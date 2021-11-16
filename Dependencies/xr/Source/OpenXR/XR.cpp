@@ -910,6 +910,8 @@ namespace xr
         , RemovedPlanes{}
         , UpdatedMeshes{}
         , RemovedMeshes{}
+        , UpdatedImageTrackingResults{}
+        , RemovedImageTrackingResults{}
         // TODO - https://github.com/BabylonJS/BabylonNative/issues/505
         // Plumb tracking states from OpenXR. For now this will maintain the current behavior where BabylonJS assumes tracking is always available.
         , IsTracking{true}
@@ -1036,7 +1038,9 @@ namespace xr
                 UpdatedPlanes,
                 RemovedPlanes,
                 UpdatedMeshes,
-                RemovedMeshes
+                RemovedMeshes,
+                UpdatedImageTrackingResults,
+                RemovedImageTrackingResults,
             };
             sceneUnderstanding.UpdateFrame(suUpdateArgs);
 

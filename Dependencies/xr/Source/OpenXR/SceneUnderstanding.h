@@ -37,6 +37,8 @@ namespace xr
             std::vector<System::Session::Frame::Plane::Identifier>& RemovedPlanes;
             std::vector<System::Session::Frame::Mesh::Identifier>& UpdatedMeshes;
             std::vector<System::Session::Frame::Mesh::Identifier>& RemovedMeshes;
+            std::vector<System::Session::Frame::ImageTrackingResult::Identifier>UpdatedImageTrackingResults;
+            std::vector<System::Session::Frame::ImageTrackingResult::Identifier>RemovedImageTrackingResults;
         };
 
         SceneUnderstanding();

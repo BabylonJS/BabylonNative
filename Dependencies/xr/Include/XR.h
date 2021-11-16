@@ -296,6 +296,16 @@ namespace xr
                 private:
                     static inline Identifier NEXT_ID{ 0 };
                 };
+                
+                struct ImageTrackingResult
+                {
+                    using Identifier = size_t;
+                    const Identifier ID{ NEXT_ID++ };
+                    SceneObject::Identifier ParentSceneObjectID{ SceneObject::INVALID_ID };
+
+                private:
+                    static inline Identifier NEXT_ID{ 0 };
+                };
 
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
@@ -309,6 +319,8 @@ namespace xr
                 std::vector<Plane::Identifier>RemovedPlanes;
                 std::vector<Mesh::Identifier>UpdatedMeshes;
                 std::vector<Mesh::Identifier>RemovedMeshes;
+                std::vector<ImageTrackingResult::Identifier>UpdatedImageTrackingResults;
+                std::vector<ImageTrackingResult::Identifier>RemovedImageTrackingResults;
 
                 bool IsTracking;
 

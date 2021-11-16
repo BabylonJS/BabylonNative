@@ -1700,7 +1700,8 @@ namespace Babylon
             static constexpr auto TRACKABLE{"trackable"};
         };
 
-        // Implementation of the XRTrackedImageInit: (TODO: Add link)
+        // Implementation of the XRTrackedImageInit: https://immersive-web.github.io/marker-tracking/#dictdef-xrtrackedimageinit
+        // TODO: Where in the WebXRImageTracking is this used? Does it need to be here?
         class XRTrackedImageInit : public Napi::ObjectWrap<XRTrackedImageInit>
         {
             static constexpr auto JS_CLASS_NAME = "XRTrackedImageInit";
@@ -1714,8 +1715,7 @@ namespace Babylon
                     env,
                     JS_CLASS_NAME,
                     {
-                        InstanceAccessor("image", &XRTrackedImageInit::GetImage, nullptr),
-                        InstanceAccessor("widthInMeters", &XRTrackedImageInit::GetWidthInMeters, nullptr)
+                        InstanceAccessor("image", &XRTrackedImageInit::GetImage, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1731,20 +1731,12 @@ namespace Babylon
             {
             }
 
-            void SetWidthInMeters(uint32_t width)
-            {
-                m_widthInMeters = width;
-            }
-
             void SetXRFrame(XRFrame* frame)
             {
                 m_frame = frame;
             }
 
         private:
-            // The width in meters
-            uint32_t m_widthInMeters{0};
-
             // Pointer to the XRFrame object.
             XRFrame* m_frame{};
 
@@ -1795,14 +1787,9 @@ namespace Babylon
                 bimg::imageFree(image);
                 return Napi::Value::From(env, outputData);
             }
-
-            Napi::Value GetWidthInMeters(const Napi::CallbackInfo& info)
-            {
-                return Napi::Value::From(info.Env(), m_widthInMeters);
-            }
         };
 
-        // Implementation of the XRImageTrackingResult: (TODO: Add link)
+        // Implementation of the XRImageTrackingResult: https://immersive-web.github.io/marker-tracking/#xrimagetrackingresult
         class XRImageTrackingResult : public Napi::ObjectWrap<XRImageTrackingResult>
         {
             static constexpr auto JS_CLASS_NAME = "XRImageTrackingResult";
@@ -1816,49 +1803,20 @@ namespace Babylon
                     env,
                     JS_CLASS_NAME,
                     {
-                        InstanceAccessor("imageSpace", &XRImageTrackingResult::GetImageSpace, nullptr),
-                        InstanceAccessor("index", &XRImageTrackingResult::GetIndex, nullptr),
-                        InstanceAccessor("trackingState", &XRImageTrackingResult::GetTrackingState, nullptr),
-                        InstanceAccessor("measuredWidthInMeters", &XRImageTrackingResult::GetMeasuredWidthInMeters, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
 
-            static Napi::Object New(const Napi::CallbackInfo& info)
+            static Napi::Object New(const Napi::Env& env)
             {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+                return env.Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
             }
 
             XRImageTrackingResult(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRImageTrackingResult>{info}
             {
             }
-
-        private:
-
-            // TODO: How to get XRSpace?
-
-            Napi::Value GetIndex(const Napi::CallbackInfo& info)
-            {
-                return Napi::Value::From(info.Env(), m_index);
-            }
-
-            Napi::Value GetTrackingState(const Napi::CallbackInfo& info)
-            {
-                return Napi::Value::From(info.Env(), m_trackingState);
-            }
-
-            Napi::Value GetMeasuredWidthInMeters(const Napi::CallbackInfo& info)
-            {
-                return Napi::Value::From(info.Env(), m_measuredWidthInMeters);
-            }
-
-            uint32_t m_index{};
-
-            XRImageTrackingState m_trackingState{};
-
-            uint32_t m_measuredWidthInMeters{};
         };
 
         // Implementation of the XRPlane interface: https://github.com/immersive-web/real-world-geometry/blob/master/plane-detection-explainer.md
@@ -2224,6 +2182,7 @@ namespace Babylon
                         InstanceMethod("getJointPose", &XRFrame::GetJointPose),
                         InstanceMethod("fillPoses", &XRFrame::FillPoses),
                         InstanceMethod("fillJointRadii", &XRFrame::FillJointRadii),
+                        InstanceMethod("getImageTrackingResults", &XRFrame::GetImageTrackingResults),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
                         InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr),
@@ -2250,7 +2209,7 @@ namespace Babylon
                 m_jsJointPose.Set("transform", m_jsTransform.Value());
             }
 
-            void Update(const Napi::Env& env, const xr::System::Session::Frame& frame, uint32_t timestamp)
+            void Update(const Napi::CallbackInfo& info, const Napi::Env& env, const xr::System::Session::Frame& frame, uint32_t timestamp)
             {
                 // Store off a pointer to the frame so that the viewer pose can be updated later. We cannot
                 // update the viewer pose here because we don't yet know the desired reference space.
@@ -2267,6 +2226,9 @@ namespace Babylon
 
                 // Update meshes.
                 UpdateMeshes(env, timestamp);
+
+                // Update image tracking results.
+                UpdateImageTrackingResults(info, timestamp);
             }
 
             Napi::Promise CreateNativeAnchor(const Napi::CallbackInfo& info, xr::Pose pose, xr::NativeTrackablePtr nativeTrackable)
@@ -2342,6 +2304,7 @@ namespace Babylon
             std::vector<Napi::ObjectReference> m_trackedAnchors{};
             std::unordered_map<xr::System::Session::Frame::Plane::Identifier, Napi::ObjectReference> m_trackedPlanes{};
             std::unordered_map<xr::System::Session::Frame::Mesh::Identifier, Napi::ObjectReference> m_trackedMeshes{};
+            std::unordered_map<xr::System::Session::Frame::ImageTrackingResult::Identifier, Napi::ObjectReference> m_trackedImageTrackingResults{};
             Napi::ObjectReference m_meshSet{};
             std::unordered_map<xr::System::Session::Frame::SceneObject::Identifier, Napi::ObjectReference> m_sceneObjects{};
 
@@ -2548,15 +2511,15 @@ namespace Babylon
                 {
                     planeSet.Get("add").As<Napi::Function>().Call(planeSet, {planeNapiValue.Value()});
                 }
-
-                // Pass the world information object back to the caller.
                 worldInformationObj.Set("detectedPlanes", planeSet);
 
+                // Pass the mesh set that was already converted in UpdateMeshes
                 if (m_meshSet)
                 {
                     worldInformationObj.Set("detectedMeshes", m_meshSet.Value());
                 }
 
+                // Pass the world information object back to the caller.
                 return std::move(worldInformationObj);
             }
 
@@ -2577,6 +2540,20 @@ namespace Babylon
                 }
 
                 return std::move(featurePointArray);
+            }
+
+            Napi::Value GetImageTrackingResults(const Napi::CallbackInfo& info)
+            {
+                // Create a set to contain all of the current image tracking results.
+                Napi::Object imageTrackingResultSet = info.Env().Global().Get("Set").As<Napi::Function>().New({});
+
+                // Loop over the list of tracked image tracking results, and add them to the set.
+                for (const auto& [imageTrackingResultID, imageTrackingResultValue] : m_trackedImageTrackingResults)
+                {
+                    imageTrackingResultSet.Get("add").As<Napi::Function>().Call(imageTrackingResultSet, {imageTrackingResultValue.Value()});
+                }
+
+                return std::move(imageTrackingResultSet);
             }
 
             void UpdateSceneObjects(const Napi::Env& env)
@@ -2667,6 +2644,50 @@ namespace Babylon
                     m_meshSet.Value().Get("add").As<Napi::Function>().Call(m_meshSet.Value(), {meshNapiValue.Value()});
                 }
             }
+
+            void UpdateImageTrackingResults(const Napi::CallbackInfo& info, uint32_t timestamp)
+            {
+                // Loop over the list of updated image tracking results, check if they exist in our map if not create them otherwise update them.
+                for (auto imageTrackingResultID : m_frame->UpdatedImageTrackingResults)
+                {
+                    XRImageTrackingResult* xrImageTrackingResult{};
+                    auto trackedImageTrackingResultIterator = m_trackedImageTrackingResults.find(imageTrackingResultID);
+
+                    // Result does not yet exist, create the JS object and insert it into the map.
+                    if (trackedImageTrackingResultIterator == m_trackedImageTrackingResults.end())
+                    {
+                        auto napiImageTrackingResult = Napi::Object::New(info.Env());
+
+                        Napi::Object napiImageTransform = XRRigidTransform::New(info);
+                        Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiImageTransform);
+                        napiImageTrackingResult.Set("imageSpace", napiSpace);
+
+                        // Where do these values come from?
+                        napiImageTrackingResult.Set("index", 0);
+                        napiImageTrackingResult.Set("trackingState", someEnumValue);
+                        napiImageTrackingResult.Set("measuredWidthInMeters", someFloatValue);
+
+                        // TODO: Is using Persistent the right choice here?
+                        auto persistentNapiImageTrackingResult = Napi::Persistent(napiImageTrackingResult);
+                        xrImageTrackingResult = XRImageTrackingResult::Unwrap(persistentNapiImageTrackingResult.Value());
+                        m_trackedImageTrackingResults.insert({imageTrackingResultID, std::move(persistentNapiImageTrackingResult)});
+                    }
+                    else
+                    {
+                        // If result is tracked, unwrap the image tracking result
+                        // TODO: Does this persist in m_trackedImagedTrackingResults? Do I need to do something with xrImageTrackingResult?
+                        xrImageTrackingResult = XRImageTrackingResult::Unwrap(trackedImageTrackingResultIterator->second.Value());
+                    }
+                }
+
+                // Next go over removed image tracking results and remove them from our mapping.
+                for (auto imageTrackingResultID : m_frame->RemovedImageTrackingResults)
+                {
+                    auto trackedImageTrackingResultIterator = m_trackedImageTrackingResults.find(imageTrackingResultID);
+                    assert(trackedImageTrackingResultIterator != m_trackedImageTrackingResults.end());
+                    m_trackedImageTrackingResults.erase(trackedImageTrackingResultIterator);
+                }
+            }
         };
 
         // Creates an anchor from a hit result.
@@ -2732,6 +2753,7 @@ namespace Babylon
                         InstanceMethod("trySetPreferredPlaneDetectorOptions", &XRSession::TrySetPreferredPlaneDetectorOptions),
                         InstanceMethod("trySetMeshDetectorEnabled", &XRSession::TrySetMeshDetectorEnabled),
                         InstanceMethod("trySetPreferredMeshDetectorOptions", &XRSession::TrySetPreferredMeshDetectorOptions),
+                        // TODO: Is this where I add getTrackedImageScores?
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -3062,7 +3084,7 @@ namespace Babylon
                     ProcessEyeInputSource(frame, Env());
                     ProcessControllerInputSources(frame, Env());
 
-                    m_xrFrame.Update(Env(), frame, m_timestamp);
+                    m_xrFrame.Update(info, Env(), frame, m_timestamp);
 
                     callbackPtr->Value().Call({Napi::Value::From(Env(), m_timestamp), m_jsXRFrame.Value()});
                 });
@@ -3531,6 +3553,7 @@ namespace Babylon
             XRHand::Initialize(env);
             XRPlane::Initialize(env);
             XRMesh::Initialize(env);
+            XRImageTrackingResult::Initialize(env);
             XRAnchor::Initialize(env);
             XRHitTestSource::Initialize(env);
             XRHitTestResult::Initialize(env);
