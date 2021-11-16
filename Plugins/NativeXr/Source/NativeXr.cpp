@@ -1701,7 +1701,7 @@ namespace Babylon
         };
 
         // Implementation of the XRTrackedImageInit: https://immersive-web.github.io/marker-tracking/#dictdef-xrtrackedimageinit
-        // TODO: Where in the WebXRImageTracking is this used? Does it need to be here?
+        // TODO: Where in the WebXRImageTracking feature is this used? Does it need to be here?
         class XRTrackedImageInit : public Napi::ObjectWrap<XRTrackedImageInit>
         {
             static constexpr auto JS_CLASS_NAME = "XRTrackedImageInit";
@@ -2662,7 +2662,7 @@ namespace Babylon
                         Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiImageTransform);
                         napiImageTrackingResult.Set("imageSpace", napiSpace);
 
-                        // Where do these values come from?
+                        // TODO: Where do these values come from?
                         napiImageTrackingResult.Set("index", 0);
                         napiImageTrackingResult.Set("trackingState", someEnumValue);
                         napiImageTrackingResult.Set("measuredWidthInMeters", someFloatValue);
