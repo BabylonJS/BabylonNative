@@ -517,9 +517,10 @@ namespace Babylon::ShaderCompilerTraversers
         public:
             static void Traverse(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
             {
+                auto intermediate{program.getIntermediate(EShLangVertex)};
                 VertexVaryingInTraverserOpenGLMetal traverser{};
-                program.getIntermediate(EShLangVertex)->getTreeRoot()->traverse(&traverser);
-                VertexVaryingInTraverser::Traverse(program.getIntermediate(EShLangVertex), ids, replacementToOriginalName, traverser);
+                intermediate->getTreeRoot()->traverse(&traverser);
+                VertexVaryingInTraverser::Traverse(intermediate, ids, replacementToOriginalName, traverser);
             }
 
         private:
@@ -568,8 +569,9 @@ namespace Babylon::ShaderCompilerTraversers
         public:
             static void Traverse(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
             {
+                auto intermediate{program.getIntermediate(EShLangVertex)};
                 VertexVaryingInTraverserD3D traverser{};
-                program.getIntermediate(EShLangVertex)->getTreeRoot()->traverse(&traverser);
+                intermediate->getTreeRoot()->traverse(&traverser);
                 // UVs are effectively a special kind of generic attribute since they both use
                 // are implemented using texture coordinates, so we preprocess to pre-count the
                 // number of UV coordinate variables to prevent collisions.
@@ -580,7 +582,7 @@ namespace Babylon::ShaderCompilerTraversers
                         traverser.m_genericAttributesRunningCount++;
                     }
                 }
-                VertexVaryingInTraverser::Traverse(program.getIntermediate(EShLangVertex), ids, replacementToOriginalName, traverser);
+                VertexVaryingInTraverser::Traverse(intermediate, ids, replacementToOriginalName, traverser);
             }
 
         private:
