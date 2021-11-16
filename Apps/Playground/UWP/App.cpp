@@ -107,8 +107,10 @@ void App::Run()
     {
         if (m_graphics)
         {
+            m_update->Finish();
             m_graphics->FinishRenderingCurrentFrame();
             m_graphics->StartRenderingCurrentFrame();
+            m_update->Start();
         }
 
         CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
@@ -122,6 +124,7 @@ void App::Uninitialize()
 {
     if (m_graphics)
     {
+        m_update->Finish();
         m_graphics->FinishRenderingCurrentFrame();
     }
 
@@ -160,6 +163,7 @@ void App::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
 
     if (m_graphics)
     {
+        m_update->Finish();
         m_graphics->FinishRenderingCurrentFrame();
     }
 
@@ -178,6 +182,7 @@ void App::OnResuming(Platform::Object^ sender, Platform::Object^ args)
     if (m_graphics)
     {
         m_graphics->StartRenderingCurrentFrame();
+        m_update->Start();
     }
 }
 
@@ -270,7 +275,9 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     graphicsConfig.Width = width;
     graphicsConfig.Height = height;
     m_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+    m_update = std::make_unique<Babylon::Graphics::Update>(m_graphics->GetUpdate("update"));
     m_graphics->StartRenderingCurrentFrame();
+    m_update->Start();
 
     m_runtime = std::make_unique<Babylon::AppRuntime>();
     m_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*m_runtime);

@@ -425,10 +425,12 @@ namespace Babylon
             {
                 explicit SessionState(GraphicsImpl& graphicsImpl)
                     : GraphicsImpl{graphicsImpl}
+                    , Update{GraphicsImpl.GetUpdate("update")}
                 {
                 }
 
                 GraphicsImpl& GraphicsImpl;
+                GraphicsImpl::Update Update;
                 Napi::FunctionReference CreateRenderTexture{};
                 Napi::FunctionReference DestroyRenderTexture{};
                 std::vector<ViewConfiguration*> ActiveViewConfigurations{};
@@ -571,10 +573,11 @@ namespace Babylon
             // reason requestAnimationFrame is being called twice when starting XR.
             m_sessionState->ScheduleFrameCallbacks.emplace_back(callback);
 
-            m_sessionState->FrameTask = arcana::make_task(m_sessionState->GraphicsImpl.BeforeRenderScheduler(), m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}] {
+            m_sessionState->FrameTask = arcana::make_task(m_sessionState->Update.Scheduler(), m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}] {
                 BeginFrame();
 
-                return arcana::make_task(m_runtimeScheduler, m_sessionState->CancellationSource, [this, updateToken{m_sessionState->GraphicsImpl.GetUpdateToken()}, thisRef{shared_from_this()}]() {
+                return arcana::make_task(m_runtimeScheduler, m_sessionState->CancellationSource, [this, updateToken{m_sessionState->Update.GetUpdateToken()}, thisRef{shared_from_this()}]()
+                    {
                     m_sessionState->FrameScheduled = false;
 
                     BeginUpdate();
@@ -707,7 +710,7 @@ namespace Babylon
 
                             // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                             // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
-                            frameBuffer.Clear(*m_sessionState->GraphicsImpl.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0); 
+                            frameBuffer.Clear(*m_sessionState->Update.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0); 
 
                             viewConfig.FrameBuffers[eyeIdx] = frameBufferPtr;
 
