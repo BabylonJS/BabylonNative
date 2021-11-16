@@ -7,13 +7,12 @@
 #undef None
 #include <filesystem>
 
-#include <Shared/InputManager.h>
-
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
+#include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -24,7 +23,7 @@ static const char* s_applicationClass = "Playground";
 
 std::unique_ptr<Babylon::Graphics> graphics{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
+Babylon::Plugins::NativeInput* nativeInput{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
 namespace
@@ -54,7 +53,7 @@ namespace
             graphics->FinishRenderingCurrentFrame();
         }
         runtime.reset();
-        inputBuffer.reset();
+        nativeInput = nullptr;
         graphics.reset();
     }
 
@@ -75,7 +74,6 @@ namespace
         graphics->StartRenderingCurrentFrame();
 
         runtime = std::make_unique<Babylon::AppRuntime>();
-        inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
         // Initialize console plugin.
         runtime->Dispatch([](Napi::Env env) {
@@ -94,7 +92,7 @@ namespace
 
             Babylon::Plugins::NativeOptimizations::Initialize(env);
 
-            InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
+            nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
         });
 
 
@@ -214,6 +212,7 @@ int main(int _argc, const char* const* _argv)
         {
             XEvent event;
             XNextEvent(display, &event);
+
             switch (event.type)
             {
                 case Expose:
@@ -232,15 +231,27 @@ int main(int _argc, const char* const* _argv)
                     }
                     break;
                 case ButtonPress:
-                    inputBuffer->SetPointerDown(true);
+                    {
+                        const XMotionEvent& xmotion = event.xmotion;
+                        if (nativeInput) {
+                            nativeInput->MouseDown(0, xmotion.x, xmotion.y);
+                        }
+                    }
                     break;
                 case ButtonRelease:
-                    inputBuffer->SetPointerDown(false);
+                    {
+                        const XMotionEvent& xmotion = event.xmotion;
+                        if (nativeInput) {
+                            nativeInput->MouseUp(0, xmotion.x, xmotion.y);
+                        }
+                    }
                     break;
                 case MotionNotify:
                     {
                         const XMotionEvent& xmotion = event.xmotion;
-                        inputBuffer->SetPointerPosition(xmotion.x, xmotion.y);
+                        if (nativeInput) {
+                            nativeInput->MouseMove(xmotion.x, xmotion.y);
+                        }
                     }
                     break;
             }
