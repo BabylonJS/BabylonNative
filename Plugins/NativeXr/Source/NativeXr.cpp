@@ -2297,6 +2297,11 @@ namespace Babylon
                 return m_sceneObjects.at(objectID).Value();
             }
 
+            std::vector<XRImageTrackingScore> GetXRImageTrackingScores()
+            {
+                // TODO
+            }
+
         private:
             const xr::System::Session::Frame* m_frame{};
             Napi::ObjectReference m_jsXRViewerPose{};
@@ -2753,7 +2758,7 @@ namespace Babylon
                         InstanceMethod("trySetPreferredPlaneDetectorOptions", &XRSession::TrySetPreferredPlaneDetectorOptions),
                         InstanceMethod("trySetMeshDetectorEnabled", &XRSession::TrySetMeshDetectorEnabled),
                         InstanceMethod("trySetPreferredMeshDetectorOptions", &XRSession::TrySetPreferredMeshDetectorOptions),
-                        // TODO: Is this where I add getTrackedImageScores?
+                        InstanceMethod("getTrackedImageScores", &XRSession::GetTrackedImageScores),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -3267,6 +3272,14 @@ namespace Babylon
                 const auto options = CreateDetectorOptions(info[0].As<Napi::Object>());
                 const auto result = m_xr->TrySetPreferredMeshDetectorOptions(options);
                 return Napi::Value::From(info.Env(), result);
+            }
+
+            Napi::Value GetTrackedImageScores(const Napi::CallbackInfo& info)
+            {
+                auto xrScores = m_xrFrame.GetXRImageTrackingScores();
+
+                // TODO: Is there any more parsing needed?
+                return Napi::Value::From(info.Env(), xrScores);
             }
         };
 
