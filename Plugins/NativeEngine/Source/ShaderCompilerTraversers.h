@@ -67,7 +67,8 @@ namespace Babylon::ShaderCompilerTraversers
 
     /// Changes the names and locations of varying attributes in the vertex shader to
     /// match bgfx's expectations.
-    void AssignLocationsAndNamesToVertexVaryings(glslang::TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& vertexAttributeRenaming);
+    void AssignLocationsAndNamesToVertexVaryingsOpenGLMetal(glslang::TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& vertexAttributeRenaming);
+    void AssignLocationsAndNamesToVertexVaryingsD3D(glslang::TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& vertexAttributeRenaming);
 
     /// WebGL (and therefore Babylon.js) treats texture samplers as a single variable.
     /// Native platforms expect them to be two separate variables -- a texture and a
