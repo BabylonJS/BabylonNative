@@ -23,6 +23,7 @@ namespace Babylon
     {
         Dispatcher g_inlineDispatcher{ [](const std::function<void()>& func) { func(); } };
         std::unique_ptr<Graphics> g_graphics{};
+        std::unique_ptr<Graphics::Update> g_update{};
         std::unique_ptr<Babylon::Polyfills::Canvas> g_nativeCanvas{};
     }
 
@@ -80,6 +81,7 @@ namespace Babylon
             if (!g_graphics)
             {
                 g_graphics = Graphics::CreateGraphics(windowConfig);
+                g_update = std::make_unique<Babylon::Graphics::Update>(g_graphics->GetUpdate("update"));
             }
             else
             {
@@ -112,6 +114,8 @@ namespace Babylon
             if (g_graphics && m_isRenderingEnabled)
             {
                 g_graphics->StartRenderingCurrentFrame();
+                g_update->Start();
+                g_update->Finish();
                 g_graphics->FinishRenderingCurrentFrame();
             }
         }
