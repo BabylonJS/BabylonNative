@@ -1701,7 +1701,6 @@ namespace Babylon
         };
 
         // Implementation of the XRTrackedImageInit: https://immersive-web.github.io/marker-tracking/#dictdef-xrtrackedimageinit
-        // TODO: Where in the WebXRImageTracking feature is this used? Does it need to be here?
         class XRTrackedImageInit : public Napi::ObjectWrap<XRTrackedImageInit>
         {
             static constexpr auto JS_CLASS_NAME = "XRTrackedImageInit";
@@ -1715,7 +1714,6 @@ namespace Babylon
                     env,
                     JS_CLASS_NAME,
                     {
-                        InstanceAccessor("image", &XRTrackedImageInit::GetImage, nullptr)
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1739,54 +1737,6 @@ namespace Babylon
         private:
             // Pointer to the XRFrame object.
             XRFrame* m_frame{};
-
-            Napi::Value GetImage(const Napi::CallbackInfo& info)
-            {
-                const auto imageBitmap = info[0].As<Napi::Object>();
-                const auto bufferWidth = info[1].As<Napi::Number>().Uint32Value();
-                const auto bufferHeight = info[2].As<Napi::Number>().Uint32Value();
-
-                const auto data = imageBitmap.Get("data").As<Napi::Uint8Array>();
-                const auto width = imageBitmap.Get("width").As<Napi::Number>().Uint32Value();
-                const auto height = imageBitmap.Get("height").As<Napi::Number>().Uint32Value();
-                const auto format = static_cast<bimg::TextureFormat::Enum>(imageBitmap.Get("format").As<Napi::Number>().Uint32Value());
-
-                const Napi::Env env{info.Env()};
-
-                bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, data.Data());
-                if (image == nullptr)
-                {
-                    throw Napi::Error::New(env, "Unable to allocate image for GetImage.");
-                }
-
-                if (format != bimg::TextureFormat::RGBA8)
-                {
-                    if (format == bimg::TextureFormat::R8)
-                    {
-                        image->m_format = bimg::TextureFormat::A8;
-                    }
-                    bimg::ImageContainer* rgba = bimg::imageConvert(&m_allocator, bimg::TextureFormat::RGBA8, *image, false);
-                    if (rgba == nullptr)
-                    {
-                        throw Napi::Error::New(env, "Unable to convert image to RGBA pixel format for GetImage.");
-                    }
-                    bimg::imageFree(image);
-                    image = rgba;
-                }
-
-                auto outputData = Napi::Uint8Array::New(env, bufferWidth * bufferHeight * 4);
-                if (width != bufferWidth || height != bufferHeight)
-                {
-                    stbir_resize_uint8(static_cast<unsigned char*>(image->m_data), width, height, 0,
-                        outputData.Data(), bufferWidth, bufferHeight, 0, 4);
-                }
-                else
-                {
-                    std::memcpy(outputData.Data(), image->m_data, image->m_size);
-                }
-                bimg::imageFree(image);
-                return Napi::Value::From(env, outputData);
-            }
         };
 
         // Implementation of the XRImageTrackingResult: https://immersive-web.github.io/marker-tracking/#xrimagetrackingresult
