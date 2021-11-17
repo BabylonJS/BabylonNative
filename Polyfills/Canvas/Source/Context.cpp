@@ -517,7 +517,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetFont(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        return Napi::Value::From(Env(), m_font);
     }
 
     void Context::SetFont(const Napi::CallbackInfo& info, const Napi::Value& value)
@@ -551,6 +551,7 @@ namespace Babylon::Polyfills::Internal
             if (m_fonts.find(fontStyleMatch[4]) != m_fonts.end())
             {
                 m_currentFontId = m_fonts.at(fontStyleMatch[4]);
+                m_font = fontOptions;
             }
         }
 
