@@ -345,6 +345,11 @@ namespace Babylon
         while (m_screenShotCallbacks.try_pop(callback, *m_cancellationSource))
         {
             m_bgfxCallback.AddScreenShotCallback(std::move(callback));
+#if APID3D12
+            // D3D12 capture is immediate but needs an extra frame swap because back buffer is captured.
+            // Because of previous swapchain flip, back buffer is not what's just been rendered.
+            bgfx::frame();
+#endif
             bgfx::requestScreenShot(BGFX_INVALID_HANDLE, "GraphicsImpl::RequestScreenShot");
         }
     }
