@@ -17,6 +17,7 @@
 #include <napi/napi.h>
 #include <napi/napi_pointer.h>
 #include <arcana/threading/task.h>
+#include <arcana/tracing/trace_region.h>
 
 namespace
 {
@@ -424,10 +425,12 @@ namespace Babylon
             {
                 explicit SessionState(GraphicsImpl& graphicsImpl)
                     : GraphicsImpl{graphicsImpl}
+                    , Update{GraphicsImpl.GetUpdate("update")}
                 {
                 }
 
                 GraphicsImpl& GraphicsImpl;
+                GraphicsImpl::Update Update;
                 Napi::FunctionReference CreateRenderTexture{};
                 Napi::FunctionReference DestroyRenderTexture{};
                 std::vector<ViewConfiguration*> ActiveViewConfigurations{};
@@ -570,18 +573,22 @@ namespace Babylon
             // reason requestAnimationFrame is being called twice when starting XR.
             m_sessionState->ScheduleFrameCallbacks.emplace_back(callback);
 
-            m_sessionState->FrameTask = arcana::make_task(m_sessionState->GraphicsImpl.BeforeRenderScheduler(), m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}] {
+            m_sessionState->FrameTask = arcana::make_task(m_sessionState->Update.Scheduler(), m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}] {
                 BeginFrame();
 
-                return arcana::make_task(m_runtimeScheduler, m_sessionState->CancellationSource, [this, updateToken{m_sessionState->GraphicsImpl.GetUpdateToken()}, thisRef{shared_from_this()}]() {
+                return arcana::make_task(m_runtimeScheduler, m_sessionState->CancellationSource, [this, updateToken{m_sessionState->Update.GetUpdateToken()}, thisRef{shared_from_this()}]()
+                    {
                     m_sessionState->FrameScheduled = false;
 
                     BeginUpdate();
 
-                    auto callbacks{std::move(m_sessionState->ScheduleFrameCallbacks)};
-                    for (auto& callback : callbacks)
                     {
-                        callback(*m_sessionState->Frame);
+                        arcana::trace_region scheduleRegion{"NativeXR::ScheduleFrame invoke JS callbacks"};
+                        auto callbacks{std::move(m_sessionState->ScheduleFrameCallbacks)};
+                        for (auto& callback : callbacks)
+                        {
+                            callback(*m_sessionState->Frame);
+                        }
                     }
 
                     EndUpdate();
@@ -601,6 +608,8 @@ namespace Babylon
             assert(m_sessionState != nullptr);
             assert(m_sessionState->Session != nullptr);
             assert(m_sessionState->Frame == nullptr);
+
+            arcana::trace_region beginFrameRegion{"NativeXR::BeginFrame"};
 
             bool shouldEndSession{};
             bool shouldRestartSession{};
@@ -629,6 +638,8 @@ namespace Babylon
 
         void NativeXr::Impl::BeginUpdate()
         {
+            arcana::trace_region beginUpdateRegion{"NativeXR::BeginUpdate"};
+
             m_sessionState->ActiveViewConfigurations.resize(m_sessionState->Frame->Views.size());
             for (uint32_t viewIdx = 0; viewIdx < m_sessionState->Frame->Views.size(); viewIdx++)
             {
@@ -699,7 +710,7 @@ namespace Babylon
 
                             // WebXR, at least in its current implementation, specifies an implicit default clear to black.
                             // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
-                            frameBuffer.Clear(*m_sessionState->GraphicsImpl.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0); 
+                            frameBuffer.Clear(*m_sessionState->Update.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0); 
 
                             viewConfig.FrameBuffers[eyeIdx] = frameBufferPtr;
 
@@ -727,6 +738,7 @@ namespace Babylon
 
         void NativeXr::Impl::EndUpdate()
         {
+            arcana::trace_region endUpdateRegion{"NativeXR::EndUpdate"};
             m_sessionState->ActiveViewConfigurations.clear();
             m_sessionState->ViewConfigurationStartViewIdx.clear();
         }
@@ -736,6 +748,8 @@ namespace Babylon
             assert(m_sessionState != nullptr);
             assert(m_sessionState->Session != nullptr);
             assert(m_sessionState->Frame != nullptr);
+
+            arcana::trace_region endFrameRegion{"NativeXR::EndFrame"};
 
             m_sessionState->Frame.reset();
         }

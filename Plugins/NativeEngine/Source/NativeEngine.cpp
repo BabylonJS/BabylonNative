@@ -5,6 +5,7 @@
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
 #include <arcana/macros.h>
+#include <arcana/tracing/trace_region.h>
 
 #include <napi/env.h>
 #include <napi/napi_pointer.h>
@@ -508,6 +509,7 @@ namespace Babylon
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtime{runtime}
         , m_graphicsImpl{GraphicsImpl::GetFromJavaScript(info.Env())}
+        , m_update{m_graphicsImpl.GetUpdate("update")}
         , m_runtimeScheduler{runtime}
         , m_defaultFrameBuffer{m_graphicsImpl, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
         , m_boundFrameBuffer{&m_defaultFrameBuffer}
@@ -1057,12 +1059,13 @@ namespace Babylon
         CreateBlitTexture(textureDestination);
         const auto handleDestination{ textureDestination->Handle };
 
-        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, handleSource, handleDestination, cancellationSource{ m_cancellationSource }]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, handleSource, handleDestination, updateToken{ m_graphicsImpl.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
+        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, handleSource, handleDestination, cancellationSource{ m_cancellationSource }]() {
+        return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, handleSource, handleDestination, updateToken{m_update.GetUpdateToken()}, cancellationSource{m_cancellationSource}]()
+            {
                 // JS Thread
                 if (bgfx::getCaps()->supported & BGFX_CAPS_TEXTURE_BLIT)
                 {
-                    bgfx::Encoder* encoder = m_graphicsImpl.GetUpdateToken().GetEncoder();
+                    bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
                     GetBoundFrameBuffer(*encoder).Blit(*encoder, handleDestination, 0, 0, handleSource);
                 }
                 else
@@ -1660,7 +1663,7 @@ namespace Babylon
     {
         if (!m_updateToken)
         {
-            m_updateToken.emplace(m_graphicsImpl.GetUpdateToken());
+            m_updateToken.emplace(m_update.GetUpdateToken());
             m_runtime.Dispatch([this](auto) {
                 m_updateToken.reset();
             });
@@ -1694,10 +1697,11 @@ namespace Babylon
 
         m_requestAnimationFrameCallbacksScheduled = true;
 
-        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{m_graphicsImpl.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() {
+        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{m_update.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() {
                 m_requestAnimationFrameCallbacksScheduled = false;
 
+                arcana::trace_region scheduleRegion{"NativeEngine::ScheduleRequestAnimationFrameCallbacks invoke JS callbacks"};
                 auto callbacks{std::move(m_requestAnimationFrameCallbacks)};
                 for (auto& callback : callbacks)
                 {

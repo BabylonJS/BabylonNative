@@ -16,6 +16,7 @@
 #import <optional>
 
 std::unique_ptr<Babylon::Graphics> graphics{};
+std::unique_ptr<Babylon::Graphics::Update> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
 std::optional<Babylon::Plugins::NativeXr> g_nativeXr{};
@@ -48,6 +49,7 @@ bool g_isXrActive{};
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+    update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
     runtime = std::make_unique<Babylon::AppRuntime>();
     inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
@@ -103,8 +105,10 @@ bool g_isXrActive{};
 {
     if (graphics)
     {
+        update->Start();
         graphics->StartRenderingCurrentFrame();
         graphics->FinishRenderingCurrentFrame();
+        update->Finish();
     }
 }
 

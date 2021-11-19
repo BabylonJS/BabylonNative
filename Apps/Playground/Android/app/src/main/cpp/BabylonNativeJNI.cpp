@@ -26,6 +26,7 @@
 namespace
 {
     std::unique_ptr<Babylon::Graphics> g_graphics{};
+    std::unique_ptr<Babylon::Graphics::Update> g_update{};
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
     std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> g_inputBuffer{};
     std::unique_ptr<Babylon::Plugins::ChromeDevTools> g_chromeDevTools{};
@@ -47,6 +48,7 @@ extern "C"
     {
         if (g_graphics)
         {
+            g_update->Finish();
             g_graphics->FinishRenderingCurrentFrame();
         }
 
@@ -82,7 +84,9 @@ extern "C"
             graphicsConfig.Width = static_cast<size_t>(width);
             graphicsConfig.Height = static_cast<size_t>(height);
             g_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+            g_update = std::make_unique<Babylon::Graphics::Update>(g_graphics->GetUpdate("update"));
             g_graphics->StartRenderingCurrentFrame();
+            g_update->Start();
 
             g_runtime = std::make_unique<Babylon::AppRuntime>();
             g_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*g_runtime);
@@ -237,8 +241,10 @@ extern "C"
     {
         if (g_graphics)
         {
+            g_update->Finish();
             g_graphics->FinishRenderingCurrentFrame();
             g_graphics->StartRenderingCurrentFrame();
+            g_update->Start();
         }
     }
 

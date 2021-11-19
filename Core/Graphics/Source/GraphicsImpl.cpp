@@ -2,6 +2,7 @@
 #include <Babylon/GraphicsPlatform.h>
 #include <Babylon/GraphicsPlatformImpl.h>
 #include <JsRuntimeInternalState.h>
+#include <arcana/tracing/trace_region.h>
 
 namespace
 {
@@ -10,9 +11,9 @@ namespace
 
 namespace Babylon
 {
-    GraphicsImpl::UpdateToken::UpdateToken(GraphicsImpl& graphicsImpl)
+    GraphicsImpl::UpdateToken::UpdateToken(GraphicsImpl& graphicsImpl, SafeTimespanGuarantor& guarantor)
         : m_graphicsImpl(graphicsImpl)
-        , m_guarantee{m_graphicsImpl.m_safeTimespanGuarantor.GetSafetyGuarantee()}
+        , m_guarantee{guarantor.GetSafetyGuarantee()}
     {
     }
 
@@ -93,14 +94,14 @@ namespace Babylon
                     .Data();
     }
 
-    GraphicsImpl::RenderScheduler& GraphicsImpl::BeforeRenderScheduler()
+    continuation_scheduler<>& GraphicsImpl::BeforeRenderScheduler()
     {
-        return m_beforeRenderScheduler;
+        return m_beforeRenderDispatcher.scheduler();
     }
 
-    GraphicsImpl::RenderScheduler& GraphicsImpl::AfterRenderScheduler()
+    continuation_scheduler<>& GraphicsImpl::AfterRenderScheduler()
     {
-        return m_afterRenderScheduler;
+        return m_afterRenderDispatcher.scheduler();
     }
 
     void GraphicsImpl::EnableRendering()
@@ -123,7 +124,7 @@ namespace Babylon
             m_state.Bgfx.Initialized = true;
             m_state.Bgfx.Dirty = false;
 
-            m_cancellationSource = std::make_unique<arcana::cancellation_source>();
+            m_cancellationSource.emplace();
         }
     }
 
@@ -150,6 +151,8 @@ namespace Babylon
 
     void GraphicsImpl::StartRenderingCurrentFrame()
     {
+        arcana::trace_region startRenderingRegion{"GraphicsImpl::StartRenderingCurrentFrame"};
+
         assert(m_renderThreadAffinity.check());
 
         if (m_rendering)
@@ -165,13 +168,29 @@ namespace Babylon
         // Update bgfx state if necessary.
         UpdateBgfxState();
 
-        m_safeTimespanGuarantor.BeginSafeTimespan();
-
-        m_beforeRenderScheduler.m_dispatcher.tick(*m_cancellationSource);
+        // Unlock the update safe timespans.
+        {
+            std::scoped_lock lock{m_updateSafeTimespansMutex};
+            for (auto& [key, value] : m_updateSafeTimespans)
+            {
+                value.Unlock();
+            }
+        }
     }
 
     void GraphicsImpl::FinishRenderingCurrentFrame()
     {
+        // Lock the update safe timespans.
+        {
+            std::scoped_lock lock{m_updateSafeTimespansMutex};
+            for (auto& [key, value] : m_updateSafeTimespans)
+            {
+                value.Lock();
+            }
+        }
+        
+        arcana::trace_region finishRenderingRegion{"GraphicsImpl::FinishRenderingCurrentFrame"};
+
         assert(m_renderThreadAffinity.check());
 
         if (!m_rendering)
@@ -179,18 +198,31 @@ namespace Babylon
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
         }
 
-        m_safeTimespanGuarantor.EndSafeTimespan();
+        m_beforeRenderDispatcher.tick(*m_cancellationSource);
 
         Frame();
 
-        m_afterRenderScheduler.m_dispatcher.tick(*m_cancellationSource);
+        m_afterRenderDispatcher.tick(*m_cancellationSource);
 
         m_rendering = false;
     }
 
-    GraphicsImpl::UpdateToken GraphicsImpl::GetUpdateToken()
+    GraphicsImpl::Update GraphicsImpl::GetUpdate(const char* updateName)
     {
-        return {*this};
+        return {GetSafeTimespanGuarantor(updateName), *this};
+    }
+
+    SafeTimespanGuarantor& GraphicsImpl::GetSafeTimespanGuarantor(const char* updateName)
+    {
+        std::scoped_lock lock{m_updateSafeTimespansMutex};
+        std::string updateNameStr{updateName};
+        auto found = m_updateSafeTimespans.find(updateNameStr);
+        if (found == m_updateSafeTimespans.end())
+        {
+            m_updateSafeTimespans.emplace(std::piecewise_construct, std::forward_as_tuple(updateNameStr), std::forward_as_tuple(m_cancellationSource));
+            found = m_updateSafeTimespans.find(updateNameStr);
+        }
+        return found->second;
     }
 
     void GraphicsImpl::AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)
@@ -319,6 +351,8 @@ namespace Babylon
 
     void GraphicsImpl::Frame()
     {
+        arcana::trace_region frameRegion{"GraphicsImpl::Frame"};
+
         // Automatically end bgfx encoders.
         EndEncoders();
 
