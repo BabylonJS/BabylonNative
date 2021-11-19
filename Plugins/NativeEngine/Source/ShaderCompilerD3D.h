@@ -98,6 +98,7 @@ namespace Babylon
         }
 
         ShaderCompilerTraversers::IdGenerator ids{};
+        auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
         auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
         std::unordered_map<std::string, std::string> vertexAttributeRenaming = {};
         ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryingsD3D(program, ids, vertexAttributeRenaming);
