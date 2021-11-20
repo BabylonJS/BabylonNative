@@ -68,10 +68,9 @@ jobs:
     
       - task: PublishBuildArtifacts@1
         inputs:
-          artifactName: '${{ variables.solutionName }} Rendered Pictures'
+          artifactName: '${{ variables.solutionName }} - ${{ parameters.graphics_api }} Rendered Pictures'
           pathtoPublish: 'build${{ variables.solutionName }}/Apps/ValidationTests/Results'
         displayName: 'Publish Tests ${{ variables.solutionName }} Results'
-        condition: succeeded()
     
       - task: PublishBuildArtifacts@1
         inputs:
