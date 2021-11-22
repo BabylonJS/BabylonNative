@@ -2247,11 +2247,6 @@ namespace Babylon
                 return m_sceneObjects.at(objectID).Value();
             }
 
-            std::vector<XRImageTrackingScore> GetXRImageTrackingScores()
-            {
-                // TODO
-            }
-
         private:
             const xr::System::Session::Frame* m_frame{};
             Napi::ObjectReference m_jsXRViewerPose{};
@@ -2734,6 +2729,18 @@ namespace Babylon
                             }
                         });
 
+                // If created with images to track, set the scores of the images
+                auto featureObject = info[1].As<Napi::Object>();
+                if (featureObject.Has("trackedImages"))
+                {
+                    auto trackedImages = featureObject.Get("trackedImages").As<Napi::Array>();
+                    for (auto idx = 0; idx < trackedImages.Length(); idx++)
+                    {
+                        // TODO : Call native to get tracking score
+                        m_imageTrackingScores[idx] = "trackable";
+                    }
+                }
+
                 return deferred.Promise();
             }
 
@@ -2805,6 +2812,7 @@ namespace Babylon
             Napi::ObjectReference m_jsEyeTrackedSource{};
             std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSelects{};
             std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSqueezes{};
+            static std::vector<char*> m_imageTrackingScores;
 
             Napi::Value GetInputSources(const Napi::CallbackInfo& /*info*/)
             {
@@ -3226,10 +3234,8 @@ namespace Babylon
 
             Napi::Value GetTrackedImageScores(const Napi::CallbackInfo& info)
             {
-                auto xrScores = m_xrFrame.GetXRImageTrackingScores();
-
                 // TODO: Is there any more parsing needed?
-                return Napi::Value::From(info.Env(), xrScores);
+                return Napi::Value::From(info.Env(), m_imageTrackingScores);
             }
         };
 
