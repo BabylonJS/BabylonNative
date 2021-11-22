@@ -155,7 +155,7 @@
         },
         {
             "title": "LOD",
-            "renderCount": 50,
+            "renderCount": 10,
             "playgroundId": "#FFMFW5#0",
             "referenceImage": "lod.png",
             "errorRatio": 9.0
