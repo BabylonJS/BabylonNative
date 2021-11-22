@@ -3,7 +3,6 @@
     "tests": [
         {
             "title": "LOD",
-            "renderCount": 50,
             "playgroundId": "#FFMFW5#30",
             "referenceImage": "lod.png",
             "errorRatio": 9.0

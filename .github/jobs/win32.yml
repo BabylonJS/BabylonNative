@@ -91,7 +91,7 @@ jobs:
     
       - task: PublishBuildArtifacts@1
         inputs:
-          artifactName: '${{ variables.solutionName }} Crash Dumps'
+          artifactName: '${{ variables.solutionName }} - ${{ parameters.graphics_api }} Crash Dumps'
           pathtoPublish: '$(Build.ArtifactStagingDirectory)/Dumps'
         displayName: 'Publish Tests ${{ variables.solutionName }} Dumps'
         condition: failed()
