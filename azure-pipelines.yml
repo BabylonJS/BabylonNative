@@ -11,6 +11,47 @@ variables:
   value: 22.1.7171670
 
 jobs:
+# Apple
+  - template: .github/jobs/macos.yml
+    parameters:
+      name: MacOS_Xcode12
+      vmImage: 'macOS-10.15'
+      xCodeVersion: 12.4
+
+  - template: .github/jobs/macos.yml
+    parameters:
+      name: MacOS_Xcode13
+      vmImage: 'macOS-11'
+      xCodeVersion: 13.0
+
+  - template: .github/jobs/ios.yml
+    parameters:
+      name: iOS_Xcode12_iOS13
+      vmImage: 'macOS-10.15'
+      xCodeVersion: 12.4
+      deploymentTarget: 13
+
+  - template: .github/jobs/ios.yml
+    parameters:
+      name: iOS_Xcode12_iOS14
+      vmImage: 'macOS-10.15'
+      xCodeVersion: 12.4
+      deploymentTarget: 14
+
+  - template: .github/jobs/ios.yml
+    parameters:
+      name: iOS_Xcode13_iOS15
+      vmImage: 'macOS-11'
+      xCodeVersion: 13.0
+      deploymentTarget: 15
+
+# WIN32
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x86_D3D11
+      vmImage: 'windows-latest'
+      platform: win32
+
   - template: .github/jobs/win32.yml
     parameters:
       name: Win32_x64_D3D11
@@ -19,7 +60,98 @@ jobs:
 
   - template: .github/jobs/win32.yml
     parameters:
+      name: Win32_x64_JSI_D3D11
+      vmImage: 'windows-latest'
+      platform: x64
+      napiType: jsi
+
+  - template: .github/jobs/win32.yml
+    parameters:
       name: Win32_x64_D3D12
       vmImage: 'windows-latest'
       platform: x64
       graphics_api: D3D12
+
+# UWP
+  - template: .github/jobs/uwp.yml
+    parameters:
+      name: UWP_x86
+      vmImage: 'windows-latest'
+      platform: win32
+
+  - template: .github/jobs/uwp.yml
+    parameters:
+      name: UWP_x64
+      vmImage: 'windows-latest'
+      platform: x64
+
+  - template: .github/jobs/uwp.yml
+    parameters:
+      name: UWP_arm64
+      vmImage: 'windows-latest'
+      platform: arm64
+
+  - template: .github/jobs/uwp.yml
+    parameters:
+      name: UWP_arm64_JSI
+      vmImage: 'windows-latest'
+      platform: arm64
+      napiType: jsi
+
+# Ubuntu/Linux
+  - template: .github/jobs/linux.yml
+    parameters:
+      name: Ubuntu_Clang9_V8
+      vmImage: 'ubuntu-latest'
+      CC: clang-9
+      CXX: clang++-9
+      JSEngine: V8
+
+  - template: .github/jobs/linux.yml
+    parameters:
+      name: Ubuntu_GCC9_JSC
+      vmImage: 'ubuntu-latest'
+      CC: gcc-9
+      CXX: g++-9
+      JSEngine: JavaScriptCore
+
+  - template: .github/jobs/linux.yml
+    parameters:
+      name: Ubuntu_GCC9_V8
+      vmImage: 'ubuntu-latest'
+      CC: gcc-9
+      CXX: g++-9
+      JSEngine: V8
+
+  - template: .github/jobs/linux.yml
+    parameters:
+      name: Ubuntu_GCC10_V8
+      vmImage: 'ubuntu-latest'
+      CC: gcc-10
+      CXX: g++-10
+      JSEngine: V8
+
+# Android
+  - template: .github/jobs/android.yml
+    parameters:
+      name: Android_Ubuntu_JSC
+      vmImage: 'ubuntu-latest'
+      JSEngine: jsc
+
+  - template: .github/jobs/android.yml
+    parameters:
+      name: Android_Ubuntu_V8
+      vmImage: 'ubuntu-latest'
+      JSEngine: v8android
+
+  - template: .github/jobs/android.yml
+    parameters:
+      name: Android_MacOS_JSC
+      vmImage: 'macOS-10.15'
+      JSEngine: jsc
+
+  - template: .github/jobs/android.yml
+    parameters:
+      name: Android_MacOS_V8
+      vmImage: 'macOS-10.15'
+      JSEngine: v8android

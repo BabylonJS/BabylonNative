@@ -2,10 +2,370 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "GLTF Sheen",
+            "playgroundId": "#YG3BBF#2",
+            "referenceImage": "glTFSheen.png"
+        },
+        {
+            "title": "GLTF Extension KHR_materials_specular",
+            "playgroundId": "#RNT7K4#9",
+            "referenceImage": "gltfExtensionKhrMaterialsSpecular.png"
+        },
+        {
+            "title": "GLTF Extension KHR_texture_transform",
+            "playgroundId": "#RNT7K4#2",
+            "referenceImage": "gltfExtensionKhrTextureTransform.png"
+        },
+        {
+            "title": "GLTF Extension KHR_materials_variants",
+            "playgroundId": "#BKGTKL#3",
+            "referenceImage": "gltfExtensionKhrMaterialsVariants.png"
+        },
+        {
+            "title": "Visibility",
+            "playgroundId": "#PXC9CF#2",
+            "referenceImage": "visibility.png"
+        },
+        {
+            "title": "Edges",
+            "playgroundId": "#TYAHX#114",
+            "referenceImage": "edges.png"
+        },
+        {
+            "title": "Outline",
+            "playgroundId": "#10WJ5S#6",
+            "referenceImage": "outline.png"
+        },
+        {
+            "title": "Glow layer and LODs",
+            "playgroundId": "#UNS6ZV#2",
+            "referenceImage": "glowlayerandlods.png"
+        },
+        {
+            "title": "Nested BBG",
+            "playgroundId": "#ZG0C8B#1",
+            "renderCount": 10,
+            "referenceImage": "nested_BBG.png"
+        },
+        {
+            "title": "GUI3D SpherePanel",
+            "playgroundId": "#HB4C01#9",
+            "renderCount": 50,
+            "referenceImage": "spherepanel.png"
+        },
+        {
+            "title": "Kernel Blur",
+            "playgroundId": "#Y0WKT0#0",
+            "referenceImage": "KernelBlur.png"
+        },
+        {
+            "title": "GLTF Mesh Primitive Attribute",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Mesh_PrimitiveAttribute, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMeshPrimitiveAttribute.png"
+        },
+        {
+            "title": "GLTF Mesh Primitive Vertex Color",
+            "renderCount": 5,
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Mesh_PrimitiveVertexColor, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMeshPrimitiveVertexColor.png"
+        },
+        {
+            "title": "GLTF Alpha Blend",
+            "playgroundId": "#SYQW69#579",
+            "referenceImage": "glTFAlphaBlend.png",
+            "renderCount": 1
+        },
+        {
+            "title": "GLTF Node Attribute (1)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Node_Attribute, __page__, 1, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfNodeAttribute1.png"
+        },
+        {
+            "title": "Soft Shadows",
+            "playgroundId": "#0YYQ3N#0",
+            "referenceImage": "softShadows.png"
+        },
+        {
+            "title": "Soft Shadows (Right Handed)",
+            "playgroundId": "#0YYQ3N#2",
+            "referenceImage": "softShadowsRightHanded.png"
+        },
+        {
+            "title": "RenderingGroupId",
+            "playgroundId": "#1J6IGD#0",
+            "referenceImage": "RenderingGroupId.png"
+        },
+        {
+            "title": "Light Projection Texture",
+            "playgroundId": "#CQNGRK#0",
+            "referenceImage": "LightProjectionTexture.png"
+        },
+        {
+            "title": "Point light shadows",
+            "playgroundId": "#U2F7P9#4",
+            "referenceImage": "point-light-shadows.png"
+        },
+        {
+            "title": "Texture cache",
+            "playgroundId": "#3TFH5I#0",
+            "referenceImage": "texture cache.png"
+        },
+        {
+            "title": "Sharpen",
+            "playgroundId": "#NAW8EA#1",
+            "renderCount": 20,
+            "referenceImage": "sharpen.png"
+        },
+        {
+            "title": "GLTF BoomBox with Unlit Material",
+            "playgroundId": "#GYM97C#2",
+            "referenceImage": "gltfUnlit.png"
+        },
+        {
+            "title": "Ribbon morphing",
+            "playgroundId": "#ACKC2#1",
+            "renderCount": 50,
+            "referenceImage": "ribbon morphing.png"
+        },
+        {
+            "title": "Solid particle system",
+            "playgroundId": "#WCDZS#92",
+            "renderCount": 150,
+            "referenceImage": "sps.png",
+            "errorRatio": 60.0
+        },
+        {
+            "title": "LightFalloff",
+            "playgroundId": "#20OAV9#201",
+            "referenceImage": "lightFalloff.png"
+        },
+        {
+            "title": "Chromatic aberration",
+            "playgroundId": "#NAW8EA#0",
+            "renderCount": 20,
+            "referenceImage": "chromaticAberration.png"
+        },
+        {
+            "title": "Normals",
+            "playgroundId": "#WXKLLJ#2",
+            "referenceImage": "normals.png"
+        },
+        {
             "title": "LOD",
-            "playgroundId": "#FFMFW5#30",
+            "renderCount": 50,
+            "playgroundId": "#FFMFW5#0",
             "referenceImage": "lod.png",
             "errorRatio": 9.0
+        },
+        {
+            "title": "Capsule",
+            "renderCount": 10,
+            "playgroundId": "#JAFIIU#2",
+            "referenceImage": "CreateCapsule.png"
+        },
+        {
+            "title": "Fresnel",
+            "playgroundId": "#603JUZ#1",
+            "referenceImage": "fresnel.png"
+        },
+        {
+            "title": "Unindexed mesh",
+            "playgroundId": "#4IHSY2#0",
+            "referenceImage": "unindexedmesh.png"
+        },
+        {
+            "title": "Black and White post-process",
+            "playgroundId": "#N55Q2M#0",
+            "renderCount": 20,
+            "referenceImage": "bwpp.png"
+        },
+        {
+            "title": "setParent",
+            "playgroundId": "#JD49CT#2",
+            "referenceImage": "setParent.png"
+        },
+        {
+            "title": "Billboard",
+            "playgroundId": "#UJEIL#13",
+            "referenceImage": "Billboard.png"
+        },
+        {
+            "title": "Up Vector",
+            "playgroundId": "#2FNBTG#27",
+            "referenceImage": "upVector.png"
+        },
+        {
+            "title": "GLTF Normals",
+            "playgroundId": "#SMEAEB#0",
+            "referenceImage": "gltfnormals.png"
+        },
+        {
+            "title": "GLTF Animation Node",
+            "renderCount": 2,
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Animation_Node, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfAnimationNode.png"
+        },
+        {
+            "title": "GLTF Animation Node Misc",
+            "renderCount": 2,
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Animation_NodeMisc, __page__, 0, __disableSRGBBuffers__, 1",
+            "referenceImage": "gltfAnimationNodeMisc.png"
+        },
+        {
+            "title": "GLTF Animation Skin (0)",
+            "renderCount": 2,
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Animation_Skin, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfAnimationSkin0.png"
+        },
+        {
+            "title": "GLTF Animation Skin (1)",
+            "renderCount": 2,
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Animation_Skin, __page__, 1, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfAnimationSkin1.png"
+        },
+        {
+            "title": "GLTF Buffer Interleaved",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Buffer_Interleaved, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfBufferInterleaved.png"
+        },
+        {
+            "title": "GLTF Material",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Material, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMaterial.png"
+        },
+        {
+            "title": "GLTF Material Alpha Blend",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Material_AlphaBlend, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMaterialAlphaBlend.png",
+            "errorRatio": 8.0
+        },
+        {
+            "title": "GLTF Material Alpha Mask",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Material_AlphaMask, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMaterialAlphaMask.png"
+        },
+        {
+            "title": "GLTF Material Double Sided (Front)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Material_DoubleSided, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMaterialDoubleSidedFront.png"
+        },
+        {
+            "title": "GLTF Material Double Sided (Back)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Material_DoubleSided, __page__, 0, alpha = Math.PI / 2, alpha = -Math.PI / 2, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMaterialDoubleSidedBack.png"
+        },
+        {
+            "title": "GLTF Material Metallic Roughness (0)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Material_MetallicRoughness, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMaterialMetallicRoughness0.png",
+            "errorRatio": 5.0
+        },
+        {
+            "title": "GLTF Material Metallic Roughness (1)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Material_MetallicRoughness, __page__, 1, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMaterialMetallicRoughness1.png"
+        },
+        {
+            "title": "GLTF Material Mixed",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Material_Mixed, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMaterialMixed.png"
+        },
+        {
+            "title": "GLTF Material Specular Glossiness (0)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Material_SpecularGlossiness, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMaterialSpecularGlossiness0.png",
+            "errorRatio": 5.0
+        },
+        {
+            "title": "GLTF Material Specular Glossiness (1)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Material_SpecularGlossiness, __page__, 1, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMaterialSpecularGlossiness1.png",
+            "errorRatio": 5.0
+        },
+        {
+            "title": "GLTF Mesh Primitive Mode (0)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Mesh_PrimitiveMode, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMeshPrimitiveMode0.png",
+            "errorRatio": 8.0,
+            "excludedEngines": ["webgpu"]
+        },
+        {
+            "title": "GLTF Mesh Primitive Mode (1)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Mesh_PrimitiveMode, __page__, 1, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMeshPrimitiveMode1.png",
+            "errorRatio": 8.0,
+            "excludedEngines": ["webgpu"]
+        },
+        {
+            "title": "GLTF Mesh Primitives",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Mesh_Primitives, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMeshPrimitives.png"
+        },
+        {
+            "title": "GLTF Mesh Primitives UV (0)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Mesh_PrimitivesUV, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMeshPrimitivesUV0.png",
+            "errorRatio": 5.0
+        },
+        {
+            "title": "GLTF Mesh Primitives UV (1)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Mesh_PrimitivesUV, __page__, 1, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfMeshPrimitivesUV1.png"
+        },
+        {
+            "title": "GLTF Node Attribute (0)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Node_Attribute, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfNodeAttribute0.png"
+        },
+        {
+            "title": "GLTF Node NegativeScale (0)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Node_NegativeScale, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfNodeNegativeScale0.png",
+            "errorRatio": 5.0
+        },
+        {
+            "title": "GLTF Node NegativeScale (1)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Node_NegativeScale, __page__, 1, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfNodeNegativeScale1.png"
+        },
+        {
+            "title": "GLTF Texture Sampler (0)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Texture_Sampler, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfTextureSampler0.png",
+            "errorRatio": 8.0
+        },
+        {
+            "title": "GLTF Texture Sampler (1)",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Texture_Sampler, __page__, 1, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfTextureSampler1.png"
         }
     ]
 }
