@@ -75,7 +75,7 @@ jobs:
 
       - task: PublishBuildArtifacts@1
         inputs:
-          artifactName: '${{ variables.solutionName }} Error Pictures'
+          artifactName: '${{ variables.solutionName }} - ${{ parameters.graphics_api }} Error Pictures'
           pathtoPublish: 'build${{ variables.solutionName }}/Apps/ValidationTests/Errors'
         displayName: 'Publish Tests ${{ variables.solutionName }} Errors'
         condition: failed()
