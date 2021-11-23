@@ -37,6 +37,7 @@ private:
     void RestartRuntime(Windows::Foundation::Rect bounds);
 
     std::unique_ptr<Babylon::Graphics> m_graphics{};
+    std::unique_ptr<Babylon::Graphics::Update> m_update{};
     std::unique_ptr<Babylon::AppRuntime> m_runtime{};
     std::unique_ptr<Babylon::Polyfills::Canvas> m_nativeCanvas{};
     Windows::Foundation::Collections::IVectorView<Windows::Storage::IStorageItem^>^ m_files;

@@ -82,6 +82,7 @@ namespace Babylon::Polyfills::Internal
         , m_canvas{info[0].As<Napi::External<NativeCanvas>>().Data()}
         , m_nvg{nvgCreate(1)}
         , m_graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())}
+        , m_update{m_graphicsImpl.GetUpdate("update")}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
@@ -347,11 +348,11 @@ namespace Babylon::Polyfills::Internal
         // Unlike other systems where it's cleared.
         bool needClear = m_canvas->UpdateRenderTarget();
 
-        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, needClear, cancellationSource{ m_cancellationSource }]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{ m_graphicsImpl.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
+        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, needClear, cancellationSource{ m_cancellationSource }]() {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{ m_update.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
                 // JS Thread
                 Babylon::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
-                bgfx::Encoder* encoder = m_graphicsImpl.GetUpdateToken().GetEncoder();
+                bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
                 frameBuffer.Bind(*encoder);
                 if (needClear)
                 {
@@ -516,7 +517,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetFont(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        return Napi::Value::From(Env(), m_font);
     }
 
     void Context::SetFont(const Napi::CallbackInfo& info, const Napi::Value& value)
@@ -550,6 +551,7 @@ namespace Babylon::Polyfills::Internal
             if (m_fonts.find(fontStyleMatch[4]) != m_fonts.end())
             {
                 m_currentFontId = m_fonts.at(fontStyleMatch[4]);
+                m_font = fontOptions;
             }
         }
 
