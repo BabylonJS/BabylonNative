@@ -160,13 +160,6 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
          nativeInput->MouseDown(theEvent.buttonNumber, eventLocation.x, eventLocation.y);
      }
  }
-- (void)rightMouseDown:(NSEvent *) theEvent {
-     if (nativeInput)
-     {
-         NSPoint eventLocation = [theEvent locationInWindow];
-         nativeInput->MouseDown(nativeInput->RIGHT_MOUSE_BUTTON_ID, eventLocation.x, eventLocation.y);
-     }
- }
 
  - (void)mouseDragged:(NSEvent *)theEvent {
      if (nativeInput)
@@ -176,34 +169,12 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
      }
  }
 
-- (void)rightMouseDragged:(NSEvent *)theEvent {
-    if (nativeInput)
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        nativeInput->MouseMove(eventLocation.x, eventLocation.y);
-    }
-}
-
  - (void)mouseUp:(NSEvent *) theEvent {
      if (nativeInput)
      {
          NSPoint eventLocation = [theEvent locationInWindow];
          nativeInput->MouseUp(theEvent.buttonNumber, eventLocation.x, eventLocation.y);
      }
-}
-
-- (void)rightMouseUp:(NSEvent *) theEvent {
-    if (nativeInput)
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        nativeInput->MouseUp(nativeInput->RIGHT_MOUSE_BUTTON_ID, eventLocation.x, -eventLocation.y);
-    }
-}
-
-- (void)scrollWheel:(NSEvent *) theEvent {
-    if (nativeInput) {
-        nativeInput->MouseWheel(round(theEvent.scrollingDeltaY));
-    }
 }
 
 - (IBAction)refresh:(id)__unused sender
