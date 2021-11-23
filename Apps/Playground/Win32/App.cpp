@@ -8,8 +8,6 @@
 #include <filesystem>
 #include <stdio.h>
 
-//#include <Shared/InputManager.h>
-
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
