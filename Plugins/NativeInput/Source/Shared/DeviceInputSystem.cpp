@@ -98,7 +98,6 @@ namespace Babylon::Plugins
         uint32_t deviceType = info[0].As<Napi::Number>().Uint32Value();
         uint32_t deviceSlot = info[1].As<Napi::Number>().Uint32Value();
         uint32_t inputIndex = info[2].As<Napi::Number>().Uint32Value();
-        
         try
         {
             int32_t inputValue = m_nativeInput.PollInput(static_cast<DeviceType>(deviceType), deviceSlot, inputIndex);
