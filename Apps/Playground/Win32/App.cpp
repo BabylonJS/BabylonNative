@@ -34,6 +34,7 @@ WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Graphics> graphics{};
 Babylon::Plugins::NativeInput* nativeInput{};
+std::unique_ptr<Babylon::Graphics::Update> update{};
 std::unique_ptr<Babylon::Plugins::ChromeDevTools> chromeDevTools{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 bool minimized{false};
@@ -84,6 +85,7 @@ namespace
     {
         if (graphics)
         {
+            update->Finish();
             graphics->FinishRenderingCurrentFrame();
         }
 
@@ -91,6 +93,7 @@ namespace
         nativeInput = nullptr;
         runtime.reset();
         nativeCanvas.reset();
+        update.reset();
         graphics.reset();
     }
 
@@ -113,7 +116,9 @@ namespace
         graphicsConfig.Height = height;
 
         graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+        update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
         graphics->StartRenderingCurrentFrame();
+        update->Start();
 
         runtime = std::make_unique<Babylon::AppRuntime>();
 
@@ -219,8 +224,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         {
             if (graphics)
             {
+                update->Finish();
                 graphics->FinishRenderingCurrentFrame();
                 graphics->StartRenderingCurrentFrame();
+                update->Start();
             }
 
             result = PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) && msg.message != WM_QUIT;
@@ -315,6 +322,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 if (graphics)
                 {
+                    update->Finish();
                     graphics->FinishRenderingCurrentFrame();
                 }
 
@@ -333,6 +341,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     if (graphics)
                     {
                         graphics->StartRenderingCurrentFrame();
+                        update->Start();
                     }
                 }
             }

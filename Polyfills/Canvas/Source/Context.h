@@ -78,6 +78,7 @@ namespace Babylon::Polyfills::Internal
         NativeCanvas* m_canvas;
         NVGcontext* m_nvg;
 
+        std::string m_font{};
         std::string m_fillStyle{};
         std::string m_strokeStyle{};
         float m_lineWidth{ 0.f };
@@ -86,6 +87,7 @@ namespace Babylon::Polyfills::Internal
         int m_currentFontId{ -1 };
 
         Babylon::GraphicsImpl& m_graphicsImpl;
+        Babylon::GraphicsImpl::Update m_update;
 
         bool m_dirty{};
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
