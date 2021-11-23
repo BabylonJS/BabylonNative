@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <time.h>
 #include <memory>
+#include <optional>
 #include <android/native_window.h> // requires ndk r5 or newer
 #include <android/native_window_jni.h> // requires ndk r5 or newer
 #include <android/log.h>
@@ -222,20 +223,19 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_setTouchInfo(JNIEnv* env, jclass clazz, jfloat x, jfloat y, jboolean down)
+    Java_BabylonNative_Wrapper_setTouchInfo(JNIEnv* env, jclass clazz, jfloat x, jfloat y, jboolean buttonAction, jint buttonValue)
     {
         if (g_nativeInput != nullptr)
         {
-            if (down)
+            if (buttonAction)
             {
-                g_nativeInput->TouchDown(0, x, y);
+                if (buttonValue == 1)
+                    g_nativeInput->TouchDown(0, x, y);
+                else
+                    g_nativeInput->TouchUp(0, x, y);
             }
-
-            g_nativeInput->TouchMove(0, x, y);
-
-            if (!down)
-            {
-                g_nativeInput->TouchUp(0, x, y);
+            else {
+                g_nativeInput->TouchMove(0, x, y);
             }
         }
     }
