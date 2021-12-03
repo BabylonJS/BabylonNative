@@ -175,6 +175,7 @@
         BabylonNative.lib;
         bgfx.lib;
         bimg.lib;
+        tinyexr.lib;
         bx.lib;
         Canvas.lib;
         edtaa3.lib;
@@ -234,6 +235,7 @@
         BabylonNative.lib;
         bgfx.lib;
         bimg.lib;
+        tinyexr.lib;
         bx.lib;
         Canvas.lib;
         edtaa3.lib;

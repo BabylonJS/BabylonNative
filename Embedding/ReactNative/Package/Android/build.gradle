@@ -89,7 +89,7 @@ repositories {
 dependencies {
     //noinspection GradleDynamicVersion
     implementation 'com.facebook.react:react-native:+'  // From node_modules
-    implementation 'com.google.ar:core:1.27.0'
+    implementation 'com.google.ar:core:1.22.0'
 }
 
 def configureReactNativePom(def pom) {
