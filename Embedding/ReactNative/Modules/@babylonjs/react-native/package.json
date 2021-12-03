@@ -28,7 +28,7 @@
     "semver": "^7.3.2"
   },
   "peerDependencies": {
-    "@babylonjs/core": "5.0.0-alpha.60",
+    "@babylonjs/core": "^5.0.0-alpha.60",
     "react": ">=16.13.1",
     "react-native": ">=0.63.1",
     "react-native-permissions": "^2.1.4"
@@ -43,14 +43,12 @@
     "@types/jest": "^25.2.1",
     "@types/react": "^16.9.32",
     "@types/react-native": "^0.63.1",
-    "@types/react-native-permissions": "^2.0.0",
     "@types/react-test-renderer": "^16.9.2",
     "@types/semver": "^7.3.4",
     "eslint": "7.12.0",
     "just-scripts": "^0.44.7",
     "metro-react-native-babel-preset": "^0.56.0",
     "prettier": "1.19.1",
-    "react-test-renderer": "17.0.1",
     "typescript": "^4.3.5"
   }
 }

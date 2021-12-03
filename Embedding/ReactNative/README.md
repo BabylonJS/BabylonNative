@@ -28,7 +28,7 @@ If you are interested in making contributions, be sure to also review [CONTRIBUT
 
 ### **Preparing a new Repo**
 
-**Required Tools:** [git](https://git-scm.com/), [Node.js](https://nodejs.org/en/download/)
+**Required Tools:** [git](https://git-scm.com/), [Node.js (16.13.0+)](https://nodejs.org/en/download/)
 
 Step 1 for all development environments and targets is to clone the repo. Use a git-enabled terminal to follow the steps below.
 

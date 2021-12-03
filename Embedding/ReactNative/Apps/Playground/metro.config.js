@@ -42,9 +42,13 @@ function processModuleSymLinks() {
             const packageInfoData = fs.readFileSync(packagePath);
             const packageInfo = JSON.parse(packageInfoData);
 
-            // Search for any dev dependencies of the package. They should be excluded from metro so the packages don't get 
-            // imported twice in the bundle
-            for (const devDependency in packageInfo.devDependencies) {
+            const dependencies = packageInfo.dependencies ? Object.keys(packageInfo.dependencies) : [];
+            const peerDependencies = packageInfo.peerDependencies ? Object.keys(packageInfo.peerDependencies) : [];
+            const devDependencies = packageInfo.devDependencies ? Object.keys(packageInfo.devDependencies) : [];
+
+            // Exclude dependencies that appear in devDependencies or peerDependencies but not in dependencies. Otherwise,
+            // the metro bundler will package those devDependencies/peerDependencies as unintended copies.
+            for (const devDependency of devDependencies.concat(peerDependencies).filter(dependency => !dependencies.includes(dependency))) {
               moduleExclusions.push(new RegExp(escapeRegExp(path.join(linkPath, "node_modules", devDependency)) + "\/.*"));
             }
           }
