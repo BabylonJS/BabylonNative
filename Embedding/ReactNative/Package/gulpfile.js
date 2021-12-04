@@ -482,6 +482,7 @@ const validate = async () => {
     'Assembled/ios/libs/libspirv-cross-hlsl.a',
     'Assembled/ios/libs/libspirv-cross-msl.a',
     'Assembled/ios/libs/libSPIRV.a',
+    'Assembled/ios/libs/libtinyexr.a',
     'Assembled/ios/libs/libUrlLib.a',
     'Assembled/ios/libs/libWindow.a',
     'Assembled/ios/libs/libXMLHttpRequest.a',

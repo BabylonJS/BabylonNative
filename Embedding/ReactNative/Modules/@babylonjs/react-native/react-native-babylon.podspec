@@ -42,6 +42,7 @@ Pod::Spec.new do |s|
                 'spirv-cross-glsl',
                 'spirv-cross-hlsl',
                 'spirv-cross-msl',
+                'tinyexr',
                 'UrlLib',
                 'Window',
                 'XMLHttpRequest',

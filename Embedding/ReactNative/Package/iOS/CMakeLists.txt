@@ -28,6 +28,7 @@ set(PACKAGED_LIBS
     spirv-cross-glsl
     spirv-cross-hlsl
     spirv-cross-msl
+    tinyexr
     UrlLib
     Window
     XMLHttpRequest
