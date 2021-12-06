@@ -28,9 +28,6 @@ endif()
 
 add_library(NativeEngine ${SOURCES})
 
-target_include_directories(NativeEngine PUBLIC "Include"
-    PRIVATE "${BIMG_DIR}/3rdparty") # for stb
-
 target_link_to_dependencies(NativeEngine
     PUBLIC JsRuntime
     INTERFACE Graphics

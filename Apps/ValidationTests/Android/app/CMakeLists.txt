@@ -62,8 +62,6 @@ target_link_libraries(BabylonNativeJNI
         ScriptLoader
         bgfx
         XMLHttpRequest
-        bx
-        bimg
         TestUtils)
 
 configure_file(

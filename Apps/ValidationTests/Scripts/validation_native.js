@@ -84,7 +84,6 @@ function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, d
 function processCurrentScene(test, resultCanvas, result, renderImage, index, waitRing, done, compareFunction) {
     currentScene.useConstantAnimationDeltaTime = true;
     var renderCount = test.renderCount || 1;
-    renderCount++;
 
     currentScene.executeWhenReady(function() {
         if (currentScene.activeCamera && currentScene.activeCamera.useAutoRotationBehavior) {
