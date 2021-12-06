@@ -28,6 +28,8 @@ endif()
 
 add_library(NativeEngine ${SOURCES})
 
+target_include_directories(NativeEngine PUBLIC "Include")
+
 target_link_to_dependencies(NativeEngine
     PUBLIC JsRuntime
     INTERFACE Graphics
