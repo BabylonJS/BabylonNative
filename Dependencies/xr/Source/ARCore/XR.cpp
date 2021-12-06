@@ -276,6 +276,27 @@ namespace xr
                     message << "Failed to create ArSession with status: " << status;
                     throw std::runtime_error{ message.str() };
                 }
+
+                // Create the ArConfig
+                ArConfig* arConfig{};
+                ArConfig_create(xrContext->Session, &arConfig);
+
+                // Set Focus Mode Auto
+                ArConfig_setFocusMode(xrContext->Session, arConfig, AR_FOCUS_MODE_AUTO);
+
+                // Configure the ArSession
+                ArStatus statusConfig { ArSession_configure(xrContext->Session, arConfig) };
+
+                // Clean up the ArConfig.
+                ArConfig_destroy(arConfig);
+
+                if (statusConfig != ArStatus::AR_SUCCESS)
+                {
+                    // ArSession failed to configure, throw an error
+                    std::ostringstream message;
+                    message << "Failed to configure ArSession with status: " << status;
+                    throw std::runtime_error{ message.str() };
+                }
             }
 
             // Create a frame buffer used for clearing the color texture
