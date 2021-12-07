@@ -2159,7 +2159,7 @@ namespace Babylon
                 m_jsJointPose.Set("transform", m_jsTransform.Value());
             }
 
-            void Update(const Napi::CallbackInfo& info, const Napi::Env& env, const xr::System::Session::Frame& frame, uint32_t timestamp)
+            void Update(const Napi::Env& env, const xr::System::Session::Frame& frame, uint32_t timestamp)
             {
                 // Store off a pointer to the frame so that the viewer pose can be updated later. We cannot
                 // update the viewer pose here because we don't yet know the desired reference space.
@@ -2178,7 +2178,7 @@ namespace Babylon
                 UpdateMeshes(env, timestamp);
 
                 // Update image tracking results.
-                UpdateImageTrackingResults(info, timestamp);
+                UpdateImageTrackingResults(env, timestamp);
             }
 
             Napi::Promise CreateNativeAnchor(const Napi::CallbackInfo& info, xr::Pose pose, xr::NativeTrackablePtr nativeTrackable)
@@ -2245,6 +2245,11 @@ namespace Babylon
 
                 assert(m_sceneObjects.count(objectID) > 0);
                 return m_sceneObjects.at(objectID).Value();
+            }
+
+            std::vector<char*> CreateAugmentedImageDatabase(std::vector<xr::System::Session::Frame::ImageTrackingBitmap> bitmaps)
+            {
+                return m_frame->CreateAugmentedImageDatabase(bitmaps);
             }
 
         private:
@@ -2497,6 +2502,9 @@ namespace Babylon
                 // Create a set to contain all of the current image tracking results.
                 Napi::Object imageTrackingResultSet = info.Env().Global().Get("Set").As<Napi::Function>().New({});
 
+                // TODO : I understand that this is wrong, but still not sure how m_frame->GetImageTrackingResults() ultimately gets called
+                auto trackedImageTrackingResults = m_frame->GetImageTrackingResults();
+
                 // Loop over the list of tracked image tracking results, and add them to the set.
                 for (const auto& [imageTrackingResultID, imageTrackingResultValue] : m_trackedImageTrackingResults)
                 {
@@ -2595,9 +2603,10 @@ namespace Babylon
                 }
             }
 
-            void UpdateImageTrackingResults(const Napi::CallbackInfo& info, uint32_t timestamp)
+            void UpdateImageTrackingResults(const Napi::Env& env, uint32_t timestamp)
             {
                 // Loop over the list of updated image tracking results, check if they exist in our map if not create them otherwise update them.
+                // TODO - I still don't understand how this and UpdatedPlanes get updated
                 for (auto imageTrackingResultID : m_frame->UpdatedImageTrackingResults)
                 {
                     XRImageTrackingResult* xrImageTrackingResult{};
@@ -2606,16 +2615,20 @@ namespace Babylon
                     // Result does not yet exist, create the JS object and insert it into the map.
                     if (trackedImageTrackingResultIterator == m_trackedImageTrackingResults.end())
                     {
-                        auto napiImageTrackingResult = Napi::Object::New(info.Env());
+                        auto napiImageTrackingResult = Napi::Object::New(env);
 
-                        Napi::Object napiImageTransform = XRRigidTransform::New(info);
-                        Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiImageTransform);
-                        napiImageTrackingResult.Set("imageSpace", napiSpace);
+                        // TODO: Passing info for XRRigidTransform::New(info) causes this error when calling m_xrFrame->Update
+                        // "An enclosing function local variable cannot be referenced in a lambda body"
+                        // 
+                        //Napi::Object napiImageTransform = XRRigidTransform::New(info);
+                        //Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiImageTransform);
+                        //napiImageTrackingResult.Set("imageSpace", napiSpace);
 
                         // TODO: Where do these values come from?
-                        napiImageTrackingResult.Set("index", 0);
-                        napiImageTrackingResult.Set("trackingState", someEnumValue);
-                        napiImageTrackingResult.Set("measuredWidthInMeters", someFloatValue);
+                        // 
+                        //napiImageTrackingResult.Set("index", 0);
+                        //napiImageTrackingResult.Set("trackingState", someEnumValue);
+                        //napiImageTrackingResult.Set("measuredWidthInMeters", someFloatValue);
 
                         // TODO: Is using Persistent the right choice here?
                         auto persistentNapiImageTrackingResult = Napi::Persistent(napiImageTrackingResult);
@@ -2729,16 +2742,27 @@ namespace Babylon
                             }
                         });
 
-                // If created with images to track, set the scores of the images
+                // If tracked images are given, initialize image tracking.
                 auto featureObject = info[1].As<Napi::Object>();
                 if (featureObject.Has("trackedImages"))
                 {
-                    auto trackedImages = featureObject.Get("trackedImages").As<Napi::Array>();
-                    for (auto idx = 0; idx < trackedImages.Length(); idx++)
+                    auto napiTrackedImages = featureObject.Get("trackedImages").As<Napi::Array>();
+                    std::vector<xr::System::Session::Frame::ImageTrackingBitmap> trackedImages;
+
+                    // Type the images, save their tracking scores
+                    for (auto idx = 0; idx < napiTrackedImages.Length(); idx++)
                     {
-                        // TODO : Call native to get tracking score
-                        m_imageTrackingScores[idx] = "trackable";
+                        trackedImages[idx] =
+                        {
+                            napiTrackedImages.Get("data").As<uint8_t*>(),
+                            napiTrackedImages.Get("width").As<uint32_t>(),
+                            napiTrackedImages.Get("height").As<uint32_t>(),
+                            napiTrackedImages.Get("depth").As<uint32_t>(),
+                        };
                     }
+
+                    // Create the image database
+                    m_imageTrackingScores = session.m_xrFrame.CreateAugmentedImageDatabase(trackedImages);
                 }
 
                 return deferred.Promise();
@@ -3047,7 +3071,7 @@ namespace Babylon
                     ProcessEyeInputSource(frame, Env());
                     ProcessControllerInputSources(frame, Env());
 
-                    m_xrFrame.Update(info, Env(), frame, m_timestamp);
+                    m_xrFrame.Update(Env(), frame, m_timestamp);
 
                     callbackPtr->Value().Call({Napi::Value::From(Env(), m_timestamp), m_jsXRFrame.Value()});
                 });

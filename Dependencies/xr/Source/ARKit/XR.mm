@@ -1525,6 +1525,8 @@ namespace xr {
         , RemovedPlanes{}
         , UpdatedMeshes{}
         , RemovedMeshes{}
+        , UpdatedImageTrackingResults{}
+        , RemovedImageTrackingResults{}
         , IsTracking{sessionImpl.IsTracking()}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) } {
         Views[0].DepthNearZ = sessionImpl.DepthNearZ;

@@ -297,14 +297,38 @@ namespace xr
                     static inline Identifier NEXT_ID{ 0 };
                 };
                 
+                struct ImageTrackingBitmap
+                {
+                    uint8_t* data;
+                    uint32_t width;
+                    uint32_t height;
+                    uint32_t depth;
+                };
+
                 struct ImageTrackingResult
                 {
                     using Identifier = size_t;
                     const Identifier ID{ NEXT_ID++ };
+                    Space imageSpace;
+                    uint32_t index;
+                    std::string trackingState;
+                    uint32_t measuredWidthInMeters;
                     SceneObject::Identifier ParentSceneObjectID{ SceneObject::INVALID_ID };
 
                 private:
                     static inline Identifier NEXT_ID{ 0 };
+                };
+                
+                struct ImageTrackingScore
+                {
+                    static constexpr auto UNTRACKABLE{"untrackable"};
+                    static constexpr auto TRACKABLE{"trackable"};
+                };
+                
+                struct ImageTrackingState
+                {
+                    static constexpr auto TRACKED{"tracked"};
+                    static constexpr auto EMULATED{"emulated"};
                 };
 
                 std::vector<View>& Views;
@@ -328,6 +352,8 @@ namespace xr
                 ~Frame();
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray, HitTestTrackableType) const;
+                std::vector<char*> CreateAugmentedImageDatabase(std::vector<ImageTrackingBitmap>) const;
+                std::vector<ImageTrackingResult> GetImageTrackingResults() const;
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 Anchor DeclareAnchor(NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;
