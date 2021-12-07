@@ -37,7 +37,7 @@ bool g_isXrActive{};
 
 - (void)init:(MTKView*)view width:(int)inWidth height:(int)inHeight xrView:(void*)xrView
 {
-    nativeInput = nullptr;
+    nativeInput = {};
     runtime.reset();
     graphics.reset();
 

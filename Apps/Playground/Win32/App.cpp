@@ -88,7 +88,7 @@ namespace
         }
 
         chromeDevTools.reset();
-        nativeInput = nullptr;
+        nativeInput = {};
         runtime.reset();
         nativeCanvas.reset();
         update.reset();
@@ -389,7 +389,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_MOUSEMOVE:
         {
-            if (nativeInput)
+            if (nativeInput != nullptr)
             {
                 nativeInput->MouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }
@@ -398,7 +398,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_LBUTTONDOWN:
         {
             SetCapture(hWnd);
-            if (nativeInput)
+            if (nativeInput != nullptr)
             {
                 nativeInput->MouseDown(0, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }
@@ -406,7 +406,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_LBUTTONUP:
         {
-            if (nativeInput)
+            if (nativeInput != nullptr)
             {
                 nativeInput->MouseUp(0, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }

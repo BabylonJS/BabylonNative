@@ -44,7 +44,7 @@ private:
     std::unique_ptr<Babylon::Graphics> m_graphics{};
     std::unique_ptr<Babylon::Graphics::Update> m_update{};
     std::unique_ptr<Babylon::AppRuntime> m_runtime{};
-    Babylon::Plugins::NativeInput* nativeInput{};
+    Babylon::Plugins::NativeInput* m_nativeInput{};
     std::unique_ptr<Babylon::Plugins::ChromeDevTools> m_chromeDevTools{};
     std::unique_ptr<Babylon::Polyfills::Canvas> m_nativeCanvas{};
     Windows::Foundation::Collections::IVectorView<Windows::Storage::IStorageItem^>^ m_files;

@@ -61,7 +61,7 @@ class ViewController: UIViewController, MTKViewDelegate {
             appDelegate!._bridge!.resize(Int32(size.width), height: Int32(size.height))
         }
     }
-    
+
     @objc func pressGesture(sender: UILongPressGestureRecognizer) {
         let appDelegate = UIApplication.shared.delegate as? AppDelegate
         let loc = mtkView.superview?.convert(sender.location(in: mtkView), to: nil)

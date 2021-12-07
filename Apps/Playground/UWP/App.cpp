@@ -129,7 +129,7 @@ void App::Uninitialize()
     }
 
     m_chromeDevTools.reset();
-    nativeInput = nullptr;
+    m_nativeInput = {};
     m_runtime.reset();
     m_graphics.reset();
 }
@@ -208,28 +208,28 @@ void App::OnWindowClosed(CoreWindow^ sender, CoreWindowEventArgs^ args)
 
 void App::OnPointerMoved(CoreWindow^, PointerEventArgs^ args)
 {
-    if (nativeInput)
+    if (m_nativeInput != nullptr)
     {
         const auto& point = args->CurrentPoint->RawPosition;
-        nativeInput->MouseMove(static_cast<int>(point.X), static_cast<int>(point.Y));
+        m_nativeInput->MouseMove(static_cast<int>(point.X), static_cast<int>(point.Y));
     }
 }
 
 void App::OnPointerPressed(CoreWindow^, PointerEventArgs^ args)
 {
-    if (nativeInput)
+    if (m_nativeInput != nullptr)
     {
         const auto& point = args->CurrentPoint->RawPosition;
-        nativeInput->MouseDown(0, static_cast<int>(point.X), static_cast<int>(point.Y));
+        m_nativeInput->MouseDown(0, static_cast<int>(point.X), static_cast<int>(point.Y));
     }
 }
 
 void App::OnPointerReleased(CoreWindow^, PointerEventArgs^ args)
 {
-    if (nativeInput)
+    if (m_nativeInput != nullptr)
     {
         const auto& point = args->CurrentPoint->RawPosition;
-        nativeInput->MouseUp(0, static_cast<int>(point.X), static_cast<int>(point.Y));
+        m_nativeInput->MouseUp(0, static_cast<int>(point.X), static_cast<int>(point.Y));
     }
 }
 
@@ -302,7 +302,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
 
         Babylon::Plugins::NativeXr::Initialize(env);
 
-        nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
+        m_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
         m_chromeDevTools = std::make_unique<Babylon::Plugins::ChromeDevTools>(Babylon::Plugins::ChromeDevTools::Initialize(env));
         if (m_chromeDevTools->SupportsInspector())

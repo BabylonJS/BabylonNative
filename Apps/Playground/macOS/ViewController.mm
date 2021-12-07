@@ -58,7 +58,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
         graphics->FinishRenderingCurrentFrame();
     }
 
-    nativeInput = nullptr;
+    nativeInput = {};
     runtime.reset();
     graphics.reset();
 }

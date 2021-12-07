@@ -55,7 +55,7 @@ namespace
             graphics->FinishRenderingCurrentFrame();
         }
         runtime.reset();
-        nativeInput = nullptr;
+        nativeInput = {};
         graphics.reset();
     }
 
@@ -239,7 +239,7 @@ int main(int _argc, const char* const* _argv)
                 case ButtonPress:
                     {
                         const XMotionEvent& xmotion = event.xmotion;
-                        if (nativeInput) {
+                        if (nativeInput != nullptr) {
                             nativeInput->MouseDown(0, xmotion.x, xmotion.y);
                         }
                     }
@@ -247,7 +247,7 @@ int main(int _argc, const char* const* _argv)
                 case ButtonRelease:
                     {
                         const XMotionEvent& xmotion = event.xmotion;
-                        if (nativeInput) {
+                        if (nativeInput != nullptr) {
                             nativeInput->MouseUp(0, xmotion.x, xmotion.y);
                         }
                     }
@@ -255,7 +255,7 @@ int main(int _argc, const char* const* _argv)
                 case MotionNotify:
                     {
                         const XMotionEvent& xmotion = event.xmotion;
-                        if (nativeInput) {
+                        if (nativeInput != nullptr) {
                             nativeInput->MouseMove(xmotion.x, xmotion.y);
                         }
                     }
