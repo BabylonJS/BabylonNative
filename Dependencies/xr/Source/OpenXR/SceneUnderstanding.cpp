@@ -212,7 +212,6 @@ private:
     {
         xr::su::ScenePlane::Extent Size;
     };
-    struct ImageTrackingResult : System::Session::Frame::ImageTrackingResult {};
 
     void Enable(const InitOptions& options)
     {
@@ -243,8 +242,6 @@ private:
         m_removedMeshes.clear();
         m_updatedPlanes.clear();
         m_removedPlanes.clear();
-        m_updatedImageTrackingResults.clear();
-        m_removedImageTrackingResults.clear();
     }
 
     void UpdateSceneData(UpdateFrameArgs& args)
@@ -253,8 +250,6 @@ private:
         UpdateSceneObjects();
         UpdateMeshes(args);
         UpdatePlanes(args);
-        // TODO - Do I need this?
-        //UpdateImageTrackingResults(args);
     }
 
     void UpdateSceneObjects()
@@ -468,12 +463,6 @@ private:
 
         args.RemovedPlanes.clear();
         m_removedPlanes.swap(args.RemovedPlanes);
-
-        args.UpdatedImageTrackingResults.clear();
-        m_updatedImageTrackingResults.swap(args.UpdatedImageTrackingResults);
-
-        args.RemovedImageTrackingResults.clear();
-        m_removedImageTrackingResults.swap(args.RemovedImageTrackingResults);
     }
 
     std::unique_ptr<xr::su::SceneObserver> m_sceneObserver;
@@ -495,8 +484,6 @@ private:
     std::vector<Mesh::Identifier> m_removedMeshes{};
     std::vector<Plane::Identifier> m_updatedPlanes{};
     std::vector<Plane::Identifier> m_removedPlanes{};
-    std::vector<ImageTrackingResult::Identifier> m_updatedImageTrackingResults;
-    std::vector<ImageTrackingResult::Identifier> m_removedImageTrackingResults;
 
     const std::unordered_map<xr::su::SceneObject::Type, xr::SceneObjectType> c_objectTypeMap
     {

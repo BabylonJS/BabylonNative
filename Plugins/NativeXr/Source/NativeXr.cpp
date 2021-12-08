@@ -912,9 +912,9 @@ namespace Babylon
                 env.Global().Set(JS_CLASS_NAME, func);
             }
 
-            static Napi::Object New(const Napi::CallbackInfo& info)
+            static Napi::Object New(const Napi::Env& env)
             {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+                return env.Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
             }
 
             XRRigidTransform(const Napi::CallbackInfo& info)
@@ -1035,7 +1035,7 @@ namespace Babylon
                 , m_eyeIdx{0}
                 , m_eye{XREye::IndexToEye(m_eyeIdx)}
                 , m_projectionMatrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
-                , m_rigidTransform{Napi::Persistent(XRRigidTransform::New(info))}
+                , m_rigidTransform{Napi::Persistent(XRRigidTransform::New(info.Env()))}
                 , m_isFirstPersonObserver{false}
             {
             }
@@ -1111,7 +1111,7 @@ namespace Babylon
 
             XRViewerPose(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRViewerPose>{info}
-                , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info))}
+                , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info.Env()))}
                 , m_jsViews{Napi::Persistent(Napi::Array::New(info.Env(), 0))}
                 , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
                 , m_isEmulatedPosition{true}
@@ -1215,7 +1215,7 @@ namespace Babylon
 
             XRPose(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRPose>{info}
-                , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info))}
+                , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info.Env()))}
                 , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
             {
             }
@@ -1505,7 +1505,7 @@ namespace Babylon
         private:
             Napi::Value GetAnchorSpace(const Napi::CallbackInfo& info)
             {
-                Napi::Object napiTransform = XRRigidTransform::New(info);
+                Napi::Object napiTransform = XRRigidTransform::New(info.Env());
                 XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
                 rigidTransform->Update(m_nativeAnchor.Pose);
 
@@ -1822,7 +1822,7 @@ namespace Babylon
 
             Napi::Value GetPlaneSpace(const Napi::CallbackInfo& info)
             {
-                Napi::Object napiTransform = XRRigidTransform::New(info);
+                Napi::Object napiTransform = XRRigidTransform::New(info.Env());
                 XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
                 rigidTransform->Update(GetPlane().Center);
 
@@ -1937,7 +1937,7 @@ namespace Babylon
 
             Napi::Value GetMeshSpace(const Napi::CallbackInfo& info)
             {
-                Napi::Object napiTransform = XRRigidTransform::New(info);
+                Napi::Object napiTransform = XRRigidTransform::New(info.Env());
                 XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
 
                 // TODO: update to not use identity pose as needed
@@ -2150,7 +2150,7 @@ namespace Babylon
                 : Napi::ObjectWrap<XRFrame>{info}
                 , m_jsXRViewerPose{Napi::Persistent(XRViewerPose::New(info))}
                 , m_xrViewerPose{*XRViewerPose::Unwrap(m_jsXRViewerPose.Value())}
-                , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info))}
+                , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info.Env()))}
                 , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
                 , m_jsPose{Napi::Persistent(Napi::Object::New(info.Env()))}
                 , m_jsJointPose{Napi::Persistent(Napi::Object::New(info.Env()))}
@@ -2502,9 +2502,6 @@ namespace Babylon
                 // Create a set to contain all of the current image tracking results.
                 Napi::Object imageTrackingResultSet = info.Env().Global().Get("Set").As<Napi::Function>().New({});
 
-                // TODO : I understand that this is wrong, but still not sure how m_frame->GetImageTrackingResults() ultimately gets called
-                auto trackedImageTrackingResults = m_frame->GetImageTrackingResults();
-
                 // Loop over the list of tracked image tracking results, and add them to the set.
                 for (const auto& [imageTrackingResultID, imageTrackingResultValue] : m_trackedImageTrackingResults)
                 {
@@ -2606,7 +2603,6 @@ namespace Babylon
             void UpdateImageTrackingResults(const Napi::Env& env, uint32_t timestamp)
             {
                 // Loop over the list of updated image tracking results, check if they exist in our map if not create them otherwise update them.
-                // TODO - I still don't understand how this and UpdatedPlanes get updated
                 for (auto imageTrackingResultID : m_frame->UpdatedImageTrackingResults)
                 {
                     XRImageTrackingResult* xrImageTrackingResult{};
@@ -2615,30 +2611,29 @@ namespace Babylon
                     // Result does not yet exist, create the JS object and insert it into the map.
                     if (trackedImageTrackingResultIterator == m_trackedImageTrackingResults.end())
                     {
-                        auto napiImageTrackingResult = Napi::Object::New(env);
+                        // Get the matching native result
+                        xr::System::Session::Frame::ImageTrackingResult& nativeResult = m_frame->GetImageTrackingResultByID(imageTrackingResultID);
 
-                        // TODO: Passing info for XRRigidTransform::New(info) causes this error when calling m_xrFrame->Update
-                        // "An enclosing function local variable cannot be referenced in a lambda body"
-                        // 
-                        //Napi::Object napiImageTransform = XRRigidTransform::New(info);
-                        //Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiImageTransform);
-                        //napiImageTrackingResult.Set("imageSpace", napiSpace);
+                        auto napiResult = Napi::Object::New(env);
+                        napiResult.Set("index", nativeResult.Index);
+                        napiResult.Set("trackingState", nativeResult.TrackingState);
+                        napiResult.Set("measuredWidthInMeters", nativeResult.MeasuredWidthInMeters);
 
-                        // TODO: Where do these values come from?
-                        // 
-                        //napiImageTrackingResult.Set("index", 0);
-                        //napiImageTrackingResult.Set("trackingState", someEnumValue);
-                        //napiImageTrackingResult.Set("measuredWidthInMeters", someFloatValue);
+                        Napi::Object napiImageTransform = XRRigidTransform::New(env);
+                        XRRigidTransform* xrImageTransforn = XRRigidTransform::Unwrap(napiImageTransform);
+                        xrImageTransforn->Update(nativeResult.ImageSpace.Pose);
+
+                        Napi::Object napiSpace = XRReferenceSpace::New(env, napiImageTransform);
+                        napiResult.Set("imageSpace", napiSpace);
 
                         // TODO: Is using Persistent the right choice here?
-                        auto persistentNapiImageTrackingResult = Napi::Persistent(napiImageTrackingResult);
-                        xrImageTrackingResult = XRImageTrackingResult::Unwrap(persistentNapiImageTrackingResult.Value());
-                        m_trackedImageTrackingResults.insert({imageTrackingResultID, std::move(persistentNapiImageTrackingResult)});
+                        auto persistentNapiResult = Napi::Persistent(napiResult);
+                        xrImageTrackingResult = XRImageTrackingResult::Unwrap(persistentNapiResult.Value());
+                        m_trackedImageTrackingResults.insert({imageTrackingResultID, std::move(persistentNapiResult)});
                     }
                     else
                     {
                         // If result is tracked, unwrap the image tracking result
-                        // TODO: Does this persist in m_trackedImagedTrackingResults? Do I need to do something with xrImageTrackingResult?
                         xrImageTrackingResult = XRImageTrackingResult::Unwrap(trackedImageTrackingResultIterator->second.Value());
                     }
                 }

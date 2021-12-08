@@ -309,10 +309,10 @@ namespace xr
                 {
                     using Identifier = size_t;
                     const Identifier ID{ NEXT_ID++ };
-                    Space imageSpace;
-                    uint32_t index;
-                    std::string trackingState;
-                    uint32_t measuredWidthInMeters;
+                    Space ImageSpace;
+                    uint32_t Index;
+                    std::string TrackingState;
+                    uint32_t MeasuredWidthInMeters;
                     SceneObject::Identifier ParentSceneObjectID{ SceneObject::INVALID_ID };
 
                 private:
@@ -353,7 +353,6 @@ namespace xr
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray, HitTestTrackableType) const;
                 std::vector<char*> CreateAugmentedImageDatabase(std::vector<ImageTrackingBitmap>) const;
-                std::vector<ImageTrackingResult> GetImageTrackingResults() const;
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 Anchor DeclareAnchor(NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;
@@ -361,6 +360,7 @@ namespace xr
                 SceneObject& GetSceneObjectByID(SceneObject::Identifier) const;
                 Plane& GetPlaneByID(Plane::Identifier) const;
                 Mesh& GetMeshByID(Mesh::Identifier) const;
+                ImageTrackingResult& GetImageTrackingResultByID(ImageTrackingResult::Identifier) const;
 
             private:
                 struct Impl;
