@@ -2045,7 +2045,6 @@ function loadItem(idx, urls, scene) {
         return;
     }
 
-console.log(" *** URL ", urls[idx]);
     BABYLON.SceneLoader.ImportMeshAsync("", urls[idx]).then(function (result) {
         if (currentMesh) {
             currentMesh.dispose(false, true);
