@@ -82,6 +82,7 @@ namespace Babylon::Polyfills::Internal
         std::string m_fillStyle{};
         std::string m_strokeStyle{};
         float m_lineWidth{ 0.f };
+        float m_globalAlpha{ 1.f };
 
         std::map<std::string, int> m_fonts;
         int m_currentFontId{ -1 };
