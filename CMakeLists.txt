@@ -4,7 +4,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 project(BabylonNative)
 
-if (APPLE)
+if(APPLE)
     # without this option on azure pipelines, there is a mismatch with math.h giving a lot of undefined functions on macOS.
     # only enabled for Apple as there is no issue for UWP/WIN32
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED TRUE)
@@ -13,8 +13,10 @@ endif()
 # Setting Platform
 if(ANDROID)
     set(BABYLON_NATIVE_PLATFORM "Android")
+elseif(IOS)
+    set(BABYLON_NATIVE_PLATFORM "iOS")
 elseif(APPLE)
-    set(BABYLON_NATIVE_PLATFORM "Apple")
+    set(BABYLON_NATIVE_PLATFORM "macOS")
 elseif(WINDOWS_STORE)
     set(BABYLON_NATIVE_PLATFORM "UWP")
 elseif(WIN32)
@@ -28,7 +30,7 @@ endif()
 # Setting Graphics API
 if(APPLE)
     set(GRAPHICS_API Metal)
-elseif(ANDROID OR UNIX)
+elseif(UNIX)
     if(NOT GRAPHICS_API)
         set(GRAPHICS_API OpenGL)
     else()
@@ -44,6 +46,12 @@ elseif(WIN32)
             message(FATAL_ERROR "Unrecognized/Unsupported render API: ${GRAPHICS_API}")
         endif()
     endif()
+endif()
+
+if(APPLE)
+    set(BABYLON_NATIVE_PLATFORM_IMPL_EXT "mm")
+else()
+    set(BABYLON_NATIVE_PLATFORM_IMPL_EXT "cpp")
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
