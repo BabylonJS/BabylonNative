@@ -48,22 +48,29 @@ jobs:
 # WIN32
   - template: .github/jobs/win32.yml
     parameters:
-      name: Win32_x86
+      name: Win32_x86_D3D11
       vmImage: 'windows-latest'
       platform: win32
-  
+
   - template: .github/jobs/win32.yml
     parameters:
-      name: Win32_x64
+      name: Win32_x64_D3D11
       vmImage: 'windows-latest'
       platform: x64
 
   - template: .github/jobs/win32.yml
     parameters:
-      name: Win32_x64_JSI
+      name: Win32_x64_JSI_D3D11
       vmImage: 'windows-latest'
       platform: x64
       napiType: jsi
+
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x64_D3D12
+      vmImage: 'windows-latest'
+      platform: x64
+      graphics_api: D3D12
 
 # UWP
   - template: .github/jobs/uwp.yml
@@ -71,13 +78,13 @@ jobs:
       name: UWP_x86
       vmImage: 'windows-latest'
       platform: win32
-  
+
   - template: .github/jobs/uwp.yml
     parameters:
       name: UWP_x64
       vmImage: 'windows-latest'
       platform: x64
-  
+
   - template: .github/jobs/uwp.yml
     parameters:
       name: UWP_arm64
@@ -99,7 +106,7 @@ jobs:
       CC: clang-9
       CXX: clang++-9
       JSEngine: V8
-  
+
   - template: .github/jobs/linux.yml
     parameters:
       name: Ubuntu_GCC9_JSC
@@ -130,7 +137,7 @@ jobs:
       name: Android_Ubuntu_JSC
       vmImage: 'ubuntu-latest'
       JSEngine: jsc
-      
+
   - template: .github/jobs/android.yml
     parameters:
       name: Android_Ubuntu_V8
@@ -142,7 +149,7 @@ jobs:
       name: Android_MacOS_JSC
       vmImage: 'macOS-10.15'
       JSEngine: jsc
-      
+
   - template: .github/jobs/android.yml
     parameters:
       name: Android_MacOS_V8
