@@ -967,6 +967,22 @@ namespace Babylon
                 std::memcpy(m_matrix.Value().Data(), CreateTransformMatrix(space, isViewSpace).data(), m_matrix.Value().ByteLength());
             }
 
+            void Update(const xr::Space& space, Napi::ArrayBuffer& outVectorData, Napi::ArrayBuffer& outMatrixData, bool isViewSpace)
+            {
+                float posAndOrientationData[8];
+                posAndOrientationData[0] = space.Pose.Position.X;
+                posAndOrientationData[1] = space.Pose.Position.Y;
+                posAndOrientationData[2] = space.Pose.Position.Z;
+                posAndOrientationData[3] = 1.f;
+                posAndOrientationData[4] = space.Pose.Orientation.X;
+                posAndOrientationData[5] = space.Pose.Orientation.Y;
+                posAndOrientationData[6] = space.Pose.Orientation.Z;
+                posAndOrientationData[7] = space.Pose.Orientation.W;
+
+                std::memcpy(outVectorData.Data(), posAndOrientationData, sizeof(float) * 8);
+                std::memcpy(outMatrixData.Data(), CreateTransformMatrix(space, isViewSpace).data(), sizeof(float) * 16);
+            }
+
             void Update(const xr::Pose& pose)
             {
                 xr::Space space{{pose}};
@@ -2039,7 +2055,7 @@ namespace Babylon
                     JS_CLASS_NAME,
                     {
                         InstanceMethod("getViewerPose", &XRFrame::GetViewerPose),
-                        InstanceMethod("getPose", &XRFrame::GetPose),
+                        InstanceMethod("getPoseData", &XRFrame::GetPoseData),
                         InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
                         InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
                         InstanceMethod("getJointPose", &XRFrame::GetJointPose),
@@ -2055,7 +2071,10 @@ namespace Babylon
 
             static Napi::Object New(const Napi::CallbackInfo& info)
             {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+                // Instead of creating just a C++ XRFrame object, wrap it in a JS NativeXRFrame object (see nativeXRFrame.ts in Babylon.JS)
+                const auto nativeImpl = info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+                const auto nativeXRFrame = JsRuntime::NativeObject::GetFromJavaScript(info.Env()).Get("NativeXRFrame").As<Napi::Function>().New({nativeImpl}).As<Napi::Object>();
+                return nativeXRFrame;
             }
 
             XRFrame(const Napi::CallbackInfo& info)
@@ -2198,23 +2217,13 @@ namespace Babylon
                 return m_jsXRViewerPose.Value();
             }
 
-            Napi::Value GetPose(const Napi::CallbackInfo& info)
+            Napi::Value GetPoseData(const Napi::CallbackInfo& info)
             {
-                if (info[0].IsExternal())
-                {
-                    const auto& space = *info[0].As<Napi::External<xr::Space>>().Data();
-                    m_transform.Update(space, false);
-                    return m_jsPose.Value();
-                }
-                else
-                {
-                    auto* xrSpace = XRReferenceSpace::Unwrap(info[0].As<Napi::Object>());
-                    assert(xrSpace != nullptr);
-                    Napi::Object napiPose = XRPose::New(info);
-                    XRPose* pose = XRPose::Unwrap(napiPose);
-                    pose->Update(xrSpace->GetTransform());
-                    return std::move(napiPose);
-                }
+                const auto& space = *info[0].As<Napi::External<xr::Space>>().Data();
+                auto vectorBuffer = info[2].As<Napi::ArrayBuffer>();
+                auto matrixBuffer = info[3].As<Napi::ArrayBuffer>();
+                m_transform.Update(space, vectorBuffer, matrixBuffer, false);
+                return Napi::Boolean::From(info.Env(), true);
             }
 
             Napi::Value GetJointPose(const Napi::CallbackInfo& info)
@@ -2585,7 +2594,7 @@ namespace Babylon
                 : Napi::ObjectWrap<XRSession>{info}
                 , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
                 , m_jsXRFrame{Napi::Persistent(XRFrame::New(info))}
-                , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Value())}
+                , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Get("_nativeImpl").As<Napi::Object>())}
                 , m_jsInputSources{Napi::Persistent(Napi::Array::New(info.Env()))}
             {
                 // Currently only immersive VR and immersive AR are supported.
