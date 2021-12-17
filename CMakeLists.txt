@@ -54,6 +54,11 @@ else()
     set(BABYLON_NATIVE_PLATFORM_IMPL_EXT "cpp")
 endif()
 
+if(UNIX AND NOT APPLE AND NOT ANDROID)
+    # Use GLVND libraries for EGL support in bgfx
+    set(OpenGL_GL_PREFERENCE GLVND)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 

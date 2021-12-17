@@ -14,8 +14,6 @@ set(NPM_SCRIPTS
     "../node_modules/chai/chai.js"
     "../node_modules/mocha/mocha.js")
 
-set(ADDITIONAL_LIBRARIES "")
-
 if(APPLE)
     find_library(JSCORE_LIBRARY JavaScriptCore)
     set(ADDITIONAL_LIBRARIES ${JSCORE_LIBRARY})
@@ -36,8 +34,7 @@ target_link_to_dependencies(UnitTests
     ScriptLoader
     Console
     Window
-    Canvas
-    ${ADDITIONAL_LIBRARIES})
+    Canvas)
 
 add_test(NAME UnitTests COMMAND UnitTests)
 
