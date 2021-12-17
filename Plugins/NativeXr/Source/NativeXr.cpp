@@ -2219,6 +2219,7 @@ namespace Babylon
 
             Napi::Value GetPoseData(const Napi::CallbackInfo& info)
             {
+                assert(XRReferenceSpace::Unwrap(info[1].As<Napi::Object>()) != nullptr);
                 const auto& space = *info[0].As<Napi::External<xr::Space>>().Data();
                 auto vectorBuffer = info[2].As<Napi::ArrayBuffer>();
                 auto matrixBuffer = info[3].As<Napi::ArrayBuffer>();
