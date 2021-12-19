@@ -67,7 +67,7 @@ target_compile_definitions( bx PUBLIC "__STDC_LIMIT_MACROS" )
 target_compile_definitions( bx PUBLIC "__STDC_FORMAT_MACROS" )
 target_compile_definitions( bx PUBLIC "__STDC_CONSTANT_MACROS" )
 
-target_compile_definitions(bx PUBLIC $<$<CONFIG:DEBUG>:BX_CONFIG_DEBUG=1> $<$<CONFIG:RELEASE>:BX_CONFIG_DEBUG=0>)
+target_compile_definitions(bx PUBLIC $<$<CONFIG:DEBUG>:BX_CONFIG_DEBUG=1> $<$<CONFIG:CHECKED>:BX_CONFIG_DEBUG=1> $<$<CONFIG:PROFILE>:BX_CONFIG_DEBUG=0> $<$<CONFIG:RELEASE>:BX_CONFIG_DEBUG=0>)
 
 # Additional dependencies on Unix
 if( UNIX AND NOT APPLE AND NOT ANDROID )

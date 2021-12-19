@@ -66,7 +66,7 @@ if( MSVC )
 endif()
 
 # Add debug config required in bx headers since bx is private
-target_compile_definitions(bgfx PUBLIC $<$<CONFIG:DEBUG>:BX_CONFIG_DEBUG=1> $<$<CONFIG:RELEASE>:BX_CONFIG_DEBUG=0>)
+target_compile_definitions(bgfx PUBLIC $<$<CONFIG:DEBUG>:BX_CONFIG_DEBUG=1> $<$<CONFIG:CHECKED>:BX_CONFIG_DEBUG=1> $<$<CONFIG:PROFILE>:BX_CONFIG_DEBUG=0> $<$<CONFIG:RELEASE>:BX_CONFIG_DEBUG=0>)
 
 # Includes
 target_include_directories( bgfx
