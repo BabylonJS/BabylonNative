@@ -66,12 +66,7 @@ if( MSVC )
 endif()
 
 # Add debug config required in bx headers since bx is private
-if (${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    target_compile_definitions( bgfx PUBLIC "BX_CONFIG_DEBUG=1" )
-else()
-    target_compile_definitions( bgfx PUBLIC "BX_CONFIG_DEBUG=0" )
-endif()
-
+target_compile_definitions(bgfx PUBLIC $<$<CONFIG:DEBUG>:BX_CONFIG_DEBUG=1> $<$<CONFIG:RELEASE>:BX_CONFIG_DEBUG=0>)
 
 # Includes
 target_include_directories( bgfx
