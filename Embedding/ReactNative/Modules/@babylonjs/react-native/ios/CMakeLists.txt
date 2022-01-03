@@ -10,6 +10,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -x objective-c++")
 # configure Babylon Native to use JSI
 set(NAPI_JAVASCRIPT_ENGINE "JSI" CACHE STRING "The JavaScript engine to power N-API")
 
+if (NOT GRAPHICS_API OR GRAPHICS_API STREQUAL "")
+    set (GRAPHICS_API "Metal")
+    message("No GRAPHICS_API specified. Defaulting to Metal.")
+endif()
+
 get_filename_component(REACTNATIVE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../react-native" ABSOLUTE)
 if(NOT EXISTS ${REACTNATIVE_DIR})
     get_filename_component(REACTNATIVE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../../Apps/Playground/node_modules/react-native" ABSOLUTE)

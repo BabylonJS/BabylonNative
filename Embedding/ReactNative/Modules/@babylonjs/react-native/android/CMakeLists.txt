@@ -21,6 +21,9 @@ cmake_minimum_required(VERSION 3.13.2)
 project(ReactNativeBabylon)
 include(${CMAKE_CURRENT_LIST_DIR}/../shared/CMakeLists.txt)
 
+string(TOUPPER ${GRAPHICS_API} GRAPHICS_API_UPPER)
+add_definitions("-D${GRAPHICS_API_UPPER}")
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 set(BABYLON_NATIVE_PLATFORM "Android")
 set(CMAKE_CXX_EXTENSIONS OFF)
