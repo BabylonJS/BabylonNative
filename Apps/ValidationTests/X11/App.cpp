@@ -67,7 +67,7 @@ namespace
         Uninitialize();
 
         Babylon::WindowConfiguration graphicsConfig{};
-        graphicsConfig.WindowPtr = (void*)(uintptr_t)window;
+        graphicsConfig.WindowPtr = window;
         graphicsConfig.Width = static_cast<size_t>(width);
         graphicsConfig.Height = static_cast<size_t>(height);
 
@@ -86,7 +86,7 @@ namespace
                 fflush(stdout);
             });
 
-            Babylon::Plugins::TestUtils::Initialize(env, (void*)(uintptr_t)window);
+            Babylon::Plugins::TestUtils::Initialize(env, window);
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
