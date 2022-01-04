@@ -25,7 +25,7 @@ namespace xr
             const XrTime DisplayTime;
             const XrSupportedExtensions& Extensions;
             std::vector<System::Session::Frame::InputSource>& activeInputSources;
-            std::optional<System::Session::Frame::Space>& eyeTrackerSpace;
+            std::optional<Space>& eyeTrackerSpace;
         };
 
         XrInput();

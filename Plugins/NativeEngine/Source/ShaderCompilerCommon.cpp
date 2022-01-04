@@ -56,7 +56,7 @@ namespace Babylon::ShaderCompilerCommon
             AppendBytes(bytes, static_cast<uint16_t>(0));
             AppendBytes(bytes, static_cast<uint16_t>(0));
 
-#if APIOpenGL
+#if OPENGL
             BX_UNUSED(compiler);
             const auto stage{static_cast<uint8_t>(stages.size())};
             stages[sampler.name] = stage;
@@ -172,7 +172,7 @@ namespace Babylon::ShaderCompilerCommon
 #if __APPLE__
             // with metal, we bind images and not samplers
             const spirv_cross::SmallVector<spirv_cross::Resource>& samplers{resources.separate_images};
-#elif APIOpenGL
+#elif OPENGL
             const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.sampled_images;
 #else
             const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_samplers;
@@ -213,7 +213,7 @@ namespace Babylon::ShaderCompilerCommon
             const auto uniformsInfo = CollectNonSamplerUniforms(*fragmentShaderInfo.Parser, compiler);
 #if __APPLE__
             const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_images;
-#elif APIOpenGL
+#elif OPENGL
             const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.sampled_images;
 #else
             const spirv_cross::SmallVector<spirv_cross::Resource>& samplers = resources.separate_samplers;

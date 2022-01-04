@@ -1,15 +1,3 @@
-if(APPLE)
-    set(GRAPHICS_API Metal)
-elseif(ANDROID)
-    set(GRAPHICS_API OpenGL)
-elseif(UNIX)
-    set(GRAPHICS_API OpenGL)
-elseif(WIN32)
-    set(GRAPHICS_API D3D)
-else()
-    message(FATAL_ERROR "Unrecognized platform: graphics API could not be deduced")
-endif()
-
 set(SOURCES
     "Include/Babylon/Plugins/NativeEngine.h"
     "Source/IndexBuffer.cpp"
@@ -33,6 +21,10 @@ set(SOURCES
     "Source/VertexArray.h"
     "Source/VertexBuffer.cpp"
     "Source/VertexBuffer.h")
+
+if(WIN32)
+    set(SOURCES ${SOURCES} "Source/ShaderCompilerD3D.h")
+endif()
 
 add_library(NativeEngine ${SOURCES})
 

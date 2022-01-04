@@ -53,7 +53,7 @@ namespace
     };
     // clang-format on
 
-    std::array<float, 16> CreateTransformMatrix(const xr::System::Session::Frame::Space& space, bool viewSpace = true)
+    std::array<float, 16> CreateTransformMatrix(const xr::Space& space, bool viewSpace = true)
     {
         auto& quat = space.Pose.Orientation;
         auto& pos = space.Pose.Position;
@@ -143,8 +143,8 @@ namespace
     void SetXRInputSourceData(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
     {
         auto env = jsInputSource.Env();
-        jsInputSource.Set("targetRaySpace", Napi::External<xr::System::Session::Frame::Space>::New(env, &inputSource.AimSpace));
-        jsInputSource.Set("gripSpace", Napi::External<xr::System::Session::Frame::Space>::New(env, &inputSource.GripSpace));
+        jsInputSource.Set("targetRaySpace", Napi::External<xr::Space>::New(env, &inputSource.AimSpace));
+        jsInputSource.Set("gripSpace", Napi::External<xr::Space>::New(env, &inputSource.GripSpace));
 
         // Don't set hands up unless hand data is supported/available
         if (inputSource.HandTrackedThisFrame || inputSource.JointsTrackedThisFrame)
@@ -854,6 +854,35 @@ namespace Babylon
             }
         };
 
+        class XRWebGLBinding : public Napi::ObjectWrap<XRWebGLBinding>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRWebGLBinding";
+
+        public:
+            static void Initialize(Napi::Env env)
+            {
+                Napi::HandleScope scope{env};
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                    });
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const Napi::CallbackInfo& info)
+            {
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+            }
+
+            XRWebGLBinding(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRWebGLBinding>{info}
+            {
+            }
+        };
+
         class XRWebGLLayer : public Napi::ObjectWrap<XRWebGLLayer>
         {
             static constexpr auto JS_CLASS_NAME = "XRWebGLLayer";
@@ -950,7 +979,7 @@ namespace Babylon
                 Update({transform->GetNativePose()}, false);
             }
 
-            void Update(const xr::System::Session::Frame::Space& space, bool isViewSpace)
+            void Update(const xr::Space& space, bool isViewSpace)
             {
                 auto position = m_position.Value();
                 position.Set("x", space.Pose.Position.X);
@@ -969,7 +998,7 @@ namespace Babylon
 
             void Update(const xr::Pose& pose)
             {
-                xr::System::Session::Frame::Space space{{pose}};
+                xr::Space space{{pose}};
                 Update(space, true);
             }
 
@@ -1041,7 +1070,7 @@ namespace Babylon
             {
             }
 
-            void Update(size_t eyeIdx, gsl::span<const float, 16> projectionMatrix, const xr::System::Session::Frame::Space& space, bool isFirstPersonObserver)
+            void Update(size_t eyeIdx, gsl::span<const float, 16> projectionMatrix, const xr::Space& space, bool isFirstPersonObserver)
             {
                 if (eyeIdx != m_eyeIdx)
                 {
@@ -1476,7 +1505,6 @@ namespace Babylon
                     env,
                     JS_CLASS_NAME,
                     {
-                        InstanceAccessor("anchorSpace", &XRAnchor::GetAnchorSpace, nullptr),
                         InstanceMethod("delete", &XRAnchor::Delete),
                     });
 
@@ -1490,7 +1518,10 @@ namespace Babylon
 
             XRAnchor(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRAnchor>{info}
+                , m_jsAnchorSpace{Napi::External<xr::Space>::New(info.Env(), &m_nativeAnchor.Space)}
             {
+                auto jsThis = info.This().As<Napi::Object>();
+                jsThis.Set("anchorSpace", m_jsAnchorSpace);
             }
 
             xr::Anchor& GetNativeAnchor()
@@ -1504,16 +1535,6 @@ namespace Babylon
             }
 
         private:
-            Napi::Value GetAnchorSpace(const Napi::CallbackInfo& info)
-            {
-                Napi::Object napiTransform = XRRigidTransform::New(info);
-                XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
-                rigidTransform->Update(m_nativeAnchor.Pose);
-
-                Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
-                return std::move(napiSpace);
-            }
-
             // Marks the anchor as no longer valid, and should be deleted on the next pass.
             void Delete(const Napi::CallbackInfo&)
             {
@@ -1522,6 +1543,7 @@ namespace Babylon
 
             // The native anchor which holds the current position of the anchor, and the native ref to the anchor.
             xr::Anchor m_nativeAnchor{};
+            Napi::External<xr::Space> m_jsAnchorSpace{};
         };
 
         // Implementation of the XRHitTestSource interface: https://immersive-web.github.io/hit-test/#hit-test-source-interface
@@ -2209,7 +2231,7 @@ namespace Babylon
             {
                 if (info[0].IsExternal())
                 {
-                    const auto& space = *info[0].As<Napi::External<xr::System::Session::Frame::Space>>().Data();
+                    const auto& space = *info[0].As<Napi::External<xr::Space>>().Data();
                     m_transform.Update(space, false);
                     return m_jsPose.Value();
                 }
@@ -2709,7 +2731,7 @@ namespace Babylon
                 if (frame.EyeTrackerSpace.has_value() && m_jsEyeTrackedSource.IsEmpty())
                 {
                     m_jsEyeTrackedSource = Napi::Persistent(Napi::Object::New(env));
-                    m_jsEyeTrackedSource.Set("gazeSpace", Napi::External<xr::System::Session::Frame::Space>::New(env, &frame.EyeTrackerSpace.value()));
+                    m_jsEyeTrackedSource.Set("gazeSpace", Napi::External<xr::Space>::New(env, &frame.EyeTrackerSpace.value()));
 
                     for (const auto& [name, callback] : m_eventNamesAndCallbacks)
                     {
@@ -3349,6 +3371,7 @@ namespace Babylon
 
             PointerEvent::Initialize(env);
 
+            XRWebGLBinding::Initialize(env);
             XRWebGLLayer::Initialize(env);
             XRRigidTransform::Initialize(env);
             XRView::Initialize(env);
