@@ -216,6 +216,11 @@ namespace Babylon::Plugins
         return device.at(inputIndex);
     }
 
+    bool NativeInput::Impl::IsDeviceAvailable(DeviceType deviceType)
+    {
+        return (deviceType == DeviceType::Mouse || deviceType == DeviceType::Touch);
+    }
+
     std::vector<int32_t>& NativeInput::Impl::GetOrCreateInputMap(DeviceType deviceType, int32_t deviceSlot, const std::vector<uint32_t>& inputIndices)
     {
         uint32_t inputIndex = *std::max_element(inputIndices.begin(), inputIndices.end());
