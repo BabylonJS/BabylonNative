@@ -1,6 +1,6 @@
 #include "GraphicsImpl.h"
 #include <Babylon/GraphicsPlatform.h>
-#include <Babylon/GraphicsPlatformImpl.h>
+#include <Babylon/GraphicsRendererType.h>
 #include <JsRuntimeInternalState.h>
 #include <arcana/tracing/trace_region.h>
 
@@ -29,8 +29,9 @@ namespace Babylon
         m_state.Bgfx.Initialized = false;
 
         auto& init = m_state.Bgfx.InitState;
-        init.type = BgfxDefaultRendererType;
-        init.resolution.reset = BGFX_RESET_FLAGS;
+        init.type = s_bgfxRenderType;
+        init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY;
+        if (s_bgfxFlipAfterRender) init.resolution.reset |= BGFX_RESET_FLIP_AFTER_RENDER;
         init.callback = &m_bgfxCallback;
     }
 
@@ -39,27 +40,22 @@ namespace Babylon
         DisableRendering();
     }
 
-    template<>
-    WindowType GraphicsImpl::GetNativeWindow<WindowType>()
-    {
-        std::scoped_lock lock{m_state.Mutex};
-        return static_cast<WindowType>(m_state.Bgfx.InitState.platformData.nwh);
-    }
-
     void GraphicsImpl::UpdateWindow(const WindowConfiguration& config)
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
+        m_state.Bgfx.InitState.platformData = {};
         ConfigureBgfxPlatformData(config, m_state.Bgfx.InitState.platformData);
-        UpdateDevicePixelRatio();
+        m_state.Resolution.DevicePixelRatio = GetDevicePixelRatio(config);
     }
 
     void GraphicsImpl::UpdateContext(const ContextConfiguration& config)
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
-        m_state.Resolution.DevicePixelRatio = config.DevicePixelRatio;
+        m_state.Bgfx.InitState.platformData = {};
         ConfigureBgfxPlatformData(config, m_state.Bgfx.InitState.platformData);
+        m_state.Resolution.DevicePixelRatio = config.DevicePixelRatio;
     }
 
     void GraphicsImpl::Resize(size_t width, size_t height)
@@ -345,6 +341,11 @@ namespace Babylon
         while (m_screenShotCallbacks.try_pop(callback, *m_cancellationSource))
         {
             m_bgfxCallback.AddScreenShotCallback(std::move(callback));
+#if D3D12
+            // D3D12 capture is immediate but needs an extra frame swap because back buffer is captured.
+            // Because of previous swapchain flip, back buffer is not what's just been rendered.
+            bgfx::frame();
+#endif
             bgfx::requestScreenShot(BGFX_INVALID_HANDLE, "GraphicsImpl::RequestScreenShot");
         }
     }

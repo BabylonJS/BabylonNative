@@ -62,7 +62,6 @@ namespace Babylon::Polyfills::Internal
             Napi::Function defineProperty{object.Get("defineProperty").As<Napi::Function>()};
             defineProperty.Call(object, {global, Napi::String::New(env, JS_DEVICE_PIXEL_RATIO_NAME), descriptor});
         }
-
     }
 
     Window& Window::GetFromJavaScript(Napi::Env env)

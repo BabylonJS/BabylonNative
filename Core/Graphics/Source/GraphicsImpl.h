@@ -138,14 +138,14 @@ namespace Babylon
     private:
         friend class UpdateToken;
 
-        template<typename WindowT>
-        WindowT GetNativeWindow();
+        static const bool s_bgfxFlipAfterRender;
+        static const bgfx::RendererType::Enum s_bgfxRenderType;
+        static void ConfigureBgfxPlatformData(const WindowConfiguration& config, bgfx::PlatformData& platformData);
+        static void ConfigureBgfxPlatformData(const ContextConfiguration& config, bgfx::PlatformData& platformData);
+        static float GetDevicePixelRatio(const WindowConfiguration& config);
 
-        void ConfigureBgfxPlatformData(const WindowConfiguration& config, bgfx::PlatformData& platformData);
-        void ConfigureBgfxPlatformData(const ContextConfiguration& config, bgfx::PlatformData& platformData);
         void UpdateBgfxState();
         void UpdateBgfxResolution();
-        float UpdateDevicePixelRatio();
         void DiscardIfDirty();
         void RequestScreenShots();
         void Frame();
