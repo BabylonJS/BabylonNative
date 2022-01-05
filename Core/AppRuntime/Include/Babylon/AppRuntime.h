@@ -9,56 +9,36 @@
 namespace Babylon
 {
     template<typename...>
-    struct dispatchable_traits;
+    class dispatchable_impl_base;
 
     template<typename ReturnT, typename... ArgsT>
-    struct dispatchable_traits<ReturnT(ArgsT...)>
-    {
-        using return_t = ReturnT;
-        using arguments_t = std::tuple<ArgsT...>;
-    };
-
-    template<typename SignatureT>
-    class dispatchable_impl
+    class dispatchable_impl_base<ReturnT(ArgsT...)>
     {
     public:
-        using return_t = typename dispatchable_traits<SignatureT>::return_t;
-        using arguments_t = typename dispatchable_traits<SignatureT>::arguments_t;
-
-        virtual ~dispatchable_impl()
-        {
-        };
-
-        template<typename... ArgsT>
-        return_t operator()(ArgsT&&... args)
-        {
-            return call(std::make_tuple<ArgsT...>(std::forward<ArgsT...>(args)...));
-        }
-
-    private:
-        virtual return_t call(arguments_t&&) = 0;
-    };
-
-    template<typename SignatureT, typename CallableT>
-    class dispatchable_impl_impl : public dispatchable_impl<SignatureT>
-    {
-    public:
-        using return_t = typename dispatchable_impl<SignatureT>::return_t;
-        using arguments_t = typename dispatchable_impl<SignatureT>::arguments_t;
-
-        dispatchable_impl_impl(dispatchable_impl_impl<SignatureT, CallableT>&& other)
-            : m_callable(std::move(other.m_callable))
+        virtual ~dispatchable_impl_base()
         {
         }
 
-        dispatchable_impl_impl(CallableT&& callable)
+        virtual ReturnT operator()(ArgsT... args) = 0;
+    };
+
+    template<typename...>
+    class dispatchable_impl;
+
+    template<typename CallableT, typename ReturnT, typename... ArgsT>
+    class dispatchable_impl<CallableT, ReturnT(ArgsT...)> : public dispatchable_impl_base<ReturnT(ArgsT...)>
+    {
+    public:
+        dispatchable_impl(dispatchable_impl<CallableT, ReturnT(ArgsT...)>&& other) = default;
+        
+        dispatchable_impl(CallableT&& callable)
             : m_callable{std::forward<CallableT>(callable)}
         {
         }
 
-        return_t call(arguments_t&& args) override
+        ReturnT operator()(ArgsT... args) override
         {
-            std::apply(m_callable, std::forward<arguments_t>(args));
+            m_callable(args...);
         }
 
     private:
@@ -75,7 +55,7 @@ namespace Babylon
 
         template<typename CallableT>
         dispatchable(CallableT&& callable)
-            : m_impl{std::make_unique<dispatchable_impl_impl<SignatureT, CallableT>>(std::forward<CallableT>(callable))}
+            : m_impl{std::make_unique<dispatchable_impl<CallableT, SignatureT>>(std::forward<CallableT>(callable))}
         {
         }
 
@@ -86,7 +66,7 @@ namespace Babylon
         }
 
     private:
-        std::unique_ptr<dispatchable_impl<SignatureT>> m_impl{};
+        std::unique_ptr<dispatchable_impl_base<SignatureT>> m_impl{};
     };
 
     class WorkQueue;
