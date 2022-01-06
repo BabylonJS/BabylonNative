@@ -114,7 +114,7 @@ namespace Babylon::Plugins
     {
         uint32_t deviceType = info[0].As<Napi::Number>().Uint32Value();
 
-        bool isAvailable =  m_nativeInput.IsDeviceAvailable(static_cast<DeviceType>(deviceType));
+        bool isAvailable = m_nativeInput.IsDeviceAvailable(static_cast<DeviceType>(deviceType));
 
         return Napi::Value::From(Env(), isAvailable);
     }

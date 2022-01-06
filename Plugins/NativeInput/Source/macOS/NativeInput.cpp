@@ -4,7 +4,7 @@ namespace Babylon::Plugins
 {
     bool NativeInput::Impl::HasMouse()
     {
-        // Assume a mouse is present (or find a way to check this programmatically).
+        // TODO: Currently assuming a mouse is present.  Need to evaluate possibly detecting this programmatically.
         return true;
     }
 }
