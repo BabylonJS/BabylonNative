@@ -130,11 +130,13 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
         float mY = event.getY();
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
+                BabylonNative.Wrapper.setTouchInfo(mX, mY, true, 1);
+                break;
             case MotionEvent.ACTION_MOVE:
-                BabylonNative.Wrapper.setTouchInfo(mX, mY, true);
+                BabylonNative.Wrapper.setTouchInfo(mX, mY, false, 0);
                 break;
             case MotionEvent.ACTION_UP:
-                BabylonNative.Wrapper.setTouchInfo(mX, mY, false);
+                BabylonNative.Wrapper.setTouchInfo(mX, mY, true, 0);
                 break;
         }
         return true;

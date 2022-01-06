@@ -45,6 +45,7 @@ namespace Babylon::Plugins
         DeviceStatusChangedCallbackTicket AddDeviceDisconnectedCallback(DeviceStatusChangedCallback&& callback);
         InputStateChangedCallbackTicket AddInputChangedCallback(InputStateChangedCallback&& callback);
         int32_t PollInput(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex);
+        bool IsDeviceAvailable(DeviceType deviceType);
 
     private:
         using InputMapKey = std::pair<DeviceType, int32_t>;
