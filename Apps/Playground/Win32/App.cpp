@@ -123,6 +123,7 @@ namespace
         inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
         auto texture = Babylon::ExternalTexture::CreateExternalTexture(*graphics);
+        texture.OverrideInternalTexture(0);
         runtime->Dispatch([texture = std::move(texture)](Napi::Env env) mutable {
             graphics->AddToJavaScript(env);
 

@@ -8,29 +8,13 @@
 
 namespace Babylon
 {
-    template<typename T>
-    class Shell
-    {
-    public:
-        Shell(T&& t)
-            : m_ptr{new T(std::forward<T>(t))}
-        {
-        }
-
-        T Unshell()
-        {
-            return {std::move(*m_ptr)};
-        }
-
-    private:
-        T* m_ptr{};
-    };
-
     class ExternalTexture
     {
     public:
         ExternalTexture(ExternalTexture&&);
         ~ExternalTexture();
+
+        void OverrideInternalTexture(uintptr_t nativeTexturePtr);
 
         static ExternalTexture CreateExternalTexture(Graphics&);
         static Napi::Object ConvertToNapiObject(Napi::Env, ExternalTexture);
