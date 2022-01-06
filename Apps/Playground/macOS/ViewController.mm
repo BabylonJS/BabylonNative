@@ -157,11 +157,18 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     // Update the view, if already loaded.
 }
 
+- (CGFloat)getScreenHeight {
+    NSScreen *mainScreen = [NSScreen mainScreen];
+    CGFloat screenScale = mainScreen.backingScaleFactor;
+    return [self view].frame.size.height * screenScale;
+}
+
 - (void)mouseDown:(NSEvent *) theEvent {
      if (nativeInput)
      {
          NSPoint eventLocation = [theEvent locationInWindow];
-         nativeInput->MouseDown(theEvent.buttonNumber, eventLocation.x, eventLocation.y);
+         auto invertedY = [self getScreenHeight] - eventLocation.y;
+         nativeInput->MouseDown(theEvent.buttonNumber, eventLocation.x, invertedY);
      }
  }
 
@@ -169,7 +176,8 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
      if (nativeInput)
      {
          NSPoint eventLocation = [theEvent locationInWindow];
-         nativeInput->MouseMove(eventLocation.x, eventLocation.y);
+         auto invertedY = [self getScreenHeight] - eventLocation.y;
+         nativeInput->MouseMove(eventLocation.x, invertedY);
      }
  }
 
@@ -177,7 +185,8 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
      if (nativeInput)
      {
          NSPoint eventLocation = [theEvent locationInWindow];
-         nativeInput->MouseUp(theEvent.buttonNumber, eventLocation.x, eventLocation.y);
+         auto invertedY = [self getScreenHeight] - eventLocation.y;
+         nativeInput->MouseUp(theEvent.buttonNumber, eventLocation.x, invertedY);
      }
 }
 
