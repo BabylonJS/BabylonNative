@@ -17,9 +17,6 @@ set(SCRIPTS
     "Scripts/experience.js"
     "Scripts/playground_runner.js")
 
-set(SOURCES
-    "Shared/InputManager.h")
-
 if(APPLE)
     find_library(JSCORE_LIBRARY JavaScriptCore)
     if(IOS)

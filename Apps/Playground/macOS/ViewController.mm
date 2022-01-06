@@ -58,6 +58,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
         graphics->FinishRenderingCurrentFrame();
     }
 
+    // Note: JS Context owns this memory for this so it's not actually a leak
     nativeInput = {};
     runtime.reset();
     graphics.reset();
