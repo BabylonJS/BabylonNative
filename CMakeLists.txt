@@ -4,6 +4,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 project(BabylonNative)
 
+option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ON)
+
 if(APPLE)
     # without this option on azure pipelines, there is a mismatch with math.h giving a lot of undefined functions on macOS.
     # only enabled for Apple as there is no issue for UWP/WIN32
@@ -73,9 +75,6 @@ if(DEFINED EXTENSIONS_DIRS)
     endforeach()
 endif()
 
-get_directory_property(hasParent PARENT_DIRECTORY)
-if(hasParent)
-    add_subdirectory(Apps EXCLUDE_FROM_ALL)
-else()
+if(BABYLON_NATIVE_BUILD_APPS)
     add_subdirectory(Apps)
 endif()
