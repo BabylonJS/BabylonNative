@@ -67,6 +67,11 @@ namespace Babylon::Polyfills::Internal
         bool UpdateRenderTarget();
         Babylon::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
 
+        GraphicsContext& GetGraphicsContext()
+        {
+            return m_graphicsContext;
+        }
+
     private:
         Napi::Value GetContext(const Napi::CallbackInfo&);
         Napi::Value GetWidth(const Napi::CallbackInfo&);

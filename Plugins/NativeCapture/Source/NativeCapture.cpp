@@ -154,7 +154,7 @@ namespace Babylon::Plugins::Internal
             , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
             , m_jsData{Napi::Persistent(Napi::Object::New(info.Env()))}
         {
-            auto& graphicsImpl{GraphicsImpl::GetFromJavaScript(info.Env())};
+            auto& graphicsContext = GraphicsContext::GetFromJavaScript(info.Env());
 
             Napi::Object jsData = m_jsData.Value();
             jsData.Set("data", Napi::ArrayBuffer::New(info.Env(), 0));
@@ -176,7 +176,7 @@ namespace Babylon::Plugins::Internal
                 frameBufferHandle = frameBuffer.Handle();
             }
 
-            m_frameProviderTicket.emplace(BeginFrameCapture(graphicsImpl.GetContext(), frameBufferHandle, std::move(frameCallback)));
+            m_frameProviderTicket.emplace(BeginFrameCapture(graphicsContext, frameBufferHandle, std::move(frameCallback)));
         }
 
         ~NativeCapture()

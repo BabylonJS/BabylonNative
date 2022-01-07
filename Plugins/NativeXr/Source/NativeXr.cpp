@@ -495,7 +495,7 @@ namespace Babylon
                 return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"There is already an immersive XR session either currently active or in the process of being set up. There can only be one immersive XR session at a time."}));
             }
 
-            GraphicsContext& graphicsContext{GraphicsImpl::GetFromJavaScript(m_env).GetContext()};
+            GraphicsContext& graphicsContext = GraphicsContext::GetFromJavaScript(m_env);
 
             // Don't try to start a session while it is still ending.
             m_beginTask.emplace(m_endTask.then(graphicsContext.AfterRenderScheduler(), arcana::cancellation::none(),

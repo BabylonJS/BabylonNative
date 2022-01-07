@@ -1,7 +1,6 @@
 #include "Canvas.h"
 #include "Image.h"
 #include "Context.h"
-#include <GraphicsImpl.h>
 #include <bgfx/bgfx.h>
 #include <napi/napi_pointer.h>
 #include <cassert>
@@ -36,7 +35,7 @@ namespace Babylon::Polyfills::Internal
 
     NativeCanvas::NativeCanvas(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeCanvas>{info}
-        , m_graphicsContext{Babylon::GraphicsImpl::GetFromJavaScript(info.Env()).GetContext()}
+        , m_graphicsContext{Babylon::GraphicsContext::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
     }
@@ -57,7 +56,7 @@ namespace Babylon::Polyfills::Internal
         std::vector<uint8_t> fontBuffer(buffer.ByteLength());
         memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
 
-        auto& graphicsContext{Babylon::GraphicsImpl::GetFromJavaScript(info.Env()).GetContext()};
+        auto& graphicsContext{Babylon::GraphicsContext::GetFromJavaScript(info.Env())};
         auto update = graphicsContext.GetUpdate("update");
         std::shared_ptr<JsRuntimeScheduler> runtimeScheduler{ std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(info.Env())) };
         auto deferred{Napi::Promise::Deferred::New(info.Env())};

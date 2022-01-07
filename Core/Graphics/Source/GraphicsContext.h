@@ -4,6 +4,8 @@
 #include "continuation_scheduler.h"
 #include "SafeTimespanGuarantor.h"
 
+#include <napi/env.h>
+
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
@@ -72,6 +74,9 @@ namespace Babylon
     class GraphicsContext
     {
     public:
+        // Deprecated: this is included only as a stopgap during feature integration and will not function long-term
+        static GraphicsContext& GetFromJavaScript(Napi::Env);
+
         GraphicsContext(GraphicsImpl&);
 
         continuation_scheduler<>& BeforeRenderScheduler();

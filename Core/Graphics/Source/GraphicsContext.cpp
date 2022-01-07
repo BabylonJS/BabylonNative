@@ -18,6 +18,11 @@ namespace Babylon
 
 namespace Babylon
 {
+    GraphicsContext& GraphicsContext::GetFromJavaScript(Napi::Env env)
+    {
+        return GraphicsImpl::GetFromJavaScript(env).GetContext();
+    }
+
     GraphicsContext::GraphicsContext(GraphicsImpl& graphicsImpl)
         : m_graphicsImpl{graphicsImpl}
     {

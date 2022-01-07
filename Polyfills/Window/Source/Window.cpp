@@ -1,6 +1,6 @@
 #include "Window.h"
 
-#include <GraphicsImpl.h>
+#include <GraphicsContext.h>
 
 #include <basen.hpp>
 #include <chrono>
@@ -122,7 +122,7 @@ namespace Babylon::Polyfills::Internal
     Napi::Value Window::GetDevicePixelRatio(const Napi::CallbackInfo& info)
     {
         auto env{info.Env()};
-        return Napi::Value::From(env, GraphicsImpl::GetFromJavaScript(env).GetDevicePixelRatio());
+        return Napi::Value::From(env, GraphicsContext::GetFromJavaScript(env).GetDevicePixelRatio());
     }
 }
 

@@ -2,8 +2,6 @@
 #include "ShaderCompiler.h"
 #include "Texture.h"
 
-#include <GraphicsImpl.h>
-
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
 #include <arcana/macros.h>
@@ -510,7 +508,7 @@ namespace Babylon
         : Napi::ObjectWrap<NativeEngine>{info}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtime{runtime}
-        , m_graphicsContext{GraphicsImpl::GetFromJavaScript(info.Env()).GetContext()}
+        , m_graphicsContext{GraphicsContext::GetFromJavaScript(info.Env())}
         , m_update{m_graphicsContext.GetUpdate("update")}
         , m_runtimeScheduler{runtime}
         , m_defaultFrameBuffer{m_graphicsContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
