@@ -7,7 +7,7 @@
 #define NANOVG_BABYLON_H_HEADER_GUARD
 
 #include <bgfx/bgfx.h>
-#include <GraphicsImpl.h>
+#include <GraphicsContext.h>
 #include <FrameBuffer.h>
 namespace bx { struct AllocatorI; }
 

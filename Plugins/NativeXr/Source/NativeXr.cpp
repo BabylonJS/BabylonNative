@@ -9,6 +9,7 @@
 #include <bgfx/bgfx.h>
 
 #include <FrameBuffer.h>
+#include <GraphicsContext.h>
 #include <GraphicsImpl.h>
 
 #include <algorithm>
@@ -423,14 +424,14 @@ namespace Babylon
 
             struct SessionState final
             {
-                explicit SessionState(GraphicsImpl& graphicsImpl)
-                    : GraphicsImpl{graphicsImpl}
-                    , Update{GraphicsImpl.GetUpdate("update")}
+                explicit SessionState(GraphicsContext& graphicsContext)
+                    : GraphicsContext{graphicsContext}
+                    , Update{GraphicsContext.GetUpdate("update")}
                 {
                 }
 
-                GraphicsImpl& GraphicsImpl;
-                GraphicsImpl::Update Update;
+                GraphicsContext& GraphicsContext;
+                Update Update;
                 Napi::FunctionReference CreateRenderTexture{};
                 Napi::FunctionReference DestroyRenderTexture{};
                 std::vector<ViewConfiguration*> ActiveViewConfigurations{};
@@ -494,14 +495,14 @@ namespace Babylon
                 return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"There is already an immersive XR session either currently active or in the process of being set up. There can only be one immersive XR session at a time."}));
             }
 
-            GraphicsImpl& graphicsImpl{GraphicsImpl::GetFromJavaScript(m_env)};
+            GraphicsContext& graphicsContext{GraphicsImpl::GetFromJavaScript(m_env).GetContext()};
 
             // Don't try to start a session while it is still ending.
-            m_beginTask.emplace(m_endTask.then(graphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(),
-                [this, thisRef{shared_from_this()}, &graphicsImpl]() {
+            m_beginTask.emplace(m_endTask.then(graphicsContext.AfterRenderScheduler(), arcana::cancellation::none(),
+                [this, thisRef{shared_from_this()}, &graphicsContext]() {
                     assert(m_sessionState == nullptr);
 
-                    m_sessionState = std::make_unique<SessionState>(graphicsImpl);
+                    m_sessionState = std::make_unique<SessionState>(graphicsContext);
 
                     if (!m_system.IsInitialized() &&
                         !m_system.TryInitialize())
@@ -510,7 +511,7 @@ namespace Babylon
                     }
 
                     return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, bgfx::getInternalData()->commandQueue, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
-                        .then(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
+                        .then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
                             m_sessionState->Session = std::move(session);
                             NotifySessionStateChanged(true);
                         });
@@ -536,7 +537,7 @@ namespace Babylon
             m_endTask = m_beginTask->then(arcana::inline_scheduler, arcana::cancellation::none(), [this, thisRef{shared_from_this()}] {
                 // Also don't try to end the session while a frame is in progress.
                 return m_sessionState->FrameTask;
-            }).then(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
+            }).then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
                 assert(m_sessionState != nullptr);
                 assert(m_sessionState->Session != nullptr);
                 assert(m_sessionState->Frame == nullptr);
@@ -597,7 +598,7 @@ namespace Babylon
                     {
                         Napi::Error::New(m_env, result.error()).ThrowAsJavaScriptException();
                     }
-                }).then(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
+                }).then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
                     EndFrame();
                 });
             });
@@ -628,7 +629,7 @@ namespace Babylon
 
                         m_sessionState->TextureToViewConfigurationMap.erase(texturePointer);
                     }
-                }).then(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), []{}); // Ensure continuations run on the render thread if they use inline_scheduler.
+                }).then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), []{}); // Ensure continuations run on the render thread if they use inline_scheduler.
             });
 
             // Ending a session outside of calls to EndSessionAsync() is currently not supported.
@@ -676,13 +677,13 @@ namespace Babylon
                     // And size is used for determining viewport when rendering to texture.
                     auto colorTextureFormat = XrTextureFormatToBgfxFormat(view.ColorTextureFormat);
                     auto colorTexture = bgfx::createTexture2D(textureWidth, textureHeight, false, textureLayers, colorTextureFormat, BGFX_TEXTURE_RT);
-                    m_sessionState->GraphicsImpl.AddTexture(colorTexture, textureWidth, textureHeight, false, textureLayers, colorTextureFormat);
+                    m_sessionState->GraphicsContext.AddTexture(colorTexture, textureWidth, textureHeight, false, textureLayers, colorTextureFormat);
 
                     auto depthTextureFormat = XrTextureFormatToBgfxFormat(view.DepthTextureFormat);
                     auto depthTexture = bgfx::createTexture2D(textureWidth, textureHeight, false, textureLayers, depthTextureFormat, BGFX_TEXTURE_RT);
-                    m_sessionState->GraphicsImpl.AddTexture(depthTexture, textureWidth, textureHeight, false, textureLayers, depthTextureFormat);
+                    m_sessionState->GraphicsContext.AddTexture(depthTexture, textureWidth, textureHeight, false, textureLayers, depthTextureFormat);
 
-                    arcana::make_task(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &viewConfig]() {
+                    arcana::make_task(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &viewConfig]() {
                         bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(viewConfig.ColorTexturePointer));
                         bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(viewConfig.DepthTexturePointer));
                     }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, &viewConfig]() {
@@ -698,7 +699,7 @@ namespace Babylon
                             auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
                             const auto frameBufferPtr = new FrameBuffer(
-                                m_sessionState->GraphicsImpl,
+                                m_sessionState->GraphicsContext,
                                 frameBufferHandle,
                                 static_cast<uint16_t>(viewConfig.ViewTextureSize.Width),
                                 static_cast<uint16_t>(viewConfig.ViewTextureSize.Height),

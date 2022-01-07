@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <regex>
+#include <GraphicsImpl.h>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #include "nanovg/nanovg.h"
@@ -81,8 +82,8 @@ namespace Babylon::Polyfills::Internal
         : Napi::ObjectWrap<Context>{info}
         , m_canvas{info[0].As<Napi::External<NativeCanvas>>().Data()}
         , m_nvg{nvgCreate(1)}
-        , m_graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())}
-        , m_update{m_graphicsImpl.GetUpdate("update")}
+        , m_graphicsContext{Babylon::GraphicsImpl::GetFromJavaScript(info.Env()).GetContext()}
+        , m_update{m_graphicsContext.GetUpdate("update")}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}

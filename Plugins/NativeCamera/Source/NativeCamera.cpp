@@ -4,7 +4,7 @@
 #include "NativeVideo.h"
 #include "NativeCameraImpl.h"
 #include <Babylon/JsRuntime.h>
-#include <GraphicsImpl.h>
+#include <GraphicsContext.h>
 #include <vector>
 #include <algorithm>
 

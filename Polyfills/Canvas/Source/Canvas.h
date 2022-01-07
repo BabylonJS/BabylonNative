@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Babylon/Polyfills/Canvas.h>
-#include <GraphicsImpl.h>
+#include <GraphicsContext.h>
 #include <FrameBuffer.h>
 
 // HACK: for TextureData
@@ -81,7 +81,7 @@ namespace Babylon::Polyfills::Internal
         uint32_t m_width{1};
         uint32_t m_height{1};
 
-        Babylon::GraphicsImpl& m_graphicsImpl;
+        Babylon::GraphicsContext& m_graphicsContext;
 
         std::unique_ptr<Babylon::FrameBuffer> m_frameBuffer;
         std::unique_ptr<TextureData> m_textureData{};

@@ -2,7 +2,7 @@
 
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/JsRuntimeScheduler.h>
-#include <GraphicsImpl.h>
+#include <GraphicsContext.h>
 #include "Image.h"
 
 struct NVGcontext;
@@ -86,8 +86,8 @@ namespace Babylon::Polyfills::Internal
         std::map<std::string, int> m_fonts;
         int m_currentFontId{ -1 };
 
-        Babylon::GraphicsImpl& m_graphicsImpl;
-        Babylon::GraphicsImpl::Update m_update;
+        Babylon::GraphicsContext& m_graphicsContext;
+        Babylon::Update m_update;
 
         bool m_dirty{};
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};

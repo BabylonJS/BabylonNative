@@ -37,7 +37,7 @@ namespace Babylon
 
             ReturnT operator()(ArgsT... args) override
             {
-                m_callable(args...);
+                return m_callable(args...);
             }
 
         private:

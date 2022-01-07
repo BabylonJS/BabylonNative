@@ -8,7 +8,7 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
 
-#include <GraphicsImpl.h>
+#include <GraphicsContext.h>
 #include <BgfxCallback.h>
 #include <FrameBuffer.h>
 
@@ -174,7 +174,7 @@ namespace Babylon
 
         std::string ProcessShaderCoordinates(const std::string& vertexSource);
 
-        GraphicsImpl::UpdateToken& GetUpdateToken();
+        UpdateToken& GetUpdateToken();
         FrameBuffer& GetBoundFrameBuffer(bgfx::Encoder& encoder);
 
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
@@ -184,12 +184,12 @@ namespace Babylon
         ProgramData* m_currentProgram{nullptr};
 
         JsRuntime& m_runtime;
-        GraphicsImpl& m_graphicsImpl;
-        GraphicsImpl::Update m_update;
+        GraphicsContext& m_graphicsContext;
+        Update m_update;
 
         JsRuntimeScheduler m_runtimeScheduler;
 
-        std::optional<GraphicsImpl::UpdateToken> m_updateToken{};
+        std::optional<UpdateToken> m_updateToken{};
 
         void ScheduleRequestAnimationFrameCallbacks();
         bool m_requestAnimationFrameCallbacksScheduled{};

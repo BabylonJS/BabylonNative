@@ -24,8 +24,8 @@ namespace Babylon
         }
     }
 
-    FrameBuffer::FrameBuffer(GraphicsImpl& impl, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil)
-        : m_impl{impl}
+    FrameBuffer::FrameBuffer(GraphicsContext& context, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil)
+        : m_context{context}
         , m_handle{handle}
         , m_width{width}
         , m_height{height}
@@ -47,12 +47,12 @@ namespace Babylon
 
     uint16_t FrameBuffer::Width() const
     {
-        return (m_width == 0 ? static_cast<uint16_t>(m_impl.GetWidth()) : m_width);
+        return (m_width == 0 ? static_cast<uint16_t>(m_context.GetWidth()) : m_width);
     }
 
     uint16_t FrameBuffer::Height() const
     {
-        return (m_height == 0 ? static_cast<uint16_t>(m_impl.GetHeight()) : m_height);
+        return (m_height == 0 ? static_cast<uint16_t>(m_context.GetHeight()) : m_height);
     }
 
     bool FrameBuffer::DefaultBackBuffer() const
@@ -62,7 +62,7 @@ namespace Babylon
 
     void FrameBuffer::Bind(bgfx::Encoder& encoder)
     {
-        m_viewId = m_impl.AcquireNewViewId(encoder);
+        m_viewId = m_context.AcquireNewViewId(encoder);
         setDefaultClearMode(m_viewId, m_handle);
         setViewPort(m_viewId, m_viewPort, Width(), Height());
         m_hasViewIdBeenUsed = false;
@@ -76,7 +76,7 @@ namespace Babylon
     {
         if (m_hasViewIdBeenUsed)
         {
-            m_viewId = m_impl.AcquireNewViewId(encoder);
+            m_viewId = m_context.AcquireNewViewId(encoder);
             setDefaultClearMode(m_viewId, m_handle);
             setViewPort(m_viewId, m_viewPort, Width(), Height());
             m_hasViewIdBeenUsed = false;
@@ -100,7 +100,7 @@ namespace Babylon
 
         if (m_hasViewIdBeenUsed)
         {
-            m_viewId = m_impl.AcquireNewViewId(encoder);
+            m_viewId = m_context.AcquireNewViewId(encoder);
             setDefaultClearMode(m_viewId, m_handle);
             m_hasViewIdBeenUsed = false;
         }
@@ -119,7 +119,7 @@ namespace Babylon
     {
         // 1 blit per view, create a new viewId for each blit
         // TODO: Really? Why? Is this from the examples or something?
-        m_viewId = m_impl.AcquireNewViewId(encoder);
+        m_viewId = m_context.AcquireNewViewId(encoder);
         setDefaultClearMode(m_viewId, m_handle);
         setViewPort(m_viewId, m_viewPort, Width(), Height());
 

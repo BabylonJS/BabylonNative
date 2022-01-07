@@ -21,6 +21,8 @@ set(SOURCES
     "Source/FrameBuffer.cpp"
     "Source/FrameBuffer.h"
     "Source/Graphics.cpp"
+    "Source/GraphicsContext.cpp"
+    "Source/GraphicsContext.h"
     "Source/GraphicsImpl.cpp"
     "Source/GraphicsImpl.h"
     "Source/GraphicsImpl_${PLATFORM_NAME}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"

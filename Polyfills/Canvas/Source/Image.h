@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Babylon/Polyfills/Canvas.h>
-#include <GraphicsImpl.h>
+#include <GraphicsContext.h>
 #include <FrameBuffer.h>
 #include <UrlLib/UrlLib.h>
 #include <Babylon/JsRuntimeScheduler.h>

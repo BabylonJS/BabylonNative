@@ -2,6 +2,7 @@
 
 #include "BgfxCallback.h"
 #include "SafeTimespanGuarantor.h"
+#include "GraphicsContext.h"
 
 #include <arcana/containers/ticketed_collection.h>
 #include <arcana/threading/blocking_concurrent_queue.h>
@@ -51,73 +52,12 @@ namespace Babylon
 
         /* ********** END UPWARD-FACING CONTRACT ********** */
 
-        /* ********** BEGIN DOWNWARD-FACING CONTRACT ********** */
-
-        class Update;
-
-        class UpdateToken final
-        {
-        public:
-            UpdateToken(const UpdateToken& other) = delete;
-            UpdateToken(UpdateToken&&) = default;
-
-            bgfx::Encoder* GetEncoder();
-
-        private:
-            friend class Update;
-
-            UpdateToken(GraphicsImpl&, SafeTimespanGuarantor&);
-
-            GraphicsImpl& m_graphicsImpl;
-            SafeTimespanGuarantor::SafetyGuarantee m_guarantee;
-        };
-
-        class Update
-        {
-        public:
-            continuation_scheduler<>& Scheduler()
-            {
-                return m_safeTimespanGuarantor.OpenScheduler();
-            }
-
-            UpdateToken GetUpdateToken()
-            {
-                return {m_graphicsImpl, m_safeTimespanGuarantor};
-            }
-
-        private:
-            friend class GraphicsImpl;
-
-            Update(SafeTimespanGuarantor& safeTimespanGuarantor, GraphicsImpl& graphicsImpl)
-                : m_safeTimespanGuarantor{safeTimespanGuarantor}
-                , m_graphicsImpl{graphicsImpl}
-            {
-            }
-
-            SafeTimespanGuarantor& m_safeTimespanGuarantor;
-            GraphicsImpl& m_graphicsImpl;
-        };
-
-        // Deprecated
-        struct TextureInfo final
-        {
-        public:
-            uint16_t Width{};
-            uint16_t Height{};
-            bool HasMips{};
-            uint16_t NumLayers{};
-            bgfx::TextureFormat::Enum Format{};
-        };
+        /* ********** BEGIN CONTEXT-FACING CONTRACT ********** */
 
         continuation_scheduler<>& BeforeRenderScheduler();
         continuation_scheduler<>& AfterRenderScheduler();
 
         Update GetUpdate(const char* updateName);
-
-        // Deprecated
-        void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
-        void RemoveTexture(bgfx::TextureHandle handle);
-        TextureInfo GetTextureInfo(bgfx::TextureHandle handle);
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
 
@@ -134,6 +74,14 @@ namespace Babylon
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
         bgfx::ViewId AcquireNewViewId(bgfx::Encoder&);
+
+        /* ********** END DOWNWARD-FACING CONTRACT ********** */
+
+        // TODO: HACK
+        GraphicsContext& GetContext()
+        {
+            return m_context;
+        }
 
     private:
         friend class UpdateToken;
@@ -195,10 +143,9 @@ namespace Babylon
 
         std::queue<std::pair<uint32_t, arcana::task_completion_source<void, std::exception_ptr>>> m_readTextureRequests{};
 
-        std::unordered_map<uint16_t, TextureInfo> m_textureHandleToInfo{};
-        std::mutex m_textureHandleToInfoMutex{};
-
         std::map<std::string, SafeTimespanGuarantor> m_updateSafeTimespans{};
         std::mutex m_updateSafeTimespansMutex{};
+
+        GraphicsContext m_context;
     };
 }

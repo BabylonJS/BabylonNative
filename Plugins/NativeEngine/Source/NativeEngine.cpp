@@ -2,6 +2,8 @@
 #include "ShaderCompiler.h"
 #include "Texture.h"
 
+#include <GraphicsImpl.h>
+
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
 #include <arcana/macros.h>
@@ -508,12 +510,12 @@ namespace Babylon
         : Napi::ObjectWrap<NativeEngine>{info}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtime{runtime}
-        , m_graphicsImpl{GraphicsImpl::GetFromJavaScript(info.Env())}
-        , m_update{m_graphicsImpl.GetUpdate("update")}
+        , m_graphicsContext{GraphicsImpl::GetFromJavaScript(info.Env()).GetContext()}
+        , m_update{m_graphicsContext.GetUpdate("update")}
         , m_runtimeScheduler{runtime}
-        , m_defaultFrameBuffer{m_graphicsImpl, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
+        , m_defaultFrameBuffer{m_graphicsContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
         , m_boundFrameBuffer{&m_defaultFrameBuffer}
-        , m_boundFrameBufferNeedsRebinding{m_graphicsImpl, *m_cancellationSource, true}
+        , m_boundFrameBufferNeedsRebinding{m_graphicsContext, *m_cancellationSource, true}
     {
     }
 
@@ -1260,7 +1262,7 @@ namespace Babylon
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
         TextureData* texture = info[0].As<Napi::Pointer<TextureData>>().Get();
-        m_graphicsImpl.RemoveTexture(texture->Handle);
+        m_graphicsContext.RemoveTexture(texture->Handle);
         texture->Dispose();
     }
 
@@ -1309,9 +1311,9 @@ namespace Babylon
         texture->Handle = bgfx::getTexture(frameBufferHandle);
         texture->OwnsHandle = false;
 
-        m_graphicsImpl.AddTexture(texture->Handle, width, height, generateMips, 1, format);
+        m_graphicsContext.AddTexture(texture->Handle, width, height, generateMips, 1, format);
 
-        FrameBuffer* frameBuffer = new FrameBuffer(m_graphicsImpl, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
+        FrameBuffer* frameBuffer = new FrameBuffer(m_graphicsContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
         return Napi::Pointer<FrameBuffer>::Create(info.Env(), frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
     }
 
@@ -1445,13 +1447,13 @@ namespace Babylon
 
     Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), m_graphicsImpl.GetHardwareScalingLevel());
+        return Napi::Value::From(info.Env(), m_graphicsContext.GetHardwareScalingLevel());
     }
 
     void NativeEngine::SetHardwareScalingLevel(const Napi::CallbackInfo& info)
     {
         const auto level = info[0].As<Napi::Number>().FloatValue();
-        m_graphicsImpl.SetHardwareScalingLevel(level);
+        m_graphicsContext.SetHardwareScalingLevel(level);
     }
 
     Napi::Value NativeEngine::CreateImageBitmap(const Napi::CallbackInfo& info)
@@ -1540,7 +1542,7 @@ namespace Babylon
         const auto callback{info[0].As<Napi::Function>()};
 
         auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
-        m_graphicsImpl.RequestScreenShot([this, callbackPtr{std::move(callbackPtr)}](std::vector<uint8_t> array) {
+        m_graphicsContext.RequestScreenShot([this, callbackPtr{std::move(callbackPtr)}](std::vector<uint8_t> array) {
             m_runtime.Dispatch([callbackPtr{std::move(callbackPtr)}, array{std::move(array)}](Napi::Env env) {
                 auto arrayBuffer{Napi::ArrayBuffer::New(env, const_cast<uint8_t*>(array.data()), array.size())};
                 auto typedArray{Napi::Uint8Array::New(env, array.size(), arrayBuffer, 0)};
@@ -1659,7 +1661,7 @@ namespace Babylon
         boundFrameBuffer.Submit(*encoder, m_currentProgram->Handle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
     }
 
-    GraphicsImpl::UpdateToken& NativeEngine::GetUpdateToken()
+    UpdateToken& NativeEngine::GetUpdateToken()
     {
         if (!m_updateToken)
         {

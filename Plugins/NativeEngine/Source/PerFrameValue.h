@@ -1,6 +1,6 @@
 #pragma once
 
-#include <GraphicsImpl.h>
+#include <GraphicsContext.h>
 
 #include <arcana/threading/cancellation.h>
 
@@ -12,8 +12,8 @@ namespace Babylon
     class PerFrameValue
     {
     public:
-        PerFrameValue(GraphicsImpl& impl, arcana::cancellation_source& cancellation, T defaultValue)
-            : m_impl{impl}
+        PerFrameValue(GraphicsContext& context, arcana::cancellation_source& cancellation, T defaultValue)
+            : m_context{context}
             , m_cancellationSource{cancellation}
             , m_defaultValue{defaultValue}
             , m_value{defaultValue}
@@ -31,7 +31,7 @@ namespace Babylon
             m_value = value;
             if (!m_isResetScheduled)
             {
-                arcana::make_task(m_impl.AfterRenderScheduler(), m_cancellationSource, [this]() {
+                arcana::make_task(m_context.AfterRenderScheduler(), m_cancellationSource, [this]() {
                     m_value = m_defaultValue;
                     m_isResetScheduled = false;
                 });
@@ -40,7 +40,7 @@ namespace Babylon
         }
 
     private:
-        GraphicsImpl& m_impl;
+        GraphicsContext& m_context;
         arcana::cancellation_source& m_cancellationSource;
         const T m_defaultValue{};
         T m_value{};

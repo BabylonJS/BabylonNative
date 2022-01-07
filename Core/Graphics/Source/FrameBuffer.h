@@ -5,7 +5,7 @@
 
 namespace Babylon
 {
-    class GraphicsImpl;
+    class GraphicsContext;
 
     struct ViewPort
     {
@@ -20,7 +20,7 @@ namespace Babylon
     class FrameBuffer final
     {
     public:
-        FrameBuffer(GraphicsImpl& impl, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil);
+        FrameBuffer(GraphicsContext& graphicsContext, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil);
         ~FrameBuffer();
 
         FrameBuffer(const FrameBuffer&) = delete;
@@ -47,7 +47,7 @@ namespace Babylon
 
     private:
 
-        GraphicsImpl& m_impl;
+        GraphicsContext& m_context;
         bgfx::FrameBufferHandle m_handle;
         const uint16_t m_width;
         const uint16_t m_height;

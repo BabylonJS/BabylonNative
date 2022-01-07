@@ -11,19 +11,9 @@ namespace
 
 namespace Babylon
 {
-    GraphicsImpl::UpdateToken::UpdateToken(GraphicsImpl& graphicsImpl, SafeTimespanGuarantor& guarantor)
-        : m_graphicsImpl(graphicsImpl)
-        , m_guarantee{guarantor.GetSafetyGuarantee()}
-    {
-    }
-
-    bgfx::Encoder* GraphicsImpl::UpdateToken::GetEncoder()
-    {
-        return m_graphicsImpl.GetEncoderForThread();
-    }
-
     GraphicsImpl::GraphicsImpl()
         : m_bgfxCallback{[this](const auto& data) { CaptureCallback(data); }}
+        , m_context{*this}
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Initialized = false;
@@ -203,11 +193,6 @@ namespace Babylon
         m_rendering = false;
     }
 
-    GraphicsImpl::Update GraphicsImpl::GetUpdate(const char* updateName)
-    {
-        return {GetSafeTimespanGuarantor(updateName), *this};
-    }
-
     SafeTimespanGuarantor& GraphicsImpl::GetSafeTimespanGuarantor(const char* updateName)
     {
         std::scoped_lock lock{m_updateSafeTimespansMutex};
@@ -219,25 +204,6 @@ namespace Babylon
             found = m_updateSafeTimespans.find(updateNameStr);
         }
         return found->second;
-    }
-
-    void GraphicsImpl::AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)
-    {
-        auto lock{std::unique_lock(m_textureHandleToInfoMutex)};
-        TextureInfo textureInfo{width, height, hasMips, numLayers, format};
-        m_textureHandleToInfo.emplace(handle.idx, textureInfo);
-    }
-
-    void GraphicsImpl::RemoveTexture(bgfx::TextureHandle handle)
-    {
-        auto lock{std::unique_lock(m_textureHandleToInfoMutex)};
-        m_textureHandleToInfo.erase(handle.idx);
-    }
-
-    GraphicsImpl::TextureInfo GraphicsImpl::GetTextureInfo(bgfx::TextureHandle handle)
-    {
-        auto lock{std::unique_lock(m_textureHandleToInfoMutex)};
-        return m_textureHandleToInfo[handle.idx];
     }
 
     void GraphicsImpl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)

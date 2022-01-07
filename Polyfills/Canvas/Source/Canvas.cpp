@@ -1,6 +1,7 @@
 #include "Canvas.h"
 #include "Image.h"
 #include "Context.h"
+#include <GraphicsImpl.h>
 #include <bgfx/bgfx.h>
 #include <napi/napi_pointer.h>
 #include <cassert>
@@ -35,7 +36,7 @@ namespace Babylon::Polyfills::Internal
 
     NativeCanvas::NativeCanvas(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeCanvas>{info}
-        , m_graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())}
+        , m_graphicsContext{Babylon::GraphicsImpl::GetFromJavaScript(info.Env()).GetContext()}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
     }
@@ -56,8 +57,8 @@ namespace Babylon::Polyfills::Internal
         std::vector<uint8_t> fontBuffer(buffer.ByteLength());
         memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
 
-        auto& graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())};
-        auto update = graphicsImpl.GetUpdate("update");
+        auto& graphicsContext{Babylon::GraphicsImpl::GetFromJavaScript(info.Env()).GetContext()};
+        auto update = graphicsContext.GetUpdate("update");
         std::shared_ptr<JsRuntimeScheduler> runtimeScheduler{ std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(info.Env())) };
         auto deferred{Napi::Promise::Deferred::New(info.Env())};
         arcana::make_task(update.Scheduler(), arcana::cancellation::none(), [fontName{ info[0].As<Napi::String>().Utf8Value() }, fontData{ std::move(fontBuffer) }]() {
@@ -110,7 +111,7 @@ namespace Babylon::Polyfills::Internal
         {
             auto handle = bgfx::createFrameBuffer(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
             assert(handle.idx != bgfx::kInvalidHandle);
-            m_frameBuffer = std::make_unique<FrameBuffer>(m_graphicsImpl, handle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false, false, false);
+            m_frameBuffer = std::make_unique<FrameBuffer>(m_graphicsContext, handle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false, false, false);
             m_dirty = false;
 
             if (m_textureData)

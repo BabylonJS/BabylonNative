@@ -1,7 +1,7 @@
 #include <napi/napi.h>
 #include "NativeCameraImpl.h"
 #include <Babylon/JsRuntime.h>
-#include <GraphicsImpl.h>
+#include <GraphicsContext.h>
 #include <vector>
 #include <algorithm>
 #include <unordered_map>
