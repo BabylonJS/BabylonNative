@@ -10,12 +10,12 @@
 
 include( CMakeParseArguments )
 
-include( cmake/3rdparty/fcpp.cmake )
-include( cmake/3rdparty/glsl-optimizer.cmake )
-include( cmake/3rdparty/glslang.cmake )
-include( cmake/3rdparty/spirv-cross.cmake )
-include( cmake/3rdparty/spirv-tools.cmake )
-include( cmake/3rdparty/webgpu.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../3rdparty/fcpp.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../3rdparty/glsl-optimizer.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../3rdparty/glslang.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../3rdparty/spirv-cross.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../3rdparty/spirv-tools.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../3rdparty/webgpu.cmake )
 
 add_executable( shaderc ${BGFX_DIR}/tools/shaderc/shaderc.cpp ${BGFX_DIR}/tools/shaderc/shaderc.h ${BGFX_DIR}/tools/shaderc/shaderc_glsl.cpp ${BGFX_DIR}/tools/shaderc/shaderc_hlsl.cpp ${BGFX_DIR}/tools/shaderc/shaderc_pssl.cpp ${BGFX_DIR}/tools/shaderc/shaderc_spirv.cpp ${BGFX_DIR}/tools/shaderc/shaderc_metal.cpp )
 target_compile_definitions( shaderc PRIVATE "-D_CRT_SECURE_NO_WARNINGS" )
