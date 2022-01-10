@@ -2,7 +2,6 @@
 
 #include <Babylon/JsRuntime.h>
 #include <GraphicsContext.h>
-#include <GraphicsImpl.h>
 #include <FrameBuffer.h>
 
 #include <napi/napi_pointer.h>

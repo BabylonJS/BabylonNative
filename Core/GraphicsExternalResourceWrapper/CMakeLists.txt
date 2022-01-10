@@ -10,7 +10,7 @@ target_include_directories(GraphicsExternalResourceWrapper PRIVATE "Include/Baby
 
 target_link_to_dependencies(GraphicsExternalResourceWrapper
     PUBLIC JsRuntime
-    PRIVATE GraphicsInternal
+    PRIVATE GraphicsContext
     PRIVATE napi_extensions)
 
 set_property(TARGET GraphicsExternalResourceWrapper PROPERTY FOLDER Core)

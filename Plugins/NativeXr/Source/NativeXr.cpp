@@ -10,7 +10,6 @@
 
 #include <FrameBuffer.h>
 #include <GraphicsContext.h>
-#include <GraphicsImpl.h>
 
 #include <algorithm>
 #include <set>

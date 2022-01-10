@@ -40,7 +40,7 @@ target_link_to_dependencies(NativeEngine
     PRIVATE glslang
     PRIVATE SPIRV
     PRIVATE spirv-cross-hlsl
-    PRIVATE GraphicsInternal
+    PRIVATE GraphicsContext
     PRIVATE napi_extensions)
 warnings_as_errors(NativeEngine)
 
@@ -71,5 +71,5 @@ target_link_to_dependencies(NativeEngineInternal
     INTERFACE glslang
     INTERFACE SPIRV
     INTERFACE spirv-cross-hlsl
-    INTERFACE GraphicsInternal
+    INTERFACE GraphicsContext
     INTERFACE napi_extensions)

@@ -24,7 +24,7 @@ target_include_directories(TestUtils PRIVATE "Source")
 
 target_link_to_dependencies(TestUtils
     PUBLIC JsRuntime
-    PRIVATE GraphicsInternal)
+    PRIVATE GraphicsContext)
 
 set_property(TARGET TestUtils PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

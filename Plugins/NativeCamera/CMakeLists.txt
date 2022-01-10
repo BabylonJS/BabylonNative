@@ -31,7 +31,7 @@ endif()
 
 target_link_to_dependencies(NativeCamera
     PUBLIC JsRuntime
-    PRIVATE GraphicsInternal
+    PRIVATE GraphicsContext
     PRIVATE napi_extensions
     PRIVATE ${EXTENSIONS})
 

@@ -32,7 +32,7 @@ target_link_to_dependencies(Canvas
     PRIVATE bimg
     PRIVATE bx
     PRIVATE JsRuntime
-    PRIVATE GraphicsInternal
+    PRIVATE GraphicsContext
     PRIVATE NativeEngineInternal
     PRIVATE UrlLib
     PRIVATE napi_extensions)
