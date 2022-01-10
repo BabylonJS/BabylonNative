@@ -24,7 +24,7 @@ namespace Babylon
         }
     }
 
-    void AppRuntime::Execute(std::function<void()> callback)
+    void AppRuntime::Execute(dispatchable<void()> callback)
     {
         callback();
     }
