@@ -26,7 +26,7 @@ public class Wrapper {
 
     public static native void activityOnRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults);
 
-    public static native void setTouchInfo(float dx, float dy, boolean down);
+    public static native void setTouchInfo(float dx, float dy, boolean button, int buttonValue);
 
     public static native void loadScript(String path);
 

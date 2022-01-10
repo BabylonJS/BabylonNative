@@ -17,9 +17,6 @@ set(SCRIPTS
     "Scripts/experience.js"
     "Scripts/playground_runner.js")
 
-set(SOURCES
-    "Shared/InputManager.h")
-
 if(APPLE)
     find_library(JSCORE_LIBRARY JavaScriptCore)
     if(IOS)
@@ -115,6 +112,7 @@ target_link_to_dependencies(Playground
     PRIVATE ChromeDevTools
     PRIVATE GraphicsExternalResourceWrapper
     PRIVATE NativeEngine
+    PRIVATE NativeInput
     PRIVATE NativeOptimizations
     PRIVATE Console
     PRIVATE Window
