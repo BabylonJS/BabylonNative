@@ -63,6 +63,11 @@ target_compile_definitions(GraphicsImplementation
 set_property(TARGET GraphicsImplementation PROPERTY FOLDER Core)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
+if(APPLE)
+    # compile as objc++
+    target_compile_options(GraphicsImplementation PUBLIC "-x objective-c++")
+endif()
+
 add_library(Graphics INTERFACE)
 target_include_directories(Graphics
     INTERFACE "Include/UpContract/Shared"
@@ -86,8 +91,3 @@ target_link_to_dependencies(GraphicsContext
 
 target_compile_definitions(GraphicsContext
     INTERFACE NOMINMAX)
-
-if(APPLE)
-    # compile as objc++
-    target_compile_options(Graphics INTERFACE "-x objective-c++")
-endif()
