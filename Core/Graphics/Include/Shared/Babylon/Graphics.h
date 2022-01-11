@@ -2,6 +2,7 @@
 
 #include <Babylon/JsRuntime.h>
 #include <Babylon/GraphicsPlatform.h>
+#include <Babylon/GraphicsRendererType.h>
 
 #include <future>
 #include <memory>
@@ -56,7 +57,7 @@ namespace Babylon
         ~Graphics();
 
         // Note: This API contract is subject to change in coming versions.
-        // Features and functionnalities will be added and
+        // Features and functionalities will be added and
         // method and structure might change.
 
         static std::unique_ptr<Graphics> CreateGraphics(const WindowConfiguration& config);

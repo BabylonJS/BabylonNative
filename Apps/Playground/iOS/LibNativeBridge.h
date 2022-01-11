@@ -12,7 +12,9 @@
 - (void)init:(MTKView*)inView width:(int)inWidth height:(int)inHeight xrView:(void*)xrView;
 - (void)resize:(int)inWidth height:(int)inHeight;
 - (void)render;
-- (void)setInputs:(int)inX y:(int)inY tap:(bool)inTap;
+- (void)setTouchDown:(int)inX y:(int)inY;
+- (void)setTouchMove:(int)inX y:(int)inY;
+- (void)setTouchUp:(int)inX y:(int)inY;
 - (bool)isXRActive;
 
 @end

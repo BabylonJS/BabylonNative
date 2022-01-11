@@ -39,15 +39,22 @@ target_link_to_dependencies(NativeEngine
     PRIVATE bx
     PRIVATE glslang
     PRIVATE SPIRV
-    PRIVATE spirv-cross-hlsl
     PRIVATE GraphicsInternal
     PRIVATE napi_extensions)
 warnings_as_errors(NativeEngine)
 
-if(APPLE)
+if(TARGET spirv-cross-hlsl)
+    target_link_to_dependencies(NativeEngine
+        PRIVATE spirv-cross-hlsl)
+elseif(TARGET spirv-cross-msl)
     target_link_to_dependencies(NativeEngine
         PRIVATE spirv-cross-msl)
-elseif(WIN32)
+else()
+    target_link_to_dependencies(NativeEngine
+        PRIVATE spirv-cross-glsl)
+endif()
+
+if(WIN32)
     target_link_to_dependencies(NativeEngine
         PRIVATE "d3dcompiler.lib")
 endif()
@@ -70,6 +77,6 @@ target_link_to_dependencies(NativeEngineInternal
     INTERFACE bx
     INTERFACE glslang
     INTERFACE SPIRV
-    INTERFACE spirv-cross-hlsl
+    INTERFACE spirv-cross-core
     INTERFACE GraphicsInternal
     INTERFACE napi_extensions)

@@ -17,12 +17,12 @@ var text = false;
 var hololens = false;
 var cameraTexture = false;
 
-function CreateBoxAsync() {
-    BABYLON.Mesh.CreateBox("box1", 0.2);
+function CreateBoxAsync(scene) {
+    BABYLON.Mesh.CreateBox("box1", 0.2, scene);
     return Promise.resolve();
 }
 
-function CreateSpheresAsync() {
+function CreateSpheresAsync(scene) {
     var size = 12;
     for (var i = 0; i < size; i++) {
         for (var j = 0; j < size; j++) {
@@ -38,31 +38,11 @@ function CreateSpheresAsync() {
     return Promise.resolve();
 }
 
-function CreateInputHandling(scene) {
-    var inputManager = new InputManager();
-    var priorX = inputManager.pointerX;
-    var priorY = inputManager.pointerY;
-    var x = 0;
-    var y = 0;
-    scene.onBeforeRenderObservable.add(function () {
-        x = inputManager.pointerX;
-        y = inputManager.pointerY;
-
-        if (inputManager.isPointerDown) {
-            scene.activeCamera.alpha += 0.01 * (priorX - x);
-            scene.activeCamera.beta += 0.01 * (priorY - y);
-        }
-
-        priorX = x;
-        priorY = y;
-    });
-}
-
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 
-CreateBoxAsync().then(function () {
-//CreateSpheresAsync().then(function () {
+CreateBoxAsync(scene).then(function () {
+//CreateSpheresAsync(scene).then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Suzanne/glTF/Suzanne.gltf").then(function () {
@@ -81,9 +61,8 @@ CreateBoxAsync().then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
     BABYLON.Tools.Log("Loaded");
 
-    scene.createDefaultCamera(true);
+    scene.createDefaultCamera(true, true, true);
     scene.activeCamera.alpha += Math.PI;
-    CreateInputHandling(scene);
 
     if (ibl) {
         scene.createDefaultEnvironment({ createGround: false, createSkybox: false });

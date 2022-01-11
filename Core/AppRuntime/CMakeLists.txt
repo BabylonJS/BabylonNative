@@ -1,15 +1,10 @@
 set(SOURCES
     "Include/Babylon/AppRuntime.h"
     "Source/AppRuntime.cpp"
-    "Source/AppRuntime${NAPI_JAVASCRIPT_ENGINE}.cpp"
+    "Source/AppRuntime_${NAPI_JAVASCRIPT_ENGINE}.cpp"
+    "Source/AppRuntime_${BABYLON_NATIVE_PLATFORM}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
     "Source/WorkQueue.cpp"
     "Source/WorkQueue.h")
-
-if(APPLE)
-    set(SOURCES ${SOURCES} "Source/AppRuntime${BABYLON_NATIVE_PLATFORM}.mm")
-else()
-    set(SOURCES ${SOURCES} "Source/AppRuntime${BABYLON_NATIVE_PLATFORM}.cpp")
-endif()
 
 add_library(AppRuntime ${SOURCES})
 warnings_as_errors(AppRuntime)

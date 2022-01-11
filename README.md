@@ -382,7 +382,7 @@ sudo apt-get install libjavascriptcoregtk-4.0-dev
 Then, run cmake targetting a Ninja make file:
 
 ```
-cmake -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so  -DNAPI_JAVASCRIPT_ENGINE=JavaScriptCore ..
+cmake -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DNAPI_JAVASCRIPT_ENGINE=JavaScriptCore ..
 ```
 
 #### V8

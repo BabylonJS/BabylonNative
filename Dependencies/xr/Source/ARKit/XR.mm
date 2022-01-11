@@ -741,6 +741,10 @@ namespace xr {
         }
 
         ~Impl() {
+            if (currentCommandBuffer != nil) {
+                [currentCommandBuffer waitUntilCompleted];
+            }
+
             if (ActiveFrameViews[0].ColorTexturePointer != nil) {
                 id<MTLTexture> oldColorTexture = (__bridge_transfer id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer;
                 [oldColorTexture setPurgeableState:MTLPurgeableStateEmpty];
@@ -870,8 +874,8 @@ namespace xr {
             }
 
             // Draw the camera texture to the color texture and clear the depth texture before handing them off to Babylon.
-            id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
-            commandBuffer.label = @"XRCameraCommandBuffer";
+            currentCommandBuffer = [commandQueue commandBuffer];
+            currentCommandBuffer.label = @"XRCameraCommandBuffer";
             MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
             id<MTLTexture> cameraTextureY = nil;
@@ -899,7 +903,7 @@ namespace xr {
                     renderPassDescriptor.stencilAttachment.storeAction = MTLStoreActionStore;
 
                     // Create and end the render encoder.
-                    id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                    id<MTLRenderCommandEncoder> renderEncoder = [currentCommandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
                     renderEncoder.label = @"XRCameraEncoder";
 
                     // Set the shader pipeline.
@@ -919,16 +923,18 @@ namespace xr {
                 }
 
                 // Finalize rendering here & push the command buffer to the GPU.
-                [commandBuffer commit];
+                [currentCommandBuffer commit];
             }
             @finally {
-                if (cameraTextureY != nil) {
-                    [cameraTextureY setPurgeableState:MTLPurgeableStateEmpty];
-                }
+                [currentCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
+                    if (cameraTextureY != nil) {
+                        [cameraTextureY setPurgeableState:MTLPurgeableStateEmpty];
+                    }
 
-                if (cameraTextureCbCr != nil) {
-                    [cameraTextureCbCr setPurgeableState:MTLPurgeableStateEmpty];
-                }
+                    if (cameraTextureCbCr != nil) {
+                        [cameraTextureCbCr setPurgeableState:MTLPurgeableStateEmpty];
+                    }
+                }];
             }
 
             return std::make_unique<Frame>(*this);
@@ -942,8 +948,8 @@ namespace xr {
         void DrawFrame() {
             if (metalLayer) {
                 // Create a new command buffer for each render pass to the current drawable.
-                id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
-                commandBuffer.label = @"XRScreenCommandBuffer";
+                currentCommandBuffer = [commandQueue commandBuffer];
+                currentCommandBuffer.label = @"XRScreenCommandBuffer";
 
                 id<CAMetalDrawable> drawable = [metalLayer nextDrawable];
                 MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
@@ -953,7 +959,7 @@ namespace xr {
                     renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
 
                     // Create a render command encoder.
-                    id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                    id<MTLRenderCommandEncoder> renderEncoder = [currentCommandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
                     renderEncoder.label = @"XRScreenEncoder";
 
                     // Set the region of the drawable to draw into.
@@ -974,11 +980,11 @@ namespace xr {
                     [renderEncoder endEncoding];
 
                     // Schedule a present once the framebuffer is complete using the current drawable.
-                    [commandBuffer presentDrawable:drawable];
+                    [currentCommandBuffer presentDrawable:drawable];
                 }
 
                 // Finalize rendering here & push the command buffer to the GPU.
-                [commandBuffer commit];
+                [currentCommandBuffer commit];
             }
 
             if (SystemImpl.XrContext->Frame != nil) {
@@ -1349,6 +1355,7 @@ namespace xr {
         id<MTLRenderPipelineState> screenPipelineState{};
         vector_uint2 viewportSize{};
         id<MTLCommandQueue> commandQueue;
+        id<MTLCommandBuffer> currentCommandBuffer;
         std::vector<ARAnchor*> nativeAnchors{};
         std::vector<float> planePolygonBuffer{};
         std::vector<Vector3f> meshVertexBuffer{};

@@ -854,6 +854,35 @@ namespace Babylon
             }
         };
 
+        class XRWebGLBinding : public Napi::ObjectWrap<XRWebGLBinding>
+        {
+            static constexpr auto JS_CLASS_NAME = "XRWebGLBinding";
+
+        public:
+            static void Initialize(Napi::Env env)
+            {
+                Napi::HandleScope scope{env};
+
+                Napi::Function func = DefineClass(
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                    });
+
+                env.Global().Set(JS_CLASS_NAME, func);
+            }
+
+            static Napi::Object New(const Napi::CallbackInfo& info)
+            {
+                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+            }
+
+            XRWebGLBinding(const Napi::CallbackInfo& info)
+                : Napi::ObjectWrap<XRWebGLBinding>{info}
+            {
+            }
+        };
+
         class XRWebGLLayer : public Napi::ObjectWrap<XRWebGLLayer>
         {
             static constexpr auto JS_CLASS_NAME = "XRWebGLLayer";
@@ -1712,7 +1741,6 @@ namespace Babylon
                     env,
                     JS_CLASS_NAME,
                     {
-                        InstanceAccessor("planeSpace", &XRPlane::GetPlaneSpace, nullptr),
                         InstanceAccessor("polygon", &XRPlane::GetPolygon, nullptr),
                         InstanceAccessor("lastChangedTime", &XRPlane::GetLastChangedTime, nullptr),
                         InstanceAccessor("parentSceneObject", &XRPlane::GetParentSceneObject, nullptr)
@@ -1728,12 +1756,10 @@ namespace Babylon
 
             XRPlane(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRPlane>{info}
+                , m_jsThis{Napi::Persistent(info.This().As<Napi::Object>())}
+                , m_jsPlaneSpace{Napi::External<xr::Space>::New(info.Env(), &m_planeSpace)}
             {
-            }
-
-            void SetLastUpdatedTime(uint32_t timestamp)
-            {
-                m_lastUpdatedTimestamp = timestamp;
+                m_jsThis.Set("planeSpace", m_jsPlaneSpace);
             }
 
             void SetNativePlaneId(xr::System::Session::Frame::Plane::Identifier planeID)
@@ -1746,18 +1772,14 @@ namespace Babylon
                 m_frame = frame;
             }
 
+            void Update(uint32_t timestamp)
+            {
+                m_planeSpace.Pose = GetPlane().Center;
+                m_lastUpdatedTimestamp = timestamp;
+            }
+
         private:
             xr::System::Session::Frame::Plane& GetPlane();
-
-            Napi::Value GetPlaneSpace(const Napi::CallbackInfo& info)
-            {
-                Napi::Object napiTransform = XRRigidTransform::New(info);
-                XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
-                rigidTransform->Update(GetPlane().Center);
-
-                Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
-                return std::move(napiSpace);
-            }
 
             Napi::Value GetPolygon(const Napi::CallbackInfo& info)
             {
@@ -1795,6 +1817,10 @@ namespace Babylon
 
             Napi::Value GetParentSceneObject(const Napi::CallbackInfo& info);
 
+            Napi::ObjectReference m_jsThis;
+            xr::Space m_planeSpace{};
+            const Napi::External<xr::Space> m_jsPlaneSpace;
+
             // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
             uint32_t m_lastUpdatedTimestamp{0};
 
@@ -1818,7 +1844,6 @@ namespace Babylon
                     env,
                     JS_CLASS_NAME,
                     {
-                        InstanceAccessor("meshSpace", &XRMesh::GetMeshSpace, nullptr),
                         InstanceAccessor("positions", &XRMesh::GetPositions, nullptr),
                         InstanceAccessor("indices", &XRMesh::GetIndices, nullptr),
                         InstanceAccessor("normals", &XRMesh::GetNormals, nullptr),
@@ -1836,7 +1861,12 @@ namespace Babylon
 
             XRMesh(const Napi::CallbackInfo& info)
                 : Napi::ObjectWrap<XRMesh>{info}
+                , m_jsThis{Napi::Persistent(info.This().As<Napi::Object>())}
+                , m_jsMeshSpace{Napi::External<xr::Space>::New(info.Env(), &m_meshSpace)}
             {
+                // OpenXR positions vertices within reference space, so "meshSpace" is identity with respect to WebXR's
+                // interpretation and our current implementation.
+                m_jsThis.Set("meshSpace", m_jsMeshSpace);
             }
 
             ~XRMesh()
@@ -1863,18 +1893,6 @@ namespace Babylon
 
         private:
             xr::System::Session::Frame::Mesh& GetMesh();
-
-            Napi::Value GetMeshSpace(const Napi::CallbackInfo& info)
-            {
-                Napi::Object napiTransform = XRRigidTransform::New(info);
-                XRRigidTransform* rigidTransform = XRRigidTransform::Unwrap(napiTransform);
-
-                // TODO: update to not use identity pose as needed
-                rigidTransform->Update(xr::Pose{});
-
-                Napi::Object napiSpace = XRReferenceSpace::New(info.Env(), napiTransform);
-                return std::move(napiSpace);
-            }
 
             Napi::Value GetPositions(const Napi::CallbackInfo& info)
             {
@@ -1976,6 +1994,10 @@ namespace Babylon
             }
 
             Napi::Value GetParentSceneObject(const Napi::CallbackInfo& info);
+
+            Napi::ObjectReference m_jsThis;
+            xr::Space m_meshSpace{};
+            const Napi::External<xr::Space> m_jsMeshSpace;
 
             // The last timestamp when this frame was updated (Pulled in from RequestAnimationFrame).
             uint32_t m_lastUpdatedTimestamp{0};
@@ -2451,7 +2473,7 @@ namespace Babylon
                         xrPlane = XRPlane::Unwrap(trackedPlaneIterator->second.Value());
                     }
 
-                    xrPlane->SetLastUpdatedTime(timestamp);
+                    xrPlane->Update(timestamp);
                 }
 
                 // Next go over removed planes and remove them from our mapping.
@@ -3352,6 +3374,7 @@ namespace Babylon
 
             PointerEvent::Initialize(env);
 
+            XRWebGLBinding::Initialize(env);
             XRWebGLLayer::Initialize(env);
             XRRigidTransform::Initialize(env);
             XRView::Initialize(env);
