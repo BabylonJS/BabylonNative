@@ -65,7 +65,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
 if(APPLE)
     # compile as objc++
-    target_compile_options(GraphicsImplementation PUBLIC "-x objective-c++")
+    target_compile_options(GraphicsImplementation PUBLIC "SHELL:-x objective-c++")
 endif()
 
 add_library(Graphics INTERFACE)
