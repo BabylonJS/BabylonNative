@@ -1,6 +1,10 @@
 #pragma once
 
+#ifdef __OBJ_C__
 #include <MetalKit/MTKView.h>
+#else
+using MTKView = void;
+#endif
 
 namespace Babylon
 {
