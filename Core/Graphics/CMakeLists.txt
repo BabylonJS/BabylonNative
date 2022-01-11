@@ -89,5 +89,5 @@ target_compile_definitions(GraphicsContext
 
 if(APPLE)
     # compile as objc++
-    target_compile_options(Graphics PUBLIC "-x objective-c++")
+    target_compile_options(Graphics INTERFACE "-x objective-c++")
 endif()
