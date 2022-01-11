@@ -13,7 +13,7 @@
 #include <bgfx/bgfx.h>
 #include <napi/napi.h>
 #include <NativeCamera.h>
-#include <GraphicsImpl.h>
+#include <GraphicsContext.h>
 #include <AndroidExtensions/OpenGLHelpers.h>
 #include <AndroidExtensions/JavaWrappers.h>
 
@@ -31,7 +31,7 @@ namespace Babylon::Plugins
 
     private:
 
-        GraphicsImpl &m_graphicsImpl;
+        GraphicsContext &m_graphicsContext;
 
         bool m_overrideCameraTexture;
 

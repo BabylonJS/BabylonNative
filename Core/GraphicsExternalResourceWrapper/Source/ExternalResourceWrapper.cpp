@@ -50,7 +50,7 @@ namespace Babylon
         return {std::make_unique<ExternalTexture::Impl>(graphics)};
     }
 
-    Napi::Object ExternalTexture::ConvertToNapiObject(Napi::Env env, ExternalTexture texturePtr)
+    Napi::Object ExternalTexture::ConvertToNapiObject(Napi::Env env, ExternalTexture)
     {
         return Napi::Object::New(env);
     }
