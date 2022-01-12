@@ -1,4 +1,4 @@
-#include <ExternalResourceWrapper.h>
+#include <ExternalResource.h>
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -45,9 +45,9 @@ namespace Babylon
     {
     }
 
-    ExternalTexture ExternalTexture::CreateExternalTexture(Graphics& graphics)
+    ExternalTexture::ExternalTexture(Graphics& graphics, uintptr_t)
+        : ExternalTexture{std::make_unique<ExternalTexture::Impl>(graphics)}
     {
-        return {std::make_unique<ExternalTexture::Impl>(graphics)};
     }
 
     Napi::Object ExternalTexture::ConvertToNapiObject(Napi::Env env, ExternalTexture)

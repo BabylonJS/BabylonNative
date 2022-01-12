@@ -10,7 +10,7 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
-#include <Babylon/Graphics/ExternalResourceWrapper.h>
+#include <Babylon/Graphics/ExternalResource.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
@@ -121,7 +121,7 @@ namespace
 
         runtime = std::make_unique<Babylon::AppRuntime>();
 
-        auto texture = Babylon::ExternalTexture::CreateExternalTexture(*graphics);
+        Babylon::ExternalTexture texture{*graphics};
         texture.OverrideInternalTexture(0);
         runtime->Dispatch([texture = std::move(texture)](Napi::Env env) mutable {
             graphics->AddToJavaScript(env);

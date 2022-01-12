@@ -11,12 +11,12 @@ namespace Babylon
     class ExternalTexture
     {
     public:
+        ExternalTexture(Graphics&, uintptr_t nativeTexturePointer = 0);
         ExternalTexture(ExternalTexture&&);
         ~ExternalTexture();
 
         void OverrideInternalTexture(uintptr_t nativeTexturePtr);
 
-        static ExternalTexture CreateExternalTexture(Graphics&);
         static Napi::Object ConvertToNapiObject(Napi::Env, ExternalTexture);
 
     private:

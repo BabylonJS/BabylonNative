@@ -12,14 +12,14 @@ else()
 endif()
 
 set(SOURCES
-    "Include/UpContract/Platform/${PLATFORM_PATH}/Babylon/GraphicsPlatform.h"
-    "Include/UpContract/RendererType/${GRAPHICS_API}/Babylon/GraphicsRendererType.h"
-    "Include/UpContract/Shared/Babylon/Graphics.h"
-    "Include/DownContract/BgfxCallback.h"
-    "Include/DownContract/continuation_scheduler.h"
-    "Include/DownContract/FrameBuffer.h"
-    "Include/DownContract/GraphicsContext.h"
-    "Include/DownContract/SafeTimespanGuarantor.h"
+    "Include/Platform/${PLATFORM_PATH}/Babylon/GraphicsPlatform.h"
+    "Include/RendererType/${GRAPHICS_API}/Babylon/GraphicsRendererType.h"
+    "Include/Shared/Babylon/Graphics.h"
+    "InternalInclude/BgfxCallback.h"
+    "InternalInclude/continuation_scheduler.h"
+    "InternalInclude/FrameBuffer.h"
+    "InternalInclude/GraphicsContext.h"
+    "InternalInclude/SafeTimespanGuarantor.h"
     "Source/BgfxCallback.cpp"
     "Source/FrameBuffer.cpp"
     "Source/Graphics.cpp"
@@ -34,10 +34,10 @@ add_library(GraphicsImplementation ${SOURCES})
 warnings_as_errors(GraphicsImplementation)
 
 target_include_directories(GraphicsImplementation
-    PRIVATE "Include/UpContract/Shared"
-    PRIVATE "Include/UpContract/Platform/${PLATFORM_PATH}"
-    PRIVATE "Include/UpContract/RendererType/${GRAPHICS_API}"
-    PRIVATE "Include/DownContract")
+    PRIVATE "Include/Shared"
+    PRIVATE "Include/Platform/${PLATFORM_PATH}"
+    PRIVATE "Include/RendererType/${GRAPHICS_API}"
+    PRIVATE "InternalInclude/")
 
 if(WIN32 AND NOT WINDOWS_STORE)
     target_link_to_dependencies(GraphicsImplementation
@@ -70,17 +70,17 @@ endif()
 
 add_library(Graphics INTERFACE)
 target_include_directories(Graphics
-    INTERFACE "Include/UpContract/Shared"
-    INTERFACE "Include/UpContract/Platform/${PLATFORM_PATH}"
-    INTERFACE "Include/UpContract/RendererType/${GRAPHICS_API}")
+    INTERFACE "Include/Shared"
+    INTERFACE "Include/Platform/${PLATFORM_PATH}"
+    INTERFACE "Include/RendererType/${GRAPHICS_API}")
 target_link_to_dependencies(Graphics
     INTERFACE GraphicsImplementation
     INTERFACE JsRuntime)
 
 add_library(GraphicsContext INTERFACE)
 target_include_directories(GraphicsContext
-    INTERFACE "Include/DownContract"
-    INTERFACE "Include/DownContract/${BABYLON_NATIVE_PLATFORM}")
+    INTERFACE "InternalInclude"
+    INTERFACE "InternalInclude/${BABYLON_NATIVE_PLATFORM}")
 target_link_to_dependencies(GraphicsContext
     INTERFACE Graphics
     INTERFACE JsRuntimeInternal
