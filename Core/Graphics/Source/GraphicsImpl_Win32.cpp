@@ -8,12 +8,12 @@ namespace Babylon
 
     void GraphicsImpl::ConfigureBgfxPlatformData(const WindowConfiguration& config, bgfx::PlatformData& pd)
     {
-        pd.nwh = config.WindowPtr;
+        pd.nwh = config.Window;
     }
 
     float GraphicsImpl::GetDevicePixelRatio(const WindowConfiguration& config)
     {
-        UINT dpi{GetDpiForWindow(config.WindowPtr)};
+        UINT dpi{GetDpiForWindow(config.Window)};
 
         // In windows, 100% DPI scaling is 96dpi.
         // See https://docs.microsoft.com/en-us/windows/win32/learnwin32/dpi-and-device-independent-pixels

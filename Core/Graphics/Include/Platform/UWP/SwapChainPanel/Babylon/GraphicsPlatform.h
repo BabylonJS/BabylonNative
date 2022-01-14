@@ -8,7 +8,7 @@ namespace Babylon
 
     struct WindowConfiguration
     {
-        WindowType SwapChainPanel{};
+        WindowType Window{};
         size_t Width{};
         size_t Height{};
     };
