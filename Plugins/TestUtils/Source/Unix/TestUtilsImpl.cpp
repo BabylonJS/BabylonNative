@@ -17,7 +17,7 @@ namespace Babylon::Plugins::Internal
 {
     void TestUtils::Exit(const Napi::CallbackInfo& info)
     {
-        auto window = (Window)m_implData->m_nativeWindowPtr;
+        auto window = (Window)m_implData->m_window;
         const int32_t exitCode = info[0].As<Napi::Number>().Int32Value();
         Plugins::TestUtils::errorCode = exitCode;
         Display* display = XOpenDisplay(NULL);
@@ -38,7 +38,7 @@ namespace Babylon::Plugins::Internal
     {
         const auto title = info[0].As<Napi::String>().Utf8Value();
         Display* display = XOpenDisplay(NULL);
-        auto window = (Window)m_implData->m_nativeWindowPtr;
+        auto window = (Window)m_implData->m_window;
         XStoreName(display, window, title.c_str());
     }
 
@@ -59,9 +59,9 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::TestUtils
 {
-    void Initialize(Napi::Env env, WindowType nativeWindowPtr)
+    void Initialize(Napi::Env env, WindowType window)
     {
-        auto implData{std::make_shared<Internal::TestUtils::ImplData>(nativeWindowPtr)};
+        auto implData{std::make_shared<Internal::TestUtils::ImplData>(window)};
         Internal::TestUtils::CreateInstance(env, implData);
     }
 }
