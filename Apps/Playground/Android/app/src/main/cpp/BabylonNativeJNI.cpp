@@ -80,7 +80,7 @@ extern "C"
             int32_t height = ANativeWindow_getHeight(window);
 
             Babylon::WindowConfiguration graphicsConfig{};
-            graphicsConfig.WindowPtr = window;
+            graphicsConfig.Window = window;
             graphicsConfig.Width = static_cast<size_t>(width);
             graphicsConfig.Height = static_cast<size_t>(height);
             g_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
@@ -151,7 +151,7 @@ extern "C"
             ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
             g_runtime->Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto env) {
                 Babylon::WindowConfiguration graphicsConfig{};
-                graphicsConfig.WindowPtr = window;
+                graphicsConfig.Window = window;
                 graphicsConfig.Width = width;
                 graphicsConfig.Height = height;
                 g_graphics->UpdateWindow(graphicsConfig);

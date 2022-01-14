@@ -45,7 +45,7 @@ bool g_isXrActive{};
     float height = inHeight;
 
     Babylon::WindowConfiguration graphicsConfig{};
-    graphicsConfig.WindowPtr = view;
+    graphicsConfig.Window = view;
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
