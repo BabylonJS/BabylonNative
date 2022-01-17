@@ -4,6 +4,7 @@
 
 namespace Babylon
 {
+    constexpr BGFX_RESET_FLAGS = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY;
     using WindowType = winrt::Windows::UI::Core::ICoreWindow*;
 
     struct WindowConfiguration

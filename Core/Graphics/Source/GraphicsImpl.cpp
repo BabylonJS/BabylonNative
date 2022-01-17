@@ -30,7 +30,7 @@ namespace Babylon
 
         auto& init = m_state.Bgfx.InitState;
         init.type = s_bgfxRenderType;
-        init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY;
+        init.resolution.reset = BGFX_RESET_FLAGS;
         if (s_bgfxFlipAfterRender) init.resolution.reset |= BGFX_RESET_FLIP_AFTER_RENDER;
         init.callback = &m_bgfxCallback;
     }

@@ -4,6 +4,7 @@
 
 namespace Babylon
 {
+    constexpr BGFX_RESET_FLAGS = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY;
     using WindowType = MTKView*;
 
     struct WindowConfiguration
