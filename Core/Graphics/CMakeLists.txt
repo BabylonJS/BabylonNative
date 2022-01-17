@@ -26,7 +26,8 @@ set(SOURCES
     "Source/GraphicsImpl_${PLATFORM_NAME}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
     "Source/GraphicsImpl_${GRAPHICS_API}.cpp"
     "Source/SafeTimespanGuarantor.cpp"
-    "Source/SafeTimespanGuarantor.h")
+    "Source/SafeTimespanGuarantor.h"
+    "Source/${PLATFORM_NAME}/GraphicsFlags.h")
 
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
@@ -34,7 +35,8 @@ warnings_as_errors(Graphics)
 target_include_directories(Graphics
     PUBLIC "Include/Shared"
     PUBLIC "Include/Platform/${PLATFORM_PATH}"
-    PUBLIC "Include/RendererType/${GRAPHICS_API}")
+    PUBLIC "Include/RendererType/${GRAPHICS_API}"
+    PRIVATE "Source/${PLATFORM_NAME}")
 
 if(WIN32 AND NOT WINDOWS_STORE)
     target_link_to_dependencies(Graphics

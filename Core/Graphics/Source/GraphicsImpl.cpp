@@ -3,6 +3,7 @@
 #include <Babylon/GraphicsRendererType.h>
 #include <JsRuntimeInternalState.h>
 #include <arcana/tracing/trace_region.h>
+#include "GraphicsFlags.h"
 
 namespace
 {
