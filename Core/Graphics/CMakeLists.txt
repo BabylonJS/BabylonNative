@@ -36,7 +36,7 @@ target_include_directories(Graphics
     PUBLIC "Include/Shared"
     PUBLIC "Include/Platform/${PLATFORM_PATH}"
     PUBLIC "Include/RendererType/${GRAPHICS_API}"
-    PRIVATE "Source/${PLATFORM_PATH}")
+    PRIVATE "Source/${PLATFORM_NAME}")
 
 if(WIN32 AND NOT WINDOWS_STORE)
     target_link_to_dependencies(Graphics
