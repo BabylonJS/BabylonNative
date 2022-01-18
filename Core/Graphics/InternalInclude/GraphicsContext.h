@@ -74,10 +74,14 @@ namespace Babylon
     class GraphicsContext
     {
     public:
-        // Deprecated: this is included only as a stopgap during feature integration and will not function long-term
+        // TODO: Move this to private a ssoon as the GraphicsImpl no longer owns and needs to create a GraphicsContext
+        GraphicsContext(GraphicsImpl&);
+
+        // TODO: Deprecated: this is included only as a stopgap during feature integration and will not function long-term
         static GraphicsContext& GetFromJavaScript(Napi::Env);
 
-        GraphicsContext(GraphicsImpl&);
+        static Napi::Value Create(Napi::Env, GraphicsImpl&);
+        static GraphicsContext& GetFromJavaScript(Napi::Value);
 
         continuation_scheduler<>& BeforeRenderScheduler();
         continuation_scheduler<>& AfterRenderScheduler();

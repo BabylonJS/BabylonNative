@@ -2,6 +2,8 @@
 
 #include "GraphicsImpl.h"
 
+#include <napi/napi_pointer.h>
+
 namespace Babylon
 {
     UpdateToken::UpdateToken(GraphicsContext& context, SafeTimespanGuarantor& guarantor)
@@ -21,6 +23,17 @@ namespace Babylon
     GraphicsContext& GraphicsContext::GetFromJavaScript(Napi::Env env)
     {
         return GraphicsImpl::GetFromJavaScript(env).GetContext();
+    }
+
+    Napi::Value GraphicsContext::Create(Napi::Env env, GraphicsImpl& impl)
+    {
+        auto* context = new GraphicsContext(impl);
+        return Napi::Pointer<GraphicsContext>::Create(env, context, Napi::NapiPointerDeleter(context));
+    }
+
+    GraphicsContext& GraphicsContext::GetFromJavaScript(Napi::Value value)
+    {
+        return *value.As<Napi::Pointer<GraphicsContext>>().Get();
     }
 
     GraphicsContext::GraphicsContext(GraphicsImpl& graphicsImpl)

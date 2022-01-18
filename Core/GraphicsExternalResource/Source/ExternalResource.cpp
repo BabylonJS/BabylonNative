@@ -1,34 +1,57 @@
 #include <ExternalResource.h>
 
+#include <GraphicsContext.h>
+#include <Texture.h>
+
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
+
+#include <napi/napi_pointer.h>
 
 #include <cassert>
 
 namespace Babylon
 {
+    namespace
+    {
+        TextureData CreateTextureDataFromNativeTexturePointer(Graphics&, TexturePointerType)
+        {
+            // TODO: Implement
+            // 
+            // uintptr_t texturePtr = 0;
+            // auto textureHandle = bgfx::createTexture2D(1, 1, false, 1, bgfx::TextureFormat::BGRA8, BGFX_TEXTURE_RT);
+            // if (bgfx::overrideInternal(textureHandle, texturePtr) == 0)
+            // {
+            //     assert(false);
+            // }
+            
+            throw std::runtime_error{"Not yet implemented"};
+        }
+    }
+
     struct ExternalTexture::Impl
     {
-        Impl(Graphics&)
-            : m_textureHandle{bgfx::createTexture2D(1, 1, false, 1, bgfx::TextureFormat::BGRA8, BGFX_TEXTURE_RT)}
+        Impl(Graphics& graphics, TexturePointerType texturePtr)
+            : m_data{CreateTextureDataFromNativeTexturePointer(graphics, texturePtr)}
         {
         }
 
         ~Impl()
         {
-            bgfx::destroy(m_textureHandle);
+            bgfx::destroy(m_data.Handle);
         }
 
-        void OverrideInternalTexture(uintptr_t texturePtr)
+        Napi::Value AddToContext(Napi::Value& value)
         {
-            if (bgfx::overrideInternal(m_textureHandle, texturePtr) == 0)
-            {
-                assert(false);
-            }
+            auto& context = GraphicsContext::GetFromJavaScript(value);
+            auto* textureData = new TextureData(m_data);
+            textureData->OwnsHandle = false;
+            context.AddTexture(textureData->Handle, 0, 0, false, 0, bgfx::TextureFormat::BGRA8);
+            return Napi::Pointer<TextureData>::Create(value.Env(), textureData, Napi::NapiPointerDeleter(textureData));
         }
     
     private:
-        bgfx::TextureHandle m_textureHandle{};
+        TextureData m_data{};
     };
 
     ExternalTexture::ExternalTexture(std::unique_ptr<Impl> impl)
@@ -41,22 +64,17 @@ namespace Babylon
     {
     }
 
-    void ExternalTexture::OverrideInternalTexture(uintptr_t nativeTexturePtr)
-    {
-        m_impl->OverrideInternalTexture(nativeTexturePtr);
-    }
-
     ExternalTexture::~ExternalTexture()
     {
     }
 
-    ExternalTexture::ExternalTexture(Graphics& graphics, uintptr_t)
-        : ExternalTexture{std::make_unique<ExternalTexture::Impl>(graphics)}
+    ExternalTexture::ExternalTexture(Graphics& graphics, TexturePointerType texturePtr)
+        : ExternalTexture{std::make_unique<ExternalTexture::Impl>(graphics, texturePtr)}
     {
     }
 
-    Napi::Object ExternalTexture::ConvertToNapiObject(Napi::Env env, ExternalTexture)
+    Napi::Value ExternalTexture::AddToContext(Napi::Value& context)
     {
-        return Napi::Object::New(env);
+        return m_impl->AddToContext(context);
     }
 }

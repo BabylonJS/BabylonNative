@@ -1,7 +1,10 @@
 #include "GraphicsImpl.h"
+
 #include <Babylon/GraphicsPlatform.h>
 #include <Babylon/GraphicsRendererType.h>
+
 #include <JsRuntimeInternalState.h>
+
 #include <arcana/tracing/trace_region.h>
 
 namespace
@@ -78,6 +81,11 @@ namespace Babylon
                     .Get(JS_GRAPHICS_NAME)
                     .As<Napi::External<GraphicsImpl>>()
                     .Data();
+    }
+
+    Napi::Value GraphicsImpl::CreateContext(Napi::Env env)
+    {
+        return GraphicsContext::Create(env, *this);
     }
 
     continuation_scheduler<>& GraphicsImpl::BeforeRenderScheduler()

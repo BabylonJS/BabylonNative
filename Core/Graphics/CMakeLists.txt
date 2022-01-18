@@ -51,6 +51,7 @@ elseif(ANDROID)
 endif()
 
 target_link_to_dependencies(GraphicsImplementation
+    PRIVATE napi_extensions
     PRIVATE JsRuntime
     PRIVATE JsRuntimeInternal
     PRIVATE bgfx

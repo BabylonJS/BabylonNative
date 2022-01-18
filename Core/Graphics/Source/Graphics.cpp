@@ -47,6 +47,11 @@ namespace Babylon
         m_impl->AddToJavaScript(env);
     }
 
+    Napi::Value Graphics::CreateContext(Napi::Env env)
+    {
+        return m_impl->CreateContext(env);
+    }
+
     void Graphics::EnableRendering()
     {
         m_impl->EnableRendering();

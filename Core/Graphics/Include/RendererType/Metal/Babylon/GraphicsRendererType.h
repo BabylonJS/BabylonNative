@@ -5,6 +5,7 @@
 namespace Babylon
 {
     using ContextType = id<MTLDevice>;
+    using TexturePointerType = uintptr_t;
 
     struct ContextConfiguration
     {

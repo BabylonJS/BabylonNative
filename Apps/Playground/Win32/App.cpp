@@ -121,12 +121,12 @@ namespace
 
         runtime = std::make_unique<Babylon::AppRuntime>();
 
-        Babylon::ExternalTexture texture{*graphics};
-        texture.OverrideInternalTexture(0);
+        Babylon::ExternalTexture texture{*graphics, 0};
         runtime->Dispatch([texture = std::move(texture)](Napi::Env env) mutable {
             graphics->AddToJavaScript(env);
 
-            auto napiTexture = Babylon::ExternalTexture::ConvertToNapiObject(env, std::move(texture));
+            auto context = graphics->CreateContext(env);
+            auto napiTexture = texture.AddToContext(context);
 
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 OutputDebugStringA(message);

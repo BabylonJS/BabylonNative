@@ -5,6 +5,7 @@
 namespace Babylon
 {
     using ContextType = EGLContext;
+    using TexturePointerType = uintptr_t;
 
     struct ContextConfiguration
     {

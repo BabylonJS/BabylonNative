@@ -40,6 +40,8 @@ namespace Babylon
         void AddToJavaScript(Napi::Env);
         static GraphicsImpl& GetFromJavaScript(Napi::Env);
 
+        Napi::Value CreateContext(Napi::Env);
+
         void EnableRendering();
         void DisableRendering();
 
