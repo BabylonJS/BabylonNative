@@ -1,0 +1,12 @@
+{
+  "name": "BabylonNative",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "cmake-windows": "mkdir build-win32 & cd build-win32 & cmake -G \"Visual Studio 16 2019\" -A x64 -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON ..",
+    "cmake-ios": "mkdir build-ios & cd build-ios & cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE=../Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DDEPLOYMENT_TARGET='12' -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF",
+    "cmake-macos": "mkdir build-macos & cd build-macos & cmake .. -G Xcode",
+    "cmake-uwp": "mkdir build-uwp & cd build-uwp & cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 -A x64",
+    "postinstall": "cd Apps & npm install"
+  }
+}
