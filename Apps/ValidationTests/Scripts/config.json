@@ -101,6 +101,7 @@
         {
             "title": "Light Projection Texture",
             "playgroundId": "#CQNGRK#0",
+            "renderCount": 2,
             "referenceImage": "LightProjectionTexture.png"
         },
         {
