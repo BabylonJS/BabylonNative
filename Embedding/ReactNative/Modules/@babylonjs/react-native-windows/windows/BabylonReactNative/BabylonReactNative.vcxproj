@@ -28,12 +28,12 @@
     <ReactNativeWindowsDir Condition="'$(ReactNativeWindowsDir)' == '' And Exists('$(ProjectDir)..\..\..\..\..\Apps\Playground\node_modules\react-native-windows\package.json')">$(ProjectDir)\..\..\..\..\..\Apps\Playground\node_modules\react-native-windows\</ReactNativeWindowsDir>
   </PropertyGroup>
   <PropertyGroup Label="BabylonReactNativeProps">
-    <BabylonReactNativeDir Condition="'$(BabylonReactNativeDir)' == '' And Exists('$(ProjectDir)\..\..\..\react-native')">$(ProjectDir)\..\..\..\react-native</BabylonReactNativeDir>
-    <BabylonNativeDir Condition="Exists('$(BabylonReactNativeDir)\submodules\BabylonNative')">$(BabylonReactNativeDir)\Build</BabylonNativeDir>
-    <BabylonNativeBuildDir Condition="'$(Platform)'=='x64' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)\uwp_x64\</BabylonNativeBuildDir>
-    <BabylonNativeBuildDir Condition="'$(Platform)'=='Win32' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)\uwp_x86\</BabylonNativeBuildDir>
-    <BabylonNativeBuildDir Condition="'$(Platform)'=='ARM' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)\uwp_arm\</BabylonNativeBuildDir>
-    <BabylonNativeBuildDir Condition="'$(Platform)'=='ARM64' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)\uwp_arm64\</BabylonNativeBuildDir>
+    <BabylonReactNativeDir Condition="'$(BabylonReactNativeDir)' == '' And Exists('$(ProjectDir)\..\..\..\react-native')">$(ProjectDir)..\..\..\react-native\</BabylonReactNativeDir>
+    <BabylonNativeDir Condition="Exists('$(BabylonReactNativeDir)submodules\BabylonNative')">$(BabylonReactNativeDir)Build\</BabylonNativeDir>
+    <BabylonNativeBuildDir Condition="'$(Platform)'=='x64' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)uwp_x64\</BabylonNativeBuildDir>
+    <BabylonNativeBuildDir Condition="'$(Platform)'=='Win32' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)uwp_x86\</BabylonNativeBuildDir>
+    <BabylonNativeBuildDir Condition="'$(Platform)'=='ARM' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)uwp_arm\</BabylonNativeBuildDir>
+    <BabylonNativeBuildDir Condition="'$(Platform)'=='ARM64' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)uwp_arm64\</BabylonNativeBuildDir>
     <BabylonNativeLibsDir Condition="'$(Platform)'=='x64' And '$(BabylonNativeDir)' == ''">..\libs\x64\</BabylonNativeLibsDir>
     <BabylonNativeLibsDir Condition="'$(Platform)'=='Win32' And '$(BabylonNativeDir)' == ''">..\libs\x86\</BabylonNativeLibsDir>
     <BabylonNativeLibsDir Condition="'$(Platform)'=='ARM' And '$(BabylonNativeDir)' == ''">..\libs\arm\</BabylonNativeLibsDir>
@@ -126,35 +126,35 @@
       <!-- Library directories when building in repo -->
       <!-- Note: you can add BabylonNative component build folders here as needed -->
       <AdditionalLibraryDirectories Condition="'$(BabylonNativeBuildDir)' != ''">
-        $(BabylonNativeBuildDir)\Core\JsRuntime\$(Configuration);
-        $(BabylonNativeBuildDir)\Core\Graphics\$(Configuration);
-        $(BabylonNativeBuildDir)\Dependencies\arcana.cpp\$(Configuration);
-        $(BabylonNativeBuildDir)\Dependencies\bgfx.cmake\$(Configuration);
-        $(BabylonNativeBuildDir)\Dependencies\glslang\glslang\$(Configuration);
-        $(BabylonNativeBuildDir)\Dependencies\glslang\glslang\OSDependent\Windows\$(Configuration);
-        $(BabylonNativeBuildDir)\Dependencies\glslang\OGLCompilersDLL\$(Configuration);
-        $(BabylonNativeBuildDir)\Dependencies\glslang\SPIRV\$(Configuration);
-        $(BabylonNativeBuildDir)\Dependencies\napi\napi-jsi\$(Configuration);
-        $(BabylonNativeBuildDir)\Dependencies\SPIRV-Cross\$(Configuration);
-        $(BabylonNativeBuildDir)\Dependencies\UrlLib\$(Configuration);
-        $(BabylonNativeBuildDir)\Dependencies\xr\$(Configuration);
-        $(BabylonNativeBuildDir)\Dependencies\xr\Dependencies\OpenXR-SDK\src\loader\$(Configuration);
-        $(BabylonNativeBuildDir)\jsi\$(Configuration);
-        $(BabylonNativeBuildDir)\Plugins\NativeCapture\$(Configuration);
-        $(BabylonNativeBuildDir)\Plugins\NativeEngine\$(Configuration);
-        $(BabylonNativeBuildDir)\Plugins\NativeInput\$(Configuration);
-        $(BabylonNativeBuildDir)\Plugins\NativeOptimizations\$(Configuration);
-        $(BabylonNativeBuildDir)\Plugins\NativeTracing\$(Configuration);
-        $(BabylonNativeBuildDir)\Plugins\NativeXr\$(Configuration);
-        $(BabylonNativeBuildDir)\Polyfills\Window\$(Configuration);
-        $(BabylonNativeBuildDir)\Polyfills\XMLHttpRequest\$(Configuration);
-        $(BabylonNativeBuildDir)\Polyfills\Canvas\$(Configuration);
-        $(BabylonNativeBuildDir)\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Core\JsRuntime\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Core\Graphics\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Dependencies\arcana.cpp\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Dependencies\bgfx.cmake\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Dependencies\glslang\glslang\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Dependencies\glslang\glslang\OSDependent\Windows\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Dependencies\glslang\OGLCompilersDLL\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Dependencies\glslang\SPIRV\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Dependencies\napi\napi-jsi\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Dependencies\SPIRV-Cross\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Dependencies\UrlLib\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Dependencies\xr\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Dependencies\xr\Dependencies\OpenXR-SDK\src\loader\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Plugins\NativeCapture\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Plugins\NativeEngine\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Plugins\NativeInput\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Plugins\NativeOptimizations\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Plugins\NativeTracing\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Plugins\NativeXr\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Polyfills\Window\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Polyfills\XMLHttpRequest\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Polyfills\Canvas\$(Configuration);
+        $(BabylonNativeBuildDir)jsi\$(Configuration);
+        $(BabylonNativeBuildDir)$(Configuration);
         %(AdditionalLibraryDirectories);
       </AdditionalLibraryDirectories>
       <!-- Library directories when building from npm package -->
       <AdditionalLibraryDirectories Condition="'$(BabylonNativeLibsDir)' != ''">
-        $(BabylonNativeLibsDir)\$(Configuration);
+        $(BabylonNativeLibsDir)$(Configuration);
         %(AdditionalLibraryDirectories)
       </AdditionalLibraryDirectories>
     </Link>
@@ -163,7 +163,7 @@
     <ClCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <!-- Include project headers when building in the repo -->
-      <AdditionalIncludeDirectories Condition="Exists('$(BabylonReactNativeDir)\shared')">$(BabylonReactNativeDir)\shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="Exists('$(BabylonReactNativeDir)shared')">$(BabylonReactNativeDir)shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -221,7 +221,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories Condition="Exists('$(BabylonReactNativeDir)\shared')">$(BabylonReactNativeDir)\shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="Exists('$(BabylonReactNativeDir)shared')">$(BabylonReactNativeDir)shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

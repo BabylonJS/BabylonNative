@@ -9,7 +9,7 @@ namespace Babylon
     using namespace facebook;
 
     // Creates a JsRuntime::DispatchFunctionT that integrates with the React Native execution environment.
-    inline JsRuntime::DispatchFunctionT CreateJsRuntimeDispatcher(Napi::Env env, jsi::Runtime& jsiRuntime, Dispatcher dispatcher, const std::shared_ptr<bool> isRunning)
+    inline JsRuntime::DispatchFunctionT CreateJsRuntimeDispatcher(Napi::Env env, jsi::Runtime& jsiRuntime, BabylonNative::Dispatcher dispatcher, const std::shared_ptr<bool> isRunning)
     {
         return [env, &jsiRuntime, dispatcher{ std::move(dispatcher) }, isRunning{ std::move(isRunning) }](std::function<void(Napi::Env)> func)
         {

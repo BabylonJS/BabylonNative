@@ -47,11 +47,7 @@ function Restore-CMakeProject {
     }
     
     cd $BuildDir
-    if ($Arch -Eq "x64") {
-        cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI ..\..\..\windows
-    } else {
-        cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A $Arch ..\..\..\windows
-    }
+    cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -A $Arch ..\..\..\windows
 
     if ($? -Eq $False) {
       Write-Error "cmake failed. Make sure cmake is added to your PATH variable"

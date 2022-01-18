@@ -14,7 +14,7 @@
 
 #include <DispatchFunction.h>
 
-namespace Babylon
+namespace BabylonNative
 {
     using namespace Babylon::Plugins;
     using namespace facebook;
@@ -22,8 +22,8 @@ namespace Babylon
     namespace
     {
         Dispatcher g_inlineDispatcher{ [](const std::function<void()>& func) { func(); } };
-        std::unique_ptr<Graphics> g_graphics{};
-        std::unique_ptr<Graphics::Update> g_update{};
+        std::unique_ptr<Babylon::Graphics> g_graphics{};
+        std::unique_ptr<Babylon::Graphics::Update> g_update{};
         std::unique_ptr<Babylon::Polyfills::Canvas> g_nativeCanvas{};
     }
 
@@ -44,22 +44,22 @@ namespace Babylon
             CreateInitPromise();
 
             // Initialize Babylon Native core components
-            JsRuntime::CreateForJavaScript(m_env, CreateJsRuntimeDispatcher(m_env, jsiRuntime, m_jsDispatcher, m_isRunning));
+            Babylon::JsRuntime::CreateForJavaScript(m_env, Babylon::CreateJsRuntimeDispatcher(m_env, jsiRuntime, m_jsDispatcher, m_isRunning));
 
             // Initialize Babylon Native plugins
-            m_nativeXr.emplace(Plugins::NativeXr::Initialize(m_env));
+            m_nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(m_env));
             m_nativeXr->SetSessionStateChangedCallback([isXRActive{ m_isXRActive }](bool isSessionActive) { *isXRActive = isSessionActive; });
-            Plugins::NativeCapture::Initialize(m_env);
-            m_nativeInput = &Plugins::NativeInput::CreateForJavaScript(m_env);
-            Plugins::NativeOptimizations::Initialize(m_env);
-            Plugins::NativeTracing::Initialize(m_env);
+            Babylon::Plugins::NativeCapture::Initialize(m_env);
+            m_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(m_env);
+            Babylon::Plugins::NativeOptimizations::Initialize(m_env);
+            Babylon::Plugins::NativeTracing::Initialize(m_env);
 
             // Initialize Babylon Native polyfills
-            Polyfills::Window::Initialize(m_env);
+            Babylon::Polyfills::Window::Initialize(m_env);
 
             // NOTE: React Native's XMLHttpRequest is slow and allocates a lot of memory. This does not override
             // React Native's implementation, but rather adds a second one scoped to Babylon and used by WebRequest.ts.
-            Polyfills::XMLHttpRequest::Initialize(m_env);
+            Babylon::Polyfills::XMLHttpRequest::Initialize(m_env);
 
             // Initialize Canvas polyfill for text support
             g_nativeCanvas = std::make_unique<Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(m_env));
@@ -71,16 +71,16 @@ namespace Babylon
             Napi::Detach(m_env);
         }
 
-        void UpdateView(void* windowPtr, size_t width, size_t height)
+        void UpdateView(WindowType window, size_t width, size_t height)
         {
-            WindowConfiguration windowConfig{};
-            windowConfig.WindowPtr = reinterpret_cast<WindowType>(windowPtr);
+            Babylon::WindowConfiguration windowConfig{};
+            windowConfig.Window = window;
             windowConfig.Width = width;
             windowConfig.Height = height;
 
             if (!g_graphics)
             {
-                g_graphics = Graphics::CreateGraphics(windowConfig);
+                g_graphics = Babylon::Graphics::CreateGraphics(windowConfig);
                 g_update = std::make_unique<Babylon::Graphics::Update>(g_graphics->GetUpdate("update"));
             }
             else
@@ -97,7 +97,7 @@ namespace Babylon
                 m_jsDispatcher([this]()
                 {
                     g_graphics->AddToJavaScript(m_env);
-                    Plugins::NativeEngine::Initialize(m_env);
+                    Babylon::Plugins::NativeEngine::Initialize(m_env);
                 });
             });
 
@@ -175,10 +175,12 @@ namespace Babylon
             return *m_isXRActive;
         }
 
-        void UpdateXRView(void* windowPtr)
+#if defined(__APPLE__) || defined(ANDROID)
+        void UpdateXRView(WindowType window)
         {
-            m_nativeXr->UpdateWindow(windowPtr);
+            m_nativeXr->UpdateWindow(window);
         }
+#endif
 
         jsi::Value get(jsi::Runtime& runtime, const jsi::PropNameID& prop) override
         {
@@ -219,8 +221,8 @@ namespace Babylon
         std::shared_ptr<bool> m_isRunning{};
         bool m_isRenderingEnabled{};
         std::once_flag m_isGraphicsInitialized{};
-        Plugins::NativeInput* m_nativeInput{};
-        std::optional<Plugins::NativeXr> m_nativeXr{};
+        Babylon::Plugins::NativeInput* m_nativeInput{};
+        std::optional<Babylon::Plugins::NativeXr> m_nativeXr{};
 
         std::shared_ptr<bool> m_isXRActive{};
     };
@@ -247,11 +249,11 @@ namespace Babylon
         g_nativeModule.reset();
     }
 
-    void UpdateView(void* windowPtr, size_t width, size_t height)
+    void UpdateView(WindowType window, size_t width, size_t height)
     {
         if (auto nativeModule{ g_nativeModule.lock() })
         {
-            nativeModule->UpdateView(windowPtr, width, height);
+            nativeModule->UpdateView(window, width, height);
         }
         else
         {
@@ -321,11 +323,13 @@ namespace Babylon
         return false;
     }
 
-    void UpdateXRView(void* windowPtr)
+#if defined(__APPLE__) || defined(ANDROID)
+    void UpdateXRView(WindowType window)
     {
         if (auto nativeModule{ g_nativeModule.lock() })
         {
-            nativeModule->UpdateXRView(windowPtr);
+            nativeModule->UpdateXRView(window);
         }
     }
+#endif
 }

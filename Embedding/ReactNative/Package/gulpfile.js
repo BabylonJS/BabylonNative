@@ -14,7 +14,7 @@ function exec(command, workingDirectory = '.', logCommand = true) {
     log(command);
   }
 
-  if (shelljs.exec(command, {fatal: true, cwd: workingDirectory}).code) {
+  if (shelljs.exec(command, { fatal: true, cwd: workingDirectory }).code) {
     throw `'${command}' finished with non-zero exit code.`;
   }
 }
@@ -40,7 +40,7 @@ const buildTypeScript = async () => {
 
 const makeXCodeProj = async () => {
   shelljs.mkdir('-p', 'iOS/Build');
-  exec('cmake -G Xcode -DCMAKE_TOOLCHAIN_FILE=../../../Apps/Playground/node_modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DENABLE_BITCODE=1 -DDEPLOYMENT_TARGET=12 -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF -DENABLE_PCH=OFF ..', 'iOS/Build');
+  exec('cmake -G Xcode -DCMAKE_TOOLCHAIN_FILE=../../../Apps/Playground/node_modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DENABLE_BITCODE=1 -DDEPLOYMENT_TARGET=12 -DENABLE_PCH=OFF ..', 'iOS/Build');
 };
 
 const buildIphoneOS = async () => {
@@ -66,11 +66,9 @@ const initializeSubmodulesWindowsAgent = async () => {
 const initializeSubmodulesMostRecentBabylonNative = async () => {
   let shaFound = false;
   const shaOptionIndex = process.argv.indexOf('--sha');
-  if (shaOptionIndex >= 0)
-  {
+  if (shaOptionIndex >= 0) {
     const shaIndex = shaOptionIndex + 1;
-    if (process.argv.length > shaIndex)
-    {
+    if (process.argv.length > shaIndex) {
       shaFound = true;
       const sha = process.argv[shaIndex];
       console.log("Using provided commit: " + sha);
@@ -80,44 +78,30 @@ const initializeSubmodulesMostRecentBabylonNative = async () => {
     }
   }
 
-  if (!shaFound)
-  {
+  if (!shaFound) {
     exec('git submodule init ./../Modules/@babylonjs/react-native/submodules/BabylonNative');
     exec('git fetch origin master', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
     exec('git checkout origin/master', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
   }
 
-  if (process.argv.indexOf('--windows') >= 0)
-  {
+  if (process.argv.indexOf('--windows') >= 0) {
     exec('git -c submodule."Dependencies/xr/Dependencies/arcore-android-sdk".update=none submodule update --init --recursive *', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
-  }
-  else
-  {
+  } else {
     exec('git submodule update --init --recursive', './../Modules/@babylonjs/react-native/submodules/BabylonNative');
   }
 
   exec('git status');
 }
 
-const makeUWPProjectx86 = async () => {
-  shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/Build/uwp_x86');
-  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A Win32 ./../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/Build/uwp_x86');
-}
+const makeUWPProjectPlatform = async (name, arch) => {
+  shelljs.mkdir('-p', `./../Modules/@babylonjs/react-native/Build/uwp_${name}`);
+  exec(`cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -A ${arch} ./../../../react-native-windows/windows`, `./../Modules/@babylonjs/react-native/Build/uwp_${name}`);
+};
 
-const makeUWPProjectx64 = async () => {
-  shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/Build/uwp_x64');
-  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI ./../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/Build/uwp_x64');
-}
-
-const makeUWPProjectARM = async () => {
-  shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/Build/uwp_arm');
-  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A arm ./../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/Build/uwp_arm');
-}
-
-const makeUWPProjectARM64 = async () => {
-  shelljs.mkdir('-p', './../Modules/@babylonjs/react-native/Build/uwp_arm64');
-  exec('cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -D NAPI_JAVASCRIPT_ENGINE=JSI -A arm64 ./../../../react-native-windows/windows', './../Modules/@babylonjs/react-native/Build/uwp_arm64');
-}
+const makeUWPProjectx86 = async () => makeUWPProjectPlatform('x86', 'Win32');
+const makeUWPProjectx64 = async () => makeUWPProjectPlatform('x64', 'x64');
+const makeUWPProjectARM = async () => makeUWPProjectPlatform('arm', 'arm');
+const makeUWPProjectARM64 = async () => makeUWPProjectPlatform('arm64', 'arm64');
 
 const makeUWPProject = gulp.parallel(
   makeUWPProjectx86,
@@ -270,17 +254,17 @@ const copyAndroidFiles = async () => {
   });
 
   await new Promise(resolve => {
-          gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/android/build/intermediates/library_and_local_jars_jni/release/jni/**/*')
-    .pipe(gulp.dest('Assembled/android/src/main/jniLibs/'))
-    .on('end', resolve);
+    gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/android/build/intermediates/library_and_local_jars_jni/release/jni/**/*')
+      .pipe(gulp.dest('Assembled/android/src/main/jniLibs/'))
+      .on('end', resolve);
   });
 
   // This is no longer found in the directory above because it is explicitly excluded because Playground has been updated to RN 0.64 which includes
   // the real implementation of libturbomodulejsijni.so, but we still need to support RN 0.63 consumers, so grab this one explicitly to include it in the package.
   await new Promise(resolve => {
-          gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/android/build/intermediates/cmake/release/obj/**/libturbomodulejsijni.so')
-    .pipe(gulp.dest('Assembled/android/src/main/jniLibs/'))
-    .on('end', resolve);
+    gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/android/build/intermediates/cmake/release/obj/**/libturbomodulejsijni.so')
+      .pipe(gulp.dest('Assembled/android/src/main/jniLibs/'))
+      .on('end', resolve);
   });
 };
 
@@ -308,9 +292,9 @@ const createUWPDirectories = async () => {
 
 const copyCommonFilesUWP = () => {
   return gulp.src('../Modules/@babylonjs/react-native-windows/package.json')
-  .pipe(gulp.src('../Modules/@babylonjs/react-native-windows/README.md'))
-  .pipe(gulp.src('../Modules/@babylonjs/react-native-windows/*.ts*'))
-  .pipe(gulp.dest('Assembled-Windows'));
+    .pipe(gulp.src('../Modules/@babylonjs/react-native-windows/README.md'))
+    .pipe(gulp.src('../Modules/@babylonjs/react-native-windows/*.ts*'))
+    .pipe(gulp.dest('Assembled-Windows'));
 }
 
 const copyx86DebugUWPFiles = () => {
@@ -368,24 +352,24 @@ const copyVCXProjUWPFiles = () => {
 
 const copyOpenXRInfoFiles = () => {
   return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Dependencies/OpenXR-MixedReality/LICENSE')
-  .pipe(gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Dependencies/OpenXR-MixedReality/README.md'))
-  .pipe(gulp.dest('Assembled-Windows/windows/OpenXR-MixedReality'));
+    .pipe(gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Dependencies/OpenXR-MixedReality/README.md'))
+    .pipe(gulp.dest('Assembled-Windows/windows/OpenXR-MixedReality'));
 }
 
 const copyOpenXRPreviewHeaders = () => {
   return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Dependencies/OpenXR-MixedReality/openxr_preview/include/openxr/*')
-  .pipe(gulp.dest('Assembled-Windows/windows/OpenXR-MixedReality/include/openxr'));
+    .pipe(gulp.dest('Assembled-Windows/windows/OpenXR-MixedReality/include/openxr'));
 }
 
 const copyOpenXRUtilityHeaders = () => {
   return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Dependencies/OpenXR-MixedReality/shared/XrUtility/*')
-  .pipe(gulp.dest('Assembled-Windows/windows/OpenXR-MixedReality/include/XrUtility'));
+    .pipe(gulp.dest('Assembled-Windows/windows/OpenXR-MixedReality/include/XrUtility'));
 }
 
 const copyOpenXRHelperHeaders = () => {
   return gulp.src('../Modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Source/OpenXR/Include/*')
-  .pipe(gulp.src('../Modules/@babylonjs/react-native-windows/windows/include/*'))
-  .pipe(gulp.dest('Assembled-Windows/windows/include'));
+    .pipe(gulp.src('../Modules/@babylonjs/react-native-windows/windows/include/*'))
+    .pipe(gulp.dest('Assembled-Windows/windows/include'));
 }
 
 const copyUWPFiles = gulp.series(
@@ -479,7 +463,6 @@ const validate = async () => {
     'Assembled/ios/libs/libOSDependent.a',
     'Assembled/ios/libs/libspirv-cross-core.a',
     'Assembled/ios/libs/libspirv-cross-glsl.a',
-    'Assembled/ios/libs/libspirv-cross-hlsl.a',
     'Assembled/ios/libs/libspirv-cross-msl.a',
     'Assembled/ios/libs/libSPIRV.a',
     'Assembled/ios/libs/libtinyexr.a',

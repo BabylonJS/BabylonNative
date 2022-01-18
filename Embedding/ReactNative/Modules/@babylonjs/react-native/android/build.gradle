@@ -65,8 +65,6 @@ android {
             cmake {
                 abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
                 arguments '-DANDROID_STL=c++_static',
-                        '-DENABLE_GLSLANG_BINARIES=OFF',
-                        '-DSPIRV_CROSS_CLI=OFF',
                         "-DGRAPHICS_API=${graphics_api}",
                         "-DARCORE_LIBPATH=${extractedLibDir}/jni",
                         "-DFBJNI_INCPATH=${extractedLibDir}/fbjni/",

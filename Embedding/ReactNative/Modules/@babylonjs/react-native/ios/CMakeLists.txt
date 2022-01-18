@@ -2,18 +2,12 @@ cmake_minimum_required(VERSION 3.13.2)
 project(ReactNativeBabylon)
 include(${CMAKE_CURRENT_LIST_DIR}/../shared/CMakeLists.txt)
 
-set(BABYLON_NATIVE_PLATFORM "Apple")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -x objective-c++")
 
 # configure Babylon Native to use JSI
 set(NAPI_JAVASCRIPT_ENGINE "JSI" CACHE STRING "The JavaScript engine to power N-API")
-
-if (NOT GRAPHICS_API OR GRAPHICS_API STREQUAL "")
-    set (GRAPHICS_API "Metal")
-    message("No GRAPHICS_API specified. Defaulting to Metal.")
-endif()
 
 get_filename_component(REACTNATIVE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../react-native" ABSOLUTE)
 if(NOT EXISTS ${REACTNATIVE_DIR})
@@ -32,21 +26,15 @@ target_include_directories(reactnative INTERFACE ${REACTNATIVE_DIR}/ReactCommon/
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/")
 
+set(BABYLON_NATIVE_BUILD_APPS OFF CACHE BOOL "")
 set(BABYLON_NATIVE_DIR "${CMAKE_CURRENT_LIST_DIR}/../submodules/BabylonNative")
-# Only add the subdirectories we need to avoid consuming the BabylonNative/Apps folder
-add_subdirectory("${BABYLON_NATIVE_DIR}/Dependencies" ${BABYLON_NATIVE_DIR}/build/ios/Dependencies EXCLUDE_FROM_ALL)
-add_subdirectory("${BABYLON_NATIVE_DIR}/Core" ${BABYLON_NATIVE_DIR}/build/ios/Core EXCLUDE_FROM_ALL)
-add_subdirectory("${BABYLON_NATIVE_DIR}/Plugins" ${BABYLON_NATIVE_DIR}/build/ios/Plugins EXCLUDE_FROM_ALL)
-add_subdirectory("${BABYLON_NATIVE_DIR}/Polyfills" ${BABYLON_NATIVE_DIR}/build/ios/Polyfills EXCLUDE_FROM_ALL)
+add_subdirectory(${BABYLON_NATIVE_DIR} ${BABYLON_NATIVE_DIR}/build/ios)
 
 set(BABYLON_REACT_NATIVE_SHARED_DIR "${CMAKE_CURRENT_LIST_DIR}/../shared")
 add_subdirectory(${BABYLON_REACT_NATIVE_SHARED_DIR} ${CMAKE_CURRENT_BINARY_DIR}/shared)
 
 add_library(BabylonNative
     ${SHARED_SOURCES})
-
-target_compile_definitions(BabylonNative PRIVATE UNICODE)
-target_compile_definitions(BabylonNative PRIVATE _UNICODE)
 
 target_include_directories(BabylonNative PRIVATE ${SHARED_INCLUDES})
 target_include_directories(BabylonNative PUBLIC ${CMAKE_CURRENT_LIST_DIR})
