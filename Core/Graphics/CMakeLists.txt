@@ -20,6 +20,7 @@ set(SOURCES
     "InternalInclude/FrameBuffer.h"
     "InternalInclude/GraphicsContext.h"
     "InternalInclude/SafeTimespanGuarantor.h"
+    "InternalInclude/Texture.h"
     "Source/BgfxCallback.cpp"
     "Source/FrameBuffer.cpp"
     "Source/Graphics.cpp"
@@ -28,7 +29,8 @@ set(SOURCES
     "Source/GraphicsImpl.h"
     "Source/GraphicsImpl_${PLATFORM_NAME}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
     "Source/GraphicsImpl_${GRAPHICS_API}.cpp"
-    "Source/SafeTimespanGuarantor.cpp")
+    "Source/SafeTimespanGuarantor.cpp"
+    "Source/Texture.cpp")
 
 add_library(GraphicsImplementation ${SOURCES})
 warnings_as_errors(GraphicsImplementation)

@@ -14,6 +14,11 @@ namespace Babylon
         {
         }
 
+        ~Impl()
+        {
+            bgfx::destroy(m_textureHandle);
+        }
+
         void OverrideInternalTexture(uintptr_t texturePtr)
         {
             if (bgfx::overrideInternal(m_textureHandle, texturePtr) == 0)
