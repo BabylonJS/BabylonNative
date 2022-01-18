@@ -68,7 +68,7 @@ namespace
 
         // Separately call reset and make_unique to ensure prior state is destroyed before new one is created.
         Babylon::WindowConfiguration graphicsConfig{};
-        graphicsConfig.WindowPtr = window;
+        graphicsConfig.Window = window;
         graphicsConfig.Width = static_cast<size_t>(width);
         graphicsConfig.Height = static_cast<size_t>(height);
 

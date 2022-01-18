@@ -1,6 +1,6 @@
 #pragma once
 
-#include <MetalKit/MTKView.h>
+#import <MetalKit/MTKView.h>
 
 namespace Babylon
 {
@@ -8,8 +8,8 @@ namespace Babylon
 
     struct WindowConfiguration
     {
-        WindowType WindowPtr;
-        size_t Width;
-        size_t Height;
+        WindowType Window{};
+        size_t Width{};
+        size_t Height{};
     };
 }

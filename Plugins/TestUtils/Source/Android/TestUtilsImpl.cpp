@@ -23,9 +23,9 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::TestUtils
 {
-    void Initialize(Napi::Env env, WindowType nativeWindowPtr)
+    void Initialize(Napi::Env env, WindowType window)
     {
-        auto implData{std::make_shared<Internal::TestUtils::ImplData>(nativeWindowPtr)};
+        auto implData{std::make_shared<Internal::TestUtils::ImplData>(window)};
         Internal::TestUtils::CreateInstance(env, implData);
     }
 }

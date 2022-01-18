@@ -86,7 +86,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     size_t width = [self view].frame.size.width * screenScale;
     size_t height = [self view].frame.size.height * screenScale;
     Babylon::WindowConfiguration graphicsConfig{};
-    graphicsConfig.WindowPtr = engineView;
+    graphicsConfig.Window = engineView;
     graphicsConfig.Width = width;
     graphicsConfig.Height = height;
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);

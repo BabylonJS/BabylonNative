@@ -7,7 +7,7 @@ namespace Babylon
 
     void GraphicsImpl::ConfigureBgfxPlatformData(const WindowConfiguration& config, bgfx::PlatformData& pd)
     {
-        pd.nwh = reinterpret_cast<void*>(config.WindowPtr);
+        pd.nwh = reinterpret_cast<void*>(config.Window);
     }
 
     float GraphicsImpl::GetDevicePixelRatio(const WindowConfiguration&)

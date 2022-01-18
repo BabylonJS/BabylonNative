@@ -35,21 +35,19 @@ android {
     compileSdkVersion 28
 
     defaultConfig {
-        applicationId 'com.android.babylonnative.playground'
+        applicationId "com.android.babylonnative.playground"
         minSdkVersion "${platformVersion}"
         targetSdkVersion 28
         externalNativeBuild {
             cmake {
-                abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
-                arguments '-DANDROID_STL=c++_static',
-                        '-DENABLE_GLSLANG_BINARIES=OFF',
-                        "-DENABLE_PCH=OFF",
-                        '-DSPIRV_CROSS_CLI=OFF',
-                        "-DGRAPHICS_API=${graphics_api}",
-                        "-DARCORE_LIBPATH=${arcore_libpath}/jni",
-                        "-DANDROID_JSENGINE_LIBPATH=${jsEngineLibDir}",
-                        "-DANDROID_JSENGINE_LIBNAME=${jsEngineLibName}",
-                        "-DANDROID_JSENGINE_INCPATH=${jsEngineIncDir}"
+                abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
+                arguments "-DANDROID_STL=c++_shared",
+                    "-DENABLE_PCH=OFF",
+                    "-DGRAPHICS_API=${graphics_api}",
+                    "-DARCORE_LIBPATH=${arcore_libpath}/jni",
+                    "-DANDROID_JSENGINE_LIBPATH=${jsEngineLibDir}",
+                    "-DANDROID_JSENGINE_LIBNAME=${jsEngineLibName}",
+                    "-DANDROID_JSENGINE_INCPATH=${jsEngineIncDir}"
             }
         }
         ndk {
@@ -70,7 +68,7 @@ android {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
             signingConfig signingConfigs.debug
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
