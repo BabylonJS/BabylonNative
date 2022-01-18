@@ -34,6 +34,7 @@ jobs:
     - task: Npm@1
       inputs:
         command: 'install'
+        workingDir: './'
       displayName: 'Install Babylon.js NPM packages'
 
     - script: |
