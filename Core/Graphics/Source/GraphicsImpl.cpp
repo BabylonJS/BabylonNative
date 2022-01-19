@@ -34,18 +34,17 @@ namespace Babylon
 
         auto& init = m_state.Bgfx.InitState;
         init.type = s_bgfxRenderType;
-
         init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY;
+        if (s_bgfxFlipAfterRender) init.resolution.reset |= BGFX_RESET_FLIP_AFTER_RENDER;
 
         // Disable MSAA on iOS and Android for now.
-        // See https://github.com/BabylonJS/BabylonNative/issues/507
-        // and https://github.com/BabylonJS/BabylonReactNative/issues/215
-        // and https://github.com/bkaradzic/bgfx/issues/2620
+            // See https://github.com/BabylonJS/BabylonNative/issues/507
+            // and https://github.com/BabylonJS/BabylonReactNative/issues/215
+            // and https://github.com/bkaradzic/bgfx/issues/2620
 #if defined(TARGET_OS_IPHONE) || defined(ANDROID)
         init.resolution.reset &= ~BGFX_RESET_MSAA_X4;
 #endif
 
-        if (s_bgfxFlipAfterRender) init.resolution.reset |= BGFX_RESET_FLIP_AFTER_RENDER;
         init.callback = &m_bgfxCallback;
     }
 
