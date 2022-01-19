@@ -23,7 +23,7 @@
 namespace
 {
     std::unique_ptr<Babylon::Graphics::Device> g_device{};
-    std::unique_ptr<Babylon::Graphics::Device::Update> g_update{};
+    std::unique_ptr<Babylon::Graphics::DeviceUpdate> g_update{};
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
     std::unique_ptr<Babylon::ScriptLoader> g_scriptLoader{};
 }
@@ -72,7 +72,7 @@ extern "C"
             graphicsConfig.Height = static_cast<size_t>(height);
 
             g_device = Babylon::Graphics::Device::Create(graphicsConfig);
-            g_update = std::make_unique<Babylon::Graphics::Device::Update>(g_device->GetUpdate("update"));
+            g_update = std::make_unique<Babylon::Graphics::DeviceUpdate>(g_device->GetUpdate("update"));
             g_device->StartRenderingCurrentFrame();
             g_update->Start();
 

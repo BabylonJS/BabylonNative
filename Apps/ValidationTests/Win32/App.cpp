@@ -31,7 +31,7 @@ HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 std::unique_ptr<Babylon::Graphics::Device> device{};
-std::unique_ptr<Babylon::Graphics::Device::Update> update{};
+std::unique_ptr<Babylon::Graphics::DeviceUpdate> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
@@ -68,7 +68,7 @@ namespace
         graphicsConfig.Height = static_cast<size_t>(TEST_HEIGHT);
 
         device = Babylon::Graphics::Device::Create(graphicsConfig);
-        update = std::make_unique<Babylon::Graphics::Device::Update>(device->GetUpdate("update"));
+        update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
         device->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
         device->StartRenderingCurrentFrame();
         update->Start();

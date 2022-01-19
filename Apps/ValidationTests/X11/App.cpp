@@ -22,7 +22,7 @@ static const char* s_applicationName  = "BabylonNative Validation Tests";
 static const char* s_applicationClass = "Validation Tests";
 
 std::unique_ptr<Babylon::Graphics::Device> device{};
-std::unique_ptr<Babylon::Graphics::Device::Update> update{};
+std::unique_ptr<Babylon::Graphics::DeviceUpdate> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
@@ -72,7 +72,7 @@ namespace
         graphicsConfig.Height = static_cast<size_t>(height);
 
         device = Babylon::Graphics::Device::Create(graphicsConfig);
-        update = std::make_unique<Babylon::Graphics::Device::Update>(device->GetUpdate("update"));
+        update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
         device->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
         device->StartRenderingCurrentFrame();
         update->Start();

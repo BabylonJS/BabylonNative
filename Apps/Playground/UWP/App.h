@@ -42,7 +42,7 @@ private:
     void RestartRuntime(Windows::Foundation::Rect bounds);
 
     std::unique_ptr<Babylon::Graphics::Device> m_device{};
-    std::unique_ptr<Babylon::Graphics::Device::Update> m_update{};
+    std::unique_ptr<Babylon::Graphics::DeviceUpdate> m_update{};
     std::unique_ptr<Babylon::AppRuntime> m_runtime{};
     Babylon::Plugins::NativeInput* m_nativeInput{};
     std::unique_ptr<Babylon::Plugins::ChromeDevTools> m_chromeDevTools{};

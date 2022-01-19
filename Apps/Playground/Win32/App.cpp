@@ -31,7 +31,7 @@ WCHAR szTitle[MAX_LOADSTRING];       // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Graphics::Device> device{};
-std::unique_ptr<Babylon::Graphics::Device::Update> update{};
+std::unique_ptr<Babylon::Graphics::DeviceUpdate> update{};
 Babylon::Plugins::NativeInput* nativeInput{};
 std::unique_ptr<Babylon::Plugins::ChromeDevTools> chromeDevTools{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
@@ -114,7 +114,7 @@ namespace
         graphicsConfig.Height = height;
 
         device = Babylon::Graphics::Device::Create(graphicsConfig);
-        update = std::make_unique<Babylon::Graphics::Device::Update>(device->GetUpdate("update"));
+        update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
         device->StartRenderingCurrentFrame();
         update->Start();
 

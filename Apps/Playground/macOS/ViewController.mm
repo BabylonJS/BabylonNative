@@ -16,7 +16,7 @@
 #import <math.h>
 
 std::unique_ptr<Babylon::Graphics::Device> device{};
-std::unique_ptr<Babylon::Graphics::Device::Update> update{};
+std::unique_ptr<Babylon::Graphics::DeviceUpdate> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 Babylon::Plugins::NativeInput* nativeInput{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
@@ -90,7 +90,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     graphicsConfig.Width = width;
     graphicsConfig.Height = height;
     device = Babylon::Graphics::Device::Create(graphicsConfig);
-    update = std::make_unique<Babylon::Graphics::Device::Update>(device->GetUpdate("update"));
+    update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
 
     runtime = std::make_unique<Babylon::AppRuntime>();
 

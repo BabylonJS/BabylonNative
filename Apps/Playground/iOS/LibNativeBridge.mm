@@ -16,7 +16,7 @@
 #import <optional>
 
 std::unique_ptr<Babylon::Graphics::Device> device{};
-std::unique_ptr<Babylon::Graphics::Device::Update> update{};
+std::unique_ptr<Babylon::Graphics::DeviceUpdate> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 Babylon::Plugins::NativeInput* nativeInput{};
 std::optional<Babylon::Plugins::NativeXr> g_nativeXr{};
@@ -49,7 +49,7 @@ bool g_isXrActive{};
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
     device = Babylon::Graphics::Device::Create(graphicsConfig);
-    update = std::make_unique<Babylon::Graphics::Device::Update>(device->GetUpdate("update"));
+    update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
     runtime = std::make_unique<Babylon::AppRuntime>();
 
     runtime->Dispatch([xrView](Napi::Env env)

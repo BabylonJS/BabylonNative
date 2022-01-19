@@ -62,7 +62,7 @@ namespace Babylon::Graphics
         m_impl->DisableRendering();
     }
 
-    Device::Update Device::GetUpdate(const char* updateName)
+    DeviceUpdate Device::GetUpdate(const char* updateName)
     {
         auto& guarantor = m_impl->GetSafeTimespanGuarantor(updateName);
         return {

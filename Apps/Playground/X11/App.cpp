@@ -22,7 +22,7 @@ static const char* s_applicationName  = "BabylonNative Playground";
 static const char* s_applicationClass = "Playground";
 
 std::unique_ptr<Babylon::Graphics::Device> device{};
-std::unique_ptr<Babylon::Graphics::Device::Update> update{};
+std::unique_ptr<Babylon::Graphics::DeviceUpdate> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 Babylon::Plugins::NativeInput* nativeInput{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
@@ -73,7 +73,7 @@ namespace
         graphicsConfig.Height = static_cast<size_t>(height);
 
         device = Babylon::Graphics::Device::Create(graphicsConfig);
-        update = std::make_unique<Babylon::Graphics::Device::Update>(device->GetUpdate("update"));
+        update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
         device->StartRenderingCurrentFrame();
         update->Start();
 

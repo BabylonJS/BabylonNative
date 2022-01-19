@@ -9,51 +9,54 @@
 
 namespace Babylon::Graphics
 {
+    class Device;
+
+    class DeviceUpdate
+    {
+    public:
+        DeviceUpdate(const DeviceUpdate&) = default;
+        DeviceUpdate(DeviceUpdate&&) = default;
+        DeviceUpdate& operator=(const DeviceUpdate&) = default;
+        DeviceUpdate& operator=(DeviceUpdate&&) = default;
+
+        void Start()
+        {
+            m_start();
+        }
+
+        void RequestFinish(std::function<void()> onFinishCallback)
+        {
+            m_requestFinish(std::move(onFinishCallback));
+        }
+
+        void Finish()
+        {
+            std::promise<void> promise{};
+            auto future = promise.get_future();
+            RequestFinish([&promise] { promise.set_value(); });
+            future.wait();
+        }
+
+    private:
+        friend class Device;
+
+        template<typename StartCallableT, typename RequestEndCallableT>
+        DeviceUpdate(StartCallableT&& start, RequestEndCallableT&& requestEnd)
+            : m_start{std::forward<StartCallableT>(start)}
+            , m_requestFinish{std::forward<RequestEndCallableT>(requestEnd)}
+        {
+        }
+
+        std::function<void()> m_start{};
+        std::function<void(std::function<void()>)> m_requestFinish{};
+    };
+
     class Device
     {
         class Impl;
 
     public:
-        class Update
-        {
-        public:
-            Update(const Update&) = default;
-            Update(Update&&) = default;
-            Update& operator=(const Update&) = default;
-            Update& operator=(Update&&) = default;
-
-            void Start()
-            {
-                m_start();
-            }
-
-            void RequestFinish(std::function<void()> onFinishCallback)
-            {
-                m_requestFinish(std::move(onFinishCallback));
-            }
-
-            void Finish()
-            {
-                std::promise<void> promise{};
-                auto future = promise.get_future();
-                RequestFinish([&promise] { promise.set_value(); });
-                future.wait();
-            }
-
-        private:
-            friend class Device;
-
-            template<typename StartCallableT, typename RequestEndCallableT>
-            Update(StartCallableT&& start, RequestEndCallableT&& requestEnd)
-                : m_start{std::forward<StartCallableT>(start)}
-                , m_requestFinish{std::forward<RequestEndCallableT>(requestEnd)}
-            {
-            }
-
-            std::function<void()> m_start{};
-            std::function<void(std::function<void()>)> m_requestFinish{};
-        };
-
+        
         ~Device();
 
         // Note: This API contract is subject to change in coming versions.
@@ -72,7 +75,7 @@ namespace Babylon::Graphics
         void EnableRendering();
         void DisableRendering();
 
-        Update GetUpdate(const char* updateName);
+        DeviceUpdate GetUpdate(const char* updateName);
 
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();

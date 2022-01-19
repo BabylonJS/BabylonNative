@@ -14,7 +14,7 @@
 #import <MetalKit/MetalKit.h>
 
 std::unique_ptr<Babylon::Graphics::Device> device{};
-std::unique_ptr<Babylon::Graphics::Device::Update> update{};
+std::unique_ptr<Babylon::Graphics::DeviceUpdate> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
@@ -82,7 +82,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     graphicsConfig.Width = static_cast<size_t>(600);
     graphicsConfig.Height = static_cast<size_t>(400);
     device = Babylon::Graphics::Device::Create(graphicsConfig);
-    update = std::make_unique<Babylon::Graphics::Device::Update>(device->GetUpdate("update"));
+    update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
     device->StartRenderingCurrentFrame();
     update->Start();
 
