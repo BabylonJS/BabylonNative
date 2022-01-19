@@ -63,7 +63,7 @@ namespace
     void Initialize(HWND hWnd)
     {
         Babylon::Graphics::WindowConfiguration graphicsConfig{};
-        graphicsConfig.WindowPtr = hWnd;
+        graphicsConfig.Window = hWnd;
         graphicsConfig.Width = static_cast<size_t>(TEST_WIDTH);
         graphicsConfig.Height = static_cast<size_t>(TEST_HEIGHT);
 

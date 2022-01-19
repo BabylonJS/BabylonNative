@@ -192,10 +192,10 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     m_displayScale = static_cast<float>(displayInformation->RawPixelsPerViewPixel);
     size_t width = static_cast<size_t>(bounds.Width * m_displayScale);
     size_t height = static_cast<size_t>(bounds.Height * m_displayScale);
-    auto* windowPtr = reinterpret_cast<winrt::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
+    auto* window = reinterpret_cast<winrt::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
 
     Babylon::Graphics::WindowConfiguration graphicsConfig{};
-    graphicsConfig.WindowPtr = windowPtr;
+    graphicsConfig.Window = window;
     graphicsConfig.Width = width;
     graphicsConfig.Height = height;
     m_device = Babylon::Graphics::Update::Create(graphicsConfig);
@@ -205,7 +205,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
 
     m_runtime = std::make_unique<Babylon::AppRuntime>();
 
-    m_runtime->Dispatch([this, windowPtr](Napi::Env env) {
+    m_runtime->Dispatch([this, window](Napi::Env env) {
         m_device->AddToJavaScript(env);
 
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
@@ -224,7 +224,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
 
         Babylon::Plugins::NativeXr::Initialize(env);
 
-        Babylon::Plugins::TestUtils::Initialize(env, windowPtr);
+        Babylon::Plugins::TestUtils::Initialize(env, window);
     });
 
     Babylon::ScriptLoader loader{*m_runtime};

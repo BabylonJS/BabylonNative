@@ -38,7 +38,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     float height = inHeight;
 
     Babylon::Graphics::WindowConfiguration graphicsConfig{};
-    graphicsConfig.WindowPtr = view;
+    graphicsConfig.Window = view;
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
     device = Babylon::Graphics::Device::Create(graphicsConfig);

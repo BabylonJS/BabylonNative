@@ -2,6 +2,7 @@
 #include <Babylon/JsRuntime.h>
 #include <napi/napi_pointer.h>
 #include <arcana/tracing/trace_region.h>
+#include <optional>
 
 namespace
 {

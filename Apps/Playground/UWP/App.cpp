@@ -270,10 +270,15 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     m_displayScale = static_cast<float>(displayInformation->RawPixelsPerViewPixel);
     size_t width = static_cast<size_t>(bounds.Width * m_displayScale);
     size_t height = static_cast<size_t>(bounds.Height * m_displayScale);
-    auto* windowPtr = reinterpret_cast<winrt::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
+    auto* window = reinterpret_cast<winrt::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
 
+<<<<<<< HEAD
     Babylon::Graphics::WindowConfiguration graphicsConfig{};
     graphicsConfig.WindowPtr = windowPtr;
+=======
+    Babylon::WindowConfiguration graphicsConfig{};
+    graphicsConfig.Window = window;
+>>>>>>> master
     graphicsConfig.Width = width;
     graphicsConfig.Height = height;
     m_device = Babylon::Graphics::Device::Create(graphicsConfig);

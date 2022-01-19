@@ -44,8 +44,13 @@ bool g_isXrActive{};
     float width = inWidth;
     float height = inHeight;
 
+<<<<<<< HEAD
     Babylon::Graphics::WindowConfiguration graphicsConfig{};
     graphicsConfig.WindowPtr = view;
+=======
+    Babylon::WindowConfiguration graphicsConfig{};
+    graphicsConfig.Window = view;
+>>>>>>> master
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
     device = Babylon::Graphics::Device::Create(graphicsConfig);

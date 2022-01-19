@@ -364,6 +364,21 @@ namespace Babylon::ShaderCompilerTraversers
                         {
                             unary->setOperand(shapeConversion);
                         }
+                        else if (auto* selection = parent->getAsSelectionNode())
+                        {
+                            if (selection->getCondition() == node)
+                            {
+                                selection->setCondition(shapeConversion);
+                            }
+                            else if (selection->getTrueBlock() == node)
+                            {
+                                selection->setTrueBlock(shapeConversion);
+                            }
+                            else
+                            {
+                                selection->setFalseBlock(shapeConversion);
+                            }
+                        }
                         else
                         {
                             throw std::runtime_error{"Cannot replace symbol: node type handler unimplemented"};

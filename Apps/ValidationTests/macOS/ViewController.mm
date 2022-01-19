@@ -78,7 +78,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     engineView.delegate = engineView;
 
     Babylon::Graphics::WindowConfiguration graphicsConfig{};
-    graphicsConfig.WindowPtr = engineView;
+    graphicsConfig.Window = engineView;
     graphicsConfig.Width = static_cast<size_t>(600);
     graphicsConfig.Height = static_cast<size_t>(400);
     device = Babylon::Graphics::Device::Create(graphicsConfig);

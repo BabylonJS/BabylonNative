@@ -43,7 +43,7 @@ int main()
     XStoreName(display, window, applicationName);
 
     Babylon::Graphics::WindowConfiguration graphicsConfig{};
-    graphicsConfig.WindowPtr = window;
+    graphicsConfig.Window = window;
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
     return Run(Babylon::Graphics::Device::Create(graphicsConfig));

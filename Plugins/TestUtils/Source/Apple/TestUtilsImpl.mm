@@ -27,7 +27,7 @@ namespace Babylon::Plugins::Internal
         });
 #else
         dispatch_async(dispatch_get_main_queue(), ^{
-            [[m_implData->m_nativeWindowPtr window]close];
+            [[m_implData->m_window window]close];
         });
 #endif
     }
@@ -49,9 +49,9 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::TestUtils
 {
-    void Initialize(Napi::Env env, WindowType nativeWindowPtr)
+    void Initialize(Napi::Env env, WindowType window)
     {
-        auto implData{std::make_shared<Internal::TestUtils::ImplData>(nativeWindowPtr)};
+        auto implData{std::make_shared<Internal::TestUtils::ImplData>(window)};
         Internal::TestUtils::CreateInstance(env, implData);
     }
 }

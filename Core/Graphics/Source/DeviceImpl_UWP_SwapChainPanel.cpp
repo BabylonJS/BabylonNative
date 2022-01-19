@@ -10,7 +10,7 @@ namespace Babylon::Graphics
     {
         // Use windowTypePtr == 2 for xaml swap chain panels
         pd.ndt = reinterpret_cast<void*>(2);
-        pd.nwh = winrt::get_abi(config.SwapChainPanel);
+        pd.nwh = winrt::get_abi(config.Window);
     }
 
     float DeviceImpl::GetDevicePixelRatio(const WindowConfiguration&)

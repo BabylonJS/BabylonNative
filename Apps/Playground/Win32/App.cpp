@@ -108,8 +108,13 @@ namespace
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
+<<<<<<< HEAD
         Babylon::Graphics::WindowConfiguration graphicsConfig{};
         graphicsConfig.WindowPtr = hWnd;
+=======
+        Babylon::WindowConfiguration graphicsConfig{};
+        graphicsConfig.Window = hWnd;
+>>>>>>> master
         graphicsConfig.Width = width;
         graphicsConfig.Height = height;
 
