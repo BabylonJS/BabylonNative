@@ -351,7 +351,7 @@ namespace Babylon::Polyfills::Internal
         arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, needClear, cancellationSource{ m_cancellationSource }]() {
             return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{ m_update.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
                 // JS Thread
-                Babylon::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
+                Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
                 bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
                 frameBuffer.Bind(*encoder);
                 if (needClear)

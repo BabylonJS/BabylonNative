@@ -2,7 +2,7 @@
 #include <arcana/threading/task.h>
 #include <future>
 #include <Babylon/AppRuntime.h>
-#include <Babylon/Graphics.h>
+#include <Babylon/Graphics/Device.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
@@ -26,13 +26,13 @@ void SetExitCode(const Napi::CallbackInfo& info)
     exitCode.set_value(info[0].As<Napi::Number>().Int32Value());
 }
 
-int Run(std::unique_ptr<Babylon::Graphics> graphics)
+int Run(std::unique_ptr<Babylon::Graphics::Device> device)
 {
     std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     std::unique_ptr<Babylon::AppRuntime> runtime = std::make_unique<Babylon::AppRuntime>();
-    runtime->Dispatch([&graphics, &nativeCanvas](Napi::Env env)
+    runtime->Dispatch([&device, &nativeCanvas](Napi::Env env)
     {
-        graphics->AddToJavaScript(env);
+        device->AddToJavaScript(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto)
@@ -55,8 +55,8 @@ int Run(std::unique_ptr<Babylon::Graphics> graphics)
     loader.LoadScript("app:///Scripts/chai.js");
     loader.LoadScript("app:///Scripts/mocha.js");
     loader.LoadScript("app:///Scripts/tests.js");
-    graphics->StartRenderingCurrentFrame();
-    graphics->FinishRenderingCurrentFrame();
+    device->StartRenderingCurrentFrame();
+    device->FinishRenderingCurrentFrame();
     auto code{exitCode.get_future().get()};
     return code;
 }

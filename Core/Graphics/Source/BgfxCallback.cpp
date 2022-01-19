@@ -7,7 +7,7 @@
 #include <bgfx/bgfx.h>
 #include <cassert>
 
-namespace Babylon
+namespace Babylon::Graphics
 {
     BgfxCallback::BgfxCallback(std::function<void(const CaptureData&)> captureCallback)
         : m_captureCallback{std::move(captureCallback)}

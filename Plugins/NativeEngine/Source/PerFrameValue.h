@@ -1,6 +1,6 @@
 #pragma once
 
-#include <GraphicsContext.h>
+#include <Babylon/Graphics/DeviceContext.h>
 
 #include <arcana/threading/cancellation.h>
 
@@ -12,7 +12,7 @@ namespace Babylon
     class PerFrameValue
     {
     public:
-        PerFrameValue(GraphicsContext& context, arcana::cancellation_source& cancellation, T defaultValue)
+        PerFrameValue(Graphics::DeviceContext& context, arcana::cancellation_source& cancellation, T defaultValue)
             : m_context{context}
             , m_cancellationSource{cancellation}
             , m_defaultValue{defaultValue}
@@ -40,7 +40,7 @@ namespace Babylon
         }
 
     private:
-        GraphicsContext& m_context;
+        Graphics::DeviceContext& m_context;
         arcana::cancellation_source& m_cancellationSource;
         const T m_defaultValue{};
         T m_value{};

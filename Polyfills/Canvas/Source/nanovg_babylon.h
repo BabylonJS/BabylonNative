@@ -7,8 +7,7 @@
 #define NANOVG_BABYLON_H_HEADER_GUARD
 
 #include <bgfx/bgfx.h>
-#include <GraphicsContext.h>
-#include <FrameBuffer.h>
+#include <Babylon/Graphics/FrameBuffer.h>
 namespace bx { struct AllocatorI; }
 
 struct NVGcontext;
@@ -19,7 +18,7 @@ NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator);
 ///
 NVGcontext* nvgCreate(int32_t _edgeaa);
 
-void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::FrameBuffer& frameBuffer, bgfx::Encoder* encoder);
+void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder);
 
 ///
 void nvgDelete(NVGcontext* _ctx);

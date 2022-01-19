@@ -1,6 +1,6 @@
 #include "Texture.h"
 
-namespace Babylon
+namespace Babylon::Graphics
 {
     TextureData::~TextureData()
     {

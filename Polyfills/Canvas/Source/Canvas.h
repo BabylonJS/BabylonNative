@@ -1,11 +1,10 @@
 #pragma once
 
 #include <Babylon/Polyfills/Canvas.h>
-#include <GraphicsContext.h>
-#include <FrameBuffer.h>
 
-// HACK: for TextureData
-#include <Texture.h>
+#include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/FrameBuffer.h>
+#include <Babylon/Graphics/Texture.h>
 
 namespace Babylon::Polyfills
 {
@@ -65,9 +64,9 @@ namespace Babylon::Polyfills::Internal
 
         // returns true if frameBuffer size has changed
         bool UpdateRenderTarget();
-        Babylon::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
+        Babylon::Graphics::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
 
-        GraphicsContext& GetGraphicsContext()
+        Graphics::DeviceContext& GetGraphicsContext()
         {
             return m_graphicsContext;
         }
@@ -86,10 +85,10 @@ namespace Babylon::Polyfills::Internal
         uint32_t m_width{1};
         uint32_t m_height{1};
 
-        Babylon::GraphicsContext& m_graphicsContext;
+        Graphics::DeviceContext& m_graphicsContext;
 
-        std::unique_ptr<Babylon::FrameBuffer> m_frameBuffer;
-        std::unique_ptr<TextureData> m_textureData{};
+        std::unique_ptr<Graphics::FrameBuffer> m_frameBuffer;
+        std::unique_ptr<Graphics::TextureData> m_textureData{};
         bool m_dirty{};
 
         void FlushGraphicResources() override;

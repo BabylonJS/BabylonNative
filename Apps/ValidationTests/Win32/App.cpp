@@ -12,7 +12,7 @@
 #include <algorithm>
 
 #include <Babylon/AppRuntime.h>
-#include <Babylon/Graphics.h>
+#include <Babylon/Graphics/Device.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
@@ -30,8 +30,8 @@
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
-std::unique_ptr<Babylon::Graphics> graphics{};
-std::unique_ptr<Babylon::Graphics::Update> update{};
+std::unique_ptr<Babylon::Graphics::Device> device{};
+std::unique_ptr<Babylon::Graphics::Device::Update> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
@@ -48,36 +48,36 @@ namespace
 {
     void Uninitialize()
     {
-        if (graphics)
+        if (device)
         {
             update->Finish();
-            graphics->FinishRenderingCurrentFrame();
+            device->FinishRenderingCurrentFrame();
         }
 
         runtime.reset();
         nativeCanvas.reset();
         update.reset();
-        graphics.reset();
+        device.reset();
     }
 
     void Initialize(HWND hWnd)
     {
-        Babylon::WindowConfiguration graphicsConfig{};
+        Babylon::Graphics::WindowConfiguration graphicsConfig{};
         graphicsConfig.WindowPtr = hWnd;
         graphicsConfig.Width = static_cast<size_t>(TEST_WIDTH);
         graphicsConfig.Height = static_cast<size_t>(TEST_HEIGHT);
 
-        graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-        update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
-        graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
-        graphics->StartRenderingCurrentFrame();
+        device = Babylon::Graphics::Device::Create(graphicsConfig);
+        update = std::make_unique<Babylon::Graphics::Device::Update>(device->GetUpdate("update"));
+        device->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
+        device->StartRenderingCurrentFrame();
         update->Start();
 
         runtime = std::make_unique<Babylon::AppRuntime>();
 
         // Initialize console plugin.
         runtime->Dispatch([hWnd](Napi::Env env) {
-            graphics->AddToJavaScript(env);
+            device->AddToJavaScript(env);
 
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 OutputDebugStringA(message);
@@ -134,11 +134,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // Main message loop:
     while (msg.message != WM_QUIT)
     {
-        if (graphics)
+        if (device)
         {
             update->Finish();
-            graphics->FinishRenderingCurrentFrame();
-            graphics->StartRenderingCurrentFrame();
+            device->FinishRenderingCurrentFrame();
+            device->StartRenderingCurrentFrame();
             update->Start();
         }
 
@@ -225,11 +225,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
         case WM_SIZE:
         {
-            if (graphics)
+            if (device)
             {
                 size_t width = static_cast<size_t>(LOWORD(lParam));
                 size_t height = static_cast<size_t>(HIWORD(lParam));
-                graphics->UpdateSize(width, height);
+                device->UpdateSize(width, height);
             }
             break;
         }

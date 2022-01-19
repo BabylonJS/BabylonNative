@@ -1,6 +1,6 @@
 #include "SafeTimespanGuarantor.h"
 
-namespace Babylon
+namespace Babylon::Graphics
 {
     SafeTimespanGuarantor::SafeTimespanGuarantor(std::optional<arcana::cancellation_source>& cancellation)
         : m_cancellation{cancellation}

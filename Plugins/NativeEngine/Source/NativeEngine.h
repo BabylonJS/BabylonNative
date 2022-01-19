@@ -8,9 +8,9 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
 
-#include <GraphicsContext.h>
-#include <BgfxCallback.h>
-#include <FrameBuffer.h>
+#include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/BgfxCallback.h>
+#include <Babylon/Graphics/FrameBuffer.h>
 
 #include <napi/napi.h>
 
@@ -174,8 +174,8 @@ namespace Babylon
 
         std::string ProcessShaderCoordinates(const std::string& vertexSource);
 
-        UpdateToken& GetUpdateToken();
-        FrameBuffer& GetBoundFrameBuffer(bgfx::Encoder& encoder);
+        Graphics::UpdateToken& GetUpdateToken();
+        Graphics::FrameBuffer& GetBoundFrameBuffer(bgfx::Encoder& encoder);
 
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
 
@@ -184,12 +184,12 @@ namespace Babylon
         ProgramData* m_currentProgram{nullptr};
 
         JsRuntime& m_runtime;
-        GraphicsContext& m_graphicsContext;
-        Update m_update;
+        Graphics::DeviceContext& m_graphicsContext;
+        Graphics::Update m_update;
 
         JsRuntimeScheduler m_runtimeScheduler;
 
-        std::optional<UpdateToken> m_updateToken{};
+        std::optional<Graphics::UpdateToken> m_updateToken{};
 
         void ScheduleRequestAnimationFrameCallbacks();
         bool m_requestAnimationFrameCallbacksScheduled{};
@@ -219,8 +219,8 @@ namespace Babylon
         std::vector<Napi::FunctionReference> m_requestAnimationFrameCallbacks{};
 
         VertexArray* m_boundVertexArray{};
-        FrameBuffer m_defaultFrameBuffer;
-        FrameBuffer* m_boundFrameBuffer{};
+        Graphics::FrameBuffer m_defaultFrameBuffer;
+        Graphics::FrameBuffer* m_boundFrameBuffer{};
         PerFrameValue<bool> m_boundFrameBufferNeedsRebinding;
 
         // TODO: This should be changed to a non-owning ref once multi-update is available.

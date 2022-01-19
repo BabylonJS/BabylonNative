@@ -1,9 +1,9 @@
 #include "FrameBuffer.h"
-#include "GraphicsImpl.h"
+#include "DeviceImpl.h"
 #include <arcana/macros.h>
 #include <cmath>
 
-namespace Babylon
+namespace Babylon::Graphics
 {
     namespace
     {
@@ -24,7 +24,7 @@ namespace Babylon
         }
     }
 
-    FrameBuffer::FrameBuffer(GraphicsContext& context, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil)
+    FrameBuffer::FrameBuffer(DeviceContext& context, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil)
         : m_context{context}
         , m_handle{handle}
         , m_width{width}

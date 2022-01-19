@@ -30,7 +30,7 @@ target_include_directories(NativeEngine PUBLIC "Include")
 
 target_link_to_dependencies(NativeEngine
     PUBLIC JsRuntime
-    PUBLIC GraphicsDevice
+    INTERFACE GraphicsDevice
     PRIVATE arcana
     PRIVATE bgfx
     PRIVATE bimg

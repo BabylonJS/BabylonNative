@@ -12,23 +12,23 @@ else()
 endif()
 
 set(SOURCES
-    "Include/Platform/${PLATFORM_PATH}/Babylon/GraphicsPlatform.h"
-    "Include/RendererType/${GRAPHICS_API}/Babylon/GraphicsRendererType.h"
-    "Include/Shared/Babylon/Graphics.h"
-    "InternalInclude/BgfxCallback.h"
-    "InternalInclude/continuation_scheduler.h"
-    "InternalInclude/FrameBuffer.h"
-    "InternalInclude/GraphicsContext.h"
-    "InternalInclude/SafeTimespanGuarantor.h"
-    "InternalInclude/Texture.h"
+    "Include/Platform/${PLATFORM_PATH}/Babylon/Graphics/Platform.h"
+    "Include/RendererType/${GRAPHICS_API}/Babylon/Graphics/RendererType.h"
+    "Include/Shared/Babylon/Graphics/Device.h"
+    "InternalInclude/Babylon/Graphics/BgfxCallback.h"
+    "InternalInclude/Babylon/Graphics/continuation_scheduler.h"
+    "InternalInclude/Babylon/Graphics/FrameBuffer.h"
+    "InternalInclude/Babylon/Graphics/DeviceContext.h"
+    "InternalInclude/Babylon/Graphics/SafeTimespanGuarantor.h"
+    "InternalInclude/Babylon/Graphics/Texture.h"
     "Source/BgfxCallback.cpp"
     "Source/FrameBuffer.cpp"
-    "Source/Graphics.cpp"
-    "Source/GraphicsContext.cpp"
-    "Source/GraphicsImpl.cpp"
-    "Source/GraphicsImpl.h"
-    "Source/GraphicsImpl_${PLATFORM_NAME}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
-    "Source/GraphicsImpl_${GRAPHICS_API}.cpp"
+    "Source/Device.cpp"
+    "Source/DeviceContext.cpp"
+    "Source/DeviceImpl.cpp"
+    "Source/DeviceImpl.h"
+    "Source/DeviceImpl_${PLATFORM_NAME}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
+    "Source/DeviceImpl_${GRAPHICS_API}.cpp"
     "Source/SafeTimespanGuarantor.cpp"
     "Source/Texture.cpp")
 
@@ -39,7 +39,7 @@ target_include_directories(Graphics
     PRIVATE "Include/Shared"
     PRIVATE "Include/Platform/${PLATFORM_PATH}"
     PRIVATE "Include/RendererType/${GRAPHICS_API}"
-    PRIVATE "InternalInclude/")
+    PRIVATE "InternalInclude/Babylon/Graphics")
 
 if(WIN32 AND NOT WINDOWS_STORE)
     target_link_to_dependencies(Graphics

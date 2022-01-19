@@ -34,7 +34,7 @@
 #include <bx/bx.h>
 #include <bx/allocator.h>
 
-#include <GraphicsContext.h>
+#include <Babylon/Graphics/DeviceContext.h>
 
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from '' to '', possible loss of data
 
@@ -154,7 +154,7 @@ namespace
 		bgfx::TextureHandle texMissing;
 
 		bgfx::TransientVertexBuffer tvb;
-		Babylon::FrameBuffer* frameBuffer;
+		Babylon::Graphics::FrameBuffer* frameBuffer;
 		bgfx::Encoder* encoder;
 
 		struct GLNVGtexture* textures;
@@ -1152,7 +1152,7 @@ error:
 	return NULL;
 }
 
-void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::FrameBuffer& frameBuffer, bgfx::Encoder* encoder)
+void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder)
 {
 	struct GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(_ctx)->userPtr;
 	gl->encoder = encoder;

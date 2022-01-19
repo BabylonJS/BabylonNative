@@ -1,8 +1,8 @@
 #pragma once
 
 #include <Babylon/Polyfills/Canvas.h>
-#include <GraphicsContext.h>
-#include <FrameBuffer.h>
+#include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/FrameBuffer.h>
 #include <UrlLib/UrlLib.h>
 #include <Babylon/JsRuntimeScheduler.h>
 #include <bx/allocator.h>

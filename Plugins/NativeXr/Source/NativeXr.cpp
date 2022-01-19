@@ -8,8 +8,8 @@
 #include <bx/math.h>
 #include <bgfx/bgfx.h>
 
-#include <FrameBuffer.h>
-#include <GraphicsContext.h>
+#include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/FrameBuffer.h>
 
 #include <algorithm>
 #include <set>
@@ -416,21 +416,21 @@ namespace Babylon
                 void* ColorTexturePointer{nullptr};
                 void* DepthTexturePointer{nullptr};
                 xr::Size ViewTextureSize{};
-                std::vector<FrameBuffer*> FrameBuffers{};
-                std::map<FrameBuffer*, Napi::ObjectReference> JsTextures{};
+                std::vector<Graphics::FrameBuffer*> FrameBuffers{};
+                std::map<Graphics::FrameBuffer*, Napi::ObjectReference> JsTextures{};
                 bool Initialized{false};
             };
 
             struct SessionState final
             {
-                explicit SessionState(GraphicsContext& graphicsContext)
+                explicit SessionState(Graphics::DeviceContext& graphicsContext)
                     : GraphicsContext{graphicsContext}
                     , Update{GraphicsContext.GetUpdate("update")}
                 {
                 }
 
-                GraphicsContext& GraphicsContext;
-                Update Update;
+                Graphics::DeviceContext& GraphicsContext;
+                Graphics::Update Update;
                 Napi::FunctionReference CreateRenderTexture{};
                 Napi::FunctionReference DestroyRenderTexture{};
                 std::vector<ViewConfiguration*> ActiveViewConfigurations{};
@@ -494,14 +494,14 @@ namespace Babylon
                 return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"There is already an immersive XR session either currently active or in the process of being set up. There can only be one immersive XR session at a time."}));
             }
 
-            GraphicsContext& graphicsContext = GraphicsContext::GetFromJavaScript(m_env);
+            Graphics::DeviceContext& context = Graphics::DeviceContext::GetFromJavaScript(m_env);
 
             // Don't try to start a session while it is still ending.
-            m_beginTask.emplace(m_endTask.then(graphicsContext.AfterRenderScheduler(), arcana::cancellation::none(),
-                [this, thisRef{shared_from_this()}, &graphicsContext]() {
+            m_beginTask.emplace(m_endTask.then(context.AfterRenderScheduler(), arcana::cancellation::none(),
+                [this, thisRef{shared_from_this()}, &context]() {
                     assert(m_sessionState == nullptr);
 
-                    m_sessionState = std::make_unique<SessionState>(graphicsContext);
+                    m_sessionState = std::make_unique<SessionState>(context);
 
                     if (!m_system.IsInitialized() &&
                         !m_system.TryInitialize())
@@ -697,7 +697,7 @@ namespace Babylon
                             
                             auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
-                            const auto frameBufferPtr = new FrameBuffer(
+                            const auto frameBufferPtr = new Graphics::FrameBuffer(
                                 m_sessionState->GraphicsContext,
                                 frameBufferHandle,
                                 static_cast<uint16_t>(viewConfig.ViewTextureSize.Width),
@@ -716,7 +716,7 @@ namespace Babylon
 
                             auto jsWidth{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Width)};
                             auto jsHeight{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Height)};
-                            auto jsFrameBuffer{Napi::Pointer<FrameBuffer>::Create(m_env, frameBufferPtr, Napi::NapiPointerDeleter(frameBufferPtr))};
+                            auto jsFrameBuffer{Napi::Pointer<Graphics::FrameBuffer>::Create(m_env, frameBufferPtr, Napi::NapiPointerDeleter(frameBufferPtr))};
                             viewConfig.JsTextures[frameBufferPtr] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
                         }
                         viewConfig.Initialized = true;
