@@ -32,25 +32,25 @@ set(SOURCES
     "Source/SafeTimespanGuarantor.cpp"
     "Source/Texture.cpp")
 
-add_library(GraphicsImplementation ${SOURCES})
-warnings_as_errors(GraphicsImplementation)
+add_library(Graphics ${SOURCES})
+warnings_as_errors(Graphics)
 
-target_include_directories(GraphicsImplementation
+target_include_directories(Graphics
     PRIVATE "Include/Shared"
     PRIVATE "Include/Platform/${PLATFORM_PATH}"
     PRIVATE "Include/RendererType/${GRAPHICS_API}"
     PRIVATE "InternalInclude/")
 
 if(WIN32 AND NOT WINDOWS_STORE)
-    target_link_to_dependencies(GraphicsImplementation
+    target_link_to_dependencies(Graphics
         PRIVATE "shlwapi.lib")
 elseif(ANDROID)
-    target_link_to_dependencies(GraphicsImplementation
+    target_link_to_dependencies(Graphics
         PRIVATE android
         PRIVATE AndroidExtensions)
 endif()
 
-target_link_to_dependencies(GraphicsImplementation
+target_link_to_dependencies(Graphics
     PRIVATE napi_extensions
     PRIVATE JsRuntime
     PRIVATE JsRuntimeInternal
@@ -59,38 +59,38 @@ target_link_to_dependencies(GraphicsImplementation
     PRIVATE bx)
 
 string(TOUPPER ${GRAPHICS_API} GRAPHICS_API_UPPER)
-target_compile_definitions(GraphicsImplementation
+target_compile_definitions(Graphics
     PRIVATE NOMINMAX
     PRIVATE ${GRAPHICS_API_UPPER})
 
-set_property(TARGET GraphicsImplementation PROPERTY FOLDER Core)
+set_property(TARGET Graphics PROPERTY FOLDER Core)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
 if(APPLE)
     # compile as objc++
-    target_compile_options(GraphicsImplementation PUBLIC "SHELL:-x objective-c++")
+    target_compile_options(Graphics PUBLIC "SHELL:-x objective-c++")
 endif()
 
-add_library(Graphics INTERFACE)
-target_include_directories(Graphics
+add_library(GraphicsDevice INTERFACE)
+target_include_directories(GraphicsDevice
     INTERFACE "Include/Shared"
     INTERFACE "Include/Platform/${PLATFORM_PATH}"
     INTERFACE "Include/RendererType/${GRAPHICS_API}")
-target_link_to_dependencies(Graphics
-    INTERFACE GraphicsImplementation
+target_link_to_dependencies(GraphicsDevice
+    INTERFACE Graphics
     INTERFACE JsRuntime)
 
-add_library(GraphicsContext INTERFACE)
-target_include_directories(GraphicsContext
+add_library(GraphicsDeviceContext INTERFACE)
+target_include_directories(GraphicsDeviceContext
     INTERFACE "InternalInclude"
     INTERFACE "InternalInclude/${BABYLON_NATIVE_PLATFORM}")
-target_link_to_dependencies(GraphicsContext
-    INTERFACE GraphicsImplementation
+target_link_to_dependencies(GraphicsDeviceContext
+    INTERFACE Graphics
     INTERFACE JsRuntimeInternal
     INTERFACE arcana
     INTERFACE bgfx
     INTERFACE bimg
     INTERFACE bx)
 
-target_compile_definitions(GraphicsContext
+target_compile_definitions(GraphicsDeviceContext
     INTERFACE NOMINMAX)

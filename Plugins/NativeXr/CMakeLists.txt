@@ -11,7 +11,7 @@ target_include_directories(NativeXr
 target_link_to_dependencies(NativeXr
     PRIVATE arcana
     PRIVATE bgfx
-    PRIVATE GraphicsContext
+    PRIVATE GraphicsDeviceContext
     PRIVATE JsRuntime
     PRIVATE napi_extensions
     PRIVATE xr)
