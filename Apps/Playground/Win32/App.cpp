@@ -10,7 +10,6 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
-#include <Babylon/Graphics/ExternalResource.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
@@ -121,12 +120,8 @@ namespace
 
         runtime = std::make_unique<Babylon::AppRuntime>();
 
-        Babylon::ExternalTexture texture{*graphics, 0};
-        runtime->Dispatch([texture = std::move(texture)](Napi::Env env) mutable {
+        runtime->Dispatch([](Napi::Env env) mutable {
             graphics->AddToJavaScript(env);
-
-            auto context = graphics->CreateContext(env);
-            auto napiTexture = texture.AddToContext(context);
 
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 OutputDebugStringA(message);

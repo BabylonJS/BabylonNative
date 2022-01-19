@@ -110,7 +110,6 @@ target_link_to_dependencies(Playground
     PRIVATE AppRuntime
     PRIVATE NativeCapture
     PRIVATE ChromeDevTools
-    PRIVATE GraphicsExternalResource
     PRIVATE NativeEngine
     PRIVATE NativeInput
     PRIVATE NativeOptimizations
