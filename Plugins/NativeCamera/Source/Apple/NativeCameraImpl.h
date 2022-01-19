@@ -3,7 +3,7 @@
 #include <bgfx/bgfx.h>
 #include <napi/napi.h>
 #include <NativeCamera.h>
-#include <GraphicsContext.h>
+#include <Babylon/Graphics/DeviceContext.h>
 
 namespace Babylon::Plugins
 {
@@ -20,7 +20,7 @@ namespace Babylon::Plugins
         void Close();
 
     private:
-        GraphicsContext& m_graphicsContext;
+        Graphics::DeviceContext& m_deviceContext;
 
         std::shared_ptr<ImplData> m_implData;
 

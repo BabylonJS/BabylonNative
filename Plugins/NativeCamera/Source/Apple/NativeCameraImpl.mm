@@ -6,7 +6,7 @@
 #include <arcana/threading/task.h>
 #include <arcana/threading/dispatcher.h>
 #include <Babylon/JsRuntimeScheduler.h>
-#include <GraphicsContext.h>
+#include <Babylon/Graphics/DeviceContext.h>
 #include <arcana/threading/task_schedulers.h>
 #include <memory>
 #include <Foundation/Foundation.h>
@@ -47,7 +47,7 @@ namespace Babylon::Plugins
         id <MTLTexture> textureBGRA{};
     };
     Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
-        : m_graphicsContext{GraphicsContext::GetFromJavaScript(env)}
+        : m_deviceContext{Graphics::DeviceContext::GetFromJavaScript(env)}
         , m_implData{std::make_unique<ImplData>()}
         , m_overrideCameraTexture{overrideCameraTexture}
     {
@@ -131,7 +131,7 @@ namespace Babylon::Plugins
 
     void Camera::Impl::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
-        arcana::make_task(m_graphicsContext.BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
+        arcana::make_task(m_deviceContext.BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
             if (m_implData->textureBGRA)
             {
                 bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureBGRA));

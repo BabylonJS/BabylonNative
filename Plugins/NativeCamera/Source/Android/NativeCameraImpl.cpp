@@ -10,7 +10,7 @@
 #include <bgfx/platform.h>
 #include <arcana/threading/dispatcher.h>
 #include <Babylon/JsRuntimeScheduler.h>
-#include <GraphicsContext.h>
+#include <Babylon/Graphics/DeviceContext.h>
 #include <arcana/threading/task_schedulers.h>
 #include <arcana/macros.h>
 #include <memory>
@@ -149,7 +149,7 @@ namespace Babylon::Plugins
 #endif
 
     Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
-        : m_graphicsContext{GraphicsContext::GetFromJavaScript(env)}
+        : m_deviceContext{Graphics::DeviceContext::GetFromJavaScript(env)}
         , m_overrideCameraTexture{overrideCameraTexture}
     {
 #if __ANDROID_API__ < 24
@@ -323,7 +323,7 @@ namespace Babylon::Plugins
             throw std::runtime_error{"Unable to make current shared GL context for camera texture."};
         }
 
-        arcana::make_task(m_graphicsContext.BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
+        arcana::make_task(m_deviceContext.BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
             bgfx::overrideInternal(textureHandle, m_cameraRGBATextureId);
         });
     }
