@@ -5,6 +5,7 @@
 #include "NativeCameraImpl.h"
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/Texture.h>
 #include <vector>
 #include <algorithm>
 
@@ -12,24 +13,6 @@ namespace Babylon
 {
     namespace Plugins
     {
-        // Move this struct to Graphics
-        struct TextureData final
-        {
-            ~TextureData()
-            {
-                if (bgfx::isValid(Handle))
-                {
-                    bgfx::destroy(Handle);
-                }
-            }
-
-            bgfx::TextureHandle Handle{ bgfx::kInvalidHandle };
-            uint32_t Width{ 0 };
-            uint32_t Height{ 0 };
-            uint32_t Flags{ 0 };
-            uint8_t AnisotropicLevel{ 0 };
-        };
-
         class NativeCamera : public Napi::ObjectWrap<NativeCamera>
         {
             static constexpr auto JS_NAVIGATOR_NAME = "navigator";
@@ -116,7 +99,7 @@ namespace Babylon
 
             void UpdateVideoTexture(const Napi::CallbackInfo& info)
             {
-                const auto& texture = *info[0].As<Napi::Pointer<TextureData>>().Get();
+                const auto& texture = *info[0].As<Napi::Pointer<Graphics::TextureData>>().Get();
                 auto videoObject = NativeVideo::Unwrap(info[1].As<Napi::Object>());
 
                 videoObject->UpdateTexture(texture.Handle);
