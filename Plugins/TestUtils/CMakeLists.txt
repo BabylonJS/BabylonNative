@@ -24,6 +24,7 @@ target_include_directories(TestUtils PRIVATE "Source")
 
 target_link_to_dependencies(TestUtils
     PUBLIC JsRuntime
+    PRIVATE Graphics
     PRIVATE GraphicsContext)
 
 set_property(TARGET TestUtils PROPERTY FOLDER Plugins)

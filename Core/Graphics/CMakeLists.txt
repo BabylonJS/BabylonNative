@@ -85,7 +85,7 @@ target_include_directories(GraphicsContext
     INTERFACE "InternalInclude"
     INTERFACE "InternalInclude/${BABYLON_NATIVE_PLATFORM}")
 target_link_to_dependencies(GraphicsContext
-    INTERFACE Graphics
+    INTERFACE GraphicsImplementation
     INTERFACE JsRuntimeInternal
     INTERFACE arcana
     INTERFACE bgfx
