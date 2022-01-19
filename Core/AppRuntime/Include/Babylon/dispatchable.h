@@ -5,16 +5,16 @@
 
 namespace Babylon
 {
-    namespace internal
+    namespace Internal
     {
         template<typename...>
-        class dispatchable_impl_base;
+        class DispatchableImplBase;
 
         template<typename ReturnT, typename... ArgsT>
-        class dispatchable_impl_base<ReturnT(ArgsT...)>
+        class DispatchableImplBase<ReturnT(ArgsT...)>
         {
         public:
-            virtual ~dispatchable_impl_base()
+            virtual ~DispatchableImplBase()
             {
             }
 
@@ -22,15 +22,15 @@ namespace Babylon
         };
 
         template<typename...>
-        class dispatchable_impl;
+        class DispatchableImpl;
 
         template<typename CallableT, typename ReturnT, typename... ArgsT>
-        class dispatchable_impl<CallableT, ReturnT(ArgsT...)> : public dispatchable_impl_base<ReturnT(ArgsT...)>
+        class DispatchableImpl<CallableT, ReturnT(ArgsT...)> : public DispatchableImplBase<ReturnT(ArgsT...)>
         {
         public:
-            dispatchable_impl(dispatchable_impl<CallableT, ReturnT(ArgsT...)>&& other) = default;
+            DispatchableImpl(DispatchableImpl<CallableT, ReturnT(ArgsT...)>&& other) = default;
         
-            dispatchable_impl(CallableT&& callable)
+            DispatchableImpl(CallableT&& callable)
                 : m_callable{std::forward<CallableT>(callable)}
             {
             }
@@ -46,16 +46,16 @@ namespace Babylon
     }
 
     template<typename SignatureT>
-    class dispatchable
+    class Dispatchable
     {
     public:
-        dispatchable() = default;
-        dispatchable(const dispatchable&) = delete;
-        dispatchable(dispatchable&&) = default;
+        Dispatchable() = default;
+        Dispatchable(const Dispatchable&) = delete;
+        Dispatchable(Dispatchable&&) = default;
 
         template<typename CallableT>
-        dispatchable(CallableT&& callable)
-            : m_impl{std::make_unique<internal::dispatchable_impl<CallableT, SignatureT>>(std::forward<CallableT>(callable))}
+        Dispatchable(CallableT&& callable)
+            : m_impl{std::make_unique<Internal::DispatchableImpl<CallableT, SignatureT>>(std::forward<CallableT>(callable))}
         {
         }
 
@@ -66,6 +66,6 @@ namespace Babylon
         }
 
     private:
-        std::unique_ptr<internal::dispatchable_impl_base<SignatureT>> m_impl{};
+        std::unique_ptr<Internal::DispatchableImplBase<SignatureT>> m_impl{};
     };
 }
