@@ -1,7 +1,7 @@
 #include "LibNativeBridge.h"
 
 #import <Babylon/AppRuntime.h>
-#import <Babylon/Graphics.h>
+#import <Babylon/Graphics/Device.h>
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
@@ -12,8 +12,8 @@
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <UIKit/UIKit.h>
 
-std::unique_ptr<Babylon::Graphics> graphics{};
-std::unique_ptr<Babylon::Graphics::Update> update{};
+std::unique_ptr<Babylon::Graphics::Device> device{};
+std::unique_ptr<Babylon::Graphics::Device::Update> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
@@ -32,19 +32,19 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 - (void)init:(MTKView*)view width:(int)inWidth height:(int)inHeight
 {
     runtime.reset();
-    graphics.reset();
+    device.reset();
 
     float width = inWidth;
     float height = inHeight;
 
-    Babylon::WindowConfiguration graphicsConfig{};
+    Babylon::Graphics::WindowConfiguration graphicsConfig{};
     graphicsConfig.WindowPtr = view;
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
-    graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-    update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
-    graphics->StartRenderingCurrentFrame();
-    graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
+    device = Babylon::Graphics::Device::Create(graphicsConfig);
+    update = std::make_unique<Babylon::Graphics::Device::Update>(device->GetUpdate("update"));
+    device->StartRenderingCurrentFrame();
+    device->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
     update->Start();
 
     runtime = std::make_unique<Babylon::AppRuntime>();
@@ -55,7 +55,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
         nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
 
-        graphics->AddToJavaScript(env);
+        device->AddToJavaScript(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         Babylon::Plugins::NativeOptimizations::Initialize(env);
@@ -76,19 +76,19 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
 - (void)resize:(int)inWidth height:(int)inHeight
 {
-    if (graphics)
+    if (device)
     {
-        graphics->UpdateSize(static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
+        device->UpdateSize(static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
     }
 }
 
 - (void)render
 {
-    if (graphics)
+    if (device)
     {
         update->Finish();
-        graphics->FinishRenderingCurrentFrame();
-        graphics->StartRenderingCurrentFrame();
+        device->FinishRenderingCurrentFrame();
+        device->StartRenderingCurrentFrame();
         update->Start();
     }
 }

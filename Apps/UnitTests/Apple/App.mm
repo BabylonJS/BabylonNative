@@ -1,6 +1,6 @@
 #include "../Shared/Tests.cpp"
 
 int main() {
-    Babylon::ContextConfiguration graphicsConfig{};
-    return Run(Babylon::Graphics::CreateGraphics(graphicsConfig));
+    Babylon::Graphics::ContextConfiguration graphicsConfig{};
+    return Run(Babylon::Graphics::Device::Create(graphicsConfig));
 }

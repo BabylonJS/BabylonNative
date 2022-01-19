@@ -1,6 +1,6 @@
 #include "App.h"
 
-#include <Babylon/Graphics.h>
+#include <Babylon/Graphics/Device.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
@@ -85,11 +85,11 @@ void App::Run()
 {
     while (!m_windowClosed)
     {
-        if (m_graphics)
+        if (m_device)
         {
             m_update->Finish();
-            m_graphics->FinishRenderingCurrentFrame();
-            m_graphics->StartRenderingCurrentFrame();
+            m_device->FinishRenderingCurrentFrame();
+            m_device->StartRenderingCurrentFrame();
             m_update->Start();
         }
 
@@ -102,14 +102,14 @@ void App::Run()
 // class is torn down while the app is in the foreground.
 void App::Uninitialize()
 {
-    if (m_graphics)
+    if (m_device)
     {
         m_update->Finish();
-        m_graphics->FinishRenderingCurrentFrame();
+        m_device->FinishRenderingCurrentFrame();
     }
 
     m_runtime.reset();
-    m_graphics.reset();
+    m_device.reset();
 }
 
 // Application lifecycle event handlers.
@@ -139,10 +139,10 @@ void App::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
     // the app will be forced to exit.
     auto deferral = args->SuspendingOperation->GetDeferral();
 
-    if (m_graphics)
+    if (m_device)
     {
         m_update->Finish();
-        m_graphics->FinishRenderingCurrentFrame();
+        m_device->FinishRenderingCurrentFrame();
     }
 
     m_runtime->Suspend();
@@ -157,9 +157,9 @@ void App::OnResuming(Platform::Object^ sender, Platform::Object^ args)
     // does not occur if the app was previously terminated.
     m_runtime->Resume();
 
-    if (m_graphics)
+    if (m_device)
     {
-        m_graphics->StartRenderingCurrentFrame();
+        m_device->StartRenderingCurrentFrame();
         m_update->Start();
     }
 }
@@ -194,19 +194,19 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     size_t height = static_cast<size_t>(bounds.Height * m_displayScale);
     auto* windowPtr = reinterpret_cast<winrt::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
 
-    Babylon::WindowConfiguration graphicsConfig{};
+    Babylon::Graphics::WindowConfiguration graphicsConfig{};
     graphicsConfig.WindowPtr = windowPtr;
     graphicsConfig.Width = width;
     graphicsConfig.Height = height;
-    m_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-    m_update = std::make_unique<Babylon::Graphics::Update>(m_graphics->GetUpdate("update"));
-    m_graphics->StartRenderingCurrentFrame();
+    m_device = Babylon::Graphics::Update::Create(graphicsConfig);
+    m_update = std::make_unique<Babylon::Graphics::Device::Update>(m_device->GetUpdate("update"));
+    m_device->StartRenderingCurrentFrame();
     m_update->Start();
 
     m_runtime = std::make_unique<Babylon::AppRuntime>();
 
     m_runtime->Dispatch([this, windowPtr](Napi::Env env) {
-        m_graphics->AddToJavaScript(env);
+        m_device->AddToJavaScript(env);
 
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
             OutputDebugStringA(message);
@@ -236,5 +236,5 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     loader.LoadScript("app:///Scripts/babylon.gui.js");
     loader.LoadScript("app:///Scripts/validation_native.js");
 
-    m_graphics->UpdateSize(600, 400);
+    m_device->UpdateSize(600, 400);
 }

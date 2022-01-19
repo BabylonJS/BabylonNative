@@ -3,7 +3,7 @@
 #import <filesystem>
 
 #import <Babylon/AppRuntime.h>
-#import <Babylon/Graphics.h>
+#import <Babylon/Graphics/Device.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
 #import <Babylon/Plugins/TestUtils.h>
@@ -13,8 +13,8 @@
 #import <Babylon/ScriptLoader.h>
 #import <MetalKit/MetalKit.h>
 
-std::unique_ptr<Babylon::Graphics> graphics{};
-std::unique_ptr<Babylon::Graphics::Update> update{};
+std::unique_ptr<Babylon::Graphics::Device> device{};
+std::unique_ptr<Babylon::Graphics::Device::Update> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
@@ -26,17 +26,17 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
 - (void)mtkView:(MTKView *)__unused view drawableSizeWillChange:(CGSize) size
 {
-    if (graphics) {
-        graphics->UpdateSize(static_cast<size_t>(size.width), static_cast<size_t>(size.height));
+    if (device) {
+        device->UpdateSize(static_cast<size_t>(size.width), static_cast<size_t>(size.height));
     }
 }
 
 - (void)drawInMTKView:(MTKView *)__unused view
 {
-    if (graphics) {
+    if (device) {
         update->Finish();
-        graphics->FinishRenderingCurrentFrame();
-        graphics->StartRenderingCurrentFrame();
+        device->FinishRenderingCurrentFrame();
+        device->StartRenderingCurrentFrame();
         update->Start();
     }
 }
@@ -53,13 +53,13 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 }
 
 - (void)uninitialize {
-    if (graphics) {
+    if (device) {
         update->Finish();
-        graphics->FinishRenderingCurrentFrame();
+        device->FinishRenderingCurrentFrame();
     }
 
     runtime.reset();
-    graphics.reset();
+    device.reset();
 }
 
 - (void)initialize {
@@ -77,20 +77,20 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     [[self view] addSubview:engineView];
     engineView.delegate = engineView;
 
-    Babylon::WindowConfiguration graphicsConfig{};
+    Babylon::Graphics::WindowConfiguration graphicsConfig{};
     graphicsConfig.WindowPtr = engineView;
     graphicsConfig.Width = static_cast<size_t>(600);
     graphicsConfig.Height = static_cast<size_t>(400);
-    graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-    update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
-    graphics->StartRenderingCurrentFrame();
+    device = Babylon::Graphics::Device::Create(graphicsConfig);
+    update = std::make_unique<Babylon::Graphics::Device::Update>(device->GetUpdate("update"));
+    device->StartRenderingCurrentFrame();
     update->Start();
 
     runtime = std::make_unique<Babylon::AppRuntime>();
 
     runtime->Dispatch([engineView](Napi::Env env)
     {
-        graphics->AddToJavaScript(env);
+        device->AddToJavaScript(env);
 
         Babylon::Polyfills::Window::Initialize(env);
 

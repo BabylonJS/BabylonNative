@@ -1,7 +1,7 @@
 #import "ViewController.h"
 
 #import <Babylon/AppRuntime.h>
-#import <Babylon/Graphics.h>
+#import <Babylon/Graphics/Device.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeInput.h>
 #import <Babylon/Polyfills/Window.h>
@@ -15,8 +15,8 @@
 
 #import <math.h>
 
-std::unique_ptr<Babylon::Graphics> graphics{};
-std::unique_ptr<Babylon::Graphics::Update> update{};
+std::unique_ptr<Babylon::Graphics::Device> device{};
+std::unique_ptr<Babylon::Graphics::Device::Update> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 Babylon::Plugins::NativeInput* nativeInput{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
@@ -29,18 +29,18 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
 - (void)mtkView:(MTKView *)__unused view drawableSizeWillChange:(CGSize) size
 {
-    if (graphics) {
-        graphics->UpdateSize(static_cast<size_t>(size.width), static_cast<size_t>(size.height));
+    if (device) {
+        device->UpdateSize(static_cast<size_t>(size.width), static_cast<size_t>(size.height));
     }
 }
 
 - (void)drawInMTKView:(MTKView *)__unused view
 {
-    if (graphics) {
-        graphics->StartRenderingCurrentFrame();
+    if (device) {
+        device->StartRenderingCurrentFrame();
         update->Start();
         update->Finish();
-        graphics->FinishRenderingCurrentFrame();
+        device->FinishRenderingCurrentFrame();
     }
 }
 
@@ -53,15 +53,15 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 }
 
 - (void)uninitialize {
-    if (graphics)
+    if (device)
     {
-        graphics->FinishRenderingCurrentFrame();
+        device->FinishRenderingCurrentFrame();
     }
 
     // Note: JS Context owns this memory for this so it's not actually a leak
     nativeInput = {};
     runtime.reset();
-    graphics.reset();
+    device.reset();
 }
 
 - (void)refreshBabylon {
@@ -85,18 +85,18 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     CGFloat screenScale = mainScreen.backingScaleFactor;
     size_t width = [self view].frame.size.width * screenScale;
     size_t height = [self view].frame.size.height * screenScale;
-    Babylon::WindowConfiguration graphicsConfig{};
+    Babylon::Graphics::WindowConfiguration graphicsConfig{};
     graphicsConfig.WindowPtr = engineView;
     graphicsConfig.Width = width;
     graphicsConfig.Height = height;
-    graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-    update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
+    device = Babylon::Graphics::Device::Create(graphicsConfig);
+    update = std::make_unique<Babylon::Graphics::Device::Update>(device->GetUpdate("update"));
 
     runtime = std::make_unique<Babylon::AppRuntime>();
 
     runtime->Dispatch([](Napi::Env env)
     {
-        graphics->AddToJavaScript(env);
+        device->AddToJavaScript(env);
 
         Babylon::Polyfills::Window::Initialize(env);
 

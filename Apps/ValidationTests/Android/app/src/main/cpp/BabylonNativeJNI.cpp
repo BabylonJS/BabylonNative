@@ -10,7 +10,7 @@
 
 #include <AndroidExtensions/Globals.h>
 #include <Babylon/AppRuntime.h>
-#include <Babylon/Graphics.h>
+#include <Babylon/Graphics/Device.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
@@ -22,8 +22,8 @@
 
 namespace
 {
-    std::unique_ptr<Babylon::Graphics> g_graphics{};
-    std::unique_ptr<Babylon::Graphics::Update> g_update{};
+    std::unique_ptr<Babylon::Graphics::Device> g_device{};
+    std::unique_ptr<Babylon::Graphics::Device::Update> g_update{};
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
     std::unique_ptr<Babylon::ScriptLoader> g_scriptLoader{};
 }
@@ -38,15 +38,15 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jclass clazz)
     {
-        if (g_graphics)
+        if (g_device)
         {
             g_update->Finish();
-            g_graphics->FinishRenderingCurrentFrame();
+            g_device->FinishRenderingCurrentFrame();
         }
 
         g_scriptLoader.reset();
         g_runtime.reset();
-        g_graphics.reset();
+        g_device.reset();
     }
 
     JNIEXPORT void JNICALL
@@ -66,20 +66,20 @@ extern "C"
             int32_t width  = 600;//ANativeWindow_getWidth(window);
             int32_t height = 400;//ANativeWindow_getHeight(window);
 
-            Babylon::WindowConfiguration graphicsConfig{};
+            Babylon::Graphics::WindowConfiguration graphicsConfig{};
             graphicsConfig.WindowPtr = window;
             graphicsConfig.Width = static_cast<size_t>(width);
             graphicsConfig.Height = static_cast<size_t>(height);
 
-            g_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-            g_update = std::make_unique<Babylon::Graphics::Update>(g_graphics->GetUpdate("update"));
-            g_graphics->StartRenderingCurrentFrame();
+            g_device = Babylon::Graphics::Device::Create(graphicsConfig);
+            g_update = std::make_unique<Babylon::Graphics::Device::Update>(g_device->GetUpdate("update"));
+            g_device->StartRenderingCurrentFrame();
             g_update->Start();
 
             g_runtime = std::make_unique<Babylon::AppRuntime>();
             g_runtime->Dispatch([window](Napi::Env env)
             {
-                g_graphics->AddToJavaScript(env);
+                g_device->AddToJavaScript(env);
 
                 Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel level)
                 {
@@ -129,12 +129,12 @@ extern "C"
         {
             ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
 
-            Babylon::WindowConfiguration graphicsConfig{};
+            Babylon::Graphics::WindowConfiguration graphicsConfig{};
             graphicsConfig.WindowPtr = window;
             graphicsConfig.Width = static_cast<size_t>(width);
             graphicsConfig.Height = static_cast<size_t>(height);
-            g_graphics->UpdateWindow(graphicsConfig);
-            g_graphics->UpdateSize(graphicsConfig.Width, graphicsConfig.Height);
+            g_device->UpdateWindow(graphicsConfig);
+            g_device->UpdateSize(graphicsConfig.Width, graphicsConfig.Height);
         }
     }
 
@@ -207,11 +207,11 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_renderFrame(JNIEnv* env, jclass clazz)
     {
-        if (g_graphics)
+        if (g_device)
         {
             g_update->Finish();
-            g_graphics->FinishRenderingCurrentFrame();
-            g_graphics->StartRenderingCurrentFrame();
+            g_device->FinishRenderingCurrentFrame();
+            g_device->StartRenderingCurrentFrame();
             g_update->Start();
         }
     }

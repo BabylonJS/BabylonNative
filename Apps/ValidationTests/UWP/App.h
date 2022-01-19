@@ -5,7 +5,7 @@
 #include <Windows.h>
 #undef NOMINMAX
 #include <Babylon/AppRuntime.h>
-#include <Babylon/Graphics.h>
+#include <Babylon/Graphics/Device.h>
 #include <Babylon/Polyfills/Canvas.h>
 
 // Main entry point for our app. Connects the app with the Windows shell and handles application lifecycle events.
@@ -36,8 +36,8 @@ private:
 
     void RestartRuntime(Windows::Foundation::Rect bounds);
 
-    std::unique_ptr<Babylon::Graphics> m_graphics{};
-    std::unique_ptr<Babylon::Graphics::Update> m_update{};
+    std::unique_ptr<Babylon::Graphics::Device> m_device{};
+    std::unique_ptr<Babylon::Graphics::Device::Update> m_update{};
     std::unique_ptr<Babylon::AppRuntime> m_runtime{};
     std::unique_ptr<Babylon::Polyfills::Canvas> m_nativeCanvas{};
     Windows::Foundation::Collections::IVectorView<Windows::Storage::IStorageItem^>^ m_files;

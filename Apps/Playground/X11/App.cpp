@@ -8,7 +8,7 @@
 #include <filesystem>
 
 #include <Babylon/AppRuntime.h>
-#include <Babylon/Graphics.h>
+#include <Babylon/Graphics/Device.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
@@ -21,8 +21,8 @@
 static const char* s_applicationName  = "BabylonNative Playground";
 static const char* s_applicationClass = "Playground";
 
-std::unique_ptr<Babylon::Graphics> graphics{};
-std::unique_ptr<Babylon::Graphics::Update> update{};
+std::unique_ptr<Babylon::Graphics::Device> device{};
+std::unique_ptr<Babylon::Graphics::Device::Update> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 Babylon::Plugins::NativeInput* nativeInput{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
@@ -49,14 +49,14 @@ namespace
 
     void Uninitialize()
     {
-        if (graphics)
+        if (device)
         {
             update->Finish();
-            graphics->FinishRenderingCurrentFrame();
+            device->FinishRenderingCurrentFrame();
         }
         runtime.reset();
         nativeInput = {};
-        graphics.reset();
+        device.reset();
     }
 
     void InitBabylon(Window window, int width, int height, int argc, const char* const* argv)
@@ -67,14 +67,14 @@ namespace
         Uninitialize();
 
         // Separately call reset and make_unique to ensure prior state is destroyed before new one is created.
-        Babylon::WindowConfiguration graphicsConfig{};
+        Babylon::Graphics::WindowConfiguration graphicsConfig{};
         graphicsConfig.WindowPtr = window;
         graphicsConfig.Width = static_cast<size_t>(width);
         graphicsConfig.Height = static_cast<size_t>(height);
 
-        graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-        update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
-        graphics->StartRenderingCurrentFrame();
+        device = Babylon::Graphics::Device::Create(graphicsConfig);
+        update = std::make_unique<Babylon::Graphics::Device::Update>(device->GetUpdate("update"));
+        device->StartRenderingCurrentFrame();
         update->Start();
 
         runtime = std::make_unique<Babylon::AppRuntime>();
@@ -91,7 +91,7 @@ namespace
             nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
 
             // Initialize NativeEngine plugin.
-            graphics->AddToJavaScript(env);
+            device->AddToJavaScript(env);
             Babylon::Plugins::NativeEngine::Initialize(env);
 
             Babylon::Plugins::NativeOptimizations::Initialize(env);
@@ -126,9 +126,9 @@ namespace
 
     void UpdateWindowSize(float width, float height)
     {
-        if (graphics != nullptr)
+        if (device != nullptr)
         {
-            graphics->UpdateSize(width, height);
+            device->UpdateSize(width, height);
         }
     }
 }
@@ -207,11 +207,11 @@ int main(int _argc, const char* const* _argv)
     bool exit{};
     while (!exit)
     {
-        if (!XPending(display) && graphics)
+        if (!XPending(display) && device)
         {
             update->Finish();
-            graphics->FinishRenderingCurrentFrame();
-            graphics->StartRenderingCurrentFrame();
+            device->FinishRenderingCurrentFrame();
+            device->StartRenderingCurrentFrame();
             update->Start();
         }
         else

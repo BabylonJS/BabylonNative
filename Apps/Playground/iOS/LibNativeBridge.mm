@@ -1,7 +1,7 @@
 #include "LibNativeBridge.h"
 
 #import <Babylon/AppRuntime.h>
-#import <Babylon/Graphics.h>
+#import <Babylon/Graphics/Device.h>
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeInput.h>
@@ -15,8 +15,8 @@
 
 #import <optional>
 
-std::unique_ptr<Babylon::Graphics> graphics{};
-std::unique_ptr<Babylon::Graphics::Update> update{};
+std::unique_ptr<Babylon::Graphics::Device> device{};
+std::unique_ptr<Babylon::Graphics::Device::Update> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 Babylon::Plugins::NativeInput* nativeInput{};
 std::optional<Babylon::Plugins::NativeXr> g_nativeXr{};
@@ -39,22 +39,22 @@ bool g_isXrActive{};
 {
     nativeInput = {};
     runtime.reset();
-    graphics.reset();
+    device.reset();
 
     float width = inWidth;
     float height = inHeight;
 
-    Babylon::WindowConfiguration graphicsConfig{};
+    Babylon::Graphics::WindowConfiguration graphicsConfig{};
     graphicsConfig.WindowPtr = view;
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
-    graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-    update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
+    device = Babylon::Graphics::Device::Create(graphicsConfig);
+    update = std::make_unique<Babylon::Graphics::Device::Update>(device->GetUpdate("update"));
     runtime = std::make_unique<Babylon::AppRuntime>();
 
     runtime->Dispatch([xrView](Napi::Env env)
     {
-        graphics->AddToJavaScript(env);
+        device->AddToJavaScript(env);
 
         Babylon::Polyfills::Window::Initialize(env);
 
@@ -94,20 +94,20 @@ bool g_isXrActive{};
 
 - (void)resize:(int)inWidth height:(int)inHeight
 {
-    if (graphics)
+    if (device)
     {
-        graphics->UpdateSize(static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
+        device->UpdateSize(static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
     }
 }
 
 - (void)render
 {
-    if (graphics)
+    if (device)
     {
-        graphics->StartRenderingCurrentFrame();
+        device->StartRenderingCurrentFrame();
         update->Start();
         update->Finish();
-        graphics->FinishRenderingCurrentFrame();
+        device->FinishRenderingCurrentFrame();
     }
 }
 

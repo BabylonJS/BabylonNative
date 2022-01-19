@@ -120,7 +120,7 @@ namespace
 
         runtime = std::make_unique<Babylon::AppRuntime>();
 
-        runtime->Dispatch([](Napi::Env env) mutable {
+        runtime->Dispatch([](Napi::Env env) {
             device->AddToJavaScript(env);
 
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
