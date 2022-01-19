@@ -80,13 +80,8 @@ extern "C"
             int32_t width  = ANativeWindow_getWidth(window);
             int32_t height = ANativeWindow_getHeight(window);
 
-<<<<<<< HEAD
             Babylon::Graphics::WindowConfiguration graphicsConfig{};
-            graphicsConfig.WindowPtr = window;
-=======
-            Babylon::WindowConfiguration graphicsConfig{};
             graphicsConfig.Window = window;
->>>>>>> master
             graphicsConfig.Width = static_cast<size_t>(width);
             graphicsConfig.Height = static_cast<size_t>(height);
             g_device = Babylon::Graphics::Device::Create(graphicsConfig);
@@ -155,13 +150,8 @@ extern "C"
         {
             ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
             g_runtime->Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto env) {
-<<<<<<< HEAD
                 Babylon::Graphics::WindowConfiguration graphicsConfig{};
-                graphicsConfig.WindowPtr = window;
-=======
-                Babylon::WindowConfiguration graphicsConfig{};
                 graphicsConfig.Window = window;
->>>>>>> master
                 graphicsConfig.Width = width;
                 graphicsConfig.Height = height;
                 g_device->UpdateWindow(graphicsConfig);

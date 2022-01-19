@@ -67,13 +67,8 @@ namespace
         Uninitialize();
 
         // Separately call reset and make_unique to ensure prior state is destroyed before new one is created.
-<<<<<<< HEAD
         Babylon::Graphics::WindowConfiguration graphicsConfig{};
-        graphicsConfig.WindowPtr = window;
-=======
-        Babylon::WindowConfiguration graphicsConfig{};
         graphicsConfig.Window = window;
->>>>>>> master
         graphicsConfig.Width = static_cast<size_t>(width);
         graphicsConfig.Height = static_cast<size_t>(height);
 

@@ -52,11 +52,7 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::TestUtils
 {
-<<<<<<< HEAD
-    void Initialize(Napi::Env env, Graphics::WindowType nativeWindowPtr)
-=======
-    void Initialize(Napi::Env env, WindowType window)
->>>>>>> master
+    void Initialize(Napi::Env env, Graphics::WindowType window)
     {
         auto implData{std::make_shared<Internal::TestUtils::ImplData>(window)};
         Internal::TestUtils::CreateInstance(env, implData);

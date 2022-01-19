@@ -85,13 +85,8 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     CGFloat screenScale = mainScreen.backingScaleFactor;
     size_t width = [self view].frame.size.width * screenScale;
     size_t height = [self view].frame.size.height * screenScale;
-<<<<<<< HEAD
     Babylon::Graphics::WindowConfiguration graphicsConfig{};
-    graphicsConfig.WindowPtr = engineView;
-=======
-    Babylon::WindowConfiguration graphicsConfig{};
     graphicsConfig.Window = engineView;
->>>>>>> master
     graphicsConfig.Width = width;
     graphicsConfig.Height = height;
     device = Babylon::Graphics::Device::Create(graphicsConfig);
