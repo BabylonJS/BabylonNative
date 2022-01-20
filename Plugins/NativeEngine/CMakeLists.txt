@@ -61,8 +61,10 @@ endif()
 
 target_compile_definitions(NativeEngine
     PRIVATE NOMINMAX)
+
+# TODO: remove this once the #define in ShaderCompilerCommon gets split into separate compilation units
 target_compile_definitions(NativeEngine
-    PRIVATE API${GRAPHICS_API}) # OpenGL is defined in bgfx.h. Using APIXXX instead
+    PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
 
 set_property(TARGET NativeEngine PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

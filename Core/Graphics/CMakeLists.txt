@@ -54,10 +54,8 @@ target_link_to_dependencies(Graphics
     PRIVATE bimg
     PRIVATE bx)
 
-string(TOUPPER ${GRAPHICS_API} GRAPHICS_API_UPPER)
 target_compile_definitions(Graphics
-    PRIVATE NOMINMAX
-    PRIVATE ${GRAPHICS_API_UPPER})
+    PRIVATE NOMINMAX)
 
 set_property(TARGET Graphics PROPERTY FOLDER Core)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
