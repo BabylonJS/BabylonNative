@@ -12,12 +12,12 @@ namespace Babylon::Plugins
         static NativeInput& CreateForJavaScript(Napi::Env);
         static NativeInput& GetFromJavaScript(Napi::Env);
 
-        void MouseDown(uint32_t buttonIndex, uint32_t x, uint32_t y);
-        void MouseUp(uint32_t buttonIndex, uint32_t x, uint32_t y);
-        void MouseMove(uint32_t x, uint32_t y);
-        void TouchDown(uint32_t pointerId, uint32_t x, uint32_t y);
-        void TouchUp(uint32_t pointerId, uint32_t x, uint32_t y);
-        void TouchMove(uint32_t pointerId, uint32_t x, uint32_t y);
+        void MouseDown(uint32_t buttonIndex, int32_t x, int32_t y);
+        void MouseUp(uint32_t buttonIndex, int32_t x, int32_t y);
+        void MouseMove(int32_t x, int32_t y);
+        void TouchDown(uint32_t pointerId, int32_t x, int32_t y);
+        void TouchUp(uint32_t pointerId, int32_t x, int32_t y);
+        void TouchMove(uint32_t pointerId, int32_t x, int32_t y);
 
         static constexpr uint32_t LEFT_MOUSE_BUTTON_ID{ 0 };
         static constexpr uint32_t MIDDLE_MOUSE_BUTTON_ID{ 1 };
