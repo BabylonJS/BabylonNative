@@ -867,6 +867,7 @@ namespace xr
             view.DepthTextureSize.Depth = depthSwapchain.ArraySize;
             view.DepthNearZ = sessionImpl.DepthNearZ;
             view.DepthFarZ = sessionImpl.DepthFarZ;
+            view.RequiresAppClear = true;
 
             PopulateProjectionMatrix(cachedView, view);
         }
