@@ -1119,9 +1119,6 @@ namespace Babylon
         const auto samplingMode = info[8].As<Napi::Number>().Int32Value();
         const auto textureType = info[10].As<Napi::Number>().Int32Value();
 
-        if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, depth, format)) 
-            throw std::runtime_error{"The data size does not match width, height, and format"};
-        
         texture->Width = width;
         texture->Height = height;
         texture->CreationFlags = BGFX_TEXTURE_NONE;
@@ -1129,10 +1126,14 @@ namespace Babylon
         texture->Handle = bgfx::createTexture2D(width, height, generateMips, depth, Cast(format), texture->Flags);
         texture->OwnsHandle = true;
 
-        if (!data.IsNull() && data.ByteLength() != 0)
+        if (!data.IsNull())
         {
-            const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
-            const bgfx::Memory* dataCopy = bgfx::copy(dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
+            if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, depth, format))
+                throw std::runtime_error{"The data size does not match width, height, depth and format"};
+
+            uint8_t* dataPtr = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
+            uint32_t dataSize = static_cast<uint32_t>(data.ByteLength());
+            const bgfx::Memory* dataCopy = bgfx::copy(dataPtr, dataSize); // This is required since BGFX must manage the data the memory.
             bgfx::updateTexture2D(texture->Handle, 0, 0, 0, 0, width, height, dataCopy);
         }
     }
