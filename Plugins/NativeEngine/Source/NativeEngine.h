@@ -73,10 +73,13 @@ namespace Babylon
         };
 
         std::unordered_map<uint16_t, UniformValue> Uniforms{};
+        std::unordered_map<uint16_t, size_t> UniformMaxElementLength{};
 
         void SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, size_t elementLength = 1)
         {
             UniformValue& value = Uniforms[handle.idx];
+            size_t& maxLenght = UniformMaxElementLength[handle.idx];
+            elementLength = std::max(static_cast<size_t>(1), std::min(maxLenght, elementLength));
             value.Data.assign(data.begin(), data.end());
             value.ElementLength = static_cast<uint16_t>(elementLength);
         }
@@ -143,6 +146,7 @@ namespace Babylon
         void LoadTexture(const Napi::CallbackInfo& info);
         void CopyTexture(const Napi::CallbackInfo& info);
         void LoadRawTexture(const Napi::CallbackInfo& info);
+        void LoadRawTexture2DArray(const Napi::CallbackInfo& info);
         void LoadCubeTexture(const Napi::CallbackInfo& info);
         void LoadCubeTextureWithMips(const Napi::CallbackInfo& info);
         Napi::Value GetTextureWidth(const Napi::CallbackInfo& info);

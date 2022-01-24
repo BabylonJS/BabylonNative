@@ -469,6 +469,7 @@ namespace Babylon
                 InstanceMethod("createTexture", &NativeEngine::CreateTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
                 InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
+                InstanceMethod("loadRawTexture2DArray", &NativeEngine::LoadRawTexture2DArray),
                 InstanceMethod("loadCubeTexture", &NativeEngine::LoadCubeTexture),
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
                 InstanceMethod("getTextureWidth", &NativeEngine::GetTextureWidth),
@@ -701,7 +702,9 @@ namespace Babylon
             throw Napi::Error::New(info.Env(), ex.what());
         }
 
-        static auto InitUniformInfos{[](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<std::string, UniformInfo>& uniformInfos) {
+        static auto InitUniformInfos
+        {
+            [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<std::string, UniformInfo>& uniformInfos, std::unordered_map<uint16_t, size_t>& uniformSizes){
             auto numUniforms = bgfx::getShaderUniforms(shader);
             std::vector<bgfx::UniformHandle> uniforms{numUniforms};
             bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
@@ -711,19 +714,20 @@ namespace Babylon
                 bgfx::UniformInfo info{};
                 bgfx::getUniformInfo(uniforms[index], info);
                 auto itStage = uniformStages.find(info.name);
-                uniformInfos.emplace(std::make_pair<std::string, UniformInfo>(info.name, {itStage == uniformStages.end() ? uint8_t{} : itStage->second, uniforms[index]}));
+                auto& handle = uniforms[index];
+                uniformInfos.emplace(std::make_pair<std::string, UniformInfo>(info.name, {itStage == uniformStages.end() ? uint8_t{} : itStage->second, handle}));
+                uniformSizes[uniforms[index].idx] = static_cast<size_t>(info.num);
             }
         }};
 
         auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
-        InitUniformInfos(vertexShader, shaderInfo.UniformStages, program->UniformInfos);
+        InitUniformInfos(vertexShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformMaxElementLength);
         program->VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
 
         auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
-        InitUniformInfos(fragmentShader, shaderInfo.UniformStages, program->UniformInfos);
+        InitUniformInfos(fragmentShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformMaxElementLength);
 
         program->Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
-
         return Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
     }
 
@@ -1100,6 +1104,37 @@ namespace Babylon
         bimg::ImageContainer* image{bimg::imageAlloc(&m_allocator, format, width, height, 1, 1, false, false, bytes)};
         image = PrepareImage(m_allocator, image, invertY, false, generateMips);
         LoadTextureFromImage(texture, image, false);
+    }
+
+    void NativeEngine::LoadRawTexture2DArray(const Napi::CallbackInfo& info)
+    {
+        const auto texture{info[0].As<Napi::Pointer<TextureData>>().Get()};
+        const auto data = info[1].As<Napi::TypedArray>();
+        const auto width{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
+        const auto height{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
+        const auto depth{static_cast<uint16_t>(info[4].As<Napi::Number>().Int32Value())};
+        const auto format{static_cast<bimg::TextureFormat::Enum>(info[5].As<Napi::Number>().Uint32Value())};
+        const auto generateMips = info[6].As<Napi::Boolean>().Value();
+        const auto invertY = info[7].As<Napi::Boolean>().Value();
+        const auto samplingMode = info[8].As<Napi::Number>().Int32Value();
+        const auto textureType = info[10].As<Napi::Number>().Int32Value();
+
+        if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, depth, format)) 
+            throw std::runtime_error{"The data size does not match width, height, and format"};
+        
+        texture->Width = width;
+        texture->Height = height;
+        texture->CreationFlags = BGFX_TEXTURE_NONE;
+        texture->Flags = BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE | BGFX_CAPS_TEXTURE_2D_ARRAY;
+        texture->Handle = bgfx::createTexture2D(width, height, generateMips, depth, Cast(format), texture->Flags);
+        texture->OwnsHandle = true;
+
+        if (!data.IsNull() && data.ByteLength() != 0)
+        {
+            const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
+            const bgfx::Memory* dataCopy = bgfx::copy(dataSpan.data(), static_cast<uint32_t>(dataSpan.size()));
+            bgfx::updateTexture2D(texture->Handle, 0, 0, 0, 0, width, height, dataCopy);
+        }
     }
 
     void NativeEngine::LoadCubeTexture(const Napi::CallbackInfo& info)
