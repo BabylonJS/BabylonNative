@@ -159,9 +159,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 }
 
 - (CGFloat)getScreenHeight {
-    NSScreen *mainScreen = [NSScreen mainScreen];
-    CGFloat screenScale = mainScreen.backingScaleFactor;
-    return [self view].frame.size.height * screenScale;
+    return [self view].frame.size.height;
 }
 
 - (void)mouseDown:(NSEvent *) theEvent {
