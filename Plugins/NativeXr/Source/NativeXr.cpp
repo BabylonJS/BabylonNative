@@ -684,7 +684,7 @@ namespace Babylon
 
                     auto requiresAppClear = view.RequiresAppClear;
 
-                    arcana::make_task(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, requiresAppClear, &viewConfig]() {
+                    arcana::make_task(m_sessionState->GraphicsImpl.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &viewConfig]() {
                         bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(viewConfig.ColorTexturePointer));
                         bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(viewConfig.DepthTexturePointer));
                     }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, requiresAppClear, &viewConfig]() {
