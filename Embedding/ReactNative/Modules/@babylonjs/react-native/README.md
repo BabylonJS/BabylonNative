@@ -76,4 +76,12 @@ const MyComponent: FunctionComponent<MyComponentProps> = (props: MyComponentProp
 }
 ```
 
+Also the `EngineView` has a boolean `isTransparent` flag which defines whether the background of the scene should be transparent or not.
+
+e.g.
+
+```tsx
+<EngineView style={{flex: 1}} camera={camera} isTransparent={true} />
+```
+
 Note: Currently only one `EngineView` can be active at any given time. Multi-view will be supported in a future release.

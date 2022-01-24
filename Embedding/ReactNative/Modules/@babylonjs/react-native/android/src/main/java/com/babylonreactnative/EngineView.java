@@ -2,16 +2,21 @@ package com.babylonreactnative;
 
 import android.annotation.TargetApi;
 import android.graphics.Bitmap;
+import android.graphics.SurfaceTexture;
 import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Base64;
 import android.view.MotionEvent;
 import android.view.PixelCopy;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.TextureView;
 import android.view.View;
 import android.widget.FrameLayout;
+
+import androidx.annotation.NonNull;
 
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.uimanager.UIManagerModule;
@@ -19,20 +24,19 @@ import com.facebook.react.uimanager.events.EventDispatcher;
 
 import java.io.ByteArrayOutputStream;
 
-public final class EngineView extends FrameLayout implements SurfaceHolder.Callback, View.OnTouchListener {
+public final class EngineView extends FrameLayout implements SurfaceHolder.Callback, TextureView.SurfaceTextureListener, View.OnTouchListener {
     private static final FrameLayout.LayoutParams childViewLayoutParams = new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
-    private final SurfaceView primarySurfaceView;
-    private final SurfaceView xrSurfaceView;
+    private TextureView transparentTextureView;
+    private Surface transparentSurface = null;
+    private SurfaceView opaqueSurfaceView = null;
+    private SurfaceView xrSurfaceView;
     private final EventDispatcher reactEventDispatcher;
     private Runnable renderRunnable;
 
     public EngineView(ReactContext reactContext) {
         super(reactContext);
 
-        this.primarySurfaceView = new SurfaceView(reactContext);
-        this.primarySurfaceView.setLayoutParams(EngineView.childViewLayoutParams);
-        this.primarySurfaceView.getHolder().addCallback(this);
-        this.addView(this.primarySurfaceView);
+        this.setIsTransparent(false);
 
         this.xrSurfaceView = new SurfaceView(reactContext);
         this.xrSurfaceView.setLayoutParams(childViewLayoutParams);
@@ -60,22 +64,43 @@ public final class EngineView extends FrameLayout implements SurfaceHolder.Callb
         this.reactEventDispatcher = reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher();
     }
 
+    // ------------------------------------
+    // TextureView related
+
+    public void setIsTransparent(Boolean isTransparent) {
+        if (isTransparent) {
+            if (this.opaqueSurfaceView != null) {
+                this.opaqueSurfaceView.setVisibility(View.GONE);
+                this.opaqueSurfaceView = null;
+            }
+            if (this.transparentTextureView == null) {
+                this.transparentTextureView = new TextureView(this.getContext());
+                this.transparentTextureView.setLayoutParams(EngineView.childViewLayoutParams);
+                this.transparentTextureView.setSurfaceTextureListener(this);
+                this.transparentTextureView.setOpaque(false);
+                this.addView(this.transparentTextureView);
+            }
+        } else {
+            if (this.transparentTextureView != null) {
+                this.transparentTextureView.setVisibility(View.GONE);
+                this.transparentTextureView = null;
+            }
+            if (this.opaqueSurfaceView == null) {
+                this.opaqueSurfaceView = new SurfaceView(this.getContext());
+                this.opaqueSurfaceView.setLayoutParams(EngineView.childViewLayoutParams);
+                this.opaqueSurfaceView.getHolder().addCallback(this);
+                this.addView(this.opaqueSurfaceView);
+            }
+        }
+        // xr view needs to be on top of views that might be created after it.
+        if (this.xrSurfaceView != null) {
+            this.xrSurfaceView.bringToFront();
+        }
+    }
+
     @Override
     public void surfaceCreated(SurfaceHolder surfaceHolder) {
-        this.renderRunnable = new Runnable() {
-            @Override
-            public void run() {
-                if (BabylonNativeInterop.isXRActive()) {
-                    EngineView.this.xrSurfaceView.setVisibility(View.VISIBLE);
-                } else {
-                    EngineView.this.xrSurfaceView.setVisibility(View.INVISIBLE);
-                }
-
-                BabylonNativeInterop.renderView();
-                EngineView.this.postOnAnimation(this);
-            }
-        };
-        this.postOnAnimation(this.renderRunnable);
+        this.startRenderLoop();
     }
 
     @Override
@@ -88,6 +113,43 @@ public final class EngineView extends FrameLayout implements SurfaceHolder.Callb
         this.removeCallbacks(this.renderRunnable);
         this.renderRunnable = null;
     }
+
+    @Override
+    public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int i, int i1) {
+        this.startRenderLoop();
+        this.acquireNewTransparentSurface(surfaceTexture);
+        BabylonNativeInterop.updateView(this.transparentSurface);
+    }
+
+    @Override
+    public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surfaceTexture, int i, int i1) {
+        this.acquireNewTransparentSurface(surfaceTexture);
+        BabylonNativeInterop.updateView(this.transparentSurface);
+    }
+
+    @Override
+    public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surfaceTexture) {
+        this.stopRenderLoop();
+        this.transparentSurface.release();
+        this.transparentSurface = null;
+        return false;
+    }
+
+    @Override
+    public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surfaceTexture) {
+        this.acquireNewTransparentSurface(surfaceTexture);
+        BabylonNativeInterop.updateView(this.transparentSurface);
+    }
+
+    private void acquireNewTransparentSurface(@NonNull SurfaceTexture surfaceTexture) {
+        if (this.transparentSurface != null) {
+            this.transparentSurface.release();
+        }
+        this.transparentSurface = new Surface(surfaceTexture);
+    }
+
+    // ------------------------------------
+    // Common
 
     @Override
     public boolean onTouch(View view, MotionEvent motionEvent) {
@@ -114,13 +176,20 @@ public final class EngineView extends FrameLayout implements SurfaceHolder.Callb
         helperThread.start();
         final Handler helperThreadHandler = new Handler(helperThread.getLooper());
 
-        SurfaceView surfaceView = this.primarySurfaceView;
+        Surface sourceSurface = this.transparentSurface;
         if (BabylonNativeInterop.isXRActive()) {
-            surfaceView = this.xrSurfaceView;
+            sourceSurface = this.xrSurfaceView.getHolder().getSurface();
+        } else if (this.opaqueSurfaceView != null) {
+            sourceSurface = this.opaqueSurfaceView.getHolder().getSurface();
         }
+        PixelCopy.request(sourceSurface, bitmap, getOnPixelCopyFinishedListener(bitmap, helperThread), helperThreadHandler);
+    }
 
-        // Request the pixel copy.
-        PixelCopy.request(surfaceView, bitmap, (copyResult) ->  {
+    // ---------------------------------------------------------------------------------------------
+    // Returns the listener for the PixelCopy.request function call
+    @NonNull
+    private PixelCopy.OnPixelCopyFinishedListener getOnPixelCopyFinishedListener(Bitmap bitmap, HandlerThread helperThread) {
+        return (copyResult) -> {
             // If the pixel copy was a success then convert the image to a base 64 encoded jpeg and fire the event.
             String encoded = "";
             if (copyResult == PixelCopy.SUCCESS) {
@@ -130,10 +199,32 @@ public final class EngineView extends FrameLayout implements SurfaceHolder.Callb
                 bitmap.recycle();
                 encoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
             }
-
             SnapshotDataReturnedEvent snapshotEvent = new SnapshotDataReturnedEvent(this.getId(), encoded);
             reactEventDispatcher.dispatchEvent(snapshotEvent);
             helperThread.quitSafely();
-        }, helperThreadHandler);
+        };
+    }
+
+    private void startRenderLoop() {
+        if(this.renderRunnable == null){
+            this.renderRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    if (BabylonNativeInterop.isXRActive()) {
+                        EngineView.this.xrSurfaceView.setVisibility(View.VISIBLE);
+                    } else {
+                        EngineView.this.xrSurfaceView.setVisibility(View.INVISIBLE);
+                    }
+                    BabylonNativeInterop.renderView();
+                    EngineView.this.postOnAnimation(this);
+                }
+            };
+            this.postOnAnimation(this.renderRunnable);
+        }
+    }
+
+    private void stopRenderLoop() {
+        this.removeCallbacks(this.renderRunnable);
+        this.renderRunnable = null;
     }
 }
