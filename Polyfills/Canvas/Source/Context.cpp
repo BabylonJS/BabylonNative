@@ -307,7 +307,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::MeasureText(const Napi::CallbackInfo& info)
     {
-        const std::string text = info[0].As<Napi::String>().Utf8Value();
+        std::string text{info[0].As<Napi::String>()};
         return MeasureText::CreateInstance(info.Env(), this, text);
     }
 
@@ -561,12 +561,12 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetGlobalAlpha(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        return Napi::Value::From(Env(), m_globalAlpha);
     }
 
     void Context::SetGlobalAlpha(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        m_globalAlpha = value.As<Napi::Number>().FloatValue();
     }
 
     Napi::Value Context::GetShadowColor(const Napi::CallbackInfo& info)
