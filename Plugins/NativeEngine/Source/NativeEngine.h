@@ -78,8 +78,8 @@ namespace Babylon
         void SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, size_t elementLength = 1)
         {
             UniformValue& value = Uniforms[handle.idx];
-            size_t& maxLenght = UniformMaxElementLength[handle.idx];
-            elementLength = std::max(static_cast<size_t>(1), std::min(maxLenght, elementLength));
+            size_t& maxLength = UniformMaxElementLength[handle.idx];
+            elementLength = std::max(static_cast<size_t>(1), std::min(maxLength, elementLength));
             value.Data.assign(data.begin(), data.end());
             value.ElementLength = static_cast<uint16_t>(elementLength);
         }
