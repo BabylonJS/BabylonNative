@@ -1129,7 +1129,9 @@ namespace Babylon
         if (!data.IsNull())
         {
             if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, depth, format))
+            {
                 throw std::runtime_error{"The data size does not match width, height, depth and format"};
+            }
 
             uint8_t* dataPtr = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
             uint32_t dataSize = static_cast<uint32_t>(data.ByteLength());
