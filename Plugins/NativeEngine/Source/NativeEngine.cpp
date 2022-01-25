@@ -702,30 +702,31 @@ namespace Babylon
             throw Napi::Error::New(info.Env(), ex.what());
         }
 
-        static auto InitUniformInfos
-        {
-            [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<std::string, UniformInfo>& uniformInfos, std::unordered_map<uint16_t, size_t>& uniformSizes){
-            auto numUniforms = bgfx::getShaderUniforms(shader);
-            std::vector<bgfx::UniformHandle> uniforms{numUniforms};
-            bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
-
-            for (uint8_t index = 0; index < numUniforms; index++)
+        static auto InitUniformInfos{
+            [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex)
             {
-                bgfx::UniformInfo info{};
-                bgfx::getUniformInfo(uniforms[index], info);
-                auto itStage = uniformStages.find(info.name);
-                auto& handle = uniforms[index];
-                uniformInfos.emplace(std::make_pair<std::string, UniformInfo>(info.name, {itStage == uniformStages.end() ? uint8_t{} : itStage->second, handle}));
-                uniformSizes[uniforms[index].idx] = static_cast<size_t>(info.num);
-            }
-        }};
+                auto numUniforms = bgfx::getShaderUniforms(shader);
+                std::vector<bgfx::UniformHandle> uniforms{numUniforms};
+                bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
+
+                for (uint8_t index = 0; index < numUniforms; index++)
+                {
+                    bgfx::UniformInfo info{};
+                    uint16_t handleIndex = uniforms[index].idx;
+                    bgfx::getUniformInfo(uniforms[index], info);
+                    auto itStage = uniformStages.find(info.name);
+                    auto& handle = uniforms[index];
+                    uniformInfos.emplace(std::make_pair(handle.idx, UniformInfo{itStage == uniformStages.end() ? uint8_t{} : itStage->second, handle, info.num}));
+                    uniformNameToIndex[info.name] = handleIndex;
+                }
+            }};
 
         auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
-        InitUniformInfos(vertexShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformMaxElementLength);
+        InitUniformInfos(vertexShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformNameToIndex);
         program->VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
 
         auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
-        InitUniformInfos(fragmentShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformMaxElementLength);
+        InitUniformInfos(fragmentShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformNameToIndex);
 
         program->Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
         return Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
@@ -743,11 +744,18 @@ namespace Babylon
             if (names[index].IsString())
             {
                 const auto name{names[index].As<Napi::String>().Utf8Value()};
-                const auto itUniformInfo{program->UniformInfos.find(name)};
-                if (itUniformInfo != program->UniformInfos.end())
+
+                const auto itUniformIndex = program->UniformNameToIndex.find(name);
+
+                if (itUniformIndex != program->UniformNameToIndex.end())
                 {
-                    uniforms[index] = Napi::Pointer<UniformInfo>::Create(info.Env(), &itUniformInfo->second);
-                    continue;
+                    const auto itUniformInfo{program->UniformInfos.find(itUniformIndex->second)};
+
+                    if (itUniformInfo != program->UniformInfos.end())
+                    {
+                        uniforms[index] = Napi::Pointer<UniformInfo>::Create(info.Env(), &itUniformInfo->second);
+                        continue;
+                    }
                 }
             }
 
