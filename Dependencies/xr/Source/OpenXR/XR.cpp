@@ -362,6 +362,8 @@ namespace xr
 
         ~Impl()
         {
+            // Dispose the input manager and its XR resources. 
+            // This needs to happen before resetting the OpenXR context.
             InputManager.reset();
             // Reset OpenXR Context to release session handle and exit immersive mode
             XrRegistry::Reset();
