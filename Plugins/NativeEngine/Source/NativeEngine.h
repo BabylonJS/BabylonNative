@@ -28,14 +28,16 @@ namespace Babylon
 {
     struct UniformInfo final
     {
-        UniformInfo(uint8_t stage, bgfx::UniformHandle handle) :
-            Stage{stage},
-            Handle{handle}
+        UniformInfo(uint8_t stage, bgfx::UniformHandle handle, size_t maxElementSize)
+            : Stage{stage}
+            , Handle{handle}
+            , MaxElementSize{maxElementSize}
         {
         }
 
         uint8_t Stage{};
         bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
+        size_t MaxElementSize{};
     };
 
     struct ProgramData final
@@ -60,9 +62,6 @@ namespace Babylon
             Disposed = true;
         }
 
-        std::unordered_map<std::string, uint32_t> VertexAttributeLocations{};
-        std::unordered_map<std::string, UniformInfo> UniformInfos{};
-
         bgfx::ProgramHandle Handle{bgfx::kInvalidHandle};
         bool Disposed{false};
 
@@ -73,13 +72,21 @@ namespace Babylon
         };
 
         std::unordered_map<uint16_t, UniformValue> Uniforms{};
-        std::unordered_map<uint16_t, size_t> UniformMaxElementLength{};
+        std::unordered_map<std::string, uint16_t> UniformNameToIndex{};
+        std::unordered_map<uint16_t, UniformInfo> UniformInfos{};
+        std::unordered_map<std::string, uint32_t> VertexAttributeLocations{};
 
         void SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, size_t elementLength = 1)
         {
             UniformValue& value = Uniforms[handle.idx];
-            size_t& maxLength = UniformMaxElementLength[handle.idx];
-            elementLength = std::max(static_cast<size_t>(1), std::min(maxLength, elementLength));
+
+            const auto itUniformInfo{UniformInfos.find(handle.idx)};
+
+            if (itUniformInfo != UniformInfos.end())
+            {
+                elementLength = std::min(itUniformInfo->second.MaxElementSize, elementLength);
+            }
+
             value.Data.assign(data.begin(), data.end());
             value.ElementLength = static_cast<uint16_t>(elementLength);
         }
