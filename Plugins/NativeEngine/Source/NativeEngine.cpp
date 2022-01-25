@@ -1124,8 +1124,12 @@ namespace Babylon
         const auto format{static_cast<bimg::TextureFormat::Enum>(info[5].As<Napi::Number>().Uint32Value())};
         const auto generateMips = info[6].As<Napi::Boolean>().Value();
         const auto invertY = info[7].As<Napi::Boolean>().Value();
-        const auto samplingMode = info[8].As<Napi::Number>().Int32Value();
-        const auto textureType = info[10].As<Napi::Number>().Int32Value();
+
+         if (generateMips)
+            throw std::runtime_error{"Texture 2D array currently do not support mipmaps."};
+
+         if (invertY)
+             throw std::runtime_error{"Texture 2D array currently do not support invert Y."};
 
         texture->Width = width;
         texture->Height = height;
