@@ -77,6 +77,13 @@ and
 ...
 ```
 
+For Hermes, add these lines in `proguard-rules.pro` :
+
+```
+-keep class com.facebook.hermes.unicode.** { *; }
+-keep class com.facebook.jni.** { *; }
+```
+
 ## Troubleshooting
 
 When running the Playground, if you encounter this error message:

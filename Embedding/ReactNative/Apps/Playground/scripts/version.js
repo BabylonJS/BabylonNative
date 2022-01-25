@@ -3,7 +3,7 @@ const shelljs = require('shelljs');
 const chalk = require('chalk');
 
 function selectRN(version) {
-  if (version != '0.64') {
+  if (version != '0.64' && version != '0.65') {
     console.error(chalk.black.bgRedBright(`Unsupported React Native ${version}`));
     process.exit(1);
   }
