@@ -11,10 +11,10 @@ function postInstall() {
   const version = shelljs.exec('npm --version', {silent: true});
 
   console.log(chalk.black.bgCyan('Installing Babylon React Native npm packages...'));
-  shelljs.exec('npm install --legacy-peer-deps', {cwd: '../../Modules/@babylonjs/react-native'});
+  shelljs.exec('npm install --legacy-peer-deps', {cwd: '../../../Modules/@babylonjs/react-native'});
 
   console.log(chalk.black.bgCyan('Updating submodules...'));
-  shelljs.exec('git submodule update --init --recursive', {cwd: '../../'});
+  shelljs.exec('git submodule update --init --recursive', {cwd: '../../../'});
 
   if (os.platform() === 'darwin') {
     iosCmake();

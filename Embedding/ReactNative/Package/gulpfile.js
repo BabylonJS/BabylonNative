@@ -40,7 +40,7 @@ const buildTypeScript = async () => {
 
 const makeXCodeProj = async () => {
   shelljs.mkdir('-p', 'iOS/Build');
-  exec('cmake -G Xcode -DCMAKE_TOOLCHAIN_FILE=../../../Apps/Playground/node_modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DENABLE_BITCODE=1 -DDEPLOYMENT_TARGET=12 -DENABLE_PCH=OFF ..', 'iOS/Build');
+  exec('cmake -G Xcode -DCMAKE_TOOLCHAIN_FILE=../../../Apps/Playground/Playground/node_modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DENABLE_BITCODE=1 -DDEPLOYMENT_TARGET=12 -DENABLE_PCH=OFF ..', 'iOS/Build');
 };
 
 const buildIphoneOS = async () => {
@@ -54,7 +54,7 @@ const buildIphoneSimulator = async () => {
 const buildIOS = gulp.series(makeXCodeProj, buildIphoneOS, buildIphoneSimulator);
 
 const buildAndroid = async () => {
-  exec('./gradlew babylonjs_react-native:assembleRelease --stacktrace --info', '../Apps/Playground/android');
+  exec('./gradlew babylonjs_react-native:assembleRelease --stacktrace --info', '../Apps/Playground/Playground/android');
 };
 
 const initializeSubmodulesWindowsAgent = async () => {
@@ -154,7 +154,7 @@ const buildUWPProject = gulp.parallel(
 );
 
 const nugetRestoreUWPPlayground = async () => {
-  exec('nuget restore Playground.sln', './../Apps/Playground/windows');
+  exec('nuget restore Playground.sln', './../Apps/Playground/Playground/windows');
 }
 
 const buildUWPPlaygroundx86Debug = async () => {
@@ -203,22 +203,22 @@ const buildUWPPlayground = gulp.parallel(
 const buildUWP = gulp.series(makeUWPProject, buildUWPProject);
 
 const copyCommonFiles = () => {
-  return gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/README.md')
+  return gulp.src('../Apps/Playground/Playground/node_modules/@babylonjs/react-native/README.md')
     .pipe(gulp.src('react-native-babylon.podspec'))
     .pipe(gulp.dest('Assembled'));
 };
 
 const copySharedFiles = () => {
-  return gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/shared/BabylonNative.h')
-    .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/shared/XrContextHelper.h'))
-    .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/shared/XrAnchorHelper.h'))
+  return gulp.src('../Apps/Playground/Playground/node_modules/@babylonjs/react-native/shared/BabylonNative.h')
+    .pipe(gulp.src('../Apps/Playground/Playground/node_modules/@babylonjs/react-native/shared/XrContextHelper.h'))
+    .pipe(gulp.src('../Apps/Playground/Playground/node_modules/@babylonjs/react-native/shared/XrAnchorHelper.h'))
     .pipe(gulp.dest('Assembled/shared'));
 };
 
 const copyIOSFiles = async () => {
   await new Promise(resolve => {
-    gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/ios/*.h')
-      .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/ios/*.mm'))
+    gulp.src('../Apps/Playground/Playground/node_modules/@babylonjs/react-native/ios/*.h')
+      .pipe(gulp.src('../Apps/Playground/Playground/node_modules/@babylonjs/react-native/ios/*.mm'))
       // This xcodeproj is garbage that we don't need in the package, but `pod install` ignores the package if it doesn't contain at least one xcodeproj. 🤷🏼‍♂️
       .pipe(gulp.src('iOS/Build/ReactNativeBabylon.xcodeproj**/**/*'))
       .pipe(gulp.dest('Assembled/ios'))
@@ -226,7 +226,7 @@ const copyIOSFiles = async () => {
   });
 
   await new Promise(resolve => {
-    gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Source/ARKit/Include/*')
+    gulp.src('../Apps/Playground/Playground/node_modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Source/ARKit/Include/*')
       .pipe(gulp.dest('Assembled/ios/include'))
       .on('end', resolve);
   });
@@ -241,20 +241,20 @@ const createIOSUniversalLibs = async () => {
 const copyAndroidFiles = async () => {
   await new Promise(resolve => {
     gulp.src('Android/build.gradle')
-      .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/android/src**/main/AndroidManifest.xml'))
-      .pipe(gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/android/src**/main/java/**/*'))
+      .pipe(gulp.src('../Apps/Playground/Playground/node_modules/@babylonjs/react-native/android/src**/main/AndroidManifest.xml'))
+      .pipe(gulp.src('../Apps/Playground/Playground/node_modules/@babylonjs/react-native/android/src**/main/java/**/*'))
       .pipe(gulp.dest('Assembled/android'))
       .on('end', resolve);
   });
 
   await new Promise(resolve => {
-    gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Source/ARCore/Include/*')
+    gulp.src('../Apps/Playground/Playground/node_modules/@babylonjs/react-native/submodules/BabylonNative/Dependencies/xr/Source/ARCore/Include/*')
       .pipe(gulp.dest('Assembled/android/include'))
       .on('end', resolve);
   });
 
   await new Promise(resolve => {
-    gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/android/build/intermediates/library_and_local_jars_jni/release/jni/**/*')
+    gulp.src('../Apps/Playground/Playground/node_modules/@babylonjs/react-native/android/build/intermediates/library_and_local_jars_jni/release/jni/**/*')
       .pipe(gulp.dest('Assembled/android/src/main/jniLibs/'))
       .on('end', resolve);
   });
@@ -262,7 +262,7 @@ const copyAndroidFiles = async () => {
   // This is no longer found in the directory above because it is explicitly excluded because Playground has been updated to RN 0.64 which includes
   // the real implementation of libturbomodulejsijni.so, but we still need to support RN 0.63 consumers, so grab this one explicitly to include it in the package.
   await new Promise(resolve => {
-    gulp.src('../Apps/Playground/node_modules/@babylonjs/react-native/android/build/intermediates/cmake/release/obj/**/libturbomodulejsijni.so')
+    gulp.src('../Apps/Playground/Playground/node_modules/@babylonjs/react-native/android/build/intermediates/cmake/release/obj/**/libturbomodulejsijni.so')
       .pipe(gulp.dest('Assembled/android/src/main/jniLibs/'))
       .on('end', resolve);
   });

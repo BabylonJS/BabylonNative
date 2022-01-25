@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13.2)
 project(ReactNativeBabylon)
-include(${CMAKE_CURRENT_SOURCE_DIR}/../../Apps/Playground/node_modules/@babylonjs/react-native/ios/CMakeLists.txt)
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../Apps/Playground/Playground/node_modules/@babylonjs/react-native/ios/CMakeLists.txt)
 
 set(PACKAGED_LIBS
     astc-codec

@@ -13,7 +13,7 @@ if ((!$Platform -And $Configuration) -Or
     exit 1;
 }
 
-$PlaygroundSolution = "$PSScriptRoot\..\..\..\..\..\Apps\Playground\windows\Playground.sln";
+$PlaygroundSolution = "$PSScriptRoot\..\..\..\..\..\Apps\Playground\Playground\windows\Playground.sln";
 
 if (!$Platform -And !$Configuration) {
     Compile-Solution -Platform "x86" -Configuration "Debug" -Solution 
