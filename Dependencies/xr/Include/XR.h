@@ -229,6 +229,7 @@ namespace xr
                     float DepthFarZ{};
 
                     bool IsFirstPersonObserver{ false };
+                    bool RequiresAppClear{ false };
                 };
 
                 struct InputSource

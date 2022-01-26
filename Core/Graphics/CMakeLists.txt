@@ -1,5 +1,7 @@
+cmake_dependent_option(BABYLON_NATIVE_USE_SWAPCHAINPANEL "Use swap chain panel." OFF WINDOWS_STORE OFF)
+
 if(WINDOWS_STORE)
-    if(BABYLON_NATIVE_WINDOWS_STORE_USE_SWAPCHAINPANEL)
+    if(BABYLON_NATIVE_USE_SWAPCHAINPANEL)
         set(PLATFORM_NAME ${BABYLON_NATIVE_PLATFORM}_SwapChainPanel)
         set(PLATFORM_PATH ${BABYLON_NATIVE_PLATFORM}/SwapChainPanel)
     else()
@@ -52,10 +54,12 @@ target_link_to_dependencies(Graphics
     PRIVATE bimg
     PRIVATE bx)
 
-string(TOUPPER ${GRAPHICS_API} GRAPHICS_API_UPPER)
 target_compile_definitions(Graphics
-    PRIVATE NOMINMAX
-    PRIVATE ${GRAPHICS_API_UPPER})
+    PRIVATE NOMINMAX)
+
+# TODO: remove this once the #define in GraphicsImpl is removed
+target_compile_definitions(Graphics
+    PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
 
 set_property(TARGET Graphics PROPERTY FOLDER Core)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

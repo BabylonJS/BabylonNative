@@ -67,7 +67,7 @@ namespace
         Uninitialize();
 
         Babylon::WindowConfiguration graphicsConfig{};
-        graphicsConfig.WindowPtr = window;
+        graphicsConfig.Window = window;
         graphicsConfig.Width = static_cast<size_t>(width);
         graphicsConfig.Height = static_cast<size_t>(height);
 
