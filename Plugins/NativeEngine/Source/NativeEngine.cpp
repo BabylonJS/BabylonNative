@@ -1126,10 +1126,14 @@ namespace Babylon
         const auto invertY = info[7].As<Napi::Boolean>().Value();
 
          if (generateMips)
-            throw std::runtime_error{"Texture 2D array currently do not support mipmaps."};
+         {
+             throw std::runtime_error{"Texture 2D array currently do not support mipmaps."};
+         }
 
          if (invertY)
+         {
              throw std::runtime_error{"Texture 2D array currently do not support invert Y."};
+         }
 
         texture->Width = width;
         texture->Height = height;
