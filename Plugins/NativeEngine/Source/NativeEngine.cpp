@@ -1137,8 +1137,8 @@ namespace Babylon
 
         texture->Width = width;
         texture->Height = height;
-        texture->CreationFlags = BGFX_CAPS_TEXTURE_2D_ARRAY;
-        texture->Handle = bgfx::createTexture2D(width, height, generateMips, depth, Cast(format), texture->CreationFlags);
+        uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE | BGFX_CAPS_TEXTURE_2D_ARRAY};
+        texture->Handle = bgfx::createTexture2D(width, height, generateMips, depth, Cast(format), flags);
         texture->OwnsHandle = true;
 
         if (!data.IsNull())
