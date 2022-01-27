@@ -84,6 +84,20 @@ For Hermes, add these lines in `proguard-rules.pro` :
 -keep class com.facebook.jni.** { *; }
 ```
 
+## Windows
+
+Create the Windows Playground app by running this command in the version folder:
+
+```
+npx react-native-windows-init --overwrite
+```
+
+Disable use of webDebugger in `Apps.cpp` because BabylonReactNative accesses the jsi runtime, which isn't possible with the web debugger.
+
+```
+InstanceSettings().UseWebDebugger(false);
+```
+
 ## Troubleshooting
 
 When running the Playground, if you encounter this error message:
