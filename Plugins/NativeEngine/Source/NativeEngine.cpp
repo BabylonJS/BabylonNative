@@ -1106,7 +1106,7 @@ namespace Babylon
         const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
         if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, format))
         {
-            throw std::runtime_error{"The data size does not match width, height, and format"};
+            Napi::Error::New(Env(), "The data size does not match width, height, and format").ThrowAsJavaScriptException();
         }
 
         bimg::ImageContainer* image{bimg::imageAlloc(&m_allocator, format, width, height, 1, 1, false, false, bytes)};
@@ -1127,12 +1127,12 @@ namespace Babylon
 
          if (generateMips)
          {
-             throw std::runtime_error{"Texture 2D array currently do not support mipmaps."};
+             Napi::Error::New(Env(), "Texture 2D array currently do not support mipmaps.").ThrowAsJavaScriptException();
          }
 
          if (invertY)
          {
-             throw std::runtime_error{"Texture 2D array currently do not support invert Y."};
+             Napi::Error::New(Env(), "Texture 2D array currently do not support invert Y.").ThrowAsJavaScriptException();
          }
 
         texture->Width = width;
@@ -1145,7 +1145,7 @@ namespace Babylon
         {
             if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, depth, format))
             {
-                throw std::runtime_error{"The data size does not match width, height, depth and format"};
+                Napi::Error::New(Env(), "The data size does not match width, height, depth and format").ThrowAsJavaScriptException();
             }
 
             uint8_t* dataPtr = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
