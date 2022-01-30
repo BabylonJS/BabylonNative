@@ -70,17 +70,22 @@ target_compile_definitions( bx PUBLIC "__STDC_CONSTANT_MACROS" )
 target_compile_definitions(bx PUBLIC "BX_CONFIG_DEBUG=$<CONFIG:Debug>")
 
 # Additional dependencies on Unix
-if( UNIX AND NOT APPLE AND NOT ANDROID )
+if (ANDROID)
+    # For __android_log_write
+    find_library( LOG_LIBRARY log )
+    mark_as_advanced( LOG_LIBRARY )
+	target_link_libraries( bx PUBLIC ${LOG_LIBRARY} )
+elseif( APPLE )
+	find_library( FOUNDATION_LIBRARY Foundation)
+	mark_as_advanced( FOUNDATION_LIBRARY )
+	target_link_libraries( bx PUBLIC ${FOUNDATION_LIBRARY} )
+elseif( UNIX )
 	# Threads
 	find_package( Threads )
 	target_link_libraries( bx ${CMAKE_THREAD_LIBS_INIT} dl )
 
 	# Real time (for clock_gettime)
 	target_link_libraries( bx rt )
-elseif(APPLE)
-	find_library( FOUNDATION_LIBRARY Foundation)
-	mark_as_advanced( FOUNDATION_LIBRARY )
-	target_link_libraries( bx PUBLIC ${FOUNDATION_LIBRARY} )
 endif()
 
 # Put in a "bgfx" folder in Visual Studio
