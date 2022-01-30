@@ -171,7 +171,7 @@ function( add_example ARG_NAME )
 	target_compile_definitions( example-${ARG_NAME} PRIVATE "-D_CRT_SECURE_NO_WARNINGS" "-D__STDC_FORMAT_MACROS" "-DENTRY_CONFIG_IMPLEMENT_MAIN=1" )
 
 	# Configure shaders
-	if( NOT ARG_COMMON AND NOT IOS AND NOT EMSCRIPTEN)
+	if( NOT ARG_COMMON AND NOT IOS AND NOT EMSCRIPTEN AND NOT ANDROID)
 		foreach( SHADER ${SHADERS} )
 			add_bgfx_shader( ${SHADER} ${ARG_NAME} )
 		endforeach()
