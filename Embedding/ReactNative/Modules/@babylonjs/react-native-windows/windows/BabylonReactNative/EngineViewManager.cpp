@@ -36,16 +36,20 @@ namespace winrt::BabylonReactNative::implementation {
     IMapView<hstring, ViewManagerPropertyType> EngineViewManager::NativeProps() noexcept {
         auto nativeProps = winrt::single_threaded_map<hstring, ViewManagerPropertyType>();
 
-        // TODO: Add properties as needed
+        nativeProps.Insert(L"isTransparent", ViewManagerPropertyType::Boolean);
 
         return nativeProps.GetView();
     }
 
     void EngineViewManager::UpdateProperties(
-        FrameworkElement const& /*view*/,
-        IJSValueReader const& /*propertyMapReader*/) noexcept {
+        FrameworkElement const& view,
+        IJSValueReader const& propertyMapReader) noexcept {
 
-        // TODO: Implement as needed
+        if (auto engineView = view.try_as<EngineView>()) {
+            engineView->UpdateProperties(propertyMapReader);
+        } else {
+            OutputDebugStringW(L"Type deduction for EngineView failed.");
+        }
     }
 
     // IViewManagerWithExportedEventTypeConstants

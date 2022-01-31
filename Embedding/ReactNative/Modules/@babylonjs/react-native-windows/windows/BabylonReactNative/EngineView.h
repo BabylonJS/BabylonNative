@@ -8,6 +8,7 @@ namespace winrt::BabylonReactNative::implementation {
     public:
         EngineView();
 
+        void UpdateProperties(winrt::Microsoft::ReactNative::IJSValueReader const& reader);
     private:
         void OnSizeChanged(winrt::Windows::Foundation::IInspectable const& sender, winrt::Windows::UI::Xaml::SizeChangedEventArgs const& args);
         void OnPointerPressed(winrt::Windows::Foundation::IInspectable const& sender, winrt::Windows::UI::Core::PointerEventArgs const& args);
