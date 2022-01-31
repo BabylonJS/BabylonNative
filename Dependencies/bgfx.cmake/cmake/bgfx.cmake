@@ -92,7 +92,8 @@ target_link_libraries( bgfx PRIVATE bx bimg )
 
 # Frameworks required on iOS, tvOS and macOS
 if( ${CMAKE_SYSTEM_NAME} MATCHES iOS|tvOS )
-	target_link_libraries (bgfx PUBLIC "-framework OpenGLES  -framework Metal -framework UIKit -framework CoreGraphics -framework QuartzCore")
+	target_link_libraries (bgfx PUBLIC 
+		"-framework OpenGLES -framework Metal -framework UIKit -framework CoreGraphics -framework QuartzCore -framework IOKit")
 elseif( APPLE )
 	find_library( COCOA_LIBRARY Cocoa )
 	find_library( METAL_LIBRARY Metal )
