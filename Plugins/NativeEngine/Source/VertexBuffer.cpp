@@ -61,6 +61,11 @@ namespace Babylon
         m_disposed = true;
     }
 
+    bool VertexBuffer::IsValid()
+    {
+        return bgfx::isValid(m_handle);
+    }
+
     void VertexBuffer::Update(Napi::Env env, gsl::span<uint8_t> bytes)
     {
         if (!m_dynamic)
@@ -142,11 +147,17 @@ namespace Babylon
     {
         if (m_dynamic)
         {
-            encoder->setVertexBuffer(stream, m_dynamicHandle, startVertex, numVertices, layoutHandle);
+            if (bgfx::isValid(m_dynamicHandle))
+            {
+                encoder->setVertexBuffer(stream, m_dynamicHandle, startVertex, numVertices, layoutHandle);
+            }
         }
         else
         {
-            encoder->setVertexBuffer(stream, m_handle, startVertex, numVertices, layoutHandle);
+            if (bgfx::isValid(m_handle))
+            {
+                encoder->setVertexBuffer(stream, m_handle, startVertex, numVertices, layoutHandle);
+            }
         }
     }
 }

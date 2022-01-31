@@ -1,8 +1,10 @@
 set(SOURCES
     "Include/Babylon/JsRuntime.h"
     "Include/Babylon/JsRuntimeScheduler.h"
+    "Include/Babylon/JsConsoleLogger.h"
     "Source/JsRuntimeInternalState.h"
-    "Source/JsRuntime.cpp")
+    "Source/JsRuntime.cpp"
+    "Source/JsConsoleLogger.cpp")
 
 add_library(JsRuntime ${SOURCES})
 warnings_as_errors(JsRuntime)

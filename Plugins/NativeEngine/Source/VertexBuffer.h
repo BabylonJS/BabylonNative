@@ -18,6 +18,7 @@ namespace Babylon
         void CreateHandle(const bgfx::VertexLayout& layout);
         void PromoteToFloats(bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride);
         void Set(bgfx::Encoder* encoder, uint8_t stream, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layoutHandle);
+        bool IsValid();
 
     private:
         std::vector<uint8_t> m_bytes{};

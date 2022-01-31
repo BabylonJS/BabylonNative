@@ -2,6 +2,8 @@
 #include "ShaderCompiler.h"
 #include "Texture.h"
 
+#include <Babylon/JsConsoleLogger.h>
+
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
 #include <arcana/macros.h>
@@ -624,6 +626,11 @@ namespace Babylon
         const bool normalized = info[7].As<Napi::Boolean>().Value();
 
         vertexArray->RecordVertexBuffer(vertexBuffer, location, byteOffset, byteStride, numElements, type, normalized);
+
+        if (!vertexBuffer->IsValid())
+        {
+            JsConsoleLogger::LogWarn(info.Env(), "WARNING: Fail to create vertex buffer. Number of vertex buffers higher than max count.");
+        }
     }
 
     void NativeEngine::UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info)
