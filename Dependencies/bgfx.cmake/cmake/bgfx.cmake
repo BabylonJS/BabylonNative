@@ -47,7 +47,7 @@ else()
 endif()
 
 if(BGFX_CONFIG_RENDERER_WEBGPU)
-    include(cmake/3rdparty/webgpu.cmake)
+    include(${CMAKE_CURRENT_LIST_DIR}/3rdparty/webgpu.cmake)
     target_compile_definitions( bgfx PRIVATE BGFX_CONFIG_RENDERER_WEBGPU=1)
     if (EMSCRIPTEN)
         target_link_options(bgfx PRIVATE "-s USE_WEBGPU=1")

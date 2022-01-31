@@ -10,7 +10,7 @@
 
 include( CMakeParseArguments )
 
-include( cmake/3rdparty/meshoptimizer.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/../3rdparty/meshoptimizer.cmake )
 
 add_executable( geometryc ${BGFX_DIR}/tools/geometryc/geometryc.cpp )
 target_compile_definitions( geometryc PRIVATE "-D_CRT_SECURE_NO_WARNINGS" )

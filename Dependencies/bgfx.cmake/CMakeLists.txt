@@ -57,19 +57,19 @@ elseif( NOT IS_ABSOLUTE "${BGFX_DIR}")
 endif()
 
 # sets project version from api ver / git rev
-include( cmake/version.cmake )
+include( ${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake )
 
-include( cmake/shared.cmake )
-include( cmake/bx.cmake )
-include( cmake/bimg.cmake )
-include( cmake/bgfx.cmake )
+include( ${CMAKE_CURRENT_SOURCE_DIR}/cmake/shared.cmake )
+include( ${CMAKE_CURRENT_SOURCE_DIR}/cmake/bx.cmake )
+include( ${CMAKE_CURRENT_SOURCE_DIR}/cmake/bimg.cmake )
+include( ${CMAKE_CURRENT_SOURCE_DIR}/cmake/bgfx.cmake )
 
 if( BGFX_BUILD_TOOLS )
-	include( cmake/tools.cmake )
+	include( ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tools.cmake )
 endif()
 
 if( BGFX_BUILD_TOOLS OR BGFX_BUILD_EXAMPLES )
-	include( cmake/examples.cmake )
+	include( ${CMAKE_CURRENT_SOURCE_DIR}/cmake/examples.cmake )
 endif()
 
 if( BGFX_INSTALL )
@@ -110,7 +110,7 @@ if( BGFX_INSTALL )
 	#   * TARGETS_EXPORT_NAME
 	#   * PROJECT_NAME
 	configure_package_config_file(
-		"cmake/Config.cmake.in"
+		"${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake.in"
 		"${project_config}"
 		INSTALL_DESTINATION "${config_install_dir}"
 	)

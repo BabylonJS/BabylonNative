@@ -10,10 +10,10 @@
 
 include( CMakeParseArguments )
 
-include( cmake/util/ConfigureDebugging.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/util/ConfigureDebugging.cmake )
 
-include( cmake/3rdparty/dear-imgui.cmake )
-include( cmake/3rdparty/meshoptimizer.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/3rdparty/dear-imgui.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/3rdparty/meshoptimizer.cmake )
 
 function( add_bgfx_shader FILE FOLDER )
 	get_filename_component( FILENAME "${FILE}" NAME_WE )
