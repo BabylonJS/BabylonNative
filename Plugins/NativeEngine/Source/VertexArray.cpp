@@ -95,7 +95,11 @@ namespace Babylon
 
     void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices)
     {
-        if (!m_vertexBufferInstanceRecords.empty())
+        const bgfx::Caps* caps = bgfx::getCaps();
+
+        // Check if instancing is supported.
+        const bool instancingSupported = 0 != (BGFX_CAPS_INSTANCING & caps->supported);
+        if (!m_vertexBufferInstanceRecords.empty() && instancingSupported)
         {
             bgfx::InstanceDataBuffer instanceDataBuffer{};
 

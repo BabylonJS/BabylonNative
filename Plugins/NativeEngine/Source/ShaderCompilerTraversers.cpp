@@ -569,28 +569,28 @@ namespace Babylon::ShaderCompilerTraversers
                 // To work around this issue, instead of mapping our attributes to the most similar bgfx::attribute, instead replace
                 // the first attribute encountered with the symbol bgfx uses for attribute 0 and increment for each subsequent attribute encountered.
                 // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
-                //UNUSED(name);
+
+                m_genericAttributesRunningCount++;
                 if (!strcmp(name, "color"))
                 {
-                    return {static_cast<unsigned int>(13), s_attribName[13]};
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[13]};
                 }
                 if (!strcmp(name, "world0"))
                 {
-                    return {static_cast<unsigned int>(14), s_attribName[14]};
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[14]};
                 }
                 if (!strcmp(name, "world1"))
                 {
-                    return {static_cast<unsigned int>(15), s_attribName[15]};
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[15]};
                 }
                 if (!strcmp(name, "world2"))
                 {
-                    return {static_cast<unsigned int>(16), s_attribName[16]};
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[16]};
                 }
                 if (!strcmp(name, "world3"))
                 {
-                    return {static_cast<unsigned int>(17), s_attribName[17]};
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[17]};
                 }
-                m_genericAttributesRunningCount++;
                 if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
                     throw std::runtime_error("Cannot support more than 18 vertex attributes.");
 
