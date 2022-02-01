@@ -71,6 +71,47 @@ CreateBoxAsync(scene).then(function () {
         scene.createDefaultLight(true);
     }
 
+    var box = BABYLON.BoxBuilder.CreateBox("root", { size: 1 });
+
+    var numPerSide = 40, size = 100, ofst = size / (numPerSide - 1);
+
+    var m = BABYLON.Matrix.Identity();
+    var col = 0, index = 0;
+
+    let instanceCount = numPerSide * numPerSide * numPerSide;
+
+    let matricesData = new Float32Array(16 * instanceCount);
+    let colorData = new Float32Array(4 * instanceCount);
+
+    for (var x = 0; x < numPerSide; x++) {
+        m.m[12] = -size / 2 + ofst * x;
+        for (var y = 0; y < numPerSide; y++) {
+            m.m[13] = -size / 2 + ofst * y;
+            for (var z = 0; z < numPerSide; z++) {
+                m.m[14] = -size / 2 + ofst * z;
+
+                m.copyToArray(matricesData, index * 16);
+
+                var coli = Math.floor(col);
+
+                colorData[index * 4 + 0] = ((coli & 0xff0000) >> 16) / 255;
+                colorData[index * 4 + 1] = ((coli & 0x00ff00) >> 8) / 255;
+                colorData[index * 4 + 2] = ((coli & 0x0000ff) >> 0) / 255;
+                colorData[index * 4 + 3] = 1.0;
+
+                index++;
+                col += 0xffffff / instanceCount;
+            }
+        }
+    }
+
+    box.thinInstanceSetBuffer("matrix", matricesData, 16);
+    box.thinInstanceSetBuffer("color", colorData, 4);
+
+    box.material = new BABYLON.StandardMaterial("material");
+    box.material.disableLighting = true;
+    box.material.emissiveColor = BABYLON.Color3.White();
+
     if (cameraTexture) {
         var cameraBox = BABYLON.Mesh.CreateBox("box1", 0.25);
         var mat = new BABYLON.StandardMaterial("mat", scene);

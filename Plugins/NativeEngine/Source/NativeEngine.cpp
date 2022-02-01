@@ -622,8 +622,9 @@ namespace Babylon
         const uint32_t numElements = info[5].As<Napi::Number>().Uint32Value();
         const uint32_t type = info[6].As<Napi::Number>().Uint32Value();
         const bool normalized = info[7].As<Napi::Boolean>().Value();
+        const uint32_t divisor = info[8].As<Napi::Number>().Uint32Value();
 
-        vertexArray->RecordVertexBuffer(vertexBuffer, location, byteOffset, byteStride, numElements, type, normalized);
+        vertexArray->RecordVertexBuffer(vertexBuffer, location, byteOffset, byteStride, numElements, type, normalized, divisor);
     }
 
     void NativeEngine::UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info)

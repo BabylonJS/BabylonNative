@@ -615,9 +615,13 @@ namespace Babylon::ShaderCompilerTraversers
                 IF_NAME_RETURN_ATTRIB("uv2", bgfx::Attrib::TexCoord1, "a_texcoord1")
                 IF_NAME_RETURN_ATTRIB("uv3", bgfx::Attrib::TexCoord2, "a_texcoord2")
                 IF_NAME_RETURN_ATTRIB("uv4", bgfx::Attrib::TexCoord3, "a_texcoord3")
-                IF_NAME_RETURN_ATTRIB("color", bgfx::Attrib::Color0, "a_color0")
+                IF_NAME_RETURN_ATTRIB("color", bgfx::Attrib::TexCoord3, "a_color0")
                 IF_NAME_RETURN_ATTRIB("matricesIndices", bgfx::Attrib::Indices, "a_indices")
                 IF_NAME_RETURN_ATTRIB("matricesWeights", bgfx::Attrib::Weight, "a_weight")
+                IF_NAME_RETURN_ATTRIB("world0", bgfx::Attrib::TexCoord4, "i_data0")
+                IF_NAME_RETURN_ATTRIB("world1", bgfx::Attrib::TexCoord5, "i_data1")
+                IF_NAME_RETURN_ATTRIB("world2", bgfx::Attrib::TexCoord6, "i_data2")
+                IF_NAME_RETURN_ATTRIB("world3", bgfx::Attrib::TexCoord7, "i_data3")
 #undef IF_NAME_RETURN_ATTRIB
                 const unsigned int attributeLocation = FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++;
                 if (attributeLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
