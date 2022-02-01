@@ -79,7 +79,6 @@ namespace Babylon
             }
 
             layout.end();
-            divisor;
             vertexBuffer->CreateHandle(layout);
 
             m_vertexBufferRecords[attrib] = {vertexBuffer, byteOffset / byteStride, bgfx::createVertexLayout(layout)};
