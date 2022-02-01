@@ -1125,15 +1125,15 @@ namespace Babylon
         const auto generateMips = info[6].As<Napi::Boolean>().Value();
         const auto invertY = info[7].As<Napi::Boolean>().Value();
 
-         if (generateMips)
-         {
-             Napi::Error::New(Env(), "Texture 2D array currently do not support mipmaps.").ThrowAsJavaScriptException();
-         }
+        if (generateMips)
+        {
+            throw Napi::Error::New(Env(), "Texture 2D array currently do not support mipmaps.");
+        }
 
-         if (invertY)
-         {
-             Napi::Error::New(Env(), "Texture 2D array currently do not support invert Y.").ThrowAsJavaScriptException();
-         }
+        if (invertY)
+        {
+            throw Napi::Error::New(Env(), "Texture 2D array currently do not support invert Y.");
+        }
 
         texture->Width = width;
         texture->Height = height;
@@ -1145,7 +1145,7 @@ namespace Babylon
         {
             if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, depth, format))
             {
-                Napi::Error::New(Env(), "The data size does not match width, height, depth and format").ThrowAsJavaScriptException();
+                throw Napi::Error::New(Env(), "The data size does not match width, height, depth and format");
             }
 
             uint8_t* dataPtr = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
