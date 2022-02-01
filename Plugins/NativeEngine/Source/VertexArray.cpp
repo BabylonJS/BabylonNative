@@ -38,10 +38,10 @@ namespace Babylon
     void VertexArray::RecordVertexBuffer(VertexBuffer* vertexBuffer, uint32_t location, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized, uint32_t divisor)
     {
         auto attrib{static_cast<bgfx::Attrib::Enum>(location)};
-        if (divisor)
+        if (divisor == 1)
         {
             // bgfx allows instancing on TexCoord3 - TexCoord7 only
-            if (attrib >= bgfx::Attrib::TexCoord3 && attrib <= bgfx::Attrib::TexCoord7)
+            //if (attrib >= bgfx::Attrib::TexCoord3 && attrib <= bgfx::Attrib::TexCoord7)
             {
                 m_vertexBufferInstanceRecords[attrib] = {vertexBuffer, byteOffset, byteStride, static_cast<uint16_t>(sizeof(float) * numElements)};
             }
@@ -122,6 +122,7 @@ namespace Babylon
 
             // reverse because of bgfx also reverting : https://github.com/bkaradzic/bgfx/blob/4581f14cd481bad1e0d6292f0dd0a6e298c2ee18/src/renderer_d3d11.cpp#L2701
             for (auto iter = m_vertexBufferInstanceRecords.rbegin(); iter != m_vertexBufferInstanceRecords.rend(); ++iter)
+            //for (auto iter = m_vertexBufferInstanceRecords.begin(); iter != m_vertexBufferInstanceRecords.end(); ++iter)
             {
                 const auto& element{iter->second};
                 const auto* source{element.Buffer->GetBytes().data()};

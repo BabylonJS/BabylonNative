@@ -573,23 +573,23 @@ namespace Babylon::ShaderCompilerTraversers
                 m_genericAttributesRunningCount++;
                 if (!strcmp(name, "color"))
                 {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[13]};
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data4"};
                 }
                 if (!strcmp(name, "world0"))
                 {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[14]};
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data3"};
                 }
                 if (!strcmp(name, "world1"))
                 {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[15]};
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data2" };
                 }
                 if (!strcmp(name, "world2"))
                 {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[16]};
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data1" };
                 }
                 if (!strcmp(name, "world3"))
                 {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[17]};
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data0" };
                 }
                 if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
                     throw std::runtime_error("Cannot support more than 18 vertex attributes.");
