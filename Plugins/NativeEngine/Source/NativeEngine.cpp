@@ -1106,7 +1106,7 @@ namespace Babylon
         const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
         if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, format))
         {
-            Napi::Error::New(Env(), "The data size does not match width, height, and format").ThrowAsJavaScriptException();
+            throw Napi::Error::New(Env(), "The data size does not match width, height, and format");
         }
 
         bimg::ImageContainer* image{bimg::imageAlloc(&m_allocator, format, width, height, 1, 1, false, false, bytes)};
