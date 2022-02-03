@@ -40,8 +40,8 @@ namespace Babylon
         auto attrib{static_cast<bgfx::Attrib::Enum>(location)};
         if (divisor == 1)
         {
-            // bgfx allows instancing on TexCoord3 - TexCoord7 only
-            //if (attrib >= bgfx::Attrib::TexCoord3 && attrib <= bgfx::Attrib::TexCoord7)
+            // bgfx allows instancing on 5 vec4 attributes
+            if (m_vertexBufferInstanceRecords.size() < 5)
             {
                 m_vertexBufferInstanceRecords[attrib] = {vertexBuffer, byteOffset, byteStride, static_cast<uint16_t>(sizeof(float) * numElements)};
             }
