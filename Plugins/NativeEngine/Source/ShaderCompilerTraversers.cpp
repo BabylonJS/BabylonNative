@@ -480,6 +480,14 @@ namespace Babylon::ShaderCompilerTraversers
             // This function is platform-dependent so it's left unimplemented in the base class.
             virtual std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name) = 0;
 
+            static bool IsInstance(const char* name)
+            {
+                return (!strcmp(name, "world0") ||
+                        !strcmp(name, "world1") ||
+                        !strcmp(name, "world2") ||
+                        !strcmp(name, "world3") ||
+                        !strcmp(name, "instanceColor"));
+            }
             static void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName, VertexVaryingInTraverser& traverser)
             {
                 std::map<std::string, TIntermTyped*> originalNameToReplacement{};
@@ -493,30 +501,38 @@ namespace Babylon::ShaderCompilerTraversers
                 // Create the new symbols with which to replace all of the original varying
                 // symbols. The primary purpose of these new symbols is to contain the required
                 // name and location.
-                for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
+                for (int pass = 0; pass < 2; pass ++)
                 {
-                    const auto& type = symbol->getType();
-                    publicType.qualifier = type.getQualifier();
-                    auto [location, newName] = traverser.GetVaryingLocationAndNewNameForName(name.c_str());
-                    // It may not be necessary to specify this on certain platforms (like OpenGL),
-                    // which might simplify the handling of scenarios where we currently run out
-                    // of attribute locations.
-                    publicType.qualifier.layoutLocation = location;
-
-                    if (type.isMatrix())
+                    for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
                     {
-                        publicType.setMatrix(type.getMatrixCols(), type.getMatrixRows());
-                    }
-                    else if (type.isVector())
-                    {
-                        publicType.setVector(type.getVectorSize());
-                    }
+                        const auto& type = symbol->getType();
+                        publicType.qualifier = type.getQualifier();
+                        const bool isInstance = IsInstance(name.c_str());
+                        if ((pass == 0 && isInstance) || (pass == 1 && !isInstance))
+                        {
+                            continue;
+                        }
+                        auto [location, newName] = traverser.GetVaryingLocationAndNewNameForName(name.c_str());
+                        // It may not be necessary to specify this on certain platforms (like OpenGL),
+                        // which might simplify the handling of scenarios where we currently run out
+                        // of attribute locations.
+                        publicType.qualifier.layoutLocation = location;
 
-                    TType newType{publicType};
-                    newType.setBasicType(symbol->getType().getBasicType());
-                    auto* newSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), newName, newType});
-                    originalNameToReplacement[name] = newSymbol;
-                    replacementToOriginalName[newName] = name;
+                        if (type.isMatrix())
+                        {
+                            publicType.setMatrix(type.getMatrixCols(), type.getMatrixRows());
+                        }
+                        else if (type.isVector())
+                        {
+                            publicType.setVector(type.getVectorSize());
+                        }
+
+                        TType newType{publicType};
+                        newType.setBasicType(symbol->getType().getBasicType());
+                        auto* newSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), newName, newType});
+                        originalNameToReplacement[name] = newSymbol;
+                        replacementToOriginalName[newName] = name;
+                    }
                 }
 
                 MakeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
@@ -527,13 +543,13 @@ namespace Babylon::ShaderCompilerTraversers
         };
 
         /// Implementation of VertexVaryingInTraverser for OpenGL and Metal
-        class VertexVaryingInTraverserOpenGLMetal final : private VertexVaryingInTraverser
+        class VertexVaryingInTraverserOpenGL final : private VertexVaryingInTraverser
         {
         public:
             static void Traverse(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
             {
                 auto intermediate{program.getIntermediate(EShLangVertex)};
-                VertexVaryingInTraverserOpenGLMetal traverser{};
+                VertexVaryingInTraverserOpenGL traverser{};
                 intermediate->getTreeRoot()->traverse(&traverser);
                 VertexVaryingInTraverser::Traverse(intermediate, ids, replacementToOriginalName, traverser);
             }
@@ -598,6 +614,138 @@ namespace Babylon::ShaderCompilerTraversers
             }
         };
 
+        class VertexVaryingInTraverserMetal final : private VertexVaryingInTraverser
+        {
+        public:
+            static void Traverse(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
+            {
+                auto intermediate{program.getIntermediate(EShLangVertex)};
+                VertexVaryingInTraverserMetal traverser{};
+                intermediate->getTreeRoot()->traverse(&traverser);
+                VertexVaryingInTraverser::Traverse(intermediate, ids, replacementToOriginalName, traverser);
+            }
+
+        private:
+            static bool IsInstance(const char* name)
+            {
+                return (!strcmp(name, "world0") ||
+                        !strcmp(name, "world1") ||
+                        !strcmp(name, "world2") ||
+                        !strcmp(name, "world3") ||
+                        !strcmp(name, "instanceColor"));
+            }
+            static void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName, VertexVaryingInTraverser& traverser)
+            {
+                std::map<std::string, TIntermTyped*> originalNameToReplacement{};
+
+                // Precursor types needed to create subtree replacements.
+                TSourceLoc loc{};
+                loc.init();
+                TPublicType publicType{};
+                publicType.qualifier.clearLayout();
+
+                // Create the new symbols with which to replace all of the original varying
+                // symbols. The primary purpose of these new symbols is to contain the required
+                // name and location.
+                for (int pass = 0; pass < 2; pass ++)
+                {
+                    for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
+                    {
+                        const auto& type = symbol->getType();
+                        publicType.qualifier = type.getQualifier();
+                        const bool isInstance = IsInstance(name.c_str());
+                        if ((pass == 0 && isInstance) || (pass == 1 && !isInstance))
+                        {
+                            continue;
+                        }
+                        auto [location, newName] = traverser.GetVaryingLocationAndNewNameForName(name.c_str());
+                        // It may not be necessary to specify this on certain platforms (like OpenGL),
+                        // which might simplify the handling of scenarios where we currently run out
+                        // of attribute locations.
+                        publicType.qualifier.layoutLocation = location;
+
+                        if (type.isMatrix())
+                        {
+                            publicType.setMatrix(type.getMatrixCols(), type.getMatrixRows());
+                        }
+                        else if (type.isVector())
+                        {
+                            publicType.setVector(type.getVectorSize());
+                        }
+
+                        TType newType{publicType};
+                        newType.setBasicType(symbol->getType().getBasicType());
+                        auto* newSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), newName, newType});
+                        originalNameToReplacement[name] = newSymbol;
+                        replacementToOriginalName[newName] = name;
+                    }
+                }
+
+                MakeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
+            }
+            unsigned int m_genericAttributesRunningCount{0};
+            std::map<std::string, TIntermSymbol*> m_varyingNameToSymbol{};
+            std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
+        };
+            // This table is a copy of the table bgfx uses for vertex attribute -> shader symbol association.
+            // copied from renderer_gl.cpp.
+            constexpr static const char* s_attribName[] =
+                {
+                    "a_position",
+                    "a_normal",
+                    "a_tangent",
+                    "a_bitangent",
+                    "a_color0",
+                    "a_color1",
+                    "a_color2",
+                    "a_color3",
+                    "a_indices",
+                    "a_weight",
+                    "a_texcoord0",
+                    "a_texcoord1",
+                    "a_texcoord2",
+                    "a_texcoord3",
+                    "a_texcoord4",
+                    "a_texcoord5",
+                    "a_texcoord6",
+                    "a_texcoord7",
+                };
+            BX_STATIC_ASSERT(bgfx::Attrib::Count == BX_COUNTOF(s_attribName));
+            std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
+            {
+                // For OpenGL and Metal platforms, we have an issue where we have a hard limit on the number shader attributes supported.
+                // To work around this issue, instead of mapping our attributes to the most similar bgfx::attribute, instead replace
+                // the first attribute encountered with the symbol bgfx uses for attribute 0 and increment for each subsequent attribute encountered.
+                // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
+
+                m_genericAttributesRunningCount++;
+                if (!strcmp(name, "instanceColor"))
+                {
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data4"};
+                }
+                if (!strcmp(name, "world0"))
+                {
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data3"};
+                }
+                if (!strcmp(name, "world1"))
+                {
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data2" };
+                }
+                if (!strcmp(name, "world2"))
+                {
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data1" };
+                }
+                if (!strcmp(name, "world3"))
+                {
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data0" };
+                }
+                if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
+                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
+
+                return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[static_cast<unsigned int>(m_genericAttributesRunningCount - 1)]};
+            }
+        };
+    
         /// Implementation of VertexVaryingInTraverser for DirectX
         class VertexVaryingInTraverserD3D final : private VertexVaryingInTraverser
         {
