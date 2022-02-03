@@ -57,11 +57,11 @@ namespace Babylon
         }
     }
 
-    void IndexBuffer::CreateHandle()
+    bool IndexBuffer::CreateHandle()
     {
         if (bgfx::isValid(m_handle))
         {
-            return;
+            return true;
         }
 
         auto releaseFn = [](void*, void* userData)
@@ -80,17 +80,22 @@ namespace Babylon
         {
             m_handle = bgfx::createIndexBuffer(memory, m_flags);
         }
+
+        return bgfx::isValid(m_handle);
     }
 
     void IndexBuffer::Set(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices)
     {
-        if (m_dynamic)
+        if (bgfx::isValid(m_handle))
         {
-            encoder->setIndexBuffer(m_dynamicHandle, firstIndex, numIndices);
-        }
-        else
-        {
-            encoder->setIndexBuffer(m_handle, firstIndex, numIndices);
+            if (m_dynamic)
+            {
+                encoder->setIndexBuffer(m_dynamicHandle, firstIndex, numIndices);
+            }
+            else
+            {
+                encoder->setIndexBuffer(m_handle, firstIndex, numIndices);
+            }
         }
     }
 }

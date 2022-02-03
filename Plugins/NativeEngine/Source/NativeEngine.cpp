@@ -584,7 +584,10 @@ namespace Babylon
         VertexArray* vertexArray = info[0].As<Napi::Pointer<VertexArray>>().Get();
         IndexBuffer* indexBuffer = info[1].As<Napi::Pointer<IndexBuffer>>().Get();
 
-        vertexArray->RecordIndexBuffer(indexBuffer);
+        if (!vertexArray->RecordIndexBuffer(indexBuffer))
+        {
+            JsConsoleLogger::LogWarn(info.Env(), "WARNING: Fail to create index buffer. Number of index buffers higher than max count.");
+        }
     }
 
     void NativeEngine::UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info)
@@ -625,9 +628,7 @@ namespace Babylon
         const uint32_t type = info[6].As<Napi::Number>().Uint32Value();
         const bool normalized = info[7].As<Napi::Boolean>().Value();
 
-        vertexArray->RecordVertexBuffer(vertexBuffer, location, byteOffset, byteStride, numElements, type, normalized);
-
-        if (!vertexBuffer->IsValid())
+        if (!vertexArray->RecordVertexBuffer(vertexBuffer, location, byteOffset, byteStride, numElements, type, normalized))
         {
             JsConsoleLogger::LogWarn(info.Env(), "WARNING: Fail to create vertex buffer. Number of vertex buffers higher than max count.");
         }
@@ -1416,6 +1417,9 @@ namespace Babylon
 
         if (m_boundVertexArray != nullptr)
         {
+            if (!m_boundVertexArray->IsValid())
+                return;
+
             m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
             m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max());
         }
@@ -1433,6 +1437,9 @@ namespace Babylon
 
         if (m_boundVertexArray != nullptr)
         {
+            if (!m_boundVertexArray->IsValid())
+                return;
+
             m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount);
         }
 
