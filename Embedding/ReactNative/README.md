@@ -40,7 +40,7 @@ Then, a React Native target must be chosen. For a React-Native 0.64 build:
 
 ```
 cd Apps/Playground
-npm install
+npm ci
 npm run select 0.64
 ```
 Selecting the React Native install will also install all NPM packages and its dependencies for the Playground sample/test app.
@@ -138,8 +138,8 @@ After having run the above commands, you can also open `Apps/Playground/ios/Play
 
 UWP can only be built on a PC. `CMake` must be manually run to generate project definitions for BabylonNative dependencies.
 
-1. Run `npm install` in Apps\Playground\Playground.
-1. Run `npm install` in Package.
+1. Run `npm ci` in Apps\Playground\Playground.
+1. Run `npm ci` in Package.
 1. Run `npx gulp buildUWP` in Package. This command will run cmake and build BabylonNative dependencies. It may take a while to complete.
 1. In Apps\Playground\Playground, run `npm run windows`.
 > Note: if you experience build issues for Apps\Playground related to autolinking, try running `npx react-native autolink-windows` in the Apps\Playground\Playground folder. You can also run `npm run windows-verbose` to view logging.
