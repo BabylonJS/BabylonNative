@@ -555,6 +555,14 @@ namespace Babylon::ShaderCompilerTraversers
                 "a_texcoord7",
             };
             BX_STATIC_ASSERT(bgfx::Attrib::Count == BX_COUNTOF(s_attribName));
+            constexpr static const char* s_attribInstanceName[] =
+            {
+                "i_data0",
+                "i_data1",
+                "i_data2",
+                "i_data3",
+                "i_data4",
+            };
         };
 
         /// Implementation of VertexVaryingInTraverser for OpenGL and Metal
@@ -581,23 +589,23 @@ namespace Babylon::ShaderCompilerTraversers
                 m_genericAttributesRunningCount++;
                 if (!strcmp(name, "instanceColor"))
                 {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data4"};
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[4]};
                 }
                 if (!strcmp(name, "world0"))
                 {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data3"};
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[3]};
                 }
                 if (!strcmp(name, "world1"))
                 {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data2" };
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[2]};
                 }
                 if (!strcmp(name, "world2"))
                 {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data1" };
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[1]};
                 }
                 if (!strcmp(name, "world3"))
                 {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data0" };
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[0]};
                 }
                 if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
                     throw std::runtime_error("Cannot support more than 18 vertex attributes.");
@@ -614,7 +622,7 @@ namespace Babylon::ShaderCompilerTraversers
                 auto intermediate{program.getIntermediate(EShLangVertex)};
                 VertexVaryingInTraverserMetal traverser{};
                 intermediate->getTreeRoot()->traverse(&traverser);
-                VertexVaryingInTraverser::Traverse(intermediate, ids, replacementToOriginalName, traverser);
+                VertexVaryingInTraverserMetal::Traverse(intermediate, ids, replacementToOriginalName, traverser);
             }
 
         private:
@@ -637,7 +645,7 @@ namespace Babylon::ShaderCompilerTraversers
                 TPublicType publicType{};
                 publicType.qualifier.clearLayout();
 
-                VertexVaryingInTraverserMetal& traverserMetal{ reinterpret_cast<VertexVaryingInTraverserMetal &>(traverser) };
+                VertexVaryingInTraverserMetal& traverserMetal{reinterpret_cast<VertexVaryingInTraverserMetal &>(traverser)};
 
                 // 2 passes done here:
                 // - first for standard attributes
@@ -653,6 +661,10 @@ namespace Babylon::ShaderCompilerTraversers
                         const bool isInstance = IsInstance(name.c_str());
                         if ((pass == 0 && isInstance) || (pass == 1 && !isInstance))
                         {
+                            if (pass == 0)
+                            {
+                                traverserMetal.m_instanceAttributeCount++;
+                            }
                             continue;
                         }
                         HandleVarying(name, symbol, publicType, intermediate, ids, originalNameToReplacement, replacementToOriginalName, traverser);
@@ -670,31 +682,16 @@ namespace Babylon::ShaderCompilerTraversers
                 // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
 
                 m_genericAttributesRunningCount++;
-                if (!strcmp(name, "instanceColor"))
+                if (IsInstance(name))
                 {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data4"};
-                }
-                if (!strcmp(name, "world0"))
-                {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data3"};
-                }
-                if (!strcmp(name, "world1"))
-                {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data2" };
-                }
-                if (!strcmp(name, "world2"))
-                {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data1" };
-                }
-                if (!strcmp(name, "world3"))
-                {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), "i_data0" };
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[--m_instanceAttributeCount]};
                 }
                 if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
                     throw std::runtime_error("Cannot support more than 18 vertex attributes.");
 
                 return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[static_cast<unsigned int>(m_genericAttributesRunningCount - 1)]};
             }
+            unsigned int m_instanceAttributeCount{0};
         };
     
         /// Implementation of VertexVaryingInTraverser for DirectX
