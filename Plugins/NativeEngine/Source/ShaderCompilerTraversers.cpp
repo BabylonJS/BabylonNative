@@ -527,6 +527,15 @@ namespace Babylon::ShaderCompilerTraversers
                 replacementToOriginalName[newName] = name;
             }
         
+            static bool IsInstance(const char* name)
+            {
+                return (!strcmp(name, "world0") ||
+                    !strcmp(name, "world1") ||
+                    !strcmp(name, "world2") ||
+                    !strcmp(name, "world3") ||
+                    !strcmp(name, "instanceColor"));
+            }
+
             unsigned int m_genericAttributesRunningCount{0};
             std::map<std::string, TIntermSymbol*> m_varyingNameToSymbol{};
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
@@ -585,33 +594,17 @@ namespace Babylon::ShaderCompilerTraversers
                 // To work around this issue, instead of mapping our attributes to the most similar bgfx::attribute, instead replace
                 // the first attribute encountered with the symbol bgfx uses for attribute 0 and increment for each subsequent attribute encountered.
                 // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
-
                 m_genericAttributesRunningCount++;
-                if (!strcmp(name, "instanceColor"))
+                if (IsInstance(name))
                 {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[4]};
-                }
-                if (!strcmp(name, "world0"))
-                {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[3]};
-                }
-                if (!strcmp(name, "world1"))
-                {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[2]};
-                }
-                if (!strcmp(name, "world2"))
-                {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[1]};
-                }
-                if (!strcmp(name, "world3"))
-                {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[0]};
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[m_instanceAttributeIndex++]};
                 }
                 if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
                     throw std::runtime_error("Cannot support more than 18 vertex attributes.");
 
                 return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[static_cast<unsigned int>(m_genericAttributesRunningCount - 1)]};
             }
+            unsigned int m_instanceAttributeIndex{0};
         };
 
         class VertexVaryingInTraverserMetal final : private VertexVaryingInTraverser
@@ -626,15 +619,6 @@ namespace Babylon::ShaderCompilerTraversers
             }
 
         private:
-            static bool IsInstance(const char* name)
-            {
-                return (!strcmp(name, "world0") ||
-                        !strcmp(name, "world1") ||
-                        !strcmp(name, "world2") ||
-                        !strcmp(name, "world3") ||
-                        !strcmp(name, "instanceColor"));
-            }
-
             static void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName, VertexVaryingInTraverser& traverser)
             {
                 std::map<std::string, TIntermTyped*> originalNameToReplacement{};

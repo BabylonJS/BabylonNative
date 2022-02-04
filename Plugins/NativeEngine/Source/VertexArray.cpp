@@ -121,11 +121,10 @@ namespace Babylon
             uint32_t offset{};
 
             // reverse because of bgfx also reverting : https://github.com/bkaradzic/bgfx/blob/4581f14cd481bad1e0d6292f0dd0a6e298c2ee18/src/renderer_d3d11.cpp#L2701
-            
-#if METAL
-            for (auto iter = m_vertexBufferInstanceRecords.cbegin(); iter != m_vertexBufferInstanceRecords.cend(); ++iter)
-#else
+#if D3D11 || D3D12 
             for (auto iter = m_vertexBufferInstanceRecords.rbegin(); iter != m_vertexBufferInstanceRecords.rend(); ++iter)
+#else
+            for (auto iter = m_vertexBufferInstanceRecords.cbegin(); iter != m_vertexBufferInstanceRecords.cend(); ++iter)
 #endif
             {
                 const auto& element{iter->second};
