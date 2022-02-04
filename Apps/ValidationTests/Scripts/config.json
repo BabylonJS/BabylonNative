@@ -312,7 +312,7 @@
             "replace": "__folder__, Mesh_PrimitiveMode, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitiveMode0.png",
             "errorRatio": 8.0,
-            "excludedEngines": [ "webgpu" ]
+            "excludedEngines": ["webgpu"]
         },
         {
             "title": "GLTF Mesh Primitive Mode (1)",
@@ -320,7 +320,7 @@
             "replace": "__folder__, Mesh_PrimitiveMode, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitiveMode1.png",
             "errorRatio": 8.0,
-            "excludedEngines": [ "webgpu" ]
+            "excludedEngines": ["webgpu"]
         },
         {
             "title": "GLTF Mesh Primitives",
