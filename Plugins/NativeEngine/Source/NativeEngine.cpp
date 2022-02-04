@@ -1106,7 +1106,7 @@ namespace Babylon
         const auto bytes{static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset()};
         if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, format))
         {
-            throw std::runtime_error{"The data size does not match width, height, and format"};
+            throw Napi::Error::New(Env(), "The data size does not match width, height, and format");
         }
 
         bimg::ImageContainer* image{bimg::imageAlloc(&m_allocator, format, width, height, 1, 1, false, false, bytes)};
@@ -1125,28 +1125,27 @@ namespace Babylon
         const auto generateMips = info[6].As<Napi::Boolean>().Value();
         const auto invertY = info[7].As<Napi::Boolean>().Value();
 
-         if (generateMips)
-         {
-             throw std::runtime_error{"Texture 2D array currently do not support mipmaps."};
-         }
+        if (generateMips)
+        {
+            throw Napi::Error::New(Env(), "Texture 2D array currently do not support mipmaps.");
+        }
 
-         if (invertY)
-         {
-             throw std::runtime_error{"Texture 2D array currently do not support invert Y."};
-         }
+        if (invertY)
+        {
+            throw Napi::Error::New(Env(), "Texture 2D array currently do not support invert Y.");
+        }
 
         texture->Width = width;
         texture->Height = height;
-        texture->CreationFlags = BGFX_TEXTURE_NONE;
-        texture->Flags = BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE | BGFX_CAPS_TEXTURE_2D_ARRAY;
-        texture->Handle = bgfx::createTexture2D(width, height, generateMips, depth, Cast(format), texture->Flags);
+        uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE | BGFX_CAPS_TEXTURE_2D_ARRAY};
+        texture->Handle = bgfx::createTexture2D(width, height, generateMips, depth, Cast(format), flags);
         texture->OwnsHandle = true;
 
         if (!data.IsNull())
         {
             if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, depth, format))
             {
-                throw std::runtime_error{"The data size does not match width, height, depth and format"};
+                throw Napi::Error::New(Env(), "The data size does not match width, height, depth and format");
             }
 
             uint8_t* dataPtr = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
