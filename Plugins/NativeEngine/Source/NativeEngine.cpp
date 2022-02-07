@@ -1,8 +1,7 @@
 #include "NativeEngine.h"
 #include "ShaderCompiler.h"
 #include "Texture.h"
-
-#include <Babylon/JsConsoleLogger.h>
+#include "JsConsoleLogger.h"
 
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
