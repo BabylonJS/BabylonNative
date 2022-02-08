@@ -3,7 +3,7 @@
 namespace Babylon
 {
     IndexBuffer::IndexBuffer(gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic)
-        : m_bytes{bytes.data(), bytes.data() + bytes.size()}
+        : m_bytes{std::vector<uint8_t>{bytes.data(), bytes.data() + bytes.size()}}
         , m_flags{flags}
         , m_dynamic{dynamic}
     {
@@ -32,9 +32,7 @@ namespace Babylon
                 bgfx::destroy(m_handle);
             }
         }
-
-        m_bytes.clear();
-
+        m_bytes = {};
         m_disposed = true;
     }
 
@@ -66,11 +64,11 @@ namespace Babylon
 
         auto releaseFn = [](void*, void* userData)
         {
-            auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
-            bytes->clear();
+            auto* bytes = reinterpret_cast<std::optional<std::vector<uint8_t>>*>(userData);
+            bytes->reset();
         };
 
-        const bgfx::Memory* memory = bgfx::makeRef(m_bytes.data(), static_cast<uint32_t>(m_bytes.size()), releaseFn, &m_bytes);
+        const bgfx::Memory* memory = bgfx::makeRef(m_bytes->data(), static_cast<uint32_t>(m_bytes->size()), releaseFn, &m_bytes);
 
         if (m_dynamic)
         {

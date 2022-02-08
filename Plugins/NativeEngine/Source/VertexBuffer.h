@@ -4,6 +4,8 @@
 #include <napi/napi.h>
 #include <gsl/gsl>
 
+#include <optional>
+
 namespace Babylon
 {
     class VertexBuffer final
@@ -20,7 +22,7 @@ namespace Babylon
         void Set(bgfx::Encoder* encoder, uint8_t stream, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layoutHandle);
 
     private:
-        std::vector<uint8_t> m_bytes{};
+        std::optional<std::vector<uint8_t>> m_bytes{};
         bool m_dynamic{};
 
         union
