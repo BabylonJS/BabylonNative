@@ -32,7 +32,7 @@ namespace Babylon
                 bgfx::destroy(m_handle);
             }
         }
-        m_bytes = {};
+        m_bytes.reset();
         m_disposed = true;
     }
 
