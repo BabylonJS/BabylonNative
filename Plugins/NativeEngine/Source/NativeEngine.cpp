@@ -1416,9 +1416,6 @@ namespace Babylon
 
         if (m_boundVertexArray != nullptr)
         {
-            if (!m_boundVertexArray->IsValid())
-                return;
-
             m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
             m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max());
         }
@@ -1436,9 +1433,6 @@ namespace Babylon
 
         if (m_boundVertexArray != nullptr)
         {
-            if (!m_boundVertexArray->IsValid())
-                return;
-
             m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount);
         }
 

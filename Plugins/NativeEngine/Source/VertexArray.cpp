@@ -27,20 +27,13 @@ namespace Babylon
         m_disposed = true;
     }
 
-    bool VertexArray::IsValid() 
-    {
-        return m_isValid;
-    }
+ 
 
     bool VertexArray::RecordIndexBuffer(IndexBuffer* indexBuffer)
     {
-        if (!m_isValid)
-            return false;
-
         if (!indexBuffer->CreateHandle())
         {
-            m_isValid = false;
-            return m_isValid;
+            return false;
         }
 
         assert(m_indexBufferRecord.Buffer == nullptr);
@@ -51,9 +44,6 @@ namespace Babylon
 
     bool VertexArray::RecordVertexBuffer(VertexBuffer* vertexBuffer, uint32_t location, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized)
     {
-        if (!m_isValid)
-            return false;
-
         bgfx::VertexLayout layout{};
         layout.begin();
 
@@ -89,8 +79,7 @@ namespace Babylon
 
         if (!vertexBuffer->CreateHandle(layout))
         {
-            m_isValid = false;
-            return m_isValid;
+            return false;
         }
 
         m_vertexBufferRecords[attrib] = {vertexBuffer, byteOffset / byteStride, bgfx::createVertexLayout(layout)};
