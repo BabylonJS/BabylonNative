@@ -27,7 +27,7 @@ namespace
 namespace Babylon
 {
     VertexBuffer::VertexBuffer(gsl::span<uint8_t> bytes, bool dynamic)
-        : m_bytes{bytes.data(), bytes.data() + bytes.size()}
+        : m_bytes{{bytes.data(), bytes.data() + bytes.size()}}
         , m_dynamic{dynamic}
     {
     }
@@ -56,8 +56,7 @@ namespace Babylon
             }
         }
 
-        m_bytes.clear();
-
+        m_bytes.reset();
         m_disposed = true;
     }
 
@@ -90,11 +89,11 @@ namespace Babylon
 
         auto releaseFn = [](void*, void* userData)
         {
-            auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
-            bytes->clear();
+            auto* bytes = reinterpret_cast<decltype(m_bytes)*>(userData);
+            bytes->reset();
         };
 
-        const bgfx::Memory* memory = bgfx::makeRef(m_bytes.data(), static_cast<uint32_t>(m_bytes.size()), releaseFn, &m_bytes);
+        const bgfx::Memory* memory = bgfx::makeRef(m_bytes->data(), static_cast<uint32_t>(m_bytes->size()), releaseFn, &m_bytes);
 
         if (m_dynamic)
         {
@@ -114,22 +113,22 @@ namespace Babylon
         {
             case bgfx::AttribType::Int8:
             {
-                ::PromoteToFloats<int8_t>(m_bytes, numElements, byteOffset, byteStride);
+                ::PromoteToFloats<int8_t>(*m_bytes, numElements, byteOffset, byteStride);
                 break;
             }
             case bgfx::AttribType::Uint8:
             {
-                ::PromoteToFloats<uint8_t>(m_bytes, numElements, byteOffset, byteStride);
+                ::PromoteToFloats<uint8_t>(*m_bytes, numElements, byteOffset, byteStride);
                 break;
             }
             case bgfx::AttribType::Int16:
             {
-                ::PromoteToFloats<int16_t>(m_bytes, numElements, byteOffset, byteStride);
+                ::PromoteToFloats<int16_t>(*m_bytes, numElements, byteOffset, byteStride);
                 break;
             }
             case bgfx::AttribType::Uint16:
             {
-                ::PromoteToFloats<uint16_t>(m_bytes, numElements, byteOffset, byteStride);
+                ::PromoteToFloats<uint16_t>(*m_bytes, numElements, byteOffset, byteStride);
                 break;
             }
             case bgfx::AttribType::Uint10: // is supported by any format ?
