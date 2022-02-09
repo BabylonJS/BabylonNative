@@ -15,7 +15,7 @@ namespace Babylon
         void Dispose();
 
         void Update(Napi::Env env, gsl::span<uint8_t> bytes);
-        void CreateHandle(const bgfx::VertexLayout& layout);
+        bool CreateHandle(const bgfx::VertexLayout& layout);
         void PromoteToFloats(bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride);
         void Set(bgfx::Encoder* encoder, uint8_t stream, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layoutHandle);
 

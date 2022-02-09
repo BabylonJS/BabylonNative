@@ -80,12 +80,12 @@ namespace Babylon
         }
     }
 
-    void VertexBuffer::CreateHandle(const bgfx::VertexLayout& layout)
+    bool VertexBuffer::CreateHandle(const bgfx::VertexLayout& layout)
     {
         if (bgfx::isValid(m_handle))
         {
             // NOTE: This code is assuming that layout stride hasn't changed.
-            return;
+            return true;
         }
 
         auto releaseFn = [](void*, void* userData)
@@ -104,6 +104,8 @@ namespace Babylon
         {
             m_handle = bgfx::createVertexBuffer(memory, layout);
         };
+
+        return bgfx::isValid(m_handle);
     }
 
     void VertexBuffer::PromoteToFloats(bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride)
@@ -140,13 +142,16 @@ namespace Babylon
 
     void VertexBuffer::Set(bgfx::Encoder* encoder, uint8_t stream, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layoutHandle)
     {
-        if (m_dynamic)
+        if (bgfx::isValid(m_handle))
         {
-            encoder->setVertexBuffer(stream, m_dynamicHandle, startVertex, numVertices, layoutHandle);
-        }
-        else
-        {
-            encoder->setVertexBuffer(stream, m_handle, startVertex, numVertices, layoutHandle);
+            if (m_dynamic)
+            {
+                encoder->setVertexBuffer(stream, m_dynamicHandle, startVertex, numVertices, layoutHandle);
+            }
+            else
+            {
+                encoder->setVertexBuffer(stream, m_handle, startVertex, numVertices, layoutHandle);
+            }
         }
     }
 }
