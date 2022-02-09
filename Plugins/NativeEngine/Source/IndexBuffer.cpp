@@ -64,7 +64,7 @@ namespace Babylon
 
         auto releaseFn = [](void*, void* userData)
         {
-            auto* bytes = reinterpret_cast<std::optional<std::vector<uint8_t>>*>(userData);
+            auto* bytes = reinterpret_cast<decltype(m_bytes)*>(userData);
             bytes->reset();
         };
 
