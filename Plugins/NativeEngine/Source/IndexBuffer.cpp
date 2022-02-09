@@ -3,7 +3,7 @@
 namespace Babylon
 {
     IndexBuffer::IndexBuffer(gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic)
-        : m_bytes{std::vector<uint8_t>{bytes.data(), bytes.data() + bytes.size()}}
+        : m_bytes{{bytes.data(), bytes.data() + bytes.size()}}
         , m_flags{flags}
         , m_dynamic{dynamic}
     {
