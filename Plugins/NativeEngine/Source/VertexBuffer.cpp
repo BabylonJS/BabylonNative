@@ -57,6 +57,7 @@ namespace Babylon
         }
 
         m_bytes.reset();
+        m_disposed = true;
     }
 
     void VertexBuffer::Update(Napi::Env env, gsl::span<uint8_t> bytes)
