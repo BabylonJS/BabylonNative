@@ -12,11 +12,10 @@ namespace Babylon::Polyfills::Internal
         explicit MeasureText(const Napi::CallbackInfo& info);
     private:
         Napi::Value GetWidth(const Napi::CallbackInfo&);
-        void SetWidth(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetHeight(const Napi::CallbackInfo&);
-        void SetHeight(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value ActualBoundingBoxLeft(const Napi::CallbackInfo&);
+        Napi::Value ActualBoundingBoxRight(const Napi::CallbackInfo&);
 
-        int m_width{};
-        int m_height{};
+        float m_bounds[4];
     };
 }
