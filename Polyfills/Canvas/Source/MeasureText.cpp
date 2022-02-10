@@ -11,50 +11,18 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    static constexpr auto JS_CONSTRUCTOR_NAME = "TextDimension";
-
     Napi::Value MeasureText::CreateInstance(Napi::Env env, Context* context, const std::string& text)
     {
-        Napi::HandleScope scope{ env };
-        Napi::Function func = DefineClass(
-            env,
-            JS_CONSTRUCTOR_NAME,
-            {
-                InstanceAccessor("width", &MeasureText::GetWidth, nullptr),
-                InstanceAccessor("height", &MeasureText::GetHeight, nullptr),
-                InstanceAccessor("actualBoundingBoxLeft", &MeasureText::ActualBoundingBoxLeft, nullptr),
-                InstanceAccessor("actualBoundingBoxRight", &MeasureText::ActualBoundingBoxRight, nullptr)
-            });
-        return func.New({Napi::External<Context>::New(env, context), Napi::String::New(env, text)});
-    }
+        float bounds[4];
+        nvgTextBounds(context->GetNVGContext(), 0, 0, text.c_str(), nullptr, bounds);
 
-    MeasureText::MeasureText(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<MeasureText>{info}
-    {
-        auto context{info[0].As<Napi::External<Context>>().Data()};
-        auto text{info[1].As<Napi::String>().Utf8Value()};
-        
-        nvgTextBounds(context->GetNVGContext(), 0, 0, text.c_str(), nullptr, m_bounds);
-    }
+        auto obj{Napi::Object::New(env)};
+        obj.Set("width", Napi::Value::From(env, bounds[2] - bounds[0]));
+        obj.Set("height", Napi::Value::From(env, bounds[3] - bounds[1]));
+        obj.Set("actualBoundingBoxLeft", Napi::Value::From(env, bounds[0]));
+        obj.Set("actualBoundingBoxRight", Napi::Value::From(env, bounds[2]));
 
-    Napi::Value MeasureText::ActualBoundingBoxLeft(const Napi::CallbackInfo&)
-    {
-        return Napi::Value::From(Env(), m_bounds[0]);
-    }
-
-    Napi::Value MeasureText::ActualBoundingBoxRight(const Napi::CallbackInfo&)
-    {
-        return Napi::Value::From(Env(), m_bounds[2]);
-    }
-
-    Napi::Value MeasureText::GetWidth(const Napi::CallbackInfo&)
-    {
-        return Napi::Value::From(Env(), m_bounds[2] - m_bounds[0]);
-    }
-
-    Napi::Value MeasureText::GetHeight(const Napi::CallbackInfo&)
-    {
-        return Napi::Value::From(Env(), m_bounds[3] - m_bounds[1]);
+        return obj.As<Napi::Value>();
     }
 }
 
