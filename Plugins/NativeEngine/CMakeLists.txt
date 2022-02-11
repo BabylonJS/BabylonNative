@@ -20,7 +20,9 @@ set(SOURCES
     "Source/VertexArray.cpp"
     "Source/VertexArray.h"
     "Source/VertexBuffer.cpp"
-    "Source/VertexBuffer.h")
+    "Source/VertexBuffer.h"
+    "Source/JsConsoleLogger.h"
+    "Source/JsConsoleLogger.cpp")
 
 if(WIN32)
     set(SOURCES ${SOURCES} "Source/ShaderCompilerD3D.h")
