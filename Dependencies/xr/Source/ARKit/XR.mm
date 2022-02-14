@@ -236,12 +236,13 @@ namespace {
 }
 
 /**
- Returns the orientation of the app based on the current status bar orientation.
+ Returns the orientation of the app
 */
 - (UIInterfaceOrientation)orientation {
     UIApplication* sharedApplication = [UIApplication sharedApplication];
 #if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
-    return [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
+    UIScene* scene = [[[sharedApplication connectedScenes] allObjects] firstObject];
+    return [(UIWindowScene*)scene interfaceOrientation];
 #else
     if (@available(iOS 13.0, *)) {
         return [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
@@ -670,7 +671,7 @@ namespace xr {
         std::vector<Frame::Plane> Planes{};
         std::vector<Frame::Mesh> Meshes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
-        std::optional<Frame::Space> EyeTrackerSpace{};
+        std::optional<Space> EyeTrackerSpace{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         bool FeaturePointCloudEnabled{ false };
@@ -1008,7 +1009,7 @@ namespace xr {
             auto anchor = [[ARAnchor alloc] initWithTransform:poseTransform];
             [SystemImpl.XrContext->Session addAnchor:anchor];
             nativeAnchors.push_back(anchor);
-            return { pose, (__bridge NativeAnchorPtr)anchor };
+            return { { pose }, (__bridge NativeAnchorPtr)anchor };
         }
 
         /**
@@ -1019,7 +1020,7 @@ namespace xr {
             const auto arAnchor = (__bridge ARAnchor*)anchor;
             nativeAnchors.push_back(arAnchor);
             const auto pose{TransformToPose(arAnchor.transform)};
-            return { pose, anchor };
+            return { { pose }, anchor };
         }
         
         /**
@@ -1034,7 +1035,7 @@ namespace xr {
             }
 
             // Then update the anchor's pose based on its transform.
-            anchor.Pose = TransformToPose(arAnchor.transform);
+            anchor.Space.Pose = TransformToPose(arAnchor.transform);
         }
 
         /**

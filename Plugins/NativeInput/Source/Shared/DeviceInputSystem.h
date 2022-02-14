@@ -19,6 +19,7 @@ namespace Babylon::Plugins
         Napi::Value GetOnInputChanged(const Napi::CallbackInfo& info);
         void SetOnInputChanged(const Napi::CallbackInfo& info, const Napi::Value& value);
         Napi::Value PollInput(const Napi::CallbackInfo& info);
+        Napi::Value IsDeviceAvailable(const Napi::CallbackInfo& info);
         Napi::Value Dispose(const Napi::CallbackInfo& info);
 
         NativeInput::Impl& m_nativeInput;

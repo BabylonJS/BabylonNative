@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <time.h>
 #include <memory>
+#include <optional>
 #include <android/native_window.h> // requires ndk r5 or newer
 #include <android/native_window_jni.h> // requires ndk r5 or newer
 #include <android/log.h>
@@ -13,6 +14,7 @@
 #include <Babylon/Graphics.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
@@ -21,14 +23,14 @@
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Canvas.h>
-#include <InputManager.h>
 
 namespace
 {
     std::unique_ptr<Babylon::Graphics> g_graphics{};
+    std::unique_ptr<Babylon::Graphics::Update> g_update{};
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
-    std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> g_inputBuffer{};
     std::unique_ptr<Babylon::Plugins::ChromeDevTools> g_chromeDevTools{};
+    Babylon::Plugins::NativeInput* g_nativeInput{};
     std::unique_ptr<Babylon::ScriptLoader> g_scriptLoader{};
     std::optional<Babylon::Plugins::NativeXr> g_nativeXr{};
     std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
@@ -47,13 +49,14 @@ extern "C"
     {
         if (g_graphics)
         {
+            g_update->Finish();
             g_graphics->FinishRenderingCurrentFrame();
         }
 
         g_chromeDevTools.reset();
         g_nativeXr.reset();
         g_scriptLoader.reset();
-        g_inputBuffer.reset();
+        g_nativeInput = {};
         g_runtime.reset();
         g_graphics.reset();
 
@@ -78,14 +81,15 @@ extern "C"
             int32_t height = ANativeWindow_getHeight(window);
 
             Babylon::WindowConfiguration graphicsConfig{};
-            graphicsConfig.WindowPtr = window;
+            graphicsConfig.Window = window;
             graphicsConfig.Width = static_cast<size_t>(width);
             graphicsConfig.Height = static_cast<size_t>(height);
             g_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+            g_update = std::make_unique<Babylon::Graphics::Update>(g_graphics->GetUpdate("update"));
             g_graphics->StartRenderingCurrentFrame();
+            g_update->Start();
 
             g_runtime = std::make_unique<Babylon::AppRuntime>();
-            g_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*g_runtime);
 
             g_runtime->Dispatch([](Napi::Env env)
             {
@@ -112,14 +116,14 @@ extern "C"
 
                 g_nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
                 g_nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ g_isXrActive = isXrActive; });
+                
+                g_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
                 Babylon::Plugins::Camera::Initialize(env, true);
                 Babylon::Polyfills::Window::Initialize(env);
 
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
                 nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
-
-                InputManager<Babylon::AppRuntime>::Initialize(env, *g_inputBuffer);
 
                 g_chromeDevTools = std::make_unique<Babylon::Plugins::ChromeDevTools>(Babylon::Plugins::ChromeDevTools::Initialize(env));
                 if (g_chromeDevTools->SupportsInspector())
@@ -147,7 +151,7 @@ extern "C"
             ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
             g_runtime->Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto env) {
                 Babylon::WindowConfiguration graphicsConfig{};
-                graphicsConfig.WindowPtr = window;
+                graphicsConfig.Window = window;
                 graphicsConfig.Width = width;
                 graphicsConfig.Height = height;
                 g_graphics->UpdateWindow(graphicsConfig);
@@ -223,12 +227,20 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_setTouchInfo(JNIEnv* env, jclass clazz, jfloat x, jfloat y, jboolean down)
+    Java_BabylonNative_Wrapper_setTouchInfo(JNIEnv* env, jclass clazz, jfloat x, jfloat y, jboolean buttonAction, jint buttonValue)
     {
-        if (g_inputBuffer != nullptr)
+        if (g_nativeInput != nullptr)
         {
-            g_inputBuffer->SetPointerPosition(x, y);
-            g_inputBuffer->SetPointerDown(down);
+            if (buttonAction)
+            {
+                if (buttonValue == 1)
+                    g_nativeInput->TouchDown(0, x, y);
+                else
+                    g_nativeInput->TouchUp(0, x, y);
+            }
+            else {
+                g_nativeInput->TouchMove(0, x, y);
+            }
         }
     }
 
@@ -237,8 +249,10 @@ extern "C"
     {
         if (g_graphics)
         {
+            g_update->Finish();
             g_graphics->FinishRenderingCurrentFrame();
             g_graphics->StartRenderingCurrentFrame();
+            g_update->Start();
         }
     }
 

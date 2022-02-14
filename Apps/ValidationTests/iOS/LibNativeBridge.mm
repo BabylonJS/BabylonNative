@@ -13,6 +13,7 @@
 #import <UIKit/UIKit.h>
 
 std::unique_ptr<Babylon::Graphics> graphics{};
+std::unique_ptr<Babylon::Graphics::Update> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
@@ -37,12 +38,14 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     float height = inHeight;
 
     Babylon::WindowConfiguration graphicsConfig{};
-    graphicsConfig.WindowPtr = view;
+    graphicsConfig.Window = view;
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+    update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
     graphics->StartRenderingCurrentFrame();
     graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
+    update->Start();
 
     runtime = std::make_unique<Babylon::AppRuntime>();
 
@@ -83,8 +86,10 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 {
     if (graphics)
     {
+        update->Finish();
         graphics->FinishRenderingCurrentFrame();
         graphics->StartRenderingCurrentFrame();
+        update->Start();
     }
 }
 

@@ -3,7 +3,7 @@
 namespace Babylon
 {
     IndexBuffer::IndexBuffer(gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic)
-        : m_bytes{bytes.data(), bytes.data() + bytes.size()}
+        : m_bytes{{bytes.data(), bytes.data() + bytes.size()}}
         , m_flags{flags}
         , m_dynamic{dynamic}
     {
@@ -32,9 +32,7 @@ namespace Babylon
                 bgfx::destroy(m_handle);
             }
         }
-
-        m_bytes.clear();
-
+        m_bytes.reset();
         m_disposed = true;
     }
 
@@ -57,20 +55,20 @@ namespace Babylon
         }
     }
 
-    void IndexBuffer::CreateHandle()
+    bool IndexBuffer::CreateHandle()
     {
         if (bgfx::isValid(m_handle))
         {
-            return;
+            return true;
         }
 
         auto releaseFn = [](void*, void* userData)
         {
-            auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
-            bytes->clear();
+            auto* bytes = reinterpret_cast<decltype(m_bytes)*>(userData);
+            bytes->reset();
         };
 
-        const bgfx::Memory* memory = bgfx::makeRef(m_bytes.data(), static_cast<uint32_t>(m_bytes.size()), releaseFn, &m_bytes);
+        const bgfx::Memory* memory = bgfx::makeRef(m_bytes->data(), static_cast<uint32_t>(m_bytes->size()), releaseFn, &m_bytes);
 
         if (m_dynamic)
         {
@@ -80,17 +78,22 @@ namespace Babylon
         {
             m_handle = bgfx::createIndexBuffer(memory, m_flags);
         }
+
+        return bgfx::isValid(m_handle);
     }
 
     void IndexBuffer::Set(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices)
     {
-        if (m_dynamic)
+        if (bgfx::isValid(m_handle))
         {
-            encoder->setIndexBuffer(m_dynamicHandle, firstIndex, numIndices);
-        }
-        else
-        {
-            encoder->setIndexBuffer(m_handle, firstIndex, numIndices);
+            if (m_dynamic)
+            {
+                encoder->setIndexBuffer(m_dynamicHandle, firstIndex, numIndices);
+            }
+            else
+            {
+                encoder->setIndexBuffer(m_handle, firstIndex, numIndices);
+            }
         }
     }
 }

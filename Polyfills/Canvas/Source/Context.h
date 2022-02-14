@@ -3,6 +3,7 @@
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/JsRuntimeScheduler.h>
 #include <GraphicsImpl.h>
+#include "Image.h"
 
 struct NVGcontext;
 
@@ -58,7 +59,6 @@ namespace Babylon::Polyfills::Internal
         void SetMiterLimit(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetFont(const Napi::CallbackInfo&);
         void SetFont(const Napi::CallbackInfo&, const Napi::Value& value);
-        Napi::Value GetGlobalAlpha(const Napi::CallbackInfo&);
         void SetGlobalAlpha(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetShadowColor(const Napi::CallbackInfo&);
         void SetShadowColor(const Napi::CallbackInfo&, const Napi::Value& value);
@@ -72,24 +72,34 @@ namespace Babylon::Polyfills::Internal
         void Dispose(const Napi::CallbackInfo&);
         void Dispose();
         void SetDirty();
-        void BeginFrame();
-        void EndFrame();
+        void DeferredFlushFrame();
 
         NativeCanvas* m_canvas;
         NVGcontext* m_nvg;
 
+        std::string m_font{};
         std::string m_fillStyle{};
         std::string m_strokeStyle{};
         float m_lineWidth{ 0.f };
+        float m_globalAlpha{ 1.f };
 
         std::map<std::string, int> m_fonts;
         int m_currentFontId{ -1 };
 
         Babylon::GraphicsImpl& m_graphicsImpl;
+        Babylon::GraphicsImpl::Update m_update;
 
         bool m_dirty{};
+
+        struct RectangleClipping
+        {
+            float left, top, width, height;
+        } m_rectangleClipping{};
+
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
         JsRuntimeScheduler m_runtimeScheduler;
+
+        std::unordered_map<const NativeCanvasImage*, int> m_nvgImageIndices;
 
         void FlushGraphicResources() override;
 

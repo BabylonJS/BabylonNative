@@ -14,17 +14,15 @@
 #include "Canvas.h"
 #include "Context.h"
 #include "MeasureText.h"
+#include "Image.h"
+#include "ImageData.h"
+#include "Colors.h"
 
 /*
 Most of these context methods are preliminary work. They are currenbly not tested properly.
 */
 namespace Babylon::Polyfills::Internal
 {
-    namespace
-    {
-        const NVGcolor TRANSPARENT_BLACK = nvgRGBA(0, 0, 0, 0);
-    }
-
     static constexpr auto JS_CONSTRUCTOR_NAME = "Context";
 
     Napi::Value Context::CreateInstance(Napi::Env env, NativeCanvas* canvas)
@@ -68,7 +66,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("font", &Context::GetFont, &Context::SetFont),
                 InstanceAccessor("strokeStyle", &Context::GetStrokeStyle, &Context::SetStrokeStyle),
                 InstanceAccessor("fillStyle", &Context::GetFillStyle, &Context::SetFillStyle),
-                InstanceAccessor("globalAlpha", &Context::GetGlobalAlpha, &Context::SetGlobalAlpha),
+                InstanceAccessor("globalAlpha", nullptr, &Context::SetGlobalAlpha),
                 InstanceAccessor("shadowColor", &Context::GetShadowColor, &Context::SetShadowColor),
                 InstanceAccessor("shadowBlur", &Context::GetShadowBlur, &Context::SetShadowBlur),
                 InstanceAccessor("shadowOffsetX", &Context::GetShadowOffsetX, &Context::SetShadowOffsetX),
@@ -84,6 +82,7 @@ namespace Babylon::Polyfills::Internal
         , m_canvas{info[0].As<Napi::External<NativeCanvas>>().Data()}
         , m_nvg{nvgCreate(1)}
         , m_graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())}
+        , m_update{m_graphicsImpl.GetUpdate("update")}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
@@ -92,7 +91,6 @@ namespace Babylon::Polyfills::Internal
         {
             m_fonts[font.first] = nvgCreateFontMem(m_nvg, font.first.c_str(), font.second.data(), font.second.size(), 0);
         }
-        BeginFrame();
     }
 
     Context::~Context()
@@ -115,208 +113,13 @@ namespace Babylon::Polyfills::Internal
     {
         if (m_nvg)
         {
+            for(auto& image : m_nvgImageIndices)
+            {
+                nvgDeleteImage(m_nvg, image.second);
+            }
             nvgDelete(m_nvg);
             m_nvg = nullptr;
         }
-    }
-
-    NVGcolor StringToColor(const std::string& colorString)
-    {
-        std::string str = colorString;
-        std::transform(str.begin(), str.end(), str.begin(),
-            [](unsigned char c) { return std::tolower(c); });
-
-        static const std::map<std::string, uint32_t> webColors = {
-            {"aliceblue", 0xf0f8ff},
-            {"antiquewhite", 0xfaebd7},
-            {"aqua", 0x00ffff},
-            {"aquamarine", 0x7fffd4},
-            {"azure", 0xf0ffff},
-            {"beige", 0xf5f5dc},
-            {"bisque", 0xffe4c4},
-            {"black", 0x000000},
-            {"blanchedalmond", 0xffebcd},
-            {"blue", 0x0000ff},
-            {"blueviolet", 0x8a2be2},
-            {"brown", 0xa52a2a},
-            {"burlywood", 0xdeb887},
-            {"cadetblue", 0x5f9ea0},
-            {"chartreuse", 0x7fff00},
-            {"chocolate", 0xd2691e},
-            {"coral", 0xff7f50},
-            {"cornflowerblue", 0x6495ed},
-            {"cornsilk", 0xfff8dc},
-            {"crimson", 0xdc143c},
-            {"cyan", 0x00ffff},
-            {"darkblue", 0x00008b},
-            {"darkcyan", 0x008b8b},
-            {"darkgoldenrod", 0xb8860b},
-            {"darkgray", 0xa9a9a9},
-            {"darkgrey", 0xa9a9a9},
-            {"darkgreen", 0x006400},
-            {"darkkhaki", 0xbdb76b},
-            {"darkmagenta", 0x8b008b},
-            {"darkolivegreen", 0x556b2f},
-            {"darkorange", 0xff8c00},
-            {"darkorchid", 0x9932cc},
-            {"darkred", 0x8b0000},
-            {"darksalmon", 0xe9967a},
-            {"darkseagreen", 0x8fbc8f},
-            {"darkslateblue", 0x483d8b},
-            {"darkslategray", 0x2f4f4f},
-            {"darkslategrey", 0x2f4f4f},
-            {"darkturquoise", 0x00ced1},
-            {"darkviolet", 0x9400d3},
-            {"deeppink", 0xff1493},
-            {"deepskyblue", 0x00bfff},
-            {"dimgray", 0x696969},
-            {"dimgrey", 0x696969},
-            {"dodgerblue", 0x1e90ff},
-            {"firebrick", 0xb22222},
-            {"floralwhite", 0xfffaf0},
-            {"forestgreen", 0x228b22},
-            {"fuchsia", 0xff00ff},
-            {"gainsboro", 0xdcdcdc},
-            {"ghostwhite", 0xf8f8ff},
-            {"gold", 0xffd700},
-            {"goldenrod", 0xdaa520},
-            {"gray", 0x808080},
-            {"grey", 0x808080},
-            {"green", 0x008000},
-            {"greenyellow", 0xadff2f},
-            {"honeydew", 0xf0fff0},
-            {"hotpink", 0xff69b4},
-            {"indianred", 0xcd5c5c},
-            {"indigo", 0x4b0082},
-            {"ivory", 0xfffff0},
-            {"khaki", 0xf0e68c},
-            {"lavender", 0xe6e6fa},
-            {"lavenderblush", 0xfff0f5},
-            {"lawngreen", 0x7cfc00},
-            {"lemonchiffon", 0xfffacd},
-            {"lightblue", 0xadd8e6},
-            {"lightcoral", 0xf08080},
-            {"lightcyan", 0xe0ffff},
-            {"lightgoldenrodyellow", 0xfafad2},
-            {"lightgray", 0xd3d3d3},
-            {"lightgrey", 0xd3d3d3},
-            {"lightgreen", 0x90ee90},
-            {"lightpink", 0xffb6c1},
-            {"lightsalmon", 0xffa07a},
-            {"lightseagreen", 0x20b2aa},
-            {"lightskyblue", 0x87cefa},
-            {"lightslategray", 0x778899},
-            {"lightslategrey", 0x778899},
-            {"lightsteelblue", 0xb0c4de},
-            {"lightyellow", 0xffffe0},
-            {"lime", 0x00ff00},
-            {"limegreen", 0x32cd32},
-            {"linen", 0xfaf0e6},
-            {"magenta", 0xff00ff},
-            {"maroon", 0x800000},
-            {"mediumaquamarine", 0x66cdaa},
-            {"mediumblue", 0x0000cd},
-            {"mediumorchid", 0xba55d3},
-            {"mediumpurple", 0x9370db},
-            {"mediumseagreen", 0x3cb371},
-            {"mediumslateblue", 0x7b68ee},
-            {"mediumspringgreen", 0x00fa9a},
-            {"mediumturquoise", 0x48d1cc},
-            {"mediumvioletred", 0xc71585},
-            {"midnightblue", 0x191970},
-            {"mintcream", 0xf5fffa},
-            {"mistyrose", 0xffe4e1},
-            {"moccasin", 0xffe4b5},
-            {"navajowhite", 0xffdead},
-            {"navy", 0x000080},
-            {"oldlace", 0xfdf5e6},
-            {"olive", 0x808000},
-            {"olivedrab", 0x6b8e23},
-            {"orange", 0xffa500},
-            {"orangered", 0xff4500},
-            {"orchid", 0xda70d6},
-            {"palegoldenrod", 0xeee8aa},
-            {"palegreen", 0x98fb98},
-            {"paleturquoise", 0xafeeee},
-            {"palevioletred", 0xdb7093},
-            {"papayawhip", 0xffefd5},
-            {"peachpuff", 0xffdab9},
-            {"peru", 0xcd853f},
-            {"pink", 0xffc0cb},
-            {"plum", 0xdda0dd},
-            {"powderblue", 0xb0e0e6},
-            {"purple", 0x800080},
-            {"red", 0xff0000},
-            {"rosybrown", 0xbc8f8f},
-            {"royalblue", 0x4169e1},
-            {"saddlebrown", 0x8b4513},
-            {"salmon", 0xfa8072},
-            {"sandybrown", 0xf4a460},
-            {"seagreen", 0x2e8b57},
-            {"seashell", 0xfff5ee},
-            {"sienna", 0xa0522d},
-            {"silver", 0xc0c0c0},
-            {"skyblue", 0x87ceeb},
-            {"slateblue", 0x6a5acd},
-            {"slategray", 0x708090},
-            {"slategrey", 0x708090},
-            {"snow", 0xfffafa},
-            {"springgreen", 0x00ff7f},
-            {"steelblue", 0x4682b4},
-            {"tan", 0xd2b48c},
-            {"teal", 0x008080},
-            {"thistle", 0xd8bfd8},
-            {"tomato", 0xff6347},
-            {"turquoise", 0x40e0d0},
-            {"violet", 0xee82ee},
-            {"wheat", 0xf5deb3},
-            {"white", 0xffffff},
-            {"whitesmoke", 0xf5f5f5},
-            {"yellow", 0xffff00},
-            {"yellowgreen", 0x9acd32}};
-        
-        if (str[0] == '#' && str.length() == 4)
-        {
-            unsigned int components[4];
-            int count = sscanf(str.c_str(), "#%1x%1x%1x", &components[0], &components[1], &components[2]);
-            for (int i = count; count < 4; count++)
-            {
-                components[i] += components[i] << 4;
-            }
-            for (int i = count; count < 4; count++)
-            {
-                components[i] = 255;
-            }
-            return nvgRGBA(components[0], components[1], components[2], components[3]);
-        }
-        else if (str[0] == '#' && str.length() == 7)
-        {
-            unsigned int components[4];
-            int count = sscanf(str.c_str(), "#%02x%02x%02x%02x", &components[0], &components[1], &components[2], &components[3]);
-            for (int i = count; count < 4; count++)
-            {
-                components[i] = 255;
-            }
-            return nvgRGBA(components[0], components[1], components[2], components[3]);
-        }
-        else
-        {
-            if (str == "transparent" || !str.length())
-            {
-                return nvgRGBA(0, 0, 0, 0);
-            }
-            auto iter = webColors.find(str);
-            if (iter != webColors.end())
-            {
-                uint32_t color = iter->second;
-                return nvgRGBA((color>>16), (color>>8)&0xFF, (color&0xFF), 0xFF);
-            }
-            else
-            {
-                throw std::runtime_error{"Unknown color name"};
-            }
-        }
-        return nvgRGBA(255, 0, 255, 255);
     }
 
     void Context::FillRect(const Napi::CallbackInfo& info)
@@ -398,10 +201,14 @@ namespace Babylon::Polyfills::Internal
         const float width = info[2].As<Napi::Number>().FloatValue();
         const float height = info[3].As<Napi::Number>().FloatValue();
 
+        nvgSave(m_nvg);
+        nvgGlobalCompositeOperation(m_nvg, NVG_COPY);
         nvgBeginPath(m_nvg);
         nvgRect(m_nvg, x, y, width, height);
+        nvgClosePath(m_nvg);
         nvgFillColor(m_nvg, TRANSPARENT_BLACK);
         nvgFill(m_nvg);
+        nvgRestore(m_nvg);
         SetDirty();
     }
 
@@ -448,12 +255,14 @@ namespace Babylon::Polyfills::Internal
         const auto height = info[3].As<Napi::Number>().FloatValue();
 
         nvgRect(m_nvg, left, top, width, height);
+        m_rectangleClipping = {left, top, width, height};
         SetDirty();
     }
 
-    void Context::Clip(const Napi::CallbackInfo& info)
+    void Context::Clip(const Napi::CallbackInfo& /*info*/)
     {
-        // throw std::runtime_error{ "not implemented" };
+        // expand clipping 1pix in each direction because nanovg AA gets cut a bit short.
+        nvgScissor(m_nvg, m_rectangleClipping.left - 1, m_rectangleClipping.top - 1, m_rectangleClipping.width + 1, m_rectangleClipping.height + 1);
     }
 
     void Context::StrokeRect(const Napi::CallbackInfo& info)
@@ -464,6 +273,7 @@ namespace Babylon::Polyfills::Internal
         const auto height = info[3].As<Napi::Number>().FloatValue();
 
         nvgRect(m_nvg, left, top, width, height);
+        nvgStroke(m_nvg);
         SetDirty();
     }
 
@@ -504,7 +314,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::MeasureText(const Napi::CallbackInfo& info)
     {
-        const std::string text = info[0].As<Napi::String>().Utf8Value();
+        std::string text{info[0].As<Napi::String>()};
         return MeasureText::CreateInstance(info.Env(), this, text);
     }
 
@@ -535,39 +345,34 @@ namespace Babylon::Polyfills::Internal
         if (!m_dirty)
         {
             m_dirty = true;
-            EndFrame();
+            DeferredFlushFrame();
         }
     }
 
-    void Context::BeginFrame()
-    {
-        const auto width = m_canvas->GetWidth();
-        const auto height = m_canvas->GetHeight();
-
-        nvgBeginFrame(m_nvg, float(width), float(height), 1.0f);
-    }
-
-    void Context::EndFrame()
+    void Context::DeferredFlushFrame()
     {
         // on some systems (Ubuntu), the framebuffer contains garbage.
         // Unlike other systems where it's cleared.
         bool needClear = m_canvas->UpdateRenderTarget();
 
-        arcana::make_task(m_graphicsImpl.BeforeRenderScheduler(), *m_cancellationSource, [this, needClear, cancellationSource{ m_cancellationSource }]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{ m_graphicsImpl.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
+        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, needClear, cancellationSource{ m_cancellationSource }]() {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{ m_update.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
                 // JS Thread
                 Babylon::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
-                bgfx::Encoder* encoder = m_graphicsImpl.GetUpdateToken().GetEncoder();
+                bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
                 frameBuffer.Bind(*encoder);
                 if (needClear)
                 {
                     frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR, 0, 1.f, 0);
                 }
                 frameBuffer.SetViewPort(*encoder, 0.f, 0.f, 1.f, 1.f);
+                const auto width = m_canvas->GetWidth();
+                const auto height = m_canvas->GetHeight();
+
+                nvgBeginFrame(m_nvg, float(width), float(height), 1.0f);
                 nvgSetFrameBufferAndEncoder(m_nvg, frameBuffer, encoder);
                 nvgEndFrame(m_nvg);
                 frameBuffer.Unbind(*encoder);
-                BeginFrame();
                 m_dirty = false;
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }](const arcana::expected<void, std::exception_ptr>& result) {
                 if (!cancellationSource->cancelled() && result.has_error())
@@ -595,66 +400,138 @@ namespace Babylon::Polyfills::Internal
         SetDirty();
     }
 
-    void Context::DrawImage(const Napi::CallbackInfo&)
+    void Context::DrawImage(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        const NativeCanvasImage* canvasImage = NativeCanvasImage::Unwrap(info[0].As<Napi::Object>());
+
+        int imageIndex{-1};
+        const auto nvgImageIter = m_nvgImageIndices.find(canvasImage);
+        if (nvgImageIter == m_nvgImageIndices.end())
+        {
+            imageIndex = canvasImage->CreateNVGImageForContext(m_nvg);
+            m_nvgImageIndices.try_emplace(canvasImage, imageIndex);
+        }
+        else
+        {
+            imageIndex = nvgImageIter->second;
+        }
+        assert(imageIndex != -1);
+
+        if (info.Length() == 3)
+        {
+            const auto dx = info[1].As<Napi::Number>().Int32Value();
+            const auto dy = info[2].As<Napi::Number>().Int32Value();
+            const auto width = static_cast<float>(canvasImage->GetWidth());
+            const auto height = static_cast<float>(canvasImage->GetHeight());
+
+            NVGpaint imagePaint = nvgImagePattern(m_nvg, 0.f, 0.f, width, height, 0.f, imageIndex, 1.f);
+            nvgBeginPath(m_nvg);
+            nvgRect(m_nvg, dx, dy, width, height);
+            nvgFillPaint(m_nvg, imagePaint);
+            nvgFill(m_nvg);
+            SetDirty();
+        } 
+        else if (info.Length() == 5)
+        {
+            const auto dx = info[1].As<Napi::Number>().Int32Value();
+            const auto dy = info[2].As<Napi::Number>().Int32Value();
+            const auto dWidth = info[3].As<Napi::Number>().Uint32Value();
+            const auto dHeight = info[4].As<Napi::Number>().Uint32Value();
+
+            NVGpaint imagePaint = nvgImagePattern(m_nvg, static_cast<float>(dx), static_cast<float>(dy), static_cast<float>(dWidth), static_cast<float>(dHeight), 0.f, imageIndex, 1.f);
+            nvgBeginPath(m_nvg);
+            nvgRect(m_nvg, dx, dy, dWidth, dHeight);
+            nvgFillPaint(m_nvg, imagePaint);
+            nvgFill(m_nvg);
+            SetDirty();
+        }
+        else if (info.Length() == 9)
+        {
+            const auto sx = info[1].As<Napi::Number>().Int32Value();
+            const auto sy = info[2].As<Napi::Number>().Int32Value();
+            const auto sWidth = info[3].As<Napi::Number>().Uint32Value();
+            const auto sHeight = info[4].As<Napi::Number>().Uint32Value();
+            const auto dx = info[5].As<Napi::Number>().Int32Value();
+            const auto dy = info[6].As<Napi::Number>().Int32Value();
+            const auto dWidth = info[7].As<Napi::Number>().Uint32Value();
+            const auto dHeight = info[8].As<Napi::Number>().Uint32Value();
+            const auto width = static_cast<float>(canvasImage->GetWidth());
+            const auto height = static_cast<float>(canvasImage->GetHeight());
+
+            NVGpaint imagePaint = nvgImagePattern(m_nvg, static_cast<float>(dx), static_cast<float>(dy), static_cast<float>(dWidth), static_cast<float>(dHeight), 0.f, imageIndex, 1.f);
+            nvgBeginPath(m_nvg);
+            nvgRect(m_nvg, dx, dy, dWidth, dHeight);
+            nvgFillPaint(m_nvg, imagePaint);
+            nvgFill(m_nvg);
+            SetDirty();
+        }
+        else
+        {
+            throw Napi::Error::New(info.Env(), "Invalid number of parameters for DrawImage");
+        }
     }
 
-    Napi::Value Context::GetImageData(const Napi::CallbackInfo&)
+    Napi::Value Context::GetImageData(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        // TODO: support source x and y
+        //const auto sx = info[0].As<Napi::Number>().Uint32Value();
+        //const auto sy = info[1].As<Napi::Number>().Uint32Value();
+        const auto sw = info[2].As<Napi::Number>().Uint32Value();
+        const auto sh = info[3].As<Napi::Number>().Uint32Value();
+
+        return ImageData::CreateInstance(info.Env(), this, sw, sh);
     }
 
-    void Context::SetLineDash(const Napi::CallbackInfo&)
+    void Context::SetLineDash(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::StrokeText(const Napi::CallbackInfo&)
+    void Context::StrokeText(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::CreateLinearGradient(const Napi::CallbackInfo&)
+    Napi::Value Context::CreateLinearGradient(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::SetTransform(const Napi::CallbackInfo&)
+    void Context::SetTransform(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::GetLineJoin(const Napi::CallbackInfo&)
+    Napi::Value Context::GetLineJoin(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::SetLineJoin(const Napi::CallbackInfo&, const Napi::Value& value)
+    void Context::SetLineJoin(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::GetMiterLimit(const Napi::CallbackInfo&)
+    Napi::Value Context::GetMiterLimit(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::SetMiterLimit(const Napi::CallbackInfo&, const Napi::Value& value)
+    void Context::SetMiterLimit(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::GetFont(const Napi::CallbackInfo&)
+    Napi::Value Context::GetFont(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        return Napi::Value::From(Env(), m_font);
     }
 
-    void Context::SetFont(const Napi::CallbackInfo&, const Napi::Value& value)
+    void Context::SetFont(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         if (!value.IsString())
         {
-            throw std::runtime_error{ "invalid argument" };
+            throw Napi::Error::New(info.Env(), "invalid argument");
         }
 
         const std::string fontOptions = value.ToString();
@@ -665,7 +542,7 @@ namespace Babylon::Polyfills::Internal
         int fontSize = 16;
 
         // Regex to parse font styling information. For now we are only capturing font size (capture group 3) and font family name (capture group 4).
-        const std::regex fontStyleRegex("([[a-zA-Z]+\\s+)*((\\d+)px\\s+)?(\\w+)");
+        static const std::regex fontStyleRegex("([[a-zA-Z]+\\s+)*((\\d+)px\\s+)?(\\w+)");
         std::smatch fontStyleMatch;
 
         // Perform the actual regex_match.
@@ -681,6 +558,7 @@ namespace Babylon::Polyfills::Internal
             if (m_fonts.find(fontStyleMatch[4]) != m_fonts.end())
             {
                 m_currentFontId = m_fonts.at(fontStyleMatch[4]);
+                m_font = fontOptions;
             }
         }
 
@@ -688,58 +566,54 @@ namespace Babylon::Polyfills::Internal
         nvgFontSize(m_nvg, fontSize);
     }
 
-    Napi::Value Context::GetGlobalAlpha(const Napi::CallbackInfo&)
+    void Context::SetGlobalAlpha(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw std::runtime_error{ "not implemented" };
+        const float alpha = value.As<Napi::Number>().FloatValue();
+        nvgGlobalAlpha(m_nvg, alpha);
     }
 
-    void Context::SetGlobalAlpha(const Napi::CallbackInfo&, const Napi::Value& value)
+    Napi::Value Context::GetShadowColor(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::GetShadowColor(const Napi::CallbackInfo&)
+    void Context::SetShadowColor(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::SetShadowColor(const Napi::CallbackInfo&, const Napi::Value& value)
+    Napi::Value Context::GetShadowBlur(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::GetShadowBlur(const Napi::CallbackInfo&)
+    void Context::SetShadowBlur(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::SetShadowBlur(const Napi::CallbackInfo&, const Napi::Value& value)
+    Napi::Value Context::GetShadowOffsetX(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::GetShadowOffsetX(const Napi::CallbackInfo&)
+    void Context::SetShadowOffsetX(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::SetShadowOffsetX(const Napi::CallbackInfo&, const Napi::Value& value)
+    Napi::Value Context::GetShadowOffsetY(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    Napi::Value Context::GetShadowOffsetY(const Napi::CallbackInfo&)
+    void Context::SetShadowOffsetY(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Context::SetShadowOffsetY(const Napi::CallbackInfo&, const Napi::Value& value)
+    Napi::Value Context::GetCanvas(const Napi::CallbackInfo& info)
     {
-        throw std::runtime_error{ "not implemented" };
-    }
-
-    Napi::Value Context::GetCanvas(const Napi::CallbackInfo&)
-    {
-        throw std::runtime_error{ "not implemented" };
+        throw Napi::Error::New(info.Env(), "not implemented");
     }
 }

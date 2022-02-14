@@ -6,8 +6,7 @@
 #include <Windowsx.h>
 #include <Shlwapi.h>
 #include <filesystem>
-
-#include <Shared/InputManager.h>
+#include <stdio.h>
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics.h>
@@ -18,6 +17,7 @@
 #include <Babylon/Plugins/ChromeDevTools.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Plugins/NativeCamera.h>
+#include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -31,7 +31,8 @@ WCHAR szTitle[MAX_LOADSTRING];       // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Graphics> graphics{};
-std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
+Babylon::Plugins::NativeInput* nativeInput{};
+std::unique_ptr<Babylon::Graphics::Update> update{};
 std::unique_ptr<Babylon::Plugins::ChromeDevTools> chromeDevTools{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 bool minimized{false};
@@ -82,13 +83,15 @@ namespace
     {
         if (graphics)
         {
+            update->Finish();
             graphics->FinishRenderingCurrentFrame();
         }
 
         chromeDevTools.reset();
-        inputBuffer.reset();
+        nativeInput = {};
         runtime.reset();
         nativeCanvas.reset();
+        update.reset();
         graphics.reset();
     }
 
@@ -106,15 +109,16 @@ namespace
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
         Babylon::WindowConfiguration graphicsConfig{};
-        graphicsConfig.WindowPtr = hWnd;
+        graphicsConfig.Window = hWnd;
         graphicsConfig.Width = width;
         graphicsConfig.Height = height;
 
         graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+        update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
         graphics->StartRenderingCurrentFrame();
+        update->Start();
 
         runtime = std::make_unique<Babylon::AppRuntime>();
-        inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
         runtime->Dispatch([](Napi::Env env) {
             graphics->AddToJavaScript(env);
@@ -140,7 +144,7 @@ namespace
             // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);
 
-            InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
+            nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
             chromeDevTools = std::make_unique<Babylon::Plugins::ChromeDevTools>(Babylon::Plugins::ChromeDevTools::Initialize(env));
             if (chromeDevTools->SupportsInspector())
@@ -218,8 +222,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         {
             if (graphics)
             {
+                update->Finish();
                 graphics->FinishRenderingCurrentFrame();
                 graphics->StartRenderingCurrentFrame();
+                update->Start();
             }
 
             result = PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) && msg.message != WM_QUIT;
@@ -314,6 +320,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 if (graphics)
                 {
+                    update->Finish();
                     graphics->FinishRenderingCurrentFrame();
                 }
 
@@ -332,6 +339,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     if (graphics)
                     {
                         graphics->StartRenderingCurrentFrame();
+                        update->Start();
                     }
                 }
             }
@@ -381,26 +389,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_MOUSEMOVE:
         {
-            if (inputBuffer)
+            if (nativeInput != nullptr)
             {
-                inputBuffer->SetPointerPosition(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                nativeInput->MouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }
             break;
         }
         case WM_LBUTTONDOWN:
         {
             SetCapture(hWnd);
-            if (inputBuffer)
+            if (nativeInput != nullptr)
             {
-                inputBuffer->SetPointerDown(true);
+                nativeInput->MouseDown(0, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }
             break;
         }
         case WM_LBUTTONUP:
         {
-            if (inputBuffer)
+            if (nativeInput != nullptr)
             {
-                inputBuffer->SetPointerDown(false);
+                nativeInput->MouseUp(0, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }
             ReleaseCapture();
             break;

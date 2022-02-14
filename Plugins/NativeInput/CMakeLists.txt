@@ -11,6 +11,12 @@ if (ANDROID)
 elseif (IOS)
     set(SOURCES ${SOURCES}
         "Source/iOS/NativeInput.cpp")
+elseif (APPLE)
+    set(SOURCES ${SOURCES}
+         "Source/macOS/NativeInput.cpp")
+elseif(UNIX)
+	set(SOURCES ${SOURCES}
+         "Source/Unix/NativeInput.cpp")
 else()
     set(SOURCES ${SOURCES}
         "Source/Windows/NativeInput.cpp")

@@ -3,6 +3,7 @@
 #import <Babylon/AppRuntime.h>
 #import <Babylon/Graphics.h>
 #import <Babylon/Plugins/NativeEngine.h>
+#import <Babylon/Plugins/NativeInput.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/Polyfills/Canvas.h>
@@ -10,12 +11,14 @@
 #import <Babylon/Plugins/NativeCamera.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
 #import <Babylon/ScriptLoader.h>
-#import <Shared/InputManager.h>
 #import <MetalKit/MetalKit.h>
 
+#import <math.h>
+
 std::unique_ptr<Babylon::Graphics> graphics{};
+std::unique_ptr<Babylon::Graphics::Update> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
+Babylon::Plugins::NativeInput* nativeInput{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
 @interface EngineView : MTKView <MTKViewDelegate>
@@ -34,8 +37,10 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 - (void)drawInMTKView:(MTKView *)__unused view
 {
     if (graphics) {
-        graphics->FinishRenderingCurrentFrame();
         graphics->StartRenderingCurrentFrame();
+        update->Start();
+        update->Finish();
+        graphics->FinishRenderingCurrentFrame();
     }
 }
 
@@ -53,7 +58,8 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
         graphics->FinishRenderingCurrentFrame();
     }
 
-    inputBuffer.reset();
+    // Note: JS Context owns this memory for this so it's not actually a leak
+    nativeInput = {};
     runtime.reset();
     graphics.reset();
 }
@@ -80,14 +86,13 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     size_t width = [self view].frame.size.width * screenScale;
     size_t height = [self view].frame.size.height * screenScale;
     Babylon::WindowConfiguration graphicsConfig{};
-    graphicsConfig.WindowPtr = engineView;
+    graphicsConfig.Window = engineView;
     graphicsConfig.Width = width;
     graphicsConfig.Height = height;
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
-    graphics->StartRenderingCurrentFrame();
+    update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
 
     runtime = std::make_unique<Babylon::AppRuntime>();
-    inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
     runtime->Dispatch([](Napi::Env env)
     {
@@ -108,7 +113,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
         Babylon::Plugins::NativeOptimizations::Initialize(env);
 
-        InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
+        nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
     });
 
     Babylon::ScriptLoader loader{ *runtime };
@@ -153,26 +158,35 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     // Update the view, if already loaded.
 }
 
-- (void)mouseDown:(NSEvent *)__unused theEvent {
-    if (inputBuffer)
-    {
-        inputBuffer->SetPointerDown(true);
-    }
+- (CGFloat)getScreenHeight {
+    return [self view].frame.size.height;
 }
 
-- (void)mouseDragged:(NSEvent *)theEvent {
-    if (inputBuffer)
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        inputBuffer->SetPointerPosition(eventLocation.x, eventLocation.y);
-    }
-}
+- (void)mouseDown:(NSEvent *) theEvent {
+     if (nativeInput)
+     {
+         NSPoint eventLocation = [theEvent locationInWindow];
+         auto invertedY = [self getScreenHeight] - eventLocation.y;
+         nativeInput->MouseDown(theEvent.buttonNumber, eventLocation.x, invertedY);
+     }
+ }
 
-- (void)mouseUp:(NSEvent *)__unused theEvent {
-    if (inputBuffer)
-    {
-        inputBuffer->SetPointerDown(false);
-    }
+ - (void)mouseDragged:(NSEvent *)theEvent {
+     if (nativeInput)
+     {
+         NSPoint eventLocation = [theEvent locationInWindow];
+         auto invertedY = [self getScreenHeight] - eventLocation.y;
+         nativeInput->MouseMove(eventLocation.x, invertedY);
+     }
+ }
+
+ - (void)mouseUp:(NSEvent *) theEvent {
+     if (nativeInput)
+     {
+         NSPoint eventLocation = [theEvent locationInWindow];
+         auto invertedY = [self getScreenHeight] - eventLocation.y;
+         nativeInput->MouseUp(theEvent.buttonNumber, eventLocation.x, invertedY);
+     }
 }
 
 - (IBAction)refresh:(id)__unused sender

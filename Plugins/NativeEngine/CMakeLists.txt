@@ -1,15 +1,3 @@
-if(APPLE)
-    set(GRAPHICS_API Metal)
-elseif(ANDROID)
-    set(GRAPHICS_API OpenGL)
-elseif(UNIX)
-    set(GRAPHICS_API OpenGL)
-elseif(WIN32)
-    set(GRAPHICS_API D3D)
-else()
-    message(FATAL_ERROR "Unrecognized platform: graphics API could not be deduced")
-endif()
-
 set(SOURCES
     "Include/Babylon/Plugins/NativeEngine.h"
     "Source/IndexBuffer.cpp"
@@ -32,7 +20,13 @@ set(SOURCES
     "Source/VertexArray.cpp"
     "Source/VertexArray.h"
     "Source/VertexBuffer.cpp"
-    "Source/VertexBuffer.h")
+    "Source/VertexBuffer.h"
+    "Source/JsConsoleLogger.h"
+    "Source/JsConsoleLogger.cpp")
+
+if(WIN32)
+    set(SOURCES ${SOURCES} "Source/ShaderCompilerD3D.h")
+endif()
 
 add_library(NativeEngine ${SOURCES})
 
@@ -47,23 +41,32 @@ target_link_to_dependencies(NativeEngine
     PRIVATE bx
     PRIVATE glslang
     PRIVATE SPIRV
-    PRIVATE spirv-cross-hlsl
     PRIVATE GraphicsInternal
     PRIVATE napi_extensions)
 warnings_as_errors(NativeEngine)
 
-if(APPLE)
+if(TARGET spirv-cross-hlsl)
+    target_link_to_dependencies(NativeEngine
+        PRIVATE spirv-cross-hlsl)
+elseif(TARGET spirv-cross-msl)
     target_link_to_dependencies(NativeEngine
         PRIVATE spirv-cross-msl)
-elseif(WIN32)
+else()
+    target_link_to_dependencies(NativeEngine
+        PRIVATE spirv-cross-glsl)
+endif()
+
+if(WIN32)
     target_link_to_dependencies(NativeEngine
         PRIVATE "d3dcompiler.lib")
 endif()
 
 target_compile_definitions(NativeEngine
     PRIVATE NOMINMAX)
+
+# TODO: remove this once the #define in ShaderCompilerCommon gets split into separate compilation units
 target_compile_definitions(NativeEngine
-    PRIVATE API${GRAPHICS_API}) # OpenGL is defined in bgfx.h. Using APIXXX instead
+    PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
 
 set_property(TARGET NativeEngine PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
@@ -78,6 +81,6 @@ target_link_to_dependencies(NativeEngineInternal
     INTERFACE bx
     INTERFACE glslang
     INTERFACE SPIRV
-    INTERFACE spirv-cross-hlsl
+    INTERFACE spirv-cross-core
     INTERFACE GraphicsInternal
     INTERFACE napi_extensions)

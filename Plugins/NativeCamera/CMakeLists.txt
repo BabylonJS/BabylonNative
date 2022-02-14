@@ -1,23 +1,24 @@
-set(SOURCES 
+if(APPLE)
+    set(PLATFORM Apple)
+else()
+    set(PLATFORM ${BABYLON_NATIVE_PLATFORM})
+endif()
+
+set(SOURCES
     "Include/Babylon/Plugins/NativeCamera.h"
     "Source/NativeCamera.cpp"
     "Source/NativeVideo.cpp"
-    "Source/NativeVideo.h")
-
-if(APPLE)
-    set(SOURCES ${SOURCES} "Source/${BABYLON_NATIVE_PLATFORM}/NativeCameraImpl.mm")
-else()
-    set(SOURCES ${SOURCES} "Source/${BABYLON_NATIVE_PLATFORM}/NativeCameraImpl.cpp")
-endif()
-
-set(SOURCES ${SOURCES} "Source/${BABYLON_NATIVE_PLATFORM}/NativeCameraImpl.h")
+    "Source/NativeVideo.h"
+    "Source/${PLATFORM}/NativeCameraImpl.h"
+    "Source/${PLATFORM}/NativeCameraImpl.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
 add_library(NativeCamera ${SOURCES})
 warnings_as_errors(NativeCamera)
 
-target_include_directories(NativeCamera INTERFACE "Include")
-target_include_directories(NativeCamera PRIVATE "Include/Babylon/Plugins"
-    PRIVATE "Source/${BABYLON_NATIVE_PLATFORM}")
+target_include_directories(NativeCamera
+    INTERFACE "Include"
+    PRIVATE "Include/Babylon/Plugins"
+    PRIVATE "Source/${PLATFORM}")
 
 if(ANDROID)
     set(EXTENSIONS AndroidExtensions)

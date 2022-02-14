@@ -184,7 +184,7 @@ namespace xr
         std::vector<Frame::Plane> Planes{};
         std::vector<Frame::Mesh> Meshes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
-        std::optional<Frame::Space> EyeTrackerSpace{};
+        std::optional<Space> EyeTrackerSpace{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         bool PlaneDetectionEnabled{ false };
@@ -274,6 +274,27 @@ namespace xr
                 {
                     std::ostringstream message;
                     message << "Failed to create ArSession with status: " << status;
+                    throw std::runtime_error{ message.str() };
+                }
+
+                // Create the ArConfig
+                ArConfig* arConfig{};
+                ArConfig_create(xrContext->Session, &arConfig);
+
+                // Set Focus Mode Auto
+                ArConfig_setFocusMode(xrContext->Session, arConfig, AR_FOCUS_MODE_AUTO);
+
+                // Configure the ArSession
+                ArStatus statusConfig { ArSession_configure(xrContext->Session, arConfig) };
+
+                // Clean up the ArConfig.
+                ArConfig_destroy(arConfig);
+
+                if (statusConfig != ArStatus::AR_SUCCESS)
+                {
+                    // ArSession failed to configure, throw an error
+                    std::ostringstream message;
+                    message << "Failed to configure ArSession with status: " << status;
                     throw std::runtime_error{ message.str() };
                 }
             }
@@ -451,6 +472,8 @@ namespace xr
             ArFrame_getTimestamp(xrContext->Session, xrContext->Frame, &frameTimestamp);
             if (frameTimestamp)
             {
+                auto stencilMaskTransaction{ GLTransactions::SetStencil(1) };
+
                 // Bind the frame buffer
                 glBindFramebuffer(GL_FRAMEBUFFER, cameraFrameBufferId);
 
@@ -533,7 +556,7 @@ namespace xr
 
                 // Only write colors to blit to the screen
                 glDepthMask(GL_FALSE);
-                glStencilMask(0);
+                auto stencilMaskTransaction{ GLTransactions::SetStencil(0) };
                 glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 
                 // Use the custom shader
@@ -688,7 +711,7 @@ namespace xr
 
             // Store the anchor the vector tracking currently allocated anchors, and pass back the result.
             arCoreAnchors.push_back(arAnchor);
-            return {pose, reinterpret_cast<NativeAnchorPtr>(arAnchor)};
+            return { { pose }, reinterpret_cast<NativeAnchorPtr>(arAnchor) };
         }
 
         Anchor DeclareAnchor(NativeAnchorPtr anchor)
@@ -705,7 +728,7 @@ namespace xr
             Pose pose{};
             RawToPose(rawPose, pose);
 
-            return {pose, reinterpret_cast<NativeAnchorPtr>(arAnchor)};
+            return { { pose }, reinterpret_cast<NativeAnchorPtr>(arAnchor)};
         };
 
         void UpdateAnchor(xr::Anchor& anchor)
@@ -728,7 +751,7 @@ namespace xr
                 ArAnchor_getPose(xrContext->Session, arAnchor, tempPose);
                 float rawPose[7]{};
                 ArPose_getPoseRaw(xrContext->Session, tempPose, rawPose);
-                RawToPose(rawPose, anchor.Pose);
+                RawToPose(rawPose, anchor.Space.Pose);
             }
             else if (trackingState == AR_TRACKING_STATE_STOPPED)
             {

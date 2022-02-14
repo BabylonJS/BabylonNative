@@ -82,6 +82,11 @@ namespace xr
         Vector4f Orientation;
     };
 
+    struct Space
+    {
+        Pose Pose;
+    };
+
     using NativeTrackablePtr = void*;
     struct HitResult
     {
@@ -98,7 +103,7 @@ namespace xr
     using NativeAnchorPtr = void*;
     struct Anchor
     {
-        Pose Pose{};
+        Space Space{};
         NativeAnchorPtr NativeAnchor{};
         bool IsValid{true};
     };
@@ -188,11 +193,6 @@ namespace xr
             class Frame
             {
             public:
-                struct Space
-                {
-                    Pose Pose;
-                };
-
                 struct JointSpace : Space
                 {
                     float PoseRadius{};
@@ -229,6 +229,7 @@ namespace xr
                     float DepthFarZ{};
 
                     bool IsFirstPersonObserver{ false };
+                    bool RequiresAppClear{ false };
                 };
 
                 struct InputSource
