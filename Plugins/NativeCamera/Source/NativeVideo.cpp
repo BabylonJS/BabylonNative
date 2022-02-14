@@ -152,6 +152,7 @@ namespace Babylon::Plugins
         }
 
         auto deferred = Napi::Promise::Deferred::New(info.Env());
+        deferred.Resolve(info.Env().Undefined());
         return deferred.Promise();
     }
 
