@@ -9,6 +9,7 @@
 #include <GraphicsImpl.h>
 #include <arcana/threading/task_schedulers.h>
 #include <memory>
+#include <array>
 #include <Foundation/Foundation.h>
 #include <AVFoundation/AVFoundation.h>
 
@@ -16,12 +17,6 @@
 
 #include "NativeCameraImpl.h"
 #include <napi/napi.h>
-
-namespace
-{
-    // TODO: is there a way to sync texture use with bgfx?
-    static constexpr unsigned int TextureBufferCount = 4;
-}
 
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>{
     std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData> implData;
@@ -57,7 +52,11 @@ namespace Babylon::Plugins
         CameraTextureDelegate* cameraTextureDelegate{};
         AVCaptureSession* avCaptureSession{};
         CVMetalTextureCacheRef textureCache{};
-        CVMetalTextureRef texture[TextureBufferCount]{};
+        /*
+         AVfoundation might update a texture while it's still being processed by the rendering. If it happens, slowdowns or no update at all will occur.
+         To fix this issue, a texture array is used with enough slots. 1 texture is used for rendering while another is updated.
+         */
+        std::array<CVMetalTextureRef, 4> texture{};
         id <MTLTexture> textureBGRA{};
         int textureFrontIndex{};
     };
@@ -177,8 +176,9 @@ namespace Babylon::Plugins
     size_t height = CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
     MTLPixelFormat pixelFormat = MTLPixelFormatBGRA8Unorm;
 
-    int back = (implData->textureFrontIndex+1) % TextureBufferCount;
-    int front = implData->textureFrontIndex % TextureBufferCount;
+    const auto textureCycleCount{implData->texture.size()};
+    int back = (implData->textureFrontIndex+1) % textureCycleCount;
+    int front = implData->textureFrontIndex % textureCycleCount;
     CVReturn status = CVMetalTextureCacheCreateTextureFromImage(NULL, implData->textureCache, pixelBuffer, NULL, pixelFormat, width, height, 0, &implData->texture[front]);
     if (status == kCVReturnSuccess)
     {
