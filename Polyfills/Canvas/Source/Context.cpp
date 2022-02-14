@@ -66,7 +66,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("font", &Context::GetFont, &Context::SetFont),
                 InstanceAccessor("strokeStyle", &Context::GetStrokeStyle, &Context::SetStrokeStyle),
                 InstanceAccessor("fillStyle", &Context::GetFillStyle, &Context::SetFillStyle),
-                InstanceAccessor("globalAlpha", &Context::GetGlobalAlpha, &Context::SetGlobalAlpha),
+                InstanceAccessor("globalAlpha", nullptr, &Context::SetGlobalAlpha),
                 InstanceAccessor("shadowColor", &Context::GetShadowColor, &Context::SetShadowColor),
                 InstanceAccessor("shadowBlur", &Context::GetShadowBlur, &Context::SetShadowBlur),
                 InstanceAccessor("shadowOffsetX", &Context::GetShadowOffsetX, &Context::SetShadowOffsetX),
@@ -201,10 +201,14 @@ namespace Babylon::Polyfills::Internal
         const float width = info[2].As<Napi::Number>().FloatValue();
         const float height = info[3].As<Napi::Number>().FloatValue();
 
+        nvgSave(m_nvg);
+        nvgGlobalCompositeOperation(m_nvg, NVG_COPY);
         nvgBeginPath(m_nvg);
         nvgRect(m_nvg, x, y, width, height);
+        nvgClosePath(m_nvg);
         nvgFillColor(m_nvg, TRANSPARENT_BLACK);
         nvgFill(m_nvg);
+        nvgRestore(m_nvg);
         SetDirty();
     }
 
@@ -251,12 +255,14 @@ namespace Babylon::Polyfills::Internal
         const auto height = info[3].As<Napi::Number>().FloatValue();
 
         nvgRect(m_nvg, left, top, width, height);
+        m_rectangleClipping = {left, top, width, height};
         SetDirty();
     }
 
-    void Context::Clip(const Napi::CallbackInfo& info)
+    void Context::Clip(const Napi::CallbackInfo& /*info*/)
     {
-        // throw std::runtime_error{ "not implemented" };
+        // expand clipping 1pix in each direction because nanovg AA gets cut a bit short.
+        nvgScissor(m_nvg, m_rectangleClipping.left - 1, m_rectangleClipping.top - 1, m_rectangleClipping.width + 1, m_rectangleClipping.height + 1);
     }
 
     void Context::StrokeRect(const Napi::CallbackInfo& info)
@@ -267,6 +273,7 @@ namespace Babylon::Polyfills::Internal
         const auto height = info[3].As<Napi::Number>().FloatValue();
 
         nvgRect(m_nvg, left, top, width, height);
+        nvgStroke(m_nvg);
         SetDirty();
     }
 
@@ -559,14 +566,10 @@ namespace Babylon::Polyfills::Internal
         nvgFontSize(m_nvg, fontSize);
     }
 
-    Napi::Value Context::GetGlobalAlpha(const Napi::CallbackInfo& info)
-    {
-        return Napi::Value::From(Env(), m_globalAlpha);
-    }
-
     void Context::SetGlobalAlpha(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        m_globalAlpha = value.As<Napi::Number>().FloatValue();
+        const float alpha = value.As<Napi::Number>().FloatValue();
+        nvgGlobalAlpha(m_nvg, alpha);
     }
 
     Napi::Value Context::GetShadowColor(const Napi::CallbackInfo& info)

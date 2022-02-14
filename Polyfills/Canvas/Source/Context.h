@@ -59,7 +59,6 @@ namespace Babylon::Polyfills::Internal
         void SetMiterLimit(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetFont(const Napi::CallbackInfo&);
         void SetFont(const Napi::CallbackInfo&, const Napi::Value& value);
-        Napi::Value GetGlobalAlpha(const Napi::CallbackInfo&);
         void SetGlobalAlpha(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetShadowColor(const Napi::CallbackInfo&);
         void SetShadowColor(const Napi::CallbackInfo&, const Napi::Value& value);
@@ -91,6 +90,12 @@ namespace Babylon::Polyfills::Internal
         Babylon::GraphicsImpl::Update m_update;
 
         bool m_dirty{};
+
+        struct RectangleClipping
+        {
+            float left, top, width, height;
+        } m_rectangleClipping{};
+
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
         JsRuntimeScheduler m_runtimeScheduler;
 
