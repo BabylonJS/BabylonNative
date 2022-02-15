@@ -72,7 +72,8 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("shadowOffsetX", &Context::GetShadowOffsetX, &Context::SetShadowOffsetX),
                 InstanceAccessor("shadowOffsetY", &Context::GetShadowOffsetY, &Context::SetShadowOffsetY),
                 InstanceAccessor("lineWidth", &Context::GetLineWidth, &Context::SetLineWidth),
-                InstanceAccessor("canvas", &Context::GetCanvas, nullptr)
+                InstanceAccessor("canvas", &Context::GetCanvas, nullptr),
+                InstanceMethod("getTextMetrics", &Context::GetTextMetrics)
             });
         return func.New({ Napi::External<NativeCanvas>::New(env, canvas)});
     }
@@ -615,5 +616,10 @@ namespace Babylon::Polyfills::Internal
     Napi::Value Context::GetCanvas(const Napi::CallbackInfo& info)
     {
         throw Napi::Error::New(info.Env(), "not implemented");
+    }
+
+    Napi::Value Context::GetTextMetrics(const Napi::CallbackInfo&)
+    {
+        return MeasureText::GetTextMetrics(Env(), this);
     }
 }

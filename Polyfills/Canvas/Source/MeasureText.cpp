@@ -24,5 +24,17 @@ namespace Babylon::Polyfills::Internal
 
         return obj.As<Napi::Value>();
     }
+
+    Napi::Value MeasureText::GetTextMetrics(Napi::Env env, Context* context)
+    {
+        float ascender{}, descender{}, lineh{};
+        nvgTextMetrics(context->GetNVGContext(), &ascender, &descender, &lineh);
+
+        auto obj{Napi::Object::New(env)};
+        obj.Set("ascent", Napi::Value::From(env, ascender));
+        obj.Set("height", Napi::Value::From(env, lineh));
+        obj.Set("descent", Napi::Value::From(env, descender));
+        return obj.As<Napi::Value>();
+    }
 }
 
