@@ -98,6 +98,12 @@ Disable use of webDebugger in `Apps.cpp` because BabylonReactNative accesses the
 InstanceSettings().UseWebDebugger(false);
 ```
 
+## Update toolchain scripts
+
+Build tools must be updated to reflect new version of React Native support (or removal).
+- In `Apps/Playground/scripts/version.js`, a simple check for supported versions is done
+- In `Package/gulpfile.js`, a test and dependency patch is done in function `patchPackageVersion`. 
+
 ## Troubleshooting
 
 When running the Playground, if you encounter this error message:

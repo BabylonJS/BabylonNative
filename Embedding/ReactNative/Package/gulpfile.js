@@ -530,9 +530,36 @@ const createPackageUWP = async () => {
   exec('npm pack', 'Assembled-Windows');
 }
 
+const patchPackageVersion = async () => {
+  const version = (process.argv[2] == '--reactNative') ? process.argv[3] : ((process.argv[3] == '--reactNative') ? process.argv[4] : '');
+  if (version == '0.64' || version == '0.65') {
+    console.log(chalk.black.bgCyan(`Updating Package.json for React Native ${version}.`))
+
+    const packageJsonPath = '../Modules/@babylonjs/react-native/package.json';
+    const packageJsonPathWindows = '../Modules/@babylonjs/react-native-windows/package.json';
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath));
+    const packageJsonWindows = JSON.parse(fs.readFileSync(packageJsonPathWindows));
+
+    if (version == '0.64') {
+      packageJson.peerDependencies['react-native'] = '>=0.63.1 <0.65.0';
+      packageJsonWindows.peerDependencies['react-native'] = '>=0.63.1 <0.65.0';
+      packageJsonWindows.peerDependencies['react-native-windows'] = '>=0.63.1 <0.65.0';
+    } else {
+      packageJson.peerDependencies['react-native'] = '>=0.65.0';
+      packageJsonWindows.peerDependencies['react-native'] = '>=0.65.0';
+      packageJsonWindows.peerDependencies['react-native-windows'] = '>=0.65.0';
+    }
+
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+    fs.writeFileSync(packageJsonPathWindows, JSON.stringify(packageJsonWindows, null, 2));
+  } else {
+    console.log(chalk.black.bgCyan(`No valid React Native version set. Letting Package.json unchanged.`))
+  }
+}
+
 const copyFiles = gulp.parallel(copyCommonFiles, copySharedFiles, copyIOSFiles, copyAndroidFiles);
 
-const build = gulp.series(buildTypeScript, buildIOS, buildAndroid, createIOSUniversalLibs, copyFiles, validate);
+const build = gulp.series(patchPackageVersion, buildTypeScript, buildIOS, buildAndroid, createIOSUniversalLibs, copyFiles, validate);
 const rebuild = gulp.series(clean, build);
 const pack = gulp.series(rebuild, createPackage);
 
@@ -558,7 +585,7 @@ const buildUWPPublish = gulp.series(buildUWP, copyPackageFilesUWP);
 const packUWP = gulp.series(clean, buildUWP, copyPackageFilesUWP, createPackage, createPackageUWP);
 const packUWPNoBuild = gulp.series(clean, copyPackageFilesUWP, createPackage, createPackageUWP);
 
-exports.initializeSubmodulesWindowsAgent = initializeSubmodulesWindowsAgent;
+exports.initializeSubmodulesWindowsAgent = gulp.series(patchPackageVersion, initializeSubmodulesWindowsAgent);
 exports.makeUWPProjectx86 = makeUWPProjectx86;
 exports.makeUWPProjectx64 = makeUWPProjectx64;
 exports.makeUWPProjectARM = makeUWPProjectARM;
