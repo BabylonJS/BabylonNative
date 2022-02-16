@@ -1,8 +1,12 @@
 #include "GraphicsImpl.h"
 #include <Babylon/GraphicsPlatform.h>
-#include <Babylon/GraphicsPlatformImpl.h>
+#include <Babylon/GraphicsRendererType.h>
 #include <JsRuntimeInternalState.h>
 #include <arcana/tracing/trace_region.h>
+
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
 
 namespace
 {
@@ -11,9 +15,9 @@ namespace
 
 namespace Babylon
 {
-    GraphicsImpl::UpdateToken::UpdateToken(GraphicsImpl& graphicsImpl)
+    GraphicsImpl::UpdateToken::UpdateToken(GraphicsImpl& graphicsImpl, SafeTimespanGuarantor& guarantor)
         : m_graphicsImpl(graphicsImpl)
-        , m_guarantee{m_graphicsImpl.m_safeTimespanGuarantor.GetSafetyGuarantee()}
+        , m_guarantee{guarantor.GetSafetyGuarantee()}
     {
     }
 
@@ -29,8 +33,18 @@ namespace Babylon
         m_state.Bgfx.Initialized = false;
 
         auto& init = m_state.Bgfx.InitState;
-        init.type = BgfxDefaultRendererType;
-        init.resolution.reset = BGFX_RESET_FLAGS;
+        init.type = s_bgfxRenderType;
+        init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY;
+        if (s_bgfxFlipAfterRender) init.resolution.reset |= BGFX_RESET_FLIP_AFTER_RENDER;
+
+        // Disable MSAA on iOS and Android for now.
+        // See https://github.com/BabylonJS/BabylonNative/issues/507
+        // and https://github.com/BabylonJS/BabylonReactNative/issues/215
+        // and https://github.com/bkaradzic/bgfx/issues/2620
+#if TARGET_OS_IPHONE || defined(ANDROID)
+        init.resolution.reset &= ~BGFX_RESET_MSAA_X4;
+#endif
+
         init.callback = &m_bgfxCallback;
     }
 
@@ -39,27 +53,22 @@ namespace Babylon
         DisableRendering();
     }
 
-    template<>
-    WindowType GraphicsImpl::GetNativeWindow<WindowType>()
-    {
-        std::scoped_lock lock{m_state.Mutex};
-        return static_cast<WindowType>(m_state.Bgfx.InitState.platformData.nwh);
-    }
-
     void GraphicsImpl::UpdateWindow(const WindowConfiguration& config)
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
+        m_state.Bgfx.InitState.platformData = {};
         ConfigureBgfxPlatformData(config, m_state.Bgfx.InitState.platformData);
-        UpdateDevicePixelRatio();
+        m_state.Resolution.DevicePixelRatio = GetDevicePixelRatio(config);
     }
 
     void GraphicsImpl::UpdateContext(const ContextConfiguration& config)
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
-        m_state.Resolution.DevicePixelRatio = config.DevicePixelRatio;
+        m_state.Bgfx.InitState.platformData = {};
         ConfigureBgfxPlatformData(config, m_state.Bgfx.InitState.platformData);
+        m_state.Resolution.DevicePixelRatio = config.DevicePixelRatio;
     }
 
     void GraphicsImpl::Resize(size_t width, size_t height)
@@ -94,14 +103,14 @@ namespace Babylon
                     .Data();
     }
 
-    GraphicsImpl::RenderScheduler& GraphicsImpl::BeforeRenderScheduler()
+    continuation_scheduler<>& GraphicsImpl::BeforeRenderScheduler()
     {
-        return m_beforeRenderScheduler;
+        return m_beforeRenderDispatcher.scheduler();
     }
 
-    GraphicsImpl::RenderScheduler& GraphicsImpl::AfterRenderScheduler()
+    continuation_scheduler<>& GraphicsImpl::AfterRenderScheduler()
     {
-        return m_afterRenderScheduler;
+        return m_afterRenderDispatcher.scheduler();
     }
 
     void GraphicsImpl::EnableRendering()
@@ -124,7 +133,7 @@ namespace Babylon
             m_state.Bgfx.Initialized = true;
             m_state.Bgfx.Dirty = false;
 
-            m_cancellationSource = std::make_unique<arcana::cancellation_source>();
+            m_cancellationSource.emplace();
         }
     }
 
@@ -168,13 +177,27 @@ namespace Babylon
         // Update bgfx state if necessary.
         UpdateBgfxState();
 
-        m_safeTimespanGuarantor.BeginSafeTimespan();
-
-        m_beforeRenderScheduler.m_dispatcher.tick(*m_cancellationSource);
+        // Unlock the update safe timespans.
+        {
+            std::scoped_lock lock{m_updateSafeTimespansMutex};
+            for (auto& [key, value] : m_updateSafeTimespans)
+            {
+                value.Unlock();
+            }
+        }
     }
 
     void GraphicsImpl::FinishRenderingCurrentFrame()
     {
+        // Lock the update safe timespans.
+        {
+            std::scoped_lock lock{m_updateSafeTimespansMutex};
+            for (auto& [key, value] : m_updateSafeTimespans)
+            {
+                value.Lock();
+            }
+        }
+        
         arcana::trace_region finishRenderingRegion{"GraphicsImpl::FinishRenderingCurrentFrame"};
 
         assert(m_renderThreadAffinity.check());
@@ -184,18 +207,31 @@ namespace Babylon
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
         }
 
-        m_safeTimespanGuarantor.EndSafeTimespan();
+        m_beforeRenderDispatcher.tick(*m_cancellationSource);
 
         Frame();
 
-        m_afterRenderScheduler.m_dispatcher.tick(*m_cancellationSource);
+        m_afterRenderDispatcher.tick(*m_cancellationSource);
 
         m_rendering = false;
     }
 
-    GraphicsImpl::UpdateToken GraphicsImpl::GetUpdateToken()
+    GraphicsImpl::Update GraphicsImpl::GetUpdate(const char* updateName)
     {
-        return {*this};
+        return {GetSafeTimespanGuarantor(updateName), *this};
+    }
+
+    SafeTimespanGuarantor& GraphicsImpl::GetSafeTimespanGuarantor(const char* updateName)
+    {
+        std::scoped_lock lock{m_updateSafeTimespansMutex};
+        std::string updateNameStr{updateName};
+        auto found = m_updateSafeTimespans.find(updateNameStr);
+        if (found == m_updateSafeTimespans.end())
+        {
+            m_updateSafeTimespans.emplace(std::piecewise_construct, std::forward_as_tuple(updateNameStr), std::forward_as_tuple(m_cancellationSource));
+            found = m_updateSafeTimespans.find(updateNameStr);
+        }
+        return found->second;
     }
 
     void GraphicsImpl::AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)
@@ -318,6 +354,11 @@ namespace Babylon
         while (m_screenShotCallbacks.try_pop(callback, *m_cancellationSource))
         {
             m_bgfxCallback.AddScreenShotCallback(std::move(callback));
+#if D3D12
+            // D3D12 capture is immediate but needs an extra frame swap because back buffer is captured.
+            // Because of previous swapchain flip, back buffer is not what's just been rendered.
+            bgfx::frame();
+#endif
             bgfx::requestScreenShot(BGFX_INVALID_HANDLE, "GraphicsImpl::RequestScreenShot");
         }
     }

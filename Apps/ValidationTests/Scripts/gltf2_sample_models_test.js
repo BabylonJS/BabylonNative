@@ -30,7 +30,6 @@ var models = [
     "GearboxAssy",
     "Lantern",
     "MetalRoughSpheres",
-    "Monster",
     "MorphPrimitivesTest",
     "MultiUVTest",
     "NormalTangentMirrorTest",

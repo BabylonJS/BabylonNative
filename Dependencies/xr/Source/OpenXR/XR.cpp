@@ -314,17 +314,18 @@ namespace xr
         struct
         {
             std::vector<System::Session::Frame::InputSource> ActiveInputSources{};
-            std::optional<System::Session::Frame::Space> EyeTrackerSpace{};
+            std::optional<Space> EyeTrackerSpace{};
             std::vector<FeaturePoint> FeaturePointCloud{};
         } ActionResources{};
 
-        const XrInput InputManager;
+        std::unique_ptr<XrInput> InputManager;
 
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
 
         Impl(System::Impl& hmdImpl, void* graphicsContext)
             : HmdImpl{ hmdImpl }
+            , InputManager{ std::make_unique<XrInput>() }
         {
             assert(HmdImpl.IsInitialized());
             const auto& context = HmdImpl.Context;
@@ -361,6 +362,9 @@ namespace xr
 
         ~Impl()
         {
+            // Dispose the input manager and its XR resources. 
+            // This needs to happen before resetting the OpenXR context.
+            InputManager.reset();
             // Reset OpenXR Context to release session handle and exit immersive mode
             XrRegistry::Reset();
         }
@@ -492,7 +496,7 @@ namespace xr
 
             if (xr::math::Pose::IsPoseValid(spaceLocation)) 
             {
-                anchor.Pose = {
+                anchor.Space.Pose = {
                     spaceLocation.pose.position.x, spaceLocation.pose.position.y, spaceLocation.pose.position.z,
                     spaceLocation.pose.orientation.x, spaceLocation.pose.orientation.y, spaceLocation.pose.orientation.z, spaceLocation.pose.orientation.w 
                 };
@@ -529,7 +533,7 @@ namespace xr
                 handTrackingSystemProperties,
                 eyeTrackingSystemProperties
             };
-            InputManager.Initialize(inputInitOptions);
+            InputManager->Initialize(inputInitOptions);
 
             const XrViewConfigurationType primaryType = HmdImpl.PrimaryViewConfigurationType;
             auto& primaryRenderResource = RenderResources.ResourceMap[primaryType];
@@ -705,7 +709,7 @@ namespace xr
                     ProcessSessionState(exitRenderLoop, requestRestart);
                     break;
                 case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
-                    InputManager.RefreshInputSources(
+                    InputManager->RefreshInputSources(
                         HmdImpl.Context.Instance(), 
                         HmdImpl.Context.Session(), 
                         ActionResources.ActiveInputSources);
@@ -867,6 +871,7 @@ namespace xr
             view.DepthTextureSize.Depth = depthSwapchain.ArraySize;
             view.DepthNearZ = sessionImpl.DepthNearZ;
             view.DepthFarZ = sessionImpl.DepthFarZ;
+            view.RequiresAppClear = true;
 
             PopulateProjectionMatrix(cachedView, view);
         }
@@ -1054,7 +1059,7 @@ namespace xr
                 InputSources,
                 EyeTrackerSpace
             };
-            sessionImpl.InputManager.UpdateFrame(inputUpdateArgs);
+            sessionImpl.InputManager->UpdateFrame(inputUpdateArgs);
         }
     }
 

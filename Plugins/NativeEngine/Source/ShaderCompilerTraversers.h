@@ -61,13 +61,15 @@ namespace Babylon::ShaderCompilerTraversers
     ScopeT MoveNonSamplerUniformsIntoStruct(glslang::TProgram& program, IdGenerator& ids);
 
     /// Performs all changes to uniform types required by platforms that need changes.
-    /// This is needed for Metal and OpenGL (not DirectX) to match bgfx's expectations
+    /// This is needed for Metal and OpenGL and Direct3D to match bgfx's expectations
     /// that all uniforms, even scalars, are implemented as vec4 uniforms.
+    /// It's not mandatory for D3D11 but it is for D3D12.
     ScopeT ChangeUniformTypes(glslang::TProgram& program, IdGenerator& ids);
 
     /// Changes the names and locations of varying attributes in the vertex shader to
     /// match bgfx's expectations.
-    void AssignLocationsAndNamesToVertexVaryings(glslang::TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& vertexAttributeRenaming);
+    void AssignLocationsAndNamesToVertexVaryingsOpenGLMetal(glslang::TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& vertexAttributeRenaming);
+    void AssignLocationsAndNamesToVertexVaryingsD3D(glslang::TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& vertexAttributeRenaming);
 
     /// WebGL (and therefore Babylon.js) treats texture samplers as a single variable.
     /// Native platforms expect them to be two separate variables -- a texture and a

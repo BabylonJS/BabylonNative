@@ -14,6 +14,7 @@
 #import <MetalKit/MetalKit.h>
 
 std::unique_ptr<Babylon::Graphics> graphics{};
+std::unique_ptr<Babylon::Graphics::Update> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
@@ -33,8 +34,10 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 - (void)drawInMTKView:(MTKView *)__unused view
 {
     if (graphics) {
+        update->Finish();
         graphics->FinishRenderingCurrentFrame();
         graphics->StartRenderingCurrentFrame();
+        update->Start();
     }
 }
 
@@ -51,6 +54,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
 - (void)uninitialize {
     if (graphics) {
+        update->Finish();
         graphics->FinishRenderingCurrentFrame();
     }
 
@@ -74,11 +78,13 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     engineView.delegate = engineView;
 
     Babylon::WindowConfiguration graphicsConfig{};
-    graphicsConfig.WindowPtr = engineView;
+    graphicsConfig.Window = engineView;
     graphicsConfig.Width = static_cast<size_t>(600);
     graphicsConfig.Height = static_cast<size_t>(400);
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+    update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
     graphics->StartRenderingCurrentFrame();
+    update->Start();
 
     runtime = std::make_unique<Babylon::AppRuntime>();
 

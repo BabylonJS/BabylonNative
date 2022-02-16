@@ -231,7 +231,6 @@ namespace xr
             HandData.SupportsArticulatedHandTracking = args.HandTrackingInteractionProps.supportsHandTracking && args.Extensions.HandTrackingSupported;
             InitializeHandResources(args.Session, args.Extensions);
 
-            // It's ok to do this because the context will outlive this module
             m_destroyHandTrackers = [this, extensions = args.Extensions]() {
                 if (HandData.HandTrackersInitialized)
                 {

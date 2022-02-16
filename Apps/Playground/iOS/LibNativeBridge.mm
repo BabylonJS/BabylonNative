@@ -4,6 +4,7 @@
 #import <Babylon/Graphics.h>
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/Plugins/NativeEngine.h>
+#import <Babylon/Plugins/NativeInput.h>
 #import <Babylon/Plugins/NativeXr.h>
 #import <Babylon/Plugins/NativeCamera.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
@@ -11,13 +12,13 @@
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/Polyfills/Console.h>
-#import <Shared/InputManager.h>
 
 #import <optional>
 
 std::unique_ptr<Babylon::Graphics> graphics{};
+std::unique_ptr<Babylon::Graphics::Update> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<InputManager<Babylon::AppRuntime>::InputBuffer> inputBuffer{};
+Babylon::Plugins::NativeInput* nativeInput{};
 std::optional<Babylon::Plugins::NativeXr> g_nativeXr{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 bool g_isXrActive{};
@@ -36,7 +37,7 @@ bool g_isXrActive{};
 
 - (void)init:(MTKView*)view width:(int)inWidth height:(int)inHeight xrView:(void*)xrView
 {
-    inputBuffer.reset();
+    nativeInput = {};
     runtime.reset();
     graphics.reset();
 
@@ -44,12 +45,12 @@ bool g_isXrActive{};
     float height = inHeight;
 
     Babylon::WindowConfiguration graphicsConfig{};
-    graphicsConfig.WindowPtr = view;
+    graphicsConfig.Window = view;
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
     graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+    update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
     runtime = std::make_unique<Babylon::AppRuntime>();
-    inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*runtime);
 
     runtime->Dispatch([xrView](Napi::Env env)
     {
@@ -77,7 +78,7 @@ bool g_isXrActive{};
         // Initialize Camera 
         Babylon::Plugins::Camera::Initialize(env);
 
-        InputManager<Babylon::AppRuntime>::Initialize(env, *inputBuffer);
+        nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
     });
 
     Babylon::ScriptLoader loader{ *runtime };
@@ -104,16 +105,30 @@ bool g_isXrActive{};
     if (graphics)
     {
         graphics->StartRenderingCurrentFrame();
+        update->Start();
+        update->Finish();
         graphics->FinishRenderingCurrentFrame();
     }
 }
 
-- (void)setInputs:(int)x y:(int)y tap:(bool)tap
+- (void)setTouchDown:(int)x y:(int)y
 {
-    if (inputBuffer)
-    {
-        inputBuffer->SetPointerPosition(x, y);
-        inputBuffer->SetPointerDown(tap);
+    if (nativeInput != nullptr) {
+        nativeInput->TouchDown(0, x, y);
+    }
+}
+
+- (void)setTouchMove:(int)x y:(int)y
+{
+    if (nativeInput != nullptr) {
+        nativeInput->TouchMove(0, x, y);
+    }
+}
+
+- (void)setTouchUp:(int)x y:(int)y
+{
+    if (nativeInput != nullptr) {
+        nativeInput->TouchUp(0, x, y);
     }
 }
 

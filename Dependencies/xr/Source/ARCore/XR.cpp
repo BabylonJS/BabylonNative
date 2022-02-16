@@ -185,7 +185,7 @@ namespace xr
         std::vector<Frame::Mesh> Meshes{};
         std::vector<Frame::ImageTrackingResult> ImageTrackingResults{};
         std::vector<FeaturePoint> FeaturePointCloud{};
-        std::optional<Frame::Space> EyeTrackerSpace{};
+        std::optional<Space> EyeTrackerSpace{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         bool PlaneDetectionEnabled{ false };
@@ -277,6 +277,27 @@ namespace xr
                 {
                     std::ostringstream message;
                     message << "Failed to create ArSession with status: " << status;
+                    throw std::runtime_error{ message.str() };
+                }
+
+                // Create the ArConfig
+                ArConfig* arConfig{};
+                ArConfig_create(xrContext->Session, &arConfig);
+
+                // Set Focus Mode Auto
+                ArConfig_setFocusMode(xrContext->Session, arConfig, AR_FOCUS_MODE_AUTO);
+
+                // Configure the ArSession
+                ArStatus statusConfig { ArSession_configure(xrContext->Session, arConfig) };
+
+                // Clean up the ArConfig.
+                ArConfig_destroy(arConfig);
+
+                if (statusConfig != ArStatus::AR_SUCCESS)
+                {
+                    // ArSession failed to configure, throw an error
+                    std::ostringstream message;
+                    message << "Failed to configure ArSession with status: " << status;
                     throw std::runtime_error{ message.str() };
                 }
             }
@@ -649,50 +670,61 @@ namespace xr
                     float rawPose[7]{};
                     ArHitResult_getHitPose(xrContext->Session, hitResult, tempPose);
                     ArPose_getPoseRaw(xrContext->Session, tempPose, rawPose);
-                    HitResult hitResult{};
-                    RawToPose(rawPose, hitResult.Pose);
+                    HitResult hitTestResult{};
+                    RawToPose(rawPose, hitTestResult.Pose);
 
-                    hitResult.NativeTrackable = reinterpret_cast<NativeTrackablePtr>(trackable);
-                    filteredResults.push_back(hitResult);
+                    hitTestResult.NativeTrackable = reinterpret_cast<NativeTrackablePtr>(trackable);
+                    filteredResults.push_back(hitTestResult);
                     frameTrackables.push_back(trackable);
                 }
             }
         }
-        
-        std::vector<char*> CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingBitmap> bitmaps) const
+
+        // TODO: Find a better place for this to live.
+        void ConvertRgbaToGrayscale(const uint8_t* image_pixel_buffer, int32_t width, int32_t height, int32_t stride, uint8_t** out_grayscale_buffer) {
+            int32_t grayscale_stride = stride / 4;  // Only support RGBA_8888 format
+            uint8_t* grayscale_buffer = new uint8_t[grayscale_stride * height];
+            for (int h = 0; h < height; ++h) {
+                for (int w = 0; w < width; ++w) {
+                    const uint8_t* pixel = &image_pixel_buffer[w * 4 + h * stride];
+                    uint8_t r = *pixel;
+                    uint8_t g = *(pixel + 1);
+                    uint8_t b = *(pixel + 2);
+                    grayscale_buffer[w + h * grayscale_stride] =
+                            static_cast<uint8_t>(0.213f * r + 0.715 * g + 0.072 * b);
+                }
+            }
+            *out_grayscale_buffer = grayscale_buffer;
+        }
+
+        std::vector<std::string> CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingBitmap> bitmaps)
         {
-            ArAugmentedImageDatabase_create(xrContext->Session, &AugmentedImageDatabase);
-            std::vector<char*> scores;
+            ArAugmentedImageDatabase_create(xrContext->Session, &augmentedImageDatabase);
+            std::vector<std::string> scores;
 
             for (System::Session::Frame::ImageTrackingBitmap bitmap : bitmaps)
             {
                 // Convert to grayscale. Note width also equals stride
                 uint8_t* grayscale_buffer;
-                util::ConvertRgbaToGrayscale(bitmap.data, bitmap.width, bitmap.height, bitmap.width, &grayscale_buffer);
-                // TODO : Why was this line in the ARCore sample?
-                int32_t grayscale_stride = stride / 4;
+                ConvertRgbaToGrayscale(bitmap.data, bitmap.width, bitmap.height, bitmap.width, &grayscale_buffer);
+                // TODO: Need to calculate stride.
+                int32_t grayscale_stride = bitmap.width / 4;
 
                 // Add each image
                 int32_t index;
                 const ArStatus status = ArAugmentedImageDatabase_addImage(
-                    xrContext->Session, AugmentedImageDatabase, "",
-                    grayscale_buffer, width, height, grayscale_stride, &index);
+                    xrContext->Session, augmentedImageDatabase, "",
+                    grayscale_buffer, bitmap.width, bitmap.height, grayscale_stride, &index);
                 
                 // Assign a score
-                char* score;
                 if (status == AR_SUCCESS)
                 {
-                    score = System::Session::Frame::ImageTrackingScore::TRACKABLE;
-                    scores.push_back(score);
-                }
-                else if (status == AR_ERROR_IMAGE_INSUFFICIENT_QUALITY)
-                {
-                    score = System::Session::Frame::ImageTrackingScore::UNTRACKABLE;
-                    scores.push_back(score);
+                    scores.push_back(System::Session::Frame::ImageTrackingScore::TRACKABLE);
                 }
                 else
                 {
-                    // TODO : What's the best way to handle? - throw then catch in NativeXR as Napi::Error
+                    // Invalid image, just mark the image as untrackable.
+                    scores.push_back(System::Session::Frame::ImageTrackingScore::UNTRACKABLE);
                 }
                 delete[] grayscale_buffer;
             }
@@ -700,7 +732,7 @@ namespace xr
             return scores;
         }
 
-        void UpdateImageTrackingResults(std::vector<Frame::ImageTrackingResult::Identifier>& updatedResults, std::vector<Frame::ImageTrackingResult::Identifier>& removedResults) const
+        void UpdateImageTrackingResults(std::vector<Frame::ImageTrackingResult::Identifier>& updatedResults)
         {
             // Get images
             ArFrame_getUpdatedTrackables(xrContext->Session, xrContext->Frame, AR_TRACKABLE_AUGMENTED_IMAGE, trackableImagesList);
@@ -823,7 +855,7 @@ namespace xr
 
             // Store the anchor the vector tracking currently allocated anchors, and pass back the result.
             arCoreAnchors.push_back(arAnchor);
-            return {pose, reinterpret_cast<NativeAnchorPtr>(arAnchor)};
+            return { { pose }, reinterpret_cast<NativeAnchorPtr>(arAnchor) };
         }
 
         Anchor DeclareAnchor(NativeAnchorPtr anchor)
@@ -840,7 +872,7 @@ namespace xr
             Pose pose{};
             RawToPose(rawPose, pose);
 
-            return {pose, reinterpret_cast<NativeAnchorPtr>(arAnchor)};
+            return { { pose }, reinterpret_cast<NativeAnchorPtr>(arAnchor)};
         };
 
         void UpdateAnchor(xr::Anchor& anchor)
@@ -863,7 +895,7 @@ namespace xr
                 ArAnchor_getPose(xrContext->Session, arAnchor, tempPose);
                 float rawPose[7]{};
                 ArPose_getPoseRaw(xrContext->Session, tempPose, rawPose);
-                RawToPose(rawPose, anchor.Pose);
+                RawToPose(rawPose, anchor.Space.Pose);
             }
             else if (trackingState == AR_TRACKING_STATE_STOPPED)
             {
@@ -1094,6 +1126,7 @@ namespace xr
         ArHitResult* hitResult{};
         ArTrackableList* trackablePlanesList{};
         ArTrackableList* trackableImagesList{};
+        ArAugmentedImageDatabase* augmentedImageDatabase{};
         
         float CameraFrameUVs[VERTEX_COUNT * 2]{};
 
@@ -1233,7 +1266,6 @@ namespace xr
         , UpdatedMeshes{}
         , RemovedMeshes{}
         , UpdatedImageTrackingResults{}
-        , RemovedImageTrackingResults{}
         , IsTracking{sessionImpl.IsTracking()}
         , m_impl{ std::make_unique<Session::Frame::Impl>(sessionImpl) }
     {
@@ -1241,7 +1273,7 @@ namespace xr
         {
             m_impl->sessionImpl.UpdatePlanes(UpdatedPlanes, RemovedPlanes);
             m_impl->sessionImpl.UpdateFeaturePointCloud();
-            m_impl->sessionImpl.UpdateImageTrackingResults(UpdatedImageTrackingResults, RemovedImageTrackingResults);
+            m_impl->sessionImpl.UpdateImageTrackingResults(UpdatedImageTrackingResults);
         }
     }
 
@@ -1249,10 +1281,10 @@ namespace xr
     {
         m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay, trackableTypes);
     }
-    
-    void System::Session::Frame::CreateAugmentedImageDatabase() const
+
+    std::vector<std::string> System::Session::Frame::CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingBitmap> bitmaps) const
     {
-        return m_impl->sessionImpl.CreateAugmentedImageDatabase();
+        return m_impl->sessionImpl.CreateAugmentedImageDatabase(bitmaps);
     }
 
     Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr trackable) const

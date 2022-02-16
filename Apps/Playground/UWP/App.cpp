@@ -107,8 +107,10 @@ void App::Run()
     {
         if (m_graphics)
         {
+            m_update->Finish();
             m_graphics->FinishRenderingCurrentFrame();
             m_graphics->StartRenderingCurrentFrame();
+            m_update->Start();
         }
 
         CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
@@ -122,11 +124,12 @@ void App::Uninitialize()
 {
     if (m_graphics)
     {
+        m_update->Finish();
         m_graphics->FinishRenderingCurrentFrame();
     }
 
     m_chromeDevTools.reset();
-    m_inputBuffer.reset();
+    m_nativeInput = {};
     m_runtime.reset();
     m_graphics.reset();
 }
@@ -160,6 +163,7 @@ void App::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
 
     if (m_graphics)
     {
+        m_update->Finish();
         m_graphics->FinishRenderingCurrentFrame();
     }
 
@@ -178,6 +182,7 @@ void App::OnResuming(Platform::Object^ sender, Platform::Object^ args)
     if (m_graphics)
     {
         m_graphics->StartRenderingCurrentFrame();
+        m_update->Start();
     }
 }
 
@@ -203,26 +208,28 @@ void App::OnWindowClosed(CoreWindow^ sender, CoreWindowEventArgs^ args)
 
 void App::OnPointerMoved(CoreWindow^, PointerEventArgs^ args)
 {
-    if (m_inputBuffer != nullptr)
+    if (m_nativeInput != nullptr)
     {
         const auto& point = args->CurrentPoint->RawPosition;
-        m_inputBuffer->SetPointerPosition(static_cast<int>(point.X), static_cast<int>(point.Y));
+        m_nativeInput->MouseMove(static_cast<int>(point.X), static_cast<int>(point.Y));
     }
 }
 
-void App::OnPointerPressed(CoreWindow^, PointerEventArgs^)
+void App::OnPointerPressed(CoreWindow^, PointerEventArgs^ args)
 {
-    if (m_inputBuffer != nullptr)
+    if (m_nativeInput != nullptr)
     {
-        m_inputBuffer->SetPointerDown(true);
+        const auto& point = args->CurrentPoint->RawPosition;
+        m_nativeInput->MouseDown(0, static_cast<int>(point.X), static_cast<int>(point.Y));
     }
 }
 
-void App::OnPointerReleased(CoreWindow^, PointerEventArgs^)
+void App::OnPointerReleased(CoreWindow^, PointerEventArgs^ args)
 {
-    if (m_inputBuffer != nullptr)
+    if (m_nativeInput != nullptr)
     {
-        m_inputBuffer->SetPointerDown(false);
+        const auto& point = args->CurrentPoint->RawPosition;
+        m_nativeInput->MouseUp(0, static_cast<int>(point.X), static_cast<int>(point.Y));
     }
 }
 
@@ -263,17 +270,18 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     m_displayScale = static_cast<float>(displayInformation->RawPixelsPerViewPixel);
     size_t width = static_cast<size_t>(bounds.Width * m_displayScale);
     size_t height = static_cast<size_t>(bounds.Height * m_displayScale);
-    auto* windowPtr = reinterpret_cast<winrt::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
+    auto* window = reinterpret_cast<winrt::Windows::UI::Core::ICoreWindow*>(CoreWindow::GetForCurrentThread());
 
     Babylon::WindowConfiguration graphicsConfig{};
-    graphicsConfig.WindowPtr = windowPtr;
+    graphicsConfig.Window = window;
     graphicsConfig.Width = width;
     graphicsConfig.Height = height;
     m_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+    m_update = std::make_unique<Babylon::Graphics::Update>(m_graphics->GetUpdate("update"));
     m_graphics->StartRenderingCurrentFrame();
+    m_update->Start();
 
     m_runtime = std::make_unique<Babylon::AppRuntime>();
-    m_inputBuffer = std::make_unique<InputManager<Babylon::AppRuntime>::InputBuffer>(*m_runtime);
 
     m_runtime->Dispatch([this](Napi::Env env) {
         m_graphics->AddToJavaScript(env);
@@ -294,7 +302,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
 
         Babylon::Plugins::NativeXr::Initialize(env);
 
-        InputManager<Babylon::AppRuntime>::Initialize(env, *m_inputBuffer);
+        m_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
         m_chromeDevTools = std::make_unique<Babylon::Plugins::ChromeDevTools>(Babylon::Plugins::ChromeDevTools::Initialize(env));
         if (m_chromeDevTools->SupportsInspector())

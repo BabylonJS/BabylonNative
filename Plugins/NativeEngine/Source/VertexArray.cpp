@@ -27,15 +27,22 @@ namespace Babylon
         m_disposed = true;
     }
 
-    void VertexArray::RecordIndexBuffer(IndexBuffer* indexBuffer)
+ 
+
+    bool VertexArray::RecordIndexBuffer(IndexBuffer* indexBuffer)
     {
-        indexBuffer->CreateHandle();
+        if (!indexBuffer->CreateHandle())
+        {
+            return false;
+        }
 
         assert(m_indexBufferRecord.Buffer == nullptr);
         m_indexBufferRecord.Buffer = indexBuffer;
+
+        return true;
     }
 
-    void VertexArray::RecordVertexBuffer(VertexBuffer* vertexBuffer, uint32_t location, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized)
+    bool VertexArray::RecordVertexBuffer(VertexBuffer* vertexBuffer, uint32_t location, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized)
     {
         bgfx::VertexLayout layout{};
         layout.begin();
@@ -70,9 +77,14 @@ namespace Babylon
 
         layout.end();
 
-        vertexBuffer->CreateHandle(layout);
+        if (!vertexBuffer->CreateHandle(layout))
+        {
+            return false;
+        }
 
         m_vertexBufferRecords[attrib] = {vertexBuffer, byteOffset / byteStride, bgfx::createVertexLayout(layout)};
+    
+        return true;
     }
 
     void VertexArray::SetIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices)

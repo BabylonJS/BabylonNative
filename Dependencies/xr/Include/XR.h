@@ -82,6 +82,11 @@ namespace xr
         Vector4f Orientation;
     };
 
+    struct Space
+    {
+        Pose Pose;
+    };
+
     using NativeTrackablePtr = void*;
     struct HitResult
     {
@@ -98,7 +103,7 @@ namespace xr
     using NativeAnchorPtr = void*;
     struct Anchor
     {
-        Pose Pose{};
+        Space Space{};
         NativeAnchorPtr NativeAnchor{};
         bool IsValid{true};
     };
@@ -188,11 +193,6 @@ namespace xr
             class Frame
             {
             public:
-                struct Space
-                {
-                    Pose Pose;
-                };
-
                 struct JointSpace : Space
                 {
                     float PoseRadius{};
@@ -229,6 +229,7 @@ namespace xr
                     float DepthFarZ{};
 
                     bool IsFirstPersonObserver{ false };
+                    bool RequiresAppClear{ false };
                 };
 
                 struct InputSource
@@ -344,7 +345,6 @@ namespace xr
                 std::vector<Mesh::Identifier>UpdatedMeshes;
                 std::vector<Mesh::Identifier>RemovedMeshes;
                 std::vector<ImageTrackingResult::Identifier>UpdatedImageTrackingResults;
-                std::vector<ImageTrackingResult::Identifier>RemovedImageTrackingResults;
 
                 bool IsTracking;
 
@@ -352,7 +352,7 @@ namespace xr
                 ~Frame();
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray, HitTestTrackableType) const;
-                std::vector<char*> CreateAugmentedImageDatabase(std::vector<ImageTrackingBitmap>) const;
+                std::vector<std::string> CreateAugmentedImageDatabase(std::vector<ImageTrackingBitmap>) const;
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 Anchor DeclareAnchor(NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;

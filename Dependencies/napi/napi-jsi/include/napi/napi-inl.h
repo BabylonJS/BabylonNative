@@ -793,11 +793,7 @@ inline ArrayBuffer ArrayBuffer::New(napi_env env, size_t byteLength) {
 inline ArrayBuffer ArrayBuffer::New(napi_env env,
                                     void* externalData,
                                     size_t byteLength) {
-  // must copy since jsi does not support array buffers with external data
-  jsi::Value value{ env->array_buffer_ctor.callAsConstructor(env->rt, static_cast<int>(byteLength)) };
-  jsi::ArrayBuffer arrayBuffer{ value.getObject(env->rt).getArrayBuffer(env->rt) };
-  std::memcpy(arrayBuffer.data(env->rt), externalData, byteLength);
-  return {env, std::move(value)};
+  return {env, FromExternal(env, externalData, byteLength)};
 }
 
 template <typename Finalizer>
@@ -805,15 +801,9 @@ inline ArrayBuffer ArrayBuffer::New(napi_env env,
                                     void* externalData,
                                     size_t byteLength,
                                     Finalizer finalizeCallback) {
-  ArrayBuffer arrayBuffer{ New(env, externalData, byteLength) };
-  jsi::Value& arrayBufferValue{ static_cast<jsi::Value&>(arrayBuffer) };
-
-  jsi::Value oldPrototype{ env->get_prototype_of_func.call(env->rt, arrayBufferValue) };
-  jsi::Value newPrototype{ jsi::Object::createFromHostObject(env->rt, std::make_shared<details::ExternalWithFinalizer<void, Finalizer>>(env, externalData, std::forward<Finalizer>(finalizeCallback))) };
-  env->set_prototype_of_func.call(env->rt, newPrototype, oldPrototype);
-  env->set_prototype_of_func.call(env->rt, arrayBufferValue, newPrototype);
-  
-  return arrayBuffer;
+  jsi::ArrayBuffer arrayBuffer{ FromExternal(env, externalData, byteLength) };
+  arrayBuffer.setProperty(env->rt, env->native_name, jsi::Object::createFromHostObject(env->rt, std::make_shared<details::ExternalWithFinalizer<void, Finalizer>>(env, externalData, std::forward<Finalizer>(finalizeCallback))));
+  return {env, std::move(arrayBuffer)};
 }
 
 template <typename Finalizer, typename Hint>
@@ -822,15 +812,9 @@ inline ArrayBuffer ArrayBuffer::New(napi_env env,
                                     size_t byteLength,
                                     Finalizer finalizeCallback,
                                     Hint* finalizeHint) {
-  ArrayBuffer arrayBuffer{ New(env, externalData, byteLength) };
-  jsi::Value& arrayBufferValue{ static_cast<jsi::Value&>(arrayBuffer) };
-
-  jsi::Value oldPrototype{ env->get_prototype_of_func.call(env->rt, arrayBufferValue) };
-  jsi::Value newPrototype{ jsi::Object::createFromHostObject(env->rt, std::make_shared<details::ExternalWithFinalizerAndHint<void, Finalizer, Hint>>(env, externalData, std::forward<Finalizer>(finalizeCallback), finalizeHint)) };
-  env->set_prototype_of_func.call(env->rt, newPrototype, oldPrototype);
-  env->set_prototype_of_func.call(env->rt, arrayBufferValue, newPrototype);
-
-  return arrayBuffer;
+  jsi::ArrayBuffer arrayBuffer{ FromExternal(env, externalData, byteLength) };
+  arrayBuffer.setProperty(env->rt, env->native_name, std::make_shared<details::ExternalWithFinalizerAndHint<void, Finalizer, Hint>>(env, externalData, std::forward<Finalizer>(finalizeCallback), finalizeHint));
+  return {env, std::move(arrayBuffer)};
 }
 
 inline ArrayBuffer::ArrayBuffer() {
@@ -868,6 +852,14 @@ inline void* ArrayBuffer::Data() const {
 
 inline size_t ArrayBuffer::ByteLength() const {
   return _arrayBuffer->length(_env->rt);
+}
+
+inline jsi::ArrayBuffer ArrayBuffer::FromExternal(napi_env env, void* externalData, size_t byteLength) {
+  // must copy since jsi does not support array buffers with external data
+  jsi::Value value{ env->array_buffer_ctor.callAsConstructor(env->rt, static_cast<int>(byteLength)) };
+  jsi::ArrayBuffer arrayBuffer{ value.getObject(env->rt).getArrayBuffer(env->rt) };
+  std::memcpy(arrayBuffer.data(env->rt), externalData, byteLength);
+  return arrayBuffer;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

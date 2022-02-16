@@ -671,7 +671,7 @@ namespace xr {
         std::vector<Frame::Plane> Planes{};
         std::vector<Frame::Mesh> Meshes{};
         std::vector<FeaturePoint> FeaturePointCloud{};
-        std::optional<Frame::Space> EyeTrackerSpace{};
+        std::optional<Space> EyeTrackerSpace{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
         float DepthFarZ{ DEFAULT_DEPTH_FAR_Z };
         bool FeaturePointCloudEnabled{ false };
@@ -1009,7 +1009,7 @@ namespace xr {
             auto anchor = [[ARAnchor alloc] initWithTransform:poseTransform];
             [SystemImpl.XrContext->Session addAnchor:anchor];
             nativeAnchors.push_back(anchor);
-            return { pose, (__bridge NativeAnchorPtr)anchor };
+            return { { pose }, (__bridge NativeAnchorPtr)anchor };
         }
 
         /**
@@ -1020,7 +1020,7 @@ namespace xr {
             const auto arAnchor = (__bridge ARAnchor*)anchor;
             nativeAnchors.push_back(arAnchor);
             const auto pose{TransformToPose(arAnchor.transform)};
-            return { pose, anchor };
+            return { { pose }, anchor };
         }
         
         /**
@@ -1035,7 +1035,7 @@ namespace xr {
             }
 
             // Then update the anchor's pose based on its transform.
-            anchor.Pose = TransformToPose(arAnchor.transform);
+            anchor.Space.Pose = TransformToPose(arAnchor.transform);
         }
 
         /**
@@ -1526,7 +1526,6 @@ namespace xr {
         , UpdatedMeshes{}
         , RemovedMeshes{}
         , UpdatedImageTrackingResults{}
-        , RemovedImageTrackingResults{}
         , IsTracking{sessionImpl.IsTracking()}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) } {
         Views[0].DepthNearZ = sessionImpl.DepthNearZ;

@@ -23,6 +23,7 @@
 namespace
 {
     std::unique_ptr<Babylon::Graphics> g_graphics{};
+    std::unique_ptr<Babylon::Graphics::Update> g_update{};
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
     std::unique_ptr<Babylon::ScriptLoader> g_scriptLoader{};
 }
@@ -39,6 +40,7 @@ extern "C"
     {
         if (g_graphics)
         {
+            g_update->Finish();
             g_graphics->FinishRenderingCurrentFrame();
         }
 
@@ -65,12 +67,14 @@ extern "C"
             int32_t height = 400;//ANativeWindow_getHeight(window);
 
             Babylon::WindowConfiguration graphicsConfig{};
-            graphicsConfig.WindowPtr = window;
+            graphicsConfig.Window = window;
             graphicsConfig.Width = static_cast<size_t>(width);
             graphicsConfig.Height = static_cast<size_t>(height);
 
             g_graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+            g_update = std::make_unique<Babylon::Graphics::Update>(g_graphics->GetUpdate("update"));
             g_graphics->StartRenderingCurrentFrame();
+            g_update->Start();
 
             g_runtime = std::make_unique<Babylon::AppRuntime>();
             g_runtime->Dispatch([window](Napi::Env env)
@@ -126,7 +130,7 @@ extern "C"
             ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
 
             Babylon::WindowConfiguration graphicsConfig{};
-            graphicsConfig.WindowPtr = window;
+            graphicsConfig.Window = window;
             graphicsConfig.Width = static_cast<size_t>(width);
             graphicsConfig.Height = static_cast<size_t>(height);
             g_graphics->UpdateWindow(graphicsConfig);
@@ -205,8 +209,10 @@ extern "C"
     {
         if (g_graphics)
         {
+            g_update->Finish();
             g_graphics->FinishRenderingCurrentFrame();
             g_graphics->StartRenderingCurrentFrame();
+            g_update->Start();
         }
     }
 }

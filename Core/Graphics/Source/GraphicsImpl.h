@@ -16,6 +16,7 @@
 
 #include <memory>
 #include <map>
+#include <optional>
 #include <unordered_map>
 
 namespace Babylon
@@ -26,6 +27,34 @@ namespace Babylon
     class GraphicsImpl
     {
     public:
+        /* ********** BEGIN UPWARD-FACING CONTRACT ********** */
+
+        GraphicsImpl();
+        virtual ~GraphicsImpl();
+
+        void UpdateWindow(const WindowConfiguration& config);
+        void UpdateContext(const ContextConfiguration& config);
+        void Resize(size_t width, size_t height);
+
+        void AddToJavaScript(Napi::Env);
+        static GraphicsImpl& GetFromJavaScript(Napi::Env);
+
+        void EnableRendering();
+        void DisableRendering();
+
+        void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
+
+        void StartRenderingCurrentFrame();
+        void FinishRenderingCurrentFrame();
+
+        SafeTimespanGuarantor& GetSafeTimespanGuarantor(const char* updateName);
+
+        /* ********** END UPWARD-FACING CONTRACT ********** */
+
+        /* ********** BEGIN DOWNWARD-FACING CONTRACT ********** */
+
+        class Update;
+
         class UpdateToken final
         {
         public:
@@ -35,29 +64,41 @@ namespace Babylon
             bgfx::Encoder* GetEncoder();
 
         private:
-            friend class GraphicsImpl;
+            friend class Update;
 
-            UpdateToken(GraphicsImpl&);
+            UpdateToken(GraphicsImpl&, SafeTimespanGuarantor&);
 
             GraphicsImpl& m_graphicsImpl;
             SafeTimespanGuarantor::SafetyGuarantee m_guarantee;
         };
 
-        class RenderScheduler final
+        class Update
         {
         public:
-            template<typename CallableT>
-            void operator()(CallableT&& callable)
+            continuation_scheduler<>& Scheduler()
             {
-                m_dispatcher(callable);
+                return m_safeTimespanGuarantor.OpenScheduler();
+            }
+
+            UpdateToken GetUpdateToken()
+            {
+                return {m_graphicsImpl, m_safeTimespanGuarantor};
             }
 
         private:
-            friend GraphicsImpl;
+            friend class GraphicsImpl;
 
-            arcana::manual_dispatcher<128> m_dispatcher;
+            Update(SafeTimespanGuarantor& safeTimespanGuarantor, GraphicsImpl& graphicsImpl)
+                : m_safeTimespanGuarantor{safeTimespanGuarantor}
+                , m_graphicsImpl{graphicsImpl}
+            {
+            }
+
+            SafeTimespanGuarantor& m_safeTimespanGuarantor;
+            GraphicsImpl& m_graphicsImpl;
         };
 
+        // Deprecated
         struct TextureInfo final
         {
         public:
@@ -68,34 +109,15 @@ namespace Babylon
             bgfx::TextureFormat::Enum Format{};
         };
 
-        GraphicsImpl();
-        virtual ~GraphicsImpl();
+        continuation_scheduler<>& BeforeRenderScheduler();
+        continuation_scheduler<>& AfterRenderScheduler();
 
-        void UpdateWindow(const WindowConfiguration& config);
-        void UpdateContext(const ContextConfiguration& config);
-        void Resize(size_t width, size_t height);
-        size_t GetWidth() const;
-        size_t GetHeight() const;
+        Update GetUpdate(const char* updateName);
 
-        void AddToJavaScript(Napi::Env);
-        static GraphicsImpl& GetFromJavaScript(Napi::Env);
-
-        RenderScheduler& BeforeRenderScheduler();
-        RenderScheduler& AfterRenderScheduler();
-
-        void EnableRendering();
-        void DisableRendering();
-
-        void StartRenderingCurrentFrame();
-        void FinishRenderingCurrentFrame();
-
-        UpdateToken GetUpdateToken();
-
+        // Deprecated
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
         void RemoveTexture(bgfx::TextureHandle handle);
         TextureInfo GetTextureInfo(bgfx::TextureHandle handle);
-
-        void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
 
@@ -104,6 +126,8 @@ namespace Babylon
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);
 
+        size_t GetWidth() const;
+        size_t GetHeight() const;
         float GetDevicePixelRatio();
 
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
@@ -114,14 +138,14 @@ namespace Babylon
     private:
         friend class UpdateToken;
 
-        template<typename WindowT>
-        WindowT GetNativeWindow();
+        static const bool s_bgfxFlipAfterRender;
+        static const bgfx::RendererType::Enum s_bgfxRenderType;
+        static void ConfigureBgfxPlatformData(const WindowConfiguration& config, bgfx::PlatformData& platformData);
+        static void ConfigureBgfxPlatformData(const ContextConfiguration& config, bgfx::PlatformData& platformData);
+        static float GetDevicePixelRatio(const WindowConfiguration& config);
 
-        void ConfigureBgfxPlatformData(const WindowConfiguration& config, bgfx::PlatformData& platformData);
-        void ConfigureBgfxPlatformData(const ContextConfiguration& config, bgfx::PlatformData& platformData);
         void UpdateBgfxState();
         void UpdateBgfxResolution();
-        float UpdateDevicePixelRatio();
         void DiscardIfDirty();
         void RequestScreenShots();
         void Frame();
@@ -134,7 +158,7 @@ namespace Babylon
 
         std::atomic<bgfx::ViewId> m_nextViewId{0};
 
-        std::unique_ptr<arcana::cancellation_source> m_cancellationSource{};
+        std::optional<arcana::cancellation_source> m_cancellationSource{};
 
         struct
         {
@@ -158,10 +182,8 @@ namespace Babylon
 
         BgfxCallback m_bgfxCallback;
 
-        SafeTimespanGuarantor m_safeTimespanGuarantor{};
-
-        RenderScheduler m_beforeRenderScheduler;
-        RenderScheduler m_afterRenderScheduler;
+        continuation_dispatcher<> m_beforeRenderDispatcher{};
+        continuation_dispatcher<> m_afterRenderDispatcher{};
 
         std::mutex m_captureCallbacksMutex{};
         arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>> m_captureCallbacks{};
@@ -175,5 +197,8 @@ namespace Babylon
 
         std::unordered_map<uint16_t, TextureInfo> m_textureHandleToInfo{};
         std::mutex m_textureHandleToInfoMutex{};
+
+        std::map<std::string, SafeTimespanGuarantor> m_updateSafeTimespans{};
+        std::mutex m_updateSafeTimespansMutex{};
     };
 }

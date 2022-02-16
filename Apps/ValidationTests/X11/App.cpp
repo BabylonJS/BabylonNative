@@ -22,6 +22,7 @@ static const char* s_applicationName  = "BabylonNative Validation Tests";
 static const char* s_applicationClass = "Validation Tests";
 
 std::unique_ptr<Babylon::Graphics> graphics{};
+std::unique_ptr<Babylon::Graphics::Update> update{};
 std::unique_ptr<Babylon::AppRuntime> runtime{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
@@ -52,6 +53,7 @@ namespace
     {
         if (graphics)
         {
+            update->Finish();
             graphics->FinishRenderingCurrentFrame();
         }
         runtime.reset();
@@ -65,13 +67,15 @@ namespace
         Uninitialize();
 
         Babylon::WindowConfiguration graphicsConfig{};
-        graphicsConfig.WindowPtr = (void*)(uintptr_t)window;
+        graphicsConfig.Window = window;
         graphicsConfig.Width = static_cast<size_t>(width);
         graphicsConfig.Height = static_cast<size_t>(height);
 
         graphics = Babylon::Graphics::CreateGraphics(graphicsConfig);
+        update = std::make_unique<Babylon::Graphics::Update>(graphics->GetUpdate("update"));
         graphics->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
         graphics->StartRenderingCurrentFrame();
+        update->Start();
 
         runtime = std::make_unique<Babylon::AppRuntime>();
 
@@ -82,7 +86,7 @@ namespace
                 fflush(stdout);
             });
 
-            Babylon::Plugins::TestUtils::Initialize(env, (void*)(uintptr_t)window);
+            Babylon::Plugins::TestUtils::Initialize(env, window);
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
@@ -186,8 +190,10 @@ int main(int /*_argc*/, const char* const* /*_argv*/)
     {
         if (!XPending(display) && graphics)
         {
+            update->Finish();
             graphics->FinishRenderingCurrentFrame();
             graphics->StartRenderingCurrentFrame();
+            update->Start();
         }
         else
         {
