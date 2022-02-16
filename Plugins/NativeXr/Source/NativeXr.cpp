@@ -929,11 +929,12 @@ namespace Babylon
 
         class XRRigidTransform : public Napi::ObjectWrap<XRRigidTransform>
         {
-            static constexpr auto JS_CLASS_NAME = "XRRigidTransform";
             // static constexpr size_t VECTOR_SIZE = 4;
             static constexpr size_t MATRIX_SIZE = 16;
 
         public:
+            static constexpr auto JS_CLASS_NAME = "XRRigidTransform";
+
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -1338,9 +1339,11 @@ namespace Babylon
                 {
                     auto argumentObject{info[0].As<Napi::Object>()};
 
-                    XRRigidTransform* transform{XRRigidTransform::Unwrap(argumentObject)};
-                    if (transform != nullptr)
+                    const auto XRRigidTransformFunction = Env().Global().Get(XRRigidTransform::JS_CLASS_NAME).As<Napi::Function>();
+
+                    if (argumentObject.InstanceOf(XRRigidTransformFunction))
                     {
+                        XRRigidTransform* transform{XRRigidTransform::Unwrap(argumentObject)};
                         // The value passed in to the constructor is an XRRigidTransform
                         xr::Pose pose{transform->GetNativePose()};
                         tempVals.Origin = pose.Position;
