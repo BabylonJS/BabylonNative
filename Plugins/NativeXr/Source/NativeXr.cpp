@@ -1737,57 +1737,6 @@ namespace Babylon
             Napi::Value CreateAnchor(const Napi::CallbackInfo& info);
         };
 
-        /*struct XRImageTrackingState
-        {
-            static constexpr auto TRACKED{"tracked"};
-            static constexpr auto EMULATED{"emulated"};
-        };
-
-        struct XRImageTrackingScore
-        {
-            static constexpr auto UNTRACKABLE{"untrackable"};
-            static constexpr auto TRACKABLE{"trackable"};
-        };*/
-
-        // Implementation of the XRTrackedImageInit: https://immersive-web.github.io/marker-tracking/#dictdef-xrtrackedimageinit
-        class XRTrackedImageInit : public Napi::ObjectWrap<XRTrackedImageInit>
-        {
-            static constexpr auto JS_CLASS_NAME = "XRTrackedImageInit";
-
-        public:
-            static void Initialize(Napi::Env env)
-            {
-                Napi::HandleScope scope{env};
-
-                Napi::Function func = DefineClass(
-                    env,
-                    JS_CLASS_NAME,
-                    {
-                    });
-
-                env.Global().Set(JS_CLASS_NAME, func);
-            }
-
-            static Napi::Object New(const Napi::CallbackInfo& info)
-            {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
-            }
-
-            XRTrackedImageInit(const Napi::CallbackInfo& info)
-                : Napi::ObjectWrap<XRTrackedImageInit>{info}
-            {
-            }
-
-            void SetXRFrame(XRFrame* frame)
-            {
-                m_frame = frame;
-            }
-
-        private:
-            // Pointer to the XRFrame object.
-            XRFrame* m_frame{};
-        };
-
         // Implementation of the XRImageTrackingResult: https://immersive-web.github.io/marker-tracking/#xrimagetrackingresult
         class XRImageTrackingResult : public Napi::ObjectWrap<XRImageTrackingResult>
         {
@@ -2535,16 +2484,16 @@ namespace Babylon
 
             Napi::Value GetImageTrackingResults(const Napi::CallbackInfo& info)
             {
-                // Create a set to contain all of the current image tracking results.
-                Napi::Object imageTrackingResultSet = info.Env().Global().Get("Set").As<Napi::Function>().New({});
+                auto results = Napi::Array::New(info.Env(), m_trackedImageTrackingResults.size());
+                int count = 0;
 
-                // Loop over the list of tracked image tracking results, and add them to the set.
+                // Loop over the list of tracked image tracking results, and add them to the array.
                 for (const auto& [imageTrackingResultID, imageTrackingResultValue] : m_trackedImageTrackingResults)
                 {
-                    imageTrackingResultSet.Get("add").As<Napi::Function>().Call(imageTrackingResultSet, {imageTrackingResultValue.Value()});
+                    results.Set(count++, imageTrackingResultValue.Value());
                 }
 
-                return std::move(imageTrackingResultSet);
+                return std::move(results);
             }
 
             void UpdateSceneObjects(const Napi::Env& env)
@@ -2644,11 +2593,17 @@ namespace Babylon
                     XRImageTrackingResult* xrImageTrackingResult{};
                     auto trackedImageTrackingResultIterator = m_trackedImageTrackingResults.find(imageTrackingResultID);
 
+                    // Get the matching native result
+                    xr::System::Session::Frame::ImageTrackingResult& nativeResult = m_frame->GetImageTrackingResultByID(imageTrackingResultID);
+
                     // Result does not yet exist, create the JS object and insert it into the map.
                     if (trackedImageTrackingResultIterator == m_trackedImageTrackingResults.end())
                     {
-                        // Get the matching native result
-                        xr::System::Session::Frame::ImageTrackingResult& nativeResult = m_frame->GetImageTrackingResultByID(imageTrackingResultID);
+                        // Don't add untracked images.
+                        if (nativeResult.TrackingState == xr::System::Session::Frame::ImageTrackingState::UNTRACKED)
+                        {
+                            continue;
+                        }
 
                         auto napiResult = Napi::Object::New(env);
                         napiResult.Set("index", nativeResult.Index);
@@ -2669,8 +2624,11 @@ namespace Babylon
                     }
                     else
                     {
-                        // If result is tracked, unwrap the image tracking result
-                        xrImageTrackingResult = XRImageTrackingResult::Unwrap(trackedImageTrackingResultIterator->second.Value());
+                        // Update the tracked image list.
+                        auto napiResult = trackedImageTrackingResultIterator->second.Value().As<Napi::Object>();
+                        napiResult.Set("trackingState", nativeResult.TrackingState);
+                        auto referenceSpace = XRReferenceSpace::Unwrap(napiResult.Get("imageSpace").As<Napi::Object>());
+                        referenceSpace->GetTransform()->Update(nativeResult.ImageSpace.Pose);
                     }
                 }
             }

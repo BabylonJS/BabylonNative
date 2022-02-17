@@ -328,6 +328,7 @@ namespace xr
                 
                 struct ImageTrackingState
                 {
+                    static constexpr auto UNTRACKED{"untracked"};
                     static constexpr auto TRACKED{"tracked"};
                     static constexpr auto EMULATED{"emulated"};
                 };

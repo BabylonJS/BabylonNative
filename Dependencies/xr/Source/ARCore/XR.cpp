@@ -755,14 +755,14 @@ namespace xr
                 ArAugmentedImage_getCenterPose(xrContext->Session, imageTrackable, tempPose);
                 ArPose_getPoseRaw(xrContext->Session, tempPose, rawPose);
 
-                ArTrackingState arTrackingState;
-                ArTrackable_getTrackingState(xrContext->Session, trackable, &arTrackingState);
+                ArAugmentedImageTrackingMethod trackingMethod{AR_AUGMENTED_IMAGE_TRACKING_METHOD_NOT_TRACKING};
+                ArAugmentedImage_getTrackingMethod(xrContext->Session, imageTrackable, &trackingMethod);
 
                 // Update the existing image tracking result if it exists
                 auto resultIterator{ imageTrackingResultsMap.find(imageTrackable) };
                 if (resultIterator != imageTrackingResultsMap.end())
                 {
-                    UpdateImageTrackingResult(updatedResults, GetImageTrackingResultByID(resultIterator->second), rawPose, imageIndex, measuredWidthInMeters, arTrackingState);
+                    UpdateImageTrackingResult(updatedResults, GetImageTrackingResultByID(resultIterator->second), rawPose, imageIndex, measuredWidthInMeters, trackingMethod);
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(imageTrackable));
                 }
                 else
@@ -771,7 +771,7 @@ namespace xr
                     ImageTrackingResults.emplace_back();
                     auto& result{ ImageTrackingResults.back() };
                     imageTrackingResultsMap.insert({imageTrackable, result.ID});
-                    UpdateImageTrackingResult(updatedResults, result, rawPose, imageIndex, measuredWidthInMeters, arTrackingState);
+                    UpdateImageTrackingResult(updatedResults, result, rawPose, imageIndex, measuredWidthInMeters, trackingMethod);
                 }
             }
         }
@@ -794,29 +794,24 @@ namespace xr
             const float rawPose[],
             int imageIndex,
             float measuredWidthInMeters,
-            ArTrackingState arTrackingState)
+            ArAugmentedImageTrackingMethod arTrackingState)
         {
             Pose newCenter{};
             RawToPose(rawPose, newCenter);
-
-            // If the trackable wasn't updated return
-            if (!PoseWasMeaningfullyUpdated(result.ImageSpace.Pose, newCenter))
-            {
-                return;
-            }
 
             // Update each property and push
             result.ImageSpace.Pose = newCenter;
             result.Index = imageIndex;
             result.MeasuredWidthInMeters = measuredWidthInMeters;
 
-            result.TrackingState = arTrackingState == AR_TRACKING_STATE_TRACKING
+            result.TrackingState = arTrackingState == AR_AUGMENTED_IMAGE_TRACKING_METHOD_FULL_TRACKING
                 ? Frame::ImageTrackingState::TRACKED
-                : Frame::ImageTrackingState::EMULATED;
+                : arTrackingState == AR_AUGMENTED_IMAGE_TRACKING_METHOD_LAST_KNOWN_POSE
+                    ? Frame::ImageTrackingState::EMULATED
+                    : Frame::ImageTrackingState::UNTRACKED;
 
             updatedResults.push_back(result.ID);
         }
-
 
         // Clean up all ArCore trackables owned by the current frame, this should be called once per frame.
         void CleanupFrameTrackables()
