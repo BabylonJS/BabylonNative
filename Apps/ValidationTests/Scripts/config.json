@@ -367,13 +367,6 @@
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Texture_Sampler, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfTextureSampler1.png"
-        },
-        {
-            "title": "Bones and morphs computation order",
-            "renderCount": 40,
-            "playgroundId": "#WGZLGJ#4040",
-            "referenceImage": "bonesMorphsCompute.png",
-            "errorRatio": 1
         }
     ]
 }
