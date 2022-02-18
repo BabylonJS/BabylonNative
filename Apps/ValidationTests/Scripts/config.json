@@ -369,11 +369,9 @@
             "referenceImage": "gltfTextureSampler1.png"
         },
         {
-            "title": "Bones and morphs computation order",
-            "renderCount": 40,
-            "playgroundId": "#WGZLGJ#4040",
-            "referenceImage": "bonesMorphsCompute.png",
-            "errorRatio": 1
+            "title": "GLTF Serializer Morph Target Animation Group",
+            "playgroundId": "#XN37SR#5",
+            "referenceImage": "gltfSerializerMorphTargetAnimationGroup.png"
         }
     ]
 }
