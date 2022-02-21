@@ -131,7 +131,7 @@ namespace Babylon
                 const auto* source{element.Buffer->GetBytes().data()};
                 for (uint32_t instance = 0; instance < instanceCount; instance++)
                 {
-                    memcpy(data + instance * instanceStride + offset, source + instance * element.Stride + element.Offset, element.ElementSize);
+                    std::memcpy(data + instance * instanceStride + offset, source + instance * element.Stride + element.Offset, element.ElementSize);
                 }
                 offset += iter->second.ElementSize;
             }
