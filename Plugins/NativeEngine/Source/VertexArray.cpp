@@ -27,8 +27,6 @@ namespace Babylon
         m_disposed = true;
     }
 
- 
-
     bool VertexArray::RecordIndexBuffer(IndexBuffer* indexBuffer)
     {
         if (!indexBuffer->CreateHandle())
