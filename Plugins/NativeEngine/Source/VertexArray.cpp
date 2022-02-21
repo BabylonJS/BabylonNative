@@ -1,5 +1,4 @@
 #include "VertexArray.h"
-#include "JsConsoleLogger.h"
 #include <cassert>
 
 namespace Babylon

@@ -615,11 +615,11 @@ namespace Babylon::ShaderCompilerTraversers
                 auto intermediate{program.getIntermediate(EShLangVertex)};
                 VertexVaryingInTraverserMetal traverser{};
                 intermediate->getTreeRoot()->traverse(&traverser);
-                VertexVaryingInTraverserMetal::Traverse(intermediate, ids, replacementToOriginalName, traverser);
+                traverser.Traverse(intermediate, ids, replacementToOriginalName);
             }
 
         private:
-            static void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName, VertexVaryingInTraverser& traverser)
+            void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
             {
                 std::map<std::string, TIntermTyped*> originalNameToReplacement{};
 
@@ -628,8 +628,6 @@ namespace Babylon::ShaderCompilerTraversers
                 loc.init();
                 TPublicType publicType{};
                 publicType.qualifier.clearLayout();
-
-                VertexVaryingInTraverserMetal& traverserMetal{reinterpret_cast<VertexVaryingInTraverserMetal &>(traverser)};
 
                 // 2 passes done here:
                 // - first for standard attributes
@@ -640,22 +638,22 @@ namespace Babylon::ShaderCompilerTraversers
                     // Create the new symbols with which to replace all of the original varying
                     // symbols. The primary purpose of these new symbols is to contain the required
                     // name and location.
-                    for (const auto& [name, symbol] : traverserMetal.m_varyingNameToSymbol)
+                    for (const auto& [name, symbol] : m_varyingNameToSymbol)
                     {
                         const bool isInstance = IsInstance(name.c_str());
                         if ((pass == 0 && isInstance) || (pass == 1 && !isInstance))
                         {
                             if (pass == 0)
                             {
-                                traverserMetal.m_instanceAttributeCount++;
+                                m_instanceAttributeCount++;
                             }
                             continue;
                         }
-                        HandleVarying(name, symbol, publicType, intermediate, ids, originalNameToReplacement, replacementToOriginalName, traverser);
+                        HandleVarying(name, symbol, publicType, intermediate, ids, originalNameToReplacement, replacementToOriginalName, *this);
                     }
                 }
 
-                MakeReplacements(originalNameToReplacement, traverserMetal.m_symbolsToParents);
+                MakeReplacements(originalNameToReplacement, m_symbolsToParents);
             }
 
             std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
