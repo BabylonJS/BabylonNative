@@ -27,7 +27,7 @@ namespace
 namespace Babylon
 {
     VertexBuffer::VertexBuffer(gsl::span<uint8_t> bytes, bool dynamic)
-        : m_bytes{bytes.data(), bytes.data() + bytes.size()}
+        : m_bytes{{bytes.data(), bytes.data() + bytes.size()}}
         , m_dynamic{dynamic}
     {
     }
@@ -56,8 +56,7 @@ namespace Babylon
             }
         }
 
-        m_bytes.clear();
-
+        m_bytes.reset();
         m_disposed = true;
     }
 
@@ -80,21 +79,21 @@ namespace Babylon
         }
     }
 
-    void VertexBuffer::CreateHandle(const bgfx::VertexLayout& layout)
+    bool VertexBuffer::CreateHandle(const bgfx::VertexLayout& layout)
     {
         if (bgfx::isValid(m_handle))
         {
             // NOTE: This code is assuming that layout stride hasn't changed.
-            return;
+            return true;
         }
 
         auto releaseFn = [](void*, void* userData)
         {
-            auto* bytes = reinterpret_cast<std::vector<uint8_t>*>(userData);
-            bytes->clear();
+            auto* bytes = reinterpret_cast<decltype(m_bytes)*>(userData);
+            bytes->reset();
         };
 
-        const bgfx::Memory* memory = bgfx::makeRef(m_bytes.data(), static_cast<uint32_t>(m_bytes.size()), releaseFn, &m_bytes);
+        const bgfx::Memory* memory = bgfx::makeRef(m_bytes->data(), static_cast<uint32_t>(m_bytes->size()), releaseFn, &m_bytes);
 
         if (m_dynamic)
         {
@@ -104,6 +103,8 @@ namespace Babylon
         {
             m_handle = bgfx::createVertexBuffer(memory, layout);
         };
+
+        return bgfx::isValid(m_handle);
     }
 
     void VertexBuffer::PromoteToFloats(bgfx::AttribType::Enum attribType, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride)
@@ -112,22 +113,22 @@ namespace Babylon
         {
             case bgfx::AttribType::Int8:
             {
-                ::PromoteToFloats<int8_t>(m_bytes, numElements, byteOffset, byteStride);
+                ::PromoteToFloats<int8_t>(*m_bytes, numElements, byteOffset, byteStride);
                 break;
             }
             case bgfx::AttribType::Uint8:
             {
-                ::PromoteToFloats<uint8_t>(m_bytes, numElements, byteOffset, byteStride);
+                ::PromoteToFloats<uint8_t>(*m_bytes, numElements, byteOffset, byteStride);
                 break;
             }
             case bgfx::AttribType::Int16:
             {
-                ::PromoteToFloats<int16_t>(m_bytes, numElements, byteOffset, byteStride);
+                ::PromoteToFloats<int16_t>(*m_bytes, numElements, byteOffset, byteStride);
                 break;
             }
             case bgfx::AttribType::Uint16:
             {
-                ::PromoteToFloats<uint16_t>(m_bytes, numElements, byteOffset, byteStride);
+                ::PromoteToFloats<uint16_t>(*m_bytes, numElements, byteOffset, byteStride);
                 break;
             }
             case bgfx::AttribType::Uint10: // is supported by any format ?
@@ -140,13 +141,51 @@ namespace Babylon
 
     void VertexBuffer::Set(bgfx::Encoder* encoder, uint8_t stream, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layoutHandle)
     {
-        if (m_dynamic)
+        if (bgfx::isValid(m_handle))
         {
-            encoder->setVertexBuffer(stream, m_dynamicHandle, startVertex, numVertices, layoutHandle);
+            if (m_dynamic)
+            {
+                encoder->setVertexBuffer(stream, m_dynamicHandle, startVertex, numVertices, layoutHandle);
+            }
+            else
+            {
+                encoder->setVertexBuffer(stream, m_handle, startVertex, numVertices, layoutHandle);
+            }
         }
-        else
+    }
+
+    void VertexBuffer::BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceVertexBufferRecord>& vertexBufferInstance)
+    {
+        uint16_t instanceStride{};
+        uint32_t instanceCount{};
+        for (auto& pair : vertexBufferInstance)
         {
-            encoder->setVertexBuffer(stream, m_handle, startVertex, numVertices, layoutHandle);
+            const auto vertexBuffer{pair.second.Buffer};
+            instanceCount = static_cast<uint32_t>(vertexBuffer->m_bytes->size()) / pair.second.Stride;
+            instanceStride += static_cast<uint16_t>(pair.second.ElementSize);
+        }
+
+        // create instance datas. Instance Data Buffer is transient.
+        bgfx::allocInstanceDataBuffer(&instanceDataBuffer, instanceCount, instanceStride);
+
+        // copy instance datas
+        uint8_t* data{instanceDataBuffer.data};
+        uint32_t offset{};
+
+        // reverse because of bgfx also reverting : https://github.com/bkaradzic/bgfx/blob/4581f14cd481bad1e0d6292f0dd0a6e298c2ee18/src/renderer_d3d11.cpp#L2701
+#if D3D11 || D3D12
+        for (auto iter = vertexBufferInstance.rbegin(); iter != vertexBufferInstance.rend(); ++iter)
+#else
+        for (auto iter = vertexBufferInstance.cbegin(); iter != vertexBufferInstance.cend(); ++iter)
+#endif
+        {
+            const auto& element{iter->second};
+            const auto* source{element.Buffer->m_bytes->data()};
+            for (uint32_t instance = 0; instance < instanceCount; instance++)
+            {
+                std::memcpy(data + instance * instanceStride + offset, source + instance * element.Stride + element.Offset, element.ElementSize);
+            }
+            offset += iter->second.ElementSize;
         }
     }
 }

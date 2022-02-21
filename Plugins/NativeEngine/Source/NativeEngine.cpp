@@ -1,6 +1,7 @@
 #include "NativeEngine.h"
 #include "ShaderCompiler.h"
 #include "Texture.h"
+#include "JsConsoleLogger.h"
 
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
@@ -582,7 +583,10 @@ namespace Babylon
         VertexArray* vertexArray = info[0].As<Napi::Pointer<VertexArray>>().Get();
         IndexBuffer* indexBuffer = info[1].As<Napi::Pointer<IndexBuffer>>().Get();
 
-        vertexArray->RecordIndexBuffer(indexBuffer);
+        if (!vertexArray->RecordIndexBuffer(indexBuffer))
+        {
+            JsConsoleLogger::LogWarn(info.Env(), "WARNING: Fail to create index buffer. Number of index buffers higher than max count.");
+        }
     }
 
     void NativeEngine::UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info)
@@ -624,7 +628,10 @@ namespace Babylon
         const bool normalized = info[7].As<Napi::Boolean>().Value();
         const uint32_t divisor = info[8].As<Napi::Number>().Uint32Value();
 
-        vertexArray->RecordVertexBuffer(vertexBuffer, location, byteOffset, byteStride, numElements, type, normalized, divisor);
+        if (!vertexArray->RecordVertexBuffer(vertexBuffer, location, byteOffset, byteStride, numElements, type, normalized, divisor))
+        {
+            JsConsoleLogger::LogWarn(info.Env(), "WARNING: Fail to create vertex buffer. Number of vertex buffers higher than max count or too many instanced streams.");
+        }
     }
 
     void NativeEngine::UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info)
