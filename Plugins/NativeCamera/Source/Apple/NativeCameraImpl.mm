@@ -179,7 +179,7 @@ namespace Babylon::Plugins
     const auto textureCycleCount{implData->texture.size()};
     int back = (implData->textureFrontIndex+1) % textureCycleCount;
     int front = implData->textureFrontIndex % textureCycleCount;
-    CVReturn status = CVMetalTextureCacheCreateTextureFromImage(NULL, implData->textureCache, pixelBuffer, NULL, pixelFormat, width, height, 0, &implData->texture[front]);
+    CVReturn status = CVMetalTextureCacheCreateTextureFromImage(nullptr, implData->textureCache, pixelBuffer, nullptr, pixelFormat, width, height, 0, &implData->texture[front]);
     if (status == kCVReturnSuccess)
     {
         if (implData->texture[back])
