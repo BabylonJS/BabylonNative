@@ -182,7 +182,7 @@ namespace Babylon::Plugins
     CVReturn status = CVMetalTextureCacheCreateTextureFromImage(NULL, implData->textureCache, pixelBuffer, NULL, pixelFormat, width, height, 0, &implData->texture[front]);
     if (status == kCVReturnSuccess)
     {
-        if(implData->texture[back])
+        if (implData->texture[back])
         {
             CFRelease(implData->texture[back]);
             implData->texture[back] = nullptr;
