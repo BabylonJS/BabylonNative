@@ -762,7 +762,7 @@ namespace xr
                 auto resultIterator{ imageTrackingResultsMap.find(imageTrackable) };
                 if (resultIterator != imageTrackingResultsMap.end())
                 {
-                    UpdateImageTrackingResult(updatedResults, GetImageTrackingResultByID(resultIterator->second), rawPose, imageIndex, measuredWidthInMeters, trackingMethod);
+                    UpdateImageTrackingResult(updatedResults, GetImageTrackingResultByID(resultIterator->second), rawPose, measuredWidthInMeters, trackingMethod);
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(imageTrackable));
                 }
                 else
@@ -770,8 +770,9 @@ namespace xr
                     // This is a new result, create it and initialize its values.
                     ImageTrackingResults.emplace_back();
                     auto& result{ ImageTrackingResults.back() };
+                    result.Index = imageIndex;
                     imageTrackingResultsMap.insert({imageTrackable, result.ID});
-                    UpdateImageTrackingResult(updatedResults, result, rawPose, imageIndex, measuredWidthInMeters, trackingMethod);
+                    UpdateImageTrackingResult(updatedResults, result, rawPose, measuredWidthInMeters, trackingMethod);
                 }
             }
         }
@@ -792,18 +793,17 @@ namespace xr
             std::vector<Frame::ImageTrackingResult::Identifier>& updatedResults,
             Frame::ImageTrackingResult& result,
             const float rawPose[],
-            int imageIndex,
             float measuredWidthInMeters,
             ArAugmentedImageTrackingMethod arTrackingState)
         {
             Pose newCenter{};
             RawToPose(rawPose, newCenter);
 
-            // Update each property and push
+            // Update the pose, and width.
             result.ImageSpace.Pose = newCenter;
-            result.Index = imageIndex;
             result.MeasuredWidthInMeters = measuredWidthInMeters;
 
+            // Map tracking ARCore tracking state to WebXR image tracking state.
             result.TrackingState = arTrackingState == AR_AUGMENTED_IMAGE_TRACKING_METHOD_FULL_TRACKING
                 ? Frame::ImageTrackingState::TRACKED
                 : arTrackingState == AR_AUGMENTED_IMAGE_TRACKING_METHOD_LAST_KNOWN_POSE
