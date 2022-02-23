@@ -17,7 +17,7 @@ namespace Babylon::Graphics
         m_impl->UpdateWindow(config);
     }
 
-    void Device::UpdateContext(const ContextConfiguration& config)
+    void Device::UpdateContext(const DeviceConfiguration& config)
     {
         m_impl->UpdateContext(config);
     }
@@ -30,11 +30,16 @@ namespace Babylon::Graphics
         return device;
     }
 
-    std::unique_ptr<Device> Device::Create(const ContextConfiguration& config)
+    std::unique_ptr<Device> Device::Create(const DeviceConfiguration& config)
     {
         std::unique_ptr<Device> device{new Device()};
         device->UpdateContext(config);
         return device;
+    }
+
+    void Device::UpdateBackbuffer(BackBufferUpdateInfo& update)
+    {
+        m_impl->UpdateBackbuffer(update);
     }
 
     void Device::UpdateSize(size_t width, size_t height)

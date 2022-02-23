@@ -23,7 +23,8 @@
 namespace Babylon::Graphics
 {
     struct WindowConfiguration;
-    struct ContextConfiguration;
+    struct DeviceConfiguration;
+    struct BackBufferUpdateInfo;
 
     class DeviceImpl
     {
@@ -34,7 +35,8 @@ namespace Babylon::Graphics
         virtual ~DeviceImpl();
 
         void UpdateWindow(const WindowConfiguration& config);
-        void UpdateContext(const ContextConfiguration& config);
+        void UpdateContext(const DeviceConfiguration& config);
+        void UpdateBackbuffer(const BackBufferUpdateInfo& update);
         void Resize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);
@@ -91,7 +93,8 @@ namespace Babylon::Graphics
         static const bool s_bgfxFlipAfterRender;
         static const bgfx::RendererType::Enum s_bgfxRenderType;
         static void ConfigureBgfxPlatformData(const WindowConfiguration& config, bgfx::PlatformData& platformData);
-        static void ConfigureBgfxPlatformData(const ContextConfiguration& config, bgfx::PlatformData& platformData);
+        static void ConfigureBgfxPlatformData(const DeviceConfiguration& config, bgfx::PlatformData& platformData);
+        static void UpdateBgfxBackBuffer(const BackBufferUpdateInfo& update, bgfx::PlatformData& platformData);
         static float GetDevicePixelRatio(const WindowConfiguration& config);
 
         void UpdateBgfxState();

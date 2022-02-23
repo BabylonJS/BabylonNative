@@ -2,6 +2,8 @@
 //
 
 #include "App.h"
+#include "Utility.h"
+
 #include <Windows.h>
 #include <Windowsx.h>
 #include <Shlwapi.h>

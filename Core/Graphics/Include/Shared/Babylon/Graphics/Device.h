@@ -64,7 +64,9 @@ namespace Babylon::Graphics
         // method and structure might change.
 
         static std::unique_ptr<Device> Create(const WindowConfiguration& config);
-        static std::unique_ptr<Device> Create(const ContextConfiguration& config);
+        static std::unique_ptr<Device> Create(const DeviceConfiguration& config);
+
+        void UpdateBackbuffer(BackBufferUpdateInfo& update);
 
         void UpdateWindow(const WindowConfiguration& config);
         void UpdateSize(size_t width, size_t height);
@@ -93,7 +95,7 @@ namespace Babylon::Graphics
         Device(const Device&) = delete;
         Device(Device&&) = delete;
 
-        void UpdateContext(const ContextConfiguration& config);
+        void UpdateContext(const DeviceConfiguration& config);
 
         float UpdateDevicePixelRatio();
 
