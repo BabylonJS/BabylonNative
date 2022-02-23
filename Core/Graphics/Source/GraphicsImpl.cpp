@@ -1,7 +1,7 @@
 #include "GraphicsImpl.h"
 #include <Babylon/GraphicsPlatform.h>
 #include <Babylon/GraphicsRendererType.h>
-#include <JsRuntimeInternalState.h>
+#include <Babylon/JsRuntime.h>
 #include <arcana/tracing/trace_region.h>
 
 #if defined(__APPLE__)

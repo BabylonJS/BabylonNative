@@ -1,5 +1,4 @@
 #include "JsRuntime.h"
-#include "JsRuntimeInternalState.h"
 
 namespace Babylon
 {
@@ -9,9 +8,9 @@ namespace Babylon
         static constexpr auto JS_WINDOW_NAME = "window";
     }
 
-    JsRuntime::JsRuntime(Napi::Env env, DispatchFunctionT dispatchFunction)
+    JsRuntime::JsRuntime(Napi::Env env, DispatchFunctionT dispatchFunction, std::function<void(const Napi::Error&)> unhandledExceptionHandler)
         : m_dispatchFunction{std::move(dispatchFunction)}
-        , m_internalState{std::make_unique<JsRuntime::InternalState>()}
+        , m_unhandledExceptionHandler{std::move(unhandledExceptionHandler)}
     {
         auto global = env.Global();
 
@@ -27,9 +26,9 @@ namespace Babylon
         jsNative.Set(JS_RUNTIME_NAME, jsRuntime);
     }
 
-    JsRuntime& JsRuntime::CreateForJavaScript(Napi::Env env, DispatchFunctionT dispatchFunction)
+    JsRuntime& JsRuntime::CreateForJavaScript(Napi::Env env, DispatchFunctionT dispatchFunction, std::function<void(const Napi::Error&)> unhandledExceptionHandler)
     {
-        auto* runtime = new JsRuntime(env, std::move(dispatchFunction));
+        auto* runtime = new JsRuntime(env, std::move(dispatchFunction), std::move(unhandledExceptionHandler));
         return *runtime;
     }
 
@@ -45,6 +44,20 @@ namespace Babylon
     void JsRuntime::Dispatch(std::function<void(Napi::Env)> function)
     {
         std::scoped_lock lock{m_mutex};
-        m_dispatchFunction(std::move(function));
+        m_dispatchFunction([function = std::move(function), unhandledExceptionHandler = m_unhandledExceptionHandler](Napi::Env env) {
+            try
+            {
+                function(env);
+            }
+            catch (const Napi::Error& error)
+            {
+                unhandledExceptionHandler(error);
+            }
+
+            if (env.IsExceptionPending())
+            {
+                unhandledExceptionHandler(env.GetAndClearPendingException());
+            }
+        });
     }
 }

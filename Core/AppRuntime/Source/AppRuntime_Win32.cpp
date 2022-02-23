@@ -29,18 +29,11 @@ namespace Babylon
         RunEnvironmentTier(filename);
     }
 
-    void AppRuntime::DefaultUnhandledExceptionHandler(std::exception_ptr ptr)
+    void AppRuntime::DefaultUnhandledExceptionHandler(const Napi::Error& error)
     {
-        try
-        {
-            std::rethrow_exception(ptr);
-        }
-        catch (const Napi::Error& error)
-        {
-            std::stringstream ss{};
-            ss << "Uncaught Error: " << error.Message() << std::endl;
-            OutputDebugStringA(ss.str().data());
-        }
+        std::stringstream ss{};
+        ss << "Uncaught Error: " << error.Message() << std::endl;
+        OutputDebugStringA(ss.str().data());
     }
 
     void AppRuntime::Execute(std::function<void()> callback)

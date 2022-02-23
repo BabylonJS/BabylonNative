@@ -29,10 +29,10 @@ namespace Babylon
 
         // Note: It is the contract of JsRuntime that its dispatch function must be usable
         // at the moment of construction. JsRuntime cannot be built with dispatch function
-        // that captures a refence to a not-yet-completed object that will be completed
+        // that captures a reference to a not-yet-completed object that will be completed
         // later -- an instance of an inheriting type, for example. The dispatch function
         // must be safely callable as soon as it is passed to the JsRuntime constructor.
-        static JsRuntime& CreateForJavaScript(Napi::Env, DispatchFunctionT);
+        static JsRuntime& CreateForJavaScript(Napi::Env, DispatchFunctionT, std::function<void(const Napi::Error&)>);
         static JsRuntime& GetFromJavaScript(Napi::Env);
         void Dispatch(std::function<void(Napi::Env)>);
 
@@ -41,11 +41,10 @@ namespace Babylon
         JsRuntime(JsRuntime&&) = delete;
 
     private:
-        JsRuntime(Napi::Env, DispatchFunctionT);
+        JsRuntime(Napi::Env, DispatchFunctionT, std::function<void(const Napi::Error&)> unhandledExceptionHandler);
 
         DispatchFunctionT m_dispatchFunction{};
+        std::function<void(const Napi::Error&)> m_unhandledExceptionHandler{};
         std::mutex m_mutex{};
-
-        std::unique_ptr<InternalState> m_internalState{};
     };
 }
