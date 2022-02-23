@@ -2,6 +2,11 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "Thin Instances",
+            "playgroundId": "#V1JE4Z#1",
+            "referenceImage": "thinInstances.png"
+        },
+        {
             "title": "GLTF Sheen",
             "playgroundId": "#YG3BBF#2",
             "referenceImage": "glTFSheen.png"

@@ -153,4 +153,39 @@ namespace Babylon
             }
         }
     }
+
+    void VertexBuffer::BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceVertexBufferRecord>& vertexBufferInstance)
+    {
+        uint16_t instanceStride{};
+        uint32_t instanceCount{};
+        for (auto& pair : vertexBufferInstance)
+        {
+            const auto vertexBuffer{pair.second.Buffer};
+            instanceCount = static_cast<uint32_t>(vertexBuffer->m_bytes->size()) / pair.second.Stride;
+            instanceStride += static_cast<uint16_t>(pair.second.ElementSize);
+        }
+
+        // create instance datas. Instance Data Buffer is transient.
+        bgfx::allocInstanceDataBuffer(&instanceDataBuffer, instanceCount, instanceStride);
+
+        // copy instance datas
+        uint8_t* data{instanceDataBuffer.data};
+        uint32_t offset{};
+
+        // reverse because of bgfx also reverting : https://github.com/bkaradzic/bgfx/blob/4581f14cd481bad1e0d6292f0dd0a6e298c2ee18/src/renderer_d3d11.cpp#L2701
+#if D3D11 || D3D12
+        for (auto iter = vertexBufferInstance.rbegin(); iter != vertexBufferInstance.rend(); ++iter)
+#else
+        for (auto iter = vertexBufferInstance.cbegin(); iter != vertexBufferInstance.cend(); ++iter)
+#endif
+        {
+            const auto& element{iter->second};
+            const auto* source{element.Buffer->m_bytes->data()};
+            for (uint32_t instance = 0; instance < instanceCount; instance++)
+            {
+                std::memcpy(data + instance * instanceStride + offset, source + instance * element.Stride + element.Offset, element.ElementSize);
+            }
+            offset += iter->second.ElementSize;
+        }
+    }
 }
