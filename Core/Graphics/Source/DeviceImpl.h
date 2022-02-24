@@ -36,7 +36,6 @@ namespace Babylon::Graphics
 
         void UpdateWindow(const WindowConfiguration& config);
         void UpdateContext(const DeviceConfiguration& config);
-        void UpdateBackbuffer(const BackBufferUpdateInfo& update);
         void Resize(size_t width, size_t height);
 
         void AddToJavaScript(Napi::Env);

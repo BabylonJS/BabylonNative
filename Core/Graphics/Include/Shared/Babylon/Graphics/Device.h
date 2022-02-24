@@ -66,8 +66,6 @@ namespace Babylon::Graphics
         static std::unique_ptr<Device> Create(const WindowConfiguration& config);
         static std::unique_ptr<Device> Create(const DeviceConfiguration& config);
 
-        void UpdateBackbuffer(BackBufferUpdateInfo& update);
-
         void UpdateWindow(const WindowConfiguration& config);
         void UpdateSize(size_t width, size_t height);
 

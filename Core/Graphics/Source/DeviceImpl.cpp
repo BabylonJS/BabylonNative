@@ -26,6 +26,7 @@ namespace Babylon::Graphics
         init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY;
         if (s_bgfxFlipAfterRender) init.resolution.reset |= BGFX_RESET_FLIP_AFTER_RENDER;
         init.callback = &m_bgfxCallback;
+        init.platformData = {};
     }
 
     DeviceImpl::~DeviceImpl()
@@ -37,7 +38,6 @@ namespace Babylon::Graphics
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
-        m_state.Bgfx.InitState.platformData = {};
         ConfigureBgfxPlatformData(config, m_state.Bgfx.InitState.platformData);
         m_state.Resolution.DevicePixelRatio = GetDevicePixelRatio(config);
     }
@@ -46,16 +46,8 @@ namespace Babylon::Graphics
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
-        m_state.Bgfx.InitState.platformData = {};
         ConfigureBgfxPlatformData(config, m_state.Bgfx.InitState.platformData);
         m_state.Resolution.DevicePixelRatio = config.DevicePixelRatio;
-    }
-
-    void DeviceImpl::UpdateBackbuffer(const BackBufferUpdateInfo& update)
-    {
-        std::scoped_lock lock{m_state.Mutex};
-        m_state.Bgfx.Dirty = true;
-        UpdateBgfxBackBuffer(update, m_state.Bgfx.InitState.platformData);
     }
 
     void DeviceImpl::Resize(size_t width, size_t height)

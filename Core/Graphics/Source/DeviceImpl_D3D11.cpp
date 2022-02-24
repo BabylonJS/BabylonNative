@@ -8,21 +8,5 @@ namespace Babylon::Graphics
     void DeviceImpl::ConfigureBgfxPlatformData(const DeviceConfiguration& config, bgfx::PlatformData& pd)
     {
         pd.context = config.Device;
-
-        if (config.Backbuffer != nullptr)
-        {
-            pd.backBuffer = config.Backbuffer;
-        }
-
-        if (config.DepthStencil != nullptr)
-        {
-            pd.backBufferDS = config.DepthStencil;
-        }
-    }
-
-    void DeviceImpl::UpdateBgfxBackBuffer(const BackBufferUpdateInfo& update, bgfx::PlatformData& pd) 
-    {
-        pd.backBuffer = update.Backbuffer;
-        pd.backBufferDS = update.DepthStencil;
     }
 }

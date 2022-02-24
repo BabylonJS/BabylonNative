@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Graphics/Platform.h>
 #include <Babylon/Graphics/RendererType.h>
@@ -10,23 +9,18 @@
 
 namespace Babylon::Graphics
 {
-    struct ExternalTextureCreateInfo
-    {
-        TexturePointerType Texture;
-        Device* Device;
-    };
-
     class ExternalTexture
     {
     public:
-        ExternalTexture(ExternalTextureCreateInfo info);
+        ExternalTexture(TextureType nativeTexture);
         ExternalTexture(ExternalTexture&&);
         ~ExternalTexture();
 
-        Napi::Value AddToContext(Napi::Value&);
+        Napi::Promise AddToContext(Napi::Env&);
 
         uint32_t GetWight();
         uint32_t GetHeight();
+        uint32_t GetFormat();
 
     private:
         struct Impl;

@@ -1,5 +1,8 @@
-// App.cpp : Defines the entry point for the application.
-//
+// Demo for using BabylonNative with external graphics objects.
+// 
+// - Had to remove  m_state.Bgfx.InitState.platformData = {}; from DeviceImpl::UpdateWindow
+// 
+// - Had to pass Device to constructor of ExternalTexture since we need to wait a frame between bgfx::createTexture2D and bgfx::overrideInternal
 
 #include "App.h"
 #include "Utility.h"
@@ -34,10 +37,6 @@
 #include <stb_image.h>
 
 ID3D11Device* g_d3dDevice;
-IDXGISwapChain* g_SwapChain;
-ID3D11Texture2D* g_DepthStencilBuffer;
-ID3D11RenderTargetView* g_RenderTargetView;
-ID3D11DepthStencilView* g_DepthStencilView;
 ID3D11Texture2D* g_Texture2D;
 
 std::unique_ptr<Babylon::AppRuntime> runtime{};
@@ -48,9 +47,6 @@ std::unique_ptr<Babylon::Graphics::ExternalTexture> externalTexture{};
 Babylon::Plugins::NativeInput* nativeInput{};
 std::unique_ptr<Babylon::Plugins::ChromeDevTools> chromeDevTools{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
-
-uint32_t m4xMsaaQuality;
-bool mEnable4xMsaa;
 
 HWND mhMainWnd;
 
@@ -130,8 +126,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         {
             update->Finish();
             device->FinishRenderingCurrentFrame();
-            
-            ASSERT_SUCCEEDED(g_SwapChain->Present(0, 0), "Fail to present");
 
             device->StartRenderingCurrentFrame();
             update->Start();
@@ -177,11 +171,7 @@ namespace
 
         ASSERT_SUCCEEDED(g_d3dDevice->CreateTexture2D(&desc, &initData, &g_Texture2D));
 
-        Babylon::Graphics::ExternalTextureCreateInfo textureInfo;
-        textureInfo.Texture = g_Texture2D;
-        textureInfo.Device = device.get();
-
-        externalTexture = std::make_unique<Babylon::Graphics::ExternalTexture>(textureInfo);
+        externalTexture = std::make_unique<Babylon::Graphics::ExternalTexture>(g_Texture2D);
     }
 
     void InitD3D11()
@@ -205,189 +195,12 @@ namespace
             NULL);
 
         ASSERT_SUCCEEDED(hr, "Fail to create D3DDevice");
-
-        ASSERT(featureLevel == D3D_FEATURE_LEVEL_11_0, "Fail DirectX 11 not supported.");
-
-        // Check 4X MSAA quality support for our back buffer format.
-        // All Direct3D 11 capable devices support 4X MSAA for all render
-        // target formats, so we only need to check quality support.
-
-        ASSERT_SUCCEEDED(g_d3dDevice->CheckMultisampleQualityLevels(
-                             DXGI_FORMAT_R8G8B8A8_UNORM, 4, &m4xMsaaQuality),
-            "Unable to get Msaa quality level.")
-
-        assert(m4xMsaaQuality > 0);
-
-        // Fill out a DXGI_SWAP_CHAIN_DESC to describe our swap chain.
-        RECT rect;
-        if (!GetClientRect(mhMainWnd, &rect))
-        {
-            return;
-        }
-
-        auto width = static_cast<size_t>(rect.right - rect.left);
-        auto height = static_cast<size_t>(rect.bottom - rect.top);
-
-        DXGI_SWAP_CHAIN_DESC sd;
-        sd.BufferDesc.Width = static_cast<uint32_t>(width);
-        sd.BufferDesc.Height = static_cast<uint32_t>(height);
-        sd.BufferDesc.RefreshRate.Numerator = 60;
-        sd.BufferDesc.RefreshRate.Denominator = 1;
-        sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        sd.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-        sd.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-
-        // Use 4X MSAA?
-        if (mEnable4xMsaa)
-        {
-            sd.SampleDesc.Count = 4;
-            sd.SampleDesc.Quality = m4xMsaaQuality - 1;
-        }
-        // No MSAA
-        else
-        {
-            sd.SampleDesc.Count = 1;
-            sd.SampleDesc.Quality = 0;
-        }
-
-        sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        sd.BufferCount = 1;
-        sd.OutputWindow = mhMainWnd;
-        sd.Windowed = true;
-        sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-        sd.Flags = 0;
-
-        // To correctly create the swap chain, we must use the IDXGIFactory that was
-        // used to create the device.  If we tried to use a different IDXGIFactory instance
-        // (by calling CreateDXGIFactory), we get an error: "IDXGIFactory::CreateSwapChain:
-        // This function is being called with a device from a different IDXGIFactory."
-
-        IDXGIDevice* dxgiDevice = 0;
-        ASSERT_SUCCEEDED(g_d3dDevice->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgiDevice));
-
-        IDXGIAdapter* dxgiAdapter = 0;
-        ASSERT_SUCCEEDED(dxgiDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&dxgiAdapter));
-
-        IDXGIFactory* dxgiFactory = 0;
-        ASSERT_SUCCEEDED(dxgiAdapter->GetParent(__uuidof(IDXGIFactory), (void**)&dxgiFactory));
-
-        ASSERT_SUCCEEDED(dxgiFactory->CreateSwapChain(g_d3dDevice, &sd, &g_SwapChain));
-
-        ReleaseCOM(dxgiDevice);
-        ReleaseCOM(dxgiAdapter);
-        ReleaseCOM(dxgiFactory);
-
-        ID3D11Texture2D* backBuffer;
-
-        ASSERT_SUCCEEDED(g_SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer)), "Fail to get swapchain buffer.");
-
-        ASSERT_SUCCEEDED(g_d3dDevice->CreateRenderTargetView(backBuffer, 0, &g_RenderTargetView), "Fail to create render target view.");
-
-        ReleaseCOM(backBuffer);
-
-        // Create the depth/stencil buffer and view.
-
-        D3D11_TEXTURE2D_DESC depthStencilDesc;
-
-        depthStencilDesc.Width = static_cast<uint32_t>(width);
-        depthStencilDesc.Height = static_cast<uint32_t>(height);
-        depthStencilDesc.MipLevels = 1;
-        depthStencilDesc.ArraySize = 1;
-        depthStencilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-
-        // Use 4X MSAA? --must match swap chain MSAA values.
-        if (mEnable4xMsaa)
-        {
-            depthStencilDesc.SampleDesc.Count = 4;
-            depthStencilDesc.SampleDesc.Quality = m4xMsaaQuality - 1;
-        }
-        // No MSAA
-        else
-        {
-            depthStencilDesc.SampleDesc.Count = 1;
-            depthStencilDesc.SampleDesc.Quality = 0;
-        }
-
-        depthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
-        depthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-        depthStencilDesc.CPUAccessFlags = 0;
-        depthStencilDesc.MiscFlags = 0;
-
-        ASSERT_SUCCEEDED(g_d3dDevice->CreateTexture2D(&depthStencilDesc, 0, &g_DepthStencilBuffer));
-
-        ASSERT_SUCCEEDED(g_d3dDevice->CreateDepthStencilView(g_DepthStencilBuffer, 0, &g_DepthStencilView));
     }
 
     void UpdateWindowSize(size_t width, size_t height)
     {
-        update->Finish();
-        device->FinishRenderingCurrentFrame();
-
-        assert(g_d3dDevice);
-        assert(g_SwapChain);
-
-        // Release the old views, as they hold references to the buffers we
-        // will be destroying.  Also release the old depth/stencil buffer.
-
-        ReleaseCOM(g_RenderTargetView);
-        ReleaseCOM(g_DepthStencilView);
-        ReleaseCOM(g_DepthStencilBuffer);
-
-        // Resize the swap chain and recreate the render target view.
-
-        ASSERT_SUCCEEDED(g_SwapChain->ResizeBuffers(1, static_cast<uint32_t>(width), static_cast<uint32_t>(height), DXGI_FORMAT_R8G8B8A8_UNORM, 0), "Fail to resize swapchain.");
-
-        ID3D11Texture2D* backBuffer;
-        
-        ASSERT_SUCCEEDED(g_SwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&backBuffer)), "Fail to get swapchain buffer.");
-        
-        ASSERT_SUCCEEDED(g_d3dDevice->CreateRenderTargetView(backBuffer, 0, &g_RenderTargetView), "Fail to create render target view.");
-
-        ReleaseCOM(backBuffer);
-
-        // Create the depth/stencil buffer and view.
-
-        D3D11_TEXTURE2D_DESC depthStencilDesc;
-
-        depthStencilDesc.Width = static_cast<uint32_t>(width);
-        depthStencilDesc.Height = static_cast<uint32_t>(height);
-        depthStencilDesc.MipLevels = 1;
-        depthStencilDesc.ArraySize = 1;
-        depthStencilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-
-        // Use 4X MSAA? --must match swap chain MSAA values.
-        if (mEnable4xMsaa)
-        {
-            depthStencilDesc.SampleDesc.Count = 4;
-            depthStencilDesc.SampleDesc.Quality = m4xMsaaQuality - 1;
-        }
-        // No MSAA
-        else
-        {
-            depthStencilDesc.SampleDesc.Count = 1;
-            depthStencilDesc.SampleDesc.Quality = 0;
-        }
-
-        depthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
-        depthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-        depthStencilDesc.CPUAccessFlags = 0;
-        depthStencilDesc.MiscFlags = 0;
-
-        ASSERT_SUCCEEDED(g_d3dDevice->CreateTexture2D(&depthStencilDesc, 0, &g_DepthStencilBuffer));
-
-        ASSERT_SUCCEEDED(g_d3dDevice->CreateDepthStencilView(g_DepthStencilBuffer, 0, &g_DepthStencilView));
-
-        Babylon::Graphics::BackBufferUpdateInfo backBufferUpdate{};
-        backBufferUpdate.Backbuffer = g_RenderTargetView;
-        backBufferUpdate.DepthStencil = g_DepthStencilView;
-
-        device->UpdateBackbuffer(backBufferUpdate);
-
         // Bind the render target view and depth/stencil view to the pipeline.
         device->UpdateSize(width, height);
-
-        device->StartRenderingCurrentFrame();
-        update->Start();
     }
 
     void Uninitialize()
@@ -449,27 +262,25 @@ namespace
         return arguments;
     }
 
-    void BabylonJs_OnReady() 
+    void BabylonJs_OnReady(const Napi::CallbackInfo& info)
     {
-        runtime->Dispatch([](Napi::Env env)
-            {
-                auto jsObject = externalTexture->AddToContext(deviceContext);
+        auto environment = info.Env();
+        auto jsObject = externalTexture->AddToContext(environment);
 
-                auto width = externalTexture->GetWight();
-                auto height = externalTexture->GetHeight();
+        auto width = externalTexture->GetWight();
+        auto height = externalTexture->GetHeight();
 
-                // Tell the JS side about the texture.
-                env.Global().Get("loadNativeTexture").As<Napi::Function>().Call({
-                    // Wrap the texture handle into a JavaScript type that can be consumed by the native engine.
-                    // This transfers ownership of the texture to the Babylon ThinTexture on the js side.
-                    // Important: We cannot do this twice with the same native texture handle.
-                    jsObject,
-                    Napi::Value::From(env, width),
-                    Napi::Value::From(env, height),
-                });
+        // Tell the JS side about the texture.
+        info.Env().Global().Get("loadNativeTexture").As<Napi::Function>().Call({
+            // Wrap the texture handle into a JavaScript type that can be consumed by the native engine.
+            // This transfers ownership of the texture to the Babylon ThinTexture on the js side.
+            // Important: We cannot do this twice with the same native texture handle.
+            jsObject,
+            Napi::Value::From(info.Env(), width),
+            Napi::Value::From(info.Env(), height),
+        });
 
-                env.Global().Get("startRender").As<Napi::Function>().Call({});
-            });
+        info.Env().Global().Get("startRender").As<Napi::Function>().Call({});
     }
 
     void RefreshBabylon(HWND hWnd) 
@@ -479,10 +290,23 @@ namespace
         Babylon::Graphics::DeviceConfiguration config;
         config.Device = g_d3dDevice;
         config.DevicePixelRatio = InitializeDPIScale(hWnd);
-        config.Backbuffer = g_RenderTargetView;
-        config.DepthStencil = g_DepthStencilView;
-
         device = Babylon::Graphics::Device::Create(config);
+
+        RECT rect;
+        if (!GetClientRect(mhMainWnd, &rect))
+        {
+            return;
+        }
+
+        auto width = static_cast<size_t>(rect.right - rect.left);
+        auto height = static_cast<size_t>(rect.bottom - rect.top);
+
+        Babylon::Graphics::WindowConfiguration winConfig;
+        winConfig.Window = hWnd;
+        winConfig.Width = width;
+        winConfig.Height = height;
+
+        device->UpdateWindow(winConfig);
         
         update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
 
@@ -496,8 +320,8 @@ namespace
                 auto envGlobal = env.Global();
 
                 envGlobal.Set("BabylonJs_OnReady", Napi::Function::New(
-                                                       env, [](const Napi::CallbackInfo&)
-                                                       { BabylonJs_OnReady(); },
+                                                       env, [](const Napi::CallbackInfo& info)
+                                                       { BabylonJs_OnReady(info); },
                                                        "BabylonJs_OnReady"));
 
                 Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto)

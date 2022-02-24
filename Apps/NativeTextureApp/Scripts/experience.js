@@ -20,22 +20,23 @@ engine.runRenderLoop(function ()
 
 function setBoxTexture(nativeTexture, width, height)
 {
-    let internalTexture = new BABYLON.InternalTexture(engine, BABYLON.InternalTextureSource.Unknown, true);
-    internalTexture._hardwareTexture = nativeTexture;
-    internalTexture.generateMipMaps = false;
-    internalTexture.baseWidth = internalTexture.width = width;
-    internalTexture.baseHeight = internalTexture.height = height;
-    internalTexture.isReady = true;
-    internalTexture.baseDepth = 1;
-    internalTexture.depth = 1;
-    internalTexture.format = BABYLON.TextureFormat.RGBA8Uint;
+    nativeTexture.then(function ()
+    {
+        let internalTexture = new BABYLON.InternalTexture(engine, BABYLON.InternalTextureSource.Unknown, true);
+        internalTexture._hardwareTexture = nativeTexture;
+        internalTexture.generateMipMaps = false;
+        internalTexture.baseWidth = internalTexture.width = width;
+        internalTexture.baseHeight = internalTexture.height = height;
+        internalTexture.isReady = true;
+        internalTexture.baseDepth = 1;
+        internalTexture.depth = 1;
+        internalTexture.format = BABYLON.TextureFormat.RGBA8Uint;
 
-    const thinTexture = new BABYLON.ThinTexture(internalTexture);
-    thinTexture.isReady = true;
+        const thinTexture = new BABYLON.ThinTexture(internalTexture);
+        thinTexture.isReady = true;
 
-    var mat = new BABYLON.StandardMaterial("mat", scene);
-    box.material = mat;
-    mat.diffuseTexture = thinTexture;
+        var mat = new BABYLON.StandardMaterial("mat", scene);
+        box.material = mat;
+        mat.diffuseTexture = thinTexture;
+    });
 }
-
-BabylonJs_OnReady("Babylon Ready!");

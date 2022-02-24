@@ -37,11 +37,6 @@ namespace Babylon::Graphics
         return device;
     }
 
-    void Device::UpdateBackbuffer(BackBufferUpdateInfo& update)
-    {
-        m_impl->UpdateBackbuffer(update);
-    }
-
     void Device::UpdateSize(size_t width, size_t height)
     {
         m_impl->Resize(width, height);

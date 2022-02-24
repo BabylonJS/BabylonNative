@@ -73,19 +73,23 @@ function startRender()
   });
 }
 
-function loadNativeTexture(nativeTexture, width, height)
+function loadNativeTexture(nativePromise, width, height)
 {
-    const internalTexture = new BABYLON.InternalTexture(
-        engine,
-        BABYLON.InternalTextureSource.Unknown,
-        true
-    );
-    internalTexture._hardwareTexture = new BABYLON.WebGLHardwareTexture(
-        nativeTexture
-    );
-    internalTexture.generateMipMaps = false;
-    internalTexture.baseWidth = internalTexture.width = width;
-    internalTexture.baseHeight = internalTexture.height = height;
-    internalTexture.isReady = true;
-    inTexture = new BABYLON.ThinTexture(internalTexture);
+    nativePromise.then((nativeTexture) =>
+    {
+        const internalTexture = new BABYLON.InternalTexture(
+            engine,
+            BABYLON.InternalTextureSource.Unknown,
+            true
+        );
+        internalTexture._hardwareTexture = new BABYLON.WebGLHardwareTexture(
+            nativeTexture
+        );
+
+        internalTexture.generateMipMaps = false;
+        internalTexture.baseWidth = internalTexture.width = width;
+        internalTexture.baseHeight = internalTexture.height = height;
+        internalTexture.isReady = true;
+        inTexture = new BABYLON.ThinTexture(internalTexture);
+    });
 }
