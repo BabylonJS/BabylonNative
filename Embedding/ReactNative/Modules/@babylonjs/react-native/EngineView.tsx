@@ -1,20 +1,9 @@
-import React, { Component, FunctionComponent, SyntheticEvent, useCallback, useEffect, useState, useRef } from 'react';
-import { requireNativeComponent, ViewProps, AppState, AppStateStatus, View, Text, findNodeHandle, UIManager } from 'react-native';
+import React, { Component, FunctionComponent, SyntheticEvent, useCallback, useEffect, useState, useRef, useMemo } from 'react';
+import { ViewProps, View, Text, findNodeHandle, UIManager } from 'react-native';
 import { Camera, SceneInstrumentation } from '@babylonjs/core';
-import { ensureInitialized } from './BabylonModule';
 import { ReactNativeEngine } from './ReactNativeEngine';
-
-declare const global: any;
-
-interface NativeEngineViewProps extends ViewProps {
-    isTransparent: boolean;
-    onSnapshotDataReturned: (event: SyntheticEvent) => void;
-}
-
-const NativeEngineView: {
-    prototype: Component<NativeEngineViewProps>;
-    new(props: Readonly<NativeEngineViewProps>): Component<NativeEngineViewProps>;
-} = global['EngineView'] || (global['EngineView'] = requireNativeComponent('EngineView'));
+import { useModuleInitializer, useRenderLoop } from './NativeEngineHook';
+import { NativeEngineViewProps, NativeEngineView } from './NativeEngineView';
 
 export interface EngineViewProps extends ViewProps {
     camera?: Camera;
@@ -33,53 +22,25 @@ interface SceneStats {
 }
 
 export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineViewProps) => {
-    const [initialized, setInitialized] = useState<boolean>();
-    const [appState, setAppState] = useState(AppState.currentState);
     //const [fps, setFps] = useState<number>();
     const [sceneStats, setSceneStats] = useState<SceneStats>();
     const engineViewRef = useRef<Component<NativeEngineViewProps>>(null);
     const snapshotPromise = useRef<{ promise: Promise<string>, resolve: (data: string) => void }>();
     const isTransparent = props.isTransparent || false
 
-    useEffect(() => {
-        (async () => {
-            setInitialized(await ensureInitialized());
-        })();
-    }, []);
+    const initialized = useModuleInitializer();
 
-    useEffect(() => {
-        const onAppStateChanged = (appState: AppStateStatus) => {
-            setAppState(appState);
-        };
+    const engine = useMemo(() => {
+        return props.camera?.getScene().getEngine() as ReactNativeEngine;
+    }, [props.camera]);
 
-        AppState.addEventListener("change", onAppStateChanged);
-
-        return () => {
-            AppState.removeEventListener("change", onAppStateChanged);
+    const renderLoop = useCallback(() => {
+        for (let scene of engine.scenes) {
+            scene.render();
         }
-    }, []);
+    }, [engine]);
 
-    useEffect(() => {
-        if (props.camera && appState === "active") {
-            const engine = props.camera.getScene().getEngine() as ReactNativeEngine;
-
-            if (!engine.isDisposed) {
-                engine.runRenderLoop(() => {
-                    for (let scene of engine.scenes) {
-                        scene.render();
-                    }
-                });
-
-                return () => {
-                    if (!engine.isDisposed) {
-                        engine.stopRenderLoop();
-                    }
-                };
-            }
-        }
-
-        return undefined;
-    }, [props.camera, appState]);
+    useRenderLoop(engine, renderLoop);
 
     useEffect(() => {
         if (props.camera && (props.displayFrameRate ?? __DEV__)) {
