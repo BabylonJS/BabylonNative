@@ -8,8 +8,10 @@ namespace
         auto coordinates{info[0].As<Napi::TypedArrayOf<float>>()};
         const auto transform{info[1].As<Napi::Object>()};
         const auto m{transform.Get("_m").As<Napi::TypedArrayOf<float>>()};
+        const auto offset{info[2].As<Napi::Number>().Uint32Value()};
+        const auto length{info[3].As<Napi::Number>().Uint32Value()};
 
-        for (size_t index = 0; index < coordinates.ElementLength(); index += 3)
+        for (size_t index = offset; index < offset + length; index += 3)
         {
             const auto x{coordinates[index]}, y{coordinates[index + 1]}, z{coordinates[index + 2]};
             const auto rx{x * m[0U] + y * m[4U] + z * m[8U] + m[12U]};
@@ -28,8 +30,10 @@ namespace
         auto normals{info[0].As<Napi::TypedArrayOf<float>>()};
         const auto transform{info[1].As<Napi::Object>()};
         const auto m{transform.Get("_m").As<Napi::TypedArrayOf<float>>()};
+        const auto offset{info[2].As<Napi::Number>().Uint32Value()};
+        const auto length{info[3].As<Napi::Number>().Uint32Value()};
 
-        for (size_t index = 0; index < normals.ElementLength(); index += 3)
+        for (size_t index = offset; index < offset + length; index += 3)
         {
             const auto x{normals[index]}, y{normals[index + 1]}, z{normals[index + 2]};
 
@@ -44,8 +48,10 @@ namespace
         auto normals{info[0].As<Napi::TypedArrayOf<float>>()};
         const auto transform{info[1].As<Napi::Object>()};
         const auto m{transform.Get("_m").As<Napi::TypedArrayOf<float>>()};
+        const auto offset{info[2].As<Napi::Number>().Uint32Value()};
+        const auto length{info[3].As<Napi::Number>().Uint32Value()};
 
-        for (size_t index = 0; index < normals.ElementLength(); index += 4)
+        for (size_t index = offset; index < offset + length; index += 4)
         {
             const auto x{normals[index]}, y{normals[index + 1]}, z{normals[index + 2]};
 
@@ -56,9 +62,9 @@ namespace
     }
 
     template<typename IndexT>
-    void FlipIndicesT(Napi::TypedArrayOf<IndexT> indices)
+    void FlipIndicesT(Napi::TypedArrayOf<IndexT> indices, uint32_t offset, uint32_t length)
     {
-        for (size_t index = 0; index < indices.ElementLength(); index += 3)
+        for (size_t index = offset; index < offset + length; index += 3)
         {
             const auto tmp{indices[index + 1]};
             indices[index + 1] = indices[index + 2];
@@ -69,18 +75,20 @@ namespace
     void FlipFaces(const Napi::CallbackInfo& info)
     {
         auto indices{info[0].As<Napi::TypedArray>()};
+        const auto offset{info[1].As<Napi::Number>().Uint32Value()};
+        const auto length{info[2].As<Napi::Number>().Uint32Value()};
 
         if (indices.TypedArrayType() == napi_typedarray_type::napi_int32_array)
         {
-            FlipIndicesT<int32_t>(indices.As<Napi::Int32Array>());
+            FlipIndicesT<int32_t>(indices.As<Napi::Int32Array>(), offset, length);
         }
         else if (indices.TypedArrayType() == napi_typedarray_type::napi_uint32_array)
         {
-            FlipIndicesT<uint32_t>(indices.As<Napi::Uint32Array>());
+            FlipIndicesT<uint32_t>(indices.As<Napi::Uint32Array>(), offset, length);
         }
         else if (indices.TypedArrayType() == napi_typedarray_type::napi_uint16_array)
         {
-            FlipIndicesT<uint16_t>(indices.As<Napi::Uint16Array>());
+            FlipIndicesT<uint16_t>(indices.As<Napi::Uint16Array>(), offset, length);
         }
         else
         {
