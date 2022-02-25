@@ -9,7 +9,7 @@ on:
 jobs:
   dispatch:
     name: Dispatch ${{ github.sha }}
-    runs-on: windows-latest
+    runs-on: windows-2019
     strategy:
       matrix:
         repo: ['BabylonJS/BabylonReactNative']
