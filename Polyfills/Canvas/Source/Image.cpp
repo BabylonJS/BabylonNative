@@ -11,6 +11,7 @@
 #include <bimg/decode.h>
 #include "nanovg.h"
 #include <cassert>
+#include <napi/napi_pointer.h>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -30,6 +31,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("naturalHeight", &NativeCanvasImage::GetNaturalHeight, nullptr),
                 InstanceAccessor("src", &NativeCanvasImage::GetSrc, &NativeCanvasImage::SetSrc),
                 InstanceAccessor("onload", nullptr, &NativeCanvasImage::SetOnload),
+                InstanceMethod("decode", &NativeCanvasImage::Decode),
             });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
@@ -82,13 +84,28 @@ namespace Babylon::Polyfills::Internal
         return Napi::Value::From(Env(), m_src);
     }
 
+    Napi::Value NativeCanvasImage::Decode(const Napi::CallbackInfo&)
+    {
+        // Create the napi promise.
+        auto napiPromise = Napi::Promise::Deferred::New(Env());
+
+        // If the image source has already been set successfully, then resolve the promise immediately.
+        if (m_imageContainer != nullptr)
+        {
+            napiPromise.Resolve(Env().Undefined());
+        }
+
+        // Otherwise return a promise that will never resolve.
+        return napiPromise.Promise();
+    }
+
     void NativeCanvasImage::SetSrc(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         auto text{value.As<Napi::String>().Utf8Value()};
         UrlLib::UrlRequest request{};
         request.Open(UrlLib::UrlMethod::Get, text);
         request.ResponseType(UrlLib::UrlResponseType::Buffer);
-        request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, request{std::move(request)}](arcana::expected<void, std::exception_ptr> result) {
+        request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [thisObject{info.This()}, env{info.Env()}, this, request{std::move(request)}](arcana::expected<void, std::exception_ptr> result) {
             if (result.has_error())
             {
                 throw Napi::Error::New(env, result.error());
@@ -102,6 +119,9 @@ namespace Babylon::Polyfills::Internal
             {
                 Napi::Error::New(env, "Unable to decode image with provided src for in Canvas.").ThrowAsJavaScriptException();
             }
+
+            auto napiImagePointer = Napi::Pointer<bimg::ImageContainer>::Create(env, m_imageContainer);
+            thisObject.As<Napi::Object>().Set("_imageContainer", napiImagePointer.ToObject());
 
             m_width = m_imageContainer->m_width;
             m_height = m_imageContainer->m_height;
