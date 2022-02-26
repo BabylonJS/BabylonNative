@@ -44,5 +44,6 @@ namespace Babylon
         static void DefaultUnhandledExceptionHandler(const Napi::Error& error);
 
         std::unique_ptr<WorkQueue> m_workQueue;
+        std::function<void(const Napi::Error&)> m_unhandledExceptionHandler;
     };
 }

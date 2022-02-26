@@ -10,9 +10,10 @@ namespace Babylon
 
     AppRuntime::AppRuntime(std::function<void(const Napi::Error&)> unhandledExceptionHandler)
         : m_workQueue{std::make_unique<WorkQueue>([this] { RunPlatformTier(); })}
+        , m_unhandledExceptionHandler{unhandledExceptionHandler}
     {
-        Dispatch([this, unhandledExceptionHandler{std::move(unhandledExceptionHandler)}](Napi::Env env) {
-            JsRuntime::CreateForJavaScript(env, [this](auto func) { m_workQueue->Append(std::move(func)); }, unhandledExceptionHandler);
+        Dispatch([this](Napi::Env env) {
+            JsRuntime::CreateForJavaScript(env, [this](auto func) { Dispatch(func); });
         });
     }
 
@@ -37,8 +38,17 @@ namespace Babylon
 
     void AppRuntime::Dispatch(std::function<void(Napi::Env)> func)
     {
-        m_workQueue->Append([this, func{std::move(func)}] (Napi::Env env) {
-            Execute({[env, func{std::move(func)}] { func(env); }});
+        m_workQueue->Append([this, func{std::move(func)}](Napi::Env env) {
+            Execute([this, env, func{std::move(func)}] {
+                try
+                {
+                    func(env);
+                }
+                catch (const Napi::Error& error)
+                {
+                    m_unhandledExceptionHandler(error);
+                }
+            });
         });
     }
 }
