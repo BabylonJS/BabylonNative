@@ -25,6 +25,9 @@ namespace Babylon
         struct InternalState;
         friend struct InternalState;
 
+        // Any JavaScript errors that occur will bubble up as a Napi::Error C++ exception.
+        // JsRuntime expects the provided dispatch function to handle this exception,
+        // such as with a try/catch and logging the exception message.
         using DispatchFunctionT = std::function<void(std::function<void(Napi::Env)>)>;
 
         // Note: It is the contract of JsRuntime that its dispatch function must be usable

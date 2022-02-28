@@ -46,6 +46,10 @@ namespace Babylon
         m_dispatchFunction([function = std::move(function)](Napi::Env env) {
             function(env);
 
+            // The environment will be in a pending exceptional state if
+            // Napi::Error::ThrowAsJavaScriptException is invoked within the
+            // previous function. Throw and clear the pending exception here to
+            // bubble up the exception to the the dispatcher.
             if (env.IsExceptionPending())
             {
                 throw env.GetAndClearPendingException();
