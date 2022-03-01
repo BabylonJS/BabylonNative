@@ -35,12 +35,14 @@ namespace Babylon::Polyfills::Internal
             });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
+        env.Global().Set(JS_CONSTRUCTOR_NAME, func);
     }
 
     NativeCanvasImage::NativeCanvasImage(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeCanvasImage>{info}
         , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
+        , m_jsThis{Napi::Persistent(info.This().As<Napi::Object>())}
     {
     }
 
@@ -120,8 +122,9 @@ namespace Babylon::Polyfills::Internal
                 Napi::Error::New(env, "Unable to decode image with provided src for in Canvas.").ThrowAsJavaScriptException();
             }
 
+            // Set up a pointer to the image container.
             auto napiImagePointer = Napi::Pointer<bimg::ImageContainer>::Create(env, m_imageContainer);
-            thisObject.As<Napi::Object>().Set("_imageContainer", napiImagePointer.ToObject());
+            m_jsThis.Set("_imageContainer", napiImagePointer);
 
             m_width = m_imageContainer->m_width;
             m_height = m_imageContainer->m_height;

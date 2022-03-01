@@ -46,5 +46,6 @@ namespace Babylon::Polyfills::Internal
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
         bx::DefaultAllocator m_allocator{};
         bimg::ImageContainer* m_imageContainer{};
+        Napi::ObjectReference m_jsThis;
     };
 }
