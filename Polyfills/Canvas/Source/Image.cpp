@@ -35,7 +35,6 @@ namespace Babylon::Polyfills::Internal
             });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
-        env.Global().Set(JS_CONSTRUCTOR_NAME, func);
     }
 
     NativeCanvasImage::NativeCanvasImage(const Napi::CallbackInfo& info)
