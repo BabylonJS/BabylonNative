@@ -48,6 +48,10 @@ namespace Babylon
                 {
                     m_unhandledExceptionHandler(error);
                 }
+                catch (...)
+                {
+                    std::abort();
+                }
             });
         });
     }
