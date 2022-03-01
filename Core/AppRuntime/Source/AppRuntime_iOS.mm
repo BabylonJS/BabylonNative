@@ -10,7 +10,7 @@ namespace Babylon
         RunEnvironmentTier();
     }
 
-    void AppRuntime::DefaultUnhandledExceptionHandler(const Napi::Error& error)
+    void AppRuntime::DefaultUnhandledExceptionHandler(const std::exception& error)
     {
         NSLog(@"Uncaught Error: %s", error.what());
     }

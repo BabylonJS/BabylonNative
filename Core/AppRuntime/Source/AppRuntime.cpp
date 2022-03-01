@@ -8,7 +8,7 @@ namespace Babylon
     {
     }
 
-    AppRuntime::AppRuntime(std::function<void(const Napi::Error&)> unhandledExceptionHandler)
+    AppRuntime::AppRuntime(std::function<void(const std::exception&)> unhandledExceptionHandler)
         : m_workQueue{std::make_unique<WorkQueue>([this] { RunPlatformTier(); })}
         , m_unhandledExceptionHandler{unhandledExceptionHandler}
     {
@@ -44,7 +44,7 @@ namespace Babylon
                 {
                     func(env);
                 }
-                catch (const Napi::Error& error)
+                catch (const std::exception& error)
                 {
                     m_unhandledExceptionHandler(error);
                 }
