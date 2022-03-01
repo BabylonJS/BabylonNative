@@ -63,10 +63,13 @@ struct napi_env__ {
   }
 
   facebook::jsi::Runtime& rt;
+
   facebook::jsi::PropNameID native_name;
   facebook::jsi::Function array_buffer_ctor;
   facebook::jsi::Function promise_ctor;
   facebook::jsi::Function typed_array_ctor[9];
+
+  facebook::jsi::Value last_exception;
 };
 
 using napi_env = napi_env__*;
@@ -74,6 +77,14 @@ using napi_env = napi_env__*;
 #ifdef NAPI_DISABLE_CPP_EXCEPTIONS
   #error Exceptions cannot be disabled for NAPI/JSI
 #endif
+
+#define NAPI_TRY() \
+  try {
+
+#define NAPI_CATCH() \
+  } catch (const std::exception& exception) { \
+    throw Error::New(_env, exception); \
+  }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// N-API C++ Wrapper Classes
@@ -131,6 +142,9 @@ namespace Napi {
     Object Global() const;
     Value Undefined() const;
     Value Null() const;
+
+    bool IsExceptionPending() const;
+    Error GetAndClearPendingException();
 
   private:
     napi_env _env;
