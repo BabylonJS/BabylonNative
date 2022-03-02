@@ -2,6 +2,11 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "Thin Instances",
+            "playgroundId": "#V1JE4Z#1",
+            "referenceImage": "thinInstances.png"
+        },
+        {
             "title": "GLTF Sheen",
             "playgroundId": "#YG3BBF#2",
             "referenceImage": "glTFSheen.png"
@@ -43,7 +48,7 @@
         },
         {
             "title": "Nested BBG",
-            "playgroundId": "#ZG0C8B#1",
+            "playgroundId": "#ZG0C8B#6",
             "renderCount": 10,
             "referenceImage": "nested_BBG.png"
         },
@@ -367,13 +372,6 @@
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Texture_Sampler, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfTextureSampler1.png"
-        },
-        {
-            "title": "Bones and morphs computation order",
-            "renderCount": 40,
-            "playgroundId": "#WGZLGJ#4040",
-            "referenceImage": "bonesMorphsCompute.png",
-            "errorRatio": 1
         }
     ]
 }

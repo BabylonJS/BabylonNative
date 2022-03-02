@@ -1340,9 +1340,10 @@ namespace Babylon
                 {
                     auto argumentObject{info[0].As<Napi::Object>()};
 
-                    XRRigidTransform* transform{XRRigidTransform::Unwrap(argumentObject)};
-                    if (transform != nullptr)
+                    // check properties of XRRigidTransform are present
+                    if (argumentObject.Has("position") && argumentObject.Has("orientation") && argumentObject.Has("matrix"))
                     {
+                        XRRigidTransform* transform{XRRigidTransform::Unwrap(argumentObject)};
                         // The value passed in to the constructor is an XRRigidTransform
                         xr::Pose pose{transform->GetNativePose()};
                         tempVals.Origin = pose.Position;
