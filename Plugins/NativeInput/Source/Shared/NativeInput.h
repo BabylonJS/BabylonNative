@@ -73,6 +73,8 @@ namespace Babylon::Plugins
 
         arcana::manual_dispatcher<64> m_eventDispatcher{};
 
+        bool m_getDelta{false};
+
         class DeviceInputSystem;
     };
 }

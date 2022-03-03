@@ -16,6 +16,17 @@ namespace Babylon::Plugins
         constexpr uint32_t POINTER_X_INPUT_INDEX{0};
         constexpr uint32_t POINTER_Y_INPUT_INDEX{1};
         constexpr uint32_t POINTER_BUTTON_BASE_INDEX{2};
+        constexpr uint32_t POINTER_BUTTON_LEFT_CLICK{2};
+        constexpr uint32_t POINTER_BUTTON_MIDDLE_CLICK{3};
+        constexpr uint32_t POINTER_BUTTON_RIGHT_CLICK{4};
+        constexpr uint32_t POINTER_BUTTON_BACK_CLICK{5};
+        constexpr uint32_t POINTER_BUTTON_FORWARD_CLICK{6};
+        constexpr uint32_t POINTER_MOUSEWHEEL_X{7};
+        constexpr uint32_t POINTER_MOUSEWHEEL_Y{8};
+        constexpr uint32_t POINTER_MOUSEWHEEL_Z{9};
+        constexpr uint32_t POINTER_DELTA_HORIZONTAL{10};
+        constexpr uint32_t POINTER_DELTA_VERTICAL{11};
+        constexpr uint32_t POINTER_MOVE{12};
         constexpr uint32_t MOUSE_POINTER_ID{0};
 
         constexpr uint32_t GetPointerButtonInputIndex(uint32_t buttonIndex)
@@ -80,8 +91,18 @@ namespace Babylon::Plugins
         if (HasMouse())
         {
             // Create a mouse input map on initialization when available to match web behavior
-            const uint32_t inputIndex{ GetPointerButtonInputIndex(0) };
-            GetOrCreateInputMap(DeviceType::Mouse, MOUSE_POINTER_ID, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX });
+            GetOrCreateInputMap(DeviceType::Mouse, MOUSE_POINTER_ID,
+                {POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX, POINTER_BUTTON_LEFT_CLICK,
+                    POINTER_BUTTON_MIDDLE_CLICK,
+                    POINTER_BUTTON_RIGHT_CLICK,
+                    POINTER_BUTTON_BACK_CLICK,
+                    POINTER_BUTTON_FORWARD_CLICK,
+                    POINTER_MOUSEWHEEL_X,
+                    POINTER_MOUSEWHEEL_Y,
+                    POINTER_MOUSEWHEEL_Z,
+                    POINTER_DELTA_HORIZONTAL,
+                    POINTER_DELTA_VERTICAL,
+                    POINTER_MOVE});
         }
     }
 
@@ -166,11 +187,33 @@ namespace Babylon::Plugins
     void NativeInput::Impl::PointerMove(uint32_t pointerId, int32_t x, int32_t y, DeviceType deviceType)
     {
         m_runtimeScheduler([pointerId, x, y, deviceType, this]() {
-            std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, { POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX }) };
-            SetInputState(deviceType, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, true);
-            SetInputState(deviceType, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, true);
+            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(deviceType, pointerId, {POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX, POINTER_DELTA_HORIZONTAL, POINTER_DELTA_VERTICAL})};
+            int32_t deltaX = 0;
+            int32_t deltaY = 0;
 
+            if (m_getDelta)
+            {
+                deltaX = x - deviceInputs[POINTER_X_INPUT_INDEX];
+                deltaY = y - deviceInputs[POINTER_Y_INPUT_INDEX];
+            }
+            else
+            {
+                m_getDelta = true;
+            }
+
+            // Populate movement values
+            SetInputState(deviceType, pointerId, POINTER_DELTA_HORIZONTAL, deltaX, deviceInputs, false);
+            SetInputState(deviceType, pointerId, POINTER_DELTA_VERTICAL, deltaY, deviceInputs, false);
+            SetInputState(deviceType, pointerId, POINTER_X_INPUT_INDEX, x, deviceInputs, false);
+            SetInputState(deviceType, pointerId, POINTER_Y_INPUT_INDEX, y, deviceInputs, false);
+            SetInputState(deviceType, pointerId, POINTER_MOVE, 1, deviceInputs, true);
             m_eventDispatcher.tick(arcana::cancellation::none());
+
+            // Zero out deltas
+            SetInputState(deviceType, pointerId, POINTER_DELTA_HORIZONTAL, 0, deviceInputs, false);
+            SetInputState(deviceType, pointerId, POINTER_DELTA_VERTICAL, 0, deviceInputs, false);
+            m_eventDispatcher.tick(arcana::cancellation::none());
+
         });
     }
 
@@ -258,7 +301,7 @@ namespace Babylon::Plugins
     void NativeInput::Impl::SetInputState(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, int32_t inputState, std::vector<int32_t>& deviceInputs, bool raiseEvents)
     {
         std::optional<int32_t> previousState = deviceInputs[inputIndex];
-        if (previousState != inputState)
+        if (previousState != inputState || inputIndex == POINTER_MOVE)
         {
             deviceInputs[inputIndex] = inputState;
             if (raiseEvents)
