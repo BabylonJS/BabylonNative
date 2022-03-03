@@ -306,9 +306,9 @@ namespace Babylon::Plugins
             deviceInputs[inputIndex] = inputState;
             if (raiseEvents)
             {
-                m_eventDispatcher.queue([this, deviceType, deviceSlot, inputIndex, previousState, inputState]() {
-                    m_inputChangedCallbacks.apply_to_all([deviceType, deviceSlot, inputIndex, previousState, inputState](auto& callback) {
-                        callback(deviceType, deviceSlot, inputIndex, previousState, inputState);
+                m_eventDispatcher.queue([this, deviceType, deviceSlot, inputIndex, inputState]() {
+                    m_inputChangedCallbacks.apply_to_all([deviceType, deviceSlot, inputIndex, inputState](auto& callback) {
+                        callback(deviceType, deviceSlot, inputIndex, inputState);
                     });
                 });
             }
