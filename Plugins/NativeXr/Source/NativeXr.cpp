@@ -2242,7 +2242,7 @@ namespace Babylon
                 return m_sceneObjects.at(objectID).Value();
             }
 
-            std::vector<std::string> CreateAugmentedImageDatabase(std::vector<xr::System::Session::Frame::ImageTrackingBitmap> bitmaps)
+            std::vector<std::string> CreateAugmentedImageDatabase(std::vector<xr::System::Session::Frame::ImageTrackingBitmap>& bitmaps)
             {
                 return m_frame->CreateAugmentedImageDatabase(bitmaps);
             }
@@ -2591,7 +2591,6 @@ namespace Babylon
                 // Loop over the list of updated image tracking results, check if they exist in our map if not create them otherwise update them.
                 for (auto imageTrackingResultID : m_frame->UpdatedImageTrackingResults)
                 {
-                    XRImageTrackingResult* xrImageTrackingResult{};
                     auto trackedImageTrackingResultIterator = m_trackedImageTrackingResults.find(imageTrackingResultID);
 
                     // Get the matching native result
@@ -2610,17 +2609,9 @@ namespace Babylon
                         napiResult.Set("index", nativeResult.Index);
                         napiResult.Set("trackingState", nativeResult.TrackingState);
                         napiResult.Set("measuredWidthInMeters", nativeResult.MeasuredWidthInMeters);
+                        napiResult.Set("imageSpace", Napi::External<xr::Space>::New(env, &nativeResult.ImageSpace));
 
-                        Napi::Object napiImageTransform = XRRigidTransform::New(env);
-                        XRRigidTransform* xrImageTransform = XRRigidTransform::Unwrap(napiImageTransform);
-                        xrImageTransform->Update(nativeResult.ImageSpace.Pose);
-
-                        Napi::Object napiSpace = XRReferenceSpace::New(env, napiImageTransform);
-                        napiResult.Set("imageSpace", napiSpace);
-
-                        // TODO: Is using Persistent the right choice here?
                         auto persistentNapiResult = Napi::Persistent(napiResult);
-                        xrImageTrackingResult = XRImageTrackingResult::Unwrap(persistentNapiResult.Value());
                         m_trackedImageTrackingResults.insert({imageTrackingResultID, std::move(persistentNapiResult)});
                     }
                     else
@@ -2628,8 +2619,7 @@ namespace Babylon
                         // Update the tracked image list.
                         auto napiResult = trackedImageTrackingResultIterator->second.Value().As<Napi::Object>();
                         napiResult.Set("trackingState", nativeResult.TrackingState);
-                        auto referenceSpace = XRReferenceSpace::Unwrap(napiResult.Get("imageSpace").As<Napi::Object>());
-                        referenceSpace->GetTransform()->Update(nativeResult.ImageSpace.Pose);
+                        napiResult.Set("measuredWidthInMeters", nativeResult.MeasuredWidthInMeters);
                     }
                 }
             }
@@ -2710,6 +2700,29 @@ namespace Babylon
                 auto& session{*XRSession::Unwrap(jsSession.Value())};
                 session.m_xr = std::move(nativeXr);
 
+                auto featureObject = info[1].As<Napi::Object>();
+                if (featureObject.Has("trackedImages"))
+                {
+                    auto napiTrackedImages = featureObject.Get("trackedImages").As<Napi::Array>();
+                    session.m_imageTrackingRequests.resize(napiTrackedImages.Length());
+
+                    // Create the tracked image buffer.
+                    for (uint32_t idx = 0; idx < napiTrackedImages.Length(); idx++)
+                    {
+                        auto napiImageRequest = napiTrackedImages.Get(idx).As<Napi::Object>();
+                        auto napiImage = napiImageRequest.Get("image").As<Napi::Object>();
+                        auto napiBuffer = napiImage.Get("data").As<Napi::Uint8Array>();
+                        session.m_imageTrackingRequests[idx] =
+                        {
+                            (uint8_t *) napiBuffer.Data(),
+                            napiImage.Get("width").ToNumber().Uint32Value(),
+                            napiImage.Get("height").ToNumber().Uint32Value(),
+                            napiImage.Get("depth").ToNumber().Uint32Value(),
+                            napiImage.Get("stride").ToNumber().Uint32Value(),
+                        };
+                    }
+                }
+
                 auto deferred{Napi::Promise::Deferred::New(info.Env())};
                 session.m_xr->BeginSessionAsync()
                     .then(session.m_runtimeScheduler, arcana::cancellation::none(),
@@ -2720,36 +2733,10 @@ namespace Babylon
                             }
                             else
                             {
+                                // If tracked images are given, initialize image tracking.
                                 deferred.Resolve(jsSession.Value());
                             }
                         });
-
-                // If tracked images are given, initialize image tracking.
-                auto featureObject = info[1].As<Napi::Object>();
-                if (featureObject.Has("trackedImages"))
-                {
-                    auto napiTrackedImages = featureObject.Get("trackedImages").As<Napi::Array>();
-                    std::vector<xr::System::Session::Frame::ImageTrackingBitmap> trackedImages;
-
-                    // Type the images, save their tracking scores
-                    for (uint32_t idx = 0; idx < napiTrackedImages.Length(); idx++)
-                    {
-                        // TODO: This seems sketchy for translating to an ArrayBuffer.
-                        auto napiImage = napiTrackedImages.Get(idx).As<Napi::Object>();
-                        auto napiBuffer = napiImage.Get("data").As<Napi::ArrayBuffer>();
-                        trackedImages[idx] =
-                        {
-                            (uint8_t*)napiBuffer.Data(),
-                            napiImage.Get("width").ToNumber().Uint32Value(),
-                            napiImage.Get("height").ToNumber().Uint32Value(),
-                            napiImage.Get("depth").ToNumber().Uint32Value(),
-                        };
-                    }
-
-                    // Create the image database
-                    session.m_imageTrackingScores = session.m_xrFrame.CreateAugmentedImageDatabase(trackedImages);
-                }
-
                 return deferred.Promise();
             }
 
@@ -2821,7 +2808,9 @@ namespace Babylon
             Napi::ObjectReference m_jsEyeTrackedSource{};
             std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSelects{};
             std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSqueezes{};
-            std::vector<std::string> m_imageTrackingScores;
+
+            std::vector<xr::System::Session::Frame::ImageTrackingBitmap> m_imageTrackingRequests{};
+            std::vector<std::string> m_imageTrackingScores{};
 
             Napi::Value GetInputSources(const Napi::CallbackInfo& /*info*/)
             {
@@ -3058,6 +3047,11 @@ namespace Babylon
 
                     m_xrFrame.Update(Env(), frame, m_timestamp);
 
+                    if (m_imageTrackingRequests.size() > 0 && m_imageTrackingScores.size() == 0) {
+                        // Create the image database
+                        m_imageTrackingScores = m_xrFrame.CreateAugmentedImageDatabase(m_imageTrackingRequests);
+                    }
+
                     callbackPtr->Value().Call({Napi::Value::From(Env(), m_timestamp), m_jsXRFrame.Value()});
                 });
 
@@ -3244,7 +3238,10 @@ namespace Babylon
             Napi::Value GetTrackedImageScores(const Napi::CallbackInfo& info)
             {
                 // TODO: Move this to a member variable during CreateImageDatabase.
-                return Napi::Value::From(info.Env(), true);
+                auto results = Napi::Array::New(info.Env(), 1);
+                int count = 0;
+                results.Set(count, Napi::Value::From(info.Env(), "trackable"));
+                return std::move(results);
             }
         };
 

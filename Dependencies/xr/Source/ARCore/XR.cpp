@@ -682,39 +682,36 @@ namespace xr
 
         // TODO: Find a better place for this to live.
         void ConvertRgbaToGrayscale(const uint8_t* image_pixel_buffer, int32_t width, int32_t height, int32_t stride, uint8_t** out_grayscale_buffer) {
-            int32_t grayscale_stride = stride / 4;  // Only support RGBA_8888 format
-            uint8_t* grayscale_buffer = new uint8_t[grayscale_stride * height];
+            uint8_t* grayscale_buffer = new uint8_t[width * height];
+            uint32_t pixelStride = stride / width;
             for (int h = 0; h < height; ++h) {
                 for (int w = 0; w < width; ++w) {
-                    const uint8_t* pixel = &image_pixel_buffer[w * 4 + h * stride];
+                    const uint8_t* pixel = &image_pixel_buffer[w * pixelStride + h * stride];
                     uint8_t r = *pixel;
                     uint8_t g = *(pixel + 1);
                     uint8_t b = *(pixel + 2);
-                    grayscale_buffer[w + h * grayscale_stride] =
+                    grayscale_buffer[w + h * width] =
                             static_cast<uint8_t>(0.213f * r + 0.715 * g + 0.072 * b);
                 }
             }
             *out_grayscale_buffer = grayscale_buffer;
         }
 
-        std::vector<std::string> CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingBitmap> bitmaps)
+        std::vector<std::string> CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingBitmap>& bitmaps)
         {
             ArAugmentedImageDatabase_create(xrContext->Session, &augmentedImageDatabase);
             std::vector<std::string> scores;
 
             for (System::Session::Frame::ImageTrackingBitmap bitmap : bitmaps)
             {
-                // Convert to grayscale. Note width also equals stride
-                uint8_t* grayscale_buffer;
-                ConvertRgbaToGrayscale(bitmap.data, bitmap.width, bitmap.height, bitmap.width, &grayscale_buffer);
-                // TODO: Need to calculate stride.
-                int32_t grayscale_stride = bitmap.width / 4;
-
                 // Add each image
                 int32_t index;
+
+                uint8_t* grayscale_buffer;
+                ConvertRgbaToGrayscale(bitmap.data, bitmap.width, bitmap.height, bitmap.stride, &grayscale_buffer);
                 const ArStatus status = ArAugmentedImageDatabase_addImage(
                     xrContext->Session, augmentedImageDatabase, "",
-                    grayscale_buffer, bitmap.width, bitmap.height, grayscale_stride, &index);
+                    grayscale_buffer, bitmap.width, bitmap.height, bitmap.width, &index);
                 
                 // Assign a score
                 if (status == AR_SUCCESS)
@@ -726,8 +723,25 @@ namespace xr
                     // Invalid image, just mark the image as untrackable.
                     scores.push_back(System::Session::Frame::ImageTrackingScore::UNTRACKABLE);
                 }
-                delete[] grayscale_buffer;
+
+                delete grayscale_buffer;
             }
+
+            // Create the ArConfig
+            ArConfig* arConfig{};
+            ArConfig_create(xrContext->Session, &arConfig);
+            ArSession_getConfig(xrContext->Session, arConfig);
+
+            // Configure the ArSession
+            ArConfig_setAugmentedImageDatabase(xrContext->Session, arConfig, augmentedImageDatabase);
+            const ArStatus status = ArSession_configure(xrContext->Session, arConfig);
+
+            if (status != AR_SUCCESS) {
+                throw new std::exception();
+            }
+
+            // Clean up the ArConfig.
+            ArConfig_destroy(arConfig);
 
             return scores;
         }
@@ -755,14 +769,14 @@ namespace xr
                 ArAugmentedImage_getCenterPose(xrContext->Session, imageTrackable, tempPose);
                 ArPose_getPoseRaw(xrContext->Session, tempPose, rawPose);
 
-                ArAugmentedImageTrackingMethod trackingMethod{AR_AUGMENTED_IMAGE_TRACKING_METHOD_NOT_TRACKING};
-                ArAugmentedImage_getTrackingMethod(xrContext->Session, imageTrackable, &trackingMethod);
+                ArTrackingState trackingState{AR_TRACKING_STATE_STOPPED};
+                ArTrackable_getTrackingState(xrContext->Session, trackable, &trackingState);
 
                 // Update the existing image tracking result if it exists
                 auto resultIterator{ imageTrackingResultsMap.find(imageTrackable) };
                 if (resultIterator != imageTrackingResultsMap.end())
                 {
-                    UpdateImageTrackingResult(updatedResults, GetImageTrackingResultByID(resultIterator->second), rawPose, measuredWidthInMeters, trackingMethod);
+                    UpdateImageTrackingResult(updatedResults, GetImageTrackingResultByID(resultIterator->second), rawPose, measuredWidthInMeters, trackingState);
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(imageTrackable));
                 }
                 else
@@ -772,7 +786,7 @@ namespace xr
                     auto& result{ ImageTrackingResults.back() };
                     result.Index = imageIndex;
                     imageTrackingResultsMap.insert({imageTrackable, result.ID});
-                    UpdateImageTrackingResult(updatedResults, result, rawPose, measuredWidthInMeters, trackingMethod);
+                    UpdateImageTrackingResult(updatedResults, result, rawPose, measuredWidthInMeters, trackingState);
                 }
             }
         }
@@ -794,19 +808,19 @@ namespace xr
             Frame::ImageTrackingResult& result,
             const float rawPose[],
             float measuredWidthInMeters,
-            ArAugmentedImageTrackingMethod arTrackingState)
+            ArTrackingState arTrackingState)
         {
             Pose newCenter{};
             RawToPose(rawPose, newCenter);
 
-            // Update the pose, and width.
+            // Update the pose, and width
             result.ImageSpace.Pose = newCenter;
             result.MeasuredWidthInMeters = measuredWidthInMeters;
 
             // Map tracking ARCore tracking state to WebXR image tracking state.
-            result.TrackingState = arTrackingState == AR_AUGMENTED_IMAGE_TRACKING_METHOD_FULL_TRACKING
+            result.TrackingState = arTrackingState == AR_TRACKING_STATE_TRACKING
                 ? Frame::ImageTrackingState::TRACKED
-                : arTrackingState == AR_AUGMENTED_IMAGE_TRACKING_METHOD_LAST_KNOWN_POSE
+                : arTrackingState == AR_TRACKING_STATE_PAUSED
                     ? Frame::ImageTrackingState::EMULATED
                     : Frame::ImageTrackingState::UNTRACKED;
 
@@ -1277,7 +1291,7 @@ namespace xr
         m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay, trackableTypes);
     }
 
-    std::vector<std::string> System::Session::Frame::CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingBitmap> bitmaps) const
+    std::vector<std::string> System::Session::Frame::CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingBitmap>& bitmaps) const
     {
         return m_impl->sessionImpl.CreateAugmentedImageDatabase(bitmaps);
     }

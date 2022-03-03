@@ -304,6 +304,7 @@ namespace xr
                     uint32_t width;
                     uint32_t height;
                     uint32_t depth;
+                    uint32_t stride;
                 };
 
                 struct ImageTrackingResult
@@ -313,7 +314,7 @@ namespace xr
                     Space ImageSpace;
                     uint32_t Index;
                     std::string TrackingState;
-                    uint32_t MeasuredWidthInMeters;
+                    float MeasuredWidthInMeters{0};
                     SceneObject::Identifier ParentSceneObjectID{ SceneObject::INVALID_ID };
 
                 private:
@@ -353,7 +354,7 @@ namespace xr
                 ~Frame();
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray, HitTestTrackableType) const;
-                std::vector<std::string> CreateAugmentedImageDatabase(std::vector<ImageTrackingBitmap>) const;
+                std::vector<std::string> CreateAugmentedImageDatabase(std::vector<ImageTrackingBitmap>&) const;
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 Anchor DeclareAnchor(NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;
