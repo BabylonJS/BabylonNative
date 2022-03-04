@@ -85,21 +85,6 @@ namespace Babylon::Polyfills::Internal
         return Napi::Value::From(Env(), m_src);
     }
 
-    Napi::Value NativeCanvasImage::Decode(const Napi::CallbackInfo&)
-    {
-        // Create the napi promise.
-        auto napiPromise = Napi::Promise::Deferred::New(Env());
-
-        // If the image source has already been set successfully, then resolve the promise immediately.
-        if (m_imageContainer != nullptr)
-        {
-            napiPromise.Resolve(Env().Undefined());
-        }
-
-        // Otherwise return a promise that will never resolve.
-        return napiPromise.Promise();
-    }
-
     void NativeCanvasImage::SetSrc(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         auto text{value.As<Napi::String>().Utf8Value()};
