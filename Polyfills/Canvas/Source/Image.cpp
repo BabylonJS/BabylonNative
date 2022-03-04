@@ -123,7 +123,10 @@ namespace Babylon::Polyfills::Internal
             m_width = m_imageContainer->m_width;
             m_height = m_imageContainer->m_height;
 
-            m_onloadHandlerRef.Call({});
+            if (m_onloadHandlerRef != nullptr)
+            {
+                m_onloadHandlerRef.Call({});
+            }
         });
     }
 
