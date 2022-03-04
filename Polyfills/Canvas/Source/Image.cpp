@@ -31,7 +31,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("naturalHeight", &NativeCanvasImage::GetNaturalHeight, nullptr),
                 InstanceAccessor("src", &NativeCanvasImage::GetSrc, &NativeCanvasImage::SetSrc),
                 InstanceAccessor("onload", nullptr, &NativeCanvasImage::SetOnload),
-                InstanceMethod("decode", &NativeCanvasImage::Decode),
+                InstanceAccessor("onerror", nullptr, &NativeCanvasImage::SetOnerror),
             });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
@@ -109,6 +109,11 @@ namespace Babylon::Polyfills::Internal
         request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [thisObject{info.This()}, env{info.Env()}, this, request{std::move(request)}](arcana::expected<void, std::exception_ptr> result) {
             if (result.has_error())
             {
+                if (m_onerrorHandlerRef != nullptr)
+                {
+                    m_onerrorHandlerRef.Call({});
+                }
+
                 throw Napi::Error::New(env, result.error());
             }
 
@@ -118,6 +123,11 @@ namespace Babylon::Polyfills::Internal
             m_imageContainer = bimg::imageParse(&m_allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()));
             if (m_imageContainer == nullptr)
             {
+                if (m_onerrorHandlerRef != nullptr)
+                {
+                    m_onerrorHandlerRef.Call({});
+                }
+
                 Napi::Error::New(env, "Unable to decode image with provided src for in Canvas.").ThrowAsJavaScriptException();
             }
 
@@ -136,6 +146,12 @@ namespace Babylon::Polyfills::Internal
     {
         Napi::Function eventHandler{value.As<Napi::Function>()};
         m_onloadHandlerRef = Napi::Persistent(eventHandler);
+    }
+
+    void NativeCanvasImage::SetOnerror(const Napi::CallbackInfo&, const Napi::Value& value)
+    {
+        Napi::Function eventHandler{value.As<Napi::Function>()};
+        m_onerrorHandlerRef = Napi::Persistent(eventHandler);
     }
 
     int NativeCanvasImage::CreateNVGImageForContext(NVGcontext* nvgContext) const
