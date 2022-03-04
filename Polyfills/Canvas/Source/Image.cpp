@@ -91,7 +91,7 @@ namespace Babylon::Polyfills::Internal
         UrlLib::UrlRequest request{};
         request.Open(UrlLib::UrlMethod::Get, text);
         request.ResponseType(UrlLib::UrlResponseType::Buffer);
-        request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [thisObject{info.This()}, env{info.Env()}, this, request{std::move(request)}](arcana::expected<void, std::exception_ptr> result) {
+        request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, request{std::move(request)}](arcana::expected<void, std::exception_ptr> result) {
             if (result.has_error())
             {
                 if (m_onerrorHandlerRef != nullptr)
