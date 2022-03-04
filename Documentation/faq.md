@@ -51,3 +51,11 @@ Download and use [RenderDoc.](https://renderdoc.org/) You can find a guide to de
 ### MacOS and iOS
 
 The tool of choice on Apple device is Xcode. It contains tools to capture and inspect shaders, textures and more. A more [detailed documentation is available here.](DebugRenderedFrameMetal.md)
+
+### How to get callstacks on Android
+
+A complete callstack along system information can be retrieved with this command:
+```
+adb bugreport ./bugreport.zip
+```
+It will create a zip that can be linked to an issue to help debugging.
