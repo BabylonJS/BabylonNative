@@ -10,16 +10,9 @@ namespace Babylon
         RunEnvironmentTier();
     }
 
-    void AppRuntime::DefaultUnhandledExceptionHandler(std::exception_ptr ptr)
+    void AppRuntime::DefaultUnhandledExceptionHandler(const std::exception& error)
     {
-        try
-        {
-            std::rethrow_exception(ptr);
-        }
-        catch (const Napi::Error& error)
-        {
-            NSLog(@"Uncaught Error: %s", error.what());
-        }
+        NSLog(@"Uncaught Error: %s", error.what());
     }
 
     void AppRuntime::Execute(std::function<void()> callback)
