@@ -54,7 +54,7 @@ The tool of choice on Apple device is Xcode. It contains tools to capture and in
 
 ### How to get callstacks on Android
 
-A complete callstack along system information can be retrieved with this command:
+A complete callstack along system information can be retrieved with this command after your app has crashed on your device:
 ```
 adb bugreport ./bugreport.zip
 ```
