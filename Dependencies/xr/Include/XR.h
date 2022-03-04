@@ -298,13 +298,14 @@ namespace xr
                     static inline Identifier NEXT_ID{ 0 };
                 };
                 
-                struct ImageTrackingBitmap
+                struct ImageTrackingRequest
                 {
                     uint8_t* data;
                     uint32_t width;
                     uint32_t height;
                     uint32_t depth;
                     uint32_t stride;
+                    float measuredWidthInMeters;
                 };
 
                 struct ImageTrackingResult
@@ -354,7 +355,7 @@ namespace xr
                 ~Frame();
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray, HitTestTrackableType) const;
-                std::vector<std::string> CreateAugmentedImageDatabase(std::vector<ImageTrackingBitmap>&) const;
+                std::vector<std::string> CreateAugmentedImageDatabase(std::vector<ImageTrackingRequest>&) const;
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 Anchor DeclareAnchor(NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;

@@ -680,8 +680,12 @@ namespace xr
             }
         }
 
-        // TODO: Find a better place for this to live.
-        void ConvertRgbaToGrayscale(const uint8_t* image_pixel_buffer, int32_t width, int32_t height, int32_t stride, uint8_t** out_grayscale_buffer) {
+        void ConvertBitmapToGrayscale(
+            const uint8_t* image_pixel_buffer,
+            int32_t width,
+            int32_t height,
+            int32_t stride,
+            uint8_t** out_grayscale_buffer) {
             uint8_t* grayscale_buffer = new uint8_t[width * height];
             uint32_t pixelStride = stride / width;
             for (int h = 0; h < height; ++h) {
@@ -697,21 +701,28 @@ namespace xr
             *out_grayscale_buffer = grayscale_buffer;
         }
 
-        std::vector<std::string> CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingBitmap>& bitmaps)
+        std::vector<std::string> CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingRequest>& requests)
         {
             ArAugmentedImageDatabase_create(xrContext->Session, &augmentedImageDatabase);
             std::vector<std::string> scores;
 
-            for (System::Session::Frame::ImageTrackingBitmap bitmap : bitmaps)
+            for (System::Session::Frame::ImageTrackingRequest image : requests)
             {
                 // Add each image
                 int32_t index;
 
                 uint8_t* grayscale_buffer;
-                ConvertRgbaToGrayscale(bitmap.data, bitmap.width, bitmap.height, bitmap.stride, &grayscale_buffer);
-                const ArStatus status = ArAugmentedImageDatabase_addImage(
-                    xrContext->Session, augmentedImageDatabase, "",
-                    grayscale_buffer, bitmap.width, bitmap.height, bitmap.width, &index);
+                ConvertBitmapToGrayscale(image.data, image.width, image.height, image.stride, &grayscale_buffer);
+                const ArStatus status = ArAugmentedImageDatabase_addImageWithPhysicalSize(
+                    xrContext->Session,
+                    augmentedImageDatabase,
+                    "",
+                    grayscale_buffer,
+                    image.width,
+                    image.height,
+                    image.width,
+                    image.measuredWidthInMeters,
+                    &index);
                 
                 // Assign a score
                 if (status == AR_SUCCESS)
@@ -1291,7 +1302,7 @@ namespace xr
         m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay, trackableTypes);
     }
 
-    std::vector<std::string> System::Session::Frame::CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingBitmap>& bitmaps) const
+    std::vector<std::string> System::Session::Frame::CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingRequest>& bitmaps) const
     {
         return m_impl->sessionImpl.CreateAugmentedImageDatabase(bitmaps);
     }

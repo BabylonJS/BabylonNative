@@ -2242,7 +2242,7 @@ namespace Babylon
                 return m_sceneObjects.at(objectID).Value();
             }
 
-            std::vector<std::string> CreateAugmentedImageDatabase(std::vector<xr::System::Session::Frame::ImageTrackingBitmap>& bitmaps)
+            std::vector<std::string> CreateAugmentedImageDatabase(std::vector<xr::System::Session::Frame::ImageTrackingRequest>& bitmaps)
             {
                 return m_frame->CreateAugmentedImageDatabase(bitmaps);
             }
@@ -2712,13 +2712,18 @@ namespace Babylon
                         auto napiImageRequest = napiTrackedImages.Get(idx).As<Napi::Object>();
                         auto napiImage = napiImageRequest.Get("image").As<Napi::Object>();
                         auto napiBuffer = napiImage.Get("data").As<Napi::Uint8Array>();
+                        uint32_t bufferSize = napiBuffer.ByteLength();
+                        uint32_t imageHeight = napiImage.Get("height").ToNumber().Uint32Value();
+                        uint32_t stride = bufferSize / imageHeight;
+                        float estimatedWidth = napiImageRequest.Get("widthInMeters").ToNumber().FloatValue();
                         session.m_imageTrackingRequests[idx] =
                         {
                             (uint8_t *) napiBuffer.Data(),
                             napiImage.Get("width").ToNumber().Uint32Value(),
-                            napiImage.Get("height").ToNumber().Uint32Value(),
+                            imageHeight,
                             napiImage.Get("depth").ToNumber().Uint32Value(),
-                            napiImage.Get("stride").ToNumber().Uint32Value(),
+                            stride,
+                            estimatedWidth
                         };
                     }
                 }
@@ -2809,7 +2814,7 @@ namespace Babylon
             std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSelects{};
             std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSqueezes{};
 
-            std::vector<xr::System::Session::Frame::ImageTrackingBitmap> m_imageTrackingRequests{};
+            std::vector<xr::System::Session::Frame::ImageTrackingRequest> m_imageTrackingRequests{};
             std::vector<std::string> m_imageTrackingScores{};
 
             Napi::Value GetInputSources(const Napi::CallbackInfo& /*info*/)
@@ -3237,10 +3242,15 @@ namespace Babylon
 
             Napi::Value GetTrackedImageScores(const Napi::CallbackInfo& info)
             {
-                // TODO: Move this to a member variable during CreateImageDatabase.
-                auto results = Napi::Array::New(info.Env(), 1);
+                auto results = Napi::Array::New(info.Env(), m_imageTrackingScores.size());
                 int count = 0;
-                results.Set(count, Napi::Value::From(info.Env(), "trackable"));
+
+                // Loop over the list of tracked image tracking results, and add them to the array.
+                for (const auto& score : m_imageTrackingScores)
+                {
+                    results.Set(count++, Napi::Value::From(info.Env(), score));
+                }
+
                 return std::move(results);
             }
         };
