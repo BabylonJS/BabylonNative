@@ -59,3 +59,4 @@ A complete callstack along system information can be retrieved with this command
 adb bugreport ./bugreport.zip
 ```
 It will create a zip that can be linked to an issue to help debugging.
+More details can be found at this link : https://developer.android.com/studio/debug/bug-report
