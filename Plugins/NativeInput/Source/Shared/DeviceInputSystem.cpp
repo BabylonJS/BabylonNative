@@ -49,14 +49,13 @@ namespace Babylon::Plugins
                 });
             }
         })}
-        , m_InputChangedTicket{m_nativeInput.AddInputChangedCallback([this](DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, std::optional<int32_t> previousState, std::optional<int32_t> currentState) {
+        , m_InputChangedTicket{m_nativeInput.AddInputChangedCallback([this](DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, std::optional<int32_t> currentState) {
             if (!m_onInputChanged.IsEmpty())
             {
                 m_onInputChanged({
                     Napi::Value::From(Env(), static_cast<uint32_t>(deviceType)),
                     Napi::Value::From(Env(), deviceSlot),
                     Napi::Value::From(Env(), inputIndex),
-                    previousState ? Napi::Value::From(Env(), *previousState) : Env().Null(),
                     currentState ? Napi::Value::From(Env(), *currentState) : Env().Null()
                 });
             }
