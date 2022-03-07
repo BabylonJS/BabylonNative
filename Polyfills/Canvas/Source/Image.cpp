@@ -94,7 +94,7 @@ namespace Babylon::Polyfills::Internal
         request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, request{std::move(request)}](arcana::expected<void, std::exception_ptr> result) {
             if (result.has_error())
             {
-                if (m_onerrorHandlerRef != nullptr)
+                if (!m_onerrorHandlerRef.IsEmpty())
                 {
                     m_onerrorHandlerRef.Call({});
                 }
@@ -108,7 +108,7 @@ namespace Babylon::Polyfills::Internal
             m_imageContainer = bimg::imageParse(&m_allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()));
             if (m_imageContainer == nullptr)
             {
-                if (m_onerrorHandlerRef != nullptr)
+                if (!m_onerrorHandlerRef.IsEmpty())
                 {
                     m_onerrorHandlerRef.Call({});
                 }
@@ -123,7 +123,7 @@ namespace Babylon::Polyfills::Internal
             m_width = m_imageContainer->m_width;
             m_height = m_imageContainer->m_height;
 
-            if (m_onloadHandlerRef != nullptr)
+            if (!m_onloadHandlerRef.IsEmpty())
             {
                 m_onloadHandlerRef.Call({});
             }
