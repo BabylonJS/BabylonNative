@@ -105,15 +105,27 @@ namespace Babylon::Polyfills::Internal
             Dispose();
 
             auto buffer{request.ResponseBuffer()};
+            if (buffer.data() == nullptr || buffer.size_bytes() == 0)
+            {
+                if (!m_onerrorHandlerRef.IsEmpty())
+                {
+                    m_onerrorHandlerRef.Call({});
+                    return;
+                }
+
+                Napi::Error::New(env, "Image with provided source returned empty response.").ThrowAsJavaScriptException();
+            }
+
             m_imageContainer = bimg::imageParse(&m_allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()));
             if (m_imageContainer == nullptr)
             {
                 if (!m_onerrorHandlerRef.IsEmpty())
                 {
                     m_onerrorHandlerRef.Call({});
+                    return;
                 }
 
-                Napi::Error::New(env, "Unable to decode image with provided src for in Canvas.").ThrowAsJavaScriptException();
+                Napi::Error::New(env, "Unable to decode image with provided src.").ThrowAsJavaScriptException();
             }
 
             // Set up a pointer to the image container.
