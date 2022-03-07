@@ -2712,7 +2712,7 @@ namespace Babylon
                         auto napiImageRequest = napiTrackedImages.Get(idx).As<Napi::Object>();
                         auto napiImage = napiImageRequest.Get("image").As<Napi::Object>();
                         auto napiBuffer = napiImage.Get("data").As<Napi::Uint8Array>();
-                        uint32_t bufferSize = napiBuffer.ByteLength();
+                        uint32_t bufferSize = (uint32_t) napiBuffer.ByteLength();
                         uint32_t imageHeight = napiImage.Get("height").ToNumber().Uint32Value();
                         uint32_t stride = bufferSize / imageHeight;
                         float estimatedWidth = napiImageRequest.Get("widthInMeters").ToNumber().FloatValue();

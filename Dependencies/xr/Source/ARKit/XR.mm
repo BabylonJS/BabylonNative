@@ -1569,6 +1569,10 @@ namespace xr {
         return m_impl->sessionImpl.GetPlaneByID(planeID);
     }
 
+    System::Session::Frame::ImageTrackingResult& System::Session::Frame::GetImageTrackingResultByID(System::Session::Frame::ImageTrackingResult::Identifier) const {
+        throw std::runtime_error("not implemented");
+    }
+
     System::Session::Frame::Mesh& System::Session::Frame::GetMeshByID(System::Session::Frame::Mesh::Identifier meshID) const {
         return m_impl->sessionImpl.GetMeshByID(meshID);
     }
@@ -1659,5 +1663,10 @@ namespace xr {
     {
         // TODO
         return false;
+    }
+
+    std::vector<std::string> System::Session::Frame::CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingRequest>&) const
+    {
+        throw std::runtime_error("Image tracking not supported");
     }
 }
