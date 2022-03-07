@@ -153,7 +153,13 @@ namespace Babylon::Plugins
     {
         m_runtimeScheduler([pointerId, buttonIndex, x, y, deviceType, this]() {
             const uint32_t inputIndex{ GetPointerButtonInputIndex(buttonIndex) };
-            std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, { inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX }) };
+            std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, {
+                inputIndex,
+                POINTER_X_INPUT_INDEX,
+                POINTER_Y_INPUT_INDEX,
+                POINTER_DELTA_HORIZONTAL_INDEX,
+                POINTER_DELTA_VERTICAL_INDEX
+            })};
 
             // Record the x/y, but don't raise associated events (this matches the behavior in the browser).
             SetInputState(deviceType, pointerId, POINTER_DELTA_HORIZONTAL_INDEX, 0, deviceInputs, false);
@@ -173,12 +179,18 @@ namespace Babylon::Plugins
             // If all "buttons" are up, then remove the device (e.g. device "disconnected").
             for (size_t index = 0; index < deviceInputs.size(); index++)
             {
-                if (index != POINTER_X_INPUT_INDEX && index != POINTER_Y_INPUT_INDEX && deviceInputs[index] > 0)
+                if (index != POINTER_X_INPUT_INDEX &&
+                    index != POINTER_Y_INPUT_INDEX &&
+                    index != POINTER_DELTA_HORIZONTAL_INDEX &&
+                    index != POINTER_DELTA_VERTICAL_INDEX &&
+                    index != POINTER_MOVE_INDEX &&
+                    deviceInputs[index] > 0)
                 {
                     return;
                 }
             }
 
+            RemoveInputMap(deviceType, pointerId);
             m_eventDispatcher.tick(arcana::cancellation::none());
         });
     }
@@ -186,7 +198,13 @@ namespace Babylon::Plugins
     void NativeInput::Impl::PointerMove(uint32_t pointerId, int32_t x, int32_t y, DeviceType deviceType)
     {
         m_runtimeScheduler([pointerId, x, y, deviceType, this]() {
-                std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(deviceType, pointerId, {POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX, POINTER_DELTA_HORIZONTAL_INDEX, POINTER_DELTA_VERTICAL_INDEX})};
+            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(deviceType, pointerId, {
+                POINTER_X_INPUT_INDEX,
+                POINTER_Y_INPUT_INDEX,
+                POINTER_DELTA_HORIZONTAL_INDEX,
+                POINTER_DELTA_VERTICAL_INDEX,
+                POINTER_MOVE_INDEX
+            })};
             int32_t deltaX = 0;
             int32_t deltaY = 0;
 
