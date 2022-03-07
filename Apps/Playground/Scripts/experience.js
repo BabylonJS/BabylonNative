@@ -299,7 +299,7 @@ CreateBoxAsync(scene).then(function () {
                     const webXRImageTrackingModule = xr.baseExperience.featuresManager.enableFeature(
                         BABYLON.WebXRFeatureName.IMAGE_TRACKING,
                         "latest",
-                        { images: [{ src: "https://i.imgur.com/FzkBC2i.png", estimatedRealWorldWidth: .2}] });
+                        { images: [{ src: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/IridescentDishWithOlives/screenshot/screenshot_Large.jpg", estimatedRealWorldWidth: .2}] });
 
                     webXRImageTrackingModule.onTrackedImageUpdatedObservable.add((imageObject) => {
                         scene.meshes[0].position = imageObject.transformationMatrix.getTranslation();
