@@ -741,6 +741,10 @@ namespace xr {
         }
 
         ~Impl() {
+            if (currentCommandBuffer != nil) {
+                [currentCommandBuffer waitUntilCompleted];
+            }
+
             if (ActiveFrameViews[0].ColorTexturePointer != nil) {
                 id<MTLTexture> oldColorTexture = (__bridge_transfer id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer;
                 [oldColorTexture setPurgeableState:MTLPurgeableStateEmpty];
@@ -870,8 +874,8 @@ namespace xr {
             }
 
             // Draw the camera texture to the color texture and clear the depth texture before handing them off to Babylon.
-            id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
-            commandBuffer.label = @"XRCameraCommandBuffer";
+            currentCommandBuffer = [commandQueue commandBuffer];
+            currentCommandBuffer.label = @"XRCameraCommandBuffer";
             MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
             id<MTLTexture> cameraTextureY = nil;
@@ -881,55 +885,54 @@ namespace xr {
                 cameraTextureCbCr = [sessionDelegate GetCameraTextureCbCr];
             }
 
-            @try {
-                if(renderPassDescriptor != nil) {
-                    // Attach the color texture, on which we'll draw the camera texture (so no need to clear on load).
-                    renderPassDescriptor.colorAttachments[0].texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer;
-                    renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
-                    renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+            if(renderPassDescriptor != nil) {
+                // Attach the color texture, on which we'll draw the camera texture (so no need to clear on load).
+                renderPassDescriptor.colorAttachments[0].texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer;
+                renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+                renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
 
-                    // Attach the depth texture, which should be cleared on load.
-                    renderPassDescriptor.depthAttachment.texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].DepthTexturePointer;
-                    renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
-                    renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionStore;
+                // Attach the depth texture, which should be cleared on load.
+                renderPassDescriptor.depthAttachment.texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].DepthTexturePointer;
+                renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
+                renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionStore;
 
-                    // Attach the stencil texture, which should be cleared on load.
-                    renderPassDescriptor.stencilAttachment.texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].DepthTexturePointer;
-                    renderPassDescriptor.stencilAttachment.loadAction = MTLLoadActionClear;
-                    renderPassDescriptor.stencilAttachment.storeAction = MTLStoreActionStore;
+                // Attach the stencil texture, which should be cleared on load.
+                renderPassDescriptor.stencilAttachment.texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].DepthTexturePointer;
+                renderPassDescriptor.stencilAttachment.loadAction = MTLLoadActionClear;
+                renderPassDescriptor.stencilAttachment.storeAction = MTLStoreActionStore;
 
-                    // Create and end the render encoder.
-                    id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-                    renderEncoder.label = @"XRCameraEncoder";
+                // Create and end the render encoder.
+                id<MTLRenderCommandEncoder> renderEncoder = [currentCommandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                renderEncoder.label = @"XRCameraEncoder";
 
-                    // Set the shader pipeline.
-                    [renderEncoder setRenderPipelineState:cameraPipelineState];
+                // Set the shader pipeline.
+                [renderEncoder setRenderPipelineState:cameraPipelineState];
 
-                    // Set the vertex data.
-                    [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
+                // Set the vertex data.
+                [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
 
-                    // Set the textures.
-                    [renderEncoder setFragmentTexture:cameraTextureY atIndex:1];
-                    [renderEncoder setFragmentTexture:cameraTextureCbCr atIndex:2];
+                // Set the textures.
+                [renderEncoder setFragmentTexture:cameraTextureY atIndex:1];
+                [renderEncoder setFragmentTexture:cameraTextureCbCr atIndex:2];
 
-                    // Draw the triangles.
-                    [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+                // Draw the triangles.
+                [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
 
-                    [renderEncoder endEncoding];
-                }
+                [renderEncoder endEncoding];
+                
+                [currentCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
+                    if (cameraTextureY != nil) {
+                        [cameraTextureY setPurgeableState:MTLPurgeableStateEmpty];
+                    }
 
-                // Finalize rendering here & push the command buffer to the GPU.
-                [commandBuffer commit];
+                    if (cameraTextureCbCr != nil) {
+                        [cameraTextureCbCr setPurgeableState:MTLPurgeableStateEmpty];
+                    }
+                }];
             }
-            @finally {
-                if (cameraTextureY != nil) {
-                    [cameraTextureY setPurgeableState:MTLPurgeableStateEmpty];
-                }
 
-                if (cameraTextureCbCr != nil) {
-                    [cameraTextureCbCr setPurgeableState:MTLPurgeableStateEmpty];
-                }
-            }
+            // Finalize rendering here & push the command buffer to the GPU.
+            [currentCommandBuffer commit];
 
             return std::make_unique<Frame>(*this);
         }
@@ -942,8 +945,8 @@ namespace xr {
         void DrawFrame() {
             if (metalLayer) {
                 // Create a new command buffer for each render pass to the current drawable.
-                id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
-                commandBuffer.label = @"XRScreenCommandBuffer";
+                currentCommandBuffer = [commandQueue commandBuffer];
+                currentCommandBuffer.label = @"XRScreenCommandBuffer";
 
                 id<CAMetalDrawable> drawable = [metalLayer nextDrawable];
                 MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
@@ -953,7 +956,7 @@ namespace xr {
                     renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
 
                     // Create a render command encoder.
-                    id<MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                    id<MTLRenderCommandEncoder> renderEncoder = [currentCommandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
                     renderEncoder.label = @"XRScreenEncoder";
 
                     // Set the region of the drawable to draw into.
@@ -974,11 +977,11 @@ namespace xr {
                     [renderEncoder endEncoding];
 
                     // Schedule a present once the framebuffer is complete using the current drawable.
-                    [commandBuffer presentDrawable:drawable];
+                    [currentCommandBuffer presentDrawable:drawable];
                 }
 
                 // Finalize rendering here & push the command buffer to the GPU.
-                [commandBuffer commit];
+                [currentCommandBuffer commit];
             }
 
             if (SystemImpl.XrContext->Frame != nil) {
@@ -1349,6 +1352,7 @@ namespace xr {
         id<MTLRenderPipelineState> screenPipelineState{};
         vector_uint2 viewportSize{};
         id<MTLCommandQueue> commandQueue;
+        id<MTLCommandBuffer> currentCommandBuffer;
         std::vector<ARAnchor*> nativeAnchors{};
         std::vector<float> planePolygonBuffer{};
         std::vector<Vector3f> meshVertexBuffer{};
