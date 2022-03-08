@@ -14,8 +14,8 @@
     "iosCmake": "node scripts/tools.js iosCMake"
   },
   "dependencies": {
-    "@babylonjs/core": "5.0.0-alpha.65",
-    "@babylonjs/loaders": "5.0.0-alpha.65",
+    "@babylonjs/core": "5.0.0-rc.1",
+    "@babylonjs/loaders": "5.0.0-rc.1",
     "@babylonjs/react-native": "file:../../../Modules/@babylonjs/react-native",
     "@babylonjs/react-native-windows": "file:../../../Modules/@babylonjs/react-native-windows",
     "@babylonjs/playground-shared": "file:../playground-shared",
