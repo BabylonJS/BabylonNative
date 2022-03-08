@@ -94,12 +94,14 @@ namespace Babylon::Polyfills::Internal
         request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, request{std::move(request)}](arcana::expected<void, std::exception_ptr> result) {
             if (result.has_error())
             {
+                const auto error = Napi::Error::New(env, result.error());
                 if (!m_onerrorHandlerRef.IsEmpty())
                 {
-                    m_onerrorHandlerRef.Call({});
+                    m_onerrorHandlerRef.Call({error.Value()});
+                    return;
                 }
 
-                throw Napi::Error::New(env, result.error());
+                throw error;
             }
 
             Dispose();
@@ -107,13 +109,14 @@ namespace Babylon::Polyfills::Internal
             auto buffer{request.ResponseBuffer()};
             if (buffer.data() == nullptr || buffer.size_bytes() == 0)
             {
+                const auto error = Napi::Error::New(env, "Image with provided source returned empty response.");
                 if (!m_onerrorHandlerRef.IsEmpty())
                 {
-                    m_onerrorHandlerRef.Call({});
+                    m_onerrorHandlerRef.Call({error.Value()});
                     return;
                 }
 
-                Napi::Error::New(env, "Image with provided source returned empty response.").ThrowAsJavaScriptException();
+                error.ThrowAsJavaScriptException();
             }
 
             m_imageContainer = bimg::imageParse(&m_allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()));

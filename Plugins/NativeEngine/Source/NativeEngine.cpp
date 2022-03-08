@@ -1538,7 +1538,8 @@ namespace Babylon
         {
             // If this is an object, then check if it has the _imageContainer property defined.
             auto imageObject = info[0].As<Napi::Object>();
-            if (imageObject.Has("_imageContainer")) {
+            if (imageObject.Has("_imageContainer"))
+            {
                 auto napiPointer = imageObject.Get("_imageContainer").As<Napi::Pointer<bimg::ImageContainer>>();
                 image = napiPointer.Get();
             }
