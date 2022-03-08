@@ -885,47 +885,41 @@ namespace xr {
                 cameraTextureCbCr = [sessionDelegate GetCameraTextureCbCr];
             }
 
-            @try {
-                if(renderPassDescriptor != nil) {
-                    // Attach the color texture, on which we'll draw the camera texture (so no need to clear on load).
-                    renderPassDescriptor.colorAttachments[0].texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer;
-                    renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
-                    renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+            if(renderPassDescriptor != nil) {
+                // Attach the color texture, on which we'll draw the camera texture (so no need to clear on load).
+                renderPassDescriptor.colorAttachments[0].texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].ColorTexturePointer;
+                renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+                renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
 
-                    // Attach the depth texture, which should be cleared on load.
-                    renderPassDescriptor.depthAttachment.texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].DepthTexturePointer;
-                    renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
-                    renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionStore;
+                // Attach the depth texture, which should be cleared on load.
+                renderPassDescriptor.depthAttachment.texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].DepthTexturePointer;
+                renderPassDescriptor.depthAttachment.loadAction = MTLLoadActionClear;
+                renderPassDescriptor.depthAttachment.storeAction = MTLStoreActionStore;
 
-                    // Attach the stencil texture, which should be cleared on load.
-                    renderPassDescriptor.stencilAttachment.texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].DepthTexturePointer;
-                    renderPassDescriptor.stencilAttachment.loadAction = MTLLoadActionClear;
-                    renderPassDescriptor.stencilAttachment.storeAction = MTLStoreActionStore;
+                // Attach the stencil texture, which should be cleared on load.
+                renderPassDescriptor.stencilAttachment.texture = (__bridge id<MTLTexture>)ActiveFrameViews[0].DepthTexturePointer;
+                renderPassDescriptor.stencilAttachment.loadAction = MTLLoadActionClear;
+                renderPassDescriptor.stencilAttachment.storeAction = MTLStoreActionStore;
 
-                    // Create and end the render encoder.
-                    id<MTLRenderCommandEncoder> renderEncoder = [currentCommandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-                    renderEncoder.label = @"XRCameraEncoder";
+                // Create and end the render encoder.
+                id<MTLRenderCommandEncoder> renderEncoder = [currentCommandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                renderEncoder.label = @"XRCameraEncoder";
 
-                    // Set the shader pipeline.
-                    [renderEncoder setRenderPipelineState:cameraPipelineState];
+                // Set the shader pipeline.
+                [renderEncoder setRenderPipelineState:cameraPipelineState];
 
-                    // Set the vertex data.
-                    [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
+                // Set the vertex data.
+                [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
 
-                    // Set the textures.
-                    [renderEncoder setFragmentTexture:cameraTextureY atIndex:1];
-                    [renderEncoder setFragmentTexture:cameraTextureCbCr atIndex:2];
+                // Set the textures.
+                [renderEncoder setFragmentTexture:cameraTextureY atIndex:1];
+                [renderEncoder setFragmentTexture:cameraTextureCbCr atIndex:2];
 
-                    // Draw the triangles.
-                    [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+                // Draw the triangles.
+                [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
 
-                    [renderEncoder endEncoding];
-                }
-
-                // Finalize rendering here & push the command buffer to the GPU.
-                [currentCommandBuffer commit];
-            }
-            @finally {
+                [renderEncoder endEncoding];
+                
                 [currentCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
                     if (cameraTextureY != nil) {
                         [cameraTextureY setPurgeableState:MTLPurgeableStateEmpty];
@@ -936,6 +930,9 @@ namespace xr {
                     }
                 }];
             }
+
+            // Finalize rendering here & push the command buffer to the GPU.
+            [currentCommandBuffer commit];
 
             return std::make_unique<Frame>(*this);
         }
