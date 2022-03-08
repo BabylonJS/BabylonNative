@@ -101,7 +101,7 @@ namespace Babylon::Polyfills::Internal
                     return;
                 }
 
-                throw error;
+                error.ThrowAsJavaScriptException();
             }
 
             Dispose();
@@ -122,13 +122,15 @@ namespace Babylon::Polyfills::Internal
             m_imageContainer = bimg::imageParse(&m_allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()));
             if (m_imageContainer == nullptr)
             {
+                const auto error = Napi::Error::New(env, "Unable to decode image with provided src.");
+
                 if (!m_onerrorHandlerRef.IsEmpty())
                 {
-                    m_onerrorHandlerRef.Call({});
+                    m_onerrorHandlerRef.Call({error.Value()});
                     return;
                 }
 
-                Napi::Error::New(env, "Unable to decode image with provided src.").ThrowAsJavaScriptException();
+                error.ThrowAsJavaScriptException();
             }
 
             // Set up a pointer to the image container.
