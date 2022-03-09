@@ -4,11 +4,11 @@
 
 namespace Babylon::Graphics
 {
-    using ContextType = EGLContext;
+    using DeviceType = EGLContext;
 
-    struct ContextConfiguration
+    struct DeviceConfiguration
     {
-        ContextType Context;
+        DeviceType Device;
         float DevicePixelRatio{1.f};
     };
 }

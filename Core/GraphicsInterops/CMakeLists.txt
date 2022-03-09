@@ -13,7 +13,7 @@ endif()
 
 set(SOURCES
     "Include/Shared/Babylon/GraphicsInterops/ExternalTexture.h"
-    "Source/Platform/${PLATFORM_PATH}/ExternalTexturePlatform.cpp"
+    "Source/RendererType/${GRAPHICS_API}/ExternalTexturePlatform.cpp"
     "Source/ExternalTexture.cpp"
     "Source/ExternalTextureImpl.h"
     "Source/ExternalTextureImpl.cpp")
@@ -24,7 +24,7 @@ warnings_as_errors(GraphicsInterops)
 target_include_directories(GraphicsInterops
     PUBLIC "Include/Shared"
     PRIVATE "Source"
-    PRIVATE "Include/Platform/${PLATFORM_PATH}")
+    PRIVATE "Include/RendererType/${GRAPHICS_API}")
 
 if(WIN32 AND NOT WINDOWS_STORE)
     target_link_to_dependencies(GraphicsInterops

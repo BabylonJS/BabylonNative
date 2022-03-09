@@ -7,6 +7,6 @@ namespace Babylon::Graphics
 
     void DeviceImpl::ConfigureBgfxPlatformData(const DeviceConfiguration& config, bgfx::PlatformData& pd)
     {
-        pd.context = config.Context;
+        pd.context = config.Device;
     }
 }

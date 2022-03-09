@@ -2,7 +2,6 @@
 //
 
 #include "App.h"
-#include "Utility.h"
 
 #include <Windows.h>
 #include <Windowsx.h>

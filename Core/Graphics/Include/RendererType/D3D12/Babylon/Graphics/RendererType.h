@@ -4,11 +4,14 @@
 
 namespace Babylon::Graphics
 {
-    using ContextType = ID3D12Device*;
+    using DeviceType = ID3D12Device*;
 
-    struct ContextConfiguration
+    using TextureType = ID3D12Resource*;
+    using TextureFormat = DXGI_FORMAT;
+
+    struct DeviceConfiguration
     {
-        ContextType Context;
+        DeviceType Device;
         float DevicePixelRatio{1.f};
     };
 }

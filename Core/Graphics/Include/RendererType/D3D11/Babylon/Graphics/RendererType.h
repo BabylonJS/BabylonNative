@@ -6,7 +6,6 @@ namespace Babylon::Graphics
 {
     using DeviceType = ID3D11Device*;
     using TextureType = ID3D11Texture2D*;
-    using WindowType = HWND;
     using TextureFormat = DXGI_FORMAT;
 
     struct DeviceConfiguration

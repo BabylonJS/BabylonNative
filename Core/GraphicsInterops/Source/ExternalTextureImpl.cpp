@@ -45,7 +45,11 @@ namespace Babylon::Graphics
                     {
                             if (bgfx::overrideInternal(textureHandle, nativeHandler) == 0)
                             {
-                                assert(false);
+                                runtime.Dispatch([deferred{std::move(deferred)}](Napi::Env env)
+                                    { 
+                                        deferred.Reject(Napi::Error::New(env, "Fail to create native texture.").Value());
+                                    });
+                                return;
                             }
 
                             auto* textureData = new TextureData{textureHandle, true, width, height};
