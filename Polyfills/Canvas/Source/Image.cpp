@@ -115,7 +115,7 @@ namespace Babylon::Polyfills::Internal
 
             // Set up a pointer to the image container.
             auto napiImagePointer = Napi::Pointer<bimg::ImageContainer>::Create(env, m_imageContainer);
-            this->Value().Set("_imageContainer", napiImagePointer);
+            Value().Set("_imageContainer", napiImagePointer);
 
             m_width = m_imageContainer->m_width;
             m_height = m_imageContainer->m_height;
