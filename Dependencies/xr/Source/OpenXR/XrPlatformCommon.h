@@ -9,15 +9,18 @@
 #include <XrUtility/XrEnumerate.h>
 #include <XrUtility/XrExtensions.h>
 #include <XrUtility/XrStruct.h>
-#include <XrUtility/XrViewConfiguration.h>
 #include <XrUtility/XrHandle.h>
 #include <XrUtility/XrMath.h>
+#include <SampleShared/XrViewConfiguration.h>
 
 #include <assert.h>
 #include <stdexcept>
 
 namespace xr
 {
+    // Move the types included from XrViewConfiguration into the xr namespace.
+    using namespace sample;
+
 #define GET_XR_RESULT_NAME_SWITCH_CASE(result) case result: return #result
     inline const char* GetXrResultName(XrResult result) noexcept
     {

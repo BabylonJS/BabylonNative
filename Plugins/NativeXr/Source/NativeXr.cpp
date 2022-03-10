@@ -682,10 +682,12 @@ namespace Babylon
                     auto depthTexture = bgfx::createTexture2D(textureWidth, textureHeight, false, textureLayers, depthTextureFormat, BGFX_TEXTURE_RT);
                     m_sessionState->GraphicsContext.AddTexture(depthTexture, textureWidth, textureHeight, false, textureLayers, depthTextureFormat);
 
+                    auto requiresAppClear = view.RequiresAppClear;
+
                     arcana::make_task(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &viewConfig]() {
                         bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(viewConfig.ColorTexturePointer));
                         bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(viewConfig.DepthTexturePointer));
-                    }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, &viewConfig]() {
+                    }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, requiresAppClear, &viewConfig]() {
                         const auto eyeCount = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(viewConfig.ViewTextureSize.Depth));
                         // TODO (rgerd): Remove old framebuffers from resource table?
                         viewConfig.FrameBuffers.resize(eyeCount);
@@ -718,6 +720,12 @@ namespace Babylon
                             auto jsHeight{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Height)};
                             auto jsFrameBuffer{Napi::Pointer<Graphics::FrameBuffer>::Create(m_env, frameBufferPtr, Napi::NapiPointerDeleter(frameBufferPtr))};
                             viewConfig.JsTextures[frameBufferPtr] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
+                            // OpenXR doesn't pre-clear textures, and so we need to make sure the render target gets cleared before rendering the scene.
+                            // ARCore and ARKit effectively pre-clear by pre-compositing the camera feed.
+                            if (requiresAppClear)
+                            {
+                                viewConfig.JsTextures[frameBufferPtr].Set("skipInitialClear", false);
+                            }
                         }
                         viewConfig.Initialized = true;
                     }).then(arcana::inline_scheduler, m_sessionState->CancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
@@ -1330,9 +1338,10 @@ namespace Babylon
                 {
                     auto argumentObject{info[0].As<Napi::Object>()};
 
-                    XRRigidTransform* transform{XRRigidTransform::Unwrap(argumentObject)};
-                    if (transform != nullptr)
+                    // check properties of XRRigidTransform are present
+                    if (argumentObject.Has("position") && argumentObject.Has("orientation") && argumentObject.Has("matrix"))
                     {
+                        XRRigidTransform* transform{XRRigidTransform::Unwrap(argumentObject)};
                         // The value passed in to the constructor is an XRRigidTransform
                         xr::Pose pose{transform->GetNativePose()};
                         tempVals.Origin = pose.Position;

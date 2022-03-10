@@ -15,7 +15,7 @@ namespace Babylon
     {
     public:
         AppRuntime();
-        AppRuntime(std::function<void(std::exception_ptr)> unhandledExceptionHandler);
+        AppRuntime(std::function<void(const std::exception&)> unhandledExceptionHandler);
         ~AppRuntime();
 
         void Suspend();
@@ -42,8 +42,9 @@ namespace Babylon
         // extra logic around the invocation of a dispatched callback.
         void Execute(Dispatchable<void()> callback);
 
-        static void DefaultUnhandledExceptionHandler(std::exception_ptr ptr);
+        static void DefaultUnhandledExceptionHandler(const std::exception& error);
 
-        std::unique_ptr<WorkQueue> m_workQueue;
+        std::unique_ptr<WorkQueue> m_workQueue{};
+        std::function<void(const std::exception&)> m_unhandledExceptionHandler{};
     };
 }

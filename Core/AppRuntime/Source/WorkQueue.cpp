@@ -2,9 +2,8 @@
 
 namespace Babylon
 {
-    WorkQueue::WorkQueue(std::function<void()> threadProcedure, std::function<void(std::exception_ptr)> unhandledExceptionHandler)
+    WorkQueue::WorkQueue(std::function<void()> threadProcedure)
         : m_thread{std::move(threadProcedure)}
-        , m_unhandledExceptionHandler{std::move(unhandledExceptionHandler)}
     {
     }
 
@@ -23,9 +22,9 @@ namespace Babylon
 
     void WorkQueue::Suspend()
     {
-        auto suspensionMutex = std::make_unique<std::mutex>();
+        auto suspensionMutex = std::make_shared<std::mutex>();
         m_suspensionLock.emplace(*suspensionMutex);
-        Append([suspensionMutex{std::move(suspensionMutex)}](Napi::Env) mutable {
+        Append([suspensionMutex{std::move(suspensionMutex)}](Napi::Env) {
             std::scoped_lock lock{*suspensionMutex};
         });
     }

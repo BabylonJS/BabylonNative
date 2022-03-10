@@ -77,6 +77,19 @@ inline Value Env::Null() const {
   return {_env, jsi::Value::null()};
 }
 
+inline bool Env::IsExceptionPending() const {
+  return !_env->last_exception.isUndefined();
+}
+
+inline Error Env::GetAndClearPendingException() {
+  if (_env->last_exception.isUndefined()) {
+    return {};
+  }
+
+  auto last_exception = std::move(_env->last_exception);
+  return {_env, last_exception.asObject(_env->rt)};
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Value class
 ////////////////////////////////////////////////////////////////////////////////
@@ -305,23 +318,33 @@ inline Number::operator double() const {
 }
 
 inline int32_t Number::Int32Value() const {
-  return static_cast<int32_t>(_value.getNumber());
+  NAPI_TRY()
+  return static_cast<int32_t>(_value.asNumber());
+  NAPI_CATCH()
 }
 
 inline uint32_t Number::Uint32Value() const {
-  return static_cast<uint32_t>(_value.getNumber());
+  NAPI_TRY()
+  return static_cast<uint32_t>(_value.asNumber());
+  NAPI_CATCH()
 }
 
 inline int64_t Number::Int64Value() const {
-  return static_cast<int64_t>(_value.getNumber());
+  NAPI_TRY()
+  return static_cast<int64_t>(_value.asNumber());
+  NAPI_CATCH()
 }
 
 inline float Number::FloatValue() const {
-  return static_cast<float>(_value.getNumber());
+  NAPI_TRY()
+  return static_cast<float>(_value.asNumber());
+  NAPI_CATCH()
 }
 
 inline double Number::DoubleValue() const {
-  return _value.getNumber();
+  NAPI_TRY()
+  return _value.asNumber();
+  NAPI_CATCH()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1315,6 +1338,8 @@ inline Value Function::Call(const Value& recv, const std::vector<Value>& args) c
 }
 
 inline Value Function::Call(const Value& recv, size_t argc, const Value* args) const {
+  NAPI_TRY()
+
   jsi::Value stackArgs[6];
   std::vector<jsi::Value> heapArgs;
   jsi::Value* argv;
@@ -1335,6 +1360,8 @@ inline Value Function::Call(const Value& recv, size_t argc, const Value* args) c
       : _function->callWithThis(_env->rt, static_cast<const jsi::Object&>(recv.ToObject()), static_cast<const jsi::Value*>(argv), argc)};
 
   return {_env, std::move(result)};
+
+  NAPI_CATCH()
 }
 
 inline Object Function::New(const std::initializer_list<Value>& args) const {
@@ -1346,6 +1373,8 @@ inline Object Function::New(const std::vector<Value>& args) const {
 }
 
 inline Object Function::New(size_t argc, const Value* args) const {
+  NAPI_TRY()
+
   jsi::Value stackArgs[6];
   std::vector<jsi::Value> heapArgs;
   jsi::Value* argv;
@@ -1364,6 +1393,8 @@ inline Object Function::New(size_t argc, const Value* args) const {
     _env->rt, static_cast<const jsi::Value*>(argv), argc)};
 
   return {_env, std::move(instance)};
+
+  NAPI_CATCH()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1449,6 +1480,9 @@ inline void Error::Fatal(const char* location, const char* message) {
   throw std::runtime_error{std::string{location} + ": " + message};
 }
 
+inline Error::Error() : ObjectReference() {
+}
+
 inline Error::Error(napi_env env, jsi::Object object)
   : ObjectReference{env, std::move(object)} {
 }
@@ -1479,12 +1513,9 @@ inline const std::string& Error::Message() const {
 }
 
 inline void Error::ThrowAsJavaScriptException() const {
-  auto func{jsi::Function::createFromHostFunction(_env->rt, jsi::PropNameID::forAscii(_env->rt, "throw"), 0,
-    [this](jsi::Runtime& rt, const jsi::Value&, const jsi::Value*, size_t) -> jsi::Value {
-      throw jsi::JSError{rt, {rt, static_cast<const jsi::Object&>(Value())}};
-    })};
-
-  func.call(_env->rt, {});
+  if (!IsEmpty()) {
+    _env->last_exception = {_env->rt, static_cast<const jsi::Object&>(Value())};
+  }
 }
 
 inline const char* Error::what() const noexcept {
