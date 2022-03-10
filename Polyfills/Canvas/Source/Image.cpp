@@ -41,7 +41,6 @@ namespace Babylon::Polyfills::Internal
         : Napi::ObjectWrap<NativeCanvasImage>{info}
         , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
-        , m_jsThis{Napi::Persistent(info.This().As<Napi::Object>())}
     {
     }
 
@@ -94,14 +93,8 @@ namespace Babylon::Polyfills::Internal
         request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, request{std::move(request)}](arcana::expected<void, std::exception_ptr> result) {
             if (result.has_error())
             {
-                const auto error = Napi::Error::New(env, result.error());
-                if (!m_onerrorHandlerRef.IsEmpty())
-                {
-                    m_onerrorHandlerRef.Call({error.Value()});
-                    return;
-                }
-
-                error.ThrowAsJavaScriptException();
+                HandleLoadImageError(Napi::Error::New(env, result.error()));
+                return;
             }
 
             Dispose();
@@ -109,33 +102,20 @@ namespace Babylon::Polyfills::Internal
             auto buffer{request.ResponseBuffer()};
             if (buffer.data() == nullptr || buffer.size_bytes() == 0)
             {
-                const auto error = Napi::Error::New(env, "Image with provided source returned empty response.");
-                if (!m_onerrorHandlerRef.IsEmpty())
-                {
-                    m_onerrorHandlerRef.Call({error.Value()});
-                    return;
-                }
-
-                error.ThrowAsJavaScriptException();
+                HandleLoadImageError(Napi::Error::New(env, "Image with provided source returned empty response."));
+                return;
             }
 
             m_imageContainer = bimg::imageParse(&m_allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()));
             if (m_imageContainer == nullptr)
             {
-                const auto error = Napi::Error::New(env, "Unable to decode image with provided src.");
-
-                if (!m_onerrorHandlerRef.IsEmpty())
-                {
-                    m_onerrorHandlerRef.Call({error.Value()});
-                    return;
-                }
-
-                error.ThrowAsJavaScriptException();
+                HandleLoadImageError(Napi::Error::New(env, "Unable to decode image with provided src."));
+                return;
             }
 
             // Set up a pointer to the image container.
             auto napiImagePointer = Napi::Pointer<bimg::ImageContainer>::Create(env, m_imageContainer);
-            m_jsThis.Set("_imageContainer", napiImagePointer);
+            this->Value().Set("_imageContainer", napiImagePointer);
 
             m_width = m_imageContainer->m_width;
             m_height = m_imageContainer->m_height;
@@ -162,5 +142,16 @@ namespace Babylon::Polyfills::Internal
     int NativeCanvasImage::CreateNVGImageForContext(NVGcontext* nvgContext) const
     {
         return nvgCreateImageRGBA(nvgContext, m_width, m_height, 0, static_cast<const unsigned char*>(m_imageContainer->m_data));
+    }
+
+    void NativeCanvasImage::HandleLoadImageError(const Napi::Error& error)
+    {
+        if (!m_onerrorHandlerRef.IsEmpty())
+        {
+            m_onerrorHandlerRef.Call({error.Value()});
+            return;
+        }
+
+        error.ThrowAsJavaScriptException();
     }
 }
