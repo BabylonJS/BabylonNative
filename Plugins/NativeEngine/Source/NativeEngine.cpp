@@ -315,7 +315,7 @@ namespace Babylon
             JS_CLASS_NAME,
             {
                 // This must match the version in nativeEngine.ts
-                StaticValue("PROTOCOL_VERSION", Napi::Number::From(env, 2)),
+                StaticValue("PROTOCOL_VERSION", Napi::Number::From(env, 4)),
 
                 StaticValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
                 StaticValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),
@@ -1157,9 +1157,16 @@ namespace Babylon
             }
 
             uint8_t* dataPtr = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
-            uint32_t dataSize = static_cast<uint32_t>(data.ByteLength());
-            const bgfx::Memory* dataCopy = bgfx::copy(dataPtr, dataSize); // This is required since BGFX must manage the data the memory.
-            bgfx::updateTexture2D(texture->Handle, 0, 0, 0, 0, width, height, dataCopy);
+            size_t dataSize = data.ByteLength();
+            
+            size_t textureSize = dataSize / static_cast<size_t>(depth);
+
+            for (uint16_t i = 0; i < depth; i++)
+            {
+                uint8_t* begin = dataPtr + (textureSize * static_cast<size_t>(i));
+                const bgfx::Memory* dataCopy = bgfx::copy(begin, static_cast<uint32_t>(textureSize)); // This is required since BGFX must manage the data the memory.
+                bgfx::updateTexture2D(texture->Handle, i, 0, 0, 0, width, height, dataCopy);
+            }
         }
     }
 
