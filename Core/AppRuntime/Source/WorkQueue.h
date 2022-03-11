@@ -19,9 +19,18 @@ namespace Babylon
         template<typename CallableT>
         void Append(CallableT callable)
         {
-            m_dispatcher.queue([this, callable = std::move(callable)]() mutable {
-                callable(m_env.value());
-            });
+            // Manual dispatcher queueing requires a copyable CallableT, we use a shared pointer trick to make a
+            // copyable callable if necessary.
+            if constexpr (std::is_copy_constructible<CallableT>::value)
+            {
+                m_dispatcher.queue([this, callable = std::move(callable)]()
+                    { Invoke(callable); });
+            }
+            else
+            {
+                m_dispatcher.queue([this, callablePtr = std::make_shared<CallableT>(std::move(callable))]()
+                    { Invoke(*callablePtr); });
+            }
         }
 
         void Suspend();
@@ -29,6 +38,12 @@ namespace Babylon
         void Run(Napi::Env);
 
     private:
+        template<typename CallableT>
+        void Invoke(CallableT& callable)
+        {
+            callable(m_env.value());
+        }
+
         std::optional<Napi::Env> m_env{};
 
         std::optional<std::scoped_lock<std::mutex>> m_suspensionLock{};

@@ -13,7 +13,7 @@ namespace Babylon
         , m_unhandledExceptionHandler{unhandledExceptionHandler}
     {
         Dispatch([this](Napi::Env env) {
-            JsRuntime::CreateForJavaScript(env, [this](auto func) { Dispatch(func); });
+            JsRuntime::CreateForJavaScript(env, [this](auto func) { Dispatch(std::move(func)); });
         });
     }
 
