@@ -108,7 +108,16 @@ namespace Babylon::Polyfills::Internal
     {
         if (m_dirty)
         {
-            auto handle = bgfx::createFrameBuffer(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
+            std::array<bgfx::TextureHandle, 2> textures{
+                bgfx::createTexture2D(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
+                bgfx::createTexture2D(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT)};
+
+            std::array<bgfx::Attachment, textures.size()> attachments{};
+            for (size_t idx = 0; idx < attachments.size(); ++idx)
+            {
+                attachments[idx].init(textures[idx]);
+            }
+            auto handle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
             assert(handle.idx != bgfx::kInvalidHandle);
             m_frameBuffer = std::make_unique<Graphics::FrameBuffer>(m_graphicsContext, handle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false, false, false);
             m_dirty = false;
