@@ -13,6 +13,7 @@ namespace Babylon::Graphics
 {
     void ExternalTexture::Impl::GetNativeTextureData(TextureType nativeTexture) 
     {
-        //TODO(Sergio): Add support for Metal external textures.
+        //TODO: Add support for Metal external textures.
+        throw std::runtime_error{"External textures is not currenlty supported for Metal."};
     }
 }
