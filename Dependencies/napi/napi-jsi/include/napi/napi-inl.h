@@ -2145,11 +2145,11 @@ inline void CallbackInfo::SetData(void* data) {
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-inline ObjectWrap<T>::ObjectWrap(const Napi::CallbackInfo& callbackInfo) {
-  napi_env env{callbackInfo.Env()};
-  jsi::Runtime& rt{env->rt};
+inline ObjectWrap<T>::ObjectWrap(const Napi::CallbackInfo& callbackInfo)
+  : _env{callbackInfo.Env()} {
+  jsi::Runtime& rt{_env->rt};
   Reference<Object>* instanceRef = static_cast<Reference<Object>*>(this);
-  *instanceRef = Reference<Object>{env, {env, std::move(static_cast<const jsi::Value&>(callbackInfo.This()).asObject(rt))}};
+  *instanceRef = Reference<Object>{_env, {_env, std::move(static_cast<const jsi::Value&>(callbackInfo.This()).asObject(rt))}};
 }
 
 template<typename T>

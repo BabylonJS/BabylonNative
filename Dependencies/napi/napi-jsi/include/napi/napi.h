@@ -1455,6 +1455,8 @@ namespace Napi {
       StaticAccessorCallbackData;
     typedef AccessorCallbackData<InstanceGetterCallback, InstanceSetterCallback>
       InstanceAccessorCallbackData;
+
+    napi_env _env;
   };
 
   // No-op stub class
