@@ -1315,7 +1315,7 @@ namespace Napi {
   ///         Napi::Value DoSomething(const Napi::CallbackInfo& info);
   ///     }
   template <typename T>
-  class ObjectWrap : public jsi::HostObject {
+  class ObjectWrap : public jsi::HostObject, public Reference<Object> {
   public:
     ObjectWrap(const CallbackInfo& callbackInfo);
     virtual ~ObjectWrap();
@@ -1455,8 +1455,6 @@ namespace Napi {
       StaticAccessorCallbackData;
     typedef AccessorCallbackData<InstanceGetterCallback, InstanceSetterCallback>
       InstanceAccessorCallbackData;
-
-    napi_env _env;
   };
 
   // No-op stub class
