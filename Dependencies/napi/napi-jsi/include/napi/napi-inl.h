@@ -2147,9 +2147,18 @@ inline void CallbackInfo::SetData(void* data) {
 template <typename T>
 inline ObjectWrap<T>::ObjectWrap(const Napi::CallbackInfo& callbackInfo)
   : _env{callbackInfo.Env()} {
-  jsi::Runtime& rt{_env->rt};
-  Reference<Object>* instanceRef = static_cast<Reference<Object>*>(this);
-  *instanceRef = Reference<Object>{_env, {_env, std::move(static_cast<const jsi::Value&>(callbackInfo.This()).asObject(rt))}};
+  //: Reference<Object>(callbackInfo.Env(), {}) {
+  //napi_env env = callbackInfo.Env();
+  //jsi::Value wrapper = callbackInfo.This();
+  //napi_status status;
+  //napi_ref ref;
+  //T* instance = static_cast<T*>(this);
+  //status = napi_wrap(env, wrapper, instance, FinalizeCallback, nullptr, &ref);
+  //NAPI_THROW_IF_FAILED_VOID(env, status);
+
+  //Reference<Object>* instanceRef = instance;
+  //*instanceRef = Reference<Object>(env, ref);
+  //throw std::runtime_error{"TODO"};
 }
 
 template<typename T>

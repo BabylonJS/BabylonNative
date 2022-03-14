@@ -31,6 +31,7 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetNaturalWidth(const Napi::CallbackInfo&);
         Napi::Value GetNaturalHeight(const Napi::CallbackInfo&);
         Napi::Value GetSrc(const Napi::CallbackInfo&);
+        Napi::Value GetImageContainer(const Napi::CallbackInfo&);
         void SetSrc(const Napi::CallbackInfo&, const Napi::Value&);
         void SetOnload(const Napi::CallbackInfo&, const Napi::Value&);
         void SetOnerror(const Napi::CallbackInfo&, const Napi::Value&);

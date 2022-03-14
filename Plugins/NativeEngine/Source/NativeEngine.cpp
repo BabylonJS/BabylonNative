@@ -1547,8 +1547,12 @@ namespace Babylon
             auto imageObject = info[0].As<Napi::Object>();
             if (imageObject.Has("_imageContainer"))
             {
-                auto napiPointer = imageObject.Get("_imageContainer").As<Napi::Pointer<bimg::ImageContainer>>();
-                image = napiPointer.Get();
+                const auto napiImageContainer = imageObject.Get("_imageContainer");
+                if (!napiImageContainer.IsNull())
+                {
+                    const auto napiPointer = napiImageContainer.As<Napi::Pointer<bimg::ImageContainer>>();
+                    image = napiPointer.Get();
+                }
             }
         }
 

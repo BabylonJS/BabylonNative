@@ -32,6 +32,8 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("src", &NativeCanvasImage::GetSrc, &NativeCanvasImage::SetSrc),
                 InstanceAccessor("onload", nullptr, &NativeCanvasImage::SetOnload),
                 InstanceAccessor("onerror", nullptr, &NativeCanvasImage::SetOnerror),
+                // TODO: This should be set directly on the JS Object rather than via an instanceAccessor see: https://github.com/BabylonJS/BabylonNative/issues/1030
+                InstanceAccessor("_imageContainer", &NativeCanvasImage::GetImageContainer, nullptr),
             });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
@@ -84,6 +86,18 @@ namespace Babylon::Polyfills::Internal
         return Napi::Value::From(Env(), m_src);
     }
 
+    Napi::Value NativeCanvasImage::GetImageContainer(const Napi::CallbackInfo&)
+    {
+        if (m_imageContainer != nullptr)
+        {
+            return Napi::Pointer<bimg::ImageContainer>::Create(Env(), m_imageContainer);
+        }
+        else
+        {
+            return Env().Null();
+        }
+    }
+
     void NativeCanvasImage::SetSrc(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         auto text{value.As<Napi::String>().Utf8Value()};
@@ -112,10 +126,6 @@ namespace Babylon::Polyfills::Internal
                 HandleLoadImageError(Napi::Error::New(env, "Unable to decode image with provided src."));
                 return;
             }
-
-            // Set up a pointer to the image container.
-            auto napiImagePointer = Napi::Pointer<bimg::ImageContainer>::Create(env, m_imageContainer);
-            Value().Set("_imageContainer", napiImagePointer);
 
             m_width = m_imageContainer->m_width;
             m_height = m_imageContainer->m_height;

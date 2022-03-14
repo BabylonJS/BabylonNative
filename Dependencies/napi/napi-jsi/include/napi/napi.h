@@ -1315,7 +1315,7 @@ namespace Napi {
   ///         Napi::Value DoSomething(const Napi::CallbackInfo& info);
   ///     }
   template <typename T>
-  class ObjectWrap : public jsi::HostObject, public Reference<Object> {
+  class ObjectWrap : public jsi::HostObject {
   public:
     ObjectWrap(const CallbackInfo& callbackInfo);
     virtual ~ObjectWrap();
