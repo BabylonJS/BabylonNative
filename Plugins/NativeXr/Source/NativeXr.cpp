@@ -2145,6 +2145,7 @@ namespace Babylon
                 : Napi::ObjectWrap<XRFrame>{info}
                 , m_jsXRViewerPose{Napi::Persistent(XRViewerPose::New(info))}
                 , m_xrViewerPose{*XRViewerPose::Unwrap(m_jsXRViewerPose.Value())}
+                , m_imageTrackingResultsArray{Napi::Persistent(Napi::Array::New(info.Env()))}
                 , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info.Env()))}
                 , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
                 , m_jsPose{Napi::Persistent(Napi::Object::New(info.Env()))}
@@ -2254,7 +2255,8 @@ namespace Babylon
             std::vector<Napi::ObjectReference> m_trackedAnchors{};
             std::unordered_map<xr::System::Session::Frame::Plane::Identifier, Napi::ObjectReference> m_trackedPlanes{};
             std::unordered_map<xr::System::Session::Frame::Mesh::Identifier, Napi::ObjectReference> m_trackedMeshes{};
-            std::unordered_map<xr::System::Session::Frame::ImageTrackingResult::Identifier, Napi::ObjectReference> m_trackedImageTrackingResults{};
+            std::unordered_map<xr::System::Session::Frame::ImageTrackingResult::Identifier, Napi::ObjectReference> m_trackedImageIDToResultMap{};
+            Napi::Reference<Napi::Array> m_imageTrackingResultsArray{};
             Napi::ObjectReference m_meshSet{};
             std::unordered_map<xr::System::Session::Frame::SceneObject::Identifier, Napi::ObjectReference> m_sceneObjects{};
 
@@ -2483,18 +2485,9 @@ namespace Babylon
                 return std::move(featurePointArray);
             }
 
-            Napi::Value GetImageTrackingResults(const Napi::CallbackInfo& info)
+            Napi::Value GetImageTrackingResults(const Napi::CallbackInfo&)
             {
-                auto results = Napi::Array::New(info.Env(), m_trackedImageTrackingResults.size());
-                int count = 0;
-
-                // Loop over the list of tracked image tracking results, and add them to the array.
-                for (const auto& [imageTrackingResultID, imageTrackingResultValue] : m_trackedImageTrackingResults)
-                {
-                    results.Set(count++, imageTrackingResultValue.Value());
-                }
-
-                return std::move(results);
+                return m_imageTrackingResultsArray.Value();
             }
 
             void UpdateSceneObjects(const Napi::Env& env)
@@ -2591,13 +2584,13 @@ namespace Babylon
                 // Loop over the list of updated image tracking results, check if they exist in our map if not create them otherwise update them.
                 for (auto imageTrackingResultID : m_frame->UpdatedImageTrackingResults)
                 {
-                    auto trackedImageTrackingResultIterator = m_trackedImageTrackingResults.find(imageTrackingResultID);
+                    auto trackedImageTrackingResultIterator = m_trackedImageIDToResultMap.find(imageTrackingResultID);
 
                     // Get the matching native result
                     xr::System::Session::Frame::ImageTrackingResult& nativeResult = m_frame->GetImageTrackingResultByID(imageTrackingResultID);
 
                     // Result does not yet exist, create the JS object and insert it into the map.
-                    if (trackedImageTrackingResultIterator == m_trackedImageTrackingResults.end())
+                    if (trackedImageTrackingResultIterator == m_trackedImageIDToResultMap.end())
                     {
                         // Don't add untracked images.
                         if (nativeResult.TrackingState == xr::System::Session::Frame::ImageTrackingState::UNTRACKED)
@@ -2612,11 +2605,13 @@ namespace Babylon
                         napiResult.Set("imageSpace", Napi::External<xr::Space>::New(env, &nativeResult.ImageSpace));
 
                         auto persistentNapiResult = Napi::Persistent(napiResult);
-                        m_trackedImageTrackingResults.insert({imageTrackingResultID, std::move(persistentNapiResult)});
+                        auto imageTrackingArray = m_imageTrackingResultsArray.Value();
+                        imageTrackingArray.Set(imageTrackingArray.Length(), persistentNapiResult.Value());
+                        m_trackedImageIDToResultMap.insert({imageTrackingResultID, std::move(persistentNapiResult)});
                     }
                     else
                     {
-                        // Update the tracked image list.
+                        // Update the tracked image.
                         auto napiResult = trackedImageTrackingResultIterator->second.Value().As<Napi::Object>();
                         napiResult.Set("trackingState", nativeResult.TrackingState);
                         napiResult.Set("measuredWidthInMeters", nativeResult.MeasuredWidthInMeters);
