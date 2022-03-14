@@ -315,7 +315,7 @@ namespace Babylon
             JS_CLASS_NAME,
             {
                 // This must match the version in nativeEngine.ts
-                StaticValue("PROTOCOL_VERSION", Napi::Number::From(env, 2)),
+                StaticValue("PROTOCOL_VERSION", Napi::Number::From(env, 4)),
 
                 StaticValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
                 StaticValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),
@@ -1157,9 +1157,16 @@ namespace Babylon
             }
 
             uint8_t* dataPtr = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
-            uint32_t dataSize = static_cast<uint32_t>(data.ByteLength());
-            const bgfx::Memory* dataCopy = bgfx::copy(dataPtr, dataSize); // This is required since BGFX must manage the data the memory.
-            bgfx::updateTexture2D(texture->Handle, 0, 0, 0, 0, width, height, dataCopy);
+            size_t dataSize = data.ByteLength();
+            
+            size_t textureSize = dataSize / static_cast<size_t>(depth);
+
+            for (uint16_t i = 0; i < depth; i++)
+            {
+                uint8_t* begin = dataPtr + (textureSize * static_cast<size_t>(i));
+                const bgfx::Memory* dataCopy = bgfx::copy(begin, static_cast<uint32_t>(textureSize)); // This is required since BGFX must manage the data the memory.
+                bgfx::updateTexture2D(texture->Handle, i, 0, 0, 0, width, height, dataCopy);
+            }
         }
     }
 
@@ -1518,20 +1525,41 @@ namespace Babylon
     Napi::Value NativeEngine::CreateImageBitmap(const Napi::CallbackInfo& info)
     {
         const Napi::Env env{info.Env()};
+        bimg::ImageContainer* image{nullptr};
+        bool allocatedImage{false};
 
-        if (!info[0].IsArrayBuffer())
+        // CreateImageBitmap supports passing in either an ArrayBuffer or an Image object.
+        if (info[0].IsArrayBuffer())
         {
-            throw Napi::Error::New(env, "CreateImageBitmap parameter is not an array buffer.");
+            const auto data{info[0].As<Napi::ArrayBuffer>()};
+
+            if (!data.ByteLength())
+            {
+                throw Napi::Error::New(env, "CreateImageBitmap array buffer is empty.");
+            }
+
+            image = ParseImage(m_allocator, gsl::make_span(static_cast<uint8_t*>(data.Data()), data.ByteLength()));
+            allocatedImage = true;
+        }
+        else if (info[0].IsObject())
+        {
+            // If this is an object, then check if it has the _imageContainer property defined.
+            auto imageObject = info[0].As<Napi::Object>();
+            if (imageObject.Has("_imageContainer"))
+            {
+                const auto napiImageContainer = imageObject.Get("_imageContainer");
+                if (!napiImageContainer.IsNull())
+                {
+                    const auto napiPointer = napiImageContainer.As<Napi::Pointer<bimg::ImageContainer>>();
+                    image = napiPointer.Get();
+                }
+            }
         }
 
-        const auto data{info[0].As<Napi::ArrayBuffer>()};
-
-        if (!data.ByteLength())
+        if (image == nullptr)
         {
-            throw Napi::Error::New(env, "CreateImageBitmap array buffer is empty.");
+            throw Napi::Error::New(env, "CreateImageBitmap parameter is not an array buffer or Image object.");
         }
-
-        bimg::ImageContainer* image{ParseImage(m_allocator, gsl::make_span(static_cast<uint8_t*>(data.Data()), data.ByteLength()))};
 
         Napi::Object imageBitmap{Napi::Object::New(env)};
         Napi::Uint8Array buffer{Napi::Uint8Array::New(env, image->m_size)};
@@ -1544,7 +1572,12 @@ namespace Babylon
         imageBitmap.Set("numLayers", Napi::Value::From(env, image->m_numLayers));
         imageBitmap.Set("format", Napi::Value::From(env, static_cast<uint32_t>(image->m_format)));
 
-        bimg::imageFree(image);
+        // Clean up the image if we allocated it from an ArrayBuffer.
+        if (allocatedImage)
+        {
+            bimg::imageFree(image);
+        }
+
         return std::move(imageBitmap);
     }
 

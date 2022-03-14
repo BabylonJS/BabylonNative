@@ -27,7 +27,7 @@ namespace Babylon::Plugins
         using DeviceStatusChangedCallback = std::function<void(DeviceType deviceType, int32_t deviceSlot)>;
         using DeviceStatusChangedCallbackTicket = arcana::weak_table<DeviceStatusChangedCallback>::ticket;
 
-        using InputStateChangedCallback = std::function<void(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, std::optional<int32_t> previousState, std::optional<int32_t> currentState)>;
+        using InputStateChangedCallback = std::function<void(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, std::optional<int32_t> currentState)>;
         using InputStateChangedCallbackTicket = arcana::weak_table<InputStateChangedCallback>::ticket;
 
         Impl(Napi::Env);
@@ -72,6 +72,8 @@ namespace Babylon::Plugins
         arcana::weak_table<InputStateChangedCallback> m_inputChangedCallbacks{};
 
         arcana::manual_dispatcher<64> m_eventDispatcher{};
+
+        bool m_getDelta{false};
 
         class DeviceInputSystem;
     };

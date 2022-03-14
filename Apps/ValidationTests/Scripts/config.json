@@ -372,6 +372,11 @@
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Texture_Sampler, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfTextureSampler1.png"
+        },
+        {
+            "title": "GLTF Serializer Morph Target Animation Group",
+            "playgroundId": "#XN37SR#5",
+            "referenceImage": "gltfSerializerMorphTargetAnimationGroup.png"
         }
     ]
 }
