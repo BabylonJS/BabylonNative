@@ -18,7 +18,7 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
     private Activity mCurrentActivity;
     private final SurfaceView primarySurfaceView;
     private final SurfaceView xrSurfaceView;
-
+    private final float pixelDensityScale = getResources().getDisplayMetrics().density;
     public BabylonView(Context context, ViewDelegate viewDelegate) {
         this(context, viewDelegate, (Activity)viewDelegate);
     }
@@ -117,7 +117,7 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
-        BabylonNative.Wrapper.surfaceChanged(w, h, holder.getSurface());
+        BabylonNative.Wrapper.surfaceChanged((int)(w / this.pixelDensityScale), (int)(h / this.pixelDensityScale), holder.getSurface());
     }
 
     public interface ViewDelegate {
@@ -126,8 +126,8 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-        float mX = event.getX();
-        float mY = event.getY();
+        float mX = event.getX() / this.pixelDensityScale;
+        float mY = event.getY() / this.pixelDensityScale;
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 BabylonNative.Wrapper.setTouchInfo(mX, mY, true, 1);
