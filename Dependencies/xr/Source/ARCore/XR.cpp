@@ -713,17 +713,33 @@ namespace xr
 
                 uint8_t* grayscale_buffer;
                 ConvertBitmapToGrayscale(image.data, image.width, image.height, image.stride, &grayscale_buffer);
-                const ArStatus status = ArAugmentedImageDatabase_addImageWithPhysicalSize(
-                    xrContext->Session,
-                    augmentedImageDatabase,
-                    "",
-                    grayscale_buffer,
-                    image.width,
-                    image.height,
-                    image.width,
-                    image.measuredWidthInMeters,
-                    &index);
-                
+                ArStatus status;
+                if (image.measuredWidthInMeters > 0)
+                {
+                    status = ArAugmentedImageDatabase_addImageWithPhysicalSize(
+                            xrContext->Session,
+                            augmentedImageDatabase,
+                            "",
+                            grayscale_buffer,
+                            image.width,
+                            image.height,
+                            image.width,
+                            image.measuredWidthInMeters,
+                            &index);
+                }
+                else
+                {
+                    status = ArAugmentedImageDatabase_addImage(
+                            xrContext->Session,
+                            augmentedImageDatabase,
+                            "",
+                            grayscale_buffer,
+                            image.width,
+                            image.height,
+                            image.width,
+                            &index);
+                }
+
                 // Assign a score
                 if (status == AR_SUCCESS)
                 {

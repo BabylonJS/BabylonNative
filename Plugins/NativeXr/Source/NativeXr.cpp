@@ -3050,6 +3050,9 @@ namespace Babylon
                     if (m_imageTrackingRequests.size() > 0 && m_imageTrackingScores.size() == 0) {
                         // Create the image database
                         m_imageTrackingScores = m_xrFrame.CreateAugmentedImageDatabase(m_imageTrackingRequests);
+
+                        // Clean up image tracking requests
+                        m_imageTrackingRequests.clear();
                     }
 
                     callbackPtr->Value().Call({Napi::Value::From(Env(), m_timestamp), m_jsXRFrame.Value()});
