@@ -31,7 +31,7 @@ namespace Babylon::Plugins
         using InputStateChangedCallbackTicket = arcana::weak_table<InputStateChangedCallback>::ticket;
 
         Impl(Napi::Env);
-            
+
         bool HasMouse();
 
         void MouseDown(uint32_t buttonIndex, int32_t x, int32_t y);
