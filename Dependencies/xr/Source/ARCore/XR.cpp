@@ -754,6 +754,8 @@ namespace xr
             // Clean up the ArConfig.
             ArConfig_destroy(arConfig);
 
+            ImageTrackingResults.resize(requests.size());
+
             return scores;
         }
 
