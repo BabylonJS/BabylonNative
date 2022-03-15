@@ -14,9 +14,6 @@ namespace Babylon::Plugins
                 env,
                 JS_CONSTRUCTOR_NAME,
                 {
-                    InstanceAccessor("onDeviceConnected", &DeviceInputSystem::GetOnDeviceConnected, &DeviceInputSystem::SetOnDeviceConnected),
-                    InstanceAccessor("onDeviceDisconnected", &DeviceInputSystem::GetOnDeviceDisconnected, &DeviceInputSystem::SetOnDeviceDisconnected),
-                    InstanceAccessor("onInputChanged", &DeviceInputSystem::GetOnInputChanged, &DeviceInputSystem::SetOnInputChanged),
                     InstanceMethod("pollInput", &DeviceInputSystem::PollInput),
                     InstanceMethod("isDeviceAvailable", &DeviceInputSystem::IsDeviceAvailable),
                     InstanceMethod("dispose", &DeviceInputSystem::Dispose),
@@ -31,66 +28,27 @@ namespace Babylon::Plugins
     NativeInput::Impl::DeviceInputSystem::DeviceInputSystem(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<DeviceInputSystem>{info}
         , m_nativeInput{*NativeInput::GetFromJavaScript(info.Env()).m_impl}
-        , m_deviceConnectedTicket{m_nativeInput.AddDeviceConnectedCallback([this](DeviceType deviceType, int32_t deviceSlot) {
-            if (!m_onDeviceConnected.IsEmpty())
-            {
-                m_onDeviceConnected({
-                    Napi::Value::From(Env(), static_cast<uint32_t>(deviceType)),
-                    Napi::Value::From(Env(), deviceSlot)
-                });
-            }
+        , m_deviceConnectedTicket{m_nativeInput.AddDeviceConnectedCallback([this, callback = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>()))](DeviceType deviceType, int32_t deviceSlot) {
+            (*callback)({
+                Napi::Value::From(Env(), static_cast<uint32_t>(deviceType)),
+                Napi::Value::From(Env(), deviceSlot)
+            });
         })}
-        , m_deviceDisconnectedTicket{m_nativeInput.AddDeviceDisconnectedCallback([this](DeviceType deviceType, int32_t deviceSlot) {
-            if (!m_onDeviceDisconnected.IsEmpty())
-            {
-                m_onDeviceDisconnected({
-                    Napi::Value::From(Env(), static_cast<uint32_t>(deviceType)),
-                    Napi::Value::From(Env(), deviceSlot)
-                });
-            }
+        , m_deviceDisconnectedTicket{m_nativeInput.AddDeviceDisconnectedCallback([this, callback = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[1].As<Napi::Function>()))](DeviceType deviceType, int32_t deviceSlot) {
+            (*callback)({
+                Napi::Value::From(Env(), static_cast<uint32_t>(deviceType)),
+                Napi::Value::From(Env(), deviceSlot)
+            });
         })}
-        , m_InputChangedTicket{m_nativeInput.AddInputChangedCallback([this](DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, std::optional<int32_t> currentState) {
-            if (!m_onInputChanged.IsEmpty())
-            {
-                m_onInputChanged({
-                    Napi::Value::From(Env(), static_cast<uint32_t>(deviceType)),
-                    Napi::Value::From(Env(), deviceSlot),
-                    Napi::Value::From(Env(), inputIndex),
-                    currentState ? Napi::Value::From(Env(), *currentState) : Env().Null()
-                });
-            }
+        , m_InputChangedTicket{m_nativeInput.AddInputChangedCallback([this, callback = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[2].As<Napi::Function>()))](DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, std::optional<int32_t> currentState) {
+            (*callback)({
+                Napi::Value::From(Env(), static_cast<uint32_t>(deviceType)),
+                Napi::Value::From(Env(), deviceSlot),
+                Napi::Value::From(Env(), inputIndex),
+                currentState ? Napi::Value::From(Env(), *currentState) : Env().Null()
+            });
         })}
     {
-    }
-
-    Napi::Value NativeInput::Impl::DeviceInputSystem::GetOnDeviceConnected(const Napi::CallbackInfo&)
-    {
-        return m_onDeviceConnected.Value();
-    }
-
-    void NativeInput::Impl::DeviceInputSystem::SetOnDeviceConnected(const Napi::CallbackInfo&, const Napi::Value& value)
-    {
-        m_onDeviceConnected = Napi::Persistent(value.As<Napi::Function>());
-    }
-
-    Napi::Value NativeInput::Impl::DeviceInputSystem::GetOnDeviceDisconnected(const Napi::CallbackInfo&)
-    {
-        return m_onDeviceDisconnected.Value();
-    }
-
-    void NativeInput::Impl::DeviceInputSystem::SetOnDeviceDisconnected(const Napi::CallbackInfo&, const Napi::Value& value)
-    {
-        m_onDeviceDisconnected = Napi::Persistent(value.As<Napi::Function>());
-    }
-
-    Napi::Value NativeInput::Impl::DeviceInputSystem::GetOnInputChanged(const Napi::CallbackInfo&)
-    {
-        return m_onInputChanged.Value();
-    }
-
-    void NativeInput::Impl::DeviceInputSystem::SetOnInputChanged(const Napi::CallbackInfo&, const Napi::Value& value)
-    {
-        m_onInputChanged = Napi::Persistent(value.As<Napi::Function>());
     }
 
     Napi::Value NativeInput::Impl::DeviceInputSystem::PollInput(const Napi::CallbackInfo& info)
