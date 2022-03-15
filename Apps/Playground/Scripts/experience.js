@@ -296,13 +296,26 @@ CreateBoxAsync(scene).then(function () {
 
                 // Test image tracking and detection.
                 if (markerTracking) {
+                    const webXRTrackingMeshes = [];
                     const webXRImageTrackingModule = xr.baseExperience.featuresManager.enableFeature(
                         BABYLON.WebXRFeatureName.IMAGE_TRACKING,
                         "latest",
-                        { images: [{ src: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/IridescentDishWithOlives/screenshot/screenshot_Large.jpg", estimatedRealWorldWidth: .2}] });
+                        {
+                            images: [
+                                { src: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/IridescentDishWithOlives/screenshot/screenshot_Large.jpg", estimatedRealWorldWidth: .2 },
+                                { src: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DragonAttenuation/screenshot/screenshot_large.png", estimatedRealWorldWidth: .2 },
+                            ]
+                        });
 
                     webXRImageTrackingModule.onTrackedImageUpdatedObservable.add((imageObject) => {
-                        scene.meshes[0].position = imageObject.transformationMatrix.getTranslation();
+                        if (webXRTrackingMeshes[imageObject.id] === undefined) {
+                            webXRTrackingMeshes[imageObject.id] = BABYLON.Mesh.CreateBox("box1", 0.05, scene);
+                            var mat = new BABYLON.StandardMaterial("mat", scene);
+                            mat.diffuseColor = BABYLON.Color3.Random();
+                            webXRTrackingMeshes[imageObject.id].material = mat;
+                        }
+                        webXRTrackingMeshes[imageObject.id].setEnabled(!imageObject.emulated);
+                        webXRTrackingMeshes[imageObject.id].position = imageObject.transformationMatrix.getTranslation();
                     });
                 }
 

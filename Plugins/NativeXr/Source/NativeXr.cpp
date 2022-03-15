@@ -2599,9 +2599,9 @@ namespace Babylon
                         }
 
                         auto napiResult = Napi::Object::New(env);
-                        napiResult.Set("index", nativeResult.Index);
-                        napiResult.Set("trackingState", nativeResult.TrackingState);
-                        napiResult.Set("measuredWidthInMeters", nativeResult.MeasuredWidthInMeters);
+                        napiResult.Set("index", Napi::Value::From(env, nativeResult.Index));
+                        napiResult.Set("trackingState", Napi::Value::From(env, nativeResult.TrackingState));
+                        napiResult.Set("measuredWidthInMeters", Napi::Value::From(env, nativeResult.MeasuredWidthInMeters));
                         napiResult.Set("imageSpace", Napi::External<xr::Space>::New(env, &nativeResult.ImageSpace));
 
                         auto persistentNapiResult = Napi::Persistent(napiResult);
@@ -2613,8 +2613,11 @@ namespace Babylon
                     {
                         // Update the tracked image.
                         auto napiResult = trackedImageTrackingResultIterator->second.Value().As<Napi::Object>();
-                        napiResult.Set("trackingState", nativeResult.TrackingState);
-                        napiResult.Set("measuredWidthInMeters", nativeResult.MeasuredWidthInMeters);
+                        napiResult.Set("trackingState", Napi::Value::From(env, nativeResult.TrackingState));
+                        napiResult.Set("measuredWidthInMeters", Napi::Value::From(env, nativeResult.MeasuredWidthInMeters));
+
+                        // TODO: Why does this not work on update for old externals??
+                        napiResult.Set("imageSpace", Napi::External<xr::Space>::New(env, &nativeResult.ImageSpace));
                     }
                 }
             }

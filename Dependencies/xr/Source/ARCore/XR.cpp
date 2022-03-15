@@ -780,8 +780,8 @@ namespace xr
                 ArAugmentedImage_getCenterPose(xrContext->Session, imageTrackable, tempPose);
                 ArPose_getPoseRaw(xrContext->Session, tempPose, rawPose);
 
-                ArTrackingState trackingState{AR_TRACKING_STATE_STOPPED};
-                ArTrackable_getTrackingState(xrContext->Session, trackable, &trackingState);
+                ArAugmentedImageTrackingMethod trackingState{AR_AUGMENTED_IMAGE_TRACKING_METHOD_NOT_TRACKING};
+                ArAugmentedImage_getTrackingMethod(xrContext->Session, imageTrackable, &trackingState);
 
                 // Update the existing image tracking result if it exists
                 auto resultIterator{ imageTrackingResultsMap.find(imageTrackable) };
@@ -819,7 +819,7 @@ namespace xr
             Frame::ImageTrackingResult& result,
             const float rawPose[],
             float measuredWidthInMeters,
-            ArTrackingState arTrackingState)
+            ArAugmentedImageTrackingMethod arTrackingState)
         {
             Pose newCenter{};
             RawToPose(rawPose, newCenter);
@@ -829,9 +829,9 @@ namespace xr
             result.MeasuredWidthInMeters = measuredWidthInMeters;
 
             // Map tracking ARCore tracking state to WebXR image tracking state.
-            result.TrackingState = arTrackingState == AR_TRACKING_STATE_TRACKING
+            result.TrackingState = arTrackingState == AR_AUGMENTED_IMAGE_TRACKING_METHOD_FULL_TRACKING
                 ? Frame::ImageTrackingState::TRACKED
-                : arTrackingState == AR_TRACKING_STATE_PAUSED
+                : arTrackingState == AR_AUGMENTED_IMAGE_TRACKING_METHOD_LAST_KNOWN_POSE
                     ? Frame::ImageTrackingState::EMULATED
                     : Frame::ImageTrackingState::UNTRACKED;
 
