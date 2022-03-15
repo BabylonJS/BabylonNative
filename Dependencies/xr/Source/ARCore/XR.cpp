@@ -183,7 +183,7 @@ namespace xr
         std::vector<Frame::InputSource> InputSources{};
         std::vector<Frame::Plane> Planes{};
         std::vector<Frame::Mesh> Meshes{};
-        std::vector<Frame::ImageTrackingResult> ImageTrackingResults{};
+        std::vector<std::unique_ptr<Frame::ImageTrackingResult>> ImageTrackingResults{};
         std::vector<FeaturePoint> FeaturePointCloud{};
         std::optional<Space> EyeTrackerSpace{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
@@ -754,8 +754,6 @@ namespace xr
             // Clean up the ArConfig.
             ArConfig_destroy(arConfig);
 
-            ImageTrackingResults.resize(requests.size());
-
             return scores;
         }
 
@@ -795,8 +793,8 @@ namespace xr
                 else
                 {
                     // This is a new result, create it and initialize its values.
-                    ImageTrackingResults.emplace_back();
-                    auto& result{ ImageTrackingResults.back() };
+                    ImageTrackingResults.push_back(std::make_unique<Frame::ImageTrackingResult>());
+                    auto& result{ *ImageTrackingResults.back() };
                     result.Index = imageIndex;
                     imageTrackingResultsMap.insert({imageTrackable, result.ID});
                     UpdateImageTrackingResult(updatedResults, result, rawPose, measuredWidthInMeters, trackingState);
@@ -806,11 +804,11 @@ namespace xr
 
         Frame::ImageTrackingResult& GetImageTrackingResultByID(Frame::ImageTrackingResult::Identifier resultID)
         {
-            for (Frame::ImageTrackingResult& result : ImageTrackingResults)
+            for (std::unique_ptr<Frame::ImageTrackingResult>& resultPtr : ImageTrackingResults)
             {
-                if (result.ID == resultID)
+                if (resultPtr->ID == resultID)
                 {
-                    return result;
+                    return *resultPtr;
                 }
             }
             throw std::runtime_error{"Tried to get non-existent image tracking result."};
