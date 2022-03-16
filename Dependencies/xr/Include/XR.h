@@ -300,21 +300,21 @@ namespace xr
                 
                 struct ImageTrackingRequest
                 {
-                    uint8_t* data;
-                    uint32_t width;
-                    uint32_t height;
-                    uint32_t depth;
-                    uint32_t stride;
-                    float measuredWidthInMeters;
+                    uint8_t* data{nullptr};
+                    uint32_t width{0};
+                    uint32_t height{0};
+                    uint32_t depth{0};
+                    uint32_t stride{0};
+                    float measuredWidthInMeters{0.0};
                 };
 
                 struct ImageTrackingResult
                 {
                     using Identifier = size_t;
                     const Identifier ID{ NEXT_ID++ };
-                    Space ImageSpace;
-                    uint32_t Index;
-                    std::string TrackingState;
+                    Space ImageSpace{};
+                    uint32_t Index{0};
+                    std::string TrackingState{ImageTrackingState::UNTRACKED};
                     float MeasuredWidthInMeters{0};
 
                 private:
@@ -340,13 +340,13 @@ namespace xr
 
                 std::optional<Space>& EyeTrackerSpace;
 
-                std::vector<SceneObject::Identifier>UpdatedSceneObjects;
-                std::vector<SceneObject::Identifier>RemovedSceneObjects;
-                std::vector<Plane::Identifier>UpdatedPlanes;
-                std::vector<Plane::Identifier>RemovedPlanes;
-                std::vector<Mesh::Identifier>UpdatedMeshes;
-                std::vector<Mesh::Identifier>RemovedMeshes;
-                std::vector<ImageTrackingResult::Identifier>UpdatedImageTrackingResults;
+                std::vector<SceneObject::Identifier> UpdatedSceneObjects;
+                std::vector<SceneObject::Identifier> RemovedSceneObjects;
+                std::vector<Plane::Identifier> UpdatedPlanes;
+                std::vector<Plane::Identifier> RemovedPlanes;
+                std::vector<Mesh::Identifier> UpdatedMeshes;
+                std::vector<Mesh::Identifier> RemovedMeshes;
+                std::vector<ImageTrackingResult::Identifier> UpdatedImageTrackingResults;
 
                 bool IsTracking;
 

@@ -292,6 +292,8 @@ CreateBoxAsync(scene).then(function () {
                 }
 
                 // Test image tracking and detection.
+                // To test image tracking locally either bring up the images below on your machine by loading the URL or by printing them out.
+                // Then gain tracking on them during the AR Session by orienting your camera towards the image, tracking will be represented by a colored cube at the center of the image.
                 if (imageTracking) {
                     const webXRTrackingMeshes = [];
                     const webXRImageTrackingModule = xr.baseExperience.featuresManager.enableFeature(
@@ -306,7 +308,7 @@ CreateBoxAsync(scene).then(function () {
                     webXRImageTrackingModule.onTrackedImageUpdatedObservable.add((imageObject) => {
                         if (webXRTrackingMeshes[imageObject.id] === undefined) {
                             webXRTrackingMeshes[imageObject.id] = BABYLON.Mesh.CreateBox("box1", 0.05, scene);
-                            var mat = new BABYLON.StandardMaterial("mat", scene);
+                            const mat = new BABYLON.StandardMaterial("mat", scene);
                             mat.diffuseColor = BABYLON.Color3.Random();
                             webXRTrackingMeshes[imageObject.id].material = mat;
                         }
