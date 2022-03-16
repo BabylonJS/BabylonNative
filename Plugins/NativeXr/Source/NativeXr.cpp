@@ -1738,36 +1738,6 @@ namespace Babylon
             Napi::Value CreateAnchor(const Napi::CallbackInfo& info);
         };
 
-        // Implementation of the XRImageTrackingResult: https://immersive-web.github.io/marker-tracking/#xrimagetrackingresult
-        class XRImageTrackingResult : public Napi::ObjectWrap<XRImageTrackingResult>
-        {
-            static constexpr auto JS_CLASS_NAME = "XRImageTrackingResult";
-
-        public:
-            static void Initialize(Napi::Env env)
-            {
-                Napi::HandleScope scope{env};
-
-                Napi::Function func = DefineClass(
-                    env,
-                    JS_CLASS_NAME,
-                    {
-                    });
-
-                env.Global().Set(JS_CLASS_NAME, func);
-            }
-
-            static Napi::Object New(const Napi::Env& env)
-            {
-                return env.Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
-            }
-
-            XRImageTrackingResult(const Napi::CallbackInfo& info)
-                : Napi::ObjectWrap<XRImageTrackingResult>{info}
-            {
-            }
-        };
-
         // Implementation of the XRPlane interface: https://github.com/immersive-web/real-world-geometry/blob/master/plane-detection-explainer.md
         class XRPlane : public Napi::ObjectWrap<XRPlane>
         {
@@ -2151,6 +2121,7 @@ namespace Babylon
                 , m_jsPose{Napi::Persistent(Napi::Object::New(info.Env()))}
                 , m_jsJointPose{Napi::Persistent(Napi::Object::New(info.Env()))}
             {
+                info.This().As<Napi::Object>().Set("_imageTrackingResults", m_imageTrackingResultsArray.Value());
                 m_jsPose.Set("transform", m_jsTransform.Value());
                 m_jsJointPose.Set("transform", m_jsTransform.Value());
             }
@@ -2339,11 +2310,11 @@ namespace Babylon
                 return Napi::Value::From(info.Env(), true);
             }
 
-            Napi::Value FillJointRadii(const Napi::CallbackInfo& info) 
+            Napi::Value FillJointRadii(const Napi::CallbackInfo& info)
             {
                 const auto spaces = info[0].As<Napi::Array>();
                 auto radii = info[1].As<Napi::Float32Array>();
-                if (spaces.Length() != radii.ElementLength()) 
+                if (spaces.Length() != radii.ElementLength())
                 {
                     throw std::runtime_error{"Number of spaces doesn't match number of radii."};
                 }
@@ -2858,7 +2829,7 @@ namespace Babylon
                 deferred.Resolve(info.Env().Undefined());
                 return deferred.Promise();
             }
-                
+
             void ProcessEyeInputSource(const xr::System::Session::Frame& frame, Napi::Env env)
             {
                 if (frame.EyeTrackerSpace.has_value() && m_jsEyeTrackedSource.IsEmpty())
@@ -2946,7 +2917,7 @@ namespace Babylon
                     const bool isSqueezed = inputSource.GamepadObject.Buttons[1].Pressed;
                     const bool wasSelected = std::find(m_activeSelects.begin(), m_activeSelects.end(), inputSource.ID) != m_activeSelects.end();
                     const bool wasSqueezed = std::find(m_activeSqueezes.begin(), m_activeSqueezes.end(), inputSource.ID) != m_activeSqueezes.end();
-                    
+
                     if (isSelected && !wasSelected)
                     {
                         selectStarts.push_back(inputSource.ID);
@@ -3537,7 +3508,6 @@ namespace Babylon
             XRHand::Initialize(env);
             XRPlane::Initialize(env);
             XRMesh::Initialize(env);
-            XRImageTrackingResult::Initialize(env);
             XRAnchor::Initialize(env);
             XRHitTestSource::Initialize(env);
             XRHitTestResult::Initialize(env);

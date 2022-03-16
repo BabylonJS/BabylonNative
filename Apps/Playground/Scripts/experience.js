@@ -5,22 +5,21 @@
 
 var wireframe = false;
 var turntable = false;
-var logfps = false;
+var logfps = true;
 var ibl = false;
 var rtt = false;
 var vr = false;
-var ar = true;
+var ar = false;
 var xrHitTest = false;
 var xrFeaturePoints = false;
 var meshDetection = false;
 var text = false;
 var hololens = false;
 var cameraTexture = false;
-var featurePointTracking = false;
-var markerTracking = true;
+var imageTracking = false;
 
 function CreateBoxAsync(scene) {
-    BABYLON.Mesh.CreateBox("box1", 0.05, scene);
+    BABYLON.Mesh.CreateBox("box1", 0.2, scene);
     return Promise.resolve();
 }
 
@@ -65,6 +64,7 @@ CreateBoxAsync(scene).then(function () {
 
     scene.createDefaultCamera(true, true, true);
     scene.activeCamera.alpha += Math.PI;
+
     if (ibl) {
         scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
     }
@@ -134,10 +134,7 @@ CreateBoxAsync(scene).then(function () {
 
     if (vr || ar || hololens) {
         setTimeout(function () {
-            scene.createDefaultXRExperienceAsync({
-                disableDefaultUI: true,
-                disableTeleportation: true,
-            }).then((xr) => {
+            scene.createDefaultXRExperienceAsync({ disableDefaultUI: true, disableTeleportation: true, }).then((xr) => {
                 if (xrHitTest) {
                     // Create the hit test module. OffsetRay specifies the target direction, and entityTypes can be any combination of "mesh", "plane", and "point".
                     const xrHitTestModule = xr.baseExperience.featuresManager.enableFeature(
@@ -295,7 +292,7 @@ CreateBoxAsync(scene).then(function () {
                 }
 
                 // Test image tracking and detection.
-                if (markerTracking) {
+                if (imageTracking) {
                     const webXRTrackingMeshes = [];
                     const webXRImageTrackingModule = xr.baseExperience.featuresManager.enableFeature(
                         BABYLON.WebXRFeatureName.IMAGE_TRACKING,
@@ -315,7 +312,7 @@ CreateBoxAsync(scene).then(function () {
                             webXRTrackingMeshes[imageObject.id].material = mat;
                         }
                         webXRTrackingMeshes[imageObject.id].setEnabled(!imageObject.emulated);
-                        webXRTrackingMeshes[imageObject.id].position = imageObject.transformationMatrix.getTranslation();
+                        imageObject.transformationMatrix.decomposeToTransformNode(webXRTrackingMeshes[imageObject.id]);
                     });
                 }
 

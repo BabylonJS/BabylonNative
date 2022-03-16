@@ -1043,7 +1043,6 @@ namespace xr
                 RemovedPlanes,
                 UpdatedMeshes,
                 RemovedMeshes,
-                UpdatedImageTrackingResults,
             };
             sceneUnderstanding.UpdateFrame(suUpdateArgs);
 
@@ -1281,7 +1280,7 @@ namespace xr
     }
 
     System::Session::Frame::ImageTrackingResult& System::Session::Frame::GetImageTrackingResultByID(System::Session::Frame::ImageTrackingResult::Identifier) const {
-        throw std::runtime_error("not implemented");
+        throw std::runtime_error("Image tracking not supported");
     }
 
     System::Session::Frame::Mesh& System::Session::Frame::GetMeshByID(System::Session::Frame::Mesh::Identifier id) const

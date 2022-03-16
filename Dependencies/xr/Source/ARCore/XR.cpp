@@ -680,6 +680,7 @@ namespace xr
             }
         }
 
+        // Converts an image bitmap to grayscale assumes an RGB8 or RGB8A image.
         void ConvertBitmapToGrayscale(
             const uint8_t* image_pixel_buffer,
             int32_t width,
@@ -705,82 +706,89 @@ namespace xr
         {
             ArAugmentedImageDatabase_create(xrContext->Session, &augmentedImageDatabase);
             std::vector<std::string> scores;
+            int32_t trackableImagesCount = 0;
 
+            // Loop over each image in the request, and add it to the image database.
             for (System::Session::Frame::ImageTrackingRequest image : requests)
             {
-                // Add each image
                 int32_t index;
-
                 uint8_t* grayscale_buffer;
                 ConvertBitmapToGrayscale(image.data, image.width, image.height, image.stride, &grayscale_buffer);
                 ArStatus status;
                 if (image.measuredWidthInMeters > 0)
                 {
                     status = ArAugmentedImageDatabase_addImageWithPhysicalSize(
-                            xrContext->Session,
-                            augmentedImageDatabase,
-                            "",
-                            grayscale_buffer,
-                            image.width,
-                            image.height,
-                            image.width,
-                            image.measuredWidthInMeters,
-                            &index);
+                        xrContext->Session,
+                        augmentedImageDatabase,
+                        "",
+                        grayscale_buffer,
+                        image.width,
+                        image.height,
+                        image.width,
+                        image.measuredWidthInMeters,
+                        &index);
                 }
                 else
                 {
                     status = ArAugmentedImageDatabase_addImage(
-                            xrContext->Session,
-                            augmentedImageDatabase,
-                            "",
-                            grayscale_buffer,
-                            image.width,
-                            image.height,
-                            image.width,
-                            &index);
+                        xrContext->Session,
+                        augmentedImageDatabase,
+                        "",
+                        grayscale_buffer,
+                        image.width,
+                        image.height,
+                        image.width,
+                        &index);
                 }
 
                 // Assign a score
                 if (status == AR_SUCCESS)
                 {
+                    trackableImagesCount++;
                     scores.push_back(System::Session::Frame::ImageTrackingScore::TRACKABLE);
                 }
                 else
                 {
-                    // Invalid image, just mark the image as untrackable.
                     scores.push_back(System::Session::Frame::ImageTrackingScore::UNTRACKABLE);
                 }
 
                 delete grayscale_buffer;
             }
 
-            // Create the ArConfig
-            ArConfig* arConfig{};
-            ArConfig_create(xrContext->Session, &arConfig);
-            ArSession_getConfig(xrContext->Session, arConfig);
+            // If we had at least one trackable image, set up image tracking.
+            if (trackableImagesCount > 0)
+            {
+                // Create an ArConfig
+                ArConfig *arConfig{};
+                ArConfig_create(xrContext->Session, &arConfig);
+                ArSession_getConfig(xrContext->Session, arConfig);
 
-            // Configure the ArSession
-            ArConfig_setAugmentedImageDatabase(xrContext->Session, arConfig, augmentedImageDatabase);
-            const ArStatus status = ArSession_configure(xrContext->Session, arConfig);
+                // Configure the ArSession to include the image tracking database
+                ArConfig_setAugmentedImageDatabase(xrContext->Session, arConfig,
+                                                   augmentedImageDatabase);
+                const ArStatus status = ArSession_configure(xrContext->Session, arConfig);
 
-            if (status != AR_SUCCESS) {
-                throw new std::exception();
+                // If we failed to configure the session, error out.
+                if (status != AR_SUCCESS)
+                {
+                    throw std::runtime_error{"Failed to configure AR Session for Image Tracking"};
+                }
+
+                // Clean up the ArConfig.
+                ArConfig_destroy(arConfig);
             }
-
-            // Clean up the ArConfig.
-            ArConfig_destroy(arConfig);
 
             return scores;
         }
 
         void UpdateImageTrackingResults(std::vector<Frame::ImageTrackingResult::Identifier>& updatedResults)
         {
-            // Get images
-            ArFrame_getUpdatedTrackables(xrContext->Session, xrContext->Frame, AR_TRACKABLE_AUGMENTED_IMAGE, trackableList);
+            // Get list of updated images in the current frame.
             int32_t imageListSize;
+            ArFrame_getUpdatedTrackables(xrContext->Session, xrContext->Frame, AR_TRACKABLE_AUGMENTED_IMAGE, trackableList);
             ArTrackableList_getSize(xrContext->Session, trackableList, &imageListSize);
 
-            // For each image, get properties from the trackable
+            // For each updated image, get the current status.
             for (int i = 0; i < imageListSize; ++i) {
                 ArTrackable* trackable = nullptr;
                 ArTrackableList_acquireItem(xrContext->Session, trackableList, i, &trackable);
@@ -799,11 +807,18 @@ namespace xr
                 ArAugmentedImageTrackingMethod trackingState{AR_AUGMENTED_IMAGE_TRACKING_METHOD_NOT_TRACKING};
                 ArAugmentedImage_getTrackingMethod(xrContext->Session, imageTrackable, &trackingState);
 
-                // Update the existing image tracking result if it exists
+                // Update the existing image tracking result if it exists.
                 auto resultIterator{ imageTrackingResultsMap.find(imageTrackable) };
                 if (resultIterator != imageTrackingResultsMap.end())
                 {
-                    UpdateImageTrackingResult(updatedResults, GetImageTrackingResultByID(resultIterator->second), rawPose, measuredWidthInMeters, trackingState);
+                    UpdateImageTrackingResult(
+                        updatedResults,
+                        GetImageTrackingResultByID(resultIterator->second),
+                        rawPose,
+                        measuredWidthInMeters,
+                        trackingState);
+
+                    // Release reference to trackable.
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(imageTrackable));
                 }
                 else
@@ -813,7 +828,12 @@ namespace xr
                     auto& result{ *ImageTrackingResults.back() };
                     result.Index = imageIndex;
                     imageTrackingResultsMap.insert({imageTrackable, result.ID});
-                    UpdateImageTrackingResult(updatedResults, result, rawPose, measuredWidthInMeters, trackingState);
+                    UpdateImageTrackingResult(
+                        updatedResults,
+                        result,
+                        rawPose,
+                        measuredWidthInMeters,
+                        trackingState);
                 }
             }
         }
@@ -827,6 +847,7 @@ namespace xr
                     return *resultPtr;
                 }
             }
+
             throw std::runtime_error{"Tried to get non-existent image tracking result."};
         }
 
@@ -837,20 +858,18 @@ namespace xr
             float measuredWidthInMeters,
             ArAugmentedImageTrackingMethod arTrackingState)
         {
-            Pose newCenter{};
-            RawToPose(rawPose, newCenter);
-
             // Update the pose, and width
-            result.ImageSpace.Pose = newCenter;
+            RawToPose(rawPose, result.ImageSpace.Pose);
             result.MeasuredWidthInMeters = measuredWidthInMeters;
 
-            // Map tracking ARCore tracking state to WebXR image tracking state.
+            // Map ARCore tracking state to WebXR image tracking state.
             result.TrackingState = arTrackingState == AR_AUGMENTED_IMAGE_TRACKING_METHOD_FULL_TRACKING
                 ? Frame::ImageTrackingState::TRACKED
                 : arTrackingState == AR_AUGMENTED_IMAGE_TRACKING_METHOD_LAST_KNOWN_POSE
                     ? Frame::ImageTrackingState::EMULATED
                     : Frame::ImageTrackingState::UNTRACKED;
 
+            // Mark that this result was updated on this frame.
             updatedResults.push_back(result.ID);
         }
 
