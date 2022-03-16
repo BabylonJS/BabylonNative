@@ -17,7 +17,7 @@ namespace Babylon::Graphics
         //TODO: Change this to take a context.
         Napi::Promise AddToContext(Napi::Env& env);
 
-        uint32_t GetWight();
+        uint32_t GetWidth();
 
         uint32_t GetHeight();
 
