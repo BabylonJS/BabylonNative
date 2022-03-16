@@ -9,7 +9,6 @@
 #include <napi/env.h>
 #include <napi/napi_pointer.h>
 
-
 namespace Babylon::Graphics
 {
         ExternalTexture::Impl::Impl(TextureType nativeTexture): m_nativeTexture{reinterpret_cast<uintptr_t>(nativeTexture)}
