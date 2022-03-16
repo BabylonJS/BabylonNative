@@ -183,7 +183,6 @@ namespace xr
         std::vector<Frame::InputSource> InputSources{};
         std::vector<Frame::Plane> Planes{};
         std::vector<Frame::Mesh> Meshes{};
-        std::vector<std::unique_ptr<Frame::ImageTrackingResult>> ImageTrackingResults{};
         std::vector<FeaturePoint> FeaturePointCloud{};
         std::optional<Space> EyeTrackerSpace{};
         float DepthNearZ{ DEFAULT_DEPTH_NEAR_Z };
@@ -670,33 +669,35 @@ namespace xr
                     float rawPose[7]{};
                     ArHitResult_getHitPose(xrContext->Session, hitResult, tempPose);
                     ArPose_getPoseRaw(xrContext->Session, tempPose, rawPose);
-                    HitResult hitResult{};
-                    RawToPose(rawPose, hitResult.Pose);
+                    HitResult hitTestResult{};
+                    RawToPose(rawPose, hitTestResult.Pose);
 
-                    hitResult.NativeTrackable = reinterpret_cast<NativeTrackablePtr>(trackable);
-                    filteredResults.push_back(hitResult);
+                    hitTestResult.NativeTrackable = reinterpret_cast<NativeTrackablePtr>(trackable);
+                    filteredResults.push_back(hitTestResult);
                     frameTrackables.push_back(trackable);
                 }
             }
         }
 
-        // Converts an image bitmap to grayscale assumes an RGB8 or RGB8A image.
+        // Converts an image bitmap to grayscale assumes an RGB8 or RGB8A image for use with ARCore.
         void ConvertBitmapToGrayscale(
             const uint8_t* image_pixel_buffer,
             int32_t width,
             int32_t height,
             int32_t stride,
-            uint8_t** out_grayscale_buffer) {
+            uint8_t** out_grayscale_buffer)
+        {
             uint8_t* grayscale_buffer = new uint8_t[width * height];
             uint32_t pixelStride = stride / width;
-            for (int h = 0; h < height; ++h) {
-                for (int w = 0; w < width; ++w) {
+            for (int h = 0; h < height; ++h)
+            {
+                for (int w = 0; w < width; ++w)
+                {
                     const uint8_t* pixel = &image_pixel_buffer[w * pixelStride + h * stride];
                     uint8_t r = *pixel;
                     uint8_t g = *(pixel + 1);
                     uint8_t b = *(pixel + 2);
-                    grayscale_buffer[w + h * width] =
-                            static_cast<uint8_t>(0.213f * r + 0.715 * g + 0.072 * b);
+                    grayscale_buffer[w + h * width] = static_cast<uint8_t>(0.213f * r + 0.715 * g + 0.072 * b);
                 }
             }
             *out_grayscale_buffer = grayscale_buffer;
@@ -705,51 +706,61 @@ namespace xr
         std::vector<std::string> CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingRequest>& requests)
         {
             ArAugmentedImageDatabase_create(xrContext->Session, &augmentedImageDatabase);
-            std::vector<std::string> scores;
+            std::vector<std::string> scores{};
             int32_t trackableImagesCount = 0;
 
             // Loop over each image in the request, and add it to the image database.
             for (System::Session::Frame::ImageTrackingRequest image : requests)
             {
                 int32_t index;
-                uint8_t* grayscale_buffer;
-                ConvertBitmapToGrayscale(image.data, image.width, image.height, image.stride, &grayscale_buffer);
+                uint8_t *grayscale_buffer;
                 ArStatus status;
-                if (image.measuredWidthInMeters > 0)
-                {
-                    status = ArAugmentedImageDatabase_addImageWithPhysicalSize(
-                        xrContext->Session,
-                        augmentedImageDatabase,
-                        "",
-                        grayscale_buffer,
-                        image.width,
-                        image.height,
-                        image.width,
-                        image.measuredWidthInMeters,
-                        &index);
-                }
-                else
-                {
-                    status = ArAugmentedImageDatabase_addImage(
-                        xrContext->Session,
-                        augmentedImageDatabase,
-                        "",
-                        grayscale_buffer,
-                        image.width,
-                        image.height,
-                        image.width,
-                        &index);
-                }
 
-                // Assign a score
-                if (status == AR_SUCCESS)
+                try
                 {
-                    trackableImagesCount++;
-                    scores.push_back(System::Session::Frame::ImageTrackingScore::TRACKABLE);
+                    ConvertBitmapToGrayscale(image.data, image.width, image.height, image.stride, &grayscale_buffer);
+
+                    // If an estimated width was provided, send that down to ARCore otherwise add the image with no size.
+                    if (image.measuredWidthInMeters > 0)
+                    {
+                        status = ArAugmentedImageDatabase_addImageWithPhysicalSize(
+                                xrContext->Session,
+                                augmentedImageDatabase,
+                                "",
+                                grayscale_buffer,
+                                image.width,
+                                image.height,
+                                image.width,
+                                image.measuredWidthInMeters,
+                                &index);
+                    }
+                    else
+                    {
+                        status = ArAugmentedImageDatabase_addImage(
+                                xrContext->Session,
+                                augmentedImageDatabase,
+                                "",
+                                grayscale_buffer,
+                                image.width,
+                                image.height,
+                                image.width,
+                                &index);
+                    }
+
+                    if (status == AR_SUCCESS)
+                    {
+                        trackableImagesCount++;
+                        scores.push_back(System::Session::Frame::ImageTrackingScore::TRACKABLE);
+                    }
+                    else
+                    {
+                        scores.push_back(System::Session::Frame::ImageTrackingScore::UNTRACKABLE);
+                    }
                 }
-                else
+                catch (std::exception)
                 {
-                    scores.push_back(System::Session::Frame::ImageTrackingScore::UNTRACKABLE);
+                    delete grayscale_buffer;
+                    throw;
                 }
 
                 delete grayscale_buffer;
@@ -800,7 +811,7 @@ namespace xr
                 float measuredWidthInMeters;
                 ArAugmentedImage_getExtentX(xrContext->Session, imageTrackable, &measuredWidthInMeters);
                 
-                float rawPose[7]{};
+                float rawPose[7];
                 ArAugmentedImage_getCenterPose(xrContext->Session, imageTrackable, tempPose);
                 ArPose_getPoseRaw(xrContext->Session, tempPose, rawPose);
 
@@ -818,14 +829,14 @@ namespace xr
                         measuredWidthInMeters,
                         trackingState);
 
-                    // Release reference to trackable.
+                    // Release reference to trackable, since we are already holding a ref count in the map.
                     ArTrackable_release(reinterpret_cast<ArTrackable*>(imageTrackable));
                 }
                 else
                 {
                     // This is a new result, create it and initialize its values.
-                    ImageTrackingResults.push_back(std::make_unique<Frame::ImageTrackingResult>());
-                    auto& result{ *ImageTrackingResults.back() };
+                    imageTrackingResults.push_back(std::make_unique<Frame::ImageTrackingResult>());
+                    auto& result{ *imageTrackingResults.back() };
                     result.Index = imageIndex;
                     imageTrackingResultsMap.insert({imageTrackable, result.ID});
                     UpdateImageTrackingResult(
@@ -840,7 +851,7 @@ namespace xr
 
         Frame::ImageTrackingResult& GetImageTrackingResultByID(Frame::ImageTrackingResult::Identifier resultID)
         {
-            for (std::unique_ptr<Frame::ImageTrackingResult>& resultPtr : ImageTrackingResults)
+            for (std::unique_ptr<Frame::ImageTrackingResult>& resultPtr : imageTrackingResults)
             {
                 if (resultPtr->ID == resultID)
                 {
@@ -858,7 +869,7 @@ namespace xr
             float measuredWidthInMeters,
             ArAugmentedImageTrackingMethod arTrackingState)
         {
-            // Update the pose, and width
+            // Update the pose and measured width
             RawToPose(rawPose, result.ImageSpace.Pose);
             result.MeasuredWidthInMeters = measuredWidthInMeters;
 
@@ -1158,6 +1169,7 @@ namespace xr
         std::vector<ArAnchor*> arCoreAnchors{};
         std::vector<float> planePolygonBuffer{};
         std::unordered_map<ArPlane*, Frame::Plane::Identifier> planeMap{};
+        std::vector<std::unique_ptr<Frame::ImageTrackingResult>> imageTrackingResults{};
         std::unordered_map<ArAugmentedImage*, Frame::ImageTrackingResult::Identifier> imageTrackingResultsMap{};
         std::unordered_map<int32_t, FeaturePoint::Identifier> featurePointIDMap{};
         FeaturePoint::Identifier nextFeaturePointID{};

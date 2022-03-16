@@ -19,8 +19,6 @@
 #include <arcana/threading/task.h>
 #include <arcana/tracing/trace_region.h>
 
-#include <bimg/bimg.h>
-
 namespace
 {
     bgfx::TextureFormat::Enum XrTextureFormatToBgfxFormat(xr::TextureFormat format)
@@ -2094,7 +2092,6 @@ namespace Babylon
                         InstanceMethod("getJointPose", &XRFrame::GetJointPose),
                         InstanceMethod("fillPoses", &XRFrame::FillPoses),
                         InstanceMethod("fillJointRadii", &XRFrame::FillJointRadii),
-                        InstanceMethod("getImageTrackingResults", &XRFrame::GetImageTrackingResults),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
                         InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr),
@@ -2427,13 +2424,11 @@ namespace Babylon
                 }
                 worldInformationObj.Set("detectedPlanes", planeSet);
 
-                // Pass the mesh set that was already converted in UpdateMeshes
                 if (m_meshSet)
                 {
                     worldInformationObj.Set("detectedMeshes", m_meshSet.Value());
                 }
 
-                // Pass the world information object back to the caller.
                 return std::move(worldInformationObj);
             }
 
@@ -2454,11 +2449,6 @@ namespace Babylon
                 }
 
                 return std::move(featurePointArray);
-            }
-
-            Napi::Value GetImageTrackingResults(const Napi::CallbackInfo&)
-            {
-                return m_imageTrackingResultsArray.Value();
             }
 
             void UpdateSceneObjects(const Napi::Env& env)
@@ -2575,10 +2565,10 @@ namespace Babylon
                         napiResult.Set("measuredWidthInMeters", Napi::Value::From(env, nativeResult.MeasuredWidthInMeters));
                         napiResult.Set("imageSpace", Napi::External<xr::Space>::New(env, &nativeResult.ImageSpace));
 
-                        auto persistentNapiResult = Napi::Persistent(napiResult);
+                        auto napiResultRef = Napi::Weak(napiResult);
                         auto imageTrackingArray = m_imageTrackingResultsArray.Value();
-                        imageTrackingArray.Set(imageTrackingArray.Length(), persistentNapiResult.Value());
-                        m_trackedImageIDToResultMap.insert({imageTrackingResultID, std::move(persistentNapiResult)});
+                        imageTrackingArray.Set(imageTrackingArray.Length(), napiResultRef.Value());
+                        m_trackedImageIDToResultMap.insert({imageTrackingResultID, std::move(napiResultRef)});
                     }
                     else
                     {

@@ -316,7 +316,6 @@ namespace xr
                     uint32_t Index;
                     std::string TrackingState;
                     float MeasuredWidthInMeters{0};
-                    SceneObject::Identifier ParentSceneObjectID{ SceneObject::INVALID_ID };
 
                 private:
                     static inline Identifier NEXT_ID{ 0 };

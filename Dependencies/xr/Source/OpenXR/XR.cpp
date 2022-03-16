@@ -1042,7 +1042,7 @@ namespace xr
                 UpdatedPlanes,
                 RemovedPlanes,
                 UpdatedMeshes,
-                RemovedMeshes,
+                RemovedMeshes
             };
             sceneUnderstanding.UpdateFrame(suUpdateArgs);
 
