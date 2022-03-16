@@ -10,7 +10,6 @@
 
 namespace Babylon::Graphics
 {
-
     ExternalTexture::ExternalTexture(std::unique_ptr<Impl> impl)
         : m_impl{std::move(impl)}
     {
