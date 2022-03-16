@@ -1,12 +1,11 @@
 #pragma once
 
 #include <EGL/egl.h>
-#include <GL/gl.h>
 
 namespace Babylon::Graphics
 {
     using DeviceType = EGLContext;
-    using TextureType = GLuint;
+    using TextureType = unsigned int;
 
     struct DeviceConfiguration
     {
