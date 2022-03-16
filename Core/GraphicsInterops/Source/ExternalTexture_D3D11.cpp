@@ -10,7 +10,7 @@
 namespace Babylon::Graphics
 {
     //For refrence see renderer_d3d11.cpp line 203.
-    bgfx::TextureFormat::Enum NativeToBGFXImageFormat(TextureFormat format)
+    bgfx::TextureFormat::Enum NativeToBGFXImageFormat(DXGI_FORMAT format)
     {
         switch (format)
         {

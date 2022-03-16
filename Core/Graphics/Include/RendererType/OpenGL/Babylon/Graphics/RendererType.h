@@ -5,6 +5,7 @@
 namespace Babylon::Graphics
 {
     using DeviceType = EGLContext;
+    using TextureType = GLuint;
 
     struct DeviceConfiguration
     {

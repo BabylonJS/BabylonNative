@@ -5,6 +5,7 @@
 namespace Babylon::Graphics
 {
     using DeviceType = id<MTLDevice>;
+    using TextureType = id<MTLTexture>;
 
     struct DeviceConfiguration
     {
