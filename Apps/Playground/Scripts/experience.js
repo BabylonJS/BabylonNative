@@ -301,7 +301,7 @@ CreateBoxAsync(scene).then(function () {
                             images: [
                                 { src: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/IridescentDishWithOlives/screenshot/screenshot_Large.jpg", estimatedRealWorldWidth: .2 },
                                 { src: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DragonAttenuation/screenshot/screenshot_large.png", estimatedRealWorldWidth: .2 },   
-						]});
+                        ]});
 
                     webXRImageTrackingModule.onTrackedImageUpdatedObservable.add((imageObject) => {
                         if (webXRTrackingMeshes[imageObject.id] === undefined) {
