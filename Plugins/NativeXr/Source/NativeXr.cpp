@@ -2422,6 +2422,8 @@ namespace Babylon
                 {
                     planeSet.Get("add").As<Napi::Function>().Call(planeSet, {planeNapiValue.Value()});
                 }
+
+                // Pass the world information object back to the caller.
                 worldInformationObj.Set("detectedPlanes", planeSet);
 
                 if (m_meshSet)
@@ -2659,19 +2661,19 @@ namespace Babylon
                 auto featureObject = info[1].As<Napi::Object>();
                 if (featureObject.Has("trackedImages"))
                 {
-                    auto napiTrackedImages = featureObject.Get("trackedImages").As<Napi::Array>();
+                    const auto napiTrackedImages = featureObject.Get("trackedImages").As<Napi::Array>();
                     session.m_imageTrackingRequests.resize(napiTrackedImages.Length());
 
                     // Create the tracked image buffer.
                     for (uint32_t idx = 0; idx < napiTrackedImages.Length(); idx++)
                     {
-                        auto napiImageRequest = napiTrackedImages.Get(idx).As<Napi::Object>();
-                        auto napiImage = napiImageRequest.Get("image").As<Napi::Object>();
-                        auto napiBuffer = napiImage.Get("data").As<Napi::Uint8Array>();
-                        uint32_t bufferSize = (uint32_t) napiBuffer.ByteLength();
-                        uint32_t imageHeight = napiImage.Get("height").ToNumber().Uint32Value();
-                        uint32_t stride = bufferSize / imageHeight;
-                        float estimatedWidth = napiImageRequest.Get("widthInMeters").ToNumber().FloatValue();
+                        const auto napiImageRequest = napiTrackedImages.Get(idx).As<Napi::Object>();
+                        const auto napiImage = napiImageRequest.Get("image").As<Napi::Object>();
+                        const auto napiBuffer = napiImage.Get("data").As<Napi::Uint8Array>();
+                        const uint32_t bufferSize = (uint32_t) napiBuffer.ByteLength();
+                        const uint32_t imageHeight = napiImage.Get("height").ToNumber().Uint32Value();
+                        const uint32_t stride = bufferSize / imageHeight;
+                        const float estimatedWidth = napiImageRequest.Get("widthInMeters").ToNumber().FloatValue();
                         session.m_imageTrackingRequests[idx] =
                         {
                             (uint8_t *) napiBuffer.Data(),

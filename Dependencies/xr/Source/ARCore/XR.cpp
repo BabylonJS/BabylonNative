@@ -711,9 +711,11 @@ namespace xr
             for (System::Session::Frame::ImageTrackingRequest image : requests)
             {
                 int32_t index{0};
-                ArStatus status{AR_SUCCESS};
+                ArStatus status{};
+                std::vector<uint8_t> grayscaleBuffer{};
+                grayscaleBuffer.reserve(image.width * image.height);
                 const std::unique_ptr<uint8_t> grayscale_buffer{new uint8_t[image.width * image.height]};
-                ConvertBitmapToGrayscale(image.data, image.width, image.height, image.stride, grayscale_buffer.get());
+                ConvertBitmapToGrayscale(image.data, image.width, image.height, image.stride, grayscaleBuffer.data());
 
                 // If an estimated width was provided, send that down to ARCore otherwise add the image with no size.
                 if (image.measuredWidthInMeters > 0)
@@ -722,7 +724,7 @@ namespace xr
                         xrContext->Session,
                         augmentedImageDatabase,
                         "",
-                        grayscale_buffer.get(),
+                        grayscaleBuffer.data(),
                         image.width,
                         image.height,
                         image.width,
@@ -735,7 +737,7 @@ namespace xr
                         xrContext->Session,
                         augmentedImageDatabase,
                         "",
-                        grayscale_buffer.get(),
+                        grayscaleBuffer.data(),
                         image.width,
                         image.height,
                         image.width,
