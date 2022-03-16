@@ -9,7 +9,7 @@
 namespace Babylon::Graphics
 {
     ExternalTexture::ExternalTexture(TextureType nativeTexture)
-        : m_nativeTexture{reinterpret_cast<uintptr_t>(nativeTexture)}
+        : m_nativeTexture{(uintptr_t)(nativeTexture)}
     {
         ReadPropertiesFromNativeTexture(nativeTexture);
     }
