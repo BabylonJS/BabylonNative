@@ -4,14 +4,12 @@
 #include <Babylon/Graphics/Texture.h>
 #include <Babylon/Graphics/DeviceContext.h>
 
-#include <ExternalTextureImpl.h>
-
 #include <napi/env.h>
 #include <napi/napi_pointer.h>
 
 namespace Babylon::Graphics
 {
-    //For refrence see renderer_d3d12.cpp line 187.
+    //For refrence see renderer_d3d11.cpp line 203.
     bgfx::TextureFormat::Enum NativeToBGFXImageFormat(TextureFormat format)
     {
         switch (format)
@@ -181,12 +179,13 @@ namespace Babylon::Graphics
         }
     }
 
-    void ExternalTexture::Impl::GetNativeTextureData(TextureType nativeTexture) 
+    void ExternalTexture::ReadPropertiesFromNativeTexture(TextureType nativeTexture) 
     {
-        D3D12_RESOURCE_DESC  desc =  nativeTexture->GetDesc();
+        D3D11_TEXTURE2D_DESC desc;
+        nativeTexture->GetDesc(&desc);
         m_format = NativeToBGFXImageFormat(desc.Format);
-        m_height = static_cast<uint32_t>(desc.Height);
-        m_width = static_cast<uint32_t>(desc.Width);
-        m_mips = static_cast<uint32_t>(desc.MipLevels);
+        m_height = desc.Height;
+        m_width = desc.Width;
+        m_mips = desc.MipLevels;
     }
 }

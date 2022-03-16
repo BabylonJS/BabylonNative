@@ -13,19 +13,21 @@ namespace Babylon::Graphics
     {
     public:
         ExternalTexture(TextureType nativeTexture);
-        ExternalTexture(ExternalTexture&&);
         ~ExternalTexture();
 
         Napi::Promise AddToContext(Napi::Env&);
 
-        uint32_t GetWight();
+        uint32_t GetWidth();
         uint32_t GetHeight();
         uint32_t GetFormat();
 
     private:
-        struct Impl;
-        std::unique_ptr<Impl> m_impl{};
+        uintptr_t m_nativeTexture{};
+        uint32_t m_width{};
+        uint32_t m_height{};
+        uint32_t m_mips{};
+        uint32_t m_format{};
 
-        ExternalTexture(std::unique_ptr<Impl>);
+        void ReadPropertiesFromNativeTexture(TextureType nativeTexture);
     };
 }

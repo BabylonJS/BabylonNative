@@ -13,10 +13,8 @@ endif()
 
 set(SOURCES
     "Include/Shared/Babylon/GraphicsInterops/ExternalTexture.h"
-    "Source/RendererType/${GRAPHICS_API}/ExternalTexturePlatform.cpp"
-    "Source/ExternalTexture.cpp"
-    "Source/ExternalTextureImpl.h"
-    "Source/ExternalTextureImpl.cpp")
+    "Source/ExternalTexture_${GRAPHICS_API}.cpp"
+    "Source/ExternalTexture.cpp")
 
 add_library(GraphicsInterops ${SOURCES})
 warnings_as_errors(GraphicsInterops)
