@@ -2092,6 +2092,7 @@ namespace Babylon
                         InstanceMethod("getJointPose", &XRFrame::GetJointPose),
                         InstanceMethod("fillPoses", &XRFrame::FillPoses),
                         InstanceMethod("fillJointRadii", &XRFrame::FillJointRadii),
+                        InstanceMethod("getImageTrackingResults", &XRFrame::GetImageTrackingResults),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
                         InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr),
@@ -2312,6 +2313,11 @@ namespace Babylon
                 }
 
                 return Napi::Value::From(info.Env(), true);
+            }
+
+            Napi::Value GetImageTrackingResults (const Napi::CallbackInfo& info)
+            {
+                return info.Env().Undefined();
             }
 
             Napi::Value GetHitTestResults(const Napi::CallbackInfo& info)
