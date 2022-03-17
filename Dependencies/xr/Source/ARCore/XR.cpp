@@ -692,10 +692,10 @@ namespace xr
             {
                 for (int w = 0; w < width; ++w)
                 {
-                    const uint8_t* pixel = &image_pixel_buffer[w * pixelStride + h * stride];
-                    uint8_t r = *pixel;
-                    uint8_t g = *(pixel + 1);
-                    uint8_t b = *(pixel + 2);
+                    const uint8_t* pixel{&image_pixel_buffer[w * pixelStride + h * stride]};
+                    const uint8_t r{*pixel};
+                    const uint8_t g{*(pixel + 1)};
+                    const uint8_t b{*(pixel + 2)};
                     grayscale_buffer[w + h * width] = static_cast<uint8_t>(0.213f * r + 0.715 * g + 0.072 * b);
                 }
             }
@@ -705,7 +705,7 @@ namespace xr
         {
             ArAugmentedImageDatabase_create(xrContext->Session, &augmentedImageDatabase);
             std::vector<std::string> scores{};
-            int32_t trackableImagesCount = 0;
+            int32_t trackableImagesCount{0};
 
             // Loop over each image in the request, and add it to the image database.
             for (System::Session::Frame::ImageTrackingRequest image : requests)
@@ -839,8 +839,8 @@ namespace xr
 
         Frame::ImageTrackingResult& GetImageTrackingResultByID(Frame::ImageTrackingResult::Identifier resultID)
         {
-            auto end = imageTrackingResults.end();
-            auto it = std::find_if(
+            const auto end = imageTrackingResults.end();
+            const auto it = std::find_if(
                 imageTrackingResults.begin(),
                 end,
                 [&](std::unique_ptr<Frame::ImageTrackingResult>& resultPtr) { return resultPtr->ID == resultID; });
@@ -1131,8 +1131,8 @@ namespace xr
 
         Frame::Plane& GetPlaneByID(Frame::Plane::Identifier planeID)
         {
-            auto end = Planes.end();
-            auto it = std::find_if(Planes.begin(), end, [&](Frame::Plane& plane) { return plane.ID == planeID; });
+            const auto end = Planes.end();
+            const auto it = std::find_if(Planes.begin(), end, [&](Frame::Plane& plane) { return plane.ID == planeID; });
 
             if (it != end)
             {

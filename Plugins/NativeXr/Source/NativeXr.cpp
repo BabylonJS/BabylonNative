@@ -2547,10 +2547,10 @@ namespace Babylon
                 // Loop over the list of updated image tracking results, check if they exist in our map if not create them otherwise update them.
                 for (auto imageTrackingResultID : m_frame->UpdatedImageTrackingResults)
                 {
-                    auto trackedImageTrackingResultIterator = m_trackedImageIDToResultMap.find(imageTrackingResultID);
+                    const auto trackedImageTrackingResultIterator{m_trackedImageIDToResultMap.find(imageTrackingResultID)};
 
                     // Get the matching native result
-                    xr::System::Session::Frame::ImageTrackingResult& nativeResult = m_frame->GetImageTrackingResultByID(imageTrackingResultID);
+                    xr::System::Session::Frame::ImageTrackingResult& nativeResult{m_frame->GetImageTrackingResultByID(imageTrackingResultID)};
 
                     // Result does not yet exist, create the JS object and insert it into the map.
                     if (trackedImageTrackingResultIterator == m_trackedImageIDToResultMap.end())
@@ -2561,21 +2561,21 @@ namespace Babylon
                             continue;
                         }
 
-                        auto napiResult = Napi::Object::New(env);
+                        auto napiResult{Napi::Object::New(env)};
                         napiResult.Set("index", Napi::Value::From(env, nativeResult.Index));
                         napiResult.Set("trackingState", Napi::Value::From(env, nativeResult.TrackingState));
                         napiResult.Set("measuredWidthInMeters", Napi::Value::From(env, nativeResult.MeasuredWidthInMeters));
                         napiResult.Set("imageSpace", Napi::External<xr::Space>::New(env, &nativeResult.ImageSpace));
 
-                        auto napiResultRef = Napi::Weak(napiResult);
-                        auto imageTrackingArray = m_imageTrackingResultsArray.Value();
+                        auto napiResultRef{Napi::Weak(napiResult)};
+                        auto imageTrackingArray{m_imageTrackingResultsArray.Value()};
                         imageTrackingArray.Set(imageTrackingArray.Length(), napiResultRef.Value());
                         m_trackedImageIDToResultMap.insert({imageTrackingResultID, std::move(napiResultRef)});
                     }
                     else
                     {
                         // Update the tracked image.
-                        auto napiResult = trackedImageTrackingResultIterator->second.Value().As<Napi::Object>();
+                        auto napiResult{trackedImageTrackingResultIterator->second.Value().As<Napi::Object>()};
                         napiResult.Set("trackingState", Napi::Value::From(env, nativeResult.TrackingState));
                         napiResult.Set("measuredWidthInMeters", Napi::Value::From(env, nativeResult.MeasuredWidthInMeters));
                     }
@@ -2661,19 +2661,19 @@ namespace Babylon
                 auto featureObject = info[1].As<Napi::Object>();
                 if (featureObject.Has("trackedImages"))
                 {
-                    const auto napiTrackedImages = featureObject.Get("trackedImages").As<Napi::Array>();
+                    const auto napiTrackedImages{featureObject.Get("trackedImages").As<Napi::Array>()};
                     session.m_imageTrackingRequests.resize(napiTrackedImages.Length());
 
                     // Create the tracked image buffer.
                     for (uint32_t idx = 0; idx < napiTrackedImages.Length(); idx++)
                     {
-                        const auto napiImageRequest = napiTrackedImages.Get(idx).As<Napi::Object>();
-                        const auto napiImage = napiImageRequest.Get("image").As<Napi::Object>();
-                        const auto napiBuffer = napiImage.Get("data").As<Napi::Uint8Array>();
-                        const uint32_t bufferSize = (uint32_t) napiBuffer.ByteLength();
-                        const uint32_t imageHeight = napiImage.Get("height").ToNumber().Uint32Value();
-                        const uint32_t stride = bufferSize / imageHeight;
-                        const float estimatedWidth = napiImageRequest.Get("widthInMeters").ToNumber().FloatValue();
+                        const auto napiImageRequest{napiTrackedImages.Get(idx).As<Napi::Object>()};
+                        const auto napiImage{napiImageRequest.Get("image").As<Napi::Object>()};
+                        const auto napiBuffer{napiImage.Get("data").As<Napi::Uint8Array>()};
+                        const uint32_t bufferSize{(uint32_t) napiBuffer.ByteLength()};
+                        const uint32_t imageHeight{napiImage.Get("height").ToNumber().Uint32Value()};
+                        const uint32_t stride{bufferSize / imageHeight};
+                        const float estimatedWidth{napiImageRequest.Get("widthInMeters").ToNumber().FloatValue()};
                         session.m_imageTrackingRequests[idx] =
                         {
                             (uint8_t *) napiBuffer.Data(),
@@ -3203,13 +3203,13 @@ namespace Babylon
 
             Napi::Value GetTrackedImageScores(const Napi::CallbackInfo& info)
             {
-                auto results = Napi::Array::New(info.Env(), m_imageTrackingScores.size());
-                int count = 0;
+                auto results{Napi::Array::New(info.Env(), m_imageTrackingScores.size())};
+                uint32_t index{0};
 
                 // Loop over the list of tracked image tracking results, and add them to the array.
                 for (const auto& score : m_imageTrackingScores)
                 {
-                    results.Set(count++, Napi::Value::From(info.Env(), score));
+                    results.Set(index++, Napi::Value::From(info.Env(), score));
                 }
 
                 return std::move(results);
