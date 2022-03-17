@@ -681,22 +681,22 @@ namespace xr
 
         // Converts an image bitmap to grayscale assumes an RGB8 or RGB8A image for use with ARCore.
         void ConvertBitmapToGrayscale(
-            const uint8_t* image_pixel_buffer,
+            const uint8_t* imagePixelBuffer,
             const int32_t width,
             const int32_t height,
             const int32_t stride,
-            uint8_t* grayscale_buffer)
+            uint8_t* grayscaleBuffer)
         {
             const uint32_t pixelStride = stride / width;
             for (int h = 0; h < height; ++h)
             {
                 for (int w = 0; w < width; ++w)
                 {
-                    const uint8_t* pixel{&image_pixel_buffer[w * pixelStride + h * stride]};
+                    const uint8_t* pixel{&imagePixelBuffer[w * pixelStride + h * stride]};
                     const uint8_t r{*pixel};
                     const uint8_t g{*(pixel + 1)};
                     const uint8_t b{*(pixel + 2)};
-                    grayscale_buffer[w + h * width] = static_cast<uint8_t>(0.213f * r + 0.715 * g + 0.072 * b);
+                    grayscaleBuffer[w + h * width] = static_cast<uint8_t>(0.213f * r + 0.715 * g + 0.072 * b);
                 }
             }
         }
@@ -714,7 +714,6 @@ namespace xr
                 ArStatus status{};
                 std::vector<uint8_t> grayscaleBuffer{};
                 grayscaleBuffer.reserve(image.width * image.height);
-                const std::unique_ptr<uint8_t> grayscale_buffer{new uint8_t[image.width * image.height]};
                 ConvertBitmapToGrayscale(image.data, image.width, image.height, image.stride, grayscaleBuffer.data());
 
                 // If an estimated width was provided, send that down to ARCore otherwise add the image with no size.
