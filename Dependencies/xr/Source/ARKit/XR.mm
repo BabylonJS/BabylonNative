@@ -1426,6 +1426,8 @@ namespace xr {
                 // Store the index in the name field.
                 referenceImage.name = [NSString stringWithFormat:@"%zu", i];
                 
+                // Queue image validation
+                // TODO: Consider making this method truly async to unblock XR startup.
                 if (@available(iOS 13.0, *)) {
                     dispatch_group_enter(validationGroup);
                     dispatch_async(validationQueue, ^{
@@ -1455,6 +1457,7 @@ namespace xr {
             // Wait for all scores to calculated.
             dispatch_group_wait(validationGroup, DISPATCH_TIME_FOREVER);
 
+            // If we have any images that qualified for tracking, then enable image detection.
             if (imageCount > 0 && configuration != nil) {
                 configuration.detectionImages = imageSet;
                 configuration.maximumNumberOfTrackedImages = imageCount > 4 ? 4 : imageCount;
