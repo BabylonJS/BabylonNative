@@ -1421,7 +1421,10 @@ namespace xr {
                        CGColorRenderingIntent::kCGRenderingIntentDefault)
                 };
 
-                ARReferenceImage* referenceImage{[[ARReferenceImage alloc] initWithCGImage: image orientation: CGImagePropertyOrientation::kCGImagePropertyOrientationUp physicalWidth: request.measuredWidthInMeters]};
+                ARReferenceImage* referenceImage{[[ARReferenceImage alloc]
+                    initWithCGImage: image
+                    orientation: CGImagePropertyOrientation::kCGImagePropertyOrientationUp
+                    physicalWidth: request.measuredWidthInMeters]};
                 
                 // Store the index in the name field.
                 referenceImage.name = [NSString stringWithFormat:@"%zu", i];
@@ -1460,6 +1463,11 @@ namespace xr {
             // If we have any images that qualified for tracking, then enable image detection.
             if (imageCount > 0 && configuration != nil) {
                 configuration.detectionImages = imageSet;
+                
+                if (@available(iOS 13.0, *)) {
+                    configuration.automaticImageScaleEstimationEnabled = true;
+                }
+
                 configuration.maximumNumberOfTrackedImages = imageCount > 4 ? 4 : imageCount;
                 [SystemImpl.XrContext->Session runWithConfiguration: configuration];
                 [sessionDelegate SetImageDetectionEnabled:true];
@@ -1550,7 +1558,9 @@ namespace xr {
             }
             
             // Update tracking state
-            imageTrackingResult.TrackingState = Frame::ImageTrackingState::TRACKED;
+            imageTrackingResult.TrackingState = imageAnchor.isTracked
+                ? Frame::ImageTrackingState::TRACKED
+                : Frame::ImageTrackingState::EMULATED;
             updatedImageTrackingResults.push_back(imageTrackingResult.ID);
         }
 
