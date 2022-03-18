@@ -1387,13 +1387,18 @@ namespace xr {
         }
         
         std::vector<std::string> CreateAugmentedImageDatabase(const std::vector<Frame::ImageTrackingRequest>& requests) {
-            std::vector<std::string> scores{};
-            uint32_t imageCount{0};
+            __block std::vector<std::string> scores{};
+            scores.resize(requests.size());
+            __block uint32_t imageCount{0};
+            __block NSMutableSet<ARReferenceImage*>* imageSet{[NSMutableSet<ARReferenceImage*> setWithCapacity:requests.size()]};
             
             // Convert each image request from a bitmap to a CGImage, and prepare to pass that to the ARKit configuration.
             ARWorldTrackingConfiguration* configuration{static_cast<ARWorldTrackingConfiguration*>(SystemImpl.XrContext->Session.configuration)};
-            NSMutableSet<ARReferenceImage*>* imageSet{[NSMutableSet<ARReferenceImage*> setWithCapacity:requests.size()]};
             
+            // Create a dispatch group for the validation tasks.
+            dispatch_queue_t validationQueue = dispatch_queue_create("Image Validation Queue", nil);
+            dispatch_group_t validationGroup = dispatch_group_create();
+                                    
             for (size_t i{0}; i < requests.size(); i++) {
                 const Frame::ImageTrackingRequest& request{requests[i]};
                 // Create the AR Reference image.
@@ -1421,23 +1426,38 @@ namespace xr {
                 // Store the index in the name field.
                 referenceImage.name = [NSString stringWithFormat:@"%zu", i];
                 
-                // TODO: Should call validate asynchronously here to validate image.
                 if (@available(iOS 13.0, *)) {
-                    [referenceImage validateWithCompletionHandler:^(NSError * _Nullable error) {
-                        if (error != nullptr) {
-                            throw error;
-                        }
-                    }];
+                    dispatch_group_enter(validationGroup);
+                    dispatch_async(validationQueue, ^{
+                        [referenceImage validateWithCompletionHandler:^(NSError * _Nullable error) {
+                            if (error != nil) {
+                                scores[i] = Frame::ImageTrackingScore::UNTRACKABLE;
+                            } else {
+                                scores[i] = Frame::ImageTrackingScore::TRACKABLE;
+                                
+                                // Add image to our image set if it is trackable.
+                                [imageSet addObject: referenceImage];
+                                imageCount++;
+                            }
+                            
+                            dispatch_group_leave(validationGroup);
+                        }];
+                    });
+                } else {
+                    scores.at(i) = Frame::ImageTrackingScore::TRACKABLE;
                 }
                 
-                // Add image to our image set.
-                [imageSet addObject: referenceImage];
-                scores.push_back(Frame::ImageTrackingScore::TRACKABLE);
-                imageCount++;
+                CGImageRelease(image);
+                CGDataProviderRelease(provider);
+                CGColorSpaceRelease(colorSpace);
             }
-                       
+            
+            // Wait for all scores to calculated.
+            dispatch_group_wait(validationGroup, DISPATCH_TIME_FOREVER);
+
             if (imageCount > 0 && configuration != nil) {
                 configuration.detectionImages = imageSet;
+                configuration.maximumNumberOfTrackedImages = imageCount > 4 ? 4 : imageCount;
                 [SystemImpl.XrContext->Session runWithConfiguration: configuration];
                 [sessionDelegate SetImageDetectionEnabled:true];
             }
