@@ -27,7 +27,7 @@
 namespace
 {
     std::unique_ptr<Babylon::Graphics::Device> g_device{};
-    std::unique_ptr<Babylon::Graphics::DeviceUpdate> g_update{};
+    std::unique_ptr<Babylon::Graphics::DeviceUpdate> g_deviceUpdate{};
     std::unique_ptr<Babylon::AppRuntime> g_runtime{};
     std::unique_ptr<Babylon::Plugins::ChromeDevTools> g_chromeDevTools{};
     Babylon::Plugins::NativeInput* g_nativeInput{};
