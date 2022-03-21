@@ -679,7 +679,8 @@ namespace xr
             }
         }
 
-        // Converts an image bitmap to grayscale assumes an RGB8 or RGB8A image for use with ARCore.
+        // Converts an image bitmap to grayscale.
+        // Supported image formats: RBG(A)8, RGB(A)16, 16-bit grayscale.
         void ConvertBitmapToGrayscale(
             const uint8_t* imagePixelBuffer,
             const int32_t width,
@@ -693,10 +694,34 @@ namespace xr
                 for (int w = 0; w < width; ++w)
                 {
                     const uint8_t* pixel{&imagePixelBuffer[w * pixelStride + h * stride]};
-                    const uint8_t r{*pixel};
-                    const uint8_t g{*(pixel + 1)};
-                    const uint8_t b{*(pixel + 2)};
-                    grayscaleBuffer[w + h * width] = static_cast<uint8_t>(0.213f * r + 0.715 * g + 0.072 * b);
+
+                    if (pixelStride == 2)
+                    {
+                        // 16-bit grayscale
+                        const uint16_t* pixel16{reinterpret_cast<const uint16_t *>(pixel)};
+                        grayscaleBuffer[w + h * width] = *pixel16 / 257;
+                    }
+                    else if (pixelStride == 4 || pixelStride == 3)
+                    {
+                        // RGB8/RGBA8
+                        const uint8_t r{*pixel};
+                        const uint8_t g{*(pixel + 1)};
+                        const uint8_t b{*(pixel + 2)};
+                        grayscaleBuffer[w + h * width] = static_cast<uint8_t>(0.213f * r +
+                            0.715 * g +
+                            0.072 * b);
+                    }
+                    else if (pixelStride == 6 || pixelStride == 8)
+                    {
+                        // RGB16/RGBA16
+                        const uint16_t* pixel16{reinterpret_cast<const uint16_t *>(pixel)};
+                        const uint8_t r{static_cast<uint8_t>(*pixel16 / 257)};
+                        const uint8_t g{static_cast<uint8_t>(*(pixel16 + 1) / 257)};
+                        const uint16_t b{static_cast<uint8_t>(*(pixel16 + 2) / 257)};
+                        grayscaleBuffer[w + h * width] = static_cast<uint8_t>(0.213f * r +
+                            0.715 * g +
+                            0.072 * b);
+                    }
                 }
             }
         }
@@ -722,8 +747,12 @@ namespace xr
                 int32_t index{0};
                 ArStatus status{};
                 std::vector<uint8_t> grayscaleBuffer{};
-                grayscaleBuffer.reserve(image.width * image.height);
-                ConvertBitmapToGrayscale(image.data, image.width, image.height, image.stride, grayscaleBuffer.data());
+                if (image.width != image.stride)
+                {
+                    grayscaleBuffer.reserve(image.width * image.height);
+                    ConvertBitmapToGrayscale(image.data, image.width, image.height, image.stride,
+                         grayscaleBuffer.data());
+                }
 
                 // If an estimated width was provided, send that down to ARCore otherwise add the image with no size.
                 if (image.measuredWidthInMeters > 0)
@@ -732,7 +761,7 @@ namespace xr
                         xrContext->Session,
                         augmentedImageDatabase,
                         "",
-                        grayscaleBuffer.data(),
+                        image.width == image.stride ? image.data : grayscaleBuffer.data(),
                         image.width,
                         image.height,
                         image.width,
@@ -745,7 +774,7 @@ namespace xr
                         xrContext->Session,
                         augmentedImageDatabase,
                         "",
-                        grayscaleBuffer.data(),
+                        image.width == image.stride ? image.data : grayscaleBuffer.data(),
                         image.width,
                         image.height,
                         image.width,
