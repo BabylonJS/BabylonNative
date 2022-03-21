@@ -33,10 +33,11 @@ namespace Babylon::Plugins
         auto height = m_height;
         auto format = m_format;
         auto mips = m_mips;
+        auto flags = m_flags;
 
-        arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(), [&context, &runtime, deferred{std::move(deferred)}, width, height, format, mips, nativeHandler]()
+        arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(), [&context, &runtime, deferred{std::move(deferred)}, width, height, format, mips, flags, nativeHandler]()
         {
-            auto textureHandle = bgfx::createTexture2D(static_cast<uint16_t>(width), static_cast<uint16_t>(height), mips != 1, 1, static_cast<bgfx::TextureFormat::Enum>(format), BGFX_TEXTURE_RT);
+            auto textureHandle = bgfx::createTexture2D(static_cast<uint16_t>(width), static_cast<uint16_t>(height), mips != 1, 1, static_cast<bgfx::TextureFormat::Enum>(format), flags);
 
             arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&context, &runtime, deferred{std::move(deferred)}, textureHandle, width, height, format, mips, nativeHandler]()
             {

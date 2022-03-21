@@ -26,6 +26,7 @@ namespace Babylon::Plugins
         uint32_t m_height{};
         uint32_t m_mips{};
         uint32_t m_format{};
+        uint64_t m_flags{};
 
         void ReadPropertiesFromNativeTexture(Babylon::Graphics::TextureType nativeTexture);
     };

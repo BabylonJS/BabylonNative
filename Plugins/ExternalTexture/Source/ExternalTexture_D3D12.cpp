@@ -10,20 +10,29 @@
 namespace Babylon::Plugins
 {
     //For refrence see renderer_d3d12.cpp line 187.
-    bgfx::TextureFormat::Enum NativeToBGFXImageFormat(DXGI_FORMAT format)
+    bgfx::TextureFormat::Enum NativeToBGFXImageFormat(DXGI_FORMAT format, uint64_t& flags)
     {
         switch (format)
         {
             case DXGI_FORMAT_BC1_UNORM:
+                return bgfx::TextureFormat::Enum::BC1;
+
             case DXGI_FORMAT_BC1_UNORM_SRGB:
+                flags |= BGFX_TEXTURE_SRGB;
                 return bgfx::TextureFormat::Enum::BC1;
 
             case DXGI_FORMAT_BC2_UNORM:
+                return bgfx::TextureFormat::Enum::BC2;
+
             case DXGI_FORMAT_BC2_UNORM_SRGB:
+                flags |= BGFX_TEXTURE_SRGB;
                 return bgfx::TextureFormat::Enum::BC2;
 
             case DXGI_FORMAT_BC3_UNORM:
+                return bgfx::TextureFormat::Enum::BC3;
+
             case DXGI_FORMAT_BC3_UNORM_SRGB:
+                flags |= BGFX_TEXTURE_SRGB;
                 return bgfx::TextureFormat::Enum::BC3;
 
             case DXGI_FORMAT_BC4_UNORM:
@@ -35,8 +44,11 @@ namespace Babylon::Plugins
             case DXGI_FORMAT_BC6H_SF16:
                 return bgfx::TextureFormat::Enum::BC6H; 
             
-            case DXGI_FORMAT_BC7_UNORM_SRGB:
             case DXGI_FORMAT_BC7_UNORM:
+                flags |= BGFX_TEXTURE_SRGB;
+                return bgfx::TextureFormat::Enum::BC7;
+
+            case DXGI_FORMAT_BC7_UNORM_SRGB:
                 return bgfx::TextureFormat::Enum::BC7;
 
             case DXGI_FORMAT_R1_UNORM:
@@ -182,9 +194,11 @@ namespace Babylon::Plugins
     void ExternalTexture::ReadPropertiesFromNativeTexture(Babylon::Graphics::TextureType nativeTexture) 
     {
         D3D12_RESOURCE_DESC  desc =  nativeTexture->GetDesc();
-        m_format = NativeToBGFXImageFormat(desc.Format);
+        uint64_t flags = 0Ui64;
+        m_format = NativeToBGFXImageFormat(desc.Format, flags);
         m_height = static_cast<uint32_t>(desc.Height);
         m_width = static_cast<uint32_t>(desc.Width);
         m_mips = static_cast<uint32_t>(desc.MipLevels);
+        m_flags = flags;
     }
 }
