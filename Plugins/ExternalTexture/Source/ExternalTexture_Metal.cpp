@@ -1,5 +1,5 @@
 #include <Babylon/Graphics/Device.h>
-#include <Babylon/GraphicsInterops/ExternalTexture.h>
+#include <Babylon/Plugins/ExternalTexture/ExternalTexture.h>
 #include <Babylon/Graphics/RendererType.h>
 #include <Babylon/Graphics/Texture.h>
 #include <Babylon/Graphics/DeviceContext.h>
@@ -7,9 +7,9 @@
 #include <napi/env.h>
 #include <napi/napi_pointer.h>
 
-namespace Babylon::Graphics
+namespace Babylon::Plugins
 {
-    void ExternalTexture::ReadPropertiesFromNativeTexture(TextureType) 
+    void ExternalTexture::ReadPropertiesFromNativeTexture(Babylon::Graphics::TextureType) 
     {
         //TODO: Add support for Metal external textures.
         throw std::runtime_error{"External textures is not currenlty supported for Metal."};

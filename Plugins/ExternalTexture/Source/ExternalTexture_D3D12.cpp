@@ -1,5 +1,5 @@
 #include <Babylon/Graphics/Device.h>
-#include <Babylon/GraphicsInterops/ExternalTexture.h>
+#include <Babylon/Plugins/ExternalTexture/ExternalTexture.h>
 #include <Babylon/Graphics/RendererType.h>
 #include <Babylon/Graphics/Texture.h>
 #include <Babylon/Graphics/DeviceContext.h>
@@ -7,7 +7,7 @@
 #include <napi/env.h>
 #include <napi/napi_pointer.h>
 
-namespace Babylon::Graphics
+namespace Babylon::Plugins
 {
     //For refrence see renderer_d3d12.cpp line 187.
     bgfx::TextureFormat::Enum NativeToBGFXImageFormat(DXGI_FORMAT format)
@@ -179,7 +179,7 @@ namespace Babylon::Graphics
         }
     }
 
-    void ExternalTexture::ReadPropertiesFromNativeTexture(TextureType nativeTexture) 
+    void ExternalTexture::ReadPropertiesFromNativeTexture(Babylon::Graphics::TextureType nativeTexture) 
     {
         D3D12_RESOURCE_DESC  desc =  nativeTexture->GetDesc();
         m_format = NativeToBGFXImageFormat(desc.Format);

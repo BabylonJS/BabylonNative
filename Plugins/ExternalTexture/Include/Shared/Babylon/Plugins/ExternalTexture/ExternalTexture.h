@@ -2,17 +2,16 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Graphics/Platform.h>
 #include <Babylon/Graphics/RendererType.h>
-#include <Babylon/Graphics/Device.h>
 
 #include <future>
 #include <memory>
 
-namespace Babylon::Graphics
+namespace Babylon::Plugins
 {
     class ExternalTexture
     {
     public:
-        ExternalTexture(TextureType nativeTexture);
+        ExternalTexture(Babylon::Graphics::TextureType nativeTexture);
         ~ExternalTexture();
 
         Napi::Promise AddToContext(Napi::Env&);
@@ -28,6 +27,6 @@ namespace Babylon::Graphics
         uint32_t m_mips{};
         uint32_t m_format{};
 
-        void ReadPropertiesFromNativeTexture(TextureType nativeTexture);
+        void ReadPropertiesFromNativeTexture(Babylon::Graphics::TextureType nativeTexture);
     };
 }

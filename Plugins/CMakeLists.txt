@@ -25,3 +25,6 @@ add_subdirectory(NativeTracing)
 
 # Add TestUtils
 add_subdirectory(TestUtils)
+
+# Add ExternalTexture 
+add_subdirectory(ExternalTexture)

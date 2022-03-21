@@ -12,28 +12,27 @@ else()
 endif()
 
 set(SOURCES
-    "Include/Shared/Babylon/GraphicsInterops/ExternalTexture.h"
+    "Include/Shared/Babylon/Plugins/ExternalTexture/ExternalTexture.h"
     "Source/ExternalTexture_${GRAPHICS_API}.cpp"
     "Source/ExternalTexture.cpp")
 
-add_library(GraphicsInterops ${SOURCES})
-warnings_as_errors(GraphicsInterops)
+add_library(ExternalTexture ${SOURCES})
+warnings_as_errors(ExternalTexture)
 
-target_include_directories(GraphicsInterops
+target_include_directories(ExternalTexture
     PUBLIC "Include/Shared"
-    PRIVATE "Source"
-    PRIVATE "Include/RendererType/${GRAPHICS_API}")
+    PRIVATE "Source")
 
 if(WIN32 AND NOT WINDOWS_STORE)
-    target_link_to_dependencies(GraphicsInterops
+    target_link_to_dependencies(ExternalTexture
         PRIVATE "shlwapi.lib")
 elseif(ANDROID)
-    target_link_to_dependencies(GraphicsInterops
+    target_link_to_dependencies(ExternalTexture
         PRIVATE android
         PRIVATE AndroidExtensions)
 endif()
 
-target_link_to_dependencies(GraphicsInterops
+target_link_to_dependencies(ExternalTexture
     PRIVATE napi_extensions
     PRIVATE JsRuntime
     PRIVATE JsRuntimeInternal
@@ -44,14 +43,14 @@ target_link_to_dependencies(GraphicsInterops
     PRIVATE bimg
     PRIVATE bx)
 
-target_compile_definitions(GraphicsInterops
+target_compile_definitions(ExternalTexture
     PRIVATE NOMINMAX
     PRIVATE ${GRAPHICS_API_UPPER})
 
-set_property(TARGET GraphicsInterops PROPERTY FOLDER Core)
+set_property(TARGET ExternalTexture PROPERTY FOLDER Core)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
 if(APPLE)
     # compile as objc++
-    target_compile_options(GraphicsInterops PUBLIC "SHELL:-x objective-c++")
+    target_compile_options(ExternalTexture PUBLIC "SHELL:-x objective-c++")
 endif()
