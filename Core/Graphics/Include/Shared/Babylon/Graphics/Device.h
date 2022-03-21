@@ -53,8 +53,6 @@ namespace Babylon::Graphics
 
     class Device
     {
-        class Impl;
-
     public:
         
         ~Device();
@@ -97,6 +95,7 @@ namespace Babylon::Graphics
 
         float UpdateDevicePixelRatio();
 
+        class Impl;
         std::unique_ptr<Impl> m_impl{};
     };
 }
