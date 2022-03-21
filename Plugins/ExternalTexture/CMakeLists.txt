@@ -1,16 +1,3 @@
-if(WINDOWS_STORE)
-    if(BABYLON_NATIVE_USE_SWAPCHAINPANEL)
-        set(PLATFORM_NAME ${BABYLON_NATIVE_PLATFORM}_SwapChainPanel)
-        set(PLATFORM_PATH ${BABYLON_NATIVE_PLATFORM}/SwapChainPanel)
-    else()
-        set(PLATFORM_NAME ${BABYLON_NATIVE_PLATFORM}_CoreWindow)
-        set(PLATFORM_PATH ${BABYLON_NATIVE_PLATFORM}/CoreWindow)
-    endif()
-else()
-    set(PLATFORM_NAME ${BABYLON_NATIVE_PLATFORM})
-    set(PLATFORM_PATH ${BABYLON_NATIVE_PLATFORM})
-endif()
-
 set(SOURCES
     "Include/Shared/Babylon/Plugins/ExternalTexture/ExternalTexture.h"
     "Source/ExternalTexture_${GRAPHICS_API}.cpp"
@@ -49,8 +36,3 @@ target_compile_definitions(ExternalTexture
 
 set_property(TARGET ExternalTexture PROPERTY FOLDER Core)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
-
-if(APPLE)
-    # compile as objc++
-    target_compile_options(ExternalTexture PUBLIC "SHELL:-x objective-c++")
-endif()
