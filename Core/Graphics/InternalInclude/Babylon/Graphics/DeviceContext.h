@@ -74,7 +74,7 @@ namespace Babylon::Graphics
     class DeviceContext
     {
     public:
-        // TODO: Move this to private a ssoon as the GraphicsImpl no longer owns and needs to create a DeviceContext
+        // TODO: Move this to private a soon as the GraphicsImpl no longer owns and needs to create a DeviceContext
         DeviceContext(DeviceImpl&);
 
         // TODO: Deprecated: this is included only as a stopgap during feature integration and will not function long-term
