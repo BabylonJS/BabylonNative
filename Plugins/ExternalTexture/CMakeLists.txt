@@ -21,9 +21,9 @@ endif()
 
 target_link_to_dependencies(ExternalTexture
     PRIVATE napi_extensions
-    PRIVATE JsRuntime
+    PUBLIC JsRuntime
+    PUBLIC GraphicsDevice
     PRIVATE JsRuntimeInternal
-    PRIVATE GraphicsDevice
     PRIVATE GraphicsDeviceContext
     PRIVATE Graphics
     PRIVATE bgfx
