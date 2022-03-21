@@ -300,7 +300,7 @@ namespace xr
                 
                 struct ImageTrackingRequest
                 {
-                    uint8_t* data{nullptr};
+                    const uint8_t* data{nullptr};
                     uint32_t width{0};
                     uint32_t height{0};
                     uint32_t depth{0};
@@ -354,7 +354,7 @@ namespace xr
                 ~Frame();
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray, HitTestTrackableType) const;
-                std::vector<std::string> CreateAugmentedImageDatabase(std::vector<ImageTrackingRequest>&) const;
+                std::vector<std::string> CreateAugmentedImageDatabase(const std::vector<ImageTrackingRequest>&) const;
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 Anchor DeclareAnchor(NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;

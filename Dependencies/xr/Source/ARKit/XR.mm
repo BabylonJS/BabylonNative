@@ -1574,7 +1574,7 @@ namespace xr {
     }
 
     System::Session::Frame::ImageTrackingResult& System::Session::Frame::GetImageTrackingResultByID(System::Session::Frame::ImageTrackingResult::Identifier) const {
-        throw std::runtime_error("not implemented");
+        throw std::runtime_error("Image tracking not supported");
     }
 
     System::Session::Frame::Mesh& System::Session::Frame::GetMeshByID(System::Session::Frame::Mesh::Identifier meshID) const {
@@ -1669,7 +1669,7 @@ namespace xr {
         return false;
     }
 
-    std::vector<std::string> System::Session::Frame::CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingRequest>&) const
+    std::vector<std::string> System::Session::Frame::CreateAugmentedImageDatabase(const std::vector<System::Session::Frame::ImageTrackingRequest>&) const
     {
         throw std::runtime_error("Image tracking not supported");
     }

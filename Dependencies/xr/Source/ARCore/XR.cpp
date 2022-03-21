@@ -1341,7 +1341,7 @@ namespace xr
         m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay, trackableTypes);
     }
 
-    std::vector<std::string> System::Session::Frame::CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingRequest>& bitmaps) const
+    std::vector<std::string> System::Session::Frame::CreateAugmentedImageDatabase(const std::vector<System::Session::Frame::ImageTrackingRequest>& bitmaps) const
     {
         return m_impl->sessionImpl.CreateAugmentedImageDatabase(bitmaps);
     }

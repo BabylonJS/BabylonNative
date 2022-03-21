@@ -2667,19 +2667,24 @@ namespace Babylon
                     // Create the tracked image buffer.
                     for (uint32_t idx = 0; idx < napiTrackedImages.Length(); idx++)
                     {
+                        // Pull out native values from the JS object.
                         const auto napiImageRequest{napiTrackedImages.Get(idx).As<Napi::Object>()};
                         const auto napiImage{napiImageRequest.Get("image").As<Napi::Object>()};
                         const auto napiBuffer{napiImage.Get("data").As<Napi::Uint8Array>()};
                         const uint32_t bufferSize{(uint32_t) napiBuffer.ByteLength()};
                         const uint32_t imageHeight{napiImage.Get("height").ToNumber().Uint32Value()};
+                        const uint32_t imageWidth{napiImage.Get("width").ToNumber().Uint32Value()};
+                        const uint32_t imageDepth{napiImage.Get("depth").ToNumber().Uint32Value()};
                         const uint32_t stride{bufferSize / imageHeight};
                         const float estimatedWidth{napiImageRequest.Get("widthInMeters").ToNumber().FloatValue()};
+
+                        // Construct the image tracking request object.
                         session.m_imageTrackingRequests[idx] =
                         {
-                            (uint8_t *) napiBuffer.Data(),
-                            napiImage.Get("width").ToNumber().Uint32Value(),
+                            napiBuffer.Data(),
+                            imageWidth,
                             imageHeight,
-                            napiImage.Get("depth").ToNumber().Uint32Value(),
+                            imageDepth,
                             stride,
                             estimatedWidth
                         };
