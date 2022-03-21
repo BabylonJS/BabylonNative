@@ -391,6 +391,14 @@ namespace Babylon
             {
                 return m_sessionState->Session->TrySetPreferredMeshDetectorOptions(options);
             }
+            
+            std::vector<std::string>* GetImageTrackingScores() {
+                return m_sessionState->Session->GetImageTrackingScores();
+            }
+            
+            void CreateAugmentedImageDatabase(const std::vector<xr::System::Session::ImageTrackingRequest>& requests) {
+                return m_sessionState->Session->CreateAugmentedImageDatabase(requests);
+            }
 
             uintptr_t GetNativeXrContext()
             {
@@ -2211,11 +2219,6 @@ namespace Babylon
                 return m_sceneObjects.at(objectID).Value();
             }
 
-            std::vector<std::string> CreateAugmentedImageDatabase(std::vector<xr::System::Session::Frame::ImageTrackingRequest>& bitmaps)
-            {
-                return m_frame->CreateAugmentedImageDatabase(bitmaps);
-            }
-
         private:
             const xr::System::Session::Frame* m_frame{};
             Napi::ObjectReference m_jsXRViewerPose{};
@@ -2696,7 +2699,6 @@ namespace Babylon
                             }
                             else
                             {
-                                // If tracked images are given, initialize image tracking.
                                 deferred.Resolve(jsSession.Value());
                             }
                         });
@@ -2772,8 +2774,7 @@ namespace Babylon
             std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSelects{};
             std::vector<xr::System::Session::Frame::InputSource::Identifier> m_activeSqueezes{};
 
-            std::vector<xr::System::Session::Frame::ImageTrackingRequest> m_imageTrackingRequests{};
-            std::vector<std::string> m_imageTrackingScores{};
+            std::vector<xr::System::Session::ImageTrackingRequest> m_imageTrackingRequests{};
 
             Napi::Value GetInputSources(const Napi::CallbackInfo& /*info*/)
             {
@@ -3010,9 +3011,9 @@ namespace Babylon
 
                     m_xrFrame.Update(Env(), frame, m_timestamp);
 
-                    if (m_imageTrackingRequests.size() > 0 && m_imageTrackingScores.size() == 0) {
+                    if (m_imageTrackingRequests.size() > 0) {
                         // Create the image database
-                        m_imageTrackingScores = m_xrFrame.CreateAugmentedImageDatabase(m_imageTrackingRequests);
+                        m_xr->CreateAugmentedImageDatabase(m_imageTrackingRequests);
 
                         // Clean up image tracking requests
                         m_imageTrackingRequests.clear();
@@ -3203,11 +3204,16 @@ namespace Babylon
 
             Napi::Value GetTrackedImageScores(const Napi::CallbackInfo& info)
             {
-                auto results{Napi::Array::New(info.Env(), m_imageTrackingScores.size())};
+                std::vector<std::string>* imageTrackingScores{m_xr->GetImageTrackingScores()};
+                if (imageTrackingScores == nullptr) {
+                    return info.Env().Undefined();
+                }
+                
+                auto results{Napi::Array::New(info.Env(), imageTrackingScores->size())};
                 uint32_t index{0};
 
                 // Loop over the list of tracked image tracking results, and add them to the array.
-                for (const auto& score : m_imageTrackingScores)
+                for (const auto& score : *imageTrackingScores)
                 {
                     results.Set(index++, Napi::Value::From(info.Env(), score));
                 }

@@ -190,6 +190,16 @@ namespace xr
             struct Impl;
 
         public:
+            struct ImageTrackingRequest
+            {
+                uint8_t* data{nullptr};
+                uint32_t width{0};
+                uint32_t height{0};
+                uint32_t depth{0};
+                uint32_t stride{0};
+                float measuredWidthInMeters{0.0};
+            };
+
             class Frame
             {
             public:
@@ -298,16 +308,6 @@ namespace xr
                     static inline Identifier NEXT_ID{ 0 };
                 };
                 
-                struct ImageTrackingRequest
-                {
-                    uint8_t* data{nullptr};
-                    uint32_t width{0};
-                    uint32_t height{0};
-                    uint32_t depth{0};
-                    uint32_t stride{0};
-                    float measuredWidthInMeters{0.0};
-                };
-
                 struct ImageTrackingResult
                 {
                     using Identifier = size_t;
@@ -354,7 +354,6 @@ namespace xr
                 ~Frame();
 
                 void GetHitTestResults(std::vector<HitResult>&, Ray, HitTestTrackableType) const;
-                std::vector<std::string> CreateAugmentedImageDatabase(std::vector<ImageTrackingRequest>&) const;
                 Anchor CreateAnchor(Pose, NativeAnchorPtr) const;
                 Anchor DeclareAnchor(NativeAnchorPtr) const;
                 void UpdateAnchor(Anchor&) const;
@@ -385,7 +384,9 @@ namespace xr
             bool TrySetPreferredPlaneDetectorOptions(const GeometryDetectorOptions& options);
             bool TrySetMeshDetectorEnabled(const bool enabled);
             bool TrySetPreferredMeshDetectorOptions(const GeometryDetectorOptions& options);
-
+            
+            std::vector<std::string>* GetImageTrackingScores() const;
+            void CreateAugmentedImageDatabase(const std::vector<ImageTrackingRequest>&) const;
         private:
             std::unique_ptr<Impl> m_impl{};
         };
