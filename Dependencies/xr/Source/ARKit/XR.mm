@@ -1669,7 +1669,12 @@ namespace xr {
         return false;
     }
 
-    std::vector<std::string> System::Session::Frame::CreateAugmentedImageDatabase(const std::vector<System::Session::Frame::ImageTrackingRequest>&) const
+    std::vector<std::string>* System::Session::GetImageTrackingScores() const
+    {
+        throw std::runtime_error("Image tracking not supported");
+    }
+
+    void System::Session::CreateAugmentedImageDatabase(const std::vector<System::Session::ImageTrackingRequest>&) const
     {
         throw std::runtime_error("Image tracking not supported");
     }

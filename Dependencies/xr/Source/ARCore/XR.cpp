@@ -701,14 +701,23 @@ namespace xr
             }
         }
 
-        std::vector<std::string> CreateAugmentedImageDatabase(const std::vector<System::Session::Frame::ImageTrackingRequest>& requests)
+        std::vector<std::string>* GetImageTrackingScores()
+        {
+            if (imageTrackingScoresValid)
+            {
+                return &imageTrackingScores;
+            }
+
+            return nullptr;
+        }
+
+        void CreateAugmentedImageDatabase(const std::vector<System::Session::ImageTrackingRequest>& requests)
         {
             ArAugmentedImageDatabase_create(xrContext->Session, &augmentedImageDatabase);
-            std::vector<std::string> scores{};
             int32_t trackableImagesCount{0};
 
             // Loop over each image in the request, and add it to the image database.
-            for (System::Session::Frame::ImageTrackingRequest image : requests)
+            for (System::Session::ImageTrackingRequest image : requests)
             {
                 int32_t index{0};
                 ArStatus status{};
@@ -746,11 +755,11 @@ namespace xr
                 if (status == AR_SUCCESS)
                 {
                     trackableImagesCount++;
-                    scores.push_back(System::Session::Frame::ImageTrackingScore::TRACKABLE);
+                    imageTrackingScores.push_back(System::Session::Frame::ImageTrackingScore::TRACKABLE);
                 }
                 else
                 {
-                    scores.push_back(System::Session::Frame::ImageTrackingScore::UNTRACKABLE);
+                    imageTrackingScores.push_back(System::Session::Frame::ImageTrackingScore::UNTRACKABLE);
                 }
             }
 
@@ -776,7 +785,7 @@ namespace xr
                 ArConfig_destroy(arConfig);
             }
 
-            return scores;
+            imageTrackingScoresValid = true;
         }
 
         void UpdateImageTrackingResults(std::vector<Frame::ImageTrackingResult::Identifier>& updatedResults)
@@ -1162,10 +1171,13 @@ namespace xr
         std::vector<ArAnchor*> arCoreAnchors{};
         std::vector<float> planePolygonBuffer{};
         std::unordered_map<ArPlane*, Frame::Plane::Identifier> planeMap{};
-        std::vector<std::unique_ptr<Frame::ImageTrackingResult>> imageTrackingResults{};
-        std::unordered_map<ArAugmentedImage*, Frame::ImageTrackingResult::Identifier> imageTrackingResultsMap{};
         std::unordered_map<int32_t, FeaturePoint::Identifier> featurePointIDMap{};
         FeaturePoint::Identifier nextFeaturePointID{};
+
+        bool imageTrackingScoresValid{false};
+        std::vector<std::string> imageTrackingScores{};
+        std::vector<std::unique_ptr<Frame::ImageTrackingResult>> imageTrackingResults{};
+        std::unordered_map<ArAugmentedImage*, Frame::ImageTrackingResult::Identifier> imageTrackingResultsMap{};
 
         std::function<ANativeWindow*()> windowProvider{};
         ANativeWindow* window{};
@@ -1339,11 +1351,6 @@ namespace xr
     void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const
     {
         m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay, trackableTypes);
-    }
-
-    std::vector<std::string> System::Session::Frame::CreateAugmentedImageDatabase(const std::vector<System::Session::Frame::ImageTrackingRequest>& bitmaps) const
-    {
-        return m_impl->sessionImpl.CreateAugmentedImageDatabase(bitmaps);
     }
 
     Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr trackable) const
@@ -1534,5 +1541,15 @@ namespace xr
     {
         // TODO
         return false;
+    }
+
+    std::vector<std::string>* System::Session::GetImageTrackingScores() const
+    {
+        return m_impl->GetImageTrackingScores();
+    }
+
+    void System::Session::CreateAugmentedImageDatabase(const std::vector<System::Session::ImageTrackingRequest>& bitmaps) const
+    {
+        return m_impl->CreateAugmentedImageDatabase(bitmaps);
     }
 }
