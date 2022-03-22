@@ -14,7 +14,7 @@ namespace Babylon::Plugins
         ExternalTexture(Babylon::Graphics::TextureType nativeTexture);
         ~ExternalTexture();
 
-        Napi::Promise AddToContext(Napi::Env&);
+        Napi::Promise AddToContext(Napi::Env&) const;
 
         uint32_t GetWidth();
         uint32_t GetHeight();
