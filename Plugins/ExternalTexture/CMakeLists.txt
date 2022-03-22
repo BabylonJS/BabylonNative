@@ -10,15 +10,6 @@ target_include_directories(ExternalTexture
     PUBLIC "Include/Shared"
     PRIVATE "Source")
 
-if(WIN32 AND NOT WINDOWS_STORE)
-    target_link_to_dependencies(ExternalTexture
-        PRIVATE "shlwapi.lib")
-elseif(ANDROID)
-    target_link_to_dependencies(ExternalTexture
-        PRIVATE android
-        PRIVATE AndroidExtensions)
-endif()
-
 target_link_to_dependencies(ExternalTexture
     PRIVATE napi_extensions
     PUBLIC JsRuntime
