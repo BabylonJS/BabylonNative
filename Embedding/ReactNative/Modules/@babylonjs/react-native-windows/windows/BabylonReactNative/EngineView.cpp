@@ -64,8 +64,8 @@ namespace winrt::BabylonReactNative::implementation {
         const auto properties = point.Properties();
         const auto deviceType = point.PointerDevice().PointerDeviceType();
         const auto position = point.Position();
-        const uint32_t x = position.X < 0 ? 0 : static_cast<uint32_t>(position.X);
-        const uint32_t y = position.Y < 0 ? 0 : static_cast<uint32_t>(position.Y);
+        const int32_t x = static_cast<int32_t>(position.X);
+        const int32_t y = static_cast<int32_t>(position.Y);
         const auto pointerId = point.PointerId();
 
         if (!_inputSource.HasCapture())
@@ -106,8 +106,8 @@ namespace winrt::BabylonReactNative::implementation {
         const auto point = args.CurrentPoint();
         const auto deviceType = point.PointerDevice().PointerDeviceType();
         const auto position = point.Position();
-        const uint32_t x = position.X < 0 ? 0 : static_cast<uint32_t>(position.X);
-        const uint32_t y = position.Y < 0 ? 0 : static_cast<uint32_t>(position.Y);
+        const int32_t x = static_cast<int32_t>(position.X);
+        const int32_t y = static_cast<int32_t>(position.Y);
 
         if (deviceType == PointerDeviceType::Mouse)
         {
@@ -126,8 +126,8 @@ namespace winrt::BabylonReactNative::implementation {
         const auto properties = point.Properties();
         const auto deviceType = point.PointerDevice().PointerDeviceType();
         const auto position = point.Position();
-        const uint32_t x = position.X < 0 ? 0 : static_cast<uint32_t>(position.X);
-        const uint32_t y = position.Y < 0 ? 0 : static_cast<uint32_t>(position.Y);
+        const int32_t x = static_cast<int32_t>(position.X);
+        const int32_t y = static_cast<int32_t>(position.Y);
         const auto pointerId = point.PointerId();
 
         _pressedPointers.erase(pointerId);

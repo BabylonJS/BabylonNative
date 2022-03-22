@@ -31,10 +31,10 @@ namespace BabylonNative
 
     void RenderView();
     void ResetView();
-    void SetMouseButtonState(uint32_t buttonId, bool isDown, uint32_t x, uint32_t y);
-    void SetMousePosition(uint32_t x, uint32_t y);
-    void SetTouchButtonState(uint32_t pointerId, bool isDown, uint32_t x, uint32_t y);
-    void SetTouchPosition(uint32_t pointerId, uint32_t x, uint32_t y);
+    void SetMouseButtonState(uint32_t buttonId, bool isDown, int32_t x, int32_t y);
+    void SetMousePosition(int32_t x, int32_t y);
+    void SetTouchButtonState(uint32_t pointerId, bool isDown, int32_t x, int32_t y);
+    void SetTouchPosition(uint32_t pointerId, int32_t x, int32_t y);
 
     bool IsXRActive();
 
