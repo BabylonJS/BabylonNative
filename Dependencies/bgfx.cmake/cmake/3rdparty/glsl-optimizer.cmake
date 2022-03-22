@@ -27,7 +27,8 @@ string(REPLACE "-fsanitize=undefined" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" )
 
 # glcpp
 file( GLOB GLCPP_SOURCES ${BGFX_DIR}/3rdparty/glsl-optimizer/src/glsl/glcpp/*.c ${BGFX_DIR}/3rdparty/glsl-optimizer/src/util/*.c )
-add_library( glcpp ${GLCPP_SOURCES} )
+# Library must be static because hash_table_ctor referenced in function glcpp_parser_create
+add_library( glcpp STATIC ${GLCPP_SOURCES} )
 target_include_directories( glcpp PUBLIC ${GLSL-OPTIMIZER_INCLUDES} )
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
 	target_compile_options( glcpp PRIVATE "-fno-strict-aliasing")
@@ -39,7 +40,8 @@ set_target_properties( glcpp PROPERTIES FOLDER "bgfx/3rdparty" )
 
 # mesa
 file( GLOB MESA_SOURCES ${BGFX_DIR}/3rdparty/glsl-optimizer/src/mesa/program/*.c ${BGFX_DIR}/3rdparty/glsl-optimizer/src/mesa/main/*.c )
-add_library( mesa ${MESA_SOURCES} )
+# Library must be static because mesa/program/prog_hash_table.c uses _mesa_error_no_memory which is in glsl/standalone_scaffolding.cpp of glsl-optimizer
+add_library( mesa STATIC ${MESA_SOURCES} )
 target_include_directories( mesa PUBLIC ${GLSL-OPTIMIZER_INCLUDES} )
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID MATCHES "Clang")
 	target_compile_options( mesa PRIVATE "-fno-strict-aliasing")
@@ -53,7 +55,7 @@ set_target_properties( mesa PROPERTIES FOLDER "bgfx/3rdparty" )
 file( GLOB GLSL-OPTIMIZER_SOURCES ${BGFX_DIR}/3rdparty/glsl-optimizer/src/glsl/*.cpp ${BGFX_DIR}/3rdparty/glsl-optimizer/src/glsl/*.c )
 file( GLOB GLSL-OPTIMIZER_SOURCES_REMOVE ${BGFX_DIR}/3rdparty/glsl-optimizer/src/glsl/main.cpp ${BGFX_DIR}/3rdparty/glsl-optimizer/src/glsl/builtin_stubs.cpp )
 list( REMOVE_ITEM GLSL-OPTIMIZER_SOURCES ${GLSL-OPTIMIZER_SOURCES_REMOVE} )
-add_library( glsl-optimizer ${GLSL-OPTIMIZER_SOURCES} )
+add_library( glsl-optimizer STATIC ${GLSL-OPTIMIZER_SOURCES} )
 target_link_libraries( glsl-optimizer glcpp mesa )
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	target_compile_options( glsl-optimizer
