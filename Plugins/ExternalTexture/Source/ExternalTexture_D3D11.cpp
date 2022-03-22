@@ -195,7 +195,7 @@ namespace Babylon::Plugins
     {
         D3D11_TEXTURE2D_DESC desc;
         nativeTexture->GetDesc(&desc);
-        uint64_t flags = 0Ui64;
+        uint64_t flags{};
         m_format = NativeToBGFXImageFormat(desc.Format, flags);
         m_height = desc.Height;
         m_width = desc.Width;
