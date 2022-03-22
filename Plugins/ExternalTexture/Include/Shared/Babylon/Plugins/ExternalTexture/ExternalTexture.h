@@ -16,9 +16,9 @@ namespace Babylon::Plugins
 
         Napi::Promise AddToContext(Napi::Env&) const;
 
-        uint32_t GetWidth();
-        uint32_t GetHeight();
-        uint32_t GetFormat();
+        uint32_t GetWidth() const;
+        uint32_t GetHeight() const;
+        uint32_t GetFormat() const;
 
     private:
         uintptr_t m_nativeTexture{};
