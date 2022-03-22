@@ -1,11 +1,7 @@
-#include <Babylon/Graphics/Device.h>
 #include <Babylon/Plugins/ExternalTexture/ExternalTexture.h>
 #include <Babylon/Graphics/RendererType.h>
-#include <Babylon/Graphics/Texture.h>
-#include <Babylon/Graphics/DeviceContext.h>
 
-#include <napi/env.h>
-#include <napi/napi_pointer.h>
+#include <bgfx/bgfx.h>
 
 namespace Babylon::Plugins
 {
