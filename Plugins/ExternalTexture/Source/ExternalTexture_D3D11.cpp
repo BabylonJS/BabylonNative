@@ -9,7 +9,7 @@
 
 namespace Babylon::Plugins
 {
-    //For refrence see renderer_d3d11.cpp line 203.
+    // For reference see renderer_d3d11.cpp line 203.
     bgfx::TextureFormat::Enum NativeToBGFXImageFormat(DXGI_FORMAT format, uint64_t& flags)
     {
         switch (format)
