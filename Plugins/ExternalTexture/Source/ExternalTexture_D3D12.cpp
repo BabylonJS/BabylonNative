@@ -45,10 +45,10 @@ namespace Babylon::Plugins
                 return bgfx::TextureFormat::Enum::BC6H; 
             
             case DXGI_FORMAT_BC7_UNORM:
-                flags |= BGFX_TEXTURE_SRGB;
                 return bgfx::TextureFormat::Enum::BC7;
 
             case DXGI_FORMAT_BC7_UNORM_SRGB:
+                flags |= BGFX_TEXTURE_SRGB;
                 return bgfx::TextureFormat::Enum::BC7;
 
             case DXGI_FORMAT_R1_UNORM:
