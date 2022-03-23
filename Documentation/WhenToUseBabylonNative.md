@@ -2,8 +2,8 @@
 
 ## High Level Overview
 
--   Babylon Native technologies are specialized and will not be the best
-    solutions for certain usages.
+-   Babylon Native technologies are specialized and will be differently
+    suited to different usages.
 -   For developers coming from a Web-first perspective, Babylon Native
     technologies should likely be "last resort" choices, selected only
     when simpler hybrid app alternatives will not suffice.
@@ -14,7 +14,7 @@
 ## Introduction
 
 Babylon Native and Babylon React Native are specialized technologies with
-specialized use cases. Both belong to the larger family of technologies
+specialized use cases. Both belong to the larger family of platforms
 which allow Web technologies to be integrated into non-Web applications, 
 including native applications on multiple platforms. Sometimes, Babylon 
 Native or Babylon React Native will be the best technologies to enable
@@ -61,9 +61,7 @@ Babylon Native's and Babylon React Native's complexity costs arise from the
 fact that both sit further toward the "native" side of the hybrid app 
 spectrum than any of the alternatives mentioned above.
 
-***
-**TODO: Picture of hybrid app spectrum**
-***
+![Hybrid app platform spectrum](./Images/hybrid_app_spectrum.png)
 
 These complexities can be approximately quantified as "distance" from a 
 true Web app: the more different from raw Web a platform is, the more
@@ -102,12 +100,12 @@ today. Thus, if your intended usage is to provide an AR experience built
 with Web-like technologies that runs on iOS, that is an excellent reason
 to use Babylon React Native as it is currently the only viable choice.
 
-More generally, Babylon Native technologies allow developer to reach through
-the fundamental limitations of Web-like platforms to directly expose native
-functionality to the Web-like hybrid app layer. Any time your experience
-requires a native capability that isn't exposed to typical Web-like 
-usage at all, Babylon Native may be a good choice for exposing it; and if 
-the feature you require is in any way associated with graphics or 
+More generally, Babylon Native technologies allow developers to reach 
+through the fundamental limitations of Web-like platforms to directly 
+expose native functionality to the Web-like hybrid app layer. Any time your 
+experience requires a native capability that isn't exposed to typical 
+Web-like usage at all, Babylon Native may be a good choice for exposing it; 
+and if the feature you require is in any way associated with graphics or 
 rendering, Babylon Native is likely among the best available choices due to 
 the infrastructure it provides for integrating Web-like and native rendering
 capabilities.
