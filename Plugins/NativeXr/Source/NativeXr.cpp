@@ -2572,7 +2572,9 @@ namespace Babylon
 
                         auto napiResultRef{Napi::Weak(napiResult)};
                         auto imageTrackingArray{m_imageTrackingResultsArray.Value()};
-                        imageTrackingArray.Set(imageTrackingArray.Length(), napiResultRef.Value());
+                        auto index = imageTrackingArray.Length();
+                        imageTrackingArray.Set("length", Napi::Value::From(env, index + 1));
+                        imageTrackingArray.Set(index, napiResultRef.Value());
                         m_trackedImageIDToResultMap.insert({imageTrackingResultID, std::move(napiResultRef)});
                     }
                     else
