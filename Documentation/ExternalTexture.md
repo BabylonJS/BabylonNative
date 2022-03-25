@@ -40,7 +40,7 @@ ExternalTexture is a class that can be constructed using a native graphics API h
 
 This class also assumes that the native texture was created using the same graphics device used to create the Babylon::Device. Therefore, it is assumed that ```Babylon::Graphics::Device``` was created by providing a ```Babylon::Graphics::DeviceConfiguration``` structure with the appropriate Device.
 
-Only when ExternalTexture::AddToContext() is called that the following things will happen: 
+The following things will happen once ExternalTexture::AddToContext() is called:
 
 -  Napi::Promise will be created, since the actual creation of the texture will happen over an entire frame. 
 - During BeforeRender a bgfx texture will be created.
