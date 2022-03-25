@@ -42,9 +42,9 @@ This class also assumes that the native texture was created using the same graph
 
 The following things will happen once ExternalTexture::AddToContext() is called:
 
--  Napi::Promise will be created, since the actual creation of the texture will happen over an entire frame. 
-- During BeforeRender a bgfx texture will be created.
-- During AfterRender this bgfx texture will be replaced to use the native provided texture instead. A TextureData will be created.
+- Napi::Promise will be created, since the actual creation of the texture will happen over an entire frame. 
+- During BeforeRender, a bgfx texture will be created.
+- During AfterRender, this bgfx texture will be replaced to use the native provided texture instead. A TextureData will be created.
 - In the JS thread a Napi::Pointer<TextureData> will be created and the Napi::Promise::Deferred will be resolved. (The bgfx texture will be released by the Napi::Pointer finalization callback)
 
 With this approach the same native texture can be used to create multiple JS objects, each one will have ownership over the bgfx texture representation but not the actual native texture.
