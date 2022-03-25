@@ -1,4 +1,4 @@
-#include <Babylon/Plugins/ExternalTexture/ExternalTexture.h>
+#include <Babylon/Plugins/ExternalTexture.h>
 #include <Babylon/Graphics/RendererType.h>
 
 #include <bgfx/bgfx.h>

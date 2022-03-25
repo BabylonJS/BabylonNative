@@ -1,5 +1,5 @@
 #include <Babylon/Graphics/Device.h>
-#include <Babylon/Plugins/ExternalTexture/ExternalTexture.h>
+#include <Babylon/Plugins/ExternalTexture.h>
 #include <Babylon/Graphics/Texture.h>
 #include <Babylon/Graphics/DeviceContext.h>
 
@@ -19,7 +19,7 @@ namespace Babylon::Plugins
     }
 
     // TODO: Change this to take a context.
-    Napi::Promise ExternalTexture::AddToContext(Napi::Env& env)
+    Napi::Promise ExternalTexture::AddToContext(Napi::Env& env) const
     {
         Babylon::Graphics::DeviceContext& context = Babylon::Graphics::DeviceContext::GetFromJavaScript(env);
 
@@ -72,17 +72,17 @@ namespace Babylon::Plugins
         return promise;
     }
 
-    uint32_t ExternalTexture::GetWidth()
+    uint32_t ExternalTexture::GetWidth() const 
     {
         return m_width;
     }
 
-    uint32_t ExternalTexture::GetHeight()
+    uint32_t ExternalTexture::GetHeight() const
     {
         return m_height;
     }
 
-    uint32_t ExternalTexture::GetFormat()
+    uint32_t ExternalTexture::GetFormat() const
     {
         return m_format;
     }

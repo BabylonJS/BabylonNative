@@ -1,5 +1,5 @@
 set(SOURCES
-    "Include/Shared/Babylon/Plugins/ExternalTexture/ExternalTexture.h"
+    "Include/Shared/Babylon/Plugins/ExternalTexture.h"
     "Source/ExternalTexture_${GRAPHICS_API}.cpp"
     "Source/ExternalTexture.cpp")
 
