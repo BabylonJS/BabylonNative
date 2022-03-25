@@ -11,7 +11,7 @@ ExternalTexture is a plugin library that provided the functionality required to 
 In order to be able to consume native textures it is important that both Babylon Native and the consuming application are using the same Graphics Device (D3D11Device equivalents). For this, ```Babylon::Graphics::Device``` must be created using a ```DeviceConfiguration``` were the consuming application can provide its graphics device as a field. The application then needs to set the drawing window that would be set when using ```WindowConfiguration```, it can do so by calling ```Babylon::Graphics::Device::UpdateWindow``` (see example below).
 
 ```cpp
-/// Create graphics Device
+// Create graphics Device
 Babylon::Graphics::DeviceConfiguration config;
 config.Device = d3dDevice;
 config.DevicePixelRatio = InitializeDPIScale(hWnd);
