@@ -36,7 +36,7 @@ device->UpdateWindow(winConfig);
 
 ## ExternalTexture class
 
-ExternalTexture is a class that can be constructed using a native graphics API handle and then be used to create Babylon::Graphics::TextureData and send this data to javascript environment using ExternalTexture::AddToContext(). It is important to notice that the constructor will only store the necessary to convert the native texture to the bgfx internal texture, but it will not create bgfx object. 
+ExternalTexture is a class that can be constructed using a native graphics API handle and then be used to create Babylon::Graphics::TextureData and send this data to JavaScript environment using ExternalTexture::AddToContext(). It is important to notice that the constructor will only store the necessary information to convert the native texture to the bgfx internal texture, but it will _not_ create bgfx object.
 
 This class also assumes that the native texture was created using the same graphics device used to create the Babylon::Device. Therefore, it is assumed that ```Babylon::Graphics::Device``` was created by providing a ```Babylon::Graphics::DeviceConfiguration``` structure with the appropriate Device.
 
