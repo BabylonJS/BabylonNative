@@ -2100,6 +2100,7 @@ namespace Babylon
                         InstanceMethod("getJointPose", &XRFrame::GetJointPose),
                         InstanceMethod("fillPoses", &XRFrame::FillPoses),
                         InstanceMethod("fillJointRadii", &XRFrame::FillJointRadii),
+                        InstanceMethod("getImageTrackingResults", &XRFrame::GetImageTrackingResults),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
                         InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr),
@@ -2327,6 +2328,13 @@ namespace Babylon
                 }
 
                 return Napi::Value::From(info.Env(), true);
+            }
+
+            // NativeXRFrame on the JS side expects getImageTrackingResults to be defined at XR initialization time.
+            // This dummy implementation is a placeholder until WebXR Image Tracking support is completed: https://github.com/BabylonJS/BabylonNative/issues/619
+            Napi::Value GetImageTrackingResults (const Napi::CallbackInfo& info)
+            {
+                return info.Env().Undefined();
             }
 
             Napi::Value GetHitTestResults(const Napi::CallbackInfo& info)
