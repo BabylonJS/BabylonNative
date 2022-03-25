@@ -1,170 +1,194 @@
 # When to Use Babylon Native
 
-## High Level Overview
+## Questionnaire
 
--   Babylon Native technologies are specialized and will be differently
-    suited to different usages.
--   For developers coming from a Web-first perspective, Babylon Native
-    technologies should likely be "last resort" choices, selected only
-    when simpler hybrid app alternatives will not suffice.
--   For developers coming from a native-first perspective, Babylon Native
-    is a prime candidate and will frequently be among the simplest and 
-    easiest ways to feature-rich rendering to native apps.
+For each of the following questions, click on the link you feel best 
+represents your answer. The link will take you to another view of this
+same page with the next question for you at the top of your view. 
+Eventually, a link will take you to a lower section discussing whether
+or not we believe a Babylon Native technology might be right for your
+scenario and why.
 
-## Introduction
+***
 
-Babylon Native and Babylon React Native are specialized technologies with
-specialized use cases. Both belong to the larger family of platforms
-which allow Web technologies to be integrated into non-Web applications, 
-including native applications on multiple platforms. Sometimes, Babylon 
-Native or Babylon React Native will be the best technologies to enable
-a certain use case; in other cases, an alternative from the same technology
-family would be a more suitable choice. This document explores some of the
-considerations involved in this choice of platform and attempts to provide 
-a thought framework for deciding when to use Babylon Native. The bulk of
-this document will be dedicated to the perspective of a developer coming
-from a Web-first background as that is the case with more ambiguity; for
-a developer with a native-first perspective, the choices are clearer and
-are covered in 
-[a dedicated later section](#the-native-first-perspective).
+#### Are you picking a platform for a new app, or is your app's platform already decided?
+-   [I'm picking a platform for my new app.](#do-you-prefer-more-native-like-technologies-or-more-web-like-technologies)
+-   [I'm adding 3D to an app that's already committed to a platform.](#is-your-app-built-on-react-native-another-javascript-using-platform-including-web-or-hybrid-app-platforms-or-non-javascript-technologies)
 
-## Alternative Platform Choices
+#### Do you prefer more native-like technologies or more Web-like technologies?
+-   [I prefer more native-like technologies.](#do-you-have-exceptional-rendering-requirements-such-as-aaa-quality-graphics-or-extreme-performance-needs)
+-   [I prefer more Web-like technologies.](#do-you-already-have-existing-expertise-andor-preferences-for-react-native-or-do-you-need-native-capabilities-that-arent-provided-by-normal-web-apis-such-as-ar-on-ios)
 
-From a Web-first perspective, there are many platform options that may, in 
-different scenarios, provide alternatives to Babylon Native/Babylon React 
-Native, the most prominent of which include the following:
+#### Do you have exceptional rendering requirements such as AAA-quality graphics or extreme performance needs?
+-   [I want things to look good, but I don't need extreme graphics or performance.](#babylon-native-is-probably-a-good-choice-for-your-project)
+-   [I need AAA-quality graphics and/or exceptional performance.](#there-may-be-other-choices-better-suited-to-your-project-than-babylon-native-technologies)
 
--   [Progressive Web Apps](https://en.wikipedia.org/wiki/Progressive_web_application)
--   [Ionic](https://ionicframework.com/)
--   [Electron](https://www.electronjs.org/)
--   [React Native](https://reactnative.dev/) (or any other true native 
-    platform) using a WebView
+#### Do you already have existing expertise and/or preferences for React Native, or do you need native capabilities that aren't provided by normal Web APIs (such as AR on iOS)?
+-   [Yes.](#babylon-react-native-is-probably-a-good-choice-for-your-project)
+-   [No.](#there-may-be-other-choices-better-suited-to-your-project-than-babylon-native-technologies)
 
-Each of these platforms has its own unique strengths and weaknesses, and
-exploring those attributes is beyond the scope of this document. An 
-important similarity they share, however, is that *any* of these platforms
-will tend to be a simpler and easier choice than a Babylon Native 
-technology *for usages where Babylon Native's strengths are not needed*.
-In other words, if it is possible to create a given experience using one of
-these other platforms, doing so is likely to be a simpler -- and in that 
-sense better -- alternative to using a Babylon Native technology. This is
-because the costs associated with using Babylon Native technologies 
-overwhelmingly come in the form of complexity, and it is of course better to
-avoid paying those costs when possible. However, there are a number of 
-usages where no other alternative we're aware of will be acceptable, and in
-these circumstances using Babylon Native technologies will be the best -- 
-and in some cases the only -- viable choice.
+#### Is your app built on React Native, another JavaScript-using platform (including Web or hybrid app platforms), or non-JavaScript technologies?
+-   [My app is a React Native app.](#babylon-react-native-is-probably-a-good-choice-for-your-project)
+-   [My app's platform uses JavaScript, but it isn't made with React Native.](#there-may-be-other-choices-better-suited-to-your-project-than-babylon-native-technologies)
+-   [My app's platform doesn't inherently use JavaScript.](#do-you-have-exceptional-rendering-requirements-such-as-aaa-quality-graphics-or-extreme-performance-needs)
 
-## Babylon Native's Costs: When to *Not* Use Babylon Native
+***
 
-Babylon Native's and Babylon React Native's complexity costs arise from the
-fact that both sit further toward the "native" side of the hybrid app 
-spectrum than any of the alternatives mentioned above.
+## Babylon Native is probably a good choice for your project!
+
+Congratulations! If you ended up here, then we think Babylon Native may
+be a suitable choice for adding 3D to your project. Typically, 
+applications for which Babylon Native is well-suited tend to be developed
+as true native apps (C++, C#, etc.) which require 3D rendering as a 
+feature, though not necessarily the focus. Examples might include the
+following:
+
+-   A presentation app written in C# that needs to be able to render 3D 
+    as well as 2D content.
+-   A scientific simulation utility written in Java that wants to be able 
+    to render data in 3D.
+-   A 3D content generation tool written in C++ that wants to be able to 
+    preview its output.
+
+The main reason Babylon Native is well-suited for these scenarios is 
+because Babylon Native makes it possible to bring Babylon.js's 
+rendering capabilities into native applications with *extremely* minimal
+requirements regarding app and development infrastructure. In other words,
+Babylon Native is perhaps the simplest way to add Web-style 3D rendering
+to a native application without having to pivot that application to 
+*become* a Web app.
+
+***
+
+## Babylon React Native is probably a good choice for your project!
+
+Congratulations! If you ended up here, then we think Babylon React Native
+may be a suitable choice for adding 3D to your project. There are two main
+situations when Babylon React Native is a particularly good choice for a 
+project:
+
+-   When the project is already being built with React Native and wants to
+    add 3D as simply as possible.
+-   When the project requires capabilities that aren't typically exposed
+    to Web-like platforms.
+
+In the former case, if your app is already committed to React Native as a 
+platform, Babylon React Native is one of two options to add 3D to
+your project using Babylon.js. The second of these options is to simply
+use Babylon.js in a WebView, and there are some advantages to this 
+approach: it can sometimes yield better JavaScript performance (on iOS,
+WebViews are allowed to run JavaScript with JIT enabled while React 
+Native, and consequently Babylon React Native, are not) and it will 
+provide access to the very latest Babylon.js features, which may not 
+always be available in Babylon React Native. However, there are 
+disadvantages as well: a WebView will create a second JavaScript context
+distinct from React Native's main JavaScript context and you will have to
+manage communication between the contexts manually, which can be complex
+and may negatively impact memory footprint as you pay the memory cost for
+two JavaScript contexts instead of one. Furthermore, running inside a 
+WebView will restrict you to only the features that the platform's WebView
+allows, whereas with Babylon React Native you can extend your 
+JavaScript-exposed capabilities by reaching through the platform into the
+native layer itself.
+
+This segues directly into the second situation when Babylon React Native
+is a particularly good choice: when you need capabilities that aren't 
+typically exposed to Web-like platforms. The most blatant example of a
+case like this is AR on iOS. Apple does not expose ARKit to JavaScript, 
+which means that JavaScript-based logic (such as Babylon.js) cannot power
+XR experiences on Apple platforms. Babylon React Native, however, 
+overcomes this limitation by augmenting its JavaScript capabilities to 
+allow AR apps using the same code on both Android and iOS. Thus, for any
+developer seeking to use Web-like technologies to develop AR-capable apps
+that run on iOS (or use any other platform feature not exposed to 
+JavaScript), Babylon React Native may be the best -- and perhaps even the
+only -- viable choice.
+
+***
+
+## There may be other choices better suited to your project than Babylon Native technologies.
+
+If you've ended up here, then Babylon Native technologies may not be the
+best options for your particular scenario. There are a number of reasons
+this might be the case, but the most common boil down to, "You don't need
+Babylon Native's or Babylon React Native's special capabilities, so there
+are simpler alternatives that may suit your needs better."
+
+Babylon Native and Babylon React Native both belong on the spectrum of
+*hybrid app platforms* -- platforms which combine features of Web and
+native environments -- and both lie more toward the native side of the
+spectrum than toward the Web side.
 
 ![Hybrid app platform spectrum](./Images/hybrid_app_spectrum.png)
 
-These complexities can be approximately quantified as "distance" from a 
-true Web app: the more different from raw Web a platform is, the more
-complex we consider it to be. (Again, this is from the perspective of a 
-developer who favors Web technologies over native technologies; for a 
-native-first perspective, please skip to 
-[the native app section](#the-native-first-perspective).) 
-Generally speaking, a developer using any hybrid app platfrom will need to 
-be broadly familiar with Web development concepts *as well as* some 
-quantity of additional concepts proportional to the platform's difference
-from a true Web app. A PWA developer needs to understand pretty much 
-everything a raw Web developer needs to understand, plus additional 
-concepts pertaining to making the PWA installable; an Ionic developer needs
-to understand what a PWA developer understands as well as how to use Ionic
-to generate Android and/or iOS apps; a React Native developer needs to 
-understand much of the same Web-like practices as the others, but also
-requires quite a bit of specialized context about React Native's bespoke
-systems; and a Babylon React Native developer needs to understand everything
-a React Native developer understands plus additional information specific to
-using Babylon React Native.
+Generally speaking, developers will approach hybrid apps from a basis of
+familiarity with one or the other end of the spectrum (dedicated React 
+Native developers are an exception), and the further one goes on the
+spectrum from one's prior familiarity, the more complex a platform will
+be to use. Babylon Native and Babylon React Native, while still hybrid
+app technologies, are both significantly dissimiliar from a "true" Web
+platform, and a Web developer has many other hybrid platform options that
+are significantly more similar to the Web and are thus likely to be simpler
+for that developer to use. Likewise from the opposite perspective, a 
+developer more familiar with native platforms may find Babylon Native and
+Babylon React Native more complex to use than a pure native solution such
+as a Unity or Unreal. (Again, dedicated React Native developers are a bit
+of an exception as their baseline familiarity lies with neither native
+nor Web; however, they are also much less likely to be reading this 
+section as it's very likely that Babylon React Native will be a suitable
+choice for their preferred platform.) Thus, the most common reason why
+a Babylon Native technology may not be the most suitable platform for a 
+given usage is simply, "There's a simpler alternative that will suffice in 
+your scenario."
 
-This leads us to repeat our earlier assertion: if you *can* use a different 
-platform (without sacrificing experience quality or features), you probably 
-*should* use a different platform. In this sense, Babylon Native 
-technologies are platforms of last resort, so they should be chosen when no
-easier option will suit your needs.
+Less commonly, Babylon Native technologies may not be suitable for a 
+particular app because the app requires something Babylon Native does not
+provide well. For example, a usage that depends on AAA-quality graphics,
+leveraging the latest features in specialized rendering pipelines, may 
+not find its needs met by Babylon Native technologies because Web 
+rendering technologies in general typically lag behind native rendering
+capabilities by several years. Similarly, apps with significant 
+performance constraints may not be well-served by Babylon Native
+technologies because Babylon.js scene logic runs in JavaScript, which 
+incurs inherent performance cost. This can even manifest between seemingly
+comparable alternatives, such as comparing Babylon React Native to 
+Babylon.js in a WebView on iOS; in this scenario, depending on what 
+exactly is being rendered and how, the specialized optimizations Babylon
+React Native can do thanks to its "native" nature may or may not fully
+offset the performance penalty of running JavaScript without JIT (which
+Apple permits for WebViews but prevents for Babylon React Native). In 
+nuanced scenarios such as this, the only way to know for sure which
+approach might perform better for the particular rendering in question
+would be to try both and measure, but both will run less speedily than
+a pure-native (not Web-like) rendering solution like Unity or Unreal.
 
-## So When *Should* I Use Babylon Native?
+### So If I Shouldn't Use Babylon Native, What Should I Use?
 
-In exchange for the complexities, Babylon Native technologies provide the 
-power to do things that other hybrid app platforms simply cannot do. The
-most prominent example of this comes from Babylon React Native: Babylon
-React Native allows for the creation of XR (i.e., ARKit) apps that run
-on iOS, which is simply not achievable using any other hybrid app platform
-today. Thus, if your intended usage is to provide an AR experience built 
-with Web-like technologies that runs on iOS, that is an excellent reason
-to use Babylon React Native as it is currently the only viable choice.
+The answer to this question depends on *why* Babylon Native technologies 
+weren't ideally suited for your scenario.
 
-More generally, Babylon Native technologies allow developers to reach 
-through the fundamental limitations of Web-like platforms to directly 
-expose native functionality to the Web-like hybrid app layer. Any time your 
-experience requires a native capability that isn't exposed to typical 
-Web-like usage at all, Babylon Native may be a good choice for exposing it; 
-and if the feature you require is in any way associated with graphics or 
-rendering, Babylon Native is likely among the best available choices due to 
-the infrastructure it provides for integrating Web-like and native rendering
-capabilities.
+-   Did you simply not need Babylon Native's specialized capabilities
+    such that a simpler alternative would suffice? If so, other options
+    such as 
+    [Progressive Web Apps](https://en.wikipedia.org/wiki/Progressive_web_application), 
+    [Ionic](https://ionicframework.com/),
+    or 
+    [Electron](https://www.electronjs.org/)
+    may be worth looking into. (Comparing these alternatives is beyond the
+    scope of this document.)
+-   Did your particular scenario run poorly in Babylon React Native on iOS
+    due to the unavailability of JIT? If so, you might try rendering the 
+    same thing using Babylon.js in a WebView.
+-   Do you need rendering speed or fidelity that seems to be beyond what
+    Web-like rendering can provide? If so, pure native rendering solutions
+    like 
+    [Unity](https://unity.com/)
+    or
+    [Unreal](https://www.unrealengine.com/)
+    may provide what you're looking for.
+-   Do you need additional help thinking about what platform might be best
+    for you? If so, please don't hesitate to ping us on the 
+    [the Babylon.js forum](https://forum.babylon.js.com/c/questions/)
+    and we'll be happy to help you weigh the options.
 
-As an example, consider the challenges of OpenXR integration. 
-Simplistically speaking, OpenXR typically works by having the XR experience
-render to a shared native texture, which is then handed off to a separate 
-process to be presented on the XR device (HMD, etc.). Using Web-like 
-technologies to render to raw native textures (especially ones passed in 
-from outside sources) is not something that's easy to set up from scratch. 
-However, because Babylon Native already provides the infrastructure to use 
-Babylon.js to render to native textures, this makes it easy to encapsulate
-the native texture into something that can be targeted by Web-like 
-rendering while the underlying relationship with the presenting process
-can be managed entirely natively. It is this very capability that 
-motivated the development of Babylon React Native in the first place.
-
-While native graphics-related capabilities are certainly Babylon Native and 
-Babylon React Native's greatest strengths, they are by no means the only
-features for which Babylon Native is the right choice. Other native-only
-capabilities, advanced asynchrony, multi-JavaScript context... Because
-Babylon Native technologies provide access to and through the platform in
-ways that other platforms preclude, any usage that requires the app to go 
-beyond the "normal" set of allowed behaviors for Web-like applications is
-a good candidate for development in Babylon Native technologies. The more
-"normal" an app's scenario is, the less likely it needs or should use 
-Babylon Native's flexibility and power; but when "normal" isn't enough, 
-Babylon Native technologies will often be the best -- and sometimes the
-only -- viable choice.
-
-## The Native-First Perspective
-
-While Babylon Native technologies should largely be "last resorts" for 
-developers approaching the hybrid app space from a Web-first perspective,
-the opposite is true from a native-first perspective. From such a 
-perspective, the goal of a hybrid app is to enable Web-like rendering
-capabilities while incurring as few of the costs associated with Web
-technologies as possible; and at this goal, Babylon Native excels.
-Babylon Native is designed to make very few assumptions about the 
-environment into which it is integrated, which makes it possible to 
-"inject" Babylon Native into existing native applications which want
-to *use* Web-like rendering capabilities without pivoting to *become*
-Web-like hybrid apps. As an example, consider an academic codebase written
-in C (as so many of them are) for use in some spatially-inclined scientific
-field such as astronomy. Adding a visualizer to this existing codebase
-would be extremely difficult to do from scratch, and the resulting 
-visualizer would likely be very rudimentary in its appearance and 
-capabilities. However, a visualizer built on Babylon Native could very
-easily be encapsulated behind a C API and added to the existing codebase,
-providing the full rendering power of Babylon.js at a very, very minimal
-code cost.
-
-In short, in all the ways that Babylon Native technologies are "last 
-resort" choices from a Web-first perspective, Babylon Native should be
-among the first options considered when looking at adding rendering from 
-a native-first perspective. Of course, Babylon Native will not be as fast
-or powerful as a full-native gaming solution like Unity or Unreal, so
-native usages that require that kind of top-tier power will likely not be 
-able to make do with Babylon Native. However, for native apps looking to 
-quickly and easily add feature-rich rendering, few alternatives will 
-provide as much rendering capability for as little native infrastructure 
-cost as Babylon Native can offer.
+Thanks for considering Babylon Native and Babylon React Native!
