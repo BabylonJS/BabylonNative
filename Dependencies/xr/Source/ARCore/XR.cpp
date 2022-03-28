@@ -679,7 +679,8 @@ namespace xr
             }
         }
 
-        // Converts an image bitmap to grayscale assumes an RGB8 or RGB8A image for use with ARCore.
+        // Converts an image bitmap to grayscale.
+        // Supported image formats: RBG(A)8, RGB(A)16, 16-bit grayscale.
         void ConvertBitmapToGrayscale(
             const uint8_t* imagePixelBuffer,
             const int32_t width,
@@ -693,28 +694,65 @@ namespace xr
                 for (int w = 0; w < width; ++w)
                 {
                     const uint8_t* pixel{&imagePixelBuffer[w * pixelStride + h * stride]};
-                    const uint8_t r{*pixel};
-                    const uint8_t g{*(pixel + 1)};
-                    const uint8_t b{*(pixel + 2)};
-                    grayscaleBuffer[w + h * width] = static_cast<uint8_t>(0.213f * r + 0.715 * g + 0.072 * b);
+
+                    if (pixelStride == 2)
+                    {
+                        // 16-bit grayscale
+                        const uint16_t* pixel16{reinterpret_cast<const uint16_t *>(pixel)};
+                        grayscaleBuffer[w + h * width] = *pixel16 / 257;
+                    }
+                    else if (pixelStride == 4 || pixelStride == 3)
+                    {
+                        // RGB8/RGBA8
+                        const uint8_t r{*pixel};
+                        const uint8_t g{*(pixel + 1)};
+                        const uint8_t b{*(pixel + 2)};
+                        grayscaleBuffer[w + h * width] = static_cast<uint8_t>(0.213f * r +
+                            0.715 * g +
+                            0.072 * b);
+                    }
+                    else if (pixelStride == 6 || pixelStride == 8)
+                    {
+                        // RGB16/RGBA16
+                        const uint16_t* pixel16{reinterpret_cast<const uint16_t *>(pixel)};
+                        const uint8_t r{static_cast<uint8_t>(*pixel16 / 257)};
+                        const uint8_t g{static_cast<uint8_t>(*(pixel16 + 1) / 257)};
+                        const uint16_t b{static_cast<uint8_t>(*(pixel16 + 2) / 257)};
+                        grayscaleBuffer[w + h * width] = static_cast<uint8_t>(0.213f * r +
+                            0.715 * g +
+                            0.072 * b);
+                    }
                 }
             }
         }
 
-        std::vector<std::string> CreateAugmentedImageDatabase(const std::vector<System::Session::Frame::ImageTrackingRequest>& requests)
+        std::vector<std::string>* GetImageTrackingScores()
+        {
+            if (imageTrackingScoresValid)
+            {
+                return &imageTrackingScores;
+            }
+
+            return nullptr;
+        }
+
+        void CreateAugmentedImageDatabase(const std::vector<System::Session::ImageTrackingRequest>& requests)
         {
             ArAugmentedImageDatabase_create(xrContext->Session, &augmentedImageDatabase);
-            std::vector<std::string> scores{};
             int32_t trackableImagesCount{0};
 
             // Loop over each image in the request, and add it to the image database.
-            for (System::Session::Frame::ImageTrackingRequest image : requests)
+            for (System::Session::ImageTrackingRequest image : requests)
             {
                 int32_t index{0};
                 ArStatus status{};
                 std::vector<uint8_t> grayscaleBuffer{};
-                grayscaleBuffer.reserve(image.width * image.height);
-                ConvertBitmapToGrayscale(image.data, image.width, image.height, image.stride, grayscaleBuffer.data());
+                if (image.width != image.stride)
+                {
+                    grayscaleBuffer.reserve(image.width * image.height);
+                    ConvertBitmapToGrayscale(image.data, image.width, image.height, image.stride,
+                         grayscaleBuffer.data());
+                }
 
                 // If an estimated width was provided, send that down to ARCore otherwise add the image with no size.
                 if (image.measuredWidthInMeters > 0)
@@ -723,7 +761,7 @@ namespace xr
                         xrContext->Session,
                         augmentedImageDatabase,
                         "",
-                        grayscaleBuffer.data(),
+                        image.width == image.stride ? image.data : grayscaleBuffer.data(),
                         image.width,
                         image.height,
                         image.width,
@@ -736,7 +774,7 @@ namespace xr
                         xrContext->Session,
                         augmentedImageDatabase,
                         "",
-                        grayscaleBuffer.data(),
+                        image.width == image.stride ? image.data : grayscaleBuffer.data(),
                         image.width,
                         image.height,
                         image.width,
@@ -746,11 +784,11 @@ namespace xr
                 if (status == AR_SUCCESS)
                 {
                     trackableImagesCount++;
-                    scores.push_back(System::Session::Frame::ImageTrackingScore::TRACKABLE);
+                    imageTrackingScores.push_back(System::Session::Frame::ImageTrackingScore::TRACKABLE);
                 }
                 else
                 {
-                    scores.push_back(System::Session::Frame::ImageTrackingScore::UNTRACKABLE);
+                    imageTrackingScores.push_back(System::Session::Frame::ImageTrackingScore::UNTRACKABLE);
                 }
             }
 
@@ -776,7 +814,7 @@ namespace xr
                 ArConfig_destroy(arConfig);
             }
 
-            return scores;
+            imageTrackingScoresValid = true;
         }
 
         void UpdateImageTrackingResults(std::vector<Frame::ImageTrackingResult::Identifier>& updatedResults)
@@ -1162,10 +1200,13 @@ namespace xr
         std::vector<ArAnchor*> arCoreAnchors{};
         std::vector<float> planePolygonBuffer{};
         std::unordered_map<ArPlane*, Frame::Plane::Identifier> planeMap{};
-        std::vector<std::unique_ptr<Frame::ImageTrackingResult>> imageTrackingResults{};
-        std::unordered_map<ArAugmentedImage*, Frame::ImageTrackingResult::Identifier> imageTrackingResultsMap{};
         std::unordered_map<int32_t, FeaturePoint::Identifier> featurePointIDMap{};
         FeaturePoint::Identifier nextFeaturePointID{};
+
+        bool imageTrackingScoresValid{false};
+        std::vector<std::string> imageTrackingScores{};
+        std::vector<std::unique_ptr<Frame::ImageTrackingResult>> imageTrackingResults{};
+        std::unordered_map<ArAugmentedImage*, Frame::ImageTrackingResult::Identifier> imageTrackingResultsMap{};
 
         std::function<ANativeWindow*()> windowProvider{};
         ANativeWindow* window{};
@@ -1339,11 +1380,6 @@ namespace xr
     void System::Session::Frame::GetHitTestResults(std::vector<HitResult>& filteredResults, xr::Ray offsetRay, xr::HitTestTrackableType trackableTypes) const
     {
         m_impl->sessionImpl.GetHitTestResults(filteredResults, offsetRay, trackableTypes);
-    }
-
-    std::vector<std::string> System::Session::Frame::CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingRequest>& bitmaps) const
-    {
-        return m_impl->sessionImpl.CreateAugmentedImageDatabase(bitmaps);
     }
 
     Anchor System::Session::Frame::CreateAnchor(Pose pose, NativeTrackablePtr trackable) const
@@ -1534,5 +1570,15 @@ namespace xr
     {
         // TODO
         return false;
+    }
+
+    std::vector<std::string>* System::Session::GetImageTrackingScores() const
+    {
+        return m_impl->GetImageTrackingScores();
+    }
+
+    void System::Session::CreateAugmentedImageDatabase(const std::vector<System::Session::ImageTrackingRequest>& bitmaps) const
+    {
+        return m_impl->CreateAugmentedImageDatabase(bitmaps);
     }
 }

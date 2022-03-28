@@ -192,7 +192,7 @@ namespace xr
         public:
             struct ImageTrackingRequest
             {
-                uint8_t* data{nullptr};
+                const uint8_t* data{nullptr};
                 uint32_t width{0};
                 uint32_t height{0};
                 uint32_t depth{0};
@@ -384,7 +384,7 @@ namespace xr
             bool TrySetPreferredPlaneDetectorOptions(const GeometryDetectorOptions& options);
             bool TrySetMeshDetectorEnabled(const bool enabled);
             bool TrySetPreferredMeshDetectorOptions(const GeometryDetectorOptions& options);
-            
+
             std::vector<std::string>* GetImageTrackingScores() const;
             void CreateAugmentedImageDatabase(const std::vector<ImageTrackingRequest>&) const;
         private:

@@ -395,9 +395,9 @@ namespace Babylon
             std::vector<std::string>* GetImageTrackingScores() {
                 return m_sessionState->Session->GetImageTrackingScores();
             }
-            
+
             void CreateAugmentedImageDatabase(const std::vector<xr::System::Session::ImageTrackingRequest>& requests) {
-                return m_sessionState->Session->CreateAugmentedImageDatabase(requests);
+                m_sessionState->Session->CreateAugmentedImageDatabase(requests);
             }
 
             uintptr_t GetNativeXrContext()
@@ -2100,6 +2100,7 @@ namespace Babylon
                         InstanceMethod("getJointPose", &XRFrame::GetJointPose),
                         InstanceMethod("fillPoses", &XRFrame::FillPoses),
                         InstanceMethod("fillJointRadii", &XRFrame::FillJointRadii),
+                        InstanceMethod("getImageTrackingResults", &XRFrame::GetImageTrackingResults),
                         InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
                         InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
                         InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr),
@@ -2327,6 +2328,13 @@ namespace Babylon
                 }
 
                 return Napi::Value::From(info.Env(), true);
+            }
+
+            // NativeXRFrame on the JS side expects getImageTrackingResults to be defined at XR initialization time.
+            // This dummy implementation is a placeholder until WebXR Image Tracking support is completed: https://github.com/BabylonJS/BabylonNative/issues/619
+            Napi::Value GetImageTrackingResults (const Napi::CallbackInfo& info)
+            {
+                return info.Env().Undefined();
             }
 
             Napi::Value GetHitTestResults(const Napi::CallbackInfo& info)
@@ -2670,19 +2678,24 @@ namespace Babylon
                     // Create the tracked image buffer.
                     for (uint32_t idx = 0; idx < napiTrackedImages.Length(); idx++)
                     {
+                        // Pull out native values from the JS object.
                         const auto napiImageRequest{napiTrackedImages.Get(idx).As<Napi::Object>()};
                         const auto napiImage{napiImageRequest.Get("image").As<Napi::Object>()};
                         const auto napiBuffer{napiImage.Get("data").As<Napi::Uint8Array>()};
                         const uint32_t bufferSize{(uint32_t) napiBuffer.ByteLength()};
                         const uint32_t imageHeight{napiImage.Get("height").ToNumber().Uint32Value()};
+                        const uint32_t imageWidth{napiImage.Get("width").ToNumber().Uint32Value()};
+                        const uint32_t imageDepth{napiImage.Get("depth").ToNumber().Uint32Value()};
                         const uint32_t stride{bufferSize / imageHeight};
                         const float estimatedWidth{napiImageRequest.Get("widthInMeters").ToNumber().FloatValue()};
+
+                        // Construct the image tracking request object.
                         session.m_imageTrackingRequests[idx] =
                         {
-                            (uint8_t *) napiBuffer.Data(),
-                            napiImage.Get("width").ToNumber().Uint32Value(),
+                            napiBuffer.Data(),
+                            imageWidth,
                             imageHeight,
-                            napiImage.Get("depth").ToNumber().Uint32Value(),
+                            imageDepth,
                             stride,
                             estimatedWidth
                         };
@@ -3012,7 +3025,7 @@ namespace Babylon
                     m_xrFrame.Update(Env(), frame, m_timestamp);
 
                     if (m_imageTrackingRequests.size() > 0) {
-                        // Create the image database
+                        // Kick off creation of the augmented image database.
                         m_xr->CreateAugmentedImageDatabase(m_imageTrackingRequests);
 
                         // Clean up image tracking requests
@@ -3208,7 +3221,6 @@ namespace Babylon
                 if (imageTrackingScores == nullptr) {
                     return info.Env().Undefined();
                 }
-                
                 auto results{Napi::Array::New(info.Env(), imageTrackingScores->size())};
                 uint32_t index{0};
 
