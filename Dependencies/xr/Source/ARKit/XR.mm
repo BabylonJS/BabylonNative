@@ -1386,9 +1386,16 @@ namespace xr {
             return SystemImpl.XrContext->Frame.camera.trackingState == ARTrackingState::ARTrackingStateNormal;
         }
         
-        std::vector<std::string> CreateAugmentedImageDatabase(const std::vector<Frame::ImageTrackingRequest>& requests) {
-            __block std::vector<std::string> scores{};
-            scores.resize(requests.size());
+        std::vector<std::string>* GetImageTrackingScores() {
+            if (imageTrackingScoresValid) {
+                return &imageTrackingScores;
+            } else {
+                return nullptr;
+            }
+        }
+        
+        void CreateAugmentedImageDatabase(const std::vector<ImageTrackingRequest>& requests) {
+            imageTrackingScores.resize(requests.size());
             __block uint32_t imageCount{0};
             __block NSMutableSet<ARReferenceImage*>* imageSet{[NSMutableSet<ARReferenceImage*> setWithCapacity:requests.size()]};
             
@@ -1400,7 +1407,7 @@ namespace xr {
             dispatch_group_t validationGroup = dispatch_group_create();
                                     
             for (size_t i{0}; i < requests.size(); i++) {
-                const Frame::ImageTrackingRequest& request{requests[i]};
+                const ImageTrackingRequest& request{requests[i]};
                 // Create the AR Reference image.
                 const size_t imageBytes{request.stride * request.height};
                 const size_t pixelStride{request.stride / request.width};
@@ -1436,9 +1443,9 @@ namespace xr {
                     dispatch_async(validationQueue, ^{
                         [referenceImage validateWithCompletionHandler:^(NSError * _Nullable error) {
                             if (error != nil) {
-                                scores[i] = Frame::ImageTrackingScore::UNTRACKABLE;
+                                imageTrackingScores[i] = Frame::ImageTrackingScore::UNTRACKABLE;
                             } else {
-                                scores[i] = Frame::ImageTrackingScore::TRACKABLE;
+                                imageTrackingScores[i] = Frame::ImageTrackingScore::TRACKABLE;
                                 
                                 // Add image to our image set if it is trackable.
                                 [imageSet addObject: referenceImage];
@@ -1449,7 +1456,7 @@ namespace xr {
                         }];
                     });
                 } else {
-                    scores.at(i) = Frame::ImageTrackingScore::TRACKABLE;
+                    imageTrackingScores[i] = Frame::ImageTrackingScore::TRACKABLE;
                 }
                 
                 CGImageRelease(image);
@@ -1471,10 +1478,9 @@ namespace xr {
                 configuration.maximumNumberOfTrackedImages = imageCount > 4 ? 4 : imageCount;
                 [SystemImpl.XrContext->Session runWithConfiguration: configuration];
                 [sessionDelegate SetImageDetectionEnabled:true];
+                imageTrackingScoresValid = true;
             }
-            
-            return scores;
-        }
+    }
 
     private:
         std::function<MTKView*()> getXRView{};
@@ -1500,8 +1506,12 @@ namespace xr {
         std::unordered_map<std::string, Frame::Plane::Identifier> planeMap{};
         std::unordered_map<std::string, Frame::Mesh::Identifier> meshMap{};
         std::unordered_map<uint64_t, FeaturePoint::Identifier> featurePointIDMap{};
+        
+        bool imageTrackingScoresValid{ false };
+        std::vector<std::string> imageTrackingScores{};
         std::vector<std::unique_ptr<Frame::ImageTrackingResult>> imageTrackingResults{};
         std::unordered_map<std::string, Frame::ImageTrackingResult::Identifier> imageTrackingMap{};
+        
         FeaturePoint::Identifier nextFeaturePointID{};
         bool planeDetectionEnabled{ false };
 
@@ -1831,8 +1841,13 @@ namespace xr {
         return false;
     }
 
-    std::vector<std::string> System::Session::Frame::CreateAugmentedImageDatabase(std::vector<System::Session::Frame::ImageTrackingRequest>& requests) const
+    void System::Session::CreateAugmentedImageDatabase(const std::vector<System::Session::ImageTrackingRequest>& requests) const
     {
-        return m_impl->sessionImpl.CreateAugmentedImageDatabase(requests);
+        m_impl->CreateAugmentedImageDatabase(requests);
+    }
+
+    std::vector<std::string>* System::Session::GetImageTrackingScores() const
+    {
+        return m_impl->GetImageTrackingScores();
     }
 }
