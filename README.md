@@ -16,7 +16,7 @@ Check out the [home page](https://aka.ms/Bnative) for a project overview.
 - [Project Status](project-status)
   - [Supported Features]()
 - [Building](BUILDING.md#building)
-  - [All Development Platforms, Common First Steps](BUILDING.md#all-development-platforms-common-first-steps)
+  - [All Development Platforms](BUILDING.md#all-development-platforms) (_Do this first!_)
   - [Building on Windows 10, Targeting Windows Desktop (Win32)](BUILDING.md#building-on-windows-10-targeting-windows-desktop-win32)
   - [Building on Windows 10, Targeting Universal Windows Platform (UWP)](BUILDING.md#building-on-windows-10-targeting-universal-windows-platform-uwp)
   - [Building on Windows 10, Targeting HoloLens 2](BUILDING.md#building-on-windows-10-targeting-hololens-2)

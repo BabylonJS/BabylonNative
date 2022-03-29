@@ -1,18 +1,16 @@
 # Building
 
-This quick overview will help you get started developing in the Babylon Native 
-repository. We support development on Windows and macOS. (It is also possible, 
-though not yet fully supported, to develop on Linux.) This overview is intended 
-for reasonably experienced developers familiar with common native development 
-principles.
+This quick overview will help you get started developing in the Babylon Native
+repository. We support development on Windows and macOS. This overview is intended
+for developers familiar with common native development practices.
 
-## **All Development Platforms, Common First Steps**
+## **All Development Platforms**
 
 **Required Tools:** [git](https://git-scm.com/), [CMake](https://cmake.org/), [node.js](https://nodejs.org/en/)
 
-The first step for all development environments and targets is to clone the repo. Use a 
+The first step for all development environments and targets is to clone the repo. Use a
 git-enabled terminal to follow the steps below. The `--recursive` flag is necessary as
-Babylon Native makes extensive use of submodules to supply its dependencies.
+Babylon Native makes extensive use of submodules for dependencies.
 
 ```
 git clone --recursive https://github.com/BabylonJS/BabylonNative.git
@@ -27,112 +25,107 @@ npm install
 ```
 
 Babylon Native's build system is based on CMake, which customarily uses a separate
-build directory. Build directory location is up to you, but we recommend just creating 
-a `Build` directory within your clone of the Babylon Native repository (Babylon 
-Native's `.gitignore` file is already set up to ignore this `Build` directory).
+build directory. Build directory location is up to you, but we recommend using
+the `build` directory from the repository root. The `.gitignore` file is set up to
+ignore this `build` directory.
 
-```
-cd <repo root>
-mkdir Build
-cd Build
-```
-
-**NOTE:** CMake considers what are sometimes called "build flavors" (Win32 x86 versus 
-Win32 x64 versus UWP x64, etc.) to be entirely different build targets which should have
-separate build folders. For cross-platform development, we commonly use multiple 
-subfolders inside the Build folder, such as `Build/win32_x86` and `Build/uwp_x64`, to 
+**NOTE:** CMake considers what are sometimes called "build flavors" (Win32/x86 versus
+Win32/x64 versus UWP/x64, etc.) to be entirely different build targets which should have
+separate build folders. For cross-platform development, we commonly use multiple
+subfolders inside the `build` folder, such as `build/win32_x86` and `build/uwp_x64`, to
 house the builds for different platforms, with each subfolder treated just like the
-`Build` folder in the instructions below.
+`build` folder in the instructions below.
 
 ## **Building on Windows 10, Targeting Windows Desktop (Win32)**
 
-**Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with 
-C++ development tools, [Python 3.0](https://www.python.org/) or newer (required by 
+_Follow the steps from [All Development Platforms](#all-development-platforms-common-first-steps) before proceeding._
+
+**Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with
+C++ development tools, [Python 3.0](https://www.python.org/) or newer (required by
 dependencies)
 
-For Windows development, CMake will generate a Visual Studio Solution. From a 
-terminal with access to CMake located in your `BabylonNative/Build` directory, type
-the following (amend paths for alternative build directories):
+For Windows development, CMake will generate a Visual Studio solution. From the root
+of the repository on the command line, run the following command:
 
 ```
-cmake ..
+cmake -B build\win32
 ```
 
 Note that, by default, this will target the same processor architecture that is being
-used to build the solution; so if your developer computer has 64-bit CPU, CMake's 
-generated solution will target 64-bit CPUs by default. To manually target specific 
-architectures, tell CMake the intended architecture using the `-A` flag, as shown below. 
-Supported arguments for using this flag with Babylon Native include `Win32` for 32-bit 
+used to build the solution. If your development environment uses a 64-bit CPU, CMake's
+generated solution will target `x64`. To manually target specific architectures, tell
+CMake the intended architecture using the `-A` flag, as shown below. Supported
+arguments for using this flag with Babylon Native include `Win32` for 32-bit
 processors and `x64` for 64-bit processors.
 
 ```
-cmake -A Win32 ..
+cmake -B build\win32_x86 -A Win32
 ```
 
-CMake will generate a new `BabylonNative.sln` file in your working directory. Please
-be patient; this process can take several minutes. When the process is completed,
-open `BabylonNative.sln` by double-clicking on it in Windows Explorer or by entering 
-the following command:
+CMake will generate a new `BabylonNative.sln` file in the specified build folder.
+When CMake is complete, open `BabylonNative.sln` by double-clicking on it in
+Windows Explorer or by running the following command:
 
 ```
-start BabylonNative.sln
+start build\win32\BabylonNative.sln
 ```
 
-By default, the "Playground" demo app should be set as the Visual Studio start-up
-project. Build and run this app by pressing the green "Play" button or by pressing
-`F5` on your keyboard.
+By default, the `Playground` demo app will be set as the Visual Studio start-up
+project.
 
 ## **Building on Windows 10, Targeting Universal Windows Platform (UWP)**
 
-**Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with 
-C++ and UWP development tools, [Python 3.0](https://www.python.org/) or newer (required 
+_Follow the steps from [All Development Platforms](#all-development-platforms-common-first-steps) before proceeding._
+
+**Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with
+C++ and UWP development tools, [Python 3.0](https://www.python.org/) or newer (required
 by dependencies)
 
-For Windows development, CMake will generate a Visual Studio Solution. By default it 
-will target Win32, so to target UWP (which CMake describes as "Windows Store") you have 
-to specify certain CMake variables. From a terminal with access to CMake located in 
-your `BabylonNative/Build` directory, type the following (amend paths for alternative 
-build directories):
+For Windows development, CMake will generate a Visual Studio solution. By default it
+will target Win32. To target UWP (which CMake describes as `Windows Store`), you must
+specify a couple CMake variables. From the root of the repository on the command line,
+run the following command:
 
 ```
-cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 ..
+cmake -B build/uwp -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
 ```
 
 Note that, by default, this will target the same processor architecture that is being
-used to build the solution; so if your developer computer has 64-bit CPU, CMake's 
-generated solution will target 64-bit CPUs by default. To manually target specific 
-architectures, tell CMake the intended architecture using the `-A` flag, as shown below. 
-Supported arguments for using this flag with Babylon Native include `Win32` for 32-bit 
-processors, `x64` for 64-bit processors, `arm` for ARM processors, and `arm64` for 
+used to build the solution. If your development environment uses a 64-bit CPU, CMake's
+generated solution will target `x64`. To manually target specific architectures, tell
+CMake the intended architecture using the `-A` flag, as shown below. Supported
+arguments for using this flag with Babylon Native include `Win32` for 32-bit
+processors, `x64` for 64-bit processors, `arm` for ARM processors, and `arm64` for
 ARM64 processors.
 
 ```
-cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -A arm64 ..
+cmake -B build/uwp_arm64 -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -A arm64
 ```
 
-CMake will generate a new `BabylonNative.sln` file in your working directory. Please
-be patient; this process can take several minutes. When the process is completed,
-open `BabylonNative.sln` by double-clicking on it in Windows Explorer or by entering 
-the following command:
+CMake will generate a new `BabylonNative.sln` file in the specified build folder.
+When CMake is complete, open `BabylonNative.sln` by double-clicking on it in
+Windows Explorer or by running the following command:
 
 ```
-start BabylonNative.sln
+start build\uwp\BabylonNative.sln
 ```
 
-By default, the "Playground" demo app should be set as the Visual Studio start-up
-project. Build and run this app by pressing the green "Play" button or by pressing
-`F5` on your keyboard.
+By default, the `Playground` demo app will be set as the Visual Studio start-up
+project.
 
 ## **Building on Windows 10, Targeting HoloLens 2**
 
-**Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with 
-C++ and UWP development tools, [Python 3.0](https://www.python.org/) or newer (required 
+_Follow the steps from [All Development Platforms](#all-development-platforms-common-first-steps) before proceeding._
+
+**Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with
+C++ and UWP development tools, [Python 3.0](https://www.python.org/) or newer (required
 by dependencies)
 
-HoloLens 2 supports `arm64` UWP applications. To create a HoloLens 2 Visual Studio solution for a physical device, run the following command from the `BabylonNative/Build` directory:
+HoloLens 2 supports `arm64` UWP applications. To create a HoloLens 2 Visual Studio
+solution for a physical device, run the following command from the repository root:
 
 ```
-cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -A arm64 ..
+cmake -B build/uwp_arm64 -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -A arm64
 ```
 
 **Additional notes for HoloLens 2 development**:
@@ -143,131 +136,112 @@ cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -A arm64 ..
 
 ## **Building on macOS, Targeting macOS**
 
-**Required Tools:** [Xcode 11](https://developer.apple.com/xcode/) or newer, 
+**Required Tools:** [Xcode 11](https://developer.apple.com/xcode/) or newer,
 [Python 3.0](https://www.python.org/) or newer (required by dependencies)
 
-This has been tested on MacOS Catalina (10.15).
-
-For macOS development, CMake by default will generate a Makefile. It may be possible
-to build Babylon Native for macOS using this approach, but at present only the Xcode
-method is supported. To generate an Xcode project using CMake, you must specify the
-correct build system generator for CMake to use, as follows:
-
-```
-cmake -G Xcode ..
-```
-
-Starting with Xcode 12, it's mandatory to set the targeted CPU architectures (X86_64 and/or arm64).
+For macOS development, CMake will generate a Makefile by default. It may be possible
+to build Babylon Native for macOS using this approach, but only the Xcode method is
+supported at present. To generate an Xcode project using CMake, you must specify the
+correct build system generator for CMake to use. Run the following command from the
+repository root:
 
 ```
-cmake .. -GXcode "-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64"
+cmake -B build/macOS -G Xcode
 ```
 
-CMake will generate a new `BabylonNative.xcodeproj` file in your working directory.
-Please be patient; this process can take several minutes. When the process is 
-completed, open the project by double-clicking on it in Finder or by entering the 
-following command:
+CMake will generate a new `BabylonNative.xcodeproj` file in the specified build folder.
+Open the project by double-clicking on it in Finder or by entering the following command:
 
 ```
-open BabylonNative.xcodeproj
+open build/macOS/BabylonNative.xcodeproj
 ```
 
-To select which project to build with Xcode, select the correct project name in the 
-menu to the right of the greyed-out "Stop" button adjacent to the "Play" button in
+To select which project to build with Xcode, select the correct project name in the
+menu to the right of the greyed-out `Stop` button adjacent to the `Play` button in
 the top-left corner of the Xcode window. For example, to build and run the Playground
-demo app, click on the project selector and find "Playground" in the list of possible
-selections. The "Play" button will subsequently allow you to build, run, and debug
+demo app, click on the project selector and find `Playground` in the list of possible
+selections. The `Play` button will subsequently allow you to build, run, and debug
 the selected Babylon Native demo app.
-
-For macOS 11.0 Big Sur and ARM based CPU, you'll need to use XCode 12.
-Also, The CMake command line is different to indicate the use of other architecture:
-
-```
-cmake -G Xcode .. "-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64"
-```
-
-If CMake is not available on your platform, you'll have to clone it and build it. [CMake repo](https://gitlab.kitware.com/cmake/cmake)
 
 ## **Building on macOS, Targeting iOS**
 
-**Required Tools:** [Xcode 11](https://developer.apple.com/xcode/) or newer, 
+_Follow the steps from [All Development Platforms](#all-development-platforms-common-first-steps) before proceeding._
+
+**Required Tools:** [Xcode 11](https://developer.apple.com/xcode/) or newer,
 [Python 3.0](https://www.python.org/) or newer (required by dependencies)
 
-This has been tested on MacOS Catalina (10.15) and iOS 13.
-
-For macOS development, CMake by default will generate a Makefile. It may be possible
-to build Babylon Native for macOS using this approach, but at present only the Xcode
-method is supported. To generate an Xcode project using CMake, you must specify the
+For macOS development, CMake will generate a Makefile by default. It may be possible
+to build Babylon Native for macOS using this approach, but only the Xcode method is
+supported at present. To generate an Xcode project using CMake, you must specify the
 correct build system generator for CMake to use. Additionally, you must tell CMake
-what toolchain to use, which provides additional information about how to generate an 
-iOS Xcode project correctly. Furthermore, a number of capabilities within Babylon 
-Native's dependencies must be deactivated in order for the project to build correctly;
-these capabilities are set to their correct state by the additional CMake variables in 
-the following command:
+what toolchain to use, which provides additional information about how to generate an
+iOS Xcode project correctly. Run the following command from the repository root:
 
 ```
-cmake -G Xcode -DCMAKE_TOOLCHAIN_FILE=../Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DDEPLOYMENT_TARGET=12 -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF ..
+cmake -B build/iOS -G Xcode -D CMAKE_TOOLCHAIN_FILE=Dependencies/ios-cmake/ios.toolchain.cmake -D PLATFORM=OS64COMBINED -D ENABLE_ARC=0 -D DEPLOYMENT_TARGET=12
 ```
 
 To enable bitcode support, add this option to the cmake command line parameters:
 
 ```
--DENABLE_BITCODE=ON
+-D ENABLE_BITCODE=ON
 ```
 
-CMake will generate a new `BabylonNative.xcodeproj` file in your working directory.
-Please be patient; this process can take several minutes. When the process is 
-completed, open the project by double-clicking on it in Finder or by entering the 
-following command:
+CMake will generate a new `BabylonNative.xcodeproj` file in the specified build folder.
+Open the project by double-clicking on it in Finder or by entering the following command:
 
 ```
-open BabylonNative.xcodeproj
+open build/macOS/BabylonNative.xcodeproj
 ```
 
-To select which project to build with Xcode, select the correct project name in the 
-menu to the right of the greyed-out "Stop" button adjacent to the "Play" button in
+To select which project to build with Xcode, select the correct project name in the
+menu to the right of the greyed-out `Stop` button adjacent to the `Play` button in
 the top-left corner of the Xcode window. For example, to build and run the Playground
-demo app, click on the project selector and find "Playground" in the list of possible
-selections. The "Play" button will subsequently allow you to build, run, and debug
+demo app, click on the project selector and find `Playground` in the list of possible
+selections. The `Play` button will subsequently allow you to build, run, and debug
 the selected Babylon Native demo app.
 
 ## **Building on Windows, Targeting Android**
 
-**Required Tools:** 
+_Follow the steps from [All Development Platforms](#all-development-platforms-common-first-steps) before proceeding._
+
+**Required Tools:**
 [Android Studio](https://developer.android.com/studio), [Node.js](https://nodejs.org/en/download/), [Ninja](https://ninja-build.org/)
 
 The minimal requirement target is Android 5.0 with an OpenGL ES 3.0 compatible GPU.
 
 Only building with Android Studio is supported. CMake is not used directly. Instead, Gradle
 is used for building and CMake is automatically invocated for building the native part.
-An .apk that can be executed on your device or simulator is the output.
+An `.apk` that can be executed on your device or simulator is the output.
 
-First download the latest release of Ninja, extract the binary, and add it to your system path.
+First, download the latest release of Ninja, extract the binary, and add it to your system path.
 
-Next install the Javascript engine dependencies. This is done by the Node.js npm package system.
+Next, install the JavaScript engine dependencies. This is done by the Node.js npm package system.
 
 ```
 cd Apps
 npm install
 ```
 
-Babylon Native on Android supports two Javascript engines: V8 and JavaScriptCore. V8 is 
-used  by default if no engine is specified. To change the engine to JavaScriptCore, open 
+Babylon Native on Android supports two JavaScript engines: V8 and JavaScriptCore. V8 is
+used by default if no engine is specified. To change the engine to JavaScriptCore, open
 the file *Apps\Playground\Android\gradle.properties* and add the following line:
 
 ```
 JSEngine=jsc
 ```
 
-Once the npm packages are installed, with AndroidStudio, open the project located at 
-*Apps\Playground\Android*. Then in the menu, select Run->Run 'app'. If you don't have an 
-Android device plugged in or no Android image in the Android simulator, that option will 
-be greyed and inaccessible. Instructions and tips on how to install the simulator are
-[available here](Documentation/AndroidSimulator.md).
+Once the npm packages are installed, open the project located at
+`Apps\Playground\Android` with Android Studio. Then in the menu, select `Run` -> `Run 'app'`.
+If you don't have an Android device plugged in or no Android image in the Android emulator,
+that option will be greyed and inaccessible. Instructions and tips on how to install the
+emulator are [available here](Documentation/AndroidEmulator.md).
 
 ## **Building on Ubuntu, Targeting Linux**
 
-**Required Tools:** 
+_Follow the steps from [All Development Platforms](#all-development-platforms-common-first-steps) before proceeding._
+
+**Required Tools:**
 [Clang](https://clang.llvm.org/) or [GCC](https://gcc.gnu.org/)
 
 *See also: [**Building on Windows using WSL**](Documentation/WSL.md)*
@@ -280,20 +254,20 @@ First step is to install packages mandatory for building. For example, with Clan
 sudo apt-get install libgl1-mesa-dev libcurl4-openssl-dev clang-9 libc++-9-dev libc++abi-9-dev lld-9 ninja-build
 ```
 
-Depending on the JavaScript engine you wan't to use, you will have to install the package accordingly:
+Depending on the JavaScript engine you want to use, you will have to install the package accordingly:
 
 ### JavaScriptCore
 
 Install the following package:
 
 ```
-sudo apt-get install libjavascriptcoregtk-4.0-dev 
+sudo apt-get install libjavascriptcoregtk-4.0-dev
 ```
 
 Then, run cmake targetting a Ninja make file:
 
 ```
-cmake -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DNAPI_JAVASCRIPT_ENGINE=JavaScriptCore ..
+cmake -G Ninja -D JSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -D NAPI_JAVASCRIPT_ENGINE=JavaScriptCore
 ```
 
 ### V8
@@ -301,13 +275,13 @@ cmake -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.
 Install the following package:
 
 ```
-sudo apt-get install libv8-dev 
+sudo apt-get install libv8-dev
 ```
 
 Then, run cmake targetting a Ninja make file:
 
 ```
-cmake -GNinja -DNAPI_JAVASCRIPT_ENGINE=V8 ..
+cmake -G Ninja -D NAPI_JAVASCRIPT_ENGINE=V8
 ```
 
 And finally, for any JavaScript engine, run a build:
@@ -335,13 +309,15 @@ You will have to run CMake again to take changes into account.
 
 ## Selecting the Graphics API
 
-For Win32, Android and Linux, it's possible to build for different Graphics API.
+For Win32, UWP, Android, and Linux, it's possible to build for different graphics API.
 With CMake, add this parameter to the command line:
 ```
--DGRAPHICS_API=XXX
+-D GRAPHICS_API=<XXX>
 ```
 
-Where `XXX` can be D3D11 (default), D3D12 or Vulkan for Windows. `Vulkan` or OpenGL (default) for Linux.
+For Win32 and UWP, `<XXX>` can be `D3D11` (default), `D3D12`, or `Vulkan`.
+
+For Linux, `<XXX>` can be `OpenGL` (default) or `Vulkan`.
 
 For Android, the switch to Vulkan instead of OpenGL (default) is done with Gradle by adding a command line parameter:
 ```
@@ -353,4 +329,4 @@ If no `GRAPHICS_API` is provided, the build will use the default.
 **Note**
 
 - For Apple devices, Metal is the only possible choice.
-- Vulkan and D3D12 are under development and might not be stable enough for your production.
+- Vulkan and D3D12 are under development and might not be stable enough for production purposes.
