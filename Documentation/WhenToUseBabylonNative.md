@@ -13,7 +13,7 @@ scenario and why.
 
 #### Are you picking a platform for a new app, or is your app's platform already decided?
 -   [I'm picking a platform for my new app.](#do-you-prefer-more-native-like-technologies-or-more-web-like-technologies)
--   [I'm adding 3D to an app that's already committed to a platform.](#is-your-app-built-on-react-native-another-javascript-using-platform-including-web-or-hybrid-app-platforms-or-non-javascript-technologies)
+-   [I'm adding rendering to an app that's already committed to a platform.](#is-your-app-built-on-react-native-another-javascript-using-platform-including-web-or-hybrid-app-platforms-or-non-javascript-technologies)
 
 #### Do you prefer more native-like technologies or more Web-like technologies?
 -   [I prefer more native-like technologies.](#do-you-have-exceptional-rendering-requirements-such-as-aaa-quality-graphics-or-extreme-performance-needs)
@@ -37,24 +37,24 @@ scenario and why.
 ## Babylon Native is probably a good choice for your project!
 
 Congratulations! If you ended up here, then we think Babylon Native may
-be a suitable choice for adding 3D to your project. Typically, 
+be a suitable choice for adding Babylon.js to your project. Typically, 
 applications for which Babylon Native is well-suited tend to be developed
-as true native apps (C++, C#, etc.) which require 3D rendering as a 
+as true native apps (C++, C#, etc.) which require rendering as a 
 feature, though not necessarily the focus. Examples might include the
 following:
 
 -   A presentation app written in C# that needs to be able to render 3D 
     as well as 2D content.
 -   A scientific simulation utility written in Java that wants to be able 
-    to render data in 3D.
+    to render data.
 -   A 3D content generation tool written in C++ that wants to be able to 
     preview its output.
 
 The main reason Babylon Native is well-suited for these scenarios is 
-because Babylon Native makes it possible to bring Babylon.js's 
+because Babylon Native makes it possible to bring Babylon's 
 rendering capabilities into native applications with *extremely* minimal
 requirements regarding app and development infrastructure. In other words,
-Babylon Native is perhaps the simplest way to add Web-style 3D rendering
+Babylon Native is perhaps the simplest way to add Web-style rendering
 to a native application without having to pivot that application to 
 *become* a Web app.
 
@@ -63,17 +63,17 @@ to a native application without having to pivot that application to
 ## Babylon React Native is probably a good choice for your project!
 
 Congratulations! If you ended up here, then we think Babylon React Native
-may be a suitable choice for adding 3D to your project. There are two main
-situations when Babylon React Native is a particularly good choice for a 
-project:
+may be a suitable choice for adding Babylon.js to your project. There are 
+two main situations when Babylon React Native is a particularly good choice 
+for a project:
 
 -   When the project is already being built with React Native and wants to
-    add 3D as simply as possible.
+    add GPU-accelerated rendering as simply as possible.
 -   When the project requires capabilities that aren't typically exposed
     to Web-like platforms.
 
 In the former case, if your app is already committed to React Native as a 
-platform, Babylon React Native is one of two options to add 3D to
+platform, Babylon React Native is one of two options to add rendering to
 your project using Babylon.js. The second of these options is to simply
 use Babylon.js in a WebView, and there are some advantages to this 
 approach: it can sometimes yield better JavaScript performance (on iOS,
@@ -84,12 +84,12 @@ always be available in Babylon React Native. However, there are
 disadvantages as well: a WebView will create a second JavaScript context
 distinct from React Native's main JavaScript context and you will have to
 manage communication between the contexts manually, which can be complex
-and may negatively impact memory footprint as you pay the memory cost for
-two JavaScript contexts instead of one. Furthermore, running inside a 
-WebView will restrict you to only the features that the platform's WebView
-allows, whereas with Babylon React Native you can extend your 
-JavaScript-exposed capabilities by reaching through the platform into the
-native layer itself.
+and/or slow and may negatively impact memory footprint as you pay the 
+memory cost for two JavaScript contexts instead of one. Furthermore, 
+running inside a WebView will restrict you to only the features that the 
+platform's WebView allows, whereas with Babylon React Native you can 
+extend your JavaScript-exposed capabilities by reaching through the 
+platform into the native layer itself.
 
 This segues directly into the second situation when Babylon React Native
 is a particularly good choice: when you need capabilities that aren't 
