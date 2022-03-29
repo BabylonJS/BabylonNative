@@ -17,6 +17,7 @@
     "@babylonjs/core": "5.0.0-rc.4",
     "@babylonjs/loaders": "5.0.0-rc.4",
     "@babylonjs/react-native": "file:../../../Modules/@babylonjs/react-native",
+    "@babylonjs/react-native-iosandroid": "file:../../../Modules/@babylonjs/react-native-iosandroid",
     "@babylonjs/react-native-windows": "file:../../../Modules/@babylonjs/react-native-windows",
     "@babylonjs/playground-shared": "file:../playground-shared",
     "@react-native-community/slider": "^4.0.0-rc.3",

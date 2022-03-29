@@ -6,6 +6,8 @@ project(ReactNativeBabylon)
 set(CMAKE_CXX_STANDARD 17)
 
 set(BABYLON_REACT_NATIVE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../react-native")
+set(BABYLON_REACT_NATIVE_IOSANDROID "${CMAKE_CURRENT_LIST_DIR}/../../react-native-iosandroid")
+
 include(${BABYLON_REACT_NATIVE_DIR}/shared/CMakeLists.txt)
 
 # Configure Babylon Native to use JSI
@@ -18,7 +20,7 @@ target_include_directories(jsi INTERFACE ${REACTNATIVE_DIR_CMAKE}/ReactCommon/js
 
 set(BABYLON_NATIVE_BUILD_APPS OFF CACHE BOOL "")
 set(BABYLON_NATIVE_USE_SWAPCHAINPANEL ON CACHE BOOL "")
-set(BABYLON_NATIVE_DIR "${BABYLON_REACT_NATIVE_DIR}/submodules/BabylonNative")
+set(BABYLON_NATIVE_DIR "${BABYLON_REACT_NATIVE_IOSANDROID}/submodules/BabylonNative")
 add_subdirectory(${BABYLON_NATIVE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/BabylonNative EXCLUDE_FROM_ALL)
 
 add_library(BabylonNative

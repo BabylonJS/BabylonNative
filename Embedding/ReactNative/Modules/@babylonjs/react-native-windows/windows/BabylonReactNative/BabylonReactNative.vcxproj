@@ -28,8 +28,9 @@
     <ReactNativeWindowsDir Condition="'$(ReactNativeWindowsDir)' == '' And Exists('$(ProjectDir)..\..\..\..\..\Apps\Playground\Playground\node_modules\react-native-windows\package.json')">$(ProjectDir)\..\..\..\..\..\Apps\Playground\Playground\node_modules\react-native-windows\</ReactNativeWindowsDir>
   </PropertyGroup>
   <PropertyGroup Label="BabylonReactNativeProps">
+    <BabylonNativeIOSAndroidProjDir Condition="'$(BabylonReactNativeDir)' == '' And Exists('$(ProjectDir)\..\..\..\react-native-iosandroid')">$(ProjectDir)..\..\..\react-native-iosandroid\</BabylonNativeIOSAndroidProjDir>
     <BabylonReactNativeDir Condition="'$(BabylonReactNativeDir)' == '' And Exists('$(ProjectDir)\..\..\..\react-native')">$(ProjectDir)..\..\..\react-native\</BabylonReactNativeDir>
-    <BabylonNativeDir Condition="Exists('$(BabylonReactNativeDir)submodules\BabylonNative')">$(BabylonReactNativeDir)Build\</BabylonNativeDir>
+    <BabylonNativeDir Condition="Exists('$(BabylonReactNativeDir)Build')">$(BabylonReactNativeDir)Build\</BabylonNativeDir>
     <BabylonNativeBuildDir Condition="'$(Platform)'=='x64' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)uwp_x64\</BabylonNativeBuildDir>
     <BabylonNativeBuildDir Condition="'$(Platform)'=='Win32' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)uwp_x86\</BabylonNativeBuildDir>
     <BabylonNativeBuildDir Condition="'$(Platform)'=='ARM' And '$(BabylonNativeDir)' != ''">$(BabylonNativeDir)uwp_arm\</BabylonNativeBuildDir>
@@ -164,6 +165,7 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <!-- Include project headers when building in the repo -->
       <AdditionalIncludeDirectories Condition="Exists('$(BabylonReactNativeDir)shared')">$(BabylonReactNativeDir)shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="Exists('$(BabylonNativeIOSAndroidProjDir)shared')">$(BabylonNativeIOSAndroidProjDir)shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -222,6 +224,7 @@
     <ClCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories Condition="Exists('$(BabylonReactNativeDir)shared')">$(BabylonReactNativeDir)shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="Exists('$(BabylonNativeIOSAndroidProjDir)shared')">$(BabylonNativeIOSAndroidProjDir)shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
