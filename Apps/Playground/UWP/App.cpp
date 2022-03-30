@@ -93,6 +93,8 @@ void App::SetWindow(CoreWindow^ window)
 
     window->KeyDown +=
         ref new TypedEventHandler<CoreWindow^, KeyEventArgs^>(this, &App::OnKeyPressed);
+    window->KeyUp +=
+        ref new TypedEventHandler<CoreWindow ^, KeyEventArgs ^>(this, &App::OnKeyReleased);
 }
 
 // Initializes scene resources, or loads a previously saved app state.
@@ -235,9 +237,17 @@ void App::OnPointerReleased(CoreWindow^, PointerEventArgs^ args)
 
 void App::OnKeyPressed(CoreWindow^ window, KeyEventArgs^ args)
 {
-    if (args->VirtualKey == VirtualKey::R)
+    if (m_nativeInput != nullptr)
     {
-        RestartRuntime(window->Bounds);
+        m_nativeInput->KeyPress(static_cast<int>(args->VirtualKey), true);
+    }
+}
+
+void App::OnKeyReleased(CoreWindow ^ window, KeyEventArgs ^ args)
+{
+    if (m_nativeInput != nullptr)
+    {
+        m_nativeInput->KeyPress(static_cast<int>(args->VirtualKey), false);
     }
 }
 
