@@ -41,6 +41,8 @@ namespace Babylon::Plugins
         void TouchUp(uint32_t pointerId, int32_t x, int32_t y);
         void TouchMove(uint32_t pointerId, int32_t x, int32_t y);
 
+        void KeyPress(uint32_t keyCode, bool isDown);
+
         DeviceStatusChangedCallbackTicket AddDeviceConnectedCallback(DeviceStatusChangedCallback&& callback);
         DeviceStatusChangedCallbackTicket AddDeviceDisconnectedCallback(DeviceStatusChangedCallback&& callback);
         InputStateChangedCallbackTicket AddInputChangedCallback(InputStateChangedCallback&& callback);

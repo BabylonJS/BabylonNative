@@ -76,6 +76,11 @@ namespace Babylon::Plugins
         m_impl->TouchMove(pointerId, x, y);
     }
 
+    void NativeInput::KeyPress(uint32_t keyCode, bool isDown)
+    {
+        m_impl->KeyPress(keyCode, isDown);
+    }
+
     NativeInput::Impl::Impl(Napi::Env env)
         : m_runtimeScheduler{JsRuntime::GetFromJavaScript(env)}
     {
@@ -232,6 +237,18 @@ namespace Babylon::Plugins
             m_eventDispatcher.tick(arcana::cancellation::none());
 
         });
+    }
+
+    void NativeInput::Impl::KeyPress(uint32_t keyCode, bool isDown)
+    {
+        int value = (isDown) ? 1 : 0;
+        m_runtimeScheduler([keyCode, value, this]()
+            {
+                std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(DeviceType::Keyboard, 0, {keyCode})};
+                SetInputState(DeviceType::Keyboard, 0, keyCode, value, deviceInputs, true);
+
+                m_eventDispatcher.tick(arcana::cancellation::none());
+            });
     }
 
     NativeInput::Impl::DeviceStatusChangedCallbackTicket NativeInput::Impl::AddDeviceConnectedCallback(NativeInput::Impl::DeviceStatusChangedCallback&& callback)

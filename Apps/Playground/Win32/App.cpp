@@ -381,9 +381,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_KEYDOWN:
         {
-            if (wParam == 'R')
+            if (nativeInput != nullptr)
             {
-                RefreshBabylon(hWnd);
+                nativeInput->KeyPress(static_cast<int>(wParam), true);
+            }
+            break;
+        }
+        case WM_KEYUP:
+        {
+            if (nativeInput != nullptr)
+            {
+                nativeInput->KeyPress(static_cast<int>(wParam), false);
             }
             break;
         }

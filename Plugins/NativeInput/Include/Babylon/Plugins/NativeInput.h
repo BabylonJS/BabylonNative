@@ -19,6 +19,8 @@ namespace Babylon::Plugins
         void TouchUp(uint32_t pointerId, int32_t x, int32_t y);
         void TouchMove(uint32_t pointerId, int32_t x, int32_t y);
 
+        void KeyPress(uint32_t keyCode, bool isDown);
+
         static constexpr uint32_t LEFT_MOUSE_BUTTON_ID{ 0 };
         static constexpr uint32_t MIDDLE_MOUSE_BUTTON_ID{ 1 };
         static constexpr uint32_t RIGHT_MOUSE_BUTTON_ID{ 2 };
