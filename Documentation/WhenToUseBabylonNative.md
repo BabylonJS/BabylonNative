@@ -11,6 +11,10 @@ scenario and why.
 
 ***
 
+#### Does your project need rendering code to be shared between Web and native deployments?
+-   [Yes, I need Web and native deployments to share rendering code.](#are-you-picking-a-platform-for-a-new-app-or-is-your-apps-platform-already-decided)
+-   [No, having multiple deployments share rendering code isn't a priority for me.](#are-you-picking-a-platform-for-a-new-app-or-is-your-apps-platform-already-decided)
+
 #### Are you picking a platform for a new app, or is your app's platform already decided?
 -   [I'm picking a platform for my new app.](#do-you-prefer-more-native-like-technologies-or-more-web-like-technologies)
 -   [I'm adding rendering to an app that's already committed to a platform.](#is-your-app-built-on-react-native-another-javascript-using-platform-including-web-or-hybrid-app-platforms-or-non-javascript-technologies)
