@@ -597,9 +597,11 @@ const patchPackageVersion = async () => {
       packageJsonWindows.peerDependencies["@babylonjs/react-native"] = releaseVersion;
       packageJsoniOSAndroid.peerDependencies["@babylonjs/react-native"] = releaseVersion;
 
+    /* version tag is done when publishing
       packageJsonWindows["version"] = releaseVersion;
       packageJsoniOSAndroid["version"] = releaseVersion;
       packageJson["version"] = releaseVersion;
+      */
     }
 
     fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
