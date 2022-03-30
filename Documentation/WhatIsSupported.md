@@ -1,4 +1,4 @@
-# What Is Working?
+# What Is Supported?
 
 Babylon.js has many, many features; and while the goal of Babylon Native
 is to support an overwhelming majority of those features, not all parts of
@@ -9,7 +9,7 @@ For more precise information about current and upcoming support for
 particular features, please don't hesitate to task us on
 [the forum](https://forum.babylonjs.com/c/questions/).
 
-## Core Features: <span style="color:green">Working</span>
+## Core Features: <span style="color:green">Supported</span>
 
 **Exceptions:**
 -   Audio
@@ -21,18 +21,18 @@ Native. As a rule, if it's in
 you can probably use it in Babylon Native. The glaring exception to 
 this is audio (`Sound`, etc.), which is not yet supported at all.
 
-## Secondary Features: <span style="color:red">Not Working</span>
+## Secondary Features: <span style="color:red">Not Supported</span>
 
 **Exceptions:**
--   Text rendering
+-   Text rendering (experimental)
 
 Secondary engine features (GUI, the Inspector, 2D Controls, and other 
-ancillary Babylon capabilities) are overwhelmingly not working in
+ancillary Babylon capabilities) are overwhelmingly not yet supported in
 Babylon Native. If it's not a core engine capability and it doesn't fit 
 into one of the other categories described below, it probably doesn't work 
 in Babylon Native yet.
 
-## XR: <span style="color:lightgreen">Mostly Working</span>
+## XR: <span style="color:lightgreen">Mostly Supported</span>
 
 **Exceptions:**
 -   Oculus
@@ -44,7 +44,7 @@ available. Android and iOS are very well supported, and Windows Mixed
 Reality (HoloLens) is also well supported. Oculus and other XR platforms 
 are not supported yet.
 
-## 3D Assets: <span style="color:lightgreen">Mostly Working</span>
+## 3D Assets: <span style="color:lightgreen">Mostly Supported</span>
 
 The bulk of Babylon's featureset for 3D assets (models, 
 materials/shaders, etc.) is supported by Babylon Native. More specialized
@@ -52,7 +52,7 @@ scenarios may have more nuanced support stories (Draco compression has
 *some* but not *full* support, for example), but in general if it's a 
 feature of loading or using a 3D asset, it probably works.
 
-## Non-3D Assets: <span style="color:yellow">Mostly Not Working</span>
+## Non-3D Assets: <span style="color:yellow">Mostly Not Supported</span>
 
 **Exceptions:**
 -   Textures
@@ -63,7 +63,7 @@ and the like are largely if not completely unsupported right now.
 If it's not a 3D asset or a part of a 3D asset, you should assume it 
 can't be used in Babylon Native yet.
 
-## Platforms: <span style="color:lightgreen">Mostly Working</span>
+## Platforms: <span style="color:lightgreen">Mostly Supported</span>
 
 **Exceptions:**
 -   Vulkan
