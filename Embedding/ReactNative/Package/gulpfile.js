@@ -576,7 +576,7 @@ const patchPackageVersion = async () => {
     const packageJsoniOSAndroid = JSON.parse(fs.readFileSync(packageJsonPathiOSAndroid));
 
     if (versionIndex != -1) {
-      const version = process.argv[versionIndex];
+      const version = process.argv[versionIndex + 1];
       if (version == '0.64' || version == '0.65') {
         console.log(chalk.black.bgCyan(`Updating Package.json for React Native ${version}.`));
         let peerDep = (version == '0.64') ? '>=0.63.1 <0.65.0' : '>=0.65.0';
@@ -594,6 +594,7 @@ const patchPackageVersion = async () => {
     // release version
     if (releaseVersionIndex !== -1) {
       const releaseVersion = process.argv[releaseVersionIndex + 1];
+      console.log(chalk.black.bgCyan(`Updating Package.json for Release version ${releaseVersion}.`));
       packageJsonWindows.peerDependencies["@babylonjs/react-native"] = releaseVersion;
       packageJsoniOSAndroid.peerDependencies["@babylonjs/react-native"] = releaseVersion;
 
