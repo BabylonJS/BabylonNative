@@ -28,7 +28,7 @@
     "semver": "^7.3.2"
   },
   "peerDependencies": {
-    "@babylonjs/core": "^5.0.0-rc.4",
+    "@babylonjs/core": "^5.0.0-rc.12",
     "react": ">=16.13.1",
     "react-native": ">=0.63.1",
     "react-native-permissions": "^3.0.0"
@@ -36,7 +36,7 @@
   "devDependencies": {
     "@babel/core": "^7.8.4",
     "@babel/runtime": "^7.8.4",
-    "@babylonjs/core": "5.0.0-rc.4",
+    "@babylonjs/core": "5.0.0-rc.12",
     "@rnw-scripts/eslint-config": "0.1.6",
     "@rnw-scripts/ts-config": "0.1.0",
     "@types/base-64": "^0.1.3",
