@@ -1,7 +1,7 @@
 # Building
 
 This quick overview will help you get started developing in the Babylon Native
-repository. We support development on Windows and macOS. This overview is intended
+repository. We support development on Windows, macOS, and Linux. This overview is intended
 for developers familiar with common native development practices.
 
 ## **All Development Platforms**
