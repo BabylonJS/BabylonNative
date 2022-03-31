@@ -26,51 +26,81 @@ Check out the [home page](https://aka.ms/Bnative) for a project overview.
   - [Building on Ubuntu, Targeting Linux](BUILDING.md#building-on-ubuntu-targeting-linux)
   - [Selecting the Graphics API](BUILDING.md#selecting-the-graphics-api)
 - [Documentation](Documentation/Readme.md)
-  - [FAQ](Documentation/faq.md)
+  - [When to Use Babylon Native](Documentation/WhenToUseBabylonNative.md)
   - [Build System](Documentation/BuildSystem.md)
   - [Continuous Integration](ContinuousIntegration.md)
   - [Extending Babylon Native](Documentation/Extending.md)
   - [Babylon Native Components](Documentation/Components.md)
   - [Android Emulator Tips](Documentation/AndroidEmulator.md)
   - [Debugging JavaScript on Mac and iOS](DebugJavascriptMacIOS.md)
+  - [FAQ](Documentation/faq.md)
 
 ## Project Status
 
-**TODO: rewrite**
+Babylon Native is currently available as a public preview in source form only. While many
+features are supported and functional, there are still features that are under active
+development. Please note that this project is not at the point where updates are fully
+backwards compatibility yet, and thus the contract for consuming Babylon Native can still
+and probably will change in the future.
 
-Babylon Native is currently available as a **public preview**. Many features are 
-currently available, and additional features are being added regularly, but certain
-features are currently unstable or not yet implemented.
+## What is Supported from Babylon.js
 
-The following major features are currently supported and expected to work. Note that 
-this list is not exhaustive.
+Babylon.js has many, many features; and while the goal of Babylon Native is to
+support an overwhelming majority of those features, not all parts of Babylon.js
+are equally well supported by Babylon Native at this time. This section is
+intended to help readers "eyeball it," checking quickly whether a given type of
+feature is likely supported by Babylon Native at this time. For more precise
+information about current and upcoming support for particular features, please
+don't hesitate to ask us on [the forum](https://forum.babylonjs.com/c/questions/).
 
-- Developing Babylon Native on the following platforms: Windows 10, macOS.
-- Building and running the libraries and demo apps for the following platforms: Win32,
-UWP, macOS, iOS, Android.
-- Loading and executing JavaScript code on all supported platforms.
-- Loading and rendering glTF objects on all supported platforms.
-- Network requests (including accessing local files using the `file://` protocol) 
-made throught the Babylon.js APIs.
-- Extending JavaScript functionality using N-API and native plugins.
-- Debugging JavaScript with V8 on the following platforms: Win32.
+### Supported
 
-The following major features are partially implemented but not yet supported. Note 
-that this list is not exhaustive.
+Many core features from Babylon.js are supported. Here is a non-exhaustive list.
 
-- Developing Babylon Native on the following platforms: Linux.
-- Mixed reality powered by OpenXR on the following platforms: Win32, UWP.
+- 3D Assets (glTF, OBJ, etc.)
+- Animations
+- Behaviors
+- Cameras
+- Gizmos
+- Materials
+- Meshes
+- Lights
+- Physics
+- Scenes
+- Shaders
+- Sprites
+- Textures loaded from a PNG or JPEG
+- XR
 
-The following major features are not yet supported or implemented, even as previews, 
-but are expected to be supported in the future. Note that this list is not exhaustive.
+### Partially Supported
 
-- Debugging JavaScript with V8 on the following platforms: Android, Apple, UWP, iOS, Linux.
-- User input.
-- Font rendering.
-- Sub-window, multi-window, and out-of-process rendering.
+The following are features that are not completely finished yet or have gaps.
 
-If you have any questions, please reach out
-to us on [the Babylon forum](https://forum.babylonjs.com).
+- Environment (only `.env` supported)
+- GUI (text rendering experimentally supported)
+- Input (only single pointer supported)
+- Instancing (only thin instances supported)
+- Post Processing (some are supported)
+
+### Not Yet Supported
+
+The following are features that don't work right now but will work in the future.
+
+- Audio
+- Serializers
+- Particles
+- Texture Loaders (KTX, DDS, etc.)
+
+### No Plan to Support
+
+The following are features that use features (e.g. HTML) that are outside the scope
+of what this project will support.
+
+- Inspector
+- Node Material Editor
+- GUI Editor
+- Performance Profiler
+- 2D Controls
 
 ## Team Stories
 - [Babylon Native](https://medium.com/@babylonjs/babylon-native-821f1694fffc)
@@ -79,6 +109,7 @@ to us on [the Babylon forum](https://forum.babylonjs.com).
 - [Babylon Native: Continuing the Journey](https://babylonjs.medium.com/babylon-native-the-continuing-the-journey-e00a7dc8157b)
 - [Audio in Babylon Native — Charting the way](https://babylonjs.medium.com/audio-in-babylon-native-charting-the-way-c6bc6d5c0d74)
 - [A Mysterious Case of Skinned Mesh Disappearances](https://babylonjs.medium.com/a-mysterious-case-of-skinned-mesh-disappearances-5fee23dd9cd6)
+- [A Babylon Native Backstage Tour](https://babylonjs.medium.com/a-babylon-native-backstage-tour-f9004bebc7fb)
 
 ## Contributing
 
