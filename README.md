@@ -13,8 +13,8 @@ Check out the [home page](https://aka.ms/Bnative) for a project overview.
 
 ## Quick Links
 
-- [Project Status](project-status)
-  - [Supported Features]()
+- [Project Status](#project-status)
+  - [What is Supported from Babylon.js](#what-is-supported-from-babylonjs)
 - [Building](BUILDING.md#building)
   - [All Development Platforms](BUILDING.md#all-development-platforms) (_Do this first!_)
   - [Building on Windows 10, Targeting Windows Desktop (Win32)](BUILDING.md#building-on-windows-10-targeting-windows-desktop-win32)
@@ -44,7 +44,7 @@ development. Please note that this project is not at the point where updates are
 backwards compatibility yet, and thus the contract for consuming Babylon Native can still
 and probably will change in the future.
 
-## What is Supported from Babylon.js
+### What is Supported from Babylon.js
 
 Babylon.js has many, many features; and while the goal of Babylon Native is to
 support an overwhelming majority of those features, not all parts of Babylon.js
@@ -54,7 +54,7 @@ feature is likely supported by Babylon Native at this time. For more precise
 information about current and upcoming support for particular features, please
 don't hesitate to ask us on [the forum](https://forum.babylonjs.com/c/questions/).
 
-### Supported
+#### Supported
 
 Many core features from Babylon.js are supported. Here is a non-exhaustive list.
 
@@ -73,7 +73,7 @@ Many core features from Babylon.js are supported. Here is a non-exhaustive list.
 - Textures loaded from a PNG or JPEG
 - XR
 
-### Partially Supported
+#### Partially Supported
 
 The following are features that are not completely finished yet or have gaps.
 
@@ -83,7 +83,7 @@ The following are features that are not completely finished yet or have gaps.
 - Instancing (only thin instances supported)
 - Post Processing (some are supported)
 
-### Not Yet Supported
+#### Not Yet Supported
 
 The following are features that don't work right now but will work in the future.
 
@@ -92,7 +92,7 @@ The following are features that don't work right now but will work in the future
 - Particles
 - Texture Loaders (KTX, DDS, etc.)
 
-### No Plan to Support
+#### No Plan to Support
 
 The following are features that depend on features (e.g. HTML) that are outside
 the scope of what this project will support.
