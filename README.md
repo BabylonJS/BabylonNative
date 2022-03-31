@@ -27,13 +27,14 @@ Check out the [home page](https://aka.ms/Bnative) for a project overview.
   - [Selecting the Graphics API](BUILDING.md#selecting-the-graphics-api)
 - [Documentation](Documentation/Readme.md)
   - [When to Use Babylon Native](Documentation/WhenToUseBabylonNative.md)
+  - [Babylon Native Components](Documentation/Components.md)
+  - [Extending Babylon Native](Documentation/Extending.md)
   - [Build System](Documentation/BuildSystem.md)
   - [Continuous Integration](ContinuousIntegration.md)
-  - [Extending Babylon Native](Documentation/Extending.md)
-  - [Babylon Native Components](Documentation/Components.md)
   - [Android Emulator Tips](Documentation/AndroidEmulator.md)
   - [Debugging JavaScript on Mac and iOS](DebugJavascriptMacIOS.md)
-  - [FAQ](Documentation/faq.md)
+  - [Debugging iOS and MacOS rendering using Xcode](DebugRenderedFrameMetal.md)
+  - [FAQ](Documentation/FAQ.md)
 
 ## Project Status
 
@@ -93,8 +94,8 @@ The following are features that don't work right now but will work in the future
 
 ### No Plan to Support
 
-The following are features that use features (e.g. HTML) that are outside the scope
-of what this project will support.
+The following are features that depend on features (e.g. HTML) that are outside
+the scope of what this project will support.
 
 - Inspector
 - Node Material Editor
