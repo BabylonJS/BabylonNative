@@ -1395,19 +1395,16 @@ namespace xr {
         }
         
         void CreateAugmentedImageDatabase(const std::vector<ImageTrackingRequest>& requests) {
+            // Create a dispatch group for the validation tasks.
+            __block dispatch_queue_t validationQueue = dispatch_queue_create("Image Validation Queue", nil);
+            __block dispatch_group_t validationGroup = dispatch_group_create();
             imageTrackingScores.resize(requests.size());
             __block uint32_t imageCount{0};
             __block NSMutableSet<ARReferenceImage*>* imageSet{[NSMutableSet<ARReferenceImage*> setWithCapacity:requests.size()]};
             
-            // Convert each image request from a bitmap to a CGImage, and prepare to pass that to the ARKit configuration.
-            ARWorldTrackingConfiguration* configuration{static_cast<ARWorldTrackingConfiguration*>(SystemImpl.XrContext->Session.configuration)};
-            
-            // Create a dispatch group for the validation tasks.
-            dispatch_queue_t validationQueue = dispatch_queue_create("Image Validation Queue", nil);
-            dispatch_group_t validationGroup = dispatch_group_create();
-                                    
             for (size_t i{0}; i < requests.size(); i++) {
                 const ImageTrackingRequest& request{requests[i]};
+                
                 // Create the AR Reference image.
                 const size_t imageBytes{request.stride * request.height};
                 const size_t pixelStride{request.stride / request.width};
@@ -1463,23 +1460,31 @@ namespace xr {
                 CGDataProviderRelease(provider);
                 CGColorSpaceRelease(colorSpace);
             }
-            
-            // Wait for all scores to calculated.
-            dispatch_group_wait(validationGroup, DISPATCH_TIME_FOREVER);
-
-            // If we have any images that qualified for tracking, then enable image detection.
-            if (imageCount > 0 && configuration != nil) {
-                configuration.detectionImages = imageSet;
                 
-                if (@available(iOS 13.0, *)) {
-                    configuration.automaticImageScaleEstimationEnabled = true;
-                }
+            // Wait for all scores to calculated.
+            __block dispatch_queue_t awaiterQueue = dispatch_queue_create("Awaiter Queue", nil);
+            dispatch_async(awaiterQueue, ^{
+                dispatch_group_wait(validationGroup, DISPATCH_TIME_FOREVER);
 
-                configuration.maximumNumberOfTrackedImages = imageCount > 4 ? 4 : imageCount;
-                [SystemImpl.XrContext->Session runWithConfiguration: configuration];
-                [sessionDelegate SetImageDetectionEnabled:true];
-                imageTrackingScoresValid = true;
-            }
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    // Convert each image request from a bitmap to a CGImage, and prepare to pass that to the ARKit configuration.
+                    ARWorldTrackingConfiguration* configuration{static_cast<ARWorldTrackingConfiguration*>(SystemImpl.XrContext->Session.configuration)};
+
+                    // If we have any images that qualified for tracking, then enable image detection.
+                    if (imageCount > 0 && configuration != nil) {
+                        configuration.detectionImages = imageSet;
+                        
+                        if (@available(iOS 13.0, *)) {
+                            configuration.automaticImageScaleEstimationEnabled = true;
+                        }
+
+                        configuration.maximumNumberOfTrackedImages = imageCount > 4 ? 4 : imageCount;
+                        [SystemImpl.XrContext->Session runWithConfiguration: configuration];
+                        [sessionDelegate SetImageDetectionEnabled:true];
+                        imageTrackingScoresValid = true;
+                    }
+                });
+            });
     }
 
     private:
