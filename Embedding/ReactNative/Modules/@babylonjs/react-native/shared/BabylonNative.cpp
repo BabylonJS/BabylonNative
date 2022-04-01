@@ -1,6 +1,6 @@
 #include "BabylonNative.h"
 
-#include <Babylon/Graphics.h>
+#include <Babylon/Graphics/Device.h>
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
@@ -22,8 +22,8 @@ namespace BabylonNative
     namespace
     {
         Dispatcher g_inlineDispatcher{ [](const std::function<void()>& func) { func(); } };
-        std::unique_ptr<Babylon::Graphics> g_graphics{};
-        std::unique_ptr<Babylon::Graphics::Update> g_update{};
+        std::unique_ptr<Babylon::Graphics::Device> g_graphics{};
+        std::unique_ptr<Babylon::Graphics::DeviceUpdate> g_update{};
         std::unique_ptr<Babylon::Polyfills::Canvas> g_nativeCanvas{};
     }
 
@@ -73,15 +73,15 @@ namespace BabylonNative
 
         void UpdateView(WindowType window, size_t width, size_t height)
         {
-            Babylon::WindowConfiguration windowConfig{};
+            Babylon::Graphics::WindowConfiguration windowConfig{};
             windowConfig.Window = window;
             windowConfig.Width = width;
             windowConfig.Height = height;
 
             if (!g_graphics)
             {
-                g_graphics = Babylon::Graphics::CreateGraphics(windowConfig);
-                g_update = std::make_unique<Babylon::Graphics::Update>(g_graphics->GetUpdate("update"));
+                g_graphics = Babylon::Graphics::Device::Create(windowConfig);
+                g_update = std::make_unique<Babylon::Graphics::DeviceUpdate>(g_graphics->GetUpdate("update"));
             }
             else
             {

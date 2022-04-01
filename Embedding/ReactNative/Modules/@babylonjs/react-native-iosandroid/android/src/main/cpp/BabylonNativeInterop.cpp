@@ -1,6 +1,6 @@
 #include <jni.h>
 
-#include <Babylon/Graphics.h>
+#include <Babylon/Graphics/Device.h>
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeInput.h>
