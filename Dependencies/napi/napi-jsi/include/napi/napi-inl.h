@@ -692,7 +692,12 @@ inline Value Object::Get(uint32_t index) const {
 template <typename ValueType>
 inline void Object::Set(uint32_t index, const ValueType& value) {
   // TODO: does this need to work for non-array objects?
-  _object->getArray(_env->rt).setValueAtIndex(_env->rt, static_cast<size_t>(index), static_cast<jsi::Value&&>(Value::From(_env, value)));
+  jsi::Array arrObj = _object->getArray(_env->rt);
+  if (arrObj.length(_env->rt) <= index) {
+      _object->setProperty(_env->rt, "length", static_cast<int>(index + 1));
+  }
+
+  arrObj.setValueAtIndex(_env->rt, static_cast<size_t>(index), static_cast<jsi::Value&&>(Value::From(_env, value)));
 }
 
 inline bool Object::Delete(uint32_t index) {

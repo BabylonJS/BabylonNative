@@ -31,8 +31,11 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetNaturalWidth(const Napi::CallbackInfo&);
         Napi::Value GetNaturalHeight(const Napi::CallbackInfo&);
         Napi::Value GetSrc(const Napi::CallbackInfo&);
+        Napi::Value GetImageContainer(const Napi::CallbackInfo&);
         void SetSrc(const Napi::CallbackInfo&, const Napi::Value&);
         void SetOnload(const Napi::CallbackInfo&, const Napi::Value&);
+        void SetOnerror(const Napi::CallbackInfo&, const Napi::Value&);
+        void HandleLoadImageError(const Napi::Error& error);
         void Dispose();
 
         uint32_t m_width{1};
@@ -42,6 +45,7 @@ namespace Babylon::Polyfills::Internal
 
         JsRuntimeScheduler m_runtimeScheduler;
         Napi::FunctionReference m_onloadHandlerRef;
+        Napi::FunctionReference m_onerrorHandlerRef;
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
         bx::DefaultAllocator m_allocator{};
         bimg::ImageContainer* m_imageContainer{};
