@@ -16,10 +16,10 @@ Babylon Native makes extensive use of submodules for dependencies.
 git clone --recursive https://github.com/BabylonJS/BabylonNative.git
 ```
 
-Babylon Native requires Babylon.js. You will need to install NPM packages to resolve these dependencies.
+Babylon Native requires Babylon.js. You will need to install NPM packages to resolve these dependencies. From the root
+of the repository on the command line, run the following commands:
 
 ```
-cd <repo root>
 cd Apps
 npm install
 ```
@@ -215,13 +215,6 @@ is used for building and CMake is automatically invocated for building the nativ
 An `.apk` that can be executed on your device or simulator is the output.
 
 First, download the latest release of Ninja, extract the binary, and add it to your system path.
-
-Next, install the JavaScript engine dependencies. This is done by the Node.js npm package system.
-
-```
-cd Apps
-npm install
-```
 
 Babylon Native on Android supports two JavaScript engines: V8 and JavaScriptCore. V8 is
 used by default if no engine is specified. To change the engine to JavaScriptCore, open
