@@ -213,18 +213,27 @@ void App::OnPointerMoved(CoreWindow^, PointerEventArgs^ args)
 {
     if (m_nativeInput != nullptr)
     {
-        const auto& point = args->CurrentPoint->RawPosition;
+        const auto& point = args->CurrentPoint;
+        const auto& position = point->RawPosition;
 
-        m_nativeInput->MouseMove(static_cast<int>(point.X), static_cast<int>(point.Y));
+        m_nativeInput->MouseMove(static_cast<int>(position.X), static_cast<int>(position.Y));
 
         /*
-         * Note: Because PointerPressed and PointerReleased don't fire for additional buttons presses/releases,
-         * we need an alternative way to track other button clicks.  In both of the below functions, we have
-         * three booleans that track each button's state and then we run these two functions to update any buttons
-         * that we may have missed.
+         * Note: Because PointerPressed only first for the first button press (and no additional ones)
+         * and PointerReleased only fires when all buttons have been released, we need an alternative way
+         * to track additional button presses.
+         * (See Definition - PointerPressed: https://docs.microsoft.com/en-us/uwp/api/windows.ui.core.corewindow.pointerpressed?view=winrt-22000)
+         * (See Remarks - PointerReleased: https://docs.microsoft.com/en-us/uwp/api/windows.ui.core.corewindow.pointerreleased?view=winrt-22000)
+         *
+         * In both of the below functions, we have three booleans that track each button's state and then we
+         * run these two functions to update any buttons that we may have missed.
          */
-        OnPointerPressed(nullptr, args);
-        OnPointerReleased(nullptr, args);
+
+        if (point->IsInContact)
+        {
+            OnPointerPressed(nullptr, args);
+            OnPointerReleased(nullptr, args);
+        }
     }
 }
 
