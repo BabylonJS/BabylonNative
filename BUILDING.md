@@ -218,7 +218,7 @@ First, download the latest release of Ninja, extract the binary, and add it to y
 
 Babylon Native on Android supports two JavaScript engines: V8 and JavaScriptCore. V8 is
 used by default if no engine is specified. To change the engine to JavaScriptCore, open
-the file *Apps\Playground\Android\gradle.properties* and add the following line:
+the file `Apps\Playground\Android\gradle.properties` and add the following line:
 
 ```
 JSEngine=jsc
