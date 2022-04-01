@@ -1,4 +1,4 @@
-# @babylonjs/react-native-windows
+# Babylon React Native Windows Runtime
 
 ## Usage
 

@@ -1,4 +1,4 @@
-# @babylonjs/react-native-iosandroid
+# Babylon React Native iOS and Android Runtime
 
 ## Usage
 

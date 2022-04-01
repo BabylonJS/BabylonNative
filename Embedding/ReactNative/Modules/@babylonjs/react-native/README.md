@@ -1,4 +1,4 @@
-# @babylonjs/react-native
+# Babylon React Native
 
 ## Usage
 
@@ -18,9 +18,15 @@ The minimum Android SDK version is 18. This must be set as `minSdkVersion` in th
 
 The minimum deployment target version is 12. This must be set as `iOS Deployment Target` in the consuming project's `project.pbxproj`, and must also be set as `platform` in the consuming project's `podfile`.
 
-### Universal Windows Platform (UWP) Configuration
+### Platform Native Packages
 
-For windows support, install `@babylonjs/react-native-windows`.
+Babylon React Native platform native packages must also be installed for the platforms and React Native versions being targeted. This is only needed for ***apps*** using Babylon React Native, not for ***libraries (React Native packages)*** building on top of Babylon React Native.
+
+|         | React Native 0.63 - 0.64                                                                                         | React Native 0.65 - 0.66                                                                                         |
+| ------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Android | [@babylonjs/react-native-iosandroid-0-64](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-64) | [@babylonjs/react-native-iosandroid-0-65](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-65) |
+| iOS     | [@babylonjs/react-native-iosandroid-0-64](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-64) | [@babylonjs/react-native-iosandroid-0-65](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-65) |
+| Windows | [@babylonjs/react-native-windows-0-64](https://www.npmjs.com/package/@babylonjs/react-native-windows-0-64)       | [@babylonjs/react-native-windows-0-65](https://www.npmjs.com/package/@babylonjs/react-native-windows-0-65)       |
 
 ### `useEngine`
 
