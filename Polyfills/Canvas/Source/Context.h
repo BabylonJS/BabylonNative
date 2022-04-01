@@ -2,7 +2,7 @@
 
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/JsRuntimeScheduler.h>
-#include <GraphicsImpl.h>
+#include <Babylon/Graphics/DeviceContext.h>
 #include "Image.h"
 
 struct NVGcontext;
@@ -86,8 +86,8 @@ namespace Babylon::Polyfills::Internal
         std::map<std::string, int> m_fonts;
         int m_currentFontId{ -1 };
 
-        Babylon::GraphicsImpl& m_graphicsImpl;
-        Babylon::GraphicsImpl::Update m_update;
+        Graphics::DeviceContext& m_graphicsContext;
+        Graphics::Update m_update;
 
         bool m_dirty{};
 

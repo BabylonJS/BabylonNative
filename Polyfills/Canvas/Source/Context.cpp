@@ -81,8 +81,8 @@ namespace Babylon::Polyfills::Internal
         : Napi::ObjectWrap<Context>{info}
         , m_canvas{info[0].As<Napi::External<NativeCanvas>>().Data()}
         , m_nvg{nvgCreate(1)}
-        , m_graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())}
-        , m_update{m_graphicsImpl.GetUpdate("update")}
+        , m_graphicsContext{m_canvas->GetGraphicsContext()}
+        , m_update{m_graphicsContext.GetUpdate("update")}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
@@ -358,7 +358,7 @@ namespace Babylon::Polyfills::Internal
         arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, needClear, cancellationSource{ m_cancellationSource }]() {
             return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{ m_update.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
                 // JS Thread
-                Babylon::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
+                Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
                 bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
                 frameBuffer.Bind(*encoder);
                 if (needClear)

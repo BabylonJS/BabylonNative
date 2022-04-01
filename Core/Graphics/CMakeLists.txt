@@ -14,29 +14,34 @@ else()
 endif()
 
 set(SOURCES
-    "Include/Platform/${PLATFORM_PATH}/Babylon/GraphicsPlatform.h"
-    "Include/RendererType/${GRAPHICS_API}/Babylon/GraphicsRendererType.h"
-    "Include/Shared/Babylon/Graphics.h"
-    "Source/continuation_scheduler.h"
+    "Include/Platform/${PLATFORM_PATH}/Babylon/Graphics/Platform.h"
+    "Include/RendererType/${GRAPHICS_API}/Babylon/Graphics/RendererType.h"
+    "Include/Shared/Babylon/Graphics/Device.h"
+    "InternalInclude/Babylon/Graphics/BgfxCallback.h"
+    "InternalInclude/Babylon/Graphics/continuation_scheduler.h"
+    "InternalInclude/Babylon/Graphics/FrameBuffer.h"
+    "InternalInclude/Babylon/Graphics/DeviceContext.h"
+    "InternalInclude/Babylon/Graphics/SafeTimespanGuarantor.h"
+    "InternalInclude/Babylon/Graphics/Texture.h"
     "Source/BgfxCallback.cpp"
-    "Source/BgfxCallback.h"
     "Source/FrameBuffer.cpp"
-    "Source/FrameBuffer.h"
-    "Source/Graphics.cpp"
-    "Source/GraphicsImpl.cpp"
-    "Source/GraphicsImpl.h"
-    "Source/GraphicsImpl_${PLATFORM_NAME}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
-    "Source/GraphicsImpl_${GRAPHICS_API}.cpp"
+    "Source/Device.cpp"
+    "Source/DeviceContext.cpp"
+    "Source/DeviceImpl.cpp"
+    "Source/DeviceImpl.h"
+    "Source/DeviceImpl_${PLATFORM_NAME}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
+    "Source/DeviceImpl_${GRAPHICS_API}.cpp"
     "Source/SafeTimespanGuarantor.cpp"
-    "Source/SafeTimespanGuarantor.h")
+    "Source/Texture.cpp")
 
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
 
 target_include_directories(Graphics
-    PUBLIC "Include/Shared"
-    PUBLIC "Include/Platform/${PLATFORM_PATH}"
-    PUBLIC "Include/RendererType/${GRAPHICS_API}")
+    PRIVATE "Include/Shared"
+    PRIVATE "Include/Platform/${PLATFORM_PATH}"
+    PRIVATE "Include/RendererType/${GRAPHICS_API}"
+    PRIVATE "InternalInclude/Babylon/Graphics")
 
 if(WIN32 AND NOT WINDOWS_STORE)
     target_link_to_dependencies(Graphics
@@ -48,7 +53,8 @@ elseif(ANDROID)
 endif()
 
 target_link_to_dependencies(Graphics
-    PUBLIC JsRuntime
+    PRIVATE napi_extensions
+    PRIVATE JsRuntime
     PRIVATE JsRuntimeInternal
     PRIVATE bgfx
     PRIVATE bimg
@@ -64,11 +70,25 @@ target_compile_definitions(Graphics
 set_property(TARGET Graphics PROPERTY FOLDER Core)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
-add_library(GraphicsInternal INTERFACE)
-target_include_directories(GraphicsInternal
-    INTERFACE "Source"
-    INTERFACE "Source/${BABYLON_NATIVE_PLATFORM}")
-target_link_to_dependencies(GraphicsInternal
+if(APPLE)
+    # compile as objc++
+    target_compile_options(Graphics PUBLIC "SHELL:-x objective-c++")
+endif()
+
+add_library(GraphicsDevice INTERFACE)
+target_include_directories(GraphicsDevice
+    INTERFACE "Include/Shared"
+    INTERFACE "Include/Platform/${PLATFORM_PATH}"
+    INTERFACE "Include/RendererType/${GRAPHICS_API}")
+target_link_to_dependencies(GraphicsDevice
+    INTERFACE Graphics
+    INTERFACE JsRuntime)
+
+add_library(GraphicsDeviceContext INTERFACE)
+target_include_directories(GraphicsDeviceContext
+    INTERFACE "InternalInclude"
+    INTERFACE "InternalInclude/${BABYLON_NATIVE_PLATFORM}")
+target_link_to_dependencies(GraphicsDeviceContext
     INTERFACE Graphics
     INTERFACE JsRuntimeInternal
     INTERFACE arcana
@@ -76,10 +96,5 @@ target_link_to_dependencies(GraphicsInternal
     INTERFACE bimg
     INTERFACE bx)
 
-target_compile_definitions(GraphicsInternal
+target_compile_definitions(GraphicsDeviceContext
     INTERFACE NOMINMAX)
-
-if(APPLE)
-    # compile as objc++
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -x objective-c++")
-endif()
