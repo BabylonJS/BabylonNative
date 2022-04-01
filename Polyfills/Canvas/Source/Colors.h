@@ -162,40 +162,52 @@ namespace Babylon::Polyfills::Internal
             {"yellow", 0xffff00},
             {"yellowgreen", 0x9acd32} };
 
-        if (str[0] == '#' && str.length() == 4)
+        if (str[0] == '#')
         {
-            unsigned int components[4];
-            int count = sscanf(str.c_str(), "#%1x%1x%1x", &components[0], &components[1], &components[2]);
-            for (int i = count; count < 4; count++)
+            unsigned int components[4] = {0xff, 0xff, 0xff, 0xff};
+            int count{};
+            int bitShift{4};
+            switch (str.length())
             {
-                components[i] += components[i] << 4;
+                case 4:
+                    count = sscanf(str.c_str(), "#%1x%1x%1x", &components[0], &components[1], &components[2]);
+                    break;
+                case 5:
+                    count = sscanf(str.c_str(), "#%1x%1x%1x%1x", &components[0], &components[1], &components[2], &components[3]);
+                    break;
+                case 7:
+                    count = sscanf(str.c_str(), "#%02x%02x%02x", &components[0], &components[1], &components[2]);
+                    bitShift = 0;
+                    break;
+                case 9:
+                    count = sscanf(str.c_str(), "#%02x%02x%02x%02x", &components[0], &components[1], &components[2], &components[3]);
+                    bitShift = 0;
+                    break;
             }
-            for (int i = count; count < 4; count++)
+            
+            for (int i = 0; i < count; i++)
             {
-                components[i] = 255;
-            }
-            return nvgRGBA(components[0], components[1], components[2], components[3]);
-        }
-        else if (str[0] == '#' && str.length() == 7)
-        {
-            unsigned int components[4];
-            int count = sscanf(str.c_str(), "#%02x%02x%02x%02x", &components[0], &components[1], &components[2], &components[3]);
-            for (int i = count; count < 4; count++)
-            {
-                components[i] = 255;
+                components[i] += components[i] << bitShift;
             }
             return nvgRGBA(components[0], components[1], components[2], components[3]);
         }
         else
         {
-            // matches strings of the form rgb(#,#,#)
-            static const std::regex rgbRegex("rgb\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*\\)");
+            // matches strings of the form rgb(#,#,#) or rgba(#,#,#,#)
+            static const std::regex rgbRegex("rgba?\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*\\,?\\s*(:?\\d{1,3})?\\)");
             std::smatch rgbMatch;
             if (std::regex_match(str, rgbMatch, rgbRegex))
             {
-                if (rgbMatch.size() == 4)
+                if (rgbMatch.size() == 5)
                 {
-                    return nvgRGB(std::stoi(rgbMatch[1]), std::stoi(rgbMatch[2]), std::stoi(rgbMatch[3]));
+                    if (rgbMatch[4].matched)
+                    {
+                        return nvgRGBA(std::stoi(rgbMatch[1]), std::stoi(rgbMatch[2]), std::stoi(rgbMatch[3]), std::stoi(rgbMatch[4]));
+                    }
+                    else
+                    {
+                        return nvgRGB(std::stoi(rgbMatch[1]), std::stoi(rgbMatch[2]), std::stoi(rgbMatch[3]));
+                    }
                 }
             }
 
