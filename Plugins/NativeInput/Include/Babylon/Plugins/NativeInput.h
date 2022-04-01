@@ -15,6 +15,7 @@ namespace Babylon::Plugins
         void MouseDown(uint32_t buttonIndex, int32_t x, int32_t y);
         void MouseUp(uint32_t buttonIndex, int32_t x, int32_t y);
         void MouseMove(int32_t x, int32_t y);
+        void MouseWheel(uint32_t wheelAxis, int32_t scrollValue);
         void TouchDown(uint32_t pointerId, int32_t x, int32_t y);
         void TouchUp(uint32_t pointerId, int32_t x, int32_t y);
         void TouchMove(uint32_t pointerId, int32_t x, int32_t y);
@@ -22,6 +23,7 @@ namespace Babylon::Plugins
         static constexpr uint32_t LEFT_MOUSE_BUTTON_ID{ 0 };
         static constexpr uint32_t MIDDLE_MOUSE_BUTTON_ID{ 1 };
         static constexpr uint32_t RIGHT_MOUSE_BUTTON_ID{ 2 };
+        static constexpr uint32_t MOUSEWHEEL_Y_ID{ 8 };
         static constexpr uint32_t TOUCH_BUTTON_ID{ 0 };
 
     private:

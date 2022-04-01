@@ -227,19 +227,19 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_setTouchInfo(JNIEnv* env, jclass clazz, jfloat x, jfloat y, jboolean buttonAction, jint buttonValue)
+    Java_BabylonNative_Wrapper_setTouchInfo(JNIEnv* env, jclass clazz, jint pointerId, jfloat x, jfloat y, jboolean buttonAction, jint buttonValue)
     {
         if (g_nativeInput != nullptr)
         {
             if (buttonAction)
             {
                 if (buttonValue == 1)
-                    g_nativeInput->TouchDown(0, x, y);
+                    g_nativeInput->TouchDown(pointerId, x, y);
                 else
-                    g_nativeInput->TouchUp(0, x, y);
+                    g_nativeInput->TouchUp(pointerId, x, y);
             }
             else {
-                g_nativeInput->TouchMove(0, x, y);
+                g_nativeInput->TouchMove(pointerId, x, y);
             }
         }
     }

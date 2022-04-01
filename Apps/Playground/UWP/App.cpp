@@ -91,6 +91,9 @@ void App::SetWindow(CoreWindow^ window)
     window->PointerReleased +=
         ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this, &App::OnPointerReleased);
 
+    window->PointerWheelChanged +=
+        ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this, &App::OnPointerWheelChanged);
+
     window->KeyDown +=
         ref new TypedEventHandler<CoreWindow^, KeyEventArgs^>(this, &App::OnKeyPressed);
 }
@@ -211,7 +214,17 @@ void App::OnPointerMoved(CoreWindow^, PointerEventArgs^ args)
     if (m_nativeInput != nullptr)
     {
         const auto& point = args->CurrentPoint->RawPosition;
+
         m_nativeInput->MouseMove(static_cast<int>(point.X), static_cast<int>(point.Y));
+
+        /*
+         * Note: Because PointerPressed and PointerReleased don't fire for additional buttons presses/releases,
+         * we need an alternative way to track other button clicks.  In both of the below functions, we have
+         * three booleans that track each button's state and then we run these two functions to update any buttons
+         * that we may have missed.
+         */
+        OnPointerPressed(nullptr, args);
+        OnPointerReleased(nullptr, args);
     }
 }
 
@@ -220,7 +233,21 @@ void App::OnPointerPressed(CoreWindow^, PointerEventArgs^ args)
     if (m_nativeInput != nullptr)
     {
         const auto& point = args->CurrentPoint->RawPosition;
-        m_nativeInput->MouseDown(0, static_cast<int>(point.X), static_cast<int>(point.Y));
+        if (!m_leftPressed && args->CurrentPoint->Properties->IsLeftButtonPressed)
+        {
+            m_leftPressed = true;
+            m_nativeInput->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, static_cast<int>(point.X), static_cast<int>(point.Y));
+        }
+        if (!m_middlePressed && args->CurrentPoint->Properties->IsMiddleButtonPressed)
+        {
+            m_middlePressed = true;
+            m_nativeInput->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, static_cast<int>(point.X), static_cast<int>(point.Y));
+        }
+        if (!m_rightPressed && args->CurrentPoint->Properties->IsRightButtonPressed)
+        {
+            m_rightPressed = true;
+            m_nativeInput->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, static_cast<int>(point.X), static_cast<int>(point.Y));
+        }
     }
 }
 
@@ -229,8 +256,27 @@ void App::OnPointerReleased(CoreWindow^, PointerEventArgs^ args)
     if (m_nativeInput != nullptr)
     {
         const auto& point = args->CurrentPoint->RawPosition;
-        m_nativeInput->MouseUp(0, static_cast<int>(point.X), static_cast<int>(point.Y));
+        if (m_leftPressed && !args->CurrentPoint->Properties->IsLeftButtonPressed)
+        {
+            m_leftPressed = false;
+            m_nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, static_cast<int>(point.X), static_cast<int>(point.Y));
+        }
+        if (m_middlePressed && !args->CurrentPoint->Properties->IsMiddleButtonPressed)
+        {
+            m_middlePressed = false;
+            m_nativeInput->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, static_cast<int>(point.X), static_cast<int>(point.Y));
+        }
+        if (m_rightPressed && !args->CurrentPoint->Properties->IsRightButtonPressed)
+        {
+            m_rightPressed = false;
+            m_nativeInput->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, static_cast<int>(point.X), static_cast<int>(point.Y));
+        }
     }
+}
+void App::OnPointerWheelChanged(CoreWindow^, PointerEventArgs^ args)
+{
+    const auto& delta = args->CurrentPoint->Properties->MouseWheelDelta;
+    m_nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, delta);
 }
 
 void App::OnKeyPressed(CoreWindow^ window, KeyEventArgs^ args)

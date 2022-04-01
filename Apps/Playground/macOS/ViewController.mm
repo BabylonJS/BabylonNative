@@ -167,7 +167,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
      {
          NSPoint eventLocation = [theEvent locationInWindow];
          auto invertedY = [self getScreenHeight] - eventLocation.y;
-         nativeInput->MouseDown(theEvent.buttonNumber, eventLocation.x, invertedY);
+         nativeInput->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, eventLocation.x, invertedY);
      }
  }
 
@@ -185,8 +185,69 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
      {
          NSPoint eventLocation = [theEvent locationInWindow];
          auto invertedY = [self getScreenHeight] - eventLocation.y;
-         nativeInput->MouseUp(theEvent.buttonNumber, eventLocation.x, invertedY);
+         nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, eventLocation.x, invertedY);
      }
+}
+
+- (void)otherMouseDown:(NSEvent *) theEvent {
+     if (nativeInput)
+     {
+         NSPoint eventLocation = [theEvent locationInWindow];
+         auto invertedY = [self getScreenHeight] - eventLocation.y;
+         nativeInput->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, eventLocation.x, invertedY);
+     }
+ }
+
+ - (void)otherMouseDragged:(NSEvent *)theEvent {
+     if (nativeInput)
+     {
+         NSPoint eventLocation = [theEvent locationInWindow];
+         auto invertedY = [self getScreenHeight] - eventLocation.y;
+         nativeInput->MouseMove(eventLocation.x, invertedY);
+     }
+ }
+
+ - (void)otherMouseUp:(NSEvent *) theEvent {
+     if (nativeInput)
+     {
+         NSPoint eventLocation = [theEvent locationInWindow];
+         auto invertedY = [self getScreenHeight] - eventLocation.y;
+         nativeInput->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, eventLocation.x, invertedY);
+     }
+}
+
+- (void)rightMouseDown:(NSEvent *) theEvent {
+     if (nativeInput)
+     {
+         NSPoint eventLocation = [theEvent locationInWindow];
+         auto invertedY = [self getScreenHeight] - eventLocation.y;
+         nativeInput->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, eventLocation.x, invertedY);
+     }
+ }
+
+ - (void)rightMouseDragged:(NSEvent *)theEvent {
+     if (nativeInput)
+     {
+         NSPoint eventLocation = [theEvent locationInWindow];
+         auto invertedY = [self getScreenHeight] - eventLocation.y;
+         nativeInput->MouseMove(eventLocation.x, invertedY);
+     }
+ }
+
+ - (void)rightMouseUp:(NSEvent *) theEvent {
+     if (nativeInput)
+     {
+         NSPoint eventLocation = [theEvent locationInWindow];
+         auto invertedY = [self getScreenHeight] - eventLocation.y;
+         nativeInput->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, eventLocation.x, invertedY);
+     }
+}
+
+- (void)scrollWheel:(NSEvent *) theEvent {
+    if (nativeInput)
+    {
+        nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, theEvent.deltaY);
+    }
 }
 
 - (IBAction)refresh:(id)__unused sender

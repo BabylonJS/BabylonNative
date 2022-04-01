@@ -401,7 +401,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             SetCapture(hWnd);
             if (nativeInput != nullptr)
             {
-                nativeInput->MouseDown(0, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                nativeInput->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }
             break;
         }
@@ -409,7 +409,52 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             if (nativeInput != nullptr)
             {
-                nativeInput->MouseUp(0, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            }
+            ReleaseCapture();
+            break;
+        }
+        case WM_MBUTTONDOWN:
+        {
+            SetCapture(hWnd);
+            if (nativeInput != nullptr)
+            {
+                nativeInput->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            }
+            break;
+        }
+        case WM_MBUTTONUP:
+        {
+            if (nativeInput != nullptr)
+            {
+                nativeInput->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            }
+            ReleaseCapture();
+            break;
+        }
+        case WM_RBUTTONDOWN:
+        {
+            SetCapture(hWnd);
+            if (nativeInput != nullptr)
+            {
+                nativeInput->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            }
+            break;
+        }
+        case WM_RBUTTONUP:
+        {
+            if (nativeInput != nullptr)
+            {
+                nativeInput->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            }
+            ReleaseCapture();
+            break;
+        }
+        case WM_MOUSEWHEEL:
+        {
+            if (nativeInput != nullptr)
+            {
+                nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, GET_WHEEL_DELTA_WPARAM(wParam));
             }
             ReleaseCapture();
             break;

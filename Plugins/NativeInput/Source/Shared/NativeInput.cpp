@@ -17,6 +17,13 @@ namespace Babylon::Plugins
         constexpr uint32_t POINTER_Y_INPUT_INDEX{1};
         constexpr uint32_t POINTER_BUTTON_BASE_INDEX{2};
         constexpr uint32_t POINTER_BUTTON_LEFT_INDEX{2};
+        constexpr uint32_t POINTER_BUTTON_MIDDLE_INDEX{3};
+        constexpr uint32_t POINTER_BUTTON_RIGHT_INDEX{4};
+        constexpr uint32_t POINTER_BUTTON_BACK_INDEX{5};
+        constexpr uint32_t POINTER_BUTTON_FORWARD_INDEX{6};
+        constexpr uint32_t POINTER_MOUSEWHEEL_X_INDEX{7};
+        constexpr uint32_t POINTER_MOUSEWHEEL_Y_INDEX{8};
+        constexpr uint32_t POINTER_MOUSEWHEEL_Z_INDEX{9};
         constexpr uint32_t POINTER_DELTA_HORIZONTAL_INDEX{10};
         constexpr uint32_t POINTER_DELTA_VERTICAL_INDEX{11};
         constexpr uint32_t POINTER_MOVE_INDEX{12};
@@ -61,6 +68,11 @@ namespace Babylon::Plugins
         m_impl->MouseMove(x, y);
     }
 
+    void NativeInput::MouseWheel(uint32_t wheelAxis, int32_t scrollValue)
+    {
+        m_impl->MouseWheel(wheelAxis, scrollValue);
+    }
+
     void NativeInput::TouchDown(uint32_t pointerId, int32_t x, int32_t y)
     {
         m_impl->TouchDown(pointerId, x, y);
@@ -89,6 +101,13 @@ namespace Babylon::Plugins
                     POINTER_X_INPUT_INDEX,
                     POINTER_Y_INPUT_INDEX,
                     POINTER_BUTTON_LEFT_INDEX,
+                    POINTER_BUTTON_MIDDLE_INDEX,
+                    POINTER_BUTTON_RIGHT_INDEX,
+                    POINTER_BUTTON_BACK_INDEX,
+                    POINTER_BUTTON_FORWARD_INDEX,
+                    POINTER_MOUSEWHEEL_X_INDEX,
+                    POINTER_MOUSEWHEEL_Y_INDEX,
+                    POINTER_MOUSEWHEEL_Z_INDEX,
                     POINTER_DELTA_HORIZONTAL_INDEX,
                     POINTER_DELTA_VERTICAL_INDEX,
                     POINTER_MOVE_INDEX
@@ -109,6 +128,11 @@ namespace Babylon::Plugins
     void NativeInput::Impl::MouseMove(int32_t x, int32_t y)
     {
         PointerMove(MOUSE_POINTER_ID, x, y, DeviceType::Mouse);
+    }
+
+    void NativeInput::Impl::MouseWheel(uint32_t wheelAxis, int32_t scrollValue)
+    {
+        PointerScroll(MOUSE_POINTER_ID, wheelAxis, scrollValue, DeviceType::Mouse);
     }
 
     void NativeInput::Impl::TouchDown(uint32_t pointerId, int32_t x, int32_t y)
@@ -176,20 +200,6 @@ namespace Babylon::Plugins
                 return;
             }
 
-            // If all "buttons" are up, then remove the device (e.g. device "disconnected").
-            for (size_t index = 0; index < deviceInputs.size(); index++)
-            {
-                if (index != POINTER_X_INPUT_INDEX &&
-                    index != POINTER_Y_INPUT_INDEX &&
-                    index != POINTER_DELTA_HORIZONTAL_INDEX &&
-                    index != POINTER_DELTA_VERTICAL_INDEX &&
-                    index != POINTER_MOVE_INDEX &&
-                    deviceInputs[index] > 0)
-                {
-                    return;
-                }
-            }
-
             RemoveInputMap(deviceType, pointerId);
             m_eventDispatcher.tick(arcana::cancellation::none());
         });
@@ -232,6 +242,19 @@ namespace Babylon::Plugins
             m_eventDispatcher.tick(arcana::cancellation::none());
 
         });
+    }
+
+    void NativeInput::Impl::PointerScroll(uint32_t pointerId, uint32_t scrollAxis, int32_t scrollValue, DeviceType deviceType)
+    {
+        m_runtimeScheduler([pointerId, scrollAxis, scrollValue, deviceType, this]()
+            {
+                std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(deviceType, pointerId, {scrollAxis})};
+                SetInputState(deviceType, pointerId, scrollAxis, scrollValue, deviceInputs, true);
+
+                m_eventDispatcher.tick(arcana::cancellation::none());
+                SetInputState(deviceType, pointerId, scrollAxis, 0, deviceInputs, true);
+                m_eventDispatcher.tick(arcana::cancellation::none());
+            });
     }
 
     NativeInput::Impl::DeviceStatusChangedCallbackTicket NativeInput::Impl::AddDeviceConnectedCallback(NativeInput::Impl::DeviceStatusChangedCallback&& callback)

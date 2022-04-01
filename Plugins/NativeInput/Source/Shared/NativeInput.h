@@ -37,6 +37,7 @@ namespace Babylon::Plugins
         void MouseDown(uint32_t buttonIndex, int32_t x, int32_t y);
         void MouseUp(uint32_t buttonIndex, int32_t x, int32_t y);
         void MouseMove(int32_t x, int32_t y);
+        void MouseWheel(uint32_t wheelAxis, int32_t scrollValue);
         void TouchDown(uint32_t pointerId, int32_t x, int32_t y);
         void TouchUp(uint32_t pointerId, int32_t x, int32_t y);
         void TouchMove(uint32_t pointerId, int32_t x, int32_t y);
@@ -61,6 +62,7 @@ namespace Babylon::Plugins
         void PointerDown(uint32_t pointerId, uint32_t buttonIndex, int32_t x, int32_t y, DeviceType deviceType);
         void PointerUp(uint32_t pointerId, uint32_t buttonIndex, int32_t x, int32_t y, DeviceType deviceType);
         void PointerMove(uint32_t pointerId, int32_t x, int32_t y, DeviceType deviceType);
+        void PointerScroll(uint32_t pointerId, uint32_t scrollAxis, int32_t scrollValue, DeviceType deviceType);
         std::vector<int32_t>& GetOrCreateInputMap(DeviceType deviceType, int32_t deviceSlot, const std::vector<uint32_t>& inputIndices);
         void RemoveInputMap(DeviceType deviceType, int32_t deviceSlot);
         void SetInputState(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, int32_t inputState, std::vector<int32_t>& deviceInputs, bool raiseEvents);
