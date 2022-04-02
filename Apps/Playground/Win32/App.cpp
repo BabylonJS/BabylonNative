@@ -37,6 +37,7 @@ Babylon::Plugins::NativeInput* nativeInput{};
 std::unique_ptr<Babylon::Plugins::ChromeDevTools> chromeDevTools{};
 std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 bool minimized{false};
+int buttonRefCount{0};
 
 // Forward declarations of functions included in this code module:
 ATOM MyRegisterClass(HINSTANCE hInstance);
@@ -398,7 +399,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_LBUTTONDOWN:
         {
-            SetCapture(hWnd);
+            if (buttonRefCount++ == 0)
+            {
+                SetCapture(hWnd);
+            }
             if (nativeInput != nullptr)
             {
                 nativeInput->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
@@ -411,12 +415,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }
-            ReleaseCapture();
+            if (buttonRefCount-- == 1)
+            {
+                ReleaseCapture();
+            }
             break;
         }
         case WM_MBUTTONDOWN:
         {
-            SetCapture(hWnd);
+            if (buttonRefCount++ == 0)
+            {
+                SetCapture(hWnd);
+            }
             if (nativeInput != nullptr)
             {
                 nativeInput->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
@@ -429,12 +439,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 nativeInput->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }
-            ReleaseCapture();
+            if (buttonRefCount-- == 1)
+            {
+                ReleaseCapture();
+            }
             break;
         }
         case WM_RBUTTONDOWN:
         {
-            SetCapture(hWnd);
+            if (buttonRefCount++ == 0)
+            {
+                SetCapture(hWnd);
+            }
             if (nativeInput != nullptr)
             {
                 nativeInput->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
@@ -447,7 +463,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 nativeInput->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }
-            ReleaseCapture();
+            if (buttonRefCount-- == 1)
+            {
+                ReleaseCapture();
+            }
             break;
         }
         case WM_MOUSEWHEEL:
@@ -456,7 +475,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, GET_WHEEL_DELTA_WPARAM(wParam));
             }
-            ReleaseCapture();
             break;
         }
         default:
