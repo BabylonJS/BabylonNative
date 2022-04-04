@@ -229,6 +229,6 @@ namespace Babylon::Polyfills::Internal
                 }
             }
         }
-        throw Napi::Error::New(env, std::string{"Unable to parse color : "} + str);
+        throw Napi::Error::New(env, std::string{"Unable to parse color: "} + str);
     }
 } //namespace
