@@ -15,8 +15,6 @@ set(SOURCES
     "Source/ShaderCompilerTraversers.cpp"
     "Source/ShaderCompilerTraversers.h"
     "Source/ShaderCompiler${GRAPHICS_API}.cpp"
-    "Source/Texture.cpp"
-    "Source/Texture.h"
     "Source/VertexArray.cpp"
     "Source/VertexArray.h"
     "Source/VertexBuffer.cpp"
@@ -34,14 +32,14 @@ target_include_directories(NativeEngine PUBLIC "Include")
 
 target_link_to_dependencies(NativeEngine
     PUBLIC JsRuntime
-    INTERFACE Graphics
+    INTERFACE GraphicsDevice
     PRIVATE arcana
     PRIVATE bgfx
     PRIVATE bimg
     PRIVATE bx
     PRIVATE glslang
     PRIVATE SPIRV
-    PRIVATE GraphicsInternal
+    PRIVATE GraphicsDeviceContext
     PRIVATE napi_extensions)
 warnings_as_errors(NativeEngine)
 
@@ -70,17 +68,3 @@ target_compile_definitions(NativeEngine
 
 set_property(TARGET NativeEngine PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
-
-add_library(NativeEngineInternal INTERFACE)
-target_include_directories(NativeEngineInternal INTERFACE "Source")
-target_link_to_dependencies(NativeEngineInternal
-    INTERFACE NativeEngine
-    INTERFACE arcana
-    INTERFACE bgfx
-    INTERFACE bimg
-    INTERFACE bx
-    INTERFACE glslang
-    INTERFACE SPIRV
-    INTERFACE spirv-cross-core
-    INTERFACE GraphicsInternal
-    INTERFACE napi_extensions)

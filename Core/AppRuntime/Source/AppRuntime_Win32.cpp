@@ -36,7 +36,7 @@ namespace Babylon
         OutputDebugStringA(ss.str().data());
     }
 
-    void AppRuntime::Execute(std::function<void()> callback)
+    void AppRuntime::Execute(Dispatchable<void()> callback)
     {
         callback();
     }

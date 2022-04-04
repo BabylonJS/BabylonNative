@@ -4,7 +4,7 @@
 [Having trouble deciding whether Babylon Native is the right choice?](WhenToUseBabylonNative.md)
 
 ## Babylon Native Components
-[An overview of the major components included with the Babylon Native repository.]()
+[An overview of the major components included with the Babylon Native repository.](Components.md)
 
 ## Extending Babylon Native
 [Babylon Native's extensive plugin system supports adding and exposing additional functionality.](Extending.md)
