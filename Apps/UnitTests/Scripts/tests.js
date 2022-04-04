@@ -88,6 +88,7 @@ describe("XMLHTTPRequest", function () {
         expect(xhr).to.have.property('responseText').with.lengthOf.above(0);
     })
 });
+
 describe("RequestFile", function () {
     this.timeout(0);
     it("should throw when requesting a URL with no protocol", function () {
@@ -98,6 +99,89 @@ describe("RequestFile", function () {
             );
         }
         expect(RequestFile).to.throw();
+    })
+})
+
+describe("ColorParsing", function () {
+    expect(_native.Canvas.parseColor("")).to.equal(0);
+    expect(_native.Canvas.parseColor("transparent")).to.equal(0);
+    expect(_native.Canvas.parseColor("#123")).to.equal(0xFF332211);
+    expect(_native.Canvas.parseColor("#1234")).to.equal(0x44332211);
+    expect(_native.Canvas.parseColor("#123456")).to.equal(0xFF563412);
+    expect(_native.Canvas.parseColor("#12345678")).to.equal(0x78563412);
+    expect(_native.Canvas.parseColor("snow")).to.equal(0xFFFAFAFF);
+    expect(_native.Canvas.parseColor("rgb(16,32,48)")).to.equal(0xFF302010);
+    expect(_native.Canvas.parseColor("rgba(16,32,48,64)")).to.equal(0x40302010);
+    expect(_native.Canvas.parseColor("rgb(16,     32   ,  48   )")).to.equal(0xFF302010);
+    expect(_native.Canvas.parseColor("rgba(    16,     32   ,  48 , 64  )")).to.equal(0x40302010);
+    
+    it("should throw", function () {
+        function incorrectColor() {
+            _native.Canvas.parseColor("unknownColor");
+        }
+        expect(incorrectColor).to.throw();
+    })
+
+    it("should throw", function () {
+        function incorrectColor() {
+            _native.Canvas.parseColor("#");
+        }
+        expect(incorrectColor).to.throw();
+    })
+
+    it("should throw", function () {
+        function incorrectColor() {
+            _native.Canvas.parseColor("#12345");
+        }
+        expect(incorrectColor).to.throw();
+    })
+
+    it("should throw", function () {
+        function incorrectColor() {
+            _native.Canvas.parseColor("rgb(11)");
+        }
+        expect(incorrectColor).to.throw();
+    })
+
+    it("should throw", function () {
+        function incorrectColor() {
+            _native.Canvas.parseColor("rgb(11,22,33");
+        }
+        expect(incorrectColor).to.throw();
+    })
+
+    it("should throw", function () {
+        function incorrectColor() {
+            _native.Canvas.parseColor("rgb(11,22,33,");
+        }
+        expect(incorrectColor).to.throw();
+    })
+
+    it("should throw", function () {
+        function incorrectColor() {
+            _native.Canvas.parseColor("rgba(11,   22, 33,  )");
+        }
+        expect(incorrectColor).to.throw();
+    })
+
+    it("should throw", function () {
+        function incorrectColor() {
+            _native.Canvas.parseColor("rgba(11,   22, 33, 44,   55,   66 )");
+        }
+        expect(incorrectColor).to.throw();
+    })
+
+    it("should throw", function () {
+        function incorrectColor() {
+            _native.Canvas.parseColor("rgb");
+        }
+        expect(incorrectColor).to.throw();
+    })
+    it("should throw", function () {
+        function incorrectColor() {
+            _native.Canvas.parseColor("rgba");
+        }
+        expect(incorrectColor).to.throw();
     })
 })
 

@@ -1,5 +1,6 @@
 #pragma once
 #include <regex>
+#include "nanovg.h"
 
 namespace Babylon::Polyfills::Internal
 {
@@ -7,7 +8,7 @@ namespace Babylon::Polyfills::Internal
     {
         const NVGcolor TRANSPARENT_BLACK = nvgRGBA(0, 0, 0, 0);
     }
-    NVGcolor StringToColor(const std::string& colorString)
+    static NVGcolor StringToColor(Napi::Env env, const std::string& colorString)
     {
         std::string str = colorString;
         std::transform(str.begin(), str.end(), str.begin(),
@@ -162,6 +163,11 @@ namespace Babylon::Polyfills::Internal
             {"yellow", 0xffff00},
             {"yellowgreen", 0x9acd32} };
 
+        if (str == "transparent" || !str.length())
+        {
+            return nvgRGBA(0, 0, 0, 0);
+        }
+
         if (str[0] == '#')
         {
             unsigned int components[4] = {0xff, 0xff, 0xff, 0xff};
@@ -183,23 +189,35 @@ namespace Babylon::Polyfills::Internal
                     count = sscanf(str.c_str(), "#%02x%02x%02x%02x", &components[0], &components[1], &components[2], &components[3]);
                     bitShift = 0;
                     break;
+                default:
+                    throw Napi::Error::New(env, std::string{"Unable to parse color : "} + str);
             }
             
-            for (int i = 0; i < count; i++)
+            if (bitShift)
             {
-                components[i] += components[i] << bitShift;
+                for (int i = 0; i < count; i++)
+                {
+                    components[i] += components[i] << bitShift;
+                }
             }
             return nvgRGBA(components[0], components[1], components[2], components[3]);
         }
         else
         {
+            auto iter = webColors.find(str);
+            if (iter != webColors.end())
+            {
+                uint32_t color = iter->second;
+                return nvgRGBA((color >> 16), (color >> 8) & 0xFF, (color & 0xFF), 0xFF);
+            }
+            
             // matches strings of the form rgb(#,#,#) or rgba(#,#,#,#)
-            static const std::regex rgbRegex("rgba?\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*\\,?\\s*(:?\\d{1,3})?\\)");
+            static const std::regex rgbRegex("rgba?\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*(?:,\\s*(\\d{1,3}))?\\s*\\)");
             std::smatch rgbMatch;
             if (std::regex_match(str, rgbMatch, rgbRegex))
             {
                 if (rgbMatch.size() == 5)
-                {
+                { 
                     if (rgbMatch[4].matched)
                     {
                         return nvgRGBA(std::stoi(rgbMatch[1]), std::stoi(rgbMatch[2]), std::stoi(rgbMatch[3]), std::stoi(rgbMatch[4]));
@@ -210,22 +228,7 @@ namespace Babylon::Polyfills::Internal
                     }
                 }
             }
-
-            if (str == "transparent" || !str.length())
-            {
-                return nvgRGBA(0, 0, 0, 0);
-            }
-            auto iter = webColors.find(str);
-            if (iter != webColors.end())
-            {
-                uint32_t color = iter->second;
-                return nvgRGBA((color >> 16), (color >> 8) & 0xFF, (color & 0xFF), 0xFF);
-            }
-            else
-            {
-                throw std::runtime_error{ "Unknown color name" };
-            }
         }
-        return nvgRGBA(255, 0, 255, 255);
+        throw Napi::Error::New(env, std::string{"Unable to parse color : "} + str);
     }
 } //namespace

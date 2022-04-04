@@ -132,7 +132,7 @@ namespace Babylon::Polyfills::Internal
         nvgBeginPath(m_nvg);
         nvgRect(m_nvg, left, top, width, height);
 
-        const auto color = StringToColor(m_fillStyle);
+        const auto color = StringToColor(info.Env(), m_fillStyle);
         nvgFillColor(m_nvg, color);
         nvgFill(m_nvg);
         SetDirty();
@@ -143,10 +143,10 @@ namespace Babylon::Polyfills::Internal
         return Napi::Value::From(Env(), m_fillStyle);
     }
 
-    void Context::SetFillStyle(const Napi::CallbackInfo&, const Napi::Value& value)
+    void Context::SetFillStyle(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         m_fillStyle = value.As<Napi::String>().Utf8Value();
-        const auto color = StringToColor(m_fillStyle);
+        const auto color = StringToColor(info.Env(), m_fillStyle);
         nvgFillColor(m_nvg, color);
         SetDirty();
     }
@@ -156,10 +156,10 @@ namespace Babylon::Polyfills::Internal
         return Napi::Value::From(Env(), m_strokeStyle);
     }
 
-    void Context::SetStrokeStyle(const Napi::CallbackInfo&, const Napi::Value& value)
+    void Context::SetStrokeStyle(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         m_strokeStyle = value.As<Napi::String>().Utf8Value();
-        auto color = StringToColor(m_strokeStyle);
+        auto color = StringToColor(info.Env(), m_strokeStyle);
         nvgStrokeColor(m_nvg, color);
         SetDirty();
     }
