@@ -1,5 +1,6 @@
 #pragma once
 #include <regex>
+#include "nanovg.h"
 
 namespace Babylon::Polyfills::Internal
 {
@@ -7,7 +8,7 @@ namespace Babylon::Polyfills::Internal
     {
         const NVGcolor TRANSPARENT_BLACK = nvgRGBA(0, 0, 0, 0);
     }
-    NVGcolor StringToColor(const std::string& colorString)
+    static NVGcolor StringToColor(Napi::Env env, const std::string& colorString)
     {
         std::string str = colorString;
         std::transform(str.begin(), str.end(), str.begin(),
@@ -162,58 +163,72 @@ namespace Babylon::Polyfills::Internal
             {"yellow", 0xffff00},
             {"yellowgreen", 0x9acd32} };
 
-        if (str[0] == '#' && str.length() == 4)
+        if (str == "transparent" || !str.length())
         {
-            unsigned int components[4];
-            int count = sscanf(str.c_str(), "#%1x%1x%1x", &components[0], &components[1], &components[2]);
-            for (int i = count; count < 4; count++)
-            {
-                components[i] += components[i] << 4;
-            }
-            for (int i = count; count < 4; count++)
-            {
-                components[i] = 255;
-            }
-            return nvgRGBA(components[0], components[1], components[2], components[3]);
+            return nvgRGBA(0, 0, 0, 0);
         }
-        else if (str[0] == '#' && str.length() == 7)
+
+        if (str[0] == '#')
         {
-            unsigned int components[4];
-            int count = sscanf(str.c_str(), "#%02x%02x%02x%02x", &components[0], &components[1], &components[2], &components[3]);
-            for (int i = count; count < 4; count++)
+            unsigned int components[4] = {0xff, 0xff, 0xff, 0xff};
+            int count{};
+            int bitShift{4};
+            switch (str.length())
             {
-                components[i] = 255;
+                case 4:
+                    count = sscanf(str.c_str(), "#%1x%1x%1x", &components[0], &components[1], &components[2]);
+                    break;
+                case 5:
+                    count = sscanf(str.c_str(), "#%1x%1x%1x%1x", &components[0], &components[1], &components[2], &components[3]);
+                    break;
+                case 7:
+                    count = sscanf(str.c_str(), "#%02x%02x%02x", &components[0], &components[1], &components[2]);
+                    bitShift = 0;
+                    break;
+                case 9:
+                    count = sscanf(str.c_str(), "#%02x%02x%02x%02x", &components[0], &components[1], &components[2], &components[3]);
+                    bitShift = 0;
+                    break;
+                default:
+                    throw Napi::Error::New(env, std::string{"Unable to parse color : "} + str);
+            }
+            
+            if (bitShift)
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    components[i] += components[i] << bitShift;
+                }
             }
             return nvgRGBA(components[0], components[1], components[2], components[3]);
         }
         else
         {
-            // matches strings of the form rgb(#,#,#)
-            static const std::regex rgbRegex("rgb\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*\\)");
-            std::smatch rgbMatch;
-            if (std::regex_match(str, rgbMatch, rgbRegex))
-            {
-                if (rgbMatch.size() == 4)
-                {
-                    return nvgRGB(std::stoi(rgbMatch[1]), std::stoi(rgbMatch[2]), std::stoi(rgbMatch[3]));
-                }
-            }
-
-            if (str == "transparent" || !str.length())
-            {
-                return nvgRGBA(0, 0, 0, 0);
-            }
             auto iter = webColors.find(str);
             if (iter != webColors.end())
             {
                 uint32_t color = iter->second;
                 return nvgRGBA((color >> 16), (color >> 8) & 0xFF, (color & 0xFF), 0xFF);
             }
-            else
+            
+            // matches strings of the form rgb(#,#,#) or rgba(#,#,#,#)
+            static const std::regex rgbRegex("rgba?\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*(?:,\\s*(\\d{1,3}))?\\s*\\)");
+            std::smatch rgbMatch;
+            if (std::regex_match(str, rgbMatch, rgbRegex))
             {
-                throw std::runtime_error{ "Unknown color name" };
+                if (rgbMatch.size() == 5)
+                { 
+                    if (rgbMatch[4].matched)
+                    {
+                        return nvgRGBA(std::stoi(rgbMatch[1]), std::stoi(rgbMatch[2]), std::stoi(rgbMatch[3]), std::stoi(rgbMatch[4]));
+                    }
+                    else
+                    {
+                        return nvgRGB(std::stoi(rgbMatch[1]), std::stoi(rgbMatch[2]), std::stoi(rgbMatch[3]));
+                    }
+                }
             }
         }
-        return nvgRGBA(255, 0, 255, 255);
+        throw Napi::Error::New(env, std::string{"Unable to parse color: "} + str);
     }
 } //namespace

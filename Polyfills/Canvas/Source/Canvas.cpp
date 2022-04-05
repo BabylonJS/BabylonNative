@@ -4,6 +4,7 @@
 #include <bgfx/bgfx.h>
 #include <napi/napi_pointer.h>
 #include <cassert>
+#include "Colors.h"
 
 namespace
 {
@@ -28,6 +29,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("getContext", &NativeCanvas::GetContext),
                 InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
                 InstanceMethod("dispose", &NativeCanvas::Dispose),
+                StaticMethod("parseColor", &NativeCanvas::ParseColor)
             });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
@@ -148,6 +150,14 @@ namespace Babylon::Polyfills::Internal
         textureData.Height = m_height;
 
         return Napi::Pointer<Graphics::TextureData>::Create(info.Env(), m_textureData.get());
+    }
+
+    Napi::Value NativeCanvas::ParseColor(const Napi::CallbackInfo& info)
+    {
+        const auto colorString = info[0].As<Napi::String>().Utf8Value();
+        const auto color = StringToColor(info.Env(), colorString);
+
+        return Napi::Value::From(info.Env(), ((uint32_t(color.a * 255.f) & 0xFF) << 24) + ((uint32_t(color.b * 255.f) & 0xFF) << 16) + ((uint32_t(color.g * 255.f) & 0xFF) << 8) + (uint32_t(color.r * 255.f) & 0xFF));
     }
 
     void NativeCanvas::Dispose()
