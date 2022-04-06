@@ -182,7 +182,7 @@ namespace xr
                 const int32_t stride,
                 uint8_t* grayscaleBuffer)
         {
-            const std::ptrdiff_t pixelStride {stride / width};
+            const std::size_t pixelStride {static_cast<std::size_t>(stride / width)};
             for (int h{0}; h < height; ++h)
             {
                 for (int w{0}; w < width; ++w)
