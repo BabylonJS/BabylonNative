@@ -161,7 +161,7 @@ endif()
 # --------------------------- v8inspector ---------------------------
 # Dependencies: none
 # Currently only supported on Win32 x86/x64 and Android
-if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND ((WIN32 AND NOT (WINDOWS_STORE OR CMAKE_GENERATOR_PLATFORM_UPPER MATCHES "ARM.*")) OR ANDROID))
     add_subdirectory(v8inspector)
     set_property(TARGET v8inspector PROPERTY FOLDER Dependencies)
 endif()
