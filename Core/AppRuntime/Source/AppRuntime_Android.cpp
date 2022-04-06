@@ -17,7 +17,7 @@ namespace Babylon
         __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", ss.str().data());
     }
 
-    void AppRuntime::Execute(std::function<void()> callback)
+    void AppRuntime::Execute(Dispatchable<void()> callback)
     {
         callback();
     }

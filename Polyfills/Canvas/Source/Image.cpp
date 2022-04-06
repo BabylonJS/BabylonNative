@@ -6,7 +6,6 @@
 #include <functional>
 #include <sstream>
 #include <assert.h>
-#include <NativeEngine.h>
 #include <bimg/bimg.h>
 #include <bimg/decode.h>
 #include "nanovg.h"

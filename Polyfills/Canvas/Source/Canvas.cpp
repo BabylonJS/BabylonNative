@@ -4,6 +4,7 @@
 #include <bgfx/bgfx.h>
 #include <napi/napi_pointer.h>
 #include <cassert>
+#include "Colors.h"
 
 namespace
 {
@@ -28,6 +29,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("getContext", &NativeCanvas::GetContext),
                 InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
                 InstanceMethod("dispose", &NativeCanvas::Dispose),
+                StaticMethod("parseColor", &NativeCanvas::ParseColor)
             });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
@@ -35,7 +37,7 @@ namespace Babylon::Polyfills::Internal
 
     NativeCanvas::NativeCanvas(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeCanvas>{info}
-        , m_graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())}
+        , m_graphicsContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
     }
@@ -56,8 +58,8 @@ namespace Babylon::Polyfills::Internal
         std::vector<uint8_t> fontBuffer(buffer.ByteLength());
         memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
 
-        auto& graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())};
-        auto update = graphicsImpl.GetUpdate("update");
+        auto& graphicsContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())};
+        auto update = graphicsContext.GetUpdate("update");
         std::shared_ptr<JsRuntimeScheduler> runtimeScheduler{ std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(info.Env())) };
         auto deferred{Napi::Promise::Deferred::New(info.Env())};
         arcana::make_task(update.Scheduler(), arcana::cancellation::none(), [fontName{ info[0].As<Napi::String>().Utf8Value() }, fontData{ std::move(fontBuffer) }]() {
@@ -119,7 +121,7 @@ namespace Babylon::Polyfills::Internal
             }
             auto handle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
             assert(handle.idx != bgfx::kInvalidHandle);
-            m_frameBuffer = std::make_unique<FrameBuffer>(m_graphicsImpl, handle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false, true, true);
+            m_frameBuffer = std::make_unique<Graphics::FrameBuffer>(m_graphicsContext, handle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false, false, false);
             m_dirty = false;
 
             if (m_textureData)
@@ -136,7 +138,7 @@ namespace Babylon::Polyfills::Internal
     {
         if (!m_textureData)
         {
-            m_textureData = std::make_unique<TextureData>();
+            m_textureData = std::make_unique<Graphics::TextureData>();
         }
 
         auto& textureData{*m_textureData};
@@ -147,7 +149,15 @@ namespace Babylon::Polyfills::Internal
         textureData.Width = m_width;
         textureData.Height = m_height;
 
-        return Napi::Pointer<TextureData>::Create(info.Env(), m_textureData.get());
+        return Napi::Pointer<Graphics::TextureData>::Create(info.Env(), m_textureData.get());
+    }
+
+    Napi::Value NativeCanvas::ParseColor(const Napi::CallbackInfo& info)
+    {
+        const auto colorString = info[0].As<Napi::String>().Utf8Value();
+        const auto color = StringToColor(info.Env(), colorString);
+
+        return Napi::Value::From(info.Env(), ((uint32_t(color.a * 255.f) & 0xFF) << 24) + ((uint32_t(color.b * 255.f) & 0xFF) << 16) + ((uint32_t(color.g * 255.f) & 0xFF) << 8) + (uint32_t(color.r * 255.f) & 0xFF));
     }
 
     void NativeCanvas::Dispose()

@@ -1,4 +1,5 @@
 set(SOURCES
+    "Include/Babylon/Dispatchable.h"
     "Include/Babylon/AppRuntime.h"
     "Source/AppRuntime.cpp"
     "Source/AppRuntime_${NAPI_JAVASCRIPT_ENGINE}.cpp"

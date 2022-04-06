@@ -43,12 +43,12 @@ namespace UrlLib
         return m_impl->StatusCode();
     }
 
-    gsl::cstring_span<> UrlRequest::ResponseUrl() const
+    std::string_view UrlRequest::ResponseUrl() const
     {
         return m_impl->ResponseUrl();
     }
 
-    gsl::cstring_span<> UrlRequest::ResponseString() const
+    std::string_view UrlRequest::ResponseString() const
     {
         return m_impl->ResponseString();
     }

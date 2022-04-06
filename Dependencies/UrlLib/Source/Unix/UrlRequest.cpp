@@ -103,12 +103,12 @@ namespace UrlLib
             return m_statusCode;
         }
 
-        gsl::cstring_span<> ResponseUrl()
+        std::string_view ResponseUrl()
         {
             return m_responseUrl;
         }
 
-        gsl::cstring_span<> ResponseString()
+        std::string_view ResponseString()
         {
             return m_responseString;
         }

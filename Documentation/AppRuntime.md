@@ -32,7 +32,7 @@ swapping out platform-specific parts of its implementation using the build
 system at configuration time. This implementation-swapping is controlled
 by two CMake variables.
 
-- `NAPI_JAVASCRIPT_ENGINE`: Thought this is technically a N-API 
+- `NAPI_JAVASCRIPT_ENGINE`: Though this is technically a N-API 
     configuration variable, AppRuntime also reads and reacts to this 
     variable in order to select the implementation that will instantiate
     the desired JavaScript engine. At present, this configuration variable,

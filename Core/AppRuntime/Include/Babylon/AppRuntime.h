@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Dispatchable.h"
+
 #include <Babylon/JsRuntime.h>
 
 #include <memory>
@@ -9,7 +11,6 @@
 namespace Babylon
 {
     class WorkQueue;
-
     class AppRuntime final
     {
     public:
@@ -20,7 +21,7 @@ namespace Babylon
         void Suspend();
         void Resume();
 
-        void Dispatch(std::function<void(Napi::Env)> callback);
+        void Dispatch(Dispatchable<void(Napi::Env)> callback);
 
     private:
         // These three methods are the mechanism by which platform- and JavaScript-specific
@@ -39,7 +40,7 @@ namespace Babylon
 
         // This method is called from Dispatch to allow platform-specific code to add
         // extra logic around the invocation of a dispatched callback.
-        void Execute(std::function<void()> callback);
+        void Execute(Dispatchable<void()> callback);
 
         static void DefaultUnhandledExceptionHandler(const std::exception& error);
 
