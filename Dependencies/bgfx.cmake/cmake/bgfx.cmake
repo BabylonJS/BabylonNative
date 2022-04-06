@@ -70,7 +70,11 @@ if( MSVC )
 endif()
 
 # Add debug config required in bx headers since bx is private
-target_compile_definitions(bgfx PUBLIC "BX_CONFIG_DEBUG=$<CONFIG:Debug>")
+target_compile_definitions(bgfx
+       PUBLIC
+               "BX_CONFIG_DEBUG=$<CONFIG:Debug>"
+               "BGFX_CONFIG_MULTITHREADED=$<BOOL:${BGFX_CONFIG_MULTITHREADED}>"
+)
 
 # Includes
 target_include_directories( bgfx
