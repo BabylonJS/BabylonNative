@@ -1669,7 +1669,7 @@ namespace xr {
         return false;
     }
 
-    std::vector<std::string>* System::Session::GetImageTrackingScores() const
+    std::vector<ImageTrackingScore>* System::Session::GetImageTrackingScores() const
     {
         throw std::runtime_error("Image tracking not supported");
     }
