@@ -1,10 +1,9 @@
 #pragma once
 
 #include <Babylon/JsRuntime.h>
-
 #include <napi/env.h>
-
 #include <gsl/gsl>
+#include <cassert>
 
 namespace Babylon
 {

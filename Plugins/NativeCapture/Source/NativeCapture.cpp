@@ -40,7 +40,7 @@ namespace
             void StartCapture()
             {
                 m_ticket = std::make_unique<Babylon::Graphics::DeviceContext::CaptureCallbackTicketT>(m_graphicsContext.AddCaptureCallback([thisRef{shared_from_this()}](auto& data) {
-                    thisRef->m_frameCallback(data.Width, data.Height, data.Format, data.YFlip, {static_cast<const uint8_t*>(data.Data), static_cast<std::ptrdiff_t>(data.DataSize)});
+                    thisRef->m_frameCallback(data.Width, data.Height, data.Format, data.YFlip, {static_cast<const uint8_t*>(data.Data), static_cast<std::size_t>(data.DataSize)});
                 }));
             }
 
