@@ -4,7 +4,35 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 project(BabylonNative)
 
+# --------------------------------------------------
+# Options
+# --------------------------------------------------
 option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ON)
+
+## Core
+option(BABYLON_NATIVE_CORE_JSRUNTIME "Include Babylon Native Core JsRuntime" ON)
+option(BABYLON_NATIVE_CORE_APPRUNTIME "Include Babylon Native Core AppRuntime" ON)
+option(BABYLON_NATIVE_CORE_SCRIPTLOADER "Include Babylon Native Core ScriptLoader" ON)
+option(BABYLON_NATIVE_CORE_GRAPHICS "Include Babylon Native Core Graphics" ON)
+
+## Plugins
+option(BABYLON_NATIVE_PLUGIN_CHROMEDEVTOOLS "Include Babylon Native Plugin ChromeDevTools." ON)
+option(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE "Include Babylon Native Plugin ExternalTexture." ON)
+option(BABYLON_NATIVE_PLUGIN_NATIVECAMERA "Include Babylon Native Plugin NativeCamera." ON)
+option(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE "Include Babylon Native Plugin NativeCapture." ON)
+option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE "Include Babylon Native Plugin NativeEngine." ON)
+option(BABYLON_NATIVE_PLUGIN_NATIVEINPUT "Include Babylon Native Plugin NativeInput." ON)
+option(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS "Include Babylon Native Plugin NativeOptimizations." ON)
+option(BABYLON_NATIVE_PLUGIN_NATIVETRACING "Include Babylon Native Plugin NativeTracing." ON)
+option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils." ON)
+option(BABYLON_NATIVE_PLUGIN_XR "Include Babylon Native Plugin XR." ON)
+
+## Polyfills
+option(BABYLON_NATIVE_PLUGIN_CONSOLE "Include Babylon Native Polyfill Console." ON)
+option(BABYLON_NATIVE_PLUGIN_WINDOW "Include Babylon Native Polyfill Window." ON)
+option(BABYLON_NATIVE_PLUGIN_XMLHTTPREQUEST "Include Babylon Native Polyfill XMLHttpRequest." ON)
+option(BABYLON_NATIVE_PLUGIN_CANVAS "Include Babylon Native Polyfill Canvas." ON)
+# --------------------------------------------------
 
 if(APPLE)
     # without this option on azure pipelines, there is a mismatch with math.h giving a lot of undefined functions on macOS.
@@ -64,17 +92,21 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_subdirectory(Dependencies EXCLUDE_FROM_ALL)
-add_subdirectory(Core EXCLUDE_FROM_ALL)
-add_subdirectory(Plugins EXCLUDE_FROM_ALL)
-add_subdirectory(Polyfills EXCLUDE_FROM_ALL)
+add_subdirectory(Dependencies)
+add_subdirectory(Core)
+add_subdirectory(Plugins)
+add_subdirectory(Polyfills)
 
 if(DEFINED EXTENSIONS_DIRS)
     foreach(extensionDir IN LISTS EXTENSIONS_DIRS)
-        add_subdirectory(${extensionDir} "Extensions" EXCLUDE_FROM_ALL)
+        add_subdirectory(${extensionDir} "Extensions")
     endforeach()
 endif()
 
 if(BABYLON_NATIVE_BUILD_APPS)
     add_subdirectory(Apps)
+endif()
+
+if(BABYLON_NATIVE_INSTALL)
+    include(Install/Install.cmake)
 endif()

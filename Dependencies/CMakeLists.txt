@@ -2,7 +2,7 @@
 add_subdirectory(CMakeExtensions)
 
 # -------------------------------- arcana --------------------------------
-# Dependencies: none
+# Dependencies: GSL
 add_subdirectory(arcana.cpp)
 if(WIN32)
     set_property(TARGET arcana PROPERTY FOLDER Dependencies)
@@ -73,12 +73,12 @@ disable_warnings(bx)
 # -------------------------------- glslang --------------------------------
 # Dependencies: none
 set(BUILD_EXTERNAL OFF CACHE BOOL "")
-set(SKIP_GLSLANG_INSTALL OFF CACHE BOOL "")
 set(ENABLE_SPVREMAPPER OFF CACHE BOOL "")
 set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "")
 set(ENABLE_HLSL OFF CACHE BOOL "")
 set(ENABLE_OPT OFF CACHE BOOL "")
 set(ENABLE_CTEST OFF CACHE BOOL "")
+set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "")
 add_subdirectory(glslang)
 set_property(TARGET GenericCodeGen PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET glslang PROPERTY FOLDER Dependencies/glslang)
@@ -109,6 +109,7 @@ set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "")
 set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "")
 set(SPIRV_CROSS_ENABLE_C_API OFF CACHE BOOL "")
 set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "")
+set(SPIRV_CROSS_SKIP_INSTALL ON CACHE BOOL "")
 if(NOT GRAPHICS_API STREQUAL "Metal")
     set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "")
 endif()
@@ -131,7 +132,7 @@ endif()
 # -------------------------------- xr --------------------------------
 # Dependencies: none
 # Currently supported on Windows via OpenXR, Android via ARCore, and iOS via ARKit.
-if(WIN32 OR WINDOWS_STORE OR ANDROID OR IOS)
+if(BABYLON_NATIVE_PLUGIN_XR AND (WIN32 OR WINDOWS_STORE OR ANDROID OR IOS))
     add_subdirectory(xr)
     set_property(TARGET xr PROPERTY FOLDER Dependencies/xr)
     warnings_as_errors(xr)
@@ -139,6 +140,7 @@ if(WIN32 OR WINDOWS_STORE OR ANDROID OR IOS)
         set_property(TARGET openxr_loader PROPERTY FOLDER Dependencies/xr/OpenXR)
         set_property(TARGET generate_openxr_header PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
         set_property(TARGET xr_global_generated_files PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
+        set_property(TARGET uninstall PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
         disable_warnings(openxr_loader)
     endif()
 endif()
@@ -151,13 +153,15 @@ endif()
 
 # -------------------------------- UrlLib --------------------------------
 # Dependencies: arcana, AndroidExtensions
-add_subdirectory(UrlLib)
-set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
+if(BABYLON_NATIVE_PLUGIN_XMLHTTPREQUEST)
+    add_subdirectory(UrlLib)
+    set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
+endif()
 
 # --------------------------- v8inspector ---------------------------
 # Dependencies: none
 # Currently only supported on Win32 x86/x64 and Android
-if ((WIN32 AND NOT (WINDOWS_STORE OR CMAKE_GENERATOR_PLATFORM_UPPER MATCHES "ARM.*")) OR ANDROID)
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     add_subdirectory(v8inspector)
     set_property(TARGET v8inspector PROPERTY FOLDER Dependencies)
 endif()

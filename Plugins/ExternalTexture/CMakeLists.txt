@@ -1,5 +1,5 @@
 set(SOURCES
-    "Include/Shared/Babylon/Plugins/ExternalTexture.h"
+    "Include/Babylon/Plugins/ExternalTexture.h"
     "Source/ExternalTexture_${GRAPHICS_API}.cpp"
     "Source/ExternalTexture.cpp")
 
@@ -7,7 +7,7 @@ add_library(ExternalTexture ${SOURCES})
 warnings_as_errors(ExternalTexture)
 
 target_include_directories(ExternalTexture
-    PUBLIC "Include/Shared"
+    PUBLIC "Include"
     PRIVATE "Source")
 
 target_link_to_dependencies(ExternalTexture

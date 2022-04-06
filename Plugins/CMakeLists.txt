@@ -1,20 +1,39 @@
-add_subdirectory(ChromeDevTools)
+if(BABYLON_NATIVE_PLUGIN_CHROMEDEVTOOLS)
+    add_subdirectory(ChromeDevTools)
+endif()
 
-add_subdirectory(NativeCapture)
+if(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE)
+    add_subdirectory(ExternalTexture)
+endif()
 
-add_subdirectory(NativeInput)
+if(BABYLON_NATIVE_PLUGIN_NATIVECAMERA)
+    add_subdirectory(NativeCamera)
+endif()
 
-add_subdirectory(NativeEngine)
+if(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE)
+    add_subdirectory(NativeCapture)
+endif()
 
-# Dependencies: NativeEngine
-add_subdirectory(NativeXr)
+if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE)
+    add_subdirectory(NativeEngine)
+endif()
 
-add_subdirectory(NativeCamera)
+if(BABYLON_NATIVE_PLUGIN_NATIVEINPUT)
+    add_subdirectory(NativeInput)
+endif()
 
-add_subdirectory(NativeOptimizations)
+if(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS)
+    add_subdirectory(NativeOptimizations)
+endif()
 
-add_subdirectory(NativeTracing)
+if(BABYLON_NATIVE_PLUGIN_NATIVETRACING)
+    add_subdirectory(NativeTracing)
+endif()
 
-add_subdirectory(TestUtils)
+if(BABYLON_NATIVE_PLUGIN_TESTUTILS)
+    add_subdirectory(TestUtils)
+endif()
 
-add_subdirectory(ExternalTexture)
+if(BABYLON_NATIVE_PLUGIN_XR)
+    add_subdirectory(NativeXr)
+endif()
