@@ -136,7 +136,7 @@ namespace UrlLib
         {
             if (m_responseBuffer)
             {
-                return {reinterpret_cast<const std::byte*>(m_responseBuffer.bytes), static_cast<long>(m_responseBuffer.length)};
+                return {reinterpret_cast<const std::byte*>(m_responseBuffer.bytes), m_responseBuffer.length};
             }
 
             return {};
