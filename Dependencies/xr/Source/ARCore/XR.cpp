@@ -172,6 +172,55 @@ namespace xr
 
             return task;
         }
+
+        // Converts an image bitmap to grayscale.
+        // Supported image formats: RBG(A)8, RGB(A)16, 16-bit grayscale.
+        void ConvertBitmapToGrayscale(
+                const uint8_t* imagePixelBuffer,
+                const int32_t width,
+                const int32_t height,
+                const int32_t stride,
+                uint8_t* grayscaleBuffer)
+        {
+            const int pixelStride {stride / width};
+            for (int h{0}; h < height; ++h)
+            {
+                for (int w{0}; w < width; ++w)
+                {
+                    gsl::span<const uint8_t> pixel{imagePixelBuffer + (w * pixelStride + h * stride), pixelStride};
+
+                    if (pixelStride == 2)
+                    {
+                        // 16-bit grayscale
+                        gsl::span<const uint16_t> pixel16{reinterpret_cast<const uint16_t *>(pixel.data()), 1};
+                        grayscaleBuffer[w + h * width] = pixel16[0] / 257;
+                    }
+                    else if (pixelStride == 4 || pixelStride == 3)
+                    {
+                        // RGB8/RGBA8
+                        const uint8_t r{pixel[0]};
+                        const uint8_t g{pixel[1]};
+                        const uint8_t b{pixel[2]};
+                        grayscaleBuffer[w + h * width] = static_cast<uint8_t>(
+                            0.213f * r +
+                            0.715 * g +
+                            0.072 * b);
+                    }
+                    else if (pixelStride == 6 || pixelStride == 8)
+                    {
+                        // RGB16/RGBA16
+                        gsl::span<const uint16_t> pixel16{reinterpret_cast<const uint16_t *>(pixel.data()), pixelStride / 2};
+                        const uint8_t r{static_cast<uint8_t>(pixel16[0] / 257)};
+                        const uint8_t g{static_cast<uint8_t>(pixel16[1] / 257)};
+                        const uint16_t b{static_cast<uint8_t>(pixel16[2] / 257)};
+                        grayscaleBuffer[w + h * width] = static_cast<uint8_t>(
+                            0.213f * r +
+                            0.715 * g +
+                            0.072 * b);
+                    }
+                }
+            }
+        }
     }
 
     struct System::Session::Impl
@@ -207,6 +256,7 @@ namespace xr
                 Planes.clear();
                 CleanupAnchor(nullptr);
                 CleanupFrameTrackables();
+                CleanupImageTrackingTrackables();
                 ArPose_destroy(cameraPose);
                 ArPose_destroy(tempPose);
                 ArHitResult_destroy(hitResult);
@@ -679,54 +729,7 @@ namespace xr
             }
         }
 
-        // Converts an image bitmap to grayscale.
-        // Supported image formats: RBG(A)8, RGB(A)16, 16-bit grayscale.
-        void ConvertBitmapToGrayscale(
-            const uint8_t* imagePixelBuffer,
-            const int32_t width,
-            const int32_t height,
-            const int32_t stride,
-            uint8_t* grayscaleBuffer)
-        {
-            const uint32_t pixelStride = stride / width;
-            for (int h = 0; h < height; ++h)
-            {
-                for (int w = 0; w < width; ++w)
-                {
-                    const uint8_t* pixel{&imagePixelBuffer[w * pixelStride + h * stride]};
-
-                    if (pixelStride == 2)
-                    {
-                        // 16-bit grayscale
-                        const uint16_t* pixel16{reinterpret_cast<const uint16_t *>(pixel)};
-                        grayscaleBuffer[w + h * width] = *pixel16 / 257;
-                    }
-                    else if (pixelStride == 4 || pixelStride == 3)
-                    {
-                        // RGB8/RGBA8
-                        const uint8_t r{*pixel};
-                        const uint8_t g{*(pixel + 1)};
-                        const uint8_t b{*(pixel + 2)};
-                        grayscaleBuffer[w + h * width] = static_cast<uint8_t>(0.213f * r +
-                            0.715 * g +
-                            0.072 * b);
-                    }
-                    else if (pixelStride == 6 || pixelStride == 8)
-                    {
-                        // RGB16/RGBA16
-                        const uint16_t* pixel16{reinterpret_cast<const uint16_t *>(pixel)};
-                        const uint8_t r{static_cast<uint8_t>(*pixel16 / 257)};
-                        const uint8_t g{static_cast<uint8_t>(*(pixel16 + 1) / 257)};
-                        const uint16_t b{static_cast<uint8_t>(*(pixel16 + 2) / 257)};
-                        grayscaleBuffer[w + h * width] = static_cast<uint8_t>(0.213f * r +
-                            0.715 * g +
-                            0.072 * b);
-                    }
-                }
-            }
-        }
-
-        std::vector<std::string>* GetImageTrackingScores()
+        std::vector<ImageTrackingScore>* GetImageTrackingScores()
         {
             if (imageTrackingScoresValid)
             {
@@ -784,11 +787,11 @@ namespace xr
                 if (status == AR_SUCCESS)
                 {
                     trackableImagesCount++;
-                    imageTrackingScores.push_back(System::Session::Frame::ImageTrackingScore::TRACKABLE);
+                    imageTrackingScores.push_back(ImageTrackingScore::TRACKABLE);
                 }
                 else
                 {
-                    imageTrackingScores.push_back(System::Session::Frame::ImageTrackingScore::UNTRACKABLE);
+                    imageTrackingScores.push_back(ImageTrackingScore::UNTRACKABLE);
                 }
             }
 
@@ -802,7 +805,7 @@ namespace xr
 
                 // Configure the ArSession to include the image tracking database
                 ArConfig_setAugmentedImageDatabase(xrContext->Session, arConfig, augmentedImageDatabase);
-                const ArStatus status = ArSession_configure(xrContext->Session, arConfig);
+                const ArStatus status{ArSession_configure(xrContext->Session, arConfig)};
 
                 // If we failed to configure the session, error out.
                 if (status != AR_SUCCESS)
@@ -825,7 +828,7 @@ namespace xr
             ArTrackableList_getSize(xrContext->Session, trackableList, &imageListSize);
 
             // For each updated image, get the current status.
-            for (int i = 0; i < imageListSize; ++i) {
+            for (int i{0}; i < imageListSize; ++i) {
                 ArTrackable* trackable{nullptr};
                 ArTrackableList_acquireItem(xrContext->Session, trackableList, i, &trackable);
                 ArAugmentedImage* imageTrackable {ArAsAugmentedImage(trackable)};
@@ -876,11 +879,11 @@ namespace xr
 
         Frame::ImageTrackingResult& GetImageTrackingResultByID(Frame::ImageTrackingResult::Identifier resultID)
         {
-            const auto end = imageTrackingResults.end();
-            const auto it = std::find_if(
+            const auto end{imageTrackingResults.end()};
+            const auto it{std::find_if(
                 imageTrackingResults.begin(),
                 end,
-                [&](std::unique_ptr<Frame::ImageTrackingResult>& resultPtr) { return resultPtr->ID == resultID; });
+                [&](std::unique_ptr<Frame::ImageTrackingResult>& resultPtr) { return resultPtr->ID == resultID; })};
 
             if (it != end)
             {
@@ -905,13 +908,28 @@ namespace xr
 
             // Map ARCore tracking state to WebXR image tracking state.
             result.TrackingState = arTrackingState == AR_AUGMENTED_IMAGE_TRACKING_METHOD_FULL_TRACKING
-                ? Frame::ImageTrackingState::TRACKED
+                ? ImageTrackingState::TRACKED
                 : arTrackingState == AR_AUGMENTED_IMAGE_TRACKING_METHOD_LAST_KNOWN_POSE
-                    ? Frame::ImageTrackingState::EMULATED
-                    : Frame::ImageTrackingState::UNTRACKED;
+                    ? ImageTrackingState::EMULATED
+                    : ImageTrackingState::UNTRACKED;
 
             // Mark that this result was updated on this frame.
             updatedResults.push_back(result.ID);
+        }
+
+        // Loop over image tracking map, and release the held trackables.
+        void CleanupImageTrackingTrackables()
+        {
+            auto imageTrackingIter{ imageTrackingResultsMap.begin() };
+            while (imageTrackingIter != imageTrackingResultsMap.end())
+            {
+                ArTrackable_release(reinterpret_cast<ArTrackable*>(imageTrackingIter->first));
+                imageTrackingIter++;
+            }
+
+            imageTrackingResultsMap.clear();
+            imageTrackingResults.clear();
+            imageTrackingScores.clear();
         }
 
         // Clean up all ArCore trackables owned by the current frame, this should be called once per frame.
@@ -1168,8 +1186,8 @@ namespace xr
 
         Frame::Plane& GetPlaneByID(Frame::Plane::Identifier planeID)
         {
-            const auto end = Planes.end();
-            const auto it = std::find_if(Planes.begin(), end, [&](Frame::Plane& plane) { return plane.ID == planeID; });
+            const auto end{Planes.end()};
+            const auto it{std::find_if(Planes.begin(), end, [&](Frame::Plane& plane) { return plane.ID == planeID; })};
 
             if (it != end)
             {
@@ -1204,7 +1222,7 @@ namespace xr
         FeaturePoint::Identifier nextFeaturePointID{};
 
         bool imageTrackingScoresValid{false};
-        std::vector<std::string> imageTrackingScores{};
+        std::vector<ImageTrackingScore> imageTrackingScores{};
         std::vector<std::unique_ptr<Frame::ImageTrackingResult>> imageTrackingResults{};
         std::unordered_map<ArAugmentedImage*, Frame::ImageTrackingResult::Identifier> imageTrackingResultsMap{};
 
@@ -1572,7 +1590,7 @@ namespace xr
         return false;
     }
 
-    std::vector<std::string>* System::Session::GetImageTrackingScores() const
+    std::vector<ImageTrackingScore>* System::Session::GetImageTrackingScores() const
     {
         return m_impl->GetImageTrackingScores();
     }

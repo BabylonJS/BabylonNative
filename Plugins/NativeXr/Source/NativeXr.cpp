@@ -392,7 +392,7 @@ namespace Babylon
                 return m_sessionState->Session->TrySetPreferredMeshDetectorOptions(options);
             }
 
-            std::vector<std::string>* GetImageTrackingScores() {
+            std::vector<xr::ImageTrackingScore>* GetImageTrackingScores() {
                 return m_sessionState->Session->GetImageTrackingScores();
             }
 
@@ -796,6 +796,13 @@ namespace Babylon
             static constexpr auto POINT{"point"};
             static constexpr auto PLANE{"plane"};
             static constexpr auto MESH{"mesh"};
+        };
+
+        struct XRImageTrackingState
+        {
+            //static constexpr auto UNTRACKED{"untracked"};
+            static constexpr auto TRACKED{"tracked"};
+            static constexpr auto EMULATED{"emulated"};
         };
 
         struct XREye
@@ -2563,18 +2570,23 @@ namespace Babylon
                     // Get the matching native result
                     xr::System::Session::Frame::ImageTrackingResult& nativeResult{m_frame->GetImageTrackingResultByID(imageTrackingResultID)};
 
+                    // Convert the image tracking state from the native result to a string.
+                    const std::string trackingStateString = nativeResult.TrackingState == xr::ImageTrackingState::TRACKED ?
+                        XRImageTrackingState::TRACKED :
+                        XRImageTrackingState::EMULATED;
+
                     // Result does not yet exist, create the JS object and insert it into the map.
                     if (trackedImageTrackingResultIterator == m_trackedImageIDToResultMap.end())
                     {
                         // Don't add untracked images.
-                        if (nativeResult.TrackingState == xr::System::Session::Frame::ImageTrackingState::UNTRACKED)
+                        if (nativeResult.TrackingState == xr::ImageTrackingState::UNTRACKED)
                         {
                             continue;
                         }
 
                         auto napiResult{Napi::Object::New(env)};
                         napiResult.Set("index", Napi::Value::From(env, nativeResult.Index));
-                        napiResult.Set("trackingState", Napi::Value::From(env, nativeResult.TrackingState));
+                        napiResult.Set("trackingState", Napi::Value::From(env, trackingStateString));
                         napiResult.Set("measuredWidthInMeters", Napi::Value::From(env, nativeResult.MeasuredWidthInMeters));
                         napiResult.Set("imageSpace", Napi::External<xr::Space>::New(env, &nativeResult.ImageSpace));
 
@@ -2587,7 +2599,7 @@ namespace Babylon
                     {
                         // Update the tracked image.
                         auto napiResult{trackedImageTrackingResultIterator->second.Value().As<Napi::Object>()};
-                        napiResult.Set("trackingState", Napi::Value::From(env, nativeResult.TrackingState));
+                        napiResult.Set("trackingState", Napi::Value::From(env, trackingStateString));
                         napiResult.Set("measuredWidthInMeters", Napi::Value::From(env, nativeResult.MeasuredWidthInMeters));
                     }
                 }
@@ -2636,6 +2648,11 @@ namespace Babylon
             static constexpr auto JS_EVENT_NAME_SQUEEZE_END = "squeezeend";
             static constexpr auto JS_EVENT_NAME_EYE_TRACKING_START = "eyetrackingstart";
             static constexpr auto JS_EVENT_NAME_EYE_TRACKING_END = "eyetrackingend";
+            struct XRImageTrackingScore
+            {
+                static constexpr auto UNTRACKABLE{"untrackable"};
+                static constexpr auto TRACKABLE{"trackable"};
+            };
 
         public:
             static void Initialize(Napi::Env env)
@@ -3217,7 +3234,7 @@ namespace Babylon
 
             Napi::Value GetTrackedImageScores(const Napi::CallbackInfo& info)
             {
-                std::vector<std::string>* imageTrackingScores{m_xr->GetImageTrackingScores()};
+                std::vector<xr::ImageTrackingScore>* imageTrackingScores{m_xr->GetImageTrackingScores()};
                 if (imageTrackingScores == nullptr) {
                     return info.Env().Undefined();
                 }
@@ -3228,7 +3245,10 @@ namespace Babylon
                 // Loop over the list of tracked image tracking results, and add them to the array.
                 for (const auto& score : *imageTrackingScores)
                 {
-                    results.Set(index++, Napi::Value::From(info.Env(), score));
+                    const std::string scoreString = score == xr::ImageTrackingScore::TRACKABLE ?
+                        XRImageTrackingScore::TRACKABLE :
+                        XRImageTrackingScore::UNTRACKABLE;
+                    results.Set(index++, Napi::Value::From(info.Env(), scoreString));
                 }
 
                 return std::move(results);
