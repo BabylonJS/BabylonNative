@@ -1111,7 +1111,7 @@ namespace Babylon
 
         private:
             size_t m_eyeIdx{};
-            gsl::czstring<> m_eye{};
+            gsl::czstring m_eye{};
             Napi::Reference<Napi::Float32Array> m_projectionMatrix{};
             Napi::ObjectReference m_rigidTransform{};
             bool m_isFirstPersonObserver{};
