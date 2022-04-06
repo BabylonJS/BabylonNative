@@ -25,7 +25,7 @@ option(BABYLON_NATIVE_PLUGIN_NATIVEINPUT "Include Babylon Native Plugin NativeIn
 option(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS "Include Babylon Native Plugin NativeOptimizations." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVETRACING "Include Babylon Native Plugin NativeTracing." ON)
 option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils." ON)
-option(BABYLON_NATIVE_PLUGIN_XR "Include Babylon Native Plugin XR." ON)
+option(BABYLON_NATIVE_PLUGIN_NATIVEXR "Include Babylon Native Plugin XR." ON)
 
 ## Polyfills
 option(BABYLON_NATIVE_PLUGIN_CONSOLE "Include Babylon Native Polyfill Console." ON)
@@ -52,7 +52,7 @@ elseif(WINDOWS_STORE)
 elseif(WIN32)
     set(BABYLON_NATIVE_PLATFORM "Win32")
 elseif(UNIX)
-    set(BABYLON_NATIVE_PLATFORM "Unix") 
+    set(BABYLON_NATIVE_PLATFORM "Unix")
 else()
     message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
 endif()

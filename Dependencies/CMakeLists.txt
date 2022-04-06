@@ -132,7 +132,7 @@ endif()
 # -------------------------------- xr --------------------------------
 # Dependencies: none
 # Currently supported on Windows via OpenXR, Android via ARCore, and iOS via ARKit.
-if(BABYLON_NATIVE_PLUGIN_XR AND (WIN32 OR WINDOWS_STORE OR ANDROID OR IOS))
+if(BABYLON_NATIVE_PLUGIN_NATIVEXR AND (WIN32 OR ANDROID OR IOS))
     add_subdirectory(xr)
     set_property(TARGET xr PROPERTY FOLDER Dependencies/xr)
     warnings_as_errors(xr)
