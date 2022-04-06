@@ -28,10 +28,10 @@ option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils.
 option(BABYLON_NATIVE_PLUGIN_NATIVEXR "Include Babylon Native Plugin XR." ON)
 
 ## Polyfills
-option(BABYLON_NATIVE_PLUGIN_CONSOLE "Include Babylon Native Polyfill Console." ON)
-option(BABYLON_NATIVE_PLUGIN_WINDOW "Include Babylon Native Polyfill Window." ON)
-option(BABYLON_NATIVE_PLUGIN_XMLHTTPREQUEST "Include Babylon Native Polyfill XMLHttpRequest." ON)
-option(BABYLON_NATIVE_PLUGIN_CANVAS "Include Babylon Native Polyfill Canvas." ON)
+option(BABYLON_NATIVE_POLYFILL_CONSOLE "Include Babylon Native Polyfill Console." ON)
+option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
+option(BABYLON_NATIVE_POLYFILL_XMLHTTPREQUEST "Include Babylon Native Polyfill XMLHttpRequest." ON)
+option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
 # --------------------------------------------------
 
 if(APPLE)
