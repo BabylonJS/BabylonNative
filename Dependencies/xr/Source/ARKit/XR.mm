@@ -162,7 +162,7 @@ namespace {
 #endif
 
 /**
- Returns the set of all updated planes since the last time we consumed plane updates.
+ Returns the set of all updated tracked images since the last time we consumed image updates.
  */
 - (std::set<ARImageAnchor*, ARAnchorComparer>*) GetUpdatedImages {
     return &updatedImages;
@@ -504,7 +504,7 @@ namespace {
             [self UnlockAnchors];
         }
     }
-    
+
     return;
 }
 
@@ -1146,12 +1146,12 @@ namespace xr {
                 // Iterate over all newly found/updated image anchors and either create or update the image tracking result.
                 auto updatedARImages{[sessionDelegate GetUpdatedImages]};
                 for (ARImageAnchor* updatedImage : *updatedARImages) {
-                    // Update the existing Image tracking result if it exists, otherwise create a new result, and add it to our list of results.
+                    // Update the existing image tracking result if it exists, otherwise create a new result and add it to our list of results.
                     const auto resultIterator{imageTrackingMap.find({[updatedImage.identifier.UUIDString UTF8String]})};
                     if (resultIterator != imageTrackingMap.end()) {
                         UpdateImageTrackingResult(updatedImageTrackingResults, GetImageTrackingResultByID(resultIterator->second), updatedImage);
                     } else {
-                        // This is a new result, create it and initialize its values.
+                        // This is a new result. Create it and initialize its values.
                         imageTrackingResults.push_back(std::make_unique<Frame::ImageTrackingResult>());
                         auto& result{ *imageTrackingResults.back() };
                         result.Index = [updatedImage.referenceImage.name intValue];
@@ -1472,7 +1472,7 @@ namespace xr {
             }
                 
             // Wait for all scores to calculated on a separate scheduler.
-            __block dispatch_queue_t awaiterQueue{dispatch_queue_create("Awaiter Queue", nil)};
+            dispatch_queue_t awaiterQueue{dispatch_queue_create("Awaiter Queue", nil)};
             dispatch_async(awaiterQueue, ^{
                 dispatch_group_wait(validationGroup, DISPATCH_TIME_FOREVER);
 
@@ -1480,7 +1480,7 @@ namespace xr {
                     // Convert each image request from a bitmap to a CGImage, and prepare to pass that to the ARKit configuration.
                     ARWorldTrackingConfiguration* configuration{static_cast<ARWorldTrackingConfiguration*>(SystemImpl.XrContext->Session.configuration)};
 
-                    // If we have any images that qualified for tracking, then enable image detection.
+                    // If we have any images that qualified for tracking then enable image detection.
                     if (imageCount > 0 && configuration != nil) {
                         configuration.detectionImages = imageSet;
                         
