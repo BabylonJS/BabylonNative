@@ -130,9 +130,9 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
         }
 
         return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <Text style={{ fontSize: 24 }}>{message}</Text>
-                <Text style={{ fontSize: 12 }}>React Native remote debugging does not work with Babylon Native.</Text>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white' }}>
+                <Text style={{ fontSize: 24, color: 'black' }}>{message}</Text>
+                <Text style={{ fontSize: 12, color: 'black' }}>React Native remote debugging does not work with Babylon Native.</Text>
             </View>
         );
     }
