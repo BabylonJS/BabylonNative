@@ -198,6 +198,9 @@ namespace {
     return meshDetectionEnabled;
 }
 
+/**
+ Sets whether image detection has been enabled for this ARKit session.
+ */
 - (void) SetImageDetectionEnabled:(bool)enabled {
     imageDetectionEnabled = enabled;
 }
@@ -231,9 +234,9 @@ namespace {
         throw std::runtime_error{"Unable to create Texture Cache"};
     }
 
+    anchorLock = [[NSLock alloc] init];
     updatedPlanes = {};
     deletedPlanes = {};
-    anchorLock = [[NSLock alloc] init];
 #if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
     updatedMeshes = {};
     deletedMeshes = {};
@@ -428,7 +431,7 @@ namespace {
 }
 
 - (void)session:(ARSession *)__unused session didAddAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
-    if (planeDetectionEnabled  ) {
+    if (planeDetectionEnabled || imageDetectionEnabled || meshDetectionEnabled) {
         [self LockAnchors];
         for (ARAnchor* newAnchor : anchors) {
             if (planeDetectionEnabled && [newAnchor isKindOfClass:[ARPlaneAnchor class]]) {
@@ -1060,8 +1063,7 @@ namespace xr {
          Updates existing planes in place, gets the list of updated/created plane IDs, and removed plane IDs.
          */
         void UpdatePlanes(std::vector<Frame::Plane::Identifier>& updatedPlanes, std::vector<Frame::Plane::Identifier>& deletedPlanes) {
-            if (!planeDetectionEnabled)
-            {
+            if (!planeDetectionEnabled) {
                 return;
             }
 
@@ -1129,18 +1131,17 @@ namespace xr {
          Updates existing image anchors in place, gets the list of updated/created image IDs.
          */
         void UpdateImageTrackingResults(std::vector<Frame::ImageTrackingResult::Identifier>& updatedImageTrackingResults) {
-            if (![sessionDelegate GetImageDetectionEnabled])
-            {
+            if (![sessionDelegate GetImageDetectionEnabled]) {
                 return;
             }
 
             [sessionDelegate LockAnchors];
             @try {
-                // First lets go and update all planes that have been updated since the last frame.
+                // Iterate over all newly found/updated image anchors and either create or update the image tracking result.
                 auto updatedARImages{[sessionDelegate GetUpdatedImages]};
                 for (ARImageAnchor* updatedImage : *updatedARImages) {
                     // Update the existing Image tracking result if it exists, otherwise create a new result, and add it to our list of results.
-                    auto resultIterator = imageTrackingMap.find({[updatedImage.identifier.UUIDString UTF8String]});
+                    const auto resultIterator{imageTrackingMap.find({[updatedImage.identifier.UUIDString UTF8String]})};
                     if (resultIterator != imageTrackingMap.end()) {
                         UpdateImageTrackingResult(updatedImageTrackingResults, GetImageTrackingResultByID(resultIterator->second), updatedImage);
                     } else {
@@ -1152,7 +1153,7 @@ namespace xr {
                         UpdateImageTrackingResult(updatedImageTrackingResults, result, updatedImage);
                     }
                 }
-
+                
                 // Clear the list of updated images to start building up for the next frame update.
                 updatedARImages->clear();
             } @finally {
@@ -1304,11 +1305,11 @@ namespace xr {
 
         Frame::Plane& GetPlaneByID(Frame::Plane::Identifier planeID)
         {
-            const auto end = Planes.end();
-            const auto it = std::find_if(
+            const auto end{Planes.end()};
+            const auto it{std::find_if(
                 Planes.begin(),
                 end,
-                [&](Frame::Plane& plane) { return plane.ID == planeID; });
+                [&](Frame::Plane& plane) { return plane.ID == planeID; })};
             if (it != end) {
                 return *it;
             } else {
@@ -1318,11 +1319,11 @@ namespace xr {
 
         Frame::Mesh& GetMeshByID(Frame::Mesh::Identifier meshID)
         {
-            const auto end = Meshes.end();
-            const auto it = std::find_if(
+            const auto end{Meshes.end()};
+            const auto it{std::find_if(
                 Meshes.begin(),
                 end,
-                [&](Frame::Mesh& mesh) { return mesh.ID == meshID; });
+                [&](Frame::Mesh& mesh) { return mesh.ID == meshID; })};
             if (it != end) {
                 return *it;
             } else {
@@ -1331,11 +1332,11 @@ namespace xr {
         }
         
         Frame::ImageTrackingResult& GetImageTrackingResultByID(Frame::ImageTrackingResult::Identifier resultID) {
-            const auto end = ImageTrackingResults.end();
-            const auto it = std::find_if(
+            const auto end{ImageTrackingResults.end()};
+            const auto it{std::find_if(
                 imageTrackingResults.begin(),
                 end,
-                [&](std::unique_ptr<Frame::ImageTrackingResult>& resultPtr) { return resultPtr->ID == resultID; });
+                [&](std::unique_ptr<Frame::ImageTrackingResult>& resultPtr) { return resultPtr->ID == resultID; })};
             if (it != end) {
                 return **it;
             } else {
@@ -1349,7 +1350,7 @@ namespace xr {
         void CleanupAnchor(ARAnchor* arAnchor) {
             // Iterate over the list of anchors if arAnchor is nil then clean up all anchors
             // otherwise clean up only the target anchor and return.
-            auto anchorIter = nativeAnchors.begin();
+            auto anchorIter{nativeAnchors.begin()};
             while (anchorIter != nativeAnchors.end()) {
                 if (arAnchor == nil || arAnchor == *anchorIter) {
                     [SystemImpl.XrContext->Session removeAnchor:*anchorIter];
@@ -1390,35 +1391,39 @@ namespace xr {
             if (imageTrackingScoresValid) {
                 return &imageTrackingScores;
             } else {
-                return nullptr;
+                return nil;
             }
         }
         
         void CreateAugmentedImageDatabase(const std::vector<ImageTrackingRequest>& requests) {
             // Create a dispatch group for the validation tasks.
-            __block dispatch_queue_t validationQueue = dispatch_queue_create("Image Validation Queue", nil);
-            __block dispatch_group_t validationGroup = dispatch_group_create();
+            __block dispatch_queue_t validationQueue{dispatch_queue_create("Image Validation Queue", nil)};
+            __block dispatch_group_t validationGroup{dispatch_group_create()};
+            
+            // Initialize values for tracking image scores.
             imageTrackingScores.resize(requests.size());
             __block uint32_t imageCount{0};
             __block NSMutableSet<ARReferenceImage*>* imageSet{[NSMutableSet<ARReferenceImage*> setWithCapacity:requests.size()]};
 
+            // Loop over every requested image, and add it to the image database.
             for (size_t i{0}; i < requests.size(); i++) {
                 const ImageTrackingRequest& request{requests[i]};
                 
                 // Create the AR Reference image.
                 const size_t imageBytes{request.stride * request.height};
                 const size_t pixelStride{request.stride / request.width};
-                const CGColorSpaceRef colorSpace{pixelStride > 1 ? CGColorSpaceCreateDeviceRGB() : CGColorSpaceCreateDeviceGray()};
+                const size_t bitsPerComponent{static_cast<size_t>(pixelStride == 2 || pixelStride == 6 || pixelStride == 8 ? 16 : 8)};
+                const CGColorSpaceRef colorSpace{pixelStride > 2 ? CGColorSpaceCreateDeviceRGB() : CGColorSpaceCreateDeviceGray()};
                 const CGDataProviderRef provider{CGDataProviderCreateWithData(nil, request.data, imageBytes, nil)};
                 const CGImageRef image{
                     CGImageCreate(
                        request.width,
                        request.height,
-                       8 /* bitsPerComponent */,
+                       bitsPerComponent,
                        8 * pixelStride /* bitsPerPixel */,
                        request.stride,
                        colorSpace,
-                       CGBitmapInfo(pixelStride == 4 ? kCGImageAlphaNoneSkipLast : 0),
+                       CGBitmapInfo(pixelStride == 4 || pixelStride == 8 ? kCGImageAlphaNoneSkipLast : 0),
                        provider,
                        nil /* decode buffer */,
                        true /* shouldInterpolate */,
@@ -1428,13 +1433,12 @@ namespace xr {
                 ARReferenceImage* referenceImage{[[ARReferenceImage alloc]
                     initWithCGImage: image
                     orientation: CGImagePropertyOrientation::kCGImagePropertyOrientationUp
-                    physicalWidth: request.measuredWidthInMeters]};
+                    physicalWidth: request.measuredWidthInMeters == 0 ? 1 : request.measuredWidthInMeters]};
                 
                 // Store the index in the name field.
                 referenceImage.name = [NSString stringWithFormat:@"%zu", i];
                 
                 // Queue image validation
-                // TODO: Consider making this method truly async to unblock XR startup.
                 if (@available(iOS 13.0, *)) {
                     dispatch_group_enter(validationGroup);
                     dispatch_async(validationQueue, ^{
@@ -1461,8 +1465,8 @@ namespace xr {
                 CGColorSpaceRelease(colorSpace);
             }
                 
-            // Wait for all scores to calculated.
-            __block dispatch_queue_t awaiterQueue = dispatch_queue_create("Awaiter Queue", nil);
+            // Wait for all scores to calculated on a separate scheduler.
+            __block dispatch_queue_t awaiterQueue{dispatch_queue_create("Awaiter Queue", nil)};
             dispatch_async(awaiterQueue, ^{
                 dispatch_group_wait(validationGroup, DISPATCH_TIME_FOREVER);
 
