@@ -1401,7 +1401,7 @@ namespace xr {
             imageTrackingScores.resize(requests.size());
             __block uint32_t imageCount{0};
             __block NSMutableSet<ARReferenceImage*>* imageSet{[NSMutableSet<ARReferenceImage*> setWithCapacity:requests.size()]};
-            
+
             for (size_t i{0}; i < requests.size(); i++) {
                 const ImageTrackingRequest& request{requests[i]};
                 
