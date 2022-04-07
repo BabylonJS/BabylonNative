@@ -122,12 +122,12 @@ namespace UrlLib
             return m_statusCode;
         }
 
-        gsl::cstring_span<> ResponseUrl()
+        std::string_view ResponseUrl()
         {
             return m_responseUrl;
         }
 
-        gsl::cstring_span<> ResponseString()
+        std::string_view ResponseString()
         {
             return m_responseString;
         }
@@ -136,7 +136,7 @@ namespace UrlLib
         {
             if (m_responseBuffer)
             {
-                return {reinterpret_cast<const std::byte*>(m_responseBuffer.bytes), static_cast<long>(m_responseBuffer.length)};
+                return {reinterpret_cast<const std::byte*>(m_responseBuffer.bytes), m_responseBuffer.length};
             }
 
             return {};

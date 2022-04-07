@@ -1846,13 +1846,13 @@ namespace xr {
         return false;
     }
 
+    std::vector<ImageTrackingScore>* System::Session::GetImageTrackingScores() const
+    {
+        return m_impl->GetImageTrackingScores();
+    }
+
     void System::Session::CreateAugmentedImageDatabase(const std::vector<System::Session::ImageTrackingRequest>& requests) const
     {
         m_impl->CreateAugmentedImageDatabase(requests);
-    }
-
-    std::vector<std::string>* System::Session::GetImageTrackingScores() const
-    {
-        return m_impl->GetImageTrackingScores();
     }
 }

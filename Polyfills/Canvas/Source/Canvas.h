@@ -1,11 +1,10 @@
 #pragma once
 
 #include <Babylon/Polyfills/Canvas.h>
-#include <GraphicsImpl.h>
-#include <FrameBuffer.h>
 
-// HACK: for TextureData
-#include <Texture.h>
+#include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/FrameBuffer.h>
+#include <Babylon/Graphics/Texture.h>
 
 namespace Babylon::Polyfills
 {
@@ -65,7 +64,12 @@ namespace Babylon::Polyfills::Internal
 
         // returns true if frameBuffer size has changed
         bool UpdateRenderTarget();
-        Babylon::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
+        Babylon::Graphics::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
+
+        Graphics::DeviceContext& GetGraphicsContext()
+        {
+            return m_graphicsContext;
+        }
 
     private:
         Napi::Value GetContext(const Napi::CallbackInfo&);
@@ -75,16 +79,17 @@ namespace Babylon::Polyfills::Internal
         void SetHeight(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetCanvasTexture(const Napi::CallbackInfo& info);
         static Napi::Value LoadTTFAsync(const Napi::CallbackInfo& info);
+        static Napi::Value ParseColor(const Napi::CallbackInfo& info);
         void Dispose(const Napi::CallbackInfo& info);
         void Dispose();
 
         uint32_t m_width{1};
         uint32_t m_height{1};
 
-        Babylon::GraphicsImpl& m_graphicsImpl;
+        Graphics::DeviceContext& m_graphicsContext;
 
-        std::unique_ptr<Babylon::FrameBuffer> m_frameBuffer;
-        std::unique_ptr<TextureData> m_textureData{};
+        std::unique_ptr<Graphics::FrameBuffer> m_frameBuffer;
+        std::unique_ptr<Graphics::TextureData> m_textureData{};
         bool m_dirty{};
 
         void FlushGraphicResources() override;

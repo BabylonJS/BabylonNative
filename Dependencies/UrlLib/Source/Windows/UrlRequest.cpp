@@ -154,12 +154,12 @@ namespace UrlLib
             return m_statusCode;
         }
 
-        gsl::cstring_span<> ResponseUrl()
+        std::string_view ResponseUrl()
         {
             return m_responseUrl;
         }
 
-        gsl::cstring_span<> ResponseString()
+        std::string_view ResponseString()
         {
             return m_responseString;
         }
@@ -171,7 +171,7 @@ namespace UrlLib
                 std::byte* bytes;
                 auto bufferByteAccess = m_responseBuffer.as<::Windows::Storage::Streams::IBufferByteAccess>();
                 winrt::check_hresult(bufferByteAccess->Buffer(reinterpret_cast<byte**>(&bytes)));
-                return {bytes, gsl::narrow_cast<std::ptrdiff_t>(m_responseBuffer.Length())};
+                return {bytes, gsl::narrow_cast<std::size_t>(m_responseBuffer.Length())};
             }
             return {};
         }

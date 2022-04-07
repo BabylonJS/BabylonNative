@@ -71,33 +71,3 @@ percentage of the NativeEngine component's source code (and none of its
 public-facing API); however, it is a sufficiently important and specialized 
 part of the codebase that it warrants 
 [its own dedicated documentation page](ShaderTranspilation.md).
-
-## The "NativeEngineInternal" CMake Target
-
-As with most Babylon Native components, the public-facing API of 
-NativeEngine is kept extremely minimal -- it is limited essentially to 
-initializers on the C++ side, and the entire type is an implementation
-detail on the JavaScript side. As described in the
-[Babylon Native build system documentation](BuildSystem.md), most consumers
-of the NativeEngine component will consume the component by linking to the 
-"NativeEngine" CMake target, which will give access to the public-facing 
-API that is extremely stable and so minimalistic as to be difficult to 
-misuse.
-
-However, there are times when certain consumers -- such as other Babylon
-Native components -- may require more invasive access to the implementation
-details of the `NativeEngine` type or associated graphics capabilities.
-The most prominent example of this is the NativeXr plugin, which requires 
-access to multiple NativeEngine and bgfx concepts and methods in order to
-enable alternative behaviors for XR, such as cross-proc rendering for 
-OpenXR. For use cases such as this, NativeEngine exposes a second CMake 
-target -- "NativeEngineInternal" which gives consuming components access
-not only to all of NativeEngine's implementation details. This target is
-intended only to be used by Babylon Native components which require access 
-to the internal details of the Native Engine, so this target should only
-be linked to when absolutely necessary and it should _never_ be linked to
-as anything but a `PRIVATE` dependency. Components which use the 
-"NativeEngineInternal" (as with other "Internal" targets) can take hard 
-dependencies on implementation details which have no guarantee of 
-stability; such dependencies are extremely vulnerable to breaking changes 
-and so must be actively and diligently maintained.

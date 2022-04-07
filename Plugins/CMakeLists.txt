@@ -1,27 +1,39 @@
-# Add DevTools
-add_subdirectory(ChromeDevTools)
+if(BABYLON_NATIVE_PLUGIN_CHROMEDEVTOOLS)
+    add_subdirectory(ChromeDevTools)
+endif()
 
-# Add NativeCapture
-add_subdirectory(NativeCapture)
+if(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE)
+    add_subdirectory(ExternalTexture)
+endif()
 
-# Add NativeInput
-add_subdirectory(NativeInput)
+if(BABYLON_NATIVE_PLUGIN_NATIVECAMERA)
+    add_subdirectory(NativeCamera)
+endif()
 
-# Add NativeEngine
-add_subdirectory(NativeEngine)
+if(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE)
+    add_subdirectory(NativeCapture)
+endif()
 
-# Add NativeXr
-# Dependencies: NativeEngine
-add_subdirectory(NativeXr)
+if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE)
+    add_subdirectory(NativeEngine)
+endif()
 
-# Add NativeCamera
-add_subdirectory(NativeCamera)
+if(BABYLON_NATIVE_PLUGIN_NATIVEINPUT)
+    add_subdirectory(NativeInput)
+endif()
 
-# Add NativeOptimizations
-add_subdirectory(NativeOptimizations)
+if(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS)
+    add_subdirectory(NativeOptimizations)
+endif()
 
-# Add NativeTracing
-add_subdirectory(NativeTracing)
+if(BABYLON_NATIVE_PLUGIN_NATIVETRACING)
+    add_subdirectory(NativeTracing)
+endif()
 
-# Add TestUtils
-add_subdirectory(TestUtils)
+if(BABYLON_NATIVE_PLUGIN_TESTUTILS)
+    add_subdirectory(TestUtils)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVEXR AND (WIN32 OR ANDROID OR IOS))
+    add_subdirectory(NativeXr)
+endif()

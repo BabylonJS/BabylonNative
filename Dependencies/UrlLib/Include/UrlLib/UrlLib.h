@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string_view>
 #include <arcana/threading/task.h>
 
 namespace UrlLib
@@ -45,9 +46,9 @@ namespace UrlLib
 
         UrlStatusCode StatusCode() const;
 
-        gsl::cstring_span<> ResponseUrl() const;
+        std::string_view ResponseUrl() const;
 
-        gsl::cstring_span<> ResponseString() const;
+        std::string_view ResponseString() const;
 
         gsl::span<const std::byte> ResponseBuffer() const;
 

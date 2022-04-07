@@ -81,8 +81,8 @@ namespace Babylon::Polyfills::Internal
         : Napi::ObjectWrap<Context>{info}
         , m_canvas{info[0].As<Napi::External<NativeCanvas>>().Data()}
         , m_nvg{nvgCreate(1)}
-        , m_graphicsImpl{Babylon::GraphicsImpl::GetFromJavaScript(info.Env())}
-        , m_update{m_graphicsImpl.GetUpdate("update")}
+        , m_graphicsContext{m_canvas->GetGraphicsContext()}
+        , m_update{m_graphicsContext.GetUpdate("update")}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
@@ -132,7 +132,7 @@ namespace Babylon::Polyfills::Internal
         nvgBeginPath(m_nvg);
         nvgRect(m_nvg, left, top, width, height);
 
-        const auto color = StringToColor(m_fillStyle);
+        const auto color = StringToColor(info.Env(), m_fillStyle);
         nvgFillColor(m_nvg, color);
         nvgFill(m_nvg);
         SetDirty();
@@ -143,10 +143,10 @@ namespace Babylon::Polyfills::Internal
         return Napi::Value::From(Env(), m_fillStyle);
     }
 
-    void Context::SetFillStyle(const Napi::CallbackInfo&, const Napi::Value& value)
+    void Context::SetFillStyle(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         m_fillStyle = value.As<Napi::String>().Utf8Value();
-        const auto color = StringToColor(m_fillStyle);
+        const auto color = StringToColor(info.Env(), m_fillStyle);
         nvgFillColor(m_nvg, color);
         SetDirty();
     }
@@ -156,10 +156,10 @@ namespace Babylon::Polyfills::Internal
         return Napi::Value::From(Env(), m_strokeStyle);
     }
 
-    void Context::SetStrokeStyle(const Napi::CallbackInfo&, const Napi::Value& value)
+    void Context::SetStrokeStyle(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         m_strokeStyle = value.As<Napi::String>().Utf8Value();
-        auto color = StringToColor(m_strokeStyle);
+        auto color = StringToColor(info.Env(), m_strokeStyle);
         nvgStrokeColor(m_nvg, color);
         SetDirty();
     }
@@ -358,7 +358,7 @@ namespace Babylon::Polyfills::Internal
         arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, needClear, cancellationSource{ m_cancellationSource }]() {
             return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{ m_update.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
                 // JS Thread
-                Babylon::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
+                Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
                 bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
                 frameBuffer.Bind(*encoder);
                 if (needClear)

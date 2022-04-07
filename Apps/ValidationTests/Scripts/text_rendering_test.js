@@ -32,11 +32,13 @@ console.log("Reading font");
 var textureGround;
 var font = "bold 44px monospace";
 BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
-    _native.NativeCanvas.loadTTFAsync("droidsans", data);
+    _native.Canvas.loadTTFAsync("droidsans", data);
     /*
-    var ground = BABYLON.MeshBuilder.CreateGround("ground1", { width: 1, height: 1, subdivisions: 2 }, scene);
-    ground.rotation.x = Math.PI * 0.5;
-    ground.position.z = 2;
+    var ground = BABYLON.MeshBuilder.CreateGround("ground1", { width: 0.5, height: 0.5, subdivisions: 2 }, scene);
+    ground.rotation.x = -Math.PI * 0.5;
+    ground.rotation.y = Math.PI;
+    ground.position.z = -0.25;
+    ground.position.x = 0.25;
 
     //Create dynamic texture
     var textureResolution = 512;

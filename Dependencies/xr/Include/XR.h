@@ -38,6 +38,19 @@ namespace xr
         MESH = 1 << 2,
     };
 
+    enum class ImageTrackingScore
+    {
+        UNTRACKABLE,
+        TRACKABLE,
+    };
+
+    enum class ImageTrackingState
+    {
+        UNTRACKED,
+        TRACKED,
+        EMULATED,
+    };
+
     constexpr enum HitTestTrackableType operator |(const enum HitTestTrackableType selfValue, const enum HitTestTrackableType inValue)
     {
         return static_cast<const enum HitTestTrackableType>(std::underlying_type_t<HitTestTrackableType>(selfValue) | std::underlying_type_t<HitTestTrackableType>(inValue));
@@ -314,26 +327,13 @@ namespace xr
                     const Identifier ID{ NEXT_ID++ };
                     Space ImageSpace{};
                     uint32_t Index{0};
-                    std::string TrackingState{ImageTrackingState::UNTRACKED};
+                    ImageTrackingState TrackingState{ImageTrackingState::UNTRACKED};
                     float MeasuredWidthInMeters{0};
 
                 private:
                     static inline Identifier NEXT_ID{ 0 };
                 };
                 
-                struct ImageTrackingScore
-                {
-                    static constexpr auto UNTRACKABLE{"untrackable"};
-                    static constexpr auto TRACKABLE{"trackable"};
-                };
-                
-                struct ImageTrackingState
-                {
-                    static constexpr auto UNTRACKED{"untracked"};
-                    static constexpr auto TRACKED{"tracked"};
-                    static constexpr auto EMULATED{"emulated"};
-                };
-
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
                 std::vector<FeaturePoint>& FeaturePointCloud;
@@ -385,7 +385,7 @@ namespace xr
             bool TrySetMeshDetectorEnabled(const bool enabled);
             bool TrySetPreferredMeshDetectorOptions(const GeometryDetectorOptions& options);
 
-            std::vector<std::string>* GetImageTrackingScores() const;
+            std::vector<ImageTrackingScore>* GetImageTrackingScores() const;
             void CreateAugmentedImageDatabase(const std::vector<ImageTrackingRequest>&) const;
         private:
             std::unique_ptr<Impl> m_impl{};

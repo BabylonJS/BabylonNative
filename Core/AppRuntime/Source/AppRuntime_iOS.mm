@@ -15,7 +15,7 @@ namespace Babylon
         NSLog(@"Uncaught Error: %s", error.what());
     }
 
-    void AppRuntime::Execute(std::function<void()> callback)
+    void AppRuntime::Execute(Dispatchable<void()> callback)
     {
         @autoreleasepool
         {
