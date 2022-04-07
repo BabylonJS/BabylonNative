@@ -433,23 +433,25 @@ namespace {
 - (void)session:(ARSession *)__unused session didAddAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
     if (planeDetectionEnabled || imageDetectionEnabled || meshDetectionEnabled) {
         [self LockAnchors];
-        for (ARAnchor* newAnchor : anchors) {
-            if (planeDetectionEnabled && [newAnchor isKindOfClass:[ARPlaneAnchor class]]) {
-                updatedPlanes.insert((ARPlaneAnchor*)newAnchor);
-            } else if (imageDetectionEnabled && [newAnchor isKindOfClass:[ARImageAnchor class]]) {
-                updatedImages.insert((ARImageAnchor*)newAnchor);
-            } else if (meshDetectionEnabled) {
+        @try {
+            for (ARAnchor* newAnchor : anchors) {
+                if (planeDetectionEnabled && [newAnchor isKindOfClass:[ARPlaneAnchor class]]) {
+                    updatedPlanes.insert((ARPlaneAnchor*)newAnchor);
+                } else if (imageDetectionEnabled && [newAnchor isKindOfClass:[ARImageAnchor class]]) {
+                    updatedImages.insert((ARImageAnchor*)newAnchor);
+                } else if (meshDetectionEnabled) {
 #if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
-                if (@available(iOS 13.4, *)) {
-                    if ([newAnchor isKindOfClass:[ARMeshAnchor class]]) {
-                        updatedMeshes.insert((ARMeshAnchor*)newAnchor);
+                    if (@available(iOS 13.4, *)) {
+                        if ([newAnchor isKindOfClass:[ARMeshAnchor class]]) {
+                            updatedMeshes.insert((ARMeshAnchor*)newAnchor);
+                        }
                     }
-                }
 #endif
+                }
             }
+        } @finally {
+            [self UnlockAnchors];
         }
-
-        [self UnlockAnchors];
     }
     return;
 }
@@ -457,46 +459,50 @@ namespace {
 - (void)session:(ARSession *)__unused session didUpdateAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
     if (planeDetectionEnabled || imageDetectionEnabled || meshDetectionEnabled) {
         [self LockAnchors];
-        for (ARAnchor* updatedAnchor : anchors) {
-            if (planeDetectionEnabled && [updatedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
-                updatedPlanes.insert((ARPlaneAnchor*)updatedAnchor);
-            } else if (imageDetectionEnabled && [updatedAnchor isKindOfClass:[ARImageAnchor class]]) {
-                updatedImages.insert((ARImageAnchor*)updatedAnchor);
-            } else if (meshDetectionEnabled) {
+        @try {
+            for (ARAnchor* updatedAnchor : anchors) {
+                if (planeDetectionEnabled && [updatedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
+                    updatedPlanes.insert((ARPlaneAnchor*)updatedAnchor);
+                } else if (imageDetectionEnabled && [updatedAnchor isKindOfClass:[ARImageAnchor class]]) {
+                    updatedImages.insert((ARImageAnchor*)updatedAnchor);
+                } else if (meshDetectionEnabled) {
 #if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
-                if (@available(iOS 13.4, *)) {
-                    if ([updatedAnchor isKindOfClass:[ARMeshAnchor class]]) {
-                        updatedMeshes.insert((ARMeshAnchor*)updatedAnchor);
+                    if (@available(iOS 13.4, *)) {
+                        if ([updatedAnchor isKindOfClass:[ARMeshAnchor class]]) {
+                            updatedMeshes.insert((ARMeshAnchor*)updatedAnchor);
+                        }
                     }
-                }
 #endif
+                }
             }
+        } @finally {
+            [self UnlockAnchors];
         }
-
-        [self UnlockAnchors];
     }
 
     return;
 }
 
 - (void)session:(ARSession *)__unused session didRemoveAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
-    if (planeDetectionEnabled || imageDetectionEnabled || meshDetectionEnabled) {
+    if (planeDetectionEnabled || meshDetectionEnabled) {
         [self LockAnchors];
-        for (ARAnchor* deletedAnchor : anchors) {
-            if (planeDetectionEnabled && [deletedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
-                deletedPlanes.push_back((ARPlaneAnchor*)deletedAnchor);
-            } else if (meshDetectionEnabled) {
+        @try {
+            for (ARAnchor* deletedAnchor : anchors) {
+                if (planeDetectionEnabled && [deletedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
+                    deletedPlanes.push_back((ARPlaneAnchor*)deletedAnchor);
+                } else if (meshDetectionEnabled) {
 #if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 130400)
-                if (@available(iOS 13.4, *)) {
-                    if ([deletedAnchor isKindOfClass:[ARImageAnchor class]]) {
-                        deletedMeshes.push_back((ARMeshAnchor*)deletedAnchor);
+                    if (@available(iOS 13.4, *)) {
+                        if ([deletedAnchor isKindOfClass:[ARImageAnchor class]]) {
+                            deletedMeshes.push_back((ARMeshAnchor*)deletedAnchor);
+                        }
                     }
-                }
 #endif
+                }
             }
+        } @finally {
+            [self UnlockAnchors];
         }
-
-        [self UnlockAnchors];
     }
     
     return;
