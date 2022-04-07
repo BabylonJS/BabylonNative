@@ -1529,6 +1529,7 @@ namespace xr {
         , RemovedPlanes{}
         , UpdatedMeshes{}
         , RemovedMeshes{}
+        , UpdatedImageTrackingResults{}
         , IsTracking{sessionImpl.IsTracking()}
         , m_impl{ std::make_unique<System::Session::Frame::Impl>(sessionImpl) } {
         Views[0].DepthNearZ = sessionImpl.DepthNearZ;
@@ -1570,6 +1571,10 @@ namespace xr {
 
     System::Session::Frame::Plane& System::Session::Frame::GetPlaneByID(System::Session::Frame::Plane::Identifier planeID) const {
         return m_impl->sessionImpl.GetPlaneByID(planeID);
+    }
+
+    System::Session::Frame::ImageTrackingResult& System::Session::Frame::GetImageTrackingResultByID(System::Session::Frame::ImageTrackingResult::Identifier) const {
+        throw std::runtime_error("Image tracking not supported");
     }
 
     System::Session::Frame::Mesh& System::Session::Frame::GetMeshByID(System::Session::Frame::Mesh::Identifier meshID) const {
@@ -1662,5 +1667,15 @@ namespace xr {
     {
         // TODO
         return false;
+    }
+
+    std::vector<ImageTrackingScore>* System::Session::GetImageTrackingScores() const
+    {
+        throw std::runtime_error("Image tracking not supported");
+    }
+
+    void System::Session::CreateAugmentedImageDatabase(const std::vector<System::Session::ImageTrackingRequest>&) const
+    {
+        throw std::runtime_error("Image tracking not supported");
     }
 }

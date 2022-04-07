@@ -38,6 +38,19 @@ namespace xr
         MESH = 1 << 2,
     };
 
+    enum class ImageTrackingScore
+    {
+        UNTRACKABLE,
+        TRACKABLE,
+    };
+
+    enum class ImageTrackingState
+    {
+        UNTRACKED,
+        TRACKED,
+        EMULATED,
+    };
+
     constexpr enum HitTestTrackableType operator |(const enum HitTestTrackableType selfValue, const enum HitTestTrackableType inValue)
     {
         return static_cast<const enum HitTestTrackableType>(std::underlying_type_t<HitTestTrackableType>(selfValue) | std::underlying_type_t<HitTestTrackableType>(inValue));
@@ -190,6 +203,16 @@ namespace xr
             struct Impl;
 
         public:
+            struct ImageTrackingRequest
+            {
+                const uint8_t* data{nullptr};
+                uint32_t width{0};
+                uint32_t height{0};
+                uint32_t depth{0};
+                uint32_t stride{0};
+                float measuredWidthInMeters{0.0};
+            };
+
             class Frame
             {
             public:
@@ -297,19 +320,33 @@ namespace xr
                 private:
                     static inline Identifier NEXT_ID{ 0 };
                 };
+                
+                struct ImageTrackingResult
+                {
+                    using Identifier = size_t;
+                    const Identifier ID{ NEXT_ID++ };
+                    Space ImageSpace{};
+                    uint32_t Index{0};
+                    ImageTrackingState TrackingState{ImageTrackingState::UNTRACKED};
+                    float MeasuredWidthInMeters{0};
 
+                private:
+                    static inline Identifier NEXT_ID{ 0 };
+                };
+                
                 std::vector<View>& Views;
                 std::vector<InputSource>& InputSources;
                 std::vector<FeaturePoint>& FeaturePointCloud;
 
                 std::optional<Space>& EyeTrackerSpace;
 
-                std::vector<SceneObject::Identifier>UpdatedSceneObjects;
-                std::vector<SceneObject::Identifier>RemovedSceneObjects;
-                std::vector<Plane::Identifier>UpdatedPlanes;
-                std::vector<Plane::Identifier>RemovedPlanes;
-                std::vector<Mesh::Identifier>UpdatedMeshes;
-                std::vector<Mesh::Identifier>RemovedMeshes;
+                std::vector<SceneObject::Identifier> UpdatedSceneObjects;
+                std::vector<SceneObject::Identifier> RemovedSceneObjects;
+                std::vector<Plane::Identifier> UpdatedPlanes;
+                std::vector<Plane::Identifier> RemovedPlanes;
+                std::vector<Mesh::Identifier> UpdatedMeshes;
+                std::vector<Mesh::Identifier> RemovedMeshes;
+                std::vector<ImageTrackingResult::Identifier> UpdatedImageTrackingResults;
 
                 bool IsTracking;
 
@@ -324,6 +361,7 @@ namespace xr
                 SceneObject& GetSceneObjectByID(SceneObject::Identifier) const;
                 Plane& GetPlaneByID(Plane::Identifier) const;
                 Mesh& GetMeshByID(Mesh::Identifier) const;
+                ImageTrackingResult& GetImageTrackingResultByID(ImageTrackingResult::Identifier) const;
 
             private:
                 struct Impl;
@@ -347,6 +385,8 @@ namespace xr
             bool TrySetMeshDetectorEnabled(const bool enabled);
             bool TrySetPreferredMeshDetectorOptions(const GeometryDetectorOptions& options);
 
+            std::vector<ImageTrackingScore>* GetImageTrackingScores() const;
+            void CreateAugmentedImageDatabase(const std::vector<ImageTrackingRequest>&) const;
         private:
             std::unique_ptr<Impl> m_impl{};
         };

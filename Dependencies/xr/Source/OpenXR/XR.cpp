@@ -915,6 +915,7 @@ namespace xr
         , RemovedPlanes{}
         , UpdatedMeshes{}
         , RemovedMeshes{}
+        , UpdatedImageTrackingResults{}
         // TODO - https://github.com/BabylonJS/BabylonNative/issues/505
         // Plumb tracking states from OpenXR. For now this will maintain the current behavior where BabylonJS assumes tracking is always available.
         , IsTracking{true}
@@ -1278,6 +1279,10 @@ namespace xr
         return su.GetPlaneByID(id);
     }
 
+    System::Session::Frame::ImageTrackingResult& System::Session::Frame::GetImageTrackingResultByID(System::Session::Frame::ImageTrackingResult::Identifier) const {
+        throw std::runtime_error("Image tracking not supported");
+    }
+
     System::Session::Frame::Mesh& System::Session::Frame::GetMeshByID(System::Session::Frame::Mesh::Identifier id) const
     {
         const auto& su = m_impl->sessionImpl.HmdImpl.Context.SceneUnderstanding();
@@ -1351,5 +1356,15 @@ namespace xr
         su.Initialize(initOptions);
 
         return true;
+    }
+
+    std::vector<ImageTrackingScore>* System::Session::GetImageTrackingScores() const
+    {
+        throw std::runtime_error("Image tracking not supported");
+    }
+
+    void System::Session::CreateAugmentedImageDatabase(const std::vector<System::Session::ImageTrackingRequest>&) const
+    {
+        throw std::runtime_error("Image tracking not supported");
     }
 }

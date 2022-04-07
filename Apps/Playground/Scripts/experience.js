@@ -16,6 +16,7 @@ var meshDetection = false;
 var text = false;
 var hololens = false;
 var cameraTexture = false;
+var imageTracking = false;
 
 function CreateBoxAsync(scene) {
     BABYLON.Mesh.CreateBox("box1", 0.2, scene);
@@ -288,6 +289,32 @@ CreateBoxAsync(scene).then(function () {
                         BABYLON.WebXRFeatureName.HAND_TRACKING,
                         "latest",
                         { xrInput: xr.input });
+                }
+
+                // Test image tracking and detection.
+                // To test image tracking locally either bring up the images below on your machine by loading the URL or by printing them out.
+                // Then gain tracking on them during the AR Session by orienting your camera towards the image, tracking will be represented by a colored cube at the center of the image.
+                if (imageTracking) {
+                    const webXRTrackingMeshes = [];
+                    const webXRImageTrackingModule = xr.baseExperience.featuresManager.enableFeature(
+                        BABYLON.WebXRFeatureName.IMAGE_TRACKING,
+                        "latest",
+                        {
+                            images: [
+                                { src: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/IridescentDishWithOlives/screenshot/screenshot_Large.jpg", estimatedRealWorldWidth: .2 },
+                                { src: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DragonAttenuation/screenshot/screenshot_large.png", estimatedRealWorldWidth: .2 },   
+                        ]});
+
+                    webXRImageTrackingModule.onTrackedImageUpdatedObservable.add((imageObject) => {
+                        if (webXRTrackingMeshes[imageObject.id] === undefined) {
+                            webXRTrackingMeshes[imageObject.id] = BABYLON.Mesh.CreateBox("box1", 0.05, scene);
+                            const mat = new BABYLON.StandardMaterial("mat", scene);
+                            mat.diffuseColor = BABYLON.Color3.Random();
+                            webXRTrackingMeshes[imageObject.id].material = mat;
+                        }
+                        webXRTrackingMeshes[imageObject.id].setEnabled(!imageObject.emulated);
+                        imageObject.transformationMatrix.decomposeToTransformNode(webXRTrackingMeshes[imageObject.id]);
+                    });
                 }
 
                 xr.baseExperience.enterXRAsync(sessionMode, "unbounded", xr.renderTarget).then((xrSessionManager) => {
