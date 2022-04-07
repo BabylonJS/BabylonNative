@@ -1386,7 +1386,7 @@ namespace xr {
             return SystemImpl.XrContext->Frame.camera.trackingState == ARTrackingState::ARTrackingStateNormal;
         }
         
-        std::vector<std::string>* GetImageTrackingScores() {
+        std::vector<ImageTrackingScore>* GetImageTrackingScores() {
             if (imageTrackingScoresValid) {
                 return &imageTrackingScores;
             } else {
@@ -1440,9 +1440,9 @@ namespace xr {
                     dispatch_async(validationQueue, ^{
                         [referenceImage validateWithCompletionHandler:^(NSError * _Nullable error) {
                             if (error != nil) {
-                                imageTrackingScores[i] = Frame::ImageTrackingScore::UNTRACKABLE;
+                                imageTrackingScores[i] = ImageTrackingScore::UNTRACKABLE;
                             } else {
-                                imageTrackingScores[i] = Frame::ImageTrackingScore::TRACKABLE;
+                                imageTrackingScores[i] = ImageTrackingScore::TRACKABLE;
                                 
                                 // Add image to our image set if it is trackable.
                                 [imageSet addObject: referenceImage];
@@ -1453,7 +1453,7 @@ namespace xr {
                         }];
                     });
                 } else {
-                    imageTrackingScores[i] = Frame::ImageTrackingScore::TRACKABLE;
+                    imageTrackingScores[i] = ImageTrackingScore::TRACKABLE;
                 }
                 
                 CGImageRelease(image);
@@ -1513,7 +1513,7 @@ namespace xr {
         std::unordered_map<uint64_t, FeaturePoint::Identifier> featurePointIDMap{};
         
         bool imageTrackingScoresValid{ false };
-        std::vector<std::string> imageTrackingScores{};
+        std::vector<ImageTrackingScore> imageTrackingScores{};
         std::vector<std::unique_ptr<Frame::ImageTrackingResult>> imageTrackingResults{};
         std::unordered_map<std::string, Frame::ImageTrackingResult::Identifier> imageTrackingMap{};
         
@@ -1574,8 +1574,8 @@ namespace xr {
             
             // Update tracking state
             imageTrackingResult.TrackingState = imageAnchor.isTracked
-                ? Frame::ImageTrackingState::TRACKED
-                : Frame::ImageTrackingState::EMULATED;
+                ? ImageTrackingState::TRACKED
+                : ImageTrackingState::EMULATED;
             updatedImageTrackingResults.push_back(imageTrackingResult.ID);
         }
 
