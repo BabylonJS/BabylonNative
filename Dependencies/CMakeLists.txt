@@ -153,7 +153,7 @@ endif()
 
 # -------------------------------- UrlLib --------------------------------
 # Dependencies: arcana, AndroidExtensions
-if(BABYLON_NATIVE_PLUGIN_XMLHTTPREQUEST)
+if(BABYLON_NATIVE_POLYFILL_XMLHTTPREQUEST)
     add_subdirectory(UrlLib)
     set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
 endif()
