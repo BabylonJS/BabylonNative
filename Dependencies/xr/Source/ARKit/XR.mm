@@ -1475,7 +1475,7 @@ namespace xr {
             // Wait for all scores to calculated on a separate scheduler.
             arcana::when_all(gsl::make_span(validationTasks))
                 .then(arcana::inline_scheduler, arcana::cancellation::none(), [this](std::vector<ARReferenceImage*> referenceImages) {
-                    size_t imageCount = 0;
+                    size_t imageCount{0};
                     NSMutableSet<ARReferenceImage*>* imageSet{[NSMutableSet<ARReferenceImage*> setWithCapacity:imageTrackingScores.size()]};
                     for (ARReferenceImage* referenceImage : referenceImages) {
                         if (referenceImage != nullptr) {
