@@ -484,6 +484,8 @@ namespace {
 }
 
 - (void)session:(ARSession *)__unused session didRemoveAnchors:(nonnull NSArray<__kindof ARAnchor *> *)anchors {
+    // Check for deleted plane or mesh anchors.
+    // Note: Image anchors are never automatically deleted, so not handled here.
     if (planeDetectionEnabled || meshDetectionEnabled) {
         [self LockAnchors];
         @try {
@@ -1407,7 +1409,7 @@ namespace xr {
             }
 
             // Create and resize vectors to hold request results.
-            std::vector<arcana::task<ARReferenceImage*, std::exception_ptr>> validationTasks;
+            std::vector<arcana::task<ARReferenceImage*, std::exception_ptr>> validationTasks{};
             validationTasks.resize(requests.size());
             imageTrackingScores.resize(requests.size());
 
@@ -1473,29 +1475,32 @@ namespace xr {
             // Wait for all scores to calculated on a separate scheduler.
             arcana::when_all(gsl::make_span(validationTasks))
                 .then(arcana::inline_scheduler, arcana::cancellation::none(), [this](std::vector<ARReferenceImage*> referenceImages) {
-                size_t imageCount = 0;
-                NSMutableSet<ARReferenceImage*>* imageSet{[NSMutableSet<ARReferenceImage*> setWithCapacity:imageTrackingScores.size()]};
-                for (ARReferenceImage* referenceImage : referenceImages) {
-                    if (referenceImage != nullptr) {
-                        [imageSet addObject: referenceImage];
-                        imageCount++;
+                    size_t imageCount = 0;
+                    NSMutableSet<ARReferenceImage*>* imageSet{[NSMutableSet<ARReferenceImage*> setWithCapacity:imageTrackingScores.size()]};
+                    for (ARReferenceImage* referenceImage : referenceImages) {
+                        if (referenceImage != nullptr) {
+                            [imageSet addObject: referenceImage];
+                            imageCount++;
+                        }
                     }
-                }
-                                   
-                // If we have any images that qualified for tracking then enable image detection.
-                ARWorldTrackingConfiguration* configuration{static_cast<ARWorldTrackingConfiguration*>(SystemImpl.XrContext->Session.configuration)};
-                if (imageCount > 0 && configuration != nil) {
-                    configuration.detectionImages = imageSet;
-                    
-                    if (@available(iOS 13.0, *)) {
-                        configuration.automaticImageScaleEstimationEnabled = true;
-                    }
+                                       
+                    // If we have any images that qualified for tracking then enable image detection.
+                    ARWorldTrackingConfiguration* configuration{static_cast<ARWorldTrackingConfiguration*>(SystemImpl.XrContext->Session.configuration)};
+                    if (imageCount > 0 && configuration != nil) {
+                        configuration.detectionImages = imageSet;
+                        
+                        if (@available(iOS 13.0, *)) {
+                            configuration.automaticImageScaleEstimationEnabled = true;
+                        }
 
-                    configuration.maximumNumberOfTrackedImages = imageCount > 4 ? 4 : imageCount;
-                    [SystemImpl.XrContext->Session runWithConfiguration: configuration];
-                    [sessionDelegate SetImageDetectionEnabled:true];
-                    imageTrackingScoresValid = true;
-                }
+                        // Sets the max number of frequently updated image anchors up to the ARKit cap of 4.
+                        // Any additional images will be tracked infrequently at 1 tick every 1-2 seconds.
+                        // See: https://developer.apple.com/documentation/arkit/arworldtrackingconfiguration/2968182-maximumnumberoftrackedimages
+                        configuration.maximumNumberOfTrackedImages = imageCount > 4 ? 4 : imageCount;
+                        [SystemImpl.XrContext->Session runWithConfiguration: configuration];
+                        [sessionDelegate SetImageDetectionEnabled:true];
+                        imageTrackingScoresValid = true;
+                    }
             });
         }
 
