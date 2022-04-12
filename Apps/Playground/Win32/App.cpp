@@ -415,7 +415,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }
-            if (buttonRefCount-- == 1)
+            if (--buttonRefCount == 0)
             {
                 ReleaseCapture();
             }
@@ -439,7 +439,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 nativeInput->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }
-            if (buttonRefCount-- == 1)
+            if (--buttonRefCount == 0)
             {
                 ReleaseCapture();
             }
@@ -463,7 +463,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 nativeInput->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }
-            if (buttonRefCount-- == 1)
+            if (--buttonRefCount == 0)
             {
                 ReleaseCapture();
             }
