@@ -107,4 +107,9 @@ namespace Babylon::Graphics
     {
         return m_impl->GetDevicePixelRatio();
     }
+
+    PlatformInfo Device::GetPlatformInfo() const
+    {
+        return m_impl->GetPlatformInfo();
+    }
 }
