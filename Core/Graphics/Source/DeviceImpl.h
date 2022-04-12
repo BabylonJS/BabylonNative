@@ -117,6 +117,7 @@ namespace Babylon::Graphics
 
         struct
         {
+            // Mutable since const getters need to lock.
             mutable std::recursive_mutex Mutex{};
 
             struct
