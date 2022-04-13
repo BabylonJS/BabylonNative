@@ -243,7 +243,7 @@ namespace Babylon::Graphics
         return completionSource.as_task();
     }
 
-    float DeviceImpl::GetHardwareScalingLevel()
+    float DeviceImpl::GetHardwareScalingLevel() const
     {
         std::scoped_lock lock{m_state.Mutex};
         return m_state.Resolution.HardwareScalingLevel;
@@ -409,9 +409,14 @@ namespace Babylon::Graphics
         }
     }
 
-    float DeviceImpl::GetDevicePixelRatio()
+    float DeviceImpl::GetDevicePixelRatio() const
     {
         std::scoped_lock lock{m_state.Mutex};
         return m_state.Resolution.DevicePixelRatio;
+    }
+
+    PlatformInfo DeviceImpl::GetPlatformInfo() const
+    {
+        return {static_cast<DeviceType>(bgfx::getInternalData()->context)};
     }
 }

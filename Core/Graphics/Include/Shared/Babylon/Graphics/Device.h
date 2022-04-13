@@ -9,6 +9,11 @@
 
 namespace Babylon::Graphics
 {
+    struct PlatformInfo
+    {
+        DeviceType Device;
+    };
+
     class Device;
 
     class DeviceUpdate
@@ -54,7 +59,6 @@ namespace Babylon::Graphics
     class Device
     {
     public:
-        
         ~Device();
 
         // Note: This API contract is subject to change in coming versions.
@@ -84,6 +88,8 @@ namespace Babylon::Graphics
         void SetHardwareScalingLevel(float level);
 
         float GetDevicePixelRatio() const;
+
+        PlatformInfo GetPlatformInfo() const;
 
     private:
         Device();

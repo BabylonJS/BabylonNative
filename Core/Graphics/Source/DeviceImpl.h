@@ -4,6 +4,8 @@
 #include "SafeTimespanGuarantor.h"
 #include "DeviceContext.h"
 
+#include <Babylon/Graphics/Device.h>
+
 #include <arcana/containers/ticketed_collection.h>
 #include <arcana/threading/blocking_concurrent_queue.h>
 #include <arcana/threading/dispatcher.h>
@@ -66,12 +68,13 @@ namespace Babylon::Graphics
 
         arcana::task<void, std::exception_ptr> ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data);
 
-        float GetHardwareScalingLevel();
+        float GetHardwareScalingLevel() const;
         void SetHardwareScalingLevel(float level);
 
         size_t GetWidth() const;
         size_t GetHeight() const;
-        float GetDevicePixelRatio();
+        float GetDevicePixelRatio() const;
+        PlatformInfo GetPlatformInfo() const;
 
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
@@ -114,7 +117,8 @@ namespace Babylon::Graphics
 
         struct
         {
-            std::recursive_mutex Mutex{};
+            // Mutable since const getters need to lock.
+            mutable std::recursive_mutex Mutex{};
 
             struct
             {
