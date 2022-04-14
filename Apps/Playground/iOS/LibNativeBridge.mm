@@ -111,24 +111,24 @@ bool g_isXrActive{};
     }
 }
 
-- (void)setTouchDown:(int)x y:(int)y
+- (void)setTouchDown:(int)pointerId x:(int)inX y:(int)inY
 {
     if (nativeInput != nullptr) {
-        nativeInput->TouchDown(0, x, y);
+        nativeInput->TouchDown(pointerId, inX, inY);
     }
 }
 
-- (void)setTouchMove:(int)x y:(int)y
+- (void)setTouchMove:(int)pointerId x:(int)inX y:(int)inY
 {
     if (nativeInput != nullptr) {
-        nativeInput->TouchMove(0, x, y);
+        nativeInput->TouchMove(pointerId, inX, inY);
     }
 }
 
-- (void)setTouchUp:(int)x y:(int)y
+- (void)setTouchUp:(int)pointerId x:(int)inX y:(int)inY
 {
     if (nativeInput != nullptr) {
-        nativeInput->TouchUp(0, x, y);
+        nativeInput->TouchUp(pointerId, inX, inY);
     }
 }
 

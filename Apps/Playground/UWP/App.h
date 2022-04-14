@@ -32,6 +32,7 @@ private:
     void OnPointerMoved(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args);
     void OnPointerPressed(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args);
     void OnPointerReleased(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs^ args);
+    void OnPointerWheelChanged(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::PointerEventArgs ^ args);
     void OnKeyPressed(Windows::UI::Core::CoreWindow^ sender, Windows::UI::Core::KeyEventArgs^ args);
 
     // DisplayInformation event handlers.
@@ -50,6 +51,9 @@ private:
     Windows::Foundation::Collections::IVectorView<Windows::Storage::IStorageItem^>^ m_files;
     bool m_windowClosed;
     bool m_windowVisible;
+    bool m_leftPressed{ false };
+    bool m_middlePressed{ false };
+    bool m_rightPressed{ false };
     float m_displayScale{ 1.f };
 };
 

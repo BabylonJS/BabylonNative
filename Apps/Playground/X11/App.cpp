@@ -239,16 +239,46 @@ int main(int _argc, const char* const* _argv)
                 case ButtonPress:
                     {
                         const XMotionEvent& xmotion = event.xmotion;
+                        const XButtonEvent& xbutton = event.xbutton;
+
                         if (nativeInput != nullptr) {
-                            nativeInput->MouseDown(0, xmotion.x, xmotion.y);
+                            switch (xbutton.button) {
+                                case Button1:
+                                    nativeInput->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    break;
+                                case Button2:
+                                    nativeInput->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    break;
+                                case Button3:
+                                    nativeInput->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    break;
+                                case Button4:
+                                    nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -120);
+                                    break;
+                                case Button5:
+                                    nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, 120);
+                                    break;
+                            }
                         }
                     }
                     break;
                 case ButtonRelease:
                     {
                         const XMotionEvent& xmotion = event.xmotion;
+                        const XButtonEvent& xbutton = event.xbutton;
+
                         if (nativeInput != nullptr) {
-                            nativeInput->MouseUp(0, xmotion.x, xmotion.y);
+                            switch (xbutton.button) {
+                                case Button1:
+                                    nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    break;
+                                case Button2:
+                                    nativeInput->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    break;
+                                case Button3:
+                                    nativeInput->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    break;
+                            }
                         }
                     }
                     break;

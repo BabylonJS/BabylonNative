@@ -126,17 +126,21 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-        float mX = event.getX() / this.pixelDensityScale;
-        float mY = event.getY() / this.pixelDensityScale;
-        switch (event.getAction()) {
+        int pointerId = event.getPointerId(event.getActionIndex());
+        float mX = event.getX(event.getActionIndex()) / this.pixelDensityScale;
+        float mY = event.getY(event.getActionIndex()) / this.pixelDensityScale;
+
+        switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                BabylonNative.Wrapper.setTouchInfo(mX, mY, true, 1);
+            case MotionEvent.ACTION_POINTER_DOWN:
+                BabylonNative.Wrapper.setTouchInfo(pointerId, mX, mY, true, 1);
                 break;
             case MotionEvent.ACTION_MOVE:
-                BabylonNative.Wrapper.setTouchInfo(mX, mY, false, 0);
+                BabylonNative.Wrapper.setTouchInfo(pointerId, mX, mY, false, 0);
                 break;
             case MotionEvent.ACTION_UP:
-                BabylonNative.Wrapper.setTouchInfo(mX, mY, true, 0);
+            case MotionEvent.ACTION_POINTER_UP:
+                BabylonNative.Wrapper.setTouchInfo(pointerId, mX, mY, true, 0);
                 break;
         }
         return true;
