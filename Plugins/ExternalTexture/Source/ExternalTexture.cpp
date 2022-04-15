@@ -8,7 +8,7 @@
 
 namespace Babylon::Plugins
 {
-    ExternalTexture::ExternalTexture(Babylon::Graphics::TextureType nativeTexture)
+    ExternalTexture::ExternalTexture(Babylon::Graphics::TextureT nativeTexture)
         : m_nativeTexture{(uintptr_t)(nativeTexture)}
     {
         ReadPropertiesFromNativeTexture(nativeTexture);

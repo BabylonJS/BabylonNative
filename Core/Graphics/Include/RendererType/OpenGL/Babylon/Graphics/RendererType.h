@@ -4,12 +4,12 @@
 
 namespace Babylon::Graphics
 {
-    using DeviceType = EGLContext;
-    using TextureType = unsigned int;
+    using DeviceT = EGLContext;
+    using TextureT = unsigned int;
 
     struct DeviceConfiguration
     {
-        DeviceType Device;
+        DeviceT Device;
         float DevicePixelRatio{1.f};
     };
 }

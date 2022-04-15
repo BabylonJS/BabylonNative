@@ -417,6 +417,6 @@ namespace Babylon::Graphics
 
     PlatformInfo DeviceImpl::GetPlatformInfo() const
     {
-        return {static_cast<DeviceType>(bgfx::getInternalData()->context)};
+        return {static_cast<DeviceT>(bgfx::getInternalData()->context)};
     }
 }

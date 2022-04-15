@@ -4,13 +4,12 @@
 
 namespace Babylon::Graphics
 {
-    using DeviceType = ID3D12Device*;
-
-    using TextureType = ID3D12Resource*;
+    using DeviceT = ID3D12Device*;
+    using TextureT = ID3D12Resource*;
 
     struct DeviceConfiguration
     {
-        DeviceType Device;
+        DeviceT Device;
         float DevicePixelRatio{1.f};
     };
 }

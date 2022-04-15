@@ -11,7 +11,7 @@ namespace Babylon::Plugins
     class ExternalTexture
     {
     public:
-        ExternalTexture(Babylon::Graphics::TextureType nativeTexture);
+        ExternalTexture(Babylon::Graphics::TextureT nativeTexture);
         ~ExternalTexture();
 
         Napi::Promise AddToContext(Napi::Env&) const;
@@ -28,6 +28,6 @@ namespace Babylon::Plugins
         uint32_t m_format{};
         uint64_t m_flags{};
 
-        void ReadPropertiesFromNativeTexture(Babylon::Graphics::TextureType nativeTexture);
+        void ReadPropertiesFromNativeTexture(Babylon::Graphics::TextureT nativeTexture);
     };
 }
