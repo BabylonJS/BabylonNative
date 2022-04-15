@@ -187,7 +187,7 @@ namespace Babylon::Plugins
         }
     }
 
-    void ExternalTexture::ReadPropertiesFromNativeTexture(Babylon::Graphics::TextureType nativeTexture) 
+    void ExternalTexture::ReadPropertiesFromNativeTexture(Babylon::Graphics::TextureT nativeTexture) 
     {
         D3D12_RESOURCE_DESC  desc =  nativeTexture->GetDesc();
         uint64_t flags = 0Ui64;

@@ -5,9 +5,9 @@
 
 namespace Babylon::Plugins
 {
-    void ExternalTexture::ReadPropertiesFromNativeTexture(Babylon::Graphics::TextureType) 
+    void ExternalTexture::ReadPropertiesFromNativeTexture(Babylon::Graphics::TextureT) 
     {
-        //TODO: Add support for OpenGL external textures.
-        throw std::runtime_error{"External textures is not currenlty supported for OpenGL."};
+        // TODO: Add support for OpenGL external textures.
+        throw std::runtime_error{"External textures is not currently supported for OpenGL."};
     }
 }

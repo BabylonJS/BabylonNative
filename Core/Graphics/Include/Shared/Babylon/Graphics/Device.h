@@ -11,7 +11,7 @@ namespace Babylon::Graphics
 {
     struct PlatformInfo
     {
-        DeviceType Device;
+        DeviceT Device;
     };
 
     class Device;
