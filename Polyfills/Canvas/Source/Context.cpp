@@ -25,9 +25,9 @@ namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_CONSTRUCTOR_NAME = "Context";
 
-    Napi::Value Context::CreateInstance(Napi::Env env, NativeCanvas* canvas)
+    void Context::Initialize(Napi::Env env)
     {
-        Napi::HandleScope scope{ env };
+        Napi::HandleScope scope{env};
 
         Napi::Function func = DefineClass(
             env,
@@ -74,6 +74,14 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("lineWidth", &Context::GetLineWidth, &Context::SetLineWidth),
                 InstanceAccessor("canvas", &Context::GetCanvas, nullptr)
             });
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
+    }
+
+    Napi::Value Context::CreateInstance(Napi::Env env, NativeCanvas* canvas)
+    {
+        Napi::HandleScope scope{ env };
+
+        auto func = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_CONSTRUCTOR_NAME).As<Napi::Function>();
         return func.New({ Napi::External<NativeCanvas>::New(env, canvas)});
     }
 
