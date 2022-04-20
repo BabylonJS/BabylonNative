@@ -29,7 +29,7 @@
 #define DXGI_FORMAT_ASTC_10X5_UNORM       DXGI_FORMAT(166)
 #define DXGI_FORMAT_ASTC_10X5_UNORM_SRGB  DXGI_FORMAT(167)
 
-// Copied from renderer_d3d11.cpp from bgfx
+// Copied from renderer_d3d11.cpp
 namespace
 {
     struct TextureFormatInfo
