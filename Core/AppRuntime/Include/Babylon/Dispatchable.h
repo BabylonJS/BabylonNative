@@ -51,7 +51,7 @@ namespace Babylon
     public:
         Dispatchable() = default;
         Dispatchable(const Dispatchable&) = delete;
-        Dispatchable(Dispatchable&&) = default;
+        Dispatchable(Dispatchable&&) noexcept = default;
 
         template<typename CallableT>
         Dispatchable(CallableT&& callable)

@@ -30,8 +30,8 @@ namespace UrlLib
         ~UrlRequest();
 
         // Copy semantics
-        UrlRequest(const UrlRequest&) noexcept;
-        UrlRequest& operator=(const UrlRequest&) noexcept;
+        UrlRequest(const UrlRequest&);
+        UrlRequest& operator=(const UrlRequest&);
 
         // Move semantics
         UrlRequest(UrlRequest&&) noexcept;

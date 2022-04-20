@@ -12,8 +12,8 @@ namespace Babylon::Plugins
     ExternalTexture& ExternalTexture::operator=(const ExternalTexture&) = default;
 
     // Move semantics
-    ExternalTexture::ExternalTexture(ExternalTexture&&) = default;
-    ExternalTexture& ExternalTexture::operator=(ExternalTexture&&) = default;
+    ExternalTexture::ExternalTexture(ExternalTexture&&) noexcept = default;
+    ExternalTexture& ExternalTexture::operator=(ExternalTexture&&) noexcept = default;
 
     ExternalTexture::~ExternalTexture() = default;
 

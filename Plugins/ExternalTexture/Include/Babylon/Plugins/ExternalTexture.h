@@ -17,8 +17,8 @@ namespace Babylon::Plugins
         ExternalTexture& operator=(const ExternalTexture&);
 
         // Move semantics
-        ExternalTexture(ExternalTexture&&);
-        ExternalTexture& operator=(ExternalTexture&&);
+        ExternalTexture(ExternalTexture&&) noexcept;
+        ExternalTexture& operator=(ExternalTexture&&) noexcept;
 
         // Returns the width of the texture.
         uint32_t Width() const;
