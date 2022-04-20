@@ -12,7 +12,7 @@ namespace Babylon::Plugins
     class ExternalTexture::Impl
     {
     public:
-        Impl(Graphics::TextureT ptr)
+        Impl(Graphics::TextureT)
         {
             throw std::runtime_error{"not implemented"};
         }
