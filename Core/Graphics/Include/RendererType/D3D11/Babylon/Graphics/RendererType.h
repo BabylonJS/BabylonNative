@@ -5,7 +5,7 @@
 namespace Babylon::Graphics
 {
     using DeviceT = ID3D11Device*;
-    using TextureT = ID3D11Texture2D*;
+    using TextureT = ID3D11Resource*;
 
     struct DeviceConfiguration
     {

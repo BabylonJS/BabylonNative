@@ -61,6 +61,10 @@ namespace Babylon::Graphics
     public:
         ~Device();
 
+        // Move semantics
+        Device(Device&&) noexcept;
+        Device& operator=(Device&&) noexcept;
+
         // Note: This API contract is subject to change in coming versions.
         // Features and functionalities will be added and
         // method and structure might change.
@@ -94,12 +98,7 @@ namespace Babylon::Graphics
     private:
         Device();
 
-        Device(const Device&) = delete;
-        Device(Device&&) = delete;
-
         void UpdateContext(const DeviceConfiguration& config);
-
-        float UpdateDevicePixelRatio();
 
         class Impl;
         std::unique_ptr<Impl> m_impl{};

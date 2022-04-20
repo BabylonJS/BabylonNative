@@ -7,11 +7,15 @@ namespace UrlLib
     {
     }
 
-    UrlRequest::UrlRequest(const UrlRequest&) = default;
-
-    UrlRequest::UrlRequest(UrlRequest&&) = default;
-
     UrlRequest::~UrlRequest() = default;
+
+    // Copy semantics
+    UrlRequest::UrlRequest(const UrlRequest&) = default;
+    UrlRequest& UrlRequest::operator=(const UrlRequest&) = default;
+
+    // Move semantics
+    UrlRequest::UrlRequest(UrlRequest&&) noexcept = default;
+    UrlRequest& UrlRequest::operator=(UrlRequest&&) noexcept = default;
 
     void UrlRequest::Abort()
     {

@@ -12,6 +12,10 @@ namespace Babylon::Graphics
 
     Device::~Device() = default;
 
+    // Move semantics
+    Device::Device(Device&&) noexcept = default;
+    Device& Device::operator=(Device&&) noexcept = default;
+
     void Device::UpdateWindow(const WindowConfiguration& config)
     {
         m_impl->UpdateWindow(config);

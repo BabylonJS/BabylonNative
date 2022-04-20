@@ -27,12 +27,15 @@ namespace UrlLib
     {
     public:
         UrlRequest();
-
-        UrlRequest(const UrlRequest&);
-
-        UrlRequest(UrlRequest&&);
-
         ~UrlRequest();
+
+        // Copy semantics
+        UrlRequest(const UrlRequest&);
+        UrlRequest& operator=(const UrlRequest&);
+
+        // Move semantics
+        UrlRequest(UrlRequest&&) noexcept;
+        UrlRequest& operator=(UrlRequest&&) noexcept;
 
         void Abort();
 

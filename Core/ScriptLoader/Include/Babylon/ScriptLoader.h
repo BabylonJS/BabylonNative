@@ -23,6 +23,10 @@ namespace Babylon
 
         ~ScriptLoader();
 
+        // Move semantics
+        ScriptLoader(ScriptLoader&&) noexcept;
+        ScriptLoader& operator=(ScriptLoader&&) noexcept;
+
         void LoadScript(std::string url);
         void Eval(std::string source, std::string url);
 

@@ -1,7 +1,7 @@
 set(SOURCES
     "Include/Babylon/Plugins/ExternalTexture.h"
     "Source/ExternalTexture_${GRAPHICS_API}.cpp"
-    "Source/ExternalTexture.cpp")
+    "Source/ExternalTexture_Shared.h")
 
 add_library(ExternalTexture ${SOURCES})
 warnings_as_errors(ExternalTexture)

@@ -54,6 +54,10 @@ namespace Babylon
     {
     }
 
+    // Move semantics
+    ScriptLoader::ScriptLoader(ScriptLoader&&) noexcept = default;
+    ScriptLoader& ScriptLoader::operator=(ScriptLoader&&) noexcept = default;
+
     void ScriptLoader::LoadScript(std::string url)
     {
         m_impl->LoadScript(std::move(url));
