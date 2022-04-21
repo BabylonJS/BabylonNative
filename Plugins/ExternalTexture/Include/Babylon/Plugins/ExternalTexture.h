@@ -28,7 +28,7 @@ namespace Babylon::Plugins
 
         // Adds this texture to the graphics context of the given N-API environment.
         // NOTE: Must call this from the JavaScript thread.
-        Napi::Promise AddToContext(Napi::Env&) const;
+        Napi::Promise AddToContextAsync(Napi::Env&) const;
 
     private:
         class Impl;

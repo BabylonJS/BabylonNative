@@ -27,7 +27,7 @@ namespace Babylon::Plugins
         return m_impl->Height();
     }
 
-    Napi::Promise ExternalTexture::AddToContext(Napi::Env& env) const
+    Napi::Promise ExternalTexture::AddToContextAsync(Napi::Env& env) const
     {
         Graphics::DeviceContext& context = Graphics::DeviceContext::GetFromJavaScript(env);
         JsRuntime& runtime = JsRuntime::GetFromJavaScript(env);
@@ -38,24 +38,27 @@ namespace Babylon::Plugins
         arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(),
             [&context, &runtime, deferred = std::move(deferred), impl = m_impl]()
         {
-            auto handle = bgfx::createTexture2D(impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
+            // REVIEW: The bgfx texture handle probably needs to be an RAII object to make sure it gets clean up during the asynchrony.
+            //         For example, if any of the schedulers/dispatches below don't fire, then the texture handle will leak.
+            bgfx::TextureHandle handle = bgfx::createTexture2D(impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
             if (!bgfx::isValid(handle))
             {
                 runtime.Dispatch([deferred{std::move(deferred)}](Napi::Env env)
                 {
-                    deferred.Reject(Napi::Error::New(env, "Failed to create native texture.").Value());
+                    deferred.Reject(Napi::Error::New(env, "Failed to create native texture").Value());
                 });
 
                 return;
             }
 
-            arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&context, &runtime, deferred = std::move(deferred), handle, impl = std::move(impl)]()
+            arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&context, &runtime, deferred = std::move(deferred), handle, impl = std::move(impl)]() mutable
             {
                 if (bgfx::overrideInternal(handle, impl->Ptr()) == 0)
                 {
-                    runtime.Dispatch([deferred = std::move(deferred)](Napi::Env env)
+                    runtime.Dispatch([deferred = std::move(deferred), handle](Napi::Env env)
                     {
-                        deferred.Reject(Napi::Error::New(env, "Failed to override native texture.").Value()); 
+                        bgfx::destroy(handle);
+                        deferred.Reject(Napi::Error::New(env, "Failed to override native texture").Value()); 
                     });
 
                     return;
@@ -63,14 +66,12 @@ namespace Babylon::Plugins
 
                 context.AddTexture(handle, 0, 0, impl->HasMips(), 0, impl->Format());
 
-                runtime.Dispatch([deferred = std::move(deferred), handle, impl = std::move(impl)](Napi::Env env)
+                runtime.Dispatch([deferred = std::move(deferred), handle, impl = std::move(impl)](Napi::Env env) mutable
                 {
-                    auto* textureData = new Graphics::TextureData{handle, false, impl->Width(), impl->Height()};
+                    auto* texture = new Graphics::TextureData{handle, true, impl->Width(), impl->Height()};
 
-                    auto jsObject = Napi::Pointer<Graphics::TextureData>::Create(env, textureData, [textureData]
-                    {
-                        bgfx::destroy(textureData->Handle);
-                        delete textureData;
+                    auto jsObject = Napi::Pointer<Graphics::TextureData>::Create(env, texture, [texture] {
+                        delete texture;
                     });
 
                     deferred.Resolve(jsObject);
