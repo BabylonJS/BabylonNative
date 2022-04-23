@@ -8,6 +8,7 @@ project(BabylonNative)
 # Options
 # --------------------------------------------------
 option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ON)
+option(BABYLON_NATIVE_INSTALL "Include the install target." ON)
 
 ## Core
 option(BABYLON_NATIVE_CORE_JSRUNTIME "Include Babylon Native Core JsRuntime" ON)
