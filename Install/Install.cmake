@@ -2,6 +2,9 @@ include(GNUInstallDirs)
 
 # Dependencies
 
+## arcana.cpp
+install(TARGETS arcana)
+
 ## bgfx
 install(TARGETS astc astc-codec edtaa3 etc1 etc2 iqa nvtt pvrtc squish tinyexr bgfx bimg bx)
 
@@ -24,6 +27,7 @@ endif()
 
 ## napi
 install(DIRECTORY Dependencies/napi/napi-direct/include/napi TYPE INCLUDE)
+install(TARGETS napi)
 
 ## UrlLib
 install(TARGETS UrlLib)
