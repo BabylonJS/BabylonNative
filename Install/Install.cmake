@@ -1,43 +1,60 @@
 include(GNUInstallDirs)
 
+function(install_targets)
+    install(TARGETS ${ARGN})
+
+    # Install the pdb files if they exist
+    foreach(target IN LISTS ARGN)
+        install(FILES $<TARGET_FILE_DIR:${target}>/${target}.pdb DESTINATION lib OPTIONAL)
+    endforeach()
+endfunction()
+
+function(install_include)
+    install(DIRECTORY ${ARGV0} TYPE INCLUDE)
+endfunction()
+
+# ----------------
 # Dependencies
+# ----------------
 
 ## arcana.cpp
-install(TARGETS arcana)
+install_targets(arcana)
 
 ## bgfx
-install(TARGETS astc astc-codec edtaa3 etc1 etc2 iqa nvtt pvrtc squish tinyexr bgfx bimg bx)
+install_targets(astc astc-codec edtaa3 etc1 etc2 iqa nvtt pvrtc squish tinyexr bgfx bimg bx)
 
 ## glslang
-install(TARGETS GenericCodeGen glslang MachineIndependent OGLCompiler OSDependent SPIRV)
+install_targets(GenericCodeGen glslang MachineIndependent OGLCompiler OSDependent SPIRV)
 
 ## SPIRV-Cross
-install(TARGETS spirv-cross-core spirv-cross-glsl)
+install_targets(spirv-cross-core spirv-cross-glsl)
 if(TARGET spirv-cross-msl)
-    install(TARGETS spirv-cross-msl)
+    install_targets(spirv-cross-msl)
 endif()
 if(TARGET spirv-cross-hlsl)
-    install(TARGETS spirv-cross-hlsl)
+    install_targets(spirv-cross-hlsl)
 endif()
 
 ## XR
 if(TARGET openxr_loader)
-    install(TARGETS openxr_loader)
+    install_targets(openxr_loader)
 endif()
 
 ## napi
-install(DIRECTORY Dependencies/napi/napi-direct/include/napi TYPE INCLUDE)
-install(TARGETS napi)
+install_include(Dependencies/napi/napi-direct/include/napi)
+install_targets(napi)
 
 ## UrlLib
-install(TARGETS UrlLib)
+install_targets(UrlLib)
 
+# ----------------
 # Core
+# ----------------
 
-install(TARGETS JsRuntime)
-install(DIRECTORY Core/JsRuntime/Include/Babylon TYPE INCLUDE)
+install_targets(JsRuntime)
+install_include(Core/JsRuntime/Include/Babylon)
 
-install(TARGETS Graphics)
+install_targets(Graphics)
 if(WINDOWS_STORE)
     if(BABYLON_NATIVE_USE_SWAPCHAINPANEL)
         set(PLATFORM_PATH ${BABYLON_NATIVE_PLATFORM}/SwapChainPanel)
@@ -47,85 +64,89 @@ if(WINDOWS_STORE)
 else()
     set(PLATFORM_PATH ${BABYLON_NATIVE_PLATFORM})
 endif()
-install(DIRECTORY Core/Graphics/Include/Platform/${PLATFORM_PATH}/Babylon TYPE INCLUDE)
-install(DIRECTORY Core/Graphics/Include/RendererType/${GRAPHICS_API}/Babylon TYPE INCLUDE)
-install(DIRECTORY Core/Graphics/Include/Shared/Babylon TYPE INCLUDE)
+install_include(Core/Graphics/Include/Platform/${PLATFORM_PATH}/Babylon)
+install_include(Core/Graphics/Include/RendererType/${GRAPHICS_API}/Babylon)
+install_include(Core/Graphics/Include/Shared/Babylon)
 
 if(TARGET AppRuntime)
-    install(TARGETS AppRuntime)
-    install(DIRECTORY Core/AppRuntime/Include/Babylon TYPE INCLUDE)
+    install_targets(AppRuntime)
+    install_include(Core/AppRuntime/Include/Babylon)
 endif()
 
 if(TARGET ScriptLoader)
-    install(TARGETS ScriptLoader)
-    install(DIRECTORY Core/ScriptLoader/Include/Babylon TYPE INCLUDE)
+    install_targets(ScriptLoader)
+    install_include(Core/ScriptLoader/Include/Babylon)
 endif()
 
+# ----------------
 # Plugins
+# ----------------
 
 if(TARGET ChromeDevTools)
-    install(TARGETS ChromeDevTools)
-    install(DIRECTORY Plugins/ChromeDevTools/Include/Babylon TYPE INCLUDE)
+    install_targets(ChromeDevTools)
+    install_include(Plugins/ChromeDevTools/Include/Babylon)
 endif()
 
 if(TARGET ExternalTexture)
-    install(TARGETS ExternalTexture)
-    install(DIRECTORY Plugins/ExternalTexture/Include/Babylon TYPE INCLUDE)
+    install_targets(ExternalTexture)
+    install_include(Plugins/ExternalTexture/Include/Babylon)
 endif()
 
 if(TARGET NativeCamera)
-    install(TARGETS NativeCamera)
-    install(DIRECTORY Plugins/NativeCamera/Include/Babylon TYPE INCLUDE)
+    install_targets(NativeCamera)
+    install_include(Plugins/NativeCamera/Include/Babylon)
 endif()
 
 if(TARGET NativeCapture)
-    install(TARGETS NativeCapture)
-    install(DIRECTORY Plugins/NativeCapture/Include/Babylon TYPE INCLUDE)
+    install_targets(NativeCapture)
+    install_include(Plugins/NativeCapture/Include/Babylon)
 endif()
 
 if(TARGET NativeEngine)
-    install(TARGETS NativeEngine)
-    install(DIRECTORY Plugins/NativeEngine/Include/Babylon TYPE INCLUDE)
+    install_targets(NativeEngine)
+    install_include(Plugins/NativeEngine/Include/Babylon)
 endif()
 
 if(TARGET NativeInput)
-    install(TARGETS NativeInput)
-    install(DIRECTORY Plugins/NativeInput/Include/Babylon TYPE INCLUDE)
+    install_targets(NativeInput)
+    install_include(Plugins/NativeInput/Include/Babylon)
 endif()
 
 if(TARGET NativeOptimizations)
-    install(TARGETS NativeOptimizations)
-    install(DIRECTORY Plugins/NativeOptimizations/Include/Babylon TYPE INCLUDE)
+    install_targets(NativeOptimizations)
+    install_include(Plugins/NativeOptimizations/Include/Babylon)
 endif()
 
 if(TARGET NativeTracing)
-    install(TARGETS NativeTracing)
-    install(DIRECTORY Plugins/NativeTracing/Include/Babylon TYPE INCLUDE)
+    install_targets(NativeTracing)
+    install_include(Plugins/NativeTracing/Include/Babylon)
 endif()
 
 if(TARGET NativeXr)
-    install(TARGETS NativeXr)
-    install(DIRECTORY Plugins/NativeXr/Include/Babylon TYPE INCLUDE)
+    install_targets(NativeXr)
+    install_include(Plugins/NativeXr/Include/Babylon)
 endif()
 
+# ----------------
 # Polyfills
+# ----------------
 
 if(TARGET Canvas)
-    install(TARGETS Canvas)
-    install(DIRECTORY Polyfills/Canvas/Include/Babylon TYPE INCLUDE)
+    install_targets(Canvas)
+    install_include(Polyfills/Canvas/Include/Babylon)
 endif()
 
 if(TARGET Console)
-    install(TARGETS Console)
-    install(DIRECTORY Polyfills/Console/Include/Babylon TYPE INCLUDE)
+    install_targets(Console)
+    install_include(Polyfills/Console/Include/Babylon)
 endif()
 
 if(TARGET Window)
-    install(TARGETS Window)
-    install(DIRECTORY Polyfills/Window/Include/Babylon TYPE INCLUDE)
+    install_targets(Window)
+    install_include(Polyfills/Window/Include/Babylon)
 endif()
 
 if(TARGET XMLHttpRequest)
-    install(TARGETS XMLHttpRequest)
-    install(DIRECTORY Polyfills/XMLHttpRequest/Include/Babylon TYPE INCLUDE)
+    install_targets(XMLHttpRequest)
+    install_include(Polyfills/XMLHttpRequest/Include/Babylon)
 endif()
