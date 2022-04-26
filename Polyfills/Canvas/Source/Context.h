@@ -12,6 +12,7 @@ namespace Babylon::Polyfills::Internal
     class Context final : public Napi::ObjectWrap<Context>, Polyfills::Canvas::Impl::MonitoredResource
     {
     public:
+        static void Initialize(Napi::Env);
         static Napi::Value CreateInstance(Napi::Env env, NativeCanvas* canvas);
 
         explicit Context(const Napi::CallbackInfo& info);

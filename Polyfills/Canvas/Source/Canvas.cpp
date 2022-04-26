@@ -235,6 +235,8 @@ namespace Babylon::Polyfills
         Internal::NativeCanvas::CreateInstance(env);
         Internal::NativeCanvasImage::CreateInstance(env);
 
+        Internal::Context::Initialize(env);
+
         return {impl};
     }
 
