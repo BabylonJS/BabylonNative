@@ -5,7 +5,10 @@ function(install_targets)
 
     # Install the pdb files if they exist
     foreach(target IN LISTS ARGN)
-        install(FILES $<TARGET_FILE_DIR:${target}>/${target}.pdb DESTINATION lib OPTIONAL)
+        get_target_property(target_type ${target} TYPE)
+        if(NOT target_type STREQUAL "INTERFACE_LIBRARY")
+            install(FILES $<TARGET_FILE_DIR:${target}>/${target}.pdb DESTINATION lib OPTIONAL)
+        endif()
     endforeach()
 endfunction()
 
