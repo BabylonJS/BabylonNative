@@ -1,24 +1,33 @@
-# Babylon React Native
-
-This project provides Babylon Native integration into React Native.
-
 [![](https://github.com/BabylonJS/BabylonReactNative/workflows/Publish%20Package/badge.svg)](https://github.com/BabylonJS/BabylonReactNative/actions?query=workflow%3A%22Publish+Package%22)
 [![npm version](https://badge.fury.io/js/%40babylonjs%2Freact-native.svg)](https://badge.fury.io/js/%40babylonjs%2Freact-native)
-[![BabylonNative master branch update](https://github.com/BabylonJS/BabylonReactNative/actions/workflows/bn_master_commit.yml/badge.svg)](https://github.com/BabylonJS/BabylonReactNative/actions/workflows/bn_master_commit.yml)
+
+# Babylon React Native
+
+Babylon React Native brings the power and flexibility of [Babylon.js](https://github.com/BabylonJS/Babylon.js) into a [React Native](https://github.com/facebook/react-native) environment via [Babylon Native](https://github.com/BabylonJS/BabylonNative).
 
 ## Current Status
 
-Babylon React Native is in the early phase of its development, and has the following limitations:
+### Limitations
 
-1. Android and iOS support only - support for Windows is planned, but the timeline is currently unknown.
+1. Android and iOS only - support for Windows is experimental.
 1. Touch input only - mouse, keyboard, and controllers are not yet supported.
 1. Single view only - multiple views are not yet supported (only a single view can be displayed).
 
-It is also worth noting that Babylon React Native relies heavily on newer React Native constructs including JSI to get the performance characteristics required for real time rendering. JSI allows for direct synchronous communication between native code and JavaScript code, but is incompatible with "remote debugging." If you need to debug your JavaScript code that uses Babylon React Native, you should enable Hermes and use "direct debugging" (e.g. chrome://inspect or edge://inspect). See the [React Native documentation](https://reactnative.dev/docs/hermes) for more info.
+### What is Supported from Babylon.js
+
+See [this](https://github.com/BabylonJS/BabylonNative#what-is-supported-from-babylonjs) from the Babylon Native repo.
+
+### Performance
+
+React Native applications targeting [JavaScriptCore on iOS](https://reactnative.dev/docs/javascript-environment#javascript-runtime) or [Hermes](https://reactnative.dev/docs/hermes) will not have JIT enabled. This may cause performance issues for JavaScript heavy scenarios.
+
+### Other
+
+Babylon React Native relies heavily on newer React Native constructs including JSI to get the performance characteristics required for real time rendering. JSI allows for direct synchronous communication between native code and JavaScript code, but is incompatible with "remote debugging." If you need to debug your JavaScript code that uses Babylon React Native, you should enable Hermes and use "direct debugging" (e.g. chrome://inspect or edge://inspect). See the [React Native documentation](https://reactnative.dev/docs/hermes) for more info.
 
 ## Usage
 
-See the [package usage](Modules/@babylonjs/react-native/README.md) for installation instructions and/or the Playground app's [App.tsx](Apps/Playground/App.tsx) for example usage.
+See the [package usage](Modules/@babylonjs/react-native/README.md) for installation instructions and/or the Playground app's [App.tsx](Apps/Playground/App.tsx) for example usage. You can also clone [this sample repo](https://github.com/BabylonJS/BabylonReactNativeSample) to quickly get started.
 
 ## Contributing
 
@@ -104,11 +113,13 @@ export PATH=$PATH:$ANDROID_HOME/tools/bin
 export PATH=$PATH:$ANDROID_HOME/platform-tools
 ```
 
-**Troubleshootings:**
+### **Troubleshooting**
 - If the Metro server is not started with `npm run android` , you can start it manually by running `npm run start` in a terminal.
 - Android Studio is the tool of choice for downloading the various versions of NDK.
 - If something goes wrong with the build `npm run android --verbose` can give some hints.
 - If the emulator is not launched by the build, you can run `~/Android/Sdk/emulator/emulator @name_of_your_image`.
+- For other emulator issues, follow the [instructions](https://github.com/BabylonJS/BabylonNative/blob/master/Documentation/AndroidEmulator.md) from Babylon Native documentation.
+- Refer to the [Babylon Native documentation](https://github.com/BabylonJS/BabylonNative/tree/master/Documentation#babylon-native-documention) for additional information that may help troubleshoot issues.
 
 ### **Building and Running the Playground App**
 
@@ -210,9 +221,3 @@ For iOS the XCode project needs to be generated with `CMake` as described [above
 ## Security
 
 If you believe you have found a security vulnerability in this repository, please see [SECURITY.md](SECURITY.md).
-
-## Known Issues
-
-We have seen issues when using npm 7+ to install local symbolic linked npm packages. For this reason, we suggest using npm 6.13 for BabylonReactNative development. To install npm 6.13, run the following command:
-
-`npm install -g npm@6.13`
