@@ -294,6 +294,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
         return FALSE;
     }
 
+    if (!RegisterTouchWindow(hWnd, 0))
+    {
+        // TODO: Handle scenarios where window can't be registered as multi-touch
+    }
+
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
 
@@ -378,6 +383,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_DESTROY:
         {
             Uninitialize();
+
+            if (!UnregisterTouchWindow(hWnd))
+            {
+                // TODO: Create message for when unregister fails
+            }
+
             PostQuitMessage(0);
             break;
         }
@@ -475,6 +486,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, GET_WHEEL_DELTA_WPARAM(wParam));
             }
+            break;
+        }
+        case WM_TOUCH:
+        {
+            OutputDebugStringA("TEST");
             break;
         }
         default:
