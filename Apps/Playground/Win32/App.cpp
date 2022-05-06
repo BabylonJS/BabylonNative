@@ -26,6 +26,10 @@
 
 #define MAX_LOADSTRING 100
 
+#define MI_WP_SIGNATURE 0xFF515700
+#define SIGNATURE_MASK 0xFFFFFF00
+#define IsTouchEvent(dw) (((dw) & SIGNATURE_MASK) == MI_WP_SIGNATURE)
+
 // Global Variables:
 HINSTANCE hInst;                     // current instance
 WCHAR szTitle[MAX_LOADSTRING];       // The title bar text
@@ -294,11 +298,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
         return FALSE;
     }
 
-    if (!RegisterTouchWindow(hWnd, 0))
-    {
-        // TODO: Handle scenarios where window can't be registered as multi-touch
-    }
-
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
 
@@ -383,12 +382,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_DESTROY:
         {
             Uninitialize();
-
-            if (!UnregisterTouchWindow(hWnd))
-            {
-                // TODO: Create message for when unregister fails
-            }
-
             PostQuitMessage(0);
             break;
         }
@@ -402,7 +395,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_MOUSEMOVE:
         {
-            if (nativeInput != nullptr)
+            if (nativeInput != nullptr && !IsTouchEvent(GetMessageExtraInfo()))
             {
                 nativeInput->MouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             }
@@ -410,25 +403,31 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_LBUTTONDOWN:
         {
-            if (buttonRefCount++ == 0)
+            if (!IsTouchEvent(GetMessageExtraInfo()))
             {
-                SetCapture(hWnd);
-            }
-            if (nativeInput != nullptr)
-            {
-                nativeInput->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                if (buttonRefCount++ == 0)
+                {
+                    SetCapture(hWnd);
+                }
+                if (nativeInput != nullptr)
+                {
+                    nativeInput->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                }
             }
             break;
         }
         case WM_LBUTTONUP:
         {
-            if (nativeInput != nullptr)
+            if (!IsTouchEvent(GetMessageExtraInfo()))
             {
-                nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-            }
-            if (--buttonRefCount == 0)
-            {
-                ReleaseCapture();
+                if (nativeInput != nullptr)
+                {
+                    nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                }
+                if (--buttonRefCount == 0)
+                {
+                    ReleaseCapture();
+                }
             }
             break;
         }
@@ -488,9 +487,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
             break;
         }
-        case WM_TOUCH:
+        case WM_POINTERDOWN:
         {
-            OutputDebugStringA("TEST");
+            if (nativeInput != nullptr)
+            {
+                nativeInput->TouchDown(GET_POINTERID_WPARAM(wParam), GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            }
+            break;
+        }
+        case WM_POINTERUPDATE:
+        {
+            if (nativeInput != nullptr)
+            {
+                nativeInput->TouchMove(GET_POINTERID_WPARAM(wParam), GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            }
+            break;
+        }
+        case WM_POINTERUP:
+        {
+            if (nativeInput != nullptr)
+            {
+                nativeInput->TouchUp(GET_POINTERID_WPARAM(wParam), GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            }
             break;
         }
         default:
