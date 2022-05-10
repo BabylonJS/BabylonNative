@@ -310,6 +310,8 @@ namespace Babylon
         // Initialize the JavaScript side.
         Napi::HandleScope scope{env};
 
+        auto caps = bgfx::getCaps();
+
         // clang-format off
         Napi::Function func = DefineClass(
             env,
@@ -317,6 +319,31 @@ namespace Babylon
             {
                 // This must match the version in nativeEngine.ts
                 StaticValue("PROTOCOL_VERSION", Napi::Number::From(env, 5)),
+
+                StaticValue("CAPS_LIMITS_MAX_DRAW_CALLS", Napi::Number::From(env, caps->limits.maxDrawCalls)),
+                StaticValue("CAPS_LIMITS_MAX_BLITS", Napi::Number::From(env, caps->limits.maxBlits)),
+                StaticValue("CAPS_LIMITS_MAX_TEXTURE_SIZE", Napi::Number::From(env, caps->limits.maxTextureSize)),
+                StaticValue("CAPS_LIMITS_MAX_TEXTURE_LAYERS", Napi::Number::From(env, caps->limits.maxTextureLayers)),
+                StaticValue("CAPS_LIMITS_MAX_VIEWS", Napi::Number::From(env, caps->limits.maxViews)),
+                StaticValue("CAPS_LIMITS_MAX_FRAME_BUFFERS", Napi::Number::From(env, caps->limits.maxFrameBuffers)),
+                StaticValue("CAPS_LIMITS_MAX_FB_ATTACHMENTS", Napi::Number::From(env, caps->limits.maxFBAttachments)),
+                StaticValue("CAPS_LIMITS_MAX_PROGRAMS", Napi::Number::From(env, caps->limits.maxPrograms)),
+                StaticValue("CAPS_LIMITS_MAX_SHADERS", Napi::Number::From(env, caps->limits.maxShaders)),
+                StaticValue("CAPS_LIMITS_MAX_TEXTURES", Napi::Number::From(env, caps->limits.maxTextures)),
+                StaticValue("CAPS_LIMITS_MAX_TEXTURE_SAMPLERS", Napi::Number::From(env, caps->limits.maxTextureSamplers)),
+                StaticValue("CAPS_LIMITS_MAX_COMPUTE_BINDINGS", Napi::Number::From(env, caps->limits.maxComputeBindings)),
+                StaticValue("CAPS_LIMITS_MAX_VERTEX_LAYOUTS", Napi::Number::From(env, caps->limits.maxVertexLayouts)),
+                StaticValue("CAPS_LIMITS_MAX_VERTEX_STREAMS", Napi::Number::From(env, caps->limits.maxVertexStreams)),
+                StaticValue("CAPS_LIMITS_MAX_INDEX_BUFFERS", Napi::Number::From(env, caps->limits.maxIndexBuffers)),
+                StaticValue("CAPS_LIMITS_MAX_VERTEX_BUFFERS", Napi::Number::From(env, caps->limits.maxVertexBuffers)),
+                StaticValue("CAPS_LIMITS_MAX_DYNAMIC_INDEX_BUFFERS", Napi::Number::From(env, caps->limits.maxDynamicIndexBuffers)),
+                StaticValue("CAPS_LIMITS_MAX_DYNAMIC_VERTEX_BUFFERS", Napi::Number::From(env, caps->limits.maxDynamicVertexBuffers)),
+                StaticValue("CAPS_LIMITS_MAX_UNIFORMS", Napi::Number::From(env, caps->limits.maxUniforms)),
+                StaticValue("CAPS_LIMITS_MAX_OCCLUSION_QUERIES", Napi::Number::From(env, caps->limits.maxOcclusionQueries)),
+                StaticValue("CAPS_LIMITS_MAX_ENCODERS", Napi::Number::From(env, caps->limits.maxEncoders)),
+                StaticValue("CAPS_LIMITS_MIN_RESOURCE_CB_SIZE", Napi::Number::From(env, caps->limits.minResourceCbSize)),
+                StaticValue("CAPS_LIMITS_TRANSIENT_VB_SIZE", Napi::Number::From(env, caps->limits.transientVbSize)),
+                StaticValue("CAPS_LIMITS_TRANSIENT_IB_SIZE", Napi::Number::From(env, caps->limits.transientIbSize)),
 
                 StaticValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
                 StaticValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),
