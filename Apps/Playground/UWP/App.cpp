@@ -223,7 +223,7 @@ void App::OnPointerMoved(CoreWindow^, PointerEventArgs^ args)
             m_nativeInput->MouseMove(static_cast<int>(position.X), static_cast<int>(position.Y));
 
             /*
-             * Note: Because PointerPressed only first for the first button press (and no additional ones)
+             * Note: Because PointerPressed only fires for the first button press (and no additional ones)
              * and PointerReleased only fires when all buttons have been released, we need an alternative way
              * to track additional button presses.
              * (See Definition - PointerPressed: https://docs.microsoft.com/en-us/uwp/api/windows.ui.core.corewindow.pointerpressed?view=winrt-22000)
