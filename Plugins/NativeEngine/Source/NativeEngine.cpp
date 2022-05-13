@@ -1679,12 +1679,19 @@ namespace Babylon
         m_commandStream = Napi::ObjectWrap<NativeDataStream>::Unwrap(jsCommandStream.Get("_nativeDataStream").As<Napi::Object>());
     }
 
-    void NativeEngine::SubmitCommands(const Napi::CallbackInfo&)
+    void NativeEngine::SubmitCommands(const Napi::CallbackInfo& info)
     {
-        NativeDataStream::Reader reader = m_commandStream->GetReader();
-        while (reader.CanRead())
+        try
         {
-            std::invoke(reader.ReadPointer<CommandFunctionPointerT>(), this, reader);
+            NativeDataStream::Reader reader = m_commandStream->GetReader();
+            while (reader.CanRead())
+            {
+                std::invoke(reader.ReadPointer<CommandFunctionPointerT>(), this, reader);
+            }
+        }
+        catch (const std::exception& exception)
+        {
+            throw Napi::Error::New(info.Env(), exception);
         }
     }
 

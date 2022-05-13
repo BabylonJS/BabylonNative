@@ -280,7 +280,12 @@ namespace Babylon::Graphics
 
     bgfx::ViewId DeviceImpl::AcquireNewViewId(bgfx::Encoder&)
     {
-        return m_nextViewId.fetch_add(1);
+        bgfx::ViewId viewId = m_nextViewId.fetch_add(1);
+        if (viewId >= bgfx::getCaps()->limits.maxViews)
+        {
+            throw std::runtime_error{"Too many views"};
+        }
+        return viewId;
     }
 
     void DeviceImpl::UpdateBgfxState()
