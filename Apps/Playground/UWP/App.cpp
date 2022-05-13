@@ -232,11 +232,7 @@ void App::OnPointerMoved(CoreWindow^, PointerEventArgs^ args)
              * In both of the below functions, we have three booleans that track each button's state and then we
              * run these two functions to update any buttons that we may have missed.
              */
-
-            // Check buttons for any button changes
-            const auto& properties = args->CurrentPoint->Properties;
-
-            if ((m_leftPressed == properties->IsLeftButtonPressed) || (m_middlePressed == properties->IsMiddleButtonPressed) || (m_rightPressed && properties->IsRightButtonPressed))
+            if (point->IsInContact)
             {
                 OnPointerPressed(nullptr, args);
                 OnPointerReleased(nullptr, args);
