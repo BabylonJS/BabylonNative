@@ -26,12 +26,6 @@
 
 #define MAX_LOADSTRING 100
 
-// This code is from the recommended approach to testing signature masks off of the Windows App Development page
-// https://docs.microsoft.com/en-us/windows/win32/tablet/system-events-and-mouse-messages#distinguishing-pen-input-from-mouse-and-touch
-#define MI_WP_SIGNATURE 0xFF515700
-#define SIGNATURE_MASK 0xFFFFFF00
-#define IsTouchEvent(dw) (((dw) & SIGNATURE_MASK) == MI_WP_SIGNATURE)
-
 // Global Variables:
 HINSTANCE hInst;                     // current instance
 WCHAR szTitle[MAX_LOADSTRING];       // The title bar text
