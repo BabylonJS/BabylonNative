@@ -51,9 +51,6 @@ private:
     Windows::Foundation::Collections::IVectorView<Windows::Storage::IStorageItem^>^ m_files;
     bool m_windowClosed;
     bool m_windowVisible;
-    bool m_leftPressed{ false };
-    bool m_middlePressed{ false };
-    bool m_rightPressed{ false };
     float m_displayScale{ 1.f };
 };
 
