@@ -33,6 +33,32 @@ int main(Platform::Array<Platform::String^>^)
     return 0;
 }
 
+// Helper function to handle mouse button routing
+void ProcessMouseButtons(Babylon::Plugins::NativeInput* m_nativeInput, PointerUpdateKind updateKind, int x, int y)
+{
+    switch (updateKind)
+    {
+        case PointerUpdateKind::LeftButtonPressed:
+            m_nativeInput->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
+            break;
+        case PointerUpdateKind::MiddleButtonPressed:
+            m_nativeInput->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
+            break;
+        case PointerUpdateKind::RightButtonPressed:
+            m_nativeInput->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
+            break;
+        case PointerUpdateKind::LeftButtonReleased:
+            m_nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
+            break;
+        case PointerUpdateKind::MiddleButtonReleased:
+            m_nativeInput->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
+            break;
+        case PointerUpdateKind::RightButtonReleased:
+            m_nativeInput->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
+            break;
+    }
+}
+
 IFrameworkView^ Direct3DApplicationSource::CreateView()
 {
     return ref new App();
@@ -217,37 +243,21 @@ void App::OnPointerMoved(CoreWindow^, PointerEventArgs^ args)
         const auto& deviceType = args->CurrentPoint->PointerDevice->PointerDeviceType;
         const auto& deviceSlot = args->CurrentPoint->PointerId;
         const auto& updateKind = args->CurrentPoint->Properties->PointerUpdateKind;
+        const auto& x = static_cast<int>(position.X);
+        const auto& y = static_cast<int>(position.Y);
 
         if (deviceType == Windows::Devices::Input::PointerDeviceType::Mouse)
         {
-            m_nativeInput->MouseMove(static_cast<int>(position.X), static_cast<int>(position.Y));
+            m_nativeInput->MouseMove(x, y);
 
-            // Check PointerUpdateKind (type of event) and call the corresponding function, if necessary
-            switch (updateKind)
+            if (args->CurrentPoint->IsInContact)
             {
-                case PointerUpdateKind::LeftButtonPressed:
-                    m_nativeInput->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, static_cast<int>(position.X), static_cast<int>(position.Y));
-                    break;
-                case PointerUpdateKind::MiddleButtonPressed:
-                    m_nativeInput->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, static_cast<int>(position.X), static_cast<int>(position.Y));
-                    break;
-                case PointerUpdateKind::RightButtonPressed:
-                    m_nativeInput->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, static_cast<int>(position.X), static_cast<int>(position.Y));
-                    break;
-                case PointerUpdateKind::LeftButtonReleased:
-                    m_nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, static_cast<int>(position.X), static_cast<int>(position.Y));
-                    break;
-                case PointerUpdateKind::MiddleButtonReleased:
-                    m_nativeInput->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, static_cast<int>(position.X), static_cast<int>(position.Y));
-                    break;
-                case PointerUpdateKind::RightButtonReleased:
-                    m_nativeInput->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, static_cast<int>(position.X), static_cast<int>(position.Y));
-                    break;
+                ProcessMouseButtons(m_nativeInput, updateKind, x, y);
             }
         }
         else
         {
-            m_nativeInput->TouchMove(deviceSlot, static_cast<int>(position.X), static_cast<int>(position.Y));
+            m_nativeInput->TouchMove(deviceSlot, x, y);
         }
     }
 }
@@ -260,26 +270,16 @@ void App::OnPointerPressed(CoreWindow^, PointerEventArgs^ args)
         const auto& deviceType = args->CurrentPoint->PointerDevice->PointerDeviceType;
         const auto& deviceSlot = args->CurrentPoint->PointerId;
         const auto& updateKind = args->CurrentPoint->Properties->PointerUpdateKind;
+        const auto& x = static_cast<int>(position.X);
+        const auto& y = static_cast<int>(position.Y);
 
         if (deviceType == Windows::Devices::Input::PointerDeviceType::Mouse)
         {
-            // Check PointerUpdateKind (type of event) and call the corresponding function, if necessary
-            switch (updateKind)
-            {
-                case PointerUpdateKind::LeftButtonPressed:
-                    m_nativeInput->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, static_cast<int>(position.X), static_cast<int>(position.Y));
-                    break;
-                case PointerUpdateKind::MiddleButtonPressed:
-                    m_nativeInput->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, static_cast<int>(position.X), static_cast<int>(position.Y));
-                    break;
-                case PointerUpdateKind::RightButtonPressed:
-                    m_nativeInput->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, static_cast<int>(position.X), static_cast<int>(position.Y));
-                    break;
-            }
+            ProcessMouseButtons(m_nativeInput, updateKind, x, y);
         }
         else
         {
-            m_nativeInput->TouchDown(deviceSlot, static_cast<int>(position.X), static_cast<int>(position.Y));
+            m_nativeInput->TouchDown(deviceSlot, x, y);
         }
     }
 }
@@ -292,28 +292,16 @@ void App::OnPointerReleased(CoreWindow^, PointerEventArgs^ args)
         const auto& deviceType = args->CurrentPoint->PointerDevice->PointerDeviceType;
         const auto& deviceSlot = args->CurrentPoint->PointerId;
         const auto& updateKind = args->CurrentPoint->Properties->PointerUpdateKind;
+        const auto& x = static_cast<int>(position.X);
+        const auto& y = static_cast<int>(position.Y);
 
         if (deviceType == Windows::Devices::Input::PointerDeviceType::Mouse)
         {
-            m_nativeInput->MouseMove(static_cast<int>(position.X), static_cast<int>(position.Y));
-
-            // Check PointerUpdateKind (type of event) and call the corresponding function, if necessary
-            switch (updateKind)
-            {
-                case PointerUpdateKind::LeftButtonReleased:
-                    m_nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, static_cast<int>(position.X), static_cast<int>(position.Y));
-                    break;
-                case PointerUpdateKind::MiddleButtonReleased:
-                    m_nativeInput->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, static_cast<int>(position.X), static_cast<int>(position.Y));
-                    break;
-                case PointerUpdateKind::RightButtonReleased:
-                    m_nativeInput->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, static_cast<int>(position.X), static_cast<int>(position.Y));
-                    break;
-            }
+            ProcessMouseButtons(m_nativeInput, updateKind, x, y);
         }
         else
         {
-            m_nativeInput->TouchUp(deviceSlot, static_cast<int>(position.X), static_cast<int>(position.Y));
+            m_nativeInput->TouchUp(deviceSlot, x, y);
         }
     }
 }
