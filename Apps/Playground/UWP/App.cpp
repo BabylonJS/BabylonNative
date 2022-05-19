@@ -243,8 +243,8 @@ void App::OnPointerMoved(CoreWindow^, PointerEventArgs^ args)
         const auto& deviceType = args->CurrentPoint->PointerDevice->PointerDeviceType;
         const auto& deviceSlot = args->CurrentPoint->PointerId;
         const auto& updateKind = args->CurrentPoint->Properties->PointerUpdateKind;
-        const auto& x = static_cast<int>(position.X);
-        const auto& y = static_cast<int>(position.Y);
+        const auto x = static_cast<int>(position.X);
+        const auto y = static_cast<int>(position.Y);
 
         if (deviceType == Windows::Devices::Input::PointerDeviceType::Mouse)
         {
