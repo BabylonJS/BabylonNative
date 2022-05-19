@@ -30,10 +30,10 @@ Check out the [home page](https://aka.ms/Bnative) for a project overview.
   - [Babylon Native Components](Documentation/Components.md)
   - [Extending Babylon Native](Documentation/Extending.md)
   - [Build System](Documentation/BuildSystem.md)
-  - [Continuous Integration](ContinuousIntegration.md)
+  - [Continuous Integration](Documentation/ContinuousIntegration.md)
   - [Android Emulator Tips](Documentation/AndroidEmulator.md)
-  - [Debugging JavaScript on Mac and iOS](DebugJavascriptMacIOS.md)
-  - [Debugging iOS and MacOS rendering using Xcode](DebugRenderedFrameMetal.md)
+  - [Debugging JavaScript on Mac and iOS](Documentation/DebugJavascriptMacIOS.md)
+  - [Debugging iOS and MacOS rendering using Xcode](Documentation/DebugRenderedFrameMetal.md)
   - [FAQ](Documentation/FAQ.md)
 
 ## Project Status

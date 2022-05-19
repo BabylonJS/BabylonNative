@@ -96,7 +96,6 @@ namespace Babylon::Graphics
         static const bgfx::RendererType::Enum s_bgfxRenderType;
         static void ConfigureBgfxPlatformData(const WindowConfiguration& config, bgfx::PlatformData& platformData);
         static void ConfigureBgfxPlatformData(const DeviceConfiguration& config, bgfx::PlatformData& platformData);
-        static void UpdateBgfxBackBuffer(const BackBufferUpdateInfo& update, bgfx::PlatformData& platformData);
         static float GetDevicePixelRatio(const WindowConfiguration& config);
 
         void UpdateBgfxState();
