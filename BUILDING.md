@@ -191,7 +191,7 @@ CMake will generate a new `BabylonNative.xcodeproj` file in the specified build 
 Open the project by double-clicking on it in Finder or by entering the following command:
 
 ```
-open build/macOS/BabylonNative.xcodeproj
+open build/iOS/BabylonNative.xcodeproj
 ```
 
 To select which project to build with Xcode, select the correct project name in the
