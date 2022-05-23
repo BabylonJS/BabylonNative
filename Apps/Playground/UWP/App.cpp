@@ -240,9 +240,9 @@ void App::OnPointerMoved(CoreWindow^, PointerEventArgs^ args)
     if (m_nativeInput != nullptr)
     {
         const auto& position = args->CurrentPoint->RawPosition;
-        const auto& deviceType = args->CurrentPoint->PointerDevice->PointerDeviceType;
-        const auto& deviceSlot = args->CurrentPoint->PointerId;
-        const auto& updateKind = args->CurrentPoint->Properties->PointerUpdateKind;
+        const auto deviceType = args->CurrentPoint->PointerDevice->PointerDeviceType;
+        const auto deviceSlot = args->CurrentPoint->PointerId;
+        const auto updateKind = args->CurrentPoint->Properties->PointerUpdateKind;
         const auto x = static_cast<int>(position.X);
         const auto y = static_cast<int>(position.Y);
 
@@ -267,11 +267,11 @@ void App::OnPointerPressed(CoreWindow^, PointerEventArgs^ args)
     if (m_nativeInput != nullptr)
     {
         const auto& position = args->CurrentPoint->RawPosition;
-        const auto& deviceType = args->CurrentPoint->PointerDevice->PointerDeviceType;
-        const auto& deviceSlot = args->CurrentPoint->PointerId;
-        const auto& updateKind = args->CurrentPoint->Properties->PointerUpdateKind;
-        const auto& x = static_cast<int>(position.X);
-        const auto& y = static_cast<int>(position.Y);
+        const auto deviceType = args->CurrentPoint->PointerDevice->PointerDeviceType;
+        const auto deviceSlot = args->CurrentPoint->PointerId;
+        const auto updateKind = args->CurrentPoint->Properties->PointerUpdateKind;
+        const auto x = static_cast<int>(position.X);
+        const auto y = static_cast<int>(position.Y);
 
         if (deviceType == Windows::Devices::Input::PointerDeviceType::Mouse)
         {
@@ -289,11 +289,11 @@ void App::OnPointerReleased(CoreWindow^, PointerEventArgs^ args)
     if (m_nativeInput != nullptr)
     {
         const auto& position = args->CurrentPoint->RawPosition;
-        const auto& deviceType = args->CurrentPoint->PointerDevice->PointerDeviceType;
-        const auto& deviceSlot = args->CurrentPoint->PointerId;
-        const auto& updateKind = args->CurrentPoint->Properties->PointerUpdateKind;
-        const auto& x = static_cast<int>(position.X);
-        const auto& y = static_cast<int>(position.Y);
+        const auto deviceType = args->CurrentPoint->PointerDevice->PointerDeviceType;
+        const auto deviceSlot = args->CurrentPoint->PointerId;
+        const auto updateKind = args->CurrentPoint->Properties->PointerUpdateKind;
+        const auto x = static_cast<int>(position.X);
+        const auto y = static_cast<int>(position.Y);
 
         if (deviceType == Windows::Devices::Input::PointerDeviceType::Mouse)
         {
@@ -307,7 +307,7 @@ void App::OnPointerReleased(CoreWindow^, PointerEventArgs^ args)
 }
 void App::OnPointerWheelChanged(CoreWindow^, PointerEventArgs^ args)
 {
-    const auto& delta = args->CurrentPoint->Properties->MouseWheelDelta;
+    const auto delta = args->CurrentPoint->Properties->MouseWheelDelta;
     m_nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, delta);
 }
 
