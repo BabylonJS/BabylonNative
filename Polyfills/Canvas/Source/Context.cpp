@@ -23,15 +23,14 @@ Most of these context methods are preliminary work. They are currenbly not teste
 */
 namespace Babylon::Polyfills::Internal
 {
-    static constexpr auto JS_CONSTRUCTOR_NAME = "Context";
-
+    static constexpr auto JS_CONTEXT_CONSTRUCTOR_NAME = "Context";
     void Context::Initialize(Napi::Env env)
     {
         Napi::HandleScope scope{env};
 
         Napi::Function func = DefineClass(
             env,
-            JS_CONSTRUCTOR_NAME,
+            JS_CONTEXT_CONSTRUCTOR_NAME,
             {
                 InstanceMethod("clearRect", &Context::ClearRect),
                 InstanceMethod("save", &Context::Save),
@@ -74,14 +73,14 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("lineWidth", &Context::GetLineWidth, &Context::SetLineWidth),
                 InstanceAccessor("canvas", &Context::GetCanvas, nullptr)
             });
-        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONTEXT_CONSTRUCTOR_NAME, func);
     }
 
     Napi::Value Context::CreateInstance(Napi::Env env, NativeCanvas* canvas)
     {
         Napi::HandleScope scope{ env };
 
-        auto func = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_CONSTRUCTOR_NAME).As<Napi::Function>();
+        auto func = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_CONTEXT_CONSTRUCTOR_NAME).As<Napi::Function>();
         return func.New({ Napi::External<NativeCanvas>::New(env, canvas)});
     }
 

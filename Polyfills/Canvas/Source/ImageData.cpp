@@ -11,14 +11,14 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    static constexpr auto JS_CONSTRUCTOR_NAME = "ImageData";
+    static constexpr auto JS_IMAGEDATA_CONSTRUCTOR_NAME = "ImageData";
 
     Napi::Value ImageData::CreateInstance(Napi::Env env, Context* context, uint32_t width, uint32_t height)
     {
         Napi::HandleScope scope{ env };
         Napi::Function func = DefineClass(
             env,
-            JS_CONSTRUCTOR_NAME,
+            JS_IMAGEDATA_CONSTRUCTOR_NAME,
             {
                 InstanceAccessor("width", &ImageData::GetWidth, nullptr),
                 InstanceAccessor("height", &ImageData::GetHeight, nullptr),

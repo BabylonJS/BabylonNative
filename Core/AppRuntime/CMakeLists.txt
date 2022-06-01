@@ -7,6 +7,10 @@ set(SOURCES
     "Source/WorkQueue.cpp"
     "Source/WorkQueue.h")
 
+if (ENABLE_UNITY_BUILD)
+    enable_unity_build(AppRuntime SOURCES)
+endif()
+
 add_library(AppRuntime ${SOURCES})
 warnings_as_errors(AppRuntime)
 
@@ -26,5 +30,7 @@ target_compile_definitions(AppRuntime
     PRIVATE NOMINMAX)
 
 set_property(TARGET AppRuntime PROPERTY FOLDER Core)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+if (NOT ENABLE_UNITY_BUILD)
+    source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+endif()
 

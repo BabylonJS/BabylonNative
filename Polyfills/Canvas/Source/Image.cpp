@@ -14,7 +14,7 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    static constexpr auto JS_CONSTRUCTOR_NAME = "Image";
+    static constexpr auto JS_IMAGE_CONSTRUCTOR_NAME = "Image";
 
     void NativeCanvasImage::CreateInstance(Napi::Env env)
     {
@@ -22,7 +22,7 @@ namespace Babylon::Polyfills::Internal
 
         Napi::Function func = DefineClass(
             env,
-            JS_CONSTRUCTOR_NAME,
+            JS_IMAGE_CONSTRUCTOR_NAME,
             {
                 InstanceAccessor("width", &NativeCanvasImage::GetWidth, nullptr),
                 InstanceAccessor("height", &NativeCanvasImage::GetHeight, nullptr),
@@ -35,7 +35,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("_imageContainer", &NativeCanvasImage::GetImageContainer, nullptr),
             });
 
-        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_IMAGE_CONSTRUCTOR_NAME, func);
     }
 
     NativeCanvasImage::NativeCanvasImage(const Napi::CallbackInfo& info)
