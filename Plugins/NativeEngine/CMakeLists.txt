@@ -26,6 +26,10 @@ if(WIN32)
     set(SOURCES ${SOURCES} "Source/ShaderCompilerD3D.h")
 endif()
 
+if (ENABLE_UNITY_BUILD)
+    enable_unity_build(NativeEngine SOURCES)
+endif()
+
 add_library(NativeEngine ${SOURCES})
 
 target_include_directories(NativeEngine PUBLIC "Include")
@@ -67,4 +71,6 @@ target_compile_definitions(NativeEngine
     PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
 
 set_property(TARGET NativeEngine PROPERTY FOLDER Plugins)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+if (NOT ENABLE_UNITY_BUILD)
+    source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+endif()
