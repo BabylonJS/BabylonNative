@@ -30,7 +30,7 @@ namespace Babylon::Graphics
     {
         std::unique_ptr<Device> device{new Device()};
         device->UpdateWindow(config);
-        device->UpdateSize(config.Width, config.Height);
+        device->UpdateSize(config);
         return device;
     }
 
@@ -44,6 +44,11 @@ namespace Babylon::Graphics
     void Device::UpdateSize(size_t width, size_t height)
     {
         m_impl->Resize(width, height);
+    }
+
+    void Device::UpdateSize(const WindowConfiguration& config)
+    {
+        m_impl->Resize(config);
     }
 
     void Device::AddToJavaScript(Napi::Env env)

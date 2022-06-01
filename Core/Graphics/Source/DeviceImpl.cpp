@@ -70,6 +70,11 @@ namespace Babylon::Graphics
         UpdateBgfxResolution();
     }
 
+    void DeviceImpl::Resize(const WindowConfiguration& config)
+    {
+        Resize(config.Width, config.Height);
+    }
+    
     size_t DeviceImpl::GetWidth() const
     {
         return m_state.Resolution.Width;

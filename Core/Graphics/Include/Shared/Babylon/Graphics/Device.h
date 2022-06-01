@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Babylon/JsRuntime.h>
-#include <Babylon/Graphics/Platform.h>
 #include <Babylon/Graphics/RendererType.h>
 
 #include <future>
@@ -9,6 +8,8 @@
 
 namespace Babylon::Graphics
 {
+    struct WindowConfiguration;
+
     struct PlatformInfo
     {
         DeviceT Device;
@@ -74,6 +75,7 @@ namespace Babylon::Graphics
 
         void UpdateWindow(const WindowConfiguration& config);
         void UpdateSize(size_t width, size_t height);
+        void UpdateSize(const WindowConfiguration& config);
 
         void AddToJavaScript(Napi::Env);
         Napi::Value CreateContext(Napi::Env);

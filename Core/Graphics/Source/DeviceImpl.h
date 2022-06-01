@@ -39,6 +39,7 @@ namespace Babylon::Graphics
         void UpdateWindow(const WindowConfiguration& config);
         void UpdateContext(const DeviceConfiguration& config);
         void Resize(size_t width, size_t height);
+        void Resize(const WindowConfiguration& config);
 
         void AddToJavaScript(Napi::Env);
         static DeviceImpl& GetFromJavaScript(Napi::Env);
