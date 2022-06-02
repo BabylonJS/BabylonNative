@@ -68,7 +68,6 @@ target_compile_definitions(Graphics
     PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
 
 set_property(TARGET Graphics PROPERTY FOLDER Core)
-
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
 if(APPLE)

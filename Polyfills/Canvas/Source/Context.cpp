@@ -25,6 +25,7 @@ Most of these context methods are preliminary work. They are currenbly not teste
 namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_CONTEXT_CONSTRUCTOR_NAME = "Context";
+
     void Context::Initialize(Napi::Env env)
     {
         Napi::HandleScope scope{env};

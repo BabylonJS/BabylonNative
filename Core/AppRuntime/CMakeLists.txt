@@ -27,3 +27,4 @@ target_compile_definitions(AppRuntime
 
 set_property(TARGET AppRuntime PROPERTY FOLDER Core)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+
