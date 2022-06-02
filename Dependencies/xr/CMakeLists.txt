@@ -48,6 +48,7 @@ if (APPLE)
     set_target_properties(xr PROPERTIES
         XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
     )
+    set_property(TARGET xr PROPERTY UNITY_BUILD false)
 endif()
 
 if (ANDROID)
