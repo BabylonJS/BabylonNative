@@ -74,6 +74,10 @@ disable_warnings(bgfx)
 disable_warnings(bimg)
 disable_warnings(bx)
 
+if(APPLE)
+    set_property(TARGET bgfx PROPERTY UNITY_BUILD false)
+endif()
+
 # -------------------------------- glslang --------------------------------
 # Dependencies: none
 set(BUILD_EXTERNAL OFF CACHE BOOL "")
