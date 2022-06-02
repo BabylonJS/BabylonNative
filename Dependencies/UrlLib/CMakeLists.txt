@@ -40,6 +40,7 @@ target_link_libraries(UrlLib
 if(APPLE)
     set_target_properties(UrlLib PROPERTIES
         XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
+    set_property(TARGET UrlLib PROPERTY UNITY_BUILD false)
 endif()
 
 
