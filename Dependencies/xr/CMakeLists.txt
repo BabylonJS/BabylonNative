@@ -36,6 +36,7 @@ else()
         "Source/OpenXR/SceneUnderstanding.cpp"
         "Source/OpenXR/XrInput.h"
         "Source/OpenXR/XrInput.cpp")
+    set_property(TARGET openxr_loader PROPERTY UNITY_BUILD false)
 endif()
 
 add_library(xr ${SOURCES})

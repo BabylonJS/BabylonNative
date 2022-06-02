@@ -34,9 +34,6 @@ set(SOURCES
     "Source/SafeTimespanGuarantor.cpp"
     "Source/Texture.cpp")
 
-if (ENABLE_UNITY_BUILD)
-    enable_unity_build(Graphics SOURCES)
-endif()
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
 
@@ -72,9 +69,7 @@ target_compile_definitions(Graphics
 
 set_property(TARGET Graphics PROPERTY FOLDER Core)
 
-if (NOT ENABLE_UNITY_BUILD)
-    source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
-endif()
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
 if(APPLE)
     # compile as objc++

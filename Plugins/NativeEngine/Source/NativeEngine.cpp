@@ -20,7 +20,7 @@
 
 // STB_IMAGE_RESIZE_IMPLEMENTATION will define implementation in stb_image_resize.h. Many .cpp can include it 
 // but only one can define implementation or linking errors will popup.
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
+//#define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include <stb/stb_image_resize.h>
 #include <bx/math.h>
 

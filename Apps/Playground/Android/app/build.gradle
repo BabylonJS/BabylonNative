@@ -47,7 +47,8 @@ android {
                     "-DARCORE_LIBPATH=${arcore_libpath}/jni",
                     "-DANDROID_JSENGINE_LIBPATH=${jsEngineLibDir}",
                     "-DANDROID_JSENGINE_LIBNAME=${jsEngineLibName}",
-                    "-DANDROID_JSENGINE_INCPATH=${jsEngineIncDir}"
+                    "-DANDROID_JSENGINE_INCPATH=${jsEngineIncDir}",
+                    "-DCMAKE_UNITY_BUILD=true"
             }
         }
         ndk {

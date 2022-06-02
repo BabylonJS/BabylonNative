@@ -11,6 +11,7 @@
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb/stb_truetype.h"
+#undef STB_TRUETYPE_IMPLEMENTATION
 #include "Canvas.h"
 #include "Context.h"
 #include "MeasureText.h"
