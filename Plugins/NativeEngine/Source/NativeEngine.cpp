@@ -686,7 +686,7 @@ namespace Babylon
                         return uv;
                     }
                     #define texture(x,y) texture(x, flip(y))
-                    #define textureLod(x,y,z) texture(x, flip(y), z)
+                    #define textureLod(x,y,z) textureLod(x, flip(y), z)
                     #define SHADER_NAME)";
 
                 patchedVertexSource.replace(shaderNameDefine, shaderNameDefineStr.length(), textureSamplerFunctions);
