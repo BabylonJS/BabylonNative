@@ -32,7 +32,7 @@ jobs:
     - script: |
         mkdir buildmacOS
         cd buildmacOS
-        cmake .. -GXcode
+        cmake .. -GXcode -DCMAKE_UNITY_BUILD=${UNITY_BUILD}
       displayName: 'Generate macOS solution'
 
     - task: Xcode@5

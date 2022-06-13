@@ -18,9 +18,6 @@
 #include <bimg/decode.h>
 #include <bimg/encode.h>
 
-// STB_IMAGE_RESIZE_IMPLEMENTATION will define implementation in stb_image_resize.h. Many .cpp can include it 
-// but only one can define implementation or linking errors will popup.
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include <stb/stb_image_resize.h>
 #include <bx/math.h>
 
@@ -310,13 +307,18 @@ namespace Babylon
         // Initialize the JavaScript side.
         Napi::HandleScope scope{env};
 
+        auto limits = bgfx::getCaps()->limits;
+
         // clang-format off
         Napi::Function func = DefineClass(
             env,
             JS_CLASS_NAME,
             {
                 // This must match the version in nativeEngine.ts
-                StaticValue("PROTOCOL_VERSION", Napi::Number::From(env, 5)),
+                StaticValue("PROTOCOL_VERSION", Napi::Number::From(env, 6)),
+
+                StaticValue("CAPS_LIMITS_MAX_TEXTURE_SIZE", Napi::Number::From(env, limits.maxTextureSize)),
+                StaticValue("CAPS_LIMITS_MAX_TEXTURE_LAYERS", Napi::Number::From(env, limits.maxTextureLayers)),
 
                 StaticValue("TEXTURE_NEAREST_NEAREST", Napi::Number::From(env, TextureSampling::NEAREST_NEAREST)),
                 StaticValue("TEXTURE_LINEAR_LINEAR", Napi::Number::From(env, TextureSampling::LINEAR_LINEAR)),
@@ -1680,12 +1682,19 @@ namespace Babylon
         m_commandStream = Napi::ObjectWrap<NativeDataStream>::Unwrap(jsCommandStream.Get("_nativeDataStream").As<Napi::Object>());
     }
 
-    void NativeEngine::SubmitCommands(const Napi::CallbackInfo&)
+    void NativeEngine::SubmitCommands(const Napi::CallbackInfo& info)
     {
-        NativeDataStream::Reader reader = m_commandStream->GetReader();
-        while (reader.CanRead())
+        try
         {
-            std::invoke(reader.ReadPointer<CommandFunctionPointerT>(), this, reader);
+            NativeDataStream::Reader reader = m_commandStream->GetReader();
+            while (reader.CanRead())
+            {
+                std::invoke(reader.ReadPointer<CommandFunctionPointerT>(), this, reader);
+            }
+        }
+        catch (const std::exception& exception)
+        {
+            throw Napi::Error::New(info.Env(), exception);
         }
     }
 

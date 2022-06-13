@@ -27,6 +27,10 @@ if (project.hasProperty("GRAPHICS_API")) {
     }
 }
 
+def unity_build = "false"
+if (project.hasProperty("UNITY_BUILD")) {
+    unity_build = project.property("UNITY_BUILD")
+}
 def arcore_libpath = "${buildDir}/arcore-native"
 
 configurations { natives }
@@ -47,7 +51,8 @@ android {
                     "-DARCORE_LIBPATH=${arcore_libpath}/jni",
                     "-DANDROID_JSENGINE_LIBPATH=${jsEngineLibDir}",
                     "-DANDROID_JSENGINE_LIBNAME=${jsEngineLibName}",
-                    "-DANDROID_JSENGINE_INCPATH=${jsEngineIncDir}"
+                    "-DANDROID_JSENGINE_INCPATH=${jsEngineIncDir}",
+                    "-DCMAKE_UNITY_BUILD=${unity_build}"
             }
         }
         ndk {

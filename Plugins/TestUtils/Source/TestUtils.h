@@ -1,3 +1,4 @@
+#pragma once
 #include <napi/env.h>
 
 #if _MSC_VER

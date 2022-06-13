@@ -296,10 +296,36 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
+    EnableMouseInPointer(true);
 
     RefreshBabylon(hWnd);
 
     return TRUE;
+}
+
+void ProcessMouseButtons(tagPOINTER_BUTTON_CHANGE_TYPE changeType, int x, int y)
+{
+    switch (changeType)
+    {
+        case POINTER_CHANGE_FIRSTBUTTON_DOWN:
+            nativeInput->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
+            break;
+        case POINTER_CHANGE_FIRSTBUTTON_UP:
+            nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
+            break;
+        case POINTER_CHANGE_SECONDBUTTON_DOWN:
+            nativeInput->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
+            break;
+        case POINTER_CHANGE_SECONDBUTTON_UP:
+            nativeInput->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
+            break;
+        case POINTER_CHANGE_THIRDBUTTON_DOWN:
+            nativeInput->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
+            break;
+        case POINTER_CHANGE_THIRDBUTTON_UP:
+            nativeInput->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
+            break;
+    }
 }
 
 //
@@ -389,91 +415,84 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
             break;
         }
-        case WM_MOUSEMOVE:
-        {
-            if (nativeInput != nullptr)
-            {
-                nativeInput->MouseMove(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-            }
-            break;
-        }
-        case WM_LBUTTONDOWN:
-        {
-            if (buttonRefCount++ == 0)
-            {
-                SetCapture(hWnd);
-            }
-            if (nativeInput != nullptr)
-            {
-                nativeInput->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-            }
-            break;
-        }
-        case WM_LBUTTONUP:
-        {
-            if (nativeInput != nullptr)
-            {
-                nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-            }
-            if (--buttonRefCount == 0)
-            {
-                ReleaseCapture();
-            }
-            break;
-        }
-        case WM_MBUTTONDOWN:
-        {
-            if (buttonRefCount++ == 0)
-            {
-                SetCapture(hWnd);
-            }
-            if (nativeInput != nullptr)
-            {
-                nativeInput->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-            }
-            break;
-        }
-        case WM_MBUTTONUP:
-        {
-            if (nativeInput != nullptr)
-            {
-                nativeInput->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-            }
-            if (--buttonRefCount == 0)
-            {
-                ReleaseCapture();
-            }
-            break;
-        }
-        case WM_RBUTTONDOWN:
-        {
-            if (buttonRefCount++ == 0)
-            {
-                SetCapture(hWnd);
-            }
-            if (nativeInput != nullptr)
-            {
-                nativeInput->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-            }
-            break;
-        }
-        case WM_RBUTTONUP:
-        {
-            if (nativeInput != nullptr)
-            {
-                nativeInput->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-            }
-            if (--buttonRefCount == 0)
-            {
-                ReleaseCapture();
-            }
-            break;
-        }
-        case WM_MOUSEWHEEL:
+        case WM_POINTERWHEEL:
         {
             if (nativeInput != nullptr)
             {
                 nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, GET_WHEEL_DELTA_WPARAM(wParam));
+            }
+            break;
+        }
+        case WM_POINTERDOWN:
+        {
+            if (nativeInput != nullptr)
+            {
+                POINTER_INFO info;
+                auto pointerId = GET_POINTERID_WPARAM(wParam);
+
+                if (GetPointerInfo(pointerId, &info))
+                {
+                    auto x = GET_X_LPARAM(lParam);
+                    auto y = GET_Y_LPARAM(lParam);
+
+                    if (info.pointerType == PT_MOUSE)
+                    {
+                        ProcessMouseButtons(info.ButtonChangeType, x, y);
+                    }
+                    else
+                    {
+                        nativeInput->TouchDown(pointerId, x, y);
+                    }
+                }
+            }
+            break;
+        }
+        case WM_POINTERUPDATE:
+        {
+            if (nativeInput != nullptr)
+            {
+                POINTER_INFO info;
+                auto pointerId = GET_POINTERID_WPARAM(wParam);
+
+                if (GetPointerInfo(pointerId, &info))
+                {
+                    auto x = GET_X_LPARAM(lParam);
+                    auto y = GET_Y_LPARAM(lParam);
+
+                    if (info.pointerType == PT_MOUSE)
+                    {
+                        ProcessMouseButtons(info.ButtonChangeType, x, y);
+                        nativeInput->MouseMove(x, y);
+                    }
+                    else
+                    {
+                        nativeInput->TouchMove(pointerId, x, y);
+                    }
+                }
+            }
+            break;
+        }
+        case WM_POINTERUP:
+        {
+            if (nativeInput != nullptr)
+            {
+                POINTER_INFO info;
+                auto pointerId = GET_POINTERID_WPARAM(wParam);
+
+                if (GetPointerInfo(pointerId, &info))
+                {
+                    auto x = GET_X_LPARAM(lParam);
+                    auto y = GET_Y_LPARAM(lParam);
+
+                    if (info.pointerType == PT_MOUSE)
+                    {
+                        ProcessMouseButtons(info.ButtonChangeType, x, y);
+                    }
+                    else
+                    {
+                        nativeInput->TouchUp(pointerId, x, y);
+                    }
+                }
             }
             break;
         }
