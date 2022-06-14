@@ -308,7 +308,7 @@ void App::OnPointerReleased(CoreWindow^, PointerEventArgs^ args)
 void App::OnPointerWheelChanged(CoreWindow^, PointerEventArgs^ args)
 {
     const auto delta = args->CurrentPoint->Properties->MouseWheelDelta;
-    m_nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, delta);
+    m_nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -delta);
 }
 
 void App::OnKeyPressed(CoreWindow^ window, KeyEventArgs^ args)

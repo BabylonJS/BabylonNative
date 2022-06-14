@@ -246,7 +246,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 - (void)scrollWheel:(NSEvent *) theEvent {
     if (nativeInput)
     {
-        nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, theEvent.deltaY);
+        nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -theEvent.deltaY);
     }
 }
 
