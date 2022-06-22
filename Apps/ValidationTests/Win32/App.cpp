@@ -66,6 +66,7 @@ namespace
         graphicsConfig.Window = hWnd;
         graphicsConfig.Width = static_cast<size_t>(TEST_WIDTH);
         graphicsConfig.Height = static_cast<size_t>(TEST_HEIGHT);
+        graphicsConfig.MSAASamples = 4;
 
         device = Babylon::Graphics::Device::Create(graphicsConfig);
         update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));

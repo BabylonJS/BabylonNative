@@ -26,16 +26,8 @@ namespace Babylon::Graphics
 
         auto& init = m_state.Bgfx.InitState;
         init.type = s_bgfxRenderType;
-        init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY;
+        init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY;
         if (s_bgfxFlipAfterRender) init.resolution.reset |= BGFX_RESET_FLIP_AFTER_RENDER;
-
-        // Disable MSAA on iOS and Android for now.
-        // See https://github.com/BabylonJS/BabylonNative/issues/507
-        // and https://github.com/BabylonJS/BabylonReactNative/issues/215
-        // and https://github.com/bkaradzic/bgfx/issues/2620
-#if TARGET_OS_IPHONE || defined(ANDROID)
-        init.resolution.reset &= ~BGFX_RESET_MSAA_X4;
-#endif
 
         init.callback = &m_bgfxCallback;
         init.platformData = {};
@@ -68,6 +60,29 @@ namespace Babylon::Graphics
         m_state.Resolution.Width = width;
         m_state.Resolution.Height = height;
         UpdateBgfxResolution();
+    }
+
+    void DeviceImpl::SetMSAA(uint8_t MSAASamples)
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Bgfx.Dirty = true;
+        auto& init = m_state.Bgfx.InitState;
+        init.resolution.reset &= ~BGFX_RESET_MSAA_MASK;
+        switch (MSAASamples)
+        {
+            case 2:
+                init.resolution.reset |= BGFX_RESET_MSAA_X2;
+                break;
+            case 4:
+                init.resolution.reset |= BGFX_RESET_MSAA_X4;
+                break;
+            case 8:
+                init.resolution.reset |= BGFX_RESET_MSAA_X8;
+                break;
+            case 16:
+                init.resolution.reset |= BGFX_RESET_MSAA_X16;
+                break;
+        }
     }
 
     size_t DeviceImpl::GetWidth() const

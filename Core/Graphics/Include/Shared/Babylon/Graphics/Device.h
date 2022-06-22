@@ -74,6 +74,7 @@ namespace Babylon::Graphics
 
         void UpdateWindow(const WindowConfiguration& config);
         void UpdateSize(size_t width, size_t height);
+        void UpdateMSAA(uint8_t MSAASamples);
 
         void AddToJavaScript(Napi::Env);
         Napi::Value CreateContext(Napi::Env);
