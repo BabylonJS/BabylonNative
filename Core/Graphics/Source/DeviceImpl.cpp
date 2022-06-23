@@ -62,13 +62,13 @@ namespace Babylon::Graphics
         UpdateBgfxResolution();
     }
 
-    void DeviceImpl::SetMSAA(uint8_t MSAASamples)
+    void DeviceImpl::SetMSAA(uint8_t value)
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
         auto& init = m_state.Bgfx.InitState;
         init.resolution.reset &= ~BGFX_RESET_MSAA_MASK;
-        switch (MSAASamples)
+        switch (value)
         {
             case 2:
                 init.resolution.reset |= BGFX_RESET_MSAA_X2;

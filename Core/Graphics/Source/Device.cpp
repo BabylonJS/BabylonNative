@@ -47,9 +47,9 @@ namespace Babylon::Graphics
         m_impl->Resize(width, height);
     }
 
-    void Device::UpdateMSAA(uint8_t MSAASamples)
+    void Device::UpdateMSAA(uint8_t value)
     {
-        m_impl->SetMSAA(MSAASamples);
+        m_impl->SetMSAA(value);
     }
 
     void Device::AddToJavaScript(Napi::Env env)
