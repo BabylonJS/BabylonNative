@@ -1495,12 +1495,12 @@ namespace Babylon
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), bgfx::getStats()->width);
+        return Napi::Value::From(info.Env(), m_graphicsContext.GetWidth());
     }
 
     Napi::Value NativeEngine::GetRenderHeight(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), bgfx::getStats()->height);
+        return Napi::Value::From(info.Env(), m_graphicsContext.GetHeight());
     }
 
     void NativeEngine::SetViewPort(const Napi::CallbackInfo& info)

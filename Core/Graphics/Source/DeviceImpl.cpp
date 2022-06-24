@@ -27,6 +27,7 @@ namespace Babylon::Graphics
         auto& init = m_state.Bgfx.InitState;
         init.type = s_bgfxRenderType;
         init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY;
+        init.resolution.maxFrameLatency = 1;
         if (s_bgfxFlipAfterRender) init.resolution.reset |= BGFX_RESET_FLIP_AFTER_RENDER;
 
         init.callback = &m_bgfxCallback;
@@ -323,6 +324,7 @@ namespace Babylon::Graphics
             auto& res = m_state.Bgfx.InitState.resolution;
             bgfx::reset(res.width, res.height, res.reset);
             bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
+            bgfx::frame();
 
             m_state.Bgfx.Dirty = false;
         }
