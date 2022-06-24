@@ -645,7 +645,7 @@ namespace Babylon
         const uint32_t byteOffset = info[2].As<Napi::Number>().Uint32Value();
         const uint32_t byteLength = info[3].As<Napi::Number>().Uint32Value();
 
-        vertexBuffer->Update(info.Env(), gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength));
+        vertexBuffer->Update(info.Env(), gsl::make_span(static_cast<uint8_t*>(bytes.Data()), byteLength), byteOffset);
     }
 
     // Change VS output coordinate system

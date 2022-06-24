@@ -60,7 +60,7 @@ namespace Babylon
         m_disposed = true;
     }
 
-    void VertexBuffer::Update(Napi::Env env, gsl::span<uint8_t> bytes)
+    void VertexBuffer::Update(Napi::Env env, gsl::span<uint8_t> bytes, size_t byteOffset)
     {
         if (!m_dynamic)
         {
@@ -75,7 +75,22 @@ namespace Babylon
         else
         {
             // Buffer hasn't been finalized yet, all that's necessary is to swap out the bytes.
-            m_bytes = {bytes.data(), bytes.data() + bytes.size()};
+            if (m_bytes && !(*m_bytes).empty())
+            {
+                // update a portion of the vertex buffer bytes
+                memcpy((*m_bytes).data() + byteOffset, bytes.data(), bytes.size());
+            }
+            else
+            {
+                if (byteOffset != 0)
+                {
+                    throw Napi::Error::New(env, "Cannot update a vertex buffer that has no data yet.");
+                }
+                else
+                {
+                    m_bytes = {bytes.data(), bytes.data() + bytes.size()};
+                }
+            }
         }
     }
 
