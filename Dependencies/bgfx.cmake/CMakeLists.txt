@@ -21,6 +21,10 @@ if( APPLE AND NOT XCODE )
 	set( CMAKE_CXX_FLAGS "-ObjC++" )
 endif()
 
+if (MSVC AND (MSVC_VERSION GREATER_EQUAL 1914))
+    add_compile_options("/Zc:__cplusplus")
+endif()
+
 option( BGFX_BUILD_TOOLS                "Build bgfx tools."                             ON  )
 option( BGFX_BUILD_EXAMPLES             "Build bgfx examples."                          ON  )
 option( BGFX_INSTALL                    "Create installation target."                   ON  )
