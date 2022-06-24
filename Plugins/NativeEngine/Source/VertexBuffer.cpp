@@ -75,7 +75,7 @@ namespace Babylon
         else
         {
             // Buffer hasn't been finalized yet, all that's necessary is to swap out the bytes.
-            if (m_bytes && !(*m_bytes).empty())
+            if (m_bytes && !m_bytes->empty())
             {
                 // update a portion of the vertex buffer bytes
                 memcpy((*m_bytes).data() + byteOffset, bytes.data(), bytes.size());
