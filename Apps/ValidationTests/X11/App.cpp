@@ -70,7 +70,8 @@ namespace
         graphicsConfig.Window = window;
         graphicsConfig.Width = static_cast<size_t>(width);
         graphicsConfig.Height = static_cast<size_t>(height);
-
+        graphicsConfig.MSAASamples = 4;
+        
         device = Babylon::Graphics::Device::Create(graphicsConfig);
         update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
         device->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
