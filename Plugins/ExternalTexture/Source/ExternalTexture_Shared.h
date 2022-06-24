@@ -27,7 +27,7 @@ namespace Babylon::Plugins
         return m_impl->Height();
     }
 
-    Napi::Promise ExternalTexture::AddToContextAsync(Napi::Env& env) const
+    Napi::Promise ExternalTexture::AddToContextAsync(Napi::Env env) const
     {
         Graphics::DeviceContext& context = Graphics::DeviceContext::GetFromJavaScript(env);
         JsRuntime& runtime = JsRuntime::GetFromJavaScript(env);
