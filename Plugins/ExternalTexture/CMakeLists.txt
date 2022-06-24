@@ -6,6 +6,11 @@ set(SOURCES
 add_library(ExternalTexture ${SOURCES})
 warnings_as_errors(ExternalTexture)
 
+if (APPLE)
+    set_target_properties(ExternalTexture PROPERTIES
+        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
+endif()
+
 target_include_directories(ExternalTexture
     PUBLIC "Include"
     PRIVATE "Source")

@@ -125,7 +125,6 @@ namespace Babylon::Plugins
         Impl(Graphics::TextureT ptr)
         {
             m_ptr = ptr;
-            [m_ptr retain];
 
             if (m_ptr.textureType != MTLTextureType2D)
             {
@@ -150,11 +149,6 @@ namespace Babylon::Plugins
                     break;
                 }
             }
-        }
-        
-        ~Impl()
-        {
-            [m_ptr release];
         }
         
         uint16_t Width() const
