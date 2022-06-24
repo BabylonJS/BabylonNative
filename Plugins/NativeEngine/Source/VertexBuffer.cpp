@@ -77,8 +77,12 @@ namespace Babylon
             // Buffer hasn't been finalized yet, all that's necessary is to swap out the bytes.
             if (m_bytes && !m_bytes->empty())
             {
+                if (byteOffset + bytes.size() > m_bytes->size())
+                {
+                    throw Napi::Error::New(env, "VertexBuffer Update: buffer overflow.");
+                }
                 // update a portion of the vertex buffer bytes
-                memcpy((*m_bytes).data() + byteOffset, bytes.data(), bytes.size());
+                memcpy(m_bytes->data() + byteOffset, bytes.data(), bytes.size());
             }
             else
             {
