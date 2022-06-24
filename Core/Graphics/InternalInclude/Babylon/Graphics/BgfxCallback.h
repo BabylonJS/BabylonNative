@@ -27,6 +27,7 @@ namespace Babylon::Graphics
 
         void AddScreenShotCallback(std::function<void(std::vector<uint8_t>)> callback);
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
+        void trace(const char* _filePath, uint16_t _line, const char* _format, ...);
 
     protected:
         void fatal(const char* filePath, uint16_t line, bgfx::Fatal::Enum code, const char* str) override;
@@ -41,7 +42,6 @@ namespace Babylon::Graphics
         void captureBegin(uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, bool yflip) override;
         void captureEnd() override;
         void captureFrame(const void* _data, uint32_t _size) override;
-        void trace(const char* _filePath, uint16_t _line, const char* _format, ...);
 
     private:
         std::function<void(const char* output)> m_outputFunction;
