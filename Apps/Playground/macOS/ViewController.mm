@@ -89,6 +89,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     graphicsConfig.Window = engineView;
     graphicsConfig.Width = width;
     graphicsConfig.Height = height;
+    graphicsConfig.MSAASamples = 4;
     device = Babylon::Graphics::Device::Create(graphicsConfig);
     update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
 
