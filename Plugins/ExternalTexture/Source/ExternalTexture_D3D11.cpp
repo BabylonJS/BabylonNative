@@ -1,12 +1,8 @@
 #include <Babylon/Plugins/ExternalTexture.h>
-#include <Babylon/Graphics/Device.h>
 #include <Babylon/Graphics/DeviceContext.h>
-#include <Babylon/Graphics/RendererType.h>
 #include <Babylon/Graphics/Texture.h>
 #include <napi/napi_pointer.h>
 #include <bx/bx.h>
-#include <bgfx/bgfx.h>
-#include <dxgiformat.h>
 #include <winrt/base.h>
 
 // clang-format off
