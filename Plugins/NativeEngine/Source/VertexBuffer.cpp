@@ -69,6 +69,10 @@ namespace Babylon
 
         if (bgfx::isValid(m_dynamicHandle))
         {
+            if (byteOffset)
+            {
+                throw Napi::Error::New(env, "Dynamic VertexBuffer Update: byte offset unimplemented.");
+            }
             // Buffer was already created, do a real update operation.
             bgfx::update(m_dynamicHandle, 0, bgfx::copy(bytes.data(), static_cast<uint32_t>(bytes.size())));
         }
