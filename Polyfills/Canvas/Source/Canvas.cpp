@@ -83,7 +83,7 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::SetWidth(const Napi::CallbackInfo&, const Napi::Value& value)
     {
-        auto width = value.As<Napi::Number>().Uint32Value();
+        auto width = static_cast<uint16_t>(value.As<Napi::Number>().Uint32Value());
         if (width != m_width && width)
         {
             m_width = width;
@@ -111,8 +111,8 @@ namespace Babylon::Polyfills::Internal
         if (m_dirty)
         {
             std::array<bgfx::TextureHandle, 2> textures{
-                bgfx::createTexture2D(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
-                bgfx::createTexture2D(static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT)};
+                bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
+                bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT)};
 
             std::array<bgfx::Attachment, textures.size()> attachments{};
             for (size_t idx = 0; idx < attachments.size(); ++idx)
@@ -121,12 +121,12 @@ namespace Babylon::Polyfills::Internal
             }
             auto handle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
             assert(handle.idx != bgfx::kInvalidHandle);
-            m_frameBuffer = std::make_unique<Graphics::FrameBuffer>(m_graphicsContext, handle, static_cast<uint16_t>(m_width), static_cast<uint16_t>(m_height), false, false, false);
+            m_frameBuffer = std::make_unique<Graphics::FrameBuffer>(m_graphicsContext, handle, m_width, m_height, false, false, false);
             m_dirty = false;
 
-            if (m_textureData)
+            if (m_texture)
             {
-                m_textureData.reset();
+                m_texture.reset();
             }
 
             return true;
@@ -136,20 +136,13 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
     {
-        if (!m_textureData)
+        if (!m_texture)
         {
-            m_textureData = std::make_unique<Graphics::TextureData>();
+            m_texture = std::make_unique<Graphics::Texture>();
         }
 
-        auto& textureData{*m_textureData};
-
-        assert(m_frameBuffer->Handle().idx != bgfx::kInvalidHandle);
-        textureData.Handle = bgfx::getTexture(m_frameBuffer->Handle());
-        textureData.OwnsHandle = false;
-        textureData.Width = m_width;
-        textureData.Height = m_height;
-
-        return Napi::Pointer<Graphics::TextureData>::Create(info.Env(), m_textureData.get());
+        m_texture->Attach(bgfx::getTexture(m_frameBuffer->Handle()), false, m_width, m_height);
+        return Napi::Pointer<Graphics::Texture>::Create(info.Env(), m_texture.get());
     }
 
     Napi::Value NativeCanvas::ParseColor(const Napi::CallbackInfo& info)
@@ -163,7 +156,7 @@ namespace Babylon::Polyfills::Internal
     void NativeCanvas::Dispose()
     {
         m_frameBuffer.reset();
-        m_textureData.reset();
+        m_texture.reset();
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
