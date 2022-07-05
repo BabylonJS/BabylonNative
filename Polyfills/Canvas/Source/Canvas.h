@@ -83,13 +83,13 @@ namespace Babylon::Polyfills::Internal
         void Dispose(const Napi::CallbackInfo& info);
         void Dispose();
 
-        uint32_t m_width{1};
-        uint32_t m_height{1};
+        uint16_t m_width{1};
+        uint16_t m_height{1};
 
         Graphics::DeviceContext& m_graphicsContext;
 
         std::unique_ptr<Graphics::FrameBuffer> m_frameBuffer;
-        std::unique_ptr<Graphics::TextureData> m_textureData{};
+        std::unique_ptr<Graphics::Texture> m_texture{};
         bool m_dirty{};
 
         void FlushGraphicResources() override;

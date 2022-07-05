@@ -99,10 +99,10 @@ namespace Babylon
 
             void UpdateVideoTexture(const Napi::CallbackInfo& info)
             {
-                const auto& texture = *info[0].As<Napi::Pointer<Graphics::TextureData>>().Get();
+                const auto& texture = *info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
                 auto videoObject = NativeVideo::Unwrap(info[1].As<Napi::Object>());
 
-                videoObject->UpdateTexture(texture.Handle);
+                videoObject->UpdateTexture(texture.Handle());
             }
         };
 

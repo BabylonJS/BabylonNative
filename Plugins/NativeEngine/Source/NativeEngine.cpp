@@ -184,21 +184,19 @@ namespace Babylon
             return image;
         }
 
-        void LoadTextureFromImage(Graphics::TextureData* texture, bimg::ImageContainer* image, bool srgb)
+        void LoadTextureFromImage(Graphics::Texture* texture, bimg::ImageContainer* image, bool srgb)
         {
-            if (bgfx::isValid(texture->Handle))
+            if (texture->IsValid())
             {
-                if (texture->Width != image->m_width || texture->Height != image->m_height)
+                if (texture->Width() != image->m_width || texture->Height() != image->m_height)
                 {
                     throw std::runtime_error{"Cannot update texture from image of different size"};
                 }
             }
             else
             {
-                uint64_t flags{(srgb ? BGFX_TEXTURE_SRGB : BGFX_TEXTURE_NONE) | BGFX_SAMPLER_NONE};
-                texture->Handle = bgfx::createTexture2D(static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), (image->m_numMips > 1), 1, Cast(image->m_format), flags);
-                texture->Width = image->m_width;
-                texture->Height = image->m_height;
+                uint64_t flags = srgb ? BGFX_TEXTURE_SRGB : BGFX_TEXTURE_NONE;
+                texture->Create2D(static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), (image->m_numMips > 1), 1, Cast(image->m_format), flags);
             }
 
             for (uint8_t mip = 0; mip < image->m_numMips; ++mip)
@@ -215,32 +213,30 @@ namespace Babylon
                     }
 
                     const bgfx::Memory* mem{bgfx::makeRef(imageMip.m_data, imageMip.m_size, releaseFn, image)};
-                    bgfx::updateTexture2D(texture->Handle, 0, mip, 0, 0, static_cast<uint16_t>(imageMip.m_width), static_cast<uint16_t>(imageMip.m_height), mem);
+                    texture->Update2D(0, mip, 0, 0, static_cast<uint16_t>(imageMip.m_width), static_cast<uint16_t>(imageMip.m_height), mem);
                 }
             }
         }
 
-        void LoadCubeTextureFromImages(Graphics::TextureData* texture, std::vector<bimg::ImageContainer*>& images, bool srgb)
+        void LoadCubeTextureFromImages(Graphics::Texture* texture, std::vector<bimg::ImageContainer*>& images, bool srgb)
         {
             const bimg::ImageContainer* firstImage{images.front()};
             assert(firstImage->m_width == firstImage->m_height);
             uint32_t size{firstImage->m_width};
 
-            if (bgfx::isValid(texture->Handle))
+            if (texture->IsValid())
             {
-                if (texture->Width != size || texture->Height != size)
+                if (texture->Width() != size || texture->Height() != size)
                 {
                     throw std::runtime_error{"Cannot update texture from image of different size"};
                 }
             }
             else
             {
-                bool hasMips{images.size() > 6 || firstImage->m_numMips > 1};
-                bgfx::TextureFormat::Enum format{Cast(firstImage->m_format)};
-                uint64_t flags{(srgb ? BGFX_TEXTURE_SRGB : BGFX_TEXTURE_NONE) | BGFX_SAMPLER_NONE};
-                texture->Handle = bgfx::createTextureCube(static_cast<uint16_t>(size), hasMips, 1, format, flags);
-                texture->Width = size;
-                texture->Height = size;
+                bool hasMips = images.size() > 6 || firstImage->m_numMips > 1;
+                bgfx::TextureFormat::Enum format = Cast(firstImage->m_format);
+                uint64_t flags = srgb ? BGFX_TEXTURE_SRGB : BGFX_TEXTURE_NONE;
+                texture->CreateCube(static_cast<uint16_t>(size), hasMips, 1, format, flags);
             }
 
             if (images.size() > 6)
@@ -258,7 +254,7 @@ namespace Babylon
                         }};
 
                         const bgfx::Memory* mem{bgfx::makeRef(image->m_data, image->m_size, releaseFn, image)};
-                        bgfx::updateTextureCube(texture->Handle, 0, side, mip, 0, 0, static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), mem);
+                        texture->UpdateCube(0, side, mip, 0, 0, static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), mem);
                     }
                 }
             }
@@ -281,22 +277,11 @@ namespace Babylon
                             }
 
                             const bgfx::Memory* mem{bgfx::makeRef(imageMip.m_data, imageMip.m_size, releaseFn, image)};
-                            bgfx::updateTextureCube(texture->Handle, 0, side, mip, 0, 0, static_cast<uint16_t>(imageMip.m_width), static_cast<uint16_t>(imageMip.m_height), mem);
+                            texture->UpdateCube(0, side, mip, 0, 0, static_cast<uint16_t>(imageMip.m_width), static_cast<uint16_t>(imageMip.m_height), mem);
                         }
                     }
                 }
             }
-        }
-
-        void CreateBlitTexture(Graphics::TextureData* texture)
-        {
-            if (texture->CreationFlags & BGFX_TEXTURE_BLIT_DST)
-            {
-                return;
-            }
-            bgfx::destroy(texture->Handle);
-            texture->Handle = bgfx::createTexture2D((uint16_t)texture->Width, (uint16_t)texture->Height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_BLIT_DST);
-            texture->CreationFlags |= BGFX_TEXTURE_BLIT_DST;
         }
 
         using CommandFunctionPointerT = void(NativeEngine::*)(NativeDataStream::Reader&);
@@ -1041,13 +1026,13 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateTexture(const Napi::CallbackInfo& info)
     {
-        Graphics::TextureData* texture = new Graphics::TextureData();
-        return Napi::Pointer<Graphics::TextureData>::Create(info.Env(), texture, Napi::NapiPointerDeleter(texture));
+        Graphics::Texture* texture = new Graphics::Texture();
+        return Napi::Pointer<Graphics::Texture>::Create(info.Env(), texture, Napi::NapiPointerDeleter(texture));
     }
 
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::Pointer<Graphics::TextureData>>().Get();
+        const auto texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         const auto data = info[1].As<Napi::TypedArray>();
         const auto generateMips = info[2].As<Napi::Boolean>().Value();
         const auto invertY = info[3].As<Napi::Boolean>().Value();
@@ -1077,26 +1062,15 @@ namespace Babylon
 
     void NativeEngine::CopyTexture(const Napi::CallbackInfo& info)
     {
-        const auto textureDestination = info[0].As<Napi::Pointer<Graphics::TextureData>>().Get();
-        const auto textureSource = info[1].As<Napi::Pointer<Graphics::TextureData>>().Get();
-        const auto handleSource{textureSource->Handle};
-        // Make sure destination texture is valid for BLIT and is not created from static datas.
-        CreateBlitTexture(textureDestination);
-        const auto handleDestination{ textureDestination->Handle };
+        const auto textureDestination = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        const auto textureSource = info[1].As<Napi::Pointer<Graphics::Texture>>().Get();
 
-        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, handleSource, handleDestination, cancellationSource{ m_cancellationSource }]() {
-        return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, handleSource, handleDestination, updateToken{m_update.GetUpdateToken()}, cancellationSource{m_cancellationSource}]()
+        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, textureDestination, textureSource, cancellationSource = m_cancellationSource]()
+        {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, textureDestination, textureSource, updateToken = m_update.GetUpdateToken(), cancellationSource = m_cancellationSource]()
             {
-                // JS Thread
-                if (bgfx::getCaps()->supported & BGFX_CAPS_TEXTURE_BLIT)
-                {
-                    bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
-                    GetBoundFrameBuffer(*encoder).Blit(*encoder, handleDestination, 0, 0, handleSource);
-                }
-                else
-                {
-                    throw std::runtime_error{ "This platform does not support texture blit." };
-                }
+                bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
+                GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }](const arcana::expected<void, std::exception_ptr>& result) {
                 if (!cancellationSource->cancelled() && result.has_error())
                 {
@@ -1108,7 +1082,7 @@ namespace Babylon
 
     void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)
     {
-        const auto texture{info[0].As<Napi::Pointer<Graphics::TextureData>>().Get()};
+        const auto texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
         const auto data{info[1].As<Napi::TypedArray>()};
         const auto width{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
         const auto height{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
@@ -1129,7 +1103,7 @@ namespace Babylon
 
     void NativeEngine::LoadRawTexture2DArray(const Napi::CallbackInfo& info)
     {
-        const auto texture{info[0].As<Napi::Pointer<Graphics::TextureData>>().Get()};
+        const auto texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
         const auto data = info[1].As<Napi::TypedArray>();
         const auto width{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
         const auto height{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
@@ -1148,11 +1122,8 @@ namespace Babylon
             throw Napi::Error::New(Env(), "Texture 2D array currently do not support invert Y.");
         }
 
-        texture->Width = width;
-        texture->Height = height;
         uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE | BGFX_CAPS_TEXTURE_2D_ARRAY};
-        texture->Handle = bgfx::createTexture2D(width, height, generateMips, depth, Cast(format), flags);
-        texture->OwnsHandle = true;
+        texture->Create2D(width, height, generateMips, depth, Cast(format), flags);
 
         if (!data.IsNull())
         {
@@ -1170,14 +1141,14 @@ namespace Babylon
             {
                 uint8_t* begin = dataPtr + (textureSize * static_cast<size_t>(i));
                 const bgfx::Memory* dataCopy = bgfx::copy(begin, static_cast<uint32_t>(textureSize)); // This is required since BGFX must manage the data the memory.
-                bgfx::updateTexture2D(texture->Handle, i, 0, 0, 0, width, height, dataCopy);
+                texture->Update2D(i, 0, 0, 0, width, height, dataCopy);
             }
         }
     }
 
     void NativeEngine::LoadCubeTexture(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::Pointer<Graphics::TextureData>>().Get();
+        const auto texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         const auto data{info[1].As<Napi::Array>()};
         const auto generateMips{info[2].As<Napi::Boolean>().Value()};
         const auto invertY{info[3].As<Napi::Boolean>().Value()};
@@ -1217,7 +1188,7 @@ namespace Babylon
 
     void NativeEngine::LoadCubeTextureWithMips(const Napi::CallbackInfo& info)
     {
-        const auto texture = info[0].As<Napi::Pointer<Graphics::TextureData>>().Get();
+        const auto texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         const auto data{info[1].As<Napi::Array>()};
         const auto invertY{info[2].As<Napi::Boolean>().Value()};
         const auto srgb{info[3].As<Napi::Boolean>().Value()};
@@ -1261,34 +1232,38 @@ namespace Babylon
 
     Napi::Value NativeEngine::GetTextureWidth(const Napi::CallbackInfo& info)
     {
-        const Graphics::TextureData* texture = info[0].As<Napi::Pointer<Graphics::TextureData>>().Get();
-        return Napi::Value::From(info.Env(), texture->Width);
+        const Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        return Napi::Value::From(info.Env(), texture->Width());
     }
 
     Napi::Value NativeEngine::GetTextureHeight(const Napi::CallbackInfo& info)
     {
-        const Graphics::TextureData* texture = info[0].As<Napi::Pointer<Graphics::TextureData>>().Get();
-        return Napi::Value::From(info.Env(), texture->Height);
+        const Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        return Napi::Value::From(info.Env(), texture->Height());
     }
 
     void NativeEngine::SetTextureSampling(NativeDataStream::Reader& data)
     {
-        auto& texture = *data.ReadPointer<Graphics::TextureData>();
+        auto& texture = *data.ReadPointer<Graphics::Texture>();
         const auto value = data.ReadUint32();
 
-        texture.Flags &= ~(BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT);
-        texture.Flags |= value;
+        uint32_t flags = texture.SamplerFlags();
+
+        flags &= ~(BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MIP_POINT);
+        flags |= value;
 
         // Disable anisotropy if either min/mag are point.
-        if ((texture.Flags & BGFX_SAMPLER_MIN_POINT) != 0 || (texture.Flags & BGFX_SAMPLER_MAG_POINT) != 0)
+        if ((flags & BGFX_SAMPLER_MIN_POINT) != 0 || (flags & BGFX_SAMPLER_MAG_POINT) != 0)
         {
-            texture.Flags &= ~(BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC);
+            flags &= ~(BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC);
         }
+
+        texture.SamplerFlags(flags);
     }
 
     void NativeEngine::SetTextureWrapMode(NativeDataStream::Reader& data)
     {
-        auto& texture = *data.ReadPointer<Graphics::TextureData>();
+        auto& texture = *data.ReadPointer<Graphics::Texture>();
         auto addressModeU = data.ReadUint32();
         auto addressModeV = data.ReadUint32();
         auto addressModeW = data.ReadUint32();
@@ -1297,27 +1272,29 @@ namespace Babylon
             (addressModeV << BGFX_SAMPLER_V_SHIFT) +
             (addressModeW << BGFX_SAMPLER_W_SHIFT);
 
-        texture.Flags &= ~(BGFX_SAMPLER_U_MASK | BGFX_SAMPLER_V_MASK | BGFX_SAMPLER_W_MASK);
-        texture.Flags |= addressMode;
+        uint32_t flags = texture.SamplerFlags();
+        flags &= ~(BGFX_SAMPLER_U_MASK | BGFX_SAMPLER_V_MASK | BGFX_SAMPLER_W_MASK);
+        flags |= addressMode;
+        texture.SamplerFlags(flags);
     }
 
     void NativeEngine::SetTextureAnisotropicLevel(NativeDataStream::Reader& data)
     {
-        auto& texture = *data.ReadPointer<Graphics::TextureData>();
+        auto& texture = *data.ReadPointer<Graphics::Texture>();
         const auto value = data.ReadUint32();
 
-        texture.Flags &= ~(BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC);
+        uint32_t flags = texture.SamplerFlags();
+
+        flags &= ~(BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC);
 
         // Enable anisotropy only if neither min/mag are point.
         // Note that bgfx currently only supports no anisotropy or max anisotropy.
-        if ((texture.Flags & BGFX_SAMPLER_MIN_POINT) == 0 && (texture.Flags & BGFX_SAMPLER_MAG_POINT) == 0 && value > 1)
+        if ((flags & BGFX_SAMPLER_MIN_POINT) == 0 && (flags & BGFX_SAMPLER_MAG_POINT) == 0 && value > 1)
         {
-            texture.Flags |= BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
-
-            // There is a bug in bgfx that causes the samplers to do the wrong thing in DirectX.
-            // Remove this once https://github.com/bkaradzic/bgfx/pull/2609 is merged.
-            texture.Flags &= ~BGFX_SAMPLER_MIP_MASK;
+            flags |= BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
         }
+
+        texture.SamplerFlags(flags);
     }
 
     void NativeEngine::SetTexture(NativeDataStream::Reader& data)
@@ -1325,21 +1302,21 @@ namespace Babylon
         bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
 
         const UniformInfo* uniformInfo = data.ReadPointer<UniformInfo>();
-        const Graphics::TextureData* texture = data.ReadPointer<Graphics::TextureData>();
+        const Graphics::Texture* texture = data.ReadPointer<Graphics::Texture>();
 
-        encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle, texture->Flags);
+        encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle(), texture->SamplerFlags());
     }
 
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
-        Graphics::TextureData* texture = info[0].As<Napi::Pointer<Graphics::TextureData>>().Get();
-        m_graphicsContext.RemoveTexture(texture->Handle);
+        Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        m_graphicsContext.RemoveTexture(texture->Handle());
         texture->Dispose();
     }
 
     Napi::Value NativeEngine::CreateFrameBuffer(const Napi::CallbackInfo& info)
     {
-        Graphics::TextureData* texture = info[0].As<Napi::Pointer<Graphics::TextureData>>().Get();
+        Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
         uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
         bgfx::TextureFormat::Enum format = static_cast<bgfx::TextureFormat::Enum>(info[3].As<Napi::Number>().Uint32Value());
@@ -1379,10 +1356,8 @@ namespace Babylon
             frameBufferHandle = bgfx::createFrameBuffer(width, height, format, BGFX_TEXTURE_RT);
         }
 
-        texture->Handle = bgfx::getTexture(frameBufferHandle);
-        texture->OwnsHandle = false;
-
-        m_graphicsContext.AddTexture(texture->Handle, width, height, generateMips, 1, format);
+        texture->Attach(bgfx::getTexture(frameBufferHandle), false, width, height);
+        m_graphicsContext.AddTexture(texture->Handle(), width, height, generateMips, 1, format);
 
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_graphicsContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
         return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
