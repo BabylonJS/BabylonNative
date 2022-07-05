@@ -12,7 +12,7 @@
 
 @property (nonatomic, copy) RCTDirectEventBlock onSnapshotDataReturned;
 @property (nonatomic, assign) BOOL isTransparent;
-
+@property (nonatomic, assign) NSNumber* antiAliasing;
 
 @end
 
@@ -39,6 +39,10 @@
         [self setOpaque:YES];
     }
     self.isTransparent = isTransparent;
+}
+
+- (void)setMSAA:(NSNumber*)value {
+    [BabylonNativeInterop updateMSAA:value];
 }
 
 - (void)setBounds:(CGRect)bounds {
@@ -116,6 +120,10 @@
 
 RCT_CUSTOM_VIEW_PROPERTY(isTransparent, NSNumber*, EngineView){
     [view setIsTransparentFlag:json];
+}
+
+RCT_CUSTOM_VIEW_PROPERTY(antiAliasing, NSNumber*, EngineView){
+    [view setMSAA:json];
 }
 
 RCT_EXPORT_MODULE(EngineViewManager)

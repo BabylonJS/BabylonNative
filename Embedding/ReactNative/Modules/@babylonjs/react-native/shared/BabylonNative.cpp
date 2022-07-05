@@ -88,6 +88,7 @@ namespace BabylonNative
                 g_graphics->UpdateWindow(windowConfig);
                 g_graphics->UpdateSize(width, height);
             }
+            g_graphics->UpdateMSAA(mMSAAValue);
 
             g_graphics->EnableRendering();
             m_isRenderingEnabled = true;
@@ -105,6 +106,15 @@ namespace BabylonNative
             {
                 m_resolveInitPromise();
             });
+        }
+
+        void UpdateMSAA(uint8_t value)
+        {
+            mMSAAValue = value;
+            if (g_graphics)
+            {
+                g_graphics->UpdateMSAA(value);
+            }
         }
 
         void RenderView()
@@ -225,6 +235,7 @@ namespace BabylonNative
         std::optional<Babylon::Plugins::NativeXr> m_nativeXr{};
 
         std::shared_ptr<bool> m_isXRActive{};
+        uint8_t mMSAAValue{};
     };
 
     namespace
@@ -258,6 +269,18 @@ namespace BabylonNative
         else
         {
             throw std::runtime_error{ "UpdateView must not be called before Initialize." };
+        }
+    }
+
+    void UpdateMSAA(uint8_t value)
+    {
+        if (auto nativeModule{ g_nativeModule.lock() })
+        {
+            nativeModule->UpdateMSAA(value);
+        }
+        else
+        {
+            throw std::runtime_error{ "UpdateMSAA must not be called before Initialize." };
         }
     }
 

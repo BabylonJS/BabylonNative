@@ -28,6 +28,11 @@ public final class EngineViewManager extends SimpleViewManager<EngineView> {
         view.setIsTransparent(isTransparent);
     }
 
+    @ReactProp(name = "antiAliasing")
+    public void setAntiAliasing(EngineView view, Integer value) {
+        view.setAntiAliasing(value);
+    }
+
     @NonNull
     @Override
     protected EngineView createViewInstance(@NonNull ThemedReactContext reactContext) {

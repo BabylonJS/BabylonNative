@@ -37,6 +37,7 @@ namespace winrt::BabylonReactNative::implementation {
         auto nativeProps = winrt::single_threaded_map<hstring, ViewManagerPropertyType>();
 
         nativeProps.Insert(L"isTransparent", ViewManagerPropertyType::Boolean);
+        nativeProps.Insert(L"antiAliasing", ViewManagerPropertyType::Number);
 
         return nativeProps.GetView();
     }

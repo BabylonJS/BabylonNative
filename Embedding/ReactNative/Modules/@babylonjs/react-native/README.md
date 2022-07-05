@@ -90,4 +90,12 @@ e.g.
 <EngineView style={{flex: 1}} camera={camera} isTransparent={true} />
 ```
 
+To configure anti-aliasing, a property called `antiAliasing` can be changed to a value of 0 or 1 (disable anti-aliasing, default), 2, 4, 8 or 16 (anti-aliasing samples).
+
+e.g.
+
+```tsx
+<EngineView style={{flex: 1}} camera={camera} MSAA={4} />
+```
+
 Note: Currently only one `EngineView` can be active at any given time. Multi-view will be supported in a future release.

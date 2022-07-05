@@ -5,6 +5,14 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../../Apps/Playground/Playground/node_module
 set(PACKAGED_LIBS
     astc-codec
     astc
+    etc1
+    etc2
+    nvtt
+    squish
+    pvrtc
+    iqa
+    edtaa3
+    tinyexr
     bgfx
     bimg
     bx

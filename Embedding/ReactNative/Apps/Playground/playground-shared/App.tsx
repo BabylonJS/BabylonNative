@@ -140,7 +140,7 @@ const EngineScreen: FunctionComponent<ViewProps> = (props: ViewProps) => {
                 <Image style={{flex: 1}} source={{uri: snapshotData }} />
               </View>
             }
-            <EngineView camera={camera} onInitialized={onInitialized} displayFrameRate={true} />
+            <EngineView camera={camera} onInitialized={onInitialized} displayFrameRate={true} antiAliasing={2}/>
             <Slider style={{position: 'absolute', minHeight: 50, margin: 10, left: 0, right: 0, bottom: 0}} minimumValue={0.2} maximumValue={2} step={0.01} value={defaultScale} onValueChange={setScale} />
             <Text style={{color: 'yellow',  position: 'absolute', margin: 3}}>{trackingStateToString(trackingState)}</Text>
           </View>

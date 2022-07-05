@@ -72,6 +72,11 @@ extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInter
     BabylonNative::UpdateView(window, width, height);
 }
 
+extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_00024BabylonNative_updateMSAA(JNIEnv* env, jclass obj, jint value)
+{
+    BabylonNative::UpdateMSAA(static_cast<uint8_t>(value));
+}
+
 extern "C" JNIEXPORT void JNICALL Java_com_babylonreactnative_BabylonNativeInterop_00024BabylonNative_renderView(JNIEnv* env, jclass obj)
 {
     BabylonNative::RenderView();

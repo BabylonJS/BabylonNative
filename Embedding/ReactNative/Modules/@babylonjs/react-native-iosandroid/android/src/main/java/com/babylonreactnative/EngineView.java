@@ -64,6 +64,9 @@ public final class EngineView extends FrameLayout implements SurfaceHolder.Callb
         this.reactEventDispatcher = reactContext.getNativeModule(UIManagerModule.class).getEventDispatcher();
     }
 
+    public void setAntiAliasing(Integer value) {
+        BabylonNativeInterop.updateMSAA(value);
+    }
     // ------------------------------------
     // TextureView related
 

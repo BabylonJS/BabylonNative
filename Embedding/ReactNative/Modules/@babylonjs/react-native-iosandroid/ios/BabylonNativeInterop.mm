@@ -63,6 +63,10 @@ static NSMutableArray* activeTouches = [NSMutableArray new];
     }
 }
 
++ (void)updateMSAA:(NSNumber*)value {
+    BabylonNative::UpdateMSAA([value unsignedCharValue]);
+}
+
 + (void)renderView {
     BabylonNative::RenderView();
 }
