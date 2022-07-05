@@ -35,7 +35,10 @@ namespace Babylon::Graphics
         UpdateToken& operator=(const UpdateToken& other) = delete;
 
         UpdateToken(UpdateToken&&) noexcept = default;
-        UpdateToken& operator=(UpdateToken&& other) noexcept = default;
+
+        // The move assignment of `SafeTimespanGuarantor::SafetyGuarantee` is marked as delete.
+        // See https://github.com/Microsoft/GSL/issues/705.
+        //UpdateToken& operator=(UpdateToken&& other) = delete;
 
         bgfx::Encoder* GetEncoder();
 
