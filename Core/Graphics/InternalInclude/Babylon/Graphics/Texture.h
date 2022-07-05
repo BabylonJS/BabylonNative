@@ -13,8 +13,8 @@ namespace Babylon::Graphics
         Texture(const Texture&) = delete;
         Texture& operator=(const Texture&) = delete;
 
-        Texture(Texture&&) = delete;
-        Texture& operator=(Texture&&) = delete;
+        Texture(Texture&&) noexcept = delete;
+        Texture& operator=(Texture&&) noexcept = delete;
 
         void Dispose();
 
@@ -31,7 +31,6 @@ namespace Babylon::Graphics
         bgfx::TextureHandle Handle() const;
         uint16_t Width() const;
         uint16_t Height() const;
-        uint64_t Flags() const;
 
         uint32_t SamplerFlags() const;
         void SamplerFlags(uint32_t);
@@ -41,7 +40,6 @@ namespace Babylon::Graphics
         bool m_ownsHandle{false};
         uint16_t m_width{0};
         uint16_t m_height{0};
-        uint64_t m_flags{BGFX_TEXTURE_NONE};
         uint32_t m_samplerFlags{BGFX_SAMPLER_NONE};
     };
 }

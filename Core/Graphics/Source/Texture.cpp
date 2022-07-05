@@ -32,7 +32,6 @@ namespace Babylon::Graphics
         m_ownsHandle = true;
         m_width = width;
         m_height = height;
-        m_flags = flags;
     }
 
     void Texture::Update2D(uint16_t layer, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch)
@@ -48,7 +47,6 @@ namespace Babylon::Graphics
         m_ownsHandle = true;
         m_width = size;
         m_height = size;
-        m_flags = flags;
     }
 
     void Texture::UpdateCube(uint16_t layer, uint8_t side, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch)
@@ -80,11 +78,6 @@ namespace Babylon::Graphics
     uint16_t Texture::Height() const
     {
         return m_height;
-    }
-
-    uint64_t Texture::Flags() const
-    {
-        return m_flags;
     }
 
     uint32_t Texture::SamplerFlags() const
