@@ -12,8 +12,9 @@ namespace Babylon
             : m_dispatcher{dispatcher}
         {
         }
+
         continuation_scheduler(const continuation_scheduler&) = delete;
-        continuation_scheduler(continuation_scheduler&&) = delete;
+        continuation_scheduler& operator=(const continuation_scheduler&) = delete;
 
         template<typename CallableT>
         void operator()(CallableT&& callable)

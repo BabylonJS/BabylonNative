@@ -10,7 +10,11 @@ namespace Babylon::Plugins
         class Impl;
 
         NativeXr(const NativeXr& other) = default;
-        NativeXr(NativeXr&&) = default;
+        NativeXr& operator=(const NativeXr& other) = default;
+
+        NativeXr(NativeXr&&) noexcept = default;
+        NativeXr& operator=(NativeXr&&) noexcept = default;
+
         ~NativeXr();
 
         static NativeXr Initialize(Napi::Env env);

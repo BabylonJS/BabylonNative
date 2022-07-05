@@ -15,9 +15,6 @@ namespace Babylon
         VertexArray(const VertexArray&) = delete;
         VertexArray& operator=(const VertexArray&) = delete;
 
-        VertexArray(VertexArray&&) = delete;
-        VertexArray& operator=(VertexArray&&) = delete;
-
         void Dispose();
 
         bool RecordIndexBuffer(IndexBuffer* indexBuffer);

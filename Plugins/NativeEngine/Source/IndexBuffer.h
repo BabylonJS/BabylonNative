@@ -17,9 +17,6 @@ namespace Babylon
         IndexBuffer(const IndexBuffer&) = delete;
         IndexBuffer& operator=(const IndexBuffer&) = delete;
 
-        IndexBuffer(IndexBuffer&&) = delete;
-        IndexBuffer& operator=(IndexBuffer&&) = delete;
-
         void Dispose();
 
         void Update(Napi::Env env, gsl::span<uint8_t> bytes, uint32_t startIndex);

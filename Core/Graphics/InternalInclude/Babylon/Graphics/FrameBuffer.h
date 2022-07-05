@@ -24,7 +24,7 @@ namespace Babylon::Graphics
         ~FrameBuffer();
 
         FrameBuffer(const FrameBuffer&) = delete;
-        FrameBuffer(FrameBuffer&&) = delete;
+        FrameBuffer& operator=(const FrameBuffer&) = delete;
 
         bgfx::FrameBufferHandle Handle() const;
         uint16_t Width() const;

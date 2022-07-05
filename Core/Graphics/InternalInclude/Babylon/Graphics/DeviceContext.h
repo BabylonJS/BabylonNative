@@ -32,7 +32,10 @@ namespace Babylon::Graphics
     {
     public:
         UpdateToken(const UpdateToken& other) = delete;
-        UpdateToken(UpdateToken&&) = default;
+        UpdateToken& operator=(const UpdateToken& other) = delete;
+
+        UpdateToken(UpdateToken&&) noexcept = default;
+        UpdateToken& operator=(UpdateToken&& other) noexcept = default;
 
         bgfx::Encoder* GetEncoder();
 

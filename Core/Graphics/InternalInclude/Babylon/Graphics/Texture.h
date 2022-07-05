@@ -13,9 +13,6 @@ namespace Babylon::Graphics
         Texture(const Texture&) = delete;
         Texture& operator=(const Texture&) = delete;
 
-        Texture(Texture&&) noexcept = delete;
-        Texture& operator=(Texture&&) noexcept = delete;
-
         void Dispose();
 
         bool IsValid() const;

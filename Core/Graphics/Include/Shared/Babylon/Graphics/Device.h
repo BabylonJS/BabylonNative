@@ -20,9 +20,10 @@ namespace Babylon::Graphics
     {
     public:
         DeviceUpdate(const DeviceUpdate&) = default;
-        DeviceUpdate(DeviceUpdate&&) = default;
         DeviceUpdate& operator=(const DeviceUpdate&) = default;
-        DeviceUpdate& operator=(DeviceUpdate&&) = default;
+
+        DeviceUpdate(DeviceUpdate&&) noexcept = default;
+        DeviceUpdate& operator=(DeviceUpdate&&) noexcept = default;
 
         void Start()
         {

@@ -28,8 +28,10 @@ namespace Babylon::Plugins
 
     private:
         NativeInput(const NativeInput&) = delete;
-        NativeInput(NativeInput&&) = delete;
+        NativeInput& operator=(const NativeInput&) = delete;
+
         NativeInput(Napi::Env);
+
         class Impl;
         std::unique_ptr<Impl> m_impl{};
     };
