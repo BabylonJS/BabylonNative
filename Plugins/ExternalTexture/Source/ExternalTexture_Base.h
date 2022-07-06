@@ -38,6 +38,12 @@ namespace
         }
 
     protected:
+        template<typename T>
+        static bool IsFullMipChain(T mipLevel, T width, T height)
+        {
+            return mipLevel == static_cast<T>(std::floor(std::log2(std::max(width, height)) + 1));
+        }
+
         void UpdateHandles(Babylon::Graphics::TextureT ptr)
         {
             std::scoped_lock lock{m_mutex};

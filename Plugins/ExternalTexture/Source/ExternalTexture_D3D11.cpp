@@ -136,45 +136,26 @@ namespace Babylon::Plugins
     public:
         Impl(Graphics::TextureT ptr)
         {
-            m_ptr.copy_from(ptr);
-
-            D3D11_RESOURCE_DIMENSION type;
-            m_ptr->GetType(&type);
-            if (type != D3D11_RESOURCE_DIMENSION_TEXTURE2D)
-            {
-                throw std::runtime_error{"Unsupported texture type"};
-            }
-
-            D3D11_TEXTURE2D_DESC desc;
-            m_ptr.as<ID3D11Texture2D>()->GetDesc(&desc);
-            if (desc.MipLevels > 1)
-            {
-                throw std::runtime_error{"Unsupported texture mip levels"};
-            }
-
-            m_width = static_cast<uint16_t>(desc.Width);
-            m_height = static_cast<uint16_t>(desc.Height);
-            m_hasMips = (desc.MipLevels == 0);
-
-            GetFormatAndFlags(desc, m_format, m_flags);
+            Init(ptr);
+            GetInfo(m_width, m_height, m_hasMips, m_format, m_flags);
         }
 
         void Update(Graphics::TextureT ptr)
         {
-            m_ptr.copy_from(ptr);
+            Init(ptr);
 
 #ifndef NDEBUG
-            D3D11_TEXTURE2D_DESC desc;
-            m_ptr.as<ID3D11Texture2D>()->GetDesc(&desc);
-            assert(static_cast<uint16_t>(desc.Width) == m_width);
-            assert(static_cast<uint16_t>(desc.Height) == m_height);
-            assert((desc.MipLevels == 0) == m_hasMips);
-
-            bgfx::TextureFormat::Enum format;
-            uint64_t flags;
-            GetFormatAndFlags(desc, format, flags);
+            uint16_t width{};
+            uint16_t height{};
+            bgfx::TextureFormat::Enum format{bgfx::TextureFormat::Unknown};
+            uint64_t flags{};
+            bool hasMips{};
+            GetInfo(width, height, hasMips, format, flags);
+            assert(width == m_width);
+            assert(height == m_height);
             assert(format == m_format);
             assert(flags == m_flags);
+            assert(hasMips == m_hasMips);
 #endif
 
             UpdateHandles(ptr);
@@ -186,8 +167,32 @@ namespace Babylon::Plugins
         }
 
     private:
-        static void GetFormatAndFlags(const D3D11_TEXTURE2D_DESC& desc, bgfx::TextureFormat::Enum& format, uint64_t& flags)
+        void Init(Graphics::TextureT ptr)
         {
+            m_ptr.copy_from(ptr);
+
+            D3D11_RESOURCE_DIMENSION type;
+            ptr->GetType(&type);
+            if (type != D3D11_RESOURCE_DIMENSION_TEXTURE2D)
+            {
+                throw std::runtime_error{"Unsupported texture type"};
+            }
+        }
+
+        void GetInfo(uint16_t& width, uint16_t& height, bool& hasMips, bgfx::TextureFormat::Enum& format, uint64_t& flags)
+        {
+            D3D11_TEXTURE2D_DESC desc;
+            m_ptr.as<ID3D11Texture2D>()->GetDesc(&desc);
+
+            if (desc.MipLevels == 0 || IsFullMipChain(desc.MipLevels, desc.Width, desc.Height))
+            {
+                hasMips = (desc.MipLevels != 1);
+            }
+            else
+            {
+                throw std::runtime_error{"Unsupported texture mip levels"};
+            }
+
             for (int i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
             {
                 const auto& info = s_textureFormat[i];
@@ -199,12 +204,9 @@ namespace Babylon::Plugins
                         flags |= BGFX_TEXTURE_SRGB;
                     }
 
-                    return;
+                    break;
                 }
             }
-
-            format = bgfx::TextureFormat::Unknown;
-            flags = 0;
         }
 
         winrt::com_ptr<ID3D11Resource> m_ptr{};
