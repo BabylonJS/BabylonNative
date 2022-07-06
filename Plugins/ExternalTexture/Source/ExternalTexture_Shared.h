@@ -71,7 +71,14 @@ namespace Babylon::Plugins
                     auto* texture = new Graphics::Texture{};
                     texture->Attach(handle, true, impl->Width(), impl->Height());
 
-                    auto jsObject = Napi::Pointer<Graphics::Texture>::Create(env, texture, [texture] {
+                    impl->AddHandle(texture->Handle());
+
+                    auto jsObject = Napi::Pointer<Graphics::Texture>::Create(env, texture, [texture, weakImpl = std::weak_ptr{impl}] {
+                        if (auto impl = weakImpl.lock())
+                        {
+                            impl->RemoveHandle(texture->Handle());
+                        }
+
                         delete texture;
                     });
 
@@ -81,5 +88,10 @@ namespace Babylon::Plugins
         });
 
         return promise;
+    }
+
+    void ExternalTexture::Update(Graphics::TextureT ptr)
+    {
+        m_impl->Update(ptr);
     }
 }

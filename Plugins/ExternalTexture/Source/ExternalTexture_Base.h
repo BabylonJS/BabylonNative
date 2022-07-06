@@ -1,0 +1,68 @@
+#pragma once
+
+#include <Babylon/Plugins/ExternalTexture.h>
+#include <bgfx/bgfx.h>
+#include <set>
+#include <cassert>
+
+namespace
+{
+    class ImplBase
+    {
+    public:
+        uint16_t Width() const { return m_width; }
+        uint16_t Height() const { return m_height; }
+        bgfx::TextureFormat::Enum Format() const { return m_format; }
+        bool HasMips() const { return m_hasMips; }
+        uint64_t Flags() const { return m_flags; }
+
+        void AddHandle(bgfx::TextureHandle handle)
+        {
+            std::scoped_lock lock{m_mutex};
+
+            if (!m_handles.insert(handle).second)
+            {
+                assert(!"Failed to insert handle");
+            }
+        }
+
+        void RemoveHandle(bgfx::TextureHandle handle)
+        {
+            std::scoped_lock lock{m_mutex};
+
+            auto it = m_handles.find(handle);
+            if (it != m_handles.end())
+            {
+                m_handles.erase(it);
+            }
+        }
+
+    protected:
+        void UpdateHandles(Babylon::Graphics::TextureT ptr)
+        {
+            std::scoped_lock lock{m_mutex};
+
+            for (auto it = m_handles.begin(); it != m_handles.end(); ++it)
+            {
+                bgfx::overrideInternal(*it, reinterpret_cast<uintptr_t>(ptr));
+            }
+        }
+
+        uint16_t m_width{};
+        uint16_t m_height{};
+        bgfx::TextureFormat::Enum m_format{bgfx::TextureFormat::Unknown};
+        bool m_hasMips{};
+        uint64_t m_flags{};
+
+        struct TextureHandleLess
+        {
+            bool operator()(const bgfx::TextureHandle& a, const bgfx::TextureHandle& b) const
+            {
+                return a.idx < b.idx;
+            }
+        };
+
+        mutable std::mutex m_mutex{};
+        std::set<bgfx::TextureHandle, TextureHandleLess> m_handles{};
+    };
+}
