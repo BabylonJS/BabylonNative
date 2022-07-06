@@ -41,7 +41,7 @@ namespace Babylon
 
     protected:
         JsRuntime(const JsRuntime&) = delete;
-        JsRuntime(JsRuntime&&) = delete;
+        JsRuntime& operator=(const JsRuntime&) = delete;
 
     private:
         JsRuntime(Napi::Env, DispatchFunctionT);

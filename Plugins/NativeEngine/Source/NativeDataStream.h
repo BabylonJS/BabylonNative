@@ -44,9 +44,7 @@ namespace Babylon
         {
         public:
             Reader(const Reader&) = delete;
-            Reader(Reader&&) = delete;
             Reader operator=(const Reader&) = delete;
-            Reader operator=(const Reader&&) = delete;
 
             bool CanRead() const
             {

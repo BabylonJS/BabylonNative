@@ -17,9 +17,6 @@ namespace Babylon
         VertexBuffer(const VertexBuffer&) = delete;
         VertexBuffer& operator=(const VertexBuffer&) = delete;
 
-        VertexBuffer(VertexBuffer&&) = delete;
-        VertexBuffer& operator=(VertexBuffer&&) = delete;
-
         void Dispose();
 
         void Update(Napi::Env env, gsl::span<uint8_t> bytes, size_t byteOffset);

@@ -10,7 +10,11 @@ namespace Babylon::Polyfills
         class Impl;
 
         Canvas(const Canvas& other) = default;
-        Canvas(Canvas&&) = default;
+        Canvas& operator=(const Canvas& other) = default;
+
+        Canvas(Canvas&&) noexcept = default;
+        Canvas& operator=(Canvas&&) noexcept = default;
+
         ~Canvas();
 
         // This instance must live as long as the JS Runtime.

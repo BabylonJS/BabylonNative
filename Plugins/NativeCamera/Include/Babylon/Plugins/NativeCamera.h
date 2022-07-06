@@ -10,8 +10,10 @@ namespace Babylon::Plugins
         class Impl;
 
         Camera(const Camera& other) = default;
-        Camera(Camera&&) = default;
-        ~Camera() = default;
+        Camera& operator=(const Camera& other) = default;
+
+        Camera(Camera&&) noexcept = default;
+        Camera& operator=(Camera&&) noexcept = default;
 
         // Initialization with overrideCameraTexture set to true means the caller
         // is expected to override the camera source texture with a native texture.

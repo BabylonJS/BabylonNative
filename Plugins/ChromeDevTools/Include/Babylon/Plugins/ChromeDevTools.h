@@ -10,8 +10,10 @@ namespace Babylon::Plugins
         class Impl;
 
         ChromeDevTools(const ChromeDevTools&) = default;
-        ChromeDevTools(ChromeDevTools&&) = default;
-        ~ChromeDevTools() = default;
+        ChromeDevTools& operator=(const ChromeDevTools&) = default;
+
+        ChromeDevTools(ChromeDevTools&&) noexcept = default;
+        ChromeDevTools& operator=(ChromeDevTools&&) noexcept = default;
 
         bool SupportsInspector() const;
         void StartInspector(const unsigned short port, const std::string& appName) const;
