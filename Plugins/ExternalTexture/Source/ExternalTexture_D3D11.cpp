@@ -149,7 +149,7 @@ namespace Babylon::Plugins
             m_ptr.copy_from(ptr);
 
             D3D11_RESOURCE_DIMENSION type;
-            ptr->GetType(&type);
+            m_ptr->GetType(&type);
             if (type != D3D11_RESOURCE_DIMENSION_TEXTURE2D)
             {
                 throw std::runtime_error{"Unsupported texture type"};
