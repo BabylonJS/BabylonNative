@@ -143,21 +143,7 @@ namespace Babylon::Plugins
         void Update(Graphics::TextureT ptr)
         {
             Init(ptr);
-
-#ifndef NDEBUG
-            uint16_t width{};
-            uint16_t height{};
-            bgfx::TextureFormat::Enum format{bgfx::TextureFormat::Unknown};
-            uint64_t flags{};
-            bool hasMips{};
-            GetInfo(width, height, hasMips, format, flags);
-            assert(width == m_width);
-            assert(height == m_height);
-            assert(format == m_format);
-            assert(flags == m_flags);
-            assert(hasMips == m_hasMips);
-#endif
-
+            CHECK_INFO();
             UpdateHandles(ptr);
         }
 
@@ -184,7 +170,10 @@ namespace Babylon::Plugins
             D3D11_TEXTURE2D_DESC desc;
             m_ptr.as<ID3D11Texture2D>()->GetDesc(&desc);
 
-            if (desc.MipLevels == 0 || IsFullMipChain(desc.MipLevels, desc.Width, desc.Height))
+            width = static_cast<uint16_t>(desc.Width);
+            height = static_cast<uint16_t>(desc.Height);
+
+            if (desc.MipLevels == 1 || desc.MipLevels == 0 || IsFullMipChain(desc.MipLevels, desc.Width, desc.Height))
             {
                 hasMips = (desc.MipLevels != 1);
             }

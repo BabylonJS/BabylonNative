@@ -5,6 +5,27 @@
 #include <set>
 #include <cassert>
 
+#ifdef NDEBUG
+    #define CHECK_INFO() 
+#else
+    #define CHECK_INFO() \
+        do \
+        { \
+            uint16_t width{}; \
+            uint16_t height{}; \
+            bgfx::TextureFormat::Enum format{bgfx::TextureFormat::Unknown}; \
+            uint64_t flags{}; \
+            bool hasMips{}; \
+            GetInfo(width, height, hasMips, format, flags); \
+            assert(width == m_width); \
+            assert(height == m_height); \
+            assert(format == m_format); \
+            assert(flags == m_flags); \
+            assert(hasMips == m_hasMips); \
+        } \
+        while (false)
+#endif
+
 namespace
 {
     class ImplBase
@@ -38,10 +59,10 @@ namespace
         }
 
     protected:
-        template<typename T>
-        static bool IsFullMipChain(T mipLevel, T width, T height)
+        template<typename T1, typename T2, typename T3>
+        static bool IsFullMipChain(T1 mipLevel, T2 width, T3 height)
         {
-            return mipLevel == static_cast<T>(std::floor(std::log2(std::max(width, height)) + 1));
+            return mipLevel == static_cast<T1>(std::floorf(std::log2f(std::max(static_cast<float>(width), static_cast<float>(height))) + 1));
         }
 
         void UpdateHandles(Babylon::Graphics::TextureT ptr)
