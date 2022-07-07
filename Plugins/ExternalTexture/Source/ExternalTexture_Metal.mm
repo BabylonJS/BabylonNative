@@ -4,6 +4,8 @@
 #include <napi/napi_pointer.h>
 #include <bx/bx.h>
 
+#include "ExternalTexture_Base.h"
+
 // clang-format off
 
 // Copied fom renderer_mtl.cpp
@@ -119,10 +121,43 @@ namespace
 
 namespace Babylon::Plugins
 {
-    class ExternalTexture::Impl
+    class ExternalTexture::Impl final : public ImplBase
     {
     public:
         Impl(Graphics::TextureT ptr)
+        {
+            Init(ptr);
+            GetInfo(m_width, m_height, m_hasMips, m_format, m_flags);
+        }
+        
+        void Update(Graphics::TextureT ptr)
+        {
+            m_ptr = ptr;
+            
+#ifndef NDEBUG
+            uint16_t width{};
+            uint16_t height{};
+            bgfx::TextureFormat::Enum format{bgfx::TextureFormat::Unknown};
+            uint64_t flags{};
+            bool hasMips{};
+            GetInfo(width, height, hasMips, format, flags);
+            assert(width == m_width);
+            assert(height == m_height);
+            assert(format == m_format);
+            assert(flags == m_flags);
+            assert(hasMips == m_hasMips);
+#endif
+            
+            UpdateHandles(ptr);
+        }
+        
+        uintptr_t Ptr() const
+        {
+            return reinterpret_cast<uintptr_t>(m_ptr);
+        }
+        
+    private:
+        void Init(Graphics::TextureT ptr)
         {
             m_ptr = ptr;
 
@@ -130,64 +165,39 @@ namespace Babylon::Plugins
             {
                 throw std::runtime_error{"Unsupported texture type"};
             }
+        }
 
-            m_width = static_cast<uint16_t>(m_ptr.width);
-            m_height = static_cast<uint16_t>(m_ptr.height);
-            m_hasMips = m_ptr.mipmapLevelCount > 1;
+        void GetInfo(uint16_t& width, uint16_t& height, bool& hasMips, bgfx::TextureFormat::Enum& format, uint64_t& flags)
+        {
+            if (m_ptr.mipmapLevelCount == 1 || IsFullMipChain(m_ptr.mipmapLevelCount, m_ptr.width, m_ptr.height))
+            {
+                hasMips = (m_ptr.mipmapLevelCount != 1);
+            }
+            else
+            {
+                throw std::runtime_error{"Unsupported texture mip levels"};
+            }
 
+            width = static_cast<uint16_t>(m_ptr.width);
+            height = static_cast<uint16_t>(m_ptr.height);
+            
             const auto pixelFormat = m_ptr.pixelFormat;
             for (size_t i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
             {
                 const auto& info = s_textureFormat[i];
                 if (info.m_fmt == pixelFormat || info.m_fmtSrgb == pixelFormat)
                 {
-                    m_format = static_cast<bgfx::TextureFormat::Enum>(i);
+                    format = static_cast<bgfx::TextureFormat::Enum>(i);
                     if (info.m_fmtSrgb == pixelFormat)
                     {
-                        m_flags |= BGFX_TEXTURE_SRGB;
+                        flags |= BGFX_TEXTURE_SRGB;
                     }
                     break;
                 }
             }
         }
         
-        uint16_t Width() const
-        {
-            return m_width;
-        }
-
-        uint16_t Height() const
-        {
-            return m_height;
-        }
-
-        bgfx::TextureFormat::Enum Format() const
-        {
-            return m_format;
-        }
-
-        bool HasMips() const
-        {
-            return m_hasMips;
-        }
-
-        uint64_t Flags() const
-        {
-            return m_flags;
-        }
-
-        uintptr_t Ptr() const
-        {
-            return reinterpret_cast<uintptr_t>(m_ptr);
-        }
-        
-    private:
         id<MTLTexture> m_ptr;
-        uint16_t m_width{};
-        uint16_t m_height{};
-        bool m_hasMips{};
-        bgfx::TextureFormat::Enum m_format{bgfx::TextureFormat::Unknown};
-        uint64_t m_flags{};
     };
 }
 

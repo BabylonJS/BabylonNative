@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Babylon/Plugins/ExternalTexture.h>
+#include <Babylon/Graphics/RendererType.h>
 #include <bgfx/bgfx.h>
 #include <set>
 #include <cassert>
@@ -50,7 +50,10 @@ namespace
 
             for (auto it = m_handles.begin(); it != m_handles.end(); ++it)
             {
-                bgfx::overrideInternal(*it, reinterpret_cast<uintptr_t>(ptr));
+                if (bgfx::overrideInternal(*it, reinterpret_cast<uintptr_t>(ptr)) == 0)
+                {
+                    assert(!"Failed to override texture");
+                }
             }
         }
 
