@@ -5,27 +5,6 @@
 #include <set>
 #include <cassert>
 
-#ifdef NDEBUG
-    #define CHECK_INFO() 
-#else
-    #define CHECK_INFO() \
-        do \
-        { \
-            uint16_t width{}; \
-            uint16_t height{}; \
-            bgfx::TextureFormat::Enum format{bgfx::TextureFormat::Unknown}; \
-            uint64_t flags{}; \
-            bool hasMips{}; \
-            GetInfo(width, height, hasMips, format, flags); \
-            assert(width == m_width); \
-            assert(height == m_height); \
-            assert(format == m_format); \
-            assert(flags == m_flags); \
-            assert(hasMips == m_hasMips); \
-        } \
-        while (false)
-#endif
-
 namespace
 {
     class ImplBase
@@ -84,6 +63,7 @@ namespace
         bool m_hasMips{};
         uint64_t m_flags{};
 
+    private:
         struct TextureHandleLess
         {
             bool operator()(const bgfx::TextureHandle& a, const bgfx::TextureHandle& b) const

@@ -14,40 +14,22 @@ namespace Babylon::Plugins
     class ExternalTexture::Impl final extends ImplBase
     {
     public:
-        Impl(Graphics::TextureT)
+        Impl(Graphics::TextureT ptr);
+        void Update(Graphics::TextureT ptr);
+        uintptr_t Ptr() const;
+
+    private:
+        void Init(Graphics::TextureT ptr)
         {
             throw std::runtime_error{"not implemented"};
         }
 
-        uint16_t Width() const
+        void GetInfo(uint16_t& width, uint16_t& height, bool& hasMips, bgfx::TextureFormat::Enum& format, uint64_t& flags)
         {
             throw std::runtime_error{"not implemented"};
         }
 
-        uint16_t Height() const
-        {
-            throw std::runtime_error{"not implemented"};
-        }
-
-        bgfx::TextureFormat::Enum Format() const
-        {
-            throw std::runtime_error{"not implemented"};
-        }
-
-        bool HasMips() const
-        {
-            throw std::runtime_error{"not implemented"};
-        }
-
-        uint64_t Flags() const
-        {
-            throw std::runtime_error{"not implemented"};
-        }
-
-        uintptr_t Ptr() const
-        {
-            throw std::runtime_error{"not implemented"};
-        }
+        unsigned int m_ptr;
     };
 }
 

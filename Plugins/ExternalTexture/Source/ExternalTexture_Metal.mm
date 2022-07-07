@@ -124,23 +124,9 @@ namespace Babylon::Plugins
     class ExternalTexture::Impl final : public ImplBase
     {
     public:
-        Impl(Graphics::TextureT ptr)
-        {
-            Init(ptr);
-            GetInfo(m_width, m_height, m_hasMips, m_format, m_flags);
-        }
-        
-        void Update(Graphics::TextureT ptr)
-        {
-            m_ptr = ptr;
-            CHECK_INFO();
-            UpdateHandles(ptr);
-        }
-        
-        uintptr_t Ptr() const
-        {
-            return reinterpret_cast<uintptr_t>(m_ptr);
-        }
+        Impl(Graphics::TextureT ptr);
+        void Update(Graphics::TextureT ptr);
+        uintptr_t Ptr() const;
         
     private:
         void Init(Graphics::TextureT ptr)
