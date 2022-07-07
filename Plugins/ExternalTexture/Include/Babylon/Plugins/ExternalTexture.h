@@ -9,7 +9,7 @@ namespace Babylon::Plugins
     class ExternalTexture final
     {
     public:
-        // Must call from the Graphics thread.
+        // NOTE: Must call from the Graphics thread.
         ExternalTexture(Graphics::TextureT);
         ~ExternalTexture();
 
@@ -33,6 +33,7 @@ namespace Babylon::Plugins
 
         // Updates to a new texture.
         // Texture attributes (width, height, format, etc.) must match.
+        // NOTE: Must call from the Graphics thread.
         void Update(Graphics::TextureT);
 
     private:
