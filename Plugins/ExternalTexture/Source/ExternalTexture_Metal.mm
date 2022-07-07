@@ -133,21 +133,7 @@ namespace Babylon::Plugins
         void Update(Graphics::TextureT ptr)
         {
             m_ptr = ptr;
-            
-#ifndef NDEBUG
-            uint16_t width{};
-            uint16_t height{};
-            bgfx::TextureFormat::Enum format{bgfx::TextureFormat::Unknown};
-            uint64_t flags{};
-            bool hasMips{};
-            GetInfo(width, height, hasMips, format, flags);
-            assert(width == m_width);
-            assert(height == m_height);
-            assert(format == m_format);
-            assert(flags == m_flags);
-            assert(hasMips == m_hasMips);
-#endif
-            
+            CHECK_INFO();
             UpdateHandles(ptr);
         }
         
