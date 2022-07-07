@@ -10,7 +10,7 @@ namespace Babylon::Plugins
 
     void ExternalTexture::Impl::Update(Graphics::TextureT ptr)
     {
-        m_ptr = ptr;
+        Init(ptr);
 
 #ifndef NDEBUG
         uint16_t width{};
@@ -27,11 +27,6 @@ namespace Babylon::Plugins
 #endif
 
         UpdateHandles(ptr);
-    }
-
-    uintptr_t ExternalTexture::Impl::Ptr() const
-    {
-        return reinterpret_cast<uintptr_t>(m_ptr);
     }
 
     ExternalTexture::ExternalTexture(Graphics::TextureT ptr)

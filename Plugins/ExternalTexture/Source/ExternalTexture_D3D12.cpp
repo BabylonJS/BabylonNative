@@ -135,8 +135,13 @@ namespace Babylon::Plugins
     {
     public:
         Impl(Graphics::TextureT ptr);
+
         void Update(Graphics::TextureT ptr);
-        uintptr_t Ptr() const;
+
+        uintptr_t Ptr() const
+        {
+            return reinterpret_cast<uintptr_t>(m_ptr.get());
+        }
 
     private:
         void Init(Graphics::TextureT ptr)

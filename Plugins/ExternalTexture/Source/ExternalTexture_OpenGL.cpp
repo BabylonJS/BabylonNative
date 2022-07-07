@@ -15,8 +15,13 @@ namespace Babylon::Plugins
     {
     public:
         Impl(Graphics::TextureT ptr);
+
         void Update(Graphics::TextureT ptr);
-        uintptr_t Ptr() const;
+
+        uintptr_t Ptr() const
+        {
+            throw std::runtime_error{"not implemented"};
+        }
 
     private:
         void Init(Graphics::TextureT ptr)
@@ -28,8 +33,6 @@ namespace Babylon::Plugins
         {
             throw std::runtime_error{"not implemented"};
         }
-
-        unsigned int m_ptr;
     };
 }
 
