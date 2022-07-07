@@ -7,9 +7,11 @@
 #include <bx/bx.h>
 #include <bgfx/bgfx.h>
 
+#include "ExternalTexture_Base.h"
+
 namespace Babylon::Plugins
 {
-    class ExternalTexture::Impl
+    class ExternalTexture::Impl final extends ImplBase
     {
     public:
         Impl(Graphics::TextureT)
