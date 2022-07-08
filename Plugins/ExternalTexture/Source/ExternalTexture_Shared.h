@@ -26,7 +26,7 @@ namespace Babylon::Plugins
         assert(hasMips == m_hasMips);
 #endif
 
-        UpdateHandles(ptr);
+        UpdateHandles(Ptr());
     }
 
     ExternalTexture::ExternalTexture(Graphics::TextureT ptr)

@@ -4,6 +4,7 @@
 #include <bgfx/bgfx.h>
 #include <set>
 #include <cassert>
+#include <cmath>
 
 namespace
 {
@@ -41,16 +42,16 @@ namespace
         template<typename T1, typename T2, typename T3>
         static bool IsFullMipChain(T1 mipLevel, T2 width, T3 height)
         {
-            return mipLevel == static_cast<T1>(std::floorf(std::log2f(std::max(static_cast<float>(width), static_cast<float>(height))) + 1));
+            return mipLevel == static_cast<T1>(std::floor(std::log2(std::max(static_cast<float>(width), static_cast<float>(height))) + 1));
         }
 
-        void UpdateHandles(Babylon::Graphics::TextureT ptr)
+        void UpdateHandles(uintptr_t ptr)
         {
             std::scoped_lock lock{m_mutex};
 
             for (auto it = m_handles.begin(); it != m_handles.end(); ++it)
             {
-                if (bgfx::overrideInternal(*it, reinterpret_cast<uintptr_t>(ptr)) == 0)
+                if (bgfx::overrideInternal(*it, ptr) == 0)
                 {
                     assert(!"Failed to override texture");
                 }

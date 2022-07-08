@@ -11,12 +11,12 @@
 
 namespace Babylon::Plugins
 {
-    class ExternalTexture::Impl final extends ImplBase
+    class ExternalTexture::Impl final : public ImplBase
     {
     public:
-        Impl(Graphics::TextureT ptr);
+        Impl(Graphics::TextureT);
 
-        void Update(Graphics::TextureT ptr);
+        void Update(Graphics::TextureT);
 
         uintptr_t Ptr() const
         {
@@ -24,12 +24,12 @@ namespace Babylon::Plugins
         }
 
     private:
-        void Init(Graphics::TextureT ptr)
+        void Init(Graphics::TextureT)
         {
             throw std::runtime_error{"not implemented"};
         }
 
-        void GetInfo(uint16_t& width, uint16_t& height, bool& hasMips, bgfx::TextureFormat::Enum& format, uint64_t& flags)
+        void GetInfo(uint16_t&, uint16_t&, bool&, bgfx::TextureFormat::Enum&, uint64_t&)
         {
             throw std::runtime_error{"not implemented"};
         }
