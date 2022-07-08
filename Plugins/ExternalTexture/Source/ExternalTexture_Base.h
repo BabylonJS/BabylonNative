@@ -6,9 +6,9 @@
 #include <cassert>
 #include <cmath>
 
-namespace
+namespace Babylon::Plugins
 {
-    class ImplBase
+    class ExternalTexture::ImplBase
     {
     public:
         uint16_t Width() const { return m_width; }

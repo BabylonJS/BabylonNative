@@ -38,6 +38,8 @@ namespace Babylon::Plugins
 
     private:
         class Impl;
+        class ImplBase;
+
         std::shared_ptr<Impl> m_impl{};
     };
 }
