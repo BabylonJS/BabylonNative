@@ -14,8 +14,8 @@ namespace Babylon::Plugins
     class ExternalTexture::Impl final : public ImplBase
     {
     public:
+        // Implemented in ExternalTexture_Shared.h
         Impl(Graphics::TextureT);
-
         void Update(Graphics::TextureT);
 
         uintptr_t Ptr() const
@@ -24,12 +24,12 @@ namespace Babylon::Plugins
         }
 
     private:
-        void Init(Graphics::TextureT)
+        void GetInfo(Graphics::TextureT ptr, Info& info)
         {
             throw std::runtime_error{"not implemented"};
         }
 
-        void GetInfo(uint16_t&, uint16_t&, bool&, bgfx::TextureFormat::Enum&, uint64_t&)
+        void Assign(Graphics::TextureT ptr)
         {
             throw std::runtime_error{"not implemented"};
         }

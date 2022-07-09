@@ -4,29 +4,26 @@ namespace Babylon::Plugins
 {
     ExternalTexture::Impl::Impl(Graphics::TextureT ptr)
     {
-        Init(ptr);
-        GetInfo(m_width, m_height, m_hasMips, m_format, m_flags);
+        GetInfo(ptr, m_info);
+
+        if (m_info.MipLevels != 1 && m_info.MipLevels != 0 && !IsFullMipChain(m_info.MipLevels, m_info.Width, m_info.Height))
+        {
+            throw std::runtime_error{"Unsupported texture mip levels"};
+        }
+
+        Assign(ptr);
     }
 
     void ExternalTexture::Impl::Update(Graphics::TextureT ptr)
     {
-        Init(ptr);
+        Info info;
+        GetInfo(ptr, info);
+        if (info != m_info)
+        {
+            throw std::runtime_error{"Textures must have same info"};
+        }
 
-#ifndef NDEBUG
-        uint16_t width{};
-        uint16_t height{};
-        bgfx::TextureFormat::Enum format{bgfx::TextureFormat::Unknown};
-        uint64_t flags{};
-        bool hasMips{};
-        GetInfo(width, height, hasMips, format, flags);
-        assert(width == m_width);
-        assert(height == m_height);
-        assert(format == m_format);
-        assert(flags == m_flags);
-        assert(hasMips == m_hasMips);
-#endif
-
-        UpdateHandles(Ptr());
+        Assign(ptr);
     }
 
     ExternalTexture::ExternalTexture(Graphics::TextureT ptr)

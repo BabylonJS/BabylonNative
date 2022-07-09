@@ -134,9 +134,9 @@ namespace Babylon::Plugins
     class ExternalTexture::Impl final : public ImplBase
     {
     public:
-        Impl(Graphics::TextureT ptr);
-
-        void Update(Graphics::TextureT ptr);
+        // Implemented in ExternalTexture_Shared.h
+        Impl(Graphics::TextureT);
+        void Update(Graphics::TextureT);
 
         uintptr_t Ptr() const
         {
@@ -144,49 +144,44 @@ namespace Babylon::Plugins
         }
 
     private:
-        void Init(Graphics::TextureT ptr)
+        void GetInfo(Graphics::TextureT ptr, Info& info)
         {
-            m_ptr.copy_from(ptr);
+            winrt::com_ptr<ID3D11Resource> resource;
+            resource.copy_from(ptr);
 
             D3D11_RESOURCE_DIMENSION type;
-            m_ptr->GetType(&type);
+            resource->GetType(&type);
             if (type != D3D11_RESOURCE_DIMENSION_TEXTURE2D)
             {
                 throw std::runtime_error{"Unsupported texture type"};
             }
-        }
 
-        void GetInfo(uint16_t& width, uint16_t& height, bool& hasMips, bgfx::TextureFormat::Enum& format, uint64_t& flags)
-        {
             D3D11_TEXTURE2D_DESC desc;
-            m_ptr.as<ID3D11Texture2D>()->GetDesc(&desc);
+            resource.as<ID3D11Texture2D>()->GetDesc(&desc);
 
-            width = static_cast<uint16_t>(desc.Width);
-            height = static_cast<uint16_t>(desc.Height);
-
-            if (desc.MipLevels == 1 || desc.MipLevels == 0 || IsFullMipChain(desc.MipLevels, desc.Width, desc.Height))
-            {
-                hasMips = (desc.MipLevels != 1);
-            }
-            else
-            {
-                throw std::runtime_error{"Unsupported texture mip levels"};
-            }
+            info.Width = static_cast<uint16_t>(desc.Width);
+            info.Height = static_cast<uint16_t>(desc.Height);
+            info.MipLevels = static_cast<uint16_t>(desc.MipLevels);
 
             for (int i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
             {
-                const auto& info = s_textureFormat[i];
-                if (info.m_fmt == desc.Format || info.m_fmtSrgb == desc.Format)
+                const auto& format = s_textureFormat[i];
+                if (format.m_fmt == desc.Format || format.m_fmtSrgb == desc.Format)
                 {
-                    format = static_cast<bgfx::TextureFormat::Enum>(i);
-                    if (info.m_fmtSrgb == desc.Format)
+                    info.Format = static_cast<bgfx::TextureFormat::Enum>(i);
+                    if (format.m_fmtSrgb == desc.Format)
                     {
-                        flags |= BGFX_TEXTURE_SRGB;
+                        info.Flags |= BGFX_TEXTURE_SRGB;
                     }
 
                     break;
                 }
             }
+        }
+
+        void Assign(Graphics::TextureT ptr)
+        {
+            m_ptr.copy_from(ptr);
         }
 
         winrt::com_ptr<ID3D11Resource> m_ptr{};

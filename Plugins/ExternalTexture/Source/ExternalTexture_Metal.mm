@@ -124,9 +124,9 @@ namespace Babylon::Plugins
     class ExternalTexture::Impl final : public ImplBase
     {
     public:
-        Impl(Graphics::TextureT ptr);
-
-        void Update(Graphics::TextureT ptr);
+        // Implemented in ExternalTexture_Shared.h
+        Impl(Graphics::TextureT);
+        void Update(Graphics::TextureT);
 
         uintptr_t Ptr() const
         {
@@ -134,46 +134,38 @@ namespace Babylon::Plugins
         }
 
     private:
-        void Init(Graphics::TextureT ptr)
+        void GetInfo(Graphics::TextureT ptr, Info& info)
         {
-            m_ptr = ptr;
-
-            if (m_ptr.textureType != MTLTextureType2D)
+            if (ptr.textureType != MTLTextureType2D)
             {
                 throw std::runtime_error{"Unsupported texture type"};
             }
-        }
 
-        void GetInfo(uint16_t& width, uint16_t& height, bool& hasMips, bgfx::TextureFormat::Enum& format, uint64_t& flags)
-        {
-            if (m_ptr.mipmapLevelCount == 1 || IsFullMipChain(m_ptr.mipmapLevelCount, m_ptr.width, m_ptr.height))
-            {
-                hasMips = (m_ptr.mipmapLevelCount != 1);
-            }
-            else
-            {
-                throw std::runtime_error{"Unsupported texture mip levels"};
-            }
+            info.Width = static_cast<uint16_t>(ptr.width);
+            info.Height = static_cast<uint16_t>(ptr.height);
+            info.MipLevels = static_cast<uint16_t>(ptr.mipmapLevelCount);
 
-            width = static_cast<uint16_t>(m_ptr.width);
-            height = static_cast<uint16_t>(m_ptr.height);
-            
             const auto pixelFormat = m_ptr.pixelFormat;
             for (size_t i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
             {
-                const auto& info = s_textureFormat[i];
-                if (info.m_fmt == pixelFormat || info.m_fmtSrgb == pixelFormat)
+                const auto& format = s_textureFormat[i];
+                if (format.m_fmt == pixelFormat || format.m_fmtSrgb == pixelFormat)
                 {
-                    format = static_cast<bgfx::TextureFormat::Enum>(i);
-                    if (info.m_fmtSrgb == pixelFormat)
+                    info.format = static_cast<bgfx::TextureFormat::Enum>(i);
+                    if (format.m_fmtSrgb == pixelFormat)
                     {
-                        flags |= BGFX_TEXTURE_SRGB;
+                        info.flags |= BGFX_TEXTURE_SRGB;
                     }
                     break;
                 }
             }
         }
-        
+
+        void Assign(Graphics::TextureT ptr)
+        {
+            m_ptr = ptr;
+        }
+
         id<MTLTexture> m_ptr;
     };
 }

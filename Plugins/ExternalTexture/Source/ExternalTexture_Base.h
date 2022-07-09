@@ -11,11 +11,11 @@ namespace Babylon::Plugins
     class ExternalTexture::ImplBase
     {
     public:
-        uint16_t Width() const { return m_width; }
-        uint16_t Height() const { return m_height; }
-        bgfx::TextureFormat::Enum Format() const { return m_format; }
-        bool HasMips() const { return m_hasMips; }
-        uint64_t Flags() const { return m_flags; }
+        uint16_t Width() const { return m_info.Width; }
+        uint16_t Height() const { return m_info.Height; }
+        bgfx::TextureFormat::Enum Format() const { return m_info.Format; }
+        bool HasMips() const { return m_info.MipLevels != 1; }
+        uint64_t Flags() const { return m_info.Flags; }
 
         void AddHandle(bgfx::TextureHandle handle)
         {
@@ -39,30 +39,49 @@ namespace Babylon::Plugins
         }
 
     protected:
-        template<typename T1, typename T2, typename T3>
-        static bool IsFullMipChain(T1 mipLevel, T2 width, T3 height)
+        static bool IsFullMipChain(uint16_t mipLevel, uint16_t width, uint16_t height)
         {
-            return mipLevel == static_cast<T1>(std::floor(std::log2(std::max(static_cast<float>(width), static_cast<float>(height))) + 1));
+            return mipLevel == static_cast<uint16_t>(std::floor(std::log2(std::max(static_cast<float>(width), static_cast<float>(height))) + 1));
         }
 
         void UpdateHandles(uintptr_t ptr)
         {
             std::scoped_lock lock{m_mutex};
 
-            for (auto it = m_handles.begin(); it != m_handles.end(); ++it)
+            for (auto handle : m_handles)
             {
-                if (bgfx::overrideInternal(*it, ptr) == 0)
+                if (bgfx::overrideInternal(handle, ptr) == 0)
                 {
                     assert(!"Failed to override texture");
                 }
             }
         }
 
-        uint16_t m_width{};
-        uint16_t m_height{};
-        bgfx::TextureFormat::Enum m_format{bgfx::TextureFormat::Unknown};
-        bool m_hasMips{};
-        uint64_t m_flags{};
+        struct Info
+        {
+            uint16_t Width{};
+            uint16_t Height{};
+            uint16_t MipLevels{};
+            bgfx::TextureFormat::Enum Format{bgfx::TextureFormat::Unknown};
+            uint64_t Flags{};
+
+            bool operator==(const Info& other)
+            {
+                return
+                    Width == other.Width &&
+                    Height == other.Height &&
+                    MipLevels == other.MipLevels &&
+                    Format == other.Format &&
+                    Flags == other.Flags;
+            }
+
+            bool operator!=(const Info& other)
+            {
+                return !operator==(other);
+            }
+        };
+
+        Info m_info{};
 
     private:
         struct TextureHandleLess
