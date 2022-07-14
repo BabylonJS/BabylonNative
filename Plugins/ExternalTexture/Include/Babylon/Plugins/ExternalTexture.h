@@ -30,6 +30,10 @@ namespace Babylon::Plugins
         // NOTE: Must call this from the JavaScript thread.
         Napi::Promise AddToContextAsync(Napi::Env) const;
 
+        void AddToContextAsync(Napi::Env, 
+                               std::function<void(Napi::Env, Napi::Value)> succeed, 
+                               std::function<void(Napi::Env, Napi::Value)> fail) const;
+
     private:
         class Impl;
         std::shared_ptr<Impl> m_impl{};

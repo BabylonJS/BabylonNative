@@ -40,6 +40,18 @@ namespace Babylon
             });
         }
 
+        void Dispatch(std::function<void(Napi::Env)> function)
+        {
+           m_task = m_task.then(arcana::inline_scheduler, arcana::cancellation::none(), [dispatchFunction{m_dispatchFunction}, function{std::move(function)}](auto) {
+                arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
+                dispatchFunction([taskCompletionSource, function{std::move(function)}](Napi::Env env) mutable {
+                    function(env);
+                    taskCompletionSource.complete();
+                });
+                return taskCompletionSource.as_task();
+           });
+        }
+
     private:
         DispatchFunctionT m_dispatchFunction{};
         arcana::task<void, std::exception_ptr> m_task{};
@@ -66,5 +78,10 @@ namespace Babylon
     void ScriptLoader::Eval(std::string source, std::string url)
     {
         m_impl->Eval(std::move(source), std::move(url));
+    }
+
+    void ScriptLoader::Dispatch(std::function<void(Napi::Env)> function)
+    {
+        m_impl->Dispatch(std::move(function));
     }
 }

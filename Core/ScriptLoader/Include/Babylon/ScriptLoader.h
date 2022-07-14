@@ -29,6 +29,7 @@ namespace Babylon
 
         void LoadScript(std::string url);
         void Eval(std::string source, std::string url);
+        void Dispatch(std::function<void(Napi::Env)> function);
 
     private:
         class Impl;
