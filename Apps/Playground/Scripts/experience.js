@@ -90,12 +90,18 @@ CreateBoxAsync(scene).then(function () {
         console.log("Starting readPixels.");
         const texture = new BABYLON.Texture("https://assets.babylonjs.com/textures/earth.jpg", scene);
         texture.onLoadObservable.addOnce(() => {
-            const width = texture.getSize().width;
-            const height = texture.getSize().height;
-            console.log(`Texture loaded: Width: ${width} | Height: ${height}.`);
+            const mip = 4;
+            const textureWidth = texture.getSize().width >> mip;
+            const textureHeight = texture.getSize().height >> mip;
+            const x = textureWidth / 4;
+            const y = textureHeight / 4;
+            const width = textureWidth / 2;
+            const height = textureHeight / 2;
+            console.log(`Texture loaded: Width: ${textureWidth} | Height: ${textureHeight}.`);
             setTimeout(() => {
-                texture.readPixels(undefined, undefined, undefined, undefined, undefined, width / 4, height / 4, width / 2, height / 2).then((buffer) => {
-                    console.log(`Read ${buffer.byteLength} pixels.`);
+                //texture.readPixels(undefined, mip, undefined, undefined, undefined, x, y, width, height).then((buffer) => {
+                texture.readPixels(undefined, mip, undefined, undefined, undefined, 0, 0, textureWidth, textureHeight).then((buffer) => {
+                    console.log(`Read ${buffer.byteLength} pixel bytes.`);
                 });
             }, 500);
         });

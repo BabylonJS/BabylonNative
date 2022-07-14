@@ -1323,19 +1323,20 @@ namespace Babylon
         const Napi::Env env{info.Env()};
 
         Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
-        uint16_t x = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
-        uint16_t y = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
-        uint16_t width = static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value());
-        uint16_t height = static_cast<uint16_t>(info[4].As<Napi::Number>().Uint32Value());
-        auto buffer = info[5].As<Napi::TypedArray>();
+        uint16_t mipLevel = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
+        const uint16_t x = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
+        const uint16_t y = static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value());
+        const uint16_t width = static_cast<uint16_t>(info[4].As<Napi::Number>().Uint32Value());
+        const uint16_t height = static_cast<uint16_t>(info[5].As<Napi::Number>().Uint32Value());
+        auto buffer = info[6].As<Napi::TypedArray>();
 
         auto deferred{Napi::Promise::Deferred::New(env)};
 
-        //Babylon::Graphics::TextureInfo sourceGraphicsTextureInfo{m_graphicsContext.GetTextureInfo(sourceTextureHandle)};
-        bgfx::TextureInfo sourceTextureInfo{};
-        //bgfx::calcTextureSize(sourceTextureInfo, sourceGraphicsTextureInfo.Width, sourceGraphicsTextureInfo.Height, 1, false, sourceGraphicsTextureInfo.HasMips, sourceGraphicsTextureInfo.NumLayers, sourceGraphicsTextureInfo.Format);
         // TODO: How can we get the texture format from the Texture? Add storage for it, or put all textures into the graphics texture map, or something else?
-        bgfx::calcTextureSize(sourceTextureInfo, width, height, 1, false, false, 1, bgfx::TextureFormat::Enum::RGBA8);
+        //Babylon::Graphics::TextureInfo sourceGraphicsTextureInfo{m_graphicsContext.GetTextureInfo(sourceTextureHandle)};
+        auto format{bgfx::TextureFormat::Enum::RGBA8};
+        bgfx::TextureInfo sourceTextureInfo{};
+        bgfx::calcTextureSize(sourceTextureInfo, width, height, /*depth*/ 1, /*cubeMap*/ false, /*hasMips*/ false, /*numLayers*/ 1, format);
 
         if (buffer.IsNull())
         {
@@ -1351,25 +1352,20 @@ namespace Babylon
             bgfx::TextureHandle sourceTextureHandle{texture->Handle()};
             auto tempTexture{false};
 
-            if (x != 0 || y != 0 || width != texture->Width() || height != texture->Height())
+            if (x != 0 || y != 0 || width != (texture->Width() >> mipLevel) || height != (texture->Height() >> mipLevel))
             {
-                // TODO: blit
-                // void blit(ViewId _id, TextureHandle _dst, uint16_t _dstX, uint16_t _dstY, TextureHandle _src, uint16_t _srcX, uint16_t _srcY, uint16_t _width, uint16_t _height)
-                // or use UpdateToken/Encoder to get bgfx encoder and call blit directly so the mip layer can be specified?
-                // bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-                // void Encoder::blit(ViewId _id, TextureHandle _dst, uint8_t _dstMip, uint16_t _dstX, uint16_t _dstY, uint16_t _dstZ, TextureHandle _src, uint8_t _srcMip, uint16_t _srcX, uint16_t _srcY, uint16_t _srcZ, uint16_t _width, uint16_t _height, uint16_t _depth)
-                // blit(_id, _dst, 0, _dstX, _dstY, 0, _src, 0, _srcX, _srcY, 0, _width, _height, 0);
-                bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, true /*mips*/, 1 /*layers*/, bgfx::TextureFormat::Enum::RGBA8 /*format*/, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
+                bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, format, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
                 bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-                encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, 0, 0, 0, 0, sourceTextureHandle, 0, x, y, 0, width, height, 0);
-                //bgfx::blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, 0, 0, sourceTextureHandle, x, y, width, height);
+                encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0, sourceTextureHandle, mipLevel, x, y, /*srcZ*/ 0, width, height, /*depth*/ 0);
+
                 sourceTextureHandle = blitTextureHandle;
+                mipLevel = 0;
                 tempTexture = true;
             }
 
             std::vector<uint8_t> textureBuffer(sourceTextureInfo.storageSize);
 
-            m_graphicsContext.ReadTextureAsync(sourceTextureHandle, textureBuffer).then(arcana::inline_scheduler, *m_cancellationSource, [textureBuffer{std::move(textureBuffer)}, width, height] {
+            m_graphicsContext.ReadTextureAsync(sourceTextureHandle, textureBuffer, mipLevel).then(arcana::inline_scheduler, *m_cancellationSource, [textureBuffer{std::move(textureBuffer)}, width, height] {
                 // TODO: Flip (if bgfx::getCaps()->originBottomLeft is true)
                 // TODO: Convert to RGBA8 (based on sourceGraphicsTextureInfo->Format)
                 // TODO: Why is this all 0xff bytes? Is this related to capture being broken too?
