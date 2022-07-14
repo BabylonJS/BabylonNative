@@ -17,6 +17,7 @@ var text = false;
 var hololens = false;
 var cameraTexture = false;
 var imageTracking = false;
+const readPixels = true;
 
 function CreateBoxAsync(scene) {
     BABYLON.Mesh.CreateBox("box1", 0.2, scene);
@@ -76,11 +77,28 @@ CreateBoxAsync(scene).then(function () {
         var cameraBox = BABYLON.Mesh.CreateBox("box1", 0.25);
         var mat = new BABYLON.StandardMaterial("mat", scene);
         mat.diffuseColor = BABYLON.Color3.Black();
+        console.log("Creating VideoTexture");
 
         BABYLON.VideoTexture.CreateFromWebCam(scene, function (videoTexture) {
+            console.log("Created VideoTexture");
             mat.emissiveTexture = videoTexture;
             cameraBox.material = mat;
         }, { maxWidth: 256, maxHeight: 256, facingMode: "environment" });
+    }
+
+    if (readPixels) {
+        console.log("Starting readPixels.");
+        const texture = new BABYLON.Texture("https://assets.babylonjs.com/textures/earth.jpg", scene);
+        texture.onLoadObservable.addOnce(() => {
+            const width = texture.getSize().width;
+            const height = texture.getSize().height;
+            console.log(`Texture loaded: Width: ${width} | Height: ${height}.`);
+            setTimeout(() => {
+                texture.readPixels(undefined, undefined, undefined, undefined, undefined, width / 4, height / 4, width / 2, height / 2).then((buffer) => {
+                    console.log(`Read ${buffer.byteLength} pixels.`);
+                });
+            }, 500);
+        });
     }
 
     if (wireframe) {

@@ -259,6 +259,7 @@ namespace Babylon::Graphics
         m_screenShotCallbacks.push(std::move(callback));
     }
 
+    // TODO: might want to add another param for the mip layer and pass through to bgfx::readTexture
     arcana::task<void, std::exception_ptr> DeviceImpl::ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data)
     {
         arcana::task_completion_source<void, std::exception_ptr> completionSource{};

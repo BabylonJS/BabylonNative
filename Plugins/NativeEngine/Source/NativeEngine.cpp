@@ -21,6 +21,9 @@
 #include <stb/stb_image_resize.h>
 #include <bx/math.h>
 
+#include "Bitmap.hpp"
+#include <Foundation/Foundation.h>
+
 namespace Babylon
 {
     namespace
@@ -466,6 +469,7 @@ namespace Babylon
                 InstanceMethod("getTextureHeight", &NativeEngine::GetTextureHeight),
                 InstanceMethod("copyTexture", &NativeEngine::CopyTexture),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
+                InstanceMethod("readTexture", &NativeEngine::ReadTexture),
 
                 InstanceMethod("createImageBitmap", &NativeEngine::CreateImageBitmap),
                 InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
@@ -1312,6 +1316,97 @@ namespace Babylon
         Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         m_graphicsContext.RemoveTexture(texture->Handle());
         texture->Dispose();
+    }
+
+    Napi::Value NativeEngine::ReadTexture(const Napi::CallbackInfo& info)
+    {
+        const Napi::Env env{info.Env()};
+
+        Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        uint16_t x = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
+        uint16_t y = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
+        uint16_t width = static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value());
+        uint16_t height = static_cast<uint16_t>(info[4].As<Napi::Number>().Uint32Value());
+        auto buffer = info[5].As<Napi::TypedArray>();
+
+        auto deferred{Napi::Promise::Deferred::New(env)};
+
+        //Babylon::Graphics::TextureInfo sourceGraphicsTextureInfo{m_graphicsContext.GetTextureInfo(sourceTextureHandle)};
+        bgfx::TextureInfo sourceTextureInfo{};
+        //bgfx::calcTextureSize(sourceTextureInfo, sourceGraphicsTextureInfo.Width, sourceGraphicsTextureInfo.Height, 1, false, sourceGraphicsTextureInfo.HasMips, sourceGraphicsTextureInfo.NumLayers, sourceGraphicsTextureInfo.Format);
+        // TODO: How can we get the texture format from the Texture? Add storage for it, or put all textures into the graphics texture map, or something else?
+        bgfx::calcTextureSize(sourceTextureInfo, width, height, 1, false, false, 1, bgfx::TextureFormat::Enum::RGBA8);
+
+        if (buffer.IsNull())
+        {
+            buffer = Napi::Uint8Array::New(env, sourceTextureInfo.storageSize);
+        }
+
+        if (buffer.ArrayBuffer().ByteLength() < sourceTextureInfo.storageSize)
+        {
+            deferred.Reject(Napi::Error::New(env, "Provided buffer is too small.").Value());
+        }
+        else
+        {
+            bgfx::TextureHandle sourceTextureHandle{texture->Handle()};
+            auto tempTexture{false};
+
+            if (x != 0 || y != 0 || width != texture->Width() || height != texture->Height())
+            {
+                // TODO: blit
+                // void blit(ViewId _id, TextureHandle _dst, uint16_t _dstX, uint16_t _dstY, TextureHandle _src, uint16_t _srcX, uint16_t _srcY, uint16_t _width, uint16_t _height)
+                // or use UpdateToken/Encoder to get bgfx encoder and call blit directly so the mip layer can be specified?
+                // bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+                // void Encoder::blit(ViewId _id, TextureHandle _dst, uint8_t _dstMip, uint16_t _dstX, uint16_t _dstY, uint16_t _dstZ, TextureHandle _src, uint8_t _srcMip, uint16_t _srcX, uint16_t _srcY, uint16_t _srcZ, uint16_t _width, uint16_t _height, uint16_t _depth)
+                // blit(_id, _dst, 0, _dstX, _dstY, 0, _src, 0, _srcX, _srcY, 0, _width, _height, 0);
+                bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, true /*mips*/, 1 /*layers*/, bgfx::TextureFormat::Enum::RGBA8 /*format*/, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
+                bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+                encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, 0, 0, 0, 0, sourceTextureHandle, 0, x, y, 0, width, height, 0);
+                //bgfx::blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, 0, 0, sourceTextureHandle, x, y, width, height);
+                sourceTextureHandle = blitTextureHandle;
+                tempTexture = true;
+            }
+
+            std::vector<uint8_t> textureBuffer(sourceTextureInfo.storageSize);
+
+            m_graphicsContext.ReadTextureAsync(sourceTextureHandle, textureBuffer).then(arcana::inline_scheduler, *m_cancellationSource, [textureBuffer{std::move(textureBuffer)}, width, height] {
+                // TODO: Flip (if bgfx::getCaps()->originBottomLeft is true)
+                // TODO: Convert to RGBA8 (based on sourceGraphicsTextureInfo->Format)
+                // TODO: Why is this all 0xff bytes? Is this related to capture being broken too?
+
+                bitmap_image bmp{width, height};
+                bmp.clear();
+                for (uint32_t y = 0; y < height; y++)
+                {
+                    for (uint32_t x = 0; x < width; x++)
+                    {
+                        auto index = y * width * 4 + x * 4;
+                        bmp.set_pixel(x, y, textureBuffer[index + 0], textureBuffer[index + 1], textureBuffer[index + 2]);
+                    }
+                }
+                auto homeDirectory{NSHomeDirectory()};
+                std::string homeDirectoryC{homeDirectory.UTF8String};
+                homeDirectoryC += "/Documents/temp.bmp";
+                bmp.save_image(homeDirectoryC.c_str());
+
+                return textureBuffer;
+            }).then(m_runtimeScheduler, *m_cancellationSource, [bufferRef{Napi::Persistent(buffer)}, deferred](std::vector<uint8_t> textureBuffer) {
+                std::memcpy(bufferRef.Value().ArrayBuffer().Data(), textureBuffer.data(), textureBuffer.size());
+                deferred.Resolve(bufferRef.Value());
+            }).then(m_runtimeScheduler, arcana::cancellation::none(), [env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
+                if (tempTexture)
+                {
+                    bgfx::destroy(sourceTextureHandle);
+                }
+
+                if (result.has_error())
+                {
+                    deferred.Reject(Napi::Error::New(env, result.error()).Value());
+                }
+            });
+        }
+
+        return deferred.Promise();
     }
 
     Napi::Value NativeEngine::CreateFrameBuffer(const Napi::CallbackInfo& info)
