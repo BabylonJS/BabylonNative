@@ -18,6 +18,13 @@ Pod::Spec.new do |s|
 
   s.libraries = 'astc-codec',
                 'astc',
+                'etc1',
+                'etc2',
+                'nvtt',
+                'squish',
+                'pvrtc',
+                'iqa',
+                'edtaa3',
                 'BabylonNative',
                 'bgfx',
                 'bimg',

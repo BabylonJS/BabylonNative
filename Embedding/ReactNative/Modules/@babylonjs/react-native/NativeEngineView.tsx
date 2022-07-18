@@ -6,6 +6,7 @@ declare const global: any;
 export interface NativeEngineViewProps extends ViewProps {
     isTransparent: boolean;
     antiAliasing: number;
+    isTopMost: boolean;
     onSnapshotDataReturned?: (event: SyntheticEvent) => void;
 }
 
