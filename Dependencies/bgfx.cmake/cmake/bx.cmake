@@ -30,6 +30,10 @@ endif()
 # Create the bx target
 add_library( bx STATIC ${BX_SOURCES} )
 
+target_compile_features( bx PUBLIC cxx_std_14 )
+# (note: see bx\scripts\toolchain.lua for equivalent compiler flag)
+target_compile_options( bx PUBLIC $<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus> )
+
 # Link against psapi on Windows
 if( WIN32 )
 	target_link_libraries( bx PUBLIC psapi )
