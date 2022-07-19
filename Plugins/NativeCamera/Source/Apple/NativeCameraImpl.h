@@ -21,7 +21,7 @@ namespace Babylon::Plugins
 
     private:
         Napi::Env m_env;
-        
+
         std::shared_ptr<ImplData> m_implData;
 
         bool m_overrideCameraTexture{};
