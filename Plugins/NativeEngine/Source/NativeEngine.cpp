@@ -21,9 +21,6 @@
 #include <stb/stb_image_resize.h>
 #include <bx/math.h>
 
-#include "Bitmap.hpp"
-//#include <Foundation/Foundation.h>
-
 namespace Babylon
 {
     namespace
@@ -1399,27 +1396,6 @@ namespace Babylon
                 {
                     FlipImage(textureBuffer, targetTextureInfo.height);
                 }
-
-                // *** TEMP TEMP TEMP *** //
-                const auto width{targetTextureInfo.width};
-                const auto height{targetTextureInfo.height};
-                bitmap_image bmp{width, height};
-                bmp.clear();
-                for (uint32_t y = 0; y < height; y++)
-                {
-                    for (uint32_t x = 0; x < width; x++)
-                    {
-                        auto index = y * width * 4 + x * 4;
-                        bmp.set_pixel(x, y, textureBuffer[index + 0], textureBuffer[index + 1], textureBuffer[index + 2]);
-                    }
-                }
-//                auto homeDirectory{NSHomeDirectory()};
-//                std::string homeDirectoryC{homeDirectory.UTF8String};
-//                homeDirectoryC += "/Documents/temp.bmp";
-//                bmp.save_image(homeDirectoryC.c_str());
-                bmp.save_image("/data/data/com.android.babylonnative.playground/files/temp.bmp");
-                // *** TEMP TEMP TEMP *** //
-
 
                 return textureBuffer;
             }).then(m_runtimeScheduler, *m_cancellationSource, [bufferRef{Napi::Persistent(buffer)}, deferred](std::vector<uint8_t> textureBuffer) {
