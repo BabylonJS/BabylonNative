@@ -93,6 +93,22 @@ namespace Babylon::Graphics
         }
     }
 
+    void DeviceImpl::SetAlphaPremultiplied(bool enabled)
+    {
+        if (bgfx::getCaps()->supported & BGFX_CAPS_TRANSPARENT_BACKBUFFER)
+        {
+            std::scoped_lock lock{m_state.Mutex};
+            m_state.Bgfx.Dirty = true;
+            auto& init = m_state.Bgfx.InitState;
+            init.resolution.reset &= ~BGFX_CAPS_TRANSPARENT_BACKBUFFER;
+            init.resolution.reset |= enabled ? BGFX_CAPS_TRANSPARENT_BACKBUFFER : 0;
+        }
+        else
+        {
+            m_bgfxCallback.trace(__FILE__, __LINE__, "WARNING: BGFX_CAPS_TRANSPARENT_BACKBUFFER unsupported on this platform.");
+        }
+    }
+
     size_t DeviceImpl::GetWidth() const
     {
         return m_state.Resolution.Width;

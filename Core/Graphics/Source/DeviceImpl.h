@@ -40,6 +40,7 @@ namespace Babylon::Graphics
         void UpdateContext(const DeviceConfiguration& config);
         void Resize(size_t width, size_t height);
         void SetMSAA(uint8_t value);
+        void SetAlphaPremultiplied(bool enabled);
 
         void AddToJavaScript(Napi::Env);
         static DeviceImpl& GetFromJavaScript(Napi::Env);
