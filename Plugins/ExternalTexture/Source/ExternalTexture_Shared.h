@@ -69,7 +69,7 @@ namespace Babylon::Plugins
                 runtime.Dispatch([deferred = std::move(deferred), handle, impl = std::move(impl)](Napi::Env env)
                 {
                     auto* texture = new Graphics::Texture{};
-                    texture->Attach(handle, true, impl->Width(), impl->Height());
+                    texture->Attach(handle, true, impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
 
                     auto jsObject = Napi::Pointer<Graphics::Texture>::Create(env, texture, [texture] {
                         delete texture;

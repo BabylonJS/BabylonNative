@@ -1337,10 +1337,8 @@ namespace Babylon
 
         const auto deferred{Napi::Promise::Deferred::New(env)};
 
-        // TODO: How can we get the texture format from the Texture? Add storage for it, or put all textures into the graphics texture map, or something else?
-        //Babylon::Graphics::TextureInfo sourceGraphicsTextureInfo{m_graphicsContext.GetTextureInfo(sourceTextureHandle)};
         // Calculate source texture storage size.
-        const auto sourceTextureFormat{bgfx::TextureFormat::Enum::RGBA8};
+        const auto sourceTextureFormat{texture->Format()};
         bgfx::TextureInfo sourceTextureInfo{};
         bgfx::calcTextureSize(sourceTextureInfo, width, height, /*depth*/ 1, /*cubeMap*/ false, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat);
 
@@ -1368,9 +1366,9 @@ namespace Babylon
             bgfx::TextureHandle sourceTextureHandle{texture->Handle()};
             auto tempTexture{false};
 
-            // If the image needs to be cropped (not starting at 0, or less than full width/height (accounting for requested mip level)), then blit it to a temp texture.
-            // TODO: How can we determine if the texture was created with BGFX_TEXTURE_READ_BACK? If it wasn't then we also need to blit.
-            if (x != 0 || y != 0 || width != (texture->Width() >> mipLevel) || height != (texture->Height() >> mipLevel))
+            // If the image needs to be cropped (not starting at 0, or less than full width/height (accounting for requested mip level)),
+            // or if the texture was not created with the BGFX_TEXTURE_READ_BACK flag, then blit it to a temp texture.
+            if (x != 0 || y != 0 || width != (texture->Width() >> mipLevel) || height != (texture->Height() >> mipLevel) || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
             {
                 const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
                 bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
@@ -1486,7 +1484,7 @@ namespace Babylon
             frameBufferHandle = bgfx::createFrameBuffer(width, height, format, BGFX_TEXTURE_RT);
         }
 
-        texture->Attach(bgfx::getTexture(frameBufferHandle), false, width, height);
+        texture->Attach(bgfx::getTexture(frameBufferHandle), false, width, height, generateMips, 1, format, BGFX_TEXTURE_RT);
         m_graphicsContext.AddTexture(texture->Handle(), width, height, generateMips, 1, format);
 
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_graphicsContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
