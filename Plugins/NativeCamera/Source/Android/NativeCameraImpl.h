@@ -31,7 +31,7 @@ namespace Babylon::Plugins
 
     private:
 
-        Graphics::DeviceContext &m_deviceContext;
+        Napi::Env m_env;
 
         bool m_overrideCameraTexture;
 
@@ -51,7 +51,7 @@ namespace Babylon::Plugins
         ACaptureSessionOutput* m_textureOutput{};
         ACaptureSessionOutput* m_output{};
         ACaptureSessionOutputContainer* m_outputs{};
-        android::graphics::SurfaceTexture m_surfaceTexture;
+        android::graphics::SurfaceTexture m_surfaceTexture{};
 #endif
         GLuint m_cameraOESTextureId{};
         GLuint m_cameraRGBATextureId{};
