@@ -1323,7 +1323,7 @@ namespace Babylon
         const Napi::Env env{info.Env()};
 
         Graphics::Texture* texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
-        uint16_t mipLevel{static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value())};
+        uint8_t mipLevel{static_cast<uint8_t>(info[1].As<Napi::Number>().Uint32Value())};
         const uint16_t x{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
         const uint16_t y{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
         const uint16_t width{static_cast<uint16_t>(info[4].As<Napi::Number>().Uint32Value())};
