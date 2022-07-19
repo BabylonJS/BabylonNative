@@ -123,6 +123,22 @@ namespace Babylon
             return image;
         }
 
+        void FlipImage(gsl::span<uint8_t> image, uint32_t height)
+        {
+            const size_t rowPitch{image.size() / height};
+
+            std::vector<uint8_t> buffer(rowPitch);
+            for (size_t row = 0; row < height / 2; row++)
+            {
+                uint8_t* frontPtr{image.data() + (row * rowPitch)};
+                uint8_t* backPtr{image.data() + ((height - row - 1) * rowPitch)};
+
+                std::memcpy(buffer.data(), frontPtr, rowPitch);
+                std::memcpy(frontPtr, backPtr, rowPitch);
+                std::memcpy(backPtr, buffer.data(), rowPitch);
+            }
+        }
+
         bimg::ImageContainer* PrepareImage(bx::AllocatorI& allocator, bimg::ImageContainer* image, bool invertY, bool srgb, bool generateMips)
         {
             assert(
@@ -138,20 +154,7 @@ namespace Babylon
 
             if (bgfx::getCaps()->originBottomLeft ? invertY : !invertY)
             {
-                uint8_t* bytes{static_cast<uint8_t*>(image->m_data)};
-                const uint32_t rowCount{image->m_height};
-                const uint32_t rowPitch{image->m_size / image->m_height};
-
-                std::vector<uint8_t> buffer(rowPitch);
-                for (size_t row = 0; row < rowCount / 2; row++)
-                {
-                    uint8_t* frontPtr{bytes + (row * rowPitch)};
-                    uint8_t* backPtr{bytes + ((rowCount - row - 1) * rowPitch)};
-
-                    std::memcpy(buffer.data(), frontPtr, rowPitch);
-                    std::memcpy(frontPtr, backPtr, rowPitch);
-                    std::memcpy(backPtr, buffer.data(), rowPitch);
-                }
+                FlipImage({static_cast<uint8_t*>(image->m_data), image->m_size}, image->m_height);
             }
 
             if (srgb && !bgfx::isTextureValid(1, false, 1, Cast(image->m_format), BGFX_TEXTURE_SRGB))
@@ -1322,13 +1325,15 @@ namespace Babylon
     {
         const Napi::Env env{info.Env()};
 
-        Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
-        uint16_t mipLevel = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
-        const uint16_t x = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
-        const uint16_t y = static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value());
-        const uint16_t width = static_cast<uint16_t>(info[4].As<Napi::Number>().Uint32Value());
-        const uint16_t height = static_cast<uint16_t>(info[5].As<Napi::Number>().Uint32Value());
-        auto buffer = info[6].As<Napi::TypedArray>();
+        Graphics::Texture* texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
+        uint16_t mipLevel{static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value())};
+        const uint16_t x{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
+        const uint16_t y{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
+        const uint16_t width{static_cast<uint16_t>(info[4].As<Napi::Number>().Uint32Value())};
+        const uint16_t height{static_cast<uint16_t>(info[5].As<Napi::Number>().Uint32Value())};
+        auto buffer{info[6].As<Napi::ArrayBuffer>()};
+        uint32_t bufferOffset{info[7].As<Napi::Number>().Uint32Value()};
+        uint32_t bufferLength{info[8].As<Napi::Number>().Uint32Value()};
 
         const auto deferred{Napi::Promise::Deferred::New(env)};
 
@@ -1348,11 +1353,13 @@ namespace Babylon
         // Create the output buffer if one wasn't passed in.
         if (buffer.IsNull())
         {
-            buffer = Napi::Uint8Array::New(env, targetTextureInfo.storageSize);
+            bufferOffset = 0;
+            bufferLength = targetTextureInfo.storageSize;
+            buffer = Napi::ArrayBuffer::New(env, bufferLength);
         }
 
         // Make sure the buffer is big enough to fit the output data.
-        if (buffer.ArrayBuffer().ByteLength() < targetTextureInfo.storageSize)
+        if (buffer.ByteLength() < bufferOffset + bufferLength)
         {
             deferred.Reject(Napi::Error::New(env, "Provided buffer is too small.").Value());
         }
@@ -1384,28 +1391,15 @@ namespace Babylon
                 // If the source texture format does not match the target texture format, convert it.
                 if (targetTextureInfo.format != sourceTextureInfo.format)
                 {
-                    bimg::ImageContainer* sourceImage{bimg::imageAlloc(&m_allocator, bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1, /*numLayers*/ 1, /*cubeMap*/ false, /*hasMips*/ false, textureBuffer.data())};
-                    bimg::ImageContainer* targetImage{bimg::imageConvert(&m_allocator, bimg::TextureFormat::Enum(targetTextureInfo.format), *sourceImage, /*convertMips*/ false)};
-                    assert(targetImage->m_size == targetTextureInfo.storageSize);
-                    textureBuffer.resize(targetImage->m_size);
-                    std::memcpy(textureBuffer.data(), targetImage->m_data, targetImage->m_size);
-                    bimg::imageFree(sourceImage);
-                    bimg::imageFree(targetImage);
+                    std::vector<uint8_t> convertedTextureBuffer(targetTextureInfo.storageSize);
+                    bimg::imageConvert(&m_allocator, convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1);
+                    textureBuffer = convertedTextureBuffer;
                 }
 
                 // Flip the image vertically if needed.
                 if (bgfx::getCaps()->originBottomLeft)
                 {
-                    const auto bytesPerRow{(targetTextureInfo.bitsPerPixel >> 3) * targetTextureInfo.width};
-                    std::vector<uint8_t> tempRow(bytesPerRow);
-                    for (uint16_t row = 0; row < targetTextureInfo.height >> 1; row++)
-                    {
-                        const auto row1Index{row * bytesPerRow};
-                        const auto row2Index{(targetTextureInfo.height - row - 1) * bytesPerRow};
-                        std::memcpy(tempRow.data(), textureBuffer.data() + row1Index, bytesPerRow);
-                        std::memcpy(textureBuffer.data() + row1Index, textureBuffer.data() + row2Index, bytesPerRow);
-                        std::memcpy(textureBuffer.data() + row2Index, tempRow.data(), bytesPerRow);
-                    }
+                    FlipImage(textureBuffer, targetTextureInfo.height);
                 }
 
                 // *** TEMP TEMP TEMP *** //
@@ -1432,7 +1426,7 @@ namespace Babylon
                 return textureBuffer;
             }).then(m_runtimeScheduler, *m_cancellationSource, [bufferRef{Napi::Persistent(buffer)}, deferred](std::vector<uint8_t> textureBuffer) {
                 // Copy the pixel data into the JS ArrayBuffer.
-                std::memcpy(bufferRef.Value().ArrayBuffer().Data(), textureBuffer.data(), textureBuffer.size());
+                std::memcpy(bufferRef.Value().Data(), textureBuffer.data(), textureBuffer.size());
                 deferred.Resolve(bufferRef.Value());
             }).then(m_runtimeScheduler, arcana::cancellation::none(), [env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
                 if (tempTexture)
