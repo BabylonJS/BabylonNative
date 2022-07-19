@@ -17,7 +17,7 @@ var text = false;
 var hololens = false;
 var cameraTexture = false;
 var imageTracking = false;
-const readPixels = true;
+const readPixels = false;
 
 function CreateBoxAsync(scene) {
     BABYLON.Mesh.CreateBox("box1", 0.2, scene);
@@ -77,10 +77,8 @@ CreateBoxAsync(scene).then(function () {
         var cameraBox = BABYLON.Mesh.CreateBox("box1", 0.25);
         var mat = new BABYLON.StandardMaterial("mat", scene);
         mat.diffuseColor = BABYLON.Color3.Black();
-        console.log("Creating VideoTexture");
 
         BABYLON.VideoTexture.CreateFromWebCam(scene, function (videoTexture) {
-            console.log("Created VideoTexture");
             mat.emissiveTexture = videoTexture;
             cameraBox.material = mat;
         }, { maxWidth: 256, maxHeight: 256, facingMode: "environment" });
@@ -90,20 +88,22 @@ CreateBoxAsync(scene).then(function () {
         console.log("Starting readPixels.");
         const texture = new BABYLON.Texture("https://assets.babylonjs.com/textures/earth.jpg", scene);
         texture.onLoadObservable.addOnce(() => {
-            const mip = 4;
+            const mip = 1;
             const textureWidth = texture.getSize().width >> mip;
             const textureHeight = texture.getSize().height >> mip;
             const x = textureWidth / 4;
             const y = textureHeight / 4;
             const width = textureWidth / 2;
             const height = textureHeight / 2;
-            console.log(`Texture loaded: Width: ${textureWidth} | Height: ${textureHeight}.`);
-            setTimeout(() => {
-                //texture.readPixels(undefined, mip, undefined, undefined, undefined, x, y, width, height).then((buffer) => {
-                texture.readPixels(undefined, mip, undefined, undefined, undefined, 0, 0, textureWidth, textureHeight).then((buffer) => {
+            texture.readPixels(undefined, mip, undefined, undefined, undefined, x, y, width, height).then((buffer) => {
+                console.log(`Read ${buffer.byteLength} pixel bytes.`);
+                return buffer;
+            })
+            .then(buffer => {
+                texture.readPixels(undefined, mip, buffer, undefined, undefined, x, y, width, height).then((buffer) => {
                     console.log(`Read ${buffer.byteLength} pixel bytes.`);
                 });
-            }, 500);
+            });
         });
     }
 
