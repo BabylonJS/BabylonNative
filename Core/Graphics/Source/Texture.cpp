@@ -32,6 +32,10 @@ namespace Babylon::Graphics
         m_ownsHandle = true;
         m_width = width;
         m_height = height;
+        m_hasMips = hasMips;
+        m_numLayers = numLayers;
+        m_format = format;
+        m_flags = flags;
     }
 
     void Texture::Update2D(uint16_t layer, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch)
@@ -47,6 +51,10 @@ namespace Babylon::Graphics
         m_ownsHandle = true;
         m_width = size;
         m_height = size;
+        m_hasMips = hasMips;
+        m_numLayers = numLayers;
+        m_format = format;
+        m_flags = flags;
     }
 
     void Texture::UpdateCube(uint16_t layer, uint8_t side, uint8_t mip, uint16_t x, uint16_t y, uint16_t width, uint16_t height, const bgfx::Memory* mem, uint16_t pitch)
@@ -54,7 +62,7 @@ namespace Babylon::Graphics
         bgfx::updateTextureCube(m_handle, layer, side, mip, x, y, width, height, mem, pitch);
     }
 
-    void Texture::Attach(bgfx::TextureHandle handle, bool ownsHandle, uint16_t width, uint16_t height)
+    void Texture::Attach(bgfx::TextureHandle handle, bool ownsHandle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format, uint64_t flags)
     {
         Dispose();
 
@@ -63,6 +71,10 @@ namespace Babylon::Graphics
         m_ownsHandle = ownsHandle;
         m_width = width;
         m_height = height;
+        m_hasMips = hasMips;
+        m_numLayers = numLayers;
+        m_format = format;
+        m_flags = flags;
     }
 
     bgfx::TextureHandle Texture::Handle() const
@@ -78,6 +90,26 @@ namespace Babylon::Graphics
     uint16_t Texture::Height() const
     {
         return m_height;
+    }
+
+    bool Texture::HasMips() const
+    {
+        return m_hasMips;
+    }
+
+    uint16_t Texture::NumLayers() const
+    {
+        return m_numLayers;
+    }
+
+    bgfx::TextureFormat::Enum Texture::Format() const
+    {
+        return m_format;
+    }
+
+    uint64_t Texture::Flags() const
+    {
+        return m_flags;
     }
 
     uint32_t Texture::SamplerFlags() const

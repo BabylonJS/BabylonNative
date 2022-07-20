@@ -61,9 +61,9 @@ namespace Babylon::Graphics
         return m_graphicsImpl.RequestScreenShot(std::move(callback));
     }
 
-    arcana::task<void, std::exception_ptr> DeviceContext::ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data)
+    arcana::task<void, std::exception_ptr> DeviceContext::ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel)
     {
-        return m_graphicsImpl.ReadTextureAsync(handle, data);
+        return m_graphicsImpl.ReadTextureAsync(handle, data, mipLevel);
     }
 
     float DeviceContext::GetHardwareScalingLevel()

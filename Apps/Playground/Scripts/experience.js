@@ -17,6 +17,7 @@ var text = false;
 var hololens = false;
 var cameraTexture = false;
 var imageTracking = false;
+const readPixels = false;
 
 function CreateBoxAsync(scene) {
     BABYLON.Mesh.CreateBox("box1", 0.2, scene);
@@ -81,6 +82,30 @@ CreateBoxAsync(scene).then(function () {
             mat.emissiveTexture = videoTexture;
             cameraBox.material = mat;
         }, { maxWidth: 256, maxHeight: 256, facingMode: "environment" });
+    }
+
+    if (readPixels) {
+        const texture = new BABYLON.Texture("https://assets.babylonjs.com/textures/earth.jpg", scene);
+        texture.onLoadObservable.addOnce(() => {
+            const mip = 1;
+            const textureWidth = texture.getSize().width >> mip;
+            const textureHeight = texture.getSize().height >> mip;
+            const x = textureWidth / 4;
+            const y = textureHeight / 4;
+            const width = textureWidth / 2;
+            const height = textureHeight / 2;
+            // This read will create a new buffer.
+            texture.readPixels(undefined, mip, undefined, undefined, undefined, x, y, width, height).then((buffer) => {
+                console.log(`Read ${buffer.byteLength} pixel bytes.`);
+                return buffer;
+            })
+            .then(buffer => {
+                // This read reuses the existing buffer.
+                texture.readPixels(undefined, mip, buffer, undefined, undefined, x, y, width, height).then((buffer) => {
+                    console.log(`Read ${buffer.byteLength} pixel bytes.`);
+                });
+            });
+        });
     }
 
     if (wireframe) {

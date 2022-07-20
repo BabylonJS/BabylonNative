@@ -141,7 +141,7 @@ namespace Babylon::Polyfills::Internal
             m_texture = std::make_unique<Graphics::Texture>();
         }
 
-        m_texture->Attach(bgfx::getTexture(m_frameBuffer->Handle()), false, m_width, m_height);
+        m_texture->Attach(bgfx::getTexture(m_frameBuffer->Handle()), false, m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
         return Napi::Pointer<Graphics::Texture>::Create(info.Env(), m_texture.get());
     }
 

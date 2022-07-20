@@ -120,6 +120,22 @@ namespace Babylon
             return image;
         }
 
+        void FlipImage(gsl::span<uint8_t> image, uint32_t height)
+        {
+            const size_t rowPitch{image.size() / height};
+
+            std::vector<uint8_t> buffer(rowPitch);
+            for (size_t row = 0; row < height / 2; row++)
+            {
+                uint8_t* frontPtr{image.data() + (row * rowPitch)};
+                uint8_t* backPtr{image.data() + ((height - row - 1) * rowPitch)};
+
+                std::memcpy(buffer.data(), frontPtr, rowPitch);
+                std::memcpy(frontPtr, backPtr, rowPitch);
+                std::memcpy(backPtr, buffer.data(), rowPitch);
+            }
+        }
+
         bimg::ImageContainer* PrepareImage(bx::AllocatorI& allocator, bimg::ImageContainer* image, bool invertY, bool srgb, bool generateMips)
         {
             assert(
@@ -135,20 +151,7 @@ namespace Babylon
 
             if (bgfx::getCaps()->originBottomLeft ? invertY : !invertY)
             {
-                uint8_t* bytes{static_cast<uint8_t*>(image->m_data)};
-                const uint32_t rowCount{image->m_height};
-                const uint32_t rowPitch{image->m_size / image->m_height};
-
-                std::vector<uint8_t> buffer(rowPitch);
-                for (size_t row = 0; row < rowCount / 2; row++)
-                {
-                    uint8_t* frontPtr{bytes + (row * rowPitch)};
-                    uint8_t* backPtr{bytes + ((rowCount - row - 1) * rowPitch)};
-
-                    std::memcpy(buffer.data(), frontPtr, rowPitch);
-                    std::memcpy(frontPtr, backPtr, rowPitch);
-                    std::memcpy(backPtr, buffer.data(), rowPitch);
-                }
+                FlipImage({static_cast<uint8_t*>(image->m_data), image->m_size}, image->m_height);
             }
 
             if (srgb && !bgfx::isTextureValid(1, false, 1, Cast(image->m_format), BGFX_TEXTURE_SRGB))
@@ -466,6 +469,7 @@ namespace Babylon
                 InstanceMethod("getTextureHeight", &NativeEngine::GetTextureHeight),
                 InstanceMethod("copyTexture", &NativeEngine::CopyTexture),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
+                InstanceMethod("readTexture", &NativeEngine::ReadTexture),
 
                 InstanceMethod("createImageBitmap", &NativeEngine::CreateImageBitmap),
                 InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
@@ -1314,6 +1318,121 @@ namespace Babylon
         texture->Dispose();
     }
 
+    Napi::Value NativeEngine::ReadTexture(const Napi::CallbackInfo& info)
+    {
+        const Napi::Env env{info.Env()};
+
+        Graphics::Texture* texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
+        uint8_t mipLevel{static_cast<uint8_t>(info[1].As<Napi::Number>().Uint32Value())};
+        const uint16_t x{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
+        const uint16_t y{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
+        const uint16_t width{static_cast<uint16_t>(info[4].As<Napi::Number>().Uint32Value())};
+        const uint16_t height{static_cast<uint16_t>(info[5].As<Napi::Number>().Uint32Value())};
+        auto buffer{info[6].As<Napi::ArrayBuffer>()};
+        uint32_t bufferOffset{info[7].As<Napi::Number>().Uint32Value()};
+        uint32_t bufferLength{info[8].As<Napi::Number>().Uint32Value()};
+
+        const auto deferred{Napi::Promise::Deferred::New(env)};
+
+        // Calculate source texture storage size.
+        const auto sourceTextureFormat{texture->Format()};
+        bgfx::TextureInfo sourceTextureInfo{};
+        bgfx::calcTextureSize(sourceTextureInfo, width, height, /*depth*/ 1, /*cubeMap*/ false, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat);
+
+        // Calculate target texture storage size.
+        // Always return pixel data in RBGA8 to match the web.
+        const auto targetTextureFormat{bgfx::TextureFormat::Enum::RGBA8};
+        bgfx::TextureInfo targetTextureInfo{};
+        bgfx::calcTextureSize(targetTextureInfo, width, height, /*depth*/ 1, /*cubeMap*/ false, /*hasMips*/ false, /*numLayers*/ 1, targetTextureFormat);
+
+        // Create the output buffer if one wasn't passed in.
+        if (buffer.IsNull())
+        {
+            bufferOffset = 0;
+            bufferLength = targetTextureInfo.storageSize;
+            buffer = Napi::ArrayBuffer::New(env, bufferLength);
+        }
+
+        // Make sure the buffer is big enough for the offset + length.
+        if (buffer.ByteLength() < bufferOffset + bufferLength)
+        {
+            deferred.Reject(Napi::Error::New(env, "Provided buffer is too small for the specified offset and length.").Value());
+        }
+        // Make sure the buffer is big enough to fit the output data.
+        else if (targetTextureInfo.storageSize > bufferLength)
+        {
+            deferred.Reject(Napi::Error::New(env, "Provided buffer is too small to contain the pixel data.").Value());
+        }
+        else
+        {
+            bgfx::TextureHandle sourceTextureHandle{texture->Handle()};
+            auto tempTexture{false};
+
+            // If the image needs to be cropped (not starting at 0, or less than full width/height (accounting for requested mip level)),
+            // or if the texture was not created with the BGFX_TEXTURE_READ_BACK flag, then blit it to a temp texture.
+            if (x != 0 || y != 0 || width != (texture->Width() >> mipLevel) || height != (texture->Height() >> mipLevel) || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
+            {
+                const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
+                bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+                encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0, sourceTextureHandle, mipLevel, x, y, /*srcZ*/ 0, width, height, /*depth*/ 0);
+
+                sourceTextureHandle = blitTextureHandle;
+                tempTexture = true;
+
+                // The requested mip level was blitted, so the source texture now has just one mip, so reset the mip level to 0.
+                mipLevel = 0;
+            }
+
+            // Allocate a buffer to store the source pixel data.
+            std::vector<uint8_t> textureBuffer(sourceTextureInfo.storageSize);
+
+            // Read the source texture.
+            m_graphicsContext.ReadTextureAsync(sourceTextureHandle, textureBuffer, mipLevel).then(arcana::inline_scheduler, *m_cancellationSource, [this, textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
+                // If the source texture format does not match the target texture format, convert it.
+                if (targetTextureInfo.format != sourceTextureInfo.format)
+                {
+                    std::vector<uint8_t> convertedTextureBuffer(targetTextureInfo.storageSize);
+                    if (!bimg::imageConvert(&m_allocator, convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
+                    {
+                        throw std::runtime_error{"Texture conversion to RBGA8 failed."};
+                    }
+                    textureBuffer = convertedTextureBuffer;
+                }
+
+                // Ensure the final texture buffer has the expected size.
+                assert(textureBuffer.size() == targetTextureInfo.storageSize);
+
+                // Flip the image vertically if needed.
+                if (bgfx::getCaps()->originBottomLeft)
+                {
+                    FlipImage(textureBuffer, targetTextureInfo.height);
+                }
+
+                return textureBuffer;
+            }).then(m_runtimeScheduler, *m_cancellationSource, [bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred](std::vector<uint8_t> textureBuffer) {
+                // Double check the destination buffer length. This is redundant with prior checks, but we'll be extra sure before the memcpy.
+                assert(bufferRef.Value().ByteLength() - bufferOffset >= textureBuffer.size());
+
+                // Copy the pixel data into the JS ArrayBuffer.
+                uint8_t* buffer{static_cast<uint8_t*>(bufferRef.Value().Data())};
+                std::memcpy(buffer + bufferOffset, textureBuffer.data(), textureBuffer.size());
+                deferred.Resolve(bufferRef.Value());
+            }).then(m_runtimeScheduler, arcana::cancellation::none(), [env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
+                if (tempTexture)
+                {
+                    bgfx::destroy(sourceTextureHandle);
+                }
+
+                if (result.has_error())
+                {
+                    deferred.Reject(Napi::Error::New(env, result.error()).Value());
+                }
+            });
+        }
+
+        return deferred.Promise();
+    }
+
     Napi::Value NativeEngine::CreateFrameBuffer(const Napi::CallbackInfo& info)
     {
         Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
@@ -1356,7 +1475,7 @@ namespace Babylon
             frameBufferHandle = bgfx::createFrameBuffer(width, height, format, BGFX_TEXTURE_RT);
         }
 
-        texture->Attach(bgfx::getTexture(frameBufferHandle), false, width, height);
+        texture->Attach(bgfx::getTexture(frameBufferHandle), false, width, height, generateMips, 1, format, BGFX_TEXTURE_RT);
         m_graphicsContext.AddTexture(texture->Handle(), width, height, generateMips, 1, format);
 
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_graphicsContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
