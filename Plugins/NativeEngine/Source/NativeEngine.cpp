@@ -1354,7 +1354,7 @@ namespace Babylon
         }
 
         // Make sure the buffer is big enough to fit the output data.
-        if (buffer.ByteLength() < bufferOffset + bufferLength)
+        if (targetTextureInfo.storageSize < bufferLength)
         {
             deferred.Reject(Napi::Error::New(env, "Provided buffer is too small.").Value());
         }
@@ -1387,7 +1387,10 @@ namespace Babylon
                 if (targetTextureInfo.format != sourceTextureInfo.format)
                 {
                     std::vector<uint8_t> convertedTextureBuffer(targetTextureInfo.storageSize);
-                    bimg::imageConvert(&m_allocator, convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1);
+                    if (!bimg::imageConvert(&m_allocator, convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
+                    {
+                        throw std::runtime_error{"Texture conversion to RBGA8 failed."};
+                    }
                     textureBuffer = convertedTextureBuffer;
                 }
 
@@ -1398,9 +1401,10 @@ namespace Babylon
                 }
 
                 return textureBuffer;
-            }).then(m_runtimeScheduler, *m_cancellationSource, [bufferRef{Napi::Persistent(buffer)}, deferred](std::vector<uint8_t> textureBuffer) {
+            }).then(m_runtimeScheduler, *m_cancellationSource, [bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred](std::vector<uint8_t> textureBuffer) {
                 // Copy the pixel data into the JS ArrayBuffer.
-                std::memcpy(bufferRef.Value().Data(), textureBuffer.data(), textureBuffer.size());
+                uint8_t* buffer{static_cast<uint8_t*>(bufferRef.Value().Data())};
+                std::memcpy(buffer + bufferOffset, textureBuffer.data(), textureBuffer.size());
                 deferred.Resolve(bufferRef.Value());
             }).then(m_runtimeScheduler, arcana::cancellation::none(), [env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
                 if (tempTexture)
