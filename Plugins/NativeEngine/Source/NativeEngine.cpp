@@ -1353,10 +1353,15 @@ namespace Babylon
             buffer = Napi::ArrayBuffer::New(env, bufferLength);
         }
 
-        // Make sure the buffer is big enough to fit the output data.
-        if (targetTextureInfo.storageSize < bufferLength)
+        // Make sure the buffer is big enough for the offset + length.
+        if (buffer.ByteLength() < bufferOffset + bufferLength)
         {
-            deferred.Reject(Napi::Error::New(env, "Provided buffer is too small.").Value());
+            deferred.Reject(Napi::Error::New(env, "Provided buffer is too small for the specified offset and length.").Value());
+        }
+        // Make sure the buffer is big enough to fit the output data.
+        else if (targetTextureInfo.storageSize > bufferLength)
+        {
+            deferred.Reject(Napi::Error::New(env, "Provided buffer is too small to contain the pixel data.").Value());
         }
         else
         {
@@ -1393,6 +1398,9 @@ namespace Babylon
                     }
                     textureBuffer = convertedTextureBuffer;
                 }
+
+                // Ensure the final texture buffer has the expected size.
+                assert(textureBuffer.size() == targetTextureInfo.storageSize);
 
                 // Flip the image vertically if needed.
                 if (bgfx::getCaps()->originBottomLeft)
