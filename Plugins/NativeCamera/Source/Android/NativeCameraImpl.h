@@ -31,6 +31,7 @@ namespace Babylon::Plugins
 
     private:
 
+        Graphics::DeviceContext* m_deviceContext;
         Napi::Env m_env;
 
         bool m_overrideCameraTexture;

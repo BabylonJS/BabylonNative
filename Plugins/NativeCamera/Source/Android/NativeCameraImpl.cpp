@@ -149,7 +149,8 @@ namespace Babylon::Plugins
 #endif
 
     Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
-        : m_env{env}
+        : m_deviceContext{nullptr}
+        , m_env{env}
         , m_overrideCameraTexture{overrideCameraTexture}
     {
 #if __ANDROID_API__ < 24
@@ -166,6 +167,10 @@ namespace Babylon::Plugins
 
     void Camera::Impl::Open(uint32_t width, uint32_t height, bool frontCamera)
     {
+        if (!m_deviceContext){
+            m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
+        }
+
         android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, width, height, frontCamera]()
         {
             m_width = width;
@@ -239,7 +244,7 @@ namespace Babylon::Plugins
                 auto id = GetCameraId(frontCamera);
                 ACameraManager_openCamera(m_cameraManager, id.c_str(), &cameraDeviceCallbacks, &m_cameraDevice);
 
-                m_textureWindow = ANativeWindow_fromSurface(m_env, surface);
+                m_textureWindow = ANativeWindow_fromSurface(GetEnvForCurrentThread(), surface);
 
                 // Prepare request for texture target
                 ACameraDevice_createCaptureRequest(m_cameraDevice, TEMPLATE_PREVIEW, &m_request);
@@ -323,7 +328,7 @@ namespace Babylon::Plugins
             throw std::runtime_error{"Unable to make current shared GL context for camera texture."};
         }
 
-        arcana::make_task(Graphics::DeviceContext::GetFromJavaScript(m_env).BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
+        arcana::make_task(m_deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
             bgfx::overrideInternal(textureHandle, m_cameraRGBATextureId);
         });
     }
