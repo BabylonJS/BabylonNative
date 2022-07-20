@@ -1409,7 +1409,10 @@ namespace Babylon
                 }
 
                 return textureBuffer;
-            }).then(m_runtimeScheduler, *m_cancellationSource, [bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred](std::vector<uint8_t> textureBuffer) {
+            }).then(m_runtimeScheduler, *m_cancellationSource, [bufferRef{Napi::Persistent(buffer)}, bufferOffset, bufferLength, deferred](std::vector<uint8_t> textureBuffer) {
+                // Double check the destination buffer length. This is redundant with prior checks, but we'll be extra sure before the memcpy.
+                assert(bufferLength >= textureBuffer.size());
+
                 // Copy the pixel data into the JS ArrayBuffer.
                 uint8_t* buffer{static_cast<uint8_t*>(bufferRef.Value().Data())};
                 std::memcpy(buffer + bufferOffset, textureBuffer.data(), textureBuffer.size());
