@@ -20,7 +20,8 @@ namespace Babylon::Plugins
         void Close();
 
     private:
-        Graphics::DeviceContext& m_deviceContext;
+        Graphics::DeviceContext* m_deviceContext;
+        Napi::Env m_env;
 
         std::shared_ptr<ImplData> m_implData;
 
