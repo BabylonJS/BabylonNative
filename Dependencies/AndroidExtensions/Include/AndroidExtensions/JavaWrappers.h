@@ -79,19 +79,29 @@ namespace java::lang
         jbyteArray m_byteArray;
     };
 
-    class Class
+    class Class final
     {
     public:
         Class(const char* className);
         Class(const jclass classObj);
+        ~Class();
+
+        Class(const Class&);
+        Class& operator=(const Class&);
+
+        Class(Class&&);
+        Class& operator=(Class&&);
 
         operator jclass() const;
 
         bool IsAssignableFrom(Class otherClass);
 
-    protected:
+    private:
+        jclass JClass() const;
+        void JClass(jclass classObj);
+
         JNIEnv* m_env;
-        const jclass m_class;
+        jclass m_class;
     };
 
     class Object
@@ -99,14 +109,27 @@ namespace java::lang
     public:
         operator jobject() const;
         Class GetClass();
+        ~Object();
 
     protected:
         Object(const char* className);
         Object(jobject object);
 
+        Object(const Object&);
+        Object& operator=(const Object&);
+
+        Object(Object&&);
+        Object& operator=(Object&&);
+
+        jobject JObject() const;
+        void JObject(jobject object);
+
         JNIEnv* m_env;
         Class m_class;
+
+    private:
         jobject m_object;
+
     };
 
     class String

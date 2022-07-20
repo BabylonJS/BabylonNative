@@ -48,14 +48,57 @@ namespace java::lang
 
     Class::Class(const char* className)
         : m_env{GetEnvForCurrentThread()}
-        , m_class{m_env->FindClass(className)}
+        , m_class{static_cast<jclass>(m_env->NewGlobalRef(m_env->FindClass(className)))}
     {
     }
 
     Class::Class(const jclass classObj)
         : m_env{GetEnvForCurrentThread()}
-        , m_class{classObj}
+        , m_class{static_cast<jclass>(m_env->NewGlobalRef(classObj))}
     {
+    }
+
+    Class::~Class()
+    {
+        JClass(nullptr);
+    }
+
+    Class::Class(const Class& other)
+        : Class(other.m_class)
+    {
+    }
+
+    Class& Class::operator=(const Class& other)
+    {
+        if (this != &other)
+        {
+            // Clear out the jclass using the current environment before updating to the
+            // other Class's environment and jclass. The jclass should be used in conjunction
+            // with the environment it was created in.
+            JClass(nullptr);
+            m_env = other.m_env;
+            JClass(other.JClass());
+        }
+
+        return *this;
+    }
+
+    Class::Class(Class&& other)
+        : m_env{other.m_env}
+        , m_class{other.m_class}
+    {
+        other.m_class = nullptr;
+        other.m_env = nullptr;
+    }
+
+    Class& Class::operator=(Class&& other)
+    {
+        m_env = other.m_env;
+        m_class = other.m_class;
+        other.m_class = nullptr;
+        other.m_env = nullptr;
+
+        return *this;
     }
 
     Class::operator jclass() const
@@ -67,6 +110,25 @@ namespace java::lang
     {
         return m_env->IsAssignableFrom(m_class, otherClass.m_class);
     };
+
+    jclass Class::JClass() const
+    {
+        return m_class;
+    }
+
+    void Class::JClass(jclass classObj)
+    {
+        if (m_class) {
+            m_env->DeleteGlobalRef(m_class);
+        }
+
+        m_class = classObj;
+
+        if (m_class)
+        {
+            m_class = static_cast<jclass>(m_env->NewGlobalRef(classObj));
+        }
+    }
 
     Object::operator jobject() const
     {
@@ -81,10 +143,76 @@ namespace java::lang
     }
 
     Object::Object(jobject object)
-            : m_env{GetEnvForCurrentThread()}
-            , m_class{m_env->GetObjectClass(object)}
-            , m_object{object}
+        : m_env{GetEnvForCurrentThread()}
+        , m_class{m_env->GetObjectClass(object)}
+        , m_object{m_env->NewGlobalRef(object)}
     {
+    }
+
+    Object::~Object()
+    {
+        JObject(nullptr);
+    }
+
+    Object::Object(const Object& other)
+        : Object(other.m_object)
+    {
+    }
+
+    Object& Object::operator=(const Object& other)
+    {
+        if (this != &other)
+        {
+            // Clear out the jobject using the current environment before updating to the
+            // other Object's environment and jobject. The jobject should be used in conjunction
+            // with the environment it was created in.
+            JObject(nullptr);
+            m_env = other.m_env;
+            m_class = other.m_class;
+            JObject(other.m_object);
+        }
+
+        return *this;
+    }
+
+    Object::Object(Object&& other)
+        : m_env{other.m_env}
+        , m_class{std::move(other.m_class)}
+        , m_object{other.m_object}
+    {
+        other.m_object = nullptr;
+        other.m_env = nullptr;
+    }
+
+    Object& Object::operator=(Object&& other)
+    {
+        m_env = other.m_env;
+        m_class = std::move(other.m_class);
+        m_object = other.m_object;
+        other.m_object = nullptr;
+        other.m_env = nullptr;
+
+        return *this;
+    }
+
+    jobject Object::JObject() const
+    {
+        return m_object;
+    }
+
+    void Object::JObject(jobject object)
+    {
+        if (m_object)
+        {
+            m_env->DeleteGlobalRef(m_object);
+        }
+
+        m_object = object;
+
+        if (m_object)
+        {
+            m_object = m_env->NewGlobalRef(object);
+        }
     }
 
     Class Object::GetClass()
@@ -137,7 +265,7 @@ namespace java::lang
 
     String Throwable::GetMessage() const
     {
-        return {(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getMessage", "()Ljava/lang/String;"))};
+        return {(jstring)m_env->CallObjectMethod(JObject(), m_env->GetMethodID(m_class, "getMessage", "()Ljava/lang/String;"))};
     }
 
     const char* Throwable::what() const noexcept
@@ -151,13 +279,13 @@ namespace java::io
     ByteArrayOutputStream::ByteArrayOutputStream()
         : Object{"java/io/ByteArrayOutputStream"}
     {
-        m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "()V"));
+        JObject(m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "()V")));
     }
 
     ByteArrayOutputStream::ByteArrayOutputStream(int size)
         : Object{"java/io/ByteArrayOutputStream"}
     {
-        m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(I)V"), size);
+        JObject(m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(I)V"), size));
     }
 
     ByteArrayOutputStream::ByteArrayOutputStream(jobject object)
@@ -167,18 +295,18 @@ namespace java::io
 
     void ByteArrayOutputStream::Write(lang::ByteArray b, int off, int len)
     {
-        m_env->CallVoidMethod(m_object, m_env->GetMethodID(m_class, "write", "([BII)V"), (jbyteArray)b, off, len);
+        m_env->CallVoidMethod(JObject(), m_env->GetMethodID(m_class, "write", "([BII)V"), (jbyteArray)b, off, len);
     }
 
     lang::ByteArray ByteArrayOutputStream::ToByteArray() const
     {
-        return {(jbyteArray)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "toByteArray", "()[B"))};
+        return {(jbyteArray)m_env->CallObjectMethod(JObject(), m_env->GetMethodID(m_class, "toByteArray", "()[B"))};
     }
 
     lang::String ByteArrayOutputStream::ToString(const char* charsetName) const
     {
         jmethodID method{m_env->GetMethodID(m_class, "toString", "(Ljava/lang/String;)Ljava/lang/String;")};
-        return {(jstring)m_env->CallObjectMethod(m_object, method, m_env->NewStringUTF(charsetName))};
+        return {(jstring)m_env->CallObjectMethod(JObject(), method, m_env->NewStringUTF(charsetName))};
     }
 
     InputStream::InputStream(jobject object)
@@ -188,7 +316,7 @@ namespace java::io
 
     int InputStream::Read(lang::ByteArray byteArray) const
     {
-        return m_env->CallIntMethod(m_object, m_env->GetMethodID(m_class, "read", "([B)I"), (jbyteArray)byteArray);
+        return m_env->CallIntMethod(JObject(), m_env->GetMethodID(m_class, "read", "([B)I"), (jbyteArray)byteArray);
     }
 }
 
@@ -206,7 +334,7 @@ namespace java::net
 
     int HttpURLConnection::GetResponseCode() const
     {
-        auto responseCode = m_env->CallIntMethod(m_object, m_env->GetMethodID(m_class, "getResponseCode", "()I"));
+        auto responseCode = m_env->CallIntMethod(JObject(), m_env->GetMethodID(m_class, "getResponseCode", "()I"));
         ThrowIfFaulted(m_env);
         return responseCode;
     }
@@ -214,7 +342,7 @@ namespace java::net
     URL::URL(lang::String url)
         : Object{"java/net/URL"}
     {
-        m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(Ljava/lang/String;)V"), (jstring)url);
+        JObject(m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(Ljava/lang/String;)V"), (jstring)url));
         ThrowIfFaulted(m_env);
     }
 
@@ -225,14 +353,14 @@ namespace java::net
 
     URLConnection URL::OpenConnection()
     {
-        auto urlConnection{m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "openConnection", "()Ljava/net/URLConnection;"))};
+        auto urlConnection{m_env->CallObjectMethod(JObject(), m_env->GetMethodID(m_class, "openConnection", "()Ljava/net/URLConnection;"))};
         ThrowIfFaulted(m_env);
         return {urlConnection};
     }
 
     lang::String URL::ToString()
     {
-        auto string{(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "toString", "()Ljava/lang/String;"))};
+        auto string{(jstring)m_env->CallObjectMethod(JObject(), m_env->GetMethodID(m_class, "toString", "()Ljava/lang/String;"))};
         ThrowIfFaulted((m_env));
         return {string};
     }
@@ -244,34 +372,34 @@ namespace java::net
 
     void URLConnection::Connect()
     {
-        m_env->CallVoidMethod(m_object, m_env->GetMethodID(m_class, "connect", "()V"));
+        m_env->CallVoidMethod(JObject(), m_env->GetMethodID(m_class, "connect", "()V"));
         ThrowIfFaulted(m_env);
     }
 
     URL URLConnection::GetURL() const
     {
-        auto url{m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getURL", "()Ljava/net/URL;"))};
+        auto url{m_env->CallObjectMethod(JObject(), m_env->GetMethodID(m_class, "getURL", "()Ljava/net/URL;"))};
         ThrowIfFaulted(m_env);
         return {url};
     }
 
     int URLConnection::GetContentLength() const
     {
-        auto contentLength{m_env->CallIntMethod(m_object, m_env->GetMethodID(m_class, "getContentLength", "()I"))};
+        auto contentLength{m_env->CallIntMethod(JObject(), m_env->GetMethodID(m_class, "getContentLength", "()I"))};
         ThrowIfFaulted(m_env);
         return contentLength;
     }
 
     io::InputStream URLConnection::GetInputStream() const
     {
-        auto inputStream{m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getInputStream", "()Ljava/io/InputStream;"))};
+        auto inputStream{m_env->CallObjectMethod(JObject(), m_env->GetMethodID(m_class, "getInputStream", "()Ljava/io/InputStream;"))};
         ThrowIfFaulted(m_env);
         return {inputStream};
     }
 
     URLConnection::operator HttpURLConnection() const
     {
-        return {m_object};
+        return {JObject()};
     }
 }
 
@@ -304,7 +432,7 @@ namespace android::app
             1,
             m_env->FindClass("java/lang/String"),
             systemPermissionName)};
-        m_env->CallVoidMethod(m_object, m_env->GetMethodID(m_class, "requestPermissions", "([Ljava/lang/String;I)V"), permissionArray, permissionRequestID);
+        m_env->CallVoidMethod(JObject(), m_env->GetMethodID(m_class, "requestPermissions", "([Ljava/lang/String;I)V"), permissionArray, permissionRequestID);
         m_env->DeleteLocalRef(permissionArray);
     }
 }
@@ -318,21 +446,21 @@ namespace android::content
 
     Context Context::getApplicationContext()
     {
-        return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getApplicationContext", "()Landroid/content/Context;"))};
+        return {m_env->CallObjectMethod(JObject(), m_env->GetMethodID(m_class, "getApplicationContext", "()Landroid/content/Context;"))};
     }
 
     res::AssetManager Context::getAssets() const
     {
-        return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getAssets", "()Landroid/content/res/AssetManager;"))};
+        return {m_env->CallObjectMethod(JObject(), m_env->GetMethodID(m_class, "getAssets", "()Landroid/content/res/AssetManager;"))};
     }
 
     jobject Context::getSystemService(const char* serviceName)
     {
-        return m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;"), m_env->NewStringUTF(serviceName));
+        return m_env->CallObjectMethod(JObject(), m_env->GetMethodID(m_class, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;"), m_env->NewStringUTF(serviceName));
     }
 
     res::Resources Context::getResources() {
-        return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getResources", "()Landroid/content/res/Resources;"))};
+        return {m_env->CallObjectMethod(JObject(), m_env->GetMethodID(m_class, "getResources", "()Landroid/content/res/Resources;"))};
     }
 
     bool Context::checkSelfPermission(jstring systemPermissionName)
@@ -343,7 +471,8 @@ namespace android::content
         jint permissionGrantedValue{m_env->GetStaticIntField(packageManager, permissionGrantedId)};
 
         // Perform the actual permission check by checking against the android context object.
-        jint permissionCheckResult{m_env->CallIntMethod(m_object, m_env->GetMethodID(m_class, "checkSelfPermission", "(Ljava/lang/String;)I"), systemPermissionName)};
+        jint permissionCheckResult{m_env->CallIntMethod(JObject(), m_env->GetMethodID(m_class, "checkSelfPermission", "(Ljava/lang/String;)I"), systemPermissionName)};
+        ThrowIfFaulted(m_env);
         return permissionGrantedValue == permissionCheckResult;
     }
 }
@@ -357,7 +486,7 @@ namespace android::content::res
 
     AssetManager::operator AAssetManager*() const
     {
-        return AAssetManager_fromJava(m_env, m_object);
+        return AAssetManager_fromJava(m_env, JObject());
     }
 
     Configuration::Configuration(jobject object)
@@ -367,7 +496,7 @@ namespace android::content::res
 
     int Configuration::getDensityDpi()
     {
-        return m_env->GetIntField(m_object, m_env->GetFieldID(m_class, "densityDpi", "I"));
+        return m_env->GetIntField(JObject(), m_env->GetFieldID(m_class, "densityDpi", "I"));
     }
 
     Resources::Resources(jobject object)
@@ -377,7 +506,7 @@ namespace android::content::res
 
     Configuration Resources::getConfiguration()
     {
-        return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getConfiguration", "()Landroid/content/res/Configuration;"))};
+        return {m_env->CallObjectMethod(JObject(), m_env->GetMethodID(m_class, "getConfiguration", "()Landroid/content/res/Configuration;"))};
     }
 }
 
@@ -390,7 +519,7 @@ namespace android::view
 
     int Display::getRotation()
     {
-        return m_env->CallIntMethod(m_object, m_env->GetMethodID(m_class, "getRotation", "()I"));
+        return m_env->CallIntMethod(JObject(), m_env->GetMethodID(m_class, "getRotation", "()I"));
     }
 
     WindowManager::WindowManager(jobject object)
@@ -400,13 +529,13 @@ namespace android::view
 
     Display WindowManager::getDefaultDisplay()
     {
-        return {m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getDefaultDisplay", "()Landroid/view/Display;"))};
+        return {m_env->CallObjectMethod(JObject(), m_env->GetMethodID(m_class, "getDefaultDisplay", "()Landroid/view/Display;"))};
     }
 
     Surface::Surface(android::graphics::SurfaceTexture& surfaceTexture)
         : Object("android/view/Surface")
     {
-        m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(Landroid/graphics/SurfaceTexture;)V"), (jobject)surfaceTexture);
+        JObject(m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(Landroid/graphics/SurfaceTexture;)V"), (jobject)surfaceTexture));
     }
 }
 
@@ -419,14 +548,14 @@ namespace android::net
 
     java::lang::String Uri::getScheme() const
     {
-        auto scheme{(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getScheme", "()Ljava/lang/String;"))};
+        auto scheme{(jstring)m_env->CallObjectMethod(JObject(), m_env->GetMethodID(m_class, "getScheme", "()Ljava/lang/String;"))};
         ThrowIfFaulted(m_env);
         return {scheme};
     }
 
     java::lang::String Uri::getPath() const
     {
-        auto path{(jstring)m_env->CallObjectMethod(m_object, m_env->GetMethodID(m_class, "getPath", "()Ljava/lang/String;"))};
+        auto path{(jstring)m_env->CallObjectMethod(JObject(), m_env->GetMethodID(m_class, "getPath", "()Ljava/lang/String;"))};
         ThrowIfFaulted(m_env);
         return {path};
     }
@@ -450,13 +579,13 @@ namespace android::graphics
 
     void SurfaceTexture::InitWithTexture(int texture)
     {
-        m_object = m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(I)V"), texture);
+        JObject(m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(I)V"), texture));
     }
 
     void SurfaceTexture::updateTexImage() const
     {
-        if (m_object) {
-            m_env->CallVoidMethod(m_object, m_env->GetMethodID(m_class, "updateTexImage", "()V"));
+        if (JObject()) {
+            m_env->CallVoidMethod(JObject(), m_env->GetMethodID(m_class, "updateTexImage", "()V"));
         }
     }
 }
