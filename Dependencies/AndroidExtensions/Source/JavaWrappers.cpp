@@ -72,6 +72,9 @@ namespace java::lang
     {
         if (this != &other)
         {
+            // Clear out the jclass using the current environment before updating to the
+            // other Class's environment and jclass. The jclass should be used in conjunction
+            // with the environment it was created in.
             JClass(nullptr);
             m_env = other.m_env;
             JClass(other.JClass());
@@ -119,9 +122,9 @@ namespace java::lang
             m_env->DeleteGlobalRef(m_class);
         }
 
-        m_class = nullptr;
+        m_class = classObj;
 
-        if (classObj)
+        if (m_class)
         {
             m_class = static_cast<jclass>(m_env->NewGlobalRef(classObj));
         }
@@ -160,6 +163,9 @@ namespace java::lang
     {
         if (this != &other)
         {
+            // Clear out the jobject using the current environment before updating to the
+            // other Object's environment and jobject. The jobject should be used in conjunction
+            // with the environment it was created in.
             JObject(nullptr);
             m_env = other.m_env;
             m_class = other.m_class;
@@ -201,9 +207,9 @@ namespace java::lang
             m_env->DeleteGlobalRef(m_object);
         }
 
-        m_object = nullptr;
+        m_object = object;
 
-        if (object)
+        if (m_object)
         {
             m_object = m_env->NewGlobalRef(object);
         }
