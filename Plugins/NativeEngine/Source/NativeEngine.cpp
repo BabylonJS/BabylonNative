@@ -614,7 +614,7 @@ namespace Babylon
         if (vertexBufferValue.IsUndefined())
             return;
 
-        VertexBuffer* vertexBuffer = info[1].As<Napi::Pointer<VertexBuffer>>().Get();
+        VertexBuffer* vertexBuffer = vertexBufferValue.As<Napi::Pointer<VertexBuffer>>().Get();
         const uint32_t location = info[2].As<Napi::Number>().Uint32Value();
         const uint32_t byteOffset = info[3].As<Napi::Number>().Uint32Value();
         const uint32_t byteStride = info[4].As<Napi::Number>().Uint32Value();
