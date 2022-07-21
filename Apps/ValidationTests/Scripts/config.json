@@ -1,11 +1,14 @@
 {
     "root": "https://cdn.babylonjs.com",
-    "tests": [
+    "disabledTests": [
         {
+            "reason": "https://github.com/BabylonJS/BabylonNative/issues/1111",
             "title": "Thin Instances",
             "playgroundId": "#V1JE4Z#1",
             "referenceImage": "thinInstances.png"
-        },
+        }
+    ],
+    "tests": [
         {
             "title": "GLTF Sheen",
             "playgroundId": "#YG3BBF#2",
