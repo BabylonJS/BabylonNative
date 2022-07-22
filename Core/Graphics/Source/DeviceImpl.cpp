@@ -93,6 +93,15 @@ namespace Babylon::Graphics
         }
     }
 
+    void DeviceImpl::SetAlphaPremultiplied(bool enabled)
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Bgfx.Dirty = true;
+        auto& init = m_state.Bgfx.InitState;
+        init.resolution.reset &= ~BGFX_RESET_TRANSPARENT_BACKBUFFER;
+        init.resolution.reset |= enabled ? BGFX_RESET_TRANSPARENT_BACKBUFFER : 0;
+    }
+
     size_t DeviceImpl::GetWidth() const
     {
         return m_state.Resolution.Width;

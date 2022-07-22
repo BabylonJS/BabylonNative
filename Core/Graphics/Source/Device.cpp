@@ -32,6 +32,7 @@ namespace Babylon::Graphics
         device->UpdateWindow(config);
         device->UpdateSize(config.Width, config.Height);
         device->UpdateMSAA(config.MSAASamples);
+        device->UpdateAlphaPremultiplied(config.AlphaPremultiplied);
         return device;
     }
 
@@ -50,6 +51,11 @@ namespace Babylon::Graphics
     void Device::UpdateMSAA(uint8_t value)
     {
         m_impl->SetMSAA(value);
+    }
+
+    void Device::UpdateAlphaPremultiplied(bool enabled)
+    {
+        m_impl->SetAlphaPremultiplied(enabled);
     }
 
     void Device::AddToJavaScript(Napi::Env env)
