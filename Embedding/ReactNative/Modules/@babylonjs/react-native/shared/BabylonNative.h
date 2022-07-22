@@ -29,6 +29,7 @@ namespace BabylonNative
 
     void UpdateView(WindowType window, size_t width, size_t height);
     void UpdateMSAA(uint8_t value);
+    void UpdateAlphaPremultiplied(bool enabled);
 
     void RenderView();
     void ResetView();
