@@ -30,6 +30,8 @@ namespace Babylon::Plugins
         // NOTE: Must call this from the JavaScript thread.
         Napi::Promise AddToContextAsync(Napi::Env) const;
 
+        Napi::Value AddToContextSync(Napi::Env) const;
+
         void AddToContextAsync(Napi::Env, 
                                std::function<void(Napi::Env, Napi::Value)> succeed, 
                                std::function<void(Napi::Env, Napi::Value)> fail) const;
