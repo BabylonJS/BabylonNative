@@ -2,6 +2,7 @@
 #include <napi/napi.h>
 #include "NativeCameraImpl.h"
 #include <Babylon/JsRuntime.h>
+#include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/Graphics/DeviceContext.h>
 #include <vector>
 #include <algorithm>
@@ -35,6 +36,8 @@ namespace Babylon::Plugins
         Napi::Value IsNative(const Napi::CallbackInfo&);
         Napi::Value GetReadyState(const Napi::CallbackInfo& info);
         Napi::Value GetHaveCurrentData(const Napi::CallbackInfo& info);
+
+        JsRuntimeScheduler m_runtimeScheduler;
 
         std::unordered_map<std::string, std::vector<Napi::FunctionReference>> m_eventHandlerRefs{};
         uint32_t m_width{};

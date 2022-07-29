@@ -22,9 +22,6 @@ target_include_directories(NativeCamera
 
 if(ANDROID)
     set(EXTENSIONS AndroidExtensions)
-    if(ANDROID_NATIVE_API_LEVEL GREATER_EQUAL 24)
-        set(EXTENSIONS ${EXTENSIONS} camera2ndk)
-    endif()
 elseif(APPLE)
     set(EXTENSIONS "-framework CoreMedia -framework AVFoundation")
 endif()

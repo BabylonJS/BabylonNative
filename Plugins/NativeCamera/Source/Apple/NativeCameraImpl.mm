@@ -58,7 +58,7 @@ namespace Babylon::Plugins
     {
     }
 
-    void Camera::Impl::Open(uint32_t /*width*/, uint32_t /*height*/, bool frontCamera)
+    arcana::task<void, std::exception_ptr> Camera::Impl::Open(uint32_t /*width*/, uint32_t /*height*/, bool frontCamera)
     {
         auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
 
@@ -123,6 +123,9 @@ namespace Babylon::Plugins
             [m_implData->avCaptureSession commitConfiguration];
             [m_implData->avCaptureSession startRunning];
         });
+        
+        // This should capture an actual task and return it... but we'll deal with that later
+        return arcana::task_from_result<std::exception_ptr>();
     }
 
     void Camera::Impl::SetTextureOverride(void* /*texturePtr*/)
