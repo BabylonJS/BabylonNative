@@ -55,6 +55,14 @@ namespace Babylon::Graphics
         m_state.Resolution.DevicePixelRatio = config.DevicePixelRatio;
     }
 
+    void DeviceImpl::UpdateRenderTarget(const RenderTargetInfo& renderTargetInfo)
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Bgfx.Dirty = true;
+        ConfigureBgfxPlatformData(renderTargetInfo, m_state.Bgfx.InitState.platformData);
+        Resize(renderTargetInfo.Width, renderTargetInfo.Height);
+    }
+
     void DeviceImpl::Resize(size_t width, size_t height)
     {
         std::scoped_lock lock{m_state.Mutex};

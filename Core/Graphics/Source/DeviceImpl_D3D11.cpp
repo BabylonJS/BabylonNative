@@ -9,4 +9,9 @@ namespace Babylon::Graphics
     {
         pd.context = config.Device;
     }
+
+    void DeviceImpl::ConfigureBgfxPlatformData(const RenderTargetInfo& config, bgfx::PlatformData& pd)
+    {
+        pd.backBuffer = (void*)config.RenderTarget;
+    }
 }

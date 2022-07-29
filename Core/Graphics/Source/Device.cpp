@@ -47,6 +47,11 @@ namespace Babylon::Graphics
         m_impl->Resize(width, height);
     }
 
+    void Device::UpdateRenderTarget(const RenderTargetInfo& renderTargetInfo)
+    {
+        m_impl->UpdateRenderTarget(renderTargetInfo);
+    }
+
     void Device::UpdateMSAA(uint8_t value)
     {
         m_impl->SetMSAA(value);
