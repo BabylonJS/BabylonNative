@@ -2,7 +2,6 @@
 #include "NativeCamera.h"
 #include "NativeCameraImpl.h"
 #include <string>
-#include <android/api-level.h>
 #include <android/native_window_jni.h>
 #include <AndroidExtensions/Globals.h>
 #include <AndroidExtensions/Permissions.h>
@@ -15,10 +14,6 @@
 #include <arcana/threading/task_schedulers.h>
 #include <arcana/macros.h>
 #include <memory>
-#include <dlfcn.h>
-
-// Helper macro to make calling camera NDK api's more type safe
-#define GET_CAMERA_FUNCTION(function) reinterpret_cast<decltype(&API24::function)>(GetCameraDynamicFunction(#function))
 
 using namespace android;
 using namespace android::global;
@@ -44,13 +39,6 @@ namespace Babylon::Plugins
             oFragColor = texture(cameraTexture, cameraFrameUV);
         }
     )"};
-
-    static const int API_LEVEL{ android_get_device_api_level() };
-
-    // Load the NDK camera lib dynamically. When running on OS 6.0 and below this will return nullptr,
-    // on OS 7.0 and up this should return a pointer to access the library using dlsym. It is technically fine
-    // to call dlopen when the API_LEVEL is below 24, but it's wasted effort on those devices.
-    static void* libCamera2NDK{ API_LEVEL >= 24 ? dlopen("libcamera2ndk.so", RTLD_NOW | RTLD_LOCAL): nullptr };
 
     GLuint Camera::Impl::GenerateOESTexture()
     {
@@ -92,23 +80,6 @@ namespace Babylon::Plugins
 
         GET_CAMERA_FUNCTION(ACameraManager_deleteCameraIdList)(cameraIds);
         return cameraId;
-    }
-
-    void* Camera::Impl::GetCameraDynamicFunction(const char* functionName)
-    {
-        if (m_cameraDynamicFunctions.count(functionName) > 0)
-        {
-            return m_cameraDynamicFunctions.at(functionName);
-        }
-
-        if (libCamera2NDK)
-        {
-            auto functionPtr{dlsym(libCamera2NDK, functionName)};
-            m_cameraDynamicFunctions.emplace(functionName, functionPtr);
-            return functionPtr;
-        }
-
-        return nullptr;
     }
 
     // device callbacks

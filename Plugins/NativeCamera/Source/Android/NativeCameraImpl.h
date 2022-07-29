@@ -1,27 +1,6 @@
 #pragma once
 
-// The camera API's in the NDK are only supported in API24 and higher. We
-// use dlopen and dlsym to link the camera lib at runtime only if the current
-// device supports it. In order to avoid redefining the type information the
-// below macro's forcefully import the camera header files as if the min supported
-// SDK was set to 24.
-#define __ORIG_ANDROID_API__ __ANDROID_API__
-#undef __ANDROID_API__
-#define __ANDROID_API__ 24
-namespace API24 {
-    #include <camera/NdkCameraManager.h>
-    #include <camera/NdkCameraCaptureSession.h>
-    #include <camera/NdkCameraDevice.h>
-    #include <camera/NdkCameraError.h>
-    #include <camera/NdkCameraManager.h>
-    #include <camera/NdkCameraMetadata.h>
-    #include <camera/NdkCameraMetadataTags.h>
-    #include <camera/NdkCameraWindowType.h>
-    #include <camera/NdkCaptureRequest.h>
-}
-#undef __ANDROID_API__
-#define __ANDROID_API__ __ORIG_ANDROID_API__
-
+#include "CameraWrappers.h"
 #include <media/NdkImageReader.h>
 #include <bgfx/bgfx.h>
 #include <napi/napi.h>
@@ -55,9 +34,7 @@ namespace Babylon::Plugins
 
         GLuint GenerateOESTexture();
         std::string GetCameraId(bool frontCamera);
-        void* GetCameraDynamicFunction(const char* functionName);
 
-        std::map<std::string, void*> m_cameraDynamicFunctions{};
         API24::ACameraManager* m_cameraManager{};
         API24::ACameraDevice* m_cameraDevice{};
         API24::ACameraOutputTarget* m_textureTarget{};
