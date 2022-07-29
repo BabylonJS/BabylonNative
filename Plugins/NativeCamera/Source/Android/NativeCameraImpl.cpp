@@ -103,7 +103,9 @@ namespace Babylon::Plugins
 
         if (libCamera2NDK)
         {
-            return dlsym(libCamera2NDK, functionName);
+            auto functionPtr{dlsym(libCamera2NDK, functionName)};
+            m_cameraDynamicFunctions.emplace(functionName, functionPtr);
+            return functionPtr;
         }
 
         return nullptr;

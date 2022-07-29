@@ -65,6 +65,8 @@ namespace Babylon::Plugins
         if (!m_deviceContext) {
             m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
         }
+        
+        __block arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
 
         dispatch_sync(dispatch_get_main_queue(), ^{
             
@@ -106,7 +108,7 @@ namespace Babylon::Plugins
             AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error];
 
             if (!input) {
-                NSLog(@"Error Getting Camera Input");
+                taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"})));
                 return;
             }
             // Adding input souce for capture session. i.e., Camera
@@ -122,10 +124,11 @@ namespace Babylon::Plugins
             [m_implData->avCaptureSession addOutput:dataOutput];
             [m_implData->avCaptureSession commitConfiguration];
             [m_implData->avCaptureSession startRunning];
+            
+            taskCompletionSource.complete();
         });
         
-        // This should capture an actual task and return it... but we'll deal with that later
-        return arcana::task_from_result<std::exception_ptr>();
+        return taskCompletionSource.as_task();
     }
 
     void Camera::Impl::SetTextureOverride(void* /*texturePtr*/)
