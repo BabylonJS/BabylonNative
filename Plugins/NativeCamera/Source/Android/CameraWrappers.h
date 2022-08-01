@@ -37,7 +37,7 @@ namespace
     // Load the NDK camera lib dynamically. When running on OS 6.0 and below this will return nullptr,
     // on OS 7.0 and up this should return a pointer to access the library using dlsym. It is technically fine
     // to call dlopen when the API_LEVEL is below 24, but it's wasted effort on those devices.
-    static void* libCamera2NDK{ API_LEVEL >= 24 ? dlopen("libcamera2ndk.so", RTLD_NOW | RTLD_LOCAL): nullptr };
+    static void* libCamera2NDK{ API_LEVEL >= 24 ? dlopen("libcamera2ndk.so", RTLD_NOW): nullptr };
 
     static std::map<std::string, void*> CameraDynamicFunctions{};
 }
