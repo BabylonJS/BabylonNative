@@ -30,14 +30,17 @@ namespace API24 {
 // Helper macro to make calling camera NDK api's more type safe
 #define GET_CAMERA_FUNCTION(function) reinterpret_cast<decltype(&API24::function)>(Babylon::Plugins::GetCameraDynamicFunction(#function))
 
-static const int API_LEVEL{ android_get_device_api_level() };
+namespace
+{
+    static const int API_LEVEL{ android_get_device_api_level() };
 
-// Load the NDK camera lib dynamically. When running on OS 6.0 and below this will return nullptr,
-// on OS 7.0 and up this should return a pointer to access the library using dlsym. It is technically fine
-// to call dlopen when the API_LEVEL is below 24, but it's wasted effort on those devices.
-static void* libCamera2NDK{ API_LEVEL >= 24 ? dlopen("libcamera2ndk.so", RTLD_NOW | RTLD_LOCAL): nullptr };
+    // Load the NDK camera lib dynamically. When running on OS 6.0 and below this will return nullptr,
+    // on OS 7.0 and up this should return a pointer to access the library using dlsym. It is technically fine
+    // to call dlopen when the API_LEVEL is below 24, but it's wasted effort on those devices.
+    static void* libCamera2NDK{ API_LEVEL >= 24 ? dlopen("libcamera2ndk.so", RTLD_NOW | RTLD_LOCAL): nullptr };
 
-static std::map<std::string, void*> CameraDynamicFunctions{};
+    static std::map<std::string, void*> CameraDynamicFunctions{};
+}
 
 namespace Babylon::Plugins {
     static inline void* GetCameraDynamicFunction(const char* functionName) {
