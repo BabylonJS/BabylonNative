@@ -1,7 +1,6 @@
 #pragma once
 
 #include <android/api-level.h>
-#include <arcana/macros.h>
 #include <dlfcn.h>
 #include <map>
 
@@ -29,7 +28,7 @@ namespace API24 {
 #undef __ORIG_ANDROID_API__
 
 // Helper macro to make calling camera NDK api's more type safe
-#define GET_CAMERA_FUNCTION(function) reinterpret_cast<decltype(&API24::function)>(GetCameraDynamicFunction(#function))
+#define GET_CAMERA_FUNCTION(function) reinterpret_cast<decltype(&API24::function)>(Babylon::Plugins::GetCameraDynamicFunction(#function))
 
 static const int API_LEVEL{ android_get_device_api_level() };
 
@@ -40,17 +39,18 @@ static void* libCamera2NDK{ API_LEVEL >= 24 ? dlopen("libcamera2ndk.so", RTLD_NO
 
 static std::map<std::string, void*> CameraDynamicFunctions{};
 
-static inline void* GetCameraDynamicFunction(const char* functionName)
-{
-    if (!libCamera2NDK)
-    {
-        return nullptr;
-    }
-    auto cameraDynamicFunctionIt{CameraDynamicFunctions.find(functionName)};
-    if (cameraDynamicFunctionIt == CameraDynamicFunctions.end())
-    {
-        cameraDynamicFunctionIt = CameraDynamicFunctions.emplace(functionName, dlsym(libCamera2NDK, functionName)).first;
-    }
+namespace Babylon::Plugins {
+    static inline void* GetCameraDynamicFunction(const char* functionName) {
+        if (!libCamera2NDK)
+        {
+            return nullptr;
+        }
+        auto cameraDynamicFunctionIt{CameraDynamicFunctions.find(functionName)};
+        if (cameraDynamicFunctionIt == CameraDynamicFunctions.end())
+        {
+            cameraDynamicFunctionIt = CameraDynamicFunctions.emplace(functionName, dlsym(libCamera2NDK, functionName)).first;
+        }
 
-    return cameraDynamicFunctionIt->second;
+        return cameraDynamicFunctionIt->second;
+    }
 }
