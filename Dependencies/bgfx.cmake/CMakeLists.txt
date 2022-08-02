@@ -34,6 +34,7 @@ option( BGFX_AMALGAMATED                "Amalgamated bgfx build for faster compi
 option( BX_AMALGAMATED                  "Amalgamated bx build for faster compilation"   OFF )
 option( BGFX_CONFIG_MULTITHREADED       "Build bgfx with multithreaded configuration"   ON )
 option( BGFX_CONFIG_RENDERER_WEBGPU     "Enables the webgpu renderer"                   OFF )
+option( BX_CONFIG_DEBUG                 "Log debug messages (default: on in debug)"     OFF )
 
 set( BGFX_OPENGL_VERSION   ""       CACHE STRING "Specify minimum opengl version" )
 set( BGFX_OPENGLES_VERSION ""       CACHE STRING "Specify minimum OpenGL ES version" )

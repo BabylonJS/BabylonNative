@@ -72,7 +72,7 @@ endif()
 # Add debug config required in bx headers since bx is private
 target_compile_definitions(bgfx
        PUBLIC
-               "BX_CONFIG_DEBUG=$<CONFIG:Debug>"
+               "BX_CONFIG_DEBUG=$<IF:$<CONFIG:Debug>,1,$<BOOL:${BX_CONFIG_DEBUG}>>"
                "BGFX_CONFIG_MULTITHREADED=$<BOOL:${BGFX_CONFIG_MULTITHREADED}>"
 )
 
