@@ -12,7 +12,8 @@
 #define __ORIG_ANDROID_API__ __ANDROID_API__
 #undef __ANDROID_API__
 #define __ANDROID_API__ 24
-namespace API24 {
+namespace API24
+{
     #include <camera/NdkCameraManager.h>
     #include <camera/NdkCameraCaptureSession.h>
     #include <camera/NdkCameraDevice.h>
@@ -43,7 +44,8 @@ namespace
 }
 
 namespace Babylon::Plugins {
-    inline void* GetCameraDynamicFunction(const char* functionName) {
+    inline void* GetCameraDynamicFunction(const char* functionName)
+    {
         if (!libCamera2NDK)
         {
             return nullptr;
