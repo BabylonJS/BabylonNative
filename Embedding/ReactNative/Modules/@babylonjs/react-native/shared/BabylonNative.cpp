@@ -2,6 +2,7 @@
 
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/JsRuntime.h>
+#include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeInput.h>
@@ -53,6 +54,7 @@ namespace BabylonNative
             m_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(m_env);
             Babylon::Plugins::NativeOptimizations::Initialize(m_env);
             Babylon::Plugins::NativeTracing::Initialize(m_env);
+            Babylon::Plugins::Camera::Initialize(m_env);
 
             // Initialize Babylon Native polyfills
             Babylon::Polyfills::Window::Initialize(m_env);

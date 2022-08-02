@@ -46,6 +46,7 @@ target_link_libraries(BabylonNative
     jsi
     reactnative
     JsRuntime
+    NativeCamera
     NativeCapture
     NativeEngine
     NativeInput

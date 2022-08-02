@@ -140,6 +140,7 @@
         $(BabylonNativeBuildDir)BabylonNative\Dependencies\UrlLib\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Dependencies\xr\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Dependencies\xr\Dependencies\OpenXR-SDK\src\loader\$(Configuration);
+        $(BabylonNativeBuildDir)BabylonNative\Plugins\NativeCamera\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Plugins\NativeCapture\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Plugins\NativeEngine\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Plugins\NativeInput\$(Configuration);
@@ -191,6 +192,7 @@
         JsRuntime.lib;
         MachineIndependentd.lib;
         napi.lib;
+        NativeCamera.lib;
         NativeCapture.lib;
         NativeEngine.lib;
         NativeInput.lib;
@@ -252,6 +254,7 @@
         JsRuntime.lib;
         MachineIndependent.lib;
         napi.lib;
+        NativeCamera.lib;
         NativeCapture.lib;
         NativeEngine.lib;
         NativeInput.lib;

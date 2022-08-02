@@ -74,6 +74,7 @@ target_link_libraries(BabylonNative
     AndroidExtensions
     Graphics
     JsRuntime
+    NativeCamera
     NativeCapture
     NativeEngine
     NativeInput
