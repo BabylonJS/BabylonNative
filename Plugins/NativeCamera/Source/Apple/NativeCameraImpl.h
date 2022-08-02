@@ -4,6 +4,7 @@
 #include <napi/napi.h>
 #include <NativeCamera.h>
 #include <Babylon/Graphics/DeviceContext.h>
+#include <arcana/threading/task.h>
 
 namespace Babylon::Plugins
 {
@@ -14,7 +15,7 @@ namespace Babylon::Plugins
         
         Impl(Napi::Env env, bool overrideCameraTexture);
         ~Impl();
-        void Open(uint32_t width, uint32_t height, bool frontCamera);
+        arcana::task<void, std::exception_ptr> Open(uint32_t width, uint32_t height, bool frontCamera);
         void SetTextureOverride(void* texturePtr);
         void UpdateCameraTexture(bgfx::TextureHandle textureHandle);
         void Close();

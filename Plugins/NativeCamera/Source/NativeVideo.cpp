@@ -36,6 +36,7 @@ namespace Babylon::Plugins
 
     NativeVideo::NativeVideo(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeVideo>{ info }
+        , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
         , m_width{ info[0].As<Napi::Number>().Uint32Value() }
         , m_height{ info[1].As<Napi::Number>().Uint32Value() }
         , m_frontCamera{ info[2].As<Napi::Boolean>().Value() }
@@ -142,15 +143,29 @@ namespace Babylon::Plugins
 
     Napi::Value NativeVideo::Play(const Napi::CallbackInfo& info)
     {
+        auto env{info.Env()};
+        auto deferred{Napi::Promise::Deferred::New(env)};
+
         if (!m_IsPlaying)
         {
             m_IsPlaying = true;
-            NativeCameraImpl->Open(m_width, m_height, m_frontCamera);
-            RaiseEvent("playing");
+            NativeCameraImpl->Open(m_width, m_height, m_frontCamera).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred](const arcana::expected<void, std::exception_ptr>& result) {
+                if (result.has_error())
+                {
+                    deferred.Reject(Napi::Error::New(env, result.error()).Value());
+                }
+                else
+                {
+                    deferred.Resolve(env.Undefined());
+                    RaiseEvent("playing");
+                }
+            });
+        }
+        else
+        {
+            deferred.Resolve(env.Undefined());
         }
 
-        auto deferred{Napi::Promise::Deferred::New(info.Env())};
-        deferred.Resolve(info.Env().Undefined());
         return deferred.Promise();
     }
 

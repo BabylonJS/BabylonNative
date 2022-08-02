@@ -58,13 +58,15 @@ namespace Babylon::Plugins
     {
     }
 
-    void Camera::Impl::Open(uint32_t /*width*/, uint32_t /*height*/, bool frontCamera)
+    arcana::task<void, std::exception_ptr> Camera::Impl::Open(uint32_t /*width*/, uint32_t /*height*/, bool frontCamera)
     {
         auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
 
         if (!m_deviceContext) {
             m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
         }
+        
+        __block arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
 
         dispatch_sync(dispatch_get_main_queue(), ^{
             
@@ -106,7 +108,7 @@ namespace Babylon::Plugins
             AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error];
 
             if (!input) {
-                NSLog(@"Error Getting Camera Input");
+                taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"})));
                 return;
             }
             // Adding input souce for capture session. i.e., Camera
@@ -122,7 +124,11 @@ namespace Babylon::Plugins
             [m_implData->avCaptureSession addOutput:dataOutput];
             [m_implData->avCaptureSession commitConfiguration];
             [m_implData->avCaptureSession startRunning];
+            
+            taskCompletionSource.complete();
         });
+        
+        return taskCompletionSource.as_task();
     }
 
     void Camera::Impl::SetTextureOverride(void* /*texturePtr*/)

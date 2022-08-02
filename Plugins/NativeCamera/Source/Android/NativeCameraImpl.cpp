@@ -39,8 +39,7 @@ namespace Babylon::Plugins
             oFragColor = texture(cameraTexture, cameraFrameUV);
         }
     )"};
-    
-#if __ANDROID_API__ >= 24
+
     GLuint Camera::Impl::GenerateOESTexture()
     {
         GLuint oesTexture;
@@ -54,8 +53,8 @@ namespace Babylon::Plugins
 
     std::string Camera::Impl::GetCameraId(bool frontCamera)
     {
-        ACameraIdList *cameraIds = nullptr;
-        ACameraManager_getCameraIdList(m_cameraManager, &cameraIds);
+        API24::ACameraIdList *cameraIds = nullptr;
+        GET_CAMERA_FUNCTION(ACameraManager_getCameraIdList)(m_cameraManager, &cameraIds);
 
         std::string cameraId{};
 
@@ -63,55 +62,55 @@ namespace Babylon::Plugins
         {
             const char *id = cameraIds->cameraIds[i];
 
-            ACameraMetadata *metadataObj;
-            ACameraManager_getCameraCharacteristics(m_cameraManager, id, &metadataObj);
+            API24::ACameraMetadata *metadataObj;
+            GET_CAMERA_FUNCTION(ACameraManager_getCameraCharacteristics)(m_cameraManager, id, &metadataObj);
 
-            ACameraMetadata_const_entry lensInfo = {};
-            ACameraMetadata_getConstEntry(metadataObj, ACAMERA_LENS_FACING, &lensInfo);
+            API24::ACameraMetadata_const_entry lensInfo = {};
+            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_LENS_FACING, &lensInfo);
 
-            auto facing = static_cast<acamera_metadata_enum_android_lens_facing_t>(lensInfo.data.u8[0]);
+            auto facing = static_cast<API24::acamera_metadata_enum_android_lens_facing_t>(lensInfo.data.u8[0]);
 
             // Found a corresponding facing camera?
-            if (facing == (frontCamera ? ACAMERA_LENS_FACING_FRONT : ACAMERA_LENS_FACING_BACK))
+            if (facing == (frontCamera ? API24::ACAMERA_LENS_FACING_FRONT : API24::ACAMERA_LENS_FACING_BACK))
             {
                 cameraId = id;
                 break;
             }
         }
 
-        ACameraManager_deleteCameraIdList(cameraIds);
+        GET_CAMERA_FUNCTION(ACameraManager_deleteCameraIdList)(cameraIds);
         return cameraId;
     }
 
     // device callbacks
-    static void onDisconnected(void* /*context*/, ACameraDevice* /*device*/)
+    static void onDisconnected(void* /*context*/, API24::ACameraDevice* /*device*/)
     {
     }
 
-    static void onError(void* /*context*/, ACameraDevice* /*device*/, int /*error*/)
+    static void onError(void* /*context*/, API24::ACameraDevice* /*device*/, int /*error*/)
     {
     }
 
-    static ACameraDevice_stateCallbacks cameraDeviceCallbacks = {
+    static API24::ACameraDevice_stateCallbacks cameraDeviceCallbacks = {
             .context = nullptr,
             .onDisconnected = onDisconnected,
             .onError = onError
     };
 
     // session callbacks
-    static void onSessionActive(void* /*context*/, ACameraCaptureSession* /*session*/)
+    static void onSessionActive(void* /*context*/, API24::ACameraCaptureSession* /*session*/)
     {
     }
 
-    static void onSessionReady(void* /*context*/, ACameraCaptureSession* /*session*/)
+    static void onSessionReady(void* /*context*/, API24::ACameraCaptureSession* /*session*/)
     {
     }
 
-    static void onSessionClosed(void* /*context*/, ACameraCaptureSession* /*session*/)
+    static void onSessionClosed(void* /*context*/, API24::ACameraCaptureSession* /*session*/)
     {
     }
 
-    static ACameraCaptureSession_stateCallbacks sessionStateCallbacks {
+    static API24::ACameraCaptureSession_stateCallbacks sessionStateCallbacks {
         .context = nullptr,
         .onClosed = onSessionClosed,
         .onReady = onSessionReady,
@@ -119,23 +118,23 @@ namespace Babylon::Plugins
     };
 
     // capture callbacks
-    static void onCaptureFailed(void* /*context*/, ACameraCaptureSession* /*session*/, ACaptureRequest* /*request*/, ACameraCaptureFailure* /*failure*/)
+    static void onCaptureFailed(void* /*context*/, API24::ACameraCaptureSession* /*session*/, API24::ACaptureRequest* /*request*/, API24::ACameraCaptureFailure* /*failure*/)
     {
     }
 
-    static void onCaptureSequenceCompleted(void* /*context*/, ACameraCaptureSession* /*session*/, int /*sequenceId*/, int64_t /*frameNumber*/)
+    static void onCaptureSequenceCompleted(void* /*context*/, API24::ACameraCaptureSession* /*session*/, int /*sequenceId*/, int64_t /*frameNumber*/)
     {
     }
 
-    static void onCaptureSequenceAborted(void* /*context*/, ACameraCaptureSession* /*session*/, int /*sequenceId*/)
+    static void onCaptureSequenceAborted(void* /*context*/, API24::ACameraCaptureSession* /*session*/, int /*sequenceId*/)
     {
     }
 
-    static void onCaptureCompleted (void* /*context*/, ACameraCaptureSession* /*session*/, ACaptureRequest* /*request*/, const ACameraMetadata* /*result*/)
+    static void onCaptureCompleted (void* /*context*/, API24::ACameraCaptureSession* /*session*/, API24::ACaptureRequest* /*request*/, const API24::ACameraMetadata* /*result*/)
     {
     }
 
-    static ACameraCaptureSession_captureCallbacks captureCallbacks {
+    static API24::ACameraCaptureSession_captureCallbacks captureCallbacks {
         .context = nullptr,
         .onCaptureStarted = nullptr,
         .onCaptureProgressed = nullptr,
@@ -146,32 +145,28 @@ namespace Babylon::Plugins
         .onCaptureBufferLost = nullptr,
     };
 
-#endif
-
     Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
         : m_deviceContext{nullptr}
         , m_env{env}
         , m_overrideCameraTexture{overrideCameraTexture}
     {
-#if __ANDROID_API__ < 24
-        if (!overrideCameraTexture)
+        if (API_LEVEL < 24 && !overrideCameraTexture)
         {
             throw std::runtime_error{"Android Platform level < 24. Only camera texture override is available."};
         }
-#endif
     }
 
     Camera::Impl::~Impl()
     {
     }
 
-    void Camera::Impl::Open(uint32_t width, uint32_t height, bool frontCamera)
+    arcana::task<void, std::exception_ptr> Camera::Impl::Open(uint32_t width, uint32_t height, bool frontCamera)
     {
         if (!m_deviceContext){
             m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
         }
 
-        android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, width, height, frontCamera]()
+        return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, width, height, frontCamera]()
         {
             m_width = width;
             m_height = height;
@@ -230,9 +225,7 @@ namespace Babylon::Plugins
 
             m_cameraShaderProgramId = android::OpenGLHelpers::CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
 
-#if __ANDROID_API__ >= 24
-            if (!m_overrideCameraTexture)
-            {
+            if (API_LEVEL >= 24 && libCamera2NDK && !m_overrideCameraTexture) {
                 m_cameraOESTextureId = GenerateOESTexture();
 
                 // Create the surface and surface texture that will receive the camera preview
@@ -240,37 +233,43 @@ namespace Babylon::Plugins
                 android::view::Surface surface(m_surfaceTexture);
 
                 // open the front or back camera
-                m_cameraManager = ACameraManager_create();
+                m_cameraManager = GET_CAMERA_FUNCTION(ACameraManager_create)();
                 auto id = GetCameraId(frontCamera);
-                ACameraManager_openCamera(m_cameraManager, id.c_str(), &cameraDeviceCallbacks, &m_cameraDevice);
+                GET_CAMERA_FUNCTION(ACameraManager_openCamera)(m_cameraManager, id.c_str(),
+                                                               &cameraDeviceCallbacks,
+                                                               &m_cameraDevice);
 
-                m_textureWindow = ANativeWindow_fromSurface(GetEnvForCurrentThread(), surface);
+                m_textureWindow = reinterpret_cast<API24::ANativeWindow *>(ANativeWindow_fromSurface(
+                        GetEnvForCurrentThread(), surface));
 
                 // Prepare request for texture target
-                ACameraDevice_createCaptureRequest(m_cameraDevice, TEMPLATE_PREVIEW, &m_request);
+                GET_CAMERA_FUNCTION(ACameraDevice_createCaptureRequest)(m_cameraDevice,
+                                                                        API24::TEMPLATE_PREVIEW,
+                                                                        &m_request);
 
                 // Prepare outputs for session
-                ACaptureSessionOutput_create(m_textureWindow, &m_textureOutput);
-                ACaptureSessionOutputContainer_create(&m_outputs);
-                ACaptureSessionOutputContainer_add(m_outputs, m_textureOutput);
+                GET_CAMERA_FUNCTION(ACaptureSessionOutput_create)(m_textureWindow,
+                                                                  &m_textureOutput);
+                GET_CAMERA_FUNCTION(ACaptureSessionOutputContainer_create)(&m_outputs);
+                GET_CAMERA_FUNCTION(ACaptureSessionOutputContainer_add)(m_outputs, m_textureOutput);
 
                 // Prepare target surface
-                ANativeWindow_acquire(m_textureWindow);
-                ACameraOutputTarget_create(m_textureWindow, &m_textureTarget);
-                ACaptureRequest_addTarget(m_request, m_textureTarget);
+                GET_CAMERA_FUNCTION(ANativeWindow_acquire)(m_textureWindow);
+                GET_CAMERA_FUNCTION(ACameraOutputTarget_create)(m_textureWindow, &m_textureTarget);
+                GET_CAMERA_FUNCTION(ACaptureRequest_addTarget)(m_request, m_textureTarget);
 
                 // Create the session
-                ACameraDevice_createCaptureSession(m_cameraDevice, m_outputs, &sessionStateCallbacks, &m_textureSession);
+                GET_CAMERA_FUNCTION(ACameraDevice_createCaptureSession)(m_cameraDevice, m_outputs,
+                                                                        &sessionStateCallbacks,
+                                                                        &m_textureSession);
 
                 // Start capturing continuously
-                ACameraCaptureSession_setRepeatingRequest(m_textureSession, &captureCallbacks, 1, &m_request, nullptr);
+                GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(m_textureSession,
+                                                                               &captureCallbacks,
+                                                                               1, &m_request,
+                                                                               nullptr);
             }
-#else
 
-            UNUSED(frontCamera);
-#pragma message("Warning: Android Platform level < 24. No HW Camera support. Only camera texture override is available.")
-
-#endif
             if (eglMakeCurrent(m_display, 0/*surface*/, 0/*surface*/, currentContext) == EGL_FALSE)
             {
                 throw std::runtime_error{"Unable to restore GL context for camera texture init."};
@@ -299,12 +298,11 @@ namespace Babylon::Plugins
             }
         }
 
-#if __ANDROID_API__ >= 24
-        if (!m_overrideCameraTexture)
+        if (API_LEVEL >= 24 && !m_overrideCameraTexture)
         {
             m_surfaceTexture.updateTexImage();
         }
-#endif
+
         glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferId);
         glViewport(0, 0, m_width, m_height);
         glUseProgram(m_cameraShaderProgramId);
@@ -335,23 +333,22 @@ namespace Babylon::Plugins
 
     void Camera::Impl::Close()
     {
-#if __ANDROID_API__ >= 24
-        if (!m_overrideCameraTexture)
+        if (API_LEVEL >= 24 && !m_overrideCameraTexture)
         {
             // Stop recording to SurfaceTexture and do some cleanup
-            ACameraCaptureSession_stopRepeating(m_textureSession);
-            ACameraCaptureSession_close(m_textureSession);
-            ACaptureSessionOutputContainer_free(m_outputs);
-            ACaptureSessionOutput_free(m_output);
+            GET_CAMERA_FUNCTION(ACameraCaptureSession_stopRepeating)(m_textureSession);
+            GET_CAMERA_FUNCTION(ACameraCaptureSession_close)(m_textureSession);
+            GET_CAMERA_FUNCTION(ACaptureSessionOutputContainer_free)(m_outputs);
+            GET_CAMERA_FUNCTION(ACaptureSessionOutput_free)(m_output);
 
-            ACameraDevice_close(m_cameraDevice);
-            ACameraManager_delete(m_cameraManager);
+            GET_CAMERA_FUNCTION(ACameraDevice_close)(m_cameraDevice);
+            GET_CAMERA_FUNCTION(ACameraManager_delete)(m_cameraManager);
 
             // Capture request for SurfaceTexture
             ANativeWindow_release(m_textureWindow);
-            ACaptureRequest_free(m_request);
+            GET_CAMERA_FUNCTION(ACaptureRequest_free)(m_request);
         }
-#endif
+
         if (m_context != EGL_NO_CONTEXT)
         {
             eglDestroyContext(m_display, m_context);

@@ -11,7 +11,7 @@ namespace Babylon::Plugins
     {
     }
 
-    void Camera::Impl::Open(uint32_t /*width*/, uint32_t /*height*/, bool /*frontCamera*/)
+    arcana::task<void, std::exception_ptr> Camera::Impl::Open(uint32_t /*width*/, uint32_t /*height*/, bool /*frontCamera*/)
     {
         throw std::runtime_error{ "HW Camera not implemented for this platform." };
     }

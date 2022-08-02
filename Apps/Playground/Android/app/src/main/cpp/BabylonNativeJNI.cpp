@@ -119,7 +119,7 @@ extern "C"
                 
                 g_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
-                Babylon::Plugins::Camera::Initialize(env, true);
+                Babylon::Plugins::Camera::Initialize(env);
                 Babylon::Polyfills::Window::Initialize(env);
 
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
