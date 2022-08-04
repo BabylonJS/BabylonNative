@@ -33,7 +33,7 @@ jobs:
       displayName: 'Install JS engine NPMs'
       
     - script: |
-        sdkmanager --uninstall "cmake;3.22.1"
+        ls /usr/local/lib/android/sdk/cmake
       displayName: 'Uninstall SDK cmake'
       
     - task: Gradle@2
