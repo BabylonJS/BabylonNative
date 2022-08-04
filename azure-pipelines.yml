@@ -17,11 +17,11 @@ jobs:
   - template: .github/jobs/android.yml
     parameters:
       name: Android_Ubuntu_JSC
-      vmImage: 'ubuntu-20.04'
+      vmImage: 'ubuntu-latest'
       JSEngine: jsc
 
   - template: .github/jobs/android.yml
     parameters:
       name: Android_Ubuntu_V8
-      vmImage: 'ubuntu-22.04'
+      vmImage: 'ubuntu-latest'
       JSEngine: v8android
