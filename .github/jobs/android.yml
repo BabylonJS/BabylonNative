@@ -31,7 +31,11 @@ jobs:
         cd ../../ValidationTests/Android
         npm install
       displayName: 'Install JS engine NPMs'
-
+      
+    - script: |
+        sdkmanager --uninstall "cmake;3.22.1"
+      displayName: 'Uninstall SDK cmake'
+      
     - task: Gradle@2
       inputs:
           workingDirectory: 'Apps/Playground/Android'
