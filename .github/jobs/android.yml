@@ -35,6 +35,7 @@ jobs:
     - script: |
         ls /usr/local/lib/android/sdk/cmake
         rm -rf /usr/local/lib/android/sdk/cmake/3.22.1
+      condition: contains('${{ parameters.vmImage }}', 'ubuntu')
       displayName: 'Uninstall SDK cmake'
       
     - task: Gradle@2
