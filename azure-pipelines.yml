@@ -16,34 +16,21 @@ jobs:
 # Apple
   - template: .github/jobs/macos.yml
     parameters:
-      name: MacOS_Xcode12
-      vmImage: 'macOS-10.15'
-      xCodeVersion: 12.4
-
-  - template: .github/jobs/macos.yml
-    parameters:
       name: MacOS_Xcode13
-      vmImage: 'macOS-11'
+      vmImage: 'macOS-latest'
       xCodeVersion: 13.0
 
   - template: .github/jobs/ios.yml
     parameters:
-      name: iOS_Xcode12_iOS13
-      vmImage: 'macOS-10.15'
-      xCodeVersion: 12.4
-      deploymentTarget: 13
-
-  - template: .github/jobs/ios.yml
-    parameters:
       name: iOS_Xcode12_iOS14
-      vmImage: 'macOS-10.15'
+      vmImage: 'macOS-latest'
       xCodeVersion: 12.4
       deploymentTarget: 14
 
   - template: .github/jobs/ios.yml
     parameters:
       name: iOS_Xcode13_iOS15
-      vmImage: 'macOS-11'
+      vmImage: 'macOS-latest'
       xCodeVersion: 13.0
       deploymentTarget: 15
 
@@ -149,11 +136,11 @@ jobs:
   - template: .github/jobs/android.yml
     parameters:
       name: Android_MacOS_JSC
-      vmImage: 'macOS-10.15'
+      vmImage: 'macOS-latest'
       JSEngine: jsc
 
   - template: .github/jobs/android.yml
     parameters:
       name: Android_MacOS_V8
-      vmImage: 'macOS-10.15'
+      vmImage: 'macOS-latest'
       JSEngine: v8android
