@@ -11,9 +11,9 @@ namespace
     struct TimeoutFunction
     {
         std::shared_ptr<Napi::FunctionReference> Function;
-        std::chrono::time_point<std::chrono::system_clock> TimePoint;
+        std::chrono::time_point<std::chrono::steady_clock> TimePoint;
 
-        TimeoutFunction(std::shared_ptr<Napi::FunctionReference> func, std::chrono::time_point<std::chrono::system_clock> time)
+        TimeoutFunction(std::shared_ptr<Napi::FunctionReference> func, std::chrono::time_point<std::chrono::steady_clock> time)
             : Function{std::move(func)}
             , TimePoint{time}
         { }
@@ -32,9 +32,9 @@ namespace
             , m_thread{&TimeoutDispatcher::WaitThenCallProc, this}
         { }
 
-        void Dispatch(std::shared_ptr<Napi::FunctionReference> func, std::chrono::system_clock::time_point time) 
+        void Dispatch(std::shared_ptr<Napi::FunctionReference> func, std::chrono::steady_clock::time_point time) 
         {   
-            if (time <= std::chrono::system_clock::now())
+            if (time <= std::chrono::steady_clock::now())
             {
                 CallFunction(std::move(func));
                 return;
@@ -56,11 +56,11 @@ namespace
 
         void WaitThenCallProc() 
         {
-            std::chrono::time_point<std::chrono::system_clock> nextTimePoint{};
+            std::chrono::time_point<std::chrono::steady_clock> nextTimePoint{};
             while (!m_shutdown) 
             {
                 std::unique_lock<std::mutex> lk(m_mutex);
-                while (!m_queue.empty() && std::chrono::system_clock::now() < (nextTimePoint = m_queue.top().TimePoint))
+                while (!m_queue.empty() && std::chrono::steady_clock::now() < (nextTimePoint = m_queue.top().TimePoint))
                 {
                     m_condVariable.wait_until(lk, nextTimePoint);
                 }
@@ -188,10 +188,10 @@ namespace Babylon::Polyfills::Internal
         auto milliseconds = std::chrono::milliseconds{info[1].As<Napi::Number>().Int32Value()};
 
         auto functionRef = std::make_shared<Napi::FunctionReference>(std::move(function));
-        const auto futureTime = std::chrono::system_clock::now() + milliseconds;
+        const auto futureTime = std::chrono::steady_clock::now() + milliseconds;
 
         auto& window = *static_cast<Window*>(info.Data());
-#if 1
+#if 0
         window.m_timeoutDispatcher->Dispatch(functionRef, futureTime);
 #else
         window.RecursiveWaitOrCall(functionRef, futureTime);
@@ -218,10 +218,10 @@ namespace Babylon::Polyfills::Internal
 
     void Window::RecursiveWaitOrCall(
         std::shared_ptr<Napi::FunctionReference> function,
-        std::chrono::system_clock::time_point whenToRun)
+        std::chrono::steady_clock::time_point whenToRun)
     {
         m_runtime.Dispatch([this, function = std::move(function), whenToRun](Napi::Env) {
-            if (std::chrono::system_clock::now() >= whenToRun)
+            if (std::chrono::steady_clock::now() >= whenToRun)
             {
                 function->Call({});
             }
