@@ -24,9 +24,37 @@ import {name as appName} from '../playground-shared/app.json';
 AppRegistry.registerComponent(appName, () => App);
 ```
 
+## Set up JS project
+Install the following packages into the project:
+* @babylonjs/core
+* @babylonjs/Loaders
+* @react-native-community/slider
+* react-native-permissions
+
+Add the following packages via reference:
+* npm install ../../../Modules/@babylonjs/react-native
+* npm install ../../../Modules/@babylonjs/react-native-iosandroid
+* npm install ../../../Modules/@babylonjs/react-native-windows
+* npm install ../playground-shared
+
+Since we consume the above packages via symlinks we need a custom Metro configuration to allow the Metro bundler to correctly process the packages. You should be able to directly copy the file from: [metro.config.js](./0.65/metro.config.js).
+
+Copy over the [scripts/tools.js](./0.65/scripts/tools.js) which contains postinstall scripts used during npm and react-native tasks. Then in package.json set up the scripts to look like the below:
+```
+  "scripts": {
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "start": "react-native start",
+    "test": "jest",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "postinstall": "node scripts/tools.js postinstall",
+    "iosCmake": "node scripts/tools.js iosCMake",
+    "windows": "react-native run-windows"
+  }
+```
+
 ## iOS
 Add BabylonReactNative in the Xcode workspace:
-
 ```
 ...
 <Workspace
@@ -59,7 +87,7 @@ target 'Playground' do
 
 ## Android
 
-Add camera and AR permission in `AndroidManifest.xml` :
+Add camera and AR permission in `android/app/.src/main/AndroidManifest.xml` :
 
 ```
 ...
@@ -77,11 +105,28 @@ and
 ...
 ```
 
-For Hermes, add these lines in `proguard-rules.pro` :
+For Hermes, add these lines in `android/app/proguard-rules.pro` :
 
 ```
 -keep class com.facebook.hermes.unicode.** { *; }
 -keep class com.facebook.jni.** { *; }
+```
+
+You may also need to update `android/build.gradle` to downgrade the default Gradle version, build tools, and remove some react-native installed gradle tasks, the final result will look something like this:
+```
+    ext {
+        buildToolsVersion = "30.0.2"
+        minSdkVersion = 21
+        compileSdkVersion = 30
+        targetSdkVersion = 30
+        ndkVersion = "20.1.5948944"
+    }
+    ...
+    dependencies {
+        classpath("com.android.tools.build:gradle:4.2.1")
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
 ```
 
 ## Windows
