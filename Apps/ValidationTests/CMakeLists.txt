@@ -127,6 +127,8 @@ target_link_to_dependencies(ValidationTests
 if(APPLE)
     target_link_libraries(ValidationTests PRIVATE "-framework MetalKit")
     if(IOS)
+        set(BABYLON_NATIVE_VALIDATION_TESTS_IOS_PRODUCT_BUNDLE_IDENTIFIER "com.BabylonNative.ValidationTests.iOS" CACHE STRING "")
+
         set_target_properties(ValidationTests PROPERTIES
             MACOSX_BUNDLE true
             MACOSX_BUNDLE_INFO_PLIST "${PLIST_FILE}"
@@ -134,7 +136,7 @@ if(APPLE)
             RESOURCE "${RESOURCE_FILES}"
 
             XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET 9.0
-            XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.BabylonNative.ValidationTests.iOS"
+            XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "${BABYLON_NATIVE_VALIDATION_TESTS_IOS_PRODUCT_BUNDLE_IDENTIFIER}"
 
             XCODE_ATTRIBUTE_SWIFT_VERSION "4.0"
             XCODE_ATTRIBUTE_SWIFT_OBJC_BRIDGING_HEADER "${CMAKE_CURRENT_LIST_DIR}/iOS/LibNativeBridge.h"
