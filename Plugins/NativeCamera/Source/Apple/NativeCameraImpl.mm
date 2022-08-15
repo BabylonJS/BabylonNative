@@ -11,6 +11,7 @@
 #include <memory>
 #include <Foundation/Foundation.h>
 #include <AVFoundation/AVFoundation.h>
+#include <cstdlib>
 
 @class CameraTextureDelegate;
 
@@ -58,7 +59,7 @@ namespace Babylon::Plugins
     {
     }
 
-    arcana::task<void, std::exception_ptr> Camera::Impl::Open(uint32_t /*width*/, uint32_t /*height*/, bool frontCamera)
+    arcana::task<void, std::exception_ptr> Camera::Impl::Open(uint32_t width, uint32_t height, bool frontCamera)
     {
         auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
 
@@ -75,37 +76,48 @@ namespace Babylon::Plugins
             m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData];
             
             m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
-            
-            NSError *error;
-#if (TARGET_OS_IPHONE)
-            AVCaptureDevicePosition preferredPosition;
-            AVCaptureDeviceType preferredDeviceType;
-            
-            if (frontCamera) {
-                preferredPosition = AVCaptureDevicePositionFront;
-                preferredDeviceType = AVCaptureDeviceTypeBuiltInTrueDepthCamera;
+            NSArray* deviceTypes{NULL};
+            AVCaptureDevice* bestDevice{NULL};
+            AVCaptureDeviceFormat* bestFormat{NULL};
+            uint32_t bestDiff{UINT32_MAX};
+            if (@available(iOS 13.0, *)) {
+                deviceTypes = @[AVCaptureDeviceTypeBuiltInWideAngleCamera,
+                    AVCaptureDeviceTypeBuiltInUltraWideCamera,
+                    AVCaptureDeviceTypeBuiltInTelephotoCamera,
+                    AVCaptureDeviceTypeBuiltInDualCamera,
+                    AVCaptureDeviceTypeBuiltInDualWideCamera,
+                    AVCaptureDeviceTypeBuiltInTripleCamera,
+                    AVCaptureDeviceTypeBuiltInTrueDepthCamera];
             } else {
-                preferredPosition = AVCaptureDevicePositionBack;
-                preferredDeviceType = AVCaptureDeviceTypeBuiltInDualCamera;
+                deviceTypes = @[AVCaptureDeviceTypeBuiltInWideAngleCamera,
+                    AVCaptureDeviceTypeBuiltInTelephotoCamera,
+                    AVCaptureDeviceTypeBuiltInDualCamera,
+                    AVCaptureDeviceTypeBuiltInTrueDepthCamera];
             }
-
-            // Set camera capture device to default and the media type to video.
-            AVCaptureDevice* captureDevice = [AVCaptureDevice defaultDeviceWithDeviceType:preferredDeviceType mediaType:AVMediaTypeVideo position:preferredPosition];
-            if (!captureDevice) {
-                // If a rear dual camera is not available, default to the rear wide angle camera.
-                captureDevice = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInWideAngleCamera mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionBack];
-                
-                // In the event that the rear wide angle camera isn't available, default to the front wide angle camera.
-                if (!captureDevice) {
-                    captureDevice = [AVCaptureDevice defaultDeviceWithDeviceType:AVCaptureDeviceTypeBuiltInWideAngleCamera mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionFront];
+            
+            AVCaptureDeviceDiscoverySession* discoverySession = [AVCaptureDeviceDiscoverySession
+                discoverySessionWithDeviceTypes:deviceTypes
+                mediaType:AVMediaTypeVideo position:frontCamera ? AVCaptureDevicePositionFront: AVCaptureDevicePositionBack];
+            
+            for (AVCaptureDevice* device in discoverySession.devices) {
+                for (AVCaptureDeviceFormat* format in device.formats) {
+                    CMVideoFormatDescriptionRef videoFormatRef = static_cast<CMVideoFormatDescriptionRef>(format.formatDescription);
+                    CMVideoDimensions resolution = CMVideoFormatDescriptionGetDimensions(videoFormatRef);
+                    uint32_t resolutionDiff = fmax(resolution.width, width) - fmin(resolution.width, width) + fmax(resolution.height, height) - fmin(resolution.height, height);
+                    if (bestDevice == NULL || resolutionDiff < bestDiff) {
+                        bestDiff = resolutionDiff;
+                        bestDevice = device;
+                        bestFormat = format;
+                    }
                 }
             }
-#else
-            UNUSED(frontCamera);
-            AVCaptureDevice* captureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-#endif
+            
+            NSError *error;
+
             // Set video capture input: If there a problem initialising the camera, it will give am error.
-            AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error];
+            [bestDevice lockForConfiguration:nil];
+            [bestDevice setActiveFormat:bestFormat];
+            AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:bestDevice error:&error];
 
             if (!input) {
                 taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"})));
@@ -164,7 +176,27 @@ namespace Babylon::Plugins
     return self;
 }
 
-- (void)captureOutput:(AVCaptureOutput *)__unused captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)__unused connection {
+- (void)captureOutput:(AVCaptureOutput *)__unused captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *) connection {
+    UIInterfaceOrientation orientation = [UIApplication sharedApplication].statusBarOrientation;
+    
+    switch (orientation) {
+        case UIInterfaceOrientationUnknown:
+            break;
+        case UIInterfaceOrientationPortrait:
+            connection.videoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
+            break;
+        case UIInterfaceOrientationPortraitUpsideDown:
+            connection.videoOrientation = AVCaptureVideoOrientationPortrait;
+            break;
+        case UIInterfaceOrientationLandscapeLeft:
+            connection.videoOrientation = AVCaptureVideoOrientationLandscapeRight;
+            break;
+        case UIInterfaceOrientationLandscapeRight:
+            connection.videoOrientation = AVCaptureVideoOrientationLandscapeLeft;
+            break;
+    }
+    
+
     CVPixelBufferRef pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
 
     id<MTLTexture> textureBGRA = nil;
