@@ -111,11 +111,10 @@ namespace Babylon::Plugins
                     }
                 }
             }
-            
+                       
+            // Set video capture input: If there a problem initialising the camera, it will give an error.
             NSError *error;
-
-            // Set video capture input: If there a problem initialising the camera, it will give am error.
-            [bestDevice lockForConfiguration:nil];
+            [bestDevice lockForConfiguration:&error];
             [bestDevice setActiveFormat:bestFormat];
             AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:bestDevice error:&error];
             [bestDevice unlockForConfiguration];
