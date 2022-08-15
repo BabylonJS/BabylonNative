@@ -118,6 +118,7 @@ namespace Babylon::Plugins
             [bestDevice lockForConfiguration:nil];
             [bestDevice setActiveFormat:bestFormat];
             AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:bestDevice error:&error];
+            [bestDevice unlockForConfiguration];
 
             if (!input) {
                 taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"})));
