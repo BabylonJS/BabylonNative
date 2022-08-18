@@ -178,6 +178,7 @@ namespace Babylon::Plugins
             UNUSED(maxWidth);
             UNUSED(maxHeight);
             UNUSED(frontCamera);
+            NSError *error{nil};
             AVCaptureDevice* captureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
             AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error];
 #endif
