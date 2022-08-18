@@ -61,6 +61,13 @@ namespace Babylon::Plugins
 
     arcana::task<void, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
+        if (maxWidth == 0) {
+            maxWidth = INT32_MAX;
+        }
+        if (maxHeight == 0) {
+            maxHeight = INT32_MAX;
+        }
+        
         auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
 
         if (!m_deviceContext)
@@ -78,8 +85,10 @@ namespace Babylon::Plugins
             // Loop over all available camera configurations to find a config that most closely matches the constraints.
             AVCaptureDevice* bestDevice{NULL};
             AVCaptureDeviceFormat* bestFormat{NULL};
-            int32_t bestPixelCount{0};
+            uint32_t bestPixelCount{0};
+            uint32_t bestDimDiff{0};
             NSArray* deviceTypes{NULL};
+            bool foundExactMatch{false};
             if (@available(iOS 13.0, *))
             {
                 // Ordered list of cameras by general usage quality.
@@ -112,22 +121,36 @@ namespace Babylon::Plugins
                 for (AVCaptureDeviceFormat* format in device.formats)
                 {
                     CMVideoFormatDescriptionRef videoFormatRef = static_cast<CMVideoFormatDescriptionRef>(format.formatDescription);
-                    CMVideoDimensions resolution = CMVideoFormatDescriptionGetDimensions(videoFormatRef);
+                    CMVideoDimensions dimensions = CMVideoFormatDescriptionGetDimensions(videoFormatRef);
                     
                     // Reject any resolution that doesn't qualify for the constraint.
-                    if (static_cast<uint32_t>(resolution.width) > maxWidth || static_cast<uint32_t>(resolution.height) > maxHeight)
+                    if (static_cast<uint32_t>(dimensions.width) > maxWidth || static_cast<uint32_t>(dimensions.height) > maxHeight)
                     {
                         continue;
                     }
                     
-                    // Calculate pixel count, and take the best qualifying one.
-                    int32_t pixelCount = resolution.width * resolution.height;
-                    if (bestDevice == NULL || pixelCount > bestPixelCount)
+                    // Calculate pixel count and dimension differential and take the best qualifying one.
+                    uint32_t pixelCount = dimensions.width * dimensions.height;
+                    uint32_t dimDiff = (maxWidth - dimensions.width) + (maxHeight - dimensions.height);
+                    if (bestDevice == NULL || pixelCount > bestPixelCount || (pixelCount == bestPixelCount && dimDiff < bestDimDiff))
                     {
                         bestPixelCount = pixelCount;
                         bestDevice = device;
                         bestFormat = format;
+                        bestDimDiff = dimDiff;
+                        
+                        // Check if we got an exact match, and exit the loop early in this case.
+                        if (static_cast<uint32_t>(dimensions.width) == maxWidth && static_cast<uint32_t>(dimensions.height) == maxHeight)
+                        {
+                            foundExactMatch = true;
+                            break;
+                        }
                     }
+                }
+                
+                if (foundExactMatch)
+                {
+                    break;
                 }
             }
             
