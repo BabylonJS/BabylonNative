@@ -61,10 +61,10 @@ namespace Babylon::Plugins
 
     arcana::task<void, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
-        if (maxWidth == 0) {
+        if (maxWidth == 0 || maxWidth > INT32_MAX) {
             maxWidth = INT32_MAX;
         }
-        if (maxHeight == 0) {
+        if (maxHeight == 0 || maxHeight > INT32_MAX) {
             maxHeight = INT32_MAX;
         }
         
