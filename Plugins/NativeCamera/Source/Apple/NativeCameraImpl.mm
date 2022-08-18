@@ -74,12 +74,12 @@ namespace Babylon::Plugins
             CVMetalTextureCacheCreate(NULL, NULL, metalDevice, NULL, &m_implData->textureCache);
             m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData];
             m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
-            NSArray* deviceTypes{NULL};
             
             // Loop over all available camera configurations to find a config that most closely matches the constraints.
             AVCaptureDevice* bestDevice{NULL};
             AVCaptureDeviceFormat* bestFormat{NULL};
             uint32_t bestDiff{UINT32_MAX};
+            NSArray* deviceTypes{NULL};
             if (@available(iOS 13.0, *))
             {
                 // Ordered list of cameras by general usage quality.
@@ -120,7 +120,7 @@ namespace Babylon::Plugins
                         continue;
                     }
                     
-                    // Calculate the resolution differential to use a heuristic.
+                    // Calculate the resolution differential for height + width to use as a simple heuristic.
                     uint32_t resolutionDiff = resolution.width - minWidth + resolution.height - minHeight;
                     if (bestDevice == NULL || resolutionDiff < bestDiff)
                     {
@@ -138,7 +138,7 @@ namespace Babylon::Plugins
                 return;
             }
                        
-            // Lock camera device send set up camera format. If there a problem initialising the camera it will give an error.
+            // Lock camera device and set up camera format. If there a problem initialising the camera it will give an error.
             NSError *error;
             [bestDevice lockForConfiguration:&error];
             if (error != nil)
@@ -151,7 +151,7 @@ namespace Babylon::Plugins
             AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:bestDevice error:&error];
             [bestDevice unlockForConfiguration];
 
-            // Check for failed init
+            // Check for failed initialisation.
             if (!input)
             {
                 taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"})));
