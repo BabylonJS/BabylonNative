@@ -20,9 +20,8 @@
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
     std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData> implData;
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_11_0
-    UIInterfaceOrientation orientation;
-#endif
+    AVCaptureVideoOrientation videoOrientation;
+    bool orientationUpdated;
 }
 
 - (id)init:(std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData>)implData;
@@ -85,6 +84,7 @@ namespace Babylon::Plugins
             m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData];
             m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
             
+#if (TARGET_OS_IPHONE)
             // Loop over all available camera configurations to find a config that most closely matches the constraints.
             AVCaptureDevice* bestDevice{NULL};
             AVCaptureDeviceFormat* bestFormat{NULL};
@@ -174,6 +174,13 @@ namespace Babylon::Plugins
             [bestDevice setActiveFormat:bestFormat];
             AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:bestDevice error:&error];
             [bestDevice unlockForConfiguration];
+#else
+            UNUSED(maxWidth);
+            UNUSED(maxHeight);
+            UNUSED(frontCamera);
+            AVCaptureDevice* captureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+            AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error];
+#endif
 
             // Check for failed initialisation.
             if (!input)
@@ -234,61 +241,78 @@ namespace Babylon::Plugins
 {
     self = [super init];
     self->implData = implData;
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_11_0
-    self->orientation = [self getOrientation];
+#if (TARGET_OS_IPHONE)
     [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(OrientationDidChange:) name:UIDeviceOrientationDidChangeNotification object:nil];
+    [self updateOrientation];
+    self->orientationUpdated = true;
+#else
+    // Orientation not supported on these devices.
+    self->videoOrientation = AVCaptureVideoOrientationUnknown;
+    self->orientationUpdated = false;
 #endif
 
     return self;
 }
 
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_11_0
+#if (TARGET_OS_IPHONE)
 /**
- Returns the orientation of the app
+ Updates target video orientation.
 */
-- (UIInterfaceOrientation)getOrientation {
+- (void)updateOrientation {
     UIApplication* sharedApplication = [UIApplication sharedApplication];
+    UIInterfaceOrientation orientation{UIInterfaceOrientationUnknown};
 #if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
     UIScene* scene = [[[sharedApplication connectedScenes] allObjects] firstObject];
     return [(UIWindowScene*)scene interfaceOrientation];
 #else
     if (@available(iOS 13.0, *)) {
-        return [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
+        orientation = [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
     }
     else {
-        return [sharedApplication statusBarOrientation];
+        orientation = [sharedApplication statusBarOrientation];
     }
 #endif
+    
+    // Determine device orienation, and adjust output to match.
+    AVCaptureVideoOrientation newVideoOrientation{AVCaptureVideoOrientationPortraitUpsideDown};
+    switch (orientation)
+        {
+            case UIInterfaceOrientationUnknown:
+                return;
+            case UIInterfaceOrientationPortrait:
+                newVideoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
+                break;
+            case UIInterfaceOrientationPortraitUpsideDown:
+                newVideoOrientation = AVCaptureVideoOrientationPortrait;
+                break;
+            case UIInterfaceOrientationLandscapeLeft:
+                newVideoOrientation = AVCaptureVideoOrientationLandscapeRight;
+                break;
+            case UIInterfaceOrientationLandscapeRight:
+                newVideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
+                break;
+        }
+
+    if (newVideoOrientation != self->videoOrientation)
+    {
+        self->videoOrientation = newVideoOrientation;
+        self->orientationUpdated = true;
+    }
 }
 
 -(void)OrientationDidChange:(NSNotification*)notification
 {
-    self->orientation = [self getOrientation];
+    [self updateOrientation];
 }
 #endif
 
 - (void)captureOutput:(AVCaptureOutput *)__unused captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *) connection
 {
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_11_0
-    // Determine device orienation, and adjust output to match.
-    switch (self->orientation)
-        {
-            case UIInterfaceOrientationUnknown:
-                break;
-            case UIInterfaceOrientationPortrait:
-                connection.videoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
-                break;
-            case UIInterfaceOrientationPortraitUpsideDown:
-                connection.videoOrientation = AVCaptureVideoOrientationPortrait;
-                break;
-            case UIInterfaceOrientationLandscapeLeft:
-                connection.videoOrientation = AVCaptureVideoOrientationLandscapeRight;
-                break;
-            case UIInterfaceOrientationLandscapeRight:
-                connection.videoOrientation = AVCaptureVideoOrientationLandscapeLeft;
-                break;
-        }
-#endif
+    if (self->orientationUpdated)
+    {
+        connection.videoOrientation = self->videoOrientation;
+        self->orientationUpdated = false;
+    }
 
     CVPixelBufferRef pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
     id<MTLTexture> textureBGRA = nil;
