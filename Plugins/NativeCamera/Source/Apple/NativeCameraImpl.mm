@@ -248,7 +248,7 @@ namespace Babylon::Plugins
     self->orientationUpdated = true;
 #else
     // Orientation not supported on these devices.
-    self->videoOrientation = AVCaptureVideoOrientationUnknown;
+    self->videoOrientation = AVCaptureVideoOrientationPortrait;
     self->orientationUpdated = false;
 #endif
 
@@ -264,7 +264,7 @@ namespace Babylon::Plugins
     UIInterfaceOrientation orientation{UIInterfaceOrientationUnknown};
 #if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
     UIScene* scene = [[[sharedApplication connectedScenes] allObjects] firstObject];
-    return [(UIWindowScene*)scene interfaceOrientation];
+    orienation = [(UIWindowScene*)scene interfaceOrientation];
 #else
     if (@available(iOS 13.0, *)) {
         orientation = [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
