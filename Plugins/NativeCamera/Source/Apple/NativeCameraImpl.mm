@@ -59,7 +59,7 @@ namespace Babylon::Plugins
     {
     }
 
-    arcana::task<void, std::exception_ptr> Camera::Impl::Open(uint32_t minWidth, uint32_t minHeight, bool frontCamera)
+    arcana::task<void, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
         auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
 
@@ -78,7 +78,7 @@ namespace Babylon::Plugins
             // Loop over all available camera configurations to find a config that most closely matches the constraints.
             AVCaptureDevice* bestDevice{NULL};
             AVCaptureDeviceFormat* bestFormat{NULL};
-            uint32_t bestDiff{UINT32_MAX};
+            int32_t bestPixelCount{0};
             NSArray* deviceTypes{NULL};
             if (@available(iOS 13.0, *))
             {
@@ -115,16 +115,16 @@ namespace Babylon::Plugins
                     CMVideoDimensions resolution = CMVideoFormatDescriptionGetDimensions(videoFormatRef);
                     
                     // Reject any resolution that does qualify for the constraint.
-                    if (static_cast<uint32_t>(resolution.width) < minWidth || static_cast<uint32_t>(resolution.height) < minHeight)
+                    if (static_cast<uint32_t>(resolution.width) > maxWidth || static_cast<uint32_t>(resolution.height) > maxHeight)
                     {
                         continue;
                     }
                     
-                    // Calculate the resolution differential for height + width to use as a simple heuristic.
-                    uint32_t resolutionDiff = resolution.width - minWidth + resolution.height - minHeight;
-                    if (bestDevice == NULL || resolutionDiff < bestDiff)
+                    // Calculate pixel count, and take the best qualifying one.
+                    int32_t pixelCount = resolution.width * resolution.height;
+                    if (bestDevice == NULL || pixelCount > bestPixelCount)
                     {
-                        bestDiff = resolutionDiff;
+                        bestPixelCount = pixelCount;
                         bestDevice = device;
                         bestFormat = format;
                     }
@@ -139,7 +139,7 @@ namespace Babylon::Plugins
             }
                        
             // Lock camera device and set up camera format. If there a problem initialising the camera it will give an error.
-            NSError *error;
+            NSError *error{nil};
             [bestDevice lockForConfiguration:&error];
             if (error != nil)
             {
