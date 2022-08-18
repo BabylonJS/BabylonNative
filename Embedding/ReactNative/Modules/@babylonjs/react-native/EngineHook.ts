@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { PERMISSIONS, check, request } from 'react-native-permissions';
-import { Engine, WebXRSessionManager, WebXRExperienceHelper, Color4, Tools } from '@babylonjs/core';
+import { Engine, WebXRSessionManager, WebXRExperienceHelper, Color4, Tools, VideoTexture } from '@babylonjs/core';
 import { ReactNativeEngine } from './ReactNativeEngine';
 
 import * as base64 from 'base-64';
@@ -21,12 +21,43 @@ class DOMException {
     get name(): string { return DOMError[this.error]; }
 }
 
+// Requests the camera permission and throws if the permission could not be granted
+async function requestCameraPermissionAsync() : Promise<void> {
+    const cameraPermission = Platform.select({
+        android: PERMISSIONS.ANDROID.CAMERA,
+        ios: PERMISSIONS.IOS.CAMERA,
+    });
+
+    // Only Android, iOS and Windows are supported.
+    if (cameraPermission === undefined) {
+        throw new DOMException(DOMError.NotSupportedError);
+    }
+
+    // If the permission has not been granted yet, but also not been blocked, then request permission.
+    let permissionStatus = await check(cameraPermission);
+    if (permissionStatus == "denied")
+    {
+        permissionStatus = await request(cameraPermission);
+    }
+
+    // If the permission has still not been granted, then throw an appropriate exception, otherwise continue with the actual XR session initialization.
+    switch(permissionStatus) {
+        case "unavailable":
+            throw new DOMException(DOMError.NotSupportedError);
+        case "denied":
+        case "blocked":
+            throw new DOMException(DOMError.SecurityError);
+        case "granted":
+            return;
+    }
+}
+
 // Override the WebXRSessionManager.initializeSessionAsync to insert a camera permissions request. It would be cleaner to do this directly in the native XR implementation, but there are a couple problems with that:
 // 1. React Native does not provide a way to hook into the permissions request result (at least on Android).
 // 2. If it is done on the native side, then we need one implementation per platform.
 {
-    const originalInitializeSessionAsync: (...args: any[]) => Promise<any> = WebXRSessionManager.prototype.initializeSessionAsync;
-    WebXRSessionManager.prototype.initializeSessionAsync = async function (...args: any[]): Promise<any> {
+    const originalInitializeSessionAsync = WebXRSessionManager.prototype.initializeSessionAsync;
+    WebXRSessionManager.prototype.initializeSessionAsync = async function (...args: Parameters<typeof originalInitializeSessionAsync>): ReturnType<typeof originalInitializeSessionAsync> {
         if (Platform.OS === "windows")
         {
             // Launching into immersive mode on Windows HMDs doesn't require a runtime permission check.
@@ -34,33 +65,21 @@ class DOMException {
             return originalInitializeSessionAsync.apply(this, args);
         }
 
-        const cameraPermission = Platform.select({
-            android: PERMISSIONS.ANDROID.CAMERA,
-            ios: PERMISSIONS.IOS.CAMERA,
-        });
+        await requestCameraPermissionAsync();
 
-        // Only Android, iOS and Windows are supported.
-        if (cameraPermission === undefined) {
-            throw new DOMException(DOMError.NotSupportedError);
-        }
+        return originalInitializeSessionAsync.apply(this, args);
+    }
+}
 
-        // If the permission has not been granted yet, but also not been blocked, then request permission.
-        let permissionStatus = await check(cameraPermission);
-        if (permissionStatus == "denied")
-        {
-            permissionStatus = await request(cameraPermission);
-        }
+// Override the VideoTexture.CreateFromWebCamAsync to insert a camera permissions request. It would be cleaner to do this directly in the NativeCamera implementation, but there are a couple problems with that:
+// 1. React Native does not provide a way to hook into the permissions request result (at least on Android).
+// 2. If it is done on the native side, then we need one implementation per platform.
+{
+    const originalCreateFromWebCamAsync = VideoTexture.CreateFromWebCamAsync;
+    VideoTexture.CreateFromWebCamAsync = async function (...args: Parameters<typeof originalCreateFromWebCamAsync>): ReturnType<typeof originalCreateFromWebCamAsync> {
+        await requestCameraPermissionAsync();
 
-        // If the permission has still not been granted, then throw an appropriate exception, otherwise continue with the actual XR session initialization.
-        switch(permissionStatus) {
-            case "unavailable":
-                throw new DOMException(DOMError.NotSupportedError);
-            case "denied":
-            case "blocked":
-                throw new DOMException(DOMError.SecurityError);
-            case "granted":
-                return originalInitializeSessionAsync.apply(this, args);
-        }
+        return originalCreateFromWebCamAsync.apply(this, args);
     }
 }
 
