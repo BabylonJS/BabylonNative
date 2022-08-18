@@ -114,7 +114,7 @@ namespace Babylon::Plugins
                     CMVideoFormatDescriptionRef videoFormatRef = static_cast<CMVideoFormatDescriptionRef>(format.formatDescription);
                     CMVideoDimensions resolution = CMVideoFormatDescriptionGetDimensions(videoFormatRef);
                     
-                    // Reject any resolution that does qualify for the constraint.
+                    // Reject any resolution that doesn't qualify for the constraint.
                     if (static_cast<uint32_t>(resolution.width) > maxWidth || static_cast<uint32_t>(resolution.height) > maxHeight)
                     {
                         continue;
@@ -131,7 +131,7 @@ namespace Babylon::Plugins
                 }
             }
             
-            // If no matching device, throw an error "ConstraintError" which matches the behavior in the browser.
+            // If no matching device, throw an error with the message "ConstraintError" which matches the behavior in the browser.
             if (bestDevice == NULL)
             {
                 taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{"ConstraintError"})));
