@@ -56,6 +56,10 @@ if(BGFX_CONFIG_RENDERER_WEBGPU)
     endif()
 endif()
 
+if(EMSCRIPTEN)
+	target_link_options(bgfx PUBLIC "-sMAX_WEBGL_VERSION=2")
+endif()
+
 if( NOT ${BGFX_OPENGL_VERSION} STREQUAL "" )
 	target_compile_definitions( bgfx PRIVATE BGFX_CONFIG_RENDERER_OPENGL_MIN_VERSION=${BGFX_OPENGL_VERSION} )
 endif()
