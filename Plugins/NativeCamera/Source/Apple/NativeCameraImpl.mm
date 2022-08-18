@@ -11,14 +11,14 @@
 #include <memory>
 #include <Foundation/Foundation.h>
 #include <AVFoundation/AVFoundation.h>
-#include <cstdlib>
 
 @class CameraTextureDelegate;
 
 #include "NativeCameraImpl.h"
 #include <napi/napi.h>
 
-@interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>{
+@interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
+{
     std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData> implData;
 }
 
@@ -59,80 +59,116 @@ namespace Babylon::Plugins
     {
     }
 
-    arcana::task<void, std::exception_ptr> Camera::Impl::Open(uint32_t width, uint32_t height, bool frontCamera)
+    arcana::task<void, std::exception_ptr> Camera::Impl::Open(uint32_t minWidth, uint32_t minHeight, bool frontCamera)
     {
         auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
 
-        if (!m_deviceContext) {
+        if (!m_deviceContext)
+        {
             m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
         }
         
         __block arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
 
         dispatch_sync(dispatch_get_main_queue(), ^{
-            
             CVMetalTextureCacheCreate(NULL, NULL, metalDevice, NULL, &m_implData->textureCache);
-            
             m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData];
-            
             m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
             NSArray* deviceTypes{NULL};
+            
+            // Loop over all available camera configurations to find a config that most closely matches the constraints.
             AVCaptureDevice* bestDevice{NULL};
             AVCaptureDeviceFormat* bestFormat{NULL};
             uint32_t bestDiff{UINT32_MAX};
-            if (@available(iOS 13.0, *)) {
-                deviceTypes = @[AVCaptureDeviceTypeBuiltInWideAngleCamera,
-                    AVCaptureDeviceTypeBuiltInUltraWideCamera,
-                    AVCaptureDeviceTypeBuiltInTelephotoCamera,
+            if (@available(iOS 13.0, *))
+            {
+                // Ordered list of cameras by general usage quality.
+                deviceTypes = @[
+                    AVCaptureDeviceTypeBuiltInTripleCamera,
                     AVCaptureDeviceTypeBuiltInDualCamera,
                     AVCaptureDeviceTypeBuiltInDualWideCamera,
-                    AVCaptureDeviceTypeBuiltInTripleCamera,
-                    AVCaptureDeviceTypeBuiltInTrueDepthCamera];
-            } else {
-                deviceTypes = @[AVCaptureDeviceTypeBuiltInWideAngleCamera,
+                    AVCaptureDeviceTypeBuiltInWideAngleCamera,
+                    AVCaptureDeviceTypeBuiltInUltraWideCamera,
                     AVCaptureDeviceTypeBuiltInTelephotoCamera,
+                    AVCaptureDeviceTypeBuiltInTrueDepthCamera
+                ];
+            }
+            else
+            {
+                // Only these camera types are available below iOS 13.0
+                deviceTypes = @[
                     AVCaptureDeviceTypeBuiltInDualCamera,
-                    AVCaptureDeviceTypeBuiltInTrueDepthCamera];
+                    AVCaptureDeviceTypeBuiltInWideAngleCamera,
+                    AVCaptureDeviceTypeBuiltInTelephotoCamera,
+                    AVCaptureDeviceTypeBuiltInTrueDepthCamera
+                ];
             }
             
             AVCaptureDeviceDiscoverySession* discoverySession = [AVCaptureDeviceDiscoverySession
                 discoverySessionWithDeviceTypes:deviceTypes
                 mediaType:AVMediaTypeVideo position:frontCamera ? AVCaptureDevicePositionFront: AVCaptureDevicePositionBack];
-            
-            for (AVCaptureDevice* device in discoverySession.devices) {
-                for (AVCaptureDeviceFormat* format in device.formats) {
+            for (AVCaptureDevice* device in discoverySession.devices)
+            {
+                for (AVCaptureDeviceFormat* format in device.formats)
+                {
                     CMVideoFormatDescriptionRef videoFormatRef = static_cast<CMVideoFormatDescriptionRef>(format.formatDescription);
                     CMVideoDimensions resolution = CMVideoFormatDescriptionGetDimensions(videoFormatRef);
-                    uint32_t resolutionDiff = fmax(resolution.width, width) - fmin(resolution.width, width) + fmax(resolution.height, height) - fmin(resolution.height, height);
-                    if (bestDevice == NULL || resolutionDiff < bestDiff) {
+                    
+                    // Reject any resolution that does qualify for the constraint.
+                    if (static_cast<uint32_t>(resolution.width) < minWidth || static_cast<uint32_t>(resolution.height) < minHeight)
+                    {
+                        continue;
+                    }
+                    
+                    // Calculate the resolution differential to use a heuristic.
+                    uint32_t resolutionDiff = resolution.width - minWidth + resolution.height - minHeight;
+                    if (bestDevice == NULL || resolutionDiff < bestDiff)
+                    {
                         bestDiff = resolutionDiff;
                         bestDevice = device;
                         bestFormat = format;
                     }
                 }
             }
+            
+            // If no matching device, throw an error "ConstraintError" which matches the behavior in the browser.
+            if (bestDevice == NULL)
+            {
+                taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{"ConstraintError"})));
+                return;
+            }
                        
-            // Set video capture input: If there a problem initialising the camera, it will give an error.
+            // Lock camera device send set up camera format. If there a problem initialising the camera it will give an error.
             NSError *error;
             [bestDevice lockForConfiguration:&error];
+            if (error != nil)
+            {
+                taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{"Failed to lock camera"})));
+                return;
+            }
+            
             [bestDevice setActiveFormat:bestFormat];
             AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:bestDevice error:&error];
             [bestDevice unlockForConfiguration];
 
-            if (!input) {
+            // Check for failed init
+            if (!input)
+            {
                 taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"})));
                 return;
             }
-            // Adding input souce for capture session. i.e., Camera
+            
+            // Add camera input source to the capture session.
             [m_implData->avCaptureSession addInput:input];
 
+            // Create the camera buffer.
             dispatch_queue_t sampleBufferQueue = dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL);
-
             AVCaptureVideoDataOutput * dataOutput = [[AVCaptureVideoDataOutput alloc] init];
             [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
             [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)}];
             [dataOutput setSampleBufferDelegate:m_implData->cameraTextureDelegate queue:sampleBufferQueue];
 
+            // Actually start the camera session.
             [m_implData->avCaptureSession addOutput:dataOutput];
             [m_implData->avCaptureSession commitConfiguration];
             [m_implData->avCaptureSession startRunning];
@@ -170,16 +206,19 @@ namespace Babylon::Plugins
 
 @implementation CameraTextureDelegate
 
-- (id)init:(std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData>)implData {
+- (id)init:(std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData>)implData
+{
     self = [super init];
     self->implData = implData;
     return self;
 }
 
-- (void)captureOutput:(AVCaptureOutput *)__unused captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *) connection {
+- (void)captureOutput:(AVCaptureOutput *)__unused captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *) connection
+{
+    // Determine device orienation, and adjust output to match.
     UIInterfaceOrientation orientation = [UIApplication sharedApplication].statusBarOrientation;
-    
-    switch (orientation) {
+    switch (orientation)
+    {
         case UIInterfaceOrientationUnknown:
             break;
         case UIInterfaceOrientationPortrait:
@@ -198,7 +237,6 @@ namespace Babylon::Plugins
     
 
     CVPixelBufferRef pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-
     id<MTLTexture> textureBGRA = nil;
 
     size_t width = CVPixelBufferGetWidthOfPlane(pixelBuffer, 0);
