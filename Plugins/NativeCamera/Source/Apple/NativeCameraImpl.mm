@@ -104,12 +104,11 @@ namespace Babylon::Plugins
             }
             else
             {
-                // Only these camera types are available below iOS 13.0
+                // Only these camera types are available for all devices
                 deviceTypes = @[
                     AVCaptureDeviceTypeBuiltInDualCamera,
                     AVCaptureDeviceTypeBuiltInWideAngleCamera,
-                    AVCaptureDeviceTypeBuiltInTelephotoCamera,
-                    AVCaptureDeviceTypeBuiltInTrueDepthCamera
+                    AVCaptureDeviceTypeBuiltInTelephotoCamera
                 ];
             }
             
@@ -236,28 +235,48 @@ namespace Babylon::Plugins
     return self;
 }
 
+#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_11_0
+/**
+ Returns the orientation of the app
+*/
+- (UIInterfaceOrientation)orientation {
+    UIApplication* sharedApplication = [UIApplication sharedApplication];
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
+    UIScene* scene = [[[sharedApplication connectedScenes] allObjects] firstObject];
+    return [(UIWindowScene*)scene interfaceOrientation];
+#else
+    if (@available(iOS 13.0, *)) {
+        return [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
+    }
+    else {
+        return [sharedApplication statusBarOrientation];
+    }
+#endif
+}
+#endif
+
 - (void)captureOutput:(AVCaptureOutput *)__unused captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *) connection
 {
+#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_11_0
     // Determine device orienation, and adjust output to match.
-    UIInterfaceOrientation orientation = [UIApplication sharedApplication].statusBarOrientation;
-    switch (orientation)
-    {
-        case UIInterfaceOrientationUnknown:
-            break;
-        case UIInterfaceOrientationPortrait:
-            connection.videoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
-            break;
-        case UIInterfaceOrientationPortraitUpsideDown:
-            connection.videoOrientation = AVCaptureVideoOrientationPortrait;
-            break;
-        case UIInterfaceOrientationLandscapeLeft:
-            connection.videoOrientation = AVCaptureVideoOrientationLandscapeRight;
-            break;
-        case UIInterfaceOrientationLandscapeRight:
-            connection.videoOrientation = AVCaptureVideoOrientationLandscapeLeft;
-            break;
-    }
-    
+    switch ([self orientation])
+        {
+            case UIInterfaceOrientationUnknown:
+                break;
+            case UIInterfaceOrientationPortrait:
+                connection.videoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
+                break;
+            case UIInterfaceOrientationPortraitUpsideDown:
+                connection.videoOrientation = AVCaptureVideoOrientationPortrait;
+                break;
+            case UIInterfaceOrientationLandscapeLeft:
+                connection.videoOrientation = AVCaptureVideoOrientationLandscapeRight;
+                break;
+            case UIInterfaceOrientationLandscapeRight:
+                connection.videoOrientation = AVCaptureVideoOrientationLandscapeLeft;
+                break;
+        }
+#endif
 
     CVPixelBufferRef pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
     id<MTLTexture> textureBGRA = nil;
