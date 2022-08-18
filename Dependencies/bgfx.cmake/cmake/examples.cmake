@@ -179,10 +179,12 @@ function( add_example ARG_NAME )
 	endif()
 
 	if (NOT ARG_COMMON AND EMSCRIPTEN)
-		target_link_libraries(example-${ARG_NAME}
-			"-s PRECISE_F32=1"
-			"-s TOTAL_MEMORY=268435456"
-			"--memory-init-file 1")
+		set_target_properties(example-${ARG_NAME}
+			PROPERTIES
+				LINK_FLAGS
+					"-s PRECISE_F32=1 -s TOTAL_MEMORY=268435456 -s ENVIRONMENT=web --memory-init-file 1 --emrun"
+				SUFFIX ".html"
+		)
 	endif()
 
 	# Directory name
