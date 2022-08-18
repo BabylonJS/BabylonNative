@@ -20,6 +20,9 @@
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
     std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData> implData;
+#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_11_0
+    UIInterfaceOrientation orientation;
+#endif
 }
 
 - (id)init:(std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData>)implData;
@@ -107,8 +110,7 @@ namespace Babylon::Plugins
                 // Only these camera types are available for all devices
                 deviceTypes = @[
                     AVCaptureDeviceTypeBuiltInDualCamera,
-                    AVCaptureDeviceTypeBuiltInWideAngleCamera,
-                    AVCaptureDeviceTypeBuiltInTelephotoCamera
+                    AVCaptureDeviceTypeBuiltInWideAngleCamera
                 ];
             }
             
@@ -232,6 +234,11 @@ namespace Babylon::Plugins
 {
     self = [super init];
     self->implData = implData;
+#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_11_0
+    self->orientation = [self getOrientation];
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(OrientationDidChange:) name:UIDeviceOrientationDidChangeNotification object:nil];
+#endif
+
     return self;
 }
 
@@ -239,7 +246,7 @@ namespace Babylon::Plugins
 /**
  Returns the orientation of the app
 */
-- (UIInterfaceOrientation)orientation {
+- (UIInterfaceOrientation)getOrientation {
     UIApplication* sharedApplication = [UIApplication sharedApplication];
 #if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
     UIScene* scene = [[[sharedApplication connectedScenes] allObjects] firstObject];
@@ -253,13 +260,18 @@ namespace Babylon::Plugins
     }
 #endif
 }
+
+-(void)OrientationDidChange:(NSNotification*)notification
+{
+    self->orientation = [self getOrientation];
+}
 #endif
 
 - (void)captureOutput:(AVCaptureOutput *)__unused captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *) connection
 {
 #if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_11_0
     // Determine device orienation, and adjust output to match.
-    switch ([self orientation])
+    switch (self->orientation)
         {
             case UIInterfaceOrientationUnknown:
                 break;
