@@ -15,7 +15,7 @@ var xrFeaturePoints = false;
 var meshDetection = false;
 var text = false;
 var hololens = false;
-var cameraTexture = false;
+var cameraTexture = true;
 var imageTracking = false;
 const readPixels = false;
 
@@ -63,8 +63,11 @@ CreateBoxAsync(scene).then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
     BABYLON.Tools.Log("Loaded");
 
-    scene.createDefaultCamera(true, true, true);
-    scene.activeCamera.alpha += Math.PI;
+    // This creates and positions a free camera (non-mesh)
+    var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 1, -10), scene);
+
+    // This targets the camera to scene origin
+    camera.setTarget(new BABYLON.Vector3(0, 1, 0));
 
     if (ibl) {
         scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
@@ -74,14 +77,21 @@ CreateBoxAsync(scene).then(function () {
     }
 
     if (cameraTexture) {
-        var cameraBox = BABYLON.Mesh.CreateBox("box1", 0.25);
+        scene.meshes[0].setEnabled(false);
+        var plane = BABYLON.MeshBuilder.CreatePlane("plane", {size: 7, sideOrientation: BABYLON.Mesh.DOUBLESIDE});
+        plane.rotation.y = Math.PI;
+        plane.rotation.z = Math.PI;
+
+        plane.position.y = 1;
+        
         var mat = new BABYLON.StandardMaterial("mat", scene);
         mat.diffuseColor = BABYLON.Color3.Black();
 
-        BABYLON.VideoTexture.CreateFromWebCam(scene, function (videoTexture) {
+        var tex = BABYLON.VideoTexture.CreateFromWebCam(scene, function(videoTexture) {
             mat.emissiveTexture = videoTexture;
-            cameraBox.material = mat;
-        }, { maxWidth: 256, maxHeight: 256, facingMode: "environment" });
+            plane.material = mat;
+            console.log(videoTexture.getSize());
+        }, { minWidth: 1281, minHeight: 721, facingMode: 'user'});
     }
 
     if (readPixels) {
