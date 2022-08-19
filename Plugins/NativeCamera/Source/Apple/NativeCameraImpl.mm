@@ -63,11 +63,11 @@ namespace Babylon::Plugins
 
     arcana::task<void, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
-        if (maxWidth == 0 || maxWidth > INT32_MAX) {
-            maxWidth = INT32_MAX;
+        if (maxWidth == 0 || maxWidth > std::numeric_limits<int32_t>::max()) {
+            maxWidth = std::numeric_limits<int32_t>::max();
         }
-        if (maxHeight == 0 || maxHeight > INT32_MAX) {
-            maxHeight = INT32_MAX;
+        if (maxHeight == 0 || maxHeight > std::numeric_limits<int32_t>::max()) {
+            maxHeight = std::numeric_limits<int32_t>::max();
         }
         
         auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
@@ -114,15 +114,15 @@ namespace Babylon::Plugins
                 ];
             }
             
-            AVCaptureDeviceDiscoverySession* discoverySession = [AVCaptureDeviceDiscoverySession
-                discoverySessionWithDeviceTypes:deviceTypes
-                mediaType:AVMediaTypeVideo position:frontCamera ? AVCaptureDevicePositionFront: AVCaptureDevicePositionBack];
+            AVCaptureDeviceDiscoverySession* discoverySession{[AVCaptureDeviceDiscoverySession
+               discoverySessionWithDeviceTypes:deviceTypes
+               mediaType:AVMediaTypeVideo position:frontCamera ? AVCaptureDevicePositionFront: AVCaptureDevicePositionBack]};
             for (AVCaptureDevice* device in discoverySession.devices)
             {
                 for (AVCaptureDeviceFormat* format in device.formats)
                 {
-                    CMVideoFormatDescriptionRef videoFormatRef = static_cast<CMVideoFormatDescriptionRef>(format.formatDescription);
-                    CMVideoDimensions dimensions = CMVideoFormatDescriptionGetDimensions(videoFormatRef);
+                    CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(format.formatDescription)};
+                    CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
                     
                     // Reject any resolution that doesn't qualify for the constraint.
                     if (static_cast<uint32_t>(dimensions.width) > maxWidth || static_cast<uint32_t>(dimensions.height) > maxHeight)
@@ -131,9 +131,9 @@ namespace Babylon::Plugins
                     }
                     
                     // Calculate pixel count and dimension differential and take the best qualifying one.
-                    uint32_t pixelCount = dimensions.width * dimensions.height;
-                    uint32_t dimDiff = (maxWidth - dimensions.width) + (maxHeight - dimensions.height);
-                    if (bestDevice == NULL || pixelCount > bestPixelCount || (pixelCount == bestPixelCount && dimDiff < bestDimDiff))
+                    uint32_t pixelCount{static_cast<uint32_t>(dimensions.width * dimensions.height)};
+                    uint32_t dimDiff{(maxWidth - dimensions.width) + (maxHeight - dimensions.height)};
+                    if (bestDevice == nullptr || pixelCount > bestPixelCount || (pixelCount == bestPixelCount && dimDiff < bestDimDiff))
                     {
                         bestPixelCount = pixelCount;
                         bestDevice = device;
@@ -158,7 +158,8 @@ namespace Babylon::Plugins
             // If no matching device, throw an error with the message "ConstraintError" which matches the behavior in the browser.
             if (bestDevice == NULL)
             {
-                taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{"ConstraintError"})));
+                taskCompletionSource.complete(arcana::make_unexpected(
+                    std::make_exception_ptr(std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."})));
                 return;
             }
                        
@@ -172,15 +173,15 @@ namespace Babylon::Plugins
             }
             
             [bestDevice setActiveFormat:bestFormat];
-            AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:bestDevice error:&error];
+            AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:bestDevice error:&error]};
             [bestDevice unlockForConfiguration];
 #else
             UNUSED(maxWidth);
             UNUSED(maxHeight);
             UNUSED(frontCamera);
             NSError *error{nil};
-            AVCaptureDevice* captureDevice = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-            AVCaptureDeviceInput *input = [AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error];
+            AVCaptureDevice* captureDevice{[AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo]};
+            AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error]};
 #endif
 
             // Check for failed initialisation.
@@ -194,8 +195,8 @@ namespace Babylon::Plugins
             [m_implData->avCaptureSession addInput:input];
 
             // Create the camera buffer.
-            dispatch_queue_t sampleBufferQueue = dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL);
-            AVCaptureVideoDataOutput * dataOutput = [[AVCaptureVideoDataOutput alloc] init];
+            dispatch_queue_t sampleBufferQueue{dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL)};
+            AVCaptureVideoDataOutput * dataOutput{[[AVCaptureVideoDataOutput alloc] init]};
             [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
             [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)}];
             [dataOutput setSampleBufferDelegate:m_implData->cameraTextureDelegate queue:sampleBufferQueue];
@@ -260,10 +261,10 @@ namespace Babylon::Plugins
  Updates target video orientation.
 */
 - (void)updateOrientation {
-    UIApplication* sharedApplication = [UIApplication sharedApplication];
+    UIApplication* sharedApplication{[UIApplication sharedApplication]};
     UIInterfaceOrientation orientation{UIInterfaceOrientationUnknown};
 #if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
-    UIScene* scene = [[[sharedApplication connectedScenes] allObjects] firstObject];
+    UIScene* scene{[[[sharedApplication connectedScenes] allObjects] firstObject]};
     orientation = [(UIWindowScene*)scene interfaceOrientation];
 #else
     if (@available(iOS 13.0, *)) {
@@ -316,22 +317,22 @@ namespace Babylon::Plugins
         self->orientationUpdated = false;
     }
 
-    CVPixelBufferRef pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
-    id<MTLTexture> textureBGRA = nil;
+    CVPixelBufferRef pixelBuffer{CMSampleBufferGetImageBuffer(sampleBuffer)};
+    id<MTLTexture> textureBGRA{nil};
 
     size_t width = CVPixelBufferGetWidthOfPlane(pixelBuffer, 0);
     size_t height = CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
-    MTLPixelFormat pixelFormat = MTLPixelFormatBGRA8Unorm;
+    MTLPixelFormat pixelFormat{MTLPixelFormatBGRA8Unorm};
     
-    CVMetalTextureRef texture = NULL;
-    CVReturn status = CVMetalTextureCacheCreateTextureFromImage(NULL, implData->textureCache, pixelBuffer, NULL, pixelFormat, width, height, 0, &texture);
-    if(status == kCVReturnSuccess)
+    CVMetalTextureRef texture{nullptr};
+    CVReturn status{CVMetalTextureCacheCreateTextureFromImage(NULL, implData->textureCache, pixelBuffer, NULL, pixelFormat, width, height, 0, &texture)};
+    if (status == kCVReturnSuccess)
     {
         textureBGRA = CVMetalTextureGetTexture(texture);
         CFRelease(texture);
     }
 
-    if(textureBGRA != nil)
+    if (textureBGRA != nil)
     {
         dispatch_async(dispatch_get_main_queue(), ^{
             implData->textureBGRA = textureBGRA;
