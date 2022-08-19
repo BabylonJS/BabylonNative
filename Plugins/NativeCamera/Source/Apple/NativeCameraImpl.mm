@@ -311,6 +311,7 @@ namespace Babylon::Plugins
 {
     if (self->orientationUpdated)
     {
+        connection.videoMirrored = true;
         connection.videoOrientation = self->videoOrientation;
         self->orientationUpdated = false;
     }
