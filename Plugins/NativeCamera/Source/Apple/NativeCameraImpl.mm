@@ -80,17 +80,17 @@ namespace Babylon::Plugins
         __block arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
 
         dispatch_sync(dispatch_get_main_queue(), ^{
-            CVMetalTextureCacheCreate(NULL, NULL, metalDevice, NULL, &m_implData->textureCache);
+            CVMetalTextureCacheCreate(nullptr, nullptr, metalDevice, nullptr, &m_implData->textureCache);
             m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData];
             m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
             
 #if (TARGET_OS_IPHONE)
             // Loop over all available camera configurations to find a config that most closely matches the constraints.
-            AVCaptureDevice* bestDevice{NULL};
-            AVCaptureDeviceFormat* bestFormat{NULL};
+            AVCaptureDevice* bestDevice{nullptr};
+            AVCaptureDeviceFormat* bestFormat{nullptr};
             uint32_t bestPixelCount{0};
             uint32_t bestDimDiff{0};
-            NSArray* deviceTypes{NULL};
+            NSArray* deviceTypes{nullptr};
             bool foundExactMatch{false};
             if (@available(iOS 13.0, *))
             {
@@ -156,7 +156,7 @@ namespace Babylon::Plugins
             }
             
             // If no matching device, throw an error with the message "ConstraintError" which matches the behavior in the browser.
-            if (bestDevice == NULL)
+            if (bestDevice == nullptr)
             {
                 taskCompletionSource.complete(arcana::make_unexpected(
                     std::make_exception_ptr(std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."})));
@@ -325,7 +325,7 @@ namespace Babylon::Plugins
     MTLPixelFormat pixelFormat{MTLPixelFormatBGRA8Unorm};
     
     CVMetalTextureRef texture{nullptr};
-    CVReturn status{CVMetalTextureCacheCreateTextureFromImage(NULL, implData->textureCache, pixelBuffer, NULL, pixelFormat, width, height, 0, &texture)};
+    CVReturn status{CVMetalTextureCacheCreateTextureFromImage(nullptr, implData->textureCache, pixelBuffer, nullptr, pixelFormat, width, height, 0, &texture)};
     if (status == kCVReturnSuccess)
     {
         textureBGRA = CVMetalTextureGetTexture(texture);
