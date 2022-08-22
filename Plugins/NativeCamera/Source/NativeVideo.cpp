@@ -149,7 +149,7 @@ namespace Babylon::Plugins
         if (!m_IsPlaying)
         {
             m_IsPlaying = true;
-            NativeCameraImpl->Open(m_width, m_height, m_frontCamera).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred](const arcana::expected<Camera::Impl::CameraDimensions*, std::exception_ptr>& result) {
+            NativeCameraImpl->Open(m_width, m_height, m_frontCamera).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred](const arcana::expected<Camera::CameraDimensions*, std::exception_ptr>& result) {
                 if (result.has_error())
                 {
                     deferred.Reject(Napi::Error::New(env, result.error()).Value());

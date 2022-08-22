@@ -47,7 +47,7 @@ namespace Babylon::Plugins
         CameraTextureDelegate* cameraTextureDelegate{};
         AVCaptureSession* avCaptureSession{};
         CVMetalTextureCacheRef textureCache{};
-        Camera::Impl::CameraDimensions dimensions{};
+        Camera::CameraDimensions dimensions{};
         id <MTLTexture> textureBGRA{};
     };
     Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
@@ -62,7 +62,7 @@ namespace Babylon::Plugins
     {
     }
 
-    arcana::task<Camera::Impl::CameraDimensions*, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
+    arcana::task<Camera::CameraDimensions*, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
         if (maxWidth == 0 || maxWidth > std::numeric_limits<int32_t>::max()) {
             maxWidth = std::numeric_limits<int32_t>::max();
@@ -78,7 +78,7 @@ namespace Babylon::Plugins
             m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
         }
         
-        __block arcana::task_completion_source<Camera::Impl::CameraDimensions*, std::exception_ptr> taskCompletionSource{};
+        __block arcana::task_completion_source<Camera::CameraDimensions*, std::exception_ptr> taskCompletionSource{};
 
         dispatch_sync(dispatch_get_main_queue(), ^{
             CVMetalTextureCacheCreate(nullptr, nullptr, metalDevice, nullptr, &m_implData->textureCache);
