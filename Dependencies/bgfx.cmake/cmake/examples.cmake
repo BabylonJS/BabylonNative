@@ -278,6 +278,7 @@ if( BGFX_BUILD_EXAMPLES )
 		44-sss
 		45-bokeh
 		46-fsr
+		47-pixelformats
 	)
 
 	foreach( EXAMPLE ${BGFX_EXAMPLES} )
