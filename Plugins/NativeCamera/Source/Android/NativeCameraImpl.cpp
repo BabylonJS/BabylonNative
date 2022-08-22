@@ -160,7 +160,7 @@ namespace Babylon::Plugins
     {
     }
 
-    arcana::task<Camera::CameraDimensions*, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
+    arcana::task<const Camera::CameraDimensions*, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
         if (!m_deviceContext){
             m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
@@ -275,7 +275,7 @@ namespace Babylon::Plugins
                 throw std::runtime_error{"Unable to restore GL context for camera texture init."};
             }
 
-            return &m_cameraDimensions;
+            return static_cast<const Camera::CameraDimensions*>(&m_cameraDimensions);
         });
     }
 

@@ -17,7 +17,7 @@ namespace Babylon::Plugins
     public:
         Impl(Napi::Env env, bool overrideCameraTexture);
         ~Impl();
-        arcana::task<Camera::CameraDimensions*, std::exception_ptr> Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera);
+        arcana::task<const Camera::CameraDimensions*, std::exception_ptr> Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera);
         void SetTextureOverride(void* texturePtr);
         void UpdateCameraTexture(bgfx::TextureHandle textureHandle);
         void Close();
