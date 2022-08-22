@@ -157,9 +157,9 @@ namespace Babylon::Plugins
                 else
                 {
                     if (result.has_value()) {
-                        auto cameraInfo = result.value();
-                        this->m_width = cameraInfo->width;
-                        this->m_height = cameraInfo->height;
+                        auto cameraDimensions{result.value()};
+                        this->m_width = cameraDimensions->width;
+                        this->m_height = cameraDimensions->height;
                     }
                     deferred.Resolve(env.Undefined());
                     RaiseEvent("playing");
