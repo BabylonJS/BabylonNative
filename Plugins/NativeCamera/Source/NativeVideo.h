@@ -27,9 +27,7 @@ namespace Babylon::Plugins
         void RaiseEvent(const char* eventType);
         Napi::Value Play(const Napi::CallbackInfo& info);
         void Pause(const Napi::CallbackInfo& info);
-        void SetVideoWidth(const Napi::CallbackInfo& info, const Napi::Value& value);
         Napi::Value GetVideoWidth(const Napi::CallbackInfo& info);
-        void SetVideoHeight(const Napi::CallbackInfo& info, const Napi::Value& value);
         Napi::Value GetVideoHeight(const Napi::CallbackInfo& info);
         void SetFrontCamera(const Napi::CallbackInfo& info, const Napi::Value& value);
         void SetAttribute(const Napi::CallbackInfo&);
@@ -40,8 +38,12 @@ namespace Babylon::Plugins
         JsRuntimeScheduler m_runtimeScheduler;
 
         std::unordered_map<std::string, std::vector<Napi::FunctionReference>> m_eventHandlerRefs{};
-        uint32_t m_width{};
-        uint32_t m_height{};
+        uint32_t m_maxWidth{};
+        uint32_t m_maxHeight{};
+
+        uint32_t m_width{0};
+        uint32_t m_height{0};
+        bool m_isReady{false};
         bool m_frontCamera{};
 
         bool m_IsPlaying{};

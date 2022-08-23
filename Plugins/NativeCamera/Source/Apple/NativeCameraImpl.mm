@@ -47,7 +47,6 @@ namespace Babylon::Plugins
         CameraTextureDelegate* cameraTextureDelegate{};
         AVCaptureSession* avCaptureSession{};
         CVMetalTextureCacheRef textureCache{};
-        Camera::CameraDimensions dimensions{};
         id <MTLTexture> textureBGRA{};
     };
     Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
@@ -62,7 +61,7 @@ namespace Babylon::Plugins
     {
     }
 
-    arcana::task<const Camera::CameraDimensions*, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
+    arcana::task<Camera::CameraDimensions, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
         if (maxWidth == 0 || maxWidth > std::numeric_limits<int32_t>::max()) {
             maxWidth = std::numeric_limits<int32_t>::max();
@@ -78,7 +77,7 @@ namespace Babylon::Plugins
             m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
         }
         
-        __block arcana::task_completion_source<const Camera::CameraDimensions*, std::exception_ptr> taskCompletionSource{};
+        __block arcana::task_completion_source<Camera::CameraDimensions, std::exception_ptr> taskCompletionSource{};
 
         dispatch_sync(dispatch_get_main_queue(), ^{
             CVMetalTextureCacheCreate(nullptr, nullptr, metalDevice, nullptr, &m_implData->textureCache);
@@ -190,10 +189,8 @@ namespace Babylon::Plugins
             CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 #endif
             
-            // Register the height and width of the native camera.
-            m_implData->dimensions.width = static_cast<uint32_t>(dimensions.width);
-            m_implData->dimensions.height = static_cast<uint32_t>(dimensions.height);
-
+            Camera::CameraDimensions cameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
+            
             // Check for failed initialisation.
             if (!input)
             {
@@ -216,7 +213,7 @@ namespace Babylon::Plugins
             [m_implData->avCaptureSession commitConfiguration];
             [m_implData->avCaptureSession startRunning];
             
-            taskCompletionSource.complete(static_cast<const Camera::CameraDimensions*>(&m_implData->dimensions));
+            taskCompletionSource.complete(cameraDimensions);
         });
         
         return taskCompletionSource.as_task();
