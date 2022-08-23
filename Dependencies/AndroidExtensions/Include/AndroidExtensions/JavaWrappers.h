@@ -311,6 +311,7 @@ namespace android::graphics
         SurfaceTexture();
         void InitWithTexture(int texture);
         void updateTexImage() const;
+        void setDefaultBufferSize(int width, int height);
     };
 }
 

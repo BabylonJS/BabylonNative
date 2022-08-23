@@ -51,16 +51,23 @@ namespace Babylon::Plugins
         return oesTexture;
     }
 
-    std::string Camera::Impl::GetCameraId(bool frontCamera)
+    Camera::Impl::CameraConfiguration Camera::Impl::GetCameraId(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
+        // Get the list of available cameras
         API24::ACameraIdList *cameraIds = nullptr;
         GET_CAMERA_FUNCTION(ACameraManager_getCameraIdList)(m_cameraManager, &cameraIds);
 
-        std::string cameraId{};
+        const char* bestCameraId{nullptr};
+        uint32_t bestPixelCount{0};
+        uint32_t bestDimDiff{0};
+        uint32_t bestWidth{0};
+        uint32_t bestHeight{0};
+        bool foundExactMatch{false};
 
+        // Iterate over all of the cameras and find the one that has the best stream configuration
         for (int i = 0; i < cameraIds->numCameras; ++i)
         {
-            const char *id = cameraIds->cameraIds[i];
+            const char* id = cameraIds->cameraIds[i];
 
             API24::ACameraMetadata *metadataObj;
             GET_CAMERA_FUNCTION(ACameraManager_getCameraCharacteristics)(m_cameraManager, id, &metadataObj);
@@ -69,17 +76,62 @@ namespace Babylon::Plugins
             GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_LENS_FACING, &lensInfo);
 
             auto facing = static_cast<API24::acamera_metadata_enum_android_lens_facing_t>(lensInfo.data.u8[0]);
-
-            // Found a corresponding facing camera?
-            if (facing == (frontCamera ? API24::ACAMERA_LENS_FACING_FRONT : API24::ACAMERA_LENS_FACING_BACK))
+            if (facing != (frontCamera ? API24::ACAMERA_LENS_FACING_FRONT : API24::ACAMERA_LENS_FACING_BACK))
             {
-                cameraId = id;
+                // Ignore cameras facing the wrong direction
+                continue;
+            }
+
+            // Get all available stream configurations supported by the camera
+            API24::ACameraMetadata_const_entry streamConfigurations;
+            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &streamConfigurations);
+            // format of the data:
+            // 0: format
+            // 1: width
+            // 2: height
+            // 3: input?
+
+            for (uint32_t j = 0; j < streamConfigurations.count; j += 4) {
+                int32_t format = streamConfigurations.data.i32[j + 0];
+                int32_t width = streamConfigurations.data.i32[j + 1];
+                int32_t height = streamConfigurations.data.i32[j + 2];
+                int32_t input = streamConfigurations.data.i32[j + 3];
+
+                if (input || format != AIMAGE_FORMAT_YUV_420_888 || static_cast<uint32_t>(width) > maxWidth || static_cast<uint32_t>(height) > maxHeight)
+                {
+                    // Ignore the configuration if it is either an input type or not a preview format
+                    // Also ignore the configuration if either the width or height is beyond the max allowed
+                    continue;
+                }
+
+                // Calculate pixel count and dimension differential and take the best qualifying one.
+                uint32_t pixelCount{static_cast<uint32_t>(width * height)};
+                uint32_t dimDiff{(maxWidth - width) + (maxHeight - height)};
+                if (bestCameraId == nullptr || pixelCount > bestPixelCount || (pixelCount == bestPixelCount && dimDiff < bestDimDiff))
+                {
+                    bestPixelCount = pixelCount;
+                    bestCameraId = id;
+                    bestDimDiff = dimDiff;
+                    bestWidth = width;
+                    bestHeight = height;
+
+                    // Check if we got an exact match, and exit the loop early in this case.
+                    if (static_cast<uint32_t>(width) == maxWidth && static_cast<uint32_t>(height) == maxHeight)
+                    {
+                        foundExactMatch = true;
+                        break;
+                    }
+                }
+            }
+
+            if (foundExactMatch)
+            {
                 break;
             }
         }
 
         GET_CAMERA_FUNCTION(ACameraManager_deleteCameraIdList)(cameraIds);
-        return cameraId;
+        return {bestCameraId, bestWidth, bestHeight};
     }
 
     // device callbacks
@@ -166,10 +218,30 @@ namespace Babylon::Plugins
             m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
         }
 
+        if (maxWidth == 0 || maxWidth > std::numeric_limits<int32_t>::max()) {
+            maxWidth = std::numeric_limits<int32_t>::max();
+        }
+        if (maxHeight == 0 || maxHeight > std::numeric_limits<int32_t>::max()) {
+            maxHeight = std::numeric_limits<int32_t>::max();
+        }
+
         return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, maxWidth, maxHeight, frontCamera]()
         {
-            m_cameraDimensions.width = maxWidth;
-            m_cameraDimensions.height = maxHeight;
+            CameraConfiguration bestCameraConfiguration{"", maxWidth, maxHeight};
+
+            if (API_LEVEL >= 24 && libCamera2NDK && !m_overrideCameraTexture) {
+                m_cameraManager = GET_CAMERA_FUNCTION(ACameraManager_create)();
+                bestCameraConfiguration = GetCameraId(maxWidth, maxHeight, frontCamera);
+
+                // If no matching device, throw an error with the message "ConstraintError" which matches the behavior in the browser.
+                if (bestCameraConfiguration.cameraID.empty())
+                {
+                    throw std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."};
+                }
+            }
+
+            m_cameraDimensions.width = bestCameraConfiguration.width;
+            m_cameraDimensions.height = bestCameraConfiguration.height;
 
             // Check if there is an already available context for this thread
             EGLContext currentContext = eglGetCurrentContext();
@@ -230,12 +302,11 @@ namespace Babylon::Plugins
 
                 // Create the surface and surface texture that will receive the camera preview
                 m_surfaceTexture.InitWithTexture(m_cameraOESTextureId);
+                m_surfaceTexture.setDefaultBufferSize(bestCameraConfiguration.width, bestCameraConfiguration.height);
                 android::view::Surface surface(m_surfaceTexture);
 
                 // open the front or back camera
-                m_cameraManager = GET_CAMERA_FUNCTION(ACameraManager_create)();
-                auto id = GetCameraId(frontCamera);
-                GET_CAMERA_FUNCTION(ACameraManager_openCamera)(m_cameraManager, id.c_str(),
+                GET_CAMERA_FUNCTION(ACameraManager_openCamera)(m_cameraManager, bestCameraConfiguration.cameraID.c_str(),
                                                                &cameraDeviceCallbacks,
                                                                &m_cameraDevice);
 

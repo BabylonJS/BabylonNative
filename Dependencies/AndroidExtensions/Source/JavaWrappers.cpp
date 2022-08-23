@@ -588,4 +588,12 @@ namespace android::graphics
             m_env->CallVoidMethod(JObject(), m_env->GetMethodID(m_class, "updateTexImage", "()V"));
         }
     }
+
+    void SurfaceTexture::setDefaultBufferSize(int width, int height)
+    {
+        if (JObject()) {
+            m_env->CallVoidMethod(JObject(), m_env->GetMethodID(m_class, "setDefaultBufferSize", "(II)V"), width, height);
+        }
+    }
+
 }
