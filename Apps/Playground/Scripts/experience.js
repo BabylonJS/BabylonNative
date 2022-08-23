@@ -90,8 +90,8 @@ CreateBoxAsync(scene).then(function () {
         var tex = BABYLON.VideoTexture.CreateFromWebCam(scene, function(videoTexture) {
             mat.emissiveTexture = videoTexture;
             plane.material = mat;
-            console.log(videoTexture.getSize());
-        }, { minWidth: 1281, minHeight: 721, facingMode: 'user'});
+            console.log("Video texture size: " + videoTexture.getSize());
+        }, { maxWidth: 1280, maxHeight: 720, facingMode: 'environment'});
     }
 
     if (readPixels) {

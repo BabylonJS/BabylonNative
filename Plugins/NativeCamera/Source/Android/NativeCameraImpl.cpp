@@ -160,17 +160,17 @@ namespace Babylon::Plugins
     {
     }
 
-    arcana::task<void, std::exception_ptr> Camera::Impl::Open(uint32_t width, uint32_t height, bool frontCamera)
+    arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
         if (!m_deviceContext){
             m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
         }
 
-        return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, width, height, frontCamera]()
+        return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, maxWidth, maxHeight, frontCamera]()
         {
-            m_width = width;
-            m_height = height;
-        
+            m_cameraDimensions.width = maxWidth;
+            m_cameraDimensions.height = maxHeight;
+
             // Check if there is an already available context for this thread
             EGLContext currentContext = eglGetCurrentContext();
             if (currentContext == EGL_NO_CONTEXT)
@@ -210,7 +210,7 @@ namespace Babylon::Plugins
 
             glGenTextures(1, &m_cameraRGBATextureId);
             glBindTexture(GL_TEXTURE_2D, m_cameraRGBATextureId);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_cameraDimensions.width, m_cameraDimensions.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glGenerateMipmap(GL_TEXTURE_2D);
@@ -274,6 +274,8 @@ namespace Babylon::Plugins
             {
                 throw std::runtime_error{"Unable to restore GL context for camera texture init."};
             }
+
+            return m_cameraDimensions;
         });
     }
 
@@ -304,7 +306,7 @@ namespace Babylon::Plugins
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferId);
-        glViewport(0, 0, m_width, m_height);
+        glViewport(0, 0, m_cameraDimensions.width, m_cameraDimensions.height);
         glUseProgram(m_cameraShaderProgramId);
 
         // Configure the camera texture

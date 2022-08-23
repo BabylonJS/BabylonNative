@@ -16,8 +16,8 @@ namespace Babylon::Plugins
                 InstanceMethod("play", &NativeVideo::Play),
                 InstanceMethod("pause", &NativeVideo::Pause),
                 InstanceMethod("setAttribute", &NativeVideo::SetAttribute),
-                InstanceAccessor("videoWidth", &NativeVideo::GetVideoWidth, &NativeVideo::SetVideoWidth),
-                InstanceAccessor("videoHeight", &NativeVideo::GetVideoHeight, &NativeVideo::SetVideoHeight),
+                InstanceAccessor("videoWidth", &NativeVideo::GetVideoWidth, nullptr),
+                InstanceAccessor("videoHeight", &NativeVideo::GetVideoHeight, nullptr),
                 InstanceAccessor("frontCamera", nullptr, &NativeVideo::SetFrontCamera),
                 InstanceAccessor("isNative", &NativeVideo::IsNative, nullptr),
                 InstanceAccessor("readyState", &NativeVideo::GetReadyState, nullptr),
@@ -37,25 +37,15 @@ namespace Babylon::Plugins
     NativeVideo::NativeVideo(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeVideo>{ info }
         , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
-        , m_width{ info[0].As<Napi::Number>().Uint32Value() }
-        , m_height{ info[1].As<Napi::Number>().Uint32Value() }
+        , m_maxWidth{ info[0].As<Napi::Number>().Uint32Value() }
+        , m_maxHeight{ info[1].As<Napi::Number>().Uint32Value() }
         , m_frontCamera{ info[2].As<Napi::Boolean>().Value() }
     {
-    }
-
-    void NativeVideo::SetVideoWidth(const Napi::CallbackInfo&, const Napi::Value& value)
-    {
-        m_width = value.As<Napi::Number>().Uint32Value();
     }
 
     Napi::Value NativeVideo::GetVideoWidth(const Napi::CallbackInfo& /*info*/)
     {
         return Napi::Value::From(Env(), m_width);
-    }
-
-    void NativeVideo::SetVideoHeight(const Napi::CallbackInfo&, const Napi::Value& value)
-    {
-        m_height = value.As<Napi::Number>().Uint32Value();
     }
 
     Napi::Value NativeVideo::GetVideoHeight(const Napi::CallbackInfo& /*info*/)
@@ -79,7 +69,7 @@ namespace Babylon::Plugins
 
     Napi::Value NativeVideo::GetReadyState(const Napi::CallbackInfo& /*info*/)
     {
-        return Napi::Value::From(Env(), 10u);
+        return Napi::Value::From(Env(), m_isReady ? 10u : 0u);
     }
 
     Napi::Value NativeVideo::GetHaveCurrentData(const Napi::CallbackInfo& /*info*/)
@@ -149,13 +139,17 @@ namespace Babylon::Plugins
         if (!m_IsPlaying)
         {
             m_IsPlaying = true;
-            NativeCameraImpl->Open(m_width, m_height, m_frontCamera).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred](const arcana::expected<void, std::exception_ptr>& result) {
+            NativeCameraImpl->Open(m_maxWidth, m_maxHeight, m_frontCamera).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred](const arcana::expected<Camera::Impl::CameraDimensions, std::exception_ptr>& result) {
                 if (result.has_error())
                 {
                     deferred.Reject(Napi::Error::New(env, result.error()).Value());
                 }
                 else
                 {
+                    auto cameraDimensions{result.value()};
+                    this->m_width = cameraDimensions.width;
+                    this->m_height = cameraDimensions.height;
+                    this->m_isReady = true;
                     deferred.Resolve(env.Undefined());
                     RaiseEvent("playing");
                 }

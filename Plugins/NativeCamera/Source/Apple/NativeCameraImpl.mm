@@ -61,7 +61,7 @@ namespace Babylon::Plugins
     {
     }
 
-    arcana::task<void, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
+    arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
         if (maxWidth == 0 || maxWidth > std::numeric_limits<int32_t>::max()) {
             maxWidth = std::numeric_limits<int32_t>::max();
@@ -77,7 +77,7 @@ namespace Babylon::Plugins
             m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
         }
         
-        __block arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
+        __block arcana::task_completion_source<Camera::Impl::CameraDimensions, std::exception_ptr> taskCompletionSource{};
 
         dispatch_sync(dispatch_get_main_queue(), ^{
             CVMetalTextureCacheCreate(nullptr, nullptr, metalDevice, nullptr, &m_implData->textureCache);
@@ -175,6 +175,9 @@ namespace Babylon::Plugins
             [bestDevice setActiveFormat:bestFormat];
             AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:bestDevice error:&error]};
             [bestDevice unlockForConfiguration];
+            
+            CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(bestFormat.formatDescription)};
+            CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 #else
             UNUSED(maxWidth);
             UNUSED(maxHeight);
@@ -182,8 +185,12 @@ namespace Babylon::Plugins
             NSError *error{nil};
             AVCaptureDevice* captureDevice{[AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo]};
             AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error]};
+            CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(captureDevice.activeFormat.formatDescription)};
+            CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 #endif
-
+            
+            Camera::Impl::CameraDimensions cameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
+            
             // Check for failed initialisation.
             if (!input)
             {
@@ -206,7 +213,7 @@ namespace Babylon::Plugins
             [m_implData->avCaptureSession commitConfiguration];
             [m_implData->avCaptureSession startRunning];
             
-            taskCompletionSource.complete();
+            taskCompletionSource.complete(cameraDimensions);
         });
         
         return taskCompletionSource.as_task();
