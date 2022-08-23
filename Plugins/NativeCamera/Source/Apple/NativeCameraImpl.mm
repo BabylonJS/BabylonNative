@@ -61,7 +61,7 @@ namespace Babylon::Plugins
     {
     }
 
-    arcana::task<Camera::CameraDimensions, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
+    arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
         if (maxWidth == 0 || maxWidth > std::numeric_limits<int32_t>::max()) {
             maxWidth = std::numeric_limits<int32_t>::max();
@@ -77,7 +77,7 @@ namespace Babylon::Plugins
             m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
         }
         
-        __block arcana::task_completion_source<Camera::CameraDimensions, std::exception_ptr> taskCompletionSource{};
+        __block arcana::task_completion_source<Camera::Impl::CameraDimensions, std::exception_ptr> taskCompletionSource{};
 
         dispatch_sync(dispatch_get_main_queue(), ^{
             CVMetalTextureCacheCreate(nullptr, nullptr, metalDevice, nullptr, &m_implData->textureCache);
@@ -189,7 +189,7 @@ namespace Babylon::Plugins
             CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 #endif
             
-            Camera::CameraDimensions cameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
+            Camera::Impl::CameraDimensions cameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
             
             // Check for failed initialisation.
             if (!input)

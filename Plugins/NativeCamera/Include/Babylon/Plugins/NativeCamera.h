@@ -7,11 +7,6 @@ namespace Babylon::Plugins
     class Camera final
     {
     public:
-        struct CameraDimensions {
-            uint32_t width;
-            uint32_t height;
-        };
-
         class Impl;
 
         Camera(const Camera& other) = default;
