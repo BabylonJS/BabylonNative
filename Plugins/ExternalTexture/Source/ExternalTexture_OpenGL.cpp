@@ -24,12 +24,12 @@ namespace Babylon::Plugins
         }
 
     private:
-        void GetInfo(Graphics::TextureT ptr, Info& info)
+        void GetInfo(Graphics::TextureT, Info&)
         {
             throw std::runtime_error{"not implemented"};
         }
 
-        void Assign(Graphics::TextureT ptr)
+        void Assign(Graphics::TextureT)
         {
             throw std::runtime_error{"not implemented"};
         }
