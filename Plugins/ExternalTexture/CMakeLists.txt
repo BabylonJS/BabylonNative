@@ -1,6 +1,7 @@
 set(SOURCES
     "Include/Babylon/Plugins/ExternalTexture.h"
     "Source/ExternalTexture_${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
+    "Source/ExternalTexture_Base.h"
     "Source/ExternalTexture_Shared.h")
 
 add_library(ExternalTexture ${SOURCES})

@@ -7,42 +7,29 @@
 #include <bx/bx.h>
 #include <bgfx/bgfx.h>
 
+#include "ExternalTexture_Base.h"
+
 namespace Babylon::Plugins
 {
-    class ExternalTexture::Impl
+    class ExternalTexture::Impl final : public ImplBase
     {
     public:
-        Impl(Graphics::TextureT)
-        {
-            throw std::runtime_error{"not implemented"};
-        }
-
-        uint16_t Width() const
-        {
-            throw std::runtime_error{"not implemented"};
-        }
-
-        uint16_t Height() const
-        {
-            throw std::runtime_error{"not implemented"};
-        }
-
-        bgfx::TextureFormat::Enum Format() const
-        {
-            throw std::runtime_error{"not implemented"};
-        }
-
-        bool HasMips() const
-        {
-            throw std::runtime_error{"not implemented"};
-        }
-
-        uint64_t Flags() const
-        {
-            throw std::runtime_error{"not implemented"};
-        }
+        // Implemented in ExternalTexture_Shared.h
+        Impl(Graphics::TextureT);
+        void Update(Graphics::TextureT);
 
         uintptr_t Ptr() const
+        {
+            throw std::runtime_error{"not implemented"};
+        }
+
+    private:
+        void GetInfo(Graphics::TextureT, Info&)
+        {
+            throw std::runtime_error{"not implemented"};
+        }
+
+        void Assign(Graphics::TextureT)
         {
             throw std::runtime_error{"not implemented"};
         }

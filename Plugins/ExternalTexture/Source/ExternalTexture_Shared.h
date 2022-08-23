@@ -1,7 +1,31 @@
-// Shared pimpl code (not an actual header)
+// Shared code (not an actual header)
 
 namespace Babylon::Plugins
 {
+    ExternalTexture::Impl::Impl(Graphics::TextureT ptr)
+    {
+        GetInfo(ptr, m_info);
+
+        if (m_info.MipLevels != 1 && m_info.MipLevels != 0 && !IsFullMipChain(m_info.MipLevels, m_info.Width, m_info.Height))
+        {
+            throw std::runtime_error{"Unsupported texture mip levels"};
+        }
+
+        Assign(ptr);
+    }
+
+    void ExternalTexture::Impl::Update(Graphics::TextureT ptr)
+    {
+        Info info;
+        GetInfo(ptr, info);
+        if (info != m_info)
+        {
+            throw std::runtime_error{"Textures must have same info"};
+        }
+
+        Assign(ptr);
+    }
+
     ExternalTexture::ExternalTexture(Graphics::TextureT ptr)
         : m_impl{std::make_unique<Impl>(ptr)}
     {
@@ -71,7 +95,14 @@ namespace Babylon::Plugins
                     auto* texture = new Graphics::Texture{};
                     texture->Attach(handle, true, impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
 
-                    auto jsObject = Napi::Pointer<Graphics::Texture>::Create(env, texture, [texture] {
+                    impl->AddHandle(texture->Handle());
+
+                    auto jsObject = Napi::Pointer<Graphics::Texture>::Create(env, texture, [texture, weakImpl = std::weak_ptr{impl}] {
+                        if (auto impl = weakImpl.lock())
+                        {
+                            impl->RemoveHandle(texture->Handle());
+                        }
+
                         delete texture;
                     });
 
@@ -81,5 +112,10 @@ namespace Babylon::Plugins
         });
 
         return promise;
+    }
+
+    void ExternalTexture::Update(Graphics::TextureT ptr)
+    {
+        m_impl->Update(ptr);
     }
 }
