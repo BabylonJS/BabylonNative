@@ -172,10 +172,12 @@ namespace Babylon::Plugins
                 return;
             }
             
+            [m_implData->avCaptureSession setSessionPreset:AVCaptureSessionPresetInputPriority];
             [bestDevice setActiveFormat:bestFormat];
             AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:bestDevice error:&error]};
             [bestDevice unlockForConfiguration];
             
+            // Capture the format dimensions.
             CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(bestFormat.formatDescription)};
             CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 #else
