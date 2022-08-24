@@ -160,9 +160,9 @@ if( BGFX_INSTALL )
 	)
 
 	# install tools
+	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/bgfxToolUtils.cmake
+		DESTINATION "${config_install_dir}")
 	if( BGFX_BUILD_TOOLS )
-		install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/bgfxToolUtils.cmake
-			DESTINATION "${config_install_dir}")
 		install( TARGETS shaderc
 			EXPORT "${TARGETS_EXPORT_NAME}"
 			DESTINATION "${CMAKE_INSTALL_BINDIR}" )
