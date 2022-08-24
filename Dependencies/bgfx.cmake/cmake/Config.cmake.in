@@ -4,5 +4,22 @@ include("${CMAKE_CURRENT_LIST_DIR}/@TARGETS_EXPORT_NAME@.cmake")
 get_target_property(BGFX_INCLUDE_PATH bgfx::bgfx INTERFACE_INCLUDE_DIRECTORIES)
 list(GET BGFX_INCLUDE_PATH 0 BGFX_INCLUDE_PATH_1) # bgfx::bgfx exports include directory twice?
 set(BGFX_SHADER_INCLUDE_PATH ${BGFX_INCLUDE_PATH_1}/bgfx)
+
+# If cross compiling, we need a host-compatible version of shaderc to compile shaders
+if (@CMAKE_CROSSCOMPILING@ AND NOT TARGET bgfx::shaderc)
+  find_program(
+    shaderc_EXECUTABLE REQUIRED
+    NAMES bgfx-shaderc shaderc
+    PATHS /usr/bin
+          ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/packages/bgfx_x64-linux/tools/bgfx
+          ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/packages/bgfx_x64-windows/tools/bgfx
+          ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/packages/bgfx_x64-osx/tools/bgfx
+  )
+  add_executable(bgfx::shaderc IMPORTED)
+  set_target_properties(
+    bgfx::shaderc PROPERTIES IMPORTED_LOCATION "${shaderc_EXECUTABLE}"
+  )
+endif ()
+
 include("${CMAKE_CURRENT_LIST_DIR}/bgfxToolUtils.cmake")
 check_required_components("@PROJECT_NAME@") 
