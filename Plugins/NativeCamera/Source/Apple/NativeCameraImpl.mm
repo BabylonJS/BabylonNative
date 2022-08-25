@@ -1,3 +1,7 @@
+#if ! __has_feature(objc_arc)
+#error "ARC is off"
+#endif
+
 #import <MetalKit/MetalKit.h>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
