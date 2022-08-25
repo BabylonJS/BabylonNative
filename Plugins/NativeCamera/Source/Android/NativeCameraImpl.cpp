@@ -30,32 +30,25 @@ namespace Babylon::Plugins
     )"};
 
 
-
-    static const std::string CAMERA_FRAG_SHADER_BASE{R"(#version 300 es
+    static const std::string CAMERA_FRAG_SHADER_HEADER{R"(#version 300 es
         #extension GL_OES_EGL_image_external_essl3 : require
+    )"};
+
+    static const std::string CAMERA_FRAG_SHADER{R"(
         precision mediump float;
         in vec2 cameraFrameUV;
         uniform samplerExternalOES cameraTexture;
         layout(location = 0) out vec4 oFragColor;
-        void main() {)"};
-    // The camera sensor is aligned with the phone orientation, parse the camera texture 1 to 1
-    static const std::string  CAMERA_FRAG_SHADER_0_DEGREE{R"(
-            oFragColor = texture(cameraTexture, cameraFrameUV);
-        }
-    )"};
-    // The camera sensor is 90 degrees out of alignment with the phone, swap the x and y and then flip the x axis
-    static const std::string  CAMERA_FRAG_SHADER_90_DEGREE{R"(
+        void main() {
+#if (SENSOR_ROTATION == 90)
             oFragColor = texture(cameraTexture, vec2(cameraFrameUV.y, 1.0 - cameraFrameUV.x));
-        }
-    )"};
-    // The camera sensor is upside down compared to the phone orientation, parse the camera texture flip the y coordinates
-    static const std::string  CAMERA_FRAG_SHADER_180_DEGREE{R"(
+#elif (SENSOR_ROTATION == 180)
             oFragColor = texture(cameraTexture, vec2(1.0 - cameraFrameUV.x, 1.0 - cameraFrameUV.y));
-        }
-    )"};
-    // The camera sensor is 270 degrees out of alignment with the phone, swap the x and y
-    static const std::string  CAMERA_FRAG_SHADER_270_DEGREE{R"(
+#elif (SENSOR_ROTATION == 270)
             oFragColor = texture(cameraTexture, vec2(1.0 -  cameraFrameUV.y, cameraFrameUV.x));
+#else
+            oFragColor = texture(cameraTexture, cameraFrameUV);
+#endif
         }
     )"};
 
@@ -337,10 +330,10 @@ namespace Babylon::Plugins
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
             const std::string fragShader =
-                    sensorRotationDiff == 90 ? CAMERA_FRAG_SHADER_BASE + CAMERA_FRAG_SHADER_90_DEGREE :
-                    sensorRotationDiff == 180 ? CAMERA_FRAG_SHADER_BASE + CAMERA_FRAG_SHADER_180_DEGREE :
-                    sensorRotationDiff == 270 ? CAMERA_FRAG_SHADER_BASE + CAMERA_FRAG_SHADER_270_DEGREE :
-                    CAMERA_FRAG_SHADER_BASE + CAMERA_FRAG_SHADER_0_DEGREE;
+                    sensorRotationDiff == 90 ? CAMERA_FRAG_SHADER_HEADER + "#define SENSOR_ROTATION 90\n" + CAMERA_FRAG_SHADER :
+                    sensorRotationDiff == 180 ? CAMERA_FRAG_SHADER_HEADER + "#define SENSOR_ROTATION 180\n" + CAMERA_FRAG_SHADER :
+                    sensorRotationDiff == 270 ? CAMERA_FRAG_SHADER_HEADER + "#define SENSOR_ROTATION 270\n" + CAMERA_FRAG_SHADER :
+                    CAMERA_FRAG_SHADER_HEADER + "#define SENSOR_ROTATION 0\n" + CAMERA_FRAG_SHADER;
 
             m_cameraShaderProgramId = android::OpenGLHelpers::CreateShaderProgram(CAMERA_VERT_SHADER, fragShader.c_str());
 
