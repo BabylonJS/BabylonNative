@@ -116,14 +116,14 @@ namespace Babylon::Plugins
             }
             
             // In portrait mode swap height and width when selecting the best format.
-            uint32_t targetHeight{maxHeight};
-            uint32_t targetWidth{maxWidth};
+            uint32_t targetFormatHeight{maxHeight};
+            uint32_t targetFormatWidth{maxWidth};
             
             if (m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortrait
                 ||  m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortraitUpsideDown)
             {
-                targetHeight = maxWidth;
-                targetWidth = maxHeight;
+                targetFormatHeight = maxWidth;
+                targetFormatWidth = maxHeight;
             }
 
             
@@ -138,14 +138,14 @@ namespace Babylon::Plugins
                     CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
                     
                     // Reject any resolution that doesn't qualify for the constraint.
-                    if (static_cast<uint32_t>(dimensions.width) > targetWidth || static_cast<uint32_t>(dimensions.height) > targetHeight)
+                    if (static_cast<uint32_t>(dimensions.width) > targetFormatWidth || static_cast<uint32_t>(dimensions.height) > targetFormatHeight)
                     {
                         continue;
                     }
                     
                     // Calculate pixel count and dimension differential and take the best qualifying one.
                     uint32_t pixelCount{static_cast<uint32_t>(dimensions.width * dimensions.height)};
-                    uint32_t dimDiff{(targetWidth - dimensions.width) + (targetHeight - dimensions.height)};
+                    uint32_t dimDiff{(targetFormatWidth - dimensions.width) + (targetFormatHeight - dimensions.height)};
                     if (bestDevice == nullptr || pixelCount > bestPixelCount || (pixelCount == bestPixelCount && dimDiff < bestDimDiff))
                     {
                         bestPixelCount = pixelCount;
@@ -154,7 +154,7 @@ namespace Babylon::Plugins
                         bestDimDiff = dimDiff;
                         
                         // Check if we got an exact match, and exit the loop early in this case.
-                        if (static_cast<uint32_t>(dimensions.width) == targetWidth && static_cast<uint32_t>(dimensions.height) == targetHeight)
+                        if (static_cast<uint32_t>(dimensions.width) == targetFormatWidth && static_cast<uint32_t>(dimensions.height) == targetFormatHeight)
                         {
                             foundExactMatch = true;
                             break;
@@ -204,7 +204,7 @@ namespace Babylon::Plugins
             CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 #endif
 
-            // For portrait orientations swap the height and width of the device dimensions.
+            // For portrait orientations swap the height and width of the video format dimensions.
             Camera::Impl::CameraDimensions cameraDimensions{};
             if (m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortrait
                 ||  m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortraitUpsideDown)
