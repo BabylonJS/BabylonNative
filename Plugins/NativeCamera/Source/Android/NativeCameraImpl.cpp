@@ -29,14 +29,33 @@ namespace Babylon::Plugins
         }
     )"};
 
-    static constexpr char CAMERA_FRAG_SHADER[]{R"(#version 300 es
+
+
+    static const std::string CAMERA_FRAG_SHADER_BASE{R"(#version 300 es
         #extension GL_OES_EGL_image_external_essl3 : require
         precision mediump float;
         in vec2 cameraFrameUV;
         uniform samplerExternalOES cameraTexture;
         layout(location = 0) out vec4 oFragColor;
-        void main() {
+        void main() {)"};
+    // The camera sensor is aligned with the phone orientation, parse the camera texture 1 to 1
+    static const std::string  CAMERA_FRAG_SHADER_0_DEGREE{R"(
             oFragColor = texture(cameraTexture, cameraFrameUV);
+        }
+    )"};
+    // The camera sensor is 90 degrees out of alignment with the phone, swap the x and y and then flip the x axis
+    static const std::string  CAMERA_FRAG_SHADER_90_DEGREE{R"(
+            oFragColor = texture(cameraTexture, vec2(cameraFrameUV.y, 1.0 - cameraFrameUV.x));
+        }
+    )"};
+    // The camera sensor is upside down compared to the phone orientation, parse the camera texture flip the y coordinates
+    static const std::string  CAMERA_FRAG_SHADER_180_DEGREE{R"(
+            oFragColor = texture(cameraTexture, vec2(1.0 - cameraFrameUV.x, 1.0 - cameraFrameUV.y));
+        }
+    )"};
+    // The camera sensor is 270 degrees out of alignment with the phone, swap the x and y
+    static const std::string  CAMERA_FRAG_SHADER_270_DEGREE{R"(
+            oFragColor = texture(cameraTexture, vec2(1.0 -  cameraFrameUV.y, cameraFrameUV.x));
         }
     )"};
 
@@ -62,6 +81,7 @@ namespace Babylon::Plugins
         uint32_t bestDimDiff{0};
         uint32_t bestWidth{0};
         uint32_t bestHeight{0};
+        int32_t bestSensorOrientation{0};
         bool foundExactMatch{false};
 
         // Iterate over all of the cameras and find the one that has the best stream configuration
@@ -74,6 +94,9 @@ namespace Babylon::Plugins
 
             API24::ACameraMetadata_const_entry lensInfo = {};
             GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_LENS_FACING, &lensInfo);
+
+            API24::ACameraMetadata_const_entry sensorOrientation = {};
+            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_SENSOR_ORIENTATION, &sensorOrientation);
 
             auto facing = static_cast<API24::acamera_metadata_enum_android_lens_facing_t>(lensInfo.data.u8[0]);
             if (facing != (frontCamera ? API24::ACAMERA_LENS_FACING_FRONT : API24::ACAMERA_LENS_FACING_BACK))
@@ -114,6 +137,7 @@ namespace Babylon::Plugins
                     bestDimDiff = dimDiff;
                     bestWidth = width;
                     bestHeight = height;
+                    bestSensorOrientation = sensorOrientation.data.i32[0];
 
                     // Check if we got an exact match, and exit the loop early in this case.
                     if (static_cast<uint32_t>(width) == maxWidth && static_cast<uint32_t>(height) == maxHeight)
@@ -131,7 +155,7 @@ namespace Babylon::Plugins
         }
 
         GET_CAMERA_FUNCTION(ACameraManager_deleteCameraIdList)(cameraIds);
-        return {bestCameraId, bestWidth, bestHeight};
+        return {bestCameraId, bestWidth, bestHeight, bestSensorOrientation};
     }
 
     // device callbacks
@@ -227,7 +251,9 @@ namespace Babylon::Plugins
 
         return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, maxWidth, maxHeight, frontCamera]()
         {
-            CameraConfiguration bestCameraConfiguration{"", maxWidth, maxHeight};
+            // Get the phone's current rotation so we can determine if the camera image needs to be rotated based on the sensor's natural orientation
+            int phoneRotation{ GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation() * 90 };
+            CameraConfiguration bestCameraConfiguration{"", maxWidth, maxHeight, phoneRotation};
 
             if (API_LEVEL >= 24 && libCamera2NDK && !m_overrideCameraTexture) {
                 m_cameraManager = GET_CAMERA_FUNCTION(ACameraManager_create)();
@@ -240,8 +266,14 @@ namespace Babylon::Plugins
                 }
             }
 
-            m_cameraDimensions.width = bestCameraConfiguration.width;
-            m_cameraDimensions.height = bestCameraConfiguration.height;
+            // The sensor rotation dictates the orientation of the camera when the phone is in it's default orientation
+            // Subtracting the phone's rotation from the camera's rotation will give us the current orientation
+            // of the sensor. Then add 360 and modulus 360 to ensure we're always talking about positive degrees.
+            int sensorRotationDiff = (bestCameraConfiguration.sensorRotation - phoneRotation + 360) % 360;
+            bool flipAxis = sensorRotationDiff == 90 || sensorRotationDiff == 270;
+
+            m_cameraDimensions.width = !flipAxis ? bestCameraConfiguration.width : bestCameraConfiguration.height;
+            m_cameraDimensions.height = !flipAxis ? bestCameraConfiguration.height : bestCameraConfiguration.width;
 
             // Check if there is an already available context for this thread
             EGLContext currentContext = eglGetCurrentContext();
@@ -295,7 +327,13 @@ namespace Babylon::Plugins
 
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-            m_cameraShaderProgramId = android::OpenGLHelpers::CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
+            const std::string fragShader =
+                    sensorRotationDiff == 90 ? CAMERA_FRAG_SHADER_BASE + CAMERA_FRAG_SHADER_90_DEGREE :
+                    sensorRotationDiff == 180 ? CAMERA_FRAG_SHADER_BASE + CAMERA_FRAG_SHADER_180_DEGREE :
+                    sensorRotationDiff == 270 ? CAMERA_FRAG_SHADER_BASE + CAMERA_FRAG_SHADER_270_DEGREE :
+                    CAMERA_FRAG_SHADER_BASE + CAMERA_FRAG_SHADER_0_DEGREE;
+
+            m_cameraShaderProgramId = android::OpenGLHelpers::CreateShaderProgram(CAMERA_VERT_SHADER, fragShader.c_str());
 
             if (API_LEVEL >= 24 && libCamera2NDK && !m_overrideCameraTexture) {
                 m_cameraOESTextureId = GenerateOESTexture();

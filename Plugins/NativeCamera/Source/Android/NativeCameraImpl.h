@@ -33,6 +33,7 @@ namespace Babylon::Plugins
                 std::string cameraID;
                 uint32_t width;
                 uint32_t height;
+                int32_t sensorRotation;
             };
 
         Graphics::DeviceContext* m_deviceContext;
