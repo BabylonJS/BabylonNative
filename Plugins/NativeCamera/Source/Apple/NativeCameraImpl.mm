@@ -114,18 +114,7 @@ namespace Babylon::Plugins
                     AVCaptureDeviceTypeBuiltInWideAngleCamera
                 ];
             }
-            
-            // In portrait mode swap height and width when selecting the best format.
-            uint32_t targetFormatHeight{maxHeight};
-            uint32_t targetFormatWidth{maxWidth};
-            
-            if (m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortrait
-                ||  m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortraitUpsideDown)
-            {
-                std::swap(targetFormatHeight, targetFormatWidth);
-            }
 
-            
             AVCaptureDeviceDiscoverySession* discoverySession{[AVCaptureDeviceDiscoverySession
                discoverySessionWithDeviceTypes:deviceTypes
                mediaType:AVMediaTypeVideo position:frontCamera ? AVCaptureDevicePositionFront: AVCaptureDevicePositionBack]};
@@ -137,14 +126,14 @@ namespace Babylon::Plugins
                     CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
                     
                     // Reject any resolution that doesn't qualify for the constraint.
-                    if (static_cast<uint32_t>(dimensions.width) > targetFormatWidth || static_cast<uint32_t>(dimensions.height) > targetFormatHeight)
+                    if (static_cast<uint32_t>(dimensions.width) > maxWidth || static_cast<uint32_t>(dimensions.height) > maxHeight)
                     {
                         continue;
                     }
                     
                     // Calculate pixel count and dimension differential and take the best qualifying one.
                     uint32_t pixelCount{static_cast<uint32_t>(dimensions.width * dimensions.height)};
-                    uint32_t dimDiff{(targetFormatWidth - dimensions.width) + (targetFormatHeight - dimensions.height)};
+                    uint32_t dimDiff{(maxWidth - dimensions.width) + (maxHeight - dimensions.height)};
                     if (bestDevice == nullptr || pixelCount > bestPixelCount || (pixelCount == bestPixelCount && dimDiff < bestDimDiff))
                     {
                         bestPixelCount = pixelCount;
@@ -153,7 +142,7 @@ namespace Babylon::Plugins
                         bestDimDiff = dimDiff;
                         
                         // Check if we got an exact match, and exit the loop early in this case.
-                        if (static_cast<uint32_t>(dimensions.width) == targetFormatWidth && static_cast<uint32_t>(dimensions.height) == targetFormatHeight)
+                        if (static_cast<uint32_t>(dimensions.width) == maxWidth && static_cast<uint32_t>(dimensions.height) == maxHeight)
                         {
                             foundExactMatch = true;
                             break;
