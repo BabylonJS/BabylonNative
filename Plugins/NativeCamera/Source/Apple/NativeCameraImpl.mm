@@ -122,8 +122,7 @@ namespace Babylon::Plugins
             if (m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortrait
                 ||  m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortraitUpsideDown)
             {
-                targetFormatHeight = maxWidth;
-                targetFormatWidth = maxHeight;
+                std::swap(targetFormatHeight, targetFormatWidth);
             }
 
             
@@ -204,18 +203,13 @@ namespace Babylon::Plugins
             CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 #endif
 
+            Camera::Impl::CameraDimensions cameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
+            
             // For portrait orientations swap the height and width of the video format dimensions.
-            Camera::Impl::CameraDimensions cameraDimensions{};
             if (m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortrait
                 ||  m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortraitUpsideDown)
             {
-                cameraDimensions.height = dimensions.width;
-                cameraDimensions.width = dimensions.height;
-            }
-            else
-            {
-                cameraDimensions.width = dimensions.width;
-                cameraDimensions.height = dimensions.height;
+                std::swap(cameraDimensions.width, cameraDimensions.height);
             }
             
             // Check for failed initialisation.
