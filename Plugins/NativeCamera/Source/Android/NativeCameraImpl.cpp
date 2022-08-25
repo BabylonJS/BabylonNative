@@ -108,10 +108,10 @@ namespace Babylon::Plugins
             // 3: input?
 
             for (uint32_t j = 0; j < streamConfigurations.count; j += 4) {
-                int32_t format = streamConfigurations.data.i32[j + 0];
-                int32_t width = streamConfigurations.data.i32[j + 1];
-                int32_t height = streamConfigurations.data.i32[j + 2];
-                int32_t input = streamConfigurations.data.i32[j + 3];
+                int32_t format{streamConfigurations.data.i32[j + 0]};
+                int32_t width{streamConfigurations.data.i32[j + 1]};
+                int32_t height{streamConfigurations.data.i32[j + 2]};
+                int32_t input{streamConfigurations.data.i32[j + 3]};
 
                 if (input || format != AIMAGE_FORMAT_YUV_420_888 || static_cast<uint32_t>(width) > maxWidth || static_cast<uint32_t>(height) > maxHeight)
                 {
@@ -262,8 +262,8 @@ namespace Babylon::Plugins
             // The sensor rotation dictates the orientation of the camera when the phone is in it's default orientation
             // Subtracting the phone's rotation from the camera's rotation will give us the current orientation
             // of the sensor. Then add 360 and modulus 360 to ensure we're always talking about positive degrees.
-            int sensorRotationDiff = (bestCameraConfiguration.sensorRotation - phoneRotation + 360) % 360;
-            bool sensorIsPortrait = sensorRotationDiff == 90 || sensorRotationDiff == 270;
+            int sensorRotationDiff{(bestCameraConfiguration.sensorRotation - phoneRotation + 360) % 360};
+            bool sensorIsPortrait{sensorRotationDiff == 90 || sensorRotationDiff == 270};
             if (frontCamera && !sensorIsPortrait && !m_overrideCameraTexture)
             {
                 // Compensate for the front facing camera being naturally mirrored. In the portrait orientation
