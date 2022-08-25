@@ -271,6 +271,13 @@ namespace Babylon::Plugins
             // of the sensor. Then add 360 and modulus 360 to ensure we're always talking about positive degrees.
             int sensorRotationDiff = (bestCameraConfiguration.sensorRotation - phoneRotation + 360) % 360;
             bool sensorIsPortrait = sensorRotationDiff == 90 || sensorRotationDiff == 270;
+            if (frontCamera && !sensorIsPortrait && !m_overrideCameraTexture)
+            {
+                // Compensate for the front facing camera being naturally mirrored. In the portrait orientation
+                // the mirrored behavior matches the browser, but in landscape it would result in the image rendering
+                // upside down. Rotate the image by 180 to compensate.
+                sensorRotationDiff = (sensorRotationDiff + 180) % 360;
+            }
 
             // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
             // of the video should be swapped
