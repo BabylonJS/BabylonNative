@@ -270,10 +270,12 @@ namespace Babylon::Plugins
             // Subtracting the phone's rotation from the camera's rotation will give us the current orientation
             // of the sensor. Then add 360 and modulus 360 to ensure we're always talking about positive degrees.
             int sensorRotationDiff = (bestCameraConfiguration.sensorRotation - phoneRotation + 360) % 360;
-            bool flipAxis = sensorRotationDiff == 90 || sensorRotationDiff == 270;
+            bool sensorIsPortrait = sensorRotationDiff == 90 || sensorRotationDiff == 270;
 
-            m_cameraDimensions.width = !flipAxis ? bestCameraConfiguration.width : bestCameraConfiguration.height;
-            m_cameraDimensions.height = !flipAxis ? bestCameraConfiguration.height : bestCameraConfiguration.width;
+            // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
+            // of the video should be swapped
+            m_cameraDimensions.width = !sensorIsPortrait ? bestCameraConfiguration.width : bestCameraConfiguration.height;
+            m_cameraDimensions.height = !sensorIsPortrait ? bestCameraConfiguration.height : bestCameraConfiguration.width;
 
             // Check if there is an already available context for this thread
             EGLContext currentContext = eglGetCurrentContext();
