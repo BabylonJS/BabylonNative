@@ -39,8 +39,6 @@ namespace Babylon::Plugins
         ~ImplData()
         {
             [avCaptureSession stopRunning];
-            [avCaptureSession release];
-            [cameraTextureDelegate release];
             if (textureCache)
             {
                 CVMetalTextureCacheFlush(textureCache, 0);
@@ -74,7 +72,7 @@ namespace Babylon::Plugins
             maxHeight = std::numeric_limits<int32_t>::max();
         }
         
-        auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
+        auto metalDevice = (__bridge id<MTLDevice>)bgfx::getInternalData()->context;
 
         if (!m_deviceContext)
         {
