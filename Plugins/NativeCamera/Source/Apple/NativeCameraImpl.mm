@@ -19,8 +19,9 @@
 
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
+    @public AVCaptureVideoOrientation videoOrientation;
+
     std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData> implData;
-    AVCaptureVideoOrientation videoOrientation;
     bool orientationUpdated;
 }
 
@@ -114,6 +115,18 @@ namespace Babylon::Plugins
                 ];
             }
             
+            // In portrait mode swap height and width when selecting the best format.
+            uint32_t targetHeight{maxHeight};
+            uint32_t targetWidth{maxWidth};
+            
+            if (m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortrait
+                ||  m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortraitUpsideDown)
+            {
+                targetHeight = maxWidth;
+                targetWidth = maxHeight;
+            }
+
+            
             AVCaptureDeviceDiscoverySession* discoverySession{[AVCaptureDeviceDiscoverySession
                discoverySessionWithDeviceTypes:deviceTypes
                mediaType:AVMediaTypeVideo position:frontCamera ? AVCaptureDevicePositionFront: AVCaptureDevicePositionBack]};
@@ -125,14 +138,14 @@ namespace Babylon::Plugins
                     CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
                     
                     // Reject any resolution that doesn't qualify for the constraint.
-                    if (static_cast<uint32_t>(dimensions.width) > maxWidth || static_cast<uint32_t>(dimensions.height) > maxHeight)
+                    if (static_cast<uint32_t>(dimensions.width) > targetWidth || static_cast<uint32_t>(dimensions.height) > targetHeight)
                     {
                         continue;
                     }
                     
                     // Calculate pixel count and dimension differential and take the best qualifying one.
                     uint32_t pixelCount{static_cast<uint32_t>(dimensions.width * dimensions.height)};
-                    uint32_t dimDiff{(maxWidth - dimensions.width) + (maxHeight - dimensions.height)};
+                    uint32_t dimDiff{(targetWidth - dimensions.width) + (targetHeight - dimensions.height)};
                     if (bestDevice == nullptr || pixelCount > bestPixelCount || (pixelCount == bestPixelCount && dimDiff < bestDimDiff))
                     {
                         bestPixelCount = pixelCount;
@@ -141,7 +154,7 @@ namespace Babylon::Plugins
                         bestDimDiff = dimDiff;
                         
                         // Check if we got an exact match, and exit the loop early in this case.
-                        if (static_cast<uint32_t>(dimensions.width) == maxWidth && static_cast<uint32_t>(dimensions.height) == maxHeight)
+                        if (static_cast<uint32_t>(dimensions.width) == targetWidth && static_cast<uint32_t>(dimensions.height) == targetHeight)
                         {
                             foundExactMatch = true;
                             break;
@@ -190,8 +203,20 @@ namespace Babylon::Plugins
             CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(captureDevice.activeFormat.formatDescription)};
             CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 #endif
-            
-            Camera::Impl::CameraDimensions cameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
+
+            // For portrait orientations swap the height and width of the device dimensions.
+            Camera::Impl::CameraDimensions cameraDimensions{};
+            if (m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortrait
+                ||  m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortraitUpsideDown)
+            {
+                cameraDimensions.height = dimensions.width;
+                cameraDimensions.width = dimensions.height;
+            }
+            else
+            {
+                cameraDimensions.width = dimensions.width;
+                cameraDimensions.height = dimensions.height;
+            }
             
             // Check for failed initialisation.
             if (!input)
@@ -257,8 +282,8 @@ namespace Babylon::Plugins
     [self updateOrientation];
     self->orientationUpdated = true;
 #else
-    // Orientation not supported on these devices.
-    self->videoOrientation = AVCaptureVideoOrientationPortrait;
+    // Orientation not supported on non-iOS devices.
+    self->videoOrientation = AVCaptureVideoOrientationLandscapeLeft;
     self->orientationUpdated = false;
 #endif
 
