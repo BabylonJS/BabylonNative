@@ -32,6 +32,19 @@
 
 @end
 
+namespace {
+    static bool isPixelFormatSupported(uint32_t pixelFormat)
+    {
+        switch (pixelFormat) {
+            case kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange:
+            case kCVPixelFormatType_420YpCbCr8BiPlanarFullRange:
+                return true;
+        }
+        return false;
+    }
+}
+
+
 namespace Babylon::Plugins
 {
     struct Camera::Impl::ImplData
@@ -91,6 +104,7 @@ namespace Babylon::Plugins
             AVCaptureDevice* bestDevice{nullptr};
             AVCaptureDeviceFormat* bestFormat{nullptr};
             uint32_t bestPixelCount{0};
+            uint32_t bestPixelFormat{0};
             uint32_t bestDimDiff{0};
             NSArray* deviceTypes{nullptr};
             bool foundExactMatch{false};
@@ -125,6 +139,13 @@ namespace Babylon::Plugins
                 {
                     CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(format.formatDescription)};
                     CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
+                    uint32_t pixelFormat{static_cast<uint32_t>(CMFormatDescriptionGetMediaSubType(videoFormatRef))};
+
+                    // Reject unsupporeted pixel formats.
+                    if (!isPixelFormatSupported(pixelFormat))
+                    {
+                        continue;
+                    }
                     
                     // Reject any resolution that doesn't qualify for the constraint.
                     if (static_cast<uint32_t>(dimensions.width) > maxWidth || static_cast<uint32_t>(dimensions.height) > maxHeight)
@@ -138,6 +159,7 @@ namespace Babylon::Plugins
                     if (bestDevice == nullptr || pixelCount > bestPixelCount || (pixelCount == bestPixelCount && dimDiff < bestDimDiff))
                     {
                         bestPixelCount = pixelCount;
+                        bestPixelFormat = pixelFormat;
                         bestDevice = device;
                         bestFormat = format;
                         bestDimDiff = dimDiff;
