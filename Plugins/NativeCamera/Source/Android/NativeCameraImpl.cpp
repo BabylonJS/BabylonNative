@@ -20,34 +20,37 @@ using namespace android::global;
 
 namespace Babylon::Plugins
 {
+    // Vertex positions for the camera texture
+    constexpr size_t CAMERA_VERTEX_COUNT{4 };
+    constexpr GLfloat CAMERA_VERTEX_POSITIONS[CAMERA_VERTEX_COUNT * 2]{-1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f };
+
+    // UV mappings to correct for the different orientations of the screen versus the camera sensor
+    constexpr size_t CAMERA_UVS_COUNT{ 4 };
+    constexpr GLfloat CAMERA_UVS_ROTATION_0[CAMERA_UVS_COUNT  * 2]{ 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f };
+    constexpr GLfloat CAMERA_UVS_ROTATION_90[CAMERA_UVS_COUNT  * 2]{ 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f };
+    constexpr GLfloat CAMERA_UVS_ROTATION_180[CAMERA_UVS_COUNT  * 2]{ 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f };
+    constexpr GLfloat CAMERA_UVS_ROTATION_270[CAMERA_UVS_COUNT  * 2]{ 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f };
+
     static constexpr char CAMERA_VERT_SHADER[]{R"(#version 300 es
         precision highp float;
-        out vec2 cameraFrameUV;
+        uniform vec2 positions[4];
+        uniform vec2 uvs[4];
+        out vec2 uv;
         void main() {
-            cameraFrameUV = vec2(gl_VertexID&1, (gl_VertexID &2)>>1) * 2.f;
-            gl_Position = vec4(cameraFrameUV * 2.f - 1.f, 0.0, 1.0);
+            gl_Position = vec4(positions[gl_VertexID], 0.0, 1.0);
+            uv = uvs[gl_VertexID];
         }
     )"};
 
-    static const std::string CAMERA_FRAG_SHADER_HEADER{R"(#version 300 es
+    static constexpr char CAMERA_FRAG_SHADER[]{R"(#version 300 es
         #extension GL_OES_EGL_image_external_essl3 : require
-    )"};
-
-    static const std::string CAMERA_FRAG_SHADER{R"(
         precision mediump float;
-        in vec2 cameraFrameUV;
+        in vec2 uv;
         uniform samplerExternalOES cameraTexture;
+        // Location 0 is GL_COLOR_ATTACHMENT0, which in turn is the babylonTexture
         layout(location = 0) out vec4 oFragColor;
         void main() {
-#if (SENSOR_ROTATION == 90)
-            oFragColor = texture(cameraTexture, vec2(cameraFrameUV.y, 1.0 - cameraFrameUV.x));
-#elif (SENSOR_ROTATION == 180)
-            oFragColor = texture(cameraTexture, vec2(1.0 - cameraFrameUV.x, 1.0 - cameraFrameUV.y));
-#elif (SENSOR_ROTATION == 270)
-            oFragColor = texture(cameraTexture, vec2(1.0 -  cameraFrameUV.y, cameraFrameUV.x));
-#else
-            oFragColor = texture(cameraTexture, cameraFrameUV);
-#endif
+            oFragColor = texture(cameraTexture, uv);
         }
     )"};
 
@@ -328,13 +331,12 @@ namespace Babylon::Plugins
 
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-            const std::string fragShader =
-                    sensorRotationDiff == 90 ? CAMERA_FRAG_SHADER_HEADER + "#define SENSOR_ROTATION 90\n" + CAMERA_FRAG_SHADER :
-                    sensorRotationDiff == 180 ? CAMERA_FRAG_SHADER_HEADER + "#define SENSOR_ROTATION 180\n" + CAMERA_FRAG_SHADER :
-                    sensorRotationDiff == 270 ? CAMERA_FRAG_SHADER_HEADER + "#define SENSOR_ROTATION 270\n" + CAMERA_FRAG_SHADER :
-                    CAMERA_FRAG_SHADER_HEADER + "#define SENSOR_ROTATION 0\n" + CAMERA_FRAG_SHADER;
+            m_cameraUVs = sensorRotationDiff == 90 ? CAMERA_UVS_ROTATION_90 :
+                          sensorRotationDiff == 180 ? CAMERA_UVS_ROTATION_180 :
+                          sensorRotationDiff == 270 ? CAMERA_UVS_ROTATION_270 :
+                          CAMERA_UVS_ROTATION_0;
 
-            m_cameraShaderProgramId = android::OpenGLHelpers::CreateShaderProgram(CAMERA_VERT_SHADER, fragShader.c_str());
+            m_cameraShaderProgramId = android::OpenGLHelpers::CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
 
             if (API_LEVEL >= 24 && libCamera2NDK && !m_overrideCameraTexture) {
                 m_cameraOESTextureId = GenerateOESTexture();
@@ -419,6 +421,12 @@ namespace Babylon::Plugins
         glViewport(0, 0, m_cameraDimensions.width, m_cameraDimensions.height);
         glUseProgram(m_cameraShaderProgramId);
 
+        auto vertexPositionsUniformLocation{ glGetUniformLocation(m_cameraShaderProgramId, "positions") };
+        glUniform2fv(vertexPositionsUniformLocation, CAMERA_VERTEX_COUNT, CAMERA_VERTEX_POSITIONS);
+
+        auto uvsUniformLocation{ glGetUniformLocation(m_cameraShaderProgramId, "uvs") };
+        glUniform2fv(uvsUniformLocation, CAMERA_UVS_COUNT, m_cameraUVs);
+
         // Configure the camera texture
         auto cameraTextureUniformLocation{glGetUniformLocation(m_cameraShaderProgramId, "cameraTexture")};
         glUniform1i(cameraTextureUniformLocation, android::OpenGLHelpers::GetTextureUnit(GL_TEXTURE0));
@@ -427,7 +435,7 @@ namespace Babylon::Plugins
         glBindSampler(android::OpenGLHelpers::GetTextureUnit(GL_TEXTURE0), 0);
 
         // Draw the quad
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 3);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, CAMERA_VERTEX_COUNT);
 
         glUseProgram(0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);

@@ -61,6 +61,7 @@ namespace Babylon::Plugins
         GLuint m_cameraRGBATextureId{};
         GLuint m_cameraShaderProgramId{};
         GLuint m_frameBufferId{};
+        const GLfloat* m_cameraUVs;
 
         EGLContext m_context{EGL_NO_CONTEXT};
         EGLDisplay m_display{};
