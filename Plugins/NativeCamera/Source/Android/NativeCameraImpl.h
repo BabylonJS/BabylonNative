@@ -44,7 +44,7 @@ namespace Babylon::Plugins
         CameraDimensions m_cameraDimensions{};
 
         GLuint GenerateOESTexture();
-        CameraConfiguration GetCameraId(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera);
+        CameraConfiguration GetCameraConfiguration(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera);
 
         API24::ACameraManager* m_cameraManager{};
         API24::ACameraDevice* m_cameraDevice{};

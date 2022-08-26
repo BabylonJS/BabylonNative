@@ -29,7 +29,6 @@ namespace Babylon::Plugins
         }
     )"};
 
-
     static const std::string CAMERA_FRAG_SHADER_HEADER{R"(#version 300 es
         #extension GL_OES_EGL_image_external_essl3 : require
     )"};
@@ -63,7 +62,7 @@ namespace Babylon::Plugins
         return oesTexture;
     }
 
-    Camera::Impl::CameraConfiguration Camera::Impl::GetCameraId(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
+    Camera::Impl::CameraConfiguration Camera::Impl::GetCameraConfiguration(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
         // Get the list of available cameras
         API24::ACameraIdList *cameraIds = nullptr;
@@ -250,7 +249,7 @@ namespace Babylon::Plugins
 
             if (API_LEVEL >= 24 && libCamera2NDK && !m_overrideCameraTexture) {
                 m_cameraManager = GET_CAMERA_FUNCTION(ACameraManager_create)();
-                bestCameraConfiguration = GetCameraId(maxWidth, maxHeight, frontCamera);
+                bestCameraConfiguration = GetCameraConfiguration(maxWidth, maxHeight, frontCamera);
 
                 // If no matching device, throw an error with the message "ConstraintError" which matches the behavior in the browser.
                 if (bestCameraConfiguration.cameraID.empty())
