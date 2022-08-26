@@ -42,8 +42,67 @@ namespace {
         }
         return false;
     }
-}
 
+    constexpr char shaderSource[] = R"(
+        #include <metal_stdlib>
+        #include <simd/simd.h>
+        using namespace metal;
+        #include <simd/simd.h>
+        typedef struct
+        {
+            vector_float2 position;
+            vector_float2 uv;
+        } XRVertex;
+        typedef struct
+        {
+            float4 position [[position]];
+            float2 uv;
+        } RasterizerData;
+        vertex RasterizerData
+        vertexShader(uint vertexID [[vertex_id]],
+                        constant XRVertex *vertices [[buffer(0)]])
+        {
+            RasterizerData out;
+            out.position = vector_float4(vertices[vertexID].position.xy, 0.0, 1.0);
+            out.uv = vertices[vertexID].uv;
+            return out;
+        }
+        fragment float4 fragmentShader(RasterizerData in [[stage_in]],
+            texture2d<float, access::sample> cameraTextureY [[ texture(1) ]],
+            texture2d<float, access::sample> cameraTextureCbCr [[ texture(2) ]])
+        {
+            constexpr sampler linearSampler(mip_filter::linear, mag_filter::linear, min_filter::linear);
+            if (!is_null_texture(cameraTextureY) && !is_null_texture(cameraTextureCbCr))
+            {
+                const float4 cameraSampleY = cameraTextureY.sample(linearSampler, in.uv);
+                const float4 cameraSampleCbCr = cameraTextureCbCr.sample(linearSampler, in.uv);
+                const float4x4 ycbcrToRGBTransform = float4x4(
+                    float4(+1.0000f, +1.0000f, +1.0000f, +0.0000f),
+                    float4(+0.0000f, -0.3441f, +1.7720f, +0.0000f),
+                    float4(+1.4020f, -0.7141f, +0.0000f, +0.0000f),
+                    float4(-0.7010f, +0.5291f, -0.8860f, +1.0000f)
+                );
+                float4 ycbcr = float4(cameraSampleY.r, cameraSampleCbCr.rg, 1.0);
+                float4 cameraSample = ycbcrToRGBTransform * ycbcr;
+                cameraSample.a = 1.0;
+                return cameraSample;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+    )";
+
+    id<MTLLibrary> CompileShader(id<MTLDevice> metalDevice, const char* source) {
+        NSError* error;
+        id<MTLLibrary> lib = [metalDevice newLibraryWithSource:@(source) options:nil error:&error];
+        if(nil != error) {
+            throw std::runtime_error{[error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]};
+        }
+        return lib;
+    }
+}
 
 namespace Babylon::Plugins
 {
@@ -62,7 +121,16 @@ namespace Babylon::Plugins
         CameraTextureDelegate* cameraTextureDelegate{};
         AVCaptureSession* avCaptureSession{};
         CVMetalTextureCacheRef textureCache{};
-        id <MTLTexture> textureBGRA{};
+        id<MTLTexture> textureY{};
+        id<MTLTexture> textureCbCr{};
+        id<MTLTexture> textureRGBA{};
+        id<MTLRenderPipelineState> cameraPipelineState{};
+        size_t width = 0;
+        size_t height = 0;
+        id<MTLDevice> metalDevice{};
+        id<MTLCommandQueue> commandQueue{};
+        id<MTLCommandBuffer> currentCommandBuffer{};
+        bool overrideBgfxTexture = true;
     };
     Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
         : m_deviceContext{nullptr}
@@ -78,6 +146,9 @@ namespace Babylon::Plugins
 
     arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
+        m_implData->commandQueue = (__bridge id<MTLCommandQueue>)bgfx::getInternalData()->commandQueue;
+        m_implData->metalDevice = (__bridge id<MTLDevice>)bgfx::getInternalData()->context;
+
         if (maxWidth == 0 || maxWidth > std::numeric_limits<int32_t>::max()) {
             maxWidth = std::numeric_limits<int32_t>::max();
         }
@@ -85,7 +156,7 @@ namespace Babylon::Plugins
             maxHeight = std::numeric_limits<int32_t>::max();
         }
         
-        auto metalDevice = (__bridge id<MTLDevice>)bgfx::getInternalData()->context;
+        auto metalDevice = m_implData->metalDevice;
 
         if (!m_deviceContext)
         {
@@ -239,6 +310,24 @@ namespace Babylon::Plugins
             [m_implData->avCaptureSession commitConfiguration];
             [m_implData->avCaptureSession startRunning];
             
+            // Create a pipeline state for converting the camera output to RGBA.
+            id<MTLLibrary> lib = CompileShader(metalDevice, shaderSource);
+            id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
+            id<MTLFunction> fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
+
+            MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+            pipelineStateDescriptor.label = @"Native Camera YCbCr to RGBA Pipeline";
+            pipelineStateDescriptor.vertexFunction = vertexFunction;
+            pipelineStateDescriptor.fragmentFunction = fragmentFunction;
+            pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+            m_implData->cameraPipelineState = [metalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
+
+            if (!m_implData->cameraPipelineState) {
+                taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{
+                    std::string("Failed to create camera pipeline state: ") + [error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]})));
+                return;
+            }
+
             taskCompletionSource.complete(cameraDimensions);
         });
         
@@ -257,9 +346,9 @@ namespace Babylon::Plugins
     void Camera::Impl::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
         arcana::make_task(m_deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
-            if (m_implData->textureBGRA)
+            if (m_implData->textureRGBA)
             {
-                bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureBGRA));
+                bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureRGBA));
             }
         });
     }
@@ -351,7 +440,7 @@ namespace Babylon::Plugins
     }
 
     CVPixelBufferRef pixelBuffer{CMSampleBufferGetImageBuffer(sampleBuffer)};
-    id<MTLTexture> textureBGRA{nil};
+    id<MTLTexture> textureRGBA{nil};
 
     size_t width = CVPixelBufferGetWidthOfPlane(pixelBuffer, 0);
     size_t height = CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
@@ -361,14 +450,14 @@ namespace Babylon::Plugins
     CVReturn status{CVMetalTextureCacheCreateTextureFromImage(nullptr, implData->textureCache, pixelBuffer, nullptr, pixelFormat, width, height, 0, &texture)};
     if (status == kCVReturnSuccess)
     {
-        textureBGRA = CVMetalTextureGetTexture(texture);
+        textureRGBA = CVMetalTextureGetTexture(texture);
         CFRelease(texture);
     }
 
-    if (textureBGRA != nil)
+    if (textureRGBA != nil)
     {
         dispatch_async(dispatch_get_main_queue(), ^{
-            implData->textureBGRA = textureBGRA;
+            implData->textureRGBA = textureRGBA;
         });
     }
 }
