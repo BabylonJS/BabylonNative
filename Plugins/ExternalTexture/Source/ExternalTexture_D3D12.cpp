@@ -157,7 +157,7 @@ namespace Babylon::Plugins
             info.Height = static_cast<uint16_t>(desc.Height);
             info.MipLevels = static_cast<uint16_t>(desc.MipLevels);
 
-            if ((desc.BindFlags & D3D12_BIND_RENDER_TARGET) != 0)
+            if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0)
             {
                 info.Flags |= BGFX_TEXTURE_RT;
             }
