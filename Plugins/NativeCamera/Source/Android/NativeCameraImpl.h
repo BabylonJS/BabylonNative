@@ -28,6 +28,13 @@ namespace Babylon::Plugins
         void Close();
 
     private:
+        struct CameraConfiguration
+        {
+            std::string cameraID;
+            uint32_t width;
+            uint32_t height;
+            int32_t sensorRotation;
+        };
 
         Graphics::DeviceContext* m_deviceContext;
         Napi::Env m_env;
@@ -37,7 +44,7 @@ namespace Babylon::Plugins
         CameraDimensions m_cameraDimensions{};
 
         GLuint GenerateOESTexture();
-        std::string GetCameraId(bool frontCamera);
+        CameraConfiguration GetCameraConfiguration(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera);
 
         API24::ACameraManager* m_cameraManager{};
         API24::ACameraDevice* m_cameraDevice{};
@@ -54,6 +61,7 @@ namespace Babylon::Plugins
         GLuint m_cameraRGBATextureId{};
         GLuint m_cameraShaderProgramId{};
         GLuint m_frameBufferId{};
+        const GLfloat* m_cameraUVs{};
 
         EGLContext m_context{EGL_NO_CONTEXT};
         EGLDisplay m_display{};
