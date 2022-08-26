@@ -21,8 +21,8 @@ using namespace android::global;
 namespace Babylon::Plugins
 {
     // Vertex positions for the camera texture
-    constexpr size_t CAMERA_VERTEX_COUNT{4 };
-    constexpr GLfloat CAMERA_VERTEX_POSITIONS[CAMERA_VERTEX_COUNT * 2]{-1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f };
+    constexpr size_t CAMERA_VERTEX_COUNT{ 4 };
+    constexpr GLfloat CAMERA_VERTEX_POSITIONS[CAMERA_VERTEX_COUNT * 2]{ -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f };
 
     // UV mappings to correct for the different orientations of the screen versus the camera sensor
     constexpr size_t CAMERA_UVS_COUNT{ 4 };
@@ -101,7 +101,7 @@ namespace Babylon::Plugins
             }
 
             // Get all available stream configurations supported by the camera
-            API24::ACameraMetadata_const_entry streamConfigurations;
+            API24::ACameraMetadata_const_entry streamConfigurations = {};
             GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &streamConfigurations);
             // format of the data:
             // 0: format
