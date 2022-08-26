@@ -145,6 +145,11 @@ namespace Babylon::Plugins
             info.Height = static_cast<uint16_t>(ptr.height);
             info.MipLevels = static_cast<uint16_t>(ptr.mipmapLevelCount);
 
+            if ((ptr.usage & MTLTextureUsage::renderTarget) != 0)
+            {
+                info.Flags |= BGFX_TEXTURE_RT;
+            }
+
             const auto pixelFormat = m_ptr.pixelFormat;
             for (size_t i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
             {

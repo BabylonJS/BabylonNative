@@ -1443,39 +1443,37 @@ namespace Babylon
         bool generateDepth = info[5].As<Napi::Boolean>();
         bool generateMips = info[6].As<Napi::Boolean>();
 
-        bgfx::FrameBufferHandle frameBufferHandle{};
-        if (generateDepth)
+        assert(bgfx::isTextureValid(0, false, 1, format, BGFX_TEXTURE_RT));
+
+        std::array<bgfx::Attachment, 2> attachments{};
+        uint8_t numAttachments = 0;
+
+        if (!texture->IsValid())
         {
-            auto depthStencilFormat = bgfx::TextureFormat::D32;
-            if (generateStencilBuffer)
+            texture->Attach(bgfx::createTexture2D(width, height, generateMips, 1, format, BGFX_TEXTURE_RT), false, width, height);
+        }
+        attachments[numAttachments++].init(texture->Handle());
+
+        if (generateStencilBuffer || generateDepth)
+        {
+            if (generateStencilBuffer != generateDepth)
             {
-                depthStencilFormat = bgfx::TextureFormat::D24S8;
+                JsConsoleLogger::LogWarn(info.Env(), "The flags generateDepth/generateStencilBuffer are mismatched. Depth and stencil are combined in one texture");
             }
 
-            assert(bgfx::isTextureValid(0, false, 1, format, BGFX_TEXTURE_RT));
+            const auto depthStencilFormat{generateStencilBuffer ? bgfx::TextureFormat::D24S8 : bgfx::TextureFormat::D32};
             assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, BGFX_TEXTURE_RT));
 
             // bgfx doesn't add flag D3D11_RESOURCE_MISC_GENERATE_MIPS for depth textures (missing that flag will crash D3D with resolving)
             // And not sure it makes sense to generate mipmaps from a depth buffer with exponential values.
             // only allows mipmaps resolve step when mipmapping is asked and for the color texture, not the depth.
             // https://github.com/bkaradzic/bgfx/blob/2c21f68998595fa388e25cb6527e82254d0e9bff/src/renderer_d3d11.cpp#L4525
-            std::array<bgfx::TextureHandle, 2> textures{
-                bgfx::createTexture2D(width, height, generateMips, 1, format, BGFX_TEXTURE_RT),
-                bgfx::createTexture2D(width, height, false, 1, depthStencilFormat, BGFX_TEXTURE_RT)};
-            std::array<bgfx::Attachment, textures.size()> attachments{};
-            for (size_t idx = 0; idx < attachments.size(); ++idx)
-            {
-                attachments[idx].init(textures[idx]);
-            }
-            frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
-        }
-        else
-        {
-            assert(!generateStencilBuffer);
-            frameBufferHandle = bgfx::createFrameBuffer(width, height, format, BGFX_TEXTURE_RT);
+            attachments[numAttachments++].init(bgfx::createTexture2D(width, height, false, 1, depthStencilFormat, BGFX_TEXTURE_RT));
         }
 
-        texture->Attach(bgfx::getTexture(frameBufferHandle), false, width, height, generateMips, 1, format, BGFX_TEXTURE_RT);
+        bgfx::FrameBufferHandle frameBufferHandle = bgfx::createFrameBuffer(numAttachments, attachments.data(), true);
+        assert(bgfx::isValid(frameBufferHandle));
+
         m_graphicsContext.AddTexture(texture->Handle(), width, height, generateMips, 1, format);
 
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_graphicsContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
