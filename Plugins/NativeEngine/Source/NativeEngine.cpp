@@ -1450,7 +1450,8 @@ namespace Babylon
 
         if (!texture->IsValid())
         {
-            texture->Attach(bgfx::createTexture2D(width, height, generateMips, 1, format, BGFX_TEXTURE_RT), false, width, height);
+            auto handle = bgfx::createTexture2D(width, height, generateMips, 1, format, BGFX_TEXTURE_RT);
+            texture->Attach(handle, false, width, height, generateMips, 1, format, BGFX_TEXTURE_RT);
         }
         attachments[numAttachments++].init(texture->Handle());
 
