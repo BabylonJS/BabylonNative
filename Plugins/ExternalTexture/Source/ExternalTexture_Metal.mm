@@ -145,7 +145,7 @@ namespace Babylon::Plugins
             info.Height = static_cast<uint16_t>(ptr.height);
             info.MipLevels = static_cast<uint16_t>(ptr.mipmapLevelCount);
 
-            if ((ptr.usage & MTLTextureUsage::renderTarget) != 0)
+            if ((ptr.usage & MTLTextureUsageRenderTarget) != 0)
             {
                 info.Flags |= BGFX_TEXTURE_RT;
             }
@@ -156,10 +156,10 @@ namespace Babylon::Plugins
                 const auto& format = s_textureFormat[i];
                 if (format.m_fmt == pixelFormat || format.m_fmtSrgb == pixelFormat)
                 {
-                    info.format = static_cast<bgfx::TextureFormat::Enum>(i);
+                    info.Format = static_cast<bgfx::TextureFormat::Enum>(i);
                     if (format.m_fmtSrgb == pixelFormat)
                     {
-                        info.flags |= BGFX_TEXTURE_SRGB;
+                        info.Flags |= BGFX_TEXTURE_SRGB;
                     }
                     break;
                 }
