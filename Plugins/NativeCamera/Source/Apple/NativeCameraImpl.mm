@@ -19,8 +19,9 @@
 
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
+    @public AVCaptureVideoOrientation videoOrientation;
+
     std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData> implData;
-    AVCaptureVideoOrientation videoOrientation;
     bool orientationUpdated;
 }
 
@@ -113,7 +114,7 @@ namespace Babylon::Plugins
                     AVCaptureDeviceTypeBuiltInWideAngleCamera
                 ];
             }
-            
+
             AVCaptureDeviceDiscoverySession* discoverySession{[AVCaptureDeviceDiscoverySession
                discoverySessionWithDeviceTypes:deviceTypes
                mediaType:AVMediaTypeVideo position:frontCamera ? AVCaptureDevicePositionFront: AVCaptureDevicePositionBack]};
@@ -190,8 +191,15 @@ namespace Babylon::Plugins
             CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(captureDevice.activeFormat.formatDescription)};
             CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 #endif
-            
+
             Camera::Impl::CameraDimensions cameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
+            
+            // For portrait orientations swap the height and width of the video format dimensions.
+            if (m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortrait
+                ||  m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortraitUpsideDown)
+            {
+                std::swap(cameraDimensions.width, cameraDimensions.height);
+            }
             
             // Check for failed initialisation.
             if (!input)
@@ -257,8 +265,8 @@ namespace Babylon::Plugins
     [self updateOrientation];
     self->orientationUpdated = true;
 #else
-    // Orientation not supported on these devices.
-    self->videoOrientation = AVCaptureVideoOrientationPortrait;
+    // Orientation not supported on non-iOS devices.
+    self->videoOrientation = AVCaptureVideoOrientationLandscapeLeft;
     self->orientationUpdated = false;
 #endif
 
