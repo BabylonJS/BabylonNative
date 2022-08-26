@@ -43,6 +43,19 @@ namespace {
         return false;
     }
 
+    typedef struct {
+        vector_float2 position;
+        vector_float2 uv;
+    } XRVertex;
+
+    static XRVertex vertices[] = {
+        // 2D positions, UV
+        { { -1, -1 },   { 0, 1 } },
+        { { -1, 1 },    { 0, 0 } },
+        { { 1, -1 },    { 1, 1 } },
+        { { 1, 1 },     { 1, 0 } },
+    };
+
     constexpr char shaderSource[] = R"(
         #include <metal_stdlib>
         #include <simd/simd.h>
@@ -346,9 +359,12 @@ namespace Babylon::Plugins
     void Camera::Impl::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
         arcana::make_task(m_deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
-            if (m_implData->textureRGBA)
-            {
-                bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureRGBA));
+            @synchronized(m_implData->cameraTextureDelegate) {
+                if (m_implData->overrideBgfxTexture && m_implData->textureRGBA != nil)
+                {
+                    bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureRGBA));
+                    m_implData->overrideBgfxTexture = false;
+                }
             }
         });
     }
@@ -440,25 +456,107 @@ namespace Babylon::Plugins
     }
 
     CVPixelBufferRef pixelBuffer{CMSampleBufferGetImageBuffer(sampleBuffer)};
-    id<MTLTexture> textureRGBA{nil};
-
     size_t width = CVPixelBufferGetWidthOfPlane(pixelBuffer, 0);
     size_t height = CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
-    MTLPixelFormat pixelFormat{MTLPixelFormatBGRA8Unorm};
-    
-    CVMetalTextureRef texture{nullptr};
-    CVReturn status{CVMetalTextureCacheCreateTextureFromImage(nullptr, implData->textureCache, pixelBuffer, nullptr, pixelFormat, width, height, 0, &texture)};
-    if (status == kCVReturnSuccess)
+
+    // Update both metal textures used by the renderer to display the camera image.
+    id<MTLTexture> textureY = [self getCameraTexture:pixelBuffer plane:0];
+    id<MTLTexture> textureCbCr = [self getCameraTexture:pixelBuffer plane:1];
+
+    if(textureY != nil && textureCbCr != nil)
     {
-        textureRGBA = CVMetalTextureGetTexture(texture);
-        CFRelease(texture);
+        @synchronized(self) {
+            implData->textureY = textureY;
+            implData->textureCbCr = textureCbCr;
+
+            if (implData->width != width || implData->height != height) {
+                implData->width = width;
+                implData->height = height;
+                MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
+                textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+                implData->textureRGBA = [implData->metalDevice newTextureWithDescriptor:textureDescriptor];
+                implData->overrideBgfxTexture = true;
+            }
+        };
+
+        if (implData->textureRGBA != nil)
+        {
+            implData->currentCommandBuffer = [implData->commandQueue commandBuffer];
+            implData->currentCommandBuffer.label = @"NativeCameraCommandBuffer";
+            MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+
+            if (renderPassDescriptor != nil) {
+                // Attach the color texture, on which we'll draw the camera texture (so no need to clear on load).
+                renderPassDescriptor.colorAttachments[0].texture = implData->textureRGBA;
+                renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+                renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+
+                // Create and end the render encoder.
+                id<MTLRenderCommandEncoder> renderEncoder = [implData->currentCommandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                renderEncoder.label = @"NativeCameraEncoder";
+
+                // Set the shader pipeline.
+                [renderEncoder setRenderPipelineState:implData->cameraPipelineState];
+
+                // Set the vertex data.
+                [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
+
+                // Set the textures.
+                [renderEncoder setFragmentTexture:textureY atIndex:1];
+                [renderEncoder setFragmentTexture:textureCbCr atIndex:2];
+
+                // Draw the triangles.
+                [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+
+                [renderEncoder endEncoding];
+
+                [implData->currentCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
+                    if (textureY != nil) {
+                        [textureY setPurgeableState:MTLPurgeableStateEmpty];
+                    }
+
+                    if (textureCbCr != nil) {
+                        [textureCbCr setPurgeableState:MTLPurgeableStateEmpty];
+                    }
+                }];
+            }
+
+            // Finalize rendering here & push the command buffer to the GPU.
+            [implData->currentCommandBuffer commit];
+        }
+    }
+}
+
+/**
+ Updates the captured texture with the current pixel buffer.
+*/
+- (id<MTLTexture>)getCameraTexture:(CVPixelBufferRef)pixelBuffer plane:(int)planeIndex {
+    CVReturn ret = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    if (ret != kCVReturnSuccess) {
+        return {};
     }
 
-    if (textureRGBA != nil)
-    {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            implData->textureRGBA = textureRGBA;
-        });
+    @try {
+        size_t planeWidth = CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
+        size_t planeHeight = CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
+
+        // Plane 0 is the Y plane, which is in R8Unorm format, and the second plane is the CBCR plane which is RG8Unorm format.
+        auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
+        CVMetalTextureRef textureRef;
+
+        // Create a texture from the corresponding plane.
+        auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, implData->textureCache, pixelBuffer, nil, pixelFormat, planeWidth, planeHeight, planeIndex, &textureRef);
+        if (status != kCVReturnSuccess) {
+            return nil;
+        }
+
+        id<MTLTexture> texture = CVMetalTextureGetTexture(textureRef);
+        CFRelease(textureRef);
+
+        return texture;
+    }
+    @finally {
+        CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
     }
 }
 
