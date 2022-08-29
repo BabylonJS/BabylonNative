@@ -15,7 +15,7 @@ var xrFeaturePoints = false;
 var meshDetection = false;
 var text = false;
 var hololens = false;
-var cameraTexture = true;
+var cameraTexture = false;
 var imageTracking = false;
 const readPixels = false;
 
@@ -64,10 +64,8 @@ CreateBoxAsync(scene).then(function () {
     BABYLON.Tools.Log("Loaded");
 
     // This creates and positions a free camera (non-mesh)
-    var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 1, -10), scene);
-
-    // This targets the camera to scene origin
-    camera.setTarget(new BABYLON.Vector3(0, 1, 0));
+    scene.createDefaultCamera(true, true, true);
+    scene.activeCamera.alpha += Math.PI;
 
     if (ibl) {
         scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
@@ -77,6 +75,9 @@ CreateBoxAsync(scene).then(function () {
     }
 
     if (cameraTexture) {
+        scene.activeCamera.position = new BABYLON.Vector3(0, 1, -10);
+        scene.activeCamera.setTarget(new BABYLON.Vector3(0, 1, 0));
+
         scene.meshes[0].setEnabled(false);
         var plane = BABYLON.MeshBuilder.CreatePlane("plane", {size: 1, sideOrientation: BABYLON.Mesh.DOUBLESIDE});
         plane.rotation.y = Math.PI;
