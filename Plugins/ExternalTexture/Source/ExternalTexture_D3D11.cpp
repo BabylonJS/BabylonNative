@@ -163,6 +163,11 @@ namespace Babylon::Plugins
             info.Height = static_cast<uint16_t>(desc.Height);
             info.MipLevels = static_cast<uint16_t>(desc.MipLevels);
 
+            if ((desc.BindFlags & D3D11_BIND_RENDER_TARGET) != 0)
+            {
+                info.Flags |= BGFX_TEXTURE_RT;
+            }
+
             for (int i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
             {
                 const auto& format = s_textureFormat[i];

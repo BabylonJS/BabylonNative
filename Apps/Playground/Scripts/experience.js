@@ -15,7 +15,7 @@ var xrFeaturePoints = false;
 var meshDetection = false;
 var text = false;
 var hololens = false;
-var cameraTexture = true;
+var cameraTexture = false;
 var imageTracking = false;
 const readPixels = false;
 
@@ -64,10 +64,8 @@ CreateBoxAsync(scene).then(function () {
     BABYLON.Tools.Log("Loaded");
 
     // This creates and positions a free camera (non-mesh)
-    var camera = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 1, -10), scene);
-
-    // This targets the camera to scene origin
-    camera.setTarget(new BABYLON.Vector3(0, 1, 0));
+    scene.createDefaultCamera(true, true, true);
+    scene.activeCamera.alpha += Math.PI;
 
     if (ibl) {
         scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
@@ -77,8 +75,11 @@ CreateBoxAsync(scene).then(function () {
     }
 
     if (cameraTexture) {
+        scene.activeCamera.position.set(0, 1, -10);
+        scene.activeCamera.setTarget(new BABYLON.Vector3(0, 1, 0));
+
         scene.meshes[0].setEnabled(false);
-        var plane = BABYLON.MeshBuilder.CreatePlane("plane", {size: 7, sideOrientation: BABYLON.Mesh.DOUBLESIDE});
+        var plane = BABYLON.MeshBuilder.CreatePlane("plane", {size: 1, sideOrientation: BABYLON.Mesh.DOUBLESIDE});
         plane.rotation.y = Math.PI;
         plane.rotation.z = Math.PI;
 
@@ -88,9 +89,12 @@ CreateBoxAsync(scene).then(function () {
         mat.diffuseColor = BABYLON.Color3.Black();
 
         var tex = BABYLON.VideoTexture.CreateFromWebCam(scene, function(videoTexture) {
+            const videoSize = videoTexture.getSize();
             mat.emissiveTexture = videoTexture;
             plane.material = mat;
-            console.log("Video texture size: " + videoTexture.getSize());
+            plane.scaling.x = 5;
+            plane.scaling.y = 5 * (videoSize.height / videoSize.width);
+            console.log("Video texture size: " + videoSize);
         }, { maxWidth: 1280, maxHeight: 720, facingMode: 'environment'});
     }
 

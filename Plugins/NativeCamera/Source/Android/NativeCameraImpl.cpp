@@ -20,23 +20,37 @@ using namespace android::global;
 
 namespace Babylon::Plugins
 {
+    // Vertex positions for the camera texture
+    constexpr size_t CAMERA_VERTEX_COUNT{ 4 };
+    constexpr GLfloat CAMERA_VERTEX_POSITIONS[CAMERA_VERTEX_COUNT * 2]{ -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f };
+
+    // UV mappings to correct for the different orientations of the screen versus the camera sensor
+    constexpr size_t CAMERA_UVS_COUNT{ 4 };
+    constexpr GLfloat CAMERA_UVS_ROTATION_0[CAMERA_UVS_COUNT  * 2]{ 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f };
+    constexpr GLfloat CAMERA_UVS_ROTATION_90[CAMERA_UVS_COUNT  * 2]{ 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f };
+    constexpr GLfloat CAMERA_UVS_ROTATION_180[CAMERA_UVS_COUNT  * 2]{ 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f };
+    constexpr GLfloat CAMERA_UVS_ROTATION_270[CAMERA_UVS_COUNT  * 2]{ 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f };
+
     static constexpr char CAMERA_VERT_SHADER[]{R"(#version 300 es
         precision highp float;
-        out vec2 cameraFrameUV;
+        uniform vec2 positions[4];
+        uniform vec2 uvs[4];
+        out vec2 uv;
         void main() {
-            cameraFrameUV = vec2(gl_VertexID&1, (gl_VertexID &2)>>1) * 2.f;
-            gl_Position = vec4(cameraFrameUV * 2.f - 1.f, 0.0, 1.0);
+            gl_Position = vec4(positions[gl_VertexID], 0.0, 1.0);
+            uv = uvs[gl_VertexID];
         }
     )"};
 
     static constexpr char CAMERA_FRAG_SHADER[]{R"(#version 300 es
         #extension GL_OES_EGL_image_external_essl3 : require
         precision mediump float;
-        in vec2 cameraFrameUV;
+        in vec2 uv;
         uniform samplerExternalOES cameraTexture;
+        // Location 0 is GL_COLOR_ATTACHMENT0, which in turn is the babylonTexture
         layout(location = 0) out vec4 oFragColor;
         void main() {
-            oFragColor = texture(cameraTexture, cameraFrameUV);
+            oFragColor = texture(cameraTexture, uv);
         }
     )"};
 
@@ -51,16 +65,24 @@ namespace Babylon::Plugins
         return oesTexture;
     }
 
-    std::string Camera::Impl::GetCameraId(bool frontCamera)
+    Camera::Impl::CameraConfiguration Camera::Impl::GetCameraConfiguration(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
+        // Get the list of available cameras
         API24::ACameraIdList *cameraIds = nullptr;
         GET_CAMERA_FUNCTION(ACameraManager_getCameraIdList)(m_cameraManager, &cameraIds);
 
-        std::string cameraId{};
+        const char* bestCameraId{nullptr};
+        uint32_t bestPixelCount{0};
+        uint32_t bestDimDiff{0};
+        uint32_t bestWidth{0};
+        uint32_t bestHeight{0};
+        int32_t bestSensorOrientation{0};
+        bool foundExactMatch{false};
 
+        // Iterate over all of the cameras and find the one that has the best stream configuration
         for (int i = 0; i < cameraIds->numCameras; ++i)
         {
-            const char *id = cameraIds->cameraIds[i];
+            const char* id = cameraIds->cameraIds[i];
 
             API24::ACameraMetadata *metadataObj;
             GET_CAMERA_FUNCTION(ACameraManager_getCameraCharacteristics)(m_cameraManager, id, &metadataObj);
@@ -68,18 +90,67 @@ namespace Babylon::Plugins
             API24::ACameraMetadata_const_entry lensInfo = {};
             GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_LENS_FACING, &lensInfo);
 
-            auto facing = static_cast<API24::acamera_metadata_enum_android_lens_facing_t>(lensInfo.data.u8[0]);
+            API24::ACameraMetadata_const_entry sensorOrientation = {};
+            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_SENSOR_ORIENTATION, &sensorOrientation);
 
-            // Found a corresponding facing camera?
-            if (facing == (frontCamera ? API24::ACAMERA_LENS_FACING_FRONT : API24::ACAMERA_LENS_FACING_BACK))
+            auto facing = static_cast<API24::acamera_metadata_enum_android_lens_facing_t>(lensInfo.data.u8[0]);
+            if (facing != (frontCamera ? API24::ACAMERA_LENS_FACING_FRONT : API24::ACAMERA_LENS_FACING_BACK))
             {
-                cameraId = id;
+                // Ignore cameras facing the wrong direction
+                continue;
+            }
+
+            // Get all available stream configurations supported by the camera
+            API24::ACameraMetadata_const_entry streamConfigurations = {};
+            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &streamConfigurations);
+            // format of the data:
+            // 0: format
+            // 1: width
+            // 2: height
+            // 3: input?
+
+            for (uint32_t j = 0; j < streamConfigurations.count; j += 4) {
+                int32_t format{streamConfigurations.data.i32[j + 0]};
+                int32_t width{streamConfigurations.data.i32[j + 1]};
+                int32_t height{streamConfigurations.data.i32[j + 2]};
+                int32_t input{streamConfigurations.data.i32[j + 3]};
+
+                if (input || format != AIMAGE_FORMAT_YUV_420_888 || static_cast<uint32_t>(width) > maxWidth || static_cast<uint32_t>(height) > maxHeight)
+                {
+                    // Ignore the configuration if it is either an input type or not a preview format
+                    // Also ignore the configuration if either the width or height is beyond the max allowed
+                    continue;
+                }
+
+                // Calculate pixel count and dimension differential and take the best qualifying one.
+                uint32_t pixelCount{static_cast<uint32_t>(width * height)};
+                uint32_t dimDiff{(maxWidth - width) + (maxHeight - height)};
+                if (bestCameraId == nullptr || pixelCount > bestPixelCount || (pixelCount == bestPixelCount && dimDiff < bestDimDiff))
+                {
+                    bestPixelCount = pixelCount;
+                    bestCameraId = id;
+                    bestDimDiff = dimDiff;
+                    bestWidth = width;
+                    bestHeight = height;
+                    bestSensorOrientation = sensorOrientation.data.i32[0];
+
+                    // Check if we got an exact match, and exit the loop early in this case.
+                    if (static_cast<uint32_t>(width) == maxWidth && static_cast<uint32_t>(height) == maxHeight)
+                    {
+                        foundExactMatch = true;
+                        break;
+                    }
+                }
+            }
+
+            if (foundExactMatch)
+            {
                 break;
             }
         }
 
         GET_CAMERA_FUNCTION(ACameraManager_deleteCameraIdList)(cameraIds);
-        return cameraId;
+        return {bestCameraId, bestWidth, bestHeight, bestSensorOrientation};
     }
 
     // device callbacks
@@ -166,10 +237,47 @@ namespace Babylon::Plugins
             m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
         }
 
+        if (maxWidth == 0 || maxWidth > std::numeric_limits<int32_t>::max()) {
+            maxWidth = std::numeric_limits<int32_t>::max();
+        }
+        if (maxHeight == 0 || maxHeight > std::numeric_limits<int32_t>::max()) {
+            maxHeight = std::numeric_limits<int32_t>::max();
+        }
+
         return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, maxWidth, maxHeight, frontCamera]()
         {
-            m_cameraDimensions.width = maxWidth;
-            m_cameraDimensions.height = maxHeight;
+            // Get the phone's current rotation so we can determine if the camera image needs to be rotated based on the sensor's natural orientation
+            int phoneRotation{ GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation() * 90 };
+            CameraConfiguration bestCameraConfiguration{"", maxWidth, maxHeight, phoneRotation};
+
+            if (API_LEVEL >= 24 && libCamera2NDK && !m_overrideCameraTexture) {
+                m_cameraManager = GET_CAMERA_FUNCTION(ACameraManager_create)();
+                bestCameraConfiguration = GetCameraConfiguration(maxWidth, maxHeight, frontCamera);
+
+                // If no matching device, throw an error with the message "ConstraintError" which matches the behavior in the browser.
+                if (bestCameraConfiguration.cameraID.empty())
+                {
+                    throw std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."};
+                }
+            }
+
+            // The sensor rotation dictates the orientation of the camera when the phone is in it's default orientation
+            // Subtracting the phone's rotation from the camera's rotation will give us the current orientation
+            // of the sensor. Then add 360 and modulus 360 to ensure we're always talking about positive degrees.
+            int sensorRotationDiff{(bestCameraConfiguration.sensorRotation - phoneRotation + 360) % 360};
+            bool sensorIsPortrait{sensorRotationDiff == 90 || sensorRotationDiff == 270};
+            if (frontCamera && !sensorIsPortrait && !m_overrideCameraTexture)
+            {
+                // Compensate for the front facing camera being naturally mirrored. In the portrait orientation
+                // the mirrored behavior matches the browser, but in landscape it would result in the image rendering
+                // upside down. Rotate the image by 180 to compensate.
+                sensorRotationDiff = (sensorRotationDiff + 180) % 360;
+            }
+
+            // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
+            // of the video should be swapped
+            m_cameraDimensions.width = !sensorIsPortrait ? bestCameraConfiguration.width : bestCameraConfiguration.height;
+            m_cameraDimensions.height = !sensorIsPortrait ? bestCameraConfiguration.height : bestCameraConfiguration.width;
 
             // Check if there is an already available context for this thread
             EGLContext currentContext = eglGetCurrentContext();
@@ -223,6 +331,11 @@ namespace Babylon::Plugins
 
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+            m_cameraUVs = sensorRotationDiff == 90 ? CAMERA_UVS_ROTATION_90 :
+                          sensorRotationDiff == 180 ? CAMERA_UVS_ROTATION_180 :
+                          sensorRotationDiff == 270 ? CAMERA_UVS_ROTATION_270 :
+                          CAMERA_UVS_ROTATION_0;
+
             m_cameraShaderProgramId = android::OpenGLHelpers::CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
 
             if (API_LEVEL >= 24 && libCamera2NDK && !m_overrideCameraTexture) {
@@ -230,12 +343,11 @@ namespace Babylon::Plugins
 
                 // Create the surface and surface texture that will receive the camera preview
                 m_surfaceTexture.InitWithTexture(m_cameraOESTextureId);
+                m_surfaceTexture.setDefaultBufferSize(bestCameraConfiguration.width, bestCameraConfiguration.height);
                 android::view::Surface surface(m_surfaceTexture);
 
                 // open the front or back camera
-                m_cameraManager = GET_CAMERA_FUNCTION(ACameraManager_create)();
-                auto id = GetCameraId(frontCamera);
-                GET_CAMERA_FUNCTION(ACameraManager_openCamera)(m_cameraManager, id.c_str(),
+                GET_CAMERA_FUNCTION(ACameraManager_openCamera)(m_cameraManager, bestCameraConfiguration.cameraID.c_str(),
                                                                &cameraDeviceCallbacks,
                                                                &m_cameraDevice);
 
@@ -309,6 +421,12 @@ namespace Babylon::Plugins
         glViewport(0, 0, m_cameraDimensions.width, m_cameraDimensions.height);
         glUseProgram(m_cameraShaderProgramId);
 
+        auto vertexPositionsUniformLocation{ glGetUniformLocation(m_cameraShaderProgramId, "positions") };
+        glUniform2fv(vertexPositionsUniformLocation, CAMERA_VERTEX_COUNT, CAMERA_VERTEX_POSITIONS);
+
+        auto uvsUniformLocation{ glGetUniformLocation(m_cameraShaderProgramId, "uvs") };
+        glUniform2fv(uvsUniformLocation, CAMERA_UVS_COUNT, m_cameraUVs);
+
         // Configure the camera texture
         auto cameraTextureUniformLocation{glGetUniformLocation(m_cameraShaderProgramId, "cameraTexture")};
         glUniform1i(cameraTextureUniformLocation, android::OpenGLHelpers::GetTextureUnit(GL_TEXTURE0));
@@ -317,7 +435,7 @@ namespace Babylon::Plugins
         glBindSampler(android::OpenGLHelpers::GetTextureUnit(GL_TEXTURE0), 0);
 
         // Draw the quad
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 3);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, CAMERA_VERTEX_COUNT);
 
         glUseProgram(0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
