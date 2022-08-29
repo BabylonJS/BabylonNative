@@ -48,7 +48,7 @@ namespace {
         vector_float2 uv;
     } Vertex;
 
-    static Vertex vertices[] = {
+    constexpr Vertex vertices[] = {
         // 2D positions, UV
         { { -1, -1 },   { 0, 1 } },
         { { -1, 1 },    { 0, 0 } },
