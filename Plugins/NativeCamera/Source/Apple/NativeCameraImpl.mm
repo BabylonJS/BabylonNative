@@ -46,9 +46,9 @@ namespace {
     typedef struct {
         vector_float2 position;
         vector_float2 uv;
-    } XRVertex;
+    } Vertex;
 
-    static XRVertex vertices[] = {
+    static Vertex vertices[] = {
         // 2D positions, UV
         { { -1, -1 },   { 0, 1 } },
         { { -1, 1 },    { 0, 0 } },
@@ -65,7 +65,7 @@ namespace {
         {
             vector_float2 position;
             vector_float2 uv;
-        } XRVertex;
+        } Vertex;
         typedef struct
         {
             float4 position [[position]];
@@ -73,7 +73,7 @@ namespace {
         } RasterizerData;
         vertex RasterizerData
         vertexShader(uint vertexID [[vertex_id]],
-                        constant XRVertex *vertices [[buffer(0)]])
+                        constant Vertex *vertices [[buffer(0)]])
         {
             RasterizerData out;
             out.position = vector_float4(vertices[vertexID].position.xy, 0.0, 1.0);
