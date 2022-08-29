@@ -43,10 +43,10 @@ namespace {
         return false;
     }
 
-    typedef struct {
+    struct Vertex {
         vector_float2 position;
         vector_float2 uv;
-    } Vertex;
+    };
 
     constexpr Vertex vertices[] = {
         // 2D positions, UV
