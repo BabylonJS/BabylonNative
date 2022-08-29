@@ -1,3 +1,7 @@
+#if ! __has_feature(objc_arc)
+#error "ARC is off"
+#endif
+
 #import <MetalKit/MetalKit.h>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -26,8 +30,95 @@
 }
 
 - (id)init:(std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData>)implData;
+- (id<MTLTexture>)getCameraTextureY;
+- (id<MTLTexture>)getCameraTextureCbCr;
 
 @end
+
+namespace {
+    static bool isPixelFormatSupported(uint32_t pixelFormat)
+    {
+        switch (pixelFormat) {
+            case kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange:
+            case kCVPixelFormatType_420YpCbCr8BiPlanarFullRange:
+                return true;
+        }
+        return false;
+    }
+
+    struct Vertex {
+        vector_float2 position;
+        vector_float2 uv;
+    };
+
+    constexpr Vertex vertices[] = {
+        // 2D positions, UV
+        { { -1, -1 },   { 0, 1 } },
+        { { -1, 1 },    { 0, 0 } },
+        { { 1, -1 },    { 1, 1 } },
+        { { 1, 1 },     { 1, 0 } },
+    };
+
+    constexpr char shaderSource[] = R"(
+        #include <metal_stdlib>
+        #include <simd/simd.h>
+        using namespace metal;
+        #include <simd/simd.h>
+        typedef struct
+        {
+            vector_float2 position;
+            vector_float2 uv;
+        } Vertex;
+        typedef struct
+        {
+            float4 position [[position]];
+            float2 uv;
+        } RasterizerData;
+        vertex RasterizerData
+        vertexShader(uint vertexID [[vertex_id]],
+                        constant Vertex *vertices [[buffer(0)]])
+        {
+            RasterizerData out;
+            out.position = vector_float4(vertices[vertexID].position.xy, 0.0, 1.0);
+            out.uv = vertices[vertexID].uv;
+            return out;
+        }
+        fragment float4 fragmentShader(RasterizerData in [[stage_in]],
+            texture2d<float, access::sample> cameraTextureY [[ texture(1) ]],
+            texture2d<float, access::sample> cameraTextureCbCr [[ texture(2) ]])
+        {
+            constexpr sampler linearSampler(mip_filter::linear, mag_filter::linear, min_filter::linear);
+            if (!is_null_texture(cameraTextureY) && !is_null_texture(cameraTextureCbCr))
+            {
+                const float4 cameraSampleY = cameraTextureY.sample(linearSampler, in.uv);
+                const float4 cameraSampleCbCr = cameraTextureCbCr.sample(linearSampler, in.uv);
+                const float4x4 ycbcrToRGBTransform = float4x4(
+                    float4(+1.0000f, +1.0000f, +1.0000f, +0.0000f),
+                    float4(+0.0000f, -0.3441f, +1.7720f, +0.0000f),
+                    float4(+1.4020f, -0.7141f, +0.0000f, +0.0000f),
+                    float4(-0.7010f, +0.5291f, -0.8860f, +1.0000f)
+                );
+                float4 ycbcr = float4(cameraSampleY.r, cameraSampleCbCr.rg, 1.0);
+                float4 cameraSample = ycbcrToRGBTransform * ycbcr;
+                cameraSample.a = 1.0;
+                return cameraSample;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+    )";
+
+    static id<MTLLibrary> CompileShader(id<MTLDevice> metalDevice, const char* source) {
+        NSError* error;
+        id<MTLLibrary> lib = [metalDevice newLibraryWithSource:@(source) options:nil error:&error];
+        if(nil != error) {
+            throw std::runtime_error{[error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]};
+        }
+        return lib;
+    }
+}
 
 namespace Babylon::Plugins
 {
@@ -36,8 +127,6 @@ namespace Babylon::Plugins
         ~ImplData()
         {
             [avCaptureSession stopRunning];
-            [avCaptureSession release];
-            [cameraTextureDelegate release];
             if (textureCache)
             {
                 CVMetalTextureCacheFlush(textureCache, 0);
@@ -48,7 +137,14 @@ namespace Babylon::Plugins
         CameraTextureDelegate* cameraTextureDelegate{};
         AVCaptureSession* avCaptureSession{};
         CVMetalTextureCacheRef textureCache{};
-        id <MTLTexture> textureBGRA{};
+        id <MTLTexture> textureRGBA{};
+        id<MTLRenderPipelineState> cameraPipelineState{};
+        id<MTLDevice> metalDevice{};
+        id<MTLCommandQueue> commandQueue{};
+        id<MTLCommandBuffer> currentCommandBuffer{};
+        size_t width{0};
+        size_t height{0};
+        bool overrideBgfxTexture{false};
     };
     Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
         : m_deviceContext{nullptr}
@@ -64,14 +160,15 @@ namespace Babylon::Plugins
 
     arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
+        m_implData->commandQueue = (__bridge id<MTLCommandQueue>)bgfx::getInternalData()->commandQueue;
+        m_implData->metalDevice = (__bridge id<MTLDevice>)bgfx::getInternalData()->context;
+
         if (maxWidth == 0 || maxWidth > std::numeric_limits<int32_t>::max()) {
             maxWidth = std::numeric_limits<int32_t>::max();
         }
         if (maxHeight == 0 || maxHeight > std::numeric_limits<int32_t>::max()) {
             maxHeight = std::numeric_limits<int32_t>::max();
         }
-        
-        auto metalDevice = (id<MTLDevice>)bgfx::getInternalData()->context;
 
         if (!m_deviceContext)
         {
@@ -81,7 +178,7 @@ namespace Babylon::Plugins
         __block arcana::task_completion_source<Camera::Impl::CameraDimensions, std::exception_ptr> taskCompletionSource{};
 
         dispatch_sync(dispatch_get_main_queue(), ^{
-            CVMetalTextureCacheCreate(nullptr, nullptr, metalDevice, nullptr, &m_implData->textureCache);
+            CVMetalTextureCacheCreate(nullptr, nullptr, m_implData->metalDevice, nullptr, &m_implData->textureCache);
             m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData];
             m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
             
@@ -90,6 +187,7 @@ namespace Babylon::Plugins
             AVCaptureDevice* bestDevice{nullptr};
             AVCaptureDeviceFormat* bestFormat{nullptr};
             uint32_t bestPixelCount{0};
+            uint32_t bestPixelFormat{0};
             uint32_t bestDimDiff{0};
             NSArray* deviceTypes{nullptr};
             bool foundExactMatch{false};
@@ -124,7 +222,14 @@ namespace Babylon::Plugins
                 {
                     CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(format.formatDescription)};
                     CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
-                    
+                    uint32_t pixelFormat{static_cast<uint32_t>(CMFormatDescriptionGetMediaSubType(videoFormatRef))};
+
+                    // Reject unsupported pixel formats.
+                    if (!isPixelFormatSupported(pixelFormat))
+                    {
+                        continue;
+                    }
+
                     // Reject any resolution that doesn't qualify for the constraint.
                     if (static_cast<uint32_t>(dimensions.width) > maxWidth || static_cast<uint32_t>(dimensions.height) > maxHeight)
                     {
@@ -137,6 +242,7 @@ namespace Babylon::Plugins
                     if (bestDevice == nullptr || pixelCount > bestPixelCount || (pixelCount == bestPixelCount && dimDiff < bestDimDiff))
                     {
                         bestPixelCount = pixelCount;
+                        bestPixelFormat = pixelFormat;
                         bestDevice = device;
                         bestFormat = format;
                         bestDimDiff = dimDiff;
@@ -215,7 +321,7 @@ namespace Babylon::Plugins
             dispatch_queue_t sampleBufferQueue{dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL)};
             AVCaptureVideoDataOutput * dataOutput{[[AVCaptureVideoDataOutput alloc] init]};
             [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
-            [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(kCVPixelFormatType_32BGRA)}];
+            [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(bestPixelFormat)}];
             [dataOutput setSampleBufferDelegate:m_implData->cameraTextureDelegate queue:sampleBufferQueue];
 
             // Actually start the camera session.
@@ -223,6 +329,24 @@ namespace Babylon::Plugins
             [m_implData->avCaptureSession commitConfiguration];
             [m_implData->avCaptureSession startRunning];
             
+            // Create a pipeline state for converting the camera output to RGBA.
+            id<MTLLibrary> lib = CompileShader(m_implData->metalDevice, shaderSource);
+            id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
+            id<MTLFunction> fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
+
+            MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+            pipelineStateDescriptor.label = @"Native Camera YCbCr to RGBA Pipeline";
+            pipelineStateDescriptor.vertexFunction = vertexFunction;
+            pipelineStateDescriptor.fragmentFunction = fragmentFunction;
+            pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+            m_implData->cameraPipelineState = [m_implData->metalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
+
+            if (!m_implData->cameraPipelineState) {
+                taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{
+                    std::string("Failed to create camera pipeline state: ") + [error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]})));
+                return;
+            }
+
             taskCompletionSource.complete(cameraDimensions);
         });
         
@@ -241,9 +365,62 @@ namespace Babylon::Plugins
     void Camera::Impl::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
         arcana::make_task(m_deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
-            if (m_implData->textureBGRA)
+            id<MTLTexture> textureY{};
+            id<MTLTexture> textureCbCr{};
+            @synchronized(m_implData->cameraTextureDelegate) {
+                textureY = [m_implData->cameraTextureDelegate getCameraTextureY];
+                textureCbCr = [m_implData->cameraTextureDelegate getCameraTextureCbCr];
+                if (m_implData->overrideBgfxTexture && m_implData->textureRGBA != nil)
+                {
+                    bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureRGBA));
+                    m_implData->overrideBgfxTexture = false;
+                }
+            }
+
+            if (textureY != nil && textureCbCr != nil && m_implData->textureRGBA != nil)
             {
-                bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureBGRA));
+                m_implData->currentCommandBuffer = [m_implData->commandQueue commandBuffer];
+                m_implData->currentCommandBuffer.label = @"NativeCameraCommandBuffer";
+                MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+
+                if (renderPassDescriptor != nil) {
+                    // Attach the color texture, on which we'll draw the camera texture (so no need to clear on load).
+                    renderPassDescriptor.colorAttachments[0].texture = m_implData->textureRGBA;
+                    renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+                    renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+
+                    // Create and end the render encoder.
+                    id<MTLRenderCommandEncoder> renderEncoder = [m_implData->currentCommandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                    renderEncoder.label = @"NativeCameraEncoder";
+
+                    // Set the shader pipeline.
+                    [renderEncoder setRenderPipelineState:m_implData->cameraPipelineState];
+
+                    // Set the vertex data.
+                    [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
+
+                    // Set the textures.
+                    [renderEncoder setFragmentTexture:textureY atIndex:1];
+                    [renderEncoder setFragmentTexture:textureCbCr atIndex:2];
+
+                    // Draw the triangles.
+                    [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+
+                    [renderEncoder endEncoding];
+
+                    [m_implData->currentCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
+                        if (textureY != nil) {
+                            [textureY setPurgeableState:MTLPurgeableStateEmpty];
+                        }
+
+                        if (textureCbCr != nil) {
+                            [textureCbCr setPurgeableState:MTLPurgeableStateEmpty];
+                        }
+                    }];
+                }
+
+                // Finalize rendering here & push the command buffer to the GPU.
+                [m_implData->currentCommandBuffer commit];
             }
         });
     }
@@ -254,7 +431,10 @@ namespace Babylon::Plugins
     }
 }
 
-@implementation CameraTextureDelegate
+@implementation CameraTextureDelegate {
+    CVMetalTextureRef cameraTextureY;
+    CVMetalTextureRef cameraTextureCbCr;
+}
 
 - (id)init:(std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData>)implData
 {
@@ -271,6 +451,30 @@ namespace Babylon::Plugins
 #endif
 
     return self;
+}
+
+/**
+ Returns the camera Y texture, the caller is responsible for freeing this texture.
+ */
+- (id<MTLTexture>)getCameraTextureY {
+    if (cameraTextureY != nil) {
+        id<MTLTexture> mtlTexture = CVMetalTextureGetTexture(cameraTextureY);
+        return mtlTexture;
+    }
+
+    return nil;
+}
+
+/**
+ Returns the camera CbCr texture, the caller is responsible for freeing this texture.
+ */
+- (id<MTLTexture>)getCameraTextureCbCr {
+    if (cameraTextureCbCr != nil) {
+        id<MTLTexture> mtlTexture = CVMetalTextureGetTexture(cameraTextureCbCr);
+        return mtlTexture;
+    }
+
+    return nil;
 }
 
 #if (TARGET_OS_IPHONE)
@@ -335,26 +539,73 @@ namespace Babylon::Plugins
     }
 
     CVPixelBufferRef pixelBuffer{CMSampleBufferGetImageBuffer(sampleBuffer)};
-    id<MTLTexture> textureBGRA{nil};
-
     size_t width = CVPixelBufferGetWidthOfPlane(pixelBuffer, 0);
     size_t height = CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
-    MTLPixelFormat pixelFormat{MTLPixelFormatBGRA8Unorm};
-    
-    CVMetalTextureRef texture{nullptr};
-    CVReturn status{CVMetalTextureCacheCreateTextureFromImage(nullptr, implData->textureCache, pixelBuffer, nullptr, pixelFormat, width, height, 0, &texture)};
-    if (status == kCVReturnSuccess)
-    {
-        textureBGRA = CVMetalTextureGetTexture(texture);
-        CFRelease(texture);
+
+    // Update both metal textures used by the renderer to display the camera image.
+    CVMetalTextureRef textureY = [self getCameraTexture:pixelBuffer plane:0];
+    CVMetalTextureRef textureCbCr = [self getCameraTexture:pixelBuffer plane:1];
+
+    @synchronized(self) {
+        [self cleanupTextures];
+        cameraTextureY = textureY;
+        cameraTextureCbCr = textureCbCr;
+
+        if (implData->width != width || implData->height != height) {
+            implData->width = width;
+            implData->height = height;
+            MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
+            textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+            implData->textureRGBA = [implData->metalDevice newTextureWithDescriptor:textureDescriptor];
+            implData->overrideBgfxTexture = true;
+        }
+    }
+}
+
+/**
+ Updates the captured texture with the current pixel buffer.
+*/
+- (CVMetalTextureRef)getCameraTexture:(CVPixelBufferRef)pixelBuffer plane:(int)planeIndex {
+    CVReturn ret = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    if (ret != kCVReturnSuccess) {
+        return {};
     }
 
-    if (textureBGRA != nil)
-    {
-        dispatch_async(dispatch_get_main_queue(), ^{
-            implData->textureBGRA = textureBGRA;
-        });
+    @try {
+        size_t planeWidth = CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
+        size_t planeHeight = CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
+
+        // Plane 0 is the Y plane, which is in R8Unorm format, and the second plane is the CBCR plane which is RG8Unorm format.
+        auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
+        CVMetalTextureRef textureRef;
+
+        // Create a texture from the corresponding plane.
+        auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, implData->textureCache, pixelBuffer, nil, pixelFormat, planeWidth, planeHeight, planeIndex, &textureRef);
+        if (status != kCVReturnSuccess) {
+            return nil;
+        }
+
+        return textureRef;
     }
+    @finally {
+        CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    }
+}
+
+-(void)cleanupTextures {
+    if (cameraTextureY != nil) {
+        CVBufferRelease(cameraTextureY);
+        cameraTextureY = nil;
+    }
+
+    if (cameraTextureCbCr != nil) {
+        CVBufferRelease(cameraTextureCbCr);
+        cameraTextureCbCr = nil;
+    }
+}
+
+-(void)dealloc {
+  [self cleanupTextures];
 }
 
 @end
