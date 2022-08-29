@@ -107,7 +107,7 @@ namespace {
         }
     )";
 
-    id<MTLLibrary> CompileShader(id<MTLDevice> metalDevice, const char* source) {
+    static id<MTLLibrary> CompileShader(id<MTLDevice> metalDevice, const char* source) {
         NSError* error;
         id<MTLLibrary> lib = [metalDevice newLibraryWithSource:@(source) options:nil error:&error];
         if(nil != error) {
