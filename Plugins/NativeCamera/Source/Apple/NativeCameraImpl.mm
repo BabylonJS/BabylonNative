@@ -117,6 +117,199 @@ namespace {
     }
 }
 
+@implementation CameraTextureDelegate {
+    @public
+    id<MTLDevice> metalDevice;
+
+    CVMetalTextureCacheRef textureCache;
+    CVMetalTextureRef _cameraTextureY;
+    CVMetalTextureRef _cameraTextureCbCr;
+    id<MTLTexture> textureRGBA;
+    size_t _width;
+    size_t _height;
+    bool overrideBgfxTexture;
+}
+
+/**
+ Returns the camera Y texture, the caller is responsible for freeing this texture.
+ */
+- (id<MTLTexture>)GetCameraTextureY {
+    if (_cameraTextureY != nil) {
+        id<MTLTexture> mtlTexture = CVMetalTextureGetTexture(_cameraTextureY);
+        return mtlTexture;
+    }
+
+    return nil;
+}
+
+/**
+ Returns the camera CbCr texture, the caller is responsible for freeing this texture.
+ */
+- (id<MTLTexture>)GetCameraTextureCbCr {
+    if (_cameraTextureCbCr != nil) {
+        id<MTLTexture> mtlTexture = CVMetalTextureGetTexture(_cameraTextureCbCr);
+        return mtlTexture;
+    }
+
+    return nil;
+}
+
+- (id)init:(std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData>)implData
+{
+    self = [super init];
+    self->implData = implData;
+#if (TARGET_OS_IPHONE)
+    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(OrientationDidChange:) name:UIDeviceOrientationDidChangeNotification object:nil];
+    [self updateOrientation];
+    self->orientationUpdated = true;
+#else
+    // Orientation not supported on these devices.
+    self->videoOrientation = AVCaptureVideoOrientationPortrait;
+    self->orientationUpdated = false;
+#endif
+
+    return self;
+}
+
+#if (TARGET_OS_IPHONE)
+/**
+ Updates target video orientation.
+*/
+- (void)updateOrientation {
+    UIApplication* sharedApplication{[UIApplication sharedApplication]};
+    UIInterfaceOrientation orientation{UIInterfaceOrientationUnknown};
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
+    UIScene* scene{[[[sharedApplication connectedScenes] allObjects] firstObject]};
+    orientation = [(UIWindowScene*)scene interfaceOrientation];
+#else
+    if (@available(iOS 13.0, *)) {
+        orientation = [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
+    }
+    else {
+        orientation = [sharedApplication statusBarOrientation];
+    }
+#endif
+
+    // Determine device orienation, and adjust output to match.
+    AVCaptureVideoOrientation newVideoOrientation{AVCaptureVideoOrientationPortraitUpsideDown};
+    switch (orientation)
+        {
+            case UIInterfaceOrientationUnknown:
+                return;
+            case UIInterfaceOrientationPortrait:
+                newVideoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
+                break;
+            case UIInterfaceOrientationPortraitUpsideDown:
+                newVideoOrientation = AVCaptureVideoOrientationPortrait;
+                break;
+            case UIInterfaceOrientationLandscapeLeft:
+                newVideoOrientation = AVCaptureVideoOrientationLandscapeRight;
+                break;
+            case UIInterfaceOrientationLandscapeRight:
+                newVideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
+                break;
+        }
+
+    if (newVideoOrientation != self->videoOrientation)
+    {
+        self->videoOrientation = newVideoOrientation;
+        self->orientationUpdated = true;
+    }
+}
+
+-(void)OrientationDidChange:(NSNotification*)notification
+{
+    [self updateOrientation];
+}
+#endif
+
+- (void)captureOutput:(AVCaptureOutput *)__unused captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *) connection
+{
+    if (self->orientationUpdated)
+    {
+        connection.videoMirrored = true;
+        connection.videoOrientation = self->videoOrientation;
+        self->orientationUpdated = false;
+    }
+
+    CVPixelBufferRef pixelBuffer{CMSampleBufferGetImageBuffer(sampleBuffer)};
+    size_t width = CVPixelBufferGetWidthOfPlane(pixelBuffer, 0);
+    size_t height = CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
+
+    // Update both metal textures used by the renderer to display the camera image.
+    CVMetalTextureRef textureY = [self getCameraTexture:pixelBuffer plane:0];
+    CVMetalTextureRef textureCbCr = [self getCameraTexture:pixelBuffer plane:1];
+
+    @synchronized(self) {
+        [self cleanupTextures];
+        _cameraTextureY = textureY;
+        _cameraTextureCbCr = textureCbCr;
+
+        if (_width != width || _height != height) {
+            _width = width;
+            _height = height;
+            MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
+            textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+            textureRGBA = [metalDevice newTextureWithDescriptor:textureDescriptor];
+            overrideBgfxTexture = true;
+        }
+    }
+}
+
+/**
+ Updates the captured texture with the current pixel buffer.
+*/
+- (CVMetalTextureRef)getCameraTexture:(CVPixelBufferRef)pixelBuffer plane:(int)planeIndex {
+    CVReturn ret = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    if (ret != kCVReturnSuccess) {
+        return {};
+    }
+
+    @try {
+        size_t planeWidth = CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
+        size_t planeHeight = CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
+
+        // Plane 0 is the Y plane, which is in R8Unorm format, and the second plane is the CBCR plane which is RG8Unorm format.
+        auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
+        CVMetalTextureRef textureRef;
+
+        // Create a texture from the corresponding plane.
+        auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, nil, pixelFormat, planeWidth, planeHeight, planeIndex, &textureRef);
+        if (status != kCVReturnSuccess) {
+            return nil;
+        }
+
+        return textureRef;
+    }
+    @finally {
+        CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    }
+}
+
+-(void)cleanupTextures {
+    if (_cameraTextureY != nil) {
+        CVBufferRelease(_cameraTextureY);
+        _cameraTextureY = nil;
+    }
+
+    if (_cameraTextureCbCr != nil) {
+        CVBufferRelease(_cameraTextureCbCr);
+        _cameraTextureCbCr = nil;
+    }
+}
+
+-(void)dealloc {
+  [self cleanupTextures];
+
+  if (textureCache != nil) {
+      CVMetalTextureCacheFlush(textureCache, 0);
+      CFRelease(textureCache);
+      textureCache = nil;
+  }
+}
+
+@end
+
 namespace Babylon::Plugins
 {
     struct Camera::Impl::ImplData
@@ -124,26 +317,14 @@ namespace Babylon::Plugins
         ~ImplData()
         {
             [avCaptureSession stopRunning];
-            if (textureCache)
-            {
-                CVMetalTextureCacheFlush(textureCache, 0);
-                CFRelease(textureCache);
-            }
         }
         
         CameraTextureDelegate* cameraTextureDelegate{};
         AVCaptureSession* avCaptureSession{};
-        CVMetalTextureCacheRef textureCache{};
-        id<MTLTexture> textureY{};
-        id<MTLTexture> textureCbCr{};
-        id<MTLTexture> textureRGBA{};
         id<MTLRenderPipelineState> cameraPipelineState{};
-        size_t width = 0;
-        size_t height = 0;
         id<MTLDevice> metalDevice{};
         id<MTLCommandQueue> commandQueue{};
         id<MTLCommandBuffer> currentCommandBuffer{};
-        bool overrideBgfxTexture = true;
     };
     Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
         : m_deviceContext{nullptr}
@@ -179,9 +360,10 @@ namespace Babylon::Plugins
         __block arcana::task_completion_source<Camera::Impl::CameraDimensions, std::exception_ptr> taskCompletionSource{};
 
         dispatch_sync(dispatch_get_main_queue(), ^{
-            CVMetalTextureCacheCreate(nullptr, nullptr, metalDevice, nullptr, &m_implData->textureCache);
             m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData];
+            m_implData->cameraTextureDelegate->metalDevice = metalDevice;
             m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
+            CVMetalTextureCacheCreate(nullptr, nullptr, metalDevice, nullptr, &m_implData->cameraTextureDelegate->textureCache);
             
 #if (TARGET_OS_IPHONE)
             // Loop over all available camera configurations to find a config that most closely matches the constraints.
@@ -360,10 +542,59 @@ namespace Babylon::Plugins
     {
         arcana::make_task(m_deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
             @synchronized(m_implData->cameraTextureDelegate) {
-                if (m_implData->overrideBgfxTexture && m_implData->textureRGBA != nil)
+                id<MTLTexture> textureY = [m_implData->cameraTextureDelegate GetCameraTextureY];
+                id<MTLTexture> textureCbCr = [m_implData->cameraTextureDelegate GetCameraTextureCbCr];
+
+                if (textureY != nil && textureCbCr != nil && m_implData->cameraTextureDelegate->textureRGBA != nil)
                 {
-                    bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureRGBA));
-                    m_implData->overrideBgfxTexture = false;
+                    if (m_implData->cameraTextureDelegate->overrideBgfxTexture)
+                    {
+                        bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->cameraTextureDelegate->textureRGBA));
+                        m_implData->cameraTextureDelegate->overrideBgfxTexture = false;
+                    }
+
+                    m_implData->currentCommandBuffer = [m_implData->commandQueue commandBuffer];
+                    m_implData->currentCommandBuffer.label = @"NativeCameraCommandBuffer";
+                    MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+
+                    if (renderPassDescriptor != nil) {
+                        // Attach the color texture, on which we'll draw the camera texture (so no need to clear on load).
+                        renderPassDescriptor.colorAttachments[0].texture = m_implData->cameraTextureDelegate->textureRGBA;
+                        renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
+                        renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+
+                        // Create and end the render encoder.
+                        id<MTLRenderCommandEncoder> renderEncoder = [m_implData->currentCommandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                        renderEncoder.label = @"NativeCameraEncoder";
+
+                        // Set the shader pipeline.
+                        [renderEncoder setRenderPipelineState:m_implData->cameraPipelineState];
+
+                        // Set the vertex data.
+                        [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
+
+                        // Set the textures.
+                        [renderEncoder setFragmentTexture:textureY atIndex:1];
+                        [renderEncoder setFragmentTexture:textureCbCr atIndex:2];
+
+                        // Draw the triangles.
+                        [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
+
+                        [renderEncoder endEncoding];
+
+                        [m_implData->currentCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
+                            if (textureY != nil) {
+                                [textureY setPurgeableState:MTLPurgeableStateEmpty];
+                            }
+
+                            if (textureCbCr != nil) {
+                                [textureCbCr setPurgeableState:MTLPurgeableStateEmpty];
+                            }
+                        }];
+                    }
+
+                    // Finalize rendering here & push the command buffer to the GPU.
+                    [m_implData->currentCommandBuffer commit];
                 }
             }
         });
@@ -374,190 +605,3 @@ namespace Babylon::Plugins
         m_implData.reset();
     }
 }
-
-@implementation CameraTextureDelegate
-
-- (id)init:(std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData>)implData
-{
-    self = [super init];
-    self->implData = implData;
-#if (TARGET_OS_IPHONE)
-    [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(OrientationDidChange:) name:UIDeviceOrientationDidChangeNotification object:nil];
-    [self updateOrientation];
-    self->orientationUpdated = true;
-#else
-    // Orientation not supported on these devices.
-    self->videoOrientation = AVCaptureVideoOrientationPortrait;
-    self->orientationUpdated = false;
-#endif
-
-    return self;
-}
-
-#if (TARGET_OS_IPHONE)
-/**
- Updates target video orientation.
-*/
-- (void)updateOrientation {
-    UIApplication* sharedApplication{[UIApplication sharedApplication]};
-    UIInterfaceOrientation orientation{UIInterfaceOrientationUnknown};
-#if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
-    UIScene* scene{[[[sharedApplication connectedScenes] allObjects] firstObject]};
-    orientation = [(UIWindowScene*)scene interfaceOrientation];
-#else
-    if (@available(iOS 13.0, *)) {
-        orientation = [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
-    }
-    else {
-        orientation = [sharedApplication statusBarOrientation];
-    }
-#endif
-    
-    // Determine device orienation, and adjust output to match.
-    AVCaptureVideoOrientation newVideoOrientation{AVCaptureVideoOrientationPortraitUpsideDown};
-    switch (orientation)
-        {
-            case UIInterfaceOrientationUnknown:
-                return;
-            case UIInterfaceOrientationPortrait:
-                newVideoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
-                break;
-            case UIInterfaceOrientationPortraitUpsideDown:
-                newVideoOrientation = AVCaptureVideoOrientationPortrait;
-                break;
-            case UIInterfaceOrientationLandscapeLeft:
-                newVideoOrientation = AVCaptureVideoOrientationLandscapeRight;
-                break;
-            case UIInterfaceOrientationLandscapeRight:
-                newVideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
-                break;
-        }
-
-    if (newVideoOrientation != self->videoOrientation)
-    {
-        self->videoOrientation = newVideoOrientation;
-        self->orientationUpdated = true;
-    }
-}
-
--(void)OrientationDidChange:(NSNotification*)notification
-{
-    [self updateOrientation];
-}
-#endif
-
-- (void)captureOutput:(AVCaptureOutput *)__unused captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *) connection
-{
-    if (self->orientationUpdated)
-    {
-        connection.videoMirrored = true;
-        connection.videoOrientation = self->videoOrientation;
-        self->orientationUpdated = false;
-    }
-
-    CVPixelBufferRef pixelBuffer{CMSampleBufferGetImageBuffer(sampleBuffer)};
-    size_t width = CVPixelBufferGetWidthOfPlane(pixelBuffer, 0);
-    size_t height = CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
-
-    // Update both metal textures used by the renderer to display the camera image.
-    id<MTLTexture> textureY = [self getCameraTexture:pixelBuffer plane:0];
-    id<MTLTexture> textureCbCr = [self getCameraTexture:pixelBuffer plane:1];
-
-    if(textureY != nil && textureCbCr != nil)
-    {
-        @synchronized(self) {
-            implData->textureY = textureY;
-            implData->textureCbCr = textureCbCr;
-
-            if (implData->width != width || implData->height != height) {
-                implData->width = width;
-                implData->height = height;
-                MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
-                textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
-                implData->textureRGBA = [implData->metalDevice newTextureWithDescriptor:textureDescriptor];
-                implData->overrideBgfxTexture = true;
-            }
-        };
-
-        if (implData->textureRGBA != nil)
-        {
-            implData->currentCommandBuffer = [implData->commandQueue commandBuffer];
-            implData->currentCommandBuffer.label = @"NativeCameraCommandBuffer";
-            MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
-
-            if (renderPassDescriptor != nil) {
-                // Attach the color texture, on which we'll draw the camera texture (so no need to clear on load).
-                renderPassDescriptor.colorAttachments[0].texture = implData->textureRGBA;
-                renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
-                renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
-
-                // Create and end the render encoder.
-                id<MTLRenderCommandEncoder> renderEncoder = [implData->currentCommandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-                renderEncoder.label = @"NativeCameraEncoder";
-
-                // Set the shader pipeline.
-                [renderEncoder setRenderPipelineState:implData->cameraPipelineState];
-
-                // Set the vertex data.
-                [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
-
-                // Set the textures.
-                [renderEncoder setFragmentTexture:textureY atIndex:1];
-                [renderEncoder setFragmentTexture:textureCbCr atIndex:2];
-
-                // Draw the triangles.
-                [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangleStrip vertexStart:0 vertexCount:4];
-
-                [renderEncoder endEncoding];
-
-                [implData->currentCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
-                    if (textureY != nil) {
-                        [textureY setPurgeableState:MTLPurgeableStateEmpty];
-                    }
-
-                    if (textureCbCr != nil) {
-                        [textureCbCr setPurgeableState:MTLPurgeableStateEmpty];
-                    }
-                }];
-            }
-
-            // Finalize rendering here & push the command buffer to the GPU.
-            [implData->currentCommandBuffer commit];
-        }
-    }
-}
-
-/**
- Updates the captured texture with the current pixel buffer.
-*/
-- (id<MTLTexture>)getCameraTexture:(CVPixelBufferRef)pixelBuffer plane:(int)planeIndex {
-    CVReturn ret = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
-    if (ret != kCVReturnSuccess) {
-        return {};
-    }
-
-    @try {
-        size_t planeWidth = CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
-        size_t planeHeight = CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
-
-        // Plane 0 is the Y plane, which is in R8Unorm format, and the second plane is the CBCR plane which is RG8Unorm format.
-        auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
-        CVMetalTextureRef textureRef;
-
-        // Create a texture from the corresponding plane.
-        auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, implData->textureCache, pixelBuffer, nil, pixelFormat, planeWidth, planeHeight, planeIndex, &textureRef);
-        if (status != kCVReturnSuccess) {
-            return nil;
-        }
-
-        id<MTLTexture> texture = CVMetalTextureGetTexture(textureRef);
-        CFRelease(textureRef);
-
-        return texture;
-    }
-    @finally {
-        CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
-    }
-}
-
-@end
