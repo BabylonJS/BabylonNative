@@ -75,7 +75,7 @@ CreateBoxAsync(scene).then(function () {
     }
 
     if (cameraTexture) {
-        scene.activeCamera.position = new BABYLON.Vector3(0, 1, -10);
+        scene.activeCamera.position.set(0, 1, -10);
         scene.activeCamera.setTarget(new BABYLON.Vector3(0, 1, 0));
 
         scene.meshes[0].setEnabled(false);
