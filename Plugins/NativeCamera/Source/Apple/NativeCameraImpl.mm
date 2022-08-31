@@ -578,26 +578,21 @@ namespace Babylon::Plugins
         return {};
     }
 
-    @try {
-        size_t planeWidth = CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
-        size_t planeHeight = CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
+    size_t planeWidth = CVPixelBufferGetWidthOfPlane(pixelBuffer, planeIndex);
+    size_t planeHeight = CVPixelBufferGetHeightOfPlane(pixelBuffer, planeIndex);
 
-        // Plane 0 is the Y plane, which is in R8Unorm format, and the second plane is the CBCR plane which is RG8Unorm format.
-        auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
-        CVMetalTextureRef textureRef;
+    // Plane 0 is the Y plane, which is in R8Unorm format, and the second plane is the CBCR plane which is RG8Unorm format.
+    auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
+    CVMetalTextureRef textureRef;
 
-        // Create a texture from the corresponding plane.
-        auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, implData->textureCache, pixelBuffer, nil, pixelFormat, planeWidth, planeHeight, planeIndex, &textureRef);
-        if (status != kCVReturnSuccess) {
-            CVBufferRelease(textureRef);
-            textureRef = nil;
-        }
-
-        return textureRef;
+    // Create a texture from the corresponding plane.
+    auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, implData->textureCache, pixelBuffer, nil, pixelFormat, planeWidth, planeHeight, planeIndex, &textureRef);
+    if (status != kCVReturnSuccess) {
+        CVBufferRelease(textureRef);
+        textureRef = nil;
     }
-    @finally {
-        CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
-    }
+
+    return textureRef;
 }
 
 -(void)cleanupTextures {
