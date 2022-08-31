@@ -62,18 +62,23 @@ namespace {
     constexpr char shaderSource[] = R"(
         #include <metal_stdlib>
         #include <simd/simd.h>
+
         using namespace metal;
+
         #include <simd/simd.h>
+
         typedef struct
         {
             vector_float2 position;
             vector_float2 uv;
         } Vertex;
+
         typedef struct
         {
             float4 position [[position]];
             float2 uv;
         } RasterizerData;
+
         vertex RasterizerData
         vertexShader(uint vertexID [[vertex_id]],
                         constant Vertex *vertices [[buffer(0)]])
@@ -83,24 +88,29 @@ namespace {
             out.uv = vertices[vertexID].uv;
             return out;
         }
+
         fragment float4 fragmentShader(RasterizerData in [[stage_in]],
             texture2d<float, access::sample> cameraTextureY [[ texture(1) ]],
             texture2d<float, access::sample> cameraTextureCbCr [[ texture(2) ]])
         {
             constexpr sampler linearSampler(mip_filter::linear, mag_filter::linear, min_filter::linear);
+
             if (!is_null_texture(cameraTextureY) && !is_null_texture(cameraTextureCbCr))
             {
                 const float4 cameraSampleY = cameraTextureY.sample(linearSampler, in.uv);
                 const float4 cameraSampleCbCr = cameraTextureCbCr.sample(linearSampler, in.uv);
+
                 const float4x4 ycbcrToRGBTransform = float4x4(
                     float4(+1.0000f, +1.0000f, +1.0000f, +0.0000f),
                     float4(+0.0000f, -0.3441f, +1.7720f, +0.0000f),
                     float4(+1.4020f, -0.7141f, +0.0000f, +0.0000f),
                     float4(-0.7010f, +0.5291f, -0.8860f, +1.0000f)
                 );
+
                 float4 ycbcr = float4(cameraSampleY.r, cameraSampleCbCr.rg, 1.0);
                 float4 cameraSample = ycbcrToRGBTransform * ycbcr;
                 cameraSample.a = 1.0;
+
                 return cameraSample;
             }
             else
