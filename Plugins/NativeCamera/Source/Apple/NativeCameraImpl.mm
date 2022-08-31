@@ -582,7 +582,8 @@ namespace Babylon::Plugins
         // Create a texture from the corresponding plane.
         auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, implData->textureCache, pixelBuffer, nil, pixelFormat, planeWidth, planeHeight, planeIndex, &textureRef);
         if (status != kCVReturnSuccess) {
-            return nil;
+            CVBufferRelease(textureRef);
+            textureRef = nil;
         }
 
         return textureRef;
