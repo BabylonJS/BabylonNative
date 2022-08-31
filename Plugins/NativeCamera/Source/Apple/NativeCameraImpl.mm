@@ -187,7 +187,7 @@ namespace Babylon::Plugins
             AVCaptureDevice* bestDevice{nullptr};
             AVCaptureDeviceFormat* bestFormat{nullptr};
             uint32_t bestPixelCount{0};
-            uint32_t bestPixelFormat{0};
+            uint32_t devicePixelFormat{0};
             uint32_t bestDimDiff{0};
             NSArray* deviceTypes{nullptr};
             bool foundExactMatch{false};
@@ -242,7 +242,7 @@ namespace Babylon::Plugins
                     if (bestDevice == nullptr || pixelCount > bestPixelCount || (pixelCount == bestPixelCount && dimDiff < bestDimDiff))
                     {
                         bestPixelCount = pixelCount;
-                        bestPixelFormat = pixelFormat;
+                        devicePixelFormat = pixelFormat;
                         bestDevice = device;
                         bestFormat = format;
                         bestDimDiff = dimDiff;
@@ -296,8 +296,8 @@ namespace Babylon::Plugins
             AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error]};
             CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(captureDevice.activeFormat.formatDescription)};
             CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
-            uint32_t bestPixelFormat{static_cast<uint32_t>(CMFormatDescriptionGetMediaSubType(videoFormatRef))};
-            if (!isPixelFormatSupported(bestPixelFormat))
+            uint32_t devicePixelFormat{static_cast<uint32_t>(CMFormatDescriptionGetMediaSubType(videoFormatRef))};
+            if (!isPixelFormatSupported(devicePixelFormat))
             {
                 taskCompletionSource.complete(arcana::make_unexpected(
                     std::make_exception_ptr(std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."})));
@@ -328,7 +328,7 @@ namespace Babylon::Plugins
             dispatch_queue_t sampleBufferQueue{dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL)};
             AVCaptureVideoDataOutput * dataOutput{[[AVCaptureVideoDataOutput alloc] init]};
             [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
-            [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(bestPixelFormat)}];
+            [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(devicePixelFormat)}];
             [dataOutput setSampleBufferDelegate:m_implData->cameraTextureDelegate queue:sampleBufferQueue];
 
             // Actually start the camera session.
