@@ -136,7 +136,12 @@ namespace Babylon::Plugins
     {
         ~ImplData()
         {
+            if (currentCommandBuffer != nil) {
+                [currentCommandBuffer waitUntilCompleted];
+            }
+
             [avCaptureSession stopRunning];
+
             if (textureCache)
             {
                 CVMetalTextureCacheFlush(textureCache, 0);
