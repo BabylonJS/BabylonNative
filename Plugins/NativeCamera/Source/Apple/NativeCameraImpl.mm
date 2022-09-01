@@ -152,9 +152,6 @@ namespace Babylon::Plugins
         id<MTLDevice> metalDevice{};
         id<MTLCommandQueue> commandQueue{};
         id<MTLCommandBuffer> currentCommandBuffer{};
-        size_t width{0};
-        size_t height{0};
-        bool overrideBgfxTexture{false};
     };
     Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
         : m_deviceContext{nullptr}
@@ -384,14 +381,25 @@ namespace Babylon::Plugins
         arcana::make_task(m_deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
             id<MTLTexture> textureY{};
             id<MTLTexture> textureCbCr{};
+            int64_t width{0};
+            int64_t height{0};
+
             @synchronized(m_implData->cameraTextureDelegate) {
                 textureY = [m_implData->cameraTextureDelegate getCameraTextureY];
                 textureCbCr = [m_implData->cameraTextureDelegate getCameraTextureCbCr];
-                if (m_implData->overrideBgfxTexture && m_implData->textureRGBA != nil)
-                {
-                    bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureRGBA));
-                    m_implData->overrideBgfxTexture = false;
-                }
+                width = [textureY width];
+                height = [textureY height];
+            }
+
+            // Recreate the output texture when the camera dimensions change.
+            if (m_cameraDimensions.width != width || m_cameraDimensions.height != height)
+            {
+                MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
+                textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+                m_implData->textureRGBA = [m_implData->metalDevice newTextureWithDescriptor:textureDescriptor];
+                bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureRGBA));
+                m_cameraDimensions.width = static_cast<uint32_t>(width);
+                m_cameraDimensions.height = static_cast<uint32_t>(height);
             }
 
             if (textureY != nil && textureCbCr != nil && m_implData->textureRGBA != nil)
@@ -556,8 +564,6 @@ namespace Babylon::Plugins
     }
 
     CVPixelBufferRef pixelBuffer{CMSampleBufferGetImageBuffer(sampleBuffer)};
-    size_t width = CVPixelBufferGetWidthOfPlane(pixelBuffer, 0);
-    size_t height = CVPixelBufferGetHeightOfPlane(pixelBuffer, 0);
 
     // Update both metal textures used by the renderer to display the camera image.
     CVMetalTextureRef textureY = [self getCameraTexture:pixelBuffer plane:0];
@@ -567,15 +573,6 @@ namespace Babylon::Plugins
         [self cleanupTextures];
         cameraTextureY = textureY;
         cameraTextureCbCr = textureCbCr;
-
-        if (implData->width != width || implData->height != height) {
-            implData->width = width;
-            implData->height = height;
-            MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
-            textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
-            implData->textureRGBA = [implData->metalDevice newTextureWithDescriptor:textureDescriptor];
-            implData->overrideBgfxTexture = true;
-        }
     }
 }
 
