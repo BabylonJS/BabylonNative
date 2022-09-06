@@ -32,5 +32,7 @@ namespace Babylon::Plugins
         std::shared_ptr<ImplData> m_implData;
 
         bool m_overrideCameraTexture{};
+
+        CameraDimensions m_cameraDimensions{};
     };
 }
