@@ -193,8 +193,7 @@ namespace Babylon::Plugins
             CVMetalTextureCacheCreate(nullptr, nullptr, m_implData->metalDevice, nullptr, &m_implData->textureCache);
             m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData];
             m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
-            m_implData->textureRGBA = nil;
-            
+
 #if (TARGET_OS_IPHONE)
             // Loop over all available camera configurations to find a config that most closely matches the constraints.
             AVCaptureDevice* bestDevice{nullptr};
@@ -403,7 +402,7 @@ namespace Babylon::Plugins
             }
 
             // Recreate the output texture when the camera dimensions change.
-            if (m_cameraDimensions.width != width || m_cameraDimensions.height != height || m_implData->textureRGBA == nil)
+            if (m_cameraDimensions.width != width || m_cameraDimensions.height != height)
             {
                 MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
                 textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
@@ -463,7 +462,7 @@ namespace Babylon::Plugins
 
     void Camera::Impl::Close()
     {
-        m_implData.reset();
+        m_implData.reset(new ImplData);
     }
 }
 
