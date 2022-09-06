@@ -8,31 +8,22 @@
 #include <string>
 #include <stdexcept>
 #include "napi/env.h"
+#include <iostream>
 
 
 namespace Napi
 {
-    template<>
-    Env Attach<>()
-    {
-        napi_env env;
-        napi_ext_env_settings settings{};
-        settings.this_size = sizeof(settings);
-        settings.flags.enable_gc_api = true;
-        settings.flags.enable_inspector = 1;
-        settings.flags.wait_for_debugger = true;
-        settings.foreground_scheduler = nullptr;
 
-        napi_ext_create_env(&settings, &env);
-        
-        // Associate environment to holder.
-        //napi_set_instance_data(env, this, nullptr /*finalize_cb*/, nullptr /*finalize_hint*/);
-        return {env};
+    template<>
+    Env Attach<>(napi_env& rt)
+    {
+        napi_env__* env_ptr{new napi_env__{rt}};
+        return {env_ptr};
     }
 
     void Detach(Env env)
     {
-        //napi_env env_ptr{env};
-        //delete env_ptr;
+        napi_env__* env_ptr{env};
+        delete env_ptr;
     }
 }
