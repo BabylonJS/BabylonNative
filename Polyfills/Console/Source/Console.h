@@ -16,13 +16,13 @@ namespace Babylon::Polyfills::Internal
         explicit Console(const Napi::CallbackInfo& info);
 
     private:
-        void Log(const Napi::CallbackInfo& info);
-        void Warn(const Napi::CallbackInfo& info);
-        void Error(const Napi::CallbackInfo& info);
-        void InvokeCallback(const Napi::CallbackInfo& info, Babylon::Polyfills::Console::LogLevel logLevel) const;
-        void InvokeEngineCallback(const std::string functionName, const Napi::CallbackInfo& info);
+        static void Log(const Napi::CallbackInfo& info);
+        static void Warn(const Napi::CallbackInfo& info);
+        static void Error(const Napi::CallbackInfo& info);
+        static void InvokeCallback(const Napi::CallbackInfo& info, Babylon::Polyfills::Console::LogLevel logLevel);
+        static void InvokeEngineCallback(const std::string functionName, const Napi::CallbackInfo& info);
 
-        std::unique_ptr<Napi::ObjectReference> m_engineConsole{};
-        Babylon::Polyfills::Console::CallbackT m_callback{};
+        static inline std::unique_ptr<Napi::ObjectReference> m_engineConsole{};
+        static inline Babylon::Polyfills::Console::CallbackT m_callback{};
     };
 }

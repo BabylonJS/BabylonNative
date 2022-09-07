@@ -16,32 +16,27 @@ namespace
 
 namespace Babylon::Polyfills::Internal
 {
+    static constexpr auto JS_CONSTRUCTOR_NAME = "console";
+
     void Console::CreateInstance(Napi::Env env, Babylon::Polyfills::Console::CallbackT callback)
     {
         Napi::HandleScope scope{env};
 
         Napi::Function func = ParentT::DefineClass(
             env,
-            "Console",
+            JS_CONSTRUCTOR_NAME,
             {
-                ParentT::InstanceMethod("log", &Console::Log),
-                ParentT::InstanceMethod("warn", &Console::Warn),
-                ParentT::InstanceMethod("error", &Console::Error),
+                ParentT::StaticMethod("log", &Console::Log),
+                ParentT::StaticMethod("warn", &Console::Warn),
+                ParentT::StaticMethod("error", &Console::Error),
             });
 
-        auto console = func.New({});
-        Console::Unwrap(console)->m_callback = std::move(callback);
-        const auto existingConsole = env.Global().Get(JS_INSTANCE_NAME);
-        if (!existingConsole.IsUndefined())
-        {
-            Console::Unwrap(console)->m_engineConsole = std::make_unique<Napi::ObjectReference>(Napi::Persistent(existingConsole.As<Napi::Object>()));
-        }
-        env.Global().Set(JS_INSTANCE_NAME, console);
+        env.Global().Set(JS_CONSTRUCTOR_NAME, func);
+        m_callback = callback;
     }
 
     Console::Console(const Napi::CallbackInfo& info)
         : ParentT{info}
-        , m_callback{}
     {
     }
 
@@ -63,7 +58,7 @@ namespace Babylon::Polyfills::Internal
         InvokeCallback(info, Babylon::Polyfills::Console::LogLevel::Error);
     }
 
-    void Console::InvokeCallback(const Napi::CallbackInfo& info, Babylon::Polyfills::Console::LogLevel logLevel) const
+    void Console::InvokeCallback(const Napi::CallbackInfo& info, Babylon::Polyfills::Console::LogLevel logLevel)
     {
         std::stringstream ss{};
         for (unsigned int index = 0; index < info.Length(); index++)
