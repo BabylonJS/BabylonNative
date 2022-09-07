@@ -176,10 +176,7 @@ namespace Babylon::Graphics
             // Drain readTextures queue, completing them in an error state.
             while (!m_readTextureRequests.empty())
             {
-                auto error = arcana::make_unexpected(
-                    std::make_exception_ptr(
-                        std::system_error(std::make_error_code(std::errc::operation_canceled))));
-
+                auto error = arcana::make_unexpected(std::make_exception_ptr(std::system_error(std::make_error_code(std::errc::operation_canceled))));
                 m_readTextureRequests.front().second.complete(error);
                 m_readTextureRequests.pop();
             }
@@ -189,7 +186,7 @@ namespace Babylon::Graphics
             FinishRenderingCurrentFrame();
 
             m_cancellationSource->cancel();
-            
+
             bgfx::shutdown();
             m_state.Bgfx.Initialized = false;
 
