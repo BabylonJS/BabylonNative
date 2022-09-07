@@ -173,6 +173,14 @@ namespace Babylon::Graphics
 
         if (m_state.Bgfx.Initialized)
         {
+            // Drain readTextures queue, completing them in an error state.
+            while (!m_readTextureRequests.empty())
+            {
+                auto error = arcana::make_unexpected(std::make_exception_ptr(std::system_error(std::make_error_code(std::errc::operation_canceled))));
+                m_readTextureRequests.front().second.complete(error);
+                m_readTextureRequests.pop();
+            }
+
             // HACK: Render one more frame to drain the before/after render work queues.
             StartRenderingCurrentFrame();
             FinishRenderingCurrentFrame();
@@ -390,8 +398,7 @@ namespace Babylon::Graphics
         uint32_t frameNumber{bgfx::frame()};
 
         // Process read texture requests.
-        assert(m_readTextureRequests.empty() || m_readTextureRequests.front().first >= frameNumber);
-        while (!m_readTextureRequests.empty() && m_readTextureRequests.front().first == frameNumber)
+        while (!m_readTextureRequests.empty() && m_readTextureRequests.front().first <= frameNumber)
         {
             m_readTextureRequests.front().second.complete();
             m_readTextureRequests.pop();
