@@ -189,10 +189,11 @@ namespace Babylon::Plugins
         
         __block arcana::task_completion_source<Camera::Impl::CameraDimensions, std::exception_ptr> taskCompletionSource{};
 
-        dispatch_sync(dispatch_get_main_queue(), ^{
+        dispatch_async(dispatch_get_main_queue(), ^{
             CVMetalTextureCacheCreate(nullptr, nullptr, m_implData->metalDevice, nullptr, &m_implData->textureCache);
             m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData];
             m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
+            m_implData->textureRGBA = nil;
 
 #if (TARGET_OS_IPHONE)
             // Loop over all available camera configurations to find a config that most closely matches the constraints.
@@ -396,13 +397,13 @@ namespace Babylon::Plugins
                 height = [textureY height];
             }
             
-            // Skip processing this frame.
+            // Skip processing this frame if width and height are invalid.
             if (width == 0 || height == 0) {
                 return;
             }
 
             // Recreate the output texture when the camera dimensions change.
-            if (m_cameraDimensions.width != width || m_cameraDimensions.height != height)
+            if (m_implData->textureRGBA == nil || m_cameraDimensions.width != width || m_cameraDimensions.height != height)
             {
                 MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
                 textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
