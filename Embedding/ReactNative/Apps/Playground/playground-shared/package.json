@@ -7,5 +7,18 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@babylonjs/core": "5.17.0",
+    "@babylonjs/loaders": "5.17.0",
+    "@babylonjs/react-native": "file:../../../Modules/@babylonjs/react-native",
+    "@babylonjs/react-native-iosandroid": "file:../../../Modules/@babylonjs/react-native-iosandroid",
+    "@babylonjs/react-native-windows": "file:../../../Modules/@babylonjs/react-native-windows",
+    "@babylonjs/playground-shared": "file:../playground-shared",
+    "@react-native-community/slider": "^4.0.0-rc.3",
+    "react": "18.0.0",
+    "react-native": "0.69.3",
+    "react-native-permissions": "^3.0.0",
+    "react-native-windows": "0.69.3"
+  }
 }

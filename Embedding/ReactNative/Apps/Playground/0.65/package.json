@@ -14,8 +14,8 @@
     "iosCmake": "node scripts/tools.js iosCMake"
   },
   "dependencies": {
-    "@babylonjs/core": "5.6.1",
-    "@babylonjs/loaders": "5.6.1",
+    "@babylonjs/core": "5.17.0",
+    "@babylonjs/loaders": "5.17.0",
     "@babylonjs/react-native": "file:../../../Modules/@babylonjs/react-native",
     "@babylonjs/react-native-iosandroid": "file:../../../Modules/@babylonjs/react-native-iosandroid",
     "@babylonjs/react-native-windows": "file:../../../Modules/@babylonjs/react-native-windows",
