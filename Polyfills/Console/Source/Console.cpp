@@ -32,7 +32,7 @@ namespace Babylon::Polyfills::Internal
             });
 
         env.Global().Set(JS_CONSTRUCTOR_NAME, func);
-        m_callback = callback;
+        s_callback = callback;
     }
 
     Console::Console(const Napi::CallbackInfo& info)
@@ -70,17 +70,17 @@ namespace Babylon::Polyfills::Internal
             ss << info[index].ToString().Utf8Value().c_str();
         }
         ss << std::endl;
-        m_callback(ss.str().c_str(), logLevel);
+        s_callback(ss.str().c_str(), logLevel);
     }
 
     void Console::InvokeEngineCallback(const std::string functionName, const Napi::CallbackInfo& info)
     {
-        if (m_engineConsole != nullptr)
+        if (s_engineConsole != nullptr)
         {
-            const auto engineConsoleFunc = m_engineConsole->Value().Get(functionName).As<Napi::Function>();
+            const auto engineConsoleFunc = s_engineConsole->Value().Get(functionName).As<Napi::Function>();
             if (!engineConsoleFunc.IsUndefined()) {
                 const auto args = GetCallbackInfoArgs(info);
-                engineConsoleFunc.As<Napi::Function>().Call(m_engineConsole->Value(), args.size(), args.data());
+                engineConsoleFunc.As<Napi::Function>().Call(s_engineConsole->Value(), args.size(), args.data());
             }
         }
     }
