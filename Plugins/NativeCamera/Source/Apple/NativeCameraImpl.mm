@@ -603,7 +603,7 @@ namespace Babylon::Plugins
 /**
  Updates the captured texture with the current pixel buffer.
 */
-- (CVMetalTextureRef)getCameraTexture:(CVPixelBufferRef)pixelBuffer plane:(int)planeIndex {    
+- (CVMetalTextureRef)getCameraTexture:(CVPixelBufferRef)pixelBuffer plane:(int)planeIndex {
     CVReturn ret = CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
     if (ret != kCVReturnSuccess) {
         return {};
