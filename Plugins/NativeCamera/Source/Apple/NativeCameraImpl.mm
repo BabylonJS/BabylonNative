@@ -25,13 +25,14 @@
 {
     @public AVCaptureVideoOrientation videoOrientation;
 
-    std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData> implData;
+    CVMetalTextureCacheRef textureCache;
     bool orientationUpdated;
 }
 
-- (id)init:(std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData>)implData;
+- (id)init:(CVMetalTextureCacheRef)textureCache;
 - (id<MTLTexture>)getCameraTextureY;
 - (id<MTLTexture>)getCameraTextureCbCr;
+- (void)reset;
 
 @end
 
@@ -140,7 +141,9 @@ namespace Babylon::Plugins
                 [currentCommandBuffer waitUntilCompleted];
             }
 
-            [avCaptureSession stopRunning];
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                [avCaptureSession stopRunning];
+            });
 
             if (textureCache)
             {
@@ -152,7 +155,7 @@ namespace Babylon::Plugins
         CameraTextureDelegate* cameraTextureDelegate{};
         AVCaptureSession* avCaptureSession{};
         CVMetalTextureCacheRef textureCache{};
-        id <MTLTexture> textureRGBA{};
+        id<MTLTexture> textureRGBA{};
         id<MTLRenderPipelineState> cameraPipelineState{};
         id<MTLDevice> metalDevice{};
         id<MTLCommandQueue> commandQueue{};
@@ -191,7 +194,7 @@ namespace Babylon::Plugins
 
         dispatch_async(dispatch_get_main_queue(), ^{
             CVMetalTextureCacheCreate(nullptr, nullptr, m_implData->metalDevice, nullptr, &m_implData->textureCache);
-            m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData];
+            m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData->textureCache];
             m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
             m_implData->textureRGBA = nil;
 
@@ -347,7 +350,9 @@ namespace Babylon::Plugins
             // Actually start the camera session.
             [m_implData->avCaptureSession addOutput:dataOutput];
             [m_implData->avCaptureSession commitConfiguration];
-            [m_implData->avCaptureSession startRunning];
+            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                [m_implData->avCaptureSession startRunning];
+            });
             
             // Create a pipeline state for converting the camera output to RGBA.
             id<MTLLibrary> lib = CompileShader(m_implData->metalDevice, shaderSource);
@@ -463,7 +468,9 @@ namespace Babylon::Plugins
 
     void Camera::Impl::Close()
     {
-        m_implData.reset(new ImplData);
+        [m_implData->cameraTextureDelegate reset];
+        m_implData.reset();
+        m_implData = std::make_unique<ImplData>();
     }
 }
 
@@ -472,10 +479,10 @@ namespace Babylon::Plugins
     CVMetalTextureRef cameraTextureCbCr;
 }
 
-- (id)init:(std::shared_ptr<Babylon::Plugins::Camera::Impl::ImplData>)implData
+- (id)init:(CVMetalTextureCacheRef)textureCache
 {
     self = [super init];
-    self->implData = implData;
+    self->textureCache = textureCache;
 #if (TARGET_OS_IPHONE)
     [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(OrientationDidChange:) name:UIDeviceOrientationDidChangeNotification object:nil];
     [self updateOrientation];
@@ -511,6 +518,12 @@ namespace Babylon::Plugins
     }
 
     return nil;
+}
+
+- (void) reset {
+    @synchronized (self) {
+        self->textureCache = nil;
+    }
 }
 
 #if (TARGET_OS_IPHONE)
@@ -603,11 +616,16 @@ namespace Babylon::Plugins
     auto pixelFormat = planeIndex ? MTLPixelFormatRG8Unorm : MTLPixelFormatR8Unorm;
     CVMetalTextureRef textureRef;
 
-    // Create a texture from the corresponding plane.
-    auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, implData->textureCache, pixelBuffer, nil, pixelFormat, planeWidth, planeHeight, planeIndex, &textureRef);
-    if (status != kCVReturnSuccess) {
-        CVBufferRelease(textureRef);
-        textureRef = nil;
+    @synchronized (self) {
+        if (self->textureCache == nil) {
+            return{};
+        }
+
+        auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, nil, pixelFormat, planeWidth, planeHeight, planeIndex, &textureRef);
+        if (status != kCVReturnSuccess) {
+            CVBufferRelease(textureRef);
+            textureRef = nil;
+        }
     }
 
     return textureRef;
