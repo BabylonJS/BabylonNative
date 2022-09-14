@@ -31,6 +31,11 @@ namespace Babylon::Polyfills::Internal
                 ParentT::StaticMethod("error", &Console::Error),
             });
 
+        const auto existingConsole = env.Global().Get(JS_INSTANCE_NAME);
+        if (!existingConsole.IsUndefined())
+        {
+            s_engineConsole = std::make_unique<Napi::ObjectReference>(Napi::Persistent(existingConsole.As<Napi::Object>()));
+        }
         env.Global().Set(JS_CONSTRUCTOR_NAME, func);
         s_callback = callback;
     }
