@@ -295,7 +295,6 @@ namespace Babylon::Plugins
             
             [m_implData->avCaptureSession setSessionPreset:AVCaptureSessionPresetInputPriority];
             [bestDevice setActiveFormat:bestFormat];
-            [bestDevice setVideoZoomFactor:1.0];
             AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:bestDevice error:&error]};
             [bestDevice unlockForConfiguration];
             
