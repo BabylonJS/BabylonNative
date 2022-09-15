@@ -22,7 +22,7 @@ namespace Babylon::Polyfills::Internal
         static void InvokeCallback(const Napi::CallbackInfo& info, Babylon::Polyfills::Console::LogLevel logLevel);
         static void InvokeEngineCallback(const std::string functionName, const Napi::CallbackInfo& info);
 
-        static inline std::unique_ptr<Napi::ObjectReference> s_engineConsole{};
+        static inline Napi::ObjectReference s_engineConsole{};
         static inline Babylon::Polyfills::Console::CallbackT s_callback{};
     };
 }
