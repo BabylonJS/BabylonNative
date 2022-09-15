@@ -32,7 +32,7 @@ namespace Babylon::Polyfills::Internal
         const auto existingConsole = env.Global().Get(JS_INSTANCE_NAME);
         if (!existingConsole.IsUndefined())
         {
-            s_engineConsole = Napi::Persistent(existingConsole.As<Napi::Object>());
+            s_engineConsole = std::make_shared<Napi::ObjectReference>(Napi::Persistent(existingConsole.As<Napi::Object>()));
         }
         env.Global().Set(JS_INSTANCE_NAME, func);
         s_callback = callback;
@@ -41,6 +41,11 @@ namespace Babylon::Polyfills::Internal
     Console::Console(const Napi::CallbackInfo& info)
         : ParentT{info}
     {
+    }
+    
+    Console::~Console()
+    {
+    
     }
 
     void Console::Log(const Napi::CallbackInfo& info)
@@ -78,12 +83,12 @@ namespace Babylon::Polyfills::Internal
 
     void Console::InvokeEngineCallback(const std::string functionName, const Napi::CallbackInfo& info)
     {
-        if (!s_engineConsole.IsEmpty())
+        if (!s_engineConsole.expired())
         {
-            const auto engineConsoleFunc = s_engineConsole.Get(functionName).As<Napi::Function>();
+            const auto engineConsoleFunc = s_engineConsole.lock()->Value().Get(functionName).As<Napi::Function>();
             if (!engineConsoleFunc.IsUndefined()) {
                 const auto args = GetCallbackInfoArgs(info);
-                engineConsoleFunc.As<Napi::Function>().Call(s_engineConsole.Value(), args.size(), args.data());
+                engineConsoleFunc.As<Napi::Function>().Call(s_engineConsole.lock()->Value(), args.size(), args.data());
             }
         }
     }
