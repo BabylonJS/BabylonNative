@@ -14,7 +14,6 @@ namespace Babylon::Polyfills::Internal
         static void CreateInstance(Napi::Env env, Babylon::Polyfills::Console::CallbackT callback);
 
         explicit Console(const Napi::CallbackInfo& info);
-        virtual ~Console();
     private:
         static void Log(const Napi::CallbackInfo& info);
         static void Warn(const Napi::CallbackInfo& info);
@@ -22,7 +21,7 @@ namespace Babylon::Polyfills::Internal
         static void InvokeCallback(const Napi::CallbackInfo& info, Babylon::Polyfills::Console::LogLevel logLevel);
         static void InvokeEngineCallback(const std::string functionName, const Napi::CallbackInfo& info);
 
-        static inline std::weak_ptr<Napi::ObjectReference> s_engineConsole{};
+        static inline Napi::ObjectReference s_engineConsole{};
         static inline Babylon::Polyfills::Console::CallbackT s_callback{};
     };
 }
