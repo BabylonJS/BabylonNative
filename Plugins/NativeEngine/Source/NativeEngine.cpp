@@ -1409,23 +1409,16 @@ namespace Babylon
                 }
 
                 return textureBuffer;
-            }).then(m_runtimeScheduler, *m_cancellationSource, [this, bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred, tempTexture, sourceTextureHandle](std::vector<uint8_t> textureBuffer) mutable {
+            }).then(m_runtimeScheduler, *m_cancellationSource, [bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred](std::vector<uint8_t> textureBuffer) {
                 // Double check the destination buffer length. This is redundant with prior checks, but we'll be extra sure before the memcpy.
                 assert(bufferRef.Value().ByteLength() - bufferOffset >= textureBuffer.size());
 
                 // Copy the pixel data into the JS ArrayBuffer.
                 uint8_t* buffer{static_cast<uint8_t*>(bufferRef.Value().Data())};
                 std::memcpy(buffer + bufferOffset, textureBuffer.data(), textureBuffer.size());
-
-                if (tempTexture && !m_cancellationSource->cancelled())
-                {
-                    bgfx::destroy(sourceTextureHandle);
-                    tempTexture = false;
-                }
-
                 deferred.Resolve(bufferRef.Value());
-            }).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
-                if (tempTexture && !m_cancellationSource->cancelled())
+            }).then(m_runtimeScheduler, arcana::cancellation::none(), [env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
+                if (tempTexture)
                 {
                     bgfx::destroy(sourceTextureHandle);
                 }
