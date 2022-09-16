@@ -37,9 +37,6 @@
 @end
 
 namespace {
-    const auto cameraQueue = dispatch_queue_create("cameraQueue", DISPATCH_QUEUE_SERIAL);
-    id<MTLTexture> textureRetainRef = nil;
-
     static bool isPixelFormatSupported(uint32_t pixelFormat)
     {
         switch (pixelFormat) {
@@ -140,25 +137,9 @@ namespace Babylon::Plugins
     {
         ~ImplData()
         {
-            if (currentCommandBuffer != nil) {
-                [currentCommandBuffer waitUntilCompleted];
-            }
-
-            if (sessionInitialized) {
-                dispatch_async(cameraQueue, ^{
-                    [avCaptureSession stopRunning];
-                });
-            }
-
-            if (textureCache)
-            {
-                CVMetalTextureCacheFlush(textureCache, 0);
-                CFRelease(textureCache);
-            }
         }
         
         CameraTextureDelegate* cameraTextureDelegate{};
-        bool sessionInitialized{false};
         AVCaptureSession* avCaptureSession{};
         CVMetalTextureCacheRef textureCache{};
         id<MTLTexture> textureRGBA{};
@@ -166,6 +147,7 @@ namespace Babylon::Plugins
         id<MTLDevice> metalDevice{};
         id<MTLCommandQueue> commandQueue{};
         id<MTLCommandBuffer> currentCommandBuffer{};
+        bool refreshBgfxHandle{true};
     };
     Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
         : m_deviceContext{nullptr}
@@ -183,6 +165,7 @@ namespace Babylon::Plugins
     {
         m_implData->commandQueue = (__bridge id<MTLCommandQueue>)bgfx::getInternalData()->commandQueue;
         m_implData->metalDevice = (__bridge id<MTLDevice>)bgfx::getInternalData()->context;
+        m_implData->refreshBgfxHandle = true;
 
         if (maxWidth == 0 || maxWidth > std::numeric_limits<int32_t>::max()) {
             maxWidth = std::numeric_limits<int32_t>::max();
@@ -198,7 +181,6 @@ namespace Babylon::Plugins
 
         CVMetalTextureCacheCreate(nullptr, nullptr, m_implData->metalDevice, nullptr, &m_implData->textureCache);
         m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData->textureCache];
-        m_implData->textureRGBA = nil;
 
 #if (TARGET_OS_IPHONE)
         // Loop over all available camera configurations to find a config that most closely matches the constraints.
@@ -254,7 +236,7 @@ namespace Babylon::Plugins
                 {
                     continue;
                 }
-                
+
                 // Calculate pixel count and dimension differential and take the best qualifying one.
                 uint32_t pixelCount{static_cast<uint32_t>(dimensions.width * dimensions.height)};
                 uint32_t dimDiff{(maxWidth - dimensions.width) + (maxHeight - dimensions.height)};
@@ -265,7 +247,7 @@ namespace Babylon::Plugins
                     bestDevice = device;
                     bestFormat = format;
                     bestDimDiff = dimDiff;
-                    
+
                     // Check if we got an exact match, and exit the loop early in this case.
                     if (static_cast<uint32_t>(dimensions.width) == maxWidth && static_cast<uint32_t>(dimensions.height) == maxHeight)
                     {
@@ -274,19 +256,19 @@ namespace Babylon::Plugins
                     }
                 }
             }
-            
+
             if (foundExactMatch)
             {
                 break;
             }
         }
-        
+
         // If no matching device, throw an error with the message "ConstraintError" which matches the behavior in the browser.
         if (bestDevice == nullptr)
         {
             return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."}));
         }
-                   
+
         // Lock camera device and set up camera format. If there a problem initialising the camera it will give an error.
         NSError *error{nil};
         [bestDevice lockForConfiguration:&error];
@@ -294,11 +276,11 @@ namespace Babylon::Plugins
         {
             return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"Failed to lock camera"}));
         }
-        
+
         [bestDevice setActiveFormat:bestFormat];
         AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:bestDevice error:&error]};
         [bestDevice unlockForConfiguration];
-        
+
         // Capture the format dimensions.
         CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(bestFormat.formatDescription)};
         CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
@@ -319,7 +301,7 @@ namespace Babylon::Plugins
 #endif
 
         Camera::Impl::CameraDimensions cameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
-        
+
         // For portrait orientations swap the height and width of the video format dimensions.
         if (m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortrait
             ||  m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortraitUpsideDown)
@@ -332,7 +314,6 @@ namespace Babylon::Plugins
         {
             return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"}));
         }
-        
 
         // Create a pipeline state for converting the camera output to RGBA.
         id<MTLLibrary> lib = CompileShader(m_implData->metalDevice, shaderSource);
@@ -346,7 +327,12 @@ namespace Babylon::Plugins
         pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatRGBA8Unorm;
         m_implData->cameraPipelineState = [m_implData->metalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
 
-        dispatch_async(cameraQueue, ^{
+        if (!m_implData->cameraPipelineState) {
+            return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{
+                std::string("Failed to create camera pipeline state: ") + [error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]}));
+        }
+
+        return arcana::make_task(m_cameraDispatcher, arcana::cancellation::none(), [this, input, devicePixelFormat, cameraDimensions]() mutable {
             // Kick off camera session on a background thread.
             m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
 
@@ -367,18 +353,8 @@ namespace Babylon::Plugins
             [m_implData->avCaptureSession addOutput:dataOutput];
             [m_implData->avCaptureSession commitConfiguration];
             [m_implData->avCaptureSession startRunning];
-            m_implData->sessionInitialized = true;
+            return cameraDimensions;
         });
-
-        if (!m_implData->cameraPipelineState) {
-            return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{
-                std::string("Failed to create camera pipeline state: ") + [error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]}));
-        }
-
-        arcana::task_completion_source<CameraDimensions, std::exception_ptr> taskCompletionSource{};
-        taskCompletionSource.complete(cameraDimensions);
-        return taskCompletionSource.as_task();
-        //return arcana::task_from_result(cameraDimensions);
     }
 
     void Camera::Impl::SetTextureOverride(void* /*texturePtr*/)
@@ -416,10 +392,13 @@ namespace Babylon::Plugins
                 MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
                 textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
                 m_implData->textureRGBA = [m_implData->metalDevice newTextureWithDescriptor:textureDescriptor];
-                textureRetainRef = m_implData->textureRGBA;
                 bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureRGBA));
                 m_cameraDimensions.width = static_cast<uint32_t>(width);
                 m_cameraDimensions.height = static_cast<uint32_t>(height);
+                m_implData->refreshBgfxHandle = false;
+            } else if (m_implData->refreshBgfxHandle) {
+                // On texture re-use across sessions set the bgfx texture handle.
+                bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureRGBA));
             }
 
             if (textureY != nil && textureCbCr != nil && m_implData->textureRGBA != nil)
@@ -472,9 +451,29 @@ namespace Babylon::Plugins
 
     void Camera::Impl::Close()
     {
+        // Stop collecting frames, release up camera texture delegate.
         [m_implData->cameraTextureDelegate reset];
-        m_implData.reset();
-        m_implData = std::make_unique<ImplData>();
+        m_implData->cameraTextureDelegate = nil;
+
+        // Complete any running command buffers before destroying the cache.
+        if (m_implData->currentCommandBuffer != nil) {
+            [m_implData->currentCommandBuffer waitUntilCompleted];
+        }
+
+        // Free the texture cache.
+        if (m_implData->textureCache)
+        {
+            CVMetalTextureCacheFlush(m_implData->textureCache, 0);
+            CFRelease(m_implData->textureCache);
+            m_implData->textureCache = nil;
+        }
+
+        if (m_implData->avCaptureSession != nil) {
+            arcana::make_task(m_cameraDispatcher, arcana::cancellation::none(), [this](){
+                [m_implData->avCaptureSession stopRunning];
+                m_implData->avCaptureSession = nil;
+            });
+        }
     }
 }
 
@@ -525,6 +524,10 @@ namespace Babylon::Plugins
 }
 
 - (void) reset {
+#if (TARGET_OS_IPHONE)
+        [[NSNotificationCenter defaultCenter]removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
+#endif
+
     @synchronized (self) {
         [self cleanupTextures];
         self->textureCache = nil;
@@ -549,7 +552,7 @@ namespace Babylon::Plugins
         orientation = [sharedApplication statusBarOrientation];
     }
 #endif
-    
+
     // Determine device orienation, and adjust output to match.
     AVCaptureVideoOrientation newVideoOrientation{AVCaptureVideoOrientationPortraitUpsideDown};
     switch (orientation)
@@ -649,7 +652,7 @@ namespace Babylon::Plugins
 }
 
 -(void)dealloc {
-  [self cleanupTextures];
+    [self reset];
 }
 
 @end
