@@ -38,6 +38,7 @@
 
 namespace {
     const auto cameraQueue = dispatch_queue_create("cameraQueue", DISPATCH_QUEUE_SERIAL);
+    id<MTLTexture> textureRetainRef = nil;
 
     static bool isPixelFormatSupported(uint32_t pixelFormat)
     {
@@ -143,9 +144,11 @@ namespace Babylon::Plugins
                 [currentCommandBuffer waitUntilCompleted];
             }
 
-            dispatch_async(cameraQueue, ^{
-                [avCaptureSession stopRunning];
-            });
+            if (sessionInitialized) {
+                dispatch_async(cameraQueue, ^{
+                    [avCaptureSession stopRunning];
+                });
+            }
 
             if (textureCache)
             {
@@ -155,6 +158,7 @@ namespace Babylon::Plugins
         }
         
         CameraTextureDelegate* cameraTextureDelegate{};
+        bool sessionInitialized{false};
         AVCaptureSession* avCaptureSession{};
         CVMetalTextureCacheRef textureCache{};
         id<MTLTexture> textureRGBA{};
@@ -191,199 +195,190 @@ namespace Babylon::Plugins
         {
             m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
         }
-        
-        __block arcana::task_completion_source<Camera::Impl::CameraDimensions, std::exception_ptr> taskCompletionSource{};
 
-        dispatch_async(dispatch_get_main_queue(), ^{
-            CVMetalTextureCacheCreate(nullptr, nullptr, m_implData->metalDevice, nullptr, &m_implData->textureCache);
-            m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData->textureCache];
-            m_implData->textureRGBA = nil;
+        CVMetalTextureCacheCreate(nullptr, nullptr, m_implData->metalDevice, nullptr, &m_implData->textureCache);
+        m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData->textureCache];
+        m_implData->textureRGBA = nil;
 
 #if (TARGET_OS_IPHONE)
-            // Loop over all available camera configurations to find a config that most closely matches the constraints.
-            AVCaptureDevice* bestDevice{nullptr};
-            AVCaptureDeviceFormat* bestFormat{nullptr};
-            uint32_t bestPixelCount{0};
-            uint32_t devicePixelFormat{0};
-            uint32_t bestDimDiff{0};
-            NSArray* deviceTypes{@[
-                // Use the main camera on the device which is best for general use and will typically be 1x optical zoom and the highest resolution.
-                // https://developer.apple.com/documentation/avfoundation/avcapturedevice/devicetype/2361449-builtinwideanglecamera
-                AVCaptureDeviceTypeBuiltInWideAngleCamera
-            ]};
-            bool foundExactMatch{false};
+        // Loop over all available camera configurations to find a config that most closely matches the constraints.
+        AVCaptureDevice* bestDevice{nullptr};
+        AVCaptureDeviceFormat* bestFormat{nullptr};
+        uint32_t bestPixelCount{0};
+        uint32_t devicePixelFormat{0};
+        uint32_t bestDimDiff{0};
+        NSArray* deviceTypes{@[
+            // Use the main camera on the device which is best for general use and will typically be 1x optical zoom and the highest resolution.
+            // https://developer.apple.com/documentation/avfoundation/avcapturedevice/devicetype/2361449-builtinwideanglecamera
+            AVCaptureDeviceTypeBuiltInWideAngleCamera
+        ]};
+        bool foundExactMatch{false};
 
-            // The below code would allow us to choose virtual cameras which dynamically switch between the different physical
-            // camera sensors based on different zoom levels. Until we support letting the consumer modify the camera's zoom
-            // it would result in often being stuck on the most zoomed out camera on the device which is often not desired.
-            
-            // if (@available(iOS 13.0, *))
-            // {
-            //     // Ordered list of cameras by general usage quality.
-            //     deviceTypes = @[
-            //         AVCaptureDeviceTypeBuiltInTripleCamera,
-            //         AVCaptureDeviceTypeBuiltInDualCamera,
-            //         AVCaptureDeviceTypeBuiltInDualWideCamera,
-            //         AVCaptureDeviceTypeBuiltInWideAngleCamera,
-            //         AVCaptureDeviceTypeBuiltInUltraWideCamera,
-            //         AVCaptureDeviceTypeBuiltInTelephotoCamera,
-            //         AVCaptureDeviceTypeBuiltInTrueDepthCamera
-            //     ];
-            // }
+        // The below code would allow us to choose virtual cameras which dynamically switch between the different physical
+        // camera sensors based on different zoom levels. Until we support letting the consumer modify the camera's zoom
+        // it would result in often being stuck on the most zoomed out camera on the device which is often not desired.
+        
+        // if (@available(iOS 13.0, *))
+        // {
+        //     // Ordered list of cameras by general usage quality.
+        //     deviceTypes = @[
+        //         AVCaptureDeviceTypeBuiltInTripleCamera,
+        //         AVCaptureDeviceTypeBuiltInDualCamera,
+        //         AVCaptureDeviceTypeBuiltInDualWideCamera,
+        //         AVCaptureDeviceTypeBuiltInWideAngleCamera,
+        //         AVCaptureDeviceTypeBuiltInUltraWideCamera,
+        //         AVCaptureDeviceTypeBuiltInTelephotoCamera,
+        //         AVCaptureDeviceTypeBuiltInTrueDepthCamera
+        //     ];
+        // }
 
-            AVCaptureDeviceDiscoverySession* discoverySession{[AVCaptureDeviceDiscoverySession
-               discoverySessionWithDeviceTypes:deviceTypes
-               mediaType:AVMediaTypeVideo position:frontCamera ? AVCaptureDevicePositionFront: AVCaptureDevicePositionBack]};
-            for (AVCaptureDevice* device in discoverySession.devices)
+        AVCaptureDeviceDiscoverySession* discoverySession{[AVCaptureDeviceDiscoverySession
+           discoverySessionWithDeviceTypes:deviceTypes
+           mediaType:AVMediaTypeVideo position:frontCamera ? AVCaptureDevicePositionFront: AVCaptureDevicePositionBack]};
+        for (AVCaptureDevice* device in discoverySession.devices)
+        {
+            for (AVCaptureDeviceFormat* format in device.formats)
             {
-                for (AVCaptureDeviceFormat* format in device.formats)
+                CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(format.formatDescription)};
+                CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
+                uint32_t pixelFormat{static_cast<uint32_t>(CMFormatDescriptionGetMediaSubType(videoFormatRef))};
+
+                // Reject unsupported pixel formats.
+                if (!isPixelFormatSupported(pixelFormat))
                 {
-                    CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(format.formatDescription)};
-                    CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
-                    uint32_t pixelFormat{static_cast<uint32_t>(CMFormatDescriptionGetMediaSubType(videoFormatRef))};
+                    continue;
+                }
 
-                    // Reject unsupported pixel formats.
-                    if (!isPixelFormatSupported(pixelFormat))
-                    {
-                        continue;
-                    }
-
-                    // Reject any resolution that doesn't qualify for the constraint.
-                    if (static_cast<uint32_t>(dimensions.width) > maxWidth || static_cast<uint32_t>(dimensions.height) > maxHeight)
-                    {
-                        continue;
-                    }
-                    
-                    // Calculate pixel count and dimension differential and take the best qualifying one.
-                    uint32_t pixelCount{static_cast<uint32_t>(dimensions.width * dimensions.height)};
-                    uint32_t dimDiff{(maxWidth - dimensions.width) + (maxHeight - dimensions.height)};
-                    if (bestDevice == nullptr || pixelCount > bestPixelCount || (pixelCount == bestPixelCount && dimDiff < bestDimDiff))
-                    {
-                        bestPixelCount = pixelCount;
-                        devicePixelFormat = pixelFormat;
-                        bestDevice = device;
-                        bestFormat = format;
-                        bestDimDiff = dimDiff;
-                        
-                        // Check if we got an exact match, and exit the loop early in this case.
-                        if (static_cast<uint32_t>(dimensions.width) == maxWidth && static_cast<uint32_t>(dimensions.height) == maxHeight)
-                        {
-                            foundExactMatch = true;
-                            break;
-                        }
-                    }
+                // Reject any resolution that doesn't qualify for the constraint.
+                if (static_cast<uint32_t>(dimensions.width) > maxWidth || static_cast<uint32_t>(dimensions.height) > maxHeight)
+                {
+                    continue;
                 }
                 
-                if (foundExactMatch)
+                // Calculate pixel count and dimension differential and take the best qualifying one.
+                uint32_t pixelCount{static_cast<uint32_t>(dimensions.width * dimensions.height)};
+                uint32_t dimDiff{(maxWidth - dimensions.width) + (maxHeight - dimensions.height)};
+                if (bestDevice == nullptr || pixelCount > bestPixelCount || (pixelCount == bestPixelCount && dimDiff < bestDimDiff))
                 {
-                    break;
+                    bestPixelCount = pixelCount;
+                    devicePixelFormat = pixelFormat;
+                    bestDevice = device;
+                    bestFormat = format;
+                    bestDimDiff = dimDiff;
+                    
+                    // Check if we got an exact match, and exit the loop early in this case.
+                    if (static_cast<uint32_t>(dimensions.width) == maxWidth && static_cast<uint32_t>(dimensions.height) == maxHeight)
+                    {
+                        foundExactMatch = true;
+                        break;
+                    }
                 }
             }
             
-            // If no matching device, throw an error with the message "ConstraintError" which matches the behavior in the browser.
-            if (bestDevice == nullptr)
+            if (foundExactMatch)
             {
-                taskCompletionSource.complete(arcana::make_unexpected(
-                    std::make_exception_ptr(std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."})));
-                return;
+                break;
             }
-                       
-            // Lock camera device and set up camera format. If there a problem initialising the camera it will give an error.
-            NSError *error{nil};
-            [bestDevice lockForConfiguration:&error];
-            if (error != nil)
-            {
-                taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{"Failed to lock camera"})));
-                return;
-            }
-            
-            [bestDevice setActiveFormat:bestFormat];
-            AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:bestDevice error:&error]};
-            [bestDevice unlockForConfiguration];
-            
-            // Capture the format dimensions.
-            CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(bestFormat.formatDescription)};
-            CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
+        }
+        
+        // If no matching device, throw an error with the message "ConstraintError" which matches the behavior in the browser.
+        if (bestDevice == nullptr)
+        {
+            return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."}));
+        }
+                   
+        // Lock camera device and set up camera format. If there a problem initialising the camera it will give an error.
+        NSError *error{nil};
+        [bestDevice lockForConfiguration:&error];
+        if (error != nil)
+        {
+            return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"Failed to lock camera"}));
+        }
+        
+        [bestDevice setActiveFormat:bestFormat];
+        AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:bestDevice error:&error]};
+        [bestDevice unlockForConfiguration];
+        
+        // Capture the format dimensions.
+        CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(bestFormat.formatDescription)};
+        CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 #else
-            UNUSED(maxWidth);
-            UNUSED(maxHeight);
-            UNUSED(frontCamera);
-            NSError *error{nil};
-            AVCaptureDevice* captureDevice{[AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo]};
-            AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error]};
-            CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(captureDevice.activeFormat.formatDescription)};
-            CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
-            uint32_t devicePixelFormat{static_cast<uint32_t>(CMFormatDescriptionGetMediaSubType(videoFormatRef))};
-            if (!isPixelFormatSupported(devicePixelFormat))
-            {
-                taskCompletionSource.complete(arcana::make_unexpected(
-                    std::make_exception_ptr(std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."})));
-                return;
-            }
+        UNUSED(maxWidth);
+        UNUSED(maxHeight);
+        UNUSED(frontCamera);
+        NSError *error{nil};
+        AVCaptureDevice* captureDevice{[AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo]};
+        AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error]};
+        CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(captureDevice.activeFormat.formatDescription)};
+        CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
+        uint32_t devicePixelFormat{static_cast<uint32_t>(CMFormatDescriptionGetMediaSubType(videoFormatRef))};
+        if (!isPixelFormatSupported(devicePixelFormat))
+        {
+            return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."}));
+        }
 #endif
 
-            Camera::Impl::CameraDimensions cameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
-            
-            // For portrait orientations swap the height and width of the video format dimensions.
-            if (m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortrait
-                ||  m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortraitUpsideDown)
-            {
-                std::swap(cameraDimensions.width, cameraDimensions.height);
-            }
-            
-            // Check for failed initialisation.
-            if (!input)
-            {
-                taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"})));
-                return;
-            }
-            
+        Camera::Impl::CameraDimensions cameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
+        
+        // For portrait orientations swap the height and width of the video format dimensions.
+        if (m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortrait
+            ||  m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortraitUpsideDown)
+        {
+            std::swap(cameraDimensions.width, cameraDimensions.height);
+        }
+        
+        // Check for failed initialisation.
+        if (!input)
+        {
+            return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"}));
+        }
+        
 
-            // Create a pipeline state for converting the camera output to RGBA.
-            id<MTLLibrary> lib = CompileShader(m_implData->metalDevice, shaderSource);
-            id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
-            id<MTLFunction> fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
+        // Create a pipeline state for converting the camera output to RGBA.
+        id<MTLLibrary> lib = CompileShader(m_implData->metalDevice, shaderSource);
+        id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
+        id<MTLFunction> fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
 
-            MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
-            pipelineStateDescriptor.label = @"Native Camera YCbCr to RGBA Pipeline";
-            pipelineStateDescriptor.vertexFunction = vertexFunction;
-            pipelineStateDescriptor.fragmentFunction = fragmentFunction;
-            pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatRGBA8Unorm;
-            m_implData->cameraPipelineState = [m_implData->metalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
+        MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+        pipelineStateDescriptor.label = @"Native Camera YCbCr to RGBA Pipeline";
+        pipelineStateDescriptor.vertexFunction = vertexFunction;
+        pipelineStateDescriptor.fragmentFunction = fragmentFunction;
+        pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatRGBA8Unorm;
+        m_implData->cameraPipelineState = [m_implData->metalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
 
+        dispatch_async(cameraQueue, ^{
             // Kick off camera session on a background thread.
-            dispatch_async(cameraQueue, ^{
-                m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
+            m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
 
 #if (TARGET_OS_IPHONE)
-                [m_implData->avCaptureSession setSessionPreset:AVCaptureSessionPresetInputPriority];
+            [m_implData->avCaptureSession setSessionPreset:AVCaptureSessionPresetInputPriority];
 #endif
-                // Add camera input source to the capture session.
-                [m_implData->avCaptureSession addInput:input];
+            // Add camera input source to the capture session.
+            [m_implData->avCaptureSession addInput:input];
 
-                // Create the camera buffer.
-                dispatch_queue_t sampleBufferQueue{dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL)};
-                AVCaptureVideoDataOutput * dataOutput{[[AVCaptureVideoDataOutput alloc] init]};
-                [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
-                [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(devicePixelFormat)}];
-                [dataOutput setSampleBufferDelegate:m_implData->cameraTextureDelegate queue:sampleBufferQueue];
+            // Create the camera buffer.
+            dispatch_queue_t sampleBufferQueue{dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL)};
+            AVCaptureVideoDataOutput * dataOutput{[[AVCaptureVideoDataOutput alloc] init]};
+            [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
+            [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(devicePixelFormat)}];
+            [dataOutput setSampleBufferDelegate:m_implData->cameraTextureDelegate queue:sampleBufferQueue];
 
-                // Actually start the camera session.
-                [m_implData->avCaptureSession addOutput:dataOutput];
-                [m_implData->avCaptureSession commitConfiguration];
-                [m_implData->avCaptureSession startRunning];
-            });
-
-            if (!m_implData->cameraPipelineState) {
-                taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{
-                    std::string("Failed to create camera pipeline state: ") + [error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]})));
-                return;
-            }
-
-            taskCompletionSource.complete(cameraDimensions);
+            // Actually start the camera session.
+            [m_implData->avCaptureSession addOutput:dataOutput];
+            [m_implData->avCaptureSession commitConfiguration];
+            [m_implData->avCaptureSession startRunning];
+            m_implData->sessionInitialized = true;
         });
-        
+
+        if (!m_implData->cameraPipelineState) {
+            return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{
+                std::string("Failed to create camera pipeline state: ") + [error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]}));
+        }
+
+        arcana::task_completion_source<CameraDimensions, std::exception_ptr> taskCompletionSource{};
+        taskCompletionSource.complete(cameraDimensions);
         return taskCompletionSource.as_task();
+        //return arcana::task_from_result(cameraDimensions);
     }
 
     void Camera::Impl::SetTextureOverride(void* /*texturePtr*/)
@@ -421,6 +416,7 @@ namespace Babylon::Plugins
                 MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
                 textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
                 m_implData->textureRGBA = [m_implData->metalDevice newTextureWithDescriptor:textureDescriptor];
+                textureRetainRef = m_implData->textureRGBA;
                 bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureRGBA));
                 m_cameraDimensions.width = static_cast<uint32_t>(width);
                 m_cameraDimensions.height = static_cast<uint32_t>(height);
