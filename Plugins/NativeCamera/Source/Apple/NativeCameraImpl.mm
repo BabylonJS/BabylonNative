@@ -145,13 +145,13 @@ namespace Babylon::Plugins
 
             dispatch_async(cameraQueue, ^{
                 [avCaptureSession stopRunning];
-
-                if (textureCache)
-                {
-                    CVMetalTextureCacheFlush(textureCache, 0);
-                    CFRelease(textureCache);
-                }
             });
+            
+            if (textureCache)
+            {
+                CVMetalTextureCacheFlush(textureCache, 0);
+                CFRelease(textureCache);
+            }
         }
         
         CameraTextureDelegate* cameraTextureDelegate{};
