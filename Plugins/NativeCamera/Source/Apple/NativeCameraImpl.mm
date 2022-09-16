@@ -37,6 +37,8 @@
 @end
 
 namespace {
+    const auto cameraQueue = dispatch_queue_create("cameraQueue", DISPATCH_QUEUE_SERIAL);
+
     static bool isPixelFormatSupported(uint32_t pixelFormat)
     {
         switch (pixelFormat) {
@@ -141,15 +143,15 @@ namespace Babylon::Plugins
                 [currentCommandBuffer waitUntilCompleted];
             }
 
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            dispatch_async(cameraQueue, ^{
                 [avCaptureSession stopRunning];
-            });
 
-            if (textureCache)
-            {
-                CVMetalTextureCacheFlush(textureCache, 0);
-                CFRelease(textureCache);
-            }
+                if (textureCache)
+                {
+                    CVMetalTextureCacheFlush(textureCache, 0);
+                    CFRelease(textureCache);
+                }
+            });
         }
         
         CameraTextureDelegate* cameraTextureDelegate{};
@@ -195,7 +197,6 @@ namespace Babylon::Plugins
         dispatch_async(dispatch_get_main_queue(), ^{
             CVMetalTextureCacheCreate(nullptr, nullptr, m_implData->metalDevice, nullptr, &m_implData->textureCache);
             m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData->textureCache];
-            m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
             m_implData->textureRGBA = nil;
 
 #if (TARGET_OS_IPHONE)
@@ -296,7 +297,6 @@ namespace Babylon::Plugins
                 return;
             }
             
-            [m_implData->avCaptureSession setSessionPreset:AVCaptureSessionPresetInputPriority];
             [bestDevice setActiveFormat:bestFormat];
             AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:bestDevice error:&error]};
             [bestDevice unlockForConfiguration];
@@ -338,23 +338,7 @@ namespace Babylon::Plugins
                 return;
             }
             
-            // Add camera input source to the capture session.
-            [m_implData->avCaptureSession addInput:input];
 
-            // Create the camera buffer.
-            dispatch_queue_t sampleBufferQueue{dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL)};
-            AVCaptureVideoDataOutput * dataOutput{[[AVCaptureVideoDataOutput alloc] init]};
-            [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
-            [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(devicePixelFormat)}];
-            [dataOutput setSampleBufferDelegate:m_implData->cameraTextureDelegate queue:sampleBufferQueue];
-
-            // Actually start the camera session.
-            [m_implData->avCaptureSession addOutput:dataOutput];
-            [m_implData->avCaptureSession commitConfiguration];
-            dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-                [m_implData->avCaptureSession startRunning];
-            });
-            
             // Create a pipeline state for converting the camera output to RGBA.
             id<MTLLibrary> lib = CompileShader(m_implData->metalDevice, shaderSource);
             id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
@@ -366,6 +350,29 @@ namespace Babylon::Plugins
             pipelineStateDescriptor.fragmentFunction = fragmentFunction;
             pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatRGBA8Unorm;
             m_implData->cameraPipelineState = [m_implData->metalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
+
+            // Kick off camera session on a background thread.
+            dispatch_async(cameraQueue, ^{
+                m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
+
+#if (TARGET_OS_IPHONE)
+                [m_implData->avCaptureSession setSessionPreset:AVCaptureSessionPresetInputPriority];
+#endif
+                // Add camera input source to the capture session.
+                [m_implData->avCaptureSession addInput:input];
+
+                // Create the camera buffer.
+                dispatch_queue_t sampleBufferQueue{dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL)};
+                AVCaptureVideoDataOutput * dataOutput{[[AVCaptureVideoDataOutput alloc] init]};
+                [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
+                [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(devicePixelFormat)}];
+                [dataOutput setSampleBufferDelegate:m_implData->cameraTextureDelegate queue:sampleBufferQueue];
+
+                // Actually start the camera session.
+                [m_implData->avCaptureSession addOutput:dataOutput];
+                [m_implData->avCaptureSession commitConfiguration];
+                [m_implData->avCaptureSession startRunning];
+            });
 
             if (!m_implData->cameraPipelineState) {
                 taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{
@@ -523,6 +530,7 @@ namespace Babylon::Plugins
 
 - (void) reset {
     @synchronized (self) {
+        [self cleanupTextures];
         self->textureCache = nil;
     }
 }
