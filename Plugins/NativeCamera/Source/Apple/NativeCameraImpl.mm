@@ -138,7 +138,7 @@ namespace Babylon::Plugins
         ~ImplData()
         {
         }
-        
+
         CameraTextureDelegate* cameraTextureDelegate{};
         AVCaptureSession* avCaptureSession{};
         CVMetalTextureCacheRef textureCache{};
@@ -147,6 +147,7 @@ namespace Babylon::Plugins
         id<MTLDevice> metalDevice{};
         id<MTLCommandQueue> commandQueue{};
         id<MTLCommandBuffer> currentCommandBuffer{};
+        bool isInitialized{false};
         bool refreshBgfxHandle{true};
     };
     Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
@@ -163,9 +164,7 @@ namespace Babylon::Plugins
 
     arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
-        m_implData->commandQueue = (__bridge id<MTLCommandQueue>)bgfx::getInternalData()->commandQueue;
-        m_implData->metalDevice = (__bridge id<MTLDevice>)bgfx::getInternalData()->context;
-        m_implData->refreshBgfxHandle = true;
+        NSError *error{nil};
 
         if (maxWidth == 0 || maxWidth > std::numeric_limits<int32_t>::max()) {
             maxWidth = std::numeric_limits<int32_t>::max();
@@ -174,9 +173,32 @@ namespace Babylon::Plugins
             maxHeight = std::numeric_limits<int32_t>::max();
         }
 
-        if (!m_deviceContext)
-        {
+        m_implData->refreshBgfxHandle = true;
+
+        // This is the first time the camera has been opened, perform some one time setup.
+        if (!m_implData->isInitialized) {
+            m_implData->commandQueue = (__bridge id<MTLCommandQueue>)bgfx::getInternalData()->commandQueue;
+            m_implData->metalDevice = (__bridge id<MTLDevice>)bgfx::getInternalData()->context;
             m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
+
+            id<MTLLibrary> lib = CompileShader(m_implData->metalDevice, shaderSource);
+            id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
+            id<MTLFunction> fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
+
+            // Create a pipeline state for converting the camera output to RGBA.
+            MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+            pipelineStateDescriptor.label = @"Native Camera YCbCr to RGBA Pipeline";
+            pipelineStateDescriptor.vertexFunction = vertexFunction;
+            pipelineStateDescriptor.fragmentFunction = fragmentFunction;
+            pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatRGBA8Unorm;
+            m_implData->cameraPipelineState = [m_implData->metalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
+
+            if (!m_implData->cameraPipelineState) {
+                return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{
+                    std::string("Failed to create camera pipeline state: ") + [error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]}));
+            }
+
+            m_implData->isInitialized = true;
         }
 
         CVMetalTextureCacheCreate(nullptr, nullptr, m_implData->metalDevice, nullptr, &m_implData->textureCache);
@@ -199,7 +221,7 @@ namespace Babylon::Plugins
         // The below code would allow us to choose virtual cameras which dynamically switch between the different physical
         // camera sensors based on different zoom levels. Until we support letting the consumer modify the camera's zoom
         // it would result in often being stuck on the most zoomed out camera on the device which is often not desired.
-        
+
         // if (@available(iOS 13.0, *))
         // {
         //     // Ordered list of cameras by general usage quality.
@@ -270,7 +292,6 @@ namespace Babylon::Plugins
         }
 
         // Lock camera device and set up camera format. If there a problem initialising the camera it will give an error.
-        NSError *error{nil};
         [bestDevice lockForConfiguration:&error];
         if (error != nil)
         {
@@ -313,23 +334,6 @@ namespace Babylon::Plugins
         if (!input)
         {
             return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"}));
-        }
-
-        // Create a pipeline state for converting the camera output to RGBA.
-        id<MTLLibrary> lib = CompileShader(m_implData->metalDevice, shaderSource);
-        id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
-        id<MTLFunction> fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
-
-        MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
-        pipelineStateDescriptor.label = @"Native Camera YCbCr to RGBA Pipeline";
-        pipelineStateDescriptor.vertexFunction = vertexFunction;
-        pipelineStateDescriptor.fragmentFunction = fragmentFunction;
-        pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatRGBA8Unorm;
-        m_implData->cameraPipelineState = [m_implData->metalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
-
-        if (!m_implData->cameraPipelineState) {
-            return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{
-                std::string("Failed to create camera pipeline state: ") + [error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]}));
         }
 
         return arcana::make_task(m_cameraDispatcher, arcana::cancellation::none(), [this, input, devicePixelFormat, cameraDimensions]() mutable {
