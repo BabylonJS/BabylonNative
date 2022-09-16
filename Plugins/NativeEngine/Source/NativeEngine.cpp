@@ -1417,8 +1417,8 @@ namespace Babylon
                 uint8_t* buffer{static_cast<uint8_t*>(bufferRef.Value().Data())};
                 std::memcpy(buffer + bufferOffset, textureBuffer.data(), textureBuffer.size());
                 deferred.Resolve(bufferRef.Value());
-            }).then(m_runtimeScheduler, arcana::cancellation::none(), [env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
-                if (tempTexture)
+            }).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
+                if (tempTexture && !m_cancellationSource->cancelled())
                 {
                     bgfx::destroy(sourceTextureHandle);
                 }
