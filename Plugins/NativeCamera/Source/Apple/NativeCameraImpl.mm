@@ -205,29 +205,30 @@ namespace Babylon::Plugins
             uint32_t bestPixelCount{0};
             uint32_t devicePixelFormat{0};
             uint32_t bestDimDiff{0};
-            NSArray* deviceTypes{nullptr};
+            NSArray* deviceTypes{@[
+                // Use the main camera on the device which is best for general use and will typically be 1x optical zoom and the highest resolution.
+                // https://developer.apple.com/documentation/avfoundation/avcapturedevice/devicetype/2361449-builtinwideanglecamera
+                AVCaptureDeviceTypeBuiltInWideAngleCamera
+            ]};
             bool foundExactMatch{false};
-            if (@available(iOS 13.0, *))
-            {
-                // Ordered list of cameras by general usage quality.
-                deviceTypes = @[
-                    AVCaptureDeviceTypeBuiltInTripleCamera,
-                    AVCaptureDeviceTypeBuiltInDualCamera,
-                    AVCaptureDeviceTypeBuiltInDualWideCamera,
-                    AVCaptureDeviceTypeBuiltInWideAngleCamera,
-                    AVCaptureDeviceTypeBuiltInUltraWideCamera,
-                    AVCaptureDeviceTypeBuiltInTelephotoCamera,
-                    AVCaptureDeviceTypeBuiltInTrueDepthCamera
-                ];
-            }
-            else
-            {
-                // Only these camera types are available for all devices
-                deviceTypes = @[
-                    AVCaptureDeviceTypeBuiltInDualCamera,
-                    AVCaptureDeviceTypeBuiltInWideAngleCamera
-                ];
-            }
+
+            // The below code would allow us to choose virtual cameras which dynamically switch between the different physical
+            // camera sensors based on different zoom levels. Until we support letting the consumer modify the camera's zoom
+            // it would result in often being stuck on the most zoomed out camera on the device which is often not desired.
+            
+            // if (@available(iOS 13.0, *))
+            // {
+            //     // Ordered list of cameras by general usage quality.
+            //     deviceTypes = @[
+            //         AVCaptureDeviceTypeBuiltInTripleCamera,
+            //         AVCaptureDeviceTypeBuiltInDualCamera,
+            //         AVCaptureDeviceTypeBuiltInDualWideCamera,
+            //         AVCaptureDeviceTypeBuiltInWideAngleCamera,
+            //         AVCaptureDeviceTypeBuiltInUltraWideCamera,
+            //         AVCaptureDeviceTypeBuiltInTelephotoCamera,
+            //         AVCaptureDeviceTypeBuiltInTrueDepthCamera
+            //     ];
+            // }
 
             AVCaptureDeviceDiscoverySession* discoverySession{[AVCaptureDeviceDiscoverySession
                discoverySessionWithDeviceTypes:deviceTypes
