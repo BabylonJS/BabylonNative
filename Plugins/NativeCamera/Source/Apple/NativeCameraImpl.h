@@ -35,6 +35,6 @@ namespace Babylon::Plugins
 
         CameraDimensions m_cameraDimensions{};
 
-        arcana::background_dispatcher<32> m_cameraDispatcher{};
+        arcana::background_dispatcher<32> m_cameraSessionDispatcher{};
     };
 }

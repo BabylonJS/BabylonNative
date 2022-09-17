@@ -32,7 +32,7 @@
 - (id)init:(CVMetalTextureCacheRef)textureCache;
 - (id<MTLTexture>)getCameraTextureY;
 - (id<MTLTexture>)getCameraTextureCbCr;
-- (void)reset;
+- (void)reset:(CVMetalTextureCacheRef)textureCache;
 
 @end
 
@@ -181,6 +181,7 @@ namespace Babylon::Plugins
             m_implData->metalDevice = (__bridge id<MTLDevice>)bgfx::getInternalData()->context;
             m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
 
+            // Compile shaders used for converting camera output to RGBA.
             id<MTLLibrary> lib = CompileShader(m_implData->metalDevice, shaderSource);
             id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
             id<MTLFunction> fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
@@ -202,7 +203,12 @@ namespace Babylon::Plugins
         }
 
         CVMetalTextureCacheCreate(nullptr, nullptr, m_implData->metalDevice, nullptr, &m_implData->textureCache);
-        m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData->textureCache];
+
+        if (!m_implData->cameraTextureDelegate) {
+            m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData->textureCache];
+        } else {
+            [m_implData->cameraTextureDelegate reset:m_implData->textureCache];
+        }
 
 #if (TARGET_OS_IPHONE)
         // Loop over all available camera configurations to find a config that most closely matches the constraints.
@@ -336,26 +342,32 @@ namespace Babylon::Plugins
             return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"}));
         }
 
-        return arcana::make_task(m_cameraDispatcher, arcana::cancellation::none(), [this, input, devicePixelFormat, cameraDimensions]() mutable {
+        return arcana::make_task(m_cameraSessionDispatcher, arcana::cancellation::none(), [this, input, devicePixelFormat, cameraDimensions]() mutable {
             // Kick off camera session on a background thread.
-            m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
+            if (m_implData->avCaptureSession == nil) {
+                m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
+
+                // Create the camera buffer.
+                dispatch_queue_t sampleBufferQueue{dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL)};
+                AVCaptureVideoDataOutput * dataOutput{[[AVCaptureVideoDataOutput alloc] init]};
+                [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
+                [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(devicePixelFormat)}];
+                [dataOutput setSampleBufferDelegate:m_implData->cameraTextureDelegate queue:sampleBufferQueue];
+                [m_implData->avCaptureSession addOutput:dataOutput];
+            } else {
+                for (AVCaptureInput* input in [m_implData->avCaptureSession inputs]) {
+                    [m_implData->avCaptureSession removeInput: input];
+                }
+            }
 
 #if (TARGET_OS_IPHONE)
             [m_implData->avCaptureSession setSessionPreset:AVCaptureSessionPresetInputPriority];
 #endif
+
             // Add camera input source to the capture session.
             [m_implData->avCaptureSession addInput:input];
 
-            // Create the camera buffer.
-            dispatch_queue_t sampleBufferQueue{dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL)};
-            AVCaptureVideoDataOutput * dataOutput{[[AVCaptureVideoDataOutput alloc] init]};
-            [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
-            [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(devicePixelFormat)}];
-            [dataOutput setSampleBufferDelegate:m_implData->cameraTextureDelegate queue:sampleBufferQueue];
-
             // Actually start the camera session.
-            [m_implData->avCaptureSession addOutput:dataOutput];
-            [m_implData->avCaptureSession commitConfiguration];
             [m_implData->avCaptureSession startRunning];
             return cameraDimensions;
         });
@@ -455,9 +467,8 @@ namespace Babylon::Plugins
 
     void Camera::Impl::Close()
     {
-        // Stop collecting frames, release up camera texture delegate.
-        [m_implData->cameraTextureDelegate reset];
-        m_implData->cameraTextureDelegate = nil;
+        // Stop collecting frames.
+        [m_implData->cameraTextureDelegate reset:nil];
 
         // Complete any running command buffers before destroying the cache.
         if (m_implData->currentCommandBuffer != nil) {
@@ -473,9 +484,8 @@ namespace Babylon::Plugins
         }
 
         if (m_implData->avCaptureSession != nil) {
-            arcana::make_task(m_cameraDispatcher, arcana::cancellation::none(), [this](){
+            arcana::make_task(m_cameraSessionDispatcher, arcana::cancellation::none(), [this](){
                 [m_implData->avCaptureSession stopRunning];
-                m_implData->avCaptureSession = nil;
             });
         }
     }
@@ -527,14 +537,11 @@ namespace Babylon::Plugins
     return nil;
 }
 
-- (void) reset {
-#if (TARGET_OS_IPHONE)
-        [[NSNotificationCenter defaultCenter]removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
-#endif
-
+- (void) reset:(CVMetalTextureCacheRef)textureCache {
     @synchronized (self) {
         [self cleanupTextures];
-        self->textureCache = nil;
+        self->textureCache = textureCache;
+        self->orientationUpdated = true;
     }
 }
 
@@ -656,7 +663,11 @@ namespace Babylon::Plugins
 }
 
 -(void)dealloc {
-    [self reset];
+#if (TARGET_OS_IPHONE)
+        [[NSNotificationCenter defaultCenter]removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
+#endif
+
+    [self reset:nil];
 }
 
 @end
