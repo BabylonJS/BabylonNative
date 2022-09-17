@@ -32,7 +32,7 @@
 - (id)init:(CVMetalTextureCacheRef)textureCache;
 - (id<MTLTexture>)getCameraTextureY;
 - (id<MTLTexture>)getCameraTextureCbCr;
-- (void)reset:(CVMetalTextureCacheRef)textureCache;
+- (void)reset;
 
 @end
 
@@ -203,12 +203,7 @@ namespace Babylon::Plugins
         }
 
         CVMetalTextureCacheCreate(nullptr, nullptr, m_implData->metalDevice, nullptr, &m_implData->textureCache);
-
-        if (!m_implData->cameraTextureDelegate) {
-            m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData->textureCache];
-        } else {
-            [m_implData->cameraTextureDelegate reset:m_implData->textureCache];
-        }
+        m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData->textureCache];
 
 #if (TARGET_OS_IPHONE)
         // Loop over all available camera configurations to find a config that most closely matches the constraints.
@@ -346,17 +341,13 @@ namespace Babylon::Plugins
             // Kick off camera session on a background thread.
             if (m_implData->avCaptureSession == nil) {
                 m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
-
-                // Create the camera buffer.
-                dispatch_queue_t sampleBufferQueue{dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL)};
-                AVCaptureVideoDataOutput * dataOutput{[[AVCaptureVideoDataOutput alloc] init]};
-                [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
-                [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(devicePixelFormat)}];
-                [dataOutput setSampleBufferDelegate:m_implData->cameraTextureDelegate queue:sampleBufferQueue];
-                [m_implData->avCaptureSession addOutput:dataOutput];
             } else {
                 for (AVCaptureInput* input in [m_implData->avCaptureSession inputs]) {
                     [m_implData->avCaptureSession removeInput: input];
+                }
+
+                for (AVCaptureOutput* output in [m_implData->avCaptureSession outputs]) {
+                    [m_implData->avCaptureSession removeOutput: output];
                 }
             }
 
@@ -366,6 +357,14 @@ namespace Babylon::Plugins
 
             // Add camera input source to the capture session.
             [m_implData->avCaptureSession addInput:input];
+
+            // Create the camera buffer.
+            dispatch_queue_t sampleBufferQueue{dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL)};
+            AVCaptureVideoDataOutput* dataOutput{[[AVCaptureVideoDataOutput alloc] init]};
+            [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
+            [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(devicePixelFormat)}];
+            [dataOutput setSampleBufferDelegate:m_implData->cameraTextureDelegate queue:sampleBufferQueue];
+            [m_implData->avCaptureSession addOutput:dataOutput];
 
             // Actually start the camera session.
             [m_implData->avCaptureSession startRunning];
@@ -396,7 +395,7 @@ namespace Babylon::Plugins
                 width = [textureY width];
                 height = [textureY height];
             }
-            
+
             // Skip processing this frame if width and height are invalid.
             if (width == 0 || height == 0) {
                 return;
@@ -467,8 +466,9 @@ namespace Babylon::Plugins
 
     void Camera::Impl::Close()
     {
-        // Stop collecting frames.
-        [m_implData->cameraTextureDelegate reset:nil];
+        // Stop collecting frames, release up camera texture delegate.
+        [m_implData->cameraTextureDelegate reset];
+        m_implData->cameraTextureDelegate = nil;
 
         // Complete any running command buffers before destroying the cache.
         if (m_implData->currentCommandBuffer != nil) {
@@ -537,11 +537,14 @@ namespace Babylon::Plugins
     return nil;
 }
 
-- (void) reset:(CVMetalTextureCacheRef)textureCache {
+- (void) reset {
+#if (TARGET_OS_IPHONE)
+        [[NSNotificationCenter defaultCenter]removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
+#endif
+
     @synchronized (self) {
         [self cleanupTextures];
-        self->textureCache = textureCache;
-        self->orientationUpdated = true;
+        self->textureCache = nil;
     }
 }
 
@@ -663,11 +666,7 @@ namespace Babylon::Plugins
 }
 
 -(void)dealloc {
-#if (TARGET_OS_IPHONE)
-        [[NSNotificationCenter defaultCenter]removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
-#endif
-
-    [self reset:nil];
+    [self reset];
 }
 
 @end
