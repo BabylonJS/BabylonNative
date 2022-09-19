@@ -614,6 +614,11 @@ namespace Babylon::Plugins
     CVMetalTextureRef textureCbCr = [self getCameraTexture:pixelBuffer plane:1];
 
     @synchronized(self) {
+        // It's possible that the texture cache has been invalidated, in which case we should skip assignment.
+        if (self->textureCache == nil) {
+            return;
+        }
+
         [self cleanupTextures];
         cameraTextureY = textureY;
         cameraTextureCbCr = textureCbCr;
