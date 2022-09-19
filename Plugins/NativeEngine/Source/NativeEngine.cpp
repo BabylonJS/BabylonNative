@@ -1409,24 +1409,35 @@ namespace Babylon
                 }
 
                 return textureBuffer;
-            }).then(m_runtimeScheduler, *m_cancellationSource, [bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred](std::vector<uint8_t> textureBuffer) {
-                // Double check the destination buffer length. This is redundant with prior checks, but we'll be extra sure before the memcpy.
-                assert(bufferRef.Value().ByteLength() - bufferOffset >= textureBuffer.size());
+            }).then(m_runtimeScheduler, *m_cancellationSource, [this, bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred, tempTexture, sourceTextureHandle](std::vector<uint8_t> textureBuffer) mutable {
+              // Double check the destination buffer length. This is redundant with prior checks, but we'll be extra sure before the memcpy.
+              assert(bufferRef.Value().ByteLength() - bufferOffset >= textureBuffer.size());
 
-                // Copy the pixel data into the JS ArrayBuffer.
-                uint8_t* buffer{static_cast<uint8_t*>(bufferRef.Value().Data())};
-                std::memcpy(buffer + bufferOffset, textureBuffer.data(), textureBuffer.size());
-                deferred.Resolve(bufferRef.Value());
-            }).then(m_runtimeScheduler, arcana::cancellation::none(), [env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
-                if (tempTexture)
-                {
-                    bgfx::destroy(sourceTextureHandle);
-                }
+              // Copy the pixel data into the JS ArrayBuffer.
+              uint8_t* buffer{static_cast<uint8_t*>(bufferRef.Value().Data())};
+              std::memcpy(buffer + bufferOffset, textureBuffer.data(), textureBuffer.size());
 
-                if (result.has_error())
-                {
-                    deferred.Reject(Napi::Error::New(env, result.error()).Value());
-                }
+              // Dispose of the texture handle before resolving the promise.
+              // TODO: Handle properly handle stale handles after BGFX shutdown
+              if (tempTexture && !m_cancellationSource->cancelled())
+              {
+                  bgfx::destroy(sourceTextureHandle);
+                  tempTexture = false;
+              }
+
+              deferred.Resolve(bufferRef.Value());
+            }).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
+              // Dispose of the texture handle if not yet disposed.
+              // TODO: Handle properly handle stale handles after BGFX shutdown
+              if (tempTexture && !m_cancellationSource->cancelled())
+              {
+                  bgfx::destroy(sourceTextureHandle);
+              }
+
+              if (result.has_error())
+              {
+                  deferred.Reject(Napi::Error::New(env, result.error()).Value());
+              }
             });
         }
 

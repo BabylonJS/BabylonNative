@@ -34,5 +34,7 @@ namespace Babylon::Plugins
         bool m_overrideCameraTexture{};
 
         CameraDimensions m_cameraDimensions{};
+
+        arcana::background_dispatcher<32> m_cameraSessionDispatcher{};
     };
 }
