@@ -312,7 +312,6 @@ namespace Babylon::Plugins
         UNUSED(maxWidth);
         UNUSED(maxHeight);
         UNUSED(frontCamera);
-        NSError *error{nil};
         AVCaptureDevice* captureDevice{[AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo]};
         AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error]};
         CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(captureDevice.activeFormat.formatDescription)};
@@ -320,7 +319,7 @@ namespace Babylon::Plugins
         uint32_t devicePixelFormat{static_cast<uint32_t>(CMFormatDescriptionGetMediaSubType(videoFormatRef))};
         if (!isPixelFormatSupported(devicePixelFormat))
         {
-            return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."}));
+            return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."}));
         }
 #endif
 
