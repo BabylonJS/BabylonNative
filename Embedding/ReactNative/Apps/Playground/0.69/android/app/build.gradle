@@ -133,7 +133,7 @@ android {
     ndkVersion rootProject.ext.ndkVersion
 
     compileSdkVersion rootProject.ext.compileSdkVersion
-	
+
     defaultConfig {
         applicationId "com.playground"
         minSdkVersion rootProject.ext.minSdkVersion
