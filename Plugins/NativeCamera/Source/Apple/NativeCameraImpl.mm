@@ -414,6 +414,7 @@ namespace Babylon::Plugins
             } else if (m_implData->refreshBgfxHandle) {
                 // On texture re-use across sessions set the bgfx texture handle.
                 bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureRGBA));
+                m_implData->refreshBgfxHandle = false;
             }
 
             if (textureY != nil && textureCbCr != nil && m_implData->textureRGBA != nil)
@@ -466,7 +467,7 @@ namespace Babylon::Plugins
 
     void Camera::Impl::Close()
     {
-        // Stop collecting frames, release up camera texture delegate.
+        // Stop collecting frames, release camera texture delegate.
         [m_implData->cameraTextureDelegate reset];
         m_implData->cameraTextureDelegate = nil;
 
@@ -538,10 +539,6 @@ namespace Babylon::Plugins
 }
 
 - (void) reset {
-#if (TARGET_OS_IPHONE)
-        [[NSNotificationCenter defaultCenter]removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
-#endif
-
     @synchronized (self) {
         [self cleanupTextures];
         self->textureCache = nil;
@@ -666,6 +663,10 @@ namespace Babylon::Plugins
 }
 
 -(void)dealloc {
+#if (TARGET_OS_IPHONE)
+        [[NSNotificationCenter defaultCenter]removeObserver:self name:UIDeviceOrientationDidChangeNotification object:nil];
+#endif
+
     [self reset];
 }
 
