@@ -339,36 +339,36 @@ namespace Babylon::Plugins
         }
 
         // Kick off camera session on a background thread.
-        return arcana::make_task(m_cameraSessionDispatcher, arcana::cancellation::none(), [this, input, devicePixelFormat, cameraDimensions]() mutable {
-            if (m_implData->avCaptureSession == nil) {
-                m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
+        return arcana::make_task(m_cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this(), input, devicePixelFormat, cameraDimensions]() mutable {
+            if (implObj->m_implData->avCaptureSession == nil) {
+                implObj->m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
             } else {
-                for (AVCaptureInput* input in [m_implData->avCaptureSession inputs]) {
-                    [m_implData->avCaptureSession removeInput: input];
+                for (AVCaptureInput* input in [implObj->m_implData->avCaptureSession inputs]) {
+                    [implObj->m_implData->avCaptureSession removeInput: input];
                 }
 
-                for (AVCaptureOutput* output in [m_implData->avCaptureSession outputs]) {
-                    [m_implData->avCaptureSession removeOutput: output];
+                for (AVCaptureOutput* output in [implObj->m_implData->avCaptureSession outputs]) {
+                    [implObj->m_implData->avCaptureSession removeOutput: output];
                 }
             }
 
 #if (TARGET_OS_IPHONE)
-            [m_implData->avCaptureSession setSessionPreset:AVCaptureSessionPresetInputPriority];
+            [implObj->m_implData->avCaptureSession setSessionPreset:AVCaptureSessionPresetInputPriority];
 #endif
 
             // Add camera input source to the capture session.
-            [m_implData->avCaptureSession addInput:input];
+            [implObj->m_implData->avCaptureSession addInput:input];
 
             // Create the camera buffer, and set up camera texture delegate to capture frames.
             dispatch_queue_t sampleBufferQueue{dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL)};
             AVCaptureVideoDataOutput* dataOutput{[[AVCaptureVideoDataOutput alloc] init]};
             [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
             [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(devicePixelFormat)}];
-            [dataOutput setSampleBufferDelegate:m_implData->cameraTextureDelegate queue:sampleBufferQueue];
-            [m_implData->avCaptureSession addOutput:dataOutput];
+            [dataOutput setSampleBufferDelegate:implObj->m_implData->cameraTextureDelegate queue:sampleBufferQueue];
+            [implObj->m_implData->avCaptureSession addOutput:dataOutput];
 
             // Actually start the camera session.
-            [m_implData->avCaptureSession startRunning];
+            [implObj->m_implData->avCaptureSession startRunning];
             return cameraDimensions;
         });
     }
@@ -486,8 +486,8 @@ namespace Babylon::Plugins
         }
 
         if (m_implData->avCaptureSession != nil) {
-            arcana::make_task(m_cameraSessionDispatcher, arcana::cancellation::none(), [this](){
-                [m_implData->avCaptureSession stopRunning];
+            arcana::make_task(m_cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this()](){
+                [implObj->m_implData->avCaptureSession stopRunning];
             });
         }
     }
