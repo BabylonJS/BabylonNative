@@ -173,8 +173,6 @@ namespace Babylon::Plugins
             maxHeight = std::numeric_limits<int32_t>::max();
         }
 
-        m_implData->refreshBgfxHandle = true;
-
         // This is the first time the camera has been opened, perform some one time setup.
         if (!m_implData->isInitialized) {
             m_implData->commandQueue = (__bridge id<MTLCommandQueue>)bgfx::getInternalData()->commandQueue;
@@ -200,8 +198,12 @@ namespace Babylon::Plugins
             }
 
             m_implData->isInitialized = true;
+        } else {
+            // Always refresh the bgfx handle to point to textureRGBA on re-open.
+            m_implData->refreshBgfxHandle = true;
         }
 
+        // Construct the camera texture delegate, which is responsible for handling updates for device orientation and the capture session.
         CVMetalTextureCacheCreate(nullptr, nullptr, m_implData->metalDevice, nullptr, &m_implData->textureCache);
         m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData->textureCache];
 
@@ -337,8 +339,8 @@ namespace Babylon::Plugins
             return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"}));
         }
 
+        // Kick off camera session on a background thread.
         return arcana::make_task(m_cameraSessionDispatcher, arcana::cancellation::none(), [this, input, devicePixelFormat, cameraDimensions]() mutable {
-            // Kick off camera session on a background thread.
             if (m_implData->avCaptureSession == nil) {
                 m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
             } else {
@@ -358,7 +360,7 @@ namespace Babylon::Plugins
             // Add camera input source to the capture session.
             [m_implData->avCaptureSession addInput:input];
 
-            // Create the camera buffer.
+            // Create the camera buffer, and set up camera texture delegate to capture frames.
             dispatch_queue_t sampleBufferQueue{dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL)};
             AVCaptureVideoDataOutput* dataOutput{[[AVCaptureVideoDataOutput alloc] init]};
             [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
