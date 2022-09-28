@@ -33,14 +33,14 @@ public final class EngineView extends FrameLayout implements SurfaceHolder.Callb
 
     private SurfaceView xrSurfaceView;
     private boolean isTransparent = false;
-    private boolean isTopMost = false;
+    private String androidView = "";
     private final EventDispatcher reactEventDispatcher;
     private Runnable renderRunnable;
 
     public EngineView(ReactContext reactContext) {
         super(reactContext);
 
-        this.setIsTransparentAndIsTopMost(false, false);
+        this.setIsTransparentAndAndroidView(false, "");
 
         this.xrSurfaceView = new SurfaceView(reactContext);
         this.xrSurfaceView.setLayoutParams(childViewLayoutParams);
@@ -72,17 +72,18 @@ public final class EngineView extends FrameLayout implements SurfaceHolder.Callb
         BabylonNativeInterop.updateMSAA(value);
     }
 
-    public void setIsTopMost(Boolean isTopMost) {
-        setIsTransparentAndIsTopMost(this.isTransparent, isTopMost);
-    }
     // ------------------------------------
-    // TextureView related
-    public void setIsTransparent(Boolean isTransparent) {
-        setIsTransparentAndIsTopMost(isTransparent, this.isTopMost);
+    
+    public void setAndroidView(String androidView) {
+        setIsTransparentAndAndroidView(this.isTransparent, androidView);
     }
 
-    private void setIsTransparentAndIsTopMost(Boolean isTransparent, Boolean isTopMost) {
-        if (this.isTransparent == isTransparent && this.isTopMost == isTopMost &&
+    public void setIsTransparent(Boolean isTransparent) {
+        setIsTransparentAndAndroidView(isTransparent, this.androidView);
+    }
+
+    private void setIsTransparentAndAndroidView(Boolean isTransparent, String androidView) {
+        if (this.isTransparent == isTransparent && this.androidView.equals(androidView) &&
                 (this.surfaceView != null || this.transparentTextureView != null)) {
             return;
         }
@@ -94,30 +95,34 @@ public final class EngineView extends FrameLayout implements SurfaceHolder.Callb
             this.transparentTextureView.setVisibility(View.GONE);
             this.transparentTextureView = null;
         }
-        if (isTransparent && !isTopMost) {
+
+        if (androidView.equals("TextureView")) {
             this.transparentTextureView = new TextureView(this.getContext());
             this.transparentTextureView.setLayoutParams(EngineView.childViewLayoutParams);
             this.transparentTextureView.setSurfaceTextureListener(this);
-            this.transparentTextureView.setOpaque(false);
+            this.transparentTextureView.setOpaque(isTransparent);
             this.addView(this.transparentTextureView);
         } else {
             this.surfaceView = new SurfaceView(this.getContext());
             this.surfaceView.setLayoutParams(EngineView.childViewLayoutParams);
             SurfaceHolder surfaceHolder = this.surfaceView.getHolder();
+
             if (isTransparent) {
+                // transparent and androidView equals "SurfaceView" will give an opaque SurfaceView
                 surfaceHolder.setFormat(PixelFormat.TRANSPARENT);
             }
-            if (isTopMost) {
-                // ZOrder is not dynamic before Android 11. Recreate the surfaceView and set order before adding to the parent
-                // https://developer.android.com/reference/android/view/SurfaceView#setZOrderOnTop(boolean)
+            if ((androidView.equals("") && isTransparent) || androidView.equals("SurfaceViewZTopMost")) {
                 this.surfaceView.setZOrderOnTop(true);
+            } else if (androidView.equals("SurfaceViewZMediaOverlay")) {
+                this.surfaceView.setZOrderMediaOverlay(true);
             }
+
             surfaceHolder.addCallback(this);
             this.addView(this.surfaceView);
         }
 
         this.isTransparent = isTransparent;
-        this.isTopMost = isTopMost;
+        this.androidView = androidView;
 
         // xr view needs to be on top of views that might be created after it.
         if (this.xrSurfaceView != null) {

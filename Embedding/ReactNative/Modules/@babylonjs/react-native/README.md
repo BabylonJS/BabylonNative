@@ -89,14 +89,6 @@ e.g.
 ```tsx
 <EngineView style={{flex: 1}} camera={camera} isTransparent={true} />
 ```
-`isTopMost` is a flag that allows to place the view on top of any other view. When enabled, this allows a huge performance improvement on Android with Transparency on.
-
-e.g.
-
-```tsx
-<EngineView style={{flex: 1}} camera={camera} isTopMost={true} />
-```
-
 To configure anti-aliasing, a property called `antiAliasing` can be changed to a value of 0 or 1 (disable anti-aliasing, default), 2, 4, 8 or 16 (anti-aliasing samples).
 
 e.g.
@@ -106,3 +98,19 @@ e.g.
 ```
 
 Note: Currently only one `EngineView` can be active at any given time. Multi-view will be supported in a future release.
+
+The Android specific `androidView` property can help set the type of the view used for rendering. Depending on user needs and performance, refer to the table below. [`TextureView`](https://developer.android.com/reference/android/view/TextureView) can be inserted anywhere in the view hierarchy, but is less efficient. [`SurfaceView`](https://developer.android.com/reference/android/view/SurfaceView) can only be full above or fully below the rest of the UI, but is more efficient.
+
+| isTransparent | androidView        | Description |
+| ----------- | ------------------------ | ----------- |
+| False       | TextureView              | Opaque TextureView.
+| False       | SurfaceView              | Simple surfaceView (default when no `androidView` set with `isTransparent=false`).
+| False       | SurfaceViewZTopMost      | SurfaceView with [ZTopMost](https://developer.android.com/reference/android/view/SurfaceView#setZOrderOnTop(boolean)) set to `true`.
+| False       | SurfaceViewZMediaOverlay | SurfaceView with [ZMediaOverlay](https://developer.android.com/reference/android/view/SurfaceView#setZOrderMediaOverlay(boolean)) set to `true`.
+| True        | TextureView              | Transparent TextureView.
+| True        | SurfaceView              | SurfaceView will stay opaque
+| True        | SurfaceViewZTopMost      | SurfaceView with [ZTopMost](https://developer.android.com/reference/android/view/SurfaceView#setZOrderOnTop(boolean)) set to `true`. Transparent but top most. (default when no `androidView` set with `isTransparent=true`)
+| True        | SurfaceViewZMediaOverlay | SurfaceView with [ZMediaOverlay](https://developer.android.com/reference/android/view/SurfaceView#setZOrderMediaOverlay(boolean)) set to `true`. Only Transparent on top of other SurfaceViews.
+
+More infos on TextureView Vs SurfaceView performance here:
+https://developer.android.com/reference/android/view/TextureView

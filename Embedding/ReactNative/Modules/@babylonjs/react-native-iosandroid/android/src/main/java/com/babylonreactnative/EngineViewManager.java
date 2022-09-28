@@ -33,9 +33,9 @@ public final class EngineViewManager extends SimpleViewManager<EngineView> {
         view.setAntiAliasing(value);
     }
 
-    @ReactProp(name = "isTopMost")
-    public void setIsTopMost(EngineView view, Boolean isTopMost) {
-        view.setIsTopMost(isTopMost);
+    @ReactProp(name = "androidView")
+    public void setAndroidView(EngineView view, String androidView) {
+        view.setAndroidView(androidView);
     }
 
     @NonNull
