@@ -1468,9 +1468,9 @@ namespace Babylon
 
         if (generateStencilBuffer || generateDepth)
         {
-            if (generateStencilBuffer != generateDepth)
+            if (generateStencilBuffer && !generateDepth)
             {
-                JsConsoleLogger::LogWarn(info.Env(), "The flags generateDepth/generateStencilBuffer are mismatched. Depth and stencil are combined in one texture");
+                JsConsoleLogger::LogWarn(info.Env(), "Stencil without depth is not supported, assuming depth and stencil");
             }
 
             const auto depthStencilFormat{generateStencilBuffer ? bgfx::TextureFormat::D24S8 : bgfx::TextureFormat::D32};
