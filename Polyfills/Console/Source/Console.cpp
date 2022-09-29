@@ -49,6 +49,20 @@ namespace
 
         callback(ss.str().c_str(), logLevel);
     }
+
+    void AddMethod(Napi::Object& console, const char* functionName, Babylon::Polyfills::Console::LogLevel logLevel, Babylon::Polyfills::Console::CallbackT callback)
+    {
+        auto existingFunction = console.Get(functionName).As<Napi::Function>();
+        console.Set(functionName, Napi::Function::New(console.Env(), [callback, existingFunction = Napi::Persistent(existingFunction), logLevel](const Napi::CallbackInfo& info)
+        {
+            InvokeCallback(callback, info, logLevel);
+
+            if (!existingFunction.Value().IsUndefined())
+            {
+                Call(existingFunction.Value(), info);
+            }
+        }, functionName));
+    };
 }
 
 namespace Babylon::Polyfills::Console
@@ -61,46 +75,11 @@ namespace Babylon::Polyfills::Console
         if (console.IsUndefined())
         {
             console = Napi::Object::New(env);
-
-            console.Set("log", Napi::Function::New(env, [callback](const Napi::CallbackInfo& info)
-            {
-                InvokeCallback(callback, info, LogLevel::Log);
-            }, "log"));
-
-            console.Set("warn", Napi::Function::New(env, [callback](const Napi::CallbackInfo& info)
-            {
-                InvokeCallback(callback, info, LogLevel::Warn);
-            }, "warn"));
-
-            console.Set("error", Napi::Function::New(env, [callback](const Napi::CallbackInfo& info)
-            {
-                InvokeCallback(callback, info, LogLevel::Error);
-            }, "error"));
-
             env.Global().Set(JS_INSTANCE_NAME, console);
         }
-        else
-        {
-            auto existingLog = console.Get("log").As<Napi::Function>();
-            console.Set("log", Napi::Function::New(env, [existingLog = Napi::Persistent(existingLog), callback](const Napi::CallbackInfo& info)
-            {
-                InvokeCallback(callback, info, LogLevel::Log);
-                Call(existingLog.Value(), info);
-            }, "log"));
 
-            auto existingWarn = console.Get("warn").As<Napi::Function>();
-            console.Set("warn", Napi::Function::New(env, [existingWarn = Napi::Persistent(existingWarn), callback](const Napi::CallbackInfo& info)
-            {
-                InvokeCallback(callback, info, LogLevel::Warn);
-                Call(existingWarn.Value(), info);
-            }, "warn"));
-
-            auto existingError = console.Get("error").As<Napi::Function>();
-            console.Set("error", Napi::Function::New(env, [existingError = Napi::Persistent(existingError), callback](const Napi::CallbackInfo& info)
-            {
-                InvokeCallback(callback, info, LogLevel::Error);
-                Call(existingError.Value(), info);
-            }, "error"));
-        }
+        AddMethod(console, "log", LogLevel::Log, callback);
+        AddMethod(console, "warn", LogLevel::Warn, callback);
+        AddMethod(console, "error", LogLevel::Error, callback);
     }
 }
