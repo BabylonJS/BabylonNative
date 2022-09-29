@@ -19,6 +19,13 @@ namespace Babylon
 
     AppRuntime::~AppRuntime()
     {
+        // Notify the JsRuntime on the JavaScript thread that the JavaScript
+        // runtime shutdown sequence has begun. The JsRuntimeScheduler will
+        // use this signal to gracefully cancel asynchronous operations.
+        Dispatch([](Napi::Env env)
+        {
+            JsRuntime::NotifyDisposing(JsRuntime::GetFromJavaScript(env));
+        });
     }
 
     void AppRuntime::Run(Napi::Env env)

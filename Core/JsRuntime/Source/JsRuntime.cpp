@@ -40,6 +40,20 @@ namespace Babylon
                     .Data();
     }
 
+    void JsRuntime::NotifyDisposing(JsRuntime& runtime)
+    {
+        auto callbacks = std::move(runtime.m_disposingCallbacks);
+        for (const auto& callback : callbacks)
+        {
+            callback();
+        }
+    }
+
+    void JsRuntime::RegisterDisposing(JsRuntime& runtime, std::function<void()> callback)
+    {
+        runtime.m_disposingCallbacks.push_back(std::move(callback));
+    }
+
     void JsRuntime::Dispatch(std::function<void(Napi::Env)> function)
     {
         std::scoped_lock lock{m_mutex};

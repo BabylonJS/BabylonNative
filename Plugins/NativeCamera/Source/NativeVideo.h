@@ -35,8 +35,6 @@ namespace Babylon::Plugins
         Napi::Value GetReadyState(const Napi::CallbackInfo& info);
         Napi::Value GetHaveCurrentData(const Napi::CallbackInfo& info);
 
-        JsRuntimeScheduler m_runtimeScheduler;
-
         std::unordered_map<std::string, std::vector<Napi::FunctionReference>> m_eventHandlerRefs{};
         uint32_t m_maxWidth{};
         uint32_t m_maxHeight{};
@@ -47,6 +45,9 @@ namespace Babylon::Plugins
         bool m_frontCamera{};
 
         bool m_IsPlaying{};
+
+        // Put this last so that it gets destructed first.
+        JsRuntimeScheduler m_runtimeScheduler;
 
         static inline std::shared_ptr<Plugins::Camera::Impl> NativeCameraImpl{};
     };

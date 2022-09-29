@@ -4,6 +4,7 @@
 
 #include <functional>
 #include <mutex>
+#include <vector>
 
 namespace Babylon
 {
@@ -22,31 +23,41 @@ namespace Babylon
             }
         };
 
-        struct InternalState;
-        friend struct InternalState;
+        JsRuntime(const JsRuntime&) = delete;
+        JsRuntime& operator=(const JsRuntime&) = delete;
 
         // Any JavaScript errors that occur will bubble up as a Napi::Error C++ exception.
         // JsRuntime expects the provided dispatch function to handle this exception,
         // such as with a try/catch and logging the exception message.
         using DispatchFunctionT = std::function<void(std::function<void(Napi::Env)>)>;
 
+        // Creates the JsRuntime object owned by the JavaScript environment.
         // Note: It is the contract of JsRuntime that its dispatch function must be usable
         // at the moment of construction. JsRuntime cannot be built with dispatch function
         // that captures a reference to a not-yet-completed object that will be completed
         // later -- an instance of an inheriting type, for example. The dispatch function
         // must be safely callable as soon as it is passed to the JsRuntime constructor.
         static JsRuntime& CreateForJavaScript(Napi::Env, DispatchFunctionT);
-        static JsRuntime& GetFromJavaScript(Napi::Env);
-        void Dispatch(std::function<void(Napi::Env)>);
 
-    protected:
-        JsRuntime(const JsRuntime&) = delete;
-        JsRuntime& operator=(const JsRuntime&) = delete;
+        // Gets the JsRuntime from the given N-API environment.
+        static JsRuntime& GetFromJavaScript(Napi::Env);
+
+        // Notifies the JsRuntime that the JavaScript environment will begin shutting down.
+        // Calling this function will signal callbacks registered with RegisterDisposing.
+        static void NotifyDisposing(JsRuntime&);
+
+        // Registers a callback for when the JavaScript environment will begin shutting down.
+        static void RegisterDisposing(JsRuntime&, std::function<void()>);
+
+        // Dispatches work onto the JavaScript thread and provides access to the N-API
+        // environment.
+        void Dispatch(std::function<void(Napi::Env)>);
 
     private:
         JsRuntime(Napi::Env, DispatchFunctionT);
 
-        DispatchFunctionT m_dispatchFunction{};
         std::mutex m_mutex{};
+        DispatchFunctionT m_dispatchFunction{};
+        std::vector<std::function<void()>> m_disposingCallbacks{};
     };
 }

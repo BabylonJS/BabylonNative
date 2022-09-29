@@ -90,9 +90,8 @@ namespace Babylon::Polyfills::Internal
         : Napi::ObjectWrap<Context>{info}
         , m_canvas{info[0].As<Napi::External<NativeCanvas>>().Data()}
         , m_nvg{nvgCreate(1)}
-        , m_graphicsContext{m_canvas->GetGraphicsContext()}
-        , m_update{m_graphicsContext.GetUpdate("update")}
-        , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
+        , m_deviceContext{m_canvas->GetGraphicsContext()}
+        , m_update{m_deviceContext.GetUpdate("update")}
         , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
@@ -105,7 +104,6 @@ namespace Babylon::Polyfills::Internal
     Context::~Context()
     {
         Dispose();
-        m_cancellationSource->cancel();
     }
 
     void Context::Dispose(const Napi::CallbackInfo&)
@@ -120,12 +118,15 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Dispose()
     {
+        m_cancellationSource.cancel();
+
         if (m_nvg)
         {
-            for(auto& image : m_nvgImageIndices)
+            for (auto& image : m_nvgImageIndices)
             {
                 nvgDeleteImage(m_nvg, image.second);
             }
+
             nvgDelete(m_nvg);
             m_nvg = nullptr;
         }
@@ -364,8 +365,10 @@ namespace Babylon::Polyfills::Internal
         // Unlike other systems where it's cleared.
         bool needClear = m_canvas->UpdateRenderTarget();
 
-        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, needClear, cancellationSource{ m_cancellationSource }]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{ m_update.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
+        // TODO: capture thisRef
+
+        arcana::make_task(m_update.Scheduler(), m_cancellationSource, [this, needClear]() {
+            return arcana::make_task(m_runtimeScheduler.Get(), m_cancellationSource, [this, needClear, updateToken = m_update.GetUpdateToken()]() {
                 // JS Thread
                 Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
                 bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
@@ -383,8 +386,8 @@ namespace Babylon::Polyfills::Internal
                 nvgEndFrame(m_nvg);
                 frameBuffer.Unbind(*encoder);
                 m_dirty = false;
-            }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }](const arcana::expected<void, std::exception_ptr>& result) {
-                if (!cancellationSource->cancelled() && result.has_error())
+            }).then(arcana::inline_scheduler, m_cancellationSource, [this](const arcana::expected<void, std::exception_ptr>& result) {
+                if (result.has_error())
                 {
                     Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
                 }

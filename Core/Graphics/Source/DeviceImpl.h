@@ -66,7 +66,7 @@ namespace Babylon::Graphics
 
         Update GetUpdate(const char* updateName);
 
-        void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
+        arcana::task<std::vector<uint8_t>, std::exception_ptr> RequestScreenShotAsync();
 
         arcana::task<void, std::exception_ptr> ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel);
 

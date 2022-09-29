@@ -87,7 +87,7 @@ namespace Babylon::Polyfills::Internal
         std::map<std::string, int> m_fonts;
         int m_currentFontId{ -1 };
 
-        Graphics::DeviceContext& m_graphicsContext;
+        Graphics::DeviceContext& m_deviceContext;
         Graphics::Update m_update;
 
         bool m_dirty{};
@@ -97,7 +97,7 @@ namespace Babylon::Polyfills::Internal
             float left, top, width, height;
         } m_rectangleClipping{};
 
-        std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
+        arcana::cancellation_source m_cancellationSource{};
         JsRuntimeScheduler m_runtimeScheduler;
 
         std::unordered_map<const NativeCanvasImage*, int> m_nvgImageIndices;

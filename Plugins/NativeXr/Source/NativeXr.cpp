@@ -412,7 +412,6 @@ namespace Babylon
 
         private:
             Napi::Env m_env;
-            JsRuntimeScheduler m_runtimeScheduler;
             std::mutex m_sessionStateChangedCallbackMutex{};
             std::function<void(bool)> m_sessionStateChangedCallback{};
             void* m_windowPtr{};
@@ -461,6 +460,8 @@ namespace Babylon
             void EndFrame();
 
             void NotifySessionStateChanged(bool isSessionActive);
+
+            JsRuntimeScheduler m_runtimeScheduler;
         };
 
         NativeXr::Impl::Impl(Napi::Env env)
@@ -584,8 +585,8 @@ namespace Babylon
             m_sessionState->FrameTask = arcana::make_task(m_sessionState->Update.Scheduler(), m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}] {
                 BeginFrame();
 
-                return arcana::make_task(m_runtimeScheduler, m_sessionState->CancellationSource, [this, updateToken{m_sessionState->Update.GetUpdateToken()}, thisRef{shared_from_this()}]()
-                    {
+                return arcana::make_task(m_runtimeScheduler.Get(), m_sessionState->CancellationSource, [this, updateToken{m_sessionState->Update.GetUpdateToken()}, thisRef{shared_from_this()}]()
+                {
                     m_sessionState->FrameScheduled = false;
 
                     BeginUpdate();
@@ -622,7 +623,7 @@ namespace Babylon
             bool shouldEndSession{};
             bool shouldRestartSession{};
             m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer) {
-                return arcana::make_task(m_runtimeScheduler, arcana::cancellation::none(), [this, texturePointer]() {
+                return arcana::make_task(m_runtimeScheduler.Get(), arcana::cancellation::none(), [this, texturePointer]() {
                     const auto itViewConfig{m_sessionState->TextureToViewConfigurationMap.find(texturePointer)};
                     if (itViewConfig != m_sessionState->TextureToViewConfigurationMap.end())
                     {
@@ -695,7 +696,7 @@ namespace Babylon
                     arcana::make_task(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &viewConfig]() {
                         bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(viewConfig.ColorTexturePointer));
                         bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(viewConfig.DepthTexturePointer));
-                    }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, requiresAppClear, &viewConfig]() {
+                    }).then(m_runtimeScheduler.Get(), m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, requiresAppClear, &viewConfig]() {
                         const auto eyeCount = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(viewConfig.ViewTextureSize.Depth));
                         // TODO (rgerd): Remove old framebuffers from resource table?
                         viewConfig.FrameBuffers.resize(eyeCount);
@@ -2721,7 +2722,7 @@ namespace Babylon
 
                 auto deferred{Napi::Promise::Deferred::New(info.Env())};
                 session.m_xr->BeginSessionAsync()
-                    .then(session.m_runtimeScheduler, arcana::cancellation::none(),
+                    .then(session.m_runtimeScheduler.Get(), arcana::cancellation::none(),
                         [deferred, jsSession{std::move(jsSession)}, env{info.Env()}](const arcana::expected<void, std::exception_ptr>& result) {
                             if (result.has_error())
                             {
@@ -3164,7 +3165,7 @@ namespace Babylon
             Napi::Value End(const Napi::CallbackInfo& info)
             {
                 auto deferred{Napi::Promise::Deferred::New(info.Env())};
-                m_xr->EndSessionAsync().then(m_runtimeScheduler, arcana::cancellation::none(),
+                m_xr->EndSessionAsync().then(m_runtimeScheduler.Get(), arcana::cancellation::none(),
                     [this, deferred](const arcana::expected<void, std::exception_ptr>& result) {
                         if (result.has_error())
                         {
@@ -3431,11 +3432,10 @@ namespace Babylon
 
                 // Fire off the IsSessionSupported task.
                 xr::System::IsSessionSupportedAsync(sessionType)
-                    .then(m_runtimeScheduler,
-                        arcana::cancellation::none(),
-                        [deferred, env = info.Env()](bool result) {
-                            deferred.Resolve(Napi::Boolean::New(env, result));
-                        });
+                    .then(m_runtimeScheduler.Get(), arcana::cancellation::none(), [deferred, thisRef = Napi::Persistent(info.This())](bool result)
+                {
+                    deferred.Resolve(Napi::Boolean::New(thisRef.Env(), result));
+                });
 
                 return deferred.Promise();
             }

@@ -233,10 +233,13 @@ namespace Babylon::Polyfills::Internal
             throw Napi::Error::New(info.Env(), "XMLHttpRequest must be opened before it can be sent");
             return;
         }
-        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
+
+        m_request.SendAsync()
+            .then(m_runtimeScheduler.Get(), arcana::cancellation::none(), [this, thisRef = Napi::Persistent(info.This())](arcana::expected<void, std::exception_ptr> result)
+        {
             if (result.has_error())
             {
-                Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
+                Napi::Error::New(thisRef.Env(), result.error()).ThrowAsJavaScriptException();
                 return;
             }
 

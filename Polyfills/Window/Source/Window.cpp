@@ -71,8 +71,13 @@ namespace Babylon::Polyfills::Internal
 
     Window::Window(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<Window>{info}
-        , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
+        , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
     {
+    }
+
+    Window::~Window()
+    {
+        m_cancelSource.cancel();
     }
 
     void Window::SetTimeout(const Napi::CallbackInfo& info)
@@ -82,7 +87,7 @@ namespace Babylon::Polyfills::Internal
 
         auto& window = *static_cast<Window*>(info.Data());
 
-        window.RecursiveWaitOrCall(std::make_shared<Napi::FunctionReference>(std::move(function)), std::chrono::system_clock::now() + milliseconds);
+        window.RecursiveWaitOrCall(Napi::Persistent(info.This()), std::move(function), std::chrono::system_clock::now() + milliseconds);
     }
 
     Napi::Value Window::DecodeBase64(const Napi::CallbackInfo& info)
@@ -104,17 +109,19 @@ namespace Babylon::Polyfills::Internal
     }
 
     void Window::RecursiveWaitOrCall(
-        std::shared_ptr<Napi::FunctionReference> function,
+        Napi::Reference<Napi::Value> thisRef,
+        Napi::FunctionReference function,
         std::chrono::system_clock::time_point whenToRun)
     {
-        m_runtime.Dispatch([this, function = std::move(function), whenToRun](Napi::Env) {
+        arcana::make_task(m_runtimeScheduler.Get(), m_cancelSource, [this, thisRef = std::move(thisRef), function = std::move(function), whenToRun]() mutable
+        {
             if (std::chrono::system_clock::now() >= whenToRun)
             {
-                function->Call({});
+                function.Call({});
             }
             else
             {
-                RecursiveWaitOrCall(std::move(function), whenToRun);
+                RecursiveWaitOrCall(std::move(thisRef), std::move(function), whenToRun);
             }
         });
     }

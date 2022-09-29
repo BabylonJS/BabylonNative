@@ -14,8 +14,12 @@ namespace Babylon
             Resume();
         }
 
-        m_cancelSource.cancel();
-        m_dispatcher.cancelled();
+        // Dispatch a cancel to signal the Run function to gracefully end.
+        // It must be dispatched and not canceled directly to ensure that
+        // existing work is executed and executed in the correct order.
+        m_dispatcher([this]() {
+            m_cancelSource.cancel();
+        });
 
         m_thread.join();
     }
@@ -44,6 +48,8 @@ namespace Babylon
             m_dispatcher.blocking_tick(m_cancelSource);
         }
 
-        m_dispatcher.clear();
+        // There should not be any outstanding work during the shutdown sequence
+        // which should be the only way exit the while loop above.
+        assert(m_dispatcher.empty());
     }
 }

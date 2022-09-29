@@ -43,11 +43,12 @@ namespace Babylon::Polyfills::Internal
 
         std::string m_src{};
 
-        JsRuntimeScheduler m_runtimeScheduler;
         Napi::FunctionReference m_onloadHandlerRef;
         Napi::FunctionReference m_onerrorHandlerRef;
-        std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
-        bx::DefaultAllocator m_allocator{};
+        arcana::cancellation_source m_cancellationSource{};
         bimg::ImageContainer* m_imageContainer{};
+
+        // Put this last so that it gets destructed first.
+        JsRuntimeScheduler m_runtimeScheduler;
     };
 }
