@@ -10,7 +10,7 @@ namespace
 
     void Call(Napi::Function func, const Napi::CallbackInfo& info)
     {
-        static std::array<Napi::Value, 6> staticArgs{};
+        std::array<Napi::Value, 6> staticArgs{};
         const size_t argc = info.Length();
 
         if (info.Length() < std::size(staticArgs))
