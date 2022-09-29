@@ -189,6 +189,7 @@ namespace Babylon
         Graphics::FrameBuffer& GetBoundFrameBuffer(bgfx::Encoder& encoder);
 
         arcana::cancellation_source m_cancellationSource{};
+        JsRuntimeScheduler m_runtimeScheduler;
 
         ShaderCompiler m_shaderCompiler{};
 
@@ -232,8 +233,5 @@ namespace Babylon
 
         // TODO: This should be changed to a non-owning ref once multi-update is available.
         NativeDataStream* m_commandStream{};
-
-        // Put this last so that it gets destructed first.
-        JsRuntimeScheduler m_runtimeScheduler;
     };
 }

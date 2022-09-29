@@ -78,6 +78,9 @@ namespace Babylon::Polyfills::Internal
     Window::~Window()
     {
         m_cancelSource.cancel();
+
+        // Wait for async operations to complete.
+        m_runtimeScheduler.Rundown();
     }
 
     void Window::SetTimeout(const Napi::CallbackInfo& info)
@@ -113,7 +116,8 @@ namespace Babylon::Polyfills::Internal
         Napi::FunctionReference function,
         std::chrono::system_clock::time_point whenToRun)
     {
-        arcana::make_task(m_runtimeScheduler.Get(), m_cancelSource, [this, thisRef = std::move(thisRef), function = std::move(function), whenToRun]() mutable
+        arcana::make_task(m_runtimeScheduler.Get(), m_cancelSource,
+            [this, thisRef = std::move(thisRef), function = std::move(function), whenToRun = std::move(whenToRun)]() mutable
         {
             if (std::chrono::system_clock::now() >= whenToRun)
             {

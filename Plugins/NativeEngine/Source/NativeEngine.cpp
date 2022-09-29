@@ -513,6 +513,9 @@ namespace Babylon
     NativeEngine::~NativeEngine()
     {
         Dispose();
+
+        // Wait for async operations to complete.
+        m_runtimeScheduler.Rundown();
     }
 
     void NativeEngine::Dispose()

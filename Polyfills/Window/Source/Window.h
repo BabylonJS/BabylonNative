@@ -22,11 +22,12 @@ namespace Babylon::Polyfills::Internal
         static void RemoveEventListener(const Napi::CallbackInfo& info);
         static Napi::Value GetDevicePixelRatio(const Napi::CallbackInfo& info);
 
-        void RecursiveWaitOrCall(Napi::Reference<Napi::Value> thisRef, Napi::FunctionReference function, std::chrono::system_clock::time_point whenToRun);
+        void RecursiveWaitOrCall(
+            Napi::Reference<Napi::Value> thisRef,
+            Napi::FunctionReference function,
+            std::chrono::system_clock::time_point whenToRun);
 
         arcana::cancellation_source m_cancelSource;
-
-        // Put this last so that it gets destructed first.
         JsRuntimeScheduler m_runtimeScheduler;
     };
 }

@@ -45,10 +45,9 @@ namespace Babylon::Polyfills::Internal
 
         Napi::FunctionReference m_onloadHandlerRef;
         Napi::FunctionReference m_onerrorHandlerRef;
-        arcana::cancellation_source m_cancellationSource{};
         bimg::ImageContainer* m_imageContainer{};
 
-        // Put this last so that it gets destructed first.
+        arcana::cancellation_source m_cancellationSource{};
         JsRuntimeScheduler m_runtimeScheduler;
     };
 }

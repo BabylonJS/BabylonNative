@@ -43,6 +43,14 @@ namespace Babylon::Plugins
     {
     }
 
+    NativeVideo::~NativeVideo()
+    {
+        m_cancellationSource.cancel();
+
+        // Wait for async operations to complete.
+        m_runtimeScheduler.Rundown();
+    }
+
     Napi::Value NativeVideo::GetVideoWidth(const Napi::CallbackInfo& /*info*/)
     {
         return Napi::Value::From(Env(), m_width);
@@ -133,34 +141,34 @@ namespace Babylon::Plugins
 
     Napi::Value NativeVideo::Play(const Napi::CallbackInfo& info)
     {
-        auto env{info.Env()};
-        auto deferred{Napi::Promise::Deferred::New(env)};
+        auto deferred = Napi::Promise::Deferred::New(info.Env());
 
         if (!m_IsPlaying)
         {
             m_IsPlaying = true;
 
             NativeCameraImpl->Open(m_maxWidth, m_maxHeight, m_frontCamera)
-                .then(m_runtimeScheduler.Get(), arcana::cancellation::none(), [this, env, deferred](const arcana::expected<Camera::Impl::CameraDimensions, std::exception_ptr>& result)
+                .then(m_runtimeScheduler.Get(), m_cancellationSource,
+                    [this, thisRef = Napi::Persistent(info.This()), deferred](const arcana::expected<Camera::Impl::CameraDimensions, std::exception_ptr>& result)
             {
                 if (result.has_error())
                 {
-                    deferred.Reject(Napi::Error::New(env, result.error()).Value());
+                    deferred.Reject(Napi::Error::New(thisRef.Env(), result.error()).Value());
                 }
                 else
                 {
-                    auto cameraDimensions{result.value()};
+                    auto cameraDimensions = result.value();
                     this->m_width = cameraDimensions.width;
                     this->m_height = cameraDimensions.height;
                     this->m_isReady = true;
-                    deferred.Resolve(env.Undefined());
+                    deferred.Resolve(thisRef.Env().Undefined());
                     RaiseEvent("playing");
                 }
             });
         }
         else
         {
-            deferred.Resolve(env.Undefined());
+            deferred.Resolve(info.Env().Undefined());
         }
 
         return deferred.Promise();

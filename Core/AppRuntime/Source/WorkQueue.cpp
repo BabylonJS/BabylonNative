@@ -18,7 +18,7 @@ namespace Babylon
         // It must be dispatched and not canceled directly to ensure that
         // existing work is executed and executed in the correct order.
         m_dispatcher([this]() {
-            m_cancelSource.cancel();
+            m_cancellationSource.cancel();
         });
 
         m_thread.join();
@@ -43,9 +43,9 @@ namespace Babylon
         m_env = std::make_optional(env);
         m_dispatcher.set_affinity(std::this_thread::get_id());
 
-        while (!m_cancelSource.cancelled())
+        while (!m_cancellationSource.cancelled())
         {
-            m_dispatcher.blocking_tick(m_cancelSource);
+            m_dispatcher.blocking_tick(m_cancellationSource);
         }
 
         // There should not be any outstanding work during the shutdown sequence

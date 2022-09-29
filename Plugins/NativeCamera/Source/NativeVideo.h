@@ -17,7 +17,7 @@ namespace Babylon::Plugins
         static void Initialize(Napi::Env& env, std::shared_ptr<Plugins::Camera::Impl> nativeCameraImpl);
         static Napi::Object New(const Napi::CallbackInfo& info, uint32_t width, uint32_t height, bool frontCamera);
         NativeVideo(const Napi::CallbackInfo& info);
-        ~NativeVideo() = default;
+        ~NativeVideo();
 
         void UpdateTexture(bgfx::TextureHandle textureHandle);
 
@@ -35,6 +35,9 @@ namespace Babylon::Plugins
         Napi::Value GetReadyState(const Napi::CallbackInfo& info);
         Napi::Value GetHaveCurrentData(const Napi::CallbackInfo& info);
 
+        arcana::cancellation_source m_cancellationSource;
+        JsRuntimeScheduler m_runtimeScheduler;
+
         std::unordered_map<std::string, std::vector<Napi::FunctionReference>> m_eventHandlerRefs{};
         uint32_t m_maxWidth{};
         uint32_t m_maxHeight{};
@@ -45,9 +48,6 @@ namespace Babylon::Plugins
         bool m_frontCamera{};
 
         bool m_IsPlaying{};
-
-        // Put this last so that it gets destructed first.
-        JsRuntimeScheduler m_runtimeScheduler;
 
         static inline std::shared_ptr<Plugins::Camera::Impl> NativeCameraImpl{};
     };

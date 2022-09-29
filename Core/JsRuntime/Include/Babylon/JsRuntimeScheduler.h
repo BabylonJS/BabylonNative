@@ -11,47 +11,48 @@ namespace Babylon
     // handling garbage collection and shutdown scenarios.  This class provides and manages the schedulers intended
     // for a N-API object to use with arcana tasks.  It is different than the typical scheduler as this class itself
     // is not a scheduler directly, but instead hands out scheduler via its `Get()` function.  It provides special
-    // handling for when the JsRuntime begins shutting down, i.e., when JsRuntime::NotifyDisposing is called:
-    //   1. The destructor blocks if there are outstanding schedulers not yet invoked on the JavaScript thread.
+    // handling for when the JsRuntime begins shutting down, i.e., when JsRuntime::NotifyDisposing is called.
+    //   1. Calling `Rundown` blocks execution until all outstanding schedulers are invoked on the JavaScript thread.
     //   2. Once the JsRuntime begins shutting down, all schedulers will reroute its dispatch calls from the
     //      JsRuntime to a separate dispatcher owned by the JsRuntimeScheduler itself.  This class will then be able
     //      to pump this dispatcher in its destructor to prevent deadlocks.
     //
     // The typical pattern for an arcana task will look something like this:
-    //
     //   class MyClass
     //   {
     //   public:
-    //       void MyFunction(const Napi::CallbackInfo& info);
+    //       ~MyClass()
+    //       {
+    //           m_cancellationSource.cancel();
+    //
+    //           // Wait for asynchronous operations to complete.
+    //           m_runtimeScheduler.Rundown();
+    //       }
+    // 
+    //       void MyFunction(const Napi::CallbackInfo& info)
+    //       {
+    //           const auto callback{info[0].As<Napi::Function>()};
+    //           
+    //           arcana::make_task(arcana::threadpool_scheduler, m_cancellationSource, []() {
+    //               // do some asynchronous work
+    //           }).then(m_runtimeScheduler.Get(), m_cancellationSource, [thisRef = Napi::Persistent(info.This()), callback = Napi::Persistent(callback)]() {
+    //               callback.Call({});
+    //           });
+    //       }
     //
     //   private:
     //       arcana::cancellation_source m_cancellationSource;
-    // 
-    //       // Put this last so that it gets destructed first.
     //       JsRuntimeScheduler m_runtimeScheduler;
     //   };
     //
-    //   void MyClass::MyFunction(const Napi::CallbackInfo& info)
-    //   {
-    //       const auto callback{info[0].As<Napi::Function>()};
-    //
-    //       arcana::make_task(arcana::threadpool_scheduler, m_cancellationSource, []()
-    //       {
-    //           // do some asynchronous work
-    //       }).then(m_runtimeScheduler.Get(), m_cancelSource, [thisRef = Napi::Persistent(info.This()), callback = Napi::Persistent(callback)]() {
-    //       {
-    //           callback.Call({});
-    //       });
-    //    }
-    //
     // **IMPORTANT**:
-    //   1. To prevent continuations from accessing destructed objects, declare the JsRuntimeScheduler at the end of
-    //      the N-API class.  The destructor of the JsRuntimeScheduler will call `Rundown()` which will block until
-    //      all of its schedulers are invoked.  If this is not possible, call `Rundown()` manually in the destructor
-    //      of the N-API class.
+    //   1. To prevent continuations from accessing freed memory, the destructor of the N-API class is expected to call
+    //      `Rundown()` which blocks execution until all of its schedulers are invoked. Failing to do so will result in
+    //      an exception if there are outstanding schedulers not yet invoked.
     //   2. The last continuation that accesses members of the N-API object, including the cancellation associated with
-    //      the continuation must capture a persistent reference to the N-API object itself to prevent GC from collecting
-    //      the N-API object during the asynchronous operation.
+    //      the continuation, must capture a persistent reference to the N-API object itself to prevent the GC from
+    //      collecting the N-API object during the asynchronous operation. Failing to do so will result in a hang
+    //      when `Rundown()` is called in the N-API class destructor.
     class JsRuntimeScheduler
     {
     public:
@@ -67,7 +68,10 @@ namespace Babylon
 
         ~JsRuntimeScheduler()
         {
-            Rundown();
+            if (m_count > 0)
+            {
+                throw std::runtime_error{"Schedulers for the JavaScript thread are not yet invoked"};
+            }
         }
 
         // Wait until all of the schedulers are invoked.

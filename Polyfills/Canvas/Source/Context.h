@@ -72,8 +72,8 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetCanvas(const Napi::CallbackInfo&);
         void Dispose(const Napi::CallbackInfo&);
         void Dispose();
-        void SetDirty();
-        void DeferredFlushFrame();
+        void SetDirty(Napi::Value thisVal);
+        void DeferredFlushFrame(Napi::Value thisVal);
 
         NativeCanvas* m_canvas;
         NVGcontext* m_nvg;

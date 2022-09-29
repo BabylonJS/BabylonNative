@@ -47,6 +47,9 @@ namespace Babylon::Polyfills::Internal
     NativeCanvasImage::~NativeCanvasImage()
     {
         Dispose();
+
+        // Wait for async operations to complete.
+        m_runtimeScheduler.Rundown();
     }
 
     void NativeCanvasImage::Dispose()
@@ -104,7 +107,8 @@ namespace Babylon::Polyfills::Internal
         request.Open(UrlLib::UrlMethod::Get, text);
         request.ResponseType(UrlLib::UrlResponseType::Buffer);
         request.SendAsync()
-            .then(m_runtimeScheduler.Get(), m_cancellationSource, [this, thisRef = Napi::Persistent(info.This()), request = std::move(request)](arcana::expected<void, std::exception_ptr> result)
+            .then(m_runtimeScheduler.Get(), m_cancellationSource,
+                [this, thisRef = Napi::Persistent(info.This()), request](arcana::expected<void, std::exception_ptr> result)
         {
             if (result.has_error())
             {
