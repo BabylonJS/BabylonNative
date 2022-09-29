@@ -1727,7 +1727,7 @@ inline Function Function::New(napi_env env,
                               void* data) {
   typedef decltype(cb(CallbackInfo(nullptr, nullptr))) ReturnType;
   typedef details::CallbackData<Callable, ReturnType> CbData;
-  auto callbackData = new CbData({ std::forward<Callable>(cb), data });
+  auto callbackData = new CbData({ cb, data });
 
   napi_value value;
   napi_status status = CreateFunction(env,

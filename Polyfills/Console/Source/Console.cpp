@@ -52,17 +52,17 @@ namespace
 
     void AddMethod(Napi::Object& console, const char* functionName, Babylon::Polyfills::Console::LogLevel logLevel, Babylon::Polyfills::Console::CallbackT callback)
     {
-        auto existingFunction = console.Get(functionName).As<Napi::Function>();
-        console.Set(functionName, Napi::Function::New(console.Env(), [callback, existingFunction = Napi::Persistent(existingFunction), logLevel](const Napi::CallbackInfo& info)
+        auto existingFunction = std::make_shared<Napi::FunctionReference>(Napi::Persistent(console.Get(functionName).As<Napi::Function>()));
+        console.Set(functionName, Napi::Function::New(console.Env(), [callback, existingFunction = std::move(existingFunction), logLevel](const Napi::CallbackInfo& info)
         {
             InvokeCallback(callback, info, logLevel);
 
-            if (!existingFunction.Value().IsUndefined())
+            if (!existingFunction->Value().IsUndefined())
             {
-                Call(existingFunction.Value(), info);
+                Call(existingFunction->Value(), info);
             }
         }, functionName));
-    };
+    }
 }
 
 namespace Babylon::Polyfills::Console
