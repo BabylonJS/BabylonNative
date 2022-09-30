@@ -9,9 +9,18 @@ export function useModuleInitializer(): boolean | undefined {
     const [initialized, setInitialized] = useState<boolean>();
 
     useEffect(() => {
+        const abortController = new AbortController();
         (async () => {
-            setInitialized(await ensureInitialized());
+            const isInitialized = await ensureInitialized();
+
+            if (!abortController.signal.aborted) {
+                setInitialized(isInitialized);
+            }
         })();
+
+        return () => {
+            abortController.abort();
+        }
     }, []);
 
     return initialized;
