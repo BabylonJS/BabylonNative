@@ -48,7 +48,7 @@ namespace Babylon
     // **IMPORTANT**:
     //   1. To prevent continuations from accessing freed memory, the destructor of the N-API class is expected to call
     //      `Rundown()` which blocks execution until all of its schedulers are invoked. Failing to do so will result in
-    //      an exception if there are outstanding schedulers not yet invoked.
+    //      an assert if there are outstanding schedulers not yet invoked.
     //   2. The last continuation that accesses members of the N-API object, including the cancellation associated with
     //      the continuation, must capture a persistent reference to the N-API object itself to prevent the GC from
     //      collecting the N-API object during the asynchronous operation. Failing to do so will result in a hang
@@ -68,10 +68,7 @@ namespace Babylon
 
         ~JsRuntimeScheduler()
         {
-            if (m_count > 0)
-            {
-                throw std::runtime_error{"Schedulers for the JavaScript thread are not yet invoked"};
-            }
+            assert(m_count == 0 && "Schedulers for the JavaScript thread are not yet invoked");
         }
 
         // Wait until all of the schedulers are invoked.
