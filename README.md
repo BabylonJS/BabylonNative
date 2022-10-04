@@ -61,6 +61,7 @@ Many core features from Babylon.js are supported. Here is a non-exhaustive list.
 - 3D Assets (glTF, OBJ, etc.)
 - Animations
 - Behaviors
+- Cameras
 - Gizmos
 - Materials
 - Meshes
@@ -81,7 +82,7 @@ The following are features that are not completely finished yet or have gaps.
 - Input (only single pointer supported)
 - Instancing (only thin instances supported)
 - Post Processing (some are supported)
-- Cameras (experimental)
+- Media Devices (e.g., Webcams) (experimental)
 
 #### Not Yet Supported
 
