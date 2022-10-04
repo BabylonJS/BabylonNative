@@ -152,8 +152,8 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value XMLHttpRequest::GetResponseHeader(const Napi::CallbackInfo& info)
     {
-        const auto headerName{info[0].As<Napi::String>().Utf8Value()};
-        const auto header{m_request.GetResponseHeader(headerName)};
+        const auto headerName = info[0].As<Napi::String>().Utf8Value();
+        const auto header = m_request.GetResponseHeader(headerName);
         return header ? Napi::Value::From(Env(), header.value()) : info.Env().Null();
     }
 
