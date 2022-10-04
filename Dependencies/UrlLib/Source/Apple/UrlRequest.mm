@@ -142,7 +142,7 @@ namespace UrlLib
             return {};
         }
 
-        std::string ResponseHeader(const std::string& headerName) const
+        std::string ResponseHeader(const std::string& /*headerName*/) const
         {
             // todo: implementation
             return {};
