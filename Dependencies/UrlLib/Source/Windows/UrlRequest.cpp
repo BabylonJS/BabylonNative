@@ -60,7 +60,7 @@ namespace UrlLib
             m_cancellationSource.cancel();
         }
 
-        void Open(UrlMethod method, std::string url)
+        void Open(UrlMethod method, const std::string& url)
         {
             m_method = method;
             m_uri = Foundation::Uri{winrt::to_hstring(url)};
@@ -170,7 +170,7 @@ namespace UrlLib
             return m_responseString;
         }
 
-        std::string ResponseHeader(const std::string& headerName) const
+        std::optional<std::string> GetResponseHeader(const std::string& headerName) const
         {
             const auto iter = m_headers.find(headerName);
             if (iter != m_headers.end())
@@ -178,19 +178,6 @@ namespace UrlLib
                 return iter->second;
             }
             return {};
-        }
-
-        std::string ResponseHeaders() const
-        {
-            std::string str{};
-            for (auto& iter : m_headers)
-            {
-                str += iter.first;
-                str += ":";
-                str += iter.second;
-                str += "\n";
-            }
-            return str;
         }
 
         gsl::span<const std::byte> ResponseBuffer() const

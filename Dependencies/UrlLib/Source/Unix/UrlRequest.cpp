@@ -21,7 +21,7 @@ namespace UrlLib
             m_cancellationSource.cancel();
         }
 
-        void Open(UrlMethod method, std::string url)
+        void Open(UrlMethod method, const std::string& url)
         {
             m_method = method;
             if (m_curl)
@@ -118,13 +118,7 @@ namespace UrlLib
             return m_responseBuffer;
         }
 
-        std::string ResponseHeader(const std::string& /*headerName*/) const
-        {
-            // todo: implementation
-            return {};
-        }
-
-        std::string ResponseHeaders() const
+        std::optional<std::string> GetResponseHeader(const std::string& /*headerName*/) const
         {
             // todo: implementation
             return {};
