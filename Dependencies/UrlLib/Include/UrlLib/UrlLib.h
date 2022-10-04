@@ -53,6 +53,10 @@ namespace UrlLib
 
         std::string_view ResponseString() const;
 
+        std::string ResponseHeader(const std::string& headerName) const;
+
+        std::string ResponseHeaders() const;
+
         gsl::span<const std::byte> ResponseBuffer() const;
 
     private:

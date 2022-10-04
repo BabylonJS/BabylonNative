@@ -57,6 +57,16 @@ namespace UrlLib
         return m_impl->ResponseString();
     }
 
+    std::string UrlRequest::ResponseHeader(const std::string& headerName) const
+    {
+        return m_impl->ResponseHeader(headerName);
+    }
+
+    std::string UrlRequest::ResponseHeaders() const
+    {
+        return m_impl->ResponseHeaders();
+    }
+
     gsl::span<const std::byte> UrlRequest::ResponseBuffer() const
     {
         return m_impl->ResponseBuffer();

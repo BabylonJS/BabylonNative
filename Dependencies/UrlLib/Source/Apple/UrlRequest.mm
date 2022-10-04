@@ -142,6 +142,18 @@ namespace UrlLib
             return {};
         }
 
+        std::string ResponseHeader(const std::string& headerName) const
+        {
+            // todo: implementation
+            return {}};
+        }
+
+        std::string ResponseHeaders() const
+        {
+            // todo: implementation
+            return {};
+        }
+
     private:
         arcana::cancellation_source m_cancellationSource{};
         UrlResponseType m_responseType{UrlResponseType::String};

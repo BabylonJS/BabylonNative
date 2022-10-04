@@ -100,6 +100,8 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("responseType", &XMLHttpRequest::GetResponseType, &XMLHttpRequest::SetResponseType),
                 InstanceAccessor("responseURL", &XMLHttpRequest::GetResponseURL, nullptr),
                 InstanceAccessor("status", &XMLHttpRequest::GetStatus, nullptr),
+                InstanceMethod("getResponseHeader", &XMLHttpRequest::GetResponseHeader),
+                InstanceMethod("getAllResponseHeaders", &XMLHttpRequest::GetAllResponseHeaders),
                 InstanceMethod("addEventListener", &XMLHttpRequest::AddEventListener),
                 InstanceMethod("removeEventListener", &XMLHttpRequest::RemoveEventListener),
                 InstanceMethod("abort", &XMLHttpRequest::Abort),
@@ -128,8 +130,8 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value XMLHttpRequest::GetResponse(const Napi::CallbackInfo&)
     {
-        gsl::span<const std::byte> responseBuffer{m_request.ResponseBuffer()};
-        auto arrayBuffer{Napi::ArrayBuffer::New(Env(), responseBuffer.size())};
+        const gsl::span<const std::byte> responseBuffer{m_request.ResponseBuffer()};
+        const auto arrayBuffer{Napi::ArrayBuffer::New(Env(), responseBuffer.size())};
         std::memcpy(arrayBuffer.Data(), responseBuffer.data(), arrayBuffer.ByteLength());
         return std::move(arrayBuffer);
     }
@@ -149,6 +151,17 @@ namespace Babylon::Polyfills::Internal
         m_request.ResponseType(ResponseType::StringToEnum(value.As<Napi::String>().Utf8Value()));
     }
 
+    Napi::Value XMLHttpRequest::GetResponseHeader(const Napi::CallbackInfo& info)
+    {
+        const auto headerName{info[0].As<Napi::String>().Utf8Value()};
+        return Napi::Value::From(Env(), m_request.ResponseHeader(headerName));
+    }
+
+    Napi::Value XMLHttpRequest::GetAllResponseHeaders(const Napi::CallbackInfo&)
+    {
+        return Napi::Value::From(Env(), m_request.ResponseHeaders());
+    }
+
     Napi::Value XMLHttpRequest::GetResponseURL(const Napi::CallbackInfo&)
     {
         return Napi::Value::From(Env(), m_request.ResponseUrl().data());
@@ -161,10 +174,10 @@ namespace Babylon::Polyfills::Internal
 
     void XMLHttpRequest::AddEventListener(const Napi::CallbackInfo& info)
     {
-        std::string eventType = info[0].As<Napi::String>().Utf8Value();
-        Napi::Function eventHandler = info[1].As<Napi::Function>();
+        const std::string eventType{info[0].As<Napi::String>().Utf8Value()};
+        const Napi::Function eventHandler{info[1].As<Napi::Function>()};
 
-        const auto& eventHandlerRefs = m_eventHandlerRefs[eventType];
+        const auto& eventHandlerRefs{m_eventHandlerRefs[eventType]};
         for (auto it = eventHandlerRefs.begin(); it != eventHandlerRefs.end(); ++it)
         {
             if (it->Value() == eventHandler)
@@ -178,9 +191,9 @@ namespace Babylon::Polyfills::Internal
 
     void XMLHttpRequest::RemoveEventListener(const Napi::CallbackInfo& info)
     {
-        std::string eventType = info[0].As<Napi::String>().Utf8Value();
-        Napi::Function eventHandler = info[1].As<Napi::Function>();
-        auto itType = m_eventHandlerRefs.find(eventType);
+        const std::string eventType{info[0].As<Napi::String>().Utf8Value()};
+        const Napi::Function eventHandler{info[1].As<Napi::Function>()};
+        const auto itType{m_eventHandlerRefs.find(eventType)};
         if (itType != m_eventHandlerRefs.end())
         {
             auto& eventHandlerRefs = itType->second;
@@ -205,13 +218,13 @@ namespace Babylon::Polyfills::Internal
         try
         {
             // printfs for debugging CI, will be removed
-            auto inputURL{info[1].As<Napi::String>()};
+            const auto inputURL{info[1].As<Napi::String>()};
             // If the input URL contains any true % characters, encode them as %25
-            auto encodedPercentURL{Napi::String::New(info.Env(), EncodePercent(inputURL.Utf8Value()))};
+            const auto encodedPercentURL{Napi::String::New(info.Env(), EncodePercent(inputURL.Utf8Value()))};
             // Decode the input URL to get a completely unencoded URL
-            auto decodedURL{info.Env().Global().Get("decodeURI").As<Napi::Function>().Call({encodedPercentURL})};
+            const auto decodedURL{info.Env().Global().Get("decodeURI").As<Napi::Function>().Call({encodedPercentURL})};
             // Re-encode the URL to make sure that every illegal character is encoded
-            auto finalURL{info.Env().Global().Get("encodeURI").As<Napi::Function>().Call({decodedURL}).As<Napi::String>()};
+            const auto finalURL{info.Env().Global().Get("encodeURI").As<Napi::Function>().Call({decodedURL}).As<Napi::String>()};
             m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), finalURL.Utf8Value());
             SetReadyState(ReadyState::Opened);
         }
@@ -257,7 +270,7 @@ namespace Babylon::Polyfills::Internal
 
     void XMLHttpRequest::RaiseEvent(const char* eventType)
     {
-        auto it = m_eventHandlerRefs.find(eventType);
+        const auto it{m_eventHandlerRefs.find(eventType)};
         if (it != m_eventHandlerRefs.end())
         {
             const auto& eventHandlerRefs = it->second;

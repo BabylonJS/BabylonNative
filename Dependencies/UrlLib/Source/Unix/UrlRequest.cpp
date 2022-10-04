@@ -118,6 +118,18 @@ namespace UrlLib
             return m_responseBuffer;
         }
 
+        std::string ResponseHeader(const std::string& headerName) const
+        {
+            // todo: implementation
+            return {}};
+        }
+
+        std::string ResponseHeaders() const
+        {
+            // todo: implementation
+            return {};
+        }
+
     private:
         struct CurlMulti
         {
