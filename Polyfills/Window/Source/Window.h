@@ -9,6 +9,8 @@ namespace
 
 namespace Babylon::Polyfills::Internal
 {
+    using TimeoutId = int32_t;
+
     class Window : public Napi::ObjectWrap<Window>
     {
         static constexpr auto JS_WINDOW_NAME = "window";
@@ -22,7 +24,7 @@ namespace Babylon::Polyfills::Internal
         JsRuntime& m_runtime;
         std::unique_ptr<TimeoutDispatcher> m_timeoutDispatcher;
 
-        static void SetTimeout(const Napi::CallbackInfo& info);
+        static Napi::Value SetTimeout(const Napi::CallbackInfo& info);
         static Napi::Value DecodeBase64(const Napi::CallbackInfo& info);
         static void AddEventListener(const Napi::CallbackInfo& info);
         static void RemoveEventListener(const Napi::CallbackInfo& info);

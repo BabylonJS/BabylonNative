@@ -8,13 +8,17 @@
 
 namespace
 {
+    using TimeoutId = Babylon::Polyfills::Internal::TimeoutId;
+
     struct Timeout
     {
+        TimeoutId Id;
         std::shared_ptr<Napi::FunctionReference> Function;
         std::chrono::time_point<std::chrono::steady_clock> TimePoint;
 
-        Timeout(std::shared_ptr<Napi::FunctionReference> func, std::chrono::time_point<std::chrono::steady_clock> time)
-            : Function{std::move(func)}
+        Timeout(TimeoutId id, std::shared_ptr<Napi::FunctionReference> func, std::chrono::time_point<std::chrono::steady_clock> time)
+            : Id(id)
+            , Function{std::move(func)}
             , TimePoint{time}
         { }
 
@@ -32,12 +36,12 @@ namespace
             , m_thread{&TimeoutDispatcher::WaitThenCallProc, this}
         { }
 
-        void Dispatch(std::shared_ptr<Napi::FunctionReference> func, std::chrono::steady_clock::time_point time) 
+        TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> func, std::chrono::steady_clock::time_point time) 
         {   
             if (time <= std::chrono::steady_clock::now())
             {
                 CallFunction(std::move(func));
-                return;
+                return 0;
             }
 
             std::unique_lock<std::mutex> lk(m_mutex);
@@ -46,15 +50,19 @@ namespace
                     ? time + std::chrono::milliseconds{1}
                     : m_queue.top().TimePoint;
 
-            m_queue.emplace(std::move(func), time);
+            const Timeout timeout = Timeout{NextTimeoutId(), std::move(func), time};
+            m_idMap.insert({timeout.Id, timeout});
+            m_queue.push(timeout);
 
             if (time <= soonestTimePoint)
             {
                 m_condVariable.notify_one();
             }
+
+            return timeout.Id;
         }
 
-        void WaitThenCallProc() 
+        void WaitThenCallProc()
         {
             std::chrono::time_point<std::chrono::steady_clock> nextTimePoint{};
             while (!m_shutdown) 
@@ -67,6 +75,7 @@ namespace
 
                 if (!m_queue.empty())
                 {
+                    m_idMap.erase(m_queue.top().Id);
                     CallFunction(m_queue.top().Function);
                     m_queue.pop();
                 }
@@ -90,6 +99,7 @@ namespace
                 std::unique_lock<std::mutex> lk(m_mutex);
                 while (!m_queue.empty())
                 {
+                    m_idMap.erase(m_queue.top().Id);
                     m_queue.pop();
                 }
                 m_shutdown = true;
@@ -103,10 +113,30 @@ namespace
         }
 
     private:
+        TimeoutId NextTimeoutId()
+        {
+            while (true)
+            {
+                ++m_lastTimeoutId;
+
+                if (m_lastTimeoutId <= 0)
+                {
+                    m_lastTimeoutId = 1;
+                }
+
+                if (m_idMap.find(m_lastTimeoutId) == m_idMap.end())
+                {
+                    return m_lastTimeoutId;
+                }
+            }
+        }
+
         Babylon::JsRuntime& m_runtime;
         std::thread m_thread;
         std::mutex m_mutex{};
         std::condition_variable m_condVariable{};
+        TimeoutId m_lastTimeoutId = 0;
+        std::map<TimeoutId, Timeout> m_idMap;
         std::priority_queue<Timeout, std::vector<Timeout>, decltype(&Timeout::Compare)> m_queue{Timeout::Compare};
         bool m_shutdown{false};
     };
@@ -182,7 +212,7 @@ namespace Babylon::Polyfills::Internal
     {
     }
 
-    void Window::SetTimeout(const Napi::CallbackInfo& info)
+    Napi::Value Window::SetTimeout(const Napi::CallbackInfo& info)
     {
         auto function = Napi::Persistent(info[0].As<Napi::Function>());
         auto milliseconds = std::chrono::milliseconds{info[1].As<Napi::Number>().Int32Value()};
@@ -191,7 +221,7 @@ namespace Babylon::Polyfills::Internal
         const auto futureTime = std::chrono::steady_clock::now() + milliseconds;
 
         auto& window = *static_cast<Window*>(info.Data());
-        window.m_timeoutDispatcher->Dispatch(functionRef, futureTime);
+        return Napi::Value::From(info.Env(), window.m_timeoutDispatcher->Dispatch(functionRef, futureTime));
     }
 
     Napi::Value Window::DecodeBase64(const Napi::CallbackInfo& info)
