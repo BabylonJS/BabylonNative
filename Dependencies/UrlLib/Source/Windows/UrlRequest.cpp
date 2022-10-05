@@ -7,6 +7,7 @@
 #include <winrt/Windows.Storage.Streams.h>
 #include <winrt/Windows.Web.Http.h>
 #include <winrt/Windows.ApplicationModel.h>
+#include <winrt/Windows.Foundation.Collections.h>
 
 namespace UrlLib
 {
@@ -59,7 +60,7 @@ namespace UrlLib
             m_cancellationSource.cancel();
         }
 
-        void Open(UrlMethod method, std::string url)
+        void Open(UrlMethod method, const std::string& url)
         {
             m_method = method;
             m_uri = Foundation::Uri{winrt::to_hstring(url)};
@@ -114,6 +115,11 @@ namespace UrlLib
 
                             m_responseUrl = winrt::to_string(responseMessage.RequestMessage().RequestUri().RawUri());
 
+                            for (auto&& iter : responseMessage.Headers())
+                            {
+                                m_headers.insert(std::make_pair(winrt::to_string(iter.Key()), winrt::to_string(iter.Value())));
+                            }
+
                             switch (m_responseType)
                             {
                                 case UrlResponseType::String:
@@ -162,6 +168,16 @@ namespace UrlLib
         std::string_view ResponseString()
         {
             return m_responseString;
+        }
+
+        std::optional<std::string> GetResponseHeader(const std::string& headerName) const
+        {
+            const auto iter = m_headers.find(headerName);
+            if (iter != m_headers.end())
+            {
+                return iter->second;
+            }
+            return {};
         }
 
         gsl::span<const std::byte> ResponseBuffer() const
@@ -213,6 +229,7 @@ namespace UrlLib
         std::string m_responseUrl{};
         std::string m_responseString{};
         Storage::Streams::IBuffer m_responseBuffer{};
+        std::map<std::string, std::string> m_headers; 
     };
 }
 

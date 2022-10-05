@@ -42,7 +42,7 @@ namespace UrlLib
             m_cancellationSource.cancel();
         }
 
-        void Open(UrlMethod method, std::string url)
+        void Open(UrlMethod method, const std::string& url)
         {
             m_method = method;
             Uri uri{Uri::Parse(url.data())};
@@ -186,6 +186,12 @@ namespace UrlLib
         gsl::span<const std::byte> ResponseBuffer() const
         {
             return m_responseBuffer;
+        }
+
+        std::optional<std::string> GetResponseHeader(const std::string& /*headerName*/) const
+        {
+            // todo: implementation
+            return {};
         }
 
     private:

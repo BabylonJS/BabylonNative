@@ -23,7 +23,7 @@ namespace UrlLib
             m_cancellationSource.cancel();
         }
 
-        void Open(UrlMethod method, std::string url)
+        void Open(UrlMethod method, const std::string& url)
         {
             m_method = method;
             NSString* urlString = [NSString stringWithUTF8String:url.data()];
@@ -139,6 +139,12 @@ namespace UrlLib
                 return {reinterpret_cast<const std::byte*>(m_responseBuffer.bytes), m_responseBuffer.length};
             }
 
+            return {};
+        }
+
+        std::optional<std::string> GetResponseHeader(const std::string& /*headerName*/) const
+        {
+            // todo: implementation
             return {};
         }
 

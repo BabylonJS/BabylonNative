@@ -39,7 +39,7 @@ namespace UrlLib
 
         void Abort();
 
-        void Open(UrlMethod method, std::string url);
+        void Open(UrlMethod method, const std::string& url);
 
         UrlResponseType ResponseType() const;
 
@@ -52,6 +52,8 @@ namespace UrlLib
         std::string_view ResponseUrl() const;
 
         std::string_view ResponseString() const;
+
+        std::optional<std::string> GetResponseHeader(const std::string& headerName) const;
 
         gsl::span<const std::byte> ResponseBuffer() const;
 

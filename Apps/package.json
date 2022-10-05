@@ -2,6 +2,9 @@
   "name": "BabylonNative",
   "version": "0.0.1",
   "private": true,
+  "scripts": {
+    "getNightly": "node scripts/getNightly.js"
+  },
   "dependencies": {
     "babylonjs": "^5.17.0",
     "babylonjs-gui": "^5.17.0",
