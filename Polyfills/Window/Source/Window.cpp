@@ -171,7 +171,7 @@ namespace
         std::mutex m_mutex{};
         std::condition_variable m_condVariable{};
         TimeoutId m_lastTimeoutId = 0;
-        std::map<TimeoutId, Timeout> m_idMap;
+        std::unordered_map<TimeoutId, Timeout> m_idMap;
         std::map<Milliseconds, std::list<Timeout>> m_timeMap;
         bool m_shutdown{false};
     };
