@@ -8,17 +8,17 @@
 
 namespace
 {
-    struct TimeoutFunction
+    struct Timeout
     {
         std::shared_ptr<Napi::FunctionReference> Function;
         std::chrono::time_point<std::chrono::steady_clock> TimePoint;
 
-        TimeoutFunction(std::shared_ptr<Napi::FunctionReference> func, std::chrono::time_point<std::chrono::steady_clock> time)
+        Timeout(std::shared_ptr<Napi::FunctionReference> func, std::chrono::time_point<std::chrono::steady_clock> time)
             : Function{std::move(func)}
             , TimePoint{time}
         { }
 
-        static bool Compare(const TimeoutFunction& tf1, const TimeoutFunction& tf2)
+        static bool Compare(const Timeout& tf1, const Timeout& tf2)
         {
             return tf1.TimePoint > tf2.TimePoint;
         }
@@ -107,7 +107,7 @@ namespace
         std::thread m_thread;
         std::mutex m_mutex{};
         std::condition_variable m_condVariable{};
-        std::priority_queue<TimeoutFunction, std::vector<TimeoutFunction>, decltype(&TimeoutFunction::Compare)> m_queue{TimeoutFunction::Compare};
+        std::priority_queue<Timeout, std::vector<Timeout>, decltype(&Timeout::Compare)> m_queue{Timeout::Compare};
         bool m_shutdown{false};
     };
 }
