@@ -25,11 +25,12 @@ namespace
         TimePoint timePoint;
 
         Timeout(TimeoutId id, std::shared_ptr<Napi::FunctionReference> func, Milliseconds time, TimePoint timePoint)
-            : id(id)
+            : id{ id }
             , function{ std::move(func) }
             , time{ time }
             , timePoint{ timePoint }
-        { }
+        {
+        }
     };
 
     class TimeoutDispatcher
@@ -52,8 +53,8 @@ namespace
             std::unique_lock<std::mutex> lk(m_mutex);
             const auto soonestTimePoint =
                 m_timeMap.empty()
-                ? now + std::chrono::milliseconds{ 1 }
-            : (*m_timeMap.cbegin()).second.front().timePoint;
+                    ? now + std::chrono::milliseconds{ 1 }
+                    : m_timeMap.cbegin()->second.front().timePoint;
 
             const auto timePoint = now + std::chrono::milliseconds(time);
             const Timeout timeout = Timeout{ NextTimeoutId(), std::move(func), time, timePoint };
