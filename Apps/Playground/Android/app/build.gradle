@@ -36,12 +36,14 @@ def arcore_libpath = "${buildDir}/arcore-native"
 configurations { natives }
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 33
+    buildToolsVersion "33.0.0"
+    ndkVersion "21.4.7075529"
 
     defaultConfig {
         applicationId "com.android.babylonnative.playground"
         minSdkVersion "${platformVersion}"
-        targetSdkVersion 28
+        targetSdkVersion 33
         externalNativeBuild {
             cmake {
                 abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
@@ -80,7 +82,6 @@ android {
 
     externalNativeBuild {
         cmake {
-            version '3.19.6'
             path 'CMakeLists.txt'
         }
     }
@@ -172,7 +173,7 @@ repositories {
         url "$rootDir/../../node_modules/v8-android/dist"
     }
     google()
-    jcenter()
+    mavenCentral()
 }
 
 configurations 

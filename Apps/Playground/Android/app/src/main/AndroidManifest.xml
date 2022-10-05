@@ -21,10 +21,12 @@
       android:fullBackupContent="false"
       android:icon="@mipmap/ic_launcher"
       android:label="@string/playground_activity">
-    <activity android:name="PlaygroundActivity"
-              android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
-              android:launchMode="singleTask"
-              android:configChanges="orientation|keyboardHidden|screenSize">
+    <activity
+        android:name="PlaygroundActivity"
+        android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+        android:launchMode="singleTask"
+        android:configChanges="orientation|keyboardHidden|screenSize"
+        android:exported="true">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
