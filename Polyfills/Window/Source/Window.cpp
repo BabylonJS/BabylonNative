@@ -174,7 +174,7 @@ namespace
         TimeoutId m_lastTimeoutId = 0;
         std::unordered_map<TimeoutId, Timeout> m_idMap;
         std::map<Milliseconds, std::list<Timeout>> m_timeMap;
-        bool m_shutdown{false};
+        std::atomic<bool> m_shutdown{false};
     };
 }
 
