@@ -17,5 +17,3 @@ download('node_modules/babylonjs-loaders/babylonjs.loaders.js', 'https://preview
 download('node_modules/babylonjs-loaders/babylonjs.loaders.js.map', 'https://preview.babylonjs.com/loaders/babylonjs.loaders.js.map');
 download('node_modules/babylonjs-gui/babylon.gui.js', 'https://preview.babylonjs.com/gui/babylon.gui.js');
 download('node_modules/babylonjs-gui/babylon.gui.js.map', 'https://preview.babylonjs.com/gui/babylon.gui.js.map');
-//download('node_modules/chai/chai.js', 'https://unpkg.com/chai/chai.js');
-//download('node_modules/mocha/mocha.js', 'https://unpkg.com/mocha/mocha.js');
