@@ -8,6 +8,8 @@
 #include <winrt/Windows.Web.Http.h>
 #include <winrt/Windows.ApplicationModel.h>
 #include <winrt/Windows.Foundation.Collections.h>
+#include <string>
+#include <unordered_map>
 
 namespace UrlLib
 {
@@ -170,26 +172,28 @@ namespace UrlLib
             return m_responseString;
         }
 
-        std::optional<std::string> GetResponseHeader(const std::string& headerName) const
-        {
-            const auto iter = m_headers.find(headerName);
-            if (iter != m_headers.end())
-            {
-                return iter->second;
-            }
-            return {};
-        }
-
         gsl::span<const std::byte> ResponseBuffer() const
         {
-            if (m_responseBuffer)
+            if (!m_responseBuffer)
             {
-                std::byte* bytes;
-                auto bufferByteAccess = m_responseBuffer.as<::Windows::Storage::Streams::IBufferByteAccess>();
-                winrt::check_hresult(bufferByteAccess->Buffer(reinterpret_cast<byte**>(&bytes)));
-                return {bytes, gsl::narrow_cast<std::size_t>(m_responseBuffer.Length())};
+                return {};
             }
-            return {};
+
+            std::byte* bytes;
+            auto bufferByteAccess = m_responseBuffer.as<::Windows::Storage::Streams::IBufferByteAccess>();
+            winrt::check_hresult(bufferByteAccess->Buffer(reinterpret_cast<byte**>(&bytes)));
+            return {bytes, gsl::narrow_cast<std::size_t>(m_responseBuffer.Length())};
+        }
+
+        std::optional<std::string> GetResponseHeader(const std::string& headerName) const
+        {
+            const auto it = m_headers.find(headerName);
+            if (it == m_headers.end())
+            {
+                return {};
+            }
+
+            return it->second;
         }
 
     private:
@@ -229,7 +233,7 @@ namespace UrlLib
         std::string m_responseUrl{};
         std::string m_responseString{};
         Storage::Streams::IBuffer m_responseBuffer{};
-        std::map<std::string, std::string> m_headers; 
+        std::unordered_map<std::string, std::string> m_headers;
     };
 }
 

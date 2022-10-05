@@ -53,9 +53,9 @@ namespace UrlLib
 
         std::string_view ResponseString() const;
 
-        std::optional<std::string> GetResponseHeader(const std::string& headerName) const;
-
         gsl::span<const std::byte> ResponseBuffer() const;
+
+        std::optional<std::string> GetResponseHeader(const std::string& headerName) const;
 
     private:
         class Impl;

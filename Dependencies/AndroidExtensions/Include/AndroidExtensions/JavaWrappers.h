@@ -1,6 +1,7 @@
 #pragma once
 
 #include <jni.h>
+#include <functional>
 #include <string>
 #include <vector>
 #include <cstddef>
@@ -16,6 +17,7 @@ namespace java::lang
     class ByteArray;
     class Object;
     class String;
+    class Throwable;
 }
 
 namespace java::io
@@ -221,6 +223,10 @@ namespace java::net
         URL GetURL() const;
 
         int GetContentLength() const;
+
+        lang::String GetHeaderField(int n) const;
+
+        lang::String GetHeaderFieldKey(int n) const;
 
         io::InputStream GetInputStream() const;
 

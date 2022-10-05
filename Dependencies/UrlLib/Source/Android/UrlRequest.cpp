@@ -4,6 +4,9 @@
 #include <android/asset_manager.h>
 #include <AndroidExtensions/Globals.h>
 #include <AndroidExtensions/JavaWrappers.h>
+#include <string>
+#include <vector>
+#include <unordered_map>
 
 using namespace android::global;
 using namespace android::net;
@@ -122,6 +125,18 @@ namespace UrlLib
                             m_statusCode = UrlStatusCode::Ok;
                         }
 
+                        for (int n = 0;; ++n)
+                        {
+                            String key = connection.GetHeaderFieldKey(n);
+                            String value = connection.GetHeaderField(n);
+                            if ((jstring)key == nullptr || (jstring)value == nullptr)
+                            {
+                                break;
+                            }
+
+                            m_headers.insert({key, value});
+                        }
+
                         int contentLength = connection.GetContentLength();
                         if (contentLength < 0)
                         {
@@ -188,10 +203,15 @@ namespace UrlLib
             return m_responseBuffer;
         }
 
-        std::optional<std::string> GetResponseHeader(const std::string& /*headerName*/) const
+        std::optional<std::string> GetResponseHeader(const std::string& headerName) const
         {
-            // todo: implementation
-            return {};
+            const auto it = m_headers.find(headerName);
+            if (it == m_headers.end())
+            {
+                return {};
+            }
+
+            return it->second;
         }
 
     private:
@@ -204,6 +224,7 @@ namespace UrlLib
         std::string m_responseUrl{};
         std::string m_responseString{};
         std::vector<std::byte> m_responseBuffer{};
+        std::unordered_map<std::string, std::string> m_headers;
     };
 }
 

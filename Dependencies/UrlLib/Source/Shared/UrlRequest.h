@@ -57,13 +57,13 @@ namespace UrlLib
         return m_impl->ResponseString();
     }
 
-    std::optional<std::string> UrlRequest::GetResponseHeader(const std::string& headerName) const
-    {
-        return m_impl->GetResponseHeader(headerName);
-    }
-
     gsl::span<const std::byte> UrlRequest::ResponseBuffer() const
     {
         return m_impl->ResponseBuffer();
+    }
+
+    std::optional<std::string> UrlRequest::GetResponseHeader(const std::string& headerName) const
+    {
+        return m_impl->GetResponseHeader(headerName);
     }
 }
