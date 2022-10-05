@@ -27,7 +27,5 @@ namespace Babylon::Polyfills::Internal
         static void AddEventListener(const Napi::CallbackInfo& info);
         static void RemoveEventListener(const Napi::CallbackInfo& info);
         static Napi::Value GetDevicePixelRatio(const Napi::CallbackInfo& info);
-
-        void RecursiveWaitOrCall(std::shared_ptr<Napi::FunctionReference> function, std::chrono::steady_clock::time_point whenToRun);
     };
 }

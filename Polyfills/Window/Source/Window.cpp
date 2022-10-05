@@ -212,22 +212,6 @@ namespace Babylon::Polyfills::Internal
         // TODO: handle events
     }
 
-    void Window::RecursiveWaitOrCall(
-        std::shared_ptr<Napi::FunctionReference> function,
-        std::chrono::steady_clock::time_point whenToRun)
-    {
-        m_runtime.Dispatch([this, function = std::move(function), whenToRun](Napi::Env) {
-            if (std::chrono::steady_clock::now() >= whenToRun)
-            {
-                function->Call({});
-            }
-            else
-            {
-                RecursiveWaitOrCall(std::move(function), whenToRun);
-            }
-        });
-    }
-
     Napi::Value Window::GetDevicePixelRatio(const Napi::CallbackInfo& info)
     {
         auto env{info.Env()};
