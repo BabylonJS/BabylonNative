@@ -9,23 +9,27 @@
 namespace
 {
     using TimeoutId = Babylon::Polyfills::Internal::TimeoutId;
+    using Milliseconds = std::chrono::milliseconds::rep;
+    using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>;
+
+    TimePoint Now()
+    {
+        return std::chrono::time_point_cast<std::chrono::milliseconds, std::chrono::steady_clock>(std::chrono::steady_clock::now());
+    }
 
     struct Timeout
     {
-        TimeoutId Id;
-        std::shared_ptr<Napi::FunctionReference> Function;
-        std::chrono::time_point<std::chrono::steady_clock> TimePoint;
+        TimeoutId id;
+        std::shared_ptr<Napi::FunctionReference> function;
+        Milliseconds time;
+        TimePoint timePoint;
 
-        Timeout(TimeoutId id, std::shared_ptr<Napi::FunctionReference> func, std::chrono::time_point<std::chrono::steady_clock> time)
-            : Id(id)
-            , Function{std::move(func)}
-            , TimePoint{time}
+        Timeout(TimeoutId id, std::shared_ptr<Napi::FunctionReference> func, Milliseconds time, TimePoint timePoint)
+            : id(id)
+            , function{ std::move(func) }
+            , time{ time }
+            , timePoint{ timePoint }
         { }
-
-        static bool Compare(const Timeout& tf1, const Timeout& tf2)
-        {
-            return tf1.TimePoint > tf2.TimePoint;
-        }
     };
 
     class TimeoutDispatcher
@@ -36,51 +40,85 @@ namespace
             , m_thread{&TimeoutDispatcher::WaitThenCallProc, this}
         { }
 
-        TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> func, std::chrono::steady_clock::time_point time) 
-        {   
-            if (time <= std::chrono::steady_clock::now())
+        TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> func, Milliseconds time)
+        {
+            if (time <= 0)
             {
                 CallFunction(std::move(func));
                 return 0;
             }
 
+            const auto now = Now();
             std::unique_lock<std::mutex> lk(m_mutex);
             const auto soonestTimePoint =
-                m_queue.empty()
-                    ? time + std::chrono::milliseconds{1}
-                    : m_queue.top().TimePoint;
+                m_timeMap.empty()
+                ? now + std::chrono::milliseconds{ 1 }
+            : (*m_timeMap.cbegin()).second.front().timePoint;
 
-            const Timeout timeout = Timeout{NextTimeoutId(), std::move(func), time};
-            m_idMap.insert({timeout.Id, timeout});
-            m_queue.push(timeout);
+            const auto timePoint = now + std::chrono::milliseconds(time);
+            const Timeout timeout = Timeout{ NextTimeoutId(), std::move(func), time, timePoint };
+            m_idMap.insert({ timeout.id, timeout });
+            m_timeMap[time].push_back(timeout);
 
-            if (time <= soonestTimePoint)
+            if (timePoint <= soonestTimePoint)
             {
                 m_condVariable.notify_one();
             }
 
-            return timeout.Id;
+            return timeout.id;
+        }
+
+        void Clear(TimeoutId id)
+        {
+            std::unique_lock<std::mutex> lk(m_mutex);
+            const auto idIterator = m_idMap.find(id);
+            if (idIterator != m_idMap.end())
+            {
+                const auto& milliseconds = (*idIterator).second.time;
+                const auto& timeoutId = (*idIterator).second.id;
+
+                const auto timeIterator = m_timeMap.find(milliseconds);
+                assert(timeIterator != m_timeMap.end() && "m_idMap and m_timeMap are out of sync");
+
+                auto& timeouts = (*timeIterator).second;
+                for (auto i = timeouts.begin(); i != timeouts.end(); i++)
+                {
+                    if ((*i).id == timeoutId)
+                    {
+                        timeouts.erase(i);
+                        break;
+                    }
+                }
+                
+                m_idMap.erase(idIterator);
+            }
         }
 
         void WaitThenCallProc()
         {
-            std::chrono::time_point<std::chrono::steady_clock> nextTimePoint{};
+            TimePoint nextTimePoint{};
             while (!m_shutdown) 
             {
                 std::unique_lock<std::mutex> lk(m_mutex);
-                while (!m_queue.empty() && std::chrono::steady_clock::now() < (nextTimePoint = m_queue.top().TimePoint))
+                while (!m_timeMap.empty() && Now() < (nextTimePoint = (*m_timeMap.begin()).second.front().timePoint))
                 {
                     m_condVariable.wait_until(lk, nextTimePoint);
                 }
 
-                if (!m_queue.empty())
+                if (!m_timeMap.empty())
                 {
-                    m_idMap.erase(m_queue.top().Id);
-                    CallFunction(m_queue.top().Function);
-                    m_queue.pop();
+                    auto &timeouts = (*m_timeMap.begin()).second;
+                    while (!timeouts.empty())
+                    {
+                        auto& timeout = timeouts.front();
+                        CallFunction(timeout.function);
+                        m_idMap.erase(timeout.id);
+                        timeouts.pop_front();
+                    }
+                    m_timeMap.erase(m_timeMap.begin());
                 }
 
-                while (!m_shutdown && m_queue.empty())
+                while (!m_shutdown && m_timeMap.empty())
                 {
                     m_condVariable.wait(lk);
                 }
@@ -97,11 +135,8 @@ namespace
         {
             {
                 std::unique_lock<std::mutex> lk(m_mutex);
-                while (!m_queue.empty())
-                {
-                    m_idMap.erase(m_queue.top().Id);
-                    m_queue.pop();
-                }
+                m_idMap.clear();
+                m_timeMap.clear();
                 m_shutdown = true;
                 m_condVariable.notify_one();
             }
@@ -137,7 +172,7 @@ namespace
         std::condition_variable m_condVariable{};
         TimeoutId m_lastTimeoutId = 0;
         std::map<TimeoutId, Timeout> m_idMap;
-        std::priority_queue<Timeout, std::vector<Timeout>, decltype(&Timeout::Compare)> m_queue{Timeout::Compare};
+        std::map<Milliseconds, std::list<Timeout>> m_timeMap;
         bool m_shutdown{false};
     };
 }
@@ -148,6 +183,7 @@ namespace Babylon::Polyfills::Internal
     {
         constexpr auto JS_CLASS_NAME = "Window";
         constexpr auto JS_SET_TIMEOUT_NAME = "setTimeout";
+        constexpr auto JS_CLEAR_TIMEOUT_NAME = "clearTimeout";
         constexpr auto JS_A_TO_B_NAME = "atob";
         constexpr auto JS_ADD_EVENT_LISTENER_NAME = "addEventListener";
         constexpr auto JS_REMOVE_EVENT_LISTENER_NAME = "removeEventListener";
@@ -172,6 +208,11 @@ namespace Babylon::Polyfills::Internal
         if (global.Get(JS_SET_TIMEOUT_NAME).IsUndefined())
         {
             global.Set(JS_SET_TIMEOUT_NAME, Napi::Function::New(env, &Window::SetTimeout, JS_SET_TIMEOUT_NAME, Window::Unwrap(jsWindow)));
+        }
+
+        if (global.Get(JS_CLEAR_TIMEOUT_NAME).IsUndefined())
+        {
+            global.Set(JS_CLEAR_TIMEOUT_NAME, Napi::Function::New(env, &Window::ClearTimeout, JS_CLEAR_TIMEOUT_NAME, Window::Unwrap(jsWindow)));
         }
 
         if (global.Get(JS_A_TO_B_NAME).IsUndefined())
@@ -215,13 +256,19 @@ namespace Babylon::Polyfills::Internal
     Napi::Value Window::SetTimeout(const Napi::CallbackInfo& info)
     {
         auto function = Napi::Persistent(info[0].As<Napi::Function>());
-        auto milliseconds = std::chrono::milliseconds{info[1].As<Napi::Number>().Int32Value()};
+        auto milliseconds = std::chrono::milliseconds{info[1].As<Napi::Number>().Int32Value()}.count();
 
         auto functionRef = std::make_shared<Napi::FunctionReference>(std::move(function));
-        const auto futureTime = std::chrono::steady_clock::now() + milliseconds;
 
         auto& window = *static_cast<Window*>(info.Data());
-        return Napi::Value::From(info.Env(), window.m_timeoutDispatcher->Dispatch(functionRef, futureTime));
+        return Napi::Value::From(info.Env(), window.m_timeoutDispatcher->Dispatch(functionRef, milliseconds));
+    }
+
+    void Window::ClearTimeout(const Napi::CallbackInfo& info)
+    {
+        auto timeoutId = info[0].As<Napi::Number>().Int32Value();
+        auto& window = *static_cast<Window*>(info.Data());
+        window.m_timeoutDispatcher->Clear(timeoutId);
     }
 
     Napi::Value Window::DecodeBase64(const Napi::CallbackInfo& info)

@@ -25,6 +25,7 @@ namespace Babylon::Polyfills::Internal
         std::unique_ptr<TimeoutDispatcher> m_timeoutDispatcher;
 
         static Napi::Value SetTimeout(const Napi::CallbackInfo& info);
+        static void ClearTimeout(const Napi::CallbackInfo& info);
         static Napi::Value DecodeBase64(const Napi::CallbackInfo& info);
         static void AddEventListener(const Napi::CallbackInfo& info);
         static void RemoveEventListener(const Napi::CallbackInfo& info);

@@ -4,6 +4,7 @@ const timeouts = [
     200, // there
     100, // Hi
     800, // are
+    2000 // : If you're seeing this, I'm not doing well
 ];
 
 const words = [
@@ -11,10 +12,21 @@ const words = [
     "how",
     "there",
     "Hi",
-    "are"
+    "are",
+    ": If you're seeing this, I'm not doing well (the timer didn't get removed)"
 ];
 
+const ids = [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+]
+
 const done = [
+    false,
     false,
     false,
     false,
@@ -27,7 +39,7 @@ const fullTimeout = timeouts.reduce((acc, curr) => (acc + curr));
 let message = " ";
 
 timeouts.forEach((duration, index) => {
-    setTimeout(() => {
+    ids[index] = setTimeout(() => {
         message = `${message} ${words[index]}`;
         done[index] = true
     }, duration);
@@ -40,15 +52,22 @@ setTimeout(() => {
     console.log(`Elapsed time: ${endTime - startTime} (Expected: ${fullTimeout})`);
 }, fullTimeout);
 
+setTimeout(() => {
+    clearTimeout(ids[5])
+}, timeouts[5] - 500)
+
 function waitUntilAllDone() {
     setTimeout(() => {
-        for (let i = 0; i < done.length; i++) {
+        for (let i = 0; i < done.length - 1; i++) {
             if (!done[i]) {
                 waitUntilAllDone();
                 return;
             }
         }
         console.log(`All done`);
+
+        // Wait for 2 more seconds to make sure the last word/timer doesn't fire.
+        setTimeout(() => { }, 2000)
     }, 1000);
 }
 
