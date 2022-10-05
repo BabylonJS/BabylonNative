@@ -191,11 +191,7 @@ namespace Babylon::Polyfills::Internal
         const auto futureTime = std::chrono::steady_clock::now() + milliseconds;
 
         auto& window = *static_cast<Window*>(info.Data());
-#if 0
         window.m_timeoutDispatcher->Dispatch(functionRef, futureTime);
-#else
-        window.RecursiveWaitOrCall(functionRef, futureTime);
-#endif
     }
 
     Napi::Value Window::DecodeBase64(const Napi::CallbackInfo& info)
