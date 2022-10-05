@@ -75,13 +75,13 @@ namespace
             const auto idIterator = m_idMap.find(id);
             if (idIterator != m_idMap.end())
             {
-                const auto& milliseconds = (*idIterator).second.time;
-                const auto& timeoutId = (*idIterator).second.id;
+                const auto& milliseconds = idIterator->second.time;
+                const auto& timeoutId = idIterator->second.id;
 
                 const auto timeIterator = m_timeMap.find(milliseconds);
                 assert(timeIterator != m_timeMap.end() && "m_idMap and m_timeMap are out of sync");
 
-                auto& timeouts = (*timeIterator).second;
+                auto& timeouts = timeIterator->second;
                 for (auto i = timeouts.begin(); i != timeouts.end(); i++)
                 {
                     if ((*i).id == timeoutId)
@@ -101,14 +101,14 @@ namespace
             while (!m_shutdown) 
             {
                 std::unique_lock<std::mutex> lk(m_mutex);
-                while (!m_timeMap.empty() && Now() < (nextTimePoint = (*m_timeMap.begin()).second.front().timePoint))
+                while (!m_timeMap.empty() && Now() < (nextTimePoint = m_timeMap.begin()->second.front().timePoint))
                 {
                     m_condVariable.wait_until(lk, nextTimePoint);
                 }
 
                 if (!m_timeMap.empty())
                 {
-                    auto &timeouts = (*m_timeMap.begin()).second;
+                    auto &timeouts = m_timeMap.begin()->second;
                     while (!timeouts.empty())
                     {
                         auto& timeout = timeouts.front();
