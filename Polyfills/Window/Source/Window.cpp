@@ -76,7 +76,7 @@ namespace Babylon::Polyfills::Internal
     Window::Window(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<Window>{info}
         , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
-        , m_timeoutDispatcher{std::make_unique<TimeoutDispatcher>(m_runtime)}
+        , m_timeoutDispatcher{m_runtime}
     {
     }
 

@@ -4,6 +4,7 @@
 
 #include <Babylon/JsRuntime.h>
 
+#include <optional>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -20,7 +21,7 @@ namespace Babylon::Polyfills::Internal
         Window(const Napi::CallbackInfo& info);
     private:
         JsRuntime& m_runtime;
-        std::unique_ptr<TimeoutDispatcher> m_timeoutDispatcher;
+        std::optional<TimeoutDispatcher> m_timeoutDispatcher;
 
         static Napi::Value SetTimeout(const Napi::CallbackInfo& info);
         static void ClearTimeout(const Napi::CallbackInfo& info);
