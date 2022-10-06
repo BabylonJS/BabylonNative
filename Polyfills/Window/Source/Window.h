@@ -1,11 +1,9 @@
 #pragma once
 
+#include "TimeoutDispatcher.h"
+
 #include <Babylon/JsRuntime.h>
 
-namespace
-{
-    class TimeoutDispatcher;
-}
 
 namespace Babylon::Polyfills::Internal
 {

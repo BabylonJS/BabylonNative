@@ -1,0 +1,38 @@
+#pragma once
+
+#include <Babylon/JsRuntime.h>
+
+#include <map>
+
+namespace Babylon::Polyfills::Internal
+{
+    struct Timeout;
+
+    using Milliseconds = std::chrono::milliseconds;
+    using TimeoutId = int32_t;
+    using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>;
+
+    class TimeoutDispatcher
+    {
+    public:
+        TimeoutDispatcher(Babylon::JsRuntime& runtime);
+        ~TimeoutDispatcher();
+
+        TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> func, Milliseconds delay);
+        void Clear(TimeoutId id);
+
+    private:
+        void WaitThenCallProc();
+        void CallFunction(std::shared_ptr<Napi::FunctionReference> func);
+        TimeoutId NextTimeoutId();
+
+        Babylon::JsRuntime& m_runtime;
+        std::thread m_thread;
+        std::mutex m_mutex{};
+        std::condition_variable m_condVariable{};
+        TimeoutId m_lastTimeoutId = 0;
+        std::unordered_map<TimeoutId, Timeout> m_idMap;
+        std::map<TimePoint, std::list<Timeout>> m_timeMap;
+        std::atomic<bool> m_shutdown{false};
+    };
+}
