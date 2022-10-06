@@ -51,7 +51,7 @@ namespace
             std::unique_lock<std::mutex> lk(m_mutex);
             const auto earliestTime =
                 m_timeMap.empty()
-                    ? now + std::chrono::milliseconds{ 1 }
+                    ? TimePoint::max()
                     : m_timeMap.cbegin()->second.front().time;
 
             const auto time = now + delay;
