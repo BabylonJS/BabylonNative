@@ -20,9 +20,9 @@ namespace Babylon::Polyfills::Internal
 
         TimePoint time;
 
-        Timeout(TimeoutId id, Napi::Function func, TimePoint time)
+        Timeout(TimeoutId id, Napi::Function function, TimePoint time)
             : id{id}
-            , function{std::make_shared<Napi::FunctionReference>(Napi::Persistent(func))}
+            , function{std::make_shared<Napi::FunctionReference>(Napi::Persistent(function))}
             , time{time}
         {
         }
@@ -30,7 +30,7 @@ namespace Babylon::Polyfills::Internal
 
     TimeoutDispatcher::TimeoutDispatcher(Babylon::JsRuntime& runtime)
         : m_runtime(runtime)
-        , m_thread{&TimeoutDispatcher::WaitThenCallProc, this}
+        , m_thread{&TimeoutDispatcher::ThreadFunction, this}
     {
     }
 
@@ -50,7 +50,7 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    TimeoutId TimeoutDispatcher::Dispatch(Napi::Function func, std::chrono::milliseconds delay)
+    TimeoutId TimeoutDispatcher::Dispatch(Napi::Function function, std::chrono::milliseconds delay)
     {
         if (delay.count() <= 0)
         {
@@ -63,7 +63,7 @@ namespace Babylon::Polyfills::Internal
                                                     : m_timeMap.cbegin()->second->time;
         const auto id = NextTimeoutId();
         const auto time = Now() + delay;
-        m_idMap.insert({id, std::make_unique<Timeout>(id, std::move(func), time)});
+        m_idMap.insert({id, std::make_unique<Timeout>(id, std::move(function), time)});
         m_timeMap.insert({time, m_idMap[id].get()});
 
         if (time <= earliestTime)
@@ -97,7 +97,7 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void TimeoutDispatcher::WaitThenCallProc()
+    void TimeoutDispatcher::ThreadFunction()
     {
         TimePoint nextTimePoint{};
         while (!m_shutdown)
@@ -124,10 +124,10 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void TimeoutDispatcher::CallFunction(std::shared_ptr<Napi::FunctionReference> func)
+    void TimeoutDispatcher::CallFunction(std::shared_ptr<Napi::FunctionReference> function)
     {
-        m_runtime.Dispatch([func = std::move(func)](Napi::Env)
-            { func->Call({}); });
+        m_runtime.Dispatch([function = std::move(function)](Napi::Env)
+            { function->Call({}); });
     }
 
     TimeoutId TimeoutDispatcher::NextTimeoutId()

@@ -6,9 +6,9 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    struct Timeout;
-
     using TimeoutId = int32_t;
+
+    struct Timeout;
 
     class TimeoutDispatcher
     {
@@ -16,14 +16,14 @@ namespace Babylon::Polyfills::Internal
         TimeoutDispatcher(Babylon::JsRuntime& runtime);
         ~TimeoutDispatcher();
 
-        TimeoutId Dispatch(Napi::Function func, std::chrono::milliseconds delay);
+        TimeoutId Dispatch(Napi::Function function, std::chrono::milliseconds delay);
         void Clear(TimeoutId id);
 
     private:
         using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>;
 
-        void WaitThenCallProc();
-        void CallFunction(std::shared_ptr<Napi::FunctionReference> func);
+        void ThreadFunction();
+        void CallFunction(std::shared_ptr<Napi::FunctionReference> function);
         TimeoutId NextTimeoutId();
 
         Babylon::JsRuntime& m_runtime;
