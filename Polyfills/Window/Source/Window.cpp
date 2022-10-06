@@ -88,6 +88,10 @@ namespace
                         break;
                     }
                 }
+                if (timeouts.empty())
+                {
+                    m_timeMap.erase(timeIterator);
+                }
                 
                 m_idMap.erase(idIterator);
             }
