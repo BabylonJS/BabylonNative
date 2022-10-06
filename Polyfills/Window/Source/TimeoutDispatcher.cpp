@@ -58,19 +58,19 @@ namespace Babylon::Polyfills::Internal
         const auto earliestTime =
             m_timeMap.empty()
             ? TimePoint::max()
-            : m_timeMap.cbegin()->second.front().time;
+            : m_timeMap.cbegin()->second.front()->time;
 
+        const auto id = NextTimeoutId();
         const auto time = now + delay;
-        const Timeout timeout = Timeout{NextTimeoutId(), std::move(func), time};
-        m_idMap.insert({timeout.id, timeout});
-        m_timeMap[time].push_back(timeout);
+        m_idMap.insert({id, std::make_unique<Timeout>(id, std::move(func), time)});
+        m_timeMap[time].push_back(m_idMap[id].get());
 
         if (time <= earliestTime)
         {
             m_condVariable.notify_one();
         }
 
-        return timeout.id;
+        return id;
     }
 
     void TimeoutDispatcher::Clear(TimeoutId id)
@@ -79,8 +79,8 @@ namespace Babylon::Polyfills::Internal
         const auto idIterator = m_idMap.find(id);
         if (idIterator != m_idMap.end())
         {
-            const auto& time = idIterator->second.time;
-            const auto& timeoutId = idIterator->second.id;
+            const auto& time = idIterator->second->time;
+            const auto& timeoutId = idIterator->second->id;
 
             const auto timeIterator = m_timeMap.find(time);
             assert(timeIterator != m_timeMap.end() && "m_idMap and m_timeMap are out of sync");
@@ -88,7 +88,7 @@ namespace Babylon::Polyfills::Internal
             auto& timeouts = timeIterator->second;
             for (auto i = timeouts.begin(); i != timeouts.end(); i++)
             {
-                if ((*i).id == timeoutId)
+                if ((*i)->id == timeoutId)
                 {
                     timeouts.erase(i);
                     break;
@@ -109,7 +109,7 @@ namespace Babylon::Polyfills::Internal
         while (!m_shutdown)
         {
             std::unique_lock<std::mutex> lk(m_mutex);
-            while (!m_timeMap.empty() && Now() < (nextTimePoint = m_timeMap.begin()->second.front().time))
+            while (!m_timeMap.empty() && Now() < (nextTimePoint = m_timeMap.begin()->second.front()->time))
             {
                 m_condVariable.wait_until(lk, nextTimePoint);
             }
@@ -120,8 +120,8 @@ namespace Babylon::Polyfills::Internal
                 while (!timeouts.empty())
                 {
                     auto& timeout = timeouts.front();
-                    CallFunction(timeout.function);
-                    m_idMap.erase(timeout.id);
+                    CallFunction(timeout->function);
+                    m_idMap.erase(timeout->id);
                     timeouts.pop_front();
                 }
                 m_timeMap.erase(m_timeMap.begin());
