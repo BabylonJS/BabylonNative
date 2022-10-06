@@ -8,9 +8,7 @@ namespace Babylon::Polyfills::Internal
 {
     struct Timeout;
 
-    using Milliseconds = std::chrono::milliseconds;
     using TimeoutId = int32_t;
-    using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>;
 
     class TimeoutDispatcher
     {
@@ -22,6 +20,8 @@ namespace Babylon::Polyfills::Internal
         void Clear(TimeoutId id);
 
     private:
+        using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>;
+
         void WaitThenCallProc();
         void CallFunction(std::shared_ptr<Napi::FunctionReference> func);
         TimeoutId NextTimeoutId();

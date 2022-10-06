@@ -4,6 +4,8 @@
 
 namespace Babylon::Polyfills::Internal
 {
+    using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>;
+
     TimePoint Now()
     {
         return std::chrono::time_point_cast<std::chrono::milliseconds, std::chrono::steady_clock>(std::chrono::steady_clock::now());
