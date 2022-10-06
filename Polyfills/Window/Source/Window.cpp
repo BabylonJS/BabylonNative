@@ -9,7 +9,7 @@
 namespace
 {
     using TimeoutId = Babylon::Polyfills::Internal::TimeoutId;
-    using Milliseconds = std::chrono::milliseconds::rep;
+    using Milliseconds = std::chrono::milliseconds;
     using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>;
 
     TimePoint Now()
@@ -21,14 +21,12 @@ namespace
     {
         TimeoutId id;
         std::shared_ptr<Napi::FunctionReference> function;
-        Milliseconds time;
-        TimePoint timePoint;
+        TimePoint time;
 
-        Timeout(TimeoutId id, std::shared_ptr<Napi::FunctionReference> func, Milliseconds time, TimePoint timePoint)
+        Timeout(TimeoutId id, std::shared_ptr<Napi::FunctionReference> func, TimePoint time)
             : id{ id }
             , function{ std::move(func) }
             , time{ time }
-            , timePoint{ timePoint }
         {
         }
     };
@@ -41,9 +39,9 @@ namespace
             , m_thread{&TimeoutDispatcher::WaitThenCallProc, this}
         { }
 
-        TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> func, Milliseconds time)
+        TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> func, Milliseconds delay)
         {
-            if (time <= 0)
+            if (delay.count() <= 0)
             {
                 CallFunction(std::move(func));
                 return 0;
@@ -51,17 +49,17 @@ namespace
 
             const auto now = Now();
             std::unique_lock<std::mutex> lk(m_mutex);
-            const auto soonestTimePoint =
+            const auto earliestTime =
                 m_timeMap.empty()
                     ? now + std::chrono::milliseconds{ 1 }
-                    : m_timeMap.cbegin()->second.front().timePoint;
+                    : m_timeMap.cbegin()->second.front().time;
 
-            const auto timePoint = now + std::chrono::milliseconds(time);
-            const Timeout timeout = Timeout{ NextTimeoutId(), std::move(func), time, timePoint };
+            const auto time = now + delay;
+            const Timeout timeout = Timeout{ NextTimeoutId(), std::move(func), time };
             m_idMap.insert({ timeout.id, timeout });
             m_timeMap[time].push_back(timeout);
 
-            if (timePoint <= soonestTimePoint)
+            if (time <= earliestTime)
             {
                 m_condVariable.notify_one();
             }
@@ -75,10 +73,10 @@ namespace
             const auto idIterator = m_idMap.find(id);
             if (idIterator != m_idMap.end())
             {
-                const auto& milliseconds = idIterator->second.time;
+                const auto& time = idIterator->second.time;
                 const auto& timeoutId = idIterator->second.id;
 
-                const auto timeIterator = m_timeMap.find(milliseconds);
+                const auto timeIterator = m_timeMap.find(time);
                 assert(timeIterator != m_timeMap.end() && "m_idMap and m_timeMap are out of sync");
 
                 auto& timeouts = timeIterator->second;
@@ -101,7 +99,7 @@ namespace
             while (!m_shutdown) 
             {
                 std::unique_lock<std::mutex> lk(m_mutex);
-                while (!m_timeMap.empty() && Now() < (nextTimePoint = m_timeMap.begin()->second.front().timePoint))
+                while (!m_timeMap.empty() && Now() < (nextTimePoint = m_timeMap.begin()->second.front().time))
                 {
                     m_condVariable.wait_until(lk, nextTimePoint);
                 }
@@ -173,7 +171,7 @@ namespace
         std::condition_variable m_condVariable{};
         TimeoutId m_lastTimeoutId = 0;
         std::unordered_map<TimeoutId, Timeout> m_idMap;
-        std::map<Milliseconds, std::list<Timeout>> m_timeMap;
+        std::map<TimePoint, std::list<Timeout>> m_timeMap;
         std::atomic<bool> m_shutdown{false};
     };
 }
@@ -257,12 +255,12 @@ namespace Babylon::Polyfills::Internal
     Napi::Value Window::SetTimeout(const Napi::CallbackInfo& info)
     {
         auto function = Napi::Persistent(info[0].As<Napi::Function>());
-        auto milliseconds = std::chrono::milliseconds{info[1].As<Napi::Number>().Int32Value()}.count();
+        auto delay = std::chrono::milliseconds{info[1].As<Napi::Number>().Int32Value()};
 
         auto functionRef = std::make_shared<Napi::FunctionReference>(std::move(function));
 
         auto& window = *static_cast<Window*>(info.Data());
-        return Napi::Value::From(info.Env(), window.m_timeoutDispatcher->Dispatch(functionRef, milliseconds));
+        return Napi::Value::From(info.Env(), window.m_timeoutDispatcher->Dispatch(functionRef, delay));
     }
 
     void Window::ClearTimeout(const Napi::CallbackInfo& info)
