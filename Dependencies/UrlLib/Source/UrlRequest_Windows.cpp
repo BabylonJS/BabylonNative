@@ -1,15 +1,14 @@
 #include <UrlLib/UrlLib.h>
 #include <Unknwn.h>
 #include <PathCch.h>
-#include <arcana/threading/task.h>
 #include <arcana/threading/task_conversions.h>
 #include <robuffer.h>
 #include <winrt/Windows.Storage.Streams.h>
 #include <winrt/Windows.Web.Http.h>
 #include <winrt/Windows.ApplicationModel.h>
 #include <winrt/Windows.Foundation.Collections.h>
-#include <string>
-#include <unordered_map>
+
+#include "UrlRequest_Base.h"
 
 namespace UrlLib
 {
@@ -49,7 +48,7 @@ namespace UrlLib
         }
     }
 
-    class UrlRequest::Impl
+    class UrlRequest::Impl : public UrlRequest::ImplBase
     {
     public:
         ~Impl()
@@ -185,17 +184,6 @@ namespace UrlLib
             return {bytes, gsl::narrow_cast<std::size_t>(m_responseBuffer.Length())};
         }
 
-        std::optional<std::string> GetResponseHeader(const std::string& headerName) const
-        {
-            const auto it = m_headers.find(headerName);
-            if (it == m_headers.end())
-            {
-                return {};
-            }
-
-            return it->second;
-        }
-
     private:
         arcana::task<void, std::exception_ptr> LoadFileAsync(Storage::StorageFile file)
         {
@@ -224,16 +212,8 @@ namespace UrlLib
             }
         }
 
-
-        arcana::cancellation_source m_cancellationSource{};
-        UrlResponseType m_responseType{UrlResponseType::String};
-        UrlMethod m_method{UrlMethod::Get};
         Foundation::Uri m_uri{nullptr};
-        UrlStatusCode m_statusCode{UrlStatusCode::None};
-        std::string m_responseUrl{};
-        std::string m_responseString{};
         Storage::Streams::IBuffer m_responseBuffer{};
-        std::unordered_map<std::string, std::string> m_headers;
     };
 }
 

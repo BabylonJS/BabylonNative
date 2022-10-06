@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <optional>
+#include <string>
 #include <string_view>
 #include <arcana/threading/task.h>
 
@@ -59,6 +61,8 @@ namespace UrlLib
 
     private:
         class Impl;
+        class ImplBase;
+
         std::shared_ptr<Impl> m_impl{};
     };
 }
