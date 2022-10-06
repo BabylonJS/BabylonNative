@@ -18,7 +18,7 @@ namespace Babylon::Polyfills::Internal
         TimeoutDispatcher(Babylon::JsRuntime& runtime);
         ~TimeoutDispatcher();
 
-        TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> func, Milliseconds delay);
+        TimeoutId Dispatch(Napi::Function func, std::chrono::milliseconds delay);
         void Clear(TimeoutId id);
 
     private:

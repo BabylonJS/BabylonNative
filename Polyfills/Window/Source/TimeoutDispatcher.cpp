@@ -12,12 +12,15 @@ namespace Babylon::Polyfills::Internal
     struct Timeout
     {
         TimeoutId id;
+
+        // Make this non-shared when JsRuntime::Dispatch supports it.
         std::shared_ptr<Napi::FunctionReference> function;
+
         TimePoint time;
 
-        Timeout(TimeoutId id, std::shared_ptr<Napi::FunctionReference> func, TimePoint time)
+        Timeout(TimeoutId id, Napi::Function func, TimePoint time)
             : id{id}
-            , function{std::move(func)}
+            , function{std::make_shared<Napi::FunctionReference>(Napi::Persistent(func))}
             , time{time}
         {
         }
@@ -45,7 +48,7 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    TimeoutId TimeoutDispatcher::Dispatch(std::shared_ptr<Napi::FunctionReference> func, Milliseconds delay)
+    TimeoutId TimeoutDispatcher::Dispatch(Napi::Function func, std::chrono::milliseconds delay)
     {
         if (delay.count() <= 0)
         {
