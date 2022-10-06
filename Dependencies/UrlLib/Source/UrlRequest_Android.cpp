@@ -1,12 +1,9 @@
-#include <UrlLib/UrlLib.h>
-#include <arcana/threading/task.h>
+#include "UrlRequest_Base.h"
+
 #include <arcana/threading/task_schedulers.h>
 #include <android/asset_manager.h>
 #include <AndroidExtensions/Globals.h>
 #include <AndroidExtensions/JavaWrappers.h>
-#include <string>
-#include <vector>
-#include <unordered_map>
 
 using namespace android::global;
 using namespace android::net;
@@ -32,19 +29,9 @@ namespace UrlLib
         }
     }
 
-    class UrlRequest::Impl
+    class UrlRequest::Impl : public ImplBase
     {
     public:
-        ~Impl()
-        {
-            Abort();
-        }
-
-        void Abort()
-        {
-            m_cancellationSource.cancel();
-        }
-
         void Open(UrlMethod method, const std::string& url)
         {
             m_method = method;
@@ -66,16 +53,6 @@ namespace UrlLib
                 m_schemeIsApp = false;
                 m_appPathOrUrl = std::move(url);
             }
-        }
-
-        UrlResponseType ResponseType() const
-        {
-            return m_responseType;
-        }
-
-        void ResponseType(UrlResponseType value)
-        {
-            m_responseType = value;
         }
 
         arcana::task<void, std::exception_ptr> SendAsync()
@@ -134,7 +111,10 @@ namespace UrlLib
                                 break;
                             }
 
-                            m_headers.insert({key, value});
+                            std::string lowerCaseKey = key;
+                            ToLower(lowerCaseKey);
+
+                            m_headers.insert({lowerCaseKey, value});
                         }
 
                         int contentLength = connection.GetContentLength();
@@ -183,49 +163,16 @@ namespace UrlLib
             });
         }
 
-        UrlStatusCode StatusCode() const
-        {
-            return m_statusCode;
-        }
-
-        std::string_view ResponseUrl()
-        {
-            return m_responseUrl;
-        }
-
-        std::string_view ResponseString()
-        {
-            return m_responseString;
-        }
-
         gsl::span<const std::byte> ResponseBuffer() const
         {
             return m_responseBuffer;
         }
 
-        std::optional<std::string> GetResponseHeader(const std::string& headerName) const
-        {
-            const auto it = m_headers.find(headerName);
-            if (it == m_headers.end())
-            {
-                return {};
-            }
-
-            return it->second;
-        }
-
     private:
-        arcana::cancellation_source m_cancellationSource{};
-        UrlResponseType m_responseType{UrlResponseType::String};
-        UrlMethod m_method{UrlMethod::Get};
         bool m_schemeIsApp{};
         std::string m_appPathOrUrl{};
-        UrlStatusCode m_statusCode{UrlStatusCode::None};
-        std::string m_responseUrl{};
-        std::string m_responseString{};
         std::vector<std::byte> m_responseBuffer{};
-        std::unordered_map<std::string, std::string> m_headers;
     };
 }
 
-#include <Shared/UrlRequest.h>
+#include "UrlRequest_Shared.h"

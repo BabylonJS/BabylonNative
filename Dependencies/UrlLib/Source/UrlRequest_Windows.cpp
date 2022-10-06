@@ -1,4 +1,5 @@
-#include <UrlLib/UrlLib.h>
+#include "UrlRequest_Base.h"
+
 #include <Unknwn.h>
 #include <PathCch.h>
 #include <arcana/threading/task_conversions.h>
@@ -7,8 +8,6 @@
 #include <winrt/Windows.Web.Http.h>
 #include <winrt/Windows.ApplicationModel.h>
 #include <winrt/Windows.Foundation.Collections.h>
-
-#include "UrlRequest_Base.h"
 
 namespace UrlLib
 {
@@ -48,33 +47,13 @@ namespace UrlLib
         }
     }
 
-    class UrlRequest::Impl : public UrlRequest::ImplBase
+    class UrlRequest::Impl : public ImplBase
     {
     public:
-        ~Impl()
-        {
-            Abort();
-        }
-
-        void Abort()
-        {
-            m_cancellationSource.cancel();
-        }
-
         void Open(UrlMethod method, const std::string& url)
         {
             m_method = method;
             m_uri = Foundation::Uri{winrt::to_hstring(url)};
-        }
-
-        UrlResponseType ResponseType() const
-        {
-            return m_responseType;
-        }
-
-        void ResponseType(UrlResponseType value)
-        {
-            m_responseType = value;
         }
 
         arcana::task<void, std::exception_ptr> SendAsync()
@@ -156,21 +135,6 @@ namespace UrlLib
             }
         }
 
-        UrlStatusCode StatusCode() const
-        {
-            return m_statusCode;
-        }
-
-        std::string_view ResponseUrl()
-        {
-            return m_responseUrl;
-        }
-
-        std::string_view ResponseString()
-        {
-            return m_responseString;
-        }
-
         gsl::span<const std::byte> ResponseBuffer() const
         {
             if (!m_responseBuffer)
@@ -217,4 +181,4 @@ namespace UrlLib
     };
 }
 
-#include <Shared/UrlRequest.h>
+#include "UrlRequest_Shared.h"

@@ -3,6 +3,7 @@
 #include <UrlLib/UrlLib.h>
 #include <arcana/threading/cancellation.h>
 #include <string>
+#include <cctype>
 #include <unordered_map>
 
 namespace UrlLib
@@ -60,10 +61,15 @@ namespace UrlLib
         static std::string ToLower(const char* str)
         {
             std::string s{str};
-            std::transform(s.cbegin(), s.cend(), s.begin(), [](auto c) { return std::tolower(c); });
+            std::transform(s.cbegin(), s.cend(), s.begin(), [](auto c) { return static_cast<decltype(c)>(std::tolower(c)); });
             return s;
         }
         
+        static void ToLower(std::string& s)
+        {
+            std::transform(s.cbegin(), s.cend(), s.begin(), [](auto c) { return static_cast<decltype(c)>(std::tolower(c)); });
+        }
+
         arcana::cancellation_source m_cancellationSource{};
         UrlResponseType m_responseType{UrlResponseType::String};
         UrlMethod m_method{UrlMethod::Get};
