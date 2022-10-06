@@ -57,17 +57,14 @@ namespace Babylon::Polyfills::Internal
             delay = std::chrono::milliseconds{0};
         }
 
-        const auto now = Now();
         std::unique_lock<std::mutex> lk(m_mutex);
-        const auto earliestTime =
-            m_timeMap.empty()
-            ? TimePoint::max()
-            : m_timeMap.cbegin()->second.front()->time;
 
+        const auto earliestTime = m_timeMap.empty() ? TimePoint::max()
+                                                    : m_timeMap.cbegin()->second->time;
         const auto id = NextTimeoutId();
-        const auto time = now + delay;
+        const auto time = Now() + delay;
         m_idMap.insert({id, std::make_unique<Timeout>(id, std::move(func), time)});
-        m_timeMap[time].push_back(m_idMap[id].get());
+        m_timeMap.insert({time, m_idMap[id].get()});
 
         if (time <= earliestTime)
         {
@@ -83,24 +80,17 @@ namespace Babylon::Polyfills::Internal
         const auto idIterator = m_idMap.find(id);
         if (idIterator != m_idMap.end())
         {
-            const auto& time = idIterator->second->time;
-            const auto& timeoutId = idIterator->second->id;
+            const auto& timeout = idIterator->second;
 
-            const auto timeIterator = m_timeMap.find(time);
-            assert(timeIterator != m_timeMap.end() && "m_idMap and m_timeMap are out of sync");
+            assert(m_timeMap.lower_bound(timeout->time) != m_timeMap.end() && "m_idMap and m_timeMap are out of sync");
 
-            auto& timeouts = timeIterator->second;
-            for (auto i = timeouts.begin(); i != timeouts.end(); i++)
+            for (auto i = m_timeMap.lower_bound(timeout->time); i->first == timeout->time; i++)
             {
-                if ((*i)->id == timeoutId)
+                if (i->second->id == id)
                 {
-                    timeouts.erase(i);
+                    m_timeMap.erase(i);
                     break;
                 }
-            }
-            if (timeouts.empty())
-            {
-                m_timeMap.erase(timeIterator);
             }
 
             m_idMap.erase(idIterator);
@@ -113,22 +103,18 @@ namespace Babylon::Polyfills::Internal
         while (!m_shutdown)
         {
             std::unique_lock<std::mutex> lk(m_mutex);
-            while (!m_timeMap.empty() && Now() < (nextTimePoint = m_timeMap.begin()->second.front()->time))
+
+            while (!m_timeMap.empty() && Now() < (nextTimePoint = m_timeMap.begin()->second->time))
             {
                 m_condVariable.wait_until(lk, nextTimePoint);
             }
 
-            if (!m_timeMap.empty())
+            for (auto i = m_timeMap.begin(); i != m_timeMap.end() && i->second->time == nextTimePoint; i = m_timeMap.begin())
             {
-                auto& timeouts = m_timeMap.begin()->second;
-                while (!timeouts.empty())
-                {
-                    auto& timeout = timeouts.front();
-                    CallFunction(timeout->function);
-                    m_idMap.erase(timeout->id);
-                    timeouts.pop_front();
-                }
-                m_timeMap.erase(m_timeMap.begin());
+                const auto *timeout = i->second;
+                CallFunction(timeout->function);
+                m_timeMap.erase(i);
+                m_idMap.erase(timeout->id);
             }
 
             while (!m_shutdown && m_timeMap.empty())

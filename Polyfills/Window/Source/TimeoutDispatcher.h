@@ -32,7 +32,7 @@ namespace Babylon::Polyfills::Internal
         std::condition_variable m_condVariable{};
         TimeoutId m_lastTimeoutId = 0;
         std::unordered_map<TimeoutId, std::unique_ptr<Timeout>> m_idMap;
-        std::map<TimePoint, std::list<Timeout*>> m_timeMap;
+        std::multimap<TimePoint, Timeout*> m_timeMap;
         std::atomic<bool> m_shutdown{false};
     };
 }
