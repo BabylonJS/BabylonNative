@@ -49,8 +49,7 @@ namespace Babylon::Polyfills::Internal
     {
         if (delay.count() <= 0)
         {
-            CallFunction(std::move(func));
-            return 0;
+            delay = std::chrono::milliseconds{0};
         }
 
         const auto now = Now();
