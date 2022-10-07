@@ -34,11 +34,16 @@ function useAppState(): string {
             setAppState(appState);
         };
 
-        AppState.addEventListener("change", onAppStateChanged);
+        const appStateListener = AppState.addEventListener("change", onAppStateChanged);
 
         return () => {
-            AppState.removeEventListener("change", onAppStateChanged);
-        }
+            if (!!appStateListener?.remove) {
+                appStateListener.remove();
+            }
+            else {
+                AppState.removeEventListener("change", onAppStateChanged);
+            }
+        };
     }, []);
 
     return appState;
