@@ -1,7 +1,6 @@
 #pragma once
 
 #include <jni.h>
-#include <functional>
 #include <string>
 #include <vector>
 #include <cstddef>
