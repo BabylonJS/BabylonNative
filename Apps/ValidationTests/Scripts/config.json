@@ -375,9 +375,9 @@
             "referenceImage": "gltfTextureSampler1.png"
         },
         {
-            "title": "GLTF Serializer Morph Target Animation Group",
+            "title": "GLTF Alien",
             "playgroundId": "#XN37SR#5",
-            "referenceImage": "gltfSerializerMorphTargetAnimationGroup.png"
+            "referenceImage": "gltfAlien.png"
         }
     ]
 }
