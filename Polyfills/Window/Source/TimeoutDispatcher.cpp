@@ -52,7 +52,7 @@ namespace Babylon::Polyfills::Internal
 
     TimeoutId TimeoutDispatcher::Dispatch(Napi::Function function, std::chrono::milliseconds delay)
     {
-        if (delay.count() <= 0)
+        if (delay.count() < 0)
         {
             delay = std::chrono::milliseconds{0};
         }
