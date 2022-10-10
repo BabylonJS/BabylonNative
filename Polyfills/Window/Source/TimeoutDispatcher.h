@@ -19,12 +19,13 @@ namespace Babylon::Polyfills::Internal
         TimeoutId Dispatch(Napi::Function function, std::chrono::milliseconds delay);
         void Clear(TimeoutId id);
 
+        TimeoutId NextTimeoutId();
+
     private:
         using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>;
 
         void ThreadFunction();
         void CallFunction(std::shared_ptr<Napi::FunctionReference> function);
-        TimeoutId NextTimeoutId();
 
         Babylon::JsRuntime& m_runtime;
         std::thread m_thread;

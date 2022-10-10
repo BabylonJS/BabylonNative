@@ -68,7 +68,7 @@ namespace Babylon::Polyfills::Internal
 
         if (time <= earliestTime)
         {
-            m_condVariable.notify_one();
+            m_runtime.Dispatch([this](Napi::Env){ m_condVariable.notify_one(); });
         }
 
         return id;
@@ -94,6 +94,24 @@ namespace Babylon::Polyfills::Internal
             }
 
             m_idMap.erase(idIterator);
+        }
+    }
+
+    TimeoutId TimeoutDispatcher::NextTimeoutId()
+    {
+        while (true)
+        {
+            ++m_lastTimeoutId;
+
+            if (m_lastTimeoutId <= 0)
+            {
+                m_lastTimeoutId = 1;
+            }
+
+            if (m_idMap.find(m_lastTimeoutId) == m_idMap.end())
+            {
+                return m_lastTimeoutId;
+            }
         }
     }
 
@@ -128,23 +146,5 @@ namespace Babylon::Polyfills::Internal
     {
         m_runtime.Dispatch([function = std::move(function)](Napi::Env)
             { function->Call({}); });
-    }
-
-    TimeoutId TimeoutDispatcher::NextTimeoutId()
-    {
-        while (true)
-        {
-            ++m_lastTimeoutId;
-
-            if (m_lastTimeoutId <= 0)
-            {
-                m_lastTimeoutId = 1;
-            }
-
-            if (m_idMap.find(m_lastTimeoutId) == m_idMap.end())
-            {
-                return m_lastTimeoutId;
-            }
-        }
     }
 }
