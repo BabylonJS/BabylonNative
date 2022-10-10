@@ -48,7 +48,6 @@ int Run(std::unique_ptr<Babylon::Graphics::Device> device)
     });
     Babylon::ScriptLoader loader{*runtime};
     loader.Eval("global = {};", ""); // Required for Chai.js as we do not have global in Babylon Native
-    loader.Eval("window.clearTimeout = () => {};", ""); // TODO: implement clear timeout, required for Mocha timeouts to work correctly
     loader.Eval("location = {href: ''};", "");          // Required for Mocha.js as we do not have a location in Babylon Native
     loader.LoadScript("app:///Scripts/babylon.max.js");
     loader.LoadScript("app:///Scripts/babylonjs.materials.js");
