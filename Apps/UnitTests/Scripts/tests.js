@@ -327,6 +327,108 @@ describe("PostProcesses", function() {
     });*/
 })
 
+const wait = async (milliseconds) => {
+    const loopFor = async (milliseconds) => {
+        const startTime = new Date().getTime();
+        while (new Date().getTime() - startTime < milliseconds) {
+        }
+    }
+    await loopFor(0);
+    for (let i = 0; i < milliseconds; i++) {
+        await loopFor(1);
+    }
+}
+
+describe("setTimeout", function () {
+    this.timeout(0);
+    it("should return an id greater than zero", function () {
+        const id = setTimeout(() => { }, 0);
+        expect(id).to.be.greaterThan(0);
+    });
+    it("should return an id greater than zero when given an undefined function", async function () {
+        const id = setTimeout(undefined, 0);
+        expect(id).to.be.greaterThan(0);
+    });
+    it("should call the given function after the given delay", async function () {
+        let called = false;
+        const startTime = new Date().getTime();
+        let calledTime = 0;
+        setTimeout(() => {
+            called = true;
+            calledTime = new Date().getTime();
+        }, 10);
+        await wait(100);
+        expect(called).to.equal(true);
+        expect(calledTime - startTime).to.be.at.least(10);
+    });
+    it("should call the given function after the given delay when the delay is a string representing a valid number", async function () {
+        let called = false;
+        const startTime = new Date().getTime();
+        let calledTime = 0;
+        setTimeout(() => {
+            called = true;
+            calledTime = new Date().getTime();
+        }, "10");
+        await wait(100);
+        expect(called).to.equal(true);
+        expect(calledTime - startTime).to.be.at.least(10);
+    });
+    it("should call the given function after zero milliseconds when the delay is a string representing an invalid number", async function () {
+        let called = false;
+        const startTime = new Date().getTime();
+        let calledTime = 0;
+        setTimeout(() => {
+            called = true;
+            calledTime = new Date().getTime();
+        }, "a");
+        await wait(100);
+        expect(called).to.equal(true);
+        expect(calledTime - startTime).to.equal(0);
+    });
+    it("should call the given function after other tasks execute when the given delay is zero", async function () {
+        let called = false;
+        setTimeout(() => { called = true; }, 0);
+        expect(called).to.equal(false);
+        await wait(100);
+        expect(called).to.equal(true);
+    });
+    it("should call the given function after other tasks execute when the given delay is undefined", async function () {
+        let called = false;
+        setTimeout(() => { called = true; }, undefined);
+        expect(called).to.equal(false);
+        await wait(100);
+        expect(called).to.equal(true);
+    });
+    it("should call the given functions in the correct order", async function () {
+        let called = []
+        for (let i = 9; i >= 0; i--) {
+            setTimeout(() => { called.push(i); }, i);
+        }
+        await wait(100);
+        for (let i = 0; i < 0; i++) {
+            expect(called[i]).to.equal(i);
+        }
+    });
+})
+
+describe("clearTimeout", function () {
+    this.timeout(0);
+    it("should stop the timeout matching the given timeout id", async function () {
+        let called = false;
+        const id = setTimeout(() => { called = true; }, 0);
+        clearTimeout(id);
+        await wait(100);
+        expect(called).to.equal(false);
+    });
+    it("should do nothing if the given timeout id is undefined", async function () {
+        let called = false;
+        const id = setTimeout(() => { called = true; }, 0);
+        clearTimeout(undefined);
+        await wait(100);
+        expect(called).to.equal(true);
+    });
+})
+
 mocha.run(failures => {
     // Test program will wait for code to be set before exiting
     if (failures > 0) {
