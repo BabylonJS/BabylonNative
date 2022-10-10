@@ -14,6 +14,9 @@ set(NPM_SCRIPTS
     "../node_modules/chai/chai.js"
     "../node_modules/mocha/mocha.js")
 
+set(HEADERS
+    "Shared/Tests.h")
+
 set(ADDITIONAL_LIBRARIES "")
 
 if(APPLE)
@@ -26,7 +29,7 @@ elseif(WIN32)
     set(TEST_APP "Win32/App.cpp")
 endif()
 
-add_executable(UnitTests ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_APP})
+add_executable(UnitTests ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_APP} ${HEADERS})
 
 target_link_to_dependencies(UnitTests
     UrlLib
