@@ -32,13 +32,9 @@ namespace Babylon::Polyfills::Internal
 
         jsNative.Set(JS_WINDOW_NAME, jsWindow);
 
-        if (global.Get(JS_SET_TIMEOUT_NAME).IsUndefined())
+        if (global.Get(JS_SET_TIMEOUT_NAME).IsUndefined() && global.Get(JS_CLEAR_TIMEOUT_NAME).IsUndefined())
         {
             global.Set(JS_SET_TIMEOUT_NAME, Napi::Function::New(env, &Window::SetTimeout, JS_SET_TIMEOUT_NAME, Window::Unwrap(jsWindow)));
-        }
-
-        if (global.Get(JS_CLEAR_TIMEOUT_NAME).IsUndefined())
-        {
             global.Set(JS_CLEAR_TIMEOUT_NAME, Napi::Function::New(env, &Window::ClearTimeout, JS_CLEAR_TIMEOUT_NAME, Window::Unwrap(jsWindow)));
         }
 
