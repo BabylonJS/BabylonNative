@@ -7,12 +7,11 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    using TimeoutId = int32_t;
-
-    struct Timeout;
-
     class TimeoutDispatcher
     {
+        using TimeoutId = int32_t;
+        struct Timeout;
+
     public:
         TimeoutDispatcher(Babylon::JsRuntime& runtime);
         ~TimeoutDispatcher();

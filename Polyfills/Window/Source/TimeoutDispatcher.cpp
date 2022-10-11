@@ -14,7 +14,7 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    struct Timeout
+    struct TimeoutDispatcher::Timeout
     {
         TimeoutId id;
 
@@ -53,7 +53,7 @@ namespace Babylon::Polyfills::Internal
         m_thread.join();
     }
 
-    TimeoutId TimeoutDispatcher::Dispatch(Napi::Function function, std::chrono::milliseconds delay)
+    TimeoutDispatcher::TimeoutId TimeoutDispatcher::Dispatch(Napi::Function function, std::chrono::milliseconds delay)
     {
         if (delay.count() < 0)
         {
@@ -101,7 +101,7 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    TimeoutId TimeoutDispatcher::NextTimeoutId()
+    TimeoutDispatcher::TimeoutId TimeoutDispatcher::NextTimeoutId()
     {
         while (true)
         {
