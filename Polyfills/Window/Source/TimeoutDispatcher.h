@@ -3,6 +3,7 @@
 #include <Babylon/JsRuntime.h>
 
 #include <map>
+#include <unordered_map>
 
 namespace Babylon::Polyfills::Internal
 {
