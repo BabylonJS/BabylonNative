@@ -1,6 +1,6 @@
 #include "TimeoutDispatcher.h"
 
-#include <assert.h>
+#include <cassert>
 
 namespace Babylon::Polyfills::Internal
 {
