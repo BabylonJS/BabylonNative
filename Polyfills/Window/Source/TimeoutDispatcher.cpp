@@ -139,7 +139,7 @@ namespace Babylon::Polyfills::Internal
 
             while (!m_timeMap.empty() && m_timeMap.begin()->second->time == nextTimePoint)
             {
-                const auto *timeout = m_timeMap.begin()->second;
+                const auto* timeout = m_timeMap.begin()->second;
                 CallFunction(timeout->function);
                 m_timeMap.erase(m_timeMap.begin());
                 m_idMap.erase(timeout->id);
