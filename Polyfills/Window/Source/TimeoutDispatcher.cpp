@@ -50,10 +50,7 @@ namespace Babylon::Polyfills::Internal
             m_condVariable.notify_one();
         }
 
-        if (m_thread.joinable())
-        {
-            m_thread.join();
-        }
+        m_thread.join();
     }
 
     TimeoutId TimeoutDispatcher::Dispatch(Napi::Function function, std::chrono::milliseconds delay)
