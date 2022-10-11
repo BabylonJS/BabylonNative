@@ -66,8 +66,8 @@ namespace Babylon::Polyfills::Internal
                                                     : m_timeMap.cbegin()->second->time;
         const auto id = NextTimeoutId();
         const auto time = Now() + delay;
-        m_idMap.insert({id, std::make_unique<Timeout>(id, std::move(function), time)});
-        m_timeMap.insert({time, m_idMap[id].get()});
+        const auto result = m_idMap.insert({id, std::make_unique<Timeout>(id, std::move(function), time)});
+        m_timeMap.insert({time, result.first->second.get()});
 
         if (time <= earliestTime)
         {
