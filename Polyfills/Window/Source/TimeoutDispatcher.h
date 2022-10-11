@@ -1,9 +1,15 @@
 #pragma once
 
 #include <Babylon/JsRuntime.h>
+#include <napi/napi.h>
 
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <map>
 #include <unordered_map>
+#include <cstdint>
+#include <thread>
 
 namespace Babylon::Polyfills::Internal
 {
