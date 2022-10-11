@@ -8,8 +8,6 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    using TimeoutId = int32_t;
-
     class Window : public Napi::ObjectWrap<Window>
     {
         static constexpr auto JS_WINDOW_NAME = "window";
