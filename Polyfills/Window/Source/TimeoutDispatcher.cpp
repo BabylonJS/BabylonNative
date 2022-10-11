@@ -43,7 +43,7 @@ namespace Babylon::Polyfills::Internal
     TimeoutDispatcher::~TimeoutDispatcher()
     {
         {
-            std::unique_lock<std::mutex> lk(m_mutex);
+            std::unique_lock<std::mutex> lk{m_mutex};
             m_idMap.clear();
             m_timeMap.clear();
             m_shutdown = true;
@@ -60,7 +60,7 @@ namespace Babylon::Polyfills::Internal
             delay = std::chrono::milliseconds{0};
         }
 
-        std::unique_lock<std::mutex> lk(m_mutex);
+        std::unique_lock<std::mutex> lk{m_mutex};
 
         const auto earliestTime = m_timeMap.empty() ? TimePoint::max()
                                                     : m_timeMap.cbegin()->second->time;
@@ -79,7 +79,7 @@ namespace Babylon::Polyfills::Internal
 
     void TimeoutDispatcher::Clear(TimeoutId id)
     {
-        std::unique_lock<std::mutex> lk(m_mutex);
+        std::unique_lock<std::mutex> lk{m_mutex};
         const auto idIterator = m_idMap.find(id);
         if (idIterator != m_idMap.end())
         {
@@ -123,7 +123,7 @@ namespace Babylon::Polyfills::Internal
         TimePoint nextTimePoint{};
         while (!m_shutdown)
         {
-            std::unique_lock<std::mutex> lk(m_mutex);
+            std::unique_lock<std::mutex> lk{m_mutex};
 
             while (!m_timeMap.empty() && Now() < (nextTimePoint = m_timeMap.begin()->second->time))
             {
