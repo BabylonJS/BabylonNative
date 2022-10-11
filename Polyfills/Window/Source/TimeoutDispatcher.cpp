@@ -121,10 +121,10 @@ namespace Babylon::Polyfills::Internal
 
     void TimeoutDispatcher::ThreadFunction()
     {
-        TimePoint nextTimePoint{};
         while (!m_shutdown)
         {
             std::unique_lock<std::mutex> lk{m_mutex};
+            TimePoint nextTimePoint{};
 
             while (!m_timeMap.empty() && Now() < (nextTimePoint = m_timeMap.begin()->second->time))
             {
