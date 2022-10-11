@@ -80,23 +80,24 @@ namespace Babylon::Polyfills::Internal
     void TimeoutDispatcher::Clear(TimeoutId id)
     {
         std::unique_lock<std::mutex> lk{m_mutex};
-        const auto idIterator = m_idMap.find(id);
-        if (idIterator != m_idMap.end())
+        const auto itId = m_idMap.find(id);
+        if (itId != m_idMap.end())
         {
-            const auto& timeout = idIterator->second;
+            const auto& timeout = itId->second;
+            const auto itTimeRange = m_timeMap.equal_range(timeout->time);
 
-            assert(m_timeMap.lower_bound(timeout->time) != m_timeMap.end() && "m_idMap and m_timeMap are out of sync");
+            assert(itTimeRange.first != m_timeMap.end() && "m_idMap and m_timeMap are out of sync");
 
-            for (auto i = m_timeMap.lower_bound(timeout->time); i->first == timeout->time; i++)
+            for (auto itTime = itTimeRange.first; itTime != itTimeRange.second; itTime++)
             {
-                if (i->second->id == id)
+                if (itTime->second->id == id)
                 {
-                    m_timeMap.erase(i);
+                    m_timeMap.erase(itTime);
                     break;
                 }
             }
 
-            m_idMap.erase(idIterator);
+            m_idMap.erase(itId);
         }
     }
 
