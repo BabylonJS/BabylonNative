@@ -383,7 +383,7 @@ describe("setTimeout", function () {
         }, "a");
         await wait(100);
         expect(called).to.equal(true);
-        expect(calledTime - startTime).to.equal(0);
+        expect(calledTime - startTime).to.be.at.most(1);
     });
     it("should call the given function after other tasks execute when the given delay is zero", async function () {
         let called = false;
