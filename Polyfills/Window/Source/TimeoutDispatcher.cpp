@@ -137,11 +137,11 @@ namespace Babylon::Polyfills::Internal
                 m_condVariable.wait_until(lk, nextTimePoint);
             }
 
-            for (auto i = m_timeMap.begin(); i != m_timeMap.end() && i->second->time == nextTimePoint; i = m_timeMap.begin())
+            while (!m_timeMap.empty() && m_timeMap.begin()->second->time == nextTimePoint)
             {
-                const auto *timeout = i->second;
+                const auto *timeout = m_timeMap.begin()->second;
                 CallFunction(timeout->function);
-                m_timeMap.erase(i);
+                m_timeMap.erase(m_timeMap.begin());
                 m_idMap.erase(timeout->id);
             }
 
