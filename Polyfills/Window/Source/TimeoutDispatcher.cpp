@@ -126,8 +126,14 @@ namespace Babylon::Polyfills::Internal
             std::unique_lock<std::mutex> lk{m_mutex};
             TimePoint nextTimePoint{};
 
-            while (!m_timeMap.empty() && Now() < (nextTimePoint = m_timeMap.begin()->second->time))
+            while (!m_timeMap.empty())
             {
+                nextTimePoint = m_timeMap.begin()->second->time;
+                if (nextTimePoint <= Now())
+                {
+                    break;
+                }
+
                 m_condVariable.wait_until(lk, nextTimePoint);
             }
 
