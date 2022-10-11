@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <optional>
+#include <string>
 #include <string_view>
 #include <arcana/threading/task.h>
 
@@ -53,12 +55,14 @@ namespace UrlLib
 
         std::string_view ResponseString() const;
 
-        std::optional<std::string> GetResponseHeader(const std::string& headerName) const;
-
         gsl::span<const std::byte> ResponseBuffer() const;
+
+        std::optional<std::string> GetResponseHeader(const std::string& headerName) const;
 
     private:
         class Impl;
+        class ImplBase;
+
         std::shared_ptr<Impl> m_impl{};
     };
 }

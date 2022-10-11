@@ -1,26 +1,15 @@
-#include <UrlLib/UrlLib.h>
-#include <arcana/threading/task.h>
-#include <arcana/threading/task_schedulers.h>
+#include "UrlRequest_Base.h"
+
 #include <curl/curl.h>
 #include <unistd.h>
 #include <filesystem>
 
 namespace UrlLib
 {
-    class UrlRequest::Impl
+    class UrlRequest::Impl : public ImplBase
     {
         using ByteArray = std::vector<std::byte>;
     public:
-        ~Impl()
-        {
-            Abort();
-        }
-
-        void Abort()
-        {
-            m_cancellationSource.cancel();
-        }
-
         void Open(UrlMethod method, const std::string& url)
         {
             m_method = method;
@@ -65,18 +54,11 @@ namespace UrlLib
                     }
 
                     curl_easy_setopt(m_curl, CURLOPT_URL, url.c_str());
+
+                    curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, this);
+                    curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, HeaderCallback);
                 }
             }
-        }
-
-        UrlResponseType ResponseType() const
-        {
-            return m_responseType;
-        }
-
-        void ResponseType(UrlResponseType value)
-        {
-            m_responseType = value;
         }
 
         arcana::task<void, std::exception_ptr> SendAsync()
@@ -98,30 +80,9 @@ namespace UrlLib
             return m_taskCompletionSource.as_task();
         }
 
-        UrlStatusCode StatusCode() const
-        {
-            return m_statusCode;
-        }
-
-        std::string_view ResponseUrl()
-        {
-            return m_responseUrl;
-        }
-
-        std::string_view ResponseString()
-        {
-            return m_responseString;
-        }
-
         gsl::span<const std::byte> ResponseBuffer() const
         {
             return m_responseBuffer;
-        }
-
-        std::optional<std::string> GetResponseHeader(const std::string& /*headerName*/) const
-        {
-            // todo: implementation
-            return {};
         }
 
     private:
@@ -239,17 +200,57 @@ namespace UrlLib
             }
         }
 
+        static size_t HeaderCallback(char* buffer, size_t size, size_t nitems, void* userdata)
+        {
+            if (nitems > 0)
+            {
+                char* bufferEnd = buffer + nitems;
+
+                char* keyStart = buffer;
+                char* keyEnd = keyStart;
+                for (; keyEnd < bufferEnd; ++keyEnd)
+                {
+                    if (*keyEnd == ':')
+                    {
+                        break;
+                    }
+                }
+
+                if (keyEnd != bufferEnd)
+                {
+                    char* valueStart = keyEnd + 1;
+                    for (; valueStart < bufferEnd; ++valueStart)
+                    {
+                        if (*valueStart != ' ')
+                        {
+                            break;
+                        }
+                    }
+
+                    char* valueEnd = bufferEnd;
+                    for (; valueEnd - 1 >= valueStart; --valueEnd)
+                    {
+                        auto ch = *(valueEnd - 1);
+                        if (ch != '\r' && ch != '\n' && ch != ' ')
+                        {
+                            break;
+                        }
+                    }
+
+                    std::string key{keyStart, keyEnd};
+                    std::string value{valueStart, valueEnd};
+                    static_cast<Impl*>(userdata)->m_headers.insert({std::move(key), std::move(value)});
+                }
+            }
+
+            return nitems * size;
+        }
+
         static inline CurlMulti s_curlMulti{};
-        arcana::cancellation_source m_cancellationSource{};
         arcana::task_completion_source<void, std::exception_ptr> m_taskCompletionSource{};
-        UrlResponseType m_responseType{UrlResponseType::String};
-        UrlMethod m_method{UrlMethod::Get};
-        UrlStatusCode m_statusCode{UrlStatusCode::None};
-        std::string m_responseUrl{};
-        std::string m_responseString{};
         ByteArray m_responseBuffer{};
-        CURL* m_curl;
+        CURL* m_curl{};
     };
 }
 
-#include <Shared/UrlRequest.h>
+#include "UrlRequest_Shared.h"

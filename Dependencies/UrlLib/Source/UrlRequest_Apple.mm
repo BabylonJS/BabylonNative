@@ -1,28 +1,16 @@
-#if ! __has_feature(objc_arc)
+#if !__has_feature(objc_arc)
 #error "ARC is off"
 #endif
 
-#include <UrlLib/UrlLib.h>
-#include <arcana/threading/task.h>
-#include <arcana/threading/task_schedulers.h>
+#include "UrlRequest_Base.h"
 
 #import <Foundation/Foundation.h>
 
 namespace UrlLib
 {
-    class UrlRequest::Impl
+    class UrlRequest::Impl : public ImplBase
     {
     public:
-        ~Impl()
-        {
-            Abort();
-        }
-
-        void Abort()
-        {
-            m_cancellationSource.cancel();
-        }
-
         void Open(UrlMethod method, const std::string& url)
         {
             m_method = method;
@@ -43,16 +31,6 @@ namespace UrlLib
                 nsURL = [NSURL fileURLWithPath:path];
             }
             m_nsURL = nsURL; // Only store the URL if we didn't throw
-        }
-
-        UrlResponseType ResponseType() const
-        {
-            return m_responseType;
-        }
-
-        void ResponseType(UrlResponseType value)
-        {
-            m_responseType = value;
         }
 
         arcana::task<void, std::exception_ptr> SendAsync()
@@ -81,6 +59,12 @@ namespace UrlLib
                 {
                     NSHTTPURLResponse* httpResponse{(NSHTTPURLResponse*)response};
                     m_statusCode = static_cast<UrlStatusCode>(httpResponse.statusCode);
+                    
+                    for (id key in httpResponse.allHeaderFields)
+                    {
+                        id value = [httpResponse.allHeaderFields objectForKey:key];
+                        m_headers.insert({ToLower([key UTF8String]), [value UTF8String]});
+                    }
                 }
                 else
                 {
@@ -117,21 +101,6 @@ namespace UrlLib
             return taskCompletionSource.as_task();
         }
 
-        UrlStatusCode StatusCode() const
-        {
-            return m_statusCode;
-        }
-
-        std::string_view ResponseUrl()
-        {
-            return m_responseUrl;
-        }
-
-        std::string_view ResponseString()
-        {
-            return m_responseString;
-        }
-
         gsl::span<const std::byte> ResponseBuffer() const
         {
             if (m_responseBuffer)
@@ -142,22 +111,10 @@ namespace UrlLib
             return {};
         }
 
-        std::optional<std::string> GetResponseHeader(const std::string& /*headerName*/) const
-        {
-            // todo: implementation
-            return {};
-        }
-
     private:
-        arcana::cancellation_source m_cancellationSource{};
-        UrlResponseType m_responseType{UrlResponseType::String};
-        UrlMethod m_method{UrlMethod::Get};
         NSURL* m_nsURL{};
-        UrlStatusCode m_statusCode{UrlStatusCode::None};
-        std::string m_responseUrl{};
-        std::string m_responseString{};
         NSData* m_responseBuffer{};
     };
 }
 
-#include <Shared/UrlRequest.h>
+#include "UrlRequest_Shared.h"
