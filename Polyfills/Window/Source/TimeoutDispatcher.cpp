@@ -29,6 +29,9 @@ namespace Babylon::Polyfills::Internal
             , time{time}
         {
         }
+
+        Timeout(const Timeout&) = delete;
+        Timeout(Timeout&&) = delete;
     };
 
     TimeoutDispatcher::TimeoutDispatcher(Babylon::JsRuntime& runtime)
