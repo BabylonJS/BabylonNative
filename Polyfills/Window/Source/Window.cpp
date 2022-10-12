@@ -95,7 +95,7 @@ namespace Babylon::Polyfills::Internal
             {
                 delay = std::chrono::milliseconds{std::stoi(delayString)};
             }
-            catch (std::invalid_argument)
+            catch (std::invalid_argument&)
             {
             }
         }
