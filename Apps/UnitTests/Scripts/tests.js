@@ -327,105 +327,107 @@ describe("PostProcesses", function() {
     });*/
 })
 
-const wait = async (milliseconds) => {
-    const loopFor = async (milliseconds) => {
-        const startTime = new Date().getTime();
-        while (new Date().getTime() - startTime < milliseconds) {
-        }
-    }
-    await loopFor(0);
-    for (let i = 0; i < milliseconds; i++) {
-        await loopFor(1);
-    }
-}
-
 describe("setTimeout", function () {
-    this.timeout(0);
+    this.timeout(1000);
     it("should return an id greater than zero", function () {
         const id = setTimeout(() => { }, 0);
         expect(id).to.be.greaterThan(0);
     });
-    it("should return an id greater than zero when given an undefined function", async function () {
+    it("should return an id greater than zero when given an undefined function", function () {
         const id = setTimeout(undefined, 0);
         expect(id).to.be.greaterThan(0);
     });
-    it("should call the given function after the given delay", async function () {
-        let called = false;
+    it("should call the given function after the given delay", function (done) {
         const startTime = new Date().getTime();
-        let calledTime = 0;
         setTimeout(() => {
-            called = true;
-            calledTime = new Date().getTime();
+            try {
+                expect(new Date().getTime() - startTime).to.be.at.least(10);
+            }
+            catch (e) {
+                done(e);
+                return;
+            }
+            done();
         }, 10);
-        await wait(100);
-        expect(called).to.equal(true);
-        expect(calledTime - startTime).to.be.at.least(10);
     });
-    it("should call the given function after the given delay when the delay is a string representing a valid number", async function () {
-        let called = false;
+    it("should call the given function after the given delay when the delay is a string representing a valid number", function (done) {
         const startTime = new Date().getTime();
-        let calledTime = 0;
         setTimeout(() => {
-            called = true;
-            calledTime = new Date().getTime();
+            try {
+                expect(new Date().getTime() - startTime).to.be.at.least(10);
+            }
+            catch (e) {
+                done(e);
+                return;
+            }
+            done();
         }, "10");
-        await wait(100);
-        expect(called).to.equal(true);
-        expect(calledTime - startTime).to.be.at.least(10);
     });
-    it("should call the given function after zero milliseconds when the delay is a string representing an invalid number", async function () {
-        let called = false;
-        const startTime = new Date().getTime();
-        let calledTime = 0;
+    it("should call the given function after zero milliseconds when the delay is a string representing an invalid number", function (done) {
         setTimeout(() => {
-            called = true;
-            calledTime = new Date().getTime();
+            done();
         }, "a");
-        await wait(100);
-        expect(called).to.equal(true);
-        expect(calledTime - startTime).to.be.at.most(1);
     });
-    it("should call the given function after other tasks execute when the given delay is zero", async function () {
-        let called = false;
-        setTimeout(() => { called = true; }, 0);
-        expect(called).to.equal(false);
-        await wait(100);
-        expect(called).to.equal(true);
+    it("should call the given function after other tasks execute when the given delay is zero", function (done) {
+        let trailingCodeExecuted = false;
+        setTimeout(() => {
+            try {
+                expect(trailingCodeExecuted).to.be.true;
+            }
+            catch (e) {
+                done(e);
+                return;
+            }
+            done();
+         }, 0);
+        trailingCodeExecuted = true
     });
-    it("should call the given function after other tasks execute when the given delay is undefined", async function () {
-        let called = false;
-        setTimeout(() => { called = true; }, undefined);
-        expect(called).to.equal(false);
-        await wait(100);
-        expect(called).to.equal(true);
+    it("should call the given function after other tasks execute when the given delay is undefined", function (done) {
+        let trailingCodeExecuted = false;
+        setTimeout(() => {
+            try {
+                expect(trailingCodeExecuted).to.be.true;
+            }
+            catch (e) {
+                done(e);
+                return;
+            }
+            done();
+         }, undefined);
+        trailingCodeExecuted = true
     });
-    it("should call the given functions in the correct order", async function () {
+    it("should call the given functions in the correct order", function (done) {
         let called = []
         for (let i = 9; i >= 0; i--) {
-            setTimeout(() => { called.push(i); }, i);
-        }
-        await wait(100);
-        for (let i = 0; i < 0; i++) {
-            expect(called[i]).to.equal(i);
+            setTimeout(() => {
+                called.push(i * 2);
+                if (called.length === 10) {
+                    try {
+                        expect(called).to.deep.equal([0, 2, 4, 6, 8, 10, 12, 14, 16, 18]);
+                    }
+                    catch (e) {
+                        done(e);
+                        return;
+                    }
+                    done();
+                }
+            }, i * 2);
         }
     });
 })
 
 describe("clearTimeout", function () {
     this.timeout(0);
-    it("should stop the timeout matching the given timeout id", async function () {
-        let called = false;
-        const id = setTimeout(() => { called = true; }, 0);
+    it("should stop the timeout matching the given timeout id", function (done) {
+        const id = setTimeout(() => {
+            done(new Error("Timeout was not cleared"));
+        }, 0);
         clearTimeout(id);
-        await wait(100);
-        expect(called).to.equal(false);
+        setTimeout(done, 100);
     });
-    it("should do nothing if the given timeout id is undefined", async function () {
-        let called = false;
-        const id = setTimeout(() => { called = true; }, 0);
+    it("should do nothing if the given timeout id is undefined", function (done) {
+        setTimeout(() => { done(); }, 0);
         clearTimeout(undefined);
-        await wait(100);
-        expect(called).to.equal(true);
     });
 })
 
