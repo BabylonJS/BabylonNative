@@ -36,11 +36,13 @@ function useAppState(): string {
 
         const appStateListener = AppState.addEventListener("change", onAppStateChanged);
 
+        // Asserting the type to prevent TS type errors on older RN versions
+        const removeListener = appStateListener?.["remove"] as undefined | Function;
+
         return () => {
-            if (!!appStateListener?.remove) {
-                appStateListener.remove();
-            }
-            else {
+            if (!!removeListener) {
+                removeListener();
+            } else {
                 AppState.removeEventListener("change", onAppStateChanged);
             }
         };
