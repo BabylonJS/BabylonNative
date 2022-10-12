@@ -84,11 +84,11 @@ namespace Babylon::Polyfills::Internal
         if (itId != m_idMap.end())
         {
             const auto& timeout = itId->second;
-            const auto itTimeRange = m_timeMap.equal_range(timeout->time);
+            const auto timeRange = m_timeMap.equal_range(timeout->time);
 
-            assert(itTimeRange.first != m_timeMap.end() && "m_idMap and m_timeMap are out of sync");
+            assert(timeRange.first != m_timeMap.end() && "m_idMap and m_timeMap are out of sync");
 
-            for (auto itTime = itTimeRange.first; itTime != itTimeRange.second; itTime++)
+            for (auto itTime = timeRange.first; itTime != timeRange.second; itTime++)
             {
                 if (itTime->second->id == id)
                 {
