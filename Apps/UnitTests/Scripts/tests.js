@@ -397,7 +397,7 @@ describe("setTimeout", function () {
         trailingCodeExecuted = true;
     });
     it("should call the given functions in the correct order", function (done) {
-        let called = [];
+        const called = [];
         for (let i = 9; i >= 0; i--) {
             setTimeout(() => {
                 called.push(i * 2);
