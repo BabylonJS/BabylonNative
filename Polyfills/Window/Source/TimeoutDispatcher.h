@@ -36,7 +36,7 @@ namespace Babylon::Polyfills::Internal
         Babylon::JsRuntime& m_runtime;
         std::mutex m_mutex{};
         std::condition_variable m_condVariable{};
-        TimeoutId m_lastTimeoutId = 0;
+        TimeoutId m_lastTimeoutId{0};
         std::unordered_map<TimeoutId, std::unique_ptr<Timeout>> m_idMap;
         std::multimap<TimePoint, Timeout*> m_timeMap;
         std::atomic<bool> m_shutdown{false};
