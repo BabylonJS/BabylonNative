@@ -342,12 +342,12 @@ describe("setTimeout", function () {
         setTimeout(() => {
             try {
                 expect(new Date().getTime() - startTime).to.be.at.least(10);
+                done();
             }
             catch (e) {
                 done(e);
                 return;
             }
-            done();
         }, 10);
     });
     it("should call the given function after the given delay when the delay is a string representing a valid number", function (done) {
@@ -355,12 +355,12 @@ describe("setTimeout", function () {
         setTimeout(() => {
             try {
                 expect(new Date().getTime() - startTime).to.be.at.least(10);
+                done();
             }
             catch (e) {
                 done(e);
                 return;
             }
-            done();
         }, "10");
     });
     it("should call the given function after zero milliseconds when the delay is a string representing an invalid number", function (done) {
@@ -373,12 +373,12 @@ describe("setTimeout", function () {
         setTimeout(() => {
             try {
                 expect(trailingCodeExecuted).to.be.true;
+                done();
             }
             catch (e) {
                 done(e);
                 return;
             }
-            done();
          }, 0);
         trailingCodeExecuted = true
     });
@@ -387,12 +387,12 @@ describe("setTimeout", function () {
         setTimeout(() => {
             try {
                 expect(trailingCodeExecuted).to.be.true;
+                done();
             }
             catch (e) {
                 done(e);
                 return;
             }
-            done();
          }, undefined);
         trailingCodeExecuted = true
     });
@@ -404,12 +404,12 @@ describe("setTimeout", function () {
                 if (called.length === 10) {
                     try {
                         expect(called).to.deep.equal([0, 2, 4, 6, 8, 10, 12, 14, 16, 18]);
+                        done();
                     }
                     catch (e) {
                         done(e);
                         return;
                     }
-                    done();
                 }
             }, i * 2);
         }
