@@ -346,7 +346,6 @@ describe("setTimeout", function () {
             }
             catch (e) {
                 done(e);
-                return;
             }
         }, 10);
     });
@@ -359,7 +358,6 @@ describe("setTimeout", function () {
             }
             catch (e) {
                 done(e);
-                return;
             }
         }, "10");
     });
@@ -377,7 +375,6 @@ describe("setTimeout", function () {
             }
             catch (e) {
                 done(e);
-                return;
             }
          }, 0);
         trailingCodeExecuted = true;
@@ -391,7 +388,6 @@ describe("setTimeout", function () {
             }
             catch (e) {
                 done(e);
-                return;
             }
          }, undefined);
         trailingCodeExecuted = true;
@@ -408,7 +404,6 @@ describe("setTimeout", function () {
                     }
                     catch (e) {
                         done(e);
-                        return;
                     }
                 }
             }, i * 2);
