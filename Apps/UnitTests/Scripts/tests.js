@@ -380,7 +380,7 @@ describe("setTimeout", function () {
                 return;
             }
          }, 0);
-        trailingCodeExecuted = true
+        trailingCodeExecuted = true;
     });
     it("should call the given function after other tasks execute when the given delay is undefined", function (done) {
         let trailingCodeExecuted = false;
@@ -394,10 +394,10 @@ describe("setTimeout", function () {
                 return;
             }
          }, undefined);
-        trailingCodeExecuted = true
+        trailingCodeExecuted = true;
     });
     it("should call the given functions in the correct order", function (done) {
-        let called = []
+        let called = [];
         for (let i = 9; i >= 0; i--) {
             setTimeout(() => {
                 called.push(i * 2);
