@@ -36,8 +36,8 @@ namespace Babylon::Polyfills::Internal
 
     TimeoutDispatcher::TimeoutDispatcher(Babylon::JsRuntime& runtime)
         : m_runtime(runtime)
+        , m_thread{std::thread{&TimeoutDispatcher::ThreadFunction, this}}
     {
-        m_thread = std::thread{&TimeoutDispatcher::ThreadFunction, this};
     }
 
     TimeoutDispatcher::~TimeoutDispatcher()
