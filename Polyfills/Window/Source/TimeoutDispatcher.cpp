@@ -6,11 +6,11 @@ namespace Babylon::Polyfills::Internal
 {
     namespace
     {
-        using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>;
+        using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::microseconds>;
 
         TimePoint Now()
         {
-            return std::chrono::time_point_cast<std::chrono::milliseconds, std::chrono::steady_clock>(std::chrono::steady_clock::now());
+            return std::chrono::time_point_cast<std::chrono::microseconds, std::chrono::steady_clock>(std::chrono::steady_clock::now());
         }
     }
 

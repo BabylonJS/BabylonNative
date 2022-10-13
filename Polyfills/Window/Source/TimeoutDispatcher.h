@@ -28,7 +28,7 @@ namespace Babylon::Polyfills::Internal
         TimeoutId NextTimeoutId();
 
     private:
-        using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::milliseconds>;
+        using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::microseconds>;
 
         void ThreadFunction();
         void CallFunction(std::shared_ptr<Napi::FunctionReference> function);
