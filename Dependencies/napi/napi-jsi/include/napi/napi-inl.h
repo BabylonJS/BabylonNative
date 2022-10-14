@@ -242,13 +242,11 @@ inline T Value::As() const {
 }
 
 inline Boolean Value::ToBoolean() const {
-  // TODO: need to coerce if not the right type
-  return Boolean::New(_env, _value.getBool());
+  return {_env, _env->boolean_func.call(_env->rt, _value)};
 }
 
 inline Number Value::ToNumber() const {
-  // TODO: need to coerce if not the right type
-  return Number::New(_env, _value.getNumber());
+  return {_env, _env->number_func.call(_env->rt, _value)};
 }
 
 inline String Value::ToString() const {
