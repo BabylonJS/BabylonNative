@@ -59,7 +59,9 @@ struct napi_env__ {
         rt.global().getPropertyAsFunction(rt, "Int32Array"),
         rt.global().getPropertyAsFunction(rt, "Uint32Array"),
         rt.global().getPropertyAsFunction(rt, "Float32Array"),
-        rt.global().getPropertyAsFunction(rt, "Float64Array")} {
+        rt.global().getPropertyAsFunction(rt, "Float64Array")}
+    , boolean_func{rt.global().getPropertyAsFunction(rt, "Boolean")}
+    , number_func{rt.global().getPropertyAsFunction(rt, "Number")} {
   }
 
   facebook::jsi::Runtime& rt;
@@ -68,6 +70,8 @@ struct napi_env__ {
   facebook::jsi::Function array_buffer_ctor;
   facebook::jsi::Function promise_ctor;
   facebook::jsi::Function typed_array_ctor[9];
+  facebook::jsi::Function boolean_func;
+  facebook::jsi::Function number_func;
 
   facebook::jsi::Value last_exception;
 };
