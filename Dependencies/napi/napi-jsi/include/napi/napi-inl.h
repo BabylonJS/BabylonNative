@@ -254,18 +254,16 @@ inline Number Value::ToNumber() const {
   }
   else if (_value.isString())
   {
+    NAPI_TRY()
     try
     {
       return Number::New(_env, std::stod(_value.asString(_env->rt).utf8(_env->rt)));
     }
-    catch (const std::invalid_argument&)
+    catch (std::invalid_argument&)
     {
       return Number::New(_env, 0);
     }
-    catch (const std::exception& exception)
-    {
-      throw Error::New(_env, exception);
-    }
+    NAPI_CATCH()
   }
   return Number::New(_env, _value.getNumber());
 }
