@@ -247,7 +247,24 @@ inline Boolean Value::ToBoolean() const {
 }
 
 inline Number Value::ToNumber() const {
-  // TODO: need to coerce if not the right type
+  // TODO: coerce other types
+  if (_value.isUndefined())
+  {
+    return Number::New(_env, 0);
+  }
+  else if (_value.isString())
+  {
+    NAPI_TRY()
+    try
+    {
+      return Number::New(_env, std::stod(_value.asString(_env->rt).utf8(_env->rt)));
+    }
+    catch (std::invalid_argument&)
+    {
+      return Number::New(_env, 0);
+    }
+    NAPI_CATCH()
+  }
   return Number::New(_env, _value.getNumber());
 }
 
