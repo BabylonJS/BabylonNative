@@ -60,45 +60,50 @@ namespace Babylon::Polyfills::Internal
             delay = std::chrono::milliseconds{0};
         }
 
-        std::unique_lock<std::mutex> lk{m_mutex};
-
-        const auto earliestTime = m_timeMap.empty() ? TimePoint::max()
-                                                    : m_timeMap.cbegin()->second->time;
         const auto id = NextTimeoutId();
-        const auto time = Now() + delay;
-        const auto result = m_idMap.insert({id, std::make_unique<Timeout>(id, std::move(function), time)});
-        m_timeMap.insert({time, result.first->second.get()});
 
-        if (time <= earliestTime)
-        {
-            m_runtime.Dispatch([this](Napi::Env){ m_condVariable.notify_one(); });
-        }
+        m_runtime.Dispatch([this, function = std::move(function), delay, id](Napi::Env){
+            std::unique_lock<std::mutex> lk{m_mutex};
+
+            const auto earliestTime = m_timeMap.empty() ? TimePoint::max()
+                                                        : m_timeMap.cbegin()->second->time;
+            const auto time = Now() + delay;
+            const auto result = m_idMap.insert({id, std::make_unique<Timeout>(id, std::move(function), time)});
+            m_timeMap.insert({time, result.first->second.get()});
+
+            if (time <= earliestTime)
+            {
+                m_condVariable.notify_one();
+            }
+        });
 
         return id;
     }
 
     void TimeoutDispatcher::Clear(TimeoutId id)
     {
-        std::unique_lock<std::mutex> lk{m_mutex};
-        const auto itId = m_idMap.find(id);
-        if (itId != m_idMap.end())
-        {
-            const auto& timeout = itId->second;
-            const auto timeRange = m_timeMap.equal_range(timeout->time);
-
-            assert(timeRange.first != m_timeMap.end() && "m_idMap and m_timeMap are out of sync");
-
-            for (auto itTime = timeRange.first; itTime != timeRange.second; itTime++)
+        m_runtime.Dispatch([this, id](Napi::Env){
+            std::unique_lock<std::mutex> lk{m_mutex};
+            const auto itId = m_idMap.find(id);
+            if (itId != m_idMap.end())
             {
-                if (itTime->second->id == id)
-                {
-                    m_timeMap.erase(itTime);
-                    break;
-                }
-            }
+                const auto& timeout = itId->second;
+                const auto timeRange = m_timeMap.equal_range(timeout->time);
 
-            m_idMap.erase(itId);
-        }
+                assert(timeRange.first != m_timeMap.end() && "m_idMap and m_timeMap are out of sync");
+
+                for (auto itTime = timeRange.first; itTime != timeRange.second; itTime++)
+                {
+                    if (itTime->second->id == id)
+                    {
+                        m_timeMap.erase(itTime);
+                        break;
+                    }
+                }
+
+                m_idMap.erase(itId);
+            }
+        });
     }
 
     TimeoutDispatcher::TimeoutId TimeoutDispatcher::NextTimeoutId()
