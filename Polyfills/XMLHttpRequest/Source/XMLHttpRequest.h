@@ -28,6 +28,7 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetResponse(const Napi::CallbackInfo& info);
         Napi::Value GetResponseText(const Napi::CallbackInfo& info);
         Napi::Value GetResponseType(const Napi::CallbackInfo& info);
+        Napi::Value GetResponseHeader(const Napi::CallbackInfo& info);
         void SetResponseType(const Napi::CallbackInfo& info, const Napi::Value& value);
         Napi::Value GetResponseURL(const Napi::CallbackInfo& info);
         Napi::Value GetStatus(const Napi::CallbackInfo& info);
