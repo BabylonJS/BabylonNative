@@ -157,7 +157,10 @@ namespace Babylon::Polyfills::Internal
 
     void TimeoutDispatcher::CallFunction(std::shared_ptr<Napi::FunctionReference> function)
     {
-        m_runtime.Dispatch([function = std::move(function)](Napi::Env)
-            { function->Call({}); });
+        if (function)
+        {
+            m_runtime.Dispatch([function = std::move(function)](Napi::Env)
+                { function->Call({}); });
+        }
     }
 }
