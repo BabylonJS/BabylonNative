@@ -108,6 +108,8 @@ namespace Babylon::Polyfills::Internal
 
     TimeoutDispatcher::TimeoutId TimeoutDispatcher::NextTimeoutId()
     {
+        std::unique_lock<std::mutex> lk{m_mutex};
+
         while (true)
         {
             ++m_lastTimeoutId;
