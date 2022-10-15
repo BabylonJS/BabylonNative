@@ -23,9 +23,9 @@ namespace Babylon::Polyfills::Internal
 
         TimePoint time;
 
-        Timeout(TimeoutId id, Napi::Function function, TimePoint time)
+        Timeout(TimeoutId id, std::shared_ptr<Napi::FunctionReference> function, TimePoint time)
             : id{id}
-            , function{std::make_shared<Napi::FunctionReference>(Napi::Persistent(function))}
+            , function{function}
             , time{time}
         {
         }
@@ -62,13 +62,13 @@ namespace Babylon::Polyfills::Internal
 
         const auto id = NextTimeoutId();
 
-        m_runtime.Dispatch([this, function = std::move(function), delay, id](Napi::Env){
+        m_runtime.Dispatch([this, function = std::make_shared<Napi::FunctionReference>(Napi::Persistent(function)), delay, id](Napi::Env) {
             std::unique_lock<std::mutex> lk{m_mutex};
 
             const auto earliestTime = m_timeMap.empty() ? TimePoint::max()
                                                         : m_timeMap.cbegin()->second->time;
             const auto time = Now() + delay;
-            const auto result = m_idMap.insert({id, std::make_unique<Timeout>(id, std::move(function), time)});
+            const auto result = m_idMap.insert({id, std::make_unique<Timeout>(id, function, time)});
             m_timeMap.insert({time, result.first->second.get()});
 
             if (time <= earliestTime)
