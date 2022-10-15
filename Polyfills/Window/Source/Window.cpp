@@ -79,8 +79,7 @@ namespace Babylon::Polyfills::Internal
     Napi::Value Window::SetTimeout(const Napi::CallbackInfo& info)
     {
         auto& window = *static_cast<Window*>(info.Data());
-        auto function = info[0].IsFunction() ? info[0].As<Napi::Function>()
-                                             : Napi::Function::New(info.Env(), [](const auto&) {}, "");
+        auto function = info[0].IsFunction() ? info[0].As<Napi::Function>() : Napi::Function();
         auto delay = std::chrono::milliseconds{info[1].ToNumber().Int32Value()};
 
         return Napi::Value::From(info.Env(), window.m_timeoutDispatcher->Dispatch(std::make_shared<Napi::FunctionReference>(Napi::Persistent(function)), delay));
