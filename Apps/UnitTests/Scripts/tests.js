@@ -349,6 +349,20 @@ describe("setTimeout", function () {
             }
         }, 10);
     });
+    it("should call the given nested function after the given delay", function (done) {
+        const startTime = new Date().getTime();
+        setTimeout(() => {
+            setTimeout(() => {
+                try {
+                    expect(new Date().getTime() - startTime).to.be.at.least(20);
+                    done();
+                }
+                catch (e) {
+                    done(e);
+                }
+            }, 10);
+        }, 10);
+    });
     it("should call the given function after the given delay when the delay is a string representing a valid number", function (done) {
         const startTime = new Date().getTime();
         setTimeout(() => {
