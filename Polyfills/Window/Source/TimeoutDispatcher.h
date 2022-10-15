@@ -22,7 +22,7 @@ namespace Babylon::Polyfills::Internal
         TimeoutDispatcher(Babylon::JsRuntime& runtime);
         ~TimeoutDispatcher();
 
-        TimeoutId Dispatch(std::shared_ptr<Napi::Reference<Napi::Value>> function, std::chrono::milliseconds delay);
+        TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay);
         void Clear(TimeoutId id);
 
     private:
@@ -30,7 +30,7 @@ namespace Babylon::Polyfills::Internal
 
         TimeoutId NextTimeoutId();
         void ThreadFunction();
-        void CallFunction(std::shared_ptr<Napi::Reference<Napi::Value>> function);
+        void CallFunction(std::shared_ptr<Napi::FunctionReference> function);
 
         Babylon::JsRuntime& m_runtime;
         std::mutex m_mutex{};
