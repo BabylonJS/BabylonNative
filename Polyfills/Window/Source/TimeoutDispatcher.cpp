@@ -19,11 +19,11 @@ namespace Babylon::Polyfills::Internal
         TimeoutId id;
 
         // Make this non-shared when JsRuntime::Dispatch supports it.
-        std::shared_ptr<Napi::FunctionReference> function;
+        std::shared_ptr<Napi::Reference<Napi::Value>> function;
 
         TimePoint time;
 
-        Timeout(TimeoutId id, std::shared_ptr<Napi::FunctionReference> function, TimePoint time)
+        Timeout(TimeoutId id, std::shared_ptr<Napi::Reference<Napi::Value>> function, TimePoint time)
             : id{id}
             , function{std::move(function)}
             , time{time}
@@ -53,7 +53,7 @@ namespace Babylon::Polyfills::Internal
         m_thread.join();
     }
 
-    TimeoutDispatcher::TimeoutId TimeoutDispatcher::Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay)
+    TimeoutDispatcher::TimeoutId TimeoutDispatcher::Dispatch(std::shared_ptr<Napi::Reference<Napi::Value>> function, std::chrono::milliseconds delay)
     {
         if (delay.count() < 0)
         {
@@ -155,9 +155,12 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void TimeoutDispatcher::CallFunction(std::shared_ptr<Napi::FunctionReference> function)
+    void TimeoutDispatcher::CallFunction(std::shared_ptr<Napi::Reference<Napi::Value>> function)
     {
-        m_runtime.Dispatch([function = std::move(function)](Napi::Env)
-            { function->Call({}); });
+        if (!function->Value().IsUndefined())
+        {
+            m_runtime.Dispatch([function = std::move(function)](Napi::Env)
+                { function->Value().As<Napi::Function>().Call({}); });
+        }
     }
 }
