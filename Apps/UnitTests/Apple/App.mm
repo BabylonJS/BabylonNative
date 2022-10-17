@@ -1,4 +1,4 @@
-#include "../Shared/Tests.cpp"
+#include "../Shared/Tests.h"
 
 int main() {
     Babylon::Graphics::DeviceConfiguration graphicsConfig{};
