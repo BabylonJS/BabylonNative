@@ -46,10 +46,10 @@ namespace Babylon::Polyfills::Internal
             std::unique_lock<std::mutex> lk{m_mutex};
             m_idMap.clear();
             m_timeMap.clear();
-            m_shutdown = true;
-            m_condVariable.notify_one();
         }
 
+        m_shutdown = true;
+        m_condVariable.notify_one();
         m_thread.join();
     }
 
@@ -70,7 +70,6 @@ namespace Babylon::Polyfills::Internal
         m_timeMap.insert({time, result.first->second.get()});
     
         m_runtime.Dispatch([this, time, earliestTime](Napi::Env) {
-            std::unique_lock<std::mutex> lk{m_mutex};
             if (time <= earliestTime)
             {
                 m_condVariable.notify_one();
