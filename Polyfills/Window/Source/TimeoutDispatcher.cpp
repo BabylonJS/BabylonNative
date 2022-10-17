@@ -69,12 +69,12 @@ namespace Babylon::Polyfills::Internal
         const auto result = m_idMap.insert({id, std::make_unique<Timeout>(id, std::move(function), time)});
         m_timeMap.insert({time, result.first->second.get()});
     
-        m_runtime.Dispatch([this, time, earliestTime](Napi::Env) {
-            if (time <= earliestTime)
-            {
+        if (time <= earliestTime)
+        {
+            m_runtime.Dispatch([this](Napi::Env) {
                 m_condVariable.notify_one();
-            }
-        });
+            });
+        }
 
         return id;
     }
