@@ -6,10 +6,12 @@ endif()
 
 set(SOURCES
     "Include/Babylon/Plugins/NativeCamera.h"
+    "Source/MediaStream.h"
+    "Source/MediaStream.cpp"
     "Source/NativeCamera.cpp"
     "Source/NativeVideo.cpp"
     "Source/NativeVideo.h"
-    "Source/${PLATFORM}/NativeCameraImpl.h"
+    "Source/NativeCameraImpl.h"
     "Source/${PLATFORM}/NativeCameraImpl.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
 add_library(NativeCamera ${SOURCES})

@@ -3,10 +3,11 @@
 
 namespace Babylon::Plugins
 {
-    static constexpr auto JS_CLASS_NAME = "NativeVideo";
+    static constexpr auto JS_CLASS_NAME = "HTMLVideoElement";
 
-    void NativeVideo::Initialize(Napi::Env& env, std::shared_ptr<Plugins::Camera::Impl> nativeCameraImpl)
+    void NativeVideo::Initialize(Napi::Env& env)
     {
+
         Napi::Function func = DefineClass(
             env,
             JS_CLASS_NAME,
@@ -16,17 +17,17 @@ namespace Babylon::Plugins
                 InstanceMethod("play", &NativeVideo::Play),
                 InstanceMethod("pause", &NativeVideo::Pause),
                 InstanceMethod("setAttribute", &NativeVideo::SetAttribute),
+                InstanceMethod("removeAttribute", &NativeVideo::RemoveAttribute),
                 InstanceAccessor("videoWidth", &NativeVideo::GetVideoWidth, nullptr),
                 InstanceAccessor("videoHeight", &NativeVideo::GetVideoHeight, nullptr),
                 InstanceAccessor("frontCamera", nullptr, &NativeVideo::SetFrontCamera),
-                InstanceAccessor("isNative", &NativeVideo::IsNative, nullptr),
+                //InstanceAccessor("isNative", &NativeVideo::IsNative, nullptr),
                 InstanceAccessor("readyState", &NativeVideo::GetReadyState, nullptr),
                 InstanceAccessor("HAVE_CURRENT_DATA", &NativeVideo::GetHaveCurrentData, nullptr),
+                InstanceAccessor("srcObject", &NativeVideo::GetSrcObject, &NativeVideo::SetSrcObject)
             });
 
         env.Global().Set(JS_CLASS_NAME, func);
-
-        NativeCameraImpl = nativeCameraImpl;
     }
 
     Napi::Object NativeVideo::New(const Napi::CallbackInfo& info, uint32_t width, uint32_t height, bool frontCamera)
@@ -36,7 +37,6 @@ namespace Babylon::Plugins
 
     NativeVideo::NativeVideo(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeVideo>{ info }
-        , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
         , m_maxWidth{ info[0].As<Napi::Number>().Uint32Value() }
         , m_maxHeight{ info[1].As<Napi::Number>().Uint32Value() }
         , m_frontCamera{ info[2].As<Napi::Boolean>().Value() }
@@ -67,6 +67,10 @@ namespace Babylon::Plugins
     {
     }
 
+    void NativeVideo::RemoveAttribute(const Napi::CallbackInfo&)
+    {
+    }
+
     Napi::Value NativeVideo::GetReadyState(const Napi::CallbackInfo& /*info*/)
     {
         return Napi::Value::From(Env(), m_isReady ? 10u : 0u);
@@ -79,7 +83,10 @@ namespace Babylon::Plugins
 
     void NativeVideo::UpdateTexture(bgfx::TextureHandle textureHandle)
     {
-        NativeCameraImpl->UpdateCameraTexture(textureHandle);
+        if (m_IsPlaying && !m_streamObject.Value().IsNull() && !m_streamObject.Value().IsUndefined())
+        {
+            MediaStream::Unwrap(m_streamObject.Value())->UpdateTexture(textureHandle);
+        }
     }
 
     void NativeVideo::AddEventListener(const Napi::CallbackInfo& info)
@@ -136,29 +143,13 @@ namespace Babylon::Plugins
         auto env{info.Env()};
         auto deferred{Napi::Promise::Deferred::New(env)};
 
-        if (!m_IsPlaying)
+        if (!m_IsPlaying && !m_streamObject.Value().IsNull() && !m_streamObject.Value().IsUndefined())
         {
             m_IsPlaying = true;
-            NativeCameraImpl->Open(m_maxWidth, m_maxHeight, m_frontCamera).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred](const arcana::expected<Camera::Impl::CameraDimensions, std::exception_ptr>& result) {
-                if (result.has_error())
-                {
-                    deferred.Reject(Napi::Error::New(env, result.error()).Value());
-                }
-                else
-                {
-                    auto cameraDimensions{result.value()};
-                    this->m_width = cameraDimensions.width;
-                    this->m_height = cameraDimensions.height;
-                    this->m_isReady = true;
-                    deferred.Resolve(env.Undefined());
-                    RaiseEvent("playing");
-                }
-            });
+            RaiseEvent("playing");
         }
-        else
-        {
-            deferred.Resolve(env.Undefined());
-        }
+
+        deferred.Resolve(env.Undefined());
 
         return deferred.Promise();
     }
@@ -166,6 +157,29 @@ namespace Babylon::Plugins
     void NativeVideo::Pause(const Napi::CallbackInfo& /*info*/)
     {
         m_IsPlaying = false;
-        NativeCameraImpl->Close();
+    }
+
+    void NativeVideo::SetSrcObject(const Napi::CallbackInfo& /*info*/, const Napi::Value& value) {
+        if (value.IsNull() || value.IsUndefined())
+        {
+            m_streamObject = Napi::Persistent(Napi::Object::New(Env()));
+            this->m_width = 0;
+            this->m_height = 0;
+            this->m_isReady = false;
+            this->m_IsPlaying = false;
+            return;
+        }
+        
+        m_streamObject = Napi::Persistent(value.As<Napi::Object>());
+        auto mediaStream = MediaStream::Unwrap(m_streamObject.Value());
+        
+        this->m_width = mediaStream->Width;
+        this->m_height = mediaStream->Height;
+        this->m_isReady = true;
+    }
+
+    Napi::Value NativeVideo::GetSrcObject(const Napi::CallbackInfo& info) {
+        // If the streamObject has not yet been defined return Null instead to match the web API
+        return m_streamObject.Value().IsUndefined() ? info.Env().Null() : m_streamObject.Value();
     }
 }

@@ -18,7 +18,7 @@
 
 @class CameraTextureDelegate;
 
-#include "NativeCameraImpl.h"
+#include "../NativeCameraImpl.h"
 #include <napi/napi.h>
 
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
@@ -135,9 +135,19 @@ namespace Babylon::Plugins
 {
     struct Camera::Impl::ImplData
     {
+        ImplData(Napi::Env env, bool overrideCameraTexture)
+            : deviceContext{nullptr}
+            , env{env}
+            , overrideCameraTexture{overrideCameraTexture} {};
+        
         ~ImplData()
         {
         }
+        
+        Graphics::DeviceContext* deviceContext;
+        Napi::Env env;
+        bool overrideCameraTexture{};
+        CameraDimensions cameraDimensions{};
 
         CameraTextureDelegate* cameraTextureDelegate{};
         AVCaptureSession* avCaptureSession{};
@@ -149,12 +159,11 @@ namespace Babylon::Plugins
         id<MTLCommandBuffer> currentCommandBuffer{};
         bool isInitialized{false};
         bool refreshBgfxHandle{true};
+        
+        arcana::background_dispatcher<32> cameraSessionDispatcher{};
     };
     Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
-        : m_deviceContext{nullptr}
-        , m_env{env}
-        , m_implData{std::make_unique<ImplData>()}
-        , m_overrideCameraTexture{overrideCameraTexture}
+        : m_implData{std::make_unique<ImplData>(env, overrideCameraTexture)}
     {
     }
 
@@ -177,7 +186,7 @@ namespace Babylon::Plugins
         if (!m_implData->isInitialized) {
             m_implData->commandQueue = (__bridge id<MTLCommandQueue>)bgfx::getInternalData()->commandQueue;
             m_implData->metalDevice = (__bridge id<MTLDevice>)bgfx::getInternalData()->context;
-            m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
+            m_implData->deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_implData->env);
 
             // Compile shaders used for converting camera output to RGBA.
             id<MTLLibrary> lib = CompileShader(m_implData->metalDevice, shaderSource);
@@ -339,7 +348,7 @@ namespace Babylon::Plugins
         }
 
         // Kick off camera session on a background thread.
-        return arcana::make_task(m_cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this(), input, devicePixelFormat, cameraDimensions]() mutable {
+        return arcana::make_task(m_implData->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this(), input, devicePixelFormat, cameraDimensions]() mutable {
             if (implObj->m_implData->avCaptureSession == nil) {
                 implObj->m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
             } else {
@@ -375,7 +384,7 @@ namespace Babylon::Plugins
 
     void Camera::Impl::SetTextureOverride(void* /*texturePtr*/)
     {
-        if (!m_overrideCameraTexture)
+        if (!m_implData->overrideCameraTexture)
         {
             throw std::runtime_error{"Trying to override NativeCamera Texture."};
         }
@@ -384,7 +393,7 @@ namespace Babylon::Plugins
 
     void Camera::Impl::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
-        arcana::make_task(m_deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
+        arcana::make_task(m_implData->deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
             id<MTLTexture> textureY{};
             id<MTLTexture> textureCbCr{};
             int64_t width{0};
@@ -403,14 +412,14 @@ namespace Babylon::Plugins
             }
 
             // Recreate the output texture when the camera dimensions change.
-            if (m_implData->textureRGBA == nil || m_cameraDimensions.width != width || m_cameraDimensions.height != height)
+            if (m_implData->textureRGBA == nil || m_implData->cameraDimensions.width != width || m_implData->cameraDimensions.height != height)
             {
                 MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
                 textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
                 m_implData->textureRGBA = [m_implData->metalDevice newTextureWithDescriptor:textureDescriptor];
                 bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureRGBA));
-                m_cameraDimensions.width = static_cast<uint32_t>(width);
-                m_cameraDimensions.height = static_cast<uint32_t>(height);
+                m_implData->cameraDimensions.width = static_cast<uint32_t>(width);
+                m_implData->cameraDimensions.height = static_cast<uint32_t>(height);
                 m_implData->refreshBgfxHandle = false;
             } else if (m_implData->refreshBgfxHandle) {
                 // On texture re-use across sessions set the bgfx texture handle.
@@ -486,7 +495,7 @@ namespace Babylon::Plugins
         }
 
         if (m_implData->avCaptureSession != nil) {
-            arcana::make_task(m_cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this()](){
+            arcana::make_task(m_implData->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this()](){
                 [implObj->m_implData->avCaptureSession stopRunning];
             });
         }

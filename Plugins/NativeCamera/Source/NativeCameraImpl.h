@@ -2,8 +2,8 @@
 
 #include <bgfx/bgfx.h>
 #include <napi/napi.h>
-#include <NativeCamera.h>
 #include <arcana/threading/task.h>
+#include <NativeCamera.h>
 
 namespace Babylon::Plugins
 {
@@ -15,11 +15,16 @@ namespace Babylon::Plugins
             uint32_t height;
         };
 
+        struct ImplData;
+
         Impl(Napi::Env env, bool overrideCameraTexture);
         ~Impl();
         arcana::task<CameraDimensions, std::exception_ptr> Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera);
         void SetTextureOverride(void* texturePtr);
         void UpdateCameraTexture(bgfx::TextureHandle textureHandle);
         void Close();
+
+    private:
+        std::unique_ptr<ImplData> m_implData;
     };
 }

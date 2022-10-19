@@ -1,9 +1,11 @@
 #include <napi/napi.h>
 #include <napi/napi_pointer.h>
 #include <NativeCamera.h>
+#include "MediaStream.h"
 #include "NativeVideo.h"
 #include "NativeCameraImpl.h"
 #include <Babylon/JsRuntime.h>
+#include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/Graphics/DeviceContext.h>
 #include <Babylon/Graphics/Texture.h>
 #include <vector>
@@ -50,18 +52,7 @@ namespace Babylon
 
                 // append media devices to navigator
                 Napi::Object mediaDevices = Napi::Object::New(env);
-                mediaDevices.Set("getUserMedia", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                    auto env = info.Env();
-                    auto deferred{Napi::Promise::Deferred::New(env)};
-                    auto promise{deferred.Promise()};
-
-                    auto& jsRuntime{JsRuntime::GetFromJavaScript(env)};
-                    jsRuntime.Dispatch([deferred{std::move(deferred)}](Napi::Env env) {
-                        deferred.Resolve(env.Null());
-                    });
-
-                    return static_cast<Napi::Value>(promise);
-                }, "getUserMedia"));
+                mediaDevices.Set("getUserMedia", Napi::Function::New(env, Camera::GetUserMedia, "getUserMedia"));
                 navigator.Set("mediaDevices", mediaDevices);
             }
 
@@ -106,24 +97,32 @@ namespace Babylon
             }
         };
 
-        Camera::Camera(std::shared_ptr<Impl> impl)
-            : m_impl{std::move(impl)}
+        Camera::Camera()
         {
         }
 
-        Camera Camera::Initialize(Napi::Env env, bool overrideCameraTexture)
+        Camera Camera::Initialize(Napi::Env env)
         {
-            auto impl{std::make_shared<Impl>(env, overrideCameraTexture)};
-
-            Babylon::Plugins::NativeVideo::Initialize(env, impl);
+            Babylon::Plugins::MediaStream::Initialize(env);
+            Babylon::Plugins::NativeVideo::Initialize(env);
             Babylon::Plugins::NativeCamera::Initialize(env);
 
-            return {impl};
+            return {};
         }
 
-        void Camera::SetTextureOverride(void* texturePtr)
+        Napi::Value Camera::GetUserMedia(const Napi::CallbackInfo& info)
         {
-           m_impl->SetTextureOverride(texturePtr);
+            auto env = info.Env();
+            
+            auto mediaStreamObject{ MediaStream::constructor.New({}) };
+            auto mediaStream{ MediaStream::Unwrap(mediaStreamObject) };
+            
+            auto callback = Napi::Function::New(env, [mediaStreamObject](const Napi::CallbackInfo& /*info*/) {
+                return static_cast<Napi::Value>(mediaStreamObject);
+            }, "then");
+            
+            auto applyPromise = mediaStream->ApplyConstraints(info).As<Napi::Promise>();
+            return applyPromise.Get("then").As<Napi::Function>().Call(applyPromise, {callback});
         }
     }
 }

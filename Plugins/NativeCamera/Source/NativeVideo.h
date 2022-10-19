@@ -1,8 +1,8 @@
 #pragma once
 #include <napi/napi.h>
 #include "NativeCameraImpl.h"
+#include "MediaStream.h"
 #include <Babylon/JsRuntime.h>
-#include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/Graphics/DeviceContext.h>
 #include <vector>
 #include <algorithm>
@@ -14,7 +14,7 @@ namespace Babylon::Plugins
     {
 
     public:
-        static void Initialize(Napi::Env& env, std::shared_ptr<Plugins::Camera::Impl> nativeCameraImpl);
+        static void Initialize(Napi::Env& env);
         static Napi::Object New(const Napi::CallbackInfo& info, uint32_t width, uint32_t height, bool frontCamera);
         NativeVideo(const Napi::CallbackInfo& info);
         ~NativeVideo() = default;
@@ -31,11 +31,12 @@ namespace Babylon::Plugins
         Napi::Value GetVideoHeight(const Napi::CallbackInfo& info);
         void SetFrontCamera(const Napi::CallbackInfo& info, const Napi::Value& value);
         void SetAttribute(const Napi::CallbackInfo&);
+        void RemoveAttribute(const Napi::CallbackInfo&);
         Napi::Value IsNative(const Napi::CallbackInfo&);
         Napi::Value GetReadyState(const Napi::CallbackInfo& info);
         Napi::Value GetHaveCurrentData(const Napi::CallbackInfo& info);
-
-        JsRuntimeScheduler m_runtimeScheduler;
+        Napi::Value GetSrcObject(const Napi::CallbackInfo& info);
+        void SetSrcObject(const Napi::CallbackInfo& info, const Napi::Value& value);
 
         std::unordered_map<std::string, std::vector<Napi::FunctionReference>> m_eventHandlerRefs{};
         uint32_t m_maxWidth{};
@@ -47,7 +48,7 @@ namespace Babylon::Plugins
         bool m_frontCamera{};
 
         bool m_IsPlaying{};
-
-        static inline std::shared_ptr<Plugins::Camera::Impl> NativeCameraImpl{};
+        
+        Napi::ObjectReference m_streamObject = Napi::Persistent(Napi::Object::New(Env()));
     };
 }
