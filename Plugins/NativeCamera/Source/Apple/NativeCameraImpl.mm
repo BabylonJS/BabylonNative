@@ -133,6 +133,21 @@ namespace {
 
 namespace Babylon::Plugins
 {
+    struct CameraTrack::ImplData
+    {
+        AVCaptureDeviceFormat* avDeviceFormat;
+        uint32_t pixelFormat;
+    };
+
+    CameraTrack::~CameraTrack() = default;
+
+    struct CameraDevice::ImplData
+    {
+        AVCaptureDevice* avDevice;
+    };
+
+    CameraDevice::~CameraDevice() = default;
+
     struct Camera::Impl::ImplData
     {
         ImplData(Napi::Env env, bool overrideCameraTexture)
@@ -150,6 +165,7 @@ namespace Babylon::Plugins
         CameraDimensions cameraDimensions{};
 
         CameraTextureDelegate* cameraTextureDelegate{};
+        AVCaptureDevice* avCaptureDevice{};
         AVCaptureSession* avCaptureSession{};
         CVMetalTextureCacheRef textureCache{};
         id<MTLTexture> textureRGBA{};
@@ -171,16 +187,86 @@ namespace Babylon::Plugins
     {
     }
 
-    arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
+    std::vector<std::shared_ptr<CameraDevice>> Camera::Impl::GetCameraDevices()
+    {
+        std::vector<std::shared_ptr<CameraDevice>> cameraDevices{};
+        
+        NSArray* deviceTypes{@[
+            // Use the main camera on the device which is best for general use and will typically be 1x optical zoom and the highest resolution.
+            // https://developer.apple.com/documentation/avfoundation/avcapturedevice/devicetype/2361449-builtinwideanglecamera
+            AVCaptureDeviceTypeBuiltInWideAngleCamera
+        ]};
+        bool foundExactMatch{false};
+
+        // The below code would allow us to choose virtual cameras which dynamically switch between the different physical
+        // camera sensors based on different zoom levels. Until we support letting the consumer modify the camera's zoom
+        // it would result in often being stuck on the most zoomed out camera on the device which is often not desired.
+
+        // if (@available(iOS 13.0, *))
+        // {
+        //     // Ordered list of cameras by general usage quality.
+        //     deviceTypes = @[
+        //         AVCaptureDeviceTypeBuiltInTripleCamera,
+        //         AVCaptureDeviceTypeBuiltInDualCamera,
+        //         AVCaptureDeviceTypeBuiltInDualWideCamera,
+        //         AVCaptureDeviceTypeBuiltInWideAngleCamera,
+        //         AVCaptureDeviceTypeBuiltInUltraWideCamera,
+        //         AVCaptureDeviceTypeBuiltInTelephotoCamera,
+        //         AVCaptureDeviceTypeBuiltInTrueDepthCamera
+        //     ];
+        // }
+
+        AVCaptureDeviceDiscoverySession* discoverySession{[AVCaptureDeviceDiscoverySession
+                                                           discoverySessionWithDeviceTypes:deviceTypes
+                                                           mediaType:AVMediaTypeVideo
+                                                           position:AVCaptureDevicePositionUnspecified]};
+        
+        for (AVCaptureDevice* device in discoverySession.devices)
+        {
+            auto cameraDevice{ std::make_shared<CameraDevice>()};
+            
+            for (AVCaptureDeviceFormat* format in device.formats)
+            {
+                CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(format.formatDescription)};
+                CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
+                uint32_t pixelFormat{static_cast<uint32_t>(CMFormatDescriptionGetMediaSubType(videoFormatRef))};
+
+                // Reject unsupported pixel formats.
+                if (!isPixelFormatSupported(pixelFormat))
+                {
+                    continue;
+                }
+                
+                auto cameraTrack{ std::make_shared<CameraTrack>()};
+                cameraTrack->width =  dimensions.width;
+                cameraTrack->height = dimensions.height;
+                cameraTrack->implData = std::make_unique<CameraTrack::ImplData>();
+                cameraTrack->implData->avDeviceFormat = format;
+                cameraTrack->implData->pixelFormat = pixelFormat;
+                cameraDevice->supportedResolutions.push_back(cameraTrack);
+            }
+                        
+            // update the cameraDevice information
+            cameraDevice->facingMode = device.position == AVCaptureDevicePositionFront ? "user" : "environment";
+            cameraDevice->supportsTorch = device.isTorchAvailable;
+            cameraDevice->implData = std::make_unique<CameraDevice::ImplData>();
+            cameraDevice->implData->avDevice = device;
+
+            cameraDevices.push_back(cameraDevice);
+
+            if (foundExactMatch)
+            {
+                break;
+            }
+        }
+        
+        return cameraDevices;
+    }
+
+
+    arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(std::shared_ptr<CameraDevice> cameraDevice, std::shared_ptr<CameraTrack> resolution)
     {
         NSError *error{nil};
-
-        if (maxWidth == 0 || maxWidth > std::numeric_limits<int32_t>::max()) {
-            maxWidth = std::numeric_limits<int32_t>::max();
-        }
-        if (maxHeight == 0 || maxHeight > std::numeric_limits<int32_t>::max()) {
-            maxHeight = std::numeric_limits<int32_t>::max();
-        }
 
         // This is the first time the camera has been opened, perform some one time setup.
         if (!m_implData->isInitialized) {
@@ -217,105 +303,20 @@ namespace Babylon::Plugins
         m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData->textureCache];
 
 #if (TARGET_OS_IPHONE)
-        // Loop over all available camera configurations to find a config that most closely matches the constraints.
-        AVCaptureDevice* bestDevice{nullptr};
-        AVCaptureDeviceFormat* bestFormat{nullptr};
-        uint32_t bestPixelCount{0};
-        uint32_t devicePixelFormat{0};
-        uint32_t bestDimDiff{0};
-        NSArray* deviceTypes{@[
-            // Use the main camera on the device which is best for general use and will typically be 1x optical zoom and the highest resolution.
-            // https://developer.apple.com/documentation/avfoundation/avcapturedevice/devicetype/2361449-builtinwideanglecamera
-            AVCaptureDeviceTypeBuiltInWideAngleCamera
-        ]};
-        bool foundExactMatch{false};
-
-        // The below code would allow us to choose virtual cameras which dynamically switch between the different physical
-        // camera sensors based on different zoom levels. Until we support letting the consumer modify the camera's zoom
-        // it would result in often being stuck on the most zoomed out camera on the device which is often not desired.
-
-        // if (@available(iOS 13.0, *))
-        // {
-        //     // Ordered list of cameras by general usage quality.
-        //     deviceTypes = @[
-        //         AVCaptureDeviceTypeBuiltInTripleCamera,
-        //         AVCaptureDeviceTypeBuiltInDualCamera,
-        //         AVCaptureDeviceTypeBuiltInDualWideCamera,
-        //         AVCaptureDeviceTypeBuiltInWideAngleCamera,
-        //         AVCaptureDeviceTypeBuiltInUltraWideCamera,
-        //         AVCaptureDeviceTypeBuiltInTelephotoCamera,
-        //         AVCaptureDeviceTypeBuiltInTrueDepthCamera
-        //     ];
-        // }
-
-        AVCaptureDeviceDiscoverySession* discoverySession{[AVCaptureDeviceDiscoverySession
-           discoverySessionWithDeviceTypes:deviceTypes
-           mediaType:AVMediaTypeVideo position:frontCamera ? AVCaptureDevicePositionFront: AVCaptureDevicePositionBack]};
-        for (AVCaptureDevice* device in discoverySession.devices)
-        {
-            for (AVCaptureDeviceFormat* format in device.formats)
-            {
-                CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(format.formatDescription)};
-                CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
-                uint32_t pixelFormat{static_cast<uint32_t>(CMFormatDescriptionGetMediaSubType(videoFormatRef))};
-
-                // Reject unsupported pixel formats.
-                if (!isPixelFormatSupported(pixelFormat))
-                {
-                    continue;
-                }
-
-                // Reject any resolution that doesn't qualify for the constraint.
-                if (static_cast<uint32_t>(dimensions.width) > maxWidth || static_cast<uint32_t>(dimensions.height) > maxHeight)
-                {
-                    continue;
-                }
-
-                // Calculate pixel count and dimension differential and take the best qualifying one.
-                uint32_t pixelCount{static_cast<uint32_t>(dimensions.width * dimensions.height)};
-                uint32_t dimDiff{(maxWidth - dimensions.width) + (maxHeight - dimensions.height)};
-                if (bestDevice == nullptr || pixelCount > bestPixelCount || (pixelCount == bestPixelCount && dimDiff < bestDimDiff))
-                {
-                    bestPixelCount = pixelCount;
-                    devicePixelFormat = pixelFormat;
-                    bestDevice = device;
-                    bestFormat = format;
-                    bestDimDiff = dimDiff;
-
-                    // Check if we got an exact match, and exit the loop early in this case.
-                    if (static_cast<uint32_t>(dimensions.width) == maxWidth && static_cast<uint32_t>(dimensions.height) == maxHeight)
-                    {
-                        foundExactMatch = true;
-                        break;
-                    }
-                }
-            }
-
-            if (foundExactMatch)
-            {
-                break;
-            }
-        }
-
-        // If no matching device, throw an error with the message "ConstraintError" which matches the behavior in the browser.
-        if (bestDevice == nullptr)
-        {
-            return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."}));
-        }
-
         // Lock camera device and set up camera format. If there a problem initialising the camera it will give an error.
-        [bestDevice lockForConfiguration:&error];
+        [cameraDevice->implData->avDevice lockForConfiguration:&error];
         if (error != nil)
         {
             return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"Failed to lock camera"}));
         }
 
-        [bestDevice setActiveFormat:bestFormat];
-        AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:bestDevice error:&error]};
-        [bestDevice unlockForConfiguration];
+        [cameraDevice->implData->avDevice setActiveFormat:resolution->implData->avDeviceFormat];
+        AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:cameraDevice->implData->avDevice error:&error]};
+        [cameraDevice->implData->avDevice setTorchMode:AVCaptureTorchModeOn];
+        [cameraDevice->implData->avDevice unlockForConfiguration];
 
         // Capture the format dimensions.
-        CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(bestFormat.formatDescription)};
+        CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(resolution->implData->avDeviceFormat.formatDescription)};
         CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 #else
         UNUSED(maxWidth);
@@ -346,9 +347,11 @@ namespace Babylon::Plugins
         {
             return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"}));
         }
+        
+        m_implData->avCaptureDevice = cameraDevice->implData->avDevice;
 
         // Kick off camera session on a background thread.
-        return arcana::make_task(m_implData->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this(), input, devicePixelFormat, cameraDimensions]() mutable {
+        return arcana::make_task(m_implData->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this(), input, resolution, cameraDimensions]() mutable {
             if (implObj->m_implData->avCaptureSession == nil) {
                 implObj->m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
             } else {
@@ -372,7 +375,7 @@ namespace Babylon::Plugins
             dispatch_queue_t sampleBufferQueue{dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL)};
             AVCaptureVideoDataOutput* dataOutput{[[AVCaptureVideoDataOutput alloc] init]};
             [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
-            [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(devicePixelFormat)}];
+            [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(resolution->implData->pixelFormat)}];
             [dataOutput setSampleBufferDelegate:implObj->m_implData->cameraTextureDelegate queue:sampleBufferQueue];
             [implObj->m_implData->avCaptureSession addOutput:dataOutput];
 
@@ -473,6 +476,27 @@ namespace Babylon::Plugins
                 [m_implData->currentCommandBuffer commit];
             }
         });
+    }
+
+    bool Camera::Impl::SetCapability(CameraCapability capability, std::variant<bool, std::string> value)
+    {
+        NSError* error{nil};
+
+        switch(capability)
+        {
+            case Torch:
+                AVCaptureTorchMode torchMode{ std::get<bool>(value) ? AVCaptureTorchModeOn : AVCaptureTorchModeOff };
+                [m_implData->avCaptureDevice lockForConfiguration:&error];
+                [m_implData->avCaptureDevice setTorchMode:torchMode];
+                [m_implData->avCaptureDevice unlockForConfiguration];
+                if (error != nil)
+                {
+                    return false;
+                }
+                return true;
+        }
+
+        return false;
     }
 
     void Camera::Impl::Close()

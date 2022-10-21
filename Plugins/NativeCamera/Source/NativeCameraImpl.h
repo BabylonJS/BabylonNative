@@ -7,6 +7,32 @@
 
 namespace Babylon::Plugins
 {
+    enum CameraCapability {
+        Torch
+    };
+
+    struct CameraTrack final {
+        ~CameraTrack();
+        
+        int32_t width;
+        int32_t height;
+        
+        struct ImplData;
+        std::unique_ptr<ImplData> implData;
+    };
+
+    struct CameraDevice final {
+        ~CameraDevice();
+
+        std::string facingMode;
+        std::vector<std::shared_ptr<CameraTrack>> supportedResolutions;
+
+        bool supportsTorch{false};
+        
+        struct ImplData;
+        std::unique_ptr<ImplData> implData;
+    };
+
     class Camera::Impl final : public std::enable_shared_from_this<Camera::Impl>
     {
     public:
@@ -19,9 +45,13 @@ namespace Babylon::Plugins
 
         Impl(Napi::Env env, bool overrideCameraTexture);
         ~Impl();
-        arcana::task<CameraDimensions, std::exception_ptr> Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera);
+        arcana::task<CameraDimensions, std::exception_ptr> Open(std::shared_ptr<CameraDevice> cameraDevice, std::shared_ptr<CameraTrack> track);
+
+        std::vector<std::shared_ptr<CameraDevice>> GetCameraDevices();
+
         void SetTextureOverride(void* texturePtr);
         void UpdateCameraTexture(bgfx::TextureHandle textureHandle);
+        bool SetCapability(CameraCapability capability, std::variant<bool, std::string> value);
         void Close();
 
     private:

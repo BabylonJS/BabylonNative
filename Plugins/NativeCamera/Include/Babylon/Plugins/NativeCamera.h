@@ -4,26 +4,6 @@
 
 namespace Babylon::Plugins
 {
-    struct ConstrainULong final {
-        std::optional<unsigned long> min{};
-        std::optional<unsigned long> max{};
-        std::optional<unsigned long> exact{};
-        std::optional<unsigned long> ideal{};
-    };
-
-    struct ConstrainString final {
-        std::optional<std::string> exact{};
-        std::optional<std::string> ideal{};
-    };
-
-    // This is a native representation of the MediaTrackConstraints Web API: https://developer.mozilla.org/en-US/docs/Web/API/MediaTrackConstraints
-    // Only the properties currently supported need to be listed.
-    struct CameraConstraints final {
-        std::optional<ConstrainULong> width{};
-        std::optional<ConstrainULong> height{};
-        std::optional<ConstrainString> facingMode{};
-    };
-
     class Camera final
     {
     public:
