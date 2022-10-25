@@ -4,14 +4,12 @@
 #include <napi/napi.h>
 #include <arcana/threading/task.h>
 #include <NativeCamera.h>
+#include "CameraCapability.h"
 
 namespace Babylon::Plugins
 {
-    enum CameraCapability {
-        Torch
-    };
-
-    struct CameraTrack final {
+    struct CameraTrack final
+    {
         ~CameraTrack();
         
         int32_t width;
@@ -21,13 +19,16 @@ namespace Babylon::Plugins
         std::unique_ptr<ImplData> implData;
     };
 
-    struct CameraDevice final {
+    struct CameraDevice final
+    {
         ~CameraDevice();
 
         std::string facingMode;
         std::vector<std::shared_ptr<CameraTrack>> supportedResolutions;
 
         bool supportsTorch{false};
+
+        std::vector<std::shared_ptr<CameraCapability>> capabilities{};
         
         struct ImplData;
         std::unique_ptr<ImplData> implData;
@@ -51,7 +52,7 @@ namespace Babylon::Plugins
 
         void SetTextureOverride(void* texturePtr);
         void UpdateCameraTexture(bgfx::TextureHandle textureHandle);
-        bool SetCapability(CameraCapability capability, std::variant<bool, std::string> value);
+        bool SetCapability(std::shared_ptr<CameraCapability> capability, std::variant<bool, uint32_t, std::string> value);
         void Close();
 
     private:

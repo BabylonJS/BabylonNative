@@ -20,6 +20,7 @@ namespace Babylon::Plugins
         
         // MediaStreamTrack polyfill: https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack
         Napi::Value ApplyConstraints(const Napi::CallbackInfo& info);
+        Napi::Value ApplyConstraints(Napi::Env env, Napi::Object constraints);
         //Napi::Value GetCapabilities(const Napi::CallbackInfo& info);
         
         void UpdateTexture(bgfx::TextureHandle textureHandle);

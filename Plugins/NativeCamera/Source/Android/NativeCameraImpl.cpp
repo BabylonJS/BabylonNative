@@ -400,6 +400,32 @@ namespace Babylon::Plugins
             cameraDevice->implData->cameraID = id;
             cameraDevice->implData->sensorRotation = sensorOrientation.data.i32[0];
 
+            auto torchCapability{ std::make_shared<CameraCapabilityBool>
+            (
+                CameraCapability::Capability::Torch,
+                false,
+                false,
+                torchSupported ? std::vector<bool>{false, true} : std::vector<bool>{false},
+                [this](bool newValue)
+                {
+                    uint8_t torchMode = newValue
+                                        ? API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_TORCH
+                                        : API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_OFF;
+                    GET_CAMERA_FUNCTION(ACaptureRequest_setEntry_u8)(m_implData->request,
+                                                                     API24::ACAMERA_FLASH_MODE, 1,
+                                                                     &torchMode);
+
+                    // Update the camera request
+                    GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(
+                            m_implData->textureSession,
+                            &captureCallbacks,
+                            1, &m_implData->request,
+                            nullptr);
+                    return true;
+                }
+            )};
+            cameraDevice->capabilities.push_back(torchCapability);
+
             cameraDevices.push_back(cameraDevice);
         }
 
@@ -468,20 +494,32 @@ namespace Babylon::Plugins
         });
     }
 
-    bool Camera::Impl::SetCapability(CameraCapability capability, std::variant<bool, std::string> value)
+    bool Camera::Impl::SetCapability(std::shared_ptr<CameraCapability> capability, std::variant<bool, uint32_t, std::string> value)
     {
-        switch(capability)
+        switch(capability->getCapability())
         {
-            case Torch:
-                uint8_t torchMode = std::get<bool>(value) ? API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_TORCH : API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_OFF;
-                GET_CAMERA_FUNCTION(ACaptureRequest_setEntry_u8)(m_implData->request, API24::ACAMERA_FLASH_MODE, 1, &torchMode);
+            case CameraCapability::Capability::Torch:
+            {
+                uint8_t torchMode = std::get<bool>(value)
+                                    ? API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_TORCH
+                                    : API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_OFF;
+                GET_CAMERA_FUNCTION(ACaptureRequest_setEntry_u8)(m_implData->request,
+                                                                 API24::ACAMERA_FLASH_MODE, 1,
+                                                                 &torchMode);
 
                 // Start capturing continuously
-                GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(m_implData->textureSession,
-                                                                               &captureCallbacks,
-                                                                               1, &m_implData->request,
-                                                                               nullptr);
+                GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(
+                        m_implData->textureSession,
+                        &captureCallbacks,
+                        1, &m_implData->request,
+                        nullptr);
                 return true;
+            }
+            // The following capabilities don't support changing after the stream has been opened
+            case CameraCapability::Capability::Width:
+            case CameraCapability::Capability::Height:
+            case CameraCapability::Capability::FacingMode:
+                return false;
         }
 
         return false;

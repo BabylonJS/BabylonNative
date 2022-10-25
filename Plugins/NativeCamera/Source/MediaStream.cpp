@@ -42,21 +42,17 @@ namespace Babylon::Plugins
         return Napi::Array::New(info.Env(), 0);
     }
 
-    Napi::Value MediaStream::ApplyConstraints(const Napi::CallbackInfo& info)
+    Napi::Value MediaStream::ApplyConstraints(Napi::Env env, Napi::Object constraints)
     {
-        auto env = info.Env();
-
         auto deferred{Napi::Promise::Deferred::New(env)};
         auto promise{deferred.Promise()};
-        
-        auto constraints = info[0].As<Napi::Object>();
-        
+
         if (m_cameraDevice == nullptr || m_cameraResolution == nullptr)
         {
             auto bestCamera = FindBestCameraStream(constraints);
             m_cameraDevice = bestCamera.first;
             m_cameraResolution = bestCamera.second;
-            
+
             // If m_cameraDevice is still null that means a camera device could not be found that meets the constraints
             if (m_cameraDevice == nullptr)
             {
@@ -64,7 +60,7 @@ namespace Babylon::Plugins
                 deferred.Reject(Napi::Error::New(env, std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."}).Value());
                 return static_cast<Napi::Value>(promise);
             }
-            
+
             // This is the first time applying the constraints to the camera. First open up the stream
             m_cameraImpl->Open(m_cameraDevice, m_cameraResolution).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred, constraints](const arcana::expected<Camera::Impl::CameraDimensions, std::exception_ptr>& result) {
                 if (result.has_error())
@@ -82,11 +78,54 @@ namespace Babylon::Plugins
             });
         }
 
-        auto torchConstraint{ constraints.Get("torch") };
-        auto torchEnabled{ torchConstraint.IsBoolean() && torchConstraint.As<Napi::Boolean>().Value() };
-        m_cameraImpl->SetCapability(CameraCapability::Torch, torchEnabled);
+        for(uint32_t i=0; i < m_cameraDevice->capabilities.size(); i++)
+        {
+            auto capability{ m_cameraDevice->capabilities[i] };
+            if (constraints.Has(capability->getName()))
+            {
+                // Set the constrainable property
+//                switch(capability->getType())
+//                {
+//                    case CameraCapability::Type::Bool:
+//                        // TODO Add some type checking to the napi object
+//                        auto boolCapability{ std::static_pointer_cast<CameraCapabilityBool>(capability) };
+//                        if (capability->isValueValid(constraints.Get(capability->getName())) )
+//                        if (m_cameraImpl->SetCapability(capability, constraints.Get(capability->getName()).As<Napi::Boolean>().Value()))
+//                        {
+//                            boolCapability->currentValue =
+//                        }
+//                        break;
+//                    case CameraCapability::Type::UInt:
+//                        // TODO Add some type checking to the napi object
+//                        m_cameraImpl->SetCapability(capability, constraints.Get(capability->getName()).As<Napi::Number>().Uint32Value());
+//                        break;
+//                    case CameraCapability::Type::String:
+//                        // TODO Add some type checking to the napi object
+//                        m_cameraImpl->SetCapability(capability, constraints.Get(capability->getName()).As<Napi::String>().Utf8Value());
+//                        break;
+//                }
+                if(!capability->setValue(constraints.Get(capability->getName())))
+                {
+                    // Setting the constraint to the capability failed
+                    deferred.Reject(Napi::Error::New(env, std::runtime_error{"OverconstrainedError: Unable to match constraints to a supported camera configuration."}).Value());
+                    return static_cast<Napi::Value>(promise);
+                }
+            }
+            else
+            {
+                capability->resetValue();
+            }
+        }
 
         return static_cast<Napi::Value>(promise);
+    }
+
+    Napi::Value MediaStream::ApplyConstraints(const Napi::CallbackInfo& info)
+    {
+        auto env = info.Env();
+        auto constraints = info[0].As<Napi::Object>();
+
+        return ApplyConstraints(env, constraints);
     }
 
     std::pair<std::shared_ptr<CameraDevice>, std::shared_ptr<CameraTrack>> MediaStream::FindBestCameraStream(Napi::Object constraints)
@@ -97,16 +136,25 @@ namespace Babylon::Plugins
         int32_t maxWidth{256}, maxHeight{256};
         std::string facingMode{"environment"};
 
-        auto maxWidthValue{constraints.Get("maxWidth")};
-        auto maxHeightValue{constraints.Get("maxHeight")};
+        auto widthValue{ constraints.Get("width") };
+        auto heightValue{ constraints.Get("height") };
         auto facingModeValue{constraints.Get("facingMode")};
-        if (maxWidthValue.IsNumber())
+
+        if (widthValue.IsObject())
         {
-            maxWidth = maxWidthValue.As<Napi::Number>().Uint32Value();
+            auto maxWidthValue{ widthValue.As<Napi::Object>().Get("max") };
+            if (maxWidthValue.IsNumber())
+            {
+                maxWidth = maxWidthValue.As<Napi::Number>().Uint32Value();
+            }
         }
-        if (maxHeightValue.IsNumber())
+        if (heightValue.IsObject())
         {
-            maxHeight = maxHeightValue.As<Napi::Number>().Uint32Value();
+            auto maxHeightvalue{ heightValue.As<Napi::Object>().Get("max") };
+            if (maxHeightvalue.IsNumber())
+            {
+                maxHeight = maxHeightvalue.As<Napi::Number>().Uint32Value();
+            }
         }
         if (facingModeValue.IsString())
         {

@@ -120,8 +120,33 @@ namespace Babylon
             auto callback = Napi::Function::New(env, [mediaStreamObject](const Napi::CallbackInfo& /*info*/) {
                 return static_cast<Napi::Value>(mediaStreamObject);
             }, "then");
+
+            Napi::Object constraints{ info[0].As<Napi::Object>() };
+            auto videoConstraints{ constraints.Get("video").As<Napi::Object>() };
+            if (videoConstraints.IsUndefined())
+            {
+                videoConstraints = Napi::Object::New(env);
+            }
+
+            // For backwards compatibility support top level properties that aren't part of the official constraint spec,
+            // but are explicitly used by Babylon.JS
+            if((videoConstraints.Has("minWidth") || videoConstraints.Has("maxWidth")) && !videoConstraints.Has("width"))
+            {
+                auto widthObject = Napi::Object::New(env);
+                widthObject.Set("min", videoConstraints.Get("minWidth"));
+                widthObject.Set("max", videoConstraints.Get("maxWidth"));
+                videoConstraints.Set("width", widthObject);
+            }
+
+            if((videoConstraints.Has("minHeight") || videoConstraints.Has("maxHeight")) && !videoConstraints.Has("height"))
+            {
+                auto heightObject = Napi::Object::New(env);
+                heightObject.Set("min", videoConstraints.Get("minHeight"));
+                heightObject.Set("max", videoConstraints.Get("maxHeight"));
+                videoConstraints.Set("height", heightObject);
+            }
             
-            auto applyPromise = mediaStream->ApplyConstraints(info).As<Napi::Promise>();
+            auto applyPromise = mediaStream->ApplyConstraints(env, videoConstraints).As<Napi::Promise>();
             return applyPromise.Get("then").As<Napi::Function>().Call(applyPromise, {callback});
         }
     }
