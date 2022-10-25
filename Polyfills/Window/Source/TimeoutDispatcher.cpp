@@ -142,7 +142,7 @@ namespace Babylon::Polyfills::Internal
             while (!m_timeMap.empty() && m_timeMap.begin()->second->time == nextTimePoint)
             {
                 const auto* timeout = m_timeMap.begin()->second;
-                auto function = timeout->function;
+                auto function = std::move(timeout->function);
                 m_timeMap.erase(m_timeMap.begin());
                 m_idMap.erase(timeout->id);
                 CallFunction(std::move(function));
