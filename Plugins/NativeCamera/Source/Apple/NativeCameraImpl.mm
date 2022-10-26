@@ -247,10 +247,39 @@ namespace Babylon::Plugins
             }
                         
             // update the cameraDevice information
-            cameraDevice->facingMode = device.position == AVCaptureDevicePositionFront ? "user" : "environment";
-            cameraDevice->supportsTorch = device.isTorchAvailable;
             cameraDevice->implData = std::make_unique<CameraDevice::ImplData>();
             cameraDevice->implData->avDevice = device;
+
+            auto facingModeCapability{ std::make_shared<CameraCapabilityTemplate<std::string>>
+            (
+                CameraCapability::Capability::FacingMode,
+                device.position == AVCaptureDevicePositionFront ? "user" : "environment",
+                device.position == AVCaptureDevicePositionFront ? "user" : "environment",
+                device.position == AVCaptureDevicePositionFront ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"}
+            )};
+            cameraDevice->capabilities.push_back(facingModeCapability);
+            
+            auto torchCapability{ std::make_shared<CameraCapabilityTemplate<bool>>
+            (
+                CameraCapability::Capability::Torch,
+                false,
+                false,
+                device.isTorchAvailable ? std::vector<bool>{false, true} : std::vector<bool>{false},
+                [this](bool newValue)
+                {
+                    NSError* error{nil};
+                    AVCaptureTorchMode torchMode{ newValue ? AVCaptureTorchModeOn : AVCaptureTorchModeOff };
+                    [m_implData->avCaptureDevice lockForConfiguration:&error];
+                    [m_implData->avCaptureDevice setTorchMode:torchMode];
+                    [m_implData->avCaptureDevice unlockForConfiguration];
+                    if (error != nil)
+                    {
+                        return false;
+                    }
+                    return true;
+                }
+            )};
+            cameraDevice->capabilities.push_back(torchCapability);
 
             cameraDevices.push_back(cameraDevice);
 
@@ -312,7 +341,6 @@ namespace Babylon::Plugins
 
         [cameraDevice->implData->avDevice setActiveFormat:resolution->implData->avDeviceFormat];
         AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:cameraDevice->implData->avDevice error:&error]};
-        [cameraDevice->implData->avDevice setTorchMode:AVCaptureTorchModeOn];
         [cameraDevice->implData->avDevice unlockForConfiguration];
 
         // Capture the format dimensions.
@@ -476,27 +504,6 @@ namespace Babylon::Plugins
                 [m_implData->currentCommandBuffer commit];
             }
         });
-    }
-
-    bool Camera::Impl::SetCapability(CameraCapability capability, std::variant<bool, std::string> value)
-    {
-        NSError* error{nil};
-
-        switch(capability)
-        {
-            case Torch:
-                AVCaptureTorchMode torchMode{ std::get<bool>(value) ? AVCaptureTorchModeOn : AVCaptureTorchModeOff };
-                [m_implData->avCaptureDevice lockForConfiguration:&error];
-                [m_implData->avCaptureDevice setTorchMode:torchMode];
-                [m_implData->avCaptureDevice unlockForConfiguration];
-                if (error != nil)
-                {
-                    return false;
-                }
-                return true;
-        }
-
-        return false;
     }
 
     void Camera::Impl::Close()

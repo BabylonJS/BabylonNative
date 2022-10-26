@@ -23,11 +23,7 @@ namespace Babylon::Plugins
     {
         ~CameraDevice();
 
-        std::string facingMode;
         std::vector<std::shared_ptr<CameraTrack>> supportedResolutions;
-
-        bool supportsTorch{false};
-
         std::vector<std::shared_ptr<CameraCapability>> capabilities{};
         
         struct ImplData;
@@ -52,7 +48,6 @@ namespace Babylon::Plugins
 
         void SetTextureOverride(void* texturePtr);
         void UpdateCameraTexture(bgfx::TextureHandle textureHandle);
-        bool SetCapability(std::shared_ptr<CameraCapability> capability, std::variant<bool, uint32_t, std::string> value);
         void Close();
 
     private:

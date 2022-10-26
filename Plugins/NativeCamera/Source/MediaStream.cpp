@@ -81,39 +81,11 @@ namespace Babylon::Plugins
         for(uint32_t i=0; i < m_cameraDevice->capabilities.size(); i++)
         {
             auto capability{ m_cameraDevice->capabilities[i] };
-            if (constraints.Has(capability->getName()))
+            if(!capability->applyConstraints(constraints))
             {
-                // Set the constrainable property
-//                switch(capability->getType())
-//                {
-//                    case CameraCapability::Type::Bool:
-//                        // TODO Add some type checking to the napi object
-//                        auto boolCapability{ std::static_pointer_cast<CameraCapabilityBool>(capability) };
-//                        if (capability->isValueValid(constraints.Get(capability->getName())) )
-//                        if (m_cameraImpl->SetCapability(capability, constraints.Get(capability->getName()).As<Napi::Boolean>().Value()))
-//                        {
-//                            boolCapability->currentValue =
-//                        }
-//                        break;
-//                    case CameraCapability::Type::UInt:
-//                        // TODO Add some type checking to the napi object
-//                        m_cameraImpl->SetCapability(capability, constraints.Get(capability->getName()).As<Napi::Number>().Uint32Value());
-//                        break;
-//                    case CameraCapability::Type::String:
-//                        // TODO Add some type checking to the napi object
-//                        m_cameraImpl->SetCapability(capability, constraints.Get(capability->getName()).As<Napi::String>().Utf8Value());
-//                        break;
-//                }
-                if(!capability->setValue(constraints.Get(capability->getName())))
-                {
-                    // Setting the constraint to the capability failed
-                    deferred.Reject(Napi::Error::New(env, std::runtime_error{"OverconstrainedError: Unable to match constraints to a supported camera configuration."}).Value());
-                    return static_cast<Napi::Value>(promise);
-                }
-            }
-            else
-            {
-                capability->resetValue();
+                // Setting the constraint to the capability failed
+                deferred.Reject(Napi::Error::New(env, std::runtime_error{"OverconstrainedError: Unable to match constraints to a supported camera configuration."}).Value());
+                return static_cast<Napi::Value>(promise);
             }
         }
 
@@ -165,16 +137,43 @@ namespace Babylon::Plugins
         std::shared_ptr<CameraTrack> bestCameraResolution{nullptr };
         int32_t bestPixelCount{0};
         int32_t bestDimDiff{0};
-
-        // The camera devices should be assumed to be sorted from best to worst. Pick the first camera device
-        // that satisfies all constraints
+        //int32_t bestFullySatisfiedCapabilityCount{0};
+        
+        // The camera devices should be assumed to be sorted from best to worst. Pick the first camera device that fully
+        // satisfies the most constraints without failing any.
         for (uint32_t i = 0; i < cameraDevices.size(); ++i)
         {
             auto cameraDevice = cameraDevices[i];
-
-            if (cameraDevice->facingMode != facingMode)
+            
+            bool failedAConstraint{ false };
+            int32_t fullySatisfiedCapabilityCount{ 0 };
+            for (uint32_t j = 0; j < cameraDevice->capabilities.size(); j++ )
             {
-                // Ignore cameras facing the wrong direction
+                CameraCapability::MeetsConstraint constraintSatifaction{ cameraDevice->capabilities[j]->meetsConstraints(constraints) };
+                switch (constraintSatifaction)
+                {
+                    case CameraCapability::MeetsConstraint::Unsatisfied:
+                        failedAConstraint = true;
+                        break;
+                    case CameraCapability::MeetsConstraint::FullySatisfied:
+                        fullySatisfiedCapabilityCount++;
+                        break;
+                    case CameraCapability::MeetsConstraint::PartiallySatisfied:
+                    case CameraCapability::MeetsConstraint::Unconstrained:
+                        // Don't weight partialy satisfied or unconstrained capabilites any higher than another device
+                        break;
+                }
+                
+                // Don't bother continuing to count capabilities if we've failed on
+                if (failedAConstraint)
+                {
+                    break;
+                }
+            }
+            
+            if (failedAConstraint)
+            {
+                // The device doesn't meet all constraints, move on to the next device
                 continue;
             }
 

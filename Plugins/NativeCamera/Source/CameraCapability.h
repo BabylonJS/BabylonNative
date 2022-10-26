@@ -5,78 +5,96 @@
 namespace Babylon::Plugins {
     class CameraCapability {
     public:
-        enum Capability {
+        enum Capability
+        {
             Width,
             Height,
             FacingMode,
             Torch,
         };
+        
+        enum MeetsConstraint
+        {
+            FullySatisfied, // The constraint can be fully met
+            PartiallySatisfied, // The constraint cannot be met, but satisfies the Exact, Min, and Max
+            Unsatisfied, // The constraint cannot be met, and fails the Exact, Min, or Max
+            Unconstrained, // There are no constraints that apply
+        };
 
-        enum Type {
-            Bool,
-            UInt,
-            String,
+        enum ConstraintType
+        {
+            Sequence,
+            Range,
         };
 
         CameraCapability(Capability capability);
         virtual ~CameraCapability() = default;
 
         std::string getName();
-        Type getType();
-        Capability getCapability();
 
-        virtual bool setValue(Napi::Value value)=0;
-        virtual bool resetValue()=0;
-        virtual Napi::Value asConstrainable(Napi::Env env)=0;
+        virtual MeetsConstraint meetsConstraints(Napi::Object constraints)=0;
+        virtual bool applyConstraints(Napi::Object constraints)=0;
+        virtual Napi::Value asCapability(Napi::Env env)=0;
         virtual Napi::Value asSetting(Napi::Env env)=0;
 
-    private:
+        template <typename T>
+        struct Constraint
+        {
+            std::optional<T> ideal;
+            std::optional<T> exact;
+            std::optional<T> min;
+            std::optional<T> max;
+        };
+
+        template <typename T>
+        Constraint<T> parseConstraint(Napi::Value value) = delete;
+
+        template <>
+        Constraint<uint32_t> parseConstraint(Napi::Value value);
+
+        template <>
+        Constraint<bool> parseConstraint(Napi::Value value);
+
+        template <>
+        Constraint<std::string> parseConstraint(Napi::Value value);
+
+        template <typename T>
+        Napi::Value asNapiValue(Napi::Env env, T value) = delete;
+
+        template <>
+        Napi::Value asNapiValue(Napi::Env env, uint32_t value);
+
+        template <>
+        Napi::Value asNapiValue(Napi::Env env, bool value);
+
+        template <>
+        Napi::Value asNapiValue(Napi::Env env, std::string value);
+
+    protected:
         const Capability m_capability;
     };
 
-    class CameraCapabilityBool : public CameraCapability
+    template <typename T>
+    class CameraCapabilityTemplate : public CameraCapability
     {
     public:
-        CameraCapabilityBool(Capability capability,
-                             bool currentValue,
-                             bool defaultValue,
-                             std::vector<bool> acceptedValues,
-                             std::optional<std::function<bool(bool)>> setterFunction);
+        CameraCapabilityTemplate(Capability capability,
+                                 T currentValue,
+                                 T defaultValue,
+                                 std::vector<T> acceptedValues,
+                                 std::function<bool(T)> setterFunction = [](T){return true;});
 
-        bool setValue(Napi::Value value);
-        bool resetValue();
-        Napi::Value asConstrainable(Napi::Env env);
+        MeetsConstraint meetsConstraints(Napi::Object constraints);
+        bool applyConstraints(Napi::Object constraints);
+        Napi::Value asCapability(Napi::Env env);
         Napi::Value asSetting(Napi::Env env);
 
     private:
-        struct Constraint
-        {
-            std::optional<bool> ideal;
-            std::optional<bool> exact;
-        };
+        ConstraintType getConstraintType();
 
-        Constraint parseConstraint(Napi::Value value);
-
-        bool m_currentValue;
-        const bool m_defaultValue;
-        const std::vector<bool> m_acceptedValues;
-        std::optional<std::function<bool(bool)>> m_setterFunction;
-    };
-
-    class CameraCapabilityString : public CameraCapability
-    {
-    public:
-        CameraCapabilityString(Capability capability,
-        std::string currentValue, std::string defaultValue,
-                std::vector<std::string> acceptedValues);
-
-        bool setValue(Napi::Value value);
-        bool resetValue();
-        Napi::Value asConstrainable(Napi::Env env);
-        Napi::Value asSetting(Napi::Env env);
-
-        std::string currentValue;
-        const std::string defaultValue;
-        const std::vector<std::string> acceptedValues;
+        T m_currentValue;
+        const T m_defaultValue;
+        const std::vector<T> m_acceptedValues;
+        std::function<bool(T)> m_setterFunction;
     };
 }

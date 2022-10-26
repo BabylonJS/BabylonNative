@@ -31,6 +31,7 @@ namespace Babylon::Plugins
     struct CameraDevice::ImplData {
         std::string cameraID;
         int32_t sensorRotation;
+        bool facingUser;
     };
 
     CameraDevice::~CameraDevice() = default;
@@ -212,7 +213,7 @@ namespace Babylon::Plugins
             // of the sensor. Then add 360 and modulus 360 to ensure we're always talking about positive degrees.
             int sensorRotationDiff{(cameraDevice->implData->sensorRotation - phoneRotation + 360) % 360};
             bool sensorIsPortrait{sensorRotationDiff == 90 || sensorRotationDiff == 270};
-            if (cameraDevice->facingMode == "user" && !sensorIsPortrait && !m_implData->overrideCameraTexture)
+            if (cameraDevice->implData->facingUser && !sensorIsPortrait && !m_implData->overrideCameraTexture)
             {
                 // Compensate for the front facing camera being naturally mirrored. In the portrait orientation
                 // the mirrored behavior matches the browser, but in landscape it would result in the image rendering
@@ -394,13 +395,20 @@ namespace Babylon::Plugins
             bool torchSupported = torchSupportedMetadata.data.u8[0];
 
             // update the cameraDevice information
-            cameraDevice->facingMode = facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment";
-            cameraDevice->supportsTorch = torchSupported;
             cameraDevice->implData = std::make_unique<CameraDevice::ImplData>();
             cameraDevice->implData->cameraID = id;
             cameraDevice->implData->sensorRotation = sensorOrientation.data.i32[0];
+            cameraDevice->implData->facingUser = facing == API24::ACAMERA_LENS_FACING_FRONT;
 
-            auto torchCapability{ std::make_shared<CameraCapabilityBool>
+            auto facingModeCapability{std::make_shared<CameraCapabilityTemplate<std::string>>(
+                CameraCapability::Capability::FacingMode,
+                facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment",
+                facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment",
+                facing == API24::ACAMERA_LENS_FACING_FRONT ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"})
+            };
+            cameraDevice->capabilities.push_back(facingModeCapability);
+
+            auto torchCapability{ std::make_shared<CameraCapabilityTemplate<bool>>
             (
                 CameraCapability::Capability::Torch,
                 false,
@@ -492,37 +500,6 @@ namespace Babylon::Plugins
         arcana::make_task(m_implData->deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
             bgfx::overrideInternal(textureHandle, m_implData->cameraRGBATextureId);
         });
-    }
-
-    bool Camera::Impl::SetCapability(std::shared_ptr<CameraCapability> capability, std::variant<bool, uint32_t, std::string> value)
-    {
-        switch(capability->getCapability())
-        {
-            case CameraCapability::Capability::Torch:
-            {
-                uint8_t torchMode = std::get<bool>(value)
-                                    ? API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_TORCH
-                                    : API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_OFF;
-                GET_CAMERA_FUNCTION(ACaptureRequest_setEntry_u8)(m_implData->request,
-                                                                 API24::ACAMERA_FLASH_MODE, 1,
-                                                                 &torchMode);
-
-                // Start capturing continuously
-                GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(
-                        m_implData->textureSession,
-                        &captureCallbacks,
-                        1, &m_implData->request,
-                        nullptr);
-                return true;
-            }
-            // The following capabilities don't support changing after the stream has been opened
-            case CameraCapability::Capability::Width:
-            case CameraCapability::Capability::Height:
-            case CameraCapability::Capability::FacingMode:
-                return false;
-        }
-
-        return false;
     }
 
     void Camera::Impl::Close()
