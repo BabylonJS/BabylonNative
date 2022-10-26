@@ -28,6 +28,7 @@ jobs:
         napiSuffix: ''
         jsEngineDefine: ''
       solutionName: 'Win32_${{ parameters.platform }}${{variables.napiSuffix}}'
+      UNITY_BUILD:  ${{ variables.UNITY_BUILD }}
 
     steps:
       - script: |
