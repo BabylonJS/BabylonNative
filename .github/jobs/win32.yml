@@ -31,6 +31,10 @@ jobs:
 
     steps:
       - script: |
+          echo "VARIABLES TEST"
+        displayName: 'Unity ${{ variables.UNITY_BUILD }}'
+
+      - script: |
           git submodule update --init --recursive
         displayName: 'Checkout dependencies'
     
@@ -39,10 +43,6 @@ jobs:
           command: 'install'
           workingDir: 'Apps'
         displayName: 'Install Babylon.js NPM packages'
-
-      - script: |
-          echo "VARIABLES TEST"
-        displayName: 'Unity ${{ variables.UNITY_BUILD }}'
 
       - script: |
           mkdir build${{ variables.solutionName }}
