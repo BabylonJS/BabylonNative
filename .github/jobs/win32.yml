@@ -28,12 +28,11 @@ jobs:
         napiSuffix: ''
         jsEngineDefine: ''
       solutionName: 'Win32_${{ parameters.platform }}${{variables.napiSuffix}}'
-      UNITY_BUILD:  ${{ variables.UNITY_BUILD }}
 
     steps:
       - script: |
           echo "VARIABLES TEST"
-        displayName: 'Unity ${{ variables.UNITY_BUILD }}'
+        displayName: 'Unity ${{ UNITY_BUILD }}'
 
       - script: |
           git submodule update --init --recursive
