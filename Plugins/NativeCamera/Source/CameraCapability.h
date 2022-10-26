@@ -7,10 +7,9 @@ namespace Babylon::Plugins {
     public:
         enum Capability
         {
-            Width,
-            Height,
             FacingMode,
             Torch,
+            Zoom
         };
         
         enum MeetsConstraint
@@ -47,26 +46,31 @@ namespace Babylon::Plugins {
         };
 
         template <typename T>
-        Constraint<T> parseConstraint(Napi::Value value) = delete;
+        static Constraint<T> parseConstraint(Napi::Value value) = delete;
+        template <typename T>
+        static Napi::Value asNapiValue(Napi::Env env, T value) = delete;
 
+        // Uint32
         template <>
         Constraint<uint32_t> parseConstraint(Napi::Value value);
-
-        template <>
-        Constraint<bool> parseConstraint(Napi::Value value);
-
-        template <>
-        Constraint<std::string> parseConstraint(Napi::Value value);
-
-        template <typename T>
-        Napi::Value asNapiValue(Napi::Env env, T value) = delete;
-
         template <>
         Napi::Value asNapiValue(Napi::Env env, uint32_t value);
+        
+        // Double
+        template <>
+        Constraint<double> parseConstraint(Napi::Value value);
+        template <>
+        Napi::Value asNapiValue(Napi::Env env, double value);
 
+        // Bool
+        template <>
+        Constraint<bool> parseConstraint(Napi::Value value);
         template <>
         Napi::Value asNapiValue(Napi::Env env, bool value);
 
+        // String
+        template <>
+        Constraint<std::string> parseConstraint(Napi::Value value);
         template <>
         Napi::Value asNapiValue(Napi::Env env, std::string value);
 

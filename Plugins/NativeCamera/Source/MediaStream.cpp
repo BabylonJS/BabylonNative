@@ -15,6 +15,9 @@ namespace Babylon::Plugins
               InstanceMethod("getVideoTracks", &MediaStream::GetVideoTracks),
               InstanceMethod("getAudioTracks", &MediaStream::GetAudioTracks),
               InstanceMethod("applyConstraints", &MediaStream::ApplyConstraints),
+              InstanceMethod("getCapabilities", &MediaStream::GetCapabilities),
+              InstanceMethod("getSettings", &MediaStream::GetSettings),
+              InstanceMethod("getConstraints", &MediaStream::GetConstraints),
           });
         
         constructor = Napi::Persistent(ctor);
@@ -49,6 +52,7 @@ namespace Babylon::Plugins
 
         if (m_cameraDevice == nullptr || m_cameraResolution == nullptr)
         {
+            // A camera device hasn't been selected yet. Find the best device and open the stream
             auto bestCamera = FindBestCameraStream(constraints);
             m_cameraDevice = bestCamera.first;
             m_cameraResolution = bestCamera.second;
@@ -72,21 +76,26 @@ namespace Babylon::Plugins
                     auto cameraDimensions{result.value()};
                     this->Width = cameraDimensions.width;
                     this->Height = cameraDimensions.height;
+                    
+                    if(!UpdateConstraints(env, constraints))
+                    {
+                        // Setting the constraint to the capability failed
+                        deferred.Reject(Napi::Error::New(env, std::runtime_error{"OverconstrainedError: Unable to match constraints to a supported camera configuration."}).Value());
+                        return;
+                    }
 
                     deferred.Resolve(env.Undefined());
                 }
             });
-        }
-
-        for(uint32_t i=0; i < m_cameraDevice->capabilities.size(); i++)
-        {
-            auto capability{ m_cameraDevice->capabilities[i] };
-            if(!capability->applyConstraints(constraints))
+        } else {
+            // Apply the constraints to the existing device
+            if(!UpdateConstraints(env, constraints))
             {
                 // Setting the constraint to the capability failed
                 deferred.Reject(Napi::Error::New(env, std::runtime_error{"OverconstrainedError: Unable to match constraints to a supported camera configuration."}).Value());
                 return static_cast<Napi::Value>(promise);
             }
+            deferred.Resolve(env.Undefined());
         }
 
         return static_cast<Napi::Value>(promise);
@@ -100,44 +109,62 @@ namespace Babylon::Plugins
         return ApplyConstraints(env, constraints);
     }
 
+    Napi::Value MediaStream::GetCapabilities(const Napi::CallbackInfo& info)
+    {
+        auto env = info.Env();
+        
+        if (m_cameraDevice == nullptr)
+        {
+            // We don't have a cameraDevice selected yet.
+            return Napi::Object::New(env);
+        }
+        
+        auto capabilities = Napi::Object::New(env);
+        
+        for (uint32_t i=0; i < m_cameraDevice->capabilities.size(); i++)
+        {
+            std::shared_ptr<CameraCapability> capability{ m_cameraDevice->capabilities[i] };
+            capabilities.Set(capability->getName(), capability->asCapability(env));
+        }
+        
+        return std::move(capabilities);
+    }
+
+    Napi::Value MediaStream::GetSettings(const Napi::CallbackInfo& info)
+    {
+        auto env = info.Env();
+        
+        if (m_cameraDevice == nullptr)
+        {
+            // We don't have a cameraDevice selected yet.
+            return Napi::Object::New(env);
+        }
+        
+        auto settings = Napi::Object::New(env);
+        
+        for (uint32_t i=0; i < m_cameraDevice->capabilities.size(); i++)
+        {
+            std::shared_ptr<CameraCapability> capability{ m_cameraDevice->capabilities[i] };
+            settings.Set(capability->getName(), capability->asSetting(env));
+        }
+        
+        return std::move(settings);
+    }
+
+    Napi::Value MediaStream::GetConstraints(const Napi::CallbackInfo& info)
+    {
+        auto env = info.Env();
+        return Napi::Object::From(env, m_currentConstraints);
+    }
+
     std::pair<std::shared_ptr<CameraDevice>, std::shared_ptr<CameraTrack>> MediaStream::FindBestCameraStream(Napi::Object constraints)
     {
         // Get the available camera devices
         std::vector<std::shared_ptr<CameraDevice>> cameraDevices{ m_cameraImpl->GetCameraDevices() };
         
-        int32_t maxWidth{256}, maxHeight{256};
-        std::string facingMode{"environment"};
-
-        auto widthValue{ constraints.Get("width") };
-        auto heightValue{ constraints.Get("height") };
-        auto facingModeValue{constraints.Get("facingMode")};
-
-        if (widthValue.IsObject())
-        {
-            auto maxWidthValue{ widthValue.As<Napi::Object>().Get("max") };
-            if (maxWidthValue.IsNumber())
-            {
-                maxWidth = maxWidthValue.As<Napi::Number>().Uint32Value();
-            }
-        }
-        if (heightValue.IsObject())
-        {
-            auto maxHeightvalue{ heightValue.As<Napi::Object>().Get("max") };
-            if (maxHeightvalue.IsNumber())
-            {
-                maxHeight = maxHeightvalue.As<Napi::Number>().Uint32Value();
-            }
-        }
-        if (facingModeValue.IsString())
-        {
-            facingMode = facingModeValue.As<Napi::String>().Utf8Value();
-        }
-        
         std::shared_ptr<CameraDevice> bestCameraDevice{ nullptr };
-        std::shared_ptr<CameraTrack> bestCameraResolution{nullptr };
-        int32_t bestPixelCount{0};
-        int32_t bestDimDiff{0};
-        //int32_t bestFullySatisfiedCapabilityCount{0};
+        std::shared_ptr<CameraTrack> bestCameraResolution{ nullptr };
+        int32_t bestFullySatisfiedCapabilityCount{0};
         
         // The camera devices should be assumed to be sorted from best to worst. Pick the first camera device that fully
         // satisfies the most constraints without failing any.
@@ -173,45 +200,123 @@ namespace Babylon::Plugins
             
             if (failedAConstraint)
             {
-                // The device doesn't meet all constraints, move on to the next device
+                // The device fails at least one of the constraint requirements. Skip it.
                 continue;
             }
+            
+            // Ensure the width/height constraints can be met and find the best resolution available within
+            // the constraints
+            std::shared_ptr<CameraTrack> bestResolution{ nullptr };
+            int32_t bestWidthDiff{INT32_MAX};
+            int32_t bestHeightDiff{INT32_MAX};
+            
+            auto widthConstraint{ CameraCapability::parseConstraint<uint32_t>(constraints.Get("width")) };
+            auto heightConstraint{ CameraCapability::parseConstraint<uint32_t>(constraints.Get("height")) };
+            
+            // Set the targetWidth and targetHeight as a fallback through the values exact, ideal, max, min
+            auto targetWidth = widthConstraint.exact.has_value() ? widthConstraint.exact
+                    : widthConstraint.ideal.has_value() ? widthConstraint.ideal
+                    : widthConstraint.max.has_value() ? widthConstraint.max
+                    : widthConstraint.min;
+            auto targetHeight = heightConstraint.exact.has_value() ? heightConstraint.exact
+                    : heightConstraint.ideal.has_value() ? heightConstraint.ideal
+                    : heightConstraint.max.has_value() ? heightConstraint.max
+                    : heightConstraint.min;
 
             for (uint32_t j = 0; j < cameraDevice->supportedResolutions.size(); j++) {
                 auto resolution = cameraDevice->supportedResolutions[j];
-
-                if (resolution->width > maxWidth || resolution->height > maxHeight)
+                uint32_t width{ static_cast<uint32_t>(resolution->width) };
+                uint32_t height{ static_cast<uint32_t>(resolution->height) };
+                
+                auto meetsWidthRequirements =
+                    (!widthConstraint.exact.has_value() || widthConstraint.exact.value() == width) &&
+                    (!widthConstraint.min.has_value() || widthConstraint.min.value() <= width) &&
+                    (!widthConstraint.max.has_value() || widthConstraint.max.value() >= width);
+                
+                auto meetsHeightRequirements =
+                    (!heightConstraint.exact.has_value() || heightConstraint.exact.value() == height) &&
+                    (!heightConstraint.min.has_value() || heightConstraint.min.value() <= height) &&
+                    (!heightConstraint.max.has_value() || heightConstraint.max.value() >= height);
+                
+                if (!meetsWidthRequirements || !meetsHeightRequirements)
                 {
-                    // The resolution exceeds our constraints. Skip it.
+                    // The resolution doesn't meet the constraint requirements
                     continue;
                 }
-
-                // Calculate pixel count and dimension differential and take the best qualifying one.
-                int32_t pixelCount{resolution->width * resolution->height};
-                int32_t dimDiff{(maxWidth - resolution->width) + (maxHeight - resolution->height)};
-                if (bestCameraDevice == nullptr || pixelCount > bestPixelCount || (pixelCount == bestPixelCount && dimDiff < bestDimDiff))
+                
+                int32_t widthDiff = targetWidth.has_value() ? abs(static_cast<int32_t>(targetWidth.value() - width)) : 0;
+                int32_t heightDiff = targetHeight.has_value() ? abs(static_cast<int32_t>(targetHeight.value() - width)) : 0;
+                
+                if (bestResolution == nullptr || widthDiff + heightDiff < bestWidthDiff + bestHeightDiff)
                 {
-                    bestPixelCount = pixelCount;
-                    bestCameraDevice = cameraDevice;
-                    bestDimDiff = dimDiff;
-                    bestCameraResolution = resolution;
+                    bestWidthDiff = widthDiff;
+                    bestHeightDiff = heightDiff;
+                    bestResolution = resolution;
 
                     // Check if we got an exact match exit the loop as no other resolution would be better
-                    if (resolution->width == maxWidth && resolution->height == maxHeight)
+                    if (widthDiff + heightDiff == 0)
                     {
                         break;
                     }
                 }
             }
-
-            if (bestCameraDevice != nullptr)
+            
+            if (bestResolution == nullptr)
             {
-                // We've found a camera device that meets all constraints no need to look further
-                break;
+                // This device doesn't meet the width/height constraints
+                continue;
+            }
+            
+            // Count a fully satisfied width or height constraint towards the overal device satisfaction
+            fullySatisfiedCapabilityCount += bestWidthDiff == 0 ? 1 : 0;
+            fullySatisfiedCapabilityCount += bestHeightDiff == 0 ? 1 : 0;
+
+            // At this point we have a device that fully satisfies all given constraints, we'll have to search
+            // all devices to find the one that meets the most constraints
+            if (bestCameraDevice == nullptr || fullySatisfiedCapabilityCount > bestFullySatisfiedCapabilityCount)
+            {
+                bestCameraDevice = cameraDevice;
+                bestCameraResolution = bestResolution;
+                bestFullySatisfiedCapabilityCount = fullySatisfiedCapabilityCount;
             }
         }
         
         return {bestCameraDevice, bestCameraResolution};
+    }
+
+    bool MediaStream::UpdateConstraints(Napi::Env env, Napi::Object constraints)
+    {
+        bool allConstraintsSatisfied{ true };
+        m_currentConstraints = Napi::Object::New(env);
+        
+        for(uint32_t i=0; i < m_cameraDevice->capabilities.size(); i++)
+        {
+            auto capability{ m_cameraDevice->capabilities[i] };
+            CameraCapability::MeetsConstraint constraintSatisfaction{ capability->meetsConstraints(constraints) };
+            
+            switch (constraintSatisfaction)
+            {
+                case CameraCapability::MeetsConstraint::Unsatisfied:
+                    // The constraint couldn't be satisfied ignore it and continue applying the remaining constraints
+                    allConstraintsSatisfied = false;
+                    continue;
+                case CameraCapability::MeetsConstraint::FullySatisfied:
+                case CameraCapability::MeetsConstraint::PartiallySatisfied:
+                    m_currentConstraints.Set(capability->getName(), constraints.Get(capability->getName()));
+                    break;
+                case CameraCapability::MeetsConstraint::Unconstrained:
+                    // Still apply the unconstrained capability so that it resets to it's default in case it was previously set
+                    break;
+            }
+            
+            if(!capability->applyConstraints(constraints))
+            {
+                // Setting the constraint to the capability failed
+                allConstraintsSatisfied = false;
+            }
+        }
+        
+        return allConstraintsSatisfied;
     }
 
     void MediaStream::UpdateTexture(bgfx::TextureHandle textureHandle)

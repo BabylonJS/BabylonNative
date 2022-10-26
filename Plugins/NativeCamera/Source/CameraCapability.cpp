@@ -11,10 +11,9 @@ namespace Babylon::Plugins
     {
         switch (m_capability)
         {
-            case Width: return "width";
-            case Height: return "height";
             case FacingMode: return "facingMode";
             case Torch: return "torch";
+            case Zoom: return "zoom";
         }
     }
 
@@ -22,10 +21,9 @@ namespace Babylon::Plugins
     CameraCapability::ConstraintType CameraCapabilityTemplate<T>::getConstraintType() {
         switch (m_capability)
         {
-            case Width: return CameraCapabilityTemplate::Range;
-            case Height: return CameraCapabilityTemplate::Range;
             case FacingMode: return CameraCapabilityTemplate::Sequence;
             case Torch: return CameraCapabilityTemplate::Sequence;
+            case Zoom: return CameraCapabilityTemplate::Range;
         }
 
     }
@@ -117,18 +115,25 @@ namespace Babylon::Plugins
                 
                 T minAccepted = m_acceptedValues[0];
                 T maxAccepted = m_acceptedValues[1];
-                if ((constraint.min.has_value() && constraint.min.value() < minAccepted) || (constraint.exact.has_value() && constraint.exact.value() < minAccepted))
+
+                if (constraint.exact.has_value())
                 {
-                    // Either the set min value or set exact value are outside the min allowed range
+                    // The exact value has highest priority the constraint is either fully satisfied or unsatisfied based on it
+                    return constraint.exact.value() >= minAccepted && constraint.exact.value() <= maxAccepted ? CameraCapability::MeetsConstraint::FullySatisfied : CameraCapability::MeetsConstraint::Unsatisfied;
+
+                }
+                if ((constraint.min.has_value() && constraint.min.value() < minAccepted))
+                {
+                    // The constraints min value is lower than this capabilities min accepted value. The constraint is unsatisfied.
                     return CameraCapability::MeetsConstraint::Unsatisfied;
                 }
-                if ((constraint.max.has_value() && constraint.max.value() > maxAccepted) || (constraint.exact.has_value() && constraint.exact.value() > maxAccepted))
+                if ((constraint.max.has_value() && constraint.max.value() > maxAccepted))
                 {
-                    // Either the set max value or set exact value are outside the max allowed range
+                    // The constraints max value is higher than this capabilities max accepted value. The constraint is unsatisfied.
                     return CameraCapability::MeetsConstraint::Unsatisfied;
                 }
 
-                // The constraints Min, Max, and Exact values are satisfied or unspecified. If the ideal value is unset or met then the constraint is fully met, otherwise it is still
+                // The constraints Min, Max, and Exact values are satisfied or unconstrained. If the ideal value is unset or met then the constraint is fully met, otherwise it is still
                 // partially satisifed as it doesn't break the min, max, or exact requirements.
                 return constraint.ideal.has_value() && constraint.ideal.value() >= minAccepted && constraint.ideal.value() <= maxAccepted ? CameraCapability::MeetsConstraint::FullySatisfied : CameraCapability::MeetsConstraint::PartiallySatisfied;
             }
@@ -245,7 +250,7 @@ namespace Babylon::Plugins
     {
         std::optional<uint32_t> ideal{}, exact{}, min{}, max{};
 
-        if (value.IsString())
+        if (value.IsNumber())
         {
             ideal = value.As<Napi::Number>().Uint32Value();
         }
@@ -279,10 +284,49 @@ namespace Babylon::Plugins
         return Napi::Number::New(env, value);
     }
 
+    template <>
+    CameraCapability::Constraint<double> CameraCapability::parseConstraint<double>(Napi::Value value)
+    {
+        std::optional<double> ideal{}, exact{}, min{}, max{};
+
+        if (value.IsNumber())
+        {
+            ideal = value.As<Napi::Number>().DoubleValue();
+        }
+        else if (value.IsObject())
+        {
+            auto valueObject = value.As<Napi::Object>();
+            if (valueObject.Get("ideal").IsNumber())
+            {
+                ideal = valueObject.Get("ideal").As<Napi::Number>().DoubleValue();
+            }
+            if (valueObject.Get("exact").IsNumber())
+            {
+                exact = valueObject.Get("exact").As<Napi::Number>().DoubleValue();
+            }
+            if (valueObject.Get("min").IsNumber())
+            {
+                min = valueObject.Get("min").As<Napi::Number>().DoubleValue();
+            }
+            if (valueObject.Get("max").IsNumber())
+            {
+                max = valueObject.Get("max").As<Napi::Number>().DoubleValue();
+            }
+        }
+
+        return {ideal, exact, min, max};
+    };
+
+    template <>
+    Napi::Value CameraCapability::asNapiValue<double>(Napi::Env env, double value)
+    {
+        return Napi::Number::New(env, value);
+    }
+
     // Explicitly instantiate the supported template types. The alternative is to put all template
     // implemenations in the header file
     template class CameraCapabilityTemplate<bool>;
     template class CameraCapabilityTemplate<std::string>;
     template class CameraCapabilityTemplate<uint32_t>;
-
+    template class CameraCapabilityTemplate<double>;
 }

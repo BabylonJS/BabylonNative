@@ -383,32 +383,37 @@ namespace Babylon::Plugins
             }
 
             // Get camera hardware info
-            API24::ACameraMetadata_const_entry lensInfo = {};
-            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_LENS_FACING, &lensInfo);
+            API24::ACameraMetadata_const_entry metaDataEntry = {};
+            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_LENS_FACING, &metaDataEntry);
+            auto facing{ static_cast<API24::acamera_metadata_enum_android_lens_facing_t>(metaDataEntry.data.u8[0]) };
 
-            API24::ACameraMetadata_const_entry sensorOrientation = {};
-            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_SENSOR_ORIENTATION, &sensorOrientation);
-            auto facing = static_cast<API24::acamera_metadata_enum_android_lens_facing_t>(lensInfo.data.u8[0]);
+            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_SENSOR_ORIENTATION, &metaDataEntry);
+            int32_t sensorOrientation{ metaDataEntry.data.i32[0] };
 
-            API24::ACameraMetadata_const_entry torchSupportedMetadata = {};
-            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_FLASH_INFO_AVAILABLE, &torchSupportedMetadata);
-            bool torchSupported = torchSupportedMetadata.data.u8[0];
+            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_FLASH_INFO_AVAILABLE, &metaDataEntry);
+            bool torchSupported = metaDataEntry.data.u8[0];
+
+            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_CONTROL_ZOOM_RATIO, &metaDataEntry);
+            float zoomRatio{ metaDataEntry.data.f[0] };
+
+            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_CONTROL_ZOOM_RATIO_RANGE, &metaDataEntry);
+            float minZoomRatio{ metaDataEntry.data.f[0] };
+            float maxZoomRatio{ metaDataEntry.data.f[1] };
 
             // update the cameraDevice information
             cameraDevice->implData = std::make_unique<CameraDevice::ImplData>();
             cameraDevice->implData->cameraID = id;
-            cameraDevice->implData->sensorRotation = sensorOrientation.data.i32[0];
+            cameraDevice->implData->sensorRotation = sensorOrientation;
             cameraDevice->implData->facingUser = facing == API24::ACAMERA_LENS_FACING_FRONT;
 
-            auto facingModeCapability{std::make_shared<CameraCapabilityTemplate<std::string>>(
+            cameraDevice->capabilities.push_back(std::make_shared<CameraCapabilityTemplate<std::string>>(
                 CameraCapability::Capability::FacingMode,
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment",
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment",
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"})
-            };
-            cameraDevice->capabilities.push_back(facingModeCapability);
+            );
 
-            auto torchCapability{ std::make_shared<CameraCapabilityTemplate<bool>>
+            cameraDevice->capabilities.push_back( std::make_shared<CameraCapabilityTemplate<bool>>
             (
                 CameraCapability::Capability::Torch,
                 false,
@@ -419,20 +424,30 @@ namespace Babylon::Plugins
                     uint8_t torchMode = newValue
                                         ? API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_TORCH
                                         : API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_OFF;
-                    GET_CAMERA_FUNCTION(ACaptureRequest_setEntry_u8)(m_implData->request,
-                                                                     API24::ACAMERA_FLASH_MODE, 1,
-                                                                     &torchMode);
+                    GET_CAMERA_FUNCTION(ACaptureRequest_setEntry_u8)(m_implData->request, API24::ACAMERA_FLASH_MODE, 1, &torchMode);
 
                     // Update the camera request
-                    GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(
-                            m_implData->textureSession,
-                            &captureCallbacks,
-                            1, &m_implData->request,
-                            nullptr);
+                    GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(m_implData->textureSession, &captureCallbacks, 1, &m_implData->request, nullptr);
                     return true;
                 }
-            )};
-            cameraDevice->capabilities.push_back(torchCapability);
+            ));
+
+            cameraDevice->capabilities.push_back( std::make_shared<CameraCapabilityTemplate<double>>
+            (
+                    CameraCapability::Capability::Zoom,
+                            zoomRatio,
+                            1.0, // Set the default target zoom to 1.0 (no zoom)
+                            std::vector<double>{minZoomRatio, maxZoomRatio},
+                            [this](double newValue)
+                            {
+                                float newZoomRatio{ static_cast<float>(newValue) };
+                                GET_CAMERA_FUNCTION(ACaptureRequest_setEntry_float)(m_implData->request, API24::ACAMERA_CONTROL_ZOOM_RATIO, 1, &newZoomRatio);
+
+                                // Update the camera request
+                                GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(m_implData->textureSession, &captureCallbacks, 1, &m_implData->request, nullptr);
+                                return true;
+                            }
+            ));
 
             cameraDevices.push_back(cameraDevice);
         }

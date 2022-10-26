@@ -21,7 +21,9 @@ namespace Babylon::Plugins
         // MediaStreamTrack polyfill: https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack
         Napi::Value ApplyConstraints(const Napi::CallbackInfo& info);
         Napi::Value ApplyConstraints(Napi::Env env, Napi::Object constraints);
-        //Napi::Value GetCapabilities(const Napi::CallbackInfo& info);
+        Napi::Value GetCapabilities(const Napi::CallbackInfo& info);
+        Napi::Value GetSettings(const Napi::CallbackInfo& info);
+        Napi::Value GetConstraints(const Napi::CallbackInfo& info);
         
         void UpdateTexture(bgfx::TextureHandle textureHandle);
         
@@ -30,6 +32,7 @@ namespace Babylon::Plugins
         
     private:
         std::pair<std::shared_ptr<CameraDevice>, std::shared_ptr<CameraTrack>> FindBestCameraStream(Napi::Object constraints);
+        bool UpdateConstraints(Napi::Env env, Napi::Object constraints);
         
         std::shared_ptr<Plugins::Camera::Impl> m_cameraImpl;
         JsRuntimeScheduler m_runtimeScheduler;

@@ -198,23 +198,19 @@ namespace Babylon::Plugins
         ]};
         bool foundExactMatch{false};
 
-        // The below code would allow us to choose virtual cameras which dynamically switch between the different physical
-        // camera sensors based on different zoom levels. Until we support letting the consumer modify the camera's zoom
-        // it would result in often being stuck on the most zoomed out camera on the device which is often not desired.
-
-        // if (@available(iOS 13.0, *))
-        // {
-        //     // Ordered list of cameras by general usage quality.
-        //     deviceTypes = @[
-        //         AVCaptureDeviceTypeBuiltInTripleCamera,
-        //         AVCaptureDeviceTypeBuiltInDualCamera,
-        //         AVCaptureDeviceTypeBuiltInDualWideCamera,
-        //         AVCaptureDeviceTypeBuiltInWideAngleCamera,
-        //         AVCaptureDeviceTypeBuiltInUltraWideCamera,
-        //         AVCaptureDeviceTypeBuiltInTelephotoCamera,
-        //         AVCaptureDeviceTypeBuiltInTrueDepthCamera
-        //     ];
-        // }
+        if (@available(iOS 13.0, *))
+        {
+            // Ordered list of cameras by general usage quality.
+            deviceTypes = @[
+                AVCaptureDeviceTypeBuiltInTripleCamera,
+                AVCaptureDeviceTypeBuiltInDualCamera,
+                AVCaptureDeviceTypeBuiltInDualWideCamera,
+                AVCaptureDeviceTypeBuiltInWideAngleCamera,
+                AVCaptureDeviceTypeBuiltInUltraWideCamera,
+                AVCaptureDeviceTypeBuiltInTelephotoCamera,
+            ];
+            
+        }
 
         AVCaptureDeviceDiscoverySession* discoverySession{[AVCaptureDeviceDiscoverySession
                                                            discoverySessionWithDeviceTypes:deviceTypes
@@ -250,16 +246,15 @@ namespace Babylon::Plugins
             cameraDevice->implData = std::make_unique<CameraDevice::ImplData>();
             cameraDevice->implData->avDevice = device;
 
-            auto facingModeCapability{ std::make_shared<CameraCapabilityTemplate<std::string>>
+            cameraDevice->capabilities.push_back(std::make_shared<CameraCapabilityTemplate<std::string>>
             (
                 CameraCapability::Capability::FacingMode,
                 device.position == AVCaptureDevicePositionFront ? "user" : "environment",
                 device.position == AVCaptureDevicePositionFront ? "user" : "environment",
                 device.position == AVCaptureDevicePositionFront ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"}
-            )};
-            cameraDevice->capabilities.push_back(facingModeCapability);
+            ));
             
-            auto torchCapability{ std::make_shared<CameraCapabilityTemplate<bool>>
+            cameraDevice->capabilities.push_back(std::make_shared<CameraCapabilityTemplate<bool>>
             (
                 CameraCapability::Capability::Torch,
                 false,
@@ -278,8 +273,46 @@ namespace Babylon::Plugins
                     }
                     return true;
                 }
-            )};
-            cameraDevice->capabilities.push_back(torchCapability);
+            ));
+            
+            // iOS Zoom factors always start at 1.0 and go up from there slide the scale based on
+            // the device type (if it starts with an ultrawide sensor or telephoto)
+            double zoomFactorScale{ 1.0 };
+            if (@available(iOS 13.0, *))
+            {
+                if (device.deviceType == AVCaptureDeviceTypeBuiltInTripleCamera ||
+                    device.deviceType == AVCaptureDeviceTypeBuiltInDualWideCamera ||
+                    device.deviceType == AVCaptureDeviceTypeBuiltInUltraWideCamera)
+                {
+                    zoomFactorScale = 0.5;
+                }
+            }
+            if (device.deviceType == AVCaptureDeviceTypeBuiltInTelephotoCamera)
+            {
+                // Newer iOS devices might have a telephoto that has a starting zoom higher, but so far
+                // as I can tell there is no API to determine the default real world zoom of the telephoto lens
+                zoomFactorScale = 2.0;
+            }
+            
+            cameraDevice->capabilities.push_back(std::make_shared<CameraCapabilityTemplate<double>>
+            (
+                CameraCapability::Capability::Zoom,
+                1.0 * zoomFactorScale, // The device always opens at 1.0 which needs to be adjusted for the zoomFactorScale
+                1.0, // Set the default target to 1.0 (regardless of zoomFactorScale)
+                std::vector<double>{device.minAvailableVideoZoomFactor * zoomFactorScale, device.maxAvailableVideoZoomFactor * zoomFactorScale},
+                [this, zoomFactorScale](double newValue)
+                {
+                    NSError* error{nil};
+                    [m_implData->avCaptureDevice lockForConfiguration:&error];
+                    [m_implData->avCaptureDevice setVideoZoomFactor:newValue / zoomFactorScale];
+                    [m_implData->avCaptureDevice unlockForConfiguration];
+                    if (error != nil)
+                    {
+                        return false;
+                    }
+                    return true;
+                }
+            ));
 
             cameraDevices.push_back(cameraDevice);
 
@@ -347,9 +380,7 @@ namespace Babylon::Plugins
         CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(resolution->implData->avDeviceFormat.formatDescription)};
         CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 #else
-        UNUSED(maxWidth);
-        UNUSED(maxHeight);
-        UNUSED(frontCamera);
+        UNUSED(resolution);
         AVCaptureDevice* captureDevice{[AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo]};
         AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error]};
         CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(captureDevice.activeFormat.formatDescription)};
