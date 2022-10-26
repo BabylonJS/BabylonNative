@@ -27,6 +27,6 @@ namespace Babylon::Polyfills::Internal
 
         arcana::cancellation_source m_cancelSource;
         JsRuntimeScheduler m_runtimeScheduler;
-        std::optional<TimeoutDispatcher> m_timeoutDispatcher;
+        TimeoutDispatcher m_timeoutDispatcher;
     };
 }

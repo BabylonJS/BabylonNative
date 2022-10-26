@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Babylon/JsRuntime.h>
+#include <Babylon/JsRuntimeScheduler.h>
 #include <napi/napi.h>
 
 #include <atomic>
@@ -19,7 +19,7 @@ namespace Babylon::Polyfills::Internal
         struct Timeout;
 
     public:
-        TimeoutDispatcher(Babylon::JsRuntime& runtime);
+        TimeoutDispatcher(Babylon::JsRuntimeScheduler& runtimeScheduler);
         ~TimeoutDispatcher();
 
         TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay);
@@ -32,7 +32,7 @@ namespace Babylon::Polyfills::Internal
         void ThreadFunction();
         void CallFunction(std::shared_ptr<Napi::FunctionReference> function);
 
-        Babylon::JsRuntime& m_runtime;
+        Babylon::JsRuntimeScheduler& m_runtimeScheduler;
         std::mutex m_mutex{};
         std::condition_variable m_condVariable{};
         TimeoutId m_lastTimeoutId{0};

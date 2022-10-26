@@ -34,8 +34,8 @@ namespace Babylon::Polyfills::Internal
         Timeout(Timeout&&) = delete;
     };
 
-    TimeoutDispatcher::TimeoutDispatcher(Babylon::JsRuntime& runtime)
-        : m_runtime{runtime}
+    TimeoutDispatcher::TimeoutDispatcher(Babylon::JsRuntimeScheduler& runtimeScheduler)
+        : m_runtimeScheduler{runtimeScheduler}
         , m_thread{std::thread{&TimeoutDispatcher::ThreadFunction, this}}
     {
     }
@@ -71,7 +71,7 @@ namespace Babylon::Polyfills::Internal
     
         if (time <= earliestTime)
         {
-            m_runtime.Dispatch([this](Napi::Env) {
+            m_runtimeScheduler.Get()([this]() {
                 m_condVariable.notify_one();
             });
         }
@@ -158,7 +158,7 @@ namespace Babylon::Polyfills::Internal
     {
         if (function)
         {
-            m_runtime.Dispatch([function = std::move(function)](Napi::Env)
+            m_runtimeScheduler.Get()([function = std::move(function)]()
                 { function->Call({}); });
         }
     }

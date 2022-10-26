@@ -72,7 +72,7 @@ namespace Babylon::Polyfills::Internal
     Window::Window(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<Window>{info}
         , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
-        , m_timeoutDispatcher{m_runtime}
+        , m_timeoutDispatcher{m_runtimeScheduler}
     {
     }
 
@@ -91,10 +91,9 @@ namespace Babylon::Polyfills::Internal
             ? std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>()))
             : std::shared_ptr<Napi::FunctionReference>{};
 
-        window.RecursiveWaitOrCall(Napi::Persistent(info.This()), std::move(function), std::chrono::system_clock::now() + milliseconds);
         auto delay = std::chrono::milliseconds{info[1].ToNumber().Int32Value()};
 
-        return Napi::Value::From(info.Env(), window.m_timeoutDispatcher->Dispatch(function, delay));
+        return Napi::Value::From(info.Env(), window.m_timeoutDispatcher.Dispatch(function, delay));
     }
 
     void Window::ClearTimeout(const Napi::CallbackInfo& info)
@@ -104,7 +103,7 @@ namespace Babylon::Polyfills::Internal
         {
             auto timeoutId = arg.As<Napi::Number>().Int32Value();
             auto& window = *static_cast<Window*>(info.Data());
-            window.m_timeoutDispatcher->Clear(timeoutId);
+            window.m_timeoutDispatcher.Clear(timeoutId);
         }
     }
 
