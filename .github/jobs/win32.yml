@@ -42,7 +42,7 @@ jobs:
 
       - script: |
           echo "VARIABLES TEST"
-          echo ${ variables.UNITY_BUILD }
+        displayName: 'Unity ${{ variables.UNITY_BUILD }}'
 
       - script: |
           mkdir build${{ variables.solutionName }}
