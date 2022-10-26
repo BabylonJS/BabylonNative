@@ -31,10 +31,6 @@ jobs:
 
     steps:
       - script: |
-          echo "VARIABLES TEST"
-        displayName: 'Unity ${{ UNITY_BUILD }}'
-
-      - script: |
           git submodule update --init --recursive
         displayName: 'Checkout dependencies'
     
@@ -47,7 +43,7 @@ jobs:
       - script: |
           mkdir build${{ variables.solutionName }}
           cd build${{ variables.solutionName }}
-          cmake -G "Visual Studio 16 2019" -A ${{ parameters.platform }} ${{ variables.jsEngineDefine }} -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON -DGRAPHICS_API=${{ parameters.graphics_api }} -DCMAKE_UNITY_BUILD=${variables.UNITY_BUILD} ..
+          cmake -G "Visual Studio 16 2019" -A ${{ parameters.platform }} ${{ variables.jsEngineDefine }} -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON -DGRAPHICS_API=${{ parameters.graphics_api }} -DCMAKE_UNITY_BUILD=$(UNITY_BUILD) ..
         displayName: 'Generate ${{ variables.solutionName }} solution'
     
       - task: MSBuild@1

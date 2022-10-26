@@ -16,7 +16,7 @@ steps:
       unzip ninja-mac.zip
       sudo cp -v ninja /usr/local/bin
       cmake --version
-    displayName: 'CMake version'
+    displayName: 'CMake version $(CMAKE_VERSION)'
     condition: contains('${{ parameters.vmImage }}', 'macOS')
 
   - script: |
@@ -29,4 +29,4 @@ steps:
       sudo apt-get install ninja-build
       cmake --version
     condition: contains('${{ parameters.vmImage }}', 'ubuntu')
-    displayName: 'CMake version'
+    displayName: 'CMake version $(CMAKE_VERSION)'
