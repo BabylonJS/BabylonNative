@@ -410,17 +410,17 @@ describe("setTimeout", function () {
         const called = [];
         for (let i = 9; i >= 0; i--) {
             setTimeout(() => {
-                called.push(i * 2);
+                called.push(i);
                 if (called.length === 10) {
                     try {
-                        expect(called).to.deep.equal([0, 2, 4, 6, 8, 10, 12, 14, 16, 18]);
+                        expect(called).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
                         done();
                     }
                     catch (e) {
                         done(e);
                     }
                 }
-            }, i * 2);
+            }, i * 10);
         }
     });
 })
