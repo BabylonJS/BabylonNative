@@ -45,7 +45,7 @@ jobs:
           echo ${{ variables.UNITY_BUILD }}
           echo ${UNITY_BUILD}
           echo ${{UNITY_BUILD}}
-      
+
       - script: |
           mkdir build${{ variables.solutionName }}
           cd build${{ variables.solutionName }}
