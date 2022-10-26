@@ -1,5 +1,7 @@
 set(SOURCES
     "Include/Babylon/Polyfills/Window.h"
+    "Source/TimeoutDispatcher.h"
+    "Source/TimeoutDispatcher.cpp"
     "Source/Window.h"
     "Source/Window.cpp")
 

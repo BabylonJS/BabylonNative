@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Babylon/JsRuntimeScheduler.h>
+#include "TimeoutDispatcher.h"
+#include <optional>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -16,18 +18,15 @@ namespace Babylon::Polyfills::Internal
         ~Window();
 
     private:
-        static void SetTimeout(const Napi::CallbackInfo& info);
+        static Napi::Value SetTimeout(const Napi::CallbackInfo& info);
+        static void ClearTimeout(const Napi::CallbackInfo& info);
         static Napi::Value DecodeBase64(const Napi::CallbackInfo& info);
         static void AddEventListener(const Napi::CallbackInfo& info);
         static void RemoveEventListener(const Napi::CallbackInfo& info);
         static Napi::Value GetDevicePixelRatio(const Napi::CallbackInfo& info);
 
-        void RecursiveWaitOrCall(
-            Napi::Reference<Napi::Value> thisRef,
-            Napi::FunctionReference function,
-            std::chrono::system_clock::time_point whenToRun);
-
         arcana::cancellation_source m_cancelSource;
         JsRuntimeScheduler m_runtimeScheduler;
+        std::optional<TimeoutDispatcher> m_timeoutDispatcher;
     };
 }

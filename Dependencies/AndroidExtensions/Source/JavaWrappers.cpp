@@ -397,6 +397,20 @@ namespace java::net
         return {inputStream};
     }
 
+    lang::String URLConnection::GetHeaderField(int n) const
+    {
+        auto result{(jstring)m_env->CallObjectMethod(JObject(), m_env->GetMethodID(m_class, "getHeaderField", "(I)Ljava/lang/String;"), n)};
+        ThrowIfFaulted(m_env);
+        return {result};
+    }
+
+    lang::String URLConnection::GetHeaderFieldKey(int n) const
+    {
+        auto result{(jstring)m_env->CallObjectMethod(JObject(), m_env->GetMethodID(m_class, "getHeaderFieldKey", "(I)Ljava/lang/String;"), n)};
+        ThrowIfFaulted(m_env);
+        return {result};
+    }
+
     URLConnection::operator HttpURLConnection() const
     {
         return {JObject()};

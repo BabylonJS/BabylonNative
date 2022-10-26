@@ -1,5 +1,5 @@
-#include <UrlLib/UrlLib.h>
-#include <arcana/threading/task.h>
+#include "UrlRequest_Base.h"
+
 #include <arcana/threading/task_schedulers.h>
 #include <android/asset_manager.h>
 #include <AndroidExtensions/Globals.h>
@@ -29,20 +29,10 @@ namespace UrlLib
         }
     }
 
-    class UrlRequest::Impl
+    class UrlRequest::Impl : public ImplBase
     {
     public:
-        ~Impl()
-        {
-            Abort();
-        }
-
-        void Abort()
-        {
-            m_cancellationSource.cancel();
-        }
-
-        void Open(UrlMethod method, std::string url)
+        void Open(UrlMethod method, const std::string& url)
         {
             m_method = method;
             Uri uri{Uri::Parse(url.data())};
@@ -63,16 +53,6 @@ namespace UrlLib
                 m_schemeIsApp = false;
                 m_appPathOrUrl = std::move(url);
             }
-        }
-
-        UrlResponseType ResponseType() const
-        {
-            return m_responseType;
-        }
-
-        void ResponseType(UrlResponseType value)
-        {
-            m_responseType = value;
         }
 
         arcana::task<void, std::exception_ptr> SendAsync()
@@ -122,6 +102,21 @@ namespace UrlLib
                             m_statusCode = UrlStatusCode::Ok;
                         }
 
+                        for (int n = 0;; ++n)
+                        {
+                            String key = connection.GetHeaderFieldKey(n);
+                            String value = connection.GetHeaderField(n);
+                            if ((jstring)key == nullptr || (jstring)value == nullptr)
+                            {
+                                break;
+                            }
+
+                            std::string lowerCaseKey = key;
+                            ToLower(lowerCaseKey);
+
+                            m_headers.insert({lowerCaseKey, value});
+                        }
+
                         int contentLength = connection.GetContentLength();
                         if (contentLength < 0)
                         {
@@ -168,37 +163,16 @@ namespace UrlLib
             });
         }
 
-        UrlStatusCode StatusCode() const
-        {
-            return m_statusCode;
-        }
-
-        std::string_view ResponseUrl()
-        {
-            return m_responseUrl;
-        }
-
-        std::string_view ResponseString()
-        {
-            return m_responseString;
-        }
-
         gsl::span<const std::byte> ResponseBuffer() const
         {
             return m_responseBuffer;
         }
 
     private:
-        arcana::cancellation_source m_cancellationSource{};
-        UrlResponseType m_responseType{UrlResponseType::String};
-        UrlMethod m_method{UrlMethod::Get};
         bool m_schemeIsApp{};
         std::string m_appPathOrUrl{};
-        UrlStatusCode m_statusCode{UrlStatusCode::None};
-        std::string m_responseUrl{};
-        std::string m_responseString{};
         std::vector<std::byte> m_responseBuffer{};
     };
 }
 
-#include <Shared/UrlRequest.h>
+#include "UrlRequest_Shared.h"

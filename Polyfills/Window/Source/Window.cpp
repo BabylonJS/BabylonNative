@@ -3,8 +3,6 @@
 #include <Babylon/Graphics/DeviceContext.h>
 
 #include <basen.hpp>
-#include <chrono>
-#include <iterator>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -12,6 +10,7 @@ namespace Babylon::Polyfills::Internal
     {
         constexpr auto JS_CLASS_NAME = "Window";
         constexpr auto JS_SET_TIMEOUT_NAME = "setTimeout";
+        constexpr auto JS_CLEAR_TIMEOUT_NAME = "clearTimeout";
         constexpr auto JS_A_TO_B_NAME = "atob";
         constexpr auto JS_ADD_EVENT_LISTENER_NAME = "addEventListener";
         constexpr auto JS_REMOVE_EVENT_LISTENER_NAME = "removeEventListener";
@@ -33,9 +32,10 @@ namespace Babylon::Polyfills::Internal
 
         jsNative.Set(JS_WINDOW_NAME, jsWindow);
 
-        if (global.Get(JS_SET_TIMEOUT_NAME).IsUndefined())
+        if (global.Get(JS_SET_TIMEOUT_NAME).IsUndefined() && global.Get(JS_CLEAR_TIMEOUT_NAME).IsUndefined())
         {
             global.Set(JS_SET_TIMEOUT_NAME, Napi::Function::New(env, &Window::SetTimeout, JS_SET_TIMEOUT_NAME, Window::Unwrap(jsWindow)));
+            global.Set(JS_CLEAR_TIMEOUT_NAME, Napi::Function::New(env, &Window::ClearTimeout, JS_CLEAR_TIMEOUT_NAME, Window::Unwrap(jsWindow)));
         }
 
         if (global.Get(JS_A_TO_B_NAME).IsUndefined())
@@ -72,6 +72,7 @@ namespace Babylon::Polyfills::Internal
     Window::Window(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<Window>{info}
         , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
+        , m_timeoutDispatcher{m_runtime}
     {
     }
 
@@ -83,14 +84,28 @@ namespace Babylon::Polyfills::Internal
         m_runtimeScheduler.Rundown();
     }
 
-    void Window::SetTimeout(const Napi::CallbackInfo& info)
+    Napi::Value Window::SetTimeout(const Napi::CallbackInfo& info)
     {
-        auto function = Napi::Persistent(info[0].As<Napi::Function>());
-        auto milliseconds = std::chrono::milliseconds{info[1].As<Napi::Number>().Int32Value()};
-
         auto& window = *static_cast<Window*>(info.Data());
+        auto function = info[0].IsFunction()
+            ? std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>()))
+            : std::shared_ptr<Napi::FunctionReference>{};
 
         window.RecursiveWaitOrCall(Napi::Persistent(info.This()), std::move(function), std::chrono::system_clock::now() + milliseconds);
+        auto delay = std::chrono::milliseconds{info[1].ToNumber().Int32Value()};
+
+        return Napi::Value::From(info.Env(), window.m_timeoutDispatcher->Dispatch(function, delay));
+    }
+
+    void Window::ClearTimeout(const Napi::CallbackInfo& info)
+    {
+        const auto arg = info[0];
+        if (arg.IsNumber())
+        {
+            auto timeoutId = arg.As<Napi::Number>().Int32Value();
+            auto& window = *static_cast<Window*>(info.Data());
+            window.m_timeoutDispatcher->Clear(timeoutId);
+        }
     }
 
     Napi::Value Window::DecodeBase64(const Napi::CallbackInfo& info)
@@ -109,25 +124,6 @@ namespace Babylon::Polyfills::Internal
     void Window::RemoveEventListener(const Napi::CallbackInfo& /*info*/)
     {
         // TODO: handle events
-    }
-
-    void Window::RecursiveWaitOrCall(
-        Napi::Reference<Napi::Value> thisRef,
-        Napi::FunctionReference function,
-        std::chrono::system_clock::time_point whenToRun)
-    {
-        arcana::make_task(m_runtimeScheduler.Get(), m_cancelSource,
-            [this, thisRef = std::move(thisRef), function = std::move(function), whenToRun = std::move(whenToRun)]() mutable
-        {
-            if (std::chrono::system_clock::now() >= whenToRun)
-            {
-                function.Call({});
-            }
-            else
-            {
-                RecursiveWaitOrCall(std::move(thisRef), std::move(function), whenToRun);
-            }
-        });
     }
 
     Napi::Value Window::GetDevicePixelRatio(const Napi::CallbackInfo& info)

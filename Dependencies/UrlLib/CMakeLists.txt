@@ -1,19 +1,19 @@
 if(ANDROID)
     set(ADDITIONAL_SOURCES
-        "Source/Android/UrlRequest.cpp")
+        "Source/UrlRequest_Android.cpp")
     set(ADDITIONAL_LIBRARIES
         PRIVATE AndroidExtensions)
 elseif(APPLE)
     set(ADDITIONAL_SOURCES
-        "Source/Apple/UrlRequest.mm")
+        "Source/UrlRequest_Apple.mm")
 elseif(UNIX)
     set(ADDITIONAL_SOURCES
-        "Source/Unix/UrlRequest.cpp")
+        "Source/UrlRequest_Unix.cpp")
     set(ADDITIONAL_LIBRARIES
         PRIVATE curl)
 elseif(WIN32)
     set(ADDITIONAL_SOURCES
-        "Source/Windows/UrlRequest.cpp")
+        "Source/UrlRequest_Windows.cpp")
     if(NOT WINDOWS_STORE)
         set(ADDITIONAL_LIBRARIES
             PUBLIC onecoreuap.lib)
@@ -24,7 +24,8 @@ endif()
 
 set(SOURCES
     "Include/UrlLib/UrlLib.h"
-    "Source/Shared/UrlRequest.h"
+    "Source/UrlRequest_Base.h"
+    "Source/UrlRequest_Shared.h"
     ${ADDITIONAL_SOURCES})
 
 add_library(UrlLib ${SOURCES})
@@ -42,6 +43,5 @@ if(APPLE)
         XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
     set_property(TARGET UrlLib PROPERTY UNITY_BUILD false)
 endif()
-
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

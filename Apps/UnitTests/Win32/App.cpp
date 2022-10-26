@@ -1,4 +1,4 @@
-#include "../Shared/Tests.cpp"
+#include "../Shared/Tests.h"
 
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {

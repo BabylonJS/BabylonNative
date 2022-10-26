@@ -100,6 +100,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("responseType", &XMLHttpRequest::GetResponseType, &XMLHttpRequest::SetResponseType),
                 InstanceAccessor("responseURL", &XMLHttpRequest::GetResponseURL, nullptr),
                 InstanceAccessor("status", &XMLHttpRequest::GetStatus, nullptr),
+                InstanceMethod("getResponseHeader", &XMLHttpRequest::GetResponseHeader),
                 InstanceMethod("addEventListener", &XMLHttpRequest::AddEventListener),
                 InstanceMethod("removeEventListener", &XMLHttpRequest::RemoveEventListener),
                 InstanceMethod("abort", &XMLHttpRequest::Abort),
@@ -137,8 +138,8 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value XMLHttpRequest::GetResponse(const Napi::CallbackInfo&)
     {
-        gsl::span<const std::byte> responseBuffer{m_request.ResponseBuffer()};
-        auto arrayBuffer{Napi::ArrayBuffer::New(Env(), responseBuffer.size())};
+        const gsl::span<const std::byte> responseBuffer{m_request.ResponseBuffer()};
+        const auto arrayBuffer{Napi::ArrayBuffer::New(Env(), responseBuffer.size())};
         std::memcpy(arrayBuffer.Data(), responseBuffer.data(), arrayBuffer.ByteLength());
         return std::move(arrayBuffer);
     }
@@ -158,6 +159,13 @@ namespace Babylon::Polyfills::Internal
         m_request.ResponseType(ResponseType::StringToEnum(value.As<Napi::String>().Utf8Value()));
     }
 
+    Napi::Value XMLHttpRequest::GetResponseHeader(const Napi::CallbackInfo& info)
+    {
+        const auto headerName = info[0].As<Napi::String>().Utf8Value();
+        const auto header = m_request.GetResponseHeader(headerName);
+        return header ? Napi::Value::From(Env(), header.value()) : info.Env().Null();
+    }
+
     Napi::Value XMLHttpRequest::GetResponseURL(const Napi::CallbackInfo&)
     {
         return Napi::Value::From(Env(), m_request.ResponseUrl().data());
@@ -170,8 +178,8 @@ namespace Babylon::Polyfills::Internal
 
     void XMLHttpRequest::AddEventListener(const Napi::CallbackInfo& info)
     {
-        std::string eventType = info[0].As<Napi::String>().Utf8Value();
-        Napi::Function eventHandler = info[1].As<Napi::Function>();
+        const std::string eventType = info[0].As<Napi::String>().Utf8Value();
+        const Napi::Function eventHandler = info[1].As<Napi::Function>();
 
         const auto& eventHandlerRefs = m_eventHandlerRefs[eventType];
         for (auto it = eventHandlerRefs.begin(); it != eventHandlerRefs.end(); ++it)
@@ -187,9 +195,9 @@ namespace Babylon::Polyfills::Internal
 
     void XMLHttpRequest::RemoveEventListener(const Napi::CallbackInfo& info)
     {
-        std::string eventType = info[0].As<Napi::String>().Utf8Value();
-        Napi::Function eventHandler = info[1].As<Napi::Function>();
-        auto itType = m_eventHandlerRefs.find(eventType);
+        const std::string eventType = info[0].As<Napi::String>().Utf8Value();
+        const Napi::Function eventHandler = info[1].As<Napi::Function>();
+        const auto itType = m_eventHandlerRefs.find(eventType);
         if (itType != m_eventHandlerRefs.end())
         {
             auto& eventHandlerRefs = itType->second;
@@ -275,7 +283,7 @@ namespace Babylon::Polyfills::Internal
 
     void XMLHttpRequest::RaiseEvent(const char* eventType)
     {
-        auto it = m_eventHandlerRefs.find(eventType);
+        const auto it = m_eventHandlerRefs.find(eventType);
         if (it != m_eventHandlerRefs.end())
         {
             const auto& eventHandlerRefs = it->second;

@@ -82,6 +82,7 @@ The following are features that are not completely finished yet or have gaps.
 - Input (only single pointer supported)
 - Instancing (only thin instances supported)
 - Post Processing (some are supported)
+- Media Devices (e.g., Webcams) (experimental)
 
 #### Not Yet Supported
 
