@@ -30,6 +30,10 @@ add_library(NativeEngine ${SOURCES})
 
 target_include_directories(NativeEngine PUBLIC "Include")
 
+if(WIN32 AND NOT WINDOWS_STORE)
+    set_property(TARGET NativeEngine PROPERTY UNITY_BUILD false)
+endif()
+
 target_link_to_dependencies(NativeEngine
     PUBLIC JsRuntime
     INTERFACE GraphicsDevice
