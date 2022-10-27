@@ -30,7 +30,7 @@ elseif(APPLE)
 endif()
 
 if(WIN32)
-    set_property(TARGET NativeEngine PROPERTY UNITY_BUILD false)
+    set_property(TARGET NativeCamera PROPERTY UNITY_BUILD false)
 endif()
 
 target_link_to_dependencies(NativeCamera
