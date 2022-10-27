@@ -22,6 +22,10 @@ endif()
 target_include_directories(TestUtils INTERFACE "Include")
 target_include_directories(TestUtils PRIVATE "Source")
 
+if(WIN32 AND NOT WINDOWS_STORE)
+    set_property(TARGET TestUtils PROPERTY UNITY_BUILD false)
+endif()
+
 target_link_to_dependencies(TestUtils
     PUBLIC JsRuntime
     PRIVATE GraphicsDevice
