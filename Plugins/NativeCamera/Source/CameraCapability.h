@@ -1,6 +1,7 @@
 #pragma once
 
 #include <napi/napi.h>
+#include <optional>
 
 namespace Babylon::Plugins {
     class CameraCapability {

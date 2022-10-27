@@ -198,6 +198,7 @@ namespace Babylon::Plugins
         ]};
         bool foundExactMatch{false};
 
+#if (TARGET_OS_IPHONE)
         if (@available(iOS 13.0, *))
         {
             // Ordered list of cameras by general usage quality.
@@ -211,6 +212,7 @@ namespace Babylon::Plugins
             ];
             
         }
+#endif
 
         AVCaptureDeviceDiscoverySession* discoverySession{[AVCaptureDeviceDiscoverySession
                                                            discoverySessionWithDeviceTypes:deviceTypes
@@ -275,6 +277,7 @@ namespace Babylon::Plugins
                 }
             ));
             
+#if (TARGET_OS_IPHONE)
             // iOS Zoom factors always start at 1.0 and go up from there slide the scale based on
             // the device type (if it starts with an ultrawide sensor or telephoto)
             double zoomFactorScale{ 1.0 };
@@ -313,6 +316,8 @@ namespace Babylon::Plugins
                     return true;
                 }
             ));
+#endif
+
 
             cameraDevices.push_back(cameraDevice);
 
