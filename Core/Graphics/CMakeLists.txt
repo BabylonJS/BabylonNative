@@ -52,6 +52,10 @@ elseif(ANDROID)
         PRIVATE AndroidExtensions)
 endif()
 
+if(WIN32 AND NOT WINDOWS_STORE)
+    set_property(TARGET Graphics PROPERTY UNITY_BUILD false)
+endif()
+
 target_link_to_dependencies(Graphics
     PRIVATE napi_extensions
     PRIVATE JsRuntime
