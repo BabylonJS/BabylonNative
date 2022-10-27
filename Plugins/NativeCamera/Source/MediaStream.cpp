@@ -3,8 +3,6 @@
 
 namespace Babylon::Plugins
 {
-    static constexpr auto JS_CLASS_NAME = "_MediaStream";
-
     void MediaStream::Initialize(Napi::Env& env)
     {
         Napi::Function ctor = DefineClass(

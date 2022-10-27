@@ -9,6 +9,8 @@ namespace Babylon::Plugins
     class MediaStream : public Napi::ObjectWrap<MediaStream>
     {
     public:
+        static constexpr auto JS_CLASS_NAME = "_MediaStream";
+        
         static void Initialize(Napi::Env& env);
         static inline Napi::FunctionReference constructor{};
 
