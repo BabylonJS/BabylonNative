@@ -71,17 +71,8 @@ namespace Babylon::Polyfills::Internal
 
     Window::Window(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<Window>{info}
-        , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
-        , m_timeoutDispatcher{m_runtimeScheduler}
+        , m_timeoutDispatcher{JsRuntime::GetFromJavaScript(info.Env())}
     {
-    }
-
-    Window::~Window()
-    {
-        m_cancelSource.cancel();
-
-        // Wait for async operations to complete.
-        m_runtimeScheduler.Rundown();
     }
 
     Napi::Value Window::SetTimeout(const Napi::CallbackInfo& info)

@@ -1067,26 +1067,25 @@ namespace Babylon
         });
     }
 
-    void NativeEngine::CopyTexture(const Napi::CallbackInfo& /*info*/)
+    void NativeEngine::CopyTexture(const Napi::CallbackInfo& info)
     {
-        //const auto textureDestination = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
-        //const auto textureSource = info[1].As<Napi::Pointer<Graphics::Texture>>().Get();
+        const auto textureDestination = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        const auto textureSource = info[1].As<Napi::Pointer<Graphics::Texture>>().Get();
 
-        // TODO: this code makes no sense
-        //arcana::make_task(m_graphicsUpdate.Scheduler(), m_cancellationSource, [this, textureDestination, textureSource]()
-        //{
-        //    return arcana::make_task(m_runtimeScheduler.Get(), m_cancellationSource, [this, textureDestination, textureSource, updateToken = m_graphicsUpdate.GetUpdateToken()]() mutable
-        //    {
-        //        bgfx::Encoder* encoder = updateToken.GetEncoder();
-        //        GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
-        //    }).then(arcana::inline_scheduler, m_cancellationSource, [this, thisRef = Napi::Persistent(info.Env())](const arcana::expected<void, std::exception_ptr>& result)
-        //    {
-        //        if (result.has_error())
-        //        {
-        //            Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
-        //        }
-        //    });
-        //});
+        arcana::make_task(m_update.Scheduler(), m_cancellationSource, [this, textureDestination, textureSource]() mutable
+        {
+            return arcana::make_task(m_runtimeScheduler.Get(), m_cancellationSource, [this, textureDestination, textureSource, updateToken = m_update.GetUpdateToken()]() mutable
+            {
+                bgfx::Encoder* encoder = updateToken.GetEncoder();
+                GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
+            }).then(arcana::inline_scheduler, m_cancellationSource, [this](const arcana::expected<void, std::exception_ptr>& result)
+            {
+                if (result.has_error())
+                {
+                    Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
+                }
+            });
+        });
     }
 
     void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)

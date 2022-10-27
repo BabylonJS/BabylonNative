@@ -53,22 +53,26 @@ namespace Babylon
     //      the continuation, must capture a persistent reference to the N-API object itself to prevent the GC from
     //      collecting the N-API object during the asynchronous operation. Failing to do so will result in a hang
     //      when `Rundown()` is called in the N-API class destructor.
-    class JsRuntimeScheduler
+    class JsRuntimeScheduler : public JsRuntime::IDisposingCallback
     {
     public:
         explicit JsRuntimeScheduler(JsRuntime& runtime)
             : m_runtime{&runtime}
             , m_scheduler{*this}
         {
-            JsRuntime::RegisterDisposing(*m_runtime, [this]()
-            {
-                m_runtime = nullptr;
-            });
+            std::scoped_lock lock{m_mutex};
+            JsRuntime::RegisterDisposing(*m_runtime, this);
         }
 
         ~JsRuntimeScheduler()
         {
             assert(m_count == 0 && "Schedulers for the JavaScript thread are not yet invoked");
+
+            std::scoped_lock lock{m_mutex};
+            if (m_runtime != nullptr)
+            {
+                JsRuntime::UnregisterDisposing(*m_runtime, this);
+            }
         }
 
         // Wait until all of the schedulers are invoked.
@@ -88,6 +92,12 @@ namespace Babylon
         }
 
     private:
+        void Disposing() override
+        {
+            std::scoped_lock lock{m_mutex};
+            m_runtime = nullptr;
+        }
+
         class SchedulerImpl
         {
         public:
@@ -108,6 +118,8 @@ namespace Babylon
         template<typename CallableT>
         void Dispatch(CallableT&& callable)
         {
+            std::scoped_lock lock{m_mutex};
+
             if (m_runtime != nullptr)
             {
                 m_runtime->Dispatch([callable{std::forward<CallableT>(callable)}](Napi::Env)
@@ -123,7 +135,10 @@ namespace Babylon
             --m_count;
         }
 
-        JsRuntime* m_runtime;
+        mutable std::mutex m_mutex{};
+        JsRuntime* m_runtime{};
+        std::function<void()> m_disposingCallback{};
+
         SchedulerImpl m_scheduler;
         std::atomic<int> m_count{0};
         arcana::manual_dispatcher<128> m_disposingDispatcher{};

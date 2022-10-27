@@ -12,7 +12,8 @@ namespace Babylon
         : m_workQueue{std::make_unique<WorkQueue>([this] { RunPlatformTier(); })}
         , m_unhandledExceptionHandler{unhandledExceptionHandler}
     {
-        Dispatch([this](Napi::Env env) {
+        Dispatch([this](Napi::Env env)
+        {
             JsRuntime::CreateForJavaScript(env, [this](auto func) { Dispatch(std::move(func)); });
         });
     }
@@ -45,8 +46,10 @@ namespace Babylon
 
     void AppRuntime::Dispatch(Dispatchable<void(Napi::Env)> func)
     {
-        m_workQueue->Append([this, func{std::move(func)}](Napi::Env env) mutable {
-            Execute([this, env, func{std::move(func)}]() mutable {
+        m_workQueue->Append([this, func{std::move(func)}](Napi::Env env) mutable
+        {
+            Execute([this, env, func{std::move(func)}]() mutable
+            {
                 try
                 {
                     func(env);

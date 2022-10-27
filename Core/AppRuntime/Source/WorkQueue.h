@@ -22,7 +22,7 @@ namespace Babylon
             if (m_cancellationSource.cancelled())
             {
                 // There is likely a coding error if this exception is thrown.
-                throw std::runtime_error{"Cannot append to the work queue after it is canceled"};
+                throw std::runtime_error{"Cannot append to the work queue while shutting down"};
             }
 
             // Manual dispatcher queueing requires a copyable CallableT, we use a shared pointer trick to make a
@@ -57,6 +57,6 @@ namespace Babylon
         arcana::cancellation_source m_cancellationSource{};
         arcana::manual_dispatcher<128> m_dispatcher{};
 
-        std::thread m_thread;
+        std::thread m_thread{};
     };
 }

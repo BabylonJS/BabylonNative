@@ -19,7 +19,7 @@ namespace Babylon::Polyfills::Internal
         struct Timeout;
 
     public:
-        TimeoutDispatcher(Babylon::JsRuntimeScheduler& runtimeScheduler);
+        TimeoutDispatcher(Babylon::JsRuntime& runtime);
         ~TimeoutDispatcher();
 
         TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay);
@@ -32,13 +32,14 @@ namespace Babylon::Polyfills::Internal
         void ThreadFunction();
         void CallFunction(std::shared_ptr<Napi::FunctionReference> function);
 
-        Babylon::JsRuntimeScheduler& m_runtimeScheduler;
-        std::mutex m_mutex{};
+        Babylon::JsRuntimeScheduler m_runtimeScheduler;
+
+        mutable std::mutex m_mutex{};
         std::condition_variable m_condVariable{};
         TimeoutId m_lastTimeoutId{0};
-        std::unordered_map<TimeoutId, std::unique_ptr<Timeout>> m_idMap;
-        std::multimap<TimePoint, Timeout*> m_timeMap;
-        std::atomic<bool> m_shutdown{false};
-        std::thread m_thread;
+        std::unordered_map<TimeoutId, std::unique_ptr<Timeout>> m_idMap{};
+        std::multimap<TimePoint, Timeout*> m_timeMap{};
+        arcana::cancellation_source m_cancellationSource{};
+        std::thread m_thread{};
     };
 }

@@ -48,8 +48,10 @@ namespace Babylon
             m_dispatcher.blocking_tick(m_cancellationSource);
         }
 
-        // There should not be any outstanding work during the shutdown sequence
-        // which should be the only way exit the while loop above.
+        // Drain the queue to complete work dispatched after cancellation.
+        m_dispatcher.tick(arcana::cancellation::none());
+
+        // There should no longer be any outstanding work once the queue is drained.
         assert(m_dispatcher.empty());
     }
 }
