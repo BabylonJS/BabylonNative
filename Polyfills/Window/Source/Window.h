@@ -2,7 +2,6 @@
 
 #include <Babylon/JsRuntimeScheduler.h>
 #include "TimeoutDispatcher.h"
-#include <optional>
 
 namespace Babylon::Polyfills::Internal
 {
