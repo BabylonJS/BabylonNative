@@ -80,11 +80,17 @@ target_compile_definitions(bgfx
                "BGFX_CONFIG_MULTITHREADED=$<BOOL:${BGFX_CONFIG_MULTITHREADED}>"
 )
 
+# WSL Include dirs for UNIX
+set (DXH_WSL)
+if (UNIX)
+	set (DXH_WSL 3rdparty/directx-headers/include/wsl/stubs)
+endif()
+
 # Includes
 target_include_directories( bgfx
 	PRIVATE
 		${BGFX_DIR}/3rdparty
-		${BGFX_DIR}/3rdparty/directx-headers/include/wsl/stubs
+		${BGFX_DIR}/${DXH_WSL}
 		${BGFX_DIR}/3rdparty/directx-headers/include/directx
 		${BGFX_DIR}/3rdparty/directx-headers/include
 		${BGFX_DIR}/3rdparty/khronos
