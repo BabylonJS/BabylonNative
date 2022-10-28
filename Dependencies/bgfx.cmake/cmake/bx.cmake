@@ -59,6 +59,11 @@ elseif( WIN32 )
 		PUBLIC
 			$<BUILD_INTERFACE:${BX_DIR}/include/compat/msvc>
 			$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/compat/msvc> )
+elseif ( UNIX )
+	target_include_directories( bx
+		PUBLIC
+			$<BUILD_INTERFACE:${BX_DIR}/include/compat/linux>
+			$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/compat/linux> )
 elseif( APPLE )
 	target_include_directories( bx
 		PUBLIC
