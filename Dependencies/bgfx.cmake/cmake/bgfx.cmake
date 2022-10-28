@@ -84,7 +84,9 @@ target_compile_definitions(bgfx
 target_include_directories( bgfx
 	PRIVATE
 		${BGFX_DIR}/3rdparty
+		${BGFX_DIR}/3rdparty/directx-headers/include/wsl/stubs
 		${BGFX_DIR}/3rdparty/directx-headers/include/directx
+		${BGFX_DIR}/3rdparty/directx-headers/include
 		${BGFX_DIR}/3rdparty/khronos
 	PUBLIC
 		$<BUILD_INTERFACE:${BGFX_DIR}/include>
