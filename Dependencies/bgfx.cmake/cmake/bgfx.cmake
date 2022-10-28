@@ -80,11 +80,24 @@ target_compile_definitions(bgfx
                "BGFX_CONFIG_MULTITHREADED=$<BOOL:${BGFX_CONFIG_MULTITHREADED}>"
 )
 
+# directx-headers
+set (DIRECTX_HEADERS)
+if (UNIX AND NOT APPLE AND NOT EMSCRIPTEN AND NOT ANDROID)  # Only Linux
+	set (DIRECTX_HEADERS 
+		${BGFX_DIR}/3rdparty/directx-headers/include/directx
+		${BGFX_DIR}/3rdparty/directx-headers/include
+		${BGFX_DIR}/3rdparty/directx-headers/include/wsl/stubs )
+elseif (WIN32)  # Only Windows
+	set (DIRECTX_HEADERS 
+		${BGFX_DIR}/3rdparty/directx-headers/include/directx
+		${BGFX_DIR}/3rdparty/directx-headers/include )
+endif()
+
 # Includes
 target_include_directories( bgfx
 	PRIVATE
+		${DIRECTX_HEADERS}
 		${BGFX_DIR}/3rdparty
-		${BGFX_DIR}/3rdparty/dxsdk/include
 		${BGFX_DIR}/3rdparty/khronos
 	PUBLIC
 		$<BUILD_INTERFACE:${BGFX_DIR}/include>
