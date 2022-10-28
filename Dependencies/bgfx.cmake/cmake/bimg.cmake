@@ -9,8 +9,7 @@
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
 # Third party libs
-include( ${CMAKE_CURRENT_LIST_DIR}/3rdparty/astc-codec.cmake )
-include( ${CMAKE_CURRENT_LIST_DIR}/3rdparty/astc.cmake )
+include( ${CMAKE_CURRENT_LIST_DIR}/3rdparty/astc-encoder.cmake )
 include( ${CMAKE_CURRENT_LIST_DIR}/3rdparty/edtaa3.cmake )
 include( ${CMAKE_CURRENT_LIST_DIR}/3rdparty/etc1.cmake )
 include( ${CMAKE_CURRENT_LIST_DIR}/3rdparty/etc2.cmake )
@@ -39,7 +38,7 @@ target_include_directories( bimg
 		$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 # bimg dependencies
-target_link_libraries( bimg PUBLIC bx PRIVATE astc-codec astc edtaa3 etc1 etc2 iqa squish nvtt pvrtc tinyexr )
+target_link_libraries( bimg PUBLIC bx PRIVATE astc-encoder edtaa3 etc1 etc2 iqa squish nvtt pvrtc tinyexr )
 
 # Put in a "bgfx" folder in Visual Studio
 set_target_properties( bimg PROPERTIES FOLDER "bgfx" )
