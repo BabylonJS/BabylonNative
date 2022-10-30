@@ -14,6 +14,9 @@ namespace Babylon::Plugins
             case FacingMode: return "facingMode";
             case Torch: return "torch";
             case Zoom: return "zoom";
+            default:
+                assert(false);
+                return "";
         }
     }
 
@@ -24,6 +27,9 @@ namespace Babylon::Plugins
             case FacingMode: return CameraCapabilityTemplate::Sequence;
             case Torch: return CameraCapabilityTemplate::Sequence;
             case Zoom: return CameraCapabilityTemplate::Range;
+            default:
+                assert(false);
+                return CameraCapabilityTemplate::Sequence;
         }
 
     }
@@ -53,7 +59,7 @@ namespace Babylon::Plugins
             {
                 auto capability{ Napi::Array::New(env, m_acceptedValues.size()) };
                 for (uint32_t i = 0; i < m_acceptedValues.size(); i++) {
-                    capability.Set(i, asNapiValue<T>(env, m_acceptedValues[i]));
+                    capability.Set(i, Constraint::asNapiValue<T>(env, m_acceptedValues[i]));
                 }
 
                 target.Set(getName(),capability);
@@ -61,18 +67,21 @@ namespace Babylon::Plugins
             case ConstraintType::Range:
             {
                 auto capability{ Napi::Object::New(env) };
-                capability.Set("min", asNapiValue<T>(env, m_acceptedValues[0]));
-                capability.Set("max", asNapiValue<T>(env, m_acceptedValues[1]));
+                capability.Set("min", Constraint::asNapiValue<T>(env, m_acceptedValues[0]));
+                capability.Set("max", Constraint::asNapiValue<T>(env, m_acceptedValues[1]));
 
                 target.Set(getName(),capability);
             }
+            default:
+                assert(false);
+                return;
         }
 
     }
 
     template <typename T>
     void CameraCapabilityTemplate<T>::addAsSetting(Napi::Object target) {
-        target.Set(getName(), asNapiValue<T>(target.Env(), m_currentValue));
+        target.Set(getName(), Constraint::asNapiValue<T>(target.Env(), m_currentValue));
     }
 
     template<typename T>
@@ -86,7 +95,7 @@ namespace Babylon::Plugins
             return CameraCapability::MeetsConstraint::Unconstrained;
         }
 
-        Constraint constraint{ parseConstraint<T>(constraintValue) };
+        Constraint::Constraint<T> constraint{ Constraint::parseConstraint<T>(constraintValue) };
 
         switch(getConstraintType())
         {
@@ -139,8 +148,10 @@ namespace Babylon::Plugins
                 // partially satisifed as it doesn't break the min, max, or exact requirements.
                 return constraint.ideal.has_value() && constraint.ideal.value() >= minAccepted && constraint.ideal.value() <= maxAccepted ? CameraCapability::MeetsConstraint::FullySatisfied : CameraCapability::MeetsConstraint::PartiallySatisfied;
             }
+            default:
+                assert(false);
+                return CameraCapability::MeetsConstraint::Unsatisfied;
         }
-
     }
 
     template <typename T>
@@ -165,32 +176,36 @@ namespace Babylon::Plugins
                 
                 return true;
             case CameraCapability::MeetsConstraint::FullySatisfied:
+            {
                 // Get the constraint matching this capability
-                Napi::Value constraintValue{ constraints.Get(getName()) };
-                
-                Constraint constraint{parseConstraint<T>(constraintValue) };
+                Napi::Value constraintValue{constraints.Get(getName())};
+
+                Constraint::Constraint constraint{Constraint::parseConstraint<T>(constraintValue)};
 
                 // The target value should fallback between the different possible constraint values in the order of exact, ideal, max, min
-                T targetValue = constraint.exact.has_value() ? constraint.exact.value()
-                        : constraint.ideal.has_value() ? constraint.ideal.value()
-                        : constraint.max.has_value() ? constraint.max.value()
-                        : constraint.min.value();
+                T targetValue =
+                        constraint.exact.has_value() ? constraint.exact.value() :
+                        constraint.ideal.has_value() ? constraint.ideal.value() :
+                        constraint.max.has_value() ? constraint.max.value() :
+                        constraint.min.value();
 
-                if (m_currentValue != targetValue)
-                {
-                    if (!m_setterFunction(targetValue))
-                    {
+                if (m_currentValue != targetValue) {
+                    if (!m_setterFunction(targetValue)) {
                         // The value was valid, but setting it failed
                         return false;
                     }
                     m_currentValue = targetValue;
                 }
                 return true;
+            }
+            default:
+                assert(false);
+                return false;
         }
     }
 
     template <>
-    CameraCapability::Constraint<bool> CameraCapability::parseConstraint<bool>(Napi::Value value) {
+    Constraint::Constraint<bool> Constraint::parseConstraint<bool>(Napi::Value value) {
         std::optional<bool> ideal{}, exact{};
 
         if (value.IsBoolean())
@@ -214,12 +229,12 @@ namespace Babylon::Plugins
     }
 
     template <>
-    Napi::Value CameraCapability::asNapiValue<bool>(Napi::Env env, bool value) {
+    Napi::Value Constraint::asNapiValue<bool>(Napi::Env env, bool value) {
         return Napi::Boolean::New(env, value);
     }
 
     template <>
-    CameraCapability::Constraint<std::string> CameraCapability::parseConstraint<std::string>(Napi::Value value) {
+    Constraint::Constraint<std::string> Constraint::parseConstraint<std::string>(Napi::Value value) {
         std::optional<std::string> ideal{}, exact{};
 
         if (value.IsString())
@@ -243,12 +258,12 @@ namespace Babylon::Plugins
     }
 
     template <>
-    Napi::Value CameraCapability::asNapiValue<std::string>(Napi::Env env, std::string value) {
+    Napi::Value Constraint::asNapiValue<std::string>(Napi::Env env, std::string value) {
         return Napi::String::New(env, value);
     }
 
     template <>
-    CameraCapability::Constraint<uint32_t> CameraCapability::parseConstraint<uint32_t>(Napi::Value value)
+    Constraint::Constraint<uint32_t> Constraint::parseConstraint<uint32_t>(Napi::Value value)
     {
         std::optional<uint32_t> ideal{}, exact{}, min{}, max{};
 
@@ -281,13 +296,13 @@ namespace Babylon::Plugins
     };
 
     template <>
-    Napi::Value CameraCapability::asNapiValue<uint32_t>(Napi::Env env, uint32_t value)
+    Napi::Value Constraint::asNapiValue<uint32_t>(Napi::Env env, uint32_t value)
     {
         return Napi::Number::New(env, value);
     }
 
     template <>
-    CameraCapability::Constraint<double> CameraCapability::parseConstraint<double>(Napi::Value value)
+    Constraint::Constraint<double> Constraint::parseConstraint<double>(Napi::Value value)
     {
         std::optional<double> ideal{}, exact{}, min{}, max{};
 
@@ -320,7 +335,7 @@ namespace Babylon::Plugins
     };
 
     template <>
-    Napi::Value CameraCapability::asNapiValue<double>(Napi::Env env, double value)
+    Napi::Value Constraint::asNapiValue<double>(Napi::Env env, double value)
     {
         return Napi::Number::New(env, value);
     }

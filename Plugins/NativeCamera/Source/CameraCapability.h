@@ -4,6 +4,47 @@
 #include <optional>
 
 namespace Babylon::Plugins {
+    namespace Constraint
+    {
+        template <typename T>
+        struct Constraint
+        {
+            std::optional<T> ideal;
+            std::optional<T> exact;
+            std::optional<T> min;
+            std::optional<T> max;
+        };
+
+        template <typename T>
+        Constraint<T> parseConstraint(Napi::Value value) = delete;
+        template <typename T>
+        Napi::Value asNapiValue(Napi::Env env, T value) = delete;
+
+        // Uint32
+        template <>
+        Constraint<uint32_t> parseConstraint(Napi::Value value);
+        template <>
+        Napi::Value asNapiValue(Napi::Env env, uint32_t value);
+
+        // Double
+        template <>
+        Constraint<double> parseConstraint(Napi::Value value);
+        template <>
+        Napi::Value asNapiValue(Napi::Env env, double value);
+
+        // Bool
+        template <>
+        Constraint<bool> parseConstraint(Napi::Value value);
+        template <>
+        Napi::Value asNapiValue(Napi::Env env, bool value);
+
+        // String
+        template <>
+        Constraint<std::string> parseConstraint(Napi::Value value);
+        template <>
+        Napi::Value asNapiValue(Napi::Env env, std::string value);
+    }
+
     class CameraCapability {
     public:
         enum Capability
@@ -36,44 +77,6 @@ namespace Babylon::Plugins {
         virtual bool applyConstraints(Napi::Object constraints)=0;
         virtual void addAsCapability(Napi::Object target)=0;
         virtual void addAsSetting(Napi::Object target)=0;
-
-        template <typename T>
-        struct Constraint
-        {
-            std::optional<T> ideal;
-            std::optional<T> exact;
-            std::optional<T> min;
-            std::optional<T> max;
-        };
-
-        template <typename T>
-        static Constraint<T> parseConstraint(Napi::Value value) = delete;
-        template <typename T>
-        static Napi::Value asNapiValue(Napi::Env env, T value) = delete;
-
-        // Uint32
-        template <>
-        Constraint<uint32_t> parseConstraint(Napi::Value value);
-        template <>
-        Napi::Value asNapiValue(Napi::Env env, uint32_t value);
-        
-        // Double
-        template <>
-        Constraint<double> parseConstraint(Napi::Value value);
-        template <>
-        Napi::Value asNapiValue(Napi::Env env, double value);
-
-        // Bool
-        template <>
-        Constraint<bool> parseConstraint(Napi::Value value);
-        template <>
-        Napi::Value asNapiValue(Napi::Env env, bool value);
-
-        // String
-        template <>
-        Constraint<std::string> parseConstraint(Napi::Value value);
-        template <>
-        Napi::Value asNapiValue(Napi::Env env, std::string value);
 
     protected:
         const Capability m_capability;

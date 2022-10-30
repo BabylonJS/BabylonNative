@@ -89,7 +89,10 @@ namespace Babylon::Plugins
             return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."}));
         }
 
-        return m_cameraImpl->Open(m_cameraDevice, m_cameraResolution).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, constraints](const arcana::expected<Camera::Impl::CameraDimensions, std::exception_ptr>& result) {
+        // Create a persistent ref to the constraints object so it isn't destructed during our async work
+        auto constraintsRef{ std::make_shared<Napi::ObjectReference>(Napi::Persistent(constraints)) };
+
+        return m_cameraImpl->Open(m_cameraDevice, m_cameraResolution).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, constraintsRef](const arcana::expected<Camera::Impl::CameraDimensions, std::exception_ptr>& result) {
             if (result.has_error())
             {
                 // Re-throw the error from opening the camera
@@ -100,7 +103,7 @@ namespace Babylon::Plugins
             this->Width = cameraDimensions.width;
             this->Height = cameraDimensions.height;
             
-            if(!UpdateConstraints(env, constraints))
+            if(!UpdateConstraints(env, constraintsRef->Value()))
             {
                 // Setting the constraint to the capability failed
                 throw std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."};
@@ -182,15 +185,16 @@ namespace Babylon::Plugins
                 CameraCapability::MeetsConstraint constraintSatifaction{ cameraDevice->capabilities[j]->meetsConstraints(constraints) };
                 switch (constraintSatifaction)
                 {
-                    case CameraCapability::MeetsConstraint::Unsatisfied:
-                        failedAConstraint = true;
-                        break;
                     case CameraCapability::MeetsConstraint::FullySatisfied:
                         fullySatisfiedCapabilityCount++;
                         break;
                     case CameraCapability::MeetsConstraint::PartiallySatisfied:
                     case CameraCapability::MeetsConstraint::Unconstrained:
                         // Don't weight partialy satisfied or unconstrained capabilites any higher than another device
+                        break;
+                    case CameraCapability::MeetsConstraint::Unsatisfied:
+                    default:
+                        failedAConstraint = true;
                         break;
                 }
                 
@@ -213,8 +217,8 @@ namespace Babylon::Plugins
             int32_t bestWidthDiff{INT32_MAX};
             int32_t bestHeightDiff{INT32_MAX};
             
-            auto widthConstraint{ CameraCapability::parseConstraint<uint32_t>(constraints.Get("width")) };
-            auto heightConstraint{ CameraCapability::parseConstraint<uint32_t>(constraints.Get("height")) };
+            auto widthConstraint{ Constraint::parseConstraint<uint32_t>(constraints.Get("width")) };
+            auto heightConstraint{ Constraint::parseConstraint<uint32_t>(constraints.Get("height")) };
             
             // Set the targetWidth and targetHeight as a fallback through the values exact, ideal, max, min
             auto targetWidth = widthConstraint.exact.has_value() ? widthConstraint.exact
@@ -299,10 +303,6 @@ namespace Babylon::Plugins
             
             switch (constraintSatisfaction)
             {
-                case CameraCapability::MeetsConstraint::Unsatisfied:
-                    // The constraint couldn't be satisfied ignore it and continue applying the remaining constraints
-                    allConstraintsSatisfied = false;
-                    continue;
                 case CameraCapability::MeetsConstraint::FullySatisfied:
                 case CameraCapability::MeetsConstraint::PartiallySatisfied:
                     m_currentConstraints.Set(capability->getName(), constraints.Get(capability->getName()));
@@ -310,6 +310,11 @@ namespace Babylon::Plugins
                 case CameraCapability::MeetsConstraint::Unconstrained:
                     // Still apply the unconstrained capability so that it resets to it's default in case it was previously set
                     break;
+                case CameraCapability::MeetsConstraint::Unsatisfied:
+                default:
+                    // The constraint couldn't be satisfied ignore it and continue applying the remaining constraints
+                    allConstraintsSatisfied = false;
+                    continue;;
             }
             
             if(!capability->applyConstraints(constraints))
