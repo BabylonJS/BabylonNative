@@ -1,9 +1,11 @@
 #include "NativeCamera.h"
-#include "NativeCameraImpl.h"
+#include "../NativeCameraImpl.h"
 #include <napi/napi.h>
 
 namespace Babylon::Plugins
 {
+    struct Camera::Impl::ImplData{};
+
     Camera::Impl::Impl(Napi::Env /*env*/, bool /*overrideCameraTexture*/)
     {
     }
@@ -12,7 +14,14 @@ namespace Babylon::Plugins
     {
     }
 
-    arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(uint32_t /*width*/, uint32_t /*height*/, bool /*frontCamera*/)
+    std::vector<std::shared_ptr<CameraDevice>> Camera::Impl::GetCameraDevices()
+    {
+        throw std::runtime_error{ "HW Camera not implemented for this platform." };
+    }
+
+    arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(
+            std::shared_ptr<CameraDevice> /*cameraDevice*/,
+            std::shared_ptr<CameraTrack> /*track*/)
     {
         throw std::runtime_error{ "HW Camera not implemented for this platform." };
     }
@@ -32,4 +41,3 @@ namespace Babylon::Plugins
         throw std::runtime_error{ "HW Camera not implemented for this platform." };
     }
 }
- 
