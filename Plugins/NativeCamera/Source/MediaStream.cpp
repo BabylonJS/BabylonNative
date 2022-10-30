@@ -3,22 +3,34 @@
 
 namespace Babylon::Plugins
 {
-    void MediaStream::Initialize(Napi::Env& env)
+    arcana::task<Napi::Object, std::exception_ptr> MediaStream::New(Napi::Env env, Napi::Object constraints)
     {
-        Napi::Function ctor = DefineClass(
-          env,
-          JS_CLASS_NAME,
-          {
-              InstanceMethod("getTracks", &MediaStream::GetVideoTracks), // The only supported tracks are video tracks
-              InstanceMethod("getVideoTracks", &MediaStream::GetVideoTracks),
-              InstanceMethod("getAudioTracks", &MediaStream::GetAudioTracks),
-              InstanceMethod("applyConstraints", &MediaStream::ApplyConstraints),
-              InstanceMethod("getCapabilities", &MediaStream::GetCapabilities),
-              InstanceMethod("getSettings", &MediaStream::GetSettings),
-              InstanceMethod("getConstraints", &MediaStream::GetConstraints),
-          });
+        auto ctor = DefineClass(
+            env,
+            JS_CLASS_NAME,
+            {
+                InstanceMethod("getTracks", &MediaStream::GetVideoTracks), // The only supported tracks are video tracks
+                InstanceMethod("getVideoTracks", &MediaStream::GetVideoTracks),
+                InstanceMethod("getAudioTracks", &MediaStream::GetAudioTracks),
+                InstanceMethod("applyConstraints", &MediaStream::ApplyConstraints),
+                InstanceMethod("getCapabilities", &MediaStream::GetCapabilities),
+                InstanceMethod("getSettings", &MediaStream::GetSettings),
+                InstanceMethod("getConstraints", &MediaStream::GetConstraints),
+            });
         
-        constructor = Napi::Persistent(ctor);
+        // Create a an object reference to the mediaStream javascript object so that it is not destructed during the async operation
+        auto mediaStreamObject{ std::make_shared<Napi::ObjectReference>(Napi::Persistent(ctor.New({}))) };
+        auto mediaStream{ MediaStream::Unwrap(mediaStreamObject->Value()) };
+        
+        return mediaStream->ApplyInitialConstraints(env, constraints).then(mediaStream->m_runtimeScheduler, arcana::cancellation::none(), [mediaStreamObject](const arcana::expected<void, std::exception_ptr>& result)
+        {
+            if (result.has_error())
+            {
+                throw result.error();
+            }
+
+            return mediaStreamObject->Value();
+        });
     }
 
     MediaStream::MediaStream(const Napi::CallbackInfo& info)
@@ -43,68 +55,59 @@ namespace Babylon::Plugins
         return Napi::Array::New(info.Env(), 0);
     }
 
-    Napi::Value MediaStream::ApplyConstraints(Napi::Env env, Napi::Object constraints)
-    {
-        auto deferred{Napi::Promise::Deferred::New(env)};
-        auto promise{deferred.Promise()};
-
-        if (m_cameraDevice == nullptr || m_cameraResolution == nullptr)
-        {
-            // A camera device hasn't been selected yet. Find the best device and open the stream
-            auto bestCamera = FindBestCameraStream(constraints);
-            m_cameraDevice = bestCamera.first;
-            m_cameraResolution = bestCamera.second;
-
-            // If m_cameraDevice is still null that means a camera device could not be found that meets the constraints
-            if (m_cameraDevice == nullptr)
-            {
-                // If no device could be fount to satisfy the constraints throw a "ConstraintError" to match the browser implementation
-                deferred.Reject(Napi::Error::New(env, std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."}).Value());
-                return static_cast<Napi::Value>(promise);
-            }
-
-            // This is the first time applying the constraints to the camera. First open up the stream
-            m_cameraImpl->Open(m_cameraDevice, m_cameraResolution).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred, constraints](const arcana::expected<Camera::Impl::CameraDimensions, std::exception_ptr>& result) {
-                if (result.has_error())
-                {
-                    deferred.Reject(Napi::Error::New(env, result.error()).Value());
-                }
-                else
-                {
-                    auto cameraDimensions{result.value()};
-                    this->Width = cameraDimensions.width;
-                    this->Height = cameraDimensions.height;
-                    
-                    if(!UpdateConstraints(env, constraints))
-                    {
-                        // Setting the constraint to the capability failed
-                        deferred.Reject(Napi::Error::New(env, std::runtime_error{"OverconstrainedError: Unable to match constraints to a supported camera configuration."}).Value());
-                        return;
-                    }
-
-                    deferred.Resolve(env.Undefined());
-                }
-            });
-        } else {
-            // Apply the constraints to the existing device
-            if(!UpdateConstraints(env, constraints))
-            {
-                // Setting the constraint to the capability failed
-                deferred.Reject(Napi::Error::New(env, std::runtime_error{"OverconstrainedError: Unable to match constraints to a supported camera configuration."}).Value());
-                return static_cast<Napi::Value>(promise);
-            }
-            deferred.Resolve(env.Undefined());
-        }
-
-        return static_cast<Napi::Value>(promise);
-    }
-
     Napi::Value MediaStream::ApplyConstraints(const Napi::CallbackInfo& info)
     {
         auto env = info.Env();
         auto constraints = info[0].As<Napi::Object>();
+        
+        auto deferred{Napi::Promise::Deferred::New(env)};
+        auto promise{deferred.Promise()};
 
-        return ApplyConstraints(env, constraints);
+        // Apply the constraints to the existing device
+        if(!UpdateConstraints(env, constraints))
+        {
+            // Setting the constraint to the capability failed
+            deferred.Reject(Napi::Error::New(env, std::runtime_error{"OverconstrainedError: Unable to match constraints to a supported camera configuration."}).Value());
+            return static_cast<Napi::Value>(promise);
+        }
+        deferred.Resolve(env.Undefined());
+
+        return static_cast<Napi::Value>(promise);
+    }
+
+    arcana::task<void, std::exception_ptr> MediaStream::ApplyInitialConstraints(Napi::Env env, Napi::Object constraints)
+    {
+        // A camera device hasn't been selected yet. Find the best device and open the stream
+        auto bestCamera = FindBestCameraStream(constraints);
+        m_cameraDevice = bestCamera.first;
+        m_cameraResolution = bestCamera.second;
+
+        // If m_cameraDevice is still null that means a camera device could not be found that meets the constraints
+        if (m_cameraDevice == nullptr)
+        {
+            // If no device could be fount to satisfy the constraints throw a "ConstraintError" to match the browser implementation
+            return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."}));
+        }
+
+        return m_cameraImpl->Open(m_cameraDevice, m_cameraResolution).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, constraints](const arcana::expected<Camera::Impl::CameraDimensions, std::exception_ptr>& result) {
+            if (result.has_error())
+            {
+                // Re-throw the error from opening the camera
+                throw result.error();
+            }
+            
+            auto cameraDimensions{result.value()};
+            this->Width = cameraDimensions.width;
+            this->Height = cameraDimensions.height;
+            
+            if(!UpdateConstraints(env, constraints))
+            {
+                // Setting the constraint to the capability failed
+                throw std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."};
+            }
+            
+            return;
+        });
     }
 
     Napi::Value MediaStream::GetCapabilities(const Napi::CallbackInfo& info)
@@ -122,7 +125,7 @@ namespace Babylon::Plugins
         for (uint32_t i=0; i < m_cameraDevice->capabilities.size(); i++)
         {
             std::shared_ptr<CameraCapability> capability{ m_cameraDevice->capabilities[i] };
-            capabilities.Set(capability->getName(), capability->asCapability(env));
+            capability->addAsCapability(capabilities);
         }
         
         return std::move(capabilities);
@@ -143,7 +146,7 @@ namespace Babylon::Plugins
         for (uint32_t i=0; i < m_cameraDevice->capabilities.size(); i++)
         {
             std::shared_ptr<CameraCapability> capability{ m_cameraDevice->capabilities[i] };
-            settings.Set(capability->getName(), capability->asSetting(env));
+            capability->addAsSetting(settings);
         }
         
         return std::move(settings);
@@ -152,7 +155,9 @@ namespace Babylon::Plugins
     Napi::Value MediaStream::GetConstraints(const Napi::CallbackInfo& info)
     {
         auto env = info.Env();
-        return Napi::Object::From(env, m_currentConstraints);
+        
+        // return a clone of the currently applied constraints
+        return Napi::Object::From(env, m_currentConstraints.Value());
     }
 
     std::pair<std::shared_ptr<CameraDevice>, std::shared_ptr<CameraTrack>> MediaStream::FindBestCameraStream(Napi::Object constraints)
@@ -285,7 +290,7 @@ namespace Babylon::Plugins
     bool MediaStream::UpdateConstraints(Napi::Env env, Napi::Object constraints)
     {
         bool allConstraintsSatisfied{ true };
-        m_currentConstraints = Napi::Object::New(env);
+        m_currentConstraints = Napi::Persistent(Napi::Object::New(env));
         
         for(uint32_t i=0; i < m_cameraDevice->capabilities.size(); i++)
         {

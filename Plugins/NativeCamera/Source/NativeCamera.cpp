@@ -103,7 +103,6 @@ namespace Babylon
 
         Camera Camera::Initialize(Napi::Env env)
         {
-            Babylon::Plugins::MediaStream::Initialize(env);
             Babylon::Plugins::NativeVideo::Initialize(env);
             Babylon::Plugins::NativeCamera::Initialize(env);
 
@@ -114,13 +113,10 @@ namespace Babylon
         {
             auto env = info.Env();
             
-            auto mediaStreamObject{ MediaStream::constructor.New({}) };
-            auto mediaStream{ MediaStream::Unwrap(mediaStreamObject) };
-            
-            auto callback = Napi::Function::New(env, [mediaStreamObject](const Napi::CallbackInfo& /*info*/) {
-                return static_cast<Napi::Value>(mediaStreamObject);
-            }, "then");
+            auto deferred{Napi::Promise::Deferred::New(env)};
+            auto promise{deferred.Promise()};
 
+            // Extract the video constraints as we only support video for the time being
             Napi::Object constraints{ info[0].As<Napi::Object>() };
             auto videoConstraints{ constraints.Get("video").As<Napi::Object>() };
             if (videoConstraints.IsUndefined())
@@ -128,26 +124,19 @@ namespace Babylon
                 videoConstraints = Napi::Object::New(env);
             }
 
-            // For backwards compatibility support top level properties that aren't part of the official constraint spec,
-            // but are explicitly used by Babylon.JS
-            if((videoConstraints.Has("minWidth") || videoConstraints.Has("maxWidth")) && !videoConstraints.Has("width"))
+            auto runtimeScheduler{ std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env)) };
+            MediaStream::New(env, videoConstraints).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler, env, deferred](const arcana::expected<Napi::Object, std::exception_ptr>& result)
             {
-                auto widthObject = Napi::Object::New(env);
-                widthObject.Set("min", videoConstraints.Get("minWidth"));
-                widthObject.Set("max", videoConstraints.Get("maxWidth"));
-                videoConstraints.Set("width", widthObject);
-            }
+                if (result.has_error())
+                {
+                    deferred.Reject(Napi::Error::New(env, result.error()).Value());
+                    return;
+                }
 
-            if((videoConstraints.Has("minHeight") || videoConstraints.Has("maxHeight")) && !videoConstraints.Has("height"))
-            {
-                auto heightObject = Napi::Object::New(env);
-                heightObject.Set("min", videoConstraints.Get("minHeight"));
-                heightObject.Set("max", videoConstraints.Get("maxHeight"));
-                videoConstraints.Set("height", heightObject);
-            }
+                deferred.Resolve(result.value());
+            });
             
-            auto applyPromise = mediaStream->ApplyConstraints(env, videoConstraints).As<Napi::Promise>();
-            return applyPromise.Get("then").As<Napi::Function>().Call(applyPromise, {callback});
+            return static_cast<Napi::Value>(promise);
         }
     }
 }

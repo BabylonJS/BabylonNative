@@ -48,6 +48,7 @@ namespace Babylon::Plugins
         bool m_frontCamera{};
 
         bool m_IsPlaying{};
+        bool m_isNative{false};
         
         Napi::ObjectReference m_streamObject = Napi::Persistent(Napi::Object::New(Env()));
     };

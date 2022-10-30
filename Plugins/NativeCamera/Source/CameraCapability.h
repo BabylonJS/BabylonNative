@@ -34,8 +34,8 @@ namespace Babylon::Plugins {
 
         virtual MeetsConstraint meetsConstraints(Napi::Object constraints)=0;
         virtual bool applyConstraints(Napi::Object constraints)=0;
-        virtual Napi::Value asCapability(Napi::Env env)=0;
-        virtual Napi::Value asSetting(Napi::Env env)=0;
+        virtual void addAsCapability(Napi::Object target)=0;
+        virtual void addAsSetting(Napi::Object target)=0;
 
         template <typename T>
         struct Constraint
@@ -91,8 +91,9 @@ namespace Babylon::Plugins {
 
         MeetsConstraint meetsConstraints(Napi::Object constraints);
         bool applyConstraints(Napi::Object constraints);
-        Napi::Value asCapability(Napi::Env env);
-        Napi::Value asSetting(Napi::Env env);
+        
+        void addAsCapability(Napi::Object target);
+        void addAsSetting(Napi::Object target);
 
     private:
         ConstraintType getConstraintType();

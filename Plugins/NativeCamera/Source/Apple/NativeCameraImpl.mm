@@ -385,10 +385,9 @@ namespace Babylon::Plugins
         CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(resolution->implData->avDeviceFormat.formatDescription)};
         CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 #else
-        UNUSED(resolution);
         AVCaptureDevice* captureDevice{[AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo]};
         AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error]};
-        CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(captureDevice.activeFormat.formatDescription)};
+        CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(resolution->implData->avDeviceFormat.formatDescription)};
         CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
         uint32_t devicePixelFormat{static_cast<uint32_t>(CMFormatDescriptionGetMediaSubType(videoFormatRef))};
         if (!isPixelFormatSupported(devicePixelFormat))

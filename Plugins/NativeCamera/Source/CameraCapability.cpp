@@ -44,7 +44,9 @@ namespace Babylon::Plugins
     }
 
     template <typename T>
-    Napi::Value CameraCapabilityTemplate<T>::asCapability(Napi::Env env) {
+    void CameraCapabilityTemplate<T>::addAsCapability(Napi::Object target) {
+        auto env{ target.Env() };
+        
         switch(getConstraintType())
         {
             case ConstraintType::Sequence:
@@ -54,7 +56,7 @@ namespace Babylon::Plugins
                     capability.Set(i, asNapiValue<T>(env, m_acceptedValues[i]));
                 }
 
-                return std::move(capability);
+                target.Set(getName(),capability);
             }
             case ConstraintType::Range:
             {
@@ -62,15 +64,15 @@ namespace Babylon::Plugins
                 capability.Set("min", asNapiValue<T>(env, m_acceptedValues[0]));
                 capability.Set("max", asNapiValue<T>(env, m_acceptedValues[1]));
 
-                return std::move(capability);
+                target.Set(getName(),capability);
             }
         }
 
     }
 
     template <typename T>
-    Napi::Value CameraCapabilityTemplate<T>::asSetting(Napi::Env env) {
-        return asNapiValue(env, m_currentValue);
+    void CameraCapabilityTemplate<T>::addAsSetting(Napi::Object target) {
+        target.Set(getName(), asNapiValue<T>(target.Env(), m_currentValue));
     }
 
     template<typename T>

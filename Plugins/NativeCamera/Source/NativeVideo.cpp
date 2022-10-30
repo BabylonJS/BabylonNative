@@ -21,7 +21,7 @@ namespace Babylon::Plugins
                 InstanceAccessor("videoWidth", &NativeVideo::GetVideoWidth, nullptr),
                 InstanceAccessor("videoHeight", &NativeVideo::GetVideoHeight, nullptr),
                 InstanceAccessor("frontCamera", nullptr, &NativeVideo::SetFrontCamera),
-                //InstanceAccessor("isNative", &NativeVideo::IsNative, nullptr),
+                InstanceAccessor("isNative", &NativeVideo::IsNative, nullptr),
                 InstanceAccessor("readyState", &NativeVideo::GetReadyState, nullptr),
                 InstanceAccessor("HAVE_CURRENT_DATA", &NativeVideo::GetHaveCurrentData, nullptr),
                 InstanceAccessor("srcObject", &NativeVideo::GetSrcObject, &NativeVideo::SetSrcObject)
@@ -60,7 +60,7 @@ namespace Babylon::Plugins
 
     Napi::Value NativeVideo::IsNative(const Napi::CallbackInfo&)
     {
-        return Napi::Value::From(Env(), true);
+        return Napi::Value::From(Env(), m_isNative);
     }
 
     void NativeVideo::SetAttribute(const Napi::CallbackInfo&)
@@ -83,7 +83,8 @@ namespace Babylon::Plugins
 
     void NativeVideo::UpdateTexture(bgfx::TextureHandle textureHandle)
     {
-        if (m_IsPlaying && !m_streamObject.Value().IsNull() && !m_streamObject.Value().IsUndefined())
+        // Only update the texture if we're playing and the srcObject is an instance of a MediaStream
+        if (m_IsPlaying && m_streamObject.Value().IsObject())
         {
             MediaStream::Unwrap(m_streamObject.Value())->UpdateTexture(textureHandle);
         }
@@ -176,6 +177,10 @@ namespace Babylon::Plugins
         this->m_width = mediaStream->Width;
         this->m_height = mediaStream->Height;
         this->m_isReady = true;
+        // TODO - This is a hack so that BJS sets the srcObject, which it only does if isNative==false.
+        // flipping it back to true avoids later logic in BJS that is failing to identify the object as an
+        // instance of HTMLVideoElement
+        this->m_isNative = true;
     }
 
     Napi::Value NativeVideo::GetSrcObject(const Napi::CallbackInfo& info) {
