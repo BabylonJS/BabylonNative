@@ -1,4 +1,5 @@
 #include "CameraCapability.h"
+#include <assert.h>
 
 namespace Babylon::Plugins
 {

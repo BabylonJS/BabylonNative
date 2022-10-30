@@ -1,5 +1,6 @@
 #include "MediaStream.h"
 #include "NativeCameraImpl.h"
+#include <assert.h>
 
 namespace Babylon::Plugins
 {
