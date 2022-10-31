@@ -335,7 +335,7 @@ namespace Babylon::Plugins
         }
 
         return {ideal, exact, min, max};
-    };
+    }
 
     template <>
     Napi::Value Constraint::asNapiValue<double>(Napi::Env env, double value)
