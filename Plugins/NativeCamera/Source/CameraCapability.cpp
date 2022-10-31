@@ -6,7 +6,7 @@ namespace Babylon::Plugins
     CameraCapability::CameraCapability(Capability capability)
         : m_capability{ capability }
     {
-    };
+    }
 
     std::string CameraCapability::getName()
     {
@@ -64,6 +64,7 @@ namespace Babylon::Plugins
                 }
 
                 target.Set(getName(),capability);
+                return;
             }
             case ConstraintType::Range:
             {
@@ -72,6 +73,7 @@ namespace Babylon::Plugins
                 capability.Set("max", Constraint::asNapiValue<T>(env, m_acceptedValues[1]));
 
                 target.Set(getName(),capability);
+                return;
             }
             default:
                 assert(false);
@@ -294,7 +296,7 @@ namespace Babylon::Plugins
         }
 
         return {ideal, exact, min, max};
-    };
+    }
 
     template <>
     Napi::Value Constraint::asNapiValue<uint32_t>(Napi::Env env, uint32_t value)
