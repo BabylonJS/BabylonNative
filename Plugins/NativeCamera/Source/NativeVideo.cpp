@@ -21,7 +21,6 @@ namespace Babylon::Plugins
                 InstanceAccessor("videoWidth", &NativeVideo::GetVideoWidth, nullptr),
                 InstanceAccessor("videoHeight", &NativeVideo::GetVideoHeight, nullptr),
                 InstanceAccessor("frontCamera", nullptr, &NativeVideo::SetFrontCamera),
-                InstanceAccessor("isNative", &NativeVideo::IsNative, nullptr),
                 InstanceAccessor("readyState", &NativeVideo::GetReadyState, nullptr),
                 InstanceAccessor("HAVE_CURRENT_DATA", &NativeVideo::GetHaveCurrentData, nullptr),
                 InstanceAccessor("srcObject", &NativeVideo::GetSrcObject, &NativeVideo::SetSrcObject)
@@ -56,11 +55,6 @@ namespace Babylon::Plugins
     void NativeVideo::SetFrontCamera(const Napi::CallbackInfo&, const Napi::Value& value)
     {
         m_frontCamera = value.As<Napi::Boolean>().Value();
-    }
-
-    Napi::Value NativeVideo::IsNative(const Napi::CallbackInfo&)
-    {
-        return Napi::Value::From(Env(), m_isNative);
     }
 
     void NativeVideo::SetAttribute(const Napi::CallbackInfo&)
@@ -177,10 +171,6 @@ namespace Babylon::Plugins
         this->m_width = mediaStream->Width;
         this->m_height = mediaStream->Height;
         this->m_isReady = true;
-        // TODO - This is a hack so that BJS sets the srcObject, which it only does if isNative==false.
-        // flipping it back to true avoids later logic in BJS that is failing to identify the object as an
-        // instance of HTMLVideoElement
-        this->m_isNative = true;
     }
 
     Napi::Value NativeVideo::GetSrcObject(const Napi::CallbackInfo& info) {

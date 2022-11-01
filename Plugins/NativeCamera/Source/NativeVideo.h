@@ -32,7 +32,6 @@ namespace Babylon::Plugins
         void SetFrontCamera(const Napi::CallbackInfo& info, const Napi::Value& value);
         void SetAttribute(const Napi::CallbackInfo&);
         void RemoveAttribute(const Napi::CallbackInfo&);
-        Napi::Value IsNative(const Napi::CallbackInfo&);
         Napi::Value GetReadyState(const Napi::CallbackInfo& info);
         Napi::Value GetHaveCurrentData(const Napi::CallbackInfo& info);
         Napi::Value GetSrcObject(const Napi::CallbackInfo& info);
@@ -48,7 +47,6 @@ namespace Babylon::Plugins
         bool m_frontCamera{};
 
         bool m_IsPlaying{};
-        bool m_isNative{false};
         
         Napi::ObjectReference m_streamObject = Napi::Persistent(Napi::Object::New(Env()));
     };
