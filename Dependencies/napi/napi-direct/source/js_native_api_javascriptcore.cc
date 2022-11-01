@@ -208,8 +208,8 @@ namespace {
         return napi_set_last_error(env, napi_generic_failure);
       }
 
-      JSObjectRef constructor{JSObjectMakeConstructor(env->context, info->_class, CallAsConstructor)};
-      JSObjectRef prototype{JSObjectMake(env->context, info->_prototypeClass, info)};
+      JSObjectRef constructor{JSObjectMakeConstructor(env->context, nullptr, CallAsConstructor)};
+      JSObjectRef prototype{JSObjectMake(env->context, info->_class, info)};
       JSObjectSetPrototype(env->context, prototype, JSObjectGetPrototype(env->context, constructor));
       JSObjectSetPrototype(env->context, constructor, prototype);
       
@@ -229,18 +229,13 @@ namespace {
       , _name{name, (length == NAPI_AUTO_LENGTH ? std::strlen(name) : length)}
       , _cb{cb}
       , _data{data} {
-      JSClassDefinition definition{kJSClassDefinitionEmpty};
-      definition.className = _name.data();
-      _class = JSClassCreate(&definition);
-
-      JSClassDefinition prototypeDefinition{kJSClassDefinitionEmpty};
-      prototypeDefinition.className = _name.data();
-      prototypeDefinition.finalize = Finalize;
-      _prototypeClass = JSClassCreate(&prototypeDefinition);
+      JSClassDefinition classDefinition{kJSClassDefinitionEmpty};
+      classDefinition.className = _name.data();
+      classDefinition.finalize = Finalize;
+      _class = JSClassCreate(&classDefinition);
     }
 
     ~ConstructorInfo() {
-      JSClassRelease(_prototypeClass);
       JSClassRelease(_class);
     }
 
@@ -261,7 +256,7 @@ namespace {
       // Make sure any errors encountered last time we were in N-API are gone.
       napi_clear_last_error(info->_env);
 
-      JSObjectRef instance{JSObjectMake(ctx, info->_class, nullptr)};
+      JSObjectRef instance{JSObjectMake(ctx, nullptr, nullptr)};
       JSObjectSetPrototype(ctx, instance, JSObjectGetPrototype(ctx, constructor));
 
       napi_callback_info__ cbinfo{};
@@ -294,7 +289,6 @@ namespace {
     napi_callback _cb;
     void* _data;
     JSClassRef _class;
-    JSClassRef _prototypeClass;
   };
 
   class FunctionInfo : public NativeInfo {
