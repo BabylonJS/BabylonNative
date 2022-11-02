@@ -196,14 +196,13 @@ namespace Babylon::Plugins
         GET_CAMERA_FUNCTION(ACameraManager_delete)(m_implData->cameraManager);
     }
 
-    arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(
-            std::shared_ptr<CameraDevice> cameraDevice, std::shared_ptr<CameraTrack> track)
+    arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(std::shared_ptr<CameraDevice> cameraDevice, CameraTrack& track)
     {
         if (!m_implData->deviceContext){
             m_implData->deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_implData->env);
         }
 
-        return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, cameraDevice, track]()
+        return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, &cameraDevice, &track]()
         {
             // Get the phone's current rotation so we can determine if the camera image needs to be rotated based on the sensor's natural orientation
             int phoneRotation{ GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation() * 90 };
@@ -223,8 +222,8 @@ namespace Babylon::Plugins
 
             // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
             // of the video should be swapped
-            m_implData->cameraDimensions.width = !sensorIsPortrait ? track->width : track->height;
-            m_implData->cameraDimensions.height = !sensorIsPortrait ? track->height : track->width;
+            m_implData->cameraDimensions.width = !sensorIsPortrait ? track.width : track.height;
+            m_implData->cameraDimensions.height = !sensorIsPortrait ? track.height : track.width;
 
             // Check if there is an already available context for this thread
             EGLContext currentContext = eglGetCurrentContext();
@@ -290,7 +289,7 @@ namespace Babylon::Plugins
 
                 // Create the surface and surface texture that will receive the camera preview
                 m_implData->surfaceTexture.InitWithTexture(m_implData->cameraOESTextureId);
-                m_implData->surfaceTexture.setDefaultBufferSize(track->width, track->height);
+                m_implData->surfaceTexture.setDefaultBufferSize(track.width, track.height);
                 android::view::Surface surface(m_implData->surfaceTexture);
 
                 // open the front or back camera
@@ -375,11 +374,9 @@ namespace Babylon::Plugins
                     continue;
                 }
 
-                auto cameraResolution{ std::make_shared<CameraTrack>() };
-                cameraResolution->width = width;
-                cameraResolution->height = height;
-
-                cameraDevice->supportedResolutions.push_back(cameraResolution);
+                auto& resolution {cameraDevice->supportedResolutions.emplace_back(std::make_unique<CameraTrack>())};
+                resolution->width = width;
+                resolution->height = height;
             }
 
             // Get camera hardware info
@@ -406,14 +403,15 @@ namespace Babylon::Plugins
             cameraDevice->implData->sensorRotation = sensorOrientation;
             cameraDevice->implData->facingUser = facing == API24::ACAMERA_LENS_FACING_FRONT;
 
-            cameraDevice->capabilities.push_back(std::make_shared<CameraCapabilityTemplate<std::string>>(
+            cameraDevice->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<std::string>>
+            (
                 CameraCapability::Capability::FacingMode,
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment",
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment",
-                facing == API24::ACAMERA_LENS_FACING_FRONT ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"})
-            );
+                facing == API24::ACAMERA_LENS_FACING_FRONT ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"}
+            ));
 
-            cameraDevice->capabilities.push_back( std::make_shared<CameraCapabilityTemplate<bool>>
+            cameraDevice->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<bool>>
             (
                 CameraCapability::Capability::Torch,
                 false,
@@ -432,24 +430,24 @@ namespace Babylon::Plugins
                 }
             ));
 
-            cameraDevice->capabilities.push_back( std::make_shared<CameraCapabilityTemplate<double>>
+            cameraDevice->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<double>>
             (
-                    CameraCapability::Capability::Zoom,
-                            zoomRatio,
-                            1.0, // Set the default target zoom to 1.0 (no zoom)
-                            std::vector<double>{minZoomRatio, maxZoomRatio},
-                            [this](double newValue)
-                            {
-                                float newZoomRatio{ static_cast<float>(newValue) };
-                                GET_CAMERA_FUNCTION(ACaptureRequest_setEntry_float)(m_implData->request, API24::ACAMERA_CONTROL_ZOOM_RATIO, 1, &newZoomRatio);
+                CameraCapability::Capability::Zoom,
+                zoomRatio,
+                1.0, // Set the default target zoom to 1.0 (no zoom)
+                std::vector<double>{minZoomRatio, maxZoomRatio},
+                [this](double newValue)
+                {
+                    float newZoomRatio{ static_cast<float>(newValue) };
+                    GET_CAMERA_FUNCTION(ACaptureRequest_setEntry_float)(m_implData->request, API24::ACAMERA_CONTROL_ZOOM_RATIO, 1, &newZoomRatio);
 
-                                // Update the camera request
-                                GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(m_implData->textureSession, &captureCallbacks, 1, &m_implData->request, nullptr);
-                                return true;
-                            }
+                    // Update the camera request
+                    GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(m_implData->textureSession, &captureCallbacks, 1, &m_implData->request, nullptr);
+                    return true;
+                }
             ));
 
-            cameraDevices.push_back(cameraDevice);
+            cameraDevices.emplace_back(cameraDevice);
         }
 
         GET_CAMERA_FUNCTION(ACameraManager_deleteCameraIdList)(cameraIds);

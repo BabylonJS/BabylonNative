@@ -117,11 +117,14 @@ namespace Babylon
             auto promise{deferred.Promise()};
 
             // Extract the video constraints as we only support video for the time being
-            Napi::Object constraints{ info[0].As<Napi::Object>() };
-            auto videoConstraints{ constraints.Get("video").As<Napi::Object>() };
-            if (videoConstraints.IsUndefined())
+            auto videoConstraints{ Napi::Object::New(env) };
+            if (info.Length() > 0 && info[0].IsObject())
             {
-                videoConstraints = Napi::Object::New(env);
+                Napi::Object constraints{ info[0].As<Napi::Object>() };
+                if (constraints.Get("video").IsObject())
+                {
+                    videoConstraints = constraints.Get("video").As<Napi::Object>();
+                }
             }
 
             auto runtimeScheduler{ std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env)) };

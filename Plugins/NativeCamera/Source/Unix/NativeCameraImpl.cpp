@@ -21,7 +21,7 @@ namespace Babylon::Plugins
 
     arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(
             std::shared_ptr<CameraDevice> /*cameraDevice*/,
-            std::shared_ptr<CameraTrack> /*track*/)
+            CameraTrack& /*track*/)
     {
         throw std::runtime_error{ "HW Camera not implemented for this platform." };
     }

@@ -33,14 +33,14 @@ namespace Babylon::Plugins
         
     private:
         arcana::task<void, std::exception_ptr> ApplyInitialConstraints(Napi::Env env, Napi::Object constraints);
-        std::pair<std::shared_ptr<CameraDevice>, std::shared_ptr<CameraTrack>> FindBestCameraStream(Napi::Object constraints);
+        std::pair<std::shared_ptr<CameraDevice>, CameraTrack*> FindBestCameraStream(Napi::Object constraints);
         bool UpdateConstraints(Napi::Env env, Napi::Object constraints);
         
-        std::shared_ptr<Plugins::Camera::Impl> m_cameraImpl;
+        std::unique_ptr<Plugins::Camera::Impl> m_cameraImpl;
         JsRuntimeScheduler m_runtimeScheduler;
         
         std::shared_ptr<CameraDevice> m_cameraDevice{nullptr};
-        std::shared_ptr<CameraTrack> m_cameraResolution{nullptr};
+        CameraTrack* m_cameraResolution{nullptr};
         
         Napi::ObjectReference m_currentConstraints{};
     };

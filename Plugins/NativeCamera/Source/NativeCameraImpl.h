@@ -23,8 +23,8 @@ namespace Babylon::Plugins
     {
         ~CameraDevice();
 
-        std::vector<std::shared_ptr<CameraTrack>> supportedResolutions;
-        std::vector<std::shared_ptr<CameraCapability>> capabilities{};
+        std::vector<std::unique_ptr<CameraTrack>> supportedResolutions;
+        std::vector<std::unique_ptr<CameraCapability>> capabilities{};
         
         struct ImplData;
         std::unique_ptr<ImplData> implData;
@@ -42,7 +42,7 @@ namespace Babylon::Plugins
 
         Impl(Napi::Env env, bool overrideCameraTexture);
         ~Impl();
-        arcana::task<CameraDimensions, std::exception_ptr> Open(std::shared_ptr<CameraDevice> cameraDevice, std::shared_ptr<CameraTrack> track);
+        arcana::task<CameraDimensions, std::exception_ptr> Open(std::shared_ptr<CameraDevice> cameraDevice, CameraTrack& track);
 
         std::vector<std::shared_ptr<CameraDevice>> GetCameraDevices();
 
