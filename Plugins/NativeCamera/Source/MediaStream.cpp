@@ -65,7 +65,7 @@ namespace Babylon::Plugins
         auto promise{deferred.Promise()};
 
         // Apply the constraints to the existing device
-        if(!UpdateConstraints(env, constraints))
+        if (!UpdateConstraints(env, constraints))
         {
             // Setting the constraint to the capability failed
             deferred.Reject(Napi::Error::New(env, std::runtime_error{"OverconstrainedError: Unable to match constraints to a supported camera configuration."}).Value());
@@ -104,7 +104,7 @@ namespace Babylon::Plugins
             this->Width = cameraDimensions.width;
             this->Height = cameraDimensions.height;
             
-            if(!UpdateConstraints(env, constraintsRef->Value()))
+            if (!UpdateConstraints(env, constraintsRef->Value()))
             {
                 // Setting the constraint to the capability failed
                 throw std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."};

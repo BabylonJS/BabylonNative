@@ -318,7 +318,6 @@ namespace Babylon::Plugins
             ));
 #endif
 
-
             cameraDevices.emplace_back(cameraDevice);
 
             if (foundExactMatch)
@@ -329,7 +328,6 @@ namespace Babylon::Plugins
         
         return cameraDevices;
     }
-
 
     arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(std::shared_ptr<CameraDevice> cameraDevice, CameraTrack& resolution)
     {

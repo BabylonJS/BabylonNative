@@ -63,7 +63,7 @@ namespace Babylon::Plugins
                     capability.Set(i, Constraint::asNapiValue<T>(env, m_acceptedValues[i]));
                 }
 
-                target.Set(getName(),capability);
+                target.Set(getName(), capability);
                 return;
             }
             case ConstraintType::Range:
@@ -72,7 +72,7 @@ namespace Babylon::Plugins
                 capability.Set("min", Constraint::asNapiValue<T>(env, m_acceptedValues[0]));
                 capability.Set("max", Constraint::asNapiValue<T>(env, m_acceptedValues[1]));
 
-                target.Set(getName(),capability);
+                target.Set(getName(), capability);
                 return;
             }
             default:
@@ -100,7 +100,7 @@ namespace Babylon::Plugins
 
         Constraint::Constraint<T> constraint{ Constraint::parseConstraint<T>(constraintValue) };
 
-        switch(getConstraintType())
+        switch (getConstraintType())
         {
             case ConstraintType::Sequence:
             {
@@ -134,7 +134,6 @@ namespace Babylon::Plugins
                 {
                     // The exact value has highest priority the constraint is either fully satisfied or unsatisfied based on it
                     return constraint.exact.value() >= minAccepted && constraint.exact.value() <= maxAccepted ? CameraCapability::MeetsConstraint::FullySatisfied : CameraCapability::MeetsConstraint::Unsatisfied;
-
                 }
                 if ((constraint.min.has_value() && constraint.min.value() < minAccepted))
                 {
