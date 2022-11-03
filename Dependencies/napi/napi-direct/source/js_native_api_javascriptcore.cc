@@ -487,11 +487,7 @@ namespace {
       JSObjectSetPrototype(env->context, prototype, JSObjectGetPrototype(env->context, ToJSObject(env, object)));
       JSObjectSetPrototype(env->context, ToJSObject(env, object), prototype);
 
-      info->AddFinalizer([finalizer = std::move(finalizer)](ReferenceInfo* info) {
-          finalizer(info);
-          delete info;
-      });
-
+      info->AddFinalizer(finalizer);
       return napi_ok;
     }
 
