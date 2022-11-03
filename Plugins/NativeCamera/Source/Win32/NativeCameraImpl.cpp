@@ -4,6 +4,18 @@
 
 namespace Babylon::Plugins
 {
+    struct CameraTrack::Impl
+    {
+        int32_t width;
+        int32_t height;
+    };
+
+    struct CameraDevice::Impl
+    {
+        std::vector<CameraTrack> supportedResolutions{};
+        std::vector<std::unique_ptr<CameraCapability>> capabilities{};
+    };
+
     struct Camera::Impl::ImplData{};
 
     Camera::Impl::Impl(Napi::Env /*env*/, bool /*overrideCameraTexture*/)
@@ -14,14 +26,19 @@ namespace Babylon::Plugins
     {
     }
 
-    std::vector<std::shared_ptr<CameraDevice>> Camera::Impl::GetCameraDevices()
+    std::vector<CameraDevice> Camera::Impl::GetCameraDevices()
     {
         throw std::runtime_error{ "HW Camera not implemented for this platform." };
     }
 
     arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(
-            std::shared_ptr<CameraDevice> /*cameraDevice*/,
-            CameraTrack& /*track*/)
+            CameraDevice /*cameraDevice*/,
+            const CameraTrack* /*track*/)
+    {
+        throw std::runtime_error{ "HW Camera not implemented for this platform." };
+    }
+
+    const CameraDevice* Camera::Impl::GetOpenedCamera()
     {
         throw std::runtime_error{ "HW Camera not implemented for this platform." };
     }
@@ -41,3 +58,5 @@ namespace Babylon::Plugins
         throw std::runtime_error{ "HW Camera not implemented for this platform." };
     }
 }
+
+#include "../NativeCameraImplShared.h"
