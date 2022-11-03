@@ -8,26 +8,44 @@
 
 namespace Babylon::Plugins
 {
-    struct CameraTrack final
+    class CameraTrack final
     {
+    public:
         ~CameraTrack();
+
+        // Move semantics
+        CameraTrack(CameraTrack&&) noexcept;
+        CameraTrack& operator=(CameraTrack&&) noexcept;
         
-        int32_t width;
-        int32_t height;
+        int32_t Width() const;
+        int32_t Height() const;
         
-        struct ImplData;
-        std::unique_ptr<ImplData> implData;
+    private:
+        struct Impl;
+        CameraTrack(std::unique_ptr<Impl> impl);
+        std::unique_ptr<Impl> m_impl;
+        
+        friend class Camera::Impl;
     };
 
-    struct CameraDevice final
+    class CameraDevice final
     {
+    public:
         ~CameraDevice();
-
-        std::vector<std::unique_ptr<CameraTrack>> supportedResolutions;
-        std::vector<std::unique_ptr<CameraCapability>> capabilities{};
         
-        struct ImplData;
-        std::unique_ptr<ImplData> implData;
+        // Move semantics
+        CameraDevice(CameraDevice&&) noexcept;
+        CameraDevice& operator=(CameraDevice&&) noexcept;
+                
+        const std::vector<CameraTrack>& SupportedResolutions() const;
+        const std::vector<std::unique_ptr<CameraCapability>>& Capabilities() const;
+
+    private:
+        struct Impl;
+        CameraDevice(std::unique_ptr<Impl> impl);
+        std::unique_ptr<Impl> m_impl;
+        
+        friend class Camera::Impl;
     };
 
     class Camera::Impl final : public std::enable_shared_from_this<Camera::Impl>
@@ -42,9 +60,9 @@ namespace Babylon::Plugins
 
         Impl(Napi::Env env, bool overrideCameraTexture);
         ~Impl();
-        arcana::task<CameraDimensions, std::exception_ptr> Open(std::shared_ptr<CameraDevice> cameraDevice, CameraTrack& track);
-
-        std::vector<std::shared_ptr<CameraDevice>> GetCameraDevices();
+        arcana::task<CameraDimensions, std::exception_ptr> Open(CameraDevice cameraDevice, const CameraTrack* track);
+        const CameraDevice* GetOpenedCamera();
+        std::vector<CameraDevice> GetCameraDevices();
 
         void SetTextureOverride(void* texturePtr);
         void UpdateCameraTexture(bgfx::TextureHandle textureHandle);

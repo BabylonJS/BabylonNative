@@ -24,17 +24,19 @@ using namespace android::global;
 
 namespace Babylon::Plugins
 {
-    struct CameraTrack::ImplData{};
+    struct CameraTrack::Impl
+    {
+        int32_t width;
+        int32_t height;
+    };
 
-    CameraTrack::~CameraTrack() = default;
-
-    struct CameraDevice::ImplData {
+    struct CameraDevice::Impl {
+        std::vector<CameraTrack> supportedResolutions{};
+        std::vector<std::unique_ptr<CameraCapability>> capabilities{};
         std::string cameraID;
         int32_t sensorRotation;
         bool facingUser;
     };
-
-    CameraDevice::~CameraDevice() = default;
 
     struct Camera::Impl::ImplData {
         Graphics::DeviceContext* deviceContext;
@@ -44,8 +46,10 @@ namespace Babylon::Plugins
 
         CameraDimensions cameraDimensions{};
 
+
+        CameraDevice cameraDevice{nullptr};
         API24::ACameraManager* cameraManager{};
-        API24::ACameraDevice* cameraDevice{};
+        API24::ACameraDevice* aCameraDevice{};
         API24::ACameraOutputTarget* textureTarget{};
         API24::ACaptureRequest* request{};
         ANativeWindow* textureWindow{};
@@ -67,7 +71,10 @@ namespace Babylon::Plugins
         ImplData(Napi::Env env, bool overrideCameraTexture)
             : deviceContext{nullptr}
             , env{env}
-            , overrideCameraTexture{overrideCameraTexture} {};
+            , overrideCameraTexture{overrideCameraTexture}
+            , cameraManager{API_LEVEL < 24 || overrideCameraTexture ? nullptr : GET_CAMERA_FUNCTION(ACameraManager_create)()}
+        {
+        }
 
         GLuint GenerateOESTexture() {
             GLuint oesTexture;
@@ -184,11 +191,6 @@ namespace Babylon::Plugins
         {
             throw std::runtime_error{"Android Platform level < 24. Only camera texture override is available."};
         }
-
-        if (!overrideCameraTexture)
-        {
-            m_implData->cameraManager = GET_CAMERA_FUNCTION(ACameraManager_create)();
-        }
     }
 
     Camera::Impl::~Impl()
@@ -196,13 +198,15 @@ namespace Babylon::Plugins
         GET_CAMERA_FUNCTION(ACameraManager_delete)(m_implData->cameraManager);
     }
 
-    arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(std::shared_ptr<CameraDevice> cameraDevice, CameraTrack& track)
+    arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(CameraDevice cameraDevice, const CameraTrack* track)
     {
         if (!m_implData->deviceContext){
             m_implData->deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_implData->env);
         }
 
-        return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, &cameraDevice, &track]()
+        m_implData->cameraDevice = std::move(cameraDevice);
+
+        return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, track]()
         {
             // Get the phone's current rotation so we can determine if the camera image needs to be rotated based on the sensor's natural orientation
             int phoneRotation{ GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation() * 90 };
@@ -210,9 +214,9 @@ namespace Babylon::Plugins
             // The sensor rotation dictates the orientation of the camera when the phone is in it's default orientation
             // Subtracting the phone's rotation from the camera's rotation will give us the current orientation
             // of the sensor. Then add 360 and modulus 360 to ensure we're always talking about positive degrees.
-            int sensorRotationDiff{(cameraDevice->implData->sensorRotation - phoneRotation + 360) % 360};
+            int sensorRotationDiff{(m_implData->cameraDevice.m_impl->sensorRotation - phoneRotation + 360) % 360};
             bool sensorIsPortrait{sensorRotationDiff == 90 || sensorRotationDiff == 270};
-            if (cameraDevice->implData->facingUser && !sensorIsPortrait && !m_implData->overrideCameraTexture)
+            if (m_implData->cameraDevice.m_impl->facingUser && !sensorIsPortrait && !m_implData->overrideCameraTexture)
             {
                 // Compensate for the front facing camera being naturally mirrored. In the portrait orientation
                 // the mirrored behavior matches the browser, but in landscape it would result in the image rendering
@@ -222,8 +226,8 @@ namespace Babylon::Plugins
 
             // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
             // of the video should be swapped
-            m_implData->cameraDimensions.width = !sensorIsPortrait ? track.width : track.height;
-            m_implData->cameraDimensions.height = !sensorIsPortrait ? track.height : track.width;
+            m_implData->cameraDimensions.width = !sensorIsPortrait ? track->Width() : track->Height();
+            m_implData->cameraDimensions.height = !sensorIsPortrait ? track->Height() : track->Width();
 
             // Check if there is an already available context for this thread
             EGLContext currentContext = eglGetCurrentContext();
@@ -289,19 +293,19 @@ namespace Babylon::Plugins
 
                 // Create the surface and surface texture that will receive the camera preview
                 m_implData->surfaceTexture.InitWithTexture(m_implData->cameraOESTextureId);
-                m_implData->surfaceTexture.setDefaultBufferSize(track.width, track.height);
+                m_implData->surfaceTexture.setDefaultBufferSize(track->Width(), track->Height());
                 android::view::Surface surface(m_implData->surfaceTexture);
 
                 // open the front or back camera
-                GET_CAMERA_FUNCTION(ACameraManager_openCamera)(m_implData->cameraManager, cameraDevice->implData->cameraID.c_str(),
+                GET_CAMERA_FUNCTION(ACameraManager_openCamera)(m_implData->cameraManager, m_implData->cameraDevice.m_impl->cameraID.c_str(),
                                                                &cameraDeviceCallbacks,
-                                                               &m_implData->cameraDevice);
+                                                               &m_implData->aCameraDevice);
 
                 m_implData->textureWindow = reinterpret_cast<ANativeWindow *>(ANativeWindow_fromSurface(
                         GetEnvForCurrentThread(), surface));
 
                 // Prepare request for texture target
-                GET_CAMERA_FUNCTION(ACameraDevice_createCaptureRequest)(m_implData->cameraDevice,
+                GET_CAMERA_FUNCTION(ACameraDevice_createCaptureRequest)(m_implData->aCameraDevice,
                                                                         API24::TEMPLATE_PREVIEW,
                                                                         &m_implData->request);
 
@@ -317,7 +321,7 @@ namespace Babylon::Plugins
                 GET_CAMERA_FUNCTION(ACaptureRequest_addTarget)(m_implData->request, m_implData->textureTarget);
 
                 // Create the session
-                GET_CAMERA_FUNCTION(ACameraDevice_createCaptureSession)(m_implData->cameraDevice, m_implData->outputs,
+                GET_CAMERA_FUNCTION(ACameraDevice_createCaptureSession)(m_implData->aCameraDevice, m_implData->outputs,
                                                                         &sessionStateCallbacks,
                                                                         &m_implData->textureSession);
 
@@ -337,9 +341,14 @@ namespace Babylon::Plugins
         });
     }
 
-    std::vector<std::shared_ptr<CameraDevice>> Camera::Impl::GetCameraDevices()
+    const CameraDevice* Camera::Impl::GetOpenedCamera()
     {
-        std::vector<std::shared_ptr<CameraDevice>> cameraDevices{};
+        return m_implData->cameraDevice.m_impl == nullptr ? nullptr : &m_implData->cameraDevice;
+    }
+
+    std::vector<CameraDevice> Camera::Impl::GetCameraDevices()
+    {
+        std::vector<CameraDevice> cameraDevices{};
 
         // Get the list of available cameras
         API24::ACameraIdList *cameraIds = nullptr;
@@ -348,7 +357,7 @@ namespace Babylon::Plugins
         for (int i = 0; i < cameraIds->numCameras; ++i)
         {
             const char* id = cameraIds->cameraIds[i];
-            auto cameraDevice{ std::make_shared<CameraDevice>()};
+            auto cameraDeviceImpl{ std::make_unique<CameraDevice::Impl>() };
 
             API24::ACameraMetadata *metadataObj;
             GET_CAMERA_FUNCTION(ACameraManager_getCameraCharacteristics)(m_implData->cameraManager, id, &metadataObj);
@@ -374,9 +383,10 @@ namespace Babylon::Plugins
                     continue;
                 }
 
-                auto& resolution {cameraDevice->supportedResolutions.emplace_back(std::make_unique<CameraTrack>())};
-                resolution->width = width;
-                resolution->height = height;
+                auto cameraTrackImpl{ std::make_unique<CameraTrack::Impl>() };
+                cameraTrackImpl->width = width;
+                cameraTrackImpl->height = height;
+                cameraDeviceImpl->supportedResolutions.emplace_back(CameraTrack(std::move(cameraTrackImpl)));
             }
 
             // Get camera hardware info
@@ -397,13 +407,13 @@ namespace Babylon::Plugins
             float minZoomRatio{ metaDataEntry.data.f[0] };
             float maxZoomRatio{ metaDataEntry.data.f[1] };
 
-            // update the cameraDevice information
-            cameraDevice->implData = std::make_unique<CameraDevice::ImplData>();
-            cameraDevice->implData->cameraID = id;
-            cameraDevice->implData->sensorRotation = sensorOrientation;
-            cameraDevice->implData->facingUser = facing == API24::ACAMERA_LENS_FACING_FRONT;
+            // Update the cameraDevice information
+            cameraDeviceImpl->cameraID = id;
+            cameraDeviceImpl->sensorRotation = sensorOrientation;
+            cameraDeviceImpl->facingUser = facing == API24::ACAMERA_LENS_FACING_FRONT;
 
-            cameraDevice->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<std::string>>
+            // Create the capabilities
+            cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<std::string>>
             (
                 CameraCapability::Capability::FacingMode,
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment",
@@ -411,7 +421,7 @@ namespace Babylon::Plugins
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"}
             ));
 
-            cameraDevice->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<bool>>
+            cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<bool>>
             (
                 CameraCapability::Capability::Torch,
                 false,
@@ -430,7 +440,7 @@ namespace Babylon::Plugins
                 }
             ));
 
-            cameraDevice->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<double>>
+            cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<double>>
             (
                 CameraCapability::Capability::Zoom,
                 zoomRatio,
@@ -447,7 +457,7 @@ namespace Babylon::Plugins
                 }
             ));
 
-            cameraDevices.emplace_back(cameraDevice);
+            cameraDevices.emplace_back(CameraDevice(std::move(cameraDeviceImpl)));
         }
 
         GET_CAMERA_FUNCTION(ACameraManager_deleteCameraIdList)(cameraIds);
@@ -525,7 +535,7 @@ namespace Babylon::Plugins
             GET_CAMERA_FUNCTION(ACaptureSessionOutputContainer_free)(m_implData->outputs);
             GET_CAMERA_FUNCTION(ACaptureSessionOutput_free)(m_implData->output);
 
-            GET_CAMERA_FUNCTION(ACameraDevice_close)(m_implData->cameraDevice);
+            GET_CAMERA_FUNCTION(ACameraDevice_close)(m_implData->aCameraDevice);
 
             // Capture request for SurfaceTexture
             ANativeWindow_release(m_implData->textureWindow);
@@ -538,3 +548,5 @@ namespace Babylon::Plugins
         }
     }
 }
+
+#include "../NativeCameraImplShared.h"

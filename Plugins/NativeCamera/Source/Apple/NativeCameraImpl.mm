@@ -133,20 +133,20 @@ namespace {
 
 namespace Babylon::Plugins
 {
-    struct CameraTrack::ImplData
+    struct CameraTrack::Impl
     {
+        int32_t width;
+        int32_t height;
         AVCaptureDeviceFormat* avDeviceFormat;
         uint32_t pixelFormat;
     };
 
-    CameraTrack::~CameraTrack() = default;
-
-    struct CameraDevice::ImplData
+    struct CameraDevice::Impl
     {
+        std::vector<CameraTrack> supportedResolutions{};
+        std::vector<std::unique_ptr<CameraCapability>> capabilities{};
         AVCaptureDevice* avDevice;
     };
-
-    CameraDevice::~CameraDevice() = default;
 
     struct Camera::Impl::ImplData
     {
@@ -165,7 +165,7 @@ namespace Babylon::Plugins
         CameraDimensions cameraDimensions{};
 
         CameraTextureDelegate* cameraTextureDelegate{};
-        AVCaptureDevice* avCaptureDevice{};
+        CameraDevice cameraDevice{nullptr};
         AVCaptureSession* avCaptureSession{};
         CVMetalTextureCacheRef textureCache{};
         id<MTLTexture> textureRGBA{};
@@ -187,9 +187,14 @@ namespace Babylon::Plugins
     {
     }
 
-    std::vector<std::shared_ptr<CameraDevice>> Camera::Impl::GetCameraDevices()
+    const CameraDevice* Camera::Impl::GetOpenedCamera()
     {
-        std::vector<std::shared_ptr<CameraDevice>> cameraDevices{};
+        return m_implData->cameraDevice.m_impl == nullptr ? nullptr : &m_implData->cameraDevice;
+    }
+
+    std::vector<CameraDevice> Camera::Impl::GetCameraDevices()
+    {
+        std::vector<CameraDevice> cameraDevices{};
         
         NSArray* deviceTypes{@[
             // Use the main camera on the device which is best for general use and will typically be 1x optical zoom and the highest resolution.
@@ -221,7 +226,7 @@ namespace Babylon::Plugins
         
         for (AVCaptureDevice* device in discoverySession.devices)
         {
-            auto cameraDevice{ std::make_shared<CameraDevice>()};
+            auto cameraDeviceImpl{ std::make_unique<CameraDevice::Impl>() };
             
             for (AVCaptureDeviceFormat* format in device.formats)
             {
@@ -235,20 +240,19 @@ namespace Babylon::Plugins
                     continue;
                 }
                 
+                auto trackImpl = std::make_unique<CameraTrack::Impl>();
+                trackImpl->width = dimensions.width;
+                trackImpl->height = dimensions.height;
+                trackImpl->avDeviceFormat = format;
+                trackImpl->pixelFormat = pixelFormat;
                 
-                auto& cameraTrack{ cameraDevice->supportedResolutions.emplace_back(std::make_unique<CameraTrack>()) };
-                cameraTrack->width =  dimensions.width;
-                cameraTrack->height = dimensions.height;
-                cameraTrack->implData = std::make_unique<CameraTrack::ImplData>();
-                cameraTrack->implData->avDeviceFormat = format;
-                cameraTrack->implData->pixelFormat = pixelFormat;
+                cameraDeviceImpl->supportedResolutions.emplace_back(CameraTrack(std::move(trackImpl)));
             }
                         
             // update the cameraDevice information
-            cameraDevice->implData = std::make_unique<CameraDevice::ImplData>();
-            cameraDevice->implData->avDevice = device;
+            cameraDeviceImpl->avDevice = device;
 
-            cameraDevice->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<std::string>>
+            cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<std::string>>
             (
                 CameraCapability::Capability::FacingMode,
                 device.position == AVCaptureDevicePositionFront ? "user" : "environment",
@@ -256,19 +260,19 @@ namespace Babylon::Plugins
                 device.position == AVCaptureDevicePositionFront ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"}
             ));
             
-            cameraDevice->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<bool>>
+            cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<bool>>
             (
                 CameraCapability::Capability::Torch,
                 false,
                 false,
                 device.isTorchAvailable ? std::vector<bool>{false, true} : std::vector<bool>{false},
-                [this](bool newValue)
+                [device](bool newValue)
                 {
                     NSError* error{nil};
                     AVCaptureTorchMode torchMode{ newValue ? AVCaptureTorchModeOn : AVCaptureTorchModeOff };
-                    [m_implData->avCaptureDevice lockForConfiguration:&error];
-                    [m_implData->avCaptureDevice setTorchMode:torchMode];
-                    [m_implData->avCaptureDevice unlockForConfiguration];
+                    [device lockForConfiguration:&error];
+                    [device setTorchMode:torchMode];
+                    [device unlockForConfiguration];
                     if (error != nil)
                     {
                         return false;
@@ -297,18 +301,18 @@ namespace Babylon::Plugins
                 zoomFactorScale = 2.0;
             }
             
-            cameraDevice->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<double>>
+            cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<double>>
             (
                 CameraCapability::Capability::Zoom,
-                1.0 * zoomFactorScale, // The device always opens at 1.0 which needs to be adjusted for the zoomFactorScale
+                1.0 * zoomFactorScale, // Translate the starting zoom value from the iOS 1.0+ scale to our 0.0+ scale.
                 1.0, // Set the default target to 1.0 (regardless of zoomFactorScale)
                 std::vector<double>{device.minAvailableVideoZoomFactor * zoomFactorScale, device.maxAvailableVideoZoomFactor * zoomFactorScale},
-                [this, zoomFactorScale](double newValue)
+                [device, zoomFactorScale](double newValue)
                 {
                     NSError* error{nil};
-                    [m_implData->avCaptureDevice lockForConfiguration:&error];
-                    [m_implData->avCaptureDevice setVideoZoomFactor:newValue / zoomFactorScale];
-                    [m_implData->avCaptureDevice unlockForConfiguration];
+                    [device lockForConfiguration:&error];
+                    [device setVideoZoomFactor:newValue / zoomFactorScale];
+                    [device unlockForConfiguration];
                     if (error != nil)
                     {
                         return false;
@@ -318,7 +322,7 @@ namespace Babylon::Plugins
             ));
 #endif
 
-            cameraDevices.emplace_back(cameraDevice);
+            cameraDevices.emplace_back(CameraDevice(std::move(cameraDeviceImpl)));
 
             if (foundExactMatch)
             {
@@ -329,7 +333,7 @@ namespace Babylon::Plugins
         return cameraDevices;
     }
 
-    arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(std::shared_ptr<CameraDevice> cameraDevice, CameraTrack& resolution)
+    arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(CameraDevice cameraDevice, const CameraTrack* resolution)
     {
         NSError *error{nil};
 
@@ -367,32 +371,20 @@ namespace Babylon::Plugins
         CVMetalTextureCacheCreate(nullptr, nullptr, m_implData->metalDevice, nullptr, &m_implData->textureCache);
         m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData->textureCache];
 
-#if (TARGET_OS_IPHONE)
         // Lock camera device and set up camera format. If there a problem initialising the camera it will give an error.
-        [cameraDevice->implData->avDevice lockForConfiguration:&error];
+        [cameraDevice.m_impl->avDevice lockForConfiguration:&error];
         if (error != nil)
         {
             return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"Failed to lock camera"}));
         }
 
-        [cameraDevice->implData->avDevice setActiveFormat:resolution.implData->avDeviceFormat];
-        AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:cameraDevice->implData->avDevice error:&error]};
-        [cameraDevice->implData->avDevice unlockForConfiguration];
+        [cameraDevice.m_impl->avDevice setActiveFormat:resolution->m_impl->avDeviceFormat];
+        AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:cameraDevice.m_impl->avDevice error:&error]};
+        [cameraDevice.m_impl->avDevice unlockForConfiguration];
 
         // Capture the format dimensions.
-        CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(resolution.implData->avDeviceFormat.formatDescription)};
+        CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(resolution->m_impl->avDeviceFormat.formatDescription)};
         CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
-#else
-        AVCaptureDevice* captureDevice{[AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo]};
-        AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:captureDevice error:&error]};
-        CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(resolution->implData->avDeviceFormat.formatDescription)};
-        CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
-        uint32_t devicePixelFormat{static_cast<uint32_t>(CMFormatDescriptionGetMediaSubType(videoFormatRef))};
-        if (!isPixelFormatSupported(devicePixelFormat))
-        {
-            return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."}));
-        }
-#endif
 
         Camera::Impl::CameraDimensions cameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
 
@@ -409,39 +401,40 @@ namespace Babylon::Plugins
             return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"}));
         }
         
-        m_implData->avCaptureDevice = cameraDevice->implData->avDevice;
+        // Take ownership of the cameraDevice
+        m_implData->cameraDevice = std::move(cameraDevice);
 
         // Kick off camera session on a background thread.
-        return arcana::make_task(m_implData->cameraSessionDispatcher, arcana::cancellation::none(), [this, input, &resolution, cameraDimensions]() mutable {
-            if (this->m_implData->avCaptureSession == nil) {
-                this->m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
+        return arcana::make_task(m_implData->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this(), pixelFormat = resolution->m_impl->pixelFormat, input, cameraDimensions]() mutable {
+            if (implObj->m_implData->avCaptureSession == nil) {
+                implObj->m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
             } else {
-                for (AVCaptureInput* input in [this->m_implData->avCaptureSession inputs]) {
-                    [this->m_implData->avCaptureSession removeInput: input];
+                for (AVCaptureInput* input in [implObj->m_implData->avCaptureSession inputs]) {
+                    [implObj->m_implData->avCaptureSession removeInput: input];
                 }
 
-                for (AVCaptureOutput* output in [this->m_implData->avCaptureSession outputs]) {
-                    [this->m_implData->avCaptureSession removeOutput: output];
+                for (AVCaptureOutput* output in [implObj->m_implData->avCaptureSession outputs]) {
+                    [implObj->m_implData->avCaptureSession removeOutput: output];
                 }
             }
 
 #if (TARGET_OS_IPHONE)
-            [this->m_implData->avCaptureSession setSessionPreset:AVCaptureSessionPresetInputPriority];
+            [implObj->m_implData->avCaptureSession setSessionPreset:AVCaptureSessionPresetInputPriority];
 #endif
 
             // Add camera input source to the capture session.
-            [this->m_implData->avCaptureSession addInput:input];
+            [implObj->m_implData->avCaptureSession addInput:input];
 
             // Create the camera buffer, and set up camera texture delegate to capture frames.
             dispatch_queue_t sampleBufferQueue{dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL)};
             AVCaptureVideoDataOutput* dataOutput{[[AVCaptureVideoDataOutput alloc] init]};
             [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
-            [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(resolution.implData->pixelFormat)}];
-            [dataOutput setSampleBufferDelegate:this->m_implData->cameraTextureDelegate queue:sampleBufferQueue];
-            [this->m_implData->avCaptureSession addOutput:dataOutput];
+            [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(pixelFormat)}];
+            [dataOutput setSampleBufferDelegate:implObj->m_implData->cameraTextureDelegate queue:sampleBufferQueue];
+            [implObj->m_implData->avCaptureSession addOutput:dataOutput];
 
             // Actually start the camera session.
-            [this->m_implData->avCaptureSession startRunning];
+            [implObj->m_implData->avCaptureSession startRunning];
             return cameraDimensions;
         });
     }
@@ -750,3 +743,5 @@ namespace Babylon::Plugins
 }
 
 @end
+
+#include "../NativeCameraImplShared.h"

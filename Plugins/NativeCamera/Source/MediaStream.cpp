@@ -80,11 +80,9 @@ namespace Babylon::Plugins
     {
         // A camera device hasn't been selected yet. Find the best device and open the stream
         auto bestCamera = FindBestCameraStream(constraints);
-        m_cameraDevice = bestCamera.first;
-        m_cameraResolution = bestCamera.second;
 
         // If m_cameraDevice is still null that means a camera device could not be found that meets the constraints
-        if (m_cameraDevice == nullptr)
+        if (!bestCamera.has_value())
         {
             // If no device could be fount to satisfy the constraints throw a "ConstraintError" to match the browser implementation
             return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."}));
@@ -93,7 +91,7 @@ namespace Babylon::Plugins
         // Create a persistent ref to the constraints object so it isn't destructed during our async work
         auto constraintsRef{ std::make_shared<Napi::ObjectReference>(Napi::Persistent(constraints)) };
 
-        return m_cameraImpl->Open(m_cameraDevice, *m_cameraResolution).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, constraintsRef](const arcana::expected<Camera::Impl::CameraDimensions, std::exception_ptr>& result) {
+        return m_cameraImpl->Open(std::move(bestCamera.value().first), bestCamera.value().second).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, constraintsRef](const arcana::expected<Camera::Impl::CameraDimensions, std::exception_ptr>& result) {
             if (result.has_error())
             {
                 // Re-throw the error from opening the camera
@@ -117,8 +115,9 @@ namespace Babylon::Plugins
     Napi::Value MediaStream::GetCapabilities(const Napi::CallbackInfo& info)
     {
         auto env = info.Env();
+        auto cameraDevice{ m_cameraImpl->GetOpenedCamera() };
         
-        if (m_cameraDevice == nullptr)
+        if (cameraDevice == nullptr)
         {
             // We don't have a cameraDevice selected yet.
             return Napi::Object::New(env);
@@ -126,9 +125,9 @@ namespace Babylon::Plugins
         
         auto capabilities = Napi::Object::New(env);
         
-        for (uint32_t i=0; i < m_cameraDevice->capabilities.size(); i++)
+        for (uint32_t i=0; i < cameraDevice->Capabilities().size(); i++)
         {
-            m_cameraDevice->capabilities[i]->addAsCapability(capabilities);
+            cameraDevice->Capabilities()[i]->addAsCapability(capabilities);
         }
         
         return std::move(capabilities);
@@ -137,8 +136,9 @@ namespace Babylon::Plugins
     Napi::Value MediaStream::GetSettings(const Napi::CallbackInfo& info)
     {
         auto env = info.Env();
+        auto cameraDevice{ m_cameraImpl->GetOpenedCamera() };
         
-        if (m_cameraDevice == nullptr)
+        if (cameraDevice == nullptr)
         {
             // We don't have a cameraDevice selected yet.
             return Napi::Object::New(env);
@@ -146,9 +146,9 @@ namespace Babylon::Plugins
         
         auto settings = Napi::Object::New(env);
         
-        for (uint32_t i=0; i < m_cameraDevice->capabilities.size(); i++)
+        for (uint32_t i=0; i < cameraDevice->Capabilities().size(); i++)
         {
-            m_cameraDevice->capabilities[i]->addAsSetting(settings);
+            cameraDevice->Capabilities()[i]->addAsSetting(settings);
         }
         
         return std::move(settings);
@@ -162,26 +162,25 @@ namespace Babylon::Plugins
         return Napi::Object::From(env, m_currentConstraints.Value());
     }
 
-    std::pair<std::shared_ptr<CameraDevice>, CameraTrack*> MediaStream::FindBestCameraStream(Napi::Object constraints)
+    std::optional<std::pair<CameraDevice, const CameraTrack*>> MediaStream::FindBestCameraStream(Napi::Object constraints)
     {
         // Get the available camera devices
-        std::vector<std::shared_ptr<CameraDevice>> cameraDevices{ m_cameraImpl->GetCameraDevices() };
+        std::vector<CameraDevice> cameraDevices{ m_cameraImpl->GetCameraDevices() };
         
-        std::shared_ptr<CameraDevice> bestCameraDevice{ nullptr };
-        CameraTrack* bestCameraResolution{ nullptr };
+        std::optional<std::pair<CameraDevice, const CameraTrack*>> bestCameraConfiguration{};
         int32_t bestFullySatisfiedCapabilityCount{0};
         
         // The camera devices should be assumed to be sorted from best to worst. Pick the first camera device that fully
         // satisfies the most constraints without failing any.
         for (uint32_t i = 0; i < cameraDevices.size(); ++i)
         {
-            auto cameraDevice = cameraDevices[i];
+            CameraDevice& cameraDevice = cameraDevices[i];
             
             bool failedAConstraint{ false };
             int32_t fullySatisfiedCapabilityCount{ 0 };
-            for (uint32_t j = 0; j < cameraDevice->capabilities.size(); j++ )
+            for (uint32_t j = 0; j < cameraDevice.Capabilities().size(); j++ )
             {
-                CameraCapability::MeetsConstraint constraintSatifaction{ cameraDevice->capabilities[j]->meetsConstraints(constraints) };
+                CameraCapability::MeetsConstraint constraintSatifaction{ cameraDevice.Capabilities()[j]->meetsConstraints(constraints) };
                 switch (constraintSatifaction)
                 {
                     case CameraCapability::MeetsConstraint::FullySatisfied:
@@ -212,7 +211,7 @@ namespace Babylon::Plugins
             
             // Ensure the width/height constraints can be met and find the best resolution available within
             // the constraints
-            CameraTrack* bestResolution{nullptr};
+            const CameraTrack* bestResolution{nullptr};
             int32_t bestWidthDiff{INT32_MAX};
             int32_t bestHeightDiff{INT32_MAX};
             
@@ -229,10 +228,10 @@ namespace Babylon::Plugins
                     : heightConstraint.max.has_value() ? heightConstraint.max
                     : heightConstraint.min;
 
-            for (uint32_t j = 0; j < cameraDevice->supportedResolutions.size(); j++) {
-                auto& resolution = *cameraDevice->supportedResolutions[j];
-                uint32_t width{ static_cast<uint32_t>(resolution.width) };
-                uint32_t height{ static_cast<uint32_t>(resolution.height) };
+            for (uint32_t j = 0; j < cameraDevice.SupportedResolutions().size(); j++) {
+                auto& resolution = cameraDevice.SupportedResolutions()[j];
+                uint32_t width{ static_cast<uint32_t>(resolution.Width()) };
+                uint32_t height{ static_cast<uint32_t>(resolution.Height()) };
                 
                 auto meetsWidthRequirements =
                     (!widthConstraint.exact.has_value() || widthConstraint.exact.value() == width) &&
@@ -279,15 +278,14 @@ namespace Babylon::Plugins
 
             // At this point we have a device that fully satisfies all given constraints, we'll have to search
             // all devices to find the one that meets the most constraints
-            if (bestCameraDevice == nullptr || fullySatisfiedCapabilityCount > bestFullySatisfiedCapabilityCount)
+            if (!bestCameraConfiguration.has_value() || fullySatisfiedCapabilityCount > bestFullySatisfiedCapabilityCount)
             {
-                bestCameraDevice = cameraDevice;
-                bestCameraResolution = bestResolution;
+                bestCameraConfiguration.emplace(std::move(cameraDevices[i]), bestResolution);
                 bestFullySatisfiedCapabilityCount = fullySatisfiedCapabilityCount;
             }
         }
         
-        return {bestCameraDevice, bestCameraResolution};
+        return bestCameraConfiguration;
     }
 
     bool MediaStream::UpdateConstraints(Napi::Env env, Napi::Object constraints)
@@ -295,9 +293,17 @@ namespace Babylon::Plugins
         bool allConstraintsSatisfied{ true };
         m_currentConstraints = Napi::Persistent(Napi::Object::New(env));
         
-        for(uint32_t i=0; i < m_cameraDevice->capabilities.size(); i++)
+        auto cameraDevice{ m_cameraImpl->GetOpenedCamera() };
+        
+        if (cameraDevice == nullptr)
         {
-            auto& capability{ m_cameraDevice->capabilities[i] };
+            // We don't have a cameraDevice selected yet.
+            return false;
+        }
+        
+        for(uint32_t i=0; i < cameraDevice->Capabilities().size(); i++)
+        {
+            auto& capability{ cameraDevice->Capabilities()[i] };
             CameraCapability::MeetsConstraint constraintSatisfaction{ capability->meetsConstraints(constraints) };
             
             switch (constraintSatisfaction)

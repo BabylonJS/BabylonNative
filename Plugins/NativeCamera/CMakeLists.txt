@@ -14,6 +14,7 @@ set(SOURCES
     "Source/NativeVideo.cpp"
     "Source/NativeVideo.h"
     "Source/NativeCameraImpl.h"
+    "Source/NativeCameraImplShared.h"
     "Source/${PLATFORM}/NativeCameraImpl.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
 add_library(NativeCamera ${SOURCES})
