@@ -115,7 +115,7 @@ namespace BabylonNative
                 });
             }
             m_isRenderingEnabled = true;
-            m_pendingReset = false;
+            m_newEngine = false;
         }
 
         void UpdateMSAA(uint8_t value)
@@ -138,12 +138,7 @@ namespace BabylonNative
 
         void RenderView()
         {
-            // m_pendingReset becomes true when a resetView call has been performed and no UpdateView has been performed.
-            // This happens with a fast refresh when the view is not unmounted and it's still available for rendering.
-            // UpdateView will set back m_pendingReset to false in case the view is unmounted/mounted with Engine.Dispose for example.
-            // With fast refresh, we have to do that work on the UI/render thread, and UpdateView is not called in that case, 
-            // so RenderView is pretty much the only option. Specifically, it must be done on the UI/render thread and so RenderView is the only hook we have.
-            if (m_pendingReset)
+            if (m_newEngine)
             {
                 UpdateGraphicsConfiguration();
             }
@@ -158,13 +153,17 @@ namespace BabylonNative
             }
         }
 
+        void Initialize()
+        {
+            m_newEngine = true;
+        }
+
         void ResetView()
         {
             if (g_graphics)
             {
                 g_nativeCanvas->FlushGraphicResources();
                 g_graphics->DisableRendering();
-                m_pendingReset = true;
             }
 
             m_isRenderingEnabled = false;
@@ -266,11 +265,11 @@ namespace BabylonNative
         std::optional<Babylon::Plugins::NativeXr> m_nativeXr{};
 
         Babylon::Graphics::WindowConfiguration m_windowConfig{};
-        bool m_pendingReset{};
 
         std::shared_ptr<bool> m_isXRActive{};
         uint8_t mMSAAValue{};
         bool mAlphaPremultiplied{};
+        bool m_newEngine{};
     };
 
     namespace
@@ -286,6 +285,10 @@ namespace BabylonNative
             auto nativeModule{ std::make_shared<ReactNativeModule>(jsiRuntime, jsDispatcher) };
             jsiRuntime.global().setProperty(jsiRuntime, JS_INSTANCE_NAME, jsi::Object::createFromHostObject(jsiRuntime, nativeModule));
             g_nativeModule = nativeModule;
+        }
+        if (auto nativeModule{ g_nativeModule.lock() })
+        {
+            nativeModule->Initialize();
         }
     }
 

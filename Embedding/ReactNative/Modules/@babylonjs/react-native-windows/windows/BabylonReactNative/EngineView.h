@@ -27,6 +27,8 @@ namespace winrt::BabylonReactNative::implementation {
         struct RevokerData
         {
             winrt::Windows::UI::Xaml::FrameworkElement::SizeChanged_revoker SizeChangedRevoker{};
+            winrt::Windows::UI::Xaml::FrameworkElement::Unloaded_revoker UnloadedEventToken{};
+            winrt::Windows::UI::Xaml::FrameworkElement::Loaded_revoker LoadedEventToken{};
             winrt::Windows::UI::Core::CoreIndependentInputSource::PointerPressed_revoker PointerPressedRevoker{};
             winrt::Windows::UI::Core::CoreIndependentInputSource::PointerMoved_revoker PointerMovedRevoker{};
             winrt::Windows::UI::Core::CoreIndependentInputSource::PointerReleased_revoker PointerReleasedRevoker{};
