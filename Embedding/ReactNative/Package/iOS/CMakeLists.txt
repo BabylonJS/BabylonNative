@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.13.2)
 project(ReactNativeBabylon)
+
+# Clang will by default emit objc_msgSend stubs in Xcode 14, which ld from earlier Xcodes doesn't understand.
+# We disable this by passing -fno-objc-msgsend-selector-stubs to clang.
+# https://stackoverflow.com/questions/73983452/xcode-14-xcode-13-incompatibility
+add_compile_options("-fno-objc-msgsend-selector-stubs")
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../Apps/Playground/Playground/node_modules/@babylonjs/react-native-iosandroid/ios/CMakeLists.txt)
 
 set(PACKAGED_LIBS
