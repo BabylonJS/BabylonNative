@@ -26,7 +26,7 @@ jobs:
         jsEngineDefine: '-DNAPI_JAVASCRIPT_ENGINE=JSI'
       ${{ if ne(parameters.napiType, 'jsi') }}:
         napiSuffix: ''
-        jsEngineDefine: ''
+        jsEngineDefine: '-DNAPI_JAVASCRIPT_ENGINE=V8'
       solutionName: 'Win32_${{ parameters.platform }}${{variables.napiSuffix}}'
 
     steps:
