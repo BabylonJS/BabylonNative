@@ -78,7 +78,7 @@ namespace Babylon::Plugins
     void NativeVideo::UpdateTexture(bgfx::TextureHandle textureHandle)
     {
         // Only update the texture if we're playing and the srcObject is an instance of a MediaStream
-        if (m_IsPlaying && m_streamObject.Value().IsObject())
+        if (m_IsPlaying && !m_streamObject.Value().IsNull() && !m_streamObject.Value().IsUndefined());
         {
             MediaStream::Unwrap(m_streamObject.Value())->UpdateTexture(textureHandle);
         }
@@ -154,10 +154,12 @@ namespace Babylon::Plugins
         m_IsPlaying = false;
     }
 
-    void NativeVideo::SetSrcObject(const Napi::CallbackInfo& /*info*/, const Napi::Value& value) {
-        if (value.IsNull() || value.IsUndefined())
+    void NativeVideo::SetSrcObject(const Napi::CallbackInfo& info, const Napi::Value& value) {
+        auto env{info.Env()};
+        
+        if (value.IsNull() || value.IsUndefined() || !value.As<Napi::Object>().InstanceOf(MediaStream::GetConstructor(env)))
         {
-            m_streamObject = Napi::Persistent(Napi::Object::New(Env()));
+            m_streamObject = Napi::Persistent(Napi::Object::New(env));
             this->m_width = 0;
             this->m_height = 0;
             this->m_isReady = false;
@@ -165,6 +167,7 @@ namespace Babylon::Plugins
             return;
         }
         
+        // We've received a MediaStream object
         m_streamObject = Napi::Persistent(value.As<Napi::Object>());
         auto mediaStream = MediaStream::Unwrap(m_streamObject.Value());
         

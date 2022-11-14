@@ -12,6 +12,7 @@ namespace Babylon::Plugins
         static constexpr auto JS_CLASS_NAME = "_MediaStream";
         
         static arcana::task<Napi::Object, std::exception_ptr> New(Napi::Env env, Napi::Object constraints);
+        static Napi::Function GetConstructor(Napi::Env env);
         
         MediaStream(const Napi::CallbackInfo& info);
         ~MediaStream()=default;
@@ -41,8 +42,4 @@ namespace Babylon::Plugins
         
         Napi::ObjectReference m_currentConstraints{};
     };
-
-//    class MediaStreamTrack : public Napi::ObjectWrap<MediaStreamTrack>
-//    {
-//    };
 }

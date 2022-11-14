@@ -6,32 +6,48 @@ namespace Babylon::Plugins
 {
     arcana::task<Napi::Object, std::exception_ptr> MediaStream::New(Napi::Env env, Napi::Object constraints)
     {
-        auto ctor = DefineClass(
-            env,
-            JS_CLASS_NAME,
-            {
-                InstanceMethod("getTracks", &MediaStream::GetVideoTracks), // The only supported tracks are video tracks
-                InstanceMethod("getVideoTracks", &MediaStream::GetVideoTracks),
-                InstanceMethod("getAudioTracks", &MediaStream::GetAudioTracks),
-                InstanceMethod("applyConstraints", &MediaStream::ApplyConstraints),
-                InstanceMethod("getCapabilities", &MediaStream::GetCapabilities),
-                InstanceMethod("getSettings", &MediaStream::GetSettings),
-                InstanceMethod("getConstraints", &MediaStream::GetConstraints),
-            });
         
+                
         // Create a an object reference to the mediaStream javascript object so that it is not destructed during the async operation
-        auto mediaStreamObject{ std::make_shared<Napi::ObjectReference>(Napi::Persistent(ctor.New({}))) };
-        auto mediaStream{ MediaStream::Unwrap(mediaStreamObject->Value()) };
+        auto mediaStreamObject{ Napi::Persistent(GetConstructor(env).New({})) };
+        auto mediaStream{ MediaStream::Unwrap(mediaStreamObject.Value()) };
         
-        return mediaStream->ApplyInitialConstraints(env, constraints).then(mediaStream->m_runtimeScheduler, arcana::cancellation::none(), [mediaStreamObject](const arcana::expected<void, std::exception_ptr>& result)
+        return mediaStream->ApplyInitialConstraints(env, constraints).then(mediaStream->m_runtimeScheduler, arcana::cancellation::none(), [mediaStreamObject{std::move(mediaStreamObject)}](const arcana::expected<void, std::exception_ptr>& result)
         {
             if (result.has_error())
             {
                 throw result.error();
             }
 
-            return mediaStreamObject->Value();
+            return mediaStreamObject.Value();
         });
+    }
+
+    Napi::Function MediaStream::GetConstructor(Napi::Env env)
+    {
+        Napi::Object _native{ JsRuntime::NativeObject::GetFromJavaScript(env) };
+        Napi::Function ctor{ _native.Get(JS_CLASS_NAME).As<Napi::Function>() };
+        
+        if (ctor.IsEmpty() || ctor.IsUndefined())
+        {
+            // Initialize the persistent constructor
+            ctor = DefineClass(
+                env,
+                JS_CLASS_NAME,
+                {
+                    InstanceMethod("getTracks", &MediaStream::GetVideoTracks), // The only supported tracks are video tracks
+                    InstanceMethod("getVideoTracks", &MediaStream::GetVideoTracks),
+                    InstanceMethod("getAudioTracks", &MediaStream::GetAudioTracks),
+                    InstanceMethod("applyConstraints", &MediaStream::ApplyConstraints),
+                    InstanceMethod("getCapabilities", &MediaStream::GetCapabilities),
+                    InstanceMethod("getSettings", &MediaStream::GetSettings),
+                    InstanceMethod("getConstraints", &MediaStream::GetConstraints),
+                });
+            
+            _native.Set(JS_CLASS_NAME, ctor);
+        }
+        
+        return ctor;
     }
 
     MediaStream::MediaStream(const Napi::CallbackInfo& info)
