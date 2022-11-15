@@ -24,7 +24,7 @@ namespace Babylon::Plugins::Internal
             JsRuntime::NativeObject::GetFromJavaScript(env).Set("Camera", func);
         }
 
-        NativeCamera(const Napi::CallbackInfo& info) : Napi::ObjectWrap<NativeCamera>{ info }
+        NativeCamera(const Napi::CallbackInfo& info) : Napi::ObjectWrap<NativeCamera>{info}
         {
         }
     private:

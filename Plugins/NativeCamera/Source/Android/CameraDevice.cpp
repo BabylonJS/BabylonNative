@@ -49,7 +49,7 @@ namespace Babylon::Plugins
         Napi::Env env;
 
         std::vector<CameraTrack> supportedResolutions{};
-        std::vector<std::unique_ptr<CameraCapability>> capabilities{};
+        std::vector<std::unique_ptr<Capability>> capabilities{};
         std::string cameraID{};
         int32_t sensorRotation{};
         bool facingUser{};
@@ -78,15 +78,15 @@ namespace Babylon::Plugins
     };
 
     // Vertex positions for the camera texture
-    constexpr size_t CAMERA_VERTEX_COUNT{ 4 };
-    constexpr GLfloat CAMERA_VERTEX_POSITIONS[CAMERA_VERTEX_COUNT * 2]{ -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f };
+    constexpr size_t CAMERA_VERTEX_COUNT{4};
+    constexpr GLfloat CAMERA_VERTEX_POSITIONS[CAMERA_VERTEX_COUNT * 2]{-1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f};
 
     // UV mappings to correct for the different orientations of the screen versus the camera sensor
-    constexpr size_t CAMERA_UVS_COUNT{ 4 };
-    constexpr GLfloat CAMERA_UVS_ROTATION_0[CAMERA_UVS_COUNT  * 2]{ 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f };
-    constexpr GLfloat CAMERA_UVS_ROTATION_90[CAMERA_UVS_COUNT  * 2]{ 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f };
-    constexpr GLfloat CAMERA_UVS_ROTATION_180[CAMERA_UVS_COUNT  * 2]{ 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f };
-    constexpr GLfloat CAMERA_UVS_ROTATION_270[CAMERA_UVS_COUNT  * 2]{ 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f };
+    constexpr size_t CAMERA_UVS_COUNT{4};
+    constexpr GLfloat CAMERA_UVS_ROTATION_0[CAMERA_UVS_COUNT  * 2]{0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f};
+    constexpr GLfloat CAMERA_UVS_ROTATION_90[CAMERA_UVS_COUNT  * 2]{0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f};
+    constexpr GLfloat CAMERA_UVS_ROTATION_180[CAMERA_UVS_COUNT  * 2]{1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f};
+    constexpr GLfloat CAMERA_UVS_ROTATION_270[CAMERA_UVS_COUNT  * 2]{1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 
     static constexpr char CAMERA_VERT_SHADER[]{R"(#version 300 es
         precision highp float;
@@ -183,7 +183,7 @@ namespace Babylon::Plugins
         return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, &track]()
         {
             // Get the phone's current rotation so we can determine if the camera image needs to be rotated based on the sensor's natural orientation
-            int phoneRotation{ GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation() * 90 };
+            int phoneRotation{GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation() * 90};
 
             // The sensor rotation dictates the orientation of the camera when the phone is in it's default orientation
             // Subtracting the phone's rotation from the camera's rotation will give us the current orientation
@@ -334,7 +334,7 @@ namespace Babylon::Plugins
         for (int i = 0; i < cameraIds->numCameras; ++i)
         {
             const char* id = cameraIds->cameraIds[i];
-            auto cameraDeviceImpl{ std::make_unique<CameraDevice::Impl>(env) };
+            auto cameraDeviceImpl{std::make_unique<CameraDevice::Impl>(env)};
 
             API24::ACameraMetadata* metadataObj;
             GET_CAMERA_FUNCTION(ACameraManager_getCameraCharacteristics)(cameraManager, id, &metadataObj);
@@ -360,7 +360,7 @@ namespace Babylon::Plugins
                     continue;
                 }
 
-                auto cameraTrackImpl{ std::make_unique<CameraTrack::Impl>() };
+                auto cameraTrackImpl{std::make_unique<CameraTrack::Impl>()};
                 cameraTrackImpl->width = width;
                 cameraTrackImpl->height = height;
                 cameraDeviceImpl->supportedResolutions.emplace_back(CameraTrack(std::move(cameraTrackImpl)));
@@ -369,20 +369,20 @@ namespace Babylon::Plugins
             // Get camera hardware info
             API24::ACameraMetadata_const_entry metaDataEntry{};
             GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_LENS_FACING, &metaDataEntry);
-            auto facing{ static_cast<API24::acamera_metadata_enum_android_lens_facing_t>(metaDataEntry.data.u8[0]) };
+            auto facing{static_cast<API24::acamera_metadata_enum_android_lens_facing_t>(metaDataEntry.data.u8[0])};
 
             GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_SENSOR_ORIENTATION, &metaDataEntry);
-            int32_t sensorOrientation{ metaDataEntry.data.i32[0] };
+            int32_t sensorOrientation{metaDataEntry.data.i32[0]};
 
             GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_FLASH_INFO_AVAILABLE, &metaDataEntry);
             bool torchSupported = metaDataEntry.data.u8[0];
 
             GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_CONTROL_ZOOM_RATIO, &metaDataEntry);
-            float zoomRatio{ metaDataEntry.data.f[0] };
+            float zoomRatio{metaDataEntry.data.f[0]};
 
             GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_CONTROL_ZOOM_RATIO_RANGE, &metaDataEntry);
-            float minZoomRatio{ metaDataEntry.data.f[0] };
-            float maxZoomRatio{ metaDataEntry.data.f[1] };
+            float minZoomRatio{metaDataEntry.data.f[0]};
+            float maxZoomRatio{metaDataEntry.data.f[1]};
 
             // Update the cameraDevice information
             cameraDeviceImpl->cameraID = id;
@@ -392,7 +392,7 @@ namespace Babylon::Plugins
             // Create the capabilities
             cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<std::string>>
             (
-                CameraCapability::Feature::FacingMode,
+                    Capability::Feature::FacingMode,
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment",
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment",
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"}
@@ -400,11 +400,11 @@ namespace Babylon::Plugins
 
             cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<bool>>
             (
-                CameraCapability::Feature::Torch,
-                false,
-                false,
+                    Capability::Feature::Torch,
+                    false,
+                    false,
                 torchSupported ? std::vector<bool>{false, true} : std::vector<bool>{false},
-                [impl{ cameraDeviceImpl.get() }](bool newValue)
+                    [impl{cameraDeviceImpl.get()}](bool newValue)
                 {
                     uint8_t torchMode = newValue
                                         ? API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_TORCH
@@ -419,13 +419,13 @@ namespace Babylon::Plugins
 
             cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<double>>
             (
-                CameraCapability::Feature::Zoom,
-                zoomRatio,
-                1.0, // Set the default target zoom to 1.0 (no zoom)
+                    Capability::Feature::Zoom,
+                    zoomRatio,
+                    1.0, // Set the default target zoom to 1.0 (no zoom)
                 std::vector<double>{minZoomRatio, maxZoomRatio},
-                [impl{ cameraDeviceImpl.get() }](double newValue)
+                    [impl{cameraDeviceImpl.get()}](double newValue)
                 {
-                    float newZoomRatio{ static_cast<float>(newValue) };
+                    float newZoomRatio{static_cast<float>(newValue)};
                     GET_CAMERA_FUNCTION(ACaptureRequest_setEntry_float)(impl->request, API24::ACAMERA_CONTROL_ZOOM_RATIO, 1, &newZoomRatio);
 
                     // Update the camera request
@@ -461,10 +461,10 @@ namespace Babylon::Plugins
         glViewport(0, 0, m_impl->cameraDimensions.width, m_impl->cameraDimensions.height);
         glUseProgram(m_impl->cameraShaderProgramId);
 
-        auto vertexPositionsUniformLocation{ glGetUniformLocation(m_impl->cameraShaderProgramId, "positions") };
+        auto vertexPositionsUniformLocation{glGetUniformLocation(m_impl->cameraShaderProgramId, "positions")};
         glUniform2fv(vertexPositionsUniformLocation, CAMERA_VERTEX_COUNT, CAMERA_VERTEX_POSITIONS);
 
-        auto uvsUniformLocation{ glGetUniformLocation(m_impl->cameraShaderProgramId, "uvs") };
+        auto uvsUniformLocation{glGetUniformLocation(m_impl->cameraShaderProgramId, "uvs")};
         glUniform2fv(uvsUniformLocation, CAMERA_UVS_COUNT, m_impl->cameraUVs);
 
         // Configure the camera texture

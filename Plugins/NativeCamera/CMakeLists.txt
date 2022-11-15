@@ -6,8 +6,9 @@ endif()
 
 set(SOURCES
     "Include/Babylon/Plugins/NativeCamera.h"
-    "Source/CameraCapability.h"
-    "Source/CameraCapability.cpp"
+    "Source/Capability.h"
+    "Source/Capability.cpp"
+    "Source/Constraint.h"
     "Source/MediaDevices.h"
     "Source/MediaDevices.cpp"
     "Source/MediaStream.h"

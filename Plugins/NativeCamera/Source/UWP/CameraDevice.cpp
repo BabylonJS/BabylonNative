@@ -13,27 +13,27 @@ namespace Babylon::Plugins
     struct CameraDevice::Impl
     {
         std::vector<CameraTrack> supportedResolutions{};
-        std::vector<std::unique_ptr<CameraCapability>> capabilities{};
+        std::vector<std::unique_ptr<Capability>> capabilities{};
     };
 
     std::vector<CameraDevice> CameraDevice::GetCameraDevices(Napi::Env /*env*/)
     {
-        throw std::runtime_error{ "HW Camera not implemented for this platform." };
+        throw std::runtime_error{"HW Camera not implemented for this platform."};
     }
 
     arcana::task<CameraDevice::CameraDimensions, std::exception_ptr> CameraDevice::OpenAsync(const CameraTrack& /*track*/)
     {
-        throw std::runtime_error{ "HW Camera not implemented for this platform." };
+        throw std::runtime_error{"HW Camera not implemented for this platform."};
     }
 
     void CameraDevice::UpdateCameraTexture(bgfx::TextureHandle /*textureHandle*/)
     {
-        throw std::runtime_error{ "HW Camera not implemented for this platform." };
+        throw std::runtime_error{"HW Camera not implemented for this platform."};
     }
 
     void CameraDevice::Close()
     {
-        throw std::runtime_error{ "HW Camera not implemented for this platform." };
+        throw std::runtime_error{"HW Camera not implemented for this platform."};
     }
 }
 

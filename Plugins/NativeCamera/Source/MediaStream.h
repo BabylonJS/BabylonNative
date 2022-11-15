@@ -40,7 +40,7 @@ namespace Babylon::Plugins
         std::optional<std::pair<CameraDevice, const CameraTrack&>> FindBestCameraStream(Napi::Env env, Napi::Object constraints);
         bool UpdateConstraints(Napi::Env env, Napi::Object constraints);
         
-        std::shared_ptr<CameraDevice> m_cameraDevice{ nullptr };
+        std::shared_ptr<CameraDevice> m_cameraDevice{nullptr};
         JsRuntimeScheduler m_runtimeScheduler;
         
         Napi::ObjectReference m_currentConstraints{};

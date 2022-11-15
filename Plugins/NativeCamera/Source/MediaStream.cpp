@@ -1,5 +1,6 @@
 #include "MediaStream.h"
 #include "CameraDevice.h"
+#include "Constraint.h"
 #include <assert.h>
 
 namespace Babylon::Plugins
@@ -9,8 +10,8 @@ namespace Babylon::Plugins
         
                 
         // Create a an object reference to the mediaStream javascript object so that it is not destructed during the async operation
-        auto mediaStreamObject{ Napi::Persistent(GetConstructor(env).New({})) };
-        auto mediaStream{ MediaStream::Unwrap(mediaStreamObject.Value()) };
+        auto mediaStreamObject{Napi::Persistent(GetConstructor(env).New({}))};
+        auto mediaStream{MediaStream::Unwrap(mediaStreamObject.Value())};
         
         return mediaStream->ApplyInitialConstraintsAsync(env, constraints).then(mediaStream->m_runtimeScheduler, arcana::cancellation::none(), [mediaStreamObject{std::move(mediaStreamObject)}]()
         {
@@ -20,8 +21,8 @@ namespace Babylon::Plugins
 
     Napi::Function MediaStream::GetConstructor(Napi::Env env)
     {
-        Napi::Object _native{ JsRuntime::NativeObject::GetFromJavaScript(env) };
-        Napi::Function ctor{ _native.Get(JS_CLASS_NAME).As<Napi::Function>() };
+        Napi::Object _native{JsRuntime::NativeObject::GetFromJavaScript(env)};
+        Napi::Function ctor{_native.Get(JS_CLASS_NAME).As<Napi::Function>()};
         
         if (ctor.IsEmpty() || ctor.IsUndefined())
         {
@@ -102,7 +103,7 @@ namespace Babylon::Plugins
         m_cameraDevice = std::make_shared<CameraDevice>(std::move(bestCamera->first));
 
         // Create a persistent ref to the constraints object so it isn't destructed during our async work
-        auto constraintsRef{ Napi::Persistent(constraints) };
+        auto constraintsRef{Napi::Persistent(constraints)};
 
         return m_cameraDevice->OpenAsync(bestCamera.value().second).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, constraintsRef{std::move(constraintsRef)}](CameraDevice::CameraDimensions cameraDimensions) {
             this->Width = cameraDimensions.width;
@@ -169,7 +170,7 @@ namespace Babylon::Plugins
     std::optional<std::pair<CameraDevice, const CameraTrack&>> MediaStream::FindBestCameraStream(Napi::Env env, Napi::Object constraints)
     {
         // Get the available camera devices
-        std::vector<CameraDevice> cameraDevices{ CameraDevice::GetCameraDevices(env) };
+        std::vector<CameraDevice> cameraDevices{CameraDevice::GetCameraDevices(env)};
         
         std::optional<std::pair<CameraDevice, const CameraTrack&>> bestCameraConfiguration{};
         int32_t bestFullySatisfiedCapabilityCount{0};
@@ -178,21 +179,21 @@ namespace Babylon::Plugins
         // satisfies the most constraints without failing any.
         for (auto& cameraDevice : cameraDevices)
         {
-            bool failedAConstraint{ false };
-            int32_t fullySatisfiedCapabilityCount{ 0 };
+            bool failedAConstraint{false};
+            int32_t fullySatisfiedCapabilityCount{0};
             for (const auto& capability : cameraDevice.Capabilities())
             {
-                CameraCapability::MeetsConstraint constraintSatifaction{ capability->meetsConstraints(constraints) };
+                Capability::MeetsConstraint constraintSatifaction{capability->meetsConstraints(constraints)};
                 switch (constraintSatifaction)
                 {
-                    case CameraCapability::MeetsConstraint::FullySatisfied:
+                    case Capability::MeetsConstraint::FullySatisfied:
                         fullySatisfiedCapabilityCount++;
                         break;
-                    case CameraCapability::MeetsConstraint::PartiallySatisfied:
-                    case CameraCapability::MeetsConstraint::Unconstrained:
+                    case Capability::MeetsConstraint::PartiallySatisfied:
+                    case Capability::MeetsConstraint::Unconstrained:
                         // Don't weight partialy satisfied or unconstrained capabilites any higher than another device
                         break;
-                    case CameraCapability::MeetsConstraint::Unsatisfied:
+                    case Capability::MeetsConstraint::Unsatisfied:
                     default:
                         failedAConstraint = true;
                         break;
@@ -217,8 +218,8 @@ namespace Babylon::Plugins
             int32_t bestWidthDiff{INT32_MAX};
             int32_t bestHeightDiff{INT32_MAX};
             
-            auto widthConstraint{ Constraint::parseConstraint<int32_t>(constraints.Get("width")) };
-            auto heightConstraint{ Constraint::parseConstraint<int32_t>(constraints.Get("height")) };
+            auto widthConstraint{Constraint::parseConstraint<int32_t>(constraints.Get("width"))};
+            auto heightConstraint{Constraint::parseConstraint<int32_t>(constraints.Get("height"))};
             
             // Set the targetWidth and targetHeight as a fallback through the values exact, ideal, max, min
             auto targetWidth = widthConstraint.exact.has_value() ? widthConstraint.exact
@@ -290,7 +291,7 @@ namespace Babylon::Plugins
 
     bool MediaStream::UpdateConstraints(Napi::Env env, Napi::Object constraints)
     {
-        bool allConstraintsSatisfied{ true };
+        bool allConstraintsSatisfied{true};
         m_currentConstraints = Napi::Persistent(Napi::Object::New(env));
 
         if (m_cameraDevice == nullptr)
@@ -301,18 +302,18 @@ namespace Babylon::Plugins
         
         for(auto& capability : m_cameraDevice->Capabilities())
         {
-            CameraCapability::MeetsConstraint constraintSatisfaction{ capability->meetsConstraints(constraints) };
+            Capability::MeetsConstraint constraintSatisfaction{capability->meetsConstraints(constraints)};
             
             switch (constraintSatisfaction)
             {
-                case CameraCapability::MeetsConstraint::FullySatisfied:
-                case CameraCapability::MeetsConstraint::PartiallySatisfied:
+                case Capability::MeetsConstraint::FullySatisfied:
+                case Capability::MeetsConstraint::PartiallySatisfied:
                     m_currentConstraints.Set(capability->getName(), constraints.Get(capability->getName()));
                     break;
-                case CameraCapability::MeetsConstraint::Unconstrained:
+                case Capability::MeetsConstraint::Unconstrained:
                     // Still apply the unconstrained capability so that it resets to it's default in case it was previously set
                     break;
-                case CameraCapability::MeetsConstraint::Unsatisfied:
+                case Capability::MeetsConstraint::Unsatisfied:
                 default:
                     // The constraint couldn't be satisfied ignore it and continue applying the remaining constraints
                     allConstraintsSatisfied = false;

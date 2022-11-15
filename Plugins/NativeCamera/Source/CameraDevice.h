@@ -3,7 +3,7 @@
 #include <bgfx/bgfx.h>
 #include <napi/napi.h>
 #include <arcana/threading/task.h>
-#include "CameraCapability.h"
+#include "Capability.h"
 
 namespace Babylon::Plugins
 {
@@ -54,7 +54,7 @@ namespace Babylon::Plugins
         void UpdateCameraTexture(bgfx::TextureHandle textureHandle);
 
         const std::vector<CameraTrack>& SupportedResolutions() const;
-        const std::vector<std::unique_ptr<CameraCapability>>& Capabilities() const;
+        const std::vector<std::unique_ptr<Capability>>& Capabilities() const;
 
     private:
         struct Impl;

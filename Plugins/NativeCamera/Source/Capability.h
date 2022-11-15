@@ -2,56 +2,16 @@
 
 #include <napi/napi.h>
 #include <optional>
+#include "Constraint.h"
 
 namespace Babylon::Plugins {
-    namespace Constraint
-    {
-        template<typename T>
-        struct Constraint
-        {
-            std::optional<T> ideal;
-            std::optional<T> exact;
-            std::optional<T> min;
-            std::optional<T> max;
-        };
-
-        template<typename T>
-        Constraint<T> parseConstraint(Napi::Value value) = delete;
-        template<typename T>
-        Napi::Value asNapiValue(Napi::Env env, T value) = delete;
-
-        // int32
-        template<>
-        Constraint<int32_t> parseConstraint(Napi::Value value);
-        template<>
-        Napi::Value asNapiValue(Napi::Env env, int32_t value);
-
-        // Double
-        template<>
-        Constraint<double> parseConstraint(Napi::Value value);
-        template<>
-        Napi::Value asNapiValue(Napi::Env env, double value);
-
-        // Bool
-        template<>
-        Constraint<bool> parseConstraint(Napi::Value value);
-        template<>
-        Napi::Value asNapiValue(Napi::Env env, bool value);
-
-        // String
-        template<>
-        Constraint<std::string> parseConstraint(Napi::Value value);
-        template<>
-        Napi::Value asNapiValue(Napi::Env env, std::string value);
-    }
-
-    // The CameraCapability class fulfills the Capabilities, Constraints, and Settings web API pattern.
+    // The Capability class fulfills the Capabilities, Constraints, and Settings web API pattern.
     // A Capability represents a camera feature as it's available values (either a min/max or a set of allowed values).
     // A Constraint represents a user request to set a camera feature to an ideal or exact value.
     // A Setting represents a camera features current value.
     // For a better understanding of the Capabilities, Constraints, and Settings pattern see this article:
     // https://developer.mozilla.org/en-US/docs/Web/API/Media_Capture_and_Streams_API/Constraints
-    class CameraCapability {
+    class Capability {
     public:
         enum Feature
         {
@@ -59,7 +19,7 @@ namespace Babylon::Plugins {
             Torch,
             Zoom
         };
-        
+
         enum MeetsConstraint
         {
             FullySatisfied, // The constraint can be fully met
@@ -68,14 +28,8 @@ namespace Babylon::Plugins {
             Unconstrained, // There are no constraints that apply
         };
 
-        enum ConstraintType
-        {
-            Sequence,
-            Range,
-        };
-
-        CameraCapability(Feature capability);
-        virtual ~CameraCapability() = default;
+        Capability(Feature capability);
+        virtual ~Capability() = default;
 
         std::string getName();
 
@@ -89,7 +43,7 @@ namespace Babylon::Plugins {
     };
 
     template<typename T>
-    class CameraCapabilityTemplate : public CameraCapability
+    class CameraCapabilityTemplate : public Capability
     {
     public:
         CameraCapabilityTemplate(Feature feature,
@@ -105,7 +59,7 @@ namespace Babylon::Plugins {
         void addAsSetting(Napi::Object target);
 
     private:
-        ConstraintType getConstraintType();
+        Constraint::Type getConstraintType();
 
         T m_currentValue;
         const T m_defaultValue;

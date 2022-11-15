@@ -34,7 +34,7 @@ namespace Babylon::Plugins
         return m_impl->supportedResolutions;
     }
 
-    const std::vector<std::unique_ptr<CameraCapability>>& CameraDevice::Capabilities() const
+    const std::vector<std::unique_ptr<Capability>>& CameraDevice::Capabilities() const
     {
         return m_impl->capabilities;
     }

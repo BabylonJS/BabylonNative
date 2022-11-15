@@ -16,7 +16,7 @@ namespace Babylon::Plugins::Internal
     {
     public:
         MediaDevices(const Napi::CallbackInfo& info)
-                : Napi::ObjectWrap<MediaDevices>{ info }
+                : Napi::ObjectWrap<MediaDevices>{info}
         {
         }
 
@@ -28,17 +28,17 @@ namespace Babylon::Plugins::Internal
             auto promise = deferred.Promise();
 
             // Extract the video constraints as we only support video for the time being
-            auto videoConstraints{ Napi::Object::New(env) };
+            auto videoConstraints{Napi::Object::New(env)};
             if (info.Length() > 0 && info[0].IsObject())
             {
-                Napi::Object constraints{ info[0].As<Napi::Object>() };
+                Napi::Object constraints{info[0].As<Napi::Object>()};
                 if (constraints.Get("video").IsObject())
                 {
                     videoConstraints = constraints.Get("video").As<Napi::Object>();
                 }
             }
 
-            auto runtimeScheduler{ std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env)) };
+            auto runtimeScheduler{std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env))};
             MediaStream::NewAsync(env, videoConstraints).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler, env, deferred](const arcana::expected<Napi::Object, std::exception_ptr>& result)
             {
                 if (result.has_error())
@@ -61,7 +61,7 @@ namespace Babylon::Plugins::MediaDevices
 
     void Initialize(Napi::Env env)
     {
-        Napi::HandleScope scope{ env };
+        Napi::HandleScope scope{env};
 
         // create or get global navigator object
         Napi::Object global = env.Global();

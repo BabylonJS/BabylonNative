@@ -54,10 +54,10 @@ namespace {
 
     constexpr Vertex vertices[] = {
         // 2D positions, UV
-        { { -1, -1 },   { 0, 1 } },
-        { { -1, 1 },    { 0, 0 } },
-        { { 1, -1 },    { 1, 1 } },
-        { { 1, 1 },     { 1, 0 } },
+        {{-1, -1},   {0, 1 }},
+        {{-1, 1},    {0, 0}},
+        {{1, -1},    {1, 1}},
+        {{1, 1},     {1, 0}},
     };
 
     constexpr char shaderSource[] = R"(
@@ -153,7 +153,7 @@ namespace Babylon::Plugins
         Napi::Env env;
         
         std::vector<CameraTrack> supportedResolutions{};
-        std::vector<std::unique_ptr<CameraCapability>> capabilities{};
+        std::vector<std::unique_ptr<Capability>> capabilities{};
         AVCaptureDevice* avDevice{};
         
         bool overrideCameraTexture{};
@@ -208,7 +208,7 @@ namespace Babylon::Plugins
         
         for (AVCaptureDevice* device in discoverySession.devices)
         {
-            auto cameraDeviceImpl{ std::make_unique<CameraDevice::Impl>(env) };
+            auto cameraDeviceImpl{std::make_unique<CameraDevice::Impl>(env)};
             
             for (AVCaptureDeviceFormat* format in device.formats)
             {
@@ -236,7 +236,7 @@ namespace Babylon::Plugins
 
             cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<std::string>>
             (
-                CameraCapability::Feature::FacingMode,
+                    Capability::Feature::FacingMode,
                 device.position == AVCaptureDevicePositionFront ? "user" : "environment",
                 device.position == AVCaptureDevicePositionFront ? "user" : "environment",
                 device.position == AVCaptureDevicePositionFront ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"}
@@ -244,14 +244,14 @@ namespace Babylon::Plugins
             
             cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<bool>>
             (
-                CameraCapability::Feature::Torch,
-                false,
-                false,
+                    Capability::Feature::Torch,
+                    false,
+                    false,
                 device.isTorchAvailable ? std::vector<bool>{false, true} : std::vector<bool>{false},
-                [device](bool newValue)
+                    [device](bool newValue)
                 {
                     NSError* error{nil};
-                    AVCaptureTorchMode torchMode{ newValue ? AVCaptureTorchModeOn : AVCaptureTorchModeOff };
+                    AVCaptureTorchMode torchMode{newValue ? AVCaptureTorchModeOn : AVCaptureTorchModeOff};
                     [device lockForConfiguration:&error];
                     [device setTorchMode:torchMode];
                     [device unlockForConfiguration];
@@ -266,7 +266,7 @@ namespace Babylon::Plugins
 #if (TARGET_OS_IPHONE)
             // iOS Zoom factors always start at 1.0 and go up from there slide the scale based on
             // the device type (if it starts with an ultrawide sensor or telephoto)
-            double zoomFactorScale{ 1.0 };
+            double zoomFactorScale{1.0};
             if (@available(iOS 13.0, *))
             {
                 if (device.deviceType == AVCaptureDeviceTypeBuiltInTripleCamera ||
@@ -285,7 +285,7 @@ namespace Babylon::Plugins
             
             cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<double>>
             (
-                CameraCapability::Feature::Zoom,
+                Capability::Feature::Zoom,
                 1.0 * zoomFactorScale, // Translate the starting zoom value from the iOS 1.0+ scale to our 0.0+ scale.
                 1.0, // Set the default target to 1.0 (regardless of zoomFactorScale)
                 std::vector<double>{device.minAvailableVideoZoomFactor * zoomFactorScale, device.maxAvailableVideoZoomFactor * zoomFactorScale},
