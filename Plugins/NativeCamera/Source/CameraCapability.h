@@ -45,9 +45,15 @@ namespace Babylon::Plugins {
         Napi::Value asNapiValue(Napi::Env env, std::string value);
     }
 
+    // The CameraCapability class fulfills the Capabilities, Constraints, and Settings web API pattern.
+    // A Capability represents a camera feature as it's available values (either a min/max or a set of allowed values).
+    // A Constraint represents a user request to set a camera feature to an ideal or exact value.
+    // A Setting represents a camera features current value.
+    // For a better understanding of the Capabilities, Constraints, and Settings pattern see this article:
+    // https://developer.mozilla.org/en-US/docs/Web/API/Media_Capture_and_Streams_API/Constraints
     class CameraCapability {
     public:
-        enum Capability
+        enum Feature
         {
             FacingMode,
             Torch,
@@ -68,7 +74,7 @@ namespace Babylon::Plugins {
             Range,
         };
 
-        CameraCapability(Capability capability);
+        CameraCapability(Feature capability);
         virtual ~CameraCapability() = default;
 
         std::string getName();
@@ -79,14 +85,14 @@ namespace Babylon::Plugins {
         virtual void addAsSetting(Napi::Object target)=0;
 
     protected:
-        const Capability m_capability;
+        const Feature m_feature;
     };
 
     template <typename T>
     class CameraCapabilityTemplate : public CameraCapability
     {
     public:
-        CameraCapabilityTemplate(Capability capability,
+        CameraCapabilityTemplate(Feature feature,
                                  T currentValue,
                                  T defaultValue,
                                  std::vector<T> acceptedValues,

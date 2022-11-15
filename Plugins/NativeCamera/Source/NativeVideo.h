@@ -1,6 +1,6 @@
 #pragma once
 #include <napi/napi.h>
-#include "NativeCameraImpl.h"
+#include "CameraDevice.h"
 #include "MediaStream.h"
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Graphics/DeviceContext.h>
@@ -10,12 +10,14 @@
 
 namespace Babylon::Plugins
 {
+    // NativeVideo provides a polyfill for the HTMLVideoElement which is used in conjunction with a MediaStream object to
+    // pull frames out of a camera and render them into the Babylon scene.
     class NativeVideo : public Napi::ObjectWrap<NativeVideo>
     {
 
     public:
         static void Initialize(Napi::Env& env);
-        static Napi::Object New(const Napi::CallbackInfo& info, uint32_t width, uint32_t height, bool frontCamera);
+        static Napi::Object New(const Napi::CallbackInfo& info);
         NativeVideo(const Napi::CallbackInfo& info);
         ~NativeVideo() = default;
 
@@ -29,7 +31,6 @@ namespace Babylon::Plugins
         void Pause(const Napi::CallbackInfo& info);
         Napi::Value GetVideoWidth(const Napi::CallbackInfo& info);
         Napi::Value GetVideoHeight(const Napi::CallbackInfo& info);
-        void SetFrontCamera(const Napi::CallbackInfo& info, const Napi::Value& value);
         void SetAttribute(const Napi::CallbackInfo&);
         void RemoveAttribute(const Napi::CallbackInfo&);
         Napi::Value GetReadyState(const Napi::CallbackInfo& info);
@@ -38,13 +39,10 @@ namespace Babylon::Plugins
         void SetSrcObject(const Napi::CallbackInfo& info, const Napi::Value& value);
 
         std::unordered_map<std::string, std::vector<Napi::FunctionReference>> m_eventHandlerRefs{};
-        uint32_t m_maxWidth{};
-        uint32_t m_maxHeight{};
 
         uint32_t m_width{0};
         uint32_t m_height{0};
         bool m_isReady{false};
-        bool m_frontCamera{};
 
         bool m_IsPlaying{};
         

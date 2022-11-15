@@ -1,6 +1,6 @@
 #include <napi/napi.h>
 #include "NativeCamera.h"
-#include "../NativeCameraImpl.h"
+#include "../CameraDevice.h"
 #include <string>
 #include <android/native_window_jni.h>
 #include <AndroidExtensions/Globals.h>
@@ -31,24 +31,17 @@ namespace Babylon::Plugins
     };
 
     struct CameraDevice::Impl {
+        Napi::Env env;
+
         std::vector<CameraTrack> supportedResolutions{};
         std::vector<std::unique_ptr<CameraCapability>> capabilities{};
         std::string cameraID;
         int32_t sensorRotation;
         bool facingUser;
-    };
-
-    struct Camera::Impl::ImplData {
-        Graphics::DeviceContext* deviceContext;
-        Napi::Env env;
-
-        bool overrideCameraTexture{};
-
         CameraDimensions cameraDimensions{};
 
+        Graphics::DeviceContext* deviceContext;
 
-        CameraDevice cameraDevice{nullptr};
-        API24::ACameraManager* cameraManager{};
         API24::ACameraDevice* aCameraDevice{};
         API24::ACameraOutputTarget* textureTarget{};
         API24::ACaptureRequest* request{};
@@ -68,11 +61,8 @@ namespace Babylon::Plugins
         EGLContext context{EGL_NO_CONTEXT};
         EGLDisplay display{};
 
-        ImplData(Napi::Env env, bool overrideCameraTexture)
-            : deviceContext{nullptr}
-            , env{env}
-            , overrideCameraTexture{overrideCameraTexture}
-            , cameraManager{API_LEVEL < 24 || overrideCameraTexture ? nullptr : GET_CAMERA_FUNCTION(ACameraManager_create)()}
+        Impl(Napi::Env env)
+            : env{env}
         {
         }
 
@@ -184,29 +174,13 @@ namespace Babylon::Plugins
         .onCaptureBufferLost = nullptr,
     };
 
-    Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
-        : m_implData{std::make_unique<ImplData>(env, overrideCameraTexture)}
+    arcana::task<CameraDevice::CameraDimensions, std::exception_ptr> CameraDevice::Open(const CameraTrack& track)
     {
-        if (API_LEVEL < 24 && !overrideCameraTexture)
-        {
-            throw std::runtime_error{"Android Platform level < 24. Only camera texture override is available."};
-        }
-    }
-
-    Camera::Impl::~Impl()
-    {
-        GET_CAMERA_FUNCTION(ACameraManager_delete)(m_implData->cameraManager);
-    }
-
-    arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(CameraDevice cameraDevice, const CameraTrack* track)
-    {
-        if (!m_implData->deviceContext){
-            m_implData->deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_implData->env);
+        if (!m_impl->deviceContext){
+            m_impl->deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_impl->env);
         }
 
-        m_implData->cameraDevice = std::move(cameraDevice);
-
-        return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, track]()
+        return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, &track]()
         {
             // Get the phone's current rotation so we can determine if the camera image needs to be rotated based on the sensor's natural orientation
             int phoneRotation{ GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation() * 90 };
@@ -214,9 +188,9 @@ namespace Babylon::Plugins
             // The sensor rotation dictates the orientation of the camera when the phone is in it's default orientation
             // Subtracting the phone's rotation from the camera's rotation will give us the current orientation
             // of the sensor. Then add 360 and modulus 360 to ensure we're always talking about positive degrees.
-            int sensorRotationDiff{(m_implData->cameraDevice.m_impl->sensorRotation - phoneRotation + 360) % 360};
+            int sensorRotationDiff{(m_impl->sensorRotation - phoneRotation + 360) % 360};
             bool sensorIsPortrait{sensorRotationDiff == 90 || sensorRotationDiff == 270};
-            if (m_implData->cameraDevice.m_impl->facingUser && !sensorIsPortrait && !m_implData->overrideCameraTexture)
+            if (m_impl->facingUser && !sensorIsPortrait)
             {
                 // Compensate for the front facing camera being naturally mirrored. In the portrait orientation
                 // the mirrored behavior matches the browser, but in landscape it would result in the image rendering
@@ -226,16 +200,16 @@ namespace Babylon::Plugins
 
             // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
             // of the video should be swapped
-            m_implData->cameraDimensions.width = !sensorIsPortrait ? track->Width() : track->Height();
-            m_implData->cameraDimensions.height = !sensorIsPortrait ? track->Height() : track->Width();
+            m_impl->cameraDimensions.width = !sensorIsPortrait ? track.Width() : track.Height();
+            m_impl->cameraDimensions.height = !sensorIsPortrait ? track.Height() : track.Width();
 
             // Check if there is an already available context for this thread
             EGLContext currentContext = eglGetCurrentContext();
             if (currentContext == EGL_NO_CONTEXT)
             {
                 // create a shared context with bgfx so JNI thread (by surfaceTexture) can update the texture
-                m_implData->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-                eglInitialize(m_implData->display, nullptr, nullptr);
+                m_impl->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+                eglInitialize(m_impl->display, nullptr, nullptr);
 
                 static const EGLint attrs[] ={
                     EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,
@@ -250,7 +224,7 @@ namespace Babylon::Plugins
 
                 EGLConfig  config;
                 EGLint numConfig = 0;
-                eglChooseConfig(m_implData->display, attrs, &config, 1, &numConfig);
+                eglChooseConfig(m_impl->display, attrs, &config, 1, &numConfig);
 
                 static const EGLint contextAttribs[] = {
                     EGL_CONTEXT_MAJOR_VERSION_KHR,
@@ -259,108 +233,111 @@ namespace Babylon::Plugins
                     0,
                     EGL_NONE};
 
-                m_implData->context = eglCreateContext(m_implData->display, config, bgfx::getInternalData()->context, contextAttribs);
-                if (eglMakeCurrent(m_implData->display, 0/*surface*/, 0/*surface*/, m_implData->context) == EGL_FALSE)
+                m_impl->context = eglCreateContext(m_impl->display, config, bgfx::getInternalData()->context, contextAttribs);
+                if (eglMakeCurrent(m_impl->display, 0/*surface*/, 0/*surface*/, m_impl->context) == EGL_FALSE)
                 {
                     throw std::runtime_error{"Unable to create a shared GL context for camera texture."};
                 }
             }
 
-            glGenTextures(1, &m_implData->cameraRGBATextureId);
-            glBindTexture(GL_TEXTURE_2D, m_implData->cameraRGBATextureId);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_implData->cameraDimensions.width, m_implData->cameraDimensions.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+            glGenTextures(1, &m_impl->cameraRGBATextureId);
+            glBindTexture(GL_TEXTURE_2D, m_impl->cameraRGBATextureId);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_impl->cameraDimensions.width, m_impl->cameraDimensions.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glGenerateMipmap(GL_TEXTURE_2D);
 
             glBindTexture(GL_TEXTURE_2D, 0);
 
-            glGenFramebuffers(1, &m_implData->frameBufferId);
-            glBindFramebuffer(GL_FRAMEBUFFER, m_implData->frameBufferId);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_implData->cameraRGBATextureId, 0);
+            glGenFramebuffers(1, &m_impl->frameBufferId);
+            glBindFramebuffer(GL_FRAMEBUFFER, m_impl->frameBufferId);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_impl->cameraRGBATextureId, 0);
 
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-            m_implData->cameraUVs = sensorRotationDiff == 90 ? CAMERA_UVS_ROTATION_90 :
+            m_impl->cameraUVs = sensorRotationDiff == 90 ? CAMERA_UVS_ROTATION_90 :
                           sensorRotationDiff == 180 ? CAMERA_UVS_ROTATION_180 :
                           sensorRotationDiff == 270 ? CAMERA_UVS_ROTATION_270 :
                           CAMERA_UVS_ROTATION_0;
 
-            m_implData->cameraShaderProgramId = android::OpenGLHelpers::CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
+            m_impl->cameraShaderProgramId = android::OpenGLHelpers::CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
 
-            if (API_LEVEL >= 24 && libCamera2NDK && !m_implData->overrideCameraTexture) {
-                m_implData->cameraOESTextureId = m_implData->GenerateOESTexture();
+            m_impl->cameraOESTextureId = m_impl->GenerateOESTexture();
 
-                // Create the surface and surface texture that will receive the camera preview
-                m_implData->surfaceTexture.InitWithTexture(m_implData->cameraOESTextureId);
-                m_implData->surfaceTexture.setDefaultBufferSize(track->Width(), track->Height());
-                android::view::Surface surface(m_implData->surfaceTexture);
+            // Create the surface and surface texture that will receive the camera preview
+            m_impl->surfaceTexture.InitWithTexture(m_impl->cameraOESTextureId);
+            m_impl->surfaceTexture.setDefaultBufferSize(track.Width(), track.Height());
+            android::view::Surface surface(m_impl->surfaceTexture);
 
-                // open the front or back camera
-                GET_CAMERA_FUNCTION(ACameraManager_openCamera)(m_implData->cameraManager, m_implData->cameraDevice.m_impl->cameraID.c_str(),
-                                                               &cameraDeviceCallbacks,
-                                                               &m_implData->aCameraDevice);
+            // open the camera stream
+            auto cameraManager{GET_CAMERA_FUNCTION(ACameraManager_create)()};
+            GET_CAMERA_FUNCTION(ACameraManager_openCamera)(cameraManager, m_impl->cameraID.c_str(),
+                                                           &cameraDeviceCallbacks,
+                                                           &m_impl->aCameraDevice);
 
-                m_implData->textureWindow = reinterpret_cast<ANativeWindow *>(ANativeWindow_fromSurface(
-                        GetEnvForCurrentThread(), surface));
+            m_impl->textureWindow = reinterpret_cast<ANativeWindow *>(ANativeWindow_fromSurface(
+                    GetEnvForCurrentThread(), surface));
 
-                // Prepare request for texture target
-                GET_CAMERA_FUNCTION(ACameraDevice_createCaptureRequest)(m_implData->aCameraDevice,
-                                                                        API24::TEMPLATE_PREVIEW,
-                                                                        &m_implData->request);
+            // Prepare request for texture target
+            GET_CAMERA_FUNCTION(ACameraDevice_createCaptureRequest)(m_impl->aCameraDevice,
+                                                                    API24::TEMPLATE_PREVIEW,
+                                                                    &m_impl->request);
 
-                // Prepare outputs for session
-                GET_CAMERA_FUNCTION(ACaptureSessionOutput_create)(m_implData->textureWindow,
-                                                                  &m_implData->textureOutput);
-                GET_CAMERA_FUNCTION(ACaptureSessionOutputContainer_create)(&m_implData->outputs);
-                GET_CAMERA_FUNCTION(ACaptureSessionOutputContainer_add)(m_implData->outputs, m_implData->textureOutput);
+            // Prepare outputs for session
+            GET_CAMERA_FUNCTION(ACaptureSessionOutput_create)(m_impl->textureWindow,
+                                                              &m_impl->textureOutput);
+            GET_CAMERA_FUNCTION(ACaptureSessionOutputContainer_create)(&m_impl->outputs);
+            GET_CAMERA_FUNCTION(ACaptureSessionOutputContainer_add)(m_impl->outputs, m_impl->textureOutput);
 
-                // Prepare target surface
-                ANativeWindow_acquire(m_implData->textureWindow);
-                GET_CAMERA_FUNCTION(ACameraOutputTarget_create)(m_implData->textureWindow, &m_implData->textureTarget);
-                GET_CAMERA_FUNCTION(ACaptureRequest_addTarget)(m_implData->request, m_implData->textureTarget);
+            // Prepare target surface
+            ANativeWindow_acquire(m_impl->textureWindow);
+            GET_CAMERA_FUNCTION(ACameraOutputTarget_create)(m_impl->textureWindow, &m_impl->textureTarget);
+            GET_CAMERA_FUNCTION(ACaptureRequest_addTarget)(m_impl->request, m_impl->textureTarget);
 
-                // Create the session
-                GET_CAMERA_FUNCTION(ACameraDevice_createCaptureSession)(m_implData->aCameraDevice, m_implData->outputs,
-                                                                        &sessionStateCallbacks,
-                                                                        &m_implData->textureSession);
+            // Create the session
+            GET_CAMERA_FUNCTION(ACameraDevice_createCaptureSession)(m_impl->aCameraDevice, m_impl->outputs,
+                                                                    &sessionStateCallbacks,
+                                                                    &m_impl->textureSession);
 
-                // Start capturing continuously
-                GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(m_implData->textureSession,
-                                                                               &captureCallbacks,
-                                                                               1, &m_implData->request,
-                                                                               nullptr);
-            }
+            // Start capturing continuously
+            GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(m_impl->textureSession,
+                                                                           &captureCallbacks,
+                                                                           1, &m_impl->request,
+                                                                           nullptr);
 
-            if (eglMakeCurrent(m_implData->display, 0/*surface*/, 0/*surface*/, currentContext) == EGL_FALSE)
+            GET_CAMERA_FUNCTION(ACameraManager_delete)(cameraManager);
+
+            if (eglMakeCurrent(m_impl->display, 0/*surface*/, 0/*surface*/, currentContext) == EGL_FALSE)
             {
                 throw std::runtime_error{"Unable to restore GL context for camera texture init."};
             }
 
-            return m_implData->cameraDimensions;
+            return m_impl->cameraDimensions;
         });
     }
 
-    const CameraDevice* Camera::Impl::GetOpenedCamera()
+    std::vector<CameraDevice> CameraDevice::GetCameraDevices(Napi::Env env)
     {
-        return m_implData->cameraDevice.m_impl == nullptr ? nullptr : &m_implData->cameraDevice;
-    }
+        if (API_LEVEL < 24)
+        {
+            throw std::runtime_error{"Android Platform level < 24. NativeCameraPlugin is only supported on Android devices running API 24+"};
+        }
 
-    std::vector<CameraDevice> Camera::Impl::GetCameraDevices()
-    {
+        auto cameraManager{GET_CAMERA_FUNCTION(ACameraManager_create)()};
+
         std::vector<CameraDevice> cameraDevices{};
 
         // Get the list of available cameras
         API24::ACameraIdList *cameraIds = nullptr;
-        GET_CAMERA_FUNCTION(ACameraManager_getCameraIdList)(m_implData->cameraManager, &cameraIds);
+        GET_CAMERA_FUNCTION(ACameraManager_getCameraIdList)(cameraManager, &cameraIds);
 
         for (int i = 0; i < cameraIds->numCameras; ++i)
         {
             const char* id = cameraIds->cameraIds[i];
-            auto cameraDeviceImpl{ std::make_unique<CameraDevice::Impl>() };
+            auto cameraDeviceImpl{ std::make_unique<CameraDevice::Impl>(env) };
 
             API24::ACameraMetadata *metadataObj;
-            GET_CAMERA_FUNCTION(ACameraManager_getCameraCharacteristics)(m_implData->cameraManager, id, &metadataObj);
+            GET_CAMERA_FUNCTION(ACameraManager_getCameraCharacteristics)(cameraManager, id, &metadataObj);
 
             // Get all available stream configurations supported by the camera
             API24::ACameraMetadata_const_entry streamConfigurations = {};
@@ -415,7 +392,7 @@ namespace Babylon::Plugins
             // Create the capabilities
             cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<std::string>>
             (
-                CameraCapability::Capability::FacingMode,
+                CameraCapability::Feature::FacingMode,
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment",
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment",
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"}
@@ -423,36 +400,36 @@ namespace Babylon::Plugins
 
             cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<bool>>
             (
-                CameraCapability::Capability::Torch,
+                CameraCapability::Feature::Torch,
                 false,
                 false,
                 torchSupported ? std::vector<bool>{false, true} : std::vector<bool>{false},
-                [this](bool newValue)
+                [impl{ cameraDeviceImpl.get() }](bool newValue)
                 {
                     uint8_t torchMode = newValue
                                         ? API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_TORCH
                                         : API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_OFF;
-                    GET_CAMERA_FUNCTION(ACaptureRequest_setEntry_u8)(m_implData->request, API24::ACAMERA_FLASH_MODE, 1, &torchMode);
+                    GET_CAMERA_FUNCTION(ACaptureRequest_setEntry_u8)(impl->request, API24::ACAMERA_FLASH_MODE, 1, &torchMode);
 
                     // Update the camera request
-                    GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(m_implData->textureSession, &captureCallbacks, 1, &m_implData->request, nullptr);
+                    GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(impl->textureSession, &captureCallbacks, 1, &impl->request, nullptr);
                     return true;
                 }
             ));
 
             cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<double>>
             (
-                CameraCapability::Capability::Zoom,
+                CameraCapability::Feature::Zoom,
                 zoomRatio,
                 1.0, // Set the default target zoom to 1.0 (no zoom)
                 std::vector<double>{minZoomRatio, maxZoomRatio},
-                [this](double newValue)
+                [impl{ cameraDeviceImpl.get() }](double newValue)
                 {
                     float newZoomRatio{ static_cast<float>(newValue) };
-                    GET_CAMERA_FUNCTION(ACaptureRequest_setEntry_float)(m_implData->request, API24::ACAMERA_CONTROL_ZOOM_RATIO, 1, &newZoomRatio);
+                    GET_CAMERA_FUNCTION(ACaptureRequest_setEntry_float)(impl->request, API24::ACAMERA_CONTROL_ZOOM_RATIO, 1, &newZoomRatio);
 
                     // Update the camera request
-                    GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(m_implData->textureSession, &captureCallbacks, 1, &m_implData->request, nullptr);
+                    GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(impl->textureSession, &captureCallbacks, 1, &impl->request, nullptr);
                     return true;
                 }
             ));
@@ -461,51 +438,40 @@ namespace Babylon::Plugins
         }
 
         GET_CAMERA_FUNCTION(ACameraManager_deleteCameraIdList)(cameraIds);
+        GET_CAMERA_FUNCTION(ACameraManager_delete)(cameraManager);
 
         return cameraDevices;
     }
 
-    void Camera::Impl::SetTextureOverride(void* texturePtr)
-    {
-        if (!m_implData->overrideCameraTexture)
-        {
-            throw std::runtime_error{"Trying to override NativeCamera Texture."};
-        }
-        m_implData->cameraOESTextureId = reinterpret_cast<uintptr_t>(texturePtr);
-    }
-
-    void Camera::Impl::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
+    void CameraDevice::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
         EGLContext currentContext = eglGetCurrentContext();
-        if (m_implData->context != EGL_NO_CONTEXT)
+        if (m_impl->context != EGL_NO_CONTEXT)
         {
             // use the newly created shared context
-            if (eglMakeCurrent(m_implData->display, 0/*surface*/, 0/*surface*/, m_implData->context) == EGL_FALSE)
+            if (eglMakeCurrent(m_impl->display, 0/*surface*/, 0/*surface*/, m_impl->context) == EGL_FALSE)
             {
                 throw std::runtime_error{"Unable to make current shared GL context for camera texture."};
             }
         }
 
-        if (API_LEVEL >= 24 && !m_implData->overrideCameraTexture)
-        {
-            m_implData->surfaceTexture.updateTexImage();
-        }
+        m_impl->surfaceTexture.updateTexImage();
 
-        glBindFramebuffer(GL_FRAMEBUFFER, m_implData->frameBufferId);
-        glViewport(0, 0, m_implData->cameraDimensions.width, m_implData->cameraDimensions.height);
-        glUseProgram(m_implData->cameraShaderProgramId);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_impl->frameBufferId);
+        glViewport(0, 0, m_impl->cameraDimensions.width, m_impl->cameraDimensions.height);
+        glUseProgram(m_impl->cameraShaderProgramId);
 
-        auto vertexPositionsUniformLocation{ glGetUniformLocation(m_implData->cameraShaderProgramId, "positions") };
+        auto vertexPositionsUniformLocation{ glGetUniformLocation(m_impl->cameraShaderProgramId, "positions") };
         glUniform2fv(vertexPositionsUniformLocation, CAMERA_VERTEX_COUNT, CAMERA_VERTEX_POSITIONS);
 
-        auto uvsUniformLocation{ glGetUniformLocation(m_implData->cameraShaderProgramId, "uvs") };
-        glUniform2fv(uvsUniformLocation, CAMERA_UVS_COUNT, m_implData->cameraUVs);
+        auto uvsUniformLocation{ glGetUniformLocation(m_impl->cameraShaderProgramId, "uvs") };
+        glUniform2fv(uvsUniformLocation, CAMERA_UVS_COUNT, m_impl->cameraUVs);
 
         // Configure the camera texture
-        auto cameraTextureUniformLocation{glGetUniformLocation(m_implData->cameraShaderProgramId, "cameraTexture")};
+        auto cameraTextureUniformLocation{glGetUniformLocation(m_impl->cameraShaderProgramId, "cameraTexture")};
         glUniform1i(cameraTextureUniformLocation, android::OpenGLHelpers::GetTextureUnit(GL_TEXTURE0));
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_EXTERNAL_OES, m_implData->cameraOESTextureId);
+        glBindTexture(GL_TEXTURE_EXTERNAL_OES, m_impl->cameraOESTextureId);
         glBindSampler(android::OpenGLHelpers::GetTextureUnit(GL_TEXTURE0), 0);
 
         // Draw the quad
@@ -515,38 +481,35 @@ namespace Babylon::Plugins
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // bind previously bound context
-        if (eglMakeCurrent(m_implData->display, 0/*surface*/, 0/*surface*/, currentContext) == EGL_FALSE)
+        if (eglMakeCurrent(m_impl->display, 0/*surface*/, 0/*surface*/, currentContext) == EGL_FALSE)
         {
             throw std::runtime_error{"Unable to make current shared GL context for camera texture."};
         }
 
-        arcana::make_task(m_implData->deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
-            bgfx::overrideInternal(textureHandle, m_implData->cameraRGBATextureId);
+        arcana::make_task(m_impl->deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
+            bgfx::overrideInternal(textureHandle, m_impl->cameraRGBATextureId);
         });
     }
 
-    void Camera::Impl::Close()
+    void CameraDevice::Close()
     {
-        if (API_LEVEL >= 24 && !m_implData->overrideCameraTexture)
+        // Stop recording to SurfaceTexture and do some cleanup
+        GET_CAMERA_FUNCTION(ACameraCaptureSession_stopRepeating)(m_impl->textureSession);
+        GET_CAMERA_FUNCTION(ACameraCaptureSession_close)(m_impl->textureSession);
+        GET_CAMERA_FUNCTION(ACaptureSessionOutputContainer_free)(m_impl->outputs);
+        GET_CAMERA_FUNCTION(ACaptureSessionOutput_free)(m_impl->output);
+
+        GET_CAMERA_FUNCTION(ACameraDevice_close)(m_impl->aCameraDevice);
+
+        // Capture request for SurfaceTexture
+        ANativeWindow_release(m_impl->textureWindow);
+        GET_CAMERA_FUNCTION(ACaptureRequest_free)(m_impl->request);
+
+        if (m_impl->context != EGL_NO_CONTEXT)
         {
-            // Stop recording to SurfaceTexture and do some cleanup
-            GET_CAMERA_FUNCTION(ACameraCaptureSession_stopRepeating)(m_implData->textureSession);
-            GET_CAMERA_FUNCTION(ACameraCaptureSession_close)(m_implData->textureSession);
-            GET_CAMERA_FUNCTION(ACaptureSessionOutputContainer_free)(m_implData->outputs);
-            GET_CAMERA_FUNCTION(ACaptureSessionOutput_free)(m_implData->output);
-
-            GET_CAMERA_FUNCTION(ACameraDevice_close)(m_implData->aCameraDevice);
-
-            // Capture request for SurfaceTexture
-            ANativeWindow_release(m_implData->textureWindow);
-            GET_CAMERA_FUNCTION(ACaptureRequest_free)(m_implData->request);
-        }
-
-        if (m_implData->context != EGL_NO_CONTEXT)
-        {
-            eglDestroyContext(m_implData->display, m_implData->context);
+            eglDestroyContext(m_impl->display, m_impl->context);
         }
     }
 }
 
-#include "../NativeCameraImplShared.h"
+#include "../CameraDeviceSharedPImpl.h"

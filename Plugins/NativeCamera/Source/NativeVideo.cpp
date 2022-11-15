@@ -1,5 +1,5 @@
 #include "NativeVideo.h"
-#include "NativeCameraImpl.h"
+#include "CameraDevice.h"
 
 namespace Babylon::Plugins
 {
@@ -7,7 +7,6 @@ namespace Babylon::Plugins
 
     void NativeVideo::Initialize(Napi::Env& env)
     {
-
         Napi::Function func = DefineClass(
             env,
             JS_CLASS_NAME,
@@ -20,7 +19,6 @@ namespace Babylon::Plugins
                 InstanceMethod("removeAttribute", &NativeVideo::RemoveAttribute),
                 InstanceAccessor("videoWidth", &NativeVideo::GetVideoWidth, nullptr),
                 InstanceAccessor("videoHeight", &NativeVideo::GetVideoHeight, nullptr),
-                InstanceAccessor("frontCamera", nullptr, &NativeVideo::SetFrontCamera),
                 InstanceAccessor("readyState", &NativeVideo::GetReadyState, nullptr),
                 InstanceAccessor("HAVE_CURRENT_DATA", &NativeVideo::GetHaveCurrentData, nullptr),
                 InstanceAccessor("srcObject", &NativeVideo::GetSrcObject, &NativeVideo::SetSrcObject)
@@ -29,16 +27,13 @@ namespace Babylon::Plugins
         env.Global().Set(JS_CLASS_NAME, func);
     }
 
-    Napi::Object NativeVideo::New(const Napi::CallbackInfo& info, uint32_t width, uint32_t height, bool frontCamera)
+    Napi::Object NativeVideo::New(const Napi::CallbackInfo& info)
     {
-        return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({ Napi::Value::From(info.Env(), width), Napi::Value::From(info.Env(), height), Napi::Value::From(info.Env(), frontCamera) });
+        return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
     }
 
     NativeVideo::NativeVideo(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeVideo>{ info }
-        , m_maxWidth{ info[0].As<Napi::Number>().Uint32Value() }
-        , m_maxHeight{ info[1].As<Napi::Number>().Uint32Value() }
-        , m_frontCamera{ info[2].As<Napi::Boolean>().Value() }
     {
     }
 
@@ -52,17 +47,14 @@ namespace Babylon::Plugins
         return Napi::Value::From(Env(), m_height);
     }
 
-    void NativeVideo::SetFrontCamera(const Napi::CallbackInfo&, const Napi::Value& value)
-    {
-        m_frontCamera = value.As<Napi::Boolean>().Value();
-    }
-
     void NativeVideo::SetAttribute(const Napi::CallbackInfo&)
     {
+        // This function is defined to fulfill the web api, but not used natively
     }
 
     void NativeVideo::RemoveAttribute(const Napi::CallbackInfo&)
     {
+        // This function is defined to fulfill the web api, but not used natively
     }
 
     Napi::Value NativeVideo::GetReadyState(const Napi::CallbackInfo& /*info*/)
@@ -78,7 +70,7 @@ namespace Babylon::Plugins
     void NativeVideo::UpdateTexture(bgfx::TextureHandle textureHandle)
     {
         // Only update the texture if we're playing and the srcObject is an instance of a MediaStream
-        if (m_IsPlaying && !m_streamObject.Value().IsNull() && !m_streamObject.Value().IsUndefined());
+        if (m_IsPlaying && !m_streamObject.Value().IsNull() && !m_streamObject.Value().IsUndefined())
         {
             MediaStream::Unwrap(m_streamObject.Value())->UpdateTexture(textureHandle);
         }

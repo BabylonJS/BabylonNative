@@ -3,14 +3,14 @@
 
 namespace Babylon::Plugins
 {
-    CameraCapability::CameraCapability(Capability capability)
-        : m_capability{ capability }
+    CameraCapability::CameraCapability(Feature capability)
+        : m_feature{ capability }
     {
     }
 
     std::string CameraCapability::getName()
     {
-        switch (m_capability)
+        switch (m_feature)
         {
             case FacingMode: return "facingMode";
             case Torch: return "torch";
@@ -23,7 +23,7 @@ namespace Babylon::Plugins
 
     template <typename T>
     CameraCapability::ConstraintType CameraCapabilityTemplate<T>::getConstraintType() {
-        switch (m_capability)
+        switch (m_feature)
         {
             case FacingMode: return CameraCapabilityTemplate::Sequence;
             case Torch: return CameraCapabilityTemplate::Sequence;
@@ -37,12 +37,12 @@ namespace Babylon::Plugins
 
     template <typename T>
     CameraCapabilityTemplate<T>::CameraCapabilityTemplate(
-            CameraCapability::Capability capability,
+            CameraCapability::Feature feature,
             T currentValue,
             T defaultValue,
             std::vector<T> acceptedValues,
             std::function<bool(T)> setterFunction)
-            : CameraCapability(capability)
+            : CameraCapability(feature)
             , m_currentValue{ currentValue }
             , m_defaultValue{ defaultValue }
             , m_acceptedValues{ acceptedValues }

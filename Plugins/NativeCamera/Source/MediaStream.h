@@ -1,11 +1,15 @@
 #pragma once
 #include <napi/napi.h>
-#include "NativeCameraImpl.h"
+#include "CameraDevice.h"
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
 
 namespace Babylon::Plugins
 {
+    // The MediaStream object provides a polyfill for both the MediaStream and MediaStreamTrack web API's
+    // that enable control over selecting a camera stream available on the device and modifying capabilities
+    // of the camera on the fly while the stream is rendering.
+    // https://developer.mozilla.org/en-US/docs/Web/API/MediaStream
     class MediaStream : public Napi::ObjectWrap<MediaStream>
     {
     public:
@@ -34,10 +38,10 @@ namespace Babylon::Plugins
         
     private:
         arcana::task<void, std::exception_ptr> ApplyInitialConstraints(Napi::Env env, Napi::Object constraints);
-        std::optional<std::pair<CameraDevice, const CameraTrack*>> FindBestCameraStream(Napi::Object constraints);
+        std::optional<std::pair<CameraDevice, const CameraTrack&>> FindBestCameraStream(Napi::Env env, Napi::Object constraints);
         bool UpdateConstraints(Napi::Env env, Napi::Object constraints);
         
-        std::shared_ptr<Plugins::Camera::Impl> m_cameraImpl;
+        std::shared_ptr<CameraDevice> m_cameraDevice{ nullptr };
         JsRuntimeScheduler m_runtimeScheduler;
         
         Napi::ObjectReference m_currentConstraints{};

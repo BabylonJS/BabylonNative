@@ -18,7 +18,7 @@
 
 @class CameraTextureDelegate;
 
-#include "../NativeCameraImpl.h"
+#include "../CameraDevice.h"
 #include <napi/napi.h>
 
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
@@ -143,21 +143,15 @@ namespace Babylon::Plugins
 
     struct CameraDevice::Impl
     {
+        Impl(Napi::Env env)
+            : deviceContext{nullptr}
+            , env{env}
+        {
+        }
+        
         std::vector<CameraTrack> supportedResolutions{};
         std::vector<std::unique_ptr<CameraCapability>> capabilities{};
         AVCaptureDevice* avDevice;
-    };
-
-    struct Camera::Impl::ImplData
-    {
-        ImplData(Napi::Env env, bool overrideCameraTexture)
-            : deviceContext{nullptr}
-            , env{env}
-            , overrideCameraTexture{overrideCameraTexture} {};
-        
-        ~ImplData()
-        {
-        }
         
         Graphics::DeviceContext* deviceContext;
         Napi::Env env;
@@ -178,21 +172,8 @@ namespace Babylon::Plugins
         
         arcana::background_dispatcher<32> cameraSessionDispatcher{};
     };
-    Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
-        : m_implData{std::make_unique<ImplData>(env, overrideCameraTexture)}
-    {
-    }
 
-    Camera::Impl::~Impl()
-    {
-    }
-
-    const CameraDevice* Camera::Impl::GetOpenedCamera()
-    {
-        return m_implData->cameraDevice.m_impl == nullptr ? nullptr : &m_implData->cameraDevice;
-    }
-
-    std::vector<CameraDevice> Camera::Impl::GetCameraDevices()
+    std::vector<CameraDevice> CameraDevice::GetCameraDevices(Napi::Env env)
     {
         std::vector<CameraDevice> cameraDevices{};
         
@@ -226,7 +207,7 @@ namespace Babylon::Plugins
         
         for (AVCaptureDevice* device in discoverySession.devices)
         {
-            auto cameraDeviceImpl{ std::make_unique<CameraDevice::Impl>() };
+            auto cameraDeviceImpl{ std::make_unique<CameraDevice::Impl>(env) };
             
             for (AVCaptureDeviceFormat* format in device.formats)
             {
@@ -254,7 +235,7 @@ namespace Babylon::Plugins
 
             cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<std::string>>
             (
-                CameraCapability::Capability::FacingMode,
+                CameraCapability::Feature::FacingMode,
                 device.position == AVCaptureDevicePositionFront ? "user" : "environment",
                 device.position == AVCaptureDevicePositionFront ? "user" : "environment",
                 device.position == AVCaptureDevicePositionFront ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"}
@@ -262,7 +243,7 @@ namespace Babylon::Plugins
             
             cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<bool>>
             (
-                CameraCapability::Capability::Torch,
+                CameraCapability::Feature::Torch,
                 false,
                 false,
                 device.isTorchAvailable ? std::vector<bool>{false, true} : std::vector<bool>{false},
@@ -303,7 +284,7 @@ namespace Babylon::Plugins
             
             cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<double>>
             (
-                CameraCapability::Capability::Zoom,
+                CameraCapability::Feature::Zoom,
                 1.0 * zoomFactorScale, // Translate the starting zoom value from the iOS 1.0+ scale to our 0.0+ scale.
                 1.0, // Set the default target to 1.0 (regardless of zoomFactorScale)
                 std::vector<double>{device.minAvailableVideoZoomFactor * zoomFactorScale, device.maxAvailableVideoZoomFactor * zoomFactorScale},
@@ -333,18 +314,18 @@ namespace Babylon::Plugins
         return cameraDevices;
     }
 
-    arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(CameraDevice cameraDevice, const CameraTrack* resolution)
+    arcana::task<CameraDevice::CameraDimensions, std::exception_ptr> CameraDevice::Open(const CameraTrack& resolution)
     {
         NSError *error{nil};
 
         // This is the first time the camera has been opened, perform some one time setup.
-        if (!m_implData->isInitialized) {
-            m_implData->commandQueue = (__bridge id<MTLCommandQueue>)bgfx::getInternalData()->commandQueue;
-            m_implData->metalDevice = (__bridge id<MTLDevice>)bgfx::getInternalData()->context;
-            m_implData->deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_implData->env);
+        if (!m_impl->isInitialized) {
+            m_impl->commandQueue = (__bridge id<MTLCommandQueue>)bgfx::getInternalData()->commandQueue;
+            m_impl->metalDevice = (__bridge id<MTLDevice>)bgfx::getInternalData()->context;
+            m_impl->deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_impl->env);
 
             // Compile shaders used for converting camera output to RGBA.
-            id<MTLLibrary> lib = CompileShader(m_implData->metalDevice, shaderSource);
+            id<MTLLibrary> lib = CompileShader(m_impl->metalDevice, shaderSource);
             id<MTLFunction> vertexFunction = [lib newFunctionWithName:@"vertexShader"];
             id<MTLFunction> fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
 
@@ -354,43 +335,43 @@ namespace Babylon::Plugins
             pipelineStateDescriptor.vertexFunction = vertexFunction;
             pipelineStateDescriptor.fragmentFunction = fragmentFunction;
             pipelineStateDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatRGBA8Unorm;
-            m_implData->cameraPipelineState = [m_implData->metalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
+            m_impl->cameraPipelineState = [m_impl->metalDevice newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
 
-            if (!m_implData->cameraPipelineState) {
+            if (!m_impl->cameraPipelineState) {
                 return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{
                     std::string("Failed to create camera pipeline state: ") + [error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]}));
             }
 
-            m_implData->isInitialized = true;
+            m_impl->isInitialized = true;
         } else {
             // Always refresh the bgfx handle to point to textureRGBA on re-open.
-            m_implData->refreshBgfxHandle = true;
+            m_impl->refreshBgfxHandle = true;
         }
 
         // Construct the camera texture delegate, which is responsible for handling updates for device orientation and the capture session.
-        CVMetalTextureCacheCreate(nullptr, nullptr, m_implData->metalDevice, nullptr, &m_implData->textureCache);
-        m_implData->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_implData->textureCache];
+        CVMetalTextureCacheCreate(nullptr, nullptr, m_impl->metalDevice, nullptr, &m_impl->textureCache);
+        m_impl->cameraTextureDelegate = [[CameraTextureDelegate alloc]init:m_impl->textureCache];
 
         // Lock camera device and set up camera format. If there a problem initialising the camera it will give an error.
-        [cameraDevice.m_impl->avDevice lockForConfiguration:&error];
+        [m_impl->avDevice lockForConfiguration:&error];
         if (error != nil)
         {
             return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"Failed to lock camera"}));
         }
 
-        [cameraDevice.m_impl->avDevice setActiveFormat:resolution->m_impl->avDeviceFormat];
-        AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:cameraDevice.m_impl->avDevice error:&error]};
-        [cameraDevice.m_impl->avDevice unlockForConfiguration];
+        [m_impl->avDevice setActiveFormat:resolution.m_impl->avDeviceFormat];
+        AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:m_impl->avDevice error:&error]};
+        [m_impl->avDevice unlockForConfiguration];
 
         // Capture the format dimensions.
-        CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(resolution->m_impl->avDeviceFormat.formatDescription)};
+        CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(resolution.m_impl->avDeviceFormat.formatDescription)};
         CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 
-        Camera::Impl::CameraDimensions cameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
+        CameraDevice::CameraDimensions cameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
 
         // For portrait orientations swap the height and width of the video format dimensions.
-        if (m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortrait
-            ||  m_implData->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortraitUpsideDown)
+        if (m_impl->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortrait
+            ||  m_impl->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortraitUpsideDown)
         {
             std::swap(cameraDimensions.width, cameraDimensions.height);
         }
@@ -401,64 +382,52 @@ namespace Babylon::Plugins
             return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"}));
         }
         
-        // Take ownership of the cameraDevice
-        m_implData->cameraDevice = std::move(cameraDevice);
-
         // Kick off camera session on a background thread.
-        return arcana::make_task(m_implData->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this(), pixelFormat = resolution->m_impl->pixelFormat, input, cameraDimensions]() mutable {
-            if (implObj->m_implData->avCaptureSession == nil) {
-                implObj->m_implData->avCaptureSession = [[AVCaptureSession alloc] init];
+        return arcana::make_task(m_impl->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this(), pixelFormat = resolution.m_impl->pixelFormat, input, cameraDimensions]() mutable {
+            if (implObj->m_impl->avCaptureSession == nil) {
+                implObj->m_impl->avCaptureSession = [[AVCaptureSession alloc] init];
             } else {
-                for (AVCaptureInput* input in [implObj->m_implData->avCaptureSession inputs]) {
-                    [implObj->m_implData->avCaptureSession removeInput: input];
+                for (AVCaptureInput* input in [implObj->m_impl->avCaptureSession inputs]) {
+                    [implObj->m_impl->avCaptureSession removeInput: input];
                 }
 
-                for (AVCaptureOutput* output in [implObj->m_implData->avCaptureSession outputs]) {
-                    [implObj->m_implData->avCaptureSession removeOutput: output];
+                for (AVCaptureOutput* output in [implObj->m_impl->avCaptureSession outputs]) {
+                    [implObj->m_impl->avCaptureSession removeOutput: output];
                 }
             }
 
 #if (TARGET_OS_IPHONE)
-            [implObj->m_implData->avCaptureSession setSessionPreset:AVCaptureSessionPresetInputPriority];
+            [implObj->m_impl->avCaptureSession setSessionPreset:AVCaptureSessionPresetInputPriority];
 #endif
 
             // Add camera input source to the capture session.
-            [implObj->m_implData->avCaptureSession addInput:input];
+            [implObj->m_impl->avCaptureSession addInput:input];
 
             // Create the camera buffer, and set up camera texture delegate to capture frames.
             dispatch_queue_t sampleBufferQueue{dispatch_queue_create("CameraMulticaster", DISPATCH_QUEUE_SERIAL)};
             AVCaptureVideoDataOutput* dataOutput{[[AVCaptureVideoDataOutput alloc] init]};
             [dataOutput setAlwaysDiscardsLateVideoFrames:YES];
             [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(pixelFormat)}];
-            [dataOutput setSampleBufferDelegate:implObj->m_implData->cameraTextureDelegate queue:sampleBufferQueue];
-            [implObj->m_implData->avCaptureSession addOutput:dataOutput];
+            [dataOutput setSampleBufferDelegate:implObj->m_impl->cameraTextureDelegate queue:sampleBufferQueue];
+            [implObj->m_impl->avCaptureSession addOutput:dataOutput];
 
             // Actually start the camera session.
-            [implObj->m_implData->avCaptureSession startRunning];
+            [implObj->m_impl->avCaptureSession startRunning];
             return cameraDimensions;
         });
     }
 
-    void Camera::Impl::SetTextureOverride(void* /*texturePtr*/)
+    void CameraDevice::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
-        if (!m_implData->overrideCameraTexture)
-        {
-            throw std::runtime_error{"Trying to override NativeCamera Texture."};
-        }
-        // stub
-    }
-
-    void Camera::Impl::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
-    {
-        arcana::make_task(m_implData->deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
+        arcana::make_task(m_impl->deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
             id<MTLTexture> textureY{};
             id<MTLTexture> textureCbCr{};
             int64_t width{0};
             int64_t height{0};
 
-            @synchronized(m_implData->cameraTextureDelegate) {
-                textureY = [m_implData->cameraTextureDelegate getCameraTextureY];
-                textureCbCr = [m_implData->cameraTextureDelegate getCameraTextureCbCr];
+            @synchronized(m_impl->cameraTextureDelegate) {
+                textureY = [m_impl->cameraTextureDelegate getCameraTextureY];
+                textureCbCr = [m_impl->cameraTextureDelegate getCameraTextureCbCr];
                 width = [textureY width];
                 height = [textureY height];
             }
@@ -469,39 +438,39 @@ namespace Babylon::Plugins
             }
 
             // Recreate the output texture when the camera dimensions change.
-            if (m_implData->textureRGBA == nil || m_implData->cameraDimensions.width != width || m_implData->cameraDimensions.height != height)
+            if (m_impl->textureRGBA == nil || m_impl->cameraDimensions.width != width || m_impl->cameraDimensions.height != height)
             {
                 MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
                 textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
-                m_implData->textureRGBA = [m_implData->metalDevice newTextureWithDescriptor:textureDescriptor];
-                bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureRGBA));
-                m_implData->cameraDimensions.width = static_cast<uint32_t>(width);
-                m_implData->cameraDimensions.height = static_cast<uint32_t>(height);
-                m_implData->refreshBgfxHandle = false;
-            } else if (m_implData->refreshBgfxHandle) {
+                m_impl->textureRGBA = [m_impl->metalDevice newTextureWithDescriptor:textureDescriptor];
+                bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_impl->textureRGBA));
+                m_impl->cameraDimensions.width = static_cast<uint32_t>(width);
+                m_impl->cameraDimensions.height = static_cast<uint32_t>(height);
+                m_impl->refreshBgfxHandle = false;
+            } else if (m_impl->refreshBgfxHandle) {
                 // On texture re-use across sessions set the bgfx texture handle.
-                bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_implData->textureRGBA));
-                m_implData->refreshBgfxHandle = false;
+                bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_impl->textureRGBA));
+                m_impl->refreshBgfxHandle = false;
             }
 
-            if (textureY != nil && textureCbCr != nil && m_implData->textureRGBA != nil)
+            if (textureY != nil && textureCbCr != nil && m_impl->textureRGBA != nil)
             {
-                m_implData->currentCommandBuffer = [m_implData->commandQueue commandBuffer];
-                m_implData->currentCommandBuffer.label = @"NativeCameraCommandBuffer";
+                m_impl->currentCommandBuffer = [m_impl->commandQueue commandBuffer];
+                m_impl->currentCommandBuffer.label = @"NativeCameraCommandBuffer";
                 MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
                 if (renderPassDescriptor != nil) {
                     // Attach the color texture, on which we'll draw the camera texture (so no need to clear on load).
-                    renderPassDescriptor.colorAttachments[0].texture = m_implData->textureRGBA;
+                    renderPassDescriptor.colorAttachments[0].texture = m_impl->textureRGBA;
                     renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
                     renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
 
                     // Create and end the render encoder.
-                    id<MTLRenderCommandEncoder> renderEncoder = [m_implData->currentCommandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+                    id<MTLRenderCommandEncoder> renderEncoder = [m_impl->currentCommandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
                     renderEncoder.label = @"NativeCameraEncoder";
 
                     // Set the shader pipeline.
-                    [renderEncoder setRenderPipelineState:m_implData->cameraPipelineState];
+                    [renderEncoder setRenderPipelineState:m_impl->cameraPipelineState];
 
                     // Set the vertex data.
                     [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
@@ -515,7 +484,7 @@ namespace Babylon::Plugins
 
                     [renderEncoder endEncoding];
 
-                    [m_implData->currentCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
+                    [m_impl->currentCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
                         if (textureY != nil) {
                             [textureY setPurgeableState:MTLPurgeableStateEmpty];
                         }
@@ -527,33 +496,33 @@ namespace Babylon::Plugins
                 }
 
                 // Finalize rendering here & push the command buffer to the GPU.
-                [m_implData->currentCommandBuffer commit];
+                [m_impl->currentCommandBuffer commit];
             }
         });
     }
 
-    void Camera::Impl::Close()
+    void CameraDevice::Close()
     {
         // Stop collecting frames, release camera texture delegate.
-        [m_implData->cameraTextureDelegate reset];
-        m_implData->cameraTextureDelegate = nil;
+        [m_impl->cameraTextureDelegate reset];
+        m_impl->cameraTextureDelegate = nil;
 
         // Complete any running command buffers before destroying the cache.
-        if (m_implData->currentCommandBuffer != nil) {
-            [m_implData->currentCommandBuffer waitUntilCompleted];
+        if (m_impl->currentCommandBuffer != nil) {
+            [m_impl->currentCommandBuffer waitUntilCompleted];
         }
 
         // Free the texture cache.
-        if (m_implData->textureCache)
+        if (m_impl->textureCache)
         {
-            CVMetalTextureCacheFlush(m_implData->textureCache, 0);
-            CFRelease(m_implData->textureCache);
-            m_implData->textureCache = nil;
+            CVMetalTextureCacheFlush(m_impl->textureCache, 0);
+            CFRelease(m_impl->textureCache);
+            m_impl->textureCache = nil;
         }
 
-        if (m_implData->avCaptureSession != nil) {
-            arcana::make_task(m_implData->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this()](){
-                [implObj->m_implData->avCaptureSession stopRunning];
+        if (m_impl->avCaptureSession != nil) {
+            arcana::make_task(m_impl->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this()](){
+                [implObj->m_impl->avCaptureSession stopRunning];
             });
         }
     }
@@ -744,4 +713,4 @@ namespace Babylon::Plugins
 
 @end
 
-#include "../NativeCameraImplShared.h"
+#include "../CameraDeviceSharedPImpl.h"
