@@ -37,8 +37,8 @@ namespace Babylon::Plugins
     {
     public:
         struct CameraDimensions {
-            uint32_t width;
-            uint32_t height;
+            uint32_t width{};
+            uint32_t height{};
         };
 
         ~CameraDevice();
@@ -49,7 +49,7 @@ namespace Babylon::Plugins
 
         static std::vector<CameraDevice> GetCameraDevices(Napi::Env env);
 
-        arcana::task<CameraDimensions, std::exception_ptr> Open(const CameraTrack& track);
+        arcana::task<CameraDimensions, std::exception_ptr> OpenAsync(const CameraTrack& track);
         void Close();
         void UpdateCameraTexture(bgfx::TextureHandle textureHandle);
 

@@ -26,21 +26,36 @@ namespace Babylon::Plugins
 {
     struct CameraTrack::Impl
     {
-        int32_t width;
-        int32_t height;
+        int32_t width{};
+        int32_t height{};
     };
 
     struct CameraDevice::Impl {
+        Impl(Napi::Env env)
+                : env{env}
+        {
+        }
+
+        GLuint GenerateOESTexture() {
+            GLuint oesTexture;
+            glGenTextures(1, &oesTexture);
+            glBindTexture(GL_TEXTURE_EXTERNAL_OES, oesTexture);
+            glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0);
+            return oesTexture;
+        }
+
         Napi::Env env;
 
         std::vector<CameraTrack> supportedResolutions{};
         std::vector<std::unique_ptr<CameraCapability>> capabilities{};
-        std::string cameraID;
-        int32_t sensorRotation;
-        bool facingUser;
+        std::string cameraID{};
+        int32_t sensorRotation{};
+        bool facingUser{};
         CameraDimensions cameraDimensions{};
 
-        Graphics::DeviceContext* deviceContext;
+        Graphics::DeviceContext* deviceContext{};
 
         API24::ACameraDevice* aCameraDevice{};
         API24::ACameraOutputTarget* textureTarget{};
@@ -60,21 +75,6 @@ namespace Babylon::Plugins
 
         EGLContext context{EGL_NO_CONTEXT};
         EGLDisplay display{};
-
-        Impl(Napi::Env env)
-            : env{env}
-        {
-        }
-
-        GLuint GenerateOESTexture() {
-            GLuint oesTexture;
-            glGenTextures(1, &oesTexture);
-            glBindTexture(GL_TEXTURE_EXTERNAL_OES, oesTexture);
-            glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0);
-            return oesTexture;
-        }
     };
 
     // Vertex positions for the camera texture
@@ -174,7 +174,7 @@ namespace Babylon::Plugins
         .onCaptureBufferLost = nullptr,
     };
 
-    arcana::task<CameraDevice::CameraDimensions, std::exception_ptr> CameraDevice::Open(const CameraTrack& track)
+    arcana::task<CameraDevice::CameraDimensions, std::exception_ptr> CameraDevice::OpenAsync(const CameraTrack& track)
     {
         if (!m_impl->deviceContext){
             m_impl->deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_impl->env);
@@ -275,7 +275,7 @@ namespace Babylon::Plugins
                                                            &cameraDeviceCallbacks,
                                                            &m_impl->aCameraDevice);
 
-            m_impl->textureWindow = reinterpret_cast<ANativeWindow *>(ANativeWindow_fromSurface(
+            m_impl->textureWindow = reinterpret_cast<ANativeWindow*>(ANativeWindow_fromSurface(
                     GetEnvForCurrentThread(), surface));
 
             // Prepare request for texture target
@@ -328,7 +328,7 @@ namespace Babylon::Plugins
         std::vector<CameraDevice> cameraDevices{};
 
         // Get the list of available cameras
-        API24::ACameraIdList *cameraIds = nullptr;
+        API24::ACameraIdList* cameraIds = nullptr;
         GET_CAMERA_FUNCTION(ACameraManager_getCameraIdList)(cameraManager, &cameraIds);
 
         for (int i = 0; i < cameraIds->numCameras; ++i)
@@ -336,7 +336,7 @@ namespace Babylon::Plugins
             const char* id = cameraIds->cameraIds[i];
             auto cameraDeviceImpl{ std::make_unique<CameraDevice::Impl>(env) };
 
-            API24::ACameraMetadata *metadataObj;
+            API24::ACameraMetadata* metadataObj;
             GET_CAMERA_FUNCTION(ACameraManager_getCameraCharacteristics)(cameraManager, id, &metadataObj);
 
             // Get all available stream configurations supported by the camera
@@ -367,7 +367,7 @@ namespace Babylon::Plugins
             }
 
             // Get camera hardware info
-            API24::ACameraMetadata_const_entry metaDataEntry = {};
+            API24::ACameraMetadata_const_entry metaDataEntry{};
             GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_LENS_FACING, &metaDataEntry);
             auto facing{ static_cast<API24::acamera_metadata_enum_android_lens_facing_t>(metaDataEntry.data.u8[0]) };
 

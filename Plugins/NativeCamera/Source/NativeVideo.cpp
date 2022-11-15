@@ -151,7 +151,7 @@ namespace Babylon::Plugins
         
         if (value.IsNull() || value.IsUndefined() || !value.As<Napi::Object>().InstanceOf(MediaStream::GetConstructor(env)))
         {
-            m_streamObject = Napi::Persistent(Napi::Object::New(env));
+            m_streamObject = Napi::ObjectReference();
             this->m_width = 0;
             this->m_height = 0;
             this->m_isReady = false;
@@ -170,6 +170,6 @@ namespace Babylon::Plugins
 
     Napi::Value NativeVideo::GetSrcObject(const Napi::CallbackInfo& info) {
         // If the streamObject has not yet been defined return Null instead to match the web API
-        return m_streamObject.Value().IsUndefined() ? info.Env().Null() : m_streamObject.Value();
+        return m_streamObject.IsEmpty() ? info.Env().Null() : m_streamObject.Value();
     }
 }

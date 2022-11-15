@@ -12,15 +12,14 @@ namespace Babylon::Plugins
     // https://developer.mozilla.org/en-US/docs/Web/API/MediaStream
     class MediaStream : public Napi::ObjectWrap<MediaStream>
     {
-    public:
         static constexpr auto JS_CLASS_NAME = "_MediaStream";
-        
-        static arcana::task<Napi::Object, std::exception_ptr> New(Napi::Env env, Napi::Object constraints);
+
+    public:
+        static arcana::task<Napi::Object, std::exception_ptr> NewAsync(Napi::Env env, Napi::Object constraints);
         static Napi::Function GetConstructor(Napi::Env env);
         
         MediaStream(const Napi::CallbackInfo& info);
-        ~MediaStream()=default;
-        
+
         // MediaStream polyfill: https://developer.mozilla.org/en-US/docs/Web/API/MediaStream
         Napi::Value GetVideoTracks(const Napi::CallbackInfo& info);
         Napi::Value GetAudioTracks(const Napi::CallbackInfo& info);
@@ -37,7 +36,7 @@ namespace Babylon::Plugins
         int Height{0};
         
     private:
-        arcana::task<void, std::exception_ptr> ApplyInitialConstraints(Napi::Env env, Napi::Object constraints);
+        arcana::task<void, std::exception_ptr> ApplyInitialConstraintsAsync(Napi::Env env, Napi::Object constraints);
         std::optional<std::pair<CameraDevice, const CameraTrack&>> FindBestCameraStream(Napi::Env env, Napi::Object constraints);
         bool UpdateConstraints(Napi::Env env, Napi::Object constraints);
         

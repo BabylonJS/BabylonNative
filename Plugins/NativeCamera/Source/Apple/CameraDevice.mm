@@ -82,7 +82,7 @@ namespace {
 
         vertex RasterizerData
         vertexShader(uint vertexID [[vertex_id]],
-                        constant Vertex *vertices [[buffer(0)]])
+                        constant Vertex* vertices [[buffer(0)]])
         {
             RasterizerData out;
             out.position = vector_float4(vertices[vertexID].position.xy, 0.0, 1.0);
@@ -134,11 +134,11 @@ namespace {
 namespace Babylon::Plugins
 {
     struct CameraTrack::Impl
-    {
-        int32_t width;
-        int32_t height;
-        AVCaptureDeviceFormat* avDeviceFormat;
-        uint32_t pixelFormat;
+{
+        int32_t width{};
+        int32_t height{};
+        AVCaptureDeviceFormat* avDeviceFormat{};
+        uint32_t pixelFormat{};
     };
 
     struct CameraDevice::Impl
@@ -149,12 +149,13 @@ namespace Babylon::Plugins
         {
         }
         
-        std::vector<CameraTrack> supportedResolutions{};
-        std::vector<std::unique_ptr<CameraCapability>> capabilities{};
-        AVCaptureDevice* avDevice;
-        
         Graphics::DeviceContext* deviceContext;
         Napi::Env env;
+        
+        std::vector<CameraTrack> supportedResolutions{};
+        std::vector<std::unique_ptr<CameraCapability>> capabilities{};
+        AVCaptureDevice* avDevice{};
+        
         bool overrideCameraTexture{};
         CameraDimensions cameraDimensions{};
 
@@ -314,9 +315,9 @@ namespace Babylon::Plugins
         return cameraDevices;
     }
 
-    arcana::task<CameraDevice::CameraDimensions, std::exception_ptr> CameraDevice::Open(const CameraTrack& resolution)
+    arcana::task<CameraDevice::CameraDimensions, std::exception_ptr> CameraDevice::OpenAsync(const CameraTrack& resolution)
     {
-        NSError *error{nil};
+        NSError* error{nil};
 
         // This is the first time the camera has been opened, perform some one time setup.
         if (!m_impl->isInitialized) {
@@ -330,7 +331,7 @@ namespace Babylon::Plugins
             id<MTLFunction> fragmentFunction = [lib newFunctionWithName:@"fragmentShader"];
 
             // Create a pipeline state for converting the camera output to RGBA.
-            MTLRenderPipelineDescriptor *pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
+            MTLRenderPipelineDescriptor* pipelineStateDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
             pipelineStateDescriptor.label = @"Native Camera YCbCr to RGBA Pipeline";
             pipelineStateDescriptor.vertexFunction = vertexFunction;
             pipelineStateDescriptor.fragmentFunction = fragmentFunction;
@@ -360,7 +361,7 @@ namespace Babylon::Plugins
         }
 
         [m_impl->avDevice setActiveFormat:resolution.m_impl->avDeviceFormat];
-        AVCaptureDeviceInput *input{[AVCaptureDeviceInput deviceInputWithDevice:m_impl->avDevice error:&error]};
+        AVCaptureDeviceInput* input{[AVCaptureDeviceInput deviceInputWithDevice:m_impl->avDevice error:&error]};
         [m_impl->avDevice unlockForConfiguration];
 
         // Capture the format dimensions.
@@ -440,7 +441,7 @@ namespace Babylon::Plugins
             // Recreate the output texture when the camera dimensions change.
             if (m_impl->textureRGBA == nil || m_impl->cameraDimensions.width != width || m_impl->cameraDimensions.height != height)
             {
-                MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
+                MTLTextureDescriptor* textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
                 textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
                 m_impl->textureRGBA = [m_impl->metalDevice newTextureWithDescriptor:textureDescriptor];
                 bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_impl->textureRGBA));
@@ -457,7 +458,7 @@ namespace Babylon::Plugins
             {
                 m_impl->currentCommandBuffer = [m_impl->commandQueue commandBuffer];
                 m_impl->currentCommandBuffer.label = @"NativeCameraCommandBuffer";
-                MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
+                MTLRenderPassDescriptor* renderPassDescriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
                 if (renderPassDescriptor != nil) {
                     // Attach the color texture, on which we'll draw the camera texture (so no need to clear on load).
@@ -633,7 +634,7 @@ namespace Babylon::Plugins
 }
 #endif
 
-- (void)captureOutput:(AVCaptureOutput *)__unused captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *) connection
+- (void)captureOutput:(AVCaptureOutput*)__unused captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection*) connection
 {
     if (self->orientationUpdated)
     {

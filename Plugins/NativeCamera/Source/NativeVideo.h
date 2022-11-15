@@ -46,6 +46,6 @@ namespace Babylon::Plugins
 
         bool m_IsPlaying{};
         
-        Napi::ObjectReference m_streamObject = Napi::Persistent(Napi::Object::New(Env()));
+        Napi::ObjectReference m_streamObject{};
     };
 }

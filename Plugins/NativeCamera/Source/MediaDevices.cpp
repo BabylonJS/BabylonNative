@@ -24,8 +24,8 @@ namespace Babylon::Plugins::Internal
         {
             auto env = info.Env();
 
-            auto deferred{Napi::Promise::Deferred::New(env)};
-            auto promise{deferred.Promise()};
+            auto deferred = Napi::Promise::Deferred::New(env);
+            auto promise = deferred.Promise();
 
             // Extract the video constraints as we only support video for the time being
             auto videoConstraints{ Napi::Object::New(env) };
@@ -39,7 +39,7 @@ namespace Babylon::Plugins::Internal
             }
 
             auto runtimeScheduler{ std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env)) };
-            MediaStream::New(env, videoConstraints).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler, env, deferred](const arcana::expected<Napi::Object, std::exception_ptr>& result)
+            MediaStream::NewAsync(env, videoConstraints).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler, env, deferred](const arcana::expected<Napi::Object, std::exception_ptr>& result)
             {
                 if (result.has_error())
                 {
@@ -50,7 +50,7 @@ namespace Babylon::Plugins::Internal
                 deferred.Resolve(result.value());
             });
 
-            return static_cast<Napi::Value>(promise);
+            return promise;
         }
     };
 }

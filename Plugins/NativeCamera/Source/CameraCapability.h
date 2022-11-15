@@ -6,7 +6,7 @@
 namespace Babylon::Plugins {
     namespace Constraint
     {
-        template <typename T>
+        template<typename T>
         struct Constraint
         {
             std::optional<T> ideal;
@@ -15,33 +15,33 @@ namespace Babylon::Plugins {
             std::optional<T> max;
         };
 
-        template <typename T>
+        template<typename T>
         Constraint<T> parseConstraint(Napi::Value value) = delete;
-        template <typename T>
+        template<typename T>
         Napi::Value asNapiValue(Napi::Env env, T value) = delete;
 
-        // Uint32
-        template <>
-        Constraint<uint32_t> parseConstraint(Napi::Value value);
-        template <>
-        Napi::Value asNapiValue(Napi::Env env, uint32_t value);
+        // int32
+        template<>
+        Constraint<int32_t> parseConstraint(Napi::Value value);
+        template<>
+        Napi::Value asNapiValue(Napi::Env env, int32_t value);
 
         // Double
-        template <>
+        template<>
         Constraint<double> parseConstraint(Napi::Value value);
-        template <>
+        template<>
         Napi::Value asNapiValue(Napi::Env env, double value);
 
         // Bool
-        template <>
+        template<>
         Constraint<bool> parseConstraint(Napi::Value value);
-        template <>
+        template<>
         Napi::Value asNapiValue(Napi::Env env, bool value);
 
         // String
-        template <>
+        template<>
         Constraint<std::string> parseConstraint(Napi::Value value);
-        template <>
+        template<>
         Napi::Value asNapiValue(Napi::Env env, std::string value);
     }
 
@@ -88,7 +88,7 @@ namespace Babylon::Plugins {
         const Feature m_feature;
     };
 
-    template <typename T>
+    template<typename T>
     class CameraCapabilityTemplate : public CameraCapability
     {
     public:

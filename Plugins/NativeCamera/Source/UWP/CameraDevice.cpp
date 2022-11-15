@@ -6,8 +6,8 @@ namespace Babylon::Plugins
 {
     struct CameraTrack::Impl
     {
-        int32_t width;
-        int32_t height;
+        int32_t width{};
+        int32_t height{};
     };
 
     struct CameraDevice::Impl
@@ -21,7 +21,7 @@ namespace Babylon::Plugins
         throw std::runtime_error{ "HW Camera not implemented for this platform." };
     }
 
-    arcana::task<CameraDevice::CameraDimensions, std::exception_ptr> CameraDevice::Open(const CameraTrack& /*track*/)
+    arcana::task<CameraDevice::CameraDimensions, std::exception_ptr> CameraDevice::OpenAsync(const CameraTrack& /*track*/)
     {
         throw std::runtime_error{ "HW Camera not implemented for this platform." };
     }

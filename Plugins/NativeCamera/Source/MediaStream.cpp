@@ -4,7 +4,7 @@
 
 namespace Babylon::Plugins
 {
-    arcana::task<Napi::Object, std::exception_ptr> MediaStream::New(Napi::Env env, Napi::Object constraints)
+    arcana::task<Napi::Object, std::exception_ptr> MediaStream::NewAsync(Napi::Env env, Napi::Object constraints)
     {
         
                 
@@ -12,13 +12,8 @@ namespace Babylon::Plugins
         auto mediaStreamObject{ Napi::Persistent(GetConstructor(env).New({})) };
         auto mediaStream{ MediaStream::Unwrap(mediaStreamObject.Value()) };
         
-        return mediaStream->ApplyInitialConstraints(env, constraints).then(mediaStream->m_runtimeScheduler, arcana::cancellation::none(), [mediaStreamObject{std::move(mediaStreamObject)}](const arcana::expected<void, std::exception_ptr>& result)
+        return mediaStream->ApplyInitialConstraintsAsync(env, constraints).then(mediaStream->m_runtimeScheduler, arcana::cancellation::none(), [mediaStreamObject{std::move(mediaStreamObject)}]()
         {
-            if (result.has_error())
-            {
-                throw result.error();
-            }
-
             return mediaStreamObject.Value();
         });
     }
@@ -91,7 +86,7 @@ namespace Babylon::Plugins
         return static_cast<Napi::Value>(promise);
     }
 
-    arcana::task<void, std::exception_ptr> MediaStream::ApplyInitialConstraints(Napi::Env env, Napi::Object constraints)
+    arcana::task<void, std::exception_ptr> MediaStream::ApplyInitialConstraintsAsync(Napi::Env env, Napi::Object constraints)
     {
         // A camera device hasn't been selected yet. Find the best device and open the stream
         auto bestCamera = FindBestCameraStream(env, constraints);
@@ -107,20 +102,13 @@ namespace Babylon::Plugins
         m_cameraDevice = std::make_shared<CameraDevice>(std::move(bestCamera->first));
 
         // Create a persistent ref to the constraints object so it isn't destructed during our async work
-        auto constraintsRef{ std::make_shared<Napi::ObjectReference>(Napi::Persistent(constraints)) };
+        auto constraintsRef{ Napi::Persistent(constraints) };
 
-        return m_cameraDevice->Open(bestCamera.value().second).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, constraintsRef](const arcana::expected<CameraDevice::CameraDimensions, std::exception_ptr>& result) {
-            if (result.has_error())
-            {
-                // Re-throw the error from opening the camera
-                throw result.error();
-            }
-            
-            auto cameraDimensions{result.value()};
+        return m_cameraDevice->OpenAsync(bestCamera.value().second).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, constraintsRef{std::move(constraintsRef)}](CameraDevice::CameraDimensions cameraDimensions) {
             this->Width = cameraDimensions.width;
             this->Height = cameraDimensions.height;
             
-            if (!UpdateConstraints(env, constraintsRef->Value()))
+            if (!UpdateConstraints(env, constraintsRef.Value()))
             {
                 // Setting the constraint to the capability failed
                 throw std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."};
@@ -142,9 +130,9 @@ namespace Babylon::Plugins
         
         auto capabilities = Napi::Object::New(env);
         
-        for (uint32_t i=0; i < m_cameraDevice->Capabilities().size(); i++)
+        for (const auto& capability : m_cameraDevice->Capabilities())
         {
-            m_cameraDevice->Capabilities()[i]->addAsCapability(capabilities);
+            capability->addAsCapability(capabilities);
         }
         
         return std::move(capabilities);
@@ -162,9 +150,9 @@ namespace Babylon::Plugins
         
         auto settings = Napi::Object::New(env);
         
-        for (uint32_t i=0; i < m_cameraDevice->Capabilities().size(); i++)
+        for (const auto& capability : m_cameraDevice->Capabilities())
         {
-            m_cameraDevice->Capabilities()[i]->addAsSetting(settings);
+            capability->addAsSetting(settings);
         }
         
         return std::move(settings);
@@ -188,15 +176,13 @@ namespace Babylon::Plugins
         
         // The camera devices should be assumed to be sorted from best to worst. Pick the first camera device that fully
         // satisfies the most constraints without failing any.
-        for (uint32_t i = 0; i < cameraDevices.size(); ++i)
+        for (auto& cameraDevice : cameraDevices)
         {
-            CameraDevice& cameraDevice = cameraDevices[i];
-            
             bool failedAConstraint{ false };
             int32_t fullySatisfiedCapabilityCount{ 0 };
-            for (uint32_t j = 0; j < cameraDevice.Capabilities().size(); j++ )
+            for (const auto& capability : cameraDevice.Capabilities())
             {
-                CameraCapability::MeetsConstraint constraintSatifaction{ cameraDevice.Capabilities()[j]->meetsConstraints(constraints) };
+                CameraCapability::MeetsConstraint constraintSatifaction{ capability->meetsConstraints(constraints) };
                 switch (constraintSatifaction)
                 {
                     case CameraCapability::MeetsConstraint::FullySatisfied:
@@ -231,8 +217,8 @@ namespace Babylon::Plugins
             int32_t bestWidthDiff{INT32_MAX};
             int32_t bestHeightDiff{INT32_MAX};
             
-            auto widthConstraint{ Constraint::parseConstraint<uint32_t>(constraints.Get("width")) };
-            auto heightConstraint{ Constraint::parseConstraint<uint32_t>(constraints.Get("height")) };
+            auto widthConstraint{ Constraint::parseConstraint<int32_t>(constraints.Get("width")) };
+            auto heightConstraint{ Constraint::parseConstraint<int32_t>(constraints.Get("height")) };
             
             // Set the targetWidth and targetHeight as a fallback through the values exact, ideal, max, min
             auto targetWidth = widthConstraint.exact.has_value() ? widthConstraint.exact
@@ -246,18 +232,16 @@ namespace Babylon::Plugins
 
             for (uint32_t j = 0; j < cameraDevice.SupportedResolutions().size(); j++) {
                 auto& resolution = cameraDevice.SupportedResolutions()[j];
-                uint32_t width{ static_cast<uint32_t>(resolution.Width()) };
-                uint32_t height{ static_cast<uint32_t>(resolution.Height()) };
                 
                 auto meetsWidthRequirements =
-                    (!widthConstraint.exact.has_value() || widthConstraint.exact.value() == width) &&
-                    (!widthConstraint.min.has_value() || widthConstraint.min.value() <= width) &&
-                    (!widthConstraint.max.has_value() || widthConstraint.max.value() >= width);
+                    (!widthConstraint.exact.has_value() || widthConstraint.exact.value() == resolution.Width()) &&
+                    (!widthConstraint.min.has_value() || widthConstraint.min.value() <= resolution.Width()) &&
+                    (!widthConstraint.max.has_value() || widthConstraint.max.value() >= resolution.Width());
                 
                 auto meetsHeightRequirements =
-                    (!heightConstraint.exact.has_value() || heightConstraint.exact.value() == height) &&
-                    (!heightConstraint.min.has_value() || heightConstraint.min.value() <= height) &&
-                    (!heightConstraint.max.has_value() || heightConstraint.max.value() >= height);
+                    (!heightConstraint.exact.has_value() || heightConstraint.exact.value() == resolution.Height()) &&
+                    (!heightConstraint.min.has_value() || heightConstraint.min.value() <= resolution.Height()) &&
+                    (!heightConstraint.max.has_value() || heightConstraint.max.value() >= resolution.Height());
                 
                 if (!meetsWidthRequirements || !meetsHeightRequirements)
                 {
@@ -265,8 +249,8 @@ namespace Babylon::Plugins
                     continue;
                 }
                 
-                int32_t widthDiff = targetWidth.has_value() ? abs(static_cast<int32_t>(targetWidth.value() - width)) : 0;
-                int32_t heightDiff = targetHeight.has_value() ? abs(static_cast<int32_t>(targetHeight.value() - width)) : 0;
+                int32_t widthDiff = targetWidth.has_value() ? abs(static_cast<int32_t>(targetWidth.value() - resolution.Width())) : 0;
+                int32_t heightDiff = targetHeight.has_value() ? abs(static_cast<int32_t>(targetHeight.value() - resolution.Height())) : 0;
                 
                 if (bestResolution == nullptr || widthDiff + heightDiff < bestWidthDiff + bestHeightDiff)
                 {
@@ -296,7 +280,7 @@ namespace Babylon::Plugins
             // all devices to find the one that meets the most constraints
             if (!bestCameraConfiguration.has_value() || fullySatisfiedCapabilityCount > bestFullySatisfiedCapabilityCount)
             {
-                bestCameraConfiguration.emplace(std::move(cameraDevices[i]), *bestResolution);
+                bestCameraConfiguration.emplace(std::move(cameraDevice), *bestResolution);
                 bestFullySatisfiedCapabilityCount = fullySatisfiedCapabilityCount;
             }
         }
@@ -315,9 +299,8 @@ namespace Babylon::Plugins
             return false;
         }
         
-        for(uint32_t i=0; i < m_cameraDevice->Capabilities().size(); i++)
+        for(auto& capability : m_cameraDevice->Capabilities())
         {
-            auto& capability{ m_cameraDevice->Capabilities()[i] };
             CameraCapability::MeetsConstraint constraintSatisfaction{ capability->meetsConstraints(constraints) };
             
             switch (constraintSatisfaction)
