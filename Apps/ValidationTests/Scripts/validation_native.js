@@ -39,7 +39,7 @@ function compare(test, renderData, referenceImage, threshold, errorRatio) {
     if (differencesCount) {
         console.log("Pixel difference: " + differencesCount + " pixels.");
     } else {
-        console.log("No pixel difference !!!");
+        console.log("No pixel difference!");
     }
 
     let error = (differencesCount * 100) / (size / 4) > errorRatio;
