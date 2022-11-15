@@ -9,6 +9,7 @@ set(SOURCES
     "Source/Capability.h"
     "Source/Capability.cpp"
     "Source/Constraint.h"
+    "Source/Constraint.cpp"
     "Source/MediaDevices.h"
     "Source/MediaDevices.cpp"
     "Source/MediaStream.h"
