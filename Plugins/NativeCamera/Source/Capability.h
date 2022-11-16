@@ -33,10 +33,10 @@ namespace Babylon::Plugins {
 
         std::string getName();
 
-        virtual MeetsConstraint meetsConstraints(Napi::Object constraints)=0;
-        virtual bool applyConstraints(Napi::Object constraints)=0;
-        virtual void addAsCapability(Napi::Object target)=0;
-        virtual void addAsSetting(Napi::Object target)=0;
+        virtual MeetsConstraint meetsConstraints(Napi::Object constraints) = 0;
+        virtual bool applyConstraints(Napi::Object constraints) = 0;
+        virtual void addAsCapability(Napi::Object target) = 0;
+        virtual void addAsSetting(Napi::Object target) = 0;
 
     protected:
         const Feature m_feature;

@@ -7,8 +7,6 @@ namespace Babylon::Plugins
 {
     arcana::task<Napi::Object, std::exception_ptr> MediaStream::NewAsync(Napi::Env env, Napi::Object constraints)
     {
-        
-                
         // Create a an object reference to the mediaStream javascript object so that it is not destructed during the async operation
         auto mediaStreamObject{Napi::Persistent(GetConstructor(env).New({}))};
         auto mediaStream{MediaStream::Unwrap(mediaStreamObject.Value())};
@@ -79,7 +77,7 @@ namespace Babylon::Plugins
         if (!UpdateConstraints(env, constraints))
         {
             // Setting the constraint to the capability failed
-            deferred.Reject(Napi::Error::New(env, std::runtime_error{"OverconstrainedError: Unable to match constraints to a supported camera configuration."}).Value());
+            deferred.Reject(Napi::Error::New(env, "OverconstrainedError: Unable to match constraints to a supported camera configuration.").Value());
             return static_cast<Napi::Value>(promise);
         }
         deferred.Resolve(env.Undefined());
@@ -96,7 +94,7 @@ namespace Babylon::Plugins
         if (!bestCamera.has_value())
         {
             // If no device could be fount to satisfy the constraints throw a "ConstraintError" to match the browser implementation
-            return arcana::task_from_error<void>(std::make_exception_ptr(std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."}));
+            throw std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."};
         }
 
         // We need to create a shared_ptr to the CameraDevice because internally it calls shared_from_this
@@ -114,8 +112,6 @@ namespace Babylon::Plugins
                 // Setting the constraint to the capability failed
                 throw std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."};
             }
-            
-            return;
         });
     }
 

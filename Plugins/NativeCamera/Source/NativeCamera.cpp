@@ -17,8 +17,8 @@ namespace Babylon::Plugins::Internal
                     env,
                     "_NativeCamera",
                     {
-                            InstanceMethod("createVideo", &NativeCamera::CreateVideo),
-                            InstanceMethod("updateVideoTexture", &NativeCamera::UpdateVideoTexture),
+                        InstanceMethod("createVideo", &NativeCamera::CreateVideo),
+                        InstanceMethod("updateVideoTexture", &NativeCamera::UpdateVideoTexture),
                     });
 
             JsRuntime::NativeObject::GetFromJavaScript(env).Set("Camera", func);
