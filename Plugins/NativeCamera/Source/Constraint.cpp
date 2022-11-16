@@ -2,7 +2,7 @@
 
 namespace Babylon::Plugins::Constraint {
     template<>
-    ConstraintValue<bool> parseConstraint<bool>(Napi::Value value) {
+    ConstraintValue<bool> ParseConstraint<bool>(Napi::Value value) {
         std::optional<bool> ideal{}, exact{};
 
         if (value.IsBoolean())
@@ -26,12 +26,12 @@ namespace Babylon::Plugins::Constraint {
     }
 
     template<>
-    Napi::Value asNapiValue<bool>(Napi::Env env, bool value) {
+    Napi::Value AsNapiValue<bool>(Napi::Env env, bool value) {
         return Napi::Boolean::New(env, value);
     }
 
     template<>
-    ConstraintValue<std::string> parseConstraint<std::string>(Napi::Value value) {
+    ConstraintValue<std::string> ParseConstraint<std::string>(Napi::Value value) {
         std::optional<std::string> ideal{}, exact{};
 
         if (value.IsString())
@@ -55,12 +55,12 @@ namespace Babylon::Plugins::Constraint {
     }
 
     template<>
-    Napi::Value asNapiValue<std::string>(Napi::Env env, std::string value) {
+    Napi::Value AsNapiValue<std::string>(Napi::Env env, std::string value) {
         return Napi::String::New(env, value);
     }
 
     template<>
-    ConstraintValue<int32_t> parseConstraint<int32_t>(Napi::Value value)
+    ConstraintValue<int32_t> ParseConstraint<int32_t>(Napi::Value value)
     {
         std::optional<int32_t> ideal{}, exact{}, min{}, max{};
 
@@ -93,13 +93,13 @@ namespace Babylon::Plugins::Constraint {
     }
 
     template<>
-    Napi::Value asNapiValue<int32_t>(Napi::Env env, int32_t value)
+    Napi::Value AsNapiValue<int32_t>(Napi::Env env, int32_t value)
     {
         return Napi::Number::New(env, value);
     }
 
     template<>
-    ConstraintValue<double> parseConstraint<double>(Napi::Value value)
+    ConstraintValue<double> ParseConstraint<double>(Napi::Value value)
     {
         std::optional<double> ideal{}, exact{}, min{}, max{};
 
@@ -132,7 +132,7 @@ namespace Babylon::Plugins::Constraint {
     }
 
     template<>
-    Napi::Value asNapiValue<double>(Napi::Env env, double value)
+    Napi::Value AsNapiValue<double>(Napi::Env env, double value)
     {
         return Napi::Number::New(env, value);
     }

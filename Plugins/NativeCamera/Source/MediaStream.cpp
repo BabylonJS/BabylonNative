@@ -129,7 +129,7 @@ namespace Babylon::Plugins
         
         for (const auto& capability : m_cameraDevice->Capabilities())
         {
-            capability->addAsCapability(capabilities);
+            capability->AddAsCapability(capabilities);
         }
         
         return std::move(capabilities);
@@ -149,7 +149,7 @@ namespace Babylon::Plugins
         
         for (const auto& capability : m_cameraDevice->Capabilities())
         {
-            capability->addAsSetting(settings);
+            capability->AddAsSetting(settings);
         }
         
         return std::move(settings);
@@ -179,7 +179,7 @@ namespace Babylon::Plugins
             int32_t fullySatisfiedCapabilityCount{0};
             for (const auto& capability : cameraDevice.Capabilities())
             {
-                Capability::MeetsConstraint constraintSatifaction{capability->meetsConstraints(constraints)};
+                Capability::MeetsConstraint constraintSatifaction{capability->MeetsConstraints(constraints)};
                 switch (constraintSatifaction)
                 {
                     case Capability::MeetsConstraint::FullySatisfied:
@@ -214,8 +214,8 @@ namespace Babylon::Plugins
             int32_t bestWidthDiff{INT32_MAX};
             int32_t bestHeightDiff{INT32_MAX};
             
-            auto widthConstraint{Constraint::parseConstraint<int32_t>(constraints.Get("width"))};
-            auto heightConstraint{Constraint::parseConstraint<int32_t>(constraints.Get("height"))};
+            auto widthConstraint{Constraint::ParseConstraint<int32_t>(constraints.Get("width"))};
+            auto heightConstraint{Constraint::ParseConstraint<int32_t>(constraints.Get("height"))};
             
             // Set the targetWidth and targetHeight as a fallback through the values exact, ideal, max, min
             auto targetWidth = widthConstraint.exact.has_value() ? widthConstraint.exact
@@ -298,13 +298,13 @@ namespace Babylon::Plugins
         
         for(auto& capability : m_cameraDevice->Capabilities())
         {
-            Capability::MeetsConstraint constraintSatisfaction{capability->meetsConstraints(constraints)};
+            Capability::MeetsConstraint constraintSatisfaction{capability->MeetsConstraints(constraints)};
             
             switch (constraintSatisfaction)
             {
                 case Capability::MeetsConstraint::FullySatisfied:
                 case Capability::MeetsConstraint::PartiallySatisfied:
-                    m_currentConstraints.Set(capability->getName(), constraints.Get(capability->getName()));
+                    m_currentConstraints.Set(capability->GetName(), constraints.Get(capability->GetName()));
                     break;
                 case Capability::MeetsConstraint::Unconstrained:
                     // Still apply the unconstrained capability so that it resets to it's default in case it was previously set
@@ -316,7 +316,7 @@ namespace Babylon::Plugins
                     continue;;
             }
             
-            if(!capability->applyConstraints(constraints))
+            if(!capability->ApplyConstraints(constraints))
             {
                 // Setting the constraint to the capability failed
                 allConstraintsSatisfied = false;

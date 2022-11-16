@@ -8,7 +8,7 @@ namespace Babylon::Plugins
     {
     }
 
-    std::string Capability::getName()
+    std::string Capability::GetName()
     {
         switch (m_feature)
         {
@@ -22,7 +22,7 @@ namespace Babylon::Plugins
     }
 
     template<typename T>
-    Constraint::Type CameraCapabilityTemplate<T>::getConstraintType() {
+    Constraint::Type CameraCapabilityTemplate<T>::GetConstraintType() {
         switch (m_feature)
         {
             case FacingMode: return Constraint::Type::Sequence;
@@ -51,28 +51,28 @@ namespace Babylon::Plugins
     }
 
     template<typename T>
-    void CameraCapabilityTemplate<T>::addAsCapability(Napi::Object target) {
+    void CameraCapabilityTemplate<T>::AddAsCapability(Napi::Object target) {
         auto env{target.Env()};
         
-        switch(getConstraintType())
+        switch(GetConstraintType())
         {
             case Constraint::Type::Sequence:
             {
                 auto capability{Napi::Array::New(env, m_acceptedValues.size())};
                 for (uint32_t i = 0; i < m_acceptedValues.size(); i++) {
-                    capability.Set(i, Constraint::asNapiValue<T>(env, m_acceptedValues[i]));
+                    capability.Set(i, Constraint::AsNapiValue<T>(env, m_acceptedValues[i]));
                 }
 
-                target.Set(getName(), capability);
+                target.Set(GetName(), capability);
                 return;
             }
             case Constraint::Type::Range:
             {
                 auto capability{Napi::Object::New(env)};
-                capability.Set("min", Constraint::asNapiValue<T>(env, m_acceptedValues[0]));
-                capability.Set("max", Constraint::asNapiValue<T>(env, m_acceptedValues[1]));
+                capability.Set("min", Constraint::AsNapiValue<T>(env, m_acceptedValues[0]));
+                capability.Set("max", Constraint::AsNapiValue<T>(env, m_acceptedValues[1]));
 
-                target.Set(getName(), capability);
+                target.Set(GetName(), capability);
                 return;
             }
             default:
@@ -83,14 +83,14 @@ namespace Babylon::Plugins
     }
 
     template<typename T>
-    void CameraCapabilityTemplate<T>::addAsSetting(Napi::Object target) {
-        target.Set(getName(), Constraint::asNapiValue<T>(target.Env(), m_currentValue));
+    void CameraCapabilityTemplate<T>::AddAsSetting(Napi::Object target) {
+        target.Set(GetName(), Constraint::AsNapiValue<T>(target.Env(), m_currentValue));
     }
 
     template<typename T>
-    Capability::MeetsConstraint CameraCapabilityTemplate<T>::meetsConstraints(Napi::Object constraints) {
+    Capability::MeetsConstraint CameraCapabilityTemplate<T>::MeetsConstraints(Napi::Object constraints) {
         // Get the constraint matching this capability
-        Napi::Value constraintValue{constraints.Get(getName())};
+        Napi::Value constraintValue{constraints.Get(GetName())};
         
         if (constraintValue.IsEmpty() || constraintValue.IsUndefined() || constraintValue.IsNull())
         {
@@ -98,9 +98,9 @@ namespace Babylon::Plugins
             return Capability::MeetsConstraint::Unconstrained;
         }
 
-        Constraint::ConstraintValue<T> constraint{Constraint::parseConstraint<T>(constraintValue)};
+        Constraint::ConstraintValue<T> constraint{Constraint::ParseConstraint<T>(constraintValue)};
 
-        switch (getConstraintType())
+        switch (GetConstraintType())
         {
             case Constraint::Type::Sequence:
             {
@@ -157,9 +157,9 @@ namespace Babylon::Plugins
     }
 
     template<typename T>
-    bool CameraCapabilityTemplate<T>::applyConstraints(Napi::Object constraints)
+    bool CameraCapabilityTemplate<T>::ApplyConstraints(Napi::Object constraints)
     {
-        auto constraintSatisfaction{meetsConstraints(constraints)};
+        auto constraintSatisfaction{MeetsConstraints(constraints)};
         
         switch (constraintSatisfaction)
         {
@@ -180,9 +180,9 @@ namespace Babylon::Plugins
             case Capability::MeetsConstraint::FullySatisfied:
             {
                 // Get the constraint matching this capability
-                Napi::Value constraintValue{constraints.Get(getName())};
+                Napi::Value constraintValue{constraints.Get(GetName())};
 
-                Constraint::ConstraintValue<T> constraint{Constraint::parseConstraint<T>(constraintValue)};
+                Constraint::ConstraintValue<T> constraint{Constraint::ParseConstraint<T>(constraintValue)};
 
                 // The target value should fallback between the different possible constraint values in the order of exact, ideal, max, min
                 T targetValue =

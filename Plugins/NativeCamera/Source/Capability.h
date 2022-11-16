@@ -31,12 +31,12 @@ namespace Babylon::Plugins {
         Capability(Feature capability);
         virtual ~Capability() = default;
 
-        std::string getName();
+        std::string GetName();
 
-        virtual MeetsConstraint meetsConstraints(Napi::Object constraints) = 0;
-        virtual bool applyConstraints(Napi::Object constraints) = 0;
-        virtual void addAsCapability(Napi::Object target) = 0;
-        virtual void addAsSetting(Napi::Object target) = 0;
+        virtual MeetsConstraint MeetsConstraints(Napi::Object constraints) = 0;
+        virtual bool ApplyConstraints(Napi::Object constraints) = 0;
+        virtual void AddAsCapability(Napi::Object target) = 0;
+        virtual void AddAsSetting(Napi::Object target) = 0;
 
     protected:
         const Feature m_feature;
@@ -52,14 +52,14 @@ namespace Babylon::Plugins {
                                  std::vector<T> acceptedValues,
                                  std::function<bool(T)> setterFunction = [](T){return true;});
 
-        MeetsConstraint meetsConstraints(Napi::Object constraints);
-        bool applyConstraints(Napi::Object constraints);
+        MeetsConstraint MeetsConstraints(Napi::Object constraints);
+        bool ApplyConstraints(Napi::Object constraints);
         
-        void addAsCapability(Napi::Object target);
-        void addAsSetting(Napi::Object target);
+        void AddAsCapability(Napi::Object target);
+        void AddAsSetting(Napi::Object target);
 
     private:
-        Constraint::Type getConstraintType();
+        Constraint::Type GetConstraintType();
 
         T m_currentValue;
         const T m_defaultValue;

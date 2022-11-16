@@ -26,31 +26,31 @@ namespace Babylon::Plugins::Constraint {
 
     // Default template, intentionally inaccessible as only explicitly defined specializations should be used
     template<typename T>
-    ConstraintValue<T> parseConstraint(Napi::Value value) = delete;
+    ConstraintValue<T> ParseConstraint(Napi::Value value) = delete;
     template<typename T>
-    Napi::Value asNapiValue(Napi::Env env, T value) = delete;
+    Napi::Value AsNapiValue(Napi::Env env, T value) = delete;
 
     // Bool specialziation
     template<>
-    ConstraintValue<bool> parseConstraint<bool>(Napi::Value value);
+    ConstraintValue<bool> ParseConstraint<bool>(Napi::Value value);
     template<>
-    Napi::Value asNapiValue<bool>(Napi::Env env, bool value);
+    Napi::Value AsNapiValue<bool>(Napi::Env env, bool value);
 
     // String specialization
     template<>
-    ConstraintValue<std::string> parseConstraint<std::string>(Napi::Value value);
+    ConstraintValue<std::string> ParseConstraint<std::string>(Napi::Value value);
     template<>
-    Napi::Value asNapiValue<std::string>(Napi::Env env, std::string value);
+    Napi::Value AsNapiValue<std::string>(Napi::Env env, std::string value);
 
     // Int32 specialization
     template<>
-    ConstraintValue<int32_t> parseConstraint<int32_t>(Napi::Value value);
+    ConstraintValue<int32_t> ParseConstraint<int32_t>(Napi::Value value);
     template<>
-    Napi::Value asNapiValue<int32_t>(Napi::Env env, int32_t value);
+    Napi::Value AsNapiValue<int32_t>(Napi::Env env, int32_t value);
 
     // Double specialization
     template<>
-    ConstraintValue<double> parseConstraint<double>(Napi::Value value);
+    ConstraintValue<double> ParseConstraint<double>(Napi::Value value);
     template<>
-    Napi::Value asNapiValue<double>(Napi::Env env, double value);
+    Napi::Value AsNapiValue<double>(Napi::Env env, double value);
 }
