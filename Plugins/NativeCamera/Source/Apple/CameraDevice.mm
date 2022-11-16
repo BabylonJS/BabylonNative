@@ -54,7 +54,7 @@ namespace {
 
     constexpr Vertex vertices[] = {
         // 2D positions, UV
-        {{-1, -1},   {0, 1 }},
+        {{-1, -1},   {0, 1}},
         {{-1, 1},    {0, 0}},
         {{1, -1},    {1, 1}},
         {{1, 1},     {1, 0}},
@@ -197,7 +197,6 @@ namespace Babylon::Plugins
                 AVCaptureDeviceTypeBuiltInUltraWideCamera,
                 AVCaptureDeviceTypeBuiltInTelephotoCamera,
             ];
-            
         }
 #endif
 

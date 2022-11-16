@@ -83,10 +83,10 @@ namespace Babylon::Plugins
 
     // UV mappings to correct for the different orientations of the screen versus the camera sensor
     constexpr size_t CAMERA_UVS_COUNT{4};
-    constexpr GLfloat CAMERA_UVS_ROTATION_0[CAMERA_UVS_COUNT  * 2]{0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f};
-    constexpr GLfloat CAMERA_UVS_ROTATION_90[CAMERA_UVS_COUNT  * 2]{0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f};
-    constexpr GLfloat CAMERA_UVS_ROTATION_180[CAMERA_UVS_COUNT  * 2]{1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f};
-    constexpr GLfloat CAMERA_UVS_ROTATION_270[CAMERA_UVS_COUNT  * 2]{1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+    constexpr GLfloat CAMERA_UVS_ROTATION_0[CAMERA_UVS_COUNT * 2]{0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f};
+    constexpr GLfloat CAMERA_UVS_ROTATION_90[CAMERA_UVS_COUNT * 2]{0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f};
+    constexpr GLfloat CAMERA_UVS_ROTATION_180[CAMERA_UVS_COUNT * 2]{1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f};
+    constexpr GLfloat CAMERA_UVS_ROTATION_270[CAMERA_UVS_COUNT * 2]{1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 
     static constexpr char CAMERA_VERT_SHADER[]{R"(#version 300 es
         precision highp float;
@@ -392,7 +392,7 @@ namespace Babylon::Plugins
             // Create the capabilities
             cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<std::string>>
             (
-                    Capability::Feature::FacingMode,
+                Capability::Feature::FacingMode,
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment",
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment",
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"}
@@ -400,9 +400,9 @@ namespace Babylon::Plugins
 
             cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<bool>>
             (
-                    Capability::Feature::Torch,
-                    false,
-                    false,
+                Capability::Feature::Torch,
+                false,
+                false,
                 torchSupported ? std::vector<bool>{false, true} : std::vector<bool>{false},
                     [impl{cameraDeviceImpl.get()}](bool newValue)
                 {
