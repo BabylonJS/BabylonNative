@@ -121,9 +121,9 @@ namespace Babylon::Plugins
     }
 
     static API24::ACameraDevice_stateCallbacks cameraDeviceCallbacks = {
-            .context = nullptr,
-            .onDisconnected = onDisconnected,
-            .onError = onError
+        .context = nullptr,
+        .onDisconnected = onDisconnected,
+        .onError = onError
     };
 
     // session callbacks
@@ -419,9 +419,9 @@ namespace Babylon::Plugins
 
             cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<double>>
             (
-                    Capability::Feature::Zoom,
-                    zoomRatio,
-                    1.0, // Set the default target zoom to 1.0 (no zoom)
+                Capability::Feature::Zoom,
+                zoomRatio,
+                1.0, // Set the default target zoom to 1.0 (no zoom)
                 std::vector<double>{minZoomRatio, maxZoomRatio},
                     [impl{cameraDeviceImpl.get()}](double newValue)
                 {
