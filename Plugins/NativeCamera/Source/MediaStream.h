@@ -19,6 +19,7 @@ namespace Babylon::Plugins
         static Napi::Function GetConstructor(Napi::Env env);
         
         MediaStream(const Napi::CallbackInfo& info);
+        ~MediaStream();
 
         // MediaStream polyfill: https://developer.mozilla.org/en-US/docs/Web/API/MediaStream
         Napi::Value GetVideoTracks(const Napi::CallbackInfo& info);

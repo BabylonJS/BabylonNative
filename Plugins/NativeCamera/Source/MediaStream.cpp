@@ -20,8 +20,9 @@ namespace Babylon::Plugins
     Napi::Function MediaStream::GetConstructor(Napi::Env env)
     {
         Napi::Object _native{JsRuntime::NativeObject::GetFromJavaScript(env)};
-        Napi::Function ctor{_native.Get(JS_CLASS_NAME).As<Napi::Function>()};
-        
+        Napi::Value ctorValue{_native.Get(JS_CLASS_NAME)};
+        Napi::Function ctor{ctorValue.IsFunction() ? ctorValue.As<Napi::Function>() : Napi::Function{}};
+
         if (ctor.IsEmpty() || ctor.IsUndefined())
         {
             // Initialize the persistent constructor
@@ -48,6 +49,17 @@ namespace Babylon::Plugins
         : Napi::ObjectWrap<MediaStream>{info}
         , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
     {
+    }
+
+    MediaStream::~MediaStream()
+    {
+        if (m_cameraDevice != nullptr)
+        {
+            // The cameraDevice should be destroyed on the JS thread as it may need to access main thread resources
+            // move ownership of the cameraDevice to a lambda and dispatch it with the runtimeScheduler so the destructor
+            // is called from that thread.
+            m_runtimeScheduler([cameraDevice = std::move(m_cameraDevice)](){});
+        }
     }
 
     Napi::Value MediaStream::GetVideoTracks(const Napi::CallbackInfo& info)
