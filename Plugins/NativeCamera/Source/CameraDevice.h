@@ -24,7 +24,7 @@ namespace Babylon::Plugins
 
     private:
         struct Impl;
-        CameraTrack(std::unique_ptr<Impl> impl);
+        explicit CameraTrack(std::unique_ptr<Impl> impl);
         std::unique_ptr<Impl> m_impl;
 
         friend class CameraDevice;
@@ -58,7 +58,7 @@ namespace Babylon::Plugins
 
     private:
         struct Impl;
-        CameraDevice(std::unique_ptr<Impl> impl);
+        explicit CameraDevice(std::unique_ptr<Impl> impl);
         std::unique_ptr<Impl> m_impl;
     };
 }

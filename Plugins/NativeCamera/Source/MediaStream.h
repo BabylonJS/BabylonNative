@@ -40,6 +40,7 @@ namespace Babylon::Plugins
         std::optional<std::pair<CameraDevice, const CameraTrack&>> FindBestCameraStream(Napi::Env env, Napi::Object constraints);
         bool UpdateConstraints(Napi::Env env, Napi::Object constraints);
         
+        // Capture CameraDevice in a shared_ptr because the iOS implementation relies on the `shared_from_this` syntax for async work
         std::shared_ptr<CameraDevice> m_cameraDevice{nullptr};
         JsRuntimeScheduler m_runtimeScheduler;
         

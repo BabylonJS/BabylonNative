@@ -38,8 +38,8 @@ namespace Babylon::Plugins::Internal
                 }
             }
 
-            auto runtimeScheduler{std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env))};
-            MediaStream::NewAsync(env, videoConstraints).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler, env, deferred](const arcana::expected<Napi::Object, std::exception_ptr>& result)
+            auto runtimeScheduler{std::make_unique<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env))};
+            MediaStream::NewAsync(env, videoConstraints).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler = std::move(runtimeScheduler), env, deferred](const arcana::expected<Napi::Object, std::exception_ptr>& result)
             {
                 if (result.has_error())
                 {
@@ -50,7 +50,7 @@ namespace Babylon::Plugins::Internal
                 deferred.Resolve(result.value());
             });
 
-            return promise;
+            return std::move(promise);
         }
     };
 }

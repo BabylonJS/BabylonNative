@@ -108,7 +108,7 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
             NSLog(@"%s", message);
         });
 
-        Babylon::Plugins::Camera::Initialize(env);
+        Babylon::Plugins::NativeCamera::Initialize(env);
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 

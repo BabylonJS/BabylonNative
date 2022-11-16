@@ -228,13 +228,13 @@ namespace Babylon::Plugins
                 trackImpl->avDeviceFormat = format;
                 trackImpl->pixelFormat = pixelFormat;
                 
-                cameraDeviceImpl->supportedResolutions.emplace_back(CameraTrack(std::move(trackImpl)));
+                cameraDeviceImpl->supportedResolutions.push_back(CameraTrack{std::move(trackImpl)});
             }
                         
             // update the cameraDevice information
             cameraDeviceImpl->avDevice = device;
 
-            cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<std::string>>
+            cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<std::string>>
             (
                     Capability::Feature::FacingMode,
                 device.position == AVCaptureDevicePositionFront ? "user" : "environment",
@@ -242,7 +242,7 @@ namespace Babylon::Plugins
                 device.position == AVCaptureDevicePositionFront ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"}
             ));
             
-            cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<bool>>
+            cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<bool>>
             (
                     Capability::Feature::Torch,
                     false,
@@ -283,7 +283,7 @@ namespace Babylon::Plugins
                 zoomFactorScale = 2.0;
             }
             
-            cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<double>>
+            cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<double>>
             (
                 Capability::Feature::Zoom,
                 1.0 * zoomFactorScale, // Translate the starting zoom value from the iOS 1.0+ scale to our 0.0+ scale.
@@ -304,7 +304,7 @@ namespace Babylon::Plugins
             ));
 #endif
 
-            cameraDevices.emplace_back(CameraDevice(std::move(cameraDeviceImpl)));
+            cameraDevices.push_back(CameraDevice{std::move(cameraDeviceImpl)});
 
             if (foundExactMatch)
             {

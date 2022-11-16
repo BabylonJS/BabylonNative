@@ -43,7 +43,7 @@ namespace Babylon::Plugins::Internal
     };
 }
 
-namespace Babylon::Plugins::Camera
+namespace Babylon::Plugins::NativeCamera
 {
     void Initialize(Napi::Env env)
     {

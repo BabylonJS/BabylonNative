@@ -363,7 +363,7 @@ namespace Babylon::Plugins
                 auto cameraTrackImpl{std::make_unique<CameraTrack::Impl>()};
                 cameraTrackImpl->width = width;
                 cameraTrackImpl->height = height;
-                cameraDeviceImpl->supportedResolutions.emplace_back(CameraTrack(std::move(cameraTrackImpl)));
+                cameraDeviceImpl->supportedResolutions.push_back(CameraTrack{std::move(cameraTrackImpl)});
             }
 
             // Get camera hardware info
@@ -390,7 +390,7 @@ namespace Babylon::Plugins
             cameraDeviceImpl->facingUser = facing == API24::ACAMERA_LENS_FACING_FRONT;
 
             // Create the capabilities
-            cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<std::string>>
+            cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<std::string>>
             (
                     Capability::Feature::FacingMode,
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment",
@@ -398,7 +398,7 @@ namespace Babylon::Plugins
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"}
             ));
 
-            cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<bool>>
+            cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<bool>>
             (
                     Capability::Feature::Torch,
                     false,
@@ -417,7 +417,7 @@ namespace Babylon::Plugins
                 }
             ));
 
-            cameraDeviceImpl->capabilities.emplace_back(std::make_unique<CameraCapabilityTemplate<double>>
+            cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<double>>
             (
                     Capability::Feature::Zoom,
                     zoomRatio,
@@ -434,7 +434,7 @@ namespace Babylon::Plugins
                 }
             ));
 
-            cameraDevices.emplace_back(CameraDevice(std::move(cameraDeviceImpl)));
+            cameraDevices.push_back(CameraDevice{std::move(cameraDeviceImpl)});
         }
 
         GET_CAMERA_FUNCTION(ACameraManager_deleteCameraIdList)(cameraIds);
