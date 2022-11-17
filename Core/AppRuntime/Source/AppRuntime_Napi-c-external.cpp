@@ -56,8 +56,8 @@ namespace Babylon
         napi_finalize finalizeCallback,
         void* finalizeHint)
     {
-        WorkQueue* holder;
-        auto result = napi_get_instance_data(env, (void**)&holder);
+        WorkQueue* worker;
+        auto result = napi_get_instance_data(env, (void**)&worker);
 
         if (result != napi_status::napi_ok)
         {
@@ -65,7 +65,7 @@ namespace Babylon
         }
 
         auto task = std::make_shared<NapiTask>(env, taskCallback, taskData, finalizeCallback, finalizeHint);
-        holder->Append([task = std::move(task)](Napi::Env)
+        worker->Append([task = std::move(task)](Napi::Env)
             { task->operator()(); });
     }
 
@@ -78,15 +78,21 @@ namespace Babylon
         settings.flags.wait_for_debugger = false;
         settings.foreground_scheduler = &ScheduleTaskCallback;
 
-        napi_ext_create_env(&settings, &_env);
-        napi_set_instance_data(_env, this->m_workQueue.get(), nullptr /*finalize_cb*/, nullptr /*finalize_hint*/);
+        auto result = napi_ext_create_env(&settings, &_env);
+        assert(result == napi_status::napi_ok);
+
+        result = napi_set_instance_data(_env, this->m_workQueue.get(), nullptr /*finalize_cb*/, nullptr /*finalize_hint*/);
+        assert(result == napi_status::napi_ok);
 
         Napi::Env env = Napi::Env(_env);
 
         napi_ext_env_scope scope;
-        NAPI_THROW_IF_FAILED(env, napi_ext_open_env_scope(env, &scope));
+        result = napi_ext_open_env_scope(env, &scope);
+        assert(result == napi_status::napi_ok);
 
         Run(env);
-        NAPI_THROW_IF_FAILED(env, napi_ext_close_env_scope(env, scope));
+
+        result = napi_ext_close_env_scope(env, scope);
+        assert(result == napi_status::napi_ok);
     }
 }
