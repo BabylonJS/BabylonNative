@@ -1,12 +1,13 @@
-#include <UrlLib/UrlLib.h>
+#include "UrlRequest_Base.h"
+
 #include <Unknwn.h>
 #include <PathCch.h>
-#include <arcana/threading/task.h>
 #include <arcana/threading/task_conversions.h>
 #include <robuffer.h>
 #include <winrt/Windows.Storage.Streams.h>
 #include <winrt/Windows.Web.Http.h>
 #include <winrt/Windows.ApplicationModel.h>
+#include <winrt/Windows.Foundation.Collections.h>
 
 namespace UrlLib
 {
@@ -46,33 +47,13 @@ namespace UrlLib
         }
     }
 
-    class UrlRequest::Impl
+    class UrlRequest::Impl : public ImplBase
     {
     public:
-        ~Impl()
-        {
-            Abort();
-        }
-
-        void Abort()
-        {
-            m_cancellationSource.cancel();
-        }
-
-        void Open(UrlMethod method, std::string url)
+        void Open(UrlMethod method, const std::string& url)
         {
             m_method = method;
             m_uri = Foundation::Uri{winrt::to_hstring(url)};
-        }
-
-        UrlResponseType ResponseType() const
-        {
-            return m_responseType;
-        }
-
-        void ResponseType(UrlResponseType value)
-        {
-            m_responseType = value;
         }
 
         arcana::task<void, std::exception_ptr> SendAsync()
@@ -114,6 +95,11 @@ namespace UrlLib
 
                             m_responseUrl = winrt::to_string(responseMessage.RequestMessage().RequestUri().RawUri());
 
+                            for (auto&& iter : responseMessage.Headers())
+                            {
+                                m_headers.insert(std::make_pair(winrt::to_string(iter.Key()), winrt::to_string(iter.Value())));
+                            }
+
                             switch (m_responseType)
                             {
                                 case UrlResponseType::String:
@@ -149,31 +135,17 @@ namespace UrlLib
             }
         }
 
-        UrlStatusCode StatusCode() const
-        {
-            return m_statusCode;
-        }
-
-        std::string_view ResponseUrl()
-        {
-            return m_responseUrl;
-        }
-
-        std::string_view ResponseString()
-        {
-            return m_responseString;
-        }
-
         gsl::span<const std::byte> ResponseBuffer() const
         {
-            if (m_responseBuffer)
+            if (!m_responseBuffer)
             {
-                std::byte* bytes;
-                auto bufferByteAccess = m_responseBuffer.as<::Windows::Storage::Streams::IBufferByteAccess>();
-                winrt::check_hresult(bufferByteAccess->Buffer(reinterpret_cast<byte**>(&bytes)));
-                return {bytes, gsl::narrow_cast<std::size_t>(m_responseBuffer.Length())};
+                return {};
             }
-            return {};
+
+            std::byte* bytes;
+            auto bufferByteAccess = m_responseBuffer.as<::Windows::Storage::Streams::IBufferByteAccess>();
+            winrt::check_hresult(bufferByteAccess->Buffer(reinterpret_cast<byte**>(&bytes)));
+            return {bytes, gsl::narrow_cast<std::size_t>(m_responseBuffer.Length())};
         }
 
     private:
@@ -204,16 +176,9 @@ namespace UrlLib
             }
         }
 
-
-        arcana::cancellation_source m_cancellationSource{};
-        UrlResponseType m_responseType{UrlResponseType::String};
-        UrlMethod m_method{UrlMethod::Get};
         Foundation::Uri m_uri{nullptr};
-        UrlStatusCode m_statusCode{UrlStatusCode::None};
-        std::string m_responseUrl{};
-        std::string m_responseString{};
         Storage::Streams::IBuffer m_responseBuffer{};
     };
 }
 
-#include <Shared/UrlRequest.h>
+#include "UrlRequest_Shared.h"

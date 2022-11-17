@@ -16,6 +16,7 @@ namespace java::lang
     class ByteArray;
     class Object;
     class String;
+    class Throwable;
 }
 
 namespace java::io
@@ -79,19 +80,29 @@ namespace java::lang
         jbyteArray m_byteArray;
     };
 
-    class Class
+    class Class final
     {
     public:
         Class(const char* className);
         Class(const jclass classObj);
+        ~Class();
+
+        Class(const Class&);
+        Class& operator=(const Class&);
+
+        Class(Class&&);
+        Class& operator=(Class&&);
 
         operator jclass() const;
 
         bool IsAssignableFrom(Class otherClass);
 
-    protected:
+    private:
+        jclass JClass() const;
+        void JClass(jclass classObj);
+
         JNIEnv* m_env;
-        const jclass m_class;
+        jclass m_class;
     };
 
     class Object
@@ -99,14 +110,27 @@ namespace java::lang
     public:
         operator jobject() const;
         Class GetClass();
+        ~Object();
 
     protected:
         Object(const char* className);
         Object(jobject object);
 
+        Object(const Object&);
+        Object& operator=(const Object&);
+
+        Object(Object&&);
+        Object& operator=(Object&&);
+
+        jobject JObject() const;
+        void JObject(jobject object);
+
         JNIEnv* m_env;
         Class m_class;
+
+    private:
         jobject m_object;
+
     };
 
     class String
@@ -199,6 +223,10 @@ namespace java::net
 
         int GetContentLength() const;
 
+        lang::String GetHeaderField(int n) const;
+
+        lang::String GetHeaderFieldKey(int n) const;
+
         io::InputStream GetInputStream() const;
 
         explicit operator HttpURLConnection() const;
@@ -288,6 +316,7 @@ namespace android::graphics
         SurfaceTexture();
         void InitWithTexture(int texture);
         void updateTexImage() const;
+        void setDefaultBufferSize(int width, int height);
     };
 }
 

@@ -41,6 +41,7 @@ namespace Babylon::Graphics
         void UpdateRenderTarget(const RenderTargetInfo& renderTargetInfo);
         void Resize(size_t width, size_t height);
         void SetMSAA(uint8_t value);
+        void SetAlphaPremultiplied(bool enabled);
 
         void AddToJavaScript(Napi::Env);
         static DeviceImpl& GetFromJavaScript(Napi::Env);
@@ -68,7 +69,7 @@ namespace Babylon::Graphics
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
 
-        arcana::task<void, std::exception_ptr> ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data);
+        arcana::task<void, std::exception_ptr> ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel);
 
         float GetHardwareScalingLevel() const;
         void SetHardwareScalingLevel(float level);

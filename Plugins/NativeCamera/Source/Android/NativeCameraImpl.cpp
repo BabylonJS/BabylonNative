@@ -20,27 +20,40 @@ using namespace android::global;
 
 namespace Babylon::Plugins
 {
+    // Vertex positions for the camera texture
+    constexpr size_t CAMERA_VERTEX_COUNT{ 4 };
+    constexpr GLfloat CAMERA_VERTEX_POSITIONS[CAMERA_VERTEX_COUNT * 2]{ -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f };
+
+    // UV mappings to correct for the different orientations of the screen versus the camera sensor
+    constexpr size_t CAMERA_UVS_COUNT{ 4 };
+    constexpr GLfloat CAMERA_UVS_ROTATION_0[CAMERA_UVS_COUNT  * 2]{ 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f };
+    constexpr GLfloat CAMERA_UVS_ROTATION_90[CAMERA_UVS_COUNT  * 2]{ 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f };
+    constexpr GLfloat CAMERA_UVS_ROTATION_180[CAMERA_UVS_COUNT  * 2]{ 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f };
+    constexpr GLfloat CAMERA_UVS_ROTATION_270[CAMERA_UVS_COUNT  * 2]{ 1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f };
+
     static constexpr char CAMERA_VERT_SHADER[]{R"(#version 300 es
         precision highp float;
-        out vec2 cameraFrameUV;
+        uniform vec2 positions[4];
+        uniform vec2 uvs[4];
+        out vec2 uv;
         void main() {
-            cameraFrameUV = vec2(gl_VertexID&1, (gl_VertexID &2)>>1) * 2.f;
-            gl_Position = vec4(cameraFrameUV * 2.f - 1.f, 0.0, 1.0);
+            gl_Position = vec4(positions[gl_VertexID], 0.0, 1.0);
+            uv = uvs[gl_VertexID];
         }
     )"};
 
     static constexpr char CAMERA_FRAG_SHADER[]{R"(#version 300 es
         #extension GL_OES_EGL_image_external_essl3 : require
         precision mediump float;
-        in vec2 cameraFrameUV;
+        in vec2 uv;
         uniform samplerExternalOES cameraTexture;
+        // Location 0 is GL_COLOR_ATTACHMENT0, which in turn is the babylonTexture
         layout(location = 0) out vec4 oFragColor;
         void main() {
-            oFragColor = texture(cameraTexture, cameraFrameUV);
+            oFragColor = texture(cameraTexture, uv);
         }
     )"};
-    
-#if __ANDROID_API__ >= 24
+
     GLuint Camera::Impl::GenerateOESTexture()
     {
         GLuint oesTexture;
@@ -52,66 +65,123 @@ namespace Babylon::Plugins
         return oesTexture;
     }
 
-    std::string Camera::Impl::GetCameraId(bool frontCamera)
+    Camera::Impl::CameraConfiguration Camera::Impl::GetCameraConfiguration(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
-        ACameraIdList *cameraIds = nullptr;
-        ACameraManager_getCameraIdList(m_cameraManager, &cameraIds);
+        // Get the list of available cameras
+        API24::ACameraIdList *cameraIds = nullptr;
+        GET_CAMERA_FUNCTION(ACameraManager_getCameraIdList)(m_cameraManager, &cameraIds);
 
-        std::string cameraId{};
+        const char* bestCameraId{nullptr};
+        uint32_t bestPixelCount{0};
+        uint32_t bestDimDiff{0};
+        uint32_t bestWidth{0};
+        uint32_t bestHeight{0};
+        int32_t bestSensorOrientation{0};
+        bool foundExactMatch{false};
 
+        // Iterate over all of the cameras and find the one that has the best stream configuration
         for (int i = 0; i < cameraIds->numCameras; ++i)
         {
-            const char *id = cameraIds->cameraIds[i];
+            const char* id = cameraIds->cameraIds[i];
 
-            ACameraMetadata *metadataObj;
-            ACameraManager_getCameraCharacteristics(m_cameraManager, id, &metadataObj);
+            API24::ACameraMetadata *metadataObj;
+            GET_CAMERA_FUNCTION(ACameraManager_getCameraCharacteristics)(m_cameraManager, id, &metadataObj);
 
-            ACameraMetadata_const_entry lensInfo = {};
-            ACameraMetadata_getConstEntry(metadataObj, ACAMERA_LENS_FACING, &lensInfo);
+            API24::ACameraMetadata_const_entry lensInfo = {};
+            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_LENS_FACING, &lensInfo);
 
-            auto facing = static_cast<acamera_metadata_enum_android_lens_facing_t>(lensInfo.data.u8[0]);
+            API24::ACameraMetadata_const_entry sensorOrientation = {};
+            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_SENSOR_ORIENTATION, &sensorOrientation);
 
-            // Found a corresponding facing camera?
-            if (facing == (frontCamera ? ACAMERA_LENS_FACING_FRONT : ACAMERA_LENS_FACING_BACK))
+            auto facing = static_cast<API24::acamera_metadata_enum_android_lens_facing_t>(lensInfo.data.u8[0]);
+            if (facing != (frontCamera ? API24::ACAMERA_LENS_FACING_FRONT : API24::ACAMERA_LENS_FACING_BACK))
             {
-                cameraId = id;
+                // Ignore cameras facing the wrong direction
+                continue;
+            }
+
+            // Get all available stream configurations supported by the camera
+            API24::ACameraMetadata_const_entry streamConfigurations = {};
+            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &streamConfigurations);
+            // format of the data:
+            // 0: format
+            // 1: width
+            // 2: height
+            // 3: input?
+
+            for (uint32_t j = 0; j < streamConfigurations.count; j += 4) {
+                int32_t format{streamConfigurations.data.i32[j + 0]};
+                int32_t width{streamConfigurations.data.i32[j + 1]};
+                int32_t height{streamConfigurations.data.i32[j + 2]};
+                int32_t input{streamConfigurations.data.i32[j + 3]};
+
+                if (input || format != AIMAGE_FORMAT_YUV_420_888 || static_cast<uint32_t>(width) > maxWidth || static_cast<uint32_t>(height) > maxHeight)
+                {
+                    // Ignore the configuration if it is either an input type or not a preview format
+                    // Also ignore the configuration if either the width or height is beyond the max allowed
+                    continue;
+                }
+
+                // Calculate pixel count and dimension differential and take the best qualifying one.
+                uint32_t pixelCount{static_cast<uint32_t>(width * height)};
+                uint32_t dimDiff{(maxWidth - width) + (maxHeight - height)};
+                if (bestCameraId == nullptr || pixelCount > bestPixelCount || (pixelCount == bestPixelCount && dimDiff < bestDimDiff))
+                {
+                    bestPixelCount = pixelCount;
+                    bestCameraId = id;
+                    bestDimDiff = dimDiff;
+                    bestWidth = width;
+                    bestHeight = height;
+                    bestSensorOrientation = sensorOrientation.data.i32[0];
+
+                    // Check if we got an exact match, and exit the loop early in this case.
+                    if (static_cast<uint32_t>(width) == maxWidth && static_cast<uint32_t>(height) == maxHeight)
+                    {
+                        foundExactMatch = true;
+                        break;
+                    }
+                }
+            }
+
+            if (foundExactMatch)
+            {
                 break;
             }
         }
 
-        ACameraManager_deleteCameraIdList(cameraIds);
-        return cameraId;
+        GET_CAMERA_FUNCTION(ACameraManager_deleteCameraIdList)(cameraIds);
+        return {bestCameraId, bestWidth, bestHeight, bestSensorOrientation};
     }
 
     // device callbacks
-    static void onDisconnected(void* /*context*/, ACameraDevice* /*device*/)
+    static void onDisconnected(void* /*context*/, API24::ACameraDevice* /*device*/)
     {
     }
 
-    static void onError(void* /*context*/, ACameraDevice* /*device*/, int /*error*/)
+    static void onError(void* /*context*/, API24::ACameraDevice* /*device*/, int /*error*/)
     {
     }
 
-    static ACameraDevice_stateCallbacks cameraDeviceCallbacks = {
+    static API24::ACameraDevice_stateCallbacks cameraDeviceCallbacks = {
             .context = nullptr,
             .onDisconnected = onDisconnected,
             .onError = onError
     };
 
     // session callbacks
-    static void onSessionActive(void* /*context*/, ACameraCaptureSession* /*session*/)
+    static void onSessionActive(void* /*context*/, API24::ACameraCaptureSession* /*session*/)
     {
     }
 
-    static void onSessionReady(void* /*context*/, ACameraCaptureSession* /*session*/)
+    static void onSessionReady(void* /*context*/, API24::ACameraCaptureSession* /*session*/)
     {
     }
 
-    static void onSessionClosed(void* /*context*/, ACameraCaptureSession* /*session*/)
+    static void onSessionClosed(void* /*context*/, API24::ACameraCaptureSession* /*session*/)
     {
     }
 
-    static ACameraCaptureSession_stateCallbacks sessionStateCallbacks {
+    static API24::ACameraCaptureSession_stateCallbacks sessionStateCallbacks {
         .context = nullptr,
         .onClosed = onSessionClosed,
         .onReady = onSessionReady,
@@ -119,23 +189,23 @@ namespace Babylon::Plugins
     };
 
     // capture callbacks
-    static void onCaptureFailed(void* /*context*/, ACameraCaptureSession* /*session*/, ACaptureRequest* /*request*/, ACameraCaptureFailure* /*failure*/)
+    static void onCaptureFailed(void* /*context*/, API24::ACameraCaptureSession* /*session*/, API24::ACaptureRequest* /*request*/, API24::ACameraCaptureFailure* /*failure*/)
     {
     }
 
-    static void onCaptureSequenceCompleted(void* /*context*/, ACameraCaptureSession* /*session*/, int /*sequenceId*/, int64_t /*frameNumber*/)
+    static void onCaptureSequenceCompleted(void* /*context*/, API24::ACameraCaptureSession* /*session*/, int /*sequenceId*/, int64_t /*frameNumber*/)
     {
     }
 
-    static void onCaptureSequenceAborted(void* /*context*/, ACameraCaptureSession* /*session*/, int /*sequenceId*/)
+    static void onCaptureSequenceAborted(void* /*context*/, API24::ACameraCaptureSession* /*session*/, int /*sequenceId*/)
     {
     }
 
-    static void onCaptureCompleted (void* /*context*/, ACameraCaptureSession* /*session*/, ACaptureRequest* /*request*/, const ACameraMetadata* /*result*/)
+    static void onCaptureCompleted (void* /*context*/, API24::ACameraCaptureSession* /*session*/, API24::ACaptureRequest* /*request*/, const API24::ACameraMetadata* /*result*/)
     {
     }
 
-    static ACameraCaptureSession_captureCallbacks captureCallbacks {
+    static API24::ACameraCaptureSession_captureCallbacks captureCallbacks {
         .context = nullptr,
         .onCaptureStarted = nullptr,
         .onCaptureProgressed = nullptr,
@@ -146,31 +216,69 @@ namespace Babylon::Plugins
         .onCaptureBufferLost = nullptr,
     };
 
-#endif
-
     Camera::Impl::Impl(Napi::Env env, bool overrideCameraTexture)
-        : m_deviceContext{Graphics::DeviceContext::GetFromJavaScript(env)}
+        : m_deviceContext{nullptr}
+        , m_env{env}
         , m_overrideCameraTexture{overrideCameraTexture}
     {
-#if __ANDROID_API__ < 24
-        if (!overrideCameraTexture)
+        if (API_LEVEL < 24 && !overrideCameraTexture)
         {
             throw std::runtime_error{"Android Platform level < 24. Only camera texture override is available."};
         }
-#endif
     }
 
     Camera::Impl::~Impl()
     {
     }
 
-    void Camera::Impl::Open(uint32_t width, uint32_t height, bool frontCamera)
+    arcana::task<Camera::Impl::CameraDimensions, std::exception_ptr> Camera::Impl::Open(uint32_t maxWidth, uint32_t maxHeight, bool frontCamera)
     {
-        android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, width, height, frontCamera]()
+        if (!m_deviceContext){
+            m_deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_env);
+        }
+
+        if (maxWidth == 0 || maxWidth > std::numeric_limits<int32_t>::max()) {
+            maxWidth = std::numeric_limits<int32_t>::max();
+        }
+        if (maxHeight == 0 || maxHeight > std::numeric_limits<int32_t>::max()) {
+            maxHeight = std::numeric_limits<int32_t>::max();
+        }
+
+        return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, maxWidth, maxHeight, frontCamera]()
         {
-            m_width = width;
-            m_height = height;
-        
+            // Get the phone's current rotation so we can determine if the camera image needs to be rotated based on the sensor's natural orientation
+            int phoneRotation{ GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation() * 90 };
+            CameraConfiguration bestCameraConfiguration{"", maxWidth, maxHeight, phoneRotation};
+
+            if (API_LEVEL >= 24 && libCamera2NDK && !m_overrideCameraTexture) {
+                m_cameraManager = GET_CAMERA_FUNCTION(ACameraManager_create)();
+                bestCameraConfiguration = GetCameraConfiguration(maxWidth, maxHeight, frontCamera);
+
+                // If no matching device, throw an error with the message "ConstraintError" which matches the behavior in the browser.
+                if (bestCameraConfiguration.cameraID.empty())
+                {
+                    throw std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."};
+                }
+            }
+
+            // The sensor rotation dictates the orientation of the camera when the phone is in it's default orientation
+            // Subtracting the phone's rotation from the camera's rotation will give us the current orientation
+            // of the sensor. Then add 360 and modulus 360 to ensure we're always talking about positive degrees.
+            int sensorRotationDiff{(bestCameraConfiguration.sensorRotation - phoneRotation + 360) % 360};
+            bool sensorIsPortrait{sensorRotationDiff == 90 || sensorRotationDiff == 270};
+            if (frontCamera && !sensorIsPortrait && !m_overrideCameraTexture)
+            {
+                // Compensate for the front facing camera being naturally mirrored. In the portrait orientation
+                // the mirrored behavior matches the browser, but in landscape it would result in the image rendering
+                // upside down. Rotate the image by 180 to compensate.
+                sensorRotationDiff = (sensorRotationDiff + 180) % 360;
+            }
+
+            // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
+            // of the video should be swapped
+            m_cameraDimensions.width = !sensorIsPortrait ? bestCameraConfiguration.width : bestCameraConfiguration.height;
+            m_cameraDimensions.height = !sensorIsPortrait ? bestCameraConfiguration.height : bestCameraConfiguration.width;
+
             // Check if there is an already available context for this thread
             EGLContext currentContext = eglGetCurrentContext();
             if (currentContext == EGL_NO_CONTEXT)
@@ -210,7 +318,7 @@ namespace Babylon::Plugins
 
             glGenTextures(1, &m_cameraRGBATextureId);
             glBindTexture(GL_TEXTURE_2D, m_cameraRGBATextureId);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_cameraDimensions.width, m_cameraDimensions.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glGenerateMipmap(GL_TEXTURE_2D);
@@ -223,53 +331,63 @@ namespace Babylon::Plugins
 
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+            m_cameraUVs = sensorRotationDiff == 90 ? CAMERA_UVS_ROTATION_90 :
+                          sensorRotationDiff == 180 ? CAMERA_UVS_ROTATION_180 :
+                          sensorRotationDiff == 270 ? CAMERA_UVS_ROTATION_270 :
+                          CAMERA_UVS_ROTATION_0;
+
             m_cameraShaderProgramId = android::OpenGLHelpers::CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
 
-#if __ANDROID_API__ >= 24
-            if (!m_overrideCameraTexture)
-            {
+            if (API_LEVEL >= 24 && libCamera2NDK && !m_overrideCameraTexture) {
                 m_cameraOESTextureId = GenerateOESTexture();
 
                 // Create the surface and surface texture that will receive the camera preview
                 m_surfaceTexture.InitWithTexture(m_cameraOESTextureId);
+                m_surfaceTexture.setDefaultBufferSize(bestCameraConfiguration.width, bestCameraConfiguration.height);
                 android::view::Surface surface(m_surfaceTexture);
 
                 // open the front or back camera
-                m_cameraManager = ACameraManager_create();
-                auto id = GetCameraId(frontCamera);
-                ACameraManager_openCamera(m_cameraManager, id.c_str(), &cameraDeviceCallbacks, &m_cameraDevice);
+                GET_CAMERA_FUNCTION(ACameraManager_openCamera)(m_cameraManager, bestCameraConfiguration.cameraID.c_str(),
+                                                               &cameraDeviceCallbacks,
+                                                               &m_cameraDevice);
 
-                m_textureWindow = ANativeWindow_fromSurface(GetEnvForCurrentThread(), surface);
+                m_textureWindow = reinterpret_cast<API24::ANativeWindow *>(ANativeWindow_fromSurface(
+                        GetEnvForCurrentThread(), surface));
 
                 // Prepare request for texture target
-                ACameraDevice_createCaptureRequest(m_cameraDevice, TEMPLATE_PREVIEW, &m_request);
+                GET_CAMERA_FUNCTION(ACameraDevice_createCaptureRequest)(m_cameraDevice,
+                                                                        API24::TEMPLATE_PREVIEW,
+                                                                        &m_request);
 
                 // Prepare outputs for session
-                ACaptureSessionOutput_create(m_textureWindow, &m_textureOutput);
-                ACaptureSessionOutputContainer_create(&m_outputs);
-                ACaptureSessionOutputContainer_add(m_outputs, m_textureOutput);
+                GET_CAMERA_FUNCTION(ACaptureSessionOutput_create)(m_textureWindow,
+                                                                  &m_textureOutput);
+                GET_CAMERA_FUNCTION(ACaptureSessionOutputContainer_create)(&m_outputs);
+                GET_CAMERA_FUNCTION(ACaptureSessionOutputContainer_add)(m_outputs, m_textureOutput);
 
                 // Prepare target surface
-                ANativeWindow_acquire(m_textureWindow);
-                ACameraOutputTarget_create(m_textureWindow, &m_textureTarget);
-                ACaptureRequest_addTarget(m_request, m_textureTarget);
+                GET_CAMERA_FUNCTION(ANativeWindow_acquire)(m_textureWindow);
+                GET_CAMERA_FUNCTION(ACameraOutputTarget_create)(m_textureWindow, &m_textureTarget);
+                GET_CAMERA_FUNCTION(ACaptureRequest_addTarget)(m_request, m_textureTarget);
 
                 // Create the session
-                ACameraDevice_createCaptureSession(m_cameraDevice, m_outputs, &sessionStateCallbacks, &m_textureSession);
+                GET_CAMERA_FUNCTION(ACameraDevice_createCaptureSession)(m_cameraDevice, m_outputs,
+                                                                        &sessionStateCallbacks,
+                                                                        &m_textureSession);
 
                 // Start capturing continuously
-                ACameraCaptureSession_setRepeatingRequest(m_textureSession, &captureCallbacks, 1, &m_request, nullptr);
+                GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(m_textureSession,
+                                                                               &captureCallbacks,
+                                                                               1, &m_request,
+                                                                               nullptr);
             }
-#else
 
-            UNUSED(frontCamera);
-#pragma message("Warning: Android Platform level < 24. No HW Camera support. Only camera texture override is available.")
-
-#endif
             if (eglMakeCurrent(m_display, 0/*surface*/, 0/*surface*/, currentContext) == EGL_FALSE)
             {
                 throw std::runtime_error{"Unable to restore GL context for camera texture init."};
             }
+
+            return m_cameraDimensions;
         });
     }
 
@@ -294,15 +412,20 @@ namespace Babylon::Plugins
             }
         }
 
-#if __ANDROID_API__ >= 24
-        if (!m_overrideCameraTexture)
+        if (API_LEVEL >= 24 && !m_overrideCameraTexture)
         {
             m_surfaceTexture.updateTexImage();
         }
-#endif
+
         glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferId);
-        glViewport(0, 0, m_width, m_height);
+        glViewport(0, 0, m_cameraDimensions.width, m_cameraDimensions.height);
         glUseProgram(m_cameraShaderProgramId);
+
+        auto vertexPositionsUniformLocation{ glGetUniformLocation(m_cameraShaderProgramId, "positions") };
+        glUniform2fv(vertexPositionsUniformLocation, CAMERA_VERTEX_COUNT, CAMERA_VERTEX_POSITIONS);
+
+        auto uvsUniformLocation{ glGetUniformLocation(m_cameraShaderProgramId, "uvs") };
+        glUniform2fv(uvsUniformLocation, CAMERA_UVS_COUNT, m_cameraUVs);
 
         // Configure the camera texture
         auto cameraTextureUniformLocation{glGetUniformLocation(m_cameraShaderProgramId, "cameraTexture")};
@@ -312,7 +435,7 @@ namespace Babylon::Plugins
         glBindSampler(android::OpenGLHelpers::GetTextureUnit(GL_TEXTURE0), 0);
 
         // Draw the quad
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 3);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, CAMERA_VERTEX_COUNT);
 
         glUseProgram(0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -323,30 +446,29 @@ namespace Babylon::Plugins
             throw std::runtime_error{"Unable to make current shared GL context for camera texture."};
         }
 
-        arcana::make_task(m_deviceContext.BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
+        arcana::make_task(m_deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
             bgfx::overrideInternal(textureHandle, m_cameraRGBATextureId);
         });
     }
 
     void Camera::Impl::Close()
     {
-#if __ANDROID_API__ >= 24
-        if (!m_overrideCameraTexture)
+        if (API_LEVEL >= 24 && !m_overrideCameraTexture)
         {
             // Stop recording to SurfaceTexture and do some cleanup
-            ACameraCaptureSession_stopRepeating(m_textureSession);
-            ACameraCaptureSession_close(m_textureSession);
-            ACaptureSessionOutputContainer_free(m_outputs);
-            ACaptureSessionOutput_free(m_output);
+            GET_CAMERA_FUNCTION(ACameraCaptureSession_stopRepeating)(m_textureSession);
+            GET_CAMERA_FUNCTION(ACameraCaptureSession_close)(m_textureSession);
+            GET_CAMERA_FUNCTION(ACaptureSessionOutputContainer_free)(m_outputs);
+            GET_CAMERA_FUNCTION(ACaptureSessionOutput_free)(m_output);
 
-            ACameraDevice_close(m_cameraDevice);
-            ACameraManager_delete(m_cameraManager);
+            GET_CAMERA_FUNCTION(ACameraDevice_close)(m_cameraDevice);
+            GET_CAMERA_FUNCTION(ACameraManager_delete)(m_cameraManager);
 
             // Capture request for SurfaceTexture
             ANativeWindow_release(m_textureWindow);
-            ACaptureRequest_free(m_request);
+            GET_CAMERA_FUNCTION(ACaptureRequest_free)(m_request);
         }
-#endif
+
         if (m_context != EGL_NO_CONTEXT)
         {
             eglDestroyContext(m_display, m_context);

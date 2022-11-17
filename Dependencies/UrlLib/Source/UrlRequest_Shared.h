@@ -22,9 +22,9 @@ namespace UrlLib
         m_impl->Abort();
     }
 
-    void UrlRequest::Open(UrlMethod method, std::string url)
+    void UrlRequest::Open(UrlMethod method, const std::string& url)
     {
-        m_impl->Open(method, std::move(url));
+        m_impl->Open(method, url);
     }
 
     UrlResponseType UrlRequest::ResponseType() const
@@ -60,5 +60,10 @@ namespace UrlLib
     gsl::span<const std::byte> UrlRequest::ResponseBuffer() const
     {
         return m_impl->ResponseBuffer();
+    }
+
+    std::optional<std::string> UrlRequest::GetResponseHeader(const std::string& headerName) const
+    {
+        return m_impl->GetResponseHeader(headerName);
     }
 }

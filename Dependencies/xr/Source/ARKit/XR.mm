@@ -334,6 +334,7 @@ namespace {
         // Create a texture from the corresponding plane.
         auto status = CVMetalTextureCacheCreateTextureFromImage(kCFAllocatorDefault, textureCache, pixelBuffer, nil, pixelFormat, planeWidth, planeHeight, planeIndex, &texture);
         if (status != kCVReturnSuccess) {
+            CVBufferRelease(texture);
             return nil;
         }
 

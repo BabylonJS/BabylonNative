@@ -22,11 +22,11 @@ target_include_directories(NativeCamera
 
 if(ANDROID)
     set(EXTENSIONS AndroidExtensions)
-    if(ANDROID_NATIVE_API_LEVEL GREATER_EQUAL 24)
-        set(EXTENSIONS ${EXTENSIONS} camera2ndk)
-    endif()
 elseif(APPLE)
     set(EXTENSIONS "-framework CoreMedia -framework AVFoundation")
+    set_target_properties(NativeCamera PROPERTIES
+        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
+    )
 endif()
 
 target_link_to_dependencies(NativeCamera

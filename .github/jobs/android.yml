@@ -31,7 +31,7 @@ jobs:
         cd ../../ValidationTests/Android
         npm install
       displayName: 'Install JS engine NPMs'
-
+      
     - task: Gradle@2
       inputs:
           workingDirectory: 'Apps/Playground/Android'

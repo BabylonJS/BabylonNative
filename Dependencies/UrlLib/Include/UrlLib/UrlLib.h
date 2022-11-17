@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <optional>
+#include <string>
 #include <string_view>
 #include <arcana/threading/task.h>
 
@@ -39,7 +41,7 @@ namespace UrlLib
 
         void Abort();
 
-        void Open(UrlMethod method, std::string url);
+        void Open(UrlMethod method, const std::string& url);
 
         UrlResponseType ResponseType() const;
 
@@ -55,8 +57,12 @@ namespace UrlLib
 
         gsl::span<const std::byte> ResponseBuffer() const;
 
+        std::optional<std::string> GetResponseHeader(const std::string& headerName) const;
+
     private:
         class Impl;
+        class ImplBase;
+
         std::shared_ptr<Impl> m_impl{};
     };
 }

@@ -45,6 +45,7 @@ namespace Babylon::ShaderCompilerCommon
             };
 
             std::string Name{};
+            uint8_t ElementLength{};
             uint32_t Offset{};
             uint16_t RegisterSize{};
             TypeEnum Type{};

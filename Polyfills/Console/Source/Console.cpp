@@ -1,93 +1,67 @@
-#include "Console.h"
+#include <Babylon/Polyfills/Console.h>
 
+#include <array>
 #include <functional>
 #include <sstream>
 
 namespace
 {
-    std::vector<Napi::Value> GetCallbackInfoArgs(const Napi::CallbackInfo& info)
+    constexpr const char* JS_INSTANCE_NAME{"console"};
+
+    void Call(Napi::Function func, const Napi::CallbackInfo& info)
     {
-        auto args = std::vector<Napi::Value>();
-        for (unsigned int index = 0; index < info.Length(); index++)
-            args.push_back(info[index]);
-        return args;
-    }
-}
+        std::array<Napi::Value, 6> staticArgs{};
+        const size_t argc = info.Length();
 
-namespace Babylon::Polyfills::Internal
-{
-    void Console::CreateInstance(Napi::Env env, Babylon::Polyfills::Console::CallbackT callback)
-    {
-        Napi::HandleScope scope{env};
-
-        Napi::Function func = ParentT::DefineClass(
-            env,
-            "Console",
-            {
-                ParentT::InstanceMethod("log", &Console::Log),
-                ParentT::InstanceMethod("warn", &Console::Warn),
-                ParentT::InstanceMethod("error", &Console::Error),
-            });
-
-        auto console = func.New({});
-        Console::Unwrap(console)->m_callback = std::move(callback);
-        const auto existingConsole = env.Global().Get(JS_INSTANCE_NAME);
-        if (!existingConsole.IsUndefined())
+        if (info.Length() < std::size(staticArgs))
         {
-            Console::Unwrap(console)->m_engineConsole = std::make_unique<Napi::ObjectReference>(Napi::Persistent(existingConsole.As<Napi::Object>()));
+            for (size_t i = 0; i < argc; ++i)
+            {
+                staticArgs[i] = info[i];
+            }
+
+            func.Call(argc, staticArgs.data());
         }
-        env.Global().Set(JS_INSTANCE_NAME, console);
+        else
+        {
+            std::vector<Napi::Value> args(argc);
+            for (size_t i = 0; i < argc; ++i)
+            {
+                args[i] = info[i];
+            }
+
+            func.Call(argc, args.data());
+        }
     }
 
-    Console::Console(const Napi::CallbackInfo& info)
-        : ParentT{info}
-        , m_callback{}
-    {
-    }
-
-    void Console::Log(const Napi::CallbackInfo& info)
-    {
-        InvokeEngineCallback("log", info);
-        InvokeCallback(info, Babylon::Polyfills::Console::LogLevel::Log);
-    }
-
-    void Console::Warn(const Napi::CallbackInfo& info)
-    {
-        InvokeEngineCallback("warn", info);
-        InvokeCallback(info, Babylon::Polyfills::Console::LogLevel::Warn);
-    }
-
-    void Console::Error(const Napi::CallbackInfo& info)
-    {
-        InvokeEngineCallback("error", info);
-        InvokeCallback(info, Babylon::Polyfills::Console::LogLevel::Error);
-    }
-
-    void Console::InvokeCallback(const Napi::CallbackInfo& info, Babylon::Polyfills::Console::LogLevel logLevel) const
+    void InvokeCallback(Babylon::Polyfills::Console::CallbackT callback, const Napi::CallbackInfo& info, Babylon::Polyfills::Console::LogLevel logLevel)
     {
         std::stringstream ss{};
-        for (unsigned int index = 0; index < info.Length(); index++)
+        for (size_t i = 0; i < info.Length(); i++)
         {
-            if (index > 0)
+            if (i > 0)
             {
                 ss << " ";
             }
-            ss << info[index].ToString().Utf8Value().c_str();
+            ss << info[i].ToString().Utf8Value().c_str();
         }
         ss << std::endl;
-        m_callback(ss.str().c_str(), logLevel);
+
+        callback(ss.str().c_str(), logLevel);
     }
 
-    void Console::InvokeEngineCallback(const std::string functionName, const Napi::CallbackInfo& info)
+    void AddMethod(Napi::Object& console, const char* functionName, Babylon::Polyfills::Console::LogLevel logLevel, Babylon::Polyfills::Console::CallbackT callback)
     {
-        if (m_engineConsole != nullptr)
+        auto existingFunction = std::make_shared<Napi::FunctionReference>(Napi::Persistent(console.Get(functionName).As<Napi::Function>()));
+        console.Set(functionName, Napi::Function::New(console.Env(), [callback, existingFunction = std::move(existingFunction), logLevel](const Napi::CallbackInfo& info)
         {
-            const auto engineConsoleFunc = m_engineConsole->Value().Get(functionName).As<Napi::Function>();
-            if (!engineConsoleFunc.IsUndefined()) {
-                const auto args = GetCallbackInfoArgs(info);
-                engineConsoleFunc.As<Napi::Function>().Call(m_engineConsole->Value(), args.size(), args.data());
+            InvokeCallback(callback, info, logLevel);
+
+            if (!existingFunction->Value().IsUndefined())
+            {
+                Call(existingFunction->Value(), info);
             }
-        }
+        }, functionName));
     }
 }
 
@@ -95,6 +69,17 @@ namespace Babylon::Polyfills::Console
 {
     void Initialize(Napi::Env env, CallbackT callback)
     {
-        Internal::Console::CreateInstance(env, std::move(callback));
+        Napi::HandleScope scope{env};
+
+        auto console = env.Global().Get(JS_INSTANCE_NAME).As<Napi::Object>();
+        if (console.IsUndefined())
+        {
+            console = Napi::Object::New(env);
+            env.Global().Set(JS_INSTANCE_NAME, console);
+        }
+
+        AddMethod(console, "log", LogLevel::Log, callback);
+        AddMethod(console, "warn", LogLevel::Warn, callback);
+        AddMethod(console, "error", LogLevel::Error, callback);
     }
 }

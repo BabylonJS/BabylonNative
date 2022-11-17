@@ -212,7 +212,7 @@ namespace Babylon::Polyfills::Internal
             }
             
             // matches strings of the form rgb(#,#,#) or rgba(#,#,#,#)
-            static const std::regex rgbRegex("rgba?\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*(?:,\\s*(\\d{1,3}))?\\s*\\)");
+            static const std::regex rgbRegex("rgba?\\(\\s*(-?\\d{1,3})\\s*,\\s*(-?\\d{1,3})\\s*,\\s*(-?\\d{1,3})\\s*(?:,\\s*(-?\\d{1,3}))?\\s*\\)");
             std::smatch rgbMatch;
             if (std::regex_match(str, rgbMatch, rgbRegex))
             {
@@ -220,11 +220,11 @@ namespace Babylon::Polyfills::Internal
                 { 
                     if (rgbMatch[4].matched)
                     {
-                        return nvgRGBA(std::stoi(rgbMatch[1]), std::stoi(rgbMatch[2]), std::stoi(rgbMatch[3]), std::stoi(rgbMatch[4]));
+                        return nvgRGBA(std::clamp(std::stoi(rgbMatch[1]), 0, 255), std::clamp(std::stoi(rgbMatch[2]), 0, 255), std::clamp(std::stoi(rgbMatch[3]), 0, 255), std::clamp(std::stoi(rgbMatch[4]), 0, 255));
                     }
                     else
                     {
-                        return nvgRGB(std::stoi(rgbMatch[1]), std::stoi(rgbMatch[2]), std::stoi(rgbMatch[3]));
+                        return nvgRGB(std::clamp(std::stoi(rgbMatch[1]), 0, 255), std::clamp(std::stoi(rgbMatch[2]), 0, 255), std::clamp(std::stoi(rgbMatch[3]), 0, 255));
                     }
                 }
             }

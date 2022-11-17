@@ -96,7 +96,7 @@ namespace Babylon::Graphics
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
 
-        arcana::task<void, std::exception_ptr> ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data);
+        arcana::task<void, std::exception_ptr> ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel = 0);
 
         float GetHardwareScalingLevel();
         void SetHardwareScalingLevel(float level);

@@ -1,7 +1,8 @@
 {
     "root": "https://cdn.babylonjs.com",
     "tests": [
-        {
+	    {
+            "reason": "https://github.com/BabylonJS/BabylonNative/issues/1111",
             "title": "Thin Instances",
             "playgroundId": "#V1JE4Z#1",
             "referenceImage": "thinInstances.png"
@@ -33,12 +34,12 @@
         },
         {
             "title": "Edges",
-            "playgroundId": "#TYAHX#114",
+            "playgroundId": "#TYAHX#244",
             "referenceImage": "edges.png"
         },
         {
             "title": "Outline",
-            "playgroundId": "#10WJ5S#6",
+            "playgroundId": "#10WJ5S#14",
             "referenceImage": "outline.png"
         },
         {
@@ -374,9 +375,9 @@
             "referenceImage": "gltfTextureSampler1.png"
         },
         {
-            "title": "GLTF Serializer Morph Target Animation Group",
+            "title": "GLTF Alien",
             "playgroundId": "#XN37SR#5",
-            "referenceImage": "gltfSerializerMorphTargetAnimationGroup.png"
+            "referenceImage": "gltfAlien.png"
         }
     ]
 }

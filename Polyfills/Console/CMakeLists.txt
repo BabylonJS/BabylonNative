@@ -1,7 +1,6 @@
 set(SOURCES
     "Include/Babylon/Polyfills/Console.h"
-    "Source/Console.cpp"
-    "Source/Console.h")
+    "Source/Console.cpp")
 
 add_library(Console ${SOURCES})
 warnings_as_errors(Console)

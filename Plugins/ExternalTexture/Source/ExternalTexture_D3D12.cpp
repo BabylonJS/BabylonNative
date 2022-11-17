@@ -5,6 +5,8 @@
 #include <bx/bx.h>
 #include <winrt/base.h>
 
+#include "ExternalTexture_Base.h"
+
 // clang-format off
 
 // Copied from renderer_d3d.h
@@ -107,8 +109,11 @@ namespace
         { DXGI_FORMAT_R32G32B32A32_SINT,  DXGI_FORMAT_UNKNOWN              }, // RGBA32I
         { DXGI_FORMAT_R32G32B32A32_UINT,  DXGI_FORMAT_UNKNOWN              }, // RGBA32U
         { DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_UNKNOWN              }, // RGBA32F
+        { DXGI_FORMAT_B5G6R5_UNORM,       DXGI_FORMAT_UNKNOWN              }, // B5G6R5
         { DXGI_FORMAT_B5G6R5_UNORM,       DXGI_FORMAT_UNKNOWN              }, // R5G6B5
+        { DXGI_FORMAT_B4G4R4A4_UNORM,     DXGI_FORMAT_UNKNOWN              }, // BGRA4
         { DXGI_FORMAT_B4G4R4A4_UNORM,     DXGI_FORMAT_UNKNOWN              }, // RGBA4
+        { DXGI_FORMAT_B5G5R5A1_UNORM,     DXGI_FORMAT_UNKNOWN              }, // BGR5A1
         { DXGI_FORMAT_B5G5R5A1_UNORM,     DXGI_FORMAT_UNKNOWN              }, // RGB5A1
         { DXGI_FORMAT_R10G10B10A2_UNORM,  DXGI_FORMAT_UNKNOWN              }, // RGB10A2
         { DXGI_FORMAT_R11G11B10_FLOAT,    DXGI_FORMAT_UNKNOWN              }, // RG11B10F
@@ -129,63 +134,12 @@ namespace
 
 namespace Babylon::Plugins
 {
-    class ExternalTexture::Impl
+    class ExternalTexture::Impl final : public ImplBase
     {
     public:
-        Impl(Graphics::TextureT ptr)
-        {
-            m_ptr.copy_from(ptr);
-
-            m_desc = m_ptr->GetDesc();
-            if (m_desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D)
-            {
-                throw std::runtime_error{"Unsupported texture type"};
-            }
-
-            if (m_desc.MipLevels > 1)
-            {
-                throw std::runtime_error{"Unsupported texture mip levels"};
-            }
-
-            for (int i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
-            {
-                const auto& info = s_textureFormat[i];
-                if (info.m_fmt == m_desc.Format || info.m_fmtSrgb == m_desc.Format)
-                {
-                    m_format = static_cast<bgfx::TextureFormat::Enum>(i);
-                    if (info.m_fmtSrgb == m_desc.Format)
-                    {
-                        m_flags |= BGFX_TEXTURE_SRGB;
-                    }
-                    break;
-                }
-            }
-        }
-
-        uint16_t Width() const
-        {
-            return static_cast<uint16_t>(m_desc.Width);
-        }
-
-        uint16_t Height() const
-        {
-            return static_cast<uint16_t>(m_desc.Height);
-        }
-
-        bgfx::TextureFormat::Enum Format() const
-        {
-            return m_format;
-        }
-
-        bool HasMips() const
-        {
-            return m_desc.MipLevels == 0;
-        }
-
-        uint64_t Flags() const
-        {
-            return m_flags;
-        }
+        // Implemented in ExternalTexture_Shared.h
+        Impl(Graphics::TextureT);
+        void Update(Graphics::TextureT);
 
         uintptr_t Ptr() const
         {
@@ -193,10 +147,46 @@ namespace Babylon::Plugins
         }
 
     private:
+        void GetInfo(Graphics::TextureT ptr, Info& info)
+        {
+            D3D12_RESOURCE_DESC desc = ptr->GetDesc();
+
+            if (desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D)
+            {
+                throw std::runtime_error{"Unsupported texture type"};
+            }
+
+            info.Width = static_cast<uint16_t>(desc.Width);
+            info.Height = static_cast<uint16_t>(desc.Height);
+            info.MipLevels = static_cast<uint16_t>(desc.MipLevels);
+
+            if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0)
+            {
+                info.Flags |= BGFX_TEXTURE_RT;
+            }
+
+            for (int i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
+            {
+                const auto& format = s_textureFormat[i];
+                if (format.m_fmt == desc.Format || format.m_fmtSrgb == desc.Format)
+                {
+                    info.Format = static_cast<bgfx::TextureFormat::Enum>(i);
+                    if (format.m_fmtSrgb == desc.Format)
+                    {
+                        info.Flags |= BGFX_TEXTURE_SRGB;
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        void Assign(Graphics::TextureT ptr)
+        {
+            m_ptr.copy_from(ptr);
+        }
+
         winrt::com_ptr<ID3D12Resource> m_ptr{};
-        D3D12_RESOURCE_DESC m_desc{};
-        bgfx::TextureFormat::Enum m_format{bgfx::TextureFormat::Unknown};
-        uint64_t m_flags{};
     };
 }
 

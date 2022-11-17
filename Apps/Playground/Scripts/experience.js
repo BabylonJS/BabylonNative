@@ -17,6 +17,7 @@ var text = false;
 var hololens = false;
 var cameraTexture = false;
 var imageTracking = false;
+const readPixels = false;
 
 function CreateBoxAsync(scene) {
     BABYLON.Mesh.CreateBox("box1", 0.2, scene);
@@ -62,6 +63,7 @@ CreateBoxAsync(scene).then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
     BABYLON.Tools.Log("Loaded");
 
+    // This creates and positions a free camera (non-mesh)
     scene.createDefaultCamera(true, true, true);
     scene.activeCamera.alpha += Math.PI;
 
@@ -73,14 +75,51 @@ CreateBoxAsync(scene).then(function () {
     }
 
     if (cameraTexture) {
-        var cameraBox = BABYLON.Mesh.CreateBox("box1", 0.25);
+        scene.activeCamera.position.set(0, 1, -10);
+        scene.activeCamera.setTarget(new BABYLON.Vector3(0, 1, 0));
+
+        scene.meshes[0].setEnabled(false);
+        var plane = BABYLON.MeshBuilder.CreatePlane("plane", {size: 1, sideOrientation: BABYLON.Mesh.DOUBLESIDE});
+        plane.rotation.y = Math.PI;
+        plane.rotation.z = Math.PI;
+
+        plane.position.y = 1;
+        
         var mat = new BABYLON.StandardMaterial("mat", scene);
         mat.diffuseColor = BABYLON.Color3.Black();
 
-        BABYLON.VideoTexture.CreateFromWebCam(scene, function (videoTexture) {
+        var tex = BABYLON.VideoTexture.CreateFromWebCam(scene, function(videoTexture) {
+            const videoSize = videoTexture.getSize();
             mat.emissiveTexture = videoTexture;
-            cameraBox.material = mat;
-        }, { maxWidth: 256, maxHeight: 256, facingMode: "environment" });
+            plane.material = mat;
+            plane.scaling.x = 5;
+            plane.scaling.y = 5 * (videoSize.height / videoSize.width);
+            console.log("Video texture size: " + videoSize);
+        }, { maxWidth: 1280, maxHeight: 720, facingMode: 'environment'});
+    }
+
+    if (readPixels) {
+        const texture = new BABYLON.Texture("https://assets.babylonjs.com/textures/earth.jpg", scene);
+        texture.onLoadObservable.addOnce(() => {
+            const mip = 1;
+            const textureWidth = texture.getSize().width >> mip;
+            const textureHeight = texture.getSize().height >> mip;
+            const x = textureWidth / 4;
+            const y = textureHeight / 4;
+            const width = textureWidth / 2;
+            const height = textureHeight / 2;
+            // This read will create a new buffer.
+            texture.readPixels(undefined, mip, undefined, undefined, undefined, x, y, width, height).then((buffer) => {
+                console.log(`Read ${buffer.byteLength} pixel bytes.`);
+                return buffer;
+            })
+            .then(buffer => {
+                // This read reuses the existing buffer.
+                texture.readPixels(undefined, mip, buffer, undefined, undefined, x, y, width, height).then((buffer) => {
+                    console.log(`Read ${buffer.byteLength} pixel bytes.`);
+                });
+            });
+        });
     }
 
     if (wireframe) {
