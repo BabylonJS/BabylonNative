@@ -1,129 +1,54 @@
-#include <napi/napi.h>
+#include <Babylon/Graphics/Texture.h>
 #include <napi/napi_pointer.h>
 #include <NativeCamera.h>
 #include "NativeVideo.h"
-#include "NativeCameraImpl.h"
-#include <Babylon/JsRuntime.h>
-#include <Babylon/Graphics/DeviceContext.h>
-#include <Babylon/Graphics/Texture.h>
-#include <vector>
-#include <algorithm>
+#include "MediaDevices.h"
 
-namespace Babylon
+namespace Babylon::Plugins::Internal
 {
-    namespace Plugins
+    // NativeVideoAccessor maintains backwards compatibility with the Babylon.JS javascript contract
+    // moving forward the NativeVideo object should be called directly instead of using this accessor class
+    class NativeCamera : public Napi::ObjectWrap<NativeCamera>
     {
-        class NativeCamera : public Napi::ObjectWrap<NativeCamera>
+    public:
+        static void Initialize(Napi::Env& env)
         {
-            static constexpr auto JS_NAVIGATOR_NAME = "navigator";
-            static constexpr auto JS_CLASS_NAME = "_NativeCamera";
-            static constexpr auto JS_CONSTRUCTOR_NAME = "Camera";
-
-        public:
-
-            static void Initialize(Napi::Env env)
-            {
-                Napi::HandleScope scope{ env };
-
-                Napi::Function func = NativeCamera::DefineClass(
+            Napi::Function func = DefineClass(
                     env,
-                    JS_CLASS_NAME,
+                    "_NativeCamera",
                     {
-                        NativeCamera::InstanceMethod("createVideo", &NativeCamera::CreateVideo),
-                        NativeCamera::InstanceMethod("updateVideoTexture", &NativeCamera::UpdateVideoTexture),
+                        InstanceMethod("createVideo", &NativeCamera::CreateVideo),
+                        InstanceMethod("updateVideoTexture", &NativeCamera::UpdateVideoTexture),
                     });
 
-                JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
-
-                // create or get global navigator object
-                Napi::Object global = env.Global();
-                Napi::Object navigator;
-                if (global.Has(JS_NAVIGATOR_NAME))
-                {
-                    navigator = global.Get(JS_NAVIGATOR_NAME).As<Napi::Object>();
-                }
-                else
-                {
-                    navigator = Napi::Object::New(env);
-                    global.Set(JS_NAVIGATOR_NAME, navigator);
-                }
-
-                // append media devices to navigator
-                Napi::Object mediaDevices = Napi::Object::New(env);
-                mediaDevices.Set("getUserMedia", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                    auto env = info.Env();
-                    auto deferred{Napi::Promise::Deferred::New(env)};
-                    auto promise{deferred.Promise()};
-
-                    auto& jsRuntime{JsRuntime::GetFromJavaScript(env)};
-                    jsRuntime.Dispatch([deferred{std::move(deferred)}](Napi::Env env) {
-                        deferred.Resolve(env.Null());
-                    });
-
-                    return static_cast<Napi::Value>(promise);
-                }, "getUserMedia"));
-                navigator.Set("mediaDevices", mediaDevices);
-            }
-
-            NativeCamera(const Napi::CallbackInfo& info)
-                : Napi::ObjectWrap<NativeCamera>{ info }
-            {
-            }
-
-        private:
-
-            Napi::Value CreateVideo(const Napi::CallbackInfo& info)
-            {
-                auto constraints = info[0].As<Napi::Object>();
-                uint32_t maxWidth{256}, maxHeight{256};
-                std::string facingMode{};
-
-                auto maxWidthValue{constraints.Get("maxWidth")};
-                auto maxHeightValue{constraints.Get("maxHeight")};
-                auto facingModeValue{constraints.Get("facingMode")};
-                if (maxWidthValue.IsNumber())
-                {
-                    maxWidth = maxWidthValue.As<Napi::Number>().Uint32Value();
-                }
-                if (maxHeightValue.IsNumber())
-                {
-                    maxHeight = maxHeightValue.As<Napi::Number>().Uint32Value();
-                }
-                if (facingModeValue.IsString())
-                {
-                    facingMode = facingModeValue.As<Napi::String>().Utf8Value();
-                }
-
-                return NativeVideo::New(info, maxWidth, maxHeight, facingMode == "user");
-            }
-
-            void UpdateVideoTexture(const Napi::CallbackInfo& info)
-            {
-                const auto& texture = *info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
-                auto videoObject = NativeVideo::Unwrap(info[1].As<Napi::Object>());
-
-                videoObject->UpdateTexture(texture.Handle());
-            }
-        };
-
-        Camera::Camera(std::shared_ptr<Impl> impl)
-            : m_impl{std::move(impl)}
-        {
+            JsRuntime::NativeObject::GetFromJavaScript(env).Set("Camera", func);
         }
 
-        Camera Camera::Initialize(Napi::Env env, bool overrideCameraTexture)
+        NativeCamera(const Napi::CallbackInfo& info) : Napi::ObjectWrap<NativeCamera>{info}
         {
-            auto impl{std::make_shared<Impl>(env, overrideCameraTexture)};
-
-            Babylon::Plugins::NativeVideo::Initialize(env, impl);
-            Babylon::Plugins::NativeCamera::Initialize(env);
-
-            return {impl};
+        }
+    private:
+        Napi::Value CreateVideo(const Napi::CallbackInfo& info)
+        {
+            return NativeVideo::New(info);
         }
 
-        void Camera::SetTextureOverride(void* texturePtr)
+        void UpdateVideoTexture(const Napi::CallbackInfo& info)
         {
-           m_impl->SetTextureOverride(texturePtr);
+            const auto& texture = *info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+            auto videoObject = NativeVideo::Unwrap(info[1].As<Napi::Object>());
+
+            videoObject->UpdateTexture(texture.Handle());
         }
+    };
+}
+
+namespace Babylon::Plugins::NativeCamera
+{
+    void Initialize(Napi::Env env)
+    {
+        Babylon::Plugins::NativeVideo::Initialize(env);
+        Babylon::Plugins::MediaDevices::Initialize(env);
+        Babylon::Plugins::Internal::NativeCamera::Initialize(env);
     }
 }

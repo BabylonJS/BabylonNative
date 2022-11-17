@@ -76,7 +76,7 @@ bool g_isXrActive{};
         g_nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ g_isXrActive = isXrActive; });
 
         // Initialize Camera 
-        Babylon::Plugins::Camera::Initialize(env);
+        Babylon::Plugins::NativeCamera::Initialize(env);
 
         nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
     });
