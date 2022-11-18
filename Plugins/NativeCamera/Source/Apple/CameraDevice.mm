@@ -503,6 +503,13 @@ namespace Babylon::Plugins
 
     void CameraDevice::Close()
     {
+        if (m_impl == nil || m_impl->cameraTextureDelegate == nil)
+        {
+            // This device was either never opened, or has already been closed.
+            // No action is required.
+            return;
+        }
+
         // Stop collecting frames, release camera texture delegate.
         [m_impl->cameraTextureDelegate reset];
         m_impl->cameraTextureDelegate = nil;
@@ -521,8 +528,10 @@ namespace Babylon::Plugins
         }
 
         if (m_impl->avCaptureSession != nil) {
-            arcana::make_task(m_impl->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this()](){
-                [implObj->m_impl->avCaptureSession stopRunning];
+            // Stopping the capture session is a synchronous (and long running call). Complete the request on the dispatcher thread
+            // instead of the main thread.
+            arcana::make_task(m_impl->cameraSessionDispatcher, arcana::cancellation::none(), [avCaptureSession = m_impl->avCaptureSession](){
+                [avCaptureSession stopRunning];
             });
         }
     }

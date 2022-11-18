@@ -149,6 +149,14 @@ namespace Babylon::Plugins
     void NativeVideo::SetSrcObject(const Napi::CallbackInfo& info, const Napi::Value& value) {
         auto env{info.Env()};
         
+        if (m_streamObject.Value().IsObject() && m_streamObject.Value().InstanceOf(MediaStream::GetConstructor(env)))
+        {
+            // The MediaStream's lifetime is owned by the javascript environment and relying on garbage collection
+            // to close out the stream can be unpredictable. Explicitly close out the stream before assigining a new source.
+            auto oldStream = MediaStream::Unwrap(m_streamObject.Value());
+            oldStream->Close();
+        }
+        
         if (value.IsNull() || value.IsUndefined() || !value.As<Napi::Object>().InstanceOf(MediaStream::GetConstructor(env)))
         {
             m_streamObject = Napi::ObjectReference();

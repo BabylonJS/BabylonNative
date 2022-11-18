@@ -338,6 +338,12 @@ namespace Babylon::Plugins
         return allConstraintsSatisfied;
     }
 
+    void MediaStream::Close()
+    {
+        // Clear out the cameraDevice which will disconnect the camera stream
+        m_cameraDevice = nullptr;
+    }
+
     void MediaStream::UpdateTexture(bgfx::TextureHandle textureHandle)
     {
         if (m_cameraDevice == nullptr)

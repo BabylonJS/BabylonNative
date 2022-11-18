@@ -25,7 +25,11 @@ namespace Babylon::Plugins
     {
     }
 
-    CameraDevice::~CameraDevice() = default;
+    CameraDevice::~CameraDevice()
+    {
+        Close();
+    }
+
     CameraDevice::CameraDevice(CameraDevice&&) noexcept = default;
     CameraDevice& CameraDevice::operator=(CameraDevice&&) noexcept = default;
 

@@ -31,6 +31,7 @@ namespace Babylon::Plugins
         Napi::Value GetSettings(const Napi::CallbackInfo& info);
         Napi::Value GetConstraints(const Napi::CallbackInfo& info);
         
+        void Close();
         void UpdateTexture(bgfx::TextureHandle textureHandle);
         
         int Width{0};

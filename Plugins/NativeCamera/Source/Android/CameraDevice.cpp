@@ -487,12 +487,25 @@ namespace Babylon::Plugins
         }
 
         arcana::make_task(m_impl->deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
+            if (m_impl == nullptr)
+            {
+                // We've been destructed, cancel out of the async work
+                return;
+            }
+
             bgfx::overrideInternal(textureHandle, m_impl->cameraRGBATextureId);
         });
     }
 
     void CameraDevice::Close()
     {
+        if (m_impl == nullptr || m_impl->textureSession == nullptr)
+        {
+            // This device was either never opened, or has already been closed.
+            // No action is required.
+            return;
+        }
+
         // Stop recording to SurfaceTexture and do some cleanup
         GET_CAMERA_FUNCTION(ACameraCaptureSession_stopRepeating)(m_impl->textureSession);
         GET_CAMERA_FUNCTION(ACameraCaptureSession_close)(m_impl->textureSession);
