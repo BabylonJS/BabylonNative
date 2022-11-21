@@ -27,7 +27,11 @@ namespace Babylon::Plugins
 
     CameraDevice::~CameraDevice()
     {
-        Close();
+        // If m_impl is null then the class has been moved and there is no cleanup required
+        if (m_impl != nullptr)
+        {
+            Close();
+        }
     }
 
     CameraDevice::CameraDevice(CameraDevice&&) noexcept = default;

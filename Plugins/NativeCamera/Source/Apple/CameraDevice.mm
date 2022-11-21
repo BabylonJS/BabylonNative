@@ -160,7 +160,6 @@ namespace Babylon::Plugins
         CameraDimensions cameraDimensions{};
 
         CameraTextureDelegate* cameraTextureDelegate{};
-        CameraDevice cameraDevice{nullptr};
         AVCaptureSession* avCaptureSession{};
         CVMetalTextureCacheRef textureCache{};
         id<MTLTexture> textureRGBA{};
@@ -503,7 +502,7 @@ namespace Babylon::Plugins
 
     void CameraDevice::Close()
     {
-        if (m_impl == nil || m_impl->cameraTextureDelegate == nil)
+        if (m_impl->cameraTextureDelegate == nil)
         {
             // This device was either never opened, or has already been closed.
             // No action is required.
@@ -530,7 +529,7 @@ namespace Babylon::Plugins
         if (m_impl->avCaptureSession != nil) {
             // Stopping the capture session is a synchronous (and long running call). Complete the request on the dispatcher thread
             // instead of the main thread.
-            arcana::make_task(m_impl->cameraSessionDispatcher, arcana::cancellation::none(), [avCaptureSession = m_impl->avCaptureSession](){
+            arcana::make_task(arcana::threadpool_scheduler, arcana::cancellation::none(), [avCaptureSession = m_impl->avCaptureSession](){
                 [avCaptureSession stopRunning];
             });
         }

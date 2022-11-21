@@ -37,6 +37,7 @@ namespace Babylon::Plugins
                     InstanceMethod("getCapabilities", &MediaStream::GetCapabilities),
                     InstanceMethod("getSettings", &MediaStream::GetSettings),
                     InstanceMethod("getConstraints", &MediaStream::GetConstraints),
+                    InstanceMethod("stop", &MediaStream::Stop),
                 });
             
             _native.Set(JS_CLASS_NAME, ctor);
@@ -338,7 +339,7 @@ namespace Babylon::Plugins
         return allConstraintsSatisfied;
     }
 
-    void MediaStream::Close()
+    void MediaStream::Stop(const Napi::CallbackInfo& /*info*/)
     {
         // Clear out the cameraDevice which will disconnect the camera stream
         m_cameraDevice = nullptr;

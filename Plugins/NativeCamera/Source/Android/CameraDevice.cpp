@@ -486,20 +486,14 @@ namespace Babylon::Plugins
             throw std::runtime_error{"Unable to make current shared GL context for camera texture."};
         }
 
-        arcana::make_task(m_impl->deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
-            if (m_impl == nullptr)
-            {
-                // We've been destructed, cancel out of the async work
-                return;
-            }
-
-            bgfx::overrideInternal(textureHandle, m_impl->cameraRGBATextureId);
+        arcana::make_task(m_impl->deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [rgbaTextureId = m_impl->cameraRGBATextureId, textureHandle] {
+            bgfx::overrideInternal(textureHandle, rgbaTextureId);
         });
     }
 
     void CameraDevice::Close()
     {
-        if (m_impl == nullptr || m_impl->textureSession == nullptr)
+        if (m_impl->textureSession == nullptr)
         {
             // This device was either never opened, or has already been closed.
             // No action is required.
