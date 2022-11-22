@@ -1,3 +1,6 @@
+// Disable the compiler warning for unreachable code due to CameraDevice being stubbed out on some platforms
+#pragma warning(disable: 4702)
+
 #include "MediaStream.h"
 #include "CameraDevice.h"
 #include "Constraint.h"
