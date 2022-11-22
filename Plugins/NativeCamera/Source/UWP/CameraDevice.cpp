@@ -20,11 +20,13 @@ namespace Babylon::Plugins
 
     std::vector<CameraDevice> CameraDevice::GetCameraDevices(Napi::Env /*env*/)
     {
+        // When implementing this function remove the disabled warning at the top of MediaStream.cpp
         throw std::runtime_error{"HW Camera not implemented for this platform."};
     }
 
     arcana::task<CameraDevice::CameraDimensions, std::exception_ptr> CameraDevice::OpenAsync(const CameraTrack& /*track*/)
     {
+        // When implementing this function remove the disabled warning at the top of MediaStream.cpp
         throw std::runtime_error{"HW Camera not implemented for this platform."};
     }
 
