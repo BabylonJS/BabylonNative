@@ -1,5 +1,7 @@
-// Disable the compiler warning for unreachable code due to CameraDevice being stubbed out on some platforms
-#pragma warning(disable: 4702)
+#if !(defined(__APPLE__) || defined(ANDROID))
+    // Disable the compiler warning for unreachable code due to CameraDevice being stubbed out on some platforms
+    #pragma warning(disable: 4702)
+#endif
 
 #include "MediaStream.h"
 #include "CameraDevice.h"
