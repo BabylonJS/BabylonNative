@@ -48,6 +48,8 @@ namespace Babylon::Plugins
 
         Napi::Env env;
 
+        arcana::affinity threadAffinity{};
+
         std::vector<CameraTrack> supportedResolutions{};
         std::vector<std::unique_ptr<Capability>> capabilities{};
         std::string cameraID{};
@@ -178,6 +180,7 @@ namespace Babylon::Plugins
     {
         if (!m_impl->deviceContext){
             m_impl->deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_impl->env);
+            m_impl->threadAffinity = std::this_thread::get_id();
         }
 
         return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, &track]()

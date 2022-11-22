@@ -30,6 +30,7 @@ namespace Babylon::Plugins
         // If m_impl is null then the class has been moved and there is no cleanup required
         if (m_impl != nullptr)
         {
+            assert(m_impl->threadAffinity.check());
             Close();
         }
     }

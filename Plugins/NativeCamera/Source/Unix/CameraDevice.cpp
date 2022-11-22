@@ -12,6 +12,7 @@ namespace Babylon::Plugins
 
     struct CameraDevice::Impl
     {
+        arcana::affinity threadAffinity{};
         std::vector<CameraTrack> supportedResolutions{};
         std::vector<std::unique_ptr<Capability>> capabilities{};
     };
