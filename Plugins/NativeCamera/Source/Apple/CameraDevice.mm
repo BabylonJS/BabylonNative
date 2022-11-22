@@ -152,6 +152,8 @@ namespace Babylon::Plugins
         Graphics::DeviceContext* deviceContext;
         Napi::Env env;
         
+        arcana::affinity threadAffinity{};
+        
         std::vector<CameraTrack> supportedResolutions{};
         std::vector<std::unique_ptr<Capability>> capabilities{};
         AVCaptureDevice* avDevice{};
@@ -160,7 +162,6 @@ namespace Babylon::Plugins
         CameraDimensions cameraDimensions{};
 
         CameraTextureDelegate* cameraTextureDelegate{};
-        CameraDevice cameraDevice{nullptr};
         AVCaptureSession* avCaptureSession{};
         CVMetalTextureCacheRef textureCache{};
         id<MTLTexture> textureRGBA{};
@@ -320,6 +321,9 @@ namespace Babylon::Plugins
 
         // This is the first time the camera has been opened, perform some one time setup.
         if (!m_impl->isInitialized) {
+            // Set the thread affinity to the current thread
+            m_impl->threadAffinity = std::this_thread::get_id();
+
             m_impl->commandQueue = (__bridge id<MTLCommandQueue>)bgfx::getInternalData()->commandQueue;
             m_impl->metalDevice = (__bridge id<MTLDevice>)bgfx::getInternalData()->context;
             m_impl->deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_impl->env);
@@ -503,6 +507,13 @@ namespace Babylon::Plugins
 
     void CameraDevice::Close()
     {
+        if (m_impl->cameraTextureDelegate == nil)
+        {
+            // This device was either never opened, or has already been closed.
+            // No action is required.
+            return;
+        }
+
         // Stop collecting frames, release camera texture delegate.
         [m_impl->cameraTextureDelegate reset];
         m_impl->cameraTextureDelegate = nil;
@@ -521,8 +532,10 @@ namespace Babylon::Plugins
         }
 
         if (m_impl->avCaptureSession != nil) {
-            arcana::make_task(m_impl->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this()](){
-                [implObj->m_impl->avCaptureSession stopRunning];
+            // Stopping the capture session is a synchronous (and long running call). Complete the request on the dispatcher thread
+            // instead of the main thread.
+            arcana::make_task(arcana::threadpool_scheduler, arcana::cancellation::none(), [avCaptureSession = m_impl->avCaptureSession](){
+                [avCaptureSession stopRunning];
             });
         }
     }

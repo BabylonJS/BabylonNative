@@ -1,6 +1,7 @@
 #include "NativeCamera.h"
 #include "../CameraDevice.h"
 #include <napi/napi.h>
+#include <arcana/threading/affinity.h>
 
 namespace Babylon::Plugins
 {
@@ -12,6 +13,7 @@ namespace Babylon::Plugins
 
     struct CameraDevice::Impl
     {
+        arcana::affinity threadAffinity{};
         std::vector<CameraTrack> supportedResolutions{};
         std::vector<std::unique_ptr<Capability>> capabilities{};
     };

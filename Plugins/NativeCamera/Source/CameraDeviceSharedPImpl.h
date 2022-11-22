@@ -25,7 +25,16 @@ namespace Babylon::Plugins
     {
     }
 
-    CameraDevice::~CameraDevice() = default;
+    CameraDevice::~CameraDevice()
+    {
+        // If m_impl is null then the class has been moved and there is no cleanup required
+        if (m_impl != nullptr)
+        {
+            assert(m_impl->threadAffinity.check());
+            Close();
+        }
+    }
+
     CameraDevice::CameraDevice(CameraDevice&&) noexcept = default;
     CameraDevice& CameraDevice::operator=(CameraDevice&&) noexcept = default;
 
