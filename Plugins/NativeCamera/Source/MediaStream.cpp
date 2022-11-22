@@ -1,3 +1,8 @@
+#if defined(_MSC_VER)
+    // Disable the compiler warning for unreachable code due to CameraDevice being stubbed out on the windows platform
+    #pragma warning(disable: 4702)
+#endif
+
 #include "MediaStream.h"
 #include "CameraDevice.h"
 #include "Constraint.h"
