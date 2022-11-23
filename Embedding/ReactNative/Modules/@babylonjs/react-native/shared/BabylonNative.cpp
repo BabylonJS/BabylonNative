@@ -54,7 +54,7 @@ namespace BabylonNative
             m_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(m_env);
             Babylon::Plugins::NativeOptimizations::Initialize(m_env);
             Babylon::Plugins::NativeTracing::Initialize(m_env);
-            Babylon::Plugins::Camera::Initialize(m_env);
+            Babylon::Plugins::NativeCamera::Initialize(m_env);
 
             // Initialize Babylon Native polyfills
             Babylon::Polyfills::Window::Initialize(m_env);

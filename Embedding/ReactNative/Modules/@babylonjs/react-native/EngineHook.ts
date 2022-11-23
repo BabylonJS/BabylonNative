@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { PERMISSIONS, check, request } from 'react-native-permissions';
 import { Engine, WebXRSessionManager, WebXRExperienceHelper, Color4, Tools, VideoTexture } from '@babylonjs/core';
 import { ReactNativeEngine } from './ReactNativeEngine';
+import { ensureInitialized } from './BabylonModule';
 
 import * as base64 from 'base-64';
 
@@ -71,17 +72,19 @@ async function requestCameraPermissionAsync() : Promise<void> {
     }
 }
 
-// Override the VideoTexture.CreateFromWebCamAsync to insert a camera permissions request. It would be cleaner to do this directly in the NativeCamera implementation, but there are a couple problems with that:
-// 1. React Native does not provide a way to hook into the permissions request result (at least on Android).
-// 2. If it is done on the native side, then we need one implementation per platform.
-{
-    const originalCreateFromWebCamAsync = VideoTexture.CreateFromWebCamAsync;
-    VideoTexture.CreateFromWebCamAsync = async function (...args: Parameters<typeof originalCreateFromWebCamAsync>): ReturnType<typeof originalCreateFromWebCamAsync> {
-        await requestCameraPermissionAsync();
+ensureInitialized().then(() => {
+    // Override the navigator.mediaDevices.getUserMedia to insert a camera permissions request. It would be cleaner to do this directly in the NativeCamera implementation, but there are a couple problems with that:
+    // 1. React Native does not provide a way to hook into the permissions request result (at least on Android).
+    // 2. If it is done on the native side, then we need one implementation per platform.
+    {
+        const originalGetUserMedia = navigator.mediaDevices.getUserMedia;
+        navigator.mediaDevices.getUserMedia = async function (...args: Parameters<typeof originalGetUserMedia>): ReturnType<typeof originalGetUserMedia> {
+            await requestCameraPermissionAsync();
 
-        return originalCreateFromWebCamAsync.apply(this, args);
+            return originalGetUserMedia.apply(this, args);
+        }
     }
-}
+});
 
 if (Platform.OS === "android" || Platform.OS === "ios") {
     const originalEnterXRAsync: (...args: any[]) => Promise<WebXRSessionManager> = WebXRExperienceHelper.prototype.enterXRAsync;
