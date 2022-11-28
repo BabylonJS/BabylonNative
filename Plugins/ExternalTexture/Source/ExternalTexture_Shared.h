@@ -51,63 +51,6 @@ namespace Babylon::Plugins
         return m_impl->Height();
     }
 
-    Napi::Value ExternalTexture::AddToContextSync(Napi::Env env) const
-    {
-        Graphics::DeviceContext& context = Graphics::DeviceContext::GetFromJavaScript(env);
-
-        bool isDone = false;
-        bool succeeded = false;
-        Graphics::Texture* texture;
-
-        arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(),
-            [&context, &isDone, &succeeded, &texture, impl = m_impl]()
-        {
-            // REVIEW: The bgfx texture handle probably needs to be an RAII object to make sure it gets clean up during the asynchrony.
-            //         For example, if any of the schedulers/dispatches below don't fire, then the texture handle will leak.
-            bgfx::TextureHandle handle = bgfx::createTexture2D(impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
-            
-            if (!bgfx::isValid(handle))
-            {
-                succeeded = false;
-                isDone = true;
-                return;
-            }
-
-            arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&context, &isDone, &succeeded, &texture,handle, impl = std::move(impl)]()
-            {
-                if (bgfx::overrideInternal(handle, impl->Ptr()) == 0)
-                {
-                    bgfx::destroy(handle);
-                    succeeded = false;
-                    isDone = true;
-                    return;
-                }
-
-                context.AddTexture(handle, 0, 0, impl->HasMips(), 0, impl->Format());
-
-                texture = new Graphics::Texture{};
-                texture->Attach(handle, true, impl->Width(), impl->Height());
-                succeeded = true;
-                isDone = true;
-            });
-        });
-
-        while(!isDone)
-        {
-        }
-
-        if(!succeeded){
-            return Napi::Error::New(env, "Failed to create native texture").Value();
-        }
-
-        auto jsObject = Napi::Pointer<Graphics::Texture>::Create(env, texture, [texture] 
-        {
-            delete texture;
-        });
-
-        return jsObject;
-    }
-
     Napi::Promise ExternalTexture::AddToContextAsync(Napi::Env env) const
     {
         Graphics::DeviceContext& context = Graphics::DeviceContext::GetFromJavaScript(env);
