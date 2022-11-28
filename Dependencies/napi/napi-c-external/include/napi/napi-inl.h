@@ -1704,6 +1704,10 @@ inline Value Function::Call(napi_value recv, const std::initializer_list<napi_va
   return Call(recv, args.size(), args.begin());
 }
 
+inline Value Function::Call(size_t argc, const Value* args) const {
+  return Call(Env().Undefined(), argc, args);
+}
+
 inline Value Function::Call(napi_value recv, const std::vector<napi_value>& args) const {
   return Call(recv, args.size(), args.data());
 }
