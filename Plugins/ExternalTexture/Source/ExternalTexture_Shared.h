@@ -114,56 +114,6 @@ namespace Babylon::Plugins
         return promise;
     }
 
-    void ExternalTexture::AddToContextAsync(Napi::Env env, std::function<void(Napi::Env, Napi::Value)> succeed, std::function<void(Napi::Env, Napi::Value)> fail) const
-    {
-        Graphics::DeviceContext& context = Graphics::DeviceContext::GetFromJavaScript(env);
-        JsRuntime& runtime = JsRuntime::GetFromJavaScript(env);
-
-        arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(),
-            [&context, &runtime, succeed = std::move(succeed), fail = std::move(fail), impl = m_impl]()
-            {
-                // REVIEW: The bgfx texture handle probably needs to be an RAII object to make sure it gets clean up during the asynchrony.
-                //         For example, if any of the schedulers/dispatches below don't fire, then the texture handle will leak.
-                bgfx::TextureHandle handle = bgfx::createTexture2D(impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
-                if (!bgfx::isValid(handle))
-                {
-                    runtime.Dispatch([fail{std::move(fail)}](Napi::Env env)
-                    {
-                        fail(env, Napi::Error::New(env, "Failed to create native texture").Value());
-                    });
-
-                    return;
-                }
-
-                arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&context, &runtime, succeed = std::move(succeed), fail = std::move(fail), handle, impl = std::move(impl)]()
-                    {
-                        if (bgfx::overrideInternal(handle, impl->Ptr()) == 0)
-                        {
-                            runtime.Dispatch([fail = std::move(fail), handle](Napi::Env env)
-                                {
-                                    bgfx::destroy(handle);
-                                    fail(env, Napi::Error::New(env, "Failed to override native texture").Value());
-                                });
-
-                            return;
-                        }
-
-                        context.AddTexture(handle, 0, 0, impl->HasMips(), 0, impl->Format());
-
-                        runtime.Dispatch([succeed = std::move(succeed), handle, impl = std::move(impl)](Napi::Env env)
-                            {
-                                auto* texture = new Graphics::Texture{};
-                                texture->Attach(handle, true, impl->Width(), impl->Height());
-
-                                auto jsObject = Napi::Pointer<Graphics::Texture>::Create(env, texture, [texture]
-                                    { delete texture; });
-
-                                succeed(env, jsObject);
-                            });
-                    });
-            });
-    }
-
     void ExternalTexture::Update(Graphics::TextureT ptr)
     {
         m_impl->Update(ptr);

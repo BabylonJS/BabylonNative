@@ -31,9 +31,6 @@ namespace Babylon::Plugins
         // NOTE: Must call from the JavaScript thread.
         Napi::Promise AddToContextAsync(Napi::Env) const;
 
-        void AddToContextAsync(Napi::Env, 
-                               std::function<void(Napi::Env, Napi::Value)> succeed, 
-                               std::function<void(Napi::Env, Napi::Value)> fail) const;
         // Updates to a new texture.
         // Texture attributes (width, height, format, etc.) must match.
         // NOTE: Must call from the Graphics thread.
