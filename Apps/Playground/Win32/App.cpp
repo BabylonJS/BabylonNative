@@ -144,7 +144,7 @@ namespace
             Babylon::Plugins::NativeCapture::Initialize(env);
 
             // Initialize Camera 
-            Babylon::Plugins::Camera::Initialize(env);
+            Babylon::Plugins::NativeCamera::Initialize(env);
 
             // Initialize NativeXr plugin.
             Babylon::Plugins::NativeXr::Initialize(env);
