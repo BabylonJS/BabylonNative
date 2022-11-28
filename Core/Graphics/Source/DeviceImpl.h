@@ -38,7 +38,6 @@ namespace Babylon::Graphics
 
         void UpdateWindow(const WindowConfiguration& config);
         void UpdateContext(const DeviceConfiguration& config);
-        void UpdateRenderTarget(const RenderTargetInfo& renderTargetInfo);
         void Resize(size_t width, size_t height);
         void SetMSAA(uint8_t value);
         void SetAlphaPremultiplied(bool enabled);
@@ -99,7 +98,6 @@ namespace Babylon::Graphics
         static const bgfx::RendererType::Enum s_bgfxRenderType;
         static void ConfigureBgfxPlatformData(const WindowConfiguration& config, bgfx::PlatformData& platformData);
         static void ConfigureBgfxPlatformData(const DeviceConfiguration& config, bgfx::PlatformData& platformData);
-        static void ConfigureBgfxPlatformData(const RenderTargetInfo& config, bgfx::PlatformData& platformData);
         static float GetDevicePixelRatio(const WindowConfiguration& config);
 
         void UpdateBgfxState();

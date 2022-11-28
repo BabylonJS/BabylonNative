@@ -74,7 +74,6 @@ namespace Babylon::Graphics
         static std::unique_ptr<Device> Create(const DeviceConfiguration& config);
 
         void UpdateWindow(const WindowConfiguration& config);
-        void UpdateRenderTarget(const RenderTargetInfo& renderTargetInfo);
         void UpdateSize(size_t width, size_t height);
         void UpdateMSAA(uint8_t value);
         void UpdateAlphaPremultiplied(bool enabled);
