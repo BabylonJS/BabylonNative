@@ -150,6 +150,7 @@ namespace Babylon
         void SetFloat3(NativeDataStream::Reader& data);
         void SetFloat4(NativeDataStream::Reader& data);
         Napi::Value CreateTexture(const Napi::CallbackInfo& info);
+        void InitializeTexture(const Napi::CallbackInfo& info);
         void LoadTexture(const Napi::CallbackInfo& info);
         void CopyTexture(const Napi::CallbackInfo& info);
         void LoadRawTexture(const Napi::CallbackInfo& info);

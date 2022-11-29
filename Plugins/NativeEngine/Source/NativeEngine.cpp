@@ -303,7 +303,7 @@ namespace Babylon
             JS_CLASS_NAME,
             {
                 // This must match the version in nativeEngine.ts
-                StaticValue("PROTOCOL_VERSION", Napi::Number::From(env, 6)),
+                StaticValue("PROTOCOL_VERSION", Napi::Number::From(env, 7)),
 
                 StaticValue("CAPS_LIMITS_MAX_TEXTURE_SIZE", Napi::Number::From(env, limits.maxTextureSize)),
                 StaticValue("CAPS_LIMITS_MAX_TEXTURE_LAYERS", Napi::Number::From(env, limits.maxTextureLayers)),
@@ -460,6 +460,7 @@ namespace Babylon
                 InstanceMethod("getAttributes", &NativeEngine::GetAttributes),
 
                 InstanceMethod("createTexture", &NativeEngine::CreateTexture),
+                InstanceMethod("initializeTexture", &NativeEngine::InitializeTexture),
                 InstanceMethod("loadTexture", &NativeEngine::LoadTexture),
                 InstanceMethod("loadRawTexture", &NativeEngine::LoadRawTexture),
                 InstanceMethod("loadRawTexture2DArray", &NativeEngine::LoadRawTexture2DArray),
@@ -1034,6 +1035,29 @@ namespace Babylon
         return Napi::Pointer<Graphics::Texture>::Create(info.Env(), texture, Napi::NapiPointerDeleter(texture));
     }
 
+    void NativeEngine::InitializeTexture(const Napi::CallbackInfo& info)
+    {
+        const auto texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        const uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
+        const uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
+        const bool hasMips = info[3].As<Napi::Boolean>();
+        const bgfx::TextureFormat::Enum format = static_cast<bgfx::TextureFormat::Enum>(info[4].As<Napi::Number>().Uint32Value());
+        const bool renderTarget = info[5].As<Napi::Boolean>();
+        const bool srgb = info[6].As<Napi::Boolean>();
+
+        auto flags = BGFX_TEXTURE_NONE;
+        if (renderTarget)
+        {
+            flags |= BGFX_TEXTURE_RT;
+        }
+        if (srgb)
+        {
+            flags |= BGFX_TEXTURE_SRGB;
+        }
+
+        texture->Create2D(width, height, hasMips, 1, format, flags);
+    }
+
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
     {
         const auto texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
@@ -1446,25 +1470,19 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateFrameBuffer(const Napi::CallbackInfo& info)
     {
-        Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
-        uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
-        uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
-        bgfx::TextureFormat::Enum format = static_cast<bgfx::TextureFormat::Enum>(info[3].As<Napi::Number>().Uint32Value());
-        bool generateStencilBuffer = info[4].As<Napi::Boolean>();
-        bool generateDepth = info[5].As<Napi::Boolean>();
-        bool generateMips = info[6].As<Napi::Boolean>();
-
-        assert(bgfx::isTextureValid(0, false, 1, format, BGFX_TEXTURE_RT));
+        const Graphics::Texture* texture = info[0].IsNull() ? nullptr : info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        const uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
+        const uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
+        const bool generateStencilBuffer = info[3].As<Napi::Boolean>();
+        const bool generateDepth = info[4].As<Napi::Boolean>();
 
         std::array<bgfx::Attachment, 2> attachments{};
         uint8_t numAttachments = 0;
 
-        if (!texture->IsValid())
+        if (texture != nullptr)
         {
-            auto handle = bgfx::createTexture2D(width, height, generateMips, 1, format, BGFX_TEXTURE_RT);
-            texture->Attach(handle, false, width, height, generateMips, 1, format, BGFX_TEXTURE_RT);
+            attachments[numAttachments++].init(texture->Handle());
         }
-        attachments[numAttachments++].init(texture->Handle());
 
         if (generateStencilBuffer || generateDepth)
         {
@@ -1485,8 +1503,6 @@ namespace Babylon
 
         bgfx::FrameBufferHandle frameBufferHandle = bgfx::createFrameBuffer(numAttachments, attachments.data(), true);
         assert(bgfx::isValid(frameBufferHandle));
-
-        m_graphicsContext.AddTexture(texture->Handle(), width, height, generateMips, 1, format);
 
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_graphicsContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
         return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
