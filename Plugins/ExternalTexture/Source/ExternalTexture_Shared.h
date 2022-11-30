@@ -88,8 +88,6 @@ namespace Babylon::Plugins
                     return;
                 }
 
-                context.AddTexture(handle, 0, 0, impl->HasMips(), 0, impl->Format());
-
                 runtime.Dispatch([deferred = std::move(deferred), handle, impl = std::move(impl)](Napi::Env env)
                 {
                     auto* texture = new Graphics::Texture{};
