@@ -75,7 +75,7 @@ namespace Babylon::Plugins
                 return;
             }
 
-            arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&context, &runtime, deferred = std::move(deferred), handle, impl = std::move(impl)]()
+            arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&runtime, deferred = std::move(deferred), handle, impl = std::move(impl)]()
             {
                 if (bgfx::overrideInternal(handle, impl->Ptr()) == 0)
                 {
