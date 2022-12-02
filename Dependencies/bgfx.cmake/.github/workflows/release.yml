@@ -25,11 +25,11 @@ jobs:
       - id: version
         run: |
           API_VERSION=$(grep -Eo "BGFX_API_VERSION UINT32_C\([0-9]+\)" bgfx/include/bgfx/defines.h | grep -Eo "[0-9]+" | tail -1)
-          REVISION=$(cd bgfx && git rev-list HEAD --count)
+          BGFX_REVISION=$(cd bgfx && git rev-list HEAD --count)
+          BGFX_CMAKE_REVISION=$(git rev-list HEAD --count)
           SHA=$(cd bgfx && git rev-parse HEAD)
-          SHA7="${GITHUB_SHA::7}"
-          TAG="v1.${API_VERSION}.${REVISION}-${SHA7}"
-          echo "::set-output name=revision::${REVISION}"
+          TAG="v1.${API_VERSION}.${BGFX_REVISION}-${BGFX_CMAKE_REVISION}"
+          echo "::set-output name=revision::${BGFX_REVISION}"
           echo "::set-output name=sha::${SHA}"
           echo "::set-output name=tag::${TAG}"
 
