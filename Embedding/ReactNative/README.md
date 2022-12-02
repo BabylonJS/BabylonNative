@@ -54,6 +54,11 @@ npm run select 0.64
 ```
 Selecting the React Native install will also install all NPM packages and its dependencies for the Playground sample/test app.
 
+> :warning: When setting up the Playground app for UWP, the `npm run select` command must be run with Administrator rights, because of the symbolic links. Not doing so will result in this build error will popup when trying to run the Playground:
+```
+ The path cannot be traversed because it contains an untrusted mount point.
+ ```
+
 This will also automatically do the following to prepare your repo for development:
 
 - Update git submodules to fetch Babylon Native and its dependencies
