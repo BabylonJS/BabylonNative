@@ -148,7 +148,7 @@ namespace Babylon::Plugins
 
     void NativeVideo::SetSrcObject(const Napi::CallbackInfo& info, const Napi::Value& value) {
         auto env{info.Env()};
-        
+
         if (value.IsNull() || value.IsUndefined() || !value.As<Napi::Object>().InstanceOf(MediaStream::GetConstructor(env)))
         {
             m_streamObject = Napi::ObjectReference();
@@ -158,7 +158,7 @@ namespace Babylon::Plugins
             this->m_IsPlaying = false;
             return;
         }
-        
+
         // We've received a MediaStream object
         m_streamObject = Napi::Persistent(value.As<Napi::Object>());
         auto mediaStream = MediaStream::Unwrap(m_streamObject.Value());

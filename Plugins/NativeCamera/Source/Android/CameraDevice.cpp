@@ -48,6 +48,8 @@ namespace Babylon::Plugins
 
         Napi::Env env;
 
+        arcana::affinity threadAffinity{};
+
         std::vector<CameraTrack> supportedResolutions{};
         std::vector<std::unique_ptr<Capability>> capabilities{};
         std::string cameraID{};
@@ -178,6 +180,7 @@ namespace Babylon::Plugins
     {
         if (!m_impl->deviceContext){
             m_impl->deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_impl->env);
+            m_impl->threadAffinity = std::this_thread::get_id();
         }
 
         return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, &track]()
@@ -486,13 +489,20 @@ namespace Babylon::Plugins
             throw std::runtime_error{"Unable to make current shared GL context for camera texture."};
         }
 
-        arcana::make_task(m_impl->deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
-            bgfx::overrideInternal(textureHandle, m_impl->cameraRGBATextureId);
+        arcana::make_task(m_impl->deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [rgbaTextureId = m_impl->cameraRGBATextureId, textureHandle] {
+            bgfx::overrideInternal(textureHandle, rgbaTextureId);
         });
     }
 
     void CameraDevice::Close()
     {
+        if (m_impl->textureSession == nullptr)
+        {
+            // This device was either never opened, or has already been closed.
+            // No action is required.
+            return;
+        }
+
         // Stop recording to SurfaceTexture and do some cleanup
         GET_CAMERA_FUNCTION(ACameraCaptureSession_stopRepeating)(m_impl->textureSession);
         GET_CAMERA_FUNCTION(ACameraCaptureSession_close)(m_impl->textureSession);

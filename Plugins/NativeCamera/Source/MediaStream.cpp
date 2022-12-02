@@ -1,3 +1,8 @@
+#if defined(_MSC_VER)
+    // Disable the compiler warning for unreachable code due to CameraDevice being stubbed out on the windows platform
+    #pragma warning(disable: 4702)
+#endif
+
 #include "MediaStream.h"
 #include "CameraDevice.h"
 #include "Constraint.h"
@@ -37,6 +42,7 @@ namespace Babylon::Plugins
                     InstanceMethod("getCapabilities", &MediaStream::GetCapabilities),
                     InstanceMethod("getSettings", &MediaStream::GetSettings),
                     InstanceMethod("getConstraints", &MediaStream::GetConstraints),
+                    InstanceMethod("stop", &MediaStream::Stop),
                 });
             
             _native.Set(JS_CLASS_NAME, ctor);
@@ -336,6 +342,12 @@ namespace Babylon::Plugins
         }
         
         return allConstraintsSatisfied;
+    }
+
+    void MediaStream::Stop(const Napi::CallbackInfo& /*info*/)
+    {
+        // Clear out the cameraDevice which will disconnect the camera stream
+        m_cameraDevice = nullptr;
     }
 
     void MediaStream::UpdateTexture(bgfx::TextureHandle textureHandle)
