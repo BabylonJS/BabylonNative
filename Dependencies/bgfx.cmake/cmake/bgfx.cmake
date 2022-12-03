@@ -44,6 +44,7 @@ if(BGFX_LIBRARY_TYPE STREQUAL STATIC)
     add_library( bgfx STATIC ${BGFX_SOURCES} )
 else()
     add_library( bgfx SHARED ${BGFX_SOURCES} )
+    target_compile_definitions( bgfx PUBLIC BGFX_SHARED_LIB_BUILD=1 )
 endif()
 
 if(BGFX_CONFIG_RENDERER_WEBGPU)
