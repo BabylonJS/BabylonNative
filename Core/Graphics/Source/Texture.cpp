@@ -77,6 +77,11 @@ namespace Babylon::Graphics
         m_flags = flags;
     }
 
+    void Texture::Disown()
+    {
+        m_ownsHandle = false;
+    }
+
     bgfx::TextureHandle Texture::Handle() const
     {
         return m_handle;
