@@ -79,6 +79,7 @@ namespace Babylon::Graphics
 
     void Texture::Disown()
     {
+        assert(m_ownsHandle);
         m_ownsHandle = false;
     }
 
