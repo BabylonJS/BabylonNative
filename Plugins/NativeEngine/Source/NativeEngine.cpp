@@ -1470,7 +1470,7 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateFrameBuffer(const Napi::CallbackInfo& info)
     {
-        const Graphics::Texture* texture = info[0].IsNull() ? nullptr : info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        Graphics::Texture* texture = info[0].IsNull() ? nullptr : info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         const uint16_t width = static_cast<uint16_t>(info[1].As<Napi::Number>().Uint32Value());
         const uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
         const bool generateStencilBuffer = info[3].As<Napi::Boolean>();
@@ -1481,6 +1481,7 @@ namespace Babylon
 
         if (texture != nullptr)
         {
+            texture->Disown();
             attachments[numAttachments++].init(texture->Handle());
         }
 
