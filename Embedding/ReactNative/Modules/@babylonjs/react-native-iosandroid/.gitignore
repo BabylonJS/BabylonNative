@@ -36,6 +36,9 @@ build/
 local.properties
 *.iml
 
+# glslang (iOS)
+ios/include/
+
 # BUCK
 buck-out/
 \.buckd/

@@ -16,8 +16,7 @@ Pod::Spec.new do |s|
   s.source_files = "ios/**/*.{h,m,mm}"
   s.requires_arc = true
 
-  s.libraries = 'astc-codec',
-                'astc',
+  s.libraries = 'astc-encoder',
                 'etc1',
                 'etc2',
                 'nvtt',

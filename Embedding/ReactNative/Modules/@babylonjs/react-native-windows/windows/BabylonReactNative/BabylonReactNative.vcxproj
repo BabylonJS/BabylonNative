@@ -173,8 +173,7 @@
       <!-- Debug Libraries -->
       <AdditionalDependencies>
         arcana.lib;
-        astc.lib;
-        astc-codec.lib;
+        astc-encoder.lib;
         BabylonNative.lib;
         bgfx.lib;
         bimg.lib;
@@ -235,8 +234,7 @@
       <!-- Release Libraries -->
       <AdditionalDependencies>
         arcana.lib;
-        astc.lib;
-        astc-codec.lib;
+        astc-encoder.lib;
         BabylonNative.lib;
         bgfx.lib;
         bimg.lib;

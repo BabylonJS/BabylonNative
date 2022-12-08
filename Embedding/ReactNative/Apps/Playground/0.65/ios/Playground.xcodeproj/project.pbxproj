@@ -145,7 +145,6 @@
 				2057E6CB92BAE45A6D33CC98 /* Pods-Playground-PlaygroundTests.debug.xcconfig */,
 				85486CB830E5B1525816C622 /* Pods-Playground-PlaygroundTests.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};

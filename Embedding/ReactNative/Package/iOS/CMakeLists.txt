@@ -9,8 +9,7 @@ add_compile_options("-fno-objc-msgsend-selector-stubs")
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../Apps/Playground/Playground/node_modules/@babylonjs/react-native-iosandroid/ios/CMakeLists.txt)
 
 set(PACKAGED_LIBS
-    astc-codec
-    astc
+    astc-encoder
     etc1
     etc2
     nvtt

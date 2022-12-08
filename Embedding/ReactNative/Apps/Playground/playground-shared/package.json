@@ -9,8 +9,8 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@babylonjs/core": "5.17.0",
-    "@babylonjs/loaders": "5.17.0",
+    "@babylonjs/core": "5.35.1",
+    "@babylonjs/loaders": "5.35.1",
     "@babylonjs/react-native": "file:../../../Modules/@babylonjs/react-native",
     "@babylonjs/react-native-iosandroid": "file:../../../Modules/@babylonjs/react-native-iosandroid",
     "@babylonjs/react-native-windows": "file:../../../Modules/@babylonjs/react-native-windows",
