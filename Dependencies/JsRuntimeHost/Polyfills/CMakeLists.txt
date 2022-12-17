@@ -2,9 +2,8 @@ if(JSRUNTIMEHOST_POLYFILL_CONSOLE)
     add_subdirectory(Console)
 endif()
 
-# Window should probably be renamed to Timeout
-if(JSRUNTIMEHOST_POLYFILL_WINDOW)
-    add_subdirectory(Window)
+if(JSRUNTIMEHOST_POLYFILL_SCHEDULING)
+    add_subdirectory(Scheduling)
 endif()
 
 if(JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST)

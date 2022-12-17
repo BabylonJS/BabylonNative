@@ -7,14 +7,21 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(JsRuntimeHost)
 
+# Options
+
 ## Core
 option(JSRUNTIMEHOST_CORE_APPRUNTIME "Include Babylon Native Core AppRuntime" ON)
 option(JSRUNTIMEHOST_CORE_SCRIPTLOADER "Include Babylon Native Core ScriptLoader" ON)
 
 ## Polyfills
 option(JSRUNTIMEHOST_POLYFILL_CONSOLE "Include Babylon Native Polyfill Console." ON)
-option(JSRUNTIMEHOST_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
+option(JSRUNTIMEHOST_POLYFILL_SCHEDULING "Include Babylon Native Polyfill Scheduling." ON)
 option(JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST "Include Babylon Native Polyfill XMLHttpRequest." ON)
+
+## Tests
+option(JSRUNTIMEHOST_TESTS "Include Babylon Native Tests." ON)
+
+# Dependencies
 
 include(FetchContent)
 
@@ -46,6 +53,8 @@ if(NOT TARGET UrlLib AND JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST)
     set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
 endif()
 
+# Subdirectories
+
 if(ANDROID)
     set(JSRUNTIMEHOST_PLATFORM "Android")
 elseif(IOS)
@@ -70,3 +79,7 @@ endif()
 
 add_subdirectory(Core)
 add_subdirectory(Polyfills)
+
+if(JSRUNTIMEHOST_TESTS)
+    add_subdirectory(Tests)
+endif()

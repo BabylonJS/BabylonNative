@@ -1,0 +1,11 @@
+{
+  "name": "jsruntimehost",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "chai": "^4.3.4",
+    "jsc-android": "^241213.1.0",
+    "mocha": "^9.2.2",
+    "v8-android": "^7.8.2"
+  }
+}

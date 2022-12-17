@@ -8,15 +8,13 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    class Window : public Napi::ObjectWrap<Window>
+    class Scheduling : public Napi::ObjectWrap<Scheduling>
     {
-        static constexpr auto JS_WINDOW_NAME = "window";
-
     public:
         static void Initialize(Napi::Env env);
-        static Window& GetFromJavaScript(Napi::Env);
 
-        Window(const Napi::CallbackInfo& info);
+        Scheduling(const Napi::CallbackInfo& info);
+
     private:
         JsRuntime& m_runtime;
         std::optional<TimeoutDispatcher> m_timeoutDispatcher;

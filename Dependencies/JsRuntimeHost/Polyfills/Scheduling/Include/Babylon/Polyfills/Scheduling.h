@@ -2,7 +2,7 @@
 
 #include <napi/env.h>
 
-namespace Babylon::Polyfills::Window
+namespace Babylon::Polyfills::Scheduling
 {
     void Initialize(Napi::Env env);
 }
