@@ -210,28 +210,22 @@ namespace Babylon::Polyfills::Internal
 
     void XMLHttpRequest::Open(const Napi::CallbackInfo& info)
     {
+        const auto inputURL = info[1].As<Napi::String>();
+
         try
         {
-            // printfs for debugging CI, will be removed
-            const auto inputURL{info[1].As<Napi::String>()};
-            // If the input URL contains any true % characters, encode them as %25
-            const auto encodedPercentURL{Napi::String::New(info.Env(), EncodePercent(inputURL.Utf8Value()))};
-            // Decode the input URL to get a completely unencoded URL
-            const auto decodedURL{info.Env().Global().Get("decodeURI").As<Napi::Function>().Call({encodedPercentURL})};
-            // Re-encode the URL to make sure that every illegal character is encoded
-            const auto finalURL{info.Env().Global().Get("encodeURI").As<Napi::Function>().Call({decodedURL}).As<Napi::String>()};
-            m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), finalURL.Utf8Value());
-            SetReadyState(ReadyState::Opened);
+            m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), inputURL);
         }
         catch (const std::exception& e)
         {
-            // If we have a parse error, catch and rethrow to JavaScript
-            throw Napi::Error::New(info.Env(), std::string{"Error parsing URL scheme: "} + e.what());
+            throw Napi::Error::New(info.Env(), std::string{"Error opening URL: "} + e.what());
         }
         catch (...)
         {
-            throw Napi::Error::New(info.Env(), "Unknown error parsing URL scheme");
+            throw Napi::Error::New(info.Env(), "Unknown error opening URL");
         }
+
+        SetReadyState(ReadyState::Opened);
     }
 
     void XMLHttpRequest::Send(const Napi::CallbackInfo& info)
