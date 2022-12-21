@@ -1790,8 +1790,9 @@ namespace Babylon
         const float y{data.ReadFloat32()};
         const float width{data.ReadFloat32()};
         const float height{data.ReadFloat32()};
+        const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
 
-        GetBoundFrameBuffer(*encoder).SetViewPort(*encoder, x, y, width, height);
+        GetBoundFrameBuffer(*encoder).SetViewPort(*encoder, x, yOrigin, width, height);
     }
 
     void NativeEngine::SetCommandDataStream(const Napi::CallbackInfo& info)
