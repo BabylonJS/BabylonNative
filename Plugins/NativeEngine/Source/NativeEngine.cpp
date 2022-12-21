@@ -440,6 +440,7 @@ namespace Babylon
                 StaticValue("COMMAND_DRAW", Napi::FunctionPointer::Create(env, &NativeEngine::Draw)),
                 StaticValue("COMMAND_CLEAR", Napi::FunctionPointer::Create(env, &NativeEngine::Clear)),
                 StaticValue("COMMAND_SETSTENCIL", Napi::FunctionPointer::Create(env, &NativeEngine::SetStencil)),
+                StaticValue("COMMAND_SETVIEWPORT", Napi::FunctionPointer::Create(env, &NativeEngine::SetViewPort)),
 
                 InstanceMethod("dispose", &NativeEngine::Dispose),
 
@@ -481,8 +482,6 @@ namespace Babylon
                 InstanceMethod("getRenderHeight", &NativeEngine::GetRenderHeight),
                 InstanceMethod("getHardwareScalingLevel", &NativeEngine::GetHardwareScalingLevel),
                 InstanceMethod("setHardwareScalingLevel", &NativeEngine::SetHardwareScalingLevel),
-
-                InstanceMethod("setViewPort", &NativeEngine::SetViewPort),
 
                 InstanceMethod("setCommandDataStream", &NativeEngine::SetCommandDataStream),
                 InstanceMethod("submitCommands", &NativeEngine::SubmitCommands),
@@ -1622,20 +1621,7 @@ namespace Babylon
     Napi::Value NativeEngine::GetRenderHeight(const Napi::CallbackInfo& info)
     {
         return Napi::Value::From(info.Env(), m_graphicsContext.GetHeight());
-    }
-
-    void NativeEngine::SetViewPort(const Napi::CallbackInfo& info)
-    {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-
-        const auto x = info[0].As<Napi::Number>().FloatValue();
-        const auto y = info[1].As<Napi::Number>().FloatValue();
-        const auto width = info[2].As<Napi::Number>().FloatValue();
-        const auto height = info[3].As<Napi::Number>().FloatValue();
-        const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
-
-        GetBoundFrameBuffer(*encoder).SetViewPort(*encoder, x, yOrigin, width, height);
-    }
+    } 
 
     Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info)
     {
@@ -1794,6 +1780,18 @@ namespace Babylon
         }
         m_stencilState |= func;
         m_stencilState |= BGFX_STENCIL_FUNC_REF(ref);
+    }
+
+    void NativeEngine::SetViewPort(NativeDataStream::Reader& data)
+    {
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+        
+        const float x{data.ReadFloat32()};
+        const float y{data.ReadFloat32()};
+        const float width{data.ReadFloat32()};
+        const float height{data.ReadFloat32()};
+
+        GetBoundFrameBuffer(*encoder).SetViewPort(*encoder, x, y, width, height);
     }
 
     void NativeEngine::SetCommandDataStream(const Napi::CallbackInfo& info)

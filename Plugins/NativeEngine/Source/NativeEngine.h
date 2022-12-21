@@ -174,13 +174,13 @@ namespace Babylon
         void Clear(NativeDataStream::Reader& data);
         Napi::Value GetRenderWidth(const Napi::CallbackInfo& info);
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
-        void SetViewPort(const Napi::CallbackInfo& info);
         Napi::Value GetHardwareScalingLevel(const Napi::CallbackInfo& info);
         void SetHardwareScalingLevel(const Napi::CallbackInfo& info);
         Napi::Value CreateImageBitmap(const Napi::CallbackInfo& info);
         Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
         void SetStencil(NativeDataStream::Reader& data);
+        void SetViewPort(NativeDataStream::Reader& data);
         void SetCommandDataStream(const Napi::CallbackInfo& info);
         void SubmitCommands(const Napi::CallbackInfo& info);
         void DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode);

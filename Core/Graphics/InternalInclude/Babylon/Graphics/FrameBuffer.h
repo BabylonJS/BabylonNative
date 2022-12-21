@@ -57,6 +57,11 @@ namespace Babylon::Graphics
 
         bgfx::ViewId m_viewId{};
         ViewPort m_viewPort{};
+        uint16_t m_flags{};
+        uint32_t m_rgba{};
+        float m_depth{};
+        uint8_t m_stencil{};
+
         bool m_hasViewIdBeenUsed{false};
 
         bool m_disposed{false};
