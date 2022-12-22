@@ -82,12 +82,12 @@ namespace Babylon::Graphics
         if (m_hasViewIdBeenUsed)
         {
             m_viewId = m_context.AcquireNewViewId(encoder);
-            setDefaultClearMode(m_viewId, m_handle, flags, rgba, depth, stencil);
+            setDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
             setViewPort(m_viewId, m_viewPort, Width(), Height());
         }
         else
         {
-            bgfx::setViewClear(m_viewId, flags, rgba, depth, stencil);
+            bgfx::setViewClear(m_viewId, m_flags, m_rgba, m_depth, m_stencil);
         }
 
         m_hasViewIdBeenUsed = true;
