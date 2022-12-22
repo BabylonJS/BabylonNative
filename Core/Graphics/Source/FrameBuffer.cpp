@@ -7,10 +7,10 @@ namespace Babylon::Graphics
 {
     namespace
     {
-        void setDefaultClearMode(bgfx::ViewId viewId, bgfx::FrameBufferHandle handle)
+        void setDefaultClearMode(bgfx::ViewId viewId, bgfx::FrameBufferHandle handle, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)
         {
             bgfx::setViewMode(viewId, bgfx::ViewMode::Sequential);
-            //bgfx::setViewClear(viewId, BGFX_CLEAR_NONE);
+            bgfx::setViewClear(viewId, flags, rgba, depth, stencil);
             bgfx::setViewFrameBuffer(viewId, handle);
         }
 
@@ -63,9 +63,8 @@ namespace Babylon::Graphics
     void FrameBuffer::Bind(bgfx::Encoder& encoder)
     {
         m_viewId = m_context.AcquireNewViewId(encoder);
-        setDefaultClearMode(m_viewId, m_handle);
+        setDefaultClearMode(m_viewId, m_handle, BGFX_CLEAR_NONE, 0x000000ff, 1.0f, 0);
         setViewPort(m_viewId, m_viewPort, Width(), Height());
-        bgfx::setViewClear(m_viewId, m_flags, m_rgba, m_depth, m_stencil);
         m_hasViewIdBeenUsed = false;
     }
 
@@ -83,11 +82,14 @@ namespace Babylon::Graphics
         if (m_hasViewIdBeenUsed)
         {
             m_viewId = m_context.AcquireNewViewId(encoder);
-            setDefaultClearMode(m_viewId, m_handle);
+            setDefaultClearMode(m_viewId, m_handle, flags, rgba, depth, stencil);
             setViewPort(m_viewId, m_viewPort, Width(), Height());
         }
+        else
+        {
+            bgfx::setViewClear(m_viewId, flags, rgba, depth, stencil);
+        }
 
-        bgfx::setViewClear(m_viewId, flags, rgba, depth, stencil);
         m_hasViewIdBeenUsed = true;
         encoder.touch(m_viewId);
     }
@@ -104,8 +106,7 @@ namespace Babylon::Graphics
         if (m_hasViewIdBeenUsed)
         {
             m_viewId = m_context.AcquireNewViewId(encoder);
-            setDefaultClearMode(m_viewId, m_handle);
-            bgfx::setViewClear(m_viewId, m_flags, m_rgba, m_depth, m_stencil);
+            setDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
         }
 
         setViewPort(m_viewId, m_viewPort, Width(), Height());
@@ -124,9 +125,8 @@ namespace Babylon::Graphics
         // 1 blit per view, create a new viewId for each blit
         // TODO: Really? Why? Is this from the examples or something?
         m_viewId = m_context.AcquireNewViewId(encoder);
-        setDefaultClearMode(m_viewId, m_handle);
+        setDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
         setViewPort(m_viewId, m_viewPort, Width(), Height());
-        bgfx::setViewClear(m_viewId, m_flags, m_rgba, m_depth, m_stencil);
 
         encoder.blit(m_viewId, dst, dstX, dstY, src, srcX, srcY, width, height);
         m_hasViewIdBeenUsed = true;
