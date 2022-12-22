@@ -24,6 +24,42 @@ function CreateBoxAsync(scene) {
     return Promise.resolve();
 }
 
+function CreateMultiCameraView(scene) {
+    const camera1 = new BABYLON.FreeCamera(`camera1`, new BABYLON.Vector3(0, 0 + 10, -10), scene);
+    camera1.viewport = new BABYLON.Viewport(0, 0, 0.5, 0.5);
+    camera1.setTarget(new BABYLON.Vector3(0, 0, 0));
+    scene.activeCameras.push(camera1);
+
+    const camera2 = new BABYLON.FreeCamera(`camera2`, new BABYLON.Vector3(0, 0 + 10, -10), scene);
+    camera2.viewport = new BABYLON.Viewport(0.5, 0, 0.5, 0.5);
+    camera2.setTarget(new BABYLON.Vector3(0, 0, 0));
+    scene.activeCameras.push(camera2);
+
+    const camera3 = new BABYLON.FreeCamera(`camera3`, new BABYLON.Vector3(0, 0 + 10, -10), scene);
+    camera3.viewport = new BABYLON.Viewport(0, 0.5, 0.5, 0.5);
+    camera3.setTarget(new BABYLON.Vector3(0, 0, 0));
+    scene.activeCameras.push(camera3);
+
+    const camera4 = new BABYLON.FreeCamera(`camera4`, new BABYLON.Vector3(0, 0 + 10, -10), scene);
+    camera4.viewport = new BABYLON.Viewport(0.5, 0.5, 0.5, 0.5);
+    camera4.setTarget(new BABYLON.Vector3(0, 0, 0));
+    scene.activeCameras.push(camera4);
+
+
+    const sphere = BABYLON.MeshBuilder.CreateSphere(
+        'sphere',
+        { diameter: 2, segments: 32 },
+        scene,
+    );
+
+    // Move the sphere upward 1/2 its height
+    sphere.position.y = 1;
+
+    // Our built-in 'ground' shape.
+    BABYLON.MeshBuilder.CreateGround('ground', { width: 6, height: 6 }, scene);
+    return Promise.resolve();
+}
+
 function CreateSpheresAsync(scene) {
     var size = 12;
     for (var i = 0; i < size; i++) {
@@ -43,7 +79,7 @@ function CreateSpheresAsync(scene) {
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 
-CreateBoxAsync(scene).then(function () {
+CreateMultiCameraView(scene).then(function () {
 //CreateSpheresAsync(scene).then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
@@ -64,8 +100,8 @@ CreateBoxAsync(scene).then(function () {
     BABYLON.Tools.Log("Loaded");
 
     // This creates and positions a free camera (non-mesh)
-    scene.createDefaultCamera(true, true, true);
-    scene.activeCamera.alpha += Math.PI;
+    //scene.createDefaultCamera(true, true, true);
+    //scene.activeCamera.alpha += Math.PI;
 
     if (ibl) {
         scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
