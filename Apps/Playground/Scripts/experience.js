@@ -25,25 +25,30 @@ function CreateBoxAsync(scene) {
 }
 
 function CreateMultiCameraView(scene) {
-    const camera1 = new BABYLON.FreeCamera(`camera1`, new BABYLON.Vector3(0, 0 + 10, -10), scene);
-    camera1.viewport = new BABYLON.Viewport(0, 0, 0.5, 0.5);
-    camera1.setTarget(new BABYLON.Vector3(0, 0, 0));
-    scene.activeCameras.push(camera1);
+    // Create cameras
+    const numX = 3;
+    const numY = 3;
+    for (let i = 0; i < numX; ++i) {
+        for (let j = 0; j < numY; ++j) {
+            const x = 2 * i - numX + 1;
+            const y = 2 * j - numY + 1;
 
-    const camera2 = new BABYLON.FreeCamera(`camera2`, new BABYLON.Vector3(0, 0 + 10, -10), scene);
-    camera2.viewport = new BABYLON.Viewport(0.5, 0, 0.5, 0.5);
-    camera2.setTarget(new BABYLON.Vector3(0, 0, 0));
-    scene.activeCameras.push(camera2);
-
-    const camera3 = new BABYLON.FreeCamera(`camera3`, new BABYLON.Vector3(0, 0 + 10, -10), scene);
-    camera3.viewport = new BABYLON.Viewport(0, 0.5, 0.5, 0.5);
-    camera3.setTarget(new BABYLON.Vector3(0, 0, 0));
-    scene.activeCameras.push(camera3);
-
-    const camera4 = new BABYLON.FreeCamera(`camera4`, new BABYLON.Vector3(0, 0 + 10, -10), scene);
-    camera4.viewport = new BABYLON.Viewport(0.5, 0.5, 0.5, 0.5);
-    camera4.setTarget(new BABYLON.Vector3(0, 0, 0));
-    scene.activeCameras.push(camera4);
+            // This creates and positions a free camera (non-mesh)
+            const camera = new BABYLON.FreeCamera(
+                `camera-${i}-${j}`,
+                new BABYLON.Vector3(x, y + 10, -10),
+                scene,
+            );
+            camera.viewport = new BABYLON.Viewport(
+                i / numX,
+                j / numY,
+                1 / numX,
+                1 / numY,
+            );
+            camera.setTarget(new BABYLON.Vector3(x, y, 0));
+            scene.activeCameras.push(camera);
+        }
+    }
 
 
     const sphere = BABYLON.MeshBuilder.CreateSphere(
