@@ -40,45 +40,10 @@ function CreateSpheresAsync(scene) {
     return Promise.resolve();
 }
 
-function CreateDynamicTexture(scene) {
-    var groundWidth = 20;
-    var groundHeight = 10;
-
-    var ground = BABYLON.MeshBuilder.CreateGround("ground1", { width: groundWidth, height: groundHeight, subdivisions: 25 }, scene);
-
-    //Create dynamic texture
-    var textureResolution = 512;
-    var textureGround = new BABYLON.DynamicTexture("dynamic texture", textureResolution, scene);
-    var ctx = textureGround.getContext("2d");
-
-    var materialGround = new BABYLON.StandardMaterial("Mat", scene);
-    materialGround.diffuseTexture = textureGround;
-    ground.material = materialGround;
-
-    ctx.save()
-    ctx.lineWidth = 2;
-    //Draw on canvas
-    ctx.beginPath();
-    ctx.moveTo(75 * 2, 25 * 2);
-    ctx.quadraticCurveTo(25 * 2, 25 * 2, 25 * 2, 62.5 * 2);
-    ctx.quadraticCurveTo(25 * 2, 100 * 2, 50 * 2, 100 * 2);
-    ctx.quadraticCurveTo(50 * 2, 120 * 2, 30 * 2, 125 * 2);
-    ctx.quadraticCurveTo(60 * 2, 120 * 2, 65 * 2, 100 * 2);
-    ctx.quadraticCurveTo(125 * 2, 100 * 2, 125 * 2, 62.5 * 2);
-    ctx.quadraticCurveTo(125 * 2, 25 * 2, 75 * 2, 25 * 2);
-    ctx.fillStyle = "green";
-    ctx.strokeStyle = "white";
-    ctx.stroke();
-    ctx.fill();
-    textureGround.update();
-
-    return Promise.resolve();
-}
-
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
 
-CreateDynamicTexture(scene).then(function () {
+CreateBoxAsync(scene).then(function () {
 //CreateSpheresAsync(scene).then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
