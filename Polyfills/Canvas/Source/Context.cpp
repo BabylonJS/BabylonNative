@@ -208,6 +208,7 @@ namespace Babylon::Polyfills::Internal
     {
         nvgRestore(m_nvg);
         SetDirty();
+        m_isClipped = false;
     }
 
     void Context::ClearRect(const Napi::CallbackInfo& info)
