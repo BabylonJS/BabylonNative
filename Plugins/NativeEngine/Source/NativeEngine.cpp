@@ -1092,13 +1092,59 @@ namespace Babylon
     {
         const auto textureDestination = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         const auto textureSource = info[1].As<Napi::Pointer<Graphics::Texture>>().Get();
+        const auto flipY = info.Length() <= 2 ? true : info[2].As<Napi::Boolean>().Value();
 
-        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, textureDestination, textureSource, cancellationSource = m_cancellationSource]()
+        Graphics::DeviceContext& context = Graphics::DeviceContext::GetFromJavaScript(info.Env());
+
+        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [&context, this, flipY, textureDestination, textureSource, cancellationSource = m_cancellationSource]()
         {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, textureDestination, textureSource, updateToken = m_update.GetUpdateToken(), cancellationSource = m_cancellationSource]()
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [&context, this, flipY, textureDestination, textureSource, updateToken = m_update.GetUpdateToken(), cancellationSource = m_cancellationSource]()
             {
                 bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
-                GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
+
+                // Flip texture in memory (maybe there is a way for bgfx to allow flipping to happen on the GPU?)
+                if (!flipY)
+                {
+                    bgfx::TextureInfo sourceTextureInfo{};
+                    bgfx::calcTextureSize(sourceTextureInfo, textureSource->Width(), textureSource->Height(), 1, false, false, 1, textureSource->Format());
+                    
+                    //Temporary texture to allow us to read texture values from GPU.
+                    const bgfx::TextureHandle gpuReadTexture{bgfx::createTexture2D(sourceTextureInfo.width, sourceTextureInfo.height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureInfo.format, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
+                    
+                    //Temporary texture to allow us to copy flipped values from CPU to GPU.
+                    std::unique_ptr<Graphics::Texture> gpuWriteTexture = std::make_unique<Graphics::Texture>();
+                    gpuWriteTexture->Create2D(sourceTextureInfo.width, sourceTextureInfo.height, false, 0, sourceTextureInfo.format, 0);
+                    
+                    //Copy source image to gpuReadTexture
+                    GetBoundFrameBuffer(*encoder).Blit(*encoder, gpuReadTexture, 0, 0, textureSource->Handle());
+                    
+                    //Blit will be done at the end of the frame.
+                    arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(), [this, &context, gpuReadTexture, encoder, tempTexture{std::move(gpuWriteTexture)}, textureDestination, sourceTextureInfo]() mutable
+                    {
+                        //Allocate CPU memory and read values from gpuReadTexture.
+                        std::vector<uint8_t> textureBuffer(sourceTextureInfo.storageSize);
+                        m_graphicsContext.ReadTextureAsync(gpuReadTexture, textureBuffer, 0).then(arcana::inline_scheduler, *m_cancellationSource, [this, &context, gpuReadTexture, encoder, tempTexture{std::move(tempTexture)}, textureDestination, textureBuffer{std::move(textureBuffer)}, sourceTextureInfo]() mutable
+                        {
+                            bgfx::destroy(gpuReadTexture);
+                            bimg::ImageContainer* image{bimg::imageAlloc(&m_allocator, bimg::TextureFormat::Enum::RGBA8, sourceTextureInfo.width, sourceTextureInfo.height, 1, 1, false, false, textureBuffer.data())};
+                            
+                            //Load CPU data to gpuWriteTexture
+                            image = PrepareImage(m_allocator, image, false, false, false);
+                            LoadTextureFromImage(tempTexture.get(), image, false);
+
+                            //Loading will done by the end of the frame.
+                            arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(), [this, &context, encoder, tempTexture(std::move(tempTexture)), textureDestination] 
+                            { 
+                                //Copy gpuWriteTexture to textureDestination
+                                GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, tempTexture->Handle());
+                            }); 
+                        });
+                    });
+                }
+                else
+                {
+                    GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
+                }
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }](const arcana::expected<void, std::exception_ptr>& result) {
                 if (!cancellationSource->cancelled() && result.has_error())
                 {
