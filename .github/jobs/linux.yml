@@ -32,7 +32,7 @@ jobs:
 
     - script: |
         sudo apt-get update
-        sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev ${{ parameters.CC }} libc++-9-dev libc++abi-9-dev libnode-dev
+        sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev ${{ parameters.CC }} libc++-dev libc++abi-dev libnode-dev
       displayName: 'Install packages'
 
     - script: |
