@@ -92,8 +92,8 @@ jobs:
     parameters:
       name: Ubuntu_Clang9_V8
       vmImage: 'ubuntu-latest'
-      CC: clang-9
-      CXX: clang++-9
+      CC: clang-10
+      CXX: clang++-10
       JSEngine: V8
 
   - template: .github/jobs/linux.yml
