@@ -1133,7 +1133,7 @@ namespace Babylon
                             LoadTextureFromImage(tempTexture.get(), image, false);
 
                             //Loading will done by the end of the frame.
-                            arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(), [this, &context, encoder, tempTexture(std::move(tempTexture)), textureDestination] 
+                            arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(), [this, encoder, tempTexture(std::move(tempTexture)), textureDestination] 
                             { 
                                 //Copy gpuWriteTexture to textureDestination
                                 GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, tempTexture->Handle());
