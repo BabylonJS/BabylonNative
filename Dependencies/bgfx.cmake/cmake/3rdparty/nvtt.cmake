@@ -32,5 +32,8 @@ target_include_directories( nvtt
 	PUBLIC
 		$<BUILD_INTERFACE:${BIMG_DIR}/3rdparty>
 		$<BUILD_INTERFACE:${BIMG_DIR}/3rdparty/nvtt> )
-set_target_properties( nvtt PROPERTIES FOLDER "bgfx/3rdparty" )
 target_link_libraries( nvtt PUBLIC bx )
+set_target_properties( nvtt
+	PROPERTIES
+		FOLDER "bgfx/3rdparty"
+		PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-" )

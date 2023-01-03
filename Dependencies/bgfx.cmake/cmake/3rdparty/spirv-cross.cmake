@@ -35,4 +35,7 @@ if( MSVC )
 	)
 endif()
 
-set_target_properties( spirv-cross PROPERTIES FOLDER "bgfx/3rdparty" )
+set_target_properties( spirv-cross
+	PROPERTIES
+		FOLDER "bgfx/3rdparty"
+		PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-" )

@@ -16,4 +16,7 @@ file( GLOB IQA_SOURCES ${BIMG_DIR}/3rdparty/iqa/source/*.c ${BIMG_DIR}/3rdparty/
 
 add_library( iqa STATIC ${IQA_SOURCES} )
 target_include_directories( iqa PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/3rdparty/iqa/include> )
-set_target_properties( iqa PROPERTIES FOLDER "bgfx/3rdparty" )
+set_target_properties( iqa
+	PROPERTIES
+		FOLDER "bgfx/3rdparty"
+		PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-" )

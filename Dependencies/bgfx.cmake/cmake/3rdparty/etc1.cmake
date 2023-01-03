@@ -16,4 +16,7 @@ file( GLOB ETC1_SOURCES ${BIMG_DIR}/3rdparty/etc1/*.cpp ${BIMG_DIR}/3rdparty/etc
 
 add_library( etc1 STATIC ${ETC1_SOURCES} )
 target_include_directories( etc1 PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/3rdparty> )
-set_target_properties( etc1 PROPERTIES FOLDER "bgfx/3rdparty" )
+set_target_properties( etc1
+	PROPERTIES
+		FOLDER "bgfx/3rdparty"
+		PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-" )

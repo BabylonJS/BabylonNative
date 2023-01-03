@@ -16,4 +16,7 @@ file( GLOB PVRTC_SOURCES ${BIMG_DIR}/3rdparty/pvrtc/*.cpp ${BIMG_DIR}/3rdparty/p
 
 add_library( pvrtc STATIC ${PVRTC_SOURCES} )
 target_include_directories( pvrtc PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/3rdparty> )
-set_target_properties( pvrtc PROPERTIES FOLDER "bgfx/3rdparty" )
+set_target_properties( pvrtc
+	PROPERTIES
+		FOLDER "bgfx/3rdparty"
+		PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-" )

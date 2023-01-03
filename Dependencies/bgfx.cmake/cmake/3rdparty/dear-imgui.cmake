@@ -18,4 +18,7 @@ add_library( dear-imgui STATIC EXCLUDE_FROM_ALL ${dear_IMGUI_SOURCES} )
 target_compile_definitions( dear-imgui PRIVATE "-D_CRT_SECURE_NO_WARNINGS" "-D__STDC_FORMAT_MACROS" )
 target_include_directories( dear-imgui PUBLIC ${BGFX_DIR}/3rdparty )
 target_link_libraries( dear-imgui PUBLIC bx )
-set_target_properties( dear-imgui PROPERTIES FOLDER "bgfx/3rdparty" )
+set_target_properties( dear-imgui
+	PROPERTIES
+		FOLDER "bgfx/3rdparty"
+		PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-" )

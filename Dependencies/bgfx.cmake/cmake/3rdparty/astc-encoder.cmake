@@ -25,4 +25,6 @@ target_include_directories( astc-encoder
 		$<BUILD_INTERFACE:${BIMG_DIR}/3rdparty>
 		$<BUILD_INTERFACE:${BIMG_DIR}/3rdparty/astc-encoder>
 		$<BUILD_INTERFACE:${BIMG_DIR}/3rdparty/astc-encoder/include> )
-set_target_properties( astc-encoder PROPERTIES FOLDER "bgfx/3rdparty" )
+set_target_properties( astc-encoder
+	PROPERTIES
+		FOLDER "bgfx/3rdparty" )

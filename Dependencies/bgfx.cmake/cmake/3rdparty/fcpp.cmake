@@ -28,5 +28,8 @@ if( MSVC )
 	set_target_properties( fcpp PROPERTIES COMPILE_FLAGS "/W0" )
 endif()
 
-set_target_properties( fcpp PROPERTIES FOLDER "bgfx/3rdparty" )
+set_target_properties( fcpp
+	PROPERTIES
+		FOLDER "bgfx/3rdparty"
+		PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-" )
 set_source_files_properties( ${BGFX_DIR}/3rdparty/fcpp/usecpp.c PROPERTIES HEADER_FILE_ONLY ON )

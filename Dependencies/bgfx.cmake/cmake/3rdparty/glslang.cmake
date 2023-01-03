@@ -40,7 +40,10 @@ target_include_directories( glslang PUBLIC
 	${BGFX_DIR}/3rdparty
 )
 
-set_target_properties( glslang PROPERTIES FOLDER "bgfx/3rdparty" )
+set_target_properties( glslang
+	PROPERTIES
+		FOLDER "bgfx/3rdparty"
+		PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-" )
 
 if( MSVC )
 	target_compile_options( glslang PRIVATE
