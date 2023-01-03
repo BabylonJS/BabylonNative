@@ -90,26 +90,26 @@ jobs:
 # Ubuntu/Linux
   - template: .github/jobs/linux.yml
     parameters:
-      name: Ubuntu_Clang9_V8
+      name: Ubuntu_Clang14_V8
       vmImage: 'ubuntu-latest'
-      CC: clang-9
-      CXX: clang++-9
+      CC: clang-14
+      CXX: clang++-14
       JSEngine: V8
 
   - template: .github/jobs/linux.yml
     parameters:
-      name: Ubuntu_GCC9_JSC
+      name: Ubuntu_GCC12_JSC
       vmImage: 'ubuntu-latest'
-      CC: gcc-9
-      CXX: g++-9
+      CC: gcc-12
+      CXX: g++-12
       JSEngine: JavaScriptCore
 
   - template: .github/jobs/linux.yml
     parameters:
-      name: Ubuntu_GCC9_V8
+      name: Ubuntu_GCC12_V8
       vmImage: 'ubuntu-latest'
-      CC: gcc-9
-      CXX: g++-9
+      CC: gcc-12
+      CXX: g++-12
       JSEngine: V8
 
   - template: .github/jobs/linux.yml
