@@ -7,7 +7,7 @@ namespace Babylon::Graphics
 {
     namespace
     {
-        void setDefaultClearMode(bgfx::ViewId viewId, bgfx::FrameBufferHandle handle, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)
+        void SetDefaultClearMode(bgfx::ViewId viewId, bgfx::FrameBufferHandle handle, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)
         {
             bgfx::setViewMode(viewId, bgfx::ViewMode::Sequential);
             bgfx::setViewClear(viewId, flags, rgba, depth, stencil);
