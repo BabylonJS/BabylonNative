@@ -63,7 +63,7 @@ namespace Babylon::Graphics
     void FrameBuffer::Bind(bgfx::Encoder& encoder)
     {
         m_viewId = m_context.AcquireNewViewId(encoder);
-        setDefaultClearMode(m_viewId, m_handle, BGFX_CLEAR_NONE, 0x000000ff, 1.0f, 0);
+        SetDefaultClearMode(m_viewId, m_handle, BGFX_CLEAR_NONE, 0x000000ff, 1.0f, 0);
         setViewPort(m_viewId, m_viewPort, Width(), Height());
         m_hasViewIdBeenUsed = false;
     }
@@ -82,7 +82,7 @@ namespace Babylon::Graphics
         if (m_hasViewIdBeenUsed)
         {
             m_viewId = m_context.AcquireNewViewId(encoder);
-            setDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
+            SetDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
             setViewPort(m_viewId, m_viewPort, Width(), Height());
         }
         else
@@ -106,7 +106,7 @@ namespace Babylon::Graphics
         if (m_hasViewIdBeenUsed)
         {
             m_viewId = m_context.AcquireNewViewId(encoder);
-            setDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
+            SetDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
         }
 
         setViewPort(m_viewId, m_viewPort, Width(), Height());
@@ -125,7 +125,7 @@ namespace Babylon::Graphics
         // 1 blit per view, create a new viewId for each blit
         // TODO: Really? Why? Is this from the examples or something?
         m_viewId = m_context.AcquireNewViewId(encoder);
-        setDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
+        SetDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
         setViewPort(m_viewId, m_viewPort, Width(), Height());
 
         encoder.blit(m_viewId, dst, dstX, dstY, src, srcX, srcY, width, height);
