@@ -95,24 +95,16 @@ jobs:
     parameters:
       name: Ubuntu_Clang14_JavaScriptCore
       vmImage: 'ubuntu-latest'
-      CC: clang-14
-      CXX: clang++-14
+      CC: clang
+      CXX: clang++
       JSEngine: JavaScriptCore
 
   - template: .github/jobs/linux.yml
     parameters:
       name: Ubuntu_GCC11_JavaScriptCore
       vmImage: 'ubuntu-latest'
-      CC: gcc-11
-      CXX: g++-11
-      JSEngine: JavaScriptCore
-
-  - template: .github/jobs/linux.yml
-    parameters:
-      name: Ubuntu_GCC12_JavaScriptCore
-      vmImage: 'ubuntu-latest'
-      CC: gcc-12
-      CXX: g++-12
+      CC: gcc
+      CXX: g++
       JSEngine: JavaScriptCore
 
 # Android

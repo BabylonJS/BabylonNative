@@ -4,13 +4,13 @@ parameters:
   CC: ''
   CXX: ''
   JSEngine: ''
-  
+
 jobs:
   - job: ${{ parameters.name }}
     timeoutInMinutes: 30
     pool:
       vmImage: ${{ parameters.vmImage }}
-  
+
     variables:
       CC: ${{ parameters.CC }}
       CXX: ${{ parameters.CXX }}
@@ -32,7 +32,7 @@ jobs:
 
     - script: |
         sudo apt-get update
-        sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev ${{ parameters.CC }} libc++-11-dev libc++abi-11-dev libnode-dev
+        sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev
       displayName: 'Install packages'
 
     - script: |
