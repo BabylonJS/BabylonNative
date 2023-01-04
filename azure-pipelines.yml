@@ -88,37 +88,32 @@ jobs:
       napiType: jsi
 
 # Ubuntu/Linux
-  - template: .github/jobs/linux.yml
-    parameters:
-      name: Ubuntu_Clang11_V8
-      vmImage: 'ubuntu-latest'
-      CC: clang-11
-      CXX: clang++-11
-      JSEngine: V8
+
+  # TODO: v8 is incompatible with curl for some reason
 
   - template: .github/jobs/linux.yml
     parameters:
-      name: Ubuntu_GCC9_JSC
+      name: Ubuntu_Clang14_JavaScriptCore
       vmImage: 'ubuntu-latest'
-      CC: gcc-9
-      CXX: g++-9
+      CC: clang-14
+      CXX: clang++-14
       JSEngine: JavaScriptCore
 
   - template: .github/jobs/linux.yml
     parameters:
-      name: Ubuntu_GCC9_V8
+      name: Ubuntu_GCC11_JavaScriptCore
       vmImage: 'ubuntu-latest'
-      CC: gcc-9
-      CXX: g++-9
-      JSEngine: V8
+      CC: gcc-11
+      CXX: g++-11
+      JSEngine: JavaScriptCore
 
   - template: .github/jobs/linux.yml
     parameters:
-      name: Ubuntu_GCC10_V8
+      name: Ubuntu_GCC12_JavaScriptCore
       vmImage: 'ubuntu-latest'
-      CC: gcc-10
-      CXX: g++-10
-      JSEngine: V8
+      CC: gcc-12
+      CXX: g++-12
+      JSEngine: JavaScriptCore
 
 # Android
   - template: .github/jobs/android.yml
