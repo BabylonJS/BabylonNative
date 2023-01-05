@@ -38,6 +38,8 @@ function compare(test, renderData, referenceImage, threshold, errorRatio) {
 
     if (differencesCount) {
         console.log("Pixel difference: " + differencesCount + " pixels.");
+    } else {
+        console.log("No pixel difference!");
     }
 
     let error = (differencesCount * 100) / (size / 4) > errorRatio;
@@ -141,8 +143,9 @@ function loadPlayground(test, done, index, referenceImage, compareFunction) {
                 }, retryTime);
             }
             else {
-                // Skip the test as we can not fetch the source.
-                done(true);
+                // Fail the test, something wrong happen
+                console.log("Running the playground failed.");
+                done(false);
             }
         }
 
