@@ -63,6 +63,14 @@ namespace Babylon::Graphics
     void FrameBuffer::Bind(bgfx::Encoder& encoder)
     {
         m_viewId = m_context.AcquireNewViewId(encoder);
+        
+        //Reset view state for next frame.
+        m_viewPort = {0, 0, 1, 1};
+        m_flags = BGFX_CLEAR_NONE;
+        m_rgba = 0x000000ff;
+        m_depth = 1.0f;
+        m_stencil = 0;
+        
         SetDefaultClearMode(m_viewId, m_handle, BGFX_CLEAR_NONE, 0x000000ff, 1.0f, 0);
         setViewPort(m_viewId, m_viewPort, Width(), Height());
         m_hasViewIdBeenUsed = false;
@@ -111,7 +119,6 @@ namespace Babylon::Graphics
 
         setViewPort(m_viewId, m_viewPort, Width(), Height());
         m_hasViewIdBeenUsed = true;
-        encoder.touch(m_viewId);
     }
 
     void FrameBuffer::Submit(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint8_t flags)
