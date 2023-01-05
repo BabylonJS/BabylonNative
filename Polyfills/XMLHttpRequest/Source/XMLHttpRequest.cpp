@@ -3,29 +3,6 @@
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <sstream>
 
-bool IsHexChar(const char& c)
-{
-    return ((c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f') || (c >= '0' && c <= '9'));
-}
-
-std::string EncodePercent(const std::string& input)
-{
-    std::ostringstream encoded;
-    for (auto i = input.begin(), e = input.end(); i != e; ++i)
-    {
-        encoded << *i;
-        if (*i == '%')
-        {
-            if (std::distance(i, e) >= 2 && !(IsHexChar(*(i + 1)) && IsHexChar(*(i + 2))))
-            {
-                // If a percent character is not followed by two hex characters, we should encode it
-                encoded << "25";
-            }
-        }
-    }
-    return encoded.str();
-}
-
 namespace Babylon::Polyfills::Internal
 {
     namespace
@@ -210,28 +187,22 @@ namespace Babylon::Polyfills::Internal
 
     void XMLHttpRequest::Open(const Napi::CallbackInfo& info)
     {
+        const auto inputURL = info[1].As<Napi::String>();
+
         try
         {
-            // printfs for debugging CI, will be removed
-            const auto inputURL{info[1].As<Napi::String>()};
-            // If the input URL contains any true % characters, encode them as %25
-            const auto encodedPercentURL{Napi::String::New(info.Env(), EncodePercent(inputURL.Utf8Value()))};
-            // Decode the input URL to get a completely unencoded URL
-            const auto decodedURL{info.Env().Global().Get("decodeURI").As<Napi::Function>().Call({encodedPercentURL})};
-            // Re-encode the URL to make sure that every illegal character is encoded
-            const auto finalURL{info.Env().Global().Get("encodeURI").As<Napi::Function>().Call({decodedURL}).As<Napi::String>()};
-            m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), finalURL.Utf8Value());
-            SetReadyState(ReadyState::Opened);
+            m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), inputURL);
         }
         catch (const std::exception& e)
         {
-            // If we have a parse error, catch and rethrow to JavaScript
-            throw Napi::Error::New(info.Env(), std::string{"Error parsing URL scheme: "} + e.what());
+            throw Napi::Error::New(info.Env(), std::string{"Error opening URL: "} + e.what());
         }
         catch (...)
         {
-            throw Napi::Error::New(info.Env(), "Unknown error parsing URL scheme");
+            throw Napi::Error::New(info.Env(), "Unknown error opening URL");
         }
+
+        SetReadyState(ReadyState::Opened);
     }
 
     void XMLHttpRequest::Send(const Napi::CallbackInfo& info)
@@ -239,9 +210,10 @@ namespace Babylon::Polyfills::Internal
         if (m_readyState != ReadyState::Opened)
         {
             throw Napi::Error::New(info.Env(), "XMLHttpRequest must be opened before it can be sent");
-            return;
         }
-        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
+
+        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result)
+        {
             if (result.has_error())
             {
                 Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
