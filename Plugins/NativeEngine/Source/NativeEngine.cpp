@@ -1097,6 +1097,10 @@ namespace Babylon
         {
             return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, textureDestination, textureSource, updateToken = m_update.GetUpdateToken(), cancellationSource = m_cancellationSource]()
             {
+                if (!bgfx::isValid(textureDestination->Handle()))
+                {
+                    return;
+                }
                 bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
                 GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }](const arcana::expected<void, std::exception_ptr>& result) {

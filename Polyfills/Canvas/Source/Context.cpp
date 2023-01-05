@@ -157,7 +157,6 @@ namespace Babylon::Polyfills::Internal
         m_fillStyle = value.As<Napi::String>().Utf8Value();
         const auto color = StringToColor(info.Env(), m_fillStyle);
         nvgFillColor(m_nvg, color);
-        SetDirty();
     }
 
     Napi::Value Context::GetStrokeStyle(const Napi::CallbackInfo&)
@@ -170,7 +169,6 @@ namespace Babylon::Polyfills::Internal
         m_strokeStyle = value.As<Napi::String>().Utf8Value();
         auto color = StringToColor(info.Env(), m_strokeStyle);
         nvgStrokeColor(m_nvg, color);
-        SetDirty();
     }
 
     Napi::Value Context::GetLineWidth(const Napi::CallbackInfo& )
@@ -182,7 +180,6 @@ namespace Babylon::Polyfills::Internal
     {
         m_lineWidth = value.As<Napi::Number>().FloatValue();
         nvgStrokeWidth(m_nvg, m_lineWidth);
-        SetDirty();
     }
 
     void Context::Fill(const Napi::CallbackInfo&)
