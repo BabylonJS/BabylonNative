@@ -3,29 +3,6 @@
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <sstream>
 
-bool IsHexChar(const char& c)
-{
-    return ((c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f') || (c >= '0' && c <= '9'));
-}
-
-std::string EncodePercent(const std::string& input)
-{
-    std::ostringstream encoded;
-    for (auto i = input.begin(), e = input.end(); i != e; ++i)
-    {
-        encoded << *i;
-        if (*i == '%')
-        {
-            if (std::distance(i, e) >= 2 && !(IsHexChar(*(i + 1)) && IsHexChar(*(i + 2))))
-            {
-                // If a percent character is not followed by two hex characters, we should encode it
-                encoded << "25";
-            }
-        }
-    }
-    return encoded.str();
-}
-
 namespace Babylon::Polyfills::Internal
 {
     namespace
@@ -233,9 +210,10 @@ namespace Babylon::Polyfills::Internal
         if (m_readyState != ReadyState::Opened)
         {
             throw Napi::Error::New(info.Env(), "XMLHttpRequest must be opened before it can be sent");
-            return;
         }
-        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
+
+        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result)
+        {
             if (result.has_error())
             {
                 Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();

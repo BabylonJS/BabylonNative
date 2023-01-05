@@ -4,19 +4,24 @@
 #include <unistd.h>
 #include <filesystem>
 #include <cassert>
+#include <sstream>
 
 namespace
 {
     void curl_check(CURLcode code)
     {
-        assert(code == CURLE_OK);
-        (void)code;
+        if (code != CURLE_OK)
+        {
+            throw std::runtime_error{(std::stringstream{} << "CURL call failed with code (" << code << ")").str()};
+        }
     }
 
     void curl_check(CURLUcode code)
     {
-        assert(code == CURLUE_OK);
-        (void)code;
+        if (code != CURLUE_OK)
+        {
+            throw std::runtime_error{(std::stringstream{} << "CURLU call failed with code (" << code << ")").str()};
+        }
     }
 }
 
