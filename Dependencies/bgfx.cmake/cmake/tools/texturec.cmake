@@ -8,18 +8,17 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-include( CMakeParseArguments )
+include(CMakeParseArguments)
 
-add_executable( texturec ${BIMG_DIR}/tools/texturec/texturec.cpp )
-set_target_properties( texturec PROPERTIES FOLDER "bgfx/tools" )
-target_link_libraries( texturec bimg )
-if( BGFX_CUSTOM_TARGETS )
-	add_dependencies( tools texturec )
+add_executable(texturec ${BIMG_DIR}/tools/texturec/texturec.cpp)
+set_target_properties(texturec PROPERTIES FOLDER "bgfx/tools")
+target_link_libraries(texturec bimg)
+if(BGFX_CUSTOM_TARGETS)
+	add_dependencies(tools texturec)
 endif()
 
-if (ANDROID)
-	target_link_libraries( texturec log )
-elseif (IOS)
-	set_target_properties(texturec PROPERTIES MACOSX_BUNDLE ON
-											  MACOSX_BUNDLE_GUI_IDENTIFIER texturec)
+if(ANDROID)
+	target_link_libraries(texturec log)
+elseif(IOS)
+	set_target_properties(texturec PROPERTIES MACOSX_BUNDLE ON MACOSX_BUNDLE_GUI_IDENTIFIER texturec)
 endif()
