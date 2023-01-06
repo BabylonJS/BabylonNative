@@ -85,7 +85,7 @@ endif()
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/shared.cmake)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bx.cmake)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bx)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bimg.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bgfx.cmake)
 
