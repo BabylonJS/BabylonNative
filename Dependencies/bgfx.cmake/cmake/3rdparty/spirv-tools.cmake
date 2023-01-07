@@ -8,7 +8,7 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-if( TARGET spirv-tools )
+if(TARGET spirv-tools)
 	return()
 endif()
 
@@ -27,35 +27,22 @@ file(
 	${BGFX_DIR}/3rdparty/spirv-tools/source/val/*.h
 )
 
-add_library( spirv-tools STATIC ${SPIRV_TOOLS_SOURCES} )
-target_include_directories( spirv-tools PUBLIC
-	${BGFX_DIR}/3rdparty/spirv-headers/include
-	${BGFX_DIR}/3rdparty/spirv-tools
-	${BGFX_DIR}/3rdparty/spirv-tools/include
-	${BGFX_DIR}/3rdparty/spirv-tools/include/generated
-	${BGFX_DIR}/3rdparty/spirv-tools/source
+add_library(spirv-tools STATIC ${SPIRV_TOOLS_SOURCES})
+target_include_directories(
+	spirv-tools
+	PUBLIC ${BGFX_DIR}/3rdparty/spirv-headers/include ${BGFX_DIR}/3rdparty/spirv-tools
+		   ${BGFX_DIR}/3rdparty/spirv-tools/include ${BGFX_DIR}/3rdparty/spirv-tools/include/generated
+		   ${BGFX_DIR}/3rdparty/spirv-tools/source
 )
 
-if( MSVC )
-	target_compile_options( spirv-tools PRIVATE
-		"/wd4127"
-		"/wd4389"
-		"/wd4702"
-		"/wd4706"
-	)
+if(MSVC)
+	target_compile_options(spirv-tools PRIVATE "/wd4127" "/wd4389" "/wd4702" "/wd4706")
 else()
-	target_compile_options( spirv-tools PRIVATE
-		"-Wno-switch"
-	)
+	target_compile_options(spirv-tools PRIVATE "-Wno-switch")
 
 	if(MINGW OR ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
-		target_compile_options( spirv-tools PRIVATE
-			"-Wno-misleading-indentation"
-		)
+		target_compile_options(spirv-tools PRIVATE "-Wno-misleading-indentation")
 	endif()
 endif()
 
-set_target_properties( spirv-tools
-	PROPERTIES
-		FOLDER "bgfx/3rdparty"
-		PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-" )
+set_target_properties(spirv-tools PROPERTIES FOLDER "bgfx/3rdparty" PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-")

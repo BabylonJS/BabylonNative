@@ -115,7 +115,7 @@ with section("format"):
   max_lines_hwrap = 2
 
   # What style line endings to use in the output.
-  line_ending = 'windows'
+  line_ending = 'unix'
 
   # Format command names consistently as 'lower' or 'upper' case
   command_case = 'canonical'

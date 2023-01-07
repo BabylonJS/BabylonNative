@@ -8,28 +8,19 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-if( TARGET fcpp )
+if(TARGET fcpp)
 	return()
 endif()
 
-file( GLOB FCPP_SOURCES ${BGFX_DIR}/3rdparty/fcpp/*.c ${BGFX_DIR}/3rdparty/fcpp/*.h )
+file(GLOB FCPP_SOURCES ${BGFX_DIR}/3rdparty/fcpp/*.c ${BGFX_DIR}/3rdparty/fcpp/*.h)
 
-add_library( fcpp STATIC ${FCPP_SOURCES} )
-target_include_directories( fcpp PUBLIC ${BGFX_DIR}/3rdparty/fcpp )
-target_compile_definitions( fcpp
-	PRIVATE
-	NINCLUDE=64
-	NWORK=65536
-	NBUFF=65536
-	OLD_PREPROCESSOR=0
-)
+add_library(fcpp STATIC ${FCPP_SOURCES})
+target_include_directories(fcpp PUBLIC ${BGFX_DIR}/3rdparty/fcpp)
+target_compile_definitions(fcpp PRIVATE NINCLUDE=64 NWORK=65536 NBUFF=65536 OLD_PREPROCESSOR=0)
 
-if( MSVC )
-	set_target_properties( fcpp PROPERTIES COMPILE_FLAGS "/W0" )
+if(MSVC)
+	set_target_properties(fcpp PROPERTIES COMPILE_FLAGS "/W0")
 endif()
 
-set_target_properties( fcpp
-	PROPERTIES
-		FOLDER "bgfx/3rdparty"
-		PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-" )
-set_source_files_properties( ${BGFX_DIR}/3rdparty/fcpp/usecpp.c PROPERTIES HEADER_FILE_ONLY ON )
+set_target_properties(fcpp PROPERTIES FOLDER "bgfx/3rdparty" PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-")
+set_source_files_properties(${BGFX_DIR}/3rdparty/fcpp/usecpp.c PROPERTIES HEADER_FILE_ONLY ON)

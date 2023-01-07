@@ -8,15 +8,12 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-if( TARGET etc1 )
+if(TARGET etc1)
 	return()
 endif()
 
-file( GLOB ETC1_SOURCES ${BIMG_DIR}/3rdparty/etc1/*.cpp ${BIMG_DIR}/3rdparty/etc1/*.h )
+file(GLOB ETC1_SOURCES ${BIMG_DIR}/3rdparty/etc1/*.cpp ${BIMG_DIR}/3rdparty/etc1/*.h)
 
-add_library( etc1 STATIC ${ETC1_SOURCES} )
-target_include_directories( etc1 PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/3rdparty> )
-set_target_properties( etc1
-	PROPERTIES
-		FOLDER "bgfx/3rdparty"
-		PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-" )
+add_library(etc1 STATIC ${ETC1_SOURCES})
+target_include_directories(etc1 PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/3rdparty>)
+set_target_properties(etc1 PROPERTIES FOLDER "bgfx/3rdparty" PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-")

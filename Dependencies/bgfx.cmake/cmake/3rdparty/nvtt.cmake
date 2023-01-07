@@ -8,7 +8,7 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-if( TARGET nvtt )
+if(TARGET nvtt)
 	return()
 endif()
 
@@ -27,13 +27,9 @@ file(
 	${BIMG_DIR}/3rdparty/nvtt/*.h
 )
 
-add_library( nvtt STATIC ${NVTT_SOURCES} )
-target_include_directories( nvtt
-	PUBLIC
-		$<BUILD_INTERFACE:${BIMG_DIR}/3rdparty>
-		$<BUILD_INTERFACE:${BIMG_DIR}/3rdparty/nvtt> )
-target_link_libraries( nvtt PUBLIC bx )
-set_target_properties( nvtt
-	PROPERTIES
-		FOLDER "bgfx/3rdparty"
-		PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-" )
+add_library(nvtt STATIC ${NVTT_SOURCES})
+target_include_directories(
+	nvtt PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/3rdparty> $<BUILD_INTERFACE:${BIMG_DIR}/3rdparty/nvtt>
+)
+target_link_libraries(nvtt PUBLIC bx)
+set_target_properties(nvtt PROPERTIES FOLDER "bgfx/3rdparty" PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-")
