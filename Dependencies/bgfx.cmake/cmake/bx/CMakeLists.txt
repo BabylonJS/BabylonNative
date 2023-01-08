@@ -9,3 +9,7 @@
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
 include(bx.cmake)
+
+if(BGFX_BUILD_TOOLS)
+	include(bin2c.cmake)
+endif()

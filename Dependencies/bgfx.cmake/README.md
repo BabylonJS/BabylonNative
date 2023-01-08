@@ -32,6 +32,34 @@ This project is setup to be included a few different ways. To include bgfx sourc
 ## Added cmake commands
 bgfx.cmake will install `bgfxToolUtils.cmake` which has useful cmake functions for using bgfx's tools:
 
+### `bgfx_compile_binary_to_header`
+Add a build rule for a binary file to the generated build system using bin2c.
+```cmake
+bgfx_compile_binary_to_header(
+	INPUT_FILE filename
+	OUTPUT_FILE filename
+	ARRAY_NAME name
+)
+```
+This defines a bin2c command to generate a specified `OUTPUT_FILE` header with an array `ARRAY_NAME` with the binary representation of a `INPUT_FILE` file.
+
+Adding these `INPUT_FILE` as source files to a target will run `bin2c` at build time and they will rebuild if either the contents of the `INPUT_FILE` change.
+
+#### Examples: Generating an image as a header
+```cmake
+bgfx_compile_binary_to_header(
+  INPUT_FILE image.png
+  OUTPUT_FILE ${CMAKE_BINARY_DIR}/include/generated/images/image.png.h
+)
+add_library(myLib image.png)
+target_include_directories(myLib ${CMAKE_BINARY_DIR}/include/generated/images)
+```
+
+```cpp
+// main.cpp
+#include <image.png.h>
+```
+
 ### `bgfx_compile_shader_to_header`
 Add a build rule for a `*.sc` shader to the generated build system using shaderc.
 ```cmake

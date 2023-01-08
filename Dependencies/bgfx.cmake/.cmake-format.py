@@ -4,7 +4,11 @@
 with section("parse"):
 
   # Specify structure for custom cmake functions
-  additional_commands = { '_bgfx_get_profile_ext': {'pargs': {'nargs': 2}},
+  additional_commands = { '_bgfx_bin2c_parse': { 'kwargs': { 'ARRAY_NAME': 1,
+                                       'INPUT_FILE': 1,
+                                       'OUTPUT_FILE': 1},
+                           'pargs': {'flags': [], 'nargs': '*'}},
+    '_bgfx_get_profile_ext': {'pargs': {'nargs': 2}},
     '_bgfx_shaderc_parse': { 'kwargs': { 'BIN2C': 1,
                                          'DEFINES': '+',
                                          'FILE': 1,
@@ -31,6 +35,10 @@ with section("parse"):
                                                    'DISASM',
                                                    'WERROR'],
                                         'nargs': '1+'}},
+    'bgfx_compile_binary_to_header': { 'kwargs': { 'ARRAY_NAME': 1,
+                                                   'INPUT_FILE': 1,
+                                                   'OUTPUT_FILE': 1},
+                                       'pargs': {'flags': [], 'nargs': '*'}},
     'bgfx_compile_shader_to_header': { 'kwargs': { 'OUTPUT_DIR': 1,
                                                    'SHADERS': '+',
                                                    'TYPE': 1,

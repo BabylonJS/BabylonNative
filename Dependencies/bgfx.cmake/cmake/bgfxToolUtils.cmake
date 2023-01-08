@@ -1,3 +1,64 @@
+# _bgfx_bin2c_parse(
+#	INPUT_FILE filename
+#	OUTPUT_FILE filename
+#	ARRAY_NAME name
+# )
+# Usage: bin2c -f <in> -o <out> -n <name>
+function(_bgfx_bin2c_parse ARG_OUT)
+	set(options "")
+	set(oneValueArgs INPUT_FILE;OUTPUT_FILE;ARRAY_NAME)
+	set(multiValueArgs "")
+	cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" "${ARGN}")
+	set(CLI "")
+
+	# -f
+	if(ARG_INPUT_FILE)
+		list(APPEND CLI "-f" "${ARG_INPUT_FILE}")
+	else()
+		message(SEND_ERROR "Call to _bgfx_bin2c_parse() must have an INPUT_FILE")
+	endif()
+
+	# -o
+	if(ARG_OUTPUT_FILE)
+		list(APPEND CLI "-o" "${ARG_OUTPUT_FILE}")
+	else()
+		message(SEND_ERROR "Call to _bgfx_bin2c_parse() must have an OUTPUT_FILE")
+	endif()
+
+	# -n
+	if(ARG_ARRAY_NAME)
+		list(APPEND CLI "-n" "${ARG_ARRAY_NAME}")
+	else()
+		message(SEND_ERROR "Call to _bgfx_bin2c_parse() must have an ARRAY_NAME")
+	endif()
+
+	set(${ARG_OUT} ${CLI} PARENT_SCOPE)
+endfunction()
+
+# bgfx_compile_binary_to_header(
+#	INPUT_FILE filename
+#	OUTPUT_FILE filename
+#	ARRAY_NAME name
+# )
+#
+function(bgfx_compile_binary_to_header)
+	set(options "")
+	set(oneValueArgs INPUT_FILE;OUTPUT_FILE;ARRAY_NAME)
+	set(multiValueArgs "")
+	cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" "${ARGN}")
+	_bgfx_bin2c_parse(
+		CLI
+		INPUT_FILE ${ARG_INPUT_FILE}
+		OUTPUT_FILE ${ARG_OUTPUT_FILE}
+		ARRAY_NAME ${ARG_ARRAY_NAME}
+	)
+	add_custom_command(
+		OUTPUT ${ARG_OUTPUT_FILE} #
+		COMMAND bgfx::bin2c ${CLI} #
+		MAIN_DEPENDENCY ${ARG_INPUT_FILE} #
+	)
+endfunction()
+
 # _bgfx_shaderc_parse(
 #	FILE filename
 #	OUTPUT filename

@@ -22,6 +22,7 @@ if(@CMAKE_CROSSCOMPILING@)
 		endif()
 	endmacro()
 
+	_bgfx_crosscompile_use_host_tool(bin2c)
 	_bgfx_crosscompile_use_host_tool(shaderc)
 	_bgfx_crosscompile_use_host_tool(texturec)
 	_bgfx_crosscompile_use_host_tool(texturev)
