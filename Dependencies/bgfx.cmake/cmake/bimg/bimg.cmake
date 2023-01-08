@@ -9,15 +9,15 @@
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
 # Third party libs
-include(${CMAKE_CURRENT_LIST_DIR}/3rdparty/astc-encoder.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/3rdparty/edtaa3.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/3rdparty/etc1.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/3rdparty/etc2.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/3rdparty/iqa.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/3rdparty/libsquish.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/3rdparty/nvtt.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/3rdparty/pvrtc.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/3rdparty/tinyexr.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/astc-encoder.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/edtaa3.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/etc1.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/etc2.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/iqa.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/libsquish.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/nvtt.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/pvrtc.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/tinyexr.cmake)
 
 # Ensure the directory exists
 if(NOT IS_DIRECTORY ${BIMG_DIR})

@@ -92,7 +92,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/shared.cmake)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bx)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bimg.cmake)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bimg)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bgfx.cmake)
 
 if(BGFX_BUILD_TOOLS)
