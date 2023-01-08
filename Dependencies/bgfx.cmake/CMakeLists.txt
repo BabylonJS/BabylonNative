@@ -35,6 +35,7 @@ option(BGFX_BUILD_TOOLS_SHADER "Build bgfx shader tools." ON)
 option(BGFX_BUILD_TOOLS_GEOMETRY "Build bgfx geometry tools." ON)
 option(BGFX_BUILD_TOOLS_TEXTURE "Build bgfx texture tools." ON)
 option(BGFX_BUILD_EXAMPLES "Build bgfx examples." ON)
+option(BGFX_BUILD_TESTS "Build bgfx tests." OFF)
 option(BGFX_INSTALL "Create installation target." ON)
 option(BGFX_INSTALL_EXAMPLES "Install examples and their runtimes." OFF)
 option(BGFX_CUSTOM_TARGETS "Include convenience custom targets." ON)
@@ -64,6 +65,10 @@ set_property(CACHE BGFX_LIBRARY_TYPE PROPERTY STRINGS STATIC SHARED)
 
 if(BGFX_LIBRARY_TYPE MATCHES "SHARED")
 	set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+if(BGFX_BUILD_TESTS)
+	enable_testing()
 endif()
 
 if(NOT BX_DIR)
