@@ -1,4 +1,4 @@
-# shaderc_parse(
+# _bgfx_shaderc_parse(
 #	FILE filename
 #	OUTPUT filename
 #	FRAGMENT|VERTEX|COMPUTE
@@ -17,7 +17,7 @@
 #	[DISASM]
 #	[WERROR]
 # )
-function(shaderc_parse ARG_OUT)
+function(_bgfx_shaderc_parse ARG_OUT)
 	cmake_parse_arguments(
 		ARG
 		"DEPENDS;ANDROID;ASM_JS;IOS;LINUX;NACL;OSX;WINDOWS;PREPROCESS;RAW;FRAGMENT;VERTEX;COMPUTE;VERBOSE;DEBUG;DISASM;WERROR"
@@ -61,14 +61,14 @@ function(shaderc_parse ARG_OUT)
 	foreach(P ${PLATFORMS})
 		if(ARG_${P})
 			if(PLATFORM)
-				message(SEND_ERROR "Call to shaderc_parse() cannot have both flags ${PLATFORM} and ${P}.")
+				message(SEND_ERROR "Call to _bgfx_shaderc_parse() cannot have both flags ${PLATFORM} and ${P}.")
 				return()
 			endif()
 			set(PLATFORM "${P}")
 		endif()
 	endforeach()
 	if(PLATFORM STREQUAL "")
-		message(SEND_ERROR "Call to shaderc_parse() must have a platform flag: ${PLATFORMS}")
+		message(SEND_ERROR "Call to _bgfx_shaderc_parse() must have a platform flag: ${PLATFORMS}")
 		return()
 	elseif(PLATFORM STREQUAL ANDROID)
 		list(APPEND CLI "--platform" "android")
@@ -116,14 +116,14 @@ function(shaderc_parse ARG_OUT)
 	foreach(T ${TYPES})
 		if(ARG_${T})
 			if(TYPE)
-				message(SEND_ERROR "Call to shaderc_parse() cannot have both flags ${TYPE} and ${T}.")
+				message(SEND_ERROR "Call to _bgfx_shaderc_parse() cannot have both flags ${TYPE} and ${T}.")
 				return()
 			endif()
 			set(TYPE "${T}")
 		endif()
 	endforeach()
 	if("${TYPE}" STREQUAL "")
-		message(SEND_ERROR "Call to shaderc_parse() must have a type flag: ${TYPES}")
+		message(SEND_ERROR "Call to _bgfx_shaderc_parse() must have a type flag: ${TYPES}")
 		return()
 	elseif("${TYPE}" STREQUAL "FRAGMENT")
 		list(APPEND CLI "--type" "fragment")
@@ -171,7 +171,7 @@ function(shaderc_parse ARG_OUT)
 	set(${ARG_OUT} ${CLI} PARENT_SCOPE)
 endfunction()
 
-function(_get_profile_ext PROFILE PROFILE_EXT)
+function(_bgfx_get_profile_ext PROFILE PROFILE_EXT)
 	string(REPLACE 300_es essl PROFILE ${PROFILE})
 	string(REPLACE 120 glsl PROFILE ${PROFILE})
 	string(REPLACE spirv spv PROFILE ${PROFILE})
@@ -183,14 +183,14 @@ function(_get_profile_ext PROFILE PROFILE_EXT)
 	set(${PROFILE_EXT} ${PROFILE} PARENT_SCOPE)
 endfunction()
 
-# compile_shader_to_header(
-#   TYPE VERTEX|FRAGMENT|COMPUTE
-#   SHADERS filenames
-#   VARYING_DEF filename
-#   OUTPUT_DIR directory
-#)
+# bgfx_compile_shader_to_header(
+# 	TYPE VERTEX|FRAGMENT|COMPUTE
+# 	SHADERS filenames
+# 	VARYING_DEF filename
+# 	OUTPUT_DIR directory
+# )
 #
-function(compile_shader_to_header)
+function(bgfx_compile_shader_to_header)
 	set(options "")
 	set(oneValueArgs TYPE VARYING_DEF OUTPUT_DIR)
 	set(multiValueArgs SHADERS)
@@ -235,13 +235,13 @@ function(compile_shader_to_header)
 		set(OUTPUTS "")
 		set(COMMANDS "")
 		foreach(PROFILE ${PROFILES})
-			_get_profile_ext(${PROFILE} PROFILE_EXT)
+			_bgfx_get_profile_ext(${PROFILE} PROFILE_EXT)
 			set(OUTPUT ${ARGS_OUTPUT_DIR}/${SHADER_FILE_BASENAME}.${PROFILE_EXT}.bin.h)
 			set(PLATFORM_I ${PLATFORM})
 			if(PROFILE STREQUAL "spirv")
 				set(PLATFORM_I LINUX)
 			endif()
-			shaderc_parse(
+			_bgfx_shaderc_parse(
 				CLI #
 				${ARGS_TYPE} ${PLATFORM_I} WERROR "$<$<CONFIG:debug>:DEBUG>$<$<CONFIG:relwithdebinfo>:DEBUG>"
 				FILE ${SHADER_FILE_ABSOLUTE}

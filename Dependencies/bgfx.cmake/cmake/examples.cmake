@@ -41,7 +41,7 @@ function(add_bgfx_shader FILE FOLDER)
 			# dx9
 			if(NOT "${TYPE}" STREQUAL "COMPUTE")
 				set(DX9_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/dx9/${FILENAME}.bin)
-				shaderc_parse(
+				_bgfx_shaderc_parse(
 					DX9 ${COMMON} WINDOWS
 					PROFILE ${D3D_PREFIX}_3_0
 					O 3
@@ -54,14 +54,14 @@ function(add_bgfx_shader FILE FOLDER)
 			# dx11
 			set(DX11_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/dx11/${FILENAME}.bin)
 			if(NOT "${TYPE}" STREQUAL "COMPUTE")
-				shaderc_parse(
+				_bgfx_shaderc_parse(
 					DX11 ${COMMON} WINDOWS
 					PROFILE ${D3D_PREFIX}_5_0
 					O 3
 					OUTPUT ${DX11_OUTPUT}
 				)
 			else()
-				shaderc_parse(
+				_bgfx_shaderc_parse(
 					DX11 ${COMMON} WINDOWS
 					PROFILE ${D3D_PREFIX}_5_0
 					O 1
@@ -75,7 +75,7 @@ function(add_bgfx_shader FILE FOLDER)
 		if(APPLE)
 			# metal
 			set(METAL_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/metal/${FILENAME}.bin)
-			shaderc_parse(METAL ${COMMON} OSX PROFILE metal OUTPUT ${METAL_OUTPUT})
+			_bgfx_shaderc_parse(METAL ${COMMON} OSX PROFILE metal OUTPUT ${METAL_OUTPUT})
 			list(APPEND OUTPUTS "METAL")
 			set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}Metal, ")
 		endif()
@@ -83,7 +83,7 @@ function(add_bgfx_shader FILE FOLDER)
 		# essl
 		if(NOT "${TYPE}" STREQUAL "COMPUTE")
 			set(ESSL_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/essl/${FILENAME}.bin)
-			shaderc_parse(ESSL ${COMMON} ANDROID OUTPUT ${ESSL_OUTPUT})
+			_bgfx_shaderc_parse(ESSL ${COMMON} ANDROID OUTPUT ${ESSL_OUTPUT})
 			list(APPEND OUTPUTS "ESSL")
 			set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}ESSL, ")
 		endif()
@@ -91,9 +91,9 @@ function(add_bgfx_shader FILE FOLDER)
 		# glsl
 		set(GLSL_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/glsl/${FILENAME}.bin)
 		if(NOT "${TYPE}" STREQUAL "COMPUTE")
-			shaderc_parse(GLSL ${COMMON} LINUX PROFILE 120 OUTPUT ${GLSL_OUTPUT})
+			_bgfx_shaderc_parse(GLSL ${COMMON} LINUX PROFILE 120 OUTPUT ${GLSL_OUTPUT})
 		else()
-			shaderc_parse(GLSL ${COMMON} LINUX PROFILE 430 OUTPUT ${GLSL_OUTPUT})
+			_bgfx_shaderc_parse(GLSL ${COMMON} LINUX PROFILE 430 OUTPUT ${GLSL_OUTPUT})
 		endif()
 		list(APPEND OUTPUTS "GLSL")
 		set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}GLSL, ")
@@ -101,7 +101,7 @@ function(add_bgfx_shader FILE FOLDER)
 		# spirv
 		if(NOT "${TYPE}" STREQUAL "COMPUTE")
 			set(SPIRV_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/spirv/${FILENAME}.bin)
-			shaderc_parse(SPIRV ${COMMON} LINUX PROFILE spirv OUTPUT ${SPIRV_OUTPUT})
+			_bgfx_shaderc_parse(SPIRV ${COMMON} LINUX PROFILE spirv OUTPUT ${SPIRV_OUTPUT})
 			list(APPEND OUTPUTS "SPIRV")
 			set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}SPIRV")
 			set(OUTPUT_FILES "")
