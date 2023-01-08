@@ -8,48 +8,36 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-# Third party libs
-include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/astc-encoder.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/edtaa3.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/etc1.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/etc2.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/iqa.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/libsquish.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/nvtt.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/pvrtc.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/tinyexr.cmake)
-
 # Ensure the directory exists
 if(NOT IS_DIRECTORY ${BIMG_DIR})
 	message(SEND_ERROR "Could not load bimg, directory does not exist. ${BIMG_DIR}")
 	return()
 endif()
 
-# Grab the bimg source files
-file(GLOB BIMG_SOURCES ${BIMG_DIR}/src/*.cpp)
-
-# Create the bimg target
-add_library(bimg STATIC ${BIMG_SOURCES})
-
-# Add include directory of bimg
-target_include_directories(
-	bimg PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/include> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-)
-
-# bimg dependencies
-target_link_libraries(
-	bimg
-	PUBLIC bx
-	PRIVATE astc-encoder
-			edtaa3
-			etc1
-			etc2
-			iqa
-			squish
-			nvtt
-			pvrtc
-			tinyexr
-)
+add_library(bimg STATIC)
 
 # Put in a "bgfx" folder in Visual Studio
 set_target_properties(bimg PROPERTIES FOLDER "bgfx")
+
+target_include_directories(
+	bimg PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/include>$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+	PRIVATE ${BIMG_DIR}/3rdparty/astc-encoder/include #
+			${BIMG_DIR}/3rdparty/tinyexr/deps/miniz #
+)
+
+file(
+	GLOB_RECURSE
+	BIMG_SOURCES
+	${BIMG_DIR}/include/* #
+	${BIMG_DIR}/src/image.* #
+	${BIMG_DIR}/src/image_gnf.cpp #
+	#
+	${BIMG_DIR}/3rdparty/astc-encoder/source/*.cpp #
+	${BIMG_DIR}/3rdparty/astc-encoder/source/*.h #
+	#
+	${BIMG_DIR}/3rdparty/tinyexr/deps/miniz/miniz.* #
+)
+
+target_sources(bimg PRIVATE ${BIMG_SOURCES})
+
+target_link_libraries(bimg PUBLIC bx)

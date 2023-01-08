@@ -154,17 +154,7 @@ if(BGFX_INSTALL)
 	)
 	if(NOT BGFX_LIBRARY_TYPE MATCHES "SHARED")
 		install(
-			TARGETS bimg
-					bx
-					astc-encoder
-					edtaa3
-					etc1
-					etc2
-					iqa
-					squish
-					nvtt
-					pvrtc
-					tinyexr
+			TARGETS bimg bx
 			EXPORT "${TARGETS_EXPORT_NAME}"
 			LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 			ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
