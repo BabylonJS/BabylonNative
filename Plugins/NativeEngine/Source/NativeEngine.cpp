@@ -506,6 +506,7 @@ namespace Babylon
         , m_runtime{runtime}
         , m_graphicsContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
         , m_update{m_graphicsContext.GetUpdate("update")}
+        , m_textureTask{ arcana::task_from_result<std::exception_ptr>() }
         , m_runtimeScheduler{runtime}
         , m_defaultFrameBuffer{m_graphicsContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
         , m_boundFrameBuffer{&m_defaultFrameBuffer}
@@ -1093,14 +1094,10 @@ namespace Babylon
         const auto textureDestination = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         const auto textureSource = info[1].As<Napi::Pointer<Graphics::Texture>>().Get();
 
-        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, textureDestination, textureSource, cancellationSource = m_cancellationSource]()
+        m_textureTask = m_textureTask.then(m_update.Scheduler(), *m_cancellationSource, [this, textureDestination, textureSource, cancellationSource = m_cancellationSource]()
         {
             return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, textureDestination, textureSource, updateToken = m_update.GetUpdateToken(), cancellationSource = m_cancellationSource]()
             {
-                if (!bgfx::isValid(textureDestination->Handle()))
-                {
-                    return;
-                }
                 bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
                 GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }](const arcana::expected<void, std::exception_ptr>& result) {
@@ -1342,8 +1339,10 @@ namespace Babylon
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
         Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
-        m_graphicsContext.RemoveTexture(texture->Handle());
-        texture->Dispose();
+        m_textureTask = m_textureTask.then(m_update.Scheduler(), *m_cancellationSource, [texture, this]() {
+            m_graphicsContext.RemoveTexture(texture->Handle());
+            texture->Dispose();
+        });
     }
 
     Napi::Value NativeEngine::ReadTexture(const Napi::CallbackInfo& info)

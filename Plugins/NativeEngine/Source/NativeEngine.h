@@ -199,6 +199,7 @@ namespace Babylon
         JsRuntime& m_runtime;
         Graphics::DeviceContext& m_graphicsContext;
         Graphics::Update m_update;
+        arcana::task<void, std::exception_ptr> m_textureTask{};
 
         JsRuntimeScheduler m_runtimeScheduler;
 
