@@ -16,13 +16,13 @@ jobs:
 # Apple
   - template: .github/jobs/macos.yml
     parameters:
-      name: MacOS_Xcode131
+      name: MacOS_Xcode1341
       vmImage: 'macOS-latest'
       xCodeVersion: 13.4.1
 
   - template: .github/jobs/ios.yml
     parameters:
-      name: iOS_Xcode131_iOS15
+      name: iOS_Xcode1341_iOS155
       vmImage: 'macOS-latest'
       xCodeVersion: 13.4.1
       deploymentTarget: 15.5
