@@ -25,7 +25,7 @@ npm install
 ```
 
 Babylon Native's build system is based on CMake, which customarily uses a separate
-build directory. Build directory location is up to you, but we recommend using
+build directory. Build directory location is up to you, but we highly recommend using
 the `build` directory from the repository root. The `.gitignore` file is set up to
 ignore this `build` directory.
 
@@ -38,7 +38,7 @@ house the builds for different platforms, with each subfolder treated just like 
 
 ## **Building on Windows 10, Targeting Windows Desktop (Win32)**
 
-_Follow the steps from [All Development Platforms](#all-development-platforms-common-first-steps) before proceeding._
+_Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
 
 **Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with
 C++ development tools, [Python 3.0](https://www.python.org/) or newer (required by
@@ -75,7 +75,7 @@ project.
 
 ## **Building on Windows 10, Targeting Universal Windows Platform (UWP)**
 
-_Follow the steps from [All Development Platforms](#all-development-platforms-common-first-steps) before proceeding._
+_Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
 
 **Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with
 C++ and UWP development tools, [Python 3.0](https://www.python.org/) or newer (required
@@ -115,7 +115,7 @@ project.
 
 ## **Building on Windows 10, Targeting HoloLens 2**
 
-_Follow the steps from [All Development Platforms](#all-development-platforms-common-first-steps) before proceeding._
+_Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
 
 **Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with
 C++ and UWP development tools, [Python 3.0](https://www.python.org/) or newer (required
@@ -165,7 +165,7 @@ the selected Babylon Native demo app.
 
 ## **Building on macOS, Targeting iOS**
 
-_Follow the steps from [All Development Platforms](#all-development-platforms-common-first-steps) before proceeding._
+_Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
 
 **Required Tools:** [Xcode 11](https://developer.apple.com/xcode/) or newer,
 [Python 3.0](https://www.python.org/) or newer (required by dependencies)
@@ -203,7 +203,7 @@ the selected Babylon Native demo app.
 
 ## **Building on Windows, Targeting Android**
 
-_Follow the steps from [All Development Platforms](#all-development-platforms-common-first-steps) before proceeding._
+_Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
 
 **Required Tools:**
 [Android Studio](https://developer.android.com/studio), [Node.js](https://nodejs.org/en/download/), [Ninja](https://ninja-build.org/)
@@ -232,7 +232,7 @@ emulator are [available here](Documentation/AndroidEmulator.md).
 
 ## **Building on Ubuntu, Targeting Linux**
 
-_Follow the steps from [All Development Platforms](#all-development-platforms-common-first-steps) before proceeding._
+_Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
 
 **Required Tools:**
 [Clang](https://clang.llvm.org/) or [GCC](https://gcc.gnu.org/)
