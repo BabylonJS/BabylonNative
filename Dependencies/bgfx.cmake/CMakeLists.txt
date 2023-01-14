@@ -94,6 +94,10 @@ endif()
 
 # sets project version from api ver / git rev
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake)
+if(BGFX_BUILD_TOOLS AND BGFX_CUSTOM_TARGETS)
+	add_custom_target(tools)
+	set_target_properties(tools PROPERTIES FOLDER "bgfx/tools")
+endif()
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/shared.cmake)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bx)

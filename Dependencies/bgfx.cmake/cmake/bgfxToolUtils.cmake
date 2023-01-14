@@ -59,6 +59,153 @@ function(bgfx_compile_binary_to_header)
 	)
 endfunction()
 
+# _bgfx_texturec_parse(
+#	FILE filename
+#	OUTPUT filename
+#	[FORMAT format]
+#	[QUALITY default|fastest|highest]
+#	[MIPS]
+#	[MIPSKIP N]
+#	[NORMALMAP]
+#	[EQUIRECT]
+#	[STRIP]
+#	[SDF]
+#	[REF alpha]
+#	[IQA]
+#	[PMA]
+#	[LINEAR]
+#	[MAX max size]
+#	[RADIANCE model]
+#	[AS extension]
+# )
+function(_bgfx_texturec_parse ARG_OUT)
+	cmake_parse_arguments(
+		ARG "MIPS;NORMALMAP;EQUIRECT;STRIP;SDF;IQA;PMA;LINEAR" "FILE;OUTPUT;FORMAT;QUALITY;MIPSKIP;REF;MAX;RADIANCE;AS"
+		"" ${ARGN}
+	)
+	set(CLI "")
+
+	# -f
+	if(ARG_FILE)
+		list(APPEND CLI "-f" "${ARG_FILE}")
+	endif()
+
+	# -o
+	if(ARG_OUTPUT)
+		list(APPEND CLI "-o" "${ARG_OUTPUT}")
+	endif()
+
+	# -t
+	if(ARG_FORMAT)
+		list(APPEND CLI "-t" "${ARG_FORMAT}")
+	endif()
+
+	# -q
+	if(ARG_QUALITY)
+		list(APPEND CLI "-q" "${ARG_QUALITY}")
+	endif()
+
+	# --mips
+	if(ARG_MIPS)
+		list(APPEND CLI "--mips")
+	endif()
+
+	# --mipskip
+	if(ARG_MIPSKIP)
+		list(APPEND CLI "--mipskip" "${ARG_MIPSKIP}")
+	endif()
+
+	# --normalmap
+	if(ARG_NORMALMAP)
+		list(APPEND CLI "--normalmap")
+	endif()
+
+	# --equirect
+	if(ARG_EQUIRECT)
+		list(APPEND CLI "--equirect")
+	endif()
+
+	# --strip
+	if(ARG_STRIP)
+		list(APPEND CLI "--strip")
+	endif()
+
+	# --sdf
+	if(ARG_SDF)
+		list(APPEND CLI "--sdf")
+	endif()
+
+	# --ref
+	if(ARG_REF)
+		list(APPEND CLI "--ref" "${ARG_REF}")
+	endif()
+
+	# --iqa
+	if(ARG_IQA)
+		list(APPEND CLI "--iqa")
+	endif()
+
+	# --pma
+	if(ARG_PMA)
+		list(APPEND CLI "--pma")
+	endif()
+
+	# --linear
+	if(ARG_LINEAR)
+		list(APPEND CLI "--linear")
+	endif()
+
+	# --max
+	if(ARG_MAX)
+		list(APPEND CLI "--max" "${ARG_MAX}")
+	endif()
+
+	# --radiance
+	if(ARG_RADIANCE)
+		list(APPEND CLI "--radiance" "${ARG_RADIANCE}")
+	endif()
+
+	# --as
+	if(ARG_AS)
+		list(APPEND CLI "--as" "${ARG_AS}")
+	endif()
+
+	set(${ARG_OUT} ${CLI} PARENT_SCOPE)
+endfunction()
+
+# bgfx_compile_texture(
+#	FILE filename
+#	OUTPUT filename
+#	[FORMAT format]
+#	[QUALITY default|fastest|highest]
+#	[MIPS]
+#	[MIPSKIP N]
+#	[NORMALMAP]
+#	[EQUIRECT]
+#	[STRIP]
+#	[SDF]
+#	[REF alpha]
+#	[IQA]
+#	[PMA]
+#	[LINEAR]
+#	[MAX max size]
+#	[RADIANCE model]
+#	[AS extension]
+# )
+#
+function(bgfx_compile_texture)
+	cmake_parse_arguments(
+		ARG "MIPS;NORMALMAP;EQUIRECT;STRIP;SDF;IQA;PMA;LINEAR" "FILE;OUTPUT;FORMAT;QUALITY;MIPSKIP;REF;MAX;RADIANCE;AS"
+		"" ${ARGN}
+	)
+	_bgfx_texturec_parse(CLI ${ARGV})
+	add_custom_command(
+		OUTPUT ${ARG_OUTPUT} #
+		COMMAND bgfx::texturec ${CLI} #
+		MAIN_DEPENDENCY ${ARG_INPUT} #
+	)
+endfunction()
+
 # _bgfx_shaderc_parse(
 #	FILE filename
 #	OUTPUT filename

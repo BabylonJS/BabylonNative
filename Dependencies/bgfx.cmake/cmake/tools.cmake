@@ -8,11 +8,6 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-if(BGFX_CUSTOM_TARGETS)
-	add_custom_target(tools)
-	set_target_properties(tools PROPERTIES FOLDER "bgfx/tools")
-endif()
-
 if(BGFX_BUILD_TOOLS_SHADER)
 	include(${CMAKE_CURRENT_LIST_DIR}/tools/shaderc.cmake)
 endif()
@@ -23,6 +18,5 @@ if(BGFX_BUILD_TOOLS_GEOMETRY)
 endif()
 
 if(BGFX_BUILD_TOOLS_TEXTURE)
-	include(${CMAKE_CURRENT_LIST_DIR}/tools/texturec.cmake)
 	include(${CMAKE_CURRENT_LIST_DIR}/tools/texturev.cmake)
 endif()

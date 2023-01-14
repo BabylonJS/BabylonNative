@@ -10,7 +10,7 @@
 
 include(bx.cmake)
 
-if(BGFX_BUILD_TOOLS)
+if(BGFX_BUILD_TOOLS_BIN2C)
 	include(bin2c.cmake)
 endif()
 

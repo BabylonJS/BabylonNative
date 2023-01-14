@@ -60,6 +60,30 @@ target_include_directories(myLib ${CMAKE_BINARY_DIR}/include/generated/images)
 #include <image.png.h>
 ```
 
+### `bgfx_compile_texture`
+Add a build rule for a texture to the generated build system be compiled using texturec.
+```cmake
+bgfx_compile_texture(
+     FILE filename
+     OUTPUT filename
+     [FORMAT format]
+     [QUALITY default|fastest|highest]
+     [MIPS]
+     [MIPSKIP N]
+     [NORMALMAP]
+     [EQUIRECT]
+     [STRIP]
+     [SDF]
+     [REF alpha]
+     [IQA]
+     [PMA]
+     [LINEAR]
+     [MAX max size]
+     [RADIANCE model]
+     [AS extension]
+)
+```
+
 ### `bgfx_compile_shader_to_header`
 Add a build rule for a `*.sc` shader to the generated build system using shaderc.
 ```cmake

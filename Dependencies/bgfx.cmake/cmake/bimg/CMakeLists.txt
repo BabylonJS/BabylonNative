@@ -22,3 +22,7 @@ include(3rdparty/miniz.cmake)
 include(bimg.cmake)
 include(bimg_decode.cmake)
 include(bimg_encode.cmake)
+
+if(BGFX_BUILD_TOOLS_TEXTURE)
+	include(texturec.cmake)
+endif()
