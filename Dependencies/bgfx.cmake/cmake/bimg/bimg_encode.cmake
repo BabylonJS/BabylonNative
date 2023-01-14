@@ -26,7 +26,7 @@ target_include_directories(
 			${BIMG_DIR}/3rdparty/astc-encoder/include #
 			${BIMG_DIR}/3rdparty/iqa/include #
 			${BIMG_DIR}/3rdparty/nvtt #
-			${BIMG_DIR}/3rdparty/tinyexr/deps/miniz #
+			${MINIZ_INCLUDE_DIR} #
 )
 
 file(
