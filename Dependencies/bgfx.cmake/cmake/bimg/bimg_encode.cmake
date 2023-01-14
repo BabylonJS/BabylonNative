@@ -24,7 +24,7 @@ target_include_directories(
 	PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/include> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 	PRIVATE ${BIMG_DIR}/3rdparty #
 			${LIBSQUISH_INCLUDE_DIR} #
-			${BIMG_DIR}/3rdparty/astc-encoder/include #
+			${ASTC_ENCODER_INCLUDE_DIR}
 			${BIMG_DIR}/3rdparty/iqa/include #
 			${BIMG_DIR}/3rdparty/nvtt #
 			${TINYEXR_INCLUDE_DIR} #
@@ -59,6 +59,7 @@ target_link_libraries(
 	bimg_encode
 	PUBLIC bx #
 		   ${LIBSQUISH_LIBRARIES} #
+		   ${ASTC_ENCODER_LIBRARIES} #
 		   ${TINYEXR_LIBRARIES} #
 )
 

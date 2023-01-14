@@ -21,7 +21,7 @@ set_target_properties(bimg PROPERTIES FOLDER "bgfx")
 
 target_include_directories(
 	bimg PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/include>$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-	PRIVATE ${BIMG_DIR}/3rdparty/astc-encoder/include #
+	PRIVATE ${ASTC_ENCODER_INCLUDE_DIR} #
 			${MINIZ_INCLUDE_DIR} #
 )
 
@@ -32,15 +32,15 @@ file(
 	${BIMG_DIR}/src/image.* #
 	${BIMG_DIR}/src/image_gnf.cpp #
 	#
-	${BIMG_DIR}/3rdparty/astc-encoder/source/*.cpp #
-	${BIMG_DIR}/3rdparty/astc-encoder/source/*.h #
-	#
+	${ASTC_ENCODER_SOURCES}
 	${MINIZ_SOURCES}
 )
 
 target_sources(bimg PRIVATE ${BIMG_SOURCES})
 
 target_link_libraries(
-	bimg PUBLIC bx #
-				${MINIZ_LIBRARIES} #
+	bimg
+	PUBLIC bx #
+		   ${ASTC_ENCODER_LIBRARIES} #
+		   ${MINIZ_LIBRARIES} #
 )
