@@ -26,6 +26,7 @@ target_include_directories(
 			${LIBSQUISH_INCLUDE_DIR} #
 			${ASTC_ENCODER_INCLUDE_DIR}
 			${BIMG_DIR}/3rdparty/nvtt #
+			${PVRTC_INCLUDE_DIR}
 			${TINYEXR_INCLUDE_DIR} #
 			${IQA_INCLUDE_DIR} #
 			${MINIZ_INCLUDE_DIR} #
@@ -46,8 +47,7 @@ file(
 	${BIMG_DIR}/3rdparty/etc2/**.hpp #
 	${BIMG_DIR}/3rdparty/nvtt/**.cpp #
 	${BIMG_DIR}/3rdparty/nvtt/**.h #
-	${BIMG_DIR}/3rdparty/pvrtc/**.cpp #
-	${BIMG_DIR}/3rdparty/pvrtc/**.h #
+	${PVRTC_SOURCES} #
 	${TINYEXR_SOURCES}
 	${IQA_SOURCES} #
 )
@@ -59,6 +59,7 @@ target_link_libraries(
 	PUBLIC bx #
 		   ${LIBSQUISH_LIBRARIES} #
 		   ${ASTC_ENCODER_LIBRARIES} #
+		   ${PVRTC_LIBRARIES} #
 		   ${TINYEXR_LIBRARIES} #
 		   ${IQA_LIBRARIES} #
 )
