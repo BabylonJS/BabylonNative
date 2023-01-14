@@ -11,6 +11,7 @@
 include(3rdparty/loadpng.cmake)
 include(3rdparty/libsquish.cmake)
 include(3rdparty/astc_encoder.cmake)
+include(3rdparty/etc1.cmake)
 include(3rdparty/etc2.cmake)
 include(3rdparty/nvtt.cmake)
 include(3rdparty/pvrtc.cmake)

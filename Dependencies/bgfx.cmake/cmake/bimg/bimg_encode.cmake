@@ -25,6 +25,7 @@ target_include_directories(
 	PRIVATE ${BIMG_DIR}/3rdparty #
 			${LIBSQUISH_INCLUDE_DIR} #
 			${ASTC_ENCODER_INCLUDE_DIR}
+			${ETC1_INCLUDE_DIR}
 			${ETC2_INCLUDE_DIR}
 			${NVTT_INCLUDE_DIR} #
 			${PVRTC_INCLUDE_DIR}
@@ -42,8 +43,7 @@ file(
 	${LIBSQUISH_SOURCES} #
 	${BIMG_DIR}/3rdparty/edtaa3/**.cpp #
 	${BIMG_DIR}/3rdparty/edtaa3/**.h #
-	${BIMG_DIR}/3rdparty/etc1/**.cpp #
-	${BIMG_DIR}/3rdparty/etc1/**.h #
+	${ETC1_SOURCES} #
 	${ETC2_SOURCES} #
 	${NVTT_SOURCES} #
 	${PVRTC_SOURCES} #
@@ -58,6 +58,7 @@ target_link_libraries(
 	PUBLIC bx #
 		   ${LIBSQUISH_LIBRARIES} #
 		   ${ASTC_ENCODER_LIBRARIES} #
+		   ${ETC1_LIBRARIES} #
 		   ${ETC2_LIBRARIES} #
 		   ${NVTT_LIBRARIES}
 		   ${PVRTC_LIBRARIES} #
