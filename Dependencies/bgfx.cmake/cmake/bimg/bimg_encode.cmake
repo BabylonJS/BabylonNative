@@ -27,6 +27,7 @@ target_include_directories(
 			${BIMG_DIR}/3rdparty/astc-encoder/include #
 			${BIMG_DIR}/3rdparty/iqa/include #
 			${BIMG_DIR}/3rdparty/nvtt #
+			${TINYEXR_INCLUDE_DIR} #
 			${MINIZ_INCLUDE_DIR} #
 )
 
@@ -47,7 +48,7 @@ file(
 	${BIMG_DIR}/3rdparty/nvtt/**.h #
 	${BIMG_DIR}/3rdparty/pvrtc/**.cpp #
 	${BIMG_DIR}/3rdparty/pvrtc/**.h #
-	${BIMG_DIR}/3rdparty/tinyexr/**.h #
+	${TINYEXR_SOURCES}
 	${BIMG_DIR}/3rdparty/iqa/include/**.h #
 	${BIMG_DIR}/3rdparty/iqa/source/**.c #
 )
@@ -55,8 +56,10 @@ file(
 target_sources(bimg_encode PRIVATE ${BIMG_ENCODE_SOURCES})
 
 target_link_libraries(
-	bimg_encode PUBLIC bx #
-					   ${LIBSQUISH_LIBRARIES} #
+	bimg_encode
+	PUBLIC bx #
+		   ${LIBSQUISH_LIBRARIES} #
+		   ${TINYEXR_LIBRARIES} #
 )
 
 include(CheckCXXCompilerFlag)
