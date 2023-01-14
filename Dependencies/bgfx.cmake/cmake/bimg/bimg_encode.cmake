@@ -23,6 +23,7 @@ target_include_directories(
 	bimg_encode
 	PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/include> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 	PRIVATE ${BIMG_DIR}/3rdparty #
+			${LIBSQUISH_INCLUDE_DIR} #
 			${BIMG_DIR}/3rdparty/astc-encoder/include #
 			${BIMG_DIR}/3rdparty/iqa/include #
 			${BIMG_DIR}/3rdparty/nvtt #
@@ -35,8 +36,7 @@ file(
 	${BIMG_DIR}/include/* #
 	${BIMG_DIR}/src/image_encode.* #
 	${BIMG_DIR}/src/image_cubemap_filter.* #
-	${BIMG_DIR}/3rdparty/libsquish/**.cpp #
-	${BIMG_DIR}/3rdparty/libsquish/**.h #
+	${LIBSQUISH_SOURCES} #
 	${BIMG_DIR}/3rdparty/edtaa3/**.cpp #
 	${BIMG_DIR}/3rdparty/edtaa3/**.h #
 	${BIMG_DIR}/3rdparty/etc1/**.cpp #
@@ -54,7 +54,10 @@ file(
 
 target_sources(bimg_encode PRIVATE ${BIMG_ENCODE_SOURCES})
 
-target_link_libraries(bimg_encode PUBLIC bx)
+target_link_libraries(
+	bimg_encode PUBLIC bx #
+					   ${LIBSQUISH_LIBRARIES} #
+)
 
 include(CheckCXXCompilerFlag)
 foreach(flag "-Wno-implicit-fallthrough" "-Wno-shadow" "-Wno-shift-negative-value" "-Wno-undef")
