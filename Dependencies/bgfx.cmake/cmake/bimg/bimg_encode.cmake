@@ -22,13 +22,13 @@ set_target_properties(bimg_encode PROPERTIES FOLDER "bgfx")
 target_include_directories(
 	bimg_encode
 	PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/include> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-	PRIVATE ${BIMG_DIR}/3rdparty #
-			${LIBSQUISH_INCLUDE_DIR} #
-			${ASTC_ENCODER_INCLUDE_DIR}
-			${ETC1_INCLUDE_DIR}
-			${ETC2_INCLUDE_DIR}
+	PRIVATE ${LIBSQUISH_INCLUDE_DIR} #
+			${ASTC_ENCODER_INCLUDE_DIR} #
+			${EDTAA3_INCLUDE_DIR} #
+			${ETC1_INCLUDE_DIR} #
+			${ETC2_INCLUDE_DIR} #
 			${NVTT_INCLUDE_DIR} #
-			${PVRTC_INCLUDE_DIR}
+			${PVRTC_INCLUDE_DIR} #
 			${TINYEXR_INCLUDE_DIR} #
 			${IQA_INCLUDE_DIR} #
 			${MINIZ_INCLUDE_DIR} #
@@ -41,8 +41,7 @@ file(
 	${BIMG_DIR}/src/image_encode.* #
 	${BIMG_DIR}/src/image_cubemap_filter.* #
 	${LIBSQUISH_SOURCES} #
-	${BIMG_DIR}/3rdparty/edtaa3/**.cpp #
-	${BIMG_DIR}/3rdparty/edtaa3/**.h #
+	${EDTAA3_SOURCES} #
 	${ETC1_SOURCES} #
 	${ETC2_SOURCES} #
 	${NVTT_SOURCES} #
@@ -58,9 +57,10 @@ target_link_libraries(
 	PUBLIC bx #
 		   ${LIBSQUISH_LIBRARIES} #
 		   ${ASTC_ENCODER_LIBRARIES} #
+		   ${EDTAA3_LIBRARIES} #
 		   ${ETC1_LIBRARIES} #
 		   ${ETC2_LIBRARIES} #
-		   ${NVTT_LIBRARIES}
+		   ${NVTT_LIBRARIES} #
 		   ${PVRTC_LIBRARIES} #
 		   ${TINYEXR_LIBRARIES} #
 		   ${IQA_LIBRARIES} #
