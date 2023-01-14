@@ -21,7 +21,7 @@ set_target_properties(bimg_decode PROPERTIES FOLDER "bgfx")
 target_include_directories(
 	bimg_decode
 	PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/include> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-	PRIVATE ${BIMG_DIR}/3rdparty #
+	PRIVATE ${LOADPNG_INCLUDE_DIR} #
 			${MINIZ_INCLUDE_DIR} #
 			${TINYEXR_INCLUDE_DIR} #
 )
@@ -32,6 +32,7 @@ file(
 	${BIMG_DIR}/include/* #
 	${BIMG_DIR}/src/image_decode.* #
 	#
+	${LOADPNG_SOURCES} #
 	${MINIZ_SOURCES} #
 )
 
@@ -40,6 +41,7 @@ target_sources(bimg_decode PRIVATE ${BIMG_DECODE_SOURCES})
 target_link_libraries(
 	bimg_decode
 	PUBLIC bx #
+		   ${LOADPNG_LIBRARIES} #
 		   ${MINIZ_LIBRARIES} #
 		   ${TINYEXR_LIBRARIES} #
 )
