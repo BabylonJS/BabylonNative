@@ -14,5 +14,4 @@ endif()
 
 if(BGFX_BUILD_TOOLS_GEOMETRY)
 	include(${CMAKE_CURRENT_LIST_DIR}/tools/geometryc.cmake)
-	include(${CMAKE_CURRENT_LIST_DIR}/tools/geometryv.cmake)
 endif()
