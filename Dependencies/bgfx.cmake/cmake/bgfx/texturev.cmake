@@ -19,7 +19,7 @@ target_sources(texturev PRIVATE ${TEXTUREV_SOURCES})
 target_link_libraries(texturev PRIVATE example-common)
 set_target_properties(texturev PROPERTIES FOLDER "bgfx/tools")
 
-if(BGFX_BUILD_TOOLS AND BGFX_CUSTOM_TARGETS)
+if(BGFX_BUILD_TOOLS_TEXTURE AND BGFX_CUSTOM_TARGETS)
 	add_dependencies(tools texturev)
 endif()
 

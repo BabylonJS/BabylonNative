@@ -59,7 +59,7 @@ target_sources(shaderc PRIVATE ${SHADERC_SOURCES})
 
 set_target_properties(geometryc PROPERTIES FOLDER "bgfx/tools")
 
-if(BGFX_BUILD_TOOLS AND BGFX_CUSTOM_TARGETS)
+if(BGFX_BUILD_TOOLS_SHADER AND BGFX_CUSTOM_TARGETS)
 	add_dependencies(tools shaderc)
 endif()
 

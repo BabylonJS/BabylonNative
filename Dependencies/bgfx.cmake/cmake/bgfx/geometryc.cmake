@@ -26,7 +26,7 @@ target_link_libraries(geometryc PRIVATE bx bgfx-vertexlayout ${MESHOPTIMIZER_LIB
 target_compile_definitions(geometryc PRIVATE "-D_CRT_SECURE_NO_WARNINGS")
 set_target_properties(geometryc PROPERTIES FOLDER "bgfx/tools")
 
-if(BGFX_BUILD_TOOLS AND BGFX_CUSTOM_TARGETS)
+if(BGFX_BUILD_TOOLS_GEOMETRY AND BGFX_CUSTOM_TARGETS)
 	add_dependencies(tools geometryc)
 endif()
 
