@@ -12,8 +12,7 @@ include(CMakeParseArguments)
 
 include(${CMAKE_CURRENT_LIST_DIR}/util/ConfigureDebugging.cmake)
 
-include(${CMAKE_CURRENT_LIST_DIR}/3rdparty/dear-imgui.cmake)
-include(${CMAKE_CURRENT_LIST_DIR}/bgfxToolUtils.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/../bgfxToolUtils.cmake)
 
 function(add_bgfx_shader FILE FOLDER)
 	get_filename_component(FILENAME "${FILE}" NAME_WE)
@@ -143,9 +142,16 @@ function(add_example ARG_NAME)
 
 	# Add target
 	if(ARG_COMMON)
-		add_library(example-${ARG_NAME} STATIC EXCLUDE_FROM_ALL ${SOURCES} ${MESHOPTIMIZER_SOURCES})
-		target_include_directories(example-${ARG_NAME} PUBLIC ${BGFX_DIR}/examples/common ${MESHOPTIMIZER_INCLUDE_DIR})
-		target_link_libraries(example-${ARG_NAME} PUBLIC bgfx bx bimg bimg_decode dear-imgui ${MESHOPTIMIZER_LIBRARIES})
+		add_library(
+			example-${ARG_NAME} STATIC EXCLUDE_FROM_ALL ${SOURCES} ${DEAR_IMGUI_SOURCES} ${MESHOPTIMIZER_SOURCES}
+		)
+		target_include_directories(
+			example-${ARG_NAME} PUBLIC ${BGFX_DIR}/examples/common ${DEAR_IMGUI_INCLUDE_DIR}
+									   ${MESHOPTIMIZER_INCLUDE_DIR}
+		)
+		target_link_libraries(
+			example-${ARG_NAME} PUBLIC bgfx bx bimg bimg_decode ${DEAR_IMGUI_LIBRARIES} ${MESHOPTIMIZER_LIBRARIES}
+		)
 		if(BGFX_WITH_GLFW)
 			find_package(glfw3 REQUIRED)
 			target_link_libraries(example-${ARG_NAME} PUBLIC glfw)

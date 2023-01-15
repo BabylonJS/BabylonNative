@@ -108,10 +108,6 @@ if(BGFX_BUILD_TOOLS)
 	include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/tools.cmake)
 endif()
 
-if(BGFX_BUILD_TOOLS OR BGFX_BUILD_EXAMPLES)
-	include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/examples.cmake)
-endif()
-
 if(BGFX_INSTALL)
 	include(GNUInstallDirs)
 

@@ -10,6 +10,9 @@
 
 include(bgfx.cmake)
 include(3rdparty/meshoptimizer.cmake)
+include(3rdparty/dear-imgui.cmake)
+
+include(examples.cmake)
 
 if(BGFX_BUILD_TOOLS_TEXTURE)
 	include(texturev.cmake)

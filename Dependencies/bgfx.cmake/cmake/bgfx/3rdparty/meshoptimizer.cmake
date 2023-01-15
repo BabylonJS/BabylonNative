@@ -10,15 +10,16 @@
 
 # Ensure the directory exists
 if(NOT IS_DIRECTORY ${BGFX_DIR})
-    message(SEND_ERROR "Could not load bgfx, directory does not exist. ${BGFX_DIR}")
-    return()
+	message(SEND_ERROR "Could not load bgfx, directory does not exist. ${BGFX_DIR}")
+	return()
 endif()
 
 if(NOT MESHOPTIMIZER_LIBRARIES)
-    file(GLOB #
-         MESHOPTIMIZER_SOURCES #
-         ${BGFX_DIR}/3rdparty/meshoptimizer/src/*.cpp #
-         ${BGFX_DIR}/3rdparty/meshoptimizer/src/*.h #
-     )
-     set(MESHOPTIMIZER_INCLUDE_DIR ${BGFX_DIR}/3rdparty)
+	file(
+		GLOB #
+		MESHOPTIMIZER_SOURCES #
+		${BGFX_DIR}/3rdparty/meshoptimizer/src/*.cpp #
+		${BGFX_DIR}/3rdparty/meshoptimizer/src/*.h #
+	)
+	set(MESHOPTIMIZER_INCLUDE_DIR ${BGFX_DIR}/3rdparty)
 endif()
