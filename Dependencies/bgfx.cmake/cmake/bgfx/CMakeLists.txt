@@ -9,3 +9,7 @@
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
 include(bgfx.cmake)
+
+if(BGFX_BUILD_TOOLS_TEXTURE)
+	include(texturev.cmake)
+endif()
