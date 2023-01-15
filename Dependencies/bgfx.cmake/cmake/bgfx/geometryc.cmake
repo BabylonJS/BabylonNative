@@ -10,7 +10,7 @@
 
 add_executable(geometryc)
 
-# Grab the texturec source files
+# Grab the geometryc source files
 file(
 	GLOB_RECURSE
 	GEOMETRYC_SOURCES #

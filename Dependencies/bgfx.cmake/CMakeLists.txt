@@ -8,7 +8,7 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.6)
 project(bgfx)
 cmake_policy(SET CMP0054 NEW)
 
@@ -103,10 +103,6 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/shared.cmake)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bx)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bimg)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bgfx)
-
-if(BGFX_BUILD_TOOLS)
-	include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/tools.cmake)
-endif()
 
 if(BGFX_INSTALL)
 	include(GNUInstallDirs)
