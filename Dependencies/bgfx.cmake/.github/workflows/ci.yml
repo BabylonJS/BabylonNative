@@ -8,7 +8,7 @@ on:
     branches: [ master ]
 
 jobs:
-  job:
+  native:
     name: ${{ matrix.os }} ${{ matrix.cc }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -61,3 +61,39 @@ jobs:
       - name: Build examples
         run: |
           cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target examples
+
+  cross-android:
+    name: cross-android
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+
+    env:
+      # Indicates the CMake build directory where project files and binaries are being produced.
+      CMAKE_BUILD_DIR: ${{ github.workspace }}/build/
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install -y libgl1-mesa-dev
+        if: matrix.os == 'ubuntu-latest'
+
+      # Setup the build machine with the most recent versions of CMake and Ninja. Both are cached if not already: on subsequent runs both will be quickly restored from GitHub cache service.
+      - uses: lukka/get-cmake@latest
+
+      # On Windows runners, let's ensure to have the Developer Command Prompt environment setup correctly. As used here the Developer Command Prompt created is targeting x64 and using the default the Windows SDK.
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      # Run CMake to generate Ninja project files
+      - name: Generate project files
+        run: |
+          cmake -B "${{ env.CMAKE_BUILD_DIR }}" -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake -DBGFX_BUILD_TOOLS=OFF
+
+      # Build the whole project with Ninja (which is spawn by CMake).
+      - name: Build
+        run: |
+          cmake --build "${{ env.CMAKE_BUILD_DIR }}"
