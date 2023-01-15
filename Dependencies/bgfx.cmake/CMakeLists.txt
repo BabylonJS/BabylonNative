@@ -102,7 +102,7 @@ endif()
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/shared.cmake)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bx)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bimg)
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bgfx.cmake)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bgfx)
 
 if(BGFX_BUILD_TOOLS)
 	include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/tools.cmake)
