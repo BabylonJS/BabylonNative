@@ -99,7 +99,6 @@ if(BGFX_BUILD_TOOLS AND BGFX_CUSTOM_TARGETS)
 	set_target_properties(tools PROPERTIES FOLDER "bgfx/tools")
 endif()
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/shared.cmake)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bx)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bimg)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bgfx)
