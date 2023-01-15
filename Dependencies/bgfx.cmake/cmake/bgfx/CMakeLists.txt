@@ -9,10 +9,12 @@
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
 include(bgfx.cmake)
+include(3rdparty/meshoptimizer.cmake)
 
 if(BGFX_BUILD_TOOLS_TEXTURE)
 	include(texturev.cmake)
 endif()
 if(BGFX_BUILD_TOOLS_GEOMETRY)
+	include(geometryc.cmake)
 	include(geometryv.cmake)
 endif()

@@ -11,7 +11,3 @@
 if(BGFX_BUILD_TOOLS_SHADER)
 	include(${CMAKE_CURRENT_LIST_DIR}/tools/shaderc.cmake)
 endif()
-
-if(BGFX_BUILD_TOOLS_GEOMETRY)
-	include(${CMAKE_CURRENT_LIST_DIR}/tools/geometryc.cmake)
-endif()

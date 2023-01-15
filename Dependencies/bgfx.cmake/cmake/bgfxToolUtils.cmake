@@ -80,8 +80,11 @@ endfunction()
 # )
 function(_bgfx_texturec_parse ARG_OUT)
 	cmake_parse_arguments(
-		ARG "MIPS;NORMALMAP;EQUIRECT;STRIP;SDF;IQA;PMA;LINEAR" "FILE;OUTPUT;FORMAT;QUALITY;MIPSKIP;REF;MAX;RADIANCE;AS"
-		"" ${ARGN}
+		ARG #
+		"MIPS;NORMALMAP;EQUIRECT;STRIP;SDF;IQA;PMA;LINEAR" #
+		"FILE;OUTPUT;FORMAT;QUALITY;MIPSKIP;REF;MAX;RADIANCE;AS" #
+		"" #
+		${ARGN} #
 	)
 	set(CLI "")
 
@@ -195,13 +198,149 @@ endfunction()
 #
 function(bgfx_compile_texture)
 	cmake_parse_arguments(
-		ARG "MIPS;NORMALMAP;EQUIRECT;STRIP;SDF;IQA;PMA;LINEAR" "FILE;OUTPUT;FORMAT;QUALITY;MIPSKIP;REF;MAX;RADIANCE;AS"
-		"" ${ARGN}
+		ARG #
+		"MIPS;NORMALMAP;EQUIRECT;STRIP;SDF;IQA;PMA;LINEAR" #
+		"FILE;OUTPUT;FORMAT;QUALITY;MIPSKIP;REF;MAX;RADIANCE;AS" #
+		"" #
+		${ARGN} #
 	)
 	_bgfx_texturec_parse(CLI ${ARGV})
 	add_custom_command(
 		OUTPUT ${ARG_OUTPUT} #
 		COMMAND bgfx::texturec ${CLI} #
+		MAIN_DEPENDENCY ${ARG_INPUT} #
+	)
+endfunction()
+
+# _bgfx_geometryc_parse(
+#	FILE filename
+#	OUTPUT filename
+#	[SCALE scale]
+#	[CCW]
+#	[FLIPV]
+#	[OBB num steps]
+#	[PACKNORMAL 0|1]
+#	[PACKUV 0|1]
+#	[TANGENT]
+#	[BARYCENTRIC]
+#	[COMPRESS]
+#	[LH_UP_Y|LH_UP_Z|RH_UP_Y|RH_UP_Z]
+# )
+function(_bgfx_geometryc_parse ARG_OUT)
+	cmake_parse_arguments(
+		ARG #
+		"CCW;FLIPV;TANGENT;BARYCENTRIC;COMPRESS;LH_UP_Y;LH_UP_Z;RH_UP_Y;RH_UP_Z" #
+		"FILE;OUTPUT;SCALE;OBB;PACKNORMAL;PACKUV" #
+		"" #
+		${ARGN} #
+	)
+	set(CLI "")
+
+	# -f
+	if(ARG_FILE)
+		list(APPEND CLI "-f" "${ARG_FILE}")
+	endif()
+
+	# -o
+	if(ARG_OUTPUT)
+		list(APPEND CLI "-o" "${ARG_OUTPUT}")
+	endif()
+
+	# -s
+	if(ARG_SCALE)
+		list(APPEND CLI "-s" "${ARG_SCALE}")
+	endif()
+
+	# --cw
+	if(ARG_QUALITY)
+		list(APPEND CLI "--cw")
+	endif()
+
+	# --flipv
+	if(ARG_FLIPV)
+		list(APPEND CLI "--flipv")
+	endif()
+
+	# --obb
+	if(ARG_OBB)
+		list(APPEND CLI "--mipskip" "${ARG_OBB}")
+	endif()
+
+	# --packnormal
+	if(ARG_PACKNORMAL)
+		list(APPEND CLI "--packnormal ${ARG_PACKNORMAL}")
+	endif()
+
+	# --packuv
+	if(ARG_PACKUV)
+		list(APPEND CLI "--packuv" ${ARG_PACKUV})
+	endif()
+
+	# --tangent
+	if(ARG_TANGENT)
+		list(APPEND CLI "--tangent")
+	endif()
+
+	# --barycentric
+	if(ARG_BARYCENTRIC)
+		list(APPEND CLI "--barycentric")
+	endif()
+
+	# --compress
+	if(ARG_REF)
+		list(APPEND CLI "--compress" "${ARG_COMPRESS}")
+	endif()
+
+	# --lh-up+y
+	if(ARG_LH_UP_Y)
+		list(APPEND CLI "--lh-up+y")
+	endif()
+
+	# --lh-up+z
+	if(ARG_LH_UP_Z)
+		list(APPEND CLI "--lh-up+z")
+	endif()
+
+	# --rh-up+y
+	if(ARG_RH_UP_Y)
+		list(APPEND CLI "--rh-up+y")
+	endif()
+
+	# --rh-up+z
+	if(ARG_RH_UP_Z)
+		list(APPEND CLI "--rh-up+z")
+	endif()
+
+	set(${ARG_OUT} ${CLI} PARENT_SCOPE)
+endfunction()
+
+# bgfx_compile_geometry(
+#	FILE filename
+#	OUTPUT filename
+#	[SCALE scale]
+#	[CCW]
+#	[FLIPV]
+#	[OBB num steps]
+#	[PACKNORMAL 0|1]
+#	[PACKUV 0|1]
+#	[TANGENT]
+#	[BARYCENTRIC]
+#	[COMPRESS]
+#	[LH_UP_Y|LH_UP_Z|RH_UP_Y|RH_UP_Z]
+# )
+#
+function(bgfx_compile_geometry)
+	cmake_parse_arguments(
+		ARG #
+		"CCW;FLIPV;TANGENT;BARYCENTRIC;COMPRESS;LH_UP_Y;LH_UP_Z;RH_UP_Y;RH_UP_Z" #
+		"FILE;OUTPUT;SCALE;OBB;PACKNORMAL;PACKUV" #
+		"" #
+		${ARGN} #
+	)
+	_bgfx_geometryc_parse(CLI ${ARGV})
+	add_custom_command(
+		OUTPUT ${ARG_OUTPUT} #
+		COMMAND bgfx::geometryc ${CLI} #
 		MAIN_DEPENDENCY ${ARG_INPUT} #
 	)
 endfunction()

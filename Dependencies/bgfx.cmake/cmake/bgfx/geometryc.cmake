@@ -8,15 +8,25 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-include(CMakeParseArguments)
+add_executable(geometryc)
 
-include(${CMAKE_CURRENT_LIST_DIR}/../3rdparty/meshoptimizer.cmake)
+# Grab the texturec source files
+file(
+	GLOB_RECURSE
+	GEOMETRYC_SOURCES #
+	${BGFX_DIR}/tools/geometryc/*.cpp #
+	${BGFX_DIR}/tools/geometryc/*.h #
+	#
+	${MESHOPTIMIZER_SOURCES}
+)
 
-add_executable(geometryc ${BGFX_DIR}/tools/geometryc/geometryc.cpp)
+target_sources(geometryc PRIVATE ${GEOMETRYC_SOURCES})
+target_include_directories(geometryc PRIVATE ${MESHOPTIMIZER_INCLUDE_DIR})
+target_link_libraries(geometryc PRIVATE bx bgfx-vertexlayout ${MESHOPTIMIZER_LIBRARIES})
 target_compile_definitions(geometryc PRIVATE "-D_CRT_SECURE_NO_WARNINGS")
 set_target_properties(geometryc PROPERTIES FOLDER "bgfx/tools")
-target_link_libraries(geometryc bx bgfx-vertexlayout meshoptimizer)
-if(BGFX_CUSTOM_TARGETS)
+
+if(BGFX_BUILD_TOOLS AND BGFX_CUSTOM_TARGETS)
 	add_dependencies(tools geometryc)
 endif()
 
