@@ -19,13 +19,10 @@ function(add_bgfx_shader FILE FOLDER)
 	string(SUBSTRING "${FILENAME}" 0 2 TYPE)
 	if("${TYPE}" STREQUAL "fs")
 		set(TYPE "FRAGMENT")
-		set(D3D_PREFIX "ps")
 	elseif("${TYPE}" STREQUAL "vs")
 		set(TYPE "VERTEX")
-		set(D3D_PREFIX "vs")
 	elseif("${TYPE}" STREQUAL "cs")
 		set(TYPE "COMPUTE")
-		set(D3D_PREFIX "cs")
 	else()
 		set(TYPE "")
 	endif()
@@ -41,7 +38,7 @@ function(add_bgfx_shader FILE FOLDER)
 				set(DX9_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/dx9/${FILENAME}.bin)
 				_bgfx_shaderc_parse(
 					DX9 ${COMMON} WINDOWS
-					PROFILE ${D3D_PREFIX}_3_0
+					PROFILE s_3_0
 					O 3
 					OUTPUT ${DX9_OUTPUT}
 				)
@@ -54,14 +51,14 @@ function(add_bgfx_shader FILE FOLDER)
 			if(NOT "${TYPE}" STREQUAL "COMPUTE")
 				_bgfx_shaderc_parse(
 					DX11 ${COMMON} WINDOWS
-					PROFILE ${D3D_PREFIX}_5_0
+					PROFILE s_5_0
 					O 3
 					OUTPUT ${DX11_OUTPUT}
 				)
 			else()
 				_bgfx_shaderc_parse(
 					DX11 ${COMMON} WINDOWS
-					PROFILE ${D3D_PREFIX}_5_0
+					PROFILE s_5_0
 					O 1
 					OUTPUT ${DX11_OUTPUT}
 				)
