@@ -100,6 +100,7 @@ namespace Babylon::Polyfills::Internal
         {
             m_fonts[font.first] = nvgCreateFontMem(m_nvg, font.first.c_str(), font.second.data(), font.second.size(), 0);
         }
+
     }
 
     Context::~Context()
@@ -129,6 +130,8 @@ namespace Babylon::Polyfills::Internal
             nvgDelete(m_nvg);
             m_nvg = nullptr;
         }
+
+        m_isClipped = false;
     }
 
     void Context::FillRect(const Napi::CallbackInfo& info)
@@ -138,7 +141,11 @@ namespace Babylon::Polyfills::Internal
         auto width = info[2].As<Napi::Number>().FloatValue();
         auto height = info[3].As<Napi::Number>().FloatValue();
 
-        nvgBeginPath(m_nvg);
+        if (!m_isClipped)
+        {
+            nvgBeginPath(m_nvg);
+        }
+
         nvgRect(m_nvg, left, top, width, height);
 
         const auto color = StringToColor(info.Env(), m_fillStyle);
@@ -201,6 +208,7 @@ namespace Babylon::Polyfills::Internal
     {
         nvgRestore(m_nvg);
         SetDirty();
+        m_isClipped = false;
     }
 
     void Context::ClearRect(const Napi::CallbackInfo& info)
@@ -212,9 +220,19 @@ namespace Babylon::Polyfills::Internal
 
         nvgSave(m_nvg);
         nvgGlobalCompositeOperation(m_nvg, NVG_COPY);
-        nvgBeginPath(m_nvg);
+
+        if (!m_isClipped)
+        {
+            nvgBeginPath(m_nvg);
+        }
+
         nvgRect(m_nvg, x, y, width, height);
-        nvgClosePath(m_nvg);
+        
+        if (!m_isClipped)
+        {
+            nvgClosePath(m_nvg);
+        }
+        
         nvgFillColor(m_nvg, TRANSPARENT_BLACK);
         nvgFill(m_nvg);
         nvgRestore(m_nvg);
@@ -270,8 +288,14 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Clip(const Napi::CallbackInfo& /*info*/)
     {
+        m_isClipped = true;
+
+        //By default m_rectangleClipping is not set, in this case we use the default render target width and height.
+        auto w = m_rectangleClipping.height != 0 ? m_rectangleClipping.height : m_canvas->GetFrameBuffer().Width();
+        auto h = m_rectangleClipping.width != 0 ? m_rectangleClipping.width : m_canvas->GetFrameBuffer().Height();
+
         // expand clipping 1pix in each direction because nanovg AA gets cut a bit short.
-        nvgScissor(m_nvg, m_rectangleClipping.left - 1, m_rectangleClipping.top - 1, m_rectangleClipping.width + 1, m_rectangleClipping.height + 1);
+        nvgScissor(m_nvg, m_rectangleClipping.left - 1, m_rectangleClipping.top - 1, w + 1, h + 1);
     }
 
     void Context::StrokeRect(const Napi::CallbackInfo& info)
@@ -434,7 +458,12 @@ namespace Babylon::Polyfills::Internal
             const auto height = static_cast<float>(canvasImage->GetHeight());
 
             NVGpaint imagePaint = nvgImagePattern(m_nvg, 0.f, 0.f, width, height, 0.f, imageIndex, 1.f);
-            nvgBeginPath(m_nvg);
+
+            if (!m_isClipped)
+            {
+                nvgBeginPath(m_nvg);
+            }
+
             nvgRect(m_nvg, dx, dy, width, height);
             nvgFillPaint(m_nvg, imagePaint);
             nvgFill(m_nvg);
@@ -448,7 +477,12 @@ namespace Babylon::Polyfills::Internal
             const auto dHeight = info[4].As<Napi::Number>().Uint32Value();
 
             NVGpaint imagePaint = nvgImagePattern(m_nvg, static_cast<float>(dx), static_cast<float>(dy), static_cast<float>(dWidth), static_cast<float>(dHeight), 0.f, imageIndex, 1.f);
-            nvgBeginPath(m_nvg);
+            
+            if (!m_isClipped)
+            {
+                nvgBeginPath(m_nvg);
+            }
+
             nvgRect(m_nvg, dx, dy, dWidth, dHeight);
             nvgFillPaint(m_nvg, imagePaint);
             nvgFill(m_nvg);
@@ -468,7 +502,12 @@ namespace Babylon::Polyfills::Internal
             const auto height = static_cast<float>(canvasImage->GetHeight());
 
             NVGpaint imagePaint = nvgImagePattern(m_nvg, static_cast<float>(dx), static_cast<float>(dy), static_cast<float>(dWidth), static_cast<float>(dHeight), 0.f, imageIndex, 1.f);
-            nvgBeginPath(m_nvg);
+            
+            if (!m_isClipped)
+            {
+                nvgBeginPath(m_nvg);
+            }
+
             nvgRect(m_nvg, dx, dy, dWidth, dHeight);
             nvgFillPaint(m_nvg, imagePaint);
             nvgFill(m_nvg);

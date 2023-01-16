@@ -91,6 +91,7 @@ namespace Babylon::Polyfills::Internal
         Graphics::Update m_update;
 
         bool m_dirty{};
+        bool m_isClipped{false};
 
         struct RectangleClipping
         {
