@@ -119,7 +119,8 @@ namespace Babylon::Polyfills::Internal
                 return;
             }
 
-            m_imageContainer = bimg::imageParse(&m_allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()));
+            m_imageContainer = bimg::imageParse(&m_allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
+            
             if (m_imageContainer == nullptr)
             {
                 HandleLoadImageError(Napi::Error::New(env, "Unable to decode image with provided src."));
