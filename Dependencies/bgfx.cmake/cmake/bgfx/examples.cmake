@@ -157,8 +157,13 @@ function(add_example ARG_NAME)
 			find_package(SDL2 REQUIRED)
 			target_link_libraries(example-${ARG_NAME} PUBLIC ${SDL2_LIBRARIES})
 			target_compile_definitions(example-${ARG_NAME} PUBLIC ENTRY_CONFIG_USE_SDL)
-		elseif(UNIX AND NOT APPLE)
+		elseif(UNIX AND NOT APPLE AND NOT ANDROID)
 			target_link_libraries(example-${ARG_NAME} PUBLIC X11)
+		endif()
+
+		if(ANDROID)
+			target_include_directories(example-${ARG_NAME} PRIVATE ${BGFX_DIR}/3rdparty/native_app_glue)
+			target_link_libraries(example-${ARG_NAME} INTERFACE android EGL GLESv2)
 		endif()
 
 		if(BGFX_BUILD_EXAMPLES)
@@ -205,12 +210,16 @@ function(add_example ARG_NAME)
 		endif()
 
 	else()
-		if(BGFX_INSTALL_EXAMPLES)
-			add_executable(example-${ARG_NAME} WIN32 ${SOURCES})
+		if(ANDROID)
+			add_library(example-${ARG_NAME} SHARED)
 		else()
-			add_executable(example-${ARG_NAME} WIN32 EXCLUDE_FROM_ALL ${SOURCES})
+			add_executable(example-${ARG_NAME} WIN32)
 		endif()
-		target_link_libraries(example-${ARG_NAME} example-common)
+		if(NOT BGFX_INSTALL_EXAMPLES)
+			set_property(TARGET example-${ARG_NAME} PROPERTY EXCLUDE_FROM_ALL ON)
+		endif()
+		target_sources(example-${ARG_NAME} PUBLIC ${SOURCES})
+		target_link_libraries(example-${ARG_NAME} PUBLIC example-common)
 		configure_debugging(example-${ARG_NAME} WORKING_DIR ${BGFX_DIR}/examples/runtime)
 		if(MSVC)
 			set_target_properties(example-${ARG_NAME} PROPERTIES LINK_FLAGS "/ENTRY:\"mainCRTStartup\"")
@@ -230,8 +239,10 @@ function(add_example ARG_NAME)
 		endif()
 	endif()
 	target_compile_definitions(
-		example-${ARG_NAME} PRIVATE "-D_CRT_SECURE_NO_WARNINGS" "-D__STDC_FORMAT_MACROS"
-									"-DENTRY_CONFIG_IMPLEMENT_MAIN=1"
+		example-${ARG_NAME}
+		PRIVATE "-D_CRT_SECURE_NO_WARNINGS" #
+				"-D__STDC_FORMAT_MACROS" #
+				"-DENTRY_CONFIG_IMPLEMENT_MAIN=1" #
 	)
 
 	# Configure shaders

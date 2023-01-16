@@ -97,3 +97,8 @@ jobs:
       - name: Build
         run: |
           cmake --build "${{ env.CMAKE_BUILD_DIR }}"
+
+      # Build the examples which are excluded from all
+      - name: Build examples
+        run: |
+          cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target examples
