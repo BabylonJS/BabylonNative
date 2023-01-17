@@ -173,6 +173,7 @@ namespace Babylon::Plugins
         bool refreshBgfxHandle{true};
         
         arcana::background_dispatcher<32> cameraSessionDispatcher{};
+        std::shared_ptr<arcana::cancellation_source> cancellationSource{std::make_shared<arcana::cancellation_source>()};
     };
 
     std::vector<CameraDevice> CameraDevice::GetCameraDevices(Napi::Env env)
@@ -423,7 +424,12 @@ namespace Babylon::Plugins
 
     void CameraDevice::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
-        arcana::make_task(m_impl->deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
+        arcana::make_task(m_impl->deviceContext->BeforeRenderScheduler(), *m_impl->cancellationSource, [this, textureHandle, cancellationSource{m_impl->cancellationSource}] {
+            if (cancellationSource->cancelled()) {
+                // The stream was closed while we were waiting to render.
+                return;
+            }
+
             id<MTLTexture> textureY{};
             id<MTLTexture> textureCbCr{};
             int64_t width{0};
@@ -513,6 +519,9 @@ namespace Babylon::Plugins
             // No action is required.
             return;
         }
+        
+        // Cancel any pending async operations
+        m_impl->cancellationSource->cancel();
 
         // Stop collecting frames, release camera texture delegate.
         [m_impl->cameraTextureDelegate reset];
@@ -532,9 +541,13 @@ namespace Babylon::Plugins
         }
 
         if (m_impl->avCaptureSession != nil) {
-            // Stopping the capture session is a synchronous (and long running call). Complete the request on the dispatcher thread
-            // instead of the main thread.
-            arcana::make_task(arcana::threadpool_scheduler, arcana::cancellation::none(), [avCaptureSession = m_impl->avCaptureSession](){
+            // Stopping the capture session is a synchronous call that requires marshalling to the main thread. Calling it from background thread can lead
+            // to a deadlock where Babylon is waiting for the frame to finish render on the main thread and AVCaptureSession::stopRunning is waiting
+            // for the main thread to free up while blocking the current frame from rendering.
+            //
+            // Capturing textureRGBA is done here because it's used in bgfx::overrideInternal but due to ARC being enabled in this project the lifetime of the texture
+            // needs to be maintained until after the render pass. Otherwise bgfx will try to access a destroyed texture handle during the render pass.
+            arcana::make_task(m_impl->deviceContext->AfterRenderScheduler(), arcana::cancellation::none(), [avCaptureSession = m_impl->avCaptureSession, textureRGBA = m_impl->textureRGBA] {
                 [avCaptureSession stopRunning];
             });
         }
