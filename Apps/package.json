@@ -6,10 +6,10 @@
     "getNightly": "node scripts/getNightly.js"
   },
   "dependencies": {
-    "babylonjs": "^5.35.1",
-    "babylonjs-gui": "^5.35.1",
-    "babylonjs-loaders": "^5.35.1",
-    "babylonjs-materials": "^5.35.1",
+    "babylonjs": "^5.42.2",
+    "babylonjs-gui": "^5.42.2",
+    "babylonjs-loaders": "^5.42.2",
+    "babylonjs-materials": "^5.42.2",
     "chai": "^4.3.4",
     "jsc-android": "^241213.1.0",
     "mocha": "^9.2.2",
