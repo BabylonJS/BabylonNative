@@ -424,12 +424,9 @@ namespace Babylon::Plugins
 
     void CameraDevice::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
+        // Hook into the BeforeRender loop to copy over the texture. Capture the cancellation token so that the shared pointer is kept alive when
+        // arcana checks internally for cancellation.
         arcana::make_task(m_impl->deviceContext->BeforeRenderScheduler(), *m_impl->cancellationSource, [this, textureHandle, cancellationSource{m_impl->cancellationSource}] {
-            if (cancellationSource->cancelled()) {
-                // The stream was closed while we were waiting to render.
-                return;
-            }
-
             id<MTLTexture> textureY{};
             id<MTLTexture> textureCbCr{};
             int64_t width{0};
