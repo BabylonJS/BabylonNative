@@ -64,7 +64,7 @@ namespace Babylon::Plugins::Internal
             
             Napi::Array devices{Napi::Array::New(env, cameraDevices.size())};
             
-            for (u_long i=0; i<cameraDevices.size(); i++)
+            for (unsigned long i=0; i<cameraDevices.size(); i++)
             {
                 Napi::Object device{Napi::Object::New(env)};
                 device.Set("deviceId", Napi::String::New(env, std::to_string(i)));
