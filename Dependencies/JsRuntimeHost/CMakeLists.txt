@@ -43,8 +43,8 @@ endif()
 if(NOT TARGET UrlLib AND JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST)
     FetchContent_Declare(
         UrlLib
-        GIT_REPOSITORY https://github.com/bghgary/UrlLib.git # TODO: move to BabylonJS later
-        GIT_TAG        017b7980e14097de2fbaf5f7389ceca603e69cdd)
+        GIT_REPOSITORY https://github.com/BabylonJS/UrlLib.git
+        GIT_TAG        0007501304a710f14626f34a73c05bcb371de92f)
 
     message(STATUS "Fetching UrlLib")
     FetchContent_MakeAvailable(UrlLib)
