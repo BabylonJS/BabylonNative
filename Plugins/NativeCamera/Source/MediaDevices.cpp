@@ -64,7 +64,7 @@ namespace Babylon::Plugins::Internal
             
             Napi::Array devices{Napi::Array::New(env, cameraDevices.size())};
             
-            for (uint i=0; i<cameraDevices.size(); i++)
+            for (u_long i=0; i<cameraDevices.size(); i++)
             {
                 Napi::Object device{Napi::Object::New(env)};
                 device.Set("deviceId", Napi::String::New(env, std::to_string(i)));
@@ -72,7 +72,7 @@ namespace Babylon::Plugins::Internal
                 device.Set("kind", Napi::String::New(env, "videoinput"));
                 device.Set("label", Napi::String::New(env, ""));
                 
-                devices.Set(i, device);
+                devices.Set(static_cast<uint32_t>(i), device);
             }
             
             deferred.Resolve(devices);
