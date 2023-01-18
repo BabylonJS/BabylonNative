@@ -199,7 +199,6 @@ namespace Babylon
         JsRuntime& m_runtime;
         Graphics::DeviceContext& m_graphicsContext;
         Graphics::Update m_update;
-        arcana::task<void, std::exception_ptr> m_textureTask{};
 
         JsRuntimeScheduler m_runtimeScheduler;
 
@@ -239,5 +238,7 @@ namespace Babylon
 
         // TODO: This should be changed to a non-owning ref once multi-update is available.
         NativeDataStream* m_commandStream{};
+
+        template<typename PointerT> auto NapiPointerDeleterTexture(PointerT pointer);
     };
 }

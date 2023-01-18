@@ -134,6 +134,15 @@ namespace Babylon::Polyfills::Internal
         return false;
     }
 
+    template<typename PointerT>
+    auto NativeCanvas::NapiPointerDeleterTexture(PointerT pointer)
+    {
+        return [pointer,  &graphicsContext = m_graphicsContext]()
+        {
+            graphicsContext.TaskChainDeleteTexture(pointer);
+        };
+    }
+
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
     {
         if (!m_texture)
@@ -142,7 +151,8 @@ namespace Babylon::Polyfills::Internal
         }
 
         m_texture->Attach(bgfx::getTexture(m_frameBuffer->Handle()), false, m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT);
-        return Napi::Pointer<Graphics::Texture>::Create(info.Env(), m_texture.get());
+        auto texturePtr{ m_texture.get() };
+        return Napi::Pointer<Graphics::Texture>::Create(info.Env(), texturePtr, NapiPointerDeleterTexture(texturePtr));
     }
 
     Napi::Value NativeCanvas::ParseColor(const Napi::CallbackInfo& info)

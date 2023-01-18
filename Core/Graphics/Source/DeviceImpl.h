@@ -27,6 +27,7 @@ namespace Babylon::Graphics
     struct WindowConfiguration;
     struct DeviceConfiguration;
     struct BackBufferUpdateInfo;
+    class Texture;
 
     class DeviceImpl
     {
@@ -90,6 +91,9 @@ namespace Babylon::Graphics
         {
             return m_context;
         }
+
+        void TaskChainDeleteTexture(Graphics::Texture* texture);
+        void TaskChainOpTexture(std::function<void()> op);
 
     private:
         friend class UpdateToken;
@@ -156,5 +160,7 @@ namespace Babylon::Graphics
         std::mutex m_updateSafeTimespansMutex{};
 
         DeviceContext m_context;
+        arcana::task<void, std::exception_ptr> m_textureTask{};
+        Graphics::Update m_update;
     };
 }

@@ -15,6 +15,7 @@ namespace Babylon::Graphics
     };
 
     class Device;
+    class Texture;
 
     class DeviceUpdate
     {
@@ -97,6 +98,8 @@ namespace Babylon::Graphics
         float GetDevicePixelRatio() const;
 
         PlatformInfo GetPlatformInfo() const;
+
+        void TaskChainDeleteTexture(Graphics::Texture* texture);
 
     private:
         Device();

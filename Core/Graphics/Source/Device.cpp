@@ -128,4 +128,9 @@ namespace Babylon::Graphics
     {
         return m_impl->GetPlatformInfo();
     }
+
+    void Device::TaskChainDeleteTexture(Graphics::Texture* texture)
+    {
+        m_impl->TaskChainDeleteTexture(texture);
+    }
 }

@@ -506,7 +506,6 @@ namespace Babylon
         , m_runtime{runtime}
         , m_graphicsContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
         , m_update{m_graphicsContext.GetUpdate("update")}
-        , m_textureTask{ arcana::task_from_result<std::exception_ptr>() }
         , m_runtimeScheduler{runtime}
         , m_defaultFrameBuffer{m_graphicsContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
         , m_boundFrameBuffer{&m_defaultFrameBuffer}
@@ -1030,10 +1029,19 @@ namespace Babylon
         SetFloatN<4>(data);
     }
 
+    template<typename PointerT>
+    auto NativeEngine::NapiPointerDeleterTexture(PointerT pointer)
+    {
+        return [pointer, &graphicsContext=m_graphicsContext]()
+        {
+            graphicsContext.TaskChainDeleteTexture(pointer);
+        };
+    }
+
     Napi::Value NativeEngine::CreateTexture(const Napi::CallbackInfo& info)
     {
         Graphics::Texture* texture = new Graphics::Texture();
-        return Napi::Pointer<Graphics::Texture>::Create(info.Env(), texture, Napi::NapiPointerDeleter(texture));
+        return Napi::Pointer<Graphics::Texture>::Create(info.Env(), texture, NapiPointerDeleterTexture(texture));
     }
 
     void NativeEngine::InitializeTexture(const Napi::CallbackInfo& info)
@@ -1094,7 +1102,7 @@ namespace Babylon
         const auto textureDestination = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         const auto textureSource = info[1].As<Napi::Pointer<Graphics::Texture>>().Get();
 
-        m_textureTask = m_textureTask.then(m_update.Scheduler(), *m_cancellationSource, [this, textureDestination, textureSource, cancellationSource = m_cancellationSource]()
+        m_graphicsContext.TaskChainOpTexture([this, textureDestination, textureSource, cancellationSource = m_cancellationSource]()
         {
             return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, textureDestination, textureSource, updateToken = m_update.GetUpdateToken(), cancellationSource = m_cancellationSource]()
             {
@@ -1339,9 +1347,11 @@ namespace Babylon
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
         Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
-        m_textureTask = m_textureTask.then(m_update.Scheduler(), *m_cancellationSource, [texture, this]() {
+        m_graphicsContext.TaskChainOpTexture([texture, this]() {
+            //m_textureTask = m_textureTask.then(m_update.Scheduler(), *m_cancellationSource, [texture, this]() {
             m_graphicsContext.RemoveTexture(texture->Handle());
             texture->Dispose();
+            //delete texture;
         });
     }
 

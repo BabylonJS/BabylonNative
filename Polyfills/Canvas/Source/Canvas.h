@@ -93,5 +93,6 @@ namespace Babylon::Polyfills::Internal
         bool m_dirty{};
 
         void FlushGraphicResources() override;
+        template<typename PointerT> auto NapiPointerDeleterTexture(PointerT pointer);
     };
 }

@@ -17,6 +17,7 @@ namespace Babylon::Graphics
     class Update;
     class DeviceContext;
     class DeviceImpl;
+    class Texture;
 
     struct TextureInfo final
     {
@@ -114,6 +115,9 @@ namespace Babylon::Graphics
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
         void RemoveTexture(bgfx::TextureHandle handle);
         TextureInfo GetTextureInfo(bgfx::TextureHandle handle);
+
+        void TaskChainDeleteTexture(Graphics::Texture* texture);
+        void TaskChainOpTexture(std::function<void()> op);
 
     private:
         friend UpdateToken;

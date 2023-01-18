@@ -119,4 +119,15 @@ namespace Babylon::Graphics
         std::scoped_lock lock{m_textureHandleToInfoMutex};
         return m_textureHandleToInfo[handle.idx];
     }
+
+    void DeviceContext::TaskChainDeleteTexture(Graphics::Texture* texture)
+    {
+        m_graphicsImpl.TaskChainDeleteTexture(texture);
+    }
+
+    void DeviceContext::TaskChainOpTexture(std::function<void()> op)
+    {
+        m_graphicsImpl.TaskChainOpTexture(op);
+    }
+  
 }

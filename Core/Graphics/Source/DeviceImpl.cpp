@@ -10,6 +10,8 @@
 #include <TargetConditionals.h>
 #endif
 
+#include "Texture.h"
+
 namespace
 {
     constexpr auto JS_GRAPHICS_NAME = "_Graphics";
@@ -20,6 +22,8 @@ namespace Babylon::Graphics
     DeviceImpl::DeviceImpl()
         : m_bgfxCallback{[this](const auto& data) { CaptureCallback(data); }}
         , m_context{*this}
+        , m_textureTask{ arcana::task_from_result<std::exception_ptr>() }
+        , m_update{ m_context.GetUpdate("update") }
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Initialized = false;
@@ -463,5 +467,23 @@ namespace Babylon::Graphics
     PlatformInfo DeviceImpl::GetPlatformInfo() const
     {
         return {static_cast<DeviceT>(bgfx::getInternalData()->context)};
+    }
+
+    void DeviceImpl::TaskChainDeleteTexture(Graphics::Texture* texture)
+    {
+        if (!texture)
+        {
+            return;
+        }
+        m_textureTask = m_textureTask.then(m_update.Scheduler(), *m_cancellationSource, [texture]() {
+            delete texture;
+        });
+    }
+
+    void DeviceImpl::TaskChainOpTexture(std::function<void()> op)
+    {
+        m_textureTask = m_textureTask.then(m_update.Scheduler(), *m_cancellationSource, [op]() {
+            op();
+            });
     }
 }
