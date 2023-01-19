@@ -6,6 +6,17 @@
 
 #import <Foundation/Foundation.h>
 
+namespace
+{
+    auto URLAllowedCharacterSet = []()
+    {
+        NSRange range;
+        range.location = 0x21;
+        range.length = 0x7e - range.location + 1;
+        return [NSCharacterSet characterSetWithRange:range];
+    }();
+}
+
 namespace UrlLib
 {
     class UrlRequest::Impl : public ImplBase
@@ -14,34 +25,32 @@ namespace UrlLib
         void Open(UrlMethod method, const std::string& url)
         {
             m_method = method;
-            NSString* urlString = [NSString stringWithUTF8String:url.data()];
-            NSURL* nsURL{[NSURL URLWithString:urlString]};
-            if (!nsURL || !nsURL.scheme)
+            m_url = [NSURL URLWithString:[[NSString stringWithUTF8String:url.data()] stringByAddingPercentEncodingWithAllowedCharacters:URLAllowedCharacterSet]];
+            if (!m_url || !m_url.scheme)
             {
                 throw std::runtime_error{"URL does not have a valid scheme"};
             }
-            NSString* scheme{nsURL.scheme};
+            NSString* scheme{m_url.scheme};
             if ([scheme isEqual:@"app"])
             {
-                NSString* path{[[NSBundle mainBundle] pathForResource:nsURL.path ofType:nil]};
+                NSString* path = [[NSBundle mainBundle] pathForResource:[m_url.path substringFromIndex:1] ofType:nil];
                 if (path == nil)
                 {
                     throw std::runtime_error{"No file exists at local path"};
                 }
-                nsURL = [NSURL fileURLWithPath:path];
+                m_url = [NSURL fileURLWithPath:path];
             }
-            m_nsURL = nsURL; // Only store the URL if we didn't throw
         }
 
         arcana::task<void, std::exception_ptr> SendAsync()
         {
-            if (m_nsURL == nil)
+            if (m_url == nil)
             {
                 // Complete the task, but retain the default status code of 0 to indicate a client side error.
                 return arcana::task_from_result<std::exception_ptr>();
             }
             NSURLSession* session{[NSURLSession sharedSession]};
-            NSURLRequest* request{[NSURLRequest requestWithURL:m_nsURL]};
+            NSURLRequest* request{[NSURLRequest requestWithURL:m_url]};
 
             __block arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
 
@@ -112,7 +121,7 @@ namespace UrlLib
         }
 
     private:
-        NSURL* m_nsURL{};
+        NSURL* m_url{};
         NSData* m_responseBuffer{};
     };
 }
