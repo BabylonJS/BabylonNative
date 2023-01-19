@@ -7,32 +7,33 @@ parameters:
   type: string
 
 jobs:
-  - job: ${{parameters.name}}
-    timeoutInMinutes: 5
-    pool:
-      vmImage: ${{parameters.vmImage}}
-    variables:
-      solutionName: 'Win32_${{parameters.platform}}'
-      buildDir: 'Build/${{variables.solutionName}}'
+- job: ${{parameters.name}}
+  timeoutInMinutes: 5
 
-    steps:
-      - task: Npm@1
-        inputs:
-          command: 'install'
-          workingDir: 'Test'
-        displayName: 'Install Babylon.js NPM packages'
+  pool:
+    vmImage: ${{parameters.vmImage}}
 
-      - script: |
-          cmake -B ${{variables.buildDir}} -A ${{parameters.platform}} ..
-        displayName: 'Generate ${{variables.solutionName}} solution'
+  variables:
+    solutionName: 'Win32_${{parameters.platform}}'
+    buildDir: 'Build/${{variables.solutionName}}'
 
-      - task: MSBuild@1
-        inputs:
-          solution: '${{variables.buildDir}}/JsRuntimeHost.sln'
-          maximumCpuCount: true
-          configuration: 'RelWithDebInfo'
-        displayName: 'Build ${{variables.solutionName}}'
+  steps:
+  - task: Npm@1
+    inputs:
+      command: 'install'
+      workingDir: 'Tests'
+    displayName: 'Install NPM packages'
 
-      - script: UnitTests
-        workingDirectory: `${{variables.buildDir}}/Tests/UnitTests/RelWithDebInfo`
-        displayName: 'Unit Tests'
+  - script: cmake -B ${{variables.buildDir}} -A ${{parameters.platform}}
+    displayName: 'Generate ${{variables.solutionName}} solution'
+
+  - task: MSBuild@1
+    inputs:
+      solution: '${{variables.buildDir}}/JsRuntimeHost.sln'
+      maximumCpuCount: true
+      configuration: 'RelWithDebInfo'
+    displayName: 'Build ${{variables.solutionName}}'
+
+  - script: UnitTests.exe
+    workingDirectory: '${{variables.buildDir}}/Tests/UnitTests/RelWithDebInfo'
+    displayName: 'Unit Tests'

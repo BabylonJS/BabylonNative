@@ -6,13 +6,13 @@ pr:
 
 jobs:
   # WIN32
-  - template: .github/jobs/win32.yml
+  - template: jobs/win32.yml
     parameters:
       name: Win32_x86
       vmImage: 'windows-latest'
       platform: win32
 
-  - template: .github/jobs/win32.yml
+  - template: jobs/win32.yml
     parameters:
       name: Win32_x64
       vmImage: 'windows-latest'
