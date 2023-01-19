@@ -32,37 +32,32 @@ describe("XMLHTTPRequest", function () {
     this.timeout(0);
 
     it("should have readyState=4 when load ends", async function () {
-        const xhr = await createRequest("GET", "https://babylonjs.com");
+        const xhr = await createRequest("GET", "https://httpbin.org/get");
         expect(xhr.readyState).to.equal(4);
     });
 
     it("should have status=200 for a file that exists", async function () {
-        const xhr = await createRequest("GET", "https://babylonjs.com");
+        const xhr = await createRequest("GET", "https://httpbin.org/status/200");
         expect(xhr.status).to.equal(200);
     });
 
-    it("should load unescaped URLs", async function () {
-        const xhr = await createRequest("GET", "https://github.com/BabylonJS/Assets/raw/master/meshes/στρογγυλεμένος % κύβος.glb");
+    it("should load URLs with escaped unicode characters", async function () {
+        const xhr = await createRequest("GET", "https://raw.githubusercontent.com/BabylonJS/Assets/master/meshes/%CF%83%CF%84%CF%81%CE%BF%CE%B3%CE%B3%CF%85%CE%BB%CE%B5%CE%BC%CE%AD%CE%BD%CE%BF%CF%82%20%25%20%CE%BA%CF%8D%CE%B2%CE%BF%CF%82.glb");
         expect(xhr.status).to.equal(200);
     });
 
-    it("should load partially unescaped URLs", async function () {
-        const xhr = await createRequest("GET", "https://github.com/BabylonJS/Assets/raw/master/meshes/στρογγυλεμένος%20%%20κύβος.glb");
+    it("should load URLs with unescaped unicode characters", async function () {
+        const xhr = await createRequest("GET", "https://raw.githubusercontent.com/BabylonJS/Assets/master/meshes/στρογγυλεμένος%20%25%20κύβος.glb");
         expect(xhr.status).to.equal(200);
     });
 
-    it("should load escaped URLs", async function () {
-        const xhr = await createRequest("GET", "https://github.com/BabylonJS/Assets/raw/master/meshes/%CF%83%CF%84%CF%81%CE%BF%CE%B3%CE%B3%CF%85%CE%BB%CE%B5%CE%BC%CE%AD%CE%BD%CE%BF%CF%82%20%25%20%CE%BA%CF%8D%CE%B2%CE%BF%CF%82.glb");
-        expect(xhr.status).to.equal(200);
-    });
-
-    it("should load URLs with unescaped %s", async function () {
-        const xhr = await createRequest("GET", "https://github.com/BabylonJS/Assets/raw/master/meshes/%CF%83%CF%84%CF%81%CE%BF%CE%B3%CE%B3%CF%85%CE%BB%CE%B5%CE%BC%CE%AD%CE%BD%CE%BF%CF%82%20%%20%CE%BA%CF%8D%CE%B2%CE%BF%CF%82.glb");
+    it("should load URLs with unescaped unicode characters and spaces", async function () {
+        const xhr = await createRequest("GET", "https://raw.githubusercontent.com/BabylonJS/Assets/master/meshes/στρογγυλεμένος %25 κύβος.glb");
         expect(xhr.status).to.equal(200);
     });
 
     it("should have status=404 for a file that does not exist", async function () {
-        const xhr = await createRequest("GET", "https://babylonjs.com/invalid");
+        const xhr = await createRequest("GET", "https://httpbin.org/status/404");
         expect(xhr.status).to.equal(404);
     });
 

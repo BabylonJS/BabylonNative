@@ -44,7 +44,7 @@ if(NOT TARGET UrlLib AND JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST)
     FetchContent_Declare(
         UrlLib
         GIT_REPOSITORY https://github.com/BabylonJS/UrlLib.git
-        GIT_TAG        0007501304a710f14626f34a73c05bcb371de92f)
+        GIT_TAG        558af491b2ec413d2eefefef1629dc652a5f9a04)
 
     message(STATUS "Fetching UrlLib")
     FetchContent_MakeAvailable(UrlLib)
