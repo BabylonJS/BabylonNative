@@ -442,9 +442,9 @@ namespace Babylon::Plugins
 
     void CameraDevice::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
-        // Hook into the BeforeRender loop to copy over the texture. Capture the cancellation token so that the shared pointer is kept alive when
-        // arcana checks internally for cancellation.
-        arcana::make_task(m_impl->deviceContext->BeforeRenderScheduler(), *m_impl->cancellationSource, [this, textureHandle, cancellationSource{m_impl->cancellationSource}] {
+        // Hook into AfterRender to copy over the texture, ensuring that the textureHandle has already been initialized by bgfx.
+        // Capture the cancellation token so that the shared pointer is kept alive when arcana checks internally for cancellation.
+        arcana::make_task(m_impl->deviceContext->AfterRenderScheduler(), *m_impl->cancellationSource, [this, textureHandle, cancellationSource{m_impl->cancellationSource}] {
             id<MTLTexture> textureY{};
             id<MTLTexture> textureCbCr{};
             int64_t width{0};
@@ -484,13 +484,16 @@ namespace Babylon::Plugins
                 m_impl->textureRGBA = [m_impl->metalDevice newTextureWithDescriptor:textureDescriptor];
                 m_impl->cameraDimensions.width = static_cast<uint32_t>(width);
                 m_impl->cameraDimensions.height = static_cast<uint32_t>(height);
-                m_impl->refreshBgfxHandle = false;
+                // Setting up the bgfx texture may fail if the textureHandle hasn't been initialized in a bgfx::frame call yet, if so try agin on
+                // the next frame to override it.
+                m_impl->refreshBgfxHandle = bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_impl->textureRGBA)) == 0;
             }
-            
-            // Update the texture override incase the camera infrastructure has updated the texture interanlly
-            bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_impl->textureRGBA));
+            else if (m_impl->refreshBgfxHandle)
+            {
+                m_impl->refreshBgfxHandle = bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_impl->textureRGBA)) == 0;
+            }
 
-            if (textureY != nil && textureCbCr != nil && m_impl->textureRGBA != nil)
+            if (textureY != nil && textureCbCr != nil && m_impl->textureRGBA != nil && !m_impl->refreshBgfxHandle)
             {
                 m_impl->currentCommandBuffer = [m_impl->commandQueue commandBuffer];
                 m_impl->currentCommandBuffer.label = @"NativeCameraCommandBuffer";
