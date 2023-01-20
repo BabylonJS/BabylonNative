@@ -8,7 +8,7 @@ variables:
 - name: CMAKE_VERSION
   value: 3.25.2
 - name: NDK_VERSION
-  value: 21.4.7075529
+  value: 25.1.8937393
 - name: UNITY_BUILD
   value: true
 
