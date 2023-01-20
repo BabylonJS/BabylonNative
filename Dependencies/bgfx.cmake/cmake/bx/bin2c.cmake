@@ -18,7 +18,10 @@ file(GLOB_RECURSE BIN2C_SOURCES #
 
 target_sources(bin2c PRIVATE ${BIN2C_SOURCES})
 target_link_libraries(bin2c PRIVATE bx)
-set_target_properties(bin2c PROPERTIES FOLDER "bgfx/tools")
+set_target_properties(
+	bin2c PROPERTIES FOLDER "bgfx/tools" #
+					 OUTPUT_NAME ${BGFX_TOOLS_PREFIX}bin2c #
+)
 
 if(BGFX_BUILD_TOOLS_BIN2C AND BGFX_CUSTOM_TARGETS)
 	add_dependencies(tools bin2c)

@@ -24,7 +24,10 @@ target_sources(geometryc PRIVATE ${GEOMETRYC_SOURCES})
 target_include_directories(geometryc PRIVATE ${MESHOPTIMIZER_INCLUDE_DIR})
 target_link_libraries(geometryc PRIVATE bx bgfx-vertexlayout ${MESHOPTIMIZER_LIBRARIES})
 target_compile_definitions(geometryc PRIVATE "-D_CRT_SECURE_NO_WARNINGS")
-set_target_properties(geometryc PROPERTIES FOLDER "bgfx/tools")
+set_target_properties(
+	geometryc PROPERTIES FOLDER "bgfx/tools" #
+						 OUTPUT_NAME ${BGFX_TOOLS_PREFIX}geometryc #
+)
 
 if(BGFX_BUILD_TOOLS_GEOMETRY AND BGFX_CUSTOM_TARGETS)
 	add_dependencies(tools geometryc)

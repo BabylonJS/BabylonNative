@@ -18,7 +18,10 @@ file(GLOB_RECURSE TEXTUREC_SOURCES #
 
 target_sources(texturec PRIVATE ${TEXTUREC_SOURCES})
 target_link_libraries(texturec PRIVATE bimg_decode bimg_encode bimg)
-set_target_properties(texturec PROPERTIES FOLDER "bgfx/tools")
+set_target_properties(
+	texturec PROPERTIES FOLDER "bgfx/tools" #
+						OUTPUT_NAME ${BGFX_TOOLS_PREFIX}texturec #
+)
 
 if(BGFX_BUILD_TOOLS_TEXTURE AND BGFX_CUSTOM_TARGETS)
 	add_dependencies(tools texturec)

@@ -17,7 +17,10 @@ file(GLOB_RECURSE GEOMETRYV_SOURCES #
 
 target_sources(geometryv PRIVATE ${GEOMETRYV_SOURCES})
 target_link_libraries(geometryv example-common)
-set_target_properties(geometryv PROPERTIES FOLDER "bgfx/tools")
+set_target_properties(
+	geometryv PROPERTIES FOLDER "bgfx/tools" #
+						 OUTPUT_NAME ${BGFX_TOOLS_PREFIX}geometryv #
+)
 
 if(BGFX_BUILD_TOOLS_GEOMETRY AND BGFX_CUSTOM_TARGETS)
 	add_dependencies(tools geometryv)
