@@ -23,7 +23,7 @@
 
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
-    @public UIInterfaceOrientation UIOrientation;
+    @public AVCaptureVideoOrientation VideoOrientation;
 
     CVMetalTextureCacheRef textureCache;
 }
@@ -393,8 +393,8 @@ namespace Babylon::Plugins
         CameraDevice::CameraDimensions cameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
 
         // For portrait orientations swap the height and width of the video format dimensions.
-        if (m_impl->cameraTextureDelegate->UIOrientation == UIInterfaceOrientationPortrait
-            ||  m_impl->cameraTextureDelegate->UIOrientation == UIInterfaceOrientationPortraitUpsideDown)
+        if (m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationPortrait
+            ||  m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationPortraitUpsideDown)
         {
             std::swap(cameraDimensions.width, cameraDimensions.height);
         }
@@ -454,16 +454,15 @@ namespace Babylon::Plugins
                 textureY = [m_impl->cameraTextureDelegate getCameraTextureY];
                 textureCbCr = [m_impl->cameraTextureDelegate getCameraTextureCbCr];
                 
-                switch (m_impl->cameraTextureDelegate->UIOrientation)
+                switch (m_impl->cameraTextureDelegate->VideoOrientation)
                 {
-                    case UIInterfaceOrientationLandscapeRight:
-                    case UIInterfaceOrientationLandscapeLeft:
-                    case UIInterfaceOrientationUnknown:
+                    case AVCaptureVideoOrientationLandscapeRight:
+                    case AVCaptureVideoOrientationLandscapeLeft:
                         width = [textureY width];
                         height = [textureY height];
                         break;
-                    case UIInterfaceOrientationPortrait:
-                    case UIInterfaceOrientationPortraitUpsideDown:
+                    case AVCaptureVideoOrientationPortrait:
+                    case AVCaptureVideoOrientationPortraitUpsideDown:
                         // In portrait orientation the camera sensor is rotated 90 degrees so the width and height should be swapped
                         width = [textureY height];
                         height = [textureY width];
@@ -511,20 +510,35 @@ namespace Babylon::Plugins
                     [renderEncoder setRenderPipelineState:m_impl->cameraPipelineState];
 
                     // Set the vertex & UV data based on current orientation
-                    switch (m_impl->cameraTextureDelegate->UIOrientation)
+                    switch (m_impl->cameraTextureDelegate->VideoOrientation)
                     {
-                        case UIInterfaceOrientationLandscapeLeft:
-                        case UIInterfaceOrientationUnknown:
-                            [renderEncoder setVertexBytes:vertices_landscape_left length:sizeof(vertices_landscape_left) atIndex:0];
+                        case AVCaptureVideoOrientationLandscapeLeft:
+                            if (m_impl->avDevice.position == AVCaptureDevicePositionFront)
+                            {
+                                // The front camera sensor is oriented 180 out of sync from the rear sensor on iOS devices. Swap landscape orientations.
+                                [renderEncoder setVertexBytes:vertices_landscape_right length:sizeof(vertices_landscape_right) atIndex:0];
+                            }
+                            else
+                            {
+                                [renderEncoder setVertexBytes:vertices_landscape_left length:sizeof(vertices_landscape_left) atIndex:0];
+                            }
                             break;
-                        case UIInterfaceOrientationPortrait:
+                        case AVCaptureVideoOrientationPortrait:
                             [renderEncoder setVertexBytes:vertices_portrait length:sizeof(vertices_portrait) atIndex:0];
                             break;
-                        case UIInterfaceOrientationPortraitUpsideDown:
+                        case AVCaptureVideoOrientationPortraitUpsideDown:
                             [renderEncoder setVertexBytes:vertices_portrait_upsideddown length:sizeof(vertices_portrait_upsideddown) atIndex:0];
                             break;
-                        case UIInterfaceOrientationLandscapeRight:
-                            [renderEncoder setVertexBytes:vertices_landscape_right length:sizeof(vertices_landscape_right) atIndex:0];
+                        case AVCaptureVideoOrientationLandscapeRight:
+                            if (m_impl->avDevice.position == AVCaptureDevicePositionFront)
+                            {
+                                // The front camera sensor is oriented 180 out of sync from the rear sensor on iOS devices. Swap landscape orientations.
+                                [renderEncoder setVertexBytes:vertices_landscape_left length:sizeof(vertices_landscape_left) atIndex:0];
+                            }
+                            else
+                            {
+                                [renderEncoder setVertexBytes:vertices_landscape_right length:sizeof(vertices_landscape_right) atIndex:0];
+                            }
                             break;
                     }
 
@@ -655,17 +669,38 @@ namespace Babylon::Plugins
 */
 - (void)updateOrientation {
     UIApplication* sharedApplication{[UIApplication sharedApplication]};
+    UIInterfaceOrientation orientation{UIInterfaceOrientationUnknown};
 #if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
     UIScene* scene{[[[sharedApplication connectedScenes] allObjects] firstObject]};
-    self->UIOrientation = [(UIWindowScene*)scene interfaceOrientation];
+    orientation = [(UIWindowScene*)scene interfaceOrientation];
 #else
     if (@available(iOS 13.0, *)) {
-        self->UIOrientation = [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
+        orientation = [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
     }
     else {
-        self->UIOrientation = [sharedApplication statusBarOrientation];
+        orientation = [sharedApplication statusBarOrientation];
     }
 #endif
+
+    // Convert from UIInterfaceOrientation to AVCaptureVideoOrientation. The conversion is only used becauase
+    // MacOS doesn't have access to UIInterfaceOrientation but it does have AVCaptureVideoOrientation which
+    // lets us share more code without ifdefs
+    switch (orientation)
+        {
+            case UIInterfaceOrientationUnknown:
+            case UIInterfaceOrientationLandscapeLeft:
+                self->VideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
+                break;
+            case UIInterfaceOrientationLandscapeRight:
+                self->VideoOrientation = AVCaptureVideoOrientationLandscapeRight;
+                break;
+            case UIInterfaceOrientationPortrait:
+                self->VideoOrientation = AVCaptureVideoOrientationPortrait;
+                break;
+            case UIInterfaceOrientationPortraitUpsideDown:
+                self->VideoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
+                break;
+        }
 }
 
 -(void)OrientationDidChange:(NSNotification*)notification
