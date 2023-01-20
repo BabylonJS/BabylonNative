@@ -29,7 +29,7 @@ if(ANDROID AND NOT TARGET AndroidExtensions)
         GIT_TAG        efaa68b2882d882470e7d1374b0d52d80db3ca35)
 
     message(STATUS "Fetching AndroidExtensions")
-    FetchContent_MakeAvailable(arcana)
+    FetchContent_MakeAvailable(AndroidExtensions)
     message(STATUS "Fetching AndroidExtensions - done")
 endif()
 
@@ -37,7 +37,9 @@ if(ANDROID)
     set(ADDITIONAL_SOURCES
         "Source/UrlRequest_Android.cpp")
     set(ADDITIONAL_LIBRARIES
-        PRIVATE AndroidExtensions)
+        PRIVATE android
+        PRIVATE AndroidExtensions
+        PRIVATE log)
 elseif(APPLE)
     set(ADDITIONAL_SOURCES
         "Source/UrlRequest_Apple.mm")
@@ -71,7 +73,7 @@ target_include_directories(UrlLib PRIVATE "Source")
 target_link_libraries(UrlLib
     PUBLIC arcana
     ${ADDITIONAL_LIBRARIES})
-    
+
 if(APPLE)
     set_target_properties(UrlLib PROPERTIES
         XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
