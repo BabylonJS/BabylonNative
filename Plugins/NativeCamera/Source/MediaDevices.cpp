@@ -52,6 +52,33 @@ namespace Babylon::Plugins::Internal
 
             return std::move(promise);
         }
+        
+        static Napi::Value EnumerateDevices(const Napi::CallbackInfo& info)
+        {
+            auto env = info.Env();
+
+            auto deferred = Napi::Promise::Deferred::New(env);
+            auto promise = deferred.Promise();
+
+            std::vector<CameraDevice> cameraDevices{CameraDevice::GetCameraDevices(env)};
+            
+            Napi::Array devices{Napi::Array::New(env, cameraDevices.size())};
+            
+            for (unsigned long i=0; i<cameraDevices.size(); i++)
+            {
+                Napi::Object device{Napi::Object::New(env)};
+                device.Set("deviceId", Napi::String::New(env, std::to_string(i)));
+                device.Set("groupId", Napi::String::New(env, ""));
+                device.Set("kind", Napi::String::New(env, "videoinput"));
+                device.Set("label", Napi::String::New(env, ""));
+                
+                devices.Set(static_cast<uint32_t>(i), device);
+            }
+            
+            deferred.Resolve(devices);
+            
+            return std::move(promise);
+        }
     };
 }
 
@@ -79,6 +106,7 @@ namespace Babylon::Plugins::MediaDevices
         // append media devices to navigator
         Napi::Object mediaDevices = Napi::Object::New(env);
         mediaDevices.Set("getUserMedia", Napi::Function::New(env, &Internal::MediaDevices::GetUserMedia, "getUserMedia"));
+        mediaDevices.Set("enumerateDevices", Napi::Function::New(env, &Internal::MediaDevices::EnumerateDevices, "enumerateDevices"));
         navigator.Set("mediaDevices", mediaDevices);
     }
 }
