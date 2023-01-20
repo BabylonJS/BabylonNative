@@ -626,7 +626,7 @@ namespace Babylon::Plugins
     [self updateOrientation];
 #else
     // Orientation not supported on non-iOS devices. LandscapeLeft assumes the video is already in the correct orientation.
-    self->UIOrientation = UIInterfaceOrientationLandscapeLeft;
+    self->VideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
 #endif
 
     return self;
