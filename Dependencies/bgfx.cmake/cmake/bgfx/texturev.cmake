@@ -8,7 +8,11 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-add_executable(texturev)
+if(ANDROID)
+	add_library(texturev SHARED)
+else()
+	add_executable(texturev)
+endif()
 
 # Grab the texturev source files
 file(GLOB_RECURSE TEXTUREV_SOURCES #
@@ -26,7 +30,9 @@ if(BGFX_BUILD_TOOLS_TEXTURE AND BGFX_CUSTOM_TARGETS)
 	add_dependencies(tools texturev)
 endif()
 
-if(EMSCRIPTEN)
+if(ANDROID)
+	set_property(TARGET texturev PROPERTY PREFIX "")
+elseif(EMSCRIPTEN)
 	target_link_options(texturev PRIVATE -sMAX_WEBGL_VERSION=2)
 elseif(IOS)
 	set_target_properties(texturev PROPERTIES MACOSX_BUNDLE ON MACOSX_BUNDLE_GUI_IDENTIFIER texturev)

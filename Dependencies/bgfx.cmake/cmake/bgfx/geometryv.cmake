@@ -8,7 +8,11 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-add_executable(geometryv)
+if(ANDROID)
+	add_library(geometryv SHARED)
+else()
+	add_executable(geometryv)
+endif()
 
 # Grab the geometryv source files
 file(GLOB_RECURSE GEOMETRYV_SOURCES #
@@ -16,7 +20,7 @@ file(GLOB_RECURSE GEOMETRYV_SOURCES #
 )
 
 target_sources(geometryv PRIVATE ${GEOMETRYV_SOURCES})
-target_link_libraries(geometryv example-common)
+target_link_libraries(geometryv PRIVATE example-common)
 set_target_properties(
 	geometryv PROPERTIES FOLDER "bgfx/tools" #
 						 OUTPUT_NAME ${BGFX_TOOLS_PREFIX}geometryv #
@@ -26,7 +30,9 @@ if(BGFX_BUILD_TOOLS_GEOMETRY AND BGFX_CUSTOM_TARGETS)
 	add_dependencies(tools geometryv)
 endif()
 
-if(EMSCRIPTEN)
+if(ANDROID)
+	set_property(TARGET geometryv PROPERTY PREFIX "")
+elseif(EMSCRIPTEN)
 	target_link_options(geometryv PRIVATE -sMAX_WEBGL_VERSION=2)
 elseif(IOS)
 	set_target_properties(geometryv PROPERTIES MACOSX_BUNDLE ON MACOSX_BUNDLE_GUI_IDENTIFIER geometryv)
