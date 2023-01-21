@@ -51,6 +51,7 @@ option(BGFX_CONFIG_DEBUG_ANNOTATION "Enable gfx debug annotations (default: on i
 set(BGFX_OPENGL_VERSION "" CACHE STRING "Specify minimum opengl version")
 set(BGFX_OPENGLES_VERSION "" CACHE STRING "Specify minimum OpenGL ES version")
 set(BGFX_LIBRARY_TYPE "STATIC" CACHE STRING "Linking type for library")
+set_property(CACHE BGFX_LIBRARY_TYPE PROPERTY STRINGS "STATIC" "SHARED")
 
 set(BGFX_CONFIG_DEFAULT_MAX_ENCODERS "" CACHE STRING "Specify default maximum encoder count (multithreaded only)")
 set(BGFX_CONFIG_MAX_DRAW_CALLS "" CACHE STRING "Specify maximum draw calls")
@@ -71,9 +72,7 @@ if(BGFX_CMAKE_USER_SCRIPT)
 	include(${BGFX_CMAKE_USER_SCRIPT})
 endif()
 
-set_property(CACHE BGFX_LIBRARY_TYPE PROPERTY STRINGS STATIC SHARED)
-
-if(BGFX_LIBRARY_TYPE MATCHES "SHARED")
+if(BGFX_LIBRARY_TYPE MATCHES "STATIC")
 	set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 endif()
 
