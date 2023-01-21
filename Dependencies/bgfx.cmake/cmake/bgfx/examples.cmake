@@ -86,7 +86,7 @@ function(add_bgfx_shader FILE FOLDER)
 		# glsl
 		set(GLSL_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/glsl/${FILENAME}.bin)
 		if(NOT "${TYPE}" STREQUAL "COMPUTE")
-			_bgfx_shaderc_parse(GLSL ${COMMON} LINUX PROFILE 120 OUTPUT ${GLSL_OUTPUT})
+			_bgfx_shaderc_parse(GLSL ${COMMON} LINUX PROFILE 140 OUTPUT ${GLSL_OUTPUT})
 		else()
 			_bgfx_shaderc_parse(GLSL ${COMMON} LINUX PROFILE 430 OUTPUT ${GLSL_OUTPUT})
 		endif()
