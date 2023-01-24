@@ -116,15 +116,15 @@ namespace Babylon::Graphics
     void DeviceImpl::AddToJavaScript(Napi::Env env)
     {
         JsRuntime::NativeObject::GetFromJavaScript(env)
-        .Set(JS_GRAPHICS_NAME, Napi::External<DeviceImpl>::New(env, this));
+            .Set(JS_GRAPHICS_NAME, Napi::External<DeviceImpl>::New(env, this));
     }
 
     DeviceImpl& DeviceImpl::GetFromJavaScript(Napi::Env env)
     {
         return *JsRuntime::NativeObject::GetFromJavaScript(env)
-                .Get(JS_GRAPHICS_NAME)
-                .As<Napi::External<DeviceImpl>>()
-                .Data();
+                    .Get(JS_GRAPHICS_NAME)
+                    .As<Napi::External<DeviceImpl>>()
+                    .Data();
     }
 
     Napi::Value DeviceImpl::CreateContext(Napi::Env env)

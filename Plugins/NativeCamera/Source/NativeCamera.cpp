@@ -14,12 +14,12 @@ namespace Babylon::Plugins::Internal
         static void Initialize(Napi::Env& env)
         {
             Napi::Function func = DefineClass(
-            env,
-            "_NativeCamera",
-            {
-            InstanceMethod("createVideo", &NativeCamera::CreateVideo),
-            InstanceMethod("updateVideoTexture", &NativeCamera::UpdateVideoTexture),
-            });
+                env,
+                "_NativeCamera",
+                {
+                    InstanceMethod("createVideo", &NativeCamera::CreateVideo),
+                    InstanceMethod("updateVideoTexture", &NativeCamera::UpdateVideoTexture),
+                });
 
             JsRuntime::NativeObject::GetFromJavaScript(env).Set("Camera", func);
         }

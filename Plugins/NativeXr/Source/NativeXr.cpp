@@ -107,36 +107,36 @@ namespace
     }
 
     constexpr std::array<const char*, 25> HAND_JOINT_NAMES{
-    "wrist",
+        "wrist",
 
-    "thumb-metacarpal",
-    "thumb-phalanx-proximal",
-    "thumb-phalanx-distal",
-    "thumb-tip",
+        "thumb-metacarpal",
+        "thumb-phalanx-proximal",
+        "thumb-phalanx-distal",
+        "thumb-tip",
 
-    "index-finger-metacarpal",
-    "index-finger-phalanx-proximal",
-    "index-finger-phalanx-intermediate",
-    "index-finger-phalanx-distal",
-    "index-finger-tip",
+        "index-finger-metacarpal",
+        "index-finger-phalanx-proximal",
+        "index-finger-phalanx-intermediate",
+        "index-finger-phalanx-distal",
+        "index-finger-tip",
 
-    "middle-finger-metacarpal",
-    "middle-finger-phalanx-proximal",
-    "middle-finger-phalanx-intermediate",
-    "middle-finger-phalanx-distal",
-    "middle-finger-tip",
+        "middle-finger-metacarpal",
+        "middle-finger-phalanx-proximal",
+        "middle-finger-phalanx-intermediate",
+        "middle-finger-phalanx-distal",
+        "middle-finger-tip",
 
-    "ring-finger-metacarpal",
-    "ring-finger-phalanx-proximal",
-    "ring-finger-phalanx-intermediate",
-    "ring-finger-phalanx-distal",
-    "ring-finger-tip",
+        "ring-finger-metacarpal",
+        "ring-finger-phalanx-proximal",
+        "ring-finger-phalanx-intermediate",
+        "ring-finger-phalanx-distal",
+        "ring-finger-tip",
 
-    "pinky-finger-metacarpal",
-    "pinky-finger-phalanx-proximal",
-    "pinky-finger-phalanx-intermediate",
-    "pinky-finger-phalanx-distal",
-    "pinky-finger-tip"};
+        "pinky-finger-metacarpal",
+        "pinky-finger-phalanx-proximal",
+        "pinky-finger-phalanx-intermediate",
+        "pinky-finger-phalanx-distal",
+        "pinky-finger-tip"};
 
     void SetXRInputSourceData(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
     {
@@ -213,8 +213,8 @@ namespace
     Napi::ObjectReference CreateXRInputSource(xr::System::Session::Frame::InputSource& inputSource, Napi::Env& env)
     {
         constexpr std::array<const char*, 2> HANDEDNESS_STRINGS{
-        "left",
-        "right"};
+            "left",
+            "right"};
         constexpr const char* TARGET_RAY_MODE{"tracked-pointer"};
 
         auto jsInputSource = Napi::Object::New(env);
@@ -237,9 +237,9 @@ namespace
         if (object.Has("type"))
         {
             const std::map<std::string, xr::DetectionBoundaryType> detectionBoundaryTypeMap{
-            {"box", xr::DetectionBoundaryType::Box},
-            {"frustum", xr::DetectionBoundaryType::Frustum},
-            {"sphere", xr::DetectionBoundaryType::Sphere}};
+                {"box", xr::DetectionBoundaryType::Box},
+                {"frustum", xr::DetectionBoundaryType::Frustum},
+                {"sphere", xr::DetectionBoundaryType::Sphere}};
             detectionBoundary.Type = detectionBoundaryTypeMap.at(object.Get("type").As<Napi::String>());
         }
 
@@ -347,8 +347,8 @@ namespace Babylon
             {
                 const auto& activeViewConfigs = m_sessionState->ActiveViewConfigurations;
                 if (activeViewConfigs.size() <= viewIndex ||
-                activeViewConfigs[viewIndex] == nullptr ||
-                !activeViewConfigs[viewIndex]->Initialized)
+                    activeViewConfigs[viewIndex] == nullptr ||
+                    !activeViewConfigs[viewIndex]->Initialized)
                 {
                     return m_env.Null();
                 }
@@ -504,23 +504,23 @@ namespace Babylon
 
             // Don't try to start a session while it is still ending.
             m_beginTask.emplace(m_endTask.then(context.AfterRenderScheduler(), arcana::cancellation::none(),
-            [this, thisRef{shared_from_this()}, &context]() {
-                assert(m_sessionState == nullptr);
+                [this, thisRef{shared_from_this()}, &context]() {
+                    assert(m_sessionState == nullptr);
 
-                m_sessionState = std::make_unique<SessionState>(context);
+                    m_sessionState = std::make_unique<SessionState>(context);
 
-                if (!m_system.IsInitialized() &&
-                !m_system.TryInitialize())
-                {
-                    throw std::runtime_error{"Failed to initialize xr system."};
-                }
+                    if (!m_system.IsInitialized() &&
+                        !m_system.TryInitialize())
+                    {
+                        throw std::runtime_error{"Failed to initialize xr system."};
+                    }
 
-                return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, bgfx::getInternalData()->commandQueue, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
-                .then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
-                    m_sessionState->Session = std::move(session);
-                    NotifySessionStateChanged(true);
-                });
-            }));
+                    return xr::System::Session::CreateAsync(m_system, bgfx::getInternalData()->context, bgfx::getInternalData()->commandQueue, [this, thisRef{shared_from_this()}] { return m_windowPtr; })
+                        .then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](std::shared_ptr<xr::System::Session> session) {
+                            m_sessionState->Session = std::move(session);
+                            NotifySessionStateChanged(true);
+                        });
+                }));
 
             return m_beginTask.value();
         }
@@ -543,26 +543,26 @@ namespace Babylon
                                        // Also don't try to end the session while a frame is in progress.
                                        return m_sessionState->FrameTask;
                                    })
-                        .then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
-                            assert(m_sessionState != nullptr);
-                            assert(m_sessionState->Session != nullptr);
-                            assert(m_sessionState->Frame == nullptr);
+                            .then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
+                                assert(m_sessionState != nullptr);
+                                assert(m_sessionState->Session != nullptr);
+                                assert(m_sessionState->Frame == nullptr);
 
-                            m_sessionState->Session->RequestEndSession();
+                                m_sessionState->Session->RequestEndSession();
 
-                            bool shouldEndSession{};
-                            bool shouldRestartSession{};
-                            do
-                            {
-                                // Block and burn frames until XR successfully shuts down.
-                                m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession);
-                                m_sessionState->Frame.reset();
-                            } while (!shouldEndSession);
+                                bool shouldEndSession{};
+                                bool shouldRestartSession{};
+                                do
+                                {
+                                    // Block and burn frames until XR successfully shuts down.
+                                    m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession);
+                                    m_sessionState->Frame.reset();
+                                } while (!shouldEndSession);
 
-                            m_sessionState.reset();
-                            m_beginTask.reset();
-                            NotifySessionStateChanged(false);
-                        });
+                                m_sessionState.reset();
+                                m_beginTask.reset();
+                                NotifySessionStateChanged(false);
+                            });
 
             return m_endTask;
         }
@@ -598,14 +598,12 @@ namespace Babylon
                     }
 
                     EndUpdate();
-                })
-                .then(arcana::inline_scheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>& result) {
-                    if (!m_sessionState->CancellationSource.cancelled() && result.has_error())
-                    {
-                        Napi::Error::New(m_env, result.error()).ThrowAsJavaScriptException();
-                    }
-                })
-                .then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
+                }).then(arcana::inline_scheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>& result) {
+                      if (!m_sessionState->CancellationSource.cancelled() && result.has_error())
+                      {
+                          Napi::Error::New(m_env, result.error()).ThrowAsJavaScriptException();
+                      }
+                  }).then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
                     EndFrame();
                 });
             });
@@ -636,8 +634,7 @@ namespace Babylon
 
                         m_sessionState->TextureToViewConfigurationMap.erase(texturePointer);
                     }
-                })
-                .then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [] {}); // Ensure continuations run on the render thread if they use inline_scheduler.
+                }).then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [] {}); // Ensure continuations run on the render thread if they use inline_scheduler.
             });
 
             // Ending a session outside of calls to EndSessionAsync() is currently not supported.
@@ -656,9 +653,9 @@ namespace Babylon
                 const auto& it{m_sessionState->TextureToViewConfigurationMap.find(view.ColorTexturePointer)};
 
                 if (it == m_sessionState->TextureToViewConfigurationMap.end() ||
-                it->second.ViewTextureSize.Width != view.ColorTextureSize.Width ||
-                it->second.ViewTextureSize.Height != view.ColorTextureSize.Height ||
-                it->second.ViewTextureSize.Depth != view.ColorTextureSize.Depth)
+                    it->second.ViewTextureSize.Width != view.ColorTextureSize.Width ||
+                    it->second.ViewTextureSize.Height != view.ColorTextureSize.Height ||
+                    it->second.ViewTextureSize.Depth != view.ColorTextureSize.Depth)
                 {
                     auto& viewConfig = m_sessionState->TextureToViewConfigurationMap[view.ColorTexturePointer] = {};
                     m_sessionState->ActiveViewConfigurations[viewIdx] = &viewConfig;
@@ -696,50 +693,48 @@ namespace Babylon
                     arcana::make_task(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &viewConfig]() {
                         bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(viewConfig.ColorTexturePointer));
                         bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(viewConfig.DepthTexturePointer));
-                    })
-                    .then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, requiresAppClear, &viewConfig]() {
-                        const auto eyeCount = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(viewConfig.ViewTextureSize.Depth));
-                        // TODO (rgerd): Remove old framebuffers from resource table?
-                        viewConfig.FrameBuffers.resize(eyeCount);
-                        for (uint16_t eyeIdx = 0; eyeIdx < eyeCount; eyeIdx++)
-                        {
-                            std::array<bgfx::Attachment, 2> attachments{};
-                            attachments[0].init(colorTexture, bgfx::Access::Write, eyeIdx);
-                            attachments[1].init(depthTexture, bgfx::Access::Write, eyeIdx);
+                    }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, requiresAppClear, &viewConfig]() {
+                          const auto eyeCount = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(viewConfig.ViewTextureSize.Depth));
+                          // TODO (rgerd): Remove old framebuffers from resource table?
+                          viewConfig.FrameBuffers.resize(eyeCount);
+                          for (uint16_t eyeIdx = 0; eyeIdx < eyeCount; eyeIdx++)
+                          {
+                              std::array<bgfx::Attachment, 2> attachments{};
+                              attachments[0].init(colorTexture, bgfx::Access::Write, eyeIdx);
+                              attachments[1].init(depthTexture, bgfx::Access::Write, eyeIdx);
 
-                            auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
+                              auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
-                            const auto frameBufferPtr = new Graphics::FrameBuffer(
-                            m_sessionState->GraphicsContext,
-                            frameBufferHandle,
-                            static_cast<uint16_t>(viewConfig.ViewTextureSize.Width),
-                            static_cast<uint16_t>(viewConfig.ViewTextureSize.Height),
-                            true,
-                            true,
-                            true);
+                              const auto frameBufferPtr = new Graphics::FrameBuffer(
+                                  m_sessionState->GraphicsContext,
+                                  frameBufferHandle,
+                                  static_cast<uint16_t>(viewConfig.ViewTextureSize.Width),
+                                  static_cast<uint16_t>(viewConfig.ViewTextureSize.Height),
+                                  true,
+                                  true,
+                                  true);
 
-                            auto& frameBuffer = *frameBufferPtr;
+                              auto& frameBuffer = *frameBufferPtr;
 
-                            // WebXR, at least in its current implementation, specifies an implicit default clear to black.
-                            // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
-                            frameBuffer.Clear(*m_sessionState->Update.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
+                              // WebXR, at least in its current implementation, specifies an implicit default clear to black.
+                              // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
+                              frameBuffer.Clear(*m_sessionState->Update.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
 
-                            viewConfig.FrameBuffers[eyeIdx] = frameBufferPtr;
+                              viewConfig.FrameBuffers[eyeIdx] = frameBufferPtr;
 
-                            auto jsWidth{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Width)};
-                            auto jsHeight{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Height)};
-                            auto jsFrameBuffer{Napi::Pointer<Graphics::FrameBuffer>::Create(m_env, frameBufferPtr, Napi::NapiPointerDeleter(frameBufferPtr))};
-                            viewConfig.JsTextures[frameBufferPtr] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
-                            // OpenXR doesn't pre-clear textures, and so we need to make sure the render target gets cleared before rendering the scene.
-                            // ARCore and ARKit effectively pre-clear by pre-compositing the camera feed.
-                            if (requiresAppClear)
-                            {
-                                viewConfig.JsTextures[frameBufferPtr].Set("skipInitialClear", false);
-                            }
-                        }
-                        viewConfig.Initialized = true;
-                    })
-                    .then(arcana::inline_scheduler, m_sessionState->CancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
+                              auto jsWidth{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Width)};
+                              auto jsHeight{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Height)};
+                              auto jsFrameBuffer{Napi::Pointer<Graphics::FrameBuffer>::Create(m_env, frameBufferPtr, Napi::NapiPointerDeleter(frameBufferPtr))};
+                              viewConfig.JsTextures[frameBufferPtr] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
+                              // OpenXR doesn't pre-clear textures, and so we need to make sure the render target gets cleared before rendering the scene.
+                              // ARCore and ARKit effectively pre-clear by pre-compositing the camera feed.
+                              if (requiresAppClear)
+                              {
+                                  viewConfig.JsTextures[frameBufferPtr].Set("skipInitialClear", false);
+                              }
+                          }
+                          viewConfig.Initialized = true;
+                      }).then(arcana::inline_scheduler, m_sessionState->CancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
                         if (result.has_error())
                         {
                             Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
@@ -858,9 +853,9 @@ namespace Babylon
             static void Initialize(Napi::Env& env)
             {
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {});
+                    env,
+                    JS_CLASS_NAME,
+                    {});
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -890,9 +885,9 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {});
+                    env,
+                    JS_CLASS_NAME,
+                    {});
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -918,11 +913,11 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                InstanceMethod("getViewport", &XRWebGLLayer::GetViewport),
-                });
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("getViewport", &XRWebGLLayer::GetViewport),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -956,13 +951,13 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                InstanceAccessor("position", &XRRigidTransform::Position, nullptr),
-                InstanceAccessor("orientation", &XRRigidTransform::Orientation, nullptr),
-                InstanceAccessor("matrix", &XRRigidTransform::Matrix, nullptr),
-                });
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceAccessor("position", &XRRigidTransform::Position, nullptr),
+                        InstanceAccessor("orientation", &XRRigidTransform::Orientation, nullptr),
+                        InstanceAccessor("matrix", &XRRigidTransform::Matrix, nullptr),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1048,8 +1043,8 @@ namespace Babylon
                 auto position = m_position.Value();
                 auto orientation = m_orientation.Value();
                 return {
-                {position.Get("x").ToNumber().FloatValue(), position.Get("y").ToNumber().FloatValue(), position.Get("z").ToNumber().FloatValue()},
-                {orientation.Get("x").ToNumber().FloatValue(), orientation.Get("y").ToNumber().FloatValue(), orientation.Get("z").ToNumber().FloatValue(), orientation.Get("w").ToNumber().FloatValue()}};
+                    {position.Get("x").ToNumber().FloatValue(), position.Get("y").ToNumber().FloatValue(), position.Get("z").ToNumber().FloatValue()},
+                    {orientation.Get("x").ToNumber().FloatValue(), orientation.Get("y").ToNumber().FloatValue(), orientation.Get("z").ToNumber().FloatValue(), orientation.Get("w").ToNumber().FloatValue()}};
             }
 
         private:
@@ -1084,12 +1079,12 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {InstanceAccessor("eye", &XRView::GetEye, nullptr),
-                InstanceAccessor("projectionMatrix", &XRView::GetProjectionMatrix, nullptr),
-                InstanceAccessor("transform", &XRView::GetTransform, nullptr),
-                InstanceAccessor("isFirstPersonObserver", &XRView::IsFirstPersonObserver, nullptr)});
+                    env,
+                    JS_CLASS_NAME,
+                    {InstanceAccessor("eye", &XRView::GetEye, nullptr),
+                        InstanceAccessor("projectionMatrix", &XRView::GetProjectionMatrix, nullptr),
+                        InstanceAccessor("transform", &XRView::GetTransform, nullptr),
+                        InstanceAccessor("isFirstPersonObserver", &XRView::IsFirstPersonObserver, nullptr)});
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1162,13 +1157,13 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                InstanceAccessor("transform", &XRViewerPose::GetTransform, nullptr),
-                InstanceAccessor("views", &XRViewerPose::GetViews, nullptr),
-                InstanceAccessor("emulatedPosition", &XRViewerPose::GetEmulatedPosition, nullptr),
-                });
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceAccessor("transform", &XRViewerPose::GetTransform, nullptr),
+                        InstanceAccessor("views", &XRViewerPose::GetViews, nullptr),
+                        InstanceAccessor("emulatedPosition", &XRViewerPose::GetEmulatedPosition, nullptr),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1268,11 +1263,11 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                InstanceAccessor("transform", &XRPose::GetTransform, nullptr),
-                });
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceAccessor("transform", &XRPose::GetTransform, nullptr),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1322,13 +1317,13 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                InstanceAccessor("origin", &XRRay::Origin, nullptr),
-                InstanceAccessor("direction", &XRRay::Direction, nullptr),
-                InstanceAccessor("matrix", &XRRay::Matrix, nullptr),
-                });
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceAccessor("origin", &XRRay::Origin, nullptr),
+                        InstanceAccessor("direction", &XRRay::Direction, nullptr),
+                        InstanceAccessor("matrix", &XRRay::Matrix, nullptr),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1469,11 +1464,11 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                InstanceMethod("getOffsetReferenceSpace", &XRReferenceSpace::GetOffsetReferenceSpace),
-                });
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("getOffsetReferenceSpace", &XRReferenceSpace::GetOffsetReferenceSpace),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1498,7 +1493,7 @@ namespace Babylon
                         // TODO: Actually support the different types of reference spaces.
                         const auto referenceSpaceType = info[0].As<Napi::String>().Utf8Value();
                         assert(referenceSpaceType == XRReferenceSpaceType::UNBOUNDED ||
-                        referenceSpaceType == XRReferenceSpaceType::VIEWER);
+                            referenceSpaceType == XRReferenceSpaceType::VIEWER);
                         (void)XRReferenceSpaceType::UNBOUNDED;
                         (void)XRReferenceSpaceType::VIEWER;
                     }
@@ -1542,11 +1537,11 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                InstanceMethod("delete", &XRAnchor::Delete),
-                });
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("delete", &XRAnchor::Delete),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1597,11 +1592,11 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                InstanceMethod("cancel", &XRHitTestSource::Cancel),
-                });
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("cancel", &XRHitTestSource::Cancel),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1702,12 +1697,12 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                InstanceMethod("getPose", &XRHitTestResult::GetPose),
-                InstanceMethod("createAnchor", &XRHitTestResult::CreateAnchor),
-                });
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("getPose", &XRHitTestResult::GetPose),
+                        InstanceMethod("createAnchor", &XRHitTestResult::CreateAnchor),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1762,11 +1757,11 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {InstanceAccessor("polygon", &XRPlane::GetPolygon, nullptr),
-                InstanceAccessor("lastChangedTime", &XRPlane::GetLastChangedTime, nullptr),
-                InstanceAccessor("parentSceneObject", &XRPlane::GetParentSceneObject, nullptr)});
+                    env,
+                    JS_CLASS_NAME,
+                    {InstanceAccessor("polygon", &XRPlane::GetPolygon, nullptr),
+                        InstanceAccessor("lastChangedTime", &XRPlane::GetLastChangedTime, nullptr),
+                        InstanceAccessor("parentSceneObject", &XRPlane::GetParentSceneObject, nullptr)});
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1863,13 +1858,13 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {InstanceAccessor("positions", &XRMesh::GetPositions, nullptr),
-                InstanceAccessor("indices", &XRMesh::GetIndices, nullptr),
-                InstanceAccessor("normals", &XRMesh::GetNormals, nullptr),
-                InstanceAccessor("lastChangedTime", &XRMesh::GetLastChangedTime, nullptr),
-                InstanceAccessor("parentSceneObject", &XRMesh::GetParentSceneObject, nullptr)});
+                    env,
+                    JS_CLASS_NAME,
+                    {InstanceAccessor("positions", &XRMesh::GetPositions, nullptr),
+                        InstanceAccessor("indices", &XRMesh::GetIndices, nullptr),
+                        InstanceAccessor("normals", &XRMesh::GetNormals, nullptr),
+                        InstanceAccessor("lastChangedTime", &XRMesh::GetLastChangedTime, nullptr),
+                        InstanceAccessor("parentSceneObject", &XRMesh::GetParentSceneObject, nullptr)});
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1921,7 +1916,7 @@ namespace Babylon
                 constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
                 bool updateValues = false;
                 if (!m_jsPositions ||
-                m_numJsPositions != VECTOR3_NUM_FLOATS * mesh.Positions.size())
+                    m_numJsPositions != VECTOR3_NUM_FLOATS * mesh.Positions.size())
                 {
                     m_numJsPositions = VECTOR3_NUM_FLOATS * mesh.Positions.size();
                     m_jsPositions.Reset();
@@ -1953,7 +1948,7 @@ namespace Babylon
                 assert(sizeof(xr::System::Session::Frame::Mesh::IndexType) == sizeof(uint32_t));
                 const auto& mesh = GetMesh();
                 if (!m_jsIndices ||
-                m_numJsIndices != mesh.Indices.size())
+                    m_numJsIndices != mesh.Indices.size())
                 {
                     m_numJsIndices = mesh.Indices.size();
                     m_jsIndices.Reset();
@@ -1981,7 +1976,7 @@ namespace Babylon
 
                 constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
                 if (!m_jsNormals ||
-                m_numJsNormals != VECTOR3_NUM_FLOATS * mesh.Normals.size())
+                    m_numJsNormals != VECTOR3_NUM_FLOATS * mesh.Normals.size())
                 {
                     m_numJsNormals = VECTOR3_NUM_FLOATS * mesh.Normals.size();
                     m_jsNormals.Reset();
@@ -2059,9 +2054,9 @@ namespace Babylon
                 initList.push_back(StaticAccessor("size", &XRHand::GetSize, nullptr));
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                initList);
+                    env,
+                    JS_CLASS_NAME,
+                    initList);
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -2093,21 +2088,21 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                InstanceMethod("getViewerPose", &XRFrame::GetViewerPose),
-                InstanceMethod("getPoseData", &XRFrame::GetPoseData),
-                InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
-                InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
-                InstanceMethod("getJointPose", &XRFrame::GetJointPose),
-                InstanceMethod("fillPoses", &XRFrame::FillPoses),
-                InstanceMethod("fillJointRadii", &XRFrame::FillJointRadii),
-                InstanceMethod("getImageTrackingResults", &XRFrame::GetImageTrackingResults),
-                InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
-                InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
-                InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr),
-                });
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("getViewerPose", &XRFrame::GetViewerPose),
+                        InstanceMethod("getPoseData", &XRFrame::GetPoseData),
+                        InstanceMethod("getHitTestResults", &XRFrame::GetHitTestResults),
+                        InstanceMethod("createAnchor", &XRFrame::CreateAnchor),
+                        InstanceMethod("getJointPose", &XRFrame::GetJointPose),
+                        InstanceMethod("fillPoses", &XRFrame::FillPoses),
+                        InstanceMethod("fillJointRadii", &XRFrame::FillJointRadii),
+                        InstanceMethod("getImageTrackingResults", &XRFrame::GetImageTrackingResults),
+                        InstanceAccessor("trackedAnchors", &XRFrame::GetTrackedAnchors, nullptr),
+                        InstanceAccessor("worldInformation", &XRFrame::GetWorldInformation, nullptr),
+                        InstanceAccessor("featurePointCloud", &XRFrame::GetFeaturePointCloud, nullptr),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -2652,24 +2647,24 @@ namespace Babylon
             static void Initialize(Napi::Env env)
             {
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                InstanceAccessor("inputSources", &XRSession::GetInputSources, nullptr),
-                InstanceMethod("addEventListener", &XRSession::AddEventListener),
-                InstanceMethod("removeEventListener", &XRSession::RemoveEventListener),
-                InstanceMethod("requestReferenceSpace", &XRSession::RequestReferenceSpace),
-                InstanceMethod("updateRenderState", &XRSession::UpdateRenderState),
-                InstanceMethod("requestAnimationFrame", &XRSession::RequestAnimationFrame),
-                InstanceMethod("end", &XRSession::End),
-                InstanceMethod("requestHitTestSource", &XRSession::RequestHitTestSource),
-                InstanceMethod("updateWorldTrackingState", &XRSession::UpdateWorldTrackingState),
-                InstanceMethod("trySetFeaturePointCloudEnabled", &XRSession::TrySetFeaturePointCloudEnabled),
-                InstanceMethod("trySetPreferredPlaneDetectorOptions", &XRSession::TrySetPreferredPlaneDetectorOptions),
-                InstanceMethod("trySetMeshDetectorEnabled", &XRSession::TrySetMeshDetectorEnabled),
-                InstanceMethod("trySetPreferredMeshDetectorOptions", &XRSession::TrySetPreferredMeshDetectorOptions),
-                InstanceMethod("getTrackedImageScores", &XRSession::GetTrackedImageScores),
-                });
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceAccessor("inputSources", &XRSession::GetInputSources, nullptr),
+                        InstanceMethod("addEventListener", &XRSession::AddEventListener),
+                        InstanceMethod("removeEventListener", &XRSession::RemoveEventListener),
+                        InstanceMethod("requestReferenceSpace", &XRSession::RequestReferenceSpace),
+                        InstanceMethod("updateRenderState", &XRSession::UpdateRenderState),
+                        InstanceMethod("requestAnimationFrame", &XRSession::RequestAnimationFrame),
+                        InstanceMethod("end", &XRSession::End),
+                        InstanceMethod("requestHitTestSource", &XRSession::RequestHitTestSource),
+                        InstanceMethod("updateWorldTrackingState", &XRSession::UpdateWorldTrackingState),
+                        InstanceMethod("trySetFeaturePointCloudEnabled", &XRSession::TrySetFeaturePointCloudEnabled),
+                        InstanceMethod("trySetPreferredPlaneDetectorOptions", &XRSession::TrySetPreferredPlaneDetectorOptions),
+                        InstanceMethod("trySetMeshDetectorEnabled", &XRSession::TrySetMeshDetectorEnabled),
+                        InstanceMethod("trySetPreferredMeshDetectorOptions", &XRSession::TrySetPreferredMeshDetectorOptions),
+                        InstanceMethod("getTrackedImageScores", &XRSession::GetTrackedImageScores),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -2702,29 +2697,29 @@ namespace Babylon
 
                         // Construct the image tracking request object.
                         session.m_imageTrackingRequests[idx] =
-                        {
-                        napiBuffer.Data(),
-                        imageWidth,
-                        imageHeight,
-                        imageDepth,
-                        stride,
-                        estimatedWidth};
+                            {
+                                napiBuffer.Data(),
+                                imageWidth,
+                                imageHeight,
+                                imageDepth,
+                                stride,
+                                estimatedWidth};
                     }
                 }
 
                 auto deferred{Napi::Promise::Deferred::New(info.Env())};
                 session.m_xr->BeginSessionAsync()
-                .then(session.m_runtimeScheduler, arcana::cancellation::none(),
-                [deferred, jsSession{std::move(jsSession)}, env{info.Env()}](const arcana::expected<void, std::exception_ptr>& result) {
-                    if (result.has_error())
-                    {
-                        deferred.Reject(Napi::Error::New(env, result.error()).Value());
-                    }
-                    else
-                    {
-                        deferred.Resolve(jsSession.Value());
-                    }
-                });
+                    .then(session.m_runtimeScheduler, arcana::cancellation::none(),
+                        [deferred, jsSession{std::move(jsSession)}, env{info.Env()}](const arcana::expected<void, std::exception_ptr>& result) {
+                            if (result.has_error())
+                            {
+                                deferred.Reject(Napi::Error::New(env, result.error()).Value());
+                            }
+                            else
+                            {
+                                deferred.Resolve(jsSession.Value());
+                            }
+                        });
                 return deferred.Promise();
             }
 
@@ -2737,7 +2732,7 @@ namespace Babylon
             {
                 // Currently only immersive VR and immersive AR are supported.
                 assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR ||
-                info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);
+                    info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);
             }
 
             void InitializeXrLayer(Napi::Object layer)
@@ -2807,8 +2802,8 @@ namespace Babylon
             void AddEventListener(const Napi::CallbackInfo& info)
             {
                 m_eventNamesAndCallbacks.emplace_back(
-                info[0].As<Napi::String>().Utf8Value(),
-                Napi::Persistent(info[1].As<Napi::Function>()));
+                    info[0].As<Napi::String>().Utf8Value(),
+                    Napi::Persistent(info[1].As<Napi::Function>()));
             }
 
             void RemoveEventListener(const Napi::CallbackInfo& info)
@@ -2816,13 +2811,13 @@ namespace Babylon
                 auto name = info[0].As<Napi::String>().Utf8Value();
                 auto callback = info[1].As<Napi::Function>();
                 m_eventNamesAndCallbacks.erase(
-                std::remove_if(
-                m_eventNamesAndCallbacks.begin(),
-                m_eventNamesAndCallbacks.end(),
-                [&name, &callback](const std::pair<std::string, Napi::FunctionReference>& listener) {
-                    return listener.first == name && listener.second.Value() == callback;
-                }),
-                m_eventNamesAndCallbacks.end());
+                    std::remove_if(
+                        m_eventNamesAndCallbacks.begin(),
+                        m_eventNamesAndCallbacks.end(),
+                        [&name, &callback](const std::pair<std::string, Napi::FunctionReference>& listener) {
+                            return listener.first == name && listener.second.Value() == callback;
+                        }),
+                    m_eventNamesAndCallbacks.end());
             }
 
             Napi::Value RequestReferenceSpace(const Napi::CallbackInfo& info)
@@ -3082,11 +3077,11 @@ namespace Babylon
             }
 
             void UpdateInputSourceEventValues(
-            const std::vector<xr::System::Session::Frame::InputSource::Identifier>& selectStarts,
-            const std::vector<xr::System::Session::Frame::InputSource::Identifier>& selectEnds,
-            const std::vector<xr::System::Session::Frame::InputSource::Identifier>& squeezeStarts,
-            const std::vector<xr::System::Session::Frame::InputSource::Identifier>& squeezeEnds,
-            Napi::Env env)
+                const std::vector<xr::System::Session::Frame::InputSource::Identifier>& selectStarts,
+                const std::vector<xr::System::Session::Frame::InputSource::Identifier>& selectEnds,
+                const std::vector<xr::System::Session::Frame::InputSource::Identifier>& squeezeStarts,
+                const std::vector<xr::System::Session::Frame::InputSource::Identifier>& squeezeEnds,
+                Napi::Env env)
             {
                 for (const auto& id : selectStarts)
                 {
@@ -3159,23 +3154,23 @@ namespace Babylon
             {
                 auto deferred{Napi::Promise::Deferred::New(info.Env())};
                 m_xr->EndSessionAsync().then(m_runtimeScheduler, arcana::cancellation::none(),
-                [this, deferred](const arcana::expected<void, std::exception_ptr>& result) {
-                    if (result.has_error())
-                    {
-                        deferred.Reject(Napi::Error::New(Env(), result.error()).Value());
-                        return;
-                    }
-
-                    for (const auto& [name, callback] : m_eventNamesAndCallbacks)
-                    {
-                        if (name == JS_EVENT_NAME_END)
+                    [this, deferred](const arcana::expected<void, std::exception_ptr>& result) {
+                        if (result.has_error())
                         {
-                            callback.Call({});
+                            deferred.Reject(Napi::Error::New(Env(), result.error()).Value());
+                            return;
                         }
-                    }
 
-                    deferred.Resolve(Env().Undefined());
-                });
+                        for (const auto& [name, callback] : m_eventNamesAndCallbacks)
+                        {
+                            if (name == JS_EVENT_NAME_END)
+                            {
+                                callback.Call({});
+                            }
+                        }
+
+                        deferred.Resolve(Env().Undefined());
+                    });
 
                 return deferred.Promise();
             }
@@ -3190,7 +3185,7 @@ namespace Babylon
             Napi::Value TrySetPreferredPlaneDetectorOptions(const Napi::CallbackInfo& info)
             {
                 if (info.Length() != 1 ||
-                !info[0].IsObject())
+                    !info[0].IsObject())
                 {
                     throw std::exception(/*invalid arguments*/);
                 }
@@ -3203,7 +3198,7 @@ namespace Babylon
             Napi::Value TrySetMeshDetectorEnabled(const Napi::CallbackInfo& info)
             {
                 if (info.Length() != 1 ||
-                !info[0].IsBoolean())
+                    !info[0].IsBoolean())
                 {
                     throw std::exception(/*invalid arguments*/);
                 }
@@ -3216,7 +3211,7 @@ namespace Babylon
             Napi::Value TrySetPreferredMeshDetectorOptions(const Napi::CallbackInfo& info)
             {
                 if (info.Length() != 1 ||
-                !info[0].IsObject())
+                    !info[0].IsObject())
                 {
                     throw std::exception(/*invalid arguments*/);
                 }
@@ -3258,12 +3253,12 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                InstanceMethod("initializeXRLayerAsync", &NativeWebXRRenderTarget::InitializeXRLayerAsync),
-                InstanceMethod("dispose", &NativeWebXRRenderTarget::Dispose),
-                });
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("initializeXRLayerAsync", &NativeWebXRRenderTarget::InitializeXRLayerAsync),
+                        InstanceMethod("dispose", &NativeWebXRRenderTarget::Dispose),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -3312,11 +3307,11 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                InstanceMethod("getRenderTargetForEye", &NativeRenderTargetProvider::GetRenderTargetForEye),
-                });
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("getRenderTargetForEye", &NativeRenderTargetProvider::GetRenderTargetForEye),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -3361,19 +3356,19 @@ namespace Babylon
                 Napi::HandleScope scope{env};
 
                 Napi::Function func = DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                InstanceMethod("isSessionSupported", &XR::IsSessionSupported),
-                InstanceMethod("requestSession", &XR::RequestSession),
-                InstanceMethod("getWebXRRenderTarget", &XR::GetWebXRRenderTarget),
-                InstanceMethod("getNativeRenderTargetProvider", &XR::GetNativeRenderTargetProvider),
-                InstanceAccessor("nativeXrContext", &XR::GetNativeXrContext, nullptr),
-                InstanceAccessor("nativeXrContextType", &XR::GetNativeXrContextType, nullptr),
-                InstanceMethod("getNativeAnchor", &XR::GetNativeAnchor),
-                InstanceMethod("declareNativeAnchor", &XR::DeclareNativeAnchor),
-                InstanceValue(JS_NATIVE_NAME, Napi::Value::From(env, true)),
-                });
+                    env,
+                    JS_CLASS_NAME,
+                    {
+                        InstanceMethod("isSessionSupported", &XR::IsSessionSupported),
+                        InstanceMethod("requestSession", &XR::RequestSession),
+                        InstanceMethod("getWebXRRenderTarget", &XR::GetWebXRRenderTarget),
+                        InstanceMethod("getNativeRenderTargetProvider", &XR::GetNativeRenderTargetProvider),
+                        InstanceAccessor("nativeXrContext", &XR::GetNativeXrContext, nullptr),
+                        InstanceAccessor("nativeXrContextType", &XR::GetNativeXrContextType, nullptr),
+                        InstanceMethod("getNativeAnchor", &XR::GetNativeAnchor),
+                        InstanceMethod("declareNativeAnchor", &XR::DeclareNativeAnchor),
+                        InstanceValue(JS_NATIVE_NAME, Napi::Value::From(env, true)),
+                    });
 
                 Napi::Object global = env.Global();
                 Napi::Object navigator;
@@ -3424,11 +3419,11 @@ namespace Babylon
 
                 // Fire off the IsSessionSupported task.
                 xr::System::IsSessionSupportedAsync(sessionType)
-                .then(m_runtimeScheduler,
-                arcana::cancellation::none(),
-                [deferred, env = info.Env()](bool result) {
-                    deferred.Resolve(Napi::Boolean::New(env, result));
-                });
+                    .then(m_runtimeScheduler,
+                        arcana::cancellation::none(),
+                        [deferred, env = info.Env()](bool result) {
+                            deferred.Resolve(Napi::Boolean::New(env, result));
+                        });
 
                 return deferred.Promise();
             }
@@ -3473,7 +3468,7 @@ namespace Babylon
             Napi::Value GetNativeAnchor(const Napi::CallbackInfo& info)
             {
                 if (info.Length() != 1 ||
-                !info[0].IsObject())
+                    !info[0].IsObject())
                 {
                     throw std::runtime_error{"A single object argument is required."};
                 }
@@ -3491,8 +3486,8 @@ namespace Babylon
             Napi::Value DeclareNativeAnchor(const Napi::CallbackInfo& info)
             {
                 if (info.Length() != 2 ||
-                !info[0].IsObject() /*XRSession*/ ||
-                !info[1].IsNumber() /*NativeAnchorPtr*/)
+                    !info[0].IsObject() /*XRSession*/ ||
+                    !info[1].IsNumber() /*NativeAnchorPtr*/)
                 {
                     throw std::runtime_error{"Invalid argument provided."};
                 }

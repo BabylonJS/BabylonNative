@@ -31,18 +31,18 @@ namespace Babylon::Plugins
         {
             // Initialize the persistent constructor
             ctor = DefineClass(
-            env,
-            JS_CLASS_NAME,
-            {
-            InstanceMethod("getTracks", &MediaStream::GetVideoTracks), // The only supported tracks are video tracks
-            InstanceMethod("getVideoTracks", &MediaStream::GetVideoTracks),
-            InstanceMethod("getAudioTracks", &MediaStream::GetAudioTracks),
-            InstanceMethod("applyConstraints", &MediaStream::ApplyConstraints),
-            InstanceMethod("getCapabilities", &MediaStream::GetCapabilities),
-            InstanceMethod("getSettings", &MediaStream::GetSettings),
-            InstanceMethod("getConstraints", &MediaStream::GetConstraints),
-            InstanceMethod("stop", &MediaStream::Stop),
-            });
+                env,
+                JS_CLASS_NAME,
+                {
+                    InstanceMethod("getTracks", &MediaStream::GetVideoTracks), // The only supported tracks are video tracks
+                    InstanceMethod("getVideoTracks", &MediaStream::GetVideoTracks),
+                    InstanceMethod("getAudioTracks", &MediaStream::GetAudioTracks),
+                    InstanceMethod("applyConstraints", &MediaStream::ApplyConstraints),
+                    InstanceMethod("getCapabilities", &MediaStream::GetCapabilities),
+                    InstanceMethod("getSettings", &MediaStream::GetSettings),
+                    InstanceMethod("getConstraints", &MediaStream::GetConstraints),
+                    InstanceMethod("stop", &MediaStream::Stop),
+                });
 
             _native.Set(JS_CLASS_NAME, ctor);
         }
@@ -249,14 +249,14 @@ namespace Babylon::Plugins
                 auto& resolution = cameraDevice.SupportedResolutions()[j];
 
                 auto meetsWidthRequirements =
-                (!widthConstraint.exact.has_value() || widthConstraint.exact.value() == resolution.Width()) &&
-                (!widthConstraint.min.has_value() || widthConstraint.min.value() <= resolution.Width()) &&
-                (!widthConstraint.max.has_value() || widthConstraint.max.value() >= resolution.Width());
+                    (!widthConstraint.exact.has_value() || widthConstraint.exact.value() == resolution.Width()) &&
+                    (!widthConstraint.min.has_value() || widthConstraint.min.value() <= resolution.Width()) &&
+                    (!widthConstraint.max.has_value() || widthConstraint.max.value() >= resolution.Width());
 
                 auto meetsHeightRequirements =
-                (!heightConstraint.exact.has_value() || heightConstraint.exact.value() == resolution.Height()) &&
-                (!heightConstraint.min.has_value() || heightConstraint.min.value() <= resolution.Height()) &&
-                (!heightConstraint.max.has_value() || heightConstraint.max.value() >= resolution.Height());
+                    (!heightConstraint.exact.has_value() || heightConstraint.exact.value() == resolution.Height()) &&
+                    (!heightConstraint.min.has_value() || heightConstraint.min.value() <= resolution.Height()) &&
+                    (!heightConstraint.max.has_value() || heightConstraint.max.value() >= resolution.Height());
 
                 if (!meetsWidthRequirements || !meetsHeightRequirements)
                 {

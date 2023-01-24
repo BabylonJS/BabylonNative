@@ -43,7 +43,7 @@ namespace Babylon
         const auto env{Napi::Attach<facebook::jsi::Runtime&>(*runtime)};
         Dispatch([&runtime](Napi::Env env) {
             JsRuntime::NativeObject::GetFromJavaScript(env)
-            .Set("_JSIRuntime", Napi::External<facebook::jsi::Runtime>::New(env, runtime.get()));
+                .Set("_JSIRuntime", Napi::External<facebook::jsi::Runtime>::New(env, runtime.get()));
         });
         Run(env);
         Napi::Detach(env);

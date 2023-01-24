@@ -20,15 +20,15 @@ namespace Babylon::Polyfills::Internal
         Napi::HandleScope scope{env};
 
         Napi::Function func = DefineClass(
-        env,
-        JS_CONSTRUCTOR_NAME,
-        {StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
-        InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
-        InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
-        InstanceMethod("getContext", &NativeCanvas::GetContext),
-        InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
-        InstanceMethod("dispose", &NativeCanvas::Dispose),
-        StaticMethod("parseColor", &NativeCanvas::ParseColor)});
+            env,
+            JS_CONSTRUCTOR_NAME,
+            {StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
+                InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
+                InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
+                InstanceMethod("getContext", &NativeCanvas::GetContext),
+                InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
+                InstanceMethod("dispose", &NativeCanvas::Dispose),
+                StaticMethod("parseColor", &NativeCanvas::ParseColor)});
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
     }
@@ -62,8 +62,7 @@ namespace Babylon::Polyfills::Internal
         auto deferred{Napi::Promise::Deferred::New(info.Env())};
         arcana::make_task(update.Scheduler(), arcana::cancellation::none(), [fontName{info[0].As<Napi::String>().Utf8Value()}, fontData{std::move(fontBuffer)}]() {
             fontsInfos[fontName] = fontData;
-        })
-        .then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler /*Keep reference alive*/, env{info.Env()}, deferred]() {
+        }).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler /*Keep reference alive*/, env{info.Env()}, deferred]() {
             deferred.Resolve(env.Undefined());
         });
 
@@ -110,8 +109,8 @@ namespace Babylon::Polyfills::Internal
         if (m_dirty)
         {
             std::array<bgfx::TextureHandle, 2> textures{
-            bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
-            bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT)};
+                bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
+                bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT)};
 
             std::array<bgfx::Attachment, textures.size()> attachments{};
             for (size_t idx = 0; idx < attachments.size(); ++idx)
@@ -175,15 +174,15 @@ namespace Babylon::Polyfills
     void Canvas::Impl::AddToJavaScript(Napi::Env env)
     {
         JsRuntime::NativeObject::GetFromJavaScript(env)
-        .Set(JS_CANVAS_NAME, Napi::External<Canvas::Impl>::New(env, this));
+            .Set(JS_CANVAS_NAME, Napi::External<Canvas::Impl>::New(env, this));
     }
 
     Canvas::Impl& Canvas::Impl::GetFromJavaScript(Napi::Env env)
     {
         return *JsRuntime::NativeObject::GetFromJavaScript(env)
-                .Get(JS_CANVAS_NAME)
-                .As<Napi::External<Canvas::Impl>>()
-                .Data();
+                    .Get(JS_CANVAS_NAME)
+                    .As<Napi::External<Canvas::Impl>>()
+                    .Data();
     }
 
     void Canvas::Impl::AddMonitoredResource(MonitoredResource* monitoredResource)

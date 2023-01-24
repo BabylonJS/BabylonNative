@@ -17,13 +17,13 @@ namespace Babylon::Polyfills::Internal
     {
         Napi::HandleScope scope{env};
         Napi::Function func = DefineClass(
-        env,
-        JS_IMAGEDATA_CONSTRUCTOR_NAME,
-        {
-        InstanceAccessor("width", &ImageData::GetWidth, nullptr),
-        InstanceAccessor("height", &ImageData::GetHeight, nullptr),
-        InstanceAccessor("data", &ImageData::GetData, nullptr),
-        });
+            env,
+            JS_IMAGEDATA_CONSTRUCTOR_NAME,
+            {
+                InstanceAccessor("width", &ImageData::GetWidth, nullptr),
+                InstanceAccessor("height", &ImageData::GetHeight, nullptr),
+                InstanceAccessor("data", &ImageData::GetData, nullptr),
+            });
         return func.New({Napi::External<Context>::New(env, context), Napi::Value::From(env, width), Napi::Value::From(env, height)});
     }
 

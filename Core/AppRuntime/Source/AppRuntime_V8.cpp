@@ -50,7 +50,7 @@ namespace Babylon
             void AddPlatformToJavaScript(Napi::Env env)
             {
                 JsRuntime::NativeObject::GetFromJavaScript(env)
-                .Set("_V8Platform", Napi::External<v8::Platform>::New(env, m_platform.get()));
+                    .Set("_V8Platform", Napi::External<v8::Platform>::New(env, m_platform.get()));
             }
 
         private:

@@ -127,18 +127,18 @@ namespace Babylon
         Microsoft::WRL::ComPtr<ID3DBlob> vertexBlob;
         auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, attributes, &vertexBlob);
         ShaderCompilerCommon::ShaderInfo vertexShaderInfo{
-        std::move(vertexParser),
-        std::move(vertexCompiler),
-        gsl::make_span(static_cast<uint8_t*>(vertexBlob->GetBufferPointer()), vertexBlob->GetBufferSize()),
-        std::move(vertexAttributeRenaming)};
+            std::move(vertexParser),
+            std::move(vertexCompiler),
+            gsl::make_span(static_cast<uint8_t*>(vertexBlob->GetBufferPointer()), vertexBlob->GetBufferSize()),
+            std::move(vertexAttributeRenaming)};
 
         Microsoft::WRL::ComPtr<ID3DBlob> fragmentBlob;
         auto [fragmentParser, fragmentCompiler] = CompileShader(program, EShLangFragment, {}, &fragmentBlob);
         ShaderCompilerCommon::ShaderInfo fragmentShaderInfo{
-        std::move(fragmentParser),
-        std::move(fragmentCompiler),
-        gsl::make_span(static_cast<uint8_t*>(fragmentBlob->GetBufferPointer()), fragmentBlob->GetBufferSize()),
-        {}};
+            std::move(fragmentParser),
+            std::move(fragmentCompiler),
+            gsl::make_span(static_cast<uint8_t*>(fragmentBlob->GetBufferPointer()), fragmentBlob->GetBufferSize()),
+            {}};
 
         return ShaderCompilerCommon::CreateBgfxShader(std::move(vertexShaderInfo), std::move(fragmentShaderInfo));
     }

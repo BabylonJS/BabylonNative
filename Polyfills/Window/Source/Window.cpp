@@ -22,9 +22,9 @@ namespace Babylon::Polyfills::Internal
         Napi::HandleScope scope{env};
 
         Napi::Function constructor = DefineClass(
-        env,
-        JS_CLASS_NAME,
-        {});
+            env,
+            JS_CLASS_NAME,
+            {});
 
         auto global = env.Global();
         auto jsNative = JsRuntime::NativeObject::GetFromJavaScript(env);
@@ -81,8 +81,8 @@ namespace Babylon::Polyfills::Internal
     {
         auto& window = *static_cast<Window*>(info.Data());
         auto function = info[0].IsFunction()
-        ? std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>()))
-        : std::shared_ptr<Napi::FunctionReference>{};
+            ? std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>()))
+            : std::shared_ptr<Napi::FunctionReference>{};
 
         auto delay = std::chrono::milliseconds{info[1].ToNumber().Int32Value()};
 

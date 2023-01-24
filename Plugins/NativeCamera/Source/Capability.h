@@ -49,11 +49,11 @@ namespace Babylon::Plugins
     {
     public:
         CameraCapabilityTemplate(
-        Feature feature,
-        T currentValue,
-        T defaultValue,
-        std::vector<T> acceptedValues,
-        std::function<bool(T)> setterFunction = [](T) { return true; });
+            Feature feature,
+            T currentValue,
+            T defaultValue,
+            std::vector<T> acceptedValues,
+            std::function<bool(T)> setterFunction = [](T) { return true; });
 
         MeetsConstraint MeetsConstraints(Napi::Object constraints);
         bool ApplyConstraints(Napi::Object constraints);

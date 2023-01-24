@@ -17,10 +17,10 @@ namespace Babylon::Graphics
         void setViewPort(bgfx::ViewId viewId, const ViewPort& viewPort, uint16_t width, uint16_t height)
         {
             bgfx::setViewRect(viewId,
-            static_cast<uint16_t>(viewPort.X * width),
-            static_cast<uint16_t>(viewPort.Y * height),
-            static_cast<uint16_t>(viewPort.Width * width),
-            static_cast<uint16_t>(viewPort.Height * height));
+                static_cast<uint16_t>(viewPort.X * width),
+                static_cast<uint16_t>(viewPort.Y * height),
+                static_cast<uint16_t>(viewPort.Width * width),
+                static_cast<uint16_t>(viewPort.Height * height));
         }
     }
 
@@ -162,8 +162,8 @@ namespace Babylon::Graphics
     bool ViewPort::Equals(const ViewPort& other) const
     {
         return std::abs(X - other.X) < std::numeric_limits<float>::epsilon() &&
-        std::abs(Y - other.Y) < std::numeric_limits<float>::epsilon() &&
-        std::abs(Width - other.Width) < std::numeric_limits<float>::epsilon() &&
-        std::abs(Height - other.Height) < std::numeric_limits<float>::epsilon();
+            std::abs(Y - other.Y) < std::numeric_limits<float>::epsilon() &&
+            std::abs(Width - other.Width) < std::numeric_limits<float>::epsilon() &&
+            std::abs(Height - other.Height) < std::numeric_limits<float>::epsilon();
     }
 }

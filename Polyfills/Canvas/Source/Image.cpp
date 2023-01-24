@@ -21,19 +21,19 @@ namespace Babylon::Polyfills::Internal
         Napi::HandleScope scope{env};
 
         Napi::Function func = DefineClass(
-        env,
-        JS_IMAGE_CONSTRUCTOR_NAME,
-        {
-        InstanceAccessor("width", &NativeCanvasImage::GetWidth, nullptr),
-        InstanceAccessor("height", &NativeCanvasImage::GetHeight, nullptr),
-        InstanceAccessor("naturalWidth", &NativeCanvasImage::GetNaturalWidth, nullptr),
-        InstanceAccessor("naturalHeight", &NativeCanvasImage::GetNaturalHeight, nullptr),
-        InstanceAccessor("src", &NativeCanvasImage::GetSrc, &NativeCanvasImage::SetSrc),
-        InstanceAccessor("onload", nullptr, &NativeCanvasImage::SetOnload),
-        InstanceAccessor("onerror", nullptr, &NativeCanvasImage::SetOnerror),
-        // TODO: This should be set directly on the JS Object rather than via an instanceAccessor see: https://github.com/BabylonJS/BabylonNative/issues/1030
-        InstanceAccessor("_imageContainer", &NativeCanvasImage::GetImageContainer, nullptr),
-        });
+            env,
+            JS_IMAGE_CONSTRUCTOR_NAME,
+            {
+                InstanceAccessor("width", &NativeCanvasImage::GetWidth, nullptr),
+                InstanceAccessor("height", &NativeCanvasImage::GetHeight, nullptr),
+                InstanceAccessor("naturalWidth", &NativeCanvasImage::GetNaturalWidth, nullptr),
+                InstanceAccessor("naturalHeight", &NativeCanvasImage::GetNaturalHeight, nullptr),
+                InstanceAccessor("src", &NativeCanvasImage::GetSrc, &NativeCanvasImage::SetSrc),
+                InstanceAccessor("onload", nullptr, &NativeCanvasImage::SetOnload),
+                InstanceAccessor("onerror", nullptr, &NativeCanvasImage::SetOnerror),
+                // TODO: This should be set directly on the JS Object rather than via an instanceAccessor see: https://github.com/BabylonJS/BabylonNative/issues/1030
+                InstanceAccessor("_imageContainer", &NativeCanvasImage::GetImageContainer, nullptr),
+            });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_IMAGE_CONSTRUCTOR_NAME, func);
     }

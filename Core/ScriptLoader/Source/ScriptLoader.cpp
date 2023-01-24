@@ -31,27 +31,27 @@ namespace Babylon
         void Eval(std::string source, std::string url)
         {
             m_task = m_task.then(arcana::inline_scheduler, arcana::cancellation::none(),
-            [dispatchFunction = m_dispatchFunction, source = std::move(source), url = std::move(url)](auto) mutable {
-                arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
-                dispatchFunction([taskCompletionSource, source = std::move(source), url = std::move(url)](Napi::Env env) mutable {
-                    Napi::Eval(env, source.data(), url.data());
-                    taskCompletionSource.complete();
+                [dispatchFunction = m_dispatchFunction, source = std::move(source), url = std::move(url)](auto) mutable {
+                    arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
+                    dispatchFunction([taskCompletionSource, source = std::move(source), url = std::move(url)](Napi::Env env) mutable {
+                        Napi::Eval(env, source.data(), url.data());
+                        taskCompletionSource.complete();
+                    });
+                    return taskCompletionSource.as_task();
                 });
-                return taskCompletionSource.as_task();
-            });
         }
 
         void Dispatch(std::function<void(Napi::Env)> callback)
         {
             m_task = m_task.then(arcana::inline_scheduler, arcana::cancellation::none(),
-            [dispatchFunction = m_dispatchFunction, callback = std::move(callback)](auto) mutable {
-                arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
-                dispatchFunction([taskCompletionSource, callback = std::move(callback)](Napi::Env env) mutable {
-                    callback(env);
-                    taskCompletionSource.complete();
+                [dispatchFunction = m_dispatchFunction, callback = std::move(callback)](auto) mutable {
+                    arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
+                    dispatchFunction([taskCompletionSource, callback = std::move(callback)](Napi::Env env) mutable {
+                        callback(env);
+                        taskCompletionSource.complete();
+                    });
+                    return taskCompletionSource.as_task();
                 });
-                return taskCompletionSource.as_task();
-            });
         }
 
     private:

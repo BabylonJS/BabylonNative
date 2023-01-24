@@ -34,10 +34,10 @@ namespace Babylon
     JsRuntime& JsRuntime::GetFromJavaScript(Napi::Env env)
     {
         return *NativeObject::GetFromJavaScript(env)
-                .As<Napi::Object>()
-                .Get(JS_RUNTIME_NAME)
-                .As<Napi::External<JsRuntime>>()
-                .Data();
+                    .As<Napi::Object>()
+                    .Get(JS_RUNTIME_NAME)
+                    .As<Napi::External<JsRuntime>>()
+                    .Data();
     }
 
     void JsRuntime::Dispatch(std::function<void(Napi::Env)> function)

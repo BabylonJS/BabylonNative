@@ -8,19 +8,19 @@ namespace Babylon::Plugins
     void NativeVideo::Initialize(Napi::Env& env)
     {
         Napi::Function func = DefineClass(
-        env,
-        JS_CLASS_NAME,
-        {InstanceMethod("addEventListener", &NativeVideo::AddEventListener),
-        InstanceMethod("removeEventListener", &NativeVideo::RemoveEventListener),
-        InstanceMethod("play", &NativeVideo::Play),
-        InstanceMethod("pause", &NativeVideo::Pause),
-        InstanceMethod("setAttribute", &NativeVideo::SetAttribute),
-        InstanceMethod("removeAttribute", &NativeVideo::RemoveAttribute),
-        InstanceAccessor("videoWidth", &NativeVideo::GetVideoWidth, nullptr),
-        InstanceAccessor("videoHeight", &NativeVideo::GetVideoHeight, nullptr),
-        InstanceAccessor("readyState", &NativeVideo::GetReadyState, nullptr),
-        InstanceAccessor("HAVE_CURRENT_DATA", &NativeVideo::GetHaveCurrentData, nullptr),
-        InstanceAccessor("srcObject", &NativeVideo::GetSrcObject, &NativeVideo::SetSrcObject)});
+            env,
+            JS_CLASS_NAME,
+            {InstanceMethod("addEventListener", &NativeVideo::AddEventListener),
+                InstanceMethod("removeEventListener", &NativeVideo::RemoveEventListener),
+                InstanceMethod("play", &NativeVideo::Play),
+                InstanceMethod("pause", &NativeVideo::Pause),
+                InstanceMethod("setAttribute", &NativeVideo::SetAttribute),
+                InstanceMethod("removeAttribute", &NativeVideo::RemoveAttribute),
+                InstanceAccessor("videoWidth", &NativeVideo::GetVideoWidth, nullptr),
+                InstanceAccessor("videoHeight", &NativeVideo::GetVideoHeight, nullptr),
+                InstanceAccessor("readyState", &NativeVideo::GetReadyState, nullptr),
+                InstanceAccessor("HAVE_CURRENT_DATA", &NativeVideo::GetHaveCurrentData, nullptr),
+                InstanceAccessor("srcObject", &NativeVideo::GetSrcObject, &NativeVideo::SetSrcObject)});
 
         env.Global().Set(JS_CLASS_NAME, func);
     }

@@ -92,16 +92,16 @@ namespace
 
                     // TODO: #1131 Address potential race condition during engine shutdown and ReadTextureAsync.
                     arcana::task<void, std::exception_ptr> readCurrentFrameTask{thisRef->m_graphicsContext.ReadTextureAsync(thisRef->m_blitTextureHandle, thisRef->m_textureBuffer)
-                                                                                .then(arcana::inline_scheduler, thisRef->m_cancellationToken, [thisRef] {
-                                                                                    thisRef->m_frameCallback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, thisRef->m_textureInfo.Format, bgfx::getCaps()->originBottomLeft, thisRef->m_textureBuffer);
-                                                                                })};
+                                                                                    .then(arcana::inline_scheduler, thisRef->m_cancellationToken, [thisRef] {
+                                                                                        thisRef->m_frameCallback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, thisRef->m_textureInfo.Format, bgfx::getCaps()->originBottomLeft, thisRef->m_textureBuffer);
+                                                                                    })};
 
                     arcana::task<void, std::exception_ptr> readNextFrameTask{thisRef->ReadTextureAsync()};
 
                     return arcana::when_all(readCurrentFrameTask, readNextFrameTask)
-                    .then(arcana::inline_scheduler, arcana::cancellation::none(), [](const auto&) {
-                        // Nothing to do, just converting to task<void, std::exception_ptr>
-                    });
+                        .then(arcana::inline_scheduler, arcana::cancellation::none(), [](const auto&) {
+                            // Nothing to do, just converting to task<void, std::exception_ptr>
+                        });
                 });
             }
 
@@ -139,12 +139,12 @@ namespace Babylon::Plugins::Internal
             Napi::HandleScope scope{env};
 
             Napi::Function func = NativeCapture::DefineClass(
-            env,
-            JS_CLASS_NAME,
-            {
-            NativeCapture::InstanceMethod("addCallback", &NativeCapture::AddCallback),
-            NativeCapture::InstanceMethod("dispose", &NativeCapture::Dispose),
-            });
+                env,
+                JS_CLASS_NAME,
+                {
+                    NativeCapture::InstanceMethod("addCallback", &NativeCapture::AddCallback),
+                    NativeCapture::InstanceMethod("dispose", &NativeCapture::Dispose),
+                });
 
             env.Global().Set(JS_CLASS_NAME, func);
         }

@@ -25,17 +25,17 @@ namespace Babylon::Plugins::Internal
             Napi::HandleScope scope{env};
 
             Napi::Function func = ParentT::DefineClass(
-            env,
-            "TestUtilsClass",
-            {
-            ParentT::InstanceMethod("exit", &TestUtils::Exit),
-            ParentT::InstanceMethod("updateSize", &TestUtils::UpdateSize),
-            ParentT::InstanceMethod("setTitle", &TestUtils::SetTitle),
-            ParentT::InstanceMethod("writePNG", &TestUtils::WritePNG),
-            ParentT::InstanceMethod("decodeImage", &TestUtils::DecodeImage),
-            ParentT::InstanceMethod("getImageData", &TestUtils::GetImageData),
-            ParentT::InstanceMethod("getOutputDirectory", &TestUtils::GetOutputDirectory),
-            });
+                env,
+                "TestUtilsClass",
+                {
+                    ParentT::InstanceMethod("exit", &TestUtils::Exit),
+                    ParentT::InstanceMethod("updateSize", &TestUtils::UpdateSize),
+                    ParentT::InstanceMethod("setTitle", &TestUtils::SetTitle),
+                    ParentT::InstanceMethod("writePNG", &TestUtils::WritePNG),
+                    ParentT::InstanceMethod("decodeImage", &TestUtils::DecodeImage),
+                    ParentT::InstanceMethod("getImageData", &TestUtils::GetImageData),
+                    ParentT::InstanceMethod("getOutputDirectory", &TestUtils::GetOutputDirectory),
+                });
             env.Global().Set(JS_INSTANCE_NAME, func.New({}));
         }
 

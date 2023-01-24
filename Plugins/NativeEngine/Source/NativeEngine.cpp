@@ -104,7 +104,7 @@ namespace Babylon
             }
 
             if (image->m_format == bimg::TextureFormat::R8 ||
-            image->m_format == bimg::TextureFormat::RG8)
+                image->m_format == bimg::TextureFormat::RG8)
             {
                 static const TransformFn UnpackR8{[](const uint8_t* src, uint8_t* dst) { dst[0] = dst[1] = dst[2] = src[0]; dst[3] = 1; }};
                 static const TransformFn UnpackRG8{[](const uint8_t* src, uint8_t* dst) { dst[0] = dst[1] = dst[2] = src[0]; dst[3] = src[1]; }};
@@ -139,10 +139,10 @@ namespace Babylon
         bimg::ImageContainer* PrepareImage(bx::AllocatorI& allocator, bimg::ImageContainer* image, bool invertY, bool srgb, bool generateMips)
         {
             assert(
-            image->m_format == bimg::TextureFormat::RGB8 ||
-            image->m_format == bimg::TextureFormat::RGBA8 ||
-            image->m_format == bimg::TextureFormat::RGBA16 ||
-            image->m_format == bimg::TextureFormat::RGBA32F);
+                image->m_format == bimg::TextureFormat::RGB8 ||
+                image->m_format == bimg::TextureFormat::RGBA8 ||
+                image->m_format == bimg::TextureFormat::RGBA16 ||
+                image->m_format == bimg::TextureFormat::RGBA32F);
 
             assert(image->m_depth == 1);
             assert(image->m_numLayers == 1);
@@ -705,22 +705,22 @@ namespace Babylon
         }
 
         static auto InitUniformInfos{
-        [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex) {
-            auto numUniforms = bgfx::getShaderUniforms(shader);
-            std::vector<bgfx::UniformHandle> uniforms{numUniforms};
-            bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
+            [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex) {
+                auto numUniforms = bgfx::getShaderUniforms(shader);
+                std::vector<bgfx::UniformHandle> uniforms{numUniforms};
+                bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
 
-            for (uint8_t index = 0; index < numUniforms; index++)
-            {
-                bgfx::UniformInfo info{};
-                uint16_t handleIndex = uniforms[index].idx;
-                bgfx::getUniformInfo(uniforms[index], info);
-                auto itStage = uniformStages.find(info.name);
-                auto& handle = uniforms[index];
-                uniformInfos.emplace(std::make_pair(handle.idx, UniformInfo{itStage == uniformStages.end() ? uint8_t{} : itStage->second, handle, info.num}));
-                uniformNameToIndex[info.name] = handleIndex;
-            }
-        }};
+                for (uint8_t index = 0; index < numUniforms; index++)
+                {
+                    bgfx::UniformInfo info{};
+                    uint16_t handleIndex = uniforms[index].idx;
+                    bgfx::getUniformInfo(uniforms[index], info);
+                    auto itStage = uniformStages.find(info.name);
+                    auto& handle = uniforms[index];
+                    uniformInfos.emplace(std::make_pair(handle.idx, UniformInfo{itStage == uniformStages.end() ? uint8_t{} : itStage->second, handle, info.num}));
+                    uniformNameToIndex[info.name] = handleIndex;
+                }
+            }};
 
         auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
         InitUniformInfos(vertexShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformNameToIndex);
@@ -874,10 +874,10 @@ namespace Babylon
         for (uint32_t index = 0; index < elementLength; index += size)
         {
             const float values[] = {
-            static_cast<float>(array[index]),
-            (size > 1) ? static_cast<float>(array[index + 1]) : 0.f,
-            (size > 2) ? static_cast<float>(array[index + 2]) : 0.f,
-            (size > 3) ? static_cast<float>(array[index + 3]) : 0.f,
+                static_cast<float>(array[index]),
+                (size > 1) ? static_cast<float>(array[index + 1]) : 0.f,
+                (size > 2) ? static_cast<float>(array[index + 2]) : 0.f,
+                (size > 3) ? static_cast<float>(array[index + 3]) : 0.f,
             };
             m_scratch.insert(m_scratch.end(), values, values + 4);
         }
@@ -890,10 +890,10 @@ namespace Babylon
     {
         const auto& uniformInfo = *data.ReadPointer<UniformInfo>();
         const float values[] = {
-        data.ReadFloat32(),
-        (size > 1) ? data.ReadFloat32() : 0.f,
-        (size > 2) ? data.ReadFloat32() : 0.f,
-        (size > 3) ? data.ReadFloat32() : 0.f,
+            data.ReadFloat32(),
+            (size > 1) ? data.ReadFloat32() : 0.f,
+            (size > 2) ? data.ReadFloat32() : 0.f,
+            (size > 3) ? data.ReadFloat32() : 0.f,
         };
 
         m_currentProgram->SetUniform(uniformInfo.Handle, values);
@@ -1069,21 +1069,21 @@ namespace Babylon
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-        [this, dataSpan, generateMips, invertY, srgb, texture, cancellationSource{m_cancellationSource}]() {
-            bimg::ImageContainer* image{ParseImage(m_allocator, dataSpan)};
-            image = PrepareImage(m_allocator, image, invertY, srgb, generateMips);
-            LoadTextureFromImage(texture, image, srgb);
-        })
-        .then(m_runtimeScheduler, *m_cancellationSource, [dataRef{Napi::Persistent(data)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
-            if (result.has_error())
-            {
-                onErrorRef.Call({});
-            }
-            else
-            {
-                onSuccessRef.Call({});
-            }
-        });
+            [this, dataSpan, generateMips, invertY, srgb, texture, cancellationSource{m_cancellationSource}]() {
+                bimg::ImageContainer* image{ParseImage(m_allocator, dataSpan)};
+                image = PrepareImage(m_allocator, image, invertY, srgb, generateMips);
+                LoadTextureFromImage(texture, image, srgb);
+            })
+            .then(m_runtimeScheduler, *m_cancellationSource, [dataRef{Napi::Persistent(data)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
+                if (result.has_error())
+                {
+                    onErrorRef.Call({});
+                }
+                else
+                {
+                    onSuccessRef.Call({});
+                }
+            });
     }
 
     void NativeEngine::CopyTexture(const Napi::CallbackInfo& info)
@@ -1095,8 +1095,7 @@ namespace Babylon
             return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, textureDestination, textureSource, updateToken = m_update.GetUpdateToken(), cancellationSource = m_cancellationSource]() {
                 bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
                 GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
-            })
-            .then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
+            }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
                 if (!cancellationSource->cancelled() && result.has_error())
                 {
                     Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
@@ -1196,19 +1195,19 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-        .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}](std::vector<bimg::ImageContainer*> images) {
-            LoadCubeTextureFromImages(texture, images, srgb);
-        })
-        .then(m_runtimeScheduler, *m_cancellationSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
-            if (result.has_error())
-            {
-                onErrorRef.Call({});
-            }
-            else
-            {
-                onSuccessRef.Call({});
-            }
-        });
+            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}](std::vector<bimg::ImageContainer*> images) {
+                LoadCubeTextureFromImages(texture, images, srgb);
+            })
+            .then(m_runtimeScheduler, *m_cancellationSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
+                if (result.has_error())
+                {
+                    onErrorRef.Call({});
+                }
+                else
+                {
+                    onSuccessRef.Call({});
+                }
+            });
     }
 
     void NativeEngine::LoadCubeTextureWithMips(const Napi::CallbackInfo& info)
@@ -1240,19 +1239,19 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-        .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}](std::vector<bimg::ImageContainer*> images) {
-            LoadCubeTextureFromImages(texture, images, srgb);
-        })
-        .then(m_runtimeScheduler, *m_cancellationSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
-            if (result.has_error())
-            {
-                onErrorRef.Call({});
-            }
-            else
-            {
-                onSuccessRef.Call({});
-            }
-        });
+            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}](std::vector<bimg::ImageContainer*> images) {
+                LoadCubeTextureFromImages(texture, images, srgb);
+            })
+            .then(m_runtimeScheduler, *m_cancellationSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
+                if (result.has_error())
+                {
+                    onErrorRef.Call({});
+                }
+                else
+                {
+                    onSuccessRef.Call({});
+                }
+            });
     }
 
     Napi::Value NativeEngine::GetTextureWidth(const Napi::CallbackInfo& info)
@@ -1294,8 +1293,8 @@ namespace Babylon
         auto addressModeW = data.ReadUint32();
 
         uint32_t addressMode = addressModeU +
-        (addressModeV << BGFX_SAMPLER_V_SHIFT) +
-        (addressModeW << BGFX_SAMPLER_W_SHIFT);
+            (addressModeV << BGFX_SAMPLER_V_SHIFT) +
+            (addressModeW << BGFX_SAMPLER_W_SHIFT);
 
         uint32_t flags = texture.SamplerFlags();
         flags &= ~(BGFX_SAMPLER_U_MASK | BGFX_SAMPLER_V_MASK | BGFX_SAMPLER_W_MASK);
@@ -1409,60 +1408,60 @@ namespace Babylon
 
             // Read the source texture.
             m_graphicsContext.ReadTextureAsync(sourceTextureHandle, textureBuffer, mipLevel)
-            .then(arcana::inline_scheduler, *m_cancellationSource, [this, textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
-                // If the source texture format does not match the target texture format, convert it.
-                if (targetTextureInfo.format != sourceTextureInfo.format)
-                {
-                    std::vector<uint8_t> convertedTextureBuffer(targetTextureInfo.storageSize);
-                    if (!bimg::imageConvert(&m_allocator, convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
+                .then(arcana::inline_scheduler, *m_cancellationSource, [this, textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
+                    // If the source texture format does not match the target texture format, convert it.
+                    if (targetTextureInfo.format != sourceTextureInfo.format)
                     {
-                        throw std::runtime_error{"Texture conversion to RBGA8 failed."};
+                        std::vector<uint8_t> convertedTextureBuffer(targetTextureInfo.storageSize);
+                        if (!bimg::imageConvert(&m_allocator, convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
+                        {
+                            throw std::runtime_error{"Texture conversion to RBGA8 failed."};
+                        }
+                        textureBuffer = convertedTextureBuffer;
                     }
-                    textureBuffer = convertedTextureBuffer;
-                }
 
-                // Ensure the final texture buffer has the expected size.
-                assert(textureBuffer.size() == targetTextureInfo.storageSize);
+                    // Ensure the final texture buffer has the expected size.
+                    assert(textureBuffer.size() == targetTextureInfo.storageSize);
 
-                // Flip the image vertically if needed.
-                if (bgfx::getCaps()->originBottomLeft)
-                {
-                    FlipImage(textureBuffer, targetTextureInfo.height);
-                }
+                    // Flip the image vertically if needed.
+                    if (bgfx::getCaps()->originBottomLeft)
+                    {
+                        FlipImage(textureBuffer, targetTextureInfo.height);
+                    }
 
-                return textureBuffer;
-            })
-            .then(m_runtimeScheduler, *m_cancellationSource, [this, bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred, tempTexture, sourceTextureHandle](std::vector<uint8_t> textureBuffer) mutable {
-                // Double check the destination buffer length. This is redundant with prior checks, but we'll be extra sure before the memcpy.
-                assert(bufferRef.Value().ByteLength() - bufferOffset >= textureBuffer.size());
+                    return textureBuffer;
+                })
+                .then(m_runtimeScheduler, *m_cancellationSource, [this, bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred, tempTexture, sourceTextureHandle](std::vector<uint8_t> textureBuffer) mutable {
+                    // Double check the destination buffer length. This is redundant with prior checks, but we'll be extra sure before the memcpy.
+                    assert(bufferRef.Value().ByteLength() - bufferOffset >= textureBuffer.size());
 
-                // Copy the pixel data into the JS ArrayBuffer.
-                uint8_t* buffer{static_cast<uint8_t*>(bufferRef.Value().Data())};
-                std::memcpy(buffer + bufferOffset, textureBuffer.data(), textureBuffer.size());
+                    // Copy the pixel data into the JS ArrayBuffer.
+                    uint8_t* buffer{static_cast<uint8_t*>(bufferRef.Value().Data())};
+                    std::memcpy(buffer + bufferOffset, textureBuffer.data(), textureBuffer.size());
 
-                // Dispose of the texture handle before resolving the promise.
-                // TODO: Handle properly handle stale handles after BGFX shutdown
-                if (tempTexture && !m_cancellationSource->cancelled())
-                {
-                    bgfx::destroy(sourceTextureHandle);
-                    tempTexture = false;
-                }
+                    // Dispose of the texture handle before resolving the promise.
+                    // TODO: Handle properly handle stale handles after BGFX shutdown
+                    if (tempTexture && !m_cancellationSource->cancelled())
+                    {
+                        bgfx::destroy(sourceTextureHandle);
+                        tempTexture = false;
+                    }
 
-                deferred.Resolve(bufferRef.Value());
-            })
-            .then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
-                // Dispose of the texture handle if not yet disposed.
-                // TODO: Handle properly handle stale handles after BGFX shutdown
-                if (tempTexture && !m_cancellationSource->cancelled())
-                {
-                    bgfx::destroy(sourceTextureHandle);
-                }
+                    deferred.Resolve(bufferRef.Value());
+                })
+                .then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
+                    // Dispose of the texture handle if not yet disposed.
+                    // TODO: Handle properly handle stale handles after BGFX shutdown
+                    if (tempTexture && !m_cancellationSource->cancelled())
+                    {
+                        bgfx::destroy(sourceTextureHandle);
+                    }
 
-                if (result.has_error())
-                {
-                    deferred.Reject(Napi::Error::New(env, result.error()).Value());
-                }
-            });
+                    if (result.has_error())
+                    {
+                        deferred.Reject(Napi::Error::New(env, result.error()).Value());
+                    }
+                });
         }
 
         return deferred.Promise();
@@ -1593,10 +1592,10 @@ namespace Babylon
         if (shouldClearColor)
         {
             rgba =
-            (static_cast<uint8_t>(r * std::numeric_limits<uint8_t>::max()) << 24) +
-            (static_cast<uint8_t>(g * std::numeric_limits<uint8_t>::max()) << 16) +
-            (static_cast<uint8_t>(b * std::numeric_limits<uint8_t>::max()) << 8) +
-            static_cast<uint8_t>(a * std::numeric_limits<uint8_t>::max());
+                (static_cast<uint8_t>(r * std::numeric_limits<uint8_t>::max()) << 24) +
+                (static_cast<uint8_t>(g * std::numeric_limits<uint8_t>::max()) << 16) +
+                (static_cast<uint8_t>(b * std::numeric_limits<uint8_t>::max()) << 8) +
+                static_cast<uint8_t>(a * std::numeric_limits<uint8_t>::max());
 
             flags |= BGFX_CLEAR_COLOR;
         }
@@ -1732,7 +1731,7 @@ namespace Babylon
         if (width != bufferWidth || height != bufferHeight)
         {
             stbir_resize_uint8(static_cast<unsigned char*>(image->m_data), width, height, 0,
-            outputData.Data(), bufferWidth, bufferHeight, 0, 4);
+                outputData.Data(), bufferWidth, bufferHeight, 0, 4);
         }
         else
         {
@@ -1935,8 +1934,7 @@ namespace Babylon
                 {
                     callback.Value().Call({});
                 }
-            })
-            .then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
+            }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
                 if (!cancellationSource->cancelled() && result.has_error())
                 {
                     Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
