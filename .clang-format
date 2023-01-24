@@ -1,4 +1,4 @@
-BasedOnStyle: Google
+BasedOnStyle: LLVM
 
 Language: Cpp
 
