@@ -17,7 +17,7 @@ namespace Babylon
 
         m_indexBufferRecord.Buffer = nullptr;
 
-        for (auto& pair: m_vertexBufferRecords)
+        for (auto& pair : m_vertexBufferRecords)
         {
             bgfx::destroy(pair.second.LayoutHandle);
         }
@@ -128,7 +128,7 @@ namespace Babylon
             encoder->setInstanceDataBuffer(&instanceDataBuffer);
         }
 
-        for (const auto& pair: m_vertexBufferRecords)
+        for (const auto& pair : m_vertexBufferRecords)
         {
             auto stream{static_cast<uint8_t>(pair.first)};
             auto& record{pair.second};

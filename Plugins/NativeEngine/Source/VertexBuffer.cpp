@@ -176,7 +176,7 @@ namespace Babylon
     {
         uint16_t instanceStride{};
         uint32_t instanceCount{};
-        for (auto& pair: vertexBufferInstance)
+        for (auto& pair : vertexBufferInstance)
         {
             const auto vertexBuffer{pair.second.Buffer};
             instanceCount = static_cast<uint32_t>(vertexBuffer->m_bytes->size()) / pair.second.Stride;

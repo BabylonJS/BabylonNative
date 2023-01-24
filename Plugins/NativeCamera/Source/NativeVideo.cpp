@@ -116,7 +116,7 @@ namespace Babylon::Plugins
         if (it != m_eventHandlerRefs.end())
         {
             const auto& eventHandlerRefs = it->second;
-            for (const auto& eventHandlerRef: eventHandlerRefs)
+            for (const auto& eventHandlerRef : eventHandlerRefs)
             {
                 eventHandlerRef.Call({});
             }

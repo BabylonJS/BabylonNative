@@ -144,7 +144,7 @@ namespace Babylon::Plugins
 
         auto capabilities = Napi::Object::New(env);
 
-        for (const auto& capability: m_cameraDevice->Capabilities())
+        for (const auto& capability : m_cameraDevice->Capabilities())
         {
             capability->AddAsCapability(capabilities);
         }
@@ -164,7 +164,7 @@ namespace Babylon::Plugins
 
         auto settings = Napi::Object::New(env);
 
-        for (const auto& capability: m_cameraDevice->Capabilities())
+        for (const auto& capability : m_cameraDevice->Capabilities())
         {
             capability->AddAsSetting(settings);
         }
@@ -190,11 +190,11 @@ namespace Babylon::Plugins
 
         // The camera devices should be assumed to be sorted from best to worst. Pick the first camera device that fully
         // satisfies the most constraints without failing any.
-        for (auto& cameraDevice: cameraDevices)
+        for (auto& cameraDevice : cameraDevices)
         {
             bool failedAConstraint{false};
             int32_t fullySatisfiedCapabilityCount{0};
-            for (const auto& capability: cameraDevice.Capabilities())
+            for (const auto& capability : cameraDevice.Capabilities())
             {
                 Capability::MeetsConstraint constraintSatifaction{capability->MeetsConstraints(constraints)};
                 switch (constraintSatifaction)
@@ -314,7 +314,7 @@ namespace Babylon::Plugins
             return false;
         }
 
-        for (auto& capability: m_cameraDevice->Capabilities())
+        for (auto& capability : m_cameraDevice->Capabilities())
         {
             Capability::MeetsConstraint constraintSatisfaction{capability->MeetsConstraints(constraints)};
 

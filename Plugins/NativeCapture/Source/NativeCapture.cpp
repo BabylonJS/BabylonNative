@@ -226,7 +226,7 @@ namespace Babylon::Plugins::Internal
                 std::memcpy(jsBytes.Data(), bytes.data(), bytes.size());
                 bytes.clear();
 
-                for (const auto& callback: m_callbacks)
+                for (const auto& callback : m_callbacks)
                 {
                     callback.Call({jsData});
                 }

@@ -205,7 +205,7 @@ namespace Babylon::Polyfills
 
     void Canvas::Impl::FlushGraphicResources()
     {
-        for (auto monitoredResource: m_monitoredResources)
+        for (auto monitoredResource : m_monitoredResources)
         {
             monitoredResource->FlushGraphicResources();
         }

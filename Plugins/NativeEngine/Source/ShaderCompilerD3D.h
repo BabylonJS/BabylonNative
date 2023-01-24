@@ -42,7 +42,7 @@ namespace Babylon
 
             compiler->set_hlsl_options({40, true});
 
-            for (const auto& attribute: attributes)
+            for (const auto& attribute : attributes)
             {
                 compiler->add_vertex_attribute_remap(attribute);
             }

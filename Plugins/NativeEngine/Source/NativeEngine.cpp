@@ -1863,7 +1863,7 @@ namespace Babylon
             }
         }
 
-        for (const auto& it: m_currentProgram->Uniforms)
+        for (const auto& it : m_currentProgram->Uniforms)
         {
             const ProgramData::UniformValue& value = it.second;
             encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
@@ -1931,7 +1931,7 @@ namespace Babylon
 
                 arcana::trace_region scheduleRegion{"NativeEngine::ScheduleRequestAnimationFrameCallbacks invoke JS callbacks"};
                 auto callbacks{std::move(m_requestAnimationFrameCallbacks)};
-                for (auto& callback: callbacks)
+                for (auto& callback : callbacks)
                 {
                     callback.Value().Call({});
                 }

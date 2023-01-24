@@ -23,6 +23,6 @@ IndentWidth: 4
 SortIncludes: false
 SpaceAfterTemplateKeyword: false
 SpaceBeforeParens: ControlStatements
-SpaceBeforeRangeBasedForLoopColon: false
+SpaceBeforeRangeBasedForLoopColon: true
 SpacesBeforeTrailingComments: 1
 NamespaceIndentation: All

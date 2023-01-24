@@ -590,7 +590,7 @@ namespace Babylon
                     {
                         arcana::trace_region scheduleRegion{"NativeXR::ScheduleFrame invoke JS callbacks"};
                         auto callbacks{std::move(m_sessionState->ScheduleFrameCallbacks)};
-                        for (auto& callback: callbacks)
+                        for (auto& callback : callbacks)
                         {
                             callback(*m_sessionState->Frame);
                         }
@@ -627,7 +627,7 @@ namespace Babylon
                     {
                         auto& viewConfig = itViewConfig->second;
                         auto& frameBuffers = viewConfig.FrameBuffers;
-                        for (const auto& frameBuffer: frameBuffers)
+                        for (const auto& frameBuffer : frameBuffers)
                         {
                             auto& jsTexture = viewConfig.JsTextures[frameBuffer];
                             m_sessionState->DestroyRenderTexture.Call({jsTexture.Value()});
@@ -2161,7 +2161,7 @@ namespace Babylon
 
             Napi::Value DeclareNativeAnchor(const Napi::Env& env, xr::NativeAnchorPtr nativeAnchor)
             {
-                for (const auto& anchor: m_trackedAnchors)
+                for (const auto& anchor : m_trackedAnchors)
                 {
                     const auto xrAnchor = XRAnchor::Unwrap(anchor.Value());
                     if (xrAnchor->GetNativeAnchor().NativeAnchor == nativeAnchor)
@@ -2369,7 +2369,7 @@ namespace Babylon
                 Napi::Object anchorSet = info.Env().Global().Get("Set").As<Napi::Function>().New({});
 
                 // Loop over the list of tracked anchors, and add them to the set.
-                for (const Napi::ObjectReference& napiAnchorRef: m_trackedAnchors)
+                for (const Napi::ObjectReference& napiAnchorRef : m_trackedAnchors)
                 {
                     anchorSet.Get("add").As<Napi::Function>().Call(anchorSet, {napiAnchorRef.Value()});
                 }
@@ -2415,7 +2415,7 @@ namespace Babylon
                 Napi::Object planeSet = info.Env().Global().Get("Set").As<Napi::Function>().New({});
 
                 // Loop over the list of tracked planes, and add them to the set.
-                for (const auto& [plane, planeNapiValue]: m_trackedPlanes)
+                for (const auto& [plane, planeNapiValue] : m_trackedPlanes)
                 {
                     planeSet.Get("add").As<Napi::Function>().Call(planeSet, {planeNapiValue.Value()});
                 }
@@ -2452,7 +2452,7 @@ namespace Babylon
 
             void UpdateSceneObjects(const Napi::Env& env)
             {
-                for (const auto& sceneObjectID: m_frame->UpdatedSceneObjects)
+                for (const auto& sceneObjectID : m_frame->UpdatedSceneObjects)
                 {
                     if (m_sceneObjects.count(sceneObjectID) == 0)
                     {
@@ -2463,7 +2463,7 @@ namespace Babylon
                     m_sceneObjects.at(sceneObjectID).Value().Set("type", xr::SceneObjectTypeNames.at(sceneObject.Type));
                 }
 
-                for (const auto& removedObjectID: m_frame->RemovedSceneObjects)
+                for (const auto& removedObjectID : m_frame->RemovedSceneObjects)
                 {
                     m_sceneObjects.erase(removedObjectID);
                 }
@@ -2472,7 +2472,7 @@ namespace Babylon
             void UpdatePlanes(const Napi::Env& env, uint32_t timestamp)
             {
                 // First loop over the list of updated planes, check if they exist in our map if not create them otherwise update them.
-                for (auto planeID: m_frame->UpdatedPlanes)
+                for (auto planeID : m_frame->UpdatedPlanes)
                 {
                     XRPlane* xrPlane{};
                     auto trackedPlaneIterator = m_trackedPlanes.find(planeID);
@@ -2495,7 +2495,7 @@ namespace Babylon
                 }
 
                 // Next go over removed planes and remove them from our mapping.
-                for (auto planeID: m_frame->RemovedPlanes)
+                for (auto planeID : m_frame->RemovedPlanes)
                 {
                     auto trackedPlaneIterator = m_trackedPlanes.find(planeID);
                     assert(trackedPlaneIterator != m_trackedPlanes.end());
@@ -2505,7 +2505,7 @@ namespace Babylon
 
             void UpdateMeshes(const Napi::Env& env, uint32_t timestamp)
             {
-                for (auto meshID: m_frame->UpdatedMeshes)
+                for (auto meshID : m_frame->UpdatedMeshes)
                 {
                     XRMesh* xrMesh{};
                     auto trackedMeshIterator = m_trackedMeshes.find(meshID);
@@ -2526,14 +2526,14 @@ namespace Babylon
                     xrMesh->SetLastUpdatedTime(timestamp);
                 }
 
-                for (auto meshID: m_frame->RemovedMeshes)
+                for (auto meshID : m_frame->RemovedMeshes)
                 {
                     m_trackedMeshes.erase(meshID);
                 }
 
                 // Create a new mesh set every frame, detected meshes are assumed immutable
                 m_meshSet = Napi::Persistent(env.Global().Get("Set").As<Napi::Function>().New({}));
-                for (const auto& [meshID, meshNapiValue]: m_trackedMeshes)
+                for (const auto& [meshID, meshNapiValue] : m_trackedMeshes)
                 {
                     m_meshSet.Value().Get("add").As<Napi::Function>().Call(m_meshSet.Value(), {meshNapiValue.Value()});
                 }
@@ -2542,7 +2542,7 @@ namespace Babylon
             void UpdateImageTrackingResults(const Napi::Env& env)
             {
                 // Loop over the list of updated image tracking results, check if they exist in our map if not create them otherwise update them.
-                for (auto imageTrackingResultID: m_frame->UpdatedImageTrackingResults)
+                for (auto imageTrackingResultID : m_frame->UpdatedImageTrackingResults)
                 {
                     const auto trackedImageTrackingResultIterator{m_trackedImageIDToResultMap.find(imageTrackingResultID)};
 
@@ -2835,7 +2835,7 @@ namespace Babylon
                     m_jsEyeTrackedSource = Napi::Persistent(Napi::Object::New(env));
                     m_jsEyeTrackedSource.Set("gazeSpace", Napi::External<xr::Space>::New(env, &frame.EyeTrackerSpace.value()));
 
-                    for (const auto& [name, callback]: m_eventNamesAndCallbacks)
+                    for (const auto& [name, callback] : m_eventNamesAndCallbacks)
                     {
                         if (name == JS_EVENT_NAME_EYE_TRACKING_START)
                         {
@@ -2846,7 +2846,7 @@ namespace Babylon
                 }
                 else if (!frame.EyeTrackerSpace.has_value() && !m_jsEyeTrackedSource.IsEmpty())
                 {
-                    for (const auto& [name, callback]: m_eventNamesAndCallbacks)
+                    for (const auto& [name, callback] : m_eventNamesAndCallbacks)
                     {
                         if (name == JS_EVENT_NAME_EYE_TRACKING_END)
                         {
@@ -2871,7 +2871,7 @@ namespace Babylon
                 std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeEnds{};
 
                 // Process the controller-based input sources
-                for (auto& inputSource: frame.InputSources)
+                for (auto& inputSource : frame.InputSources)
                 {
                     if (!inputSource.TrackedThisFrame)
                     {
@@ -2934,7 +2934,7 @@ namespace Babylon
                         squeezeEnds.push_back(inputSource.ID);
                     }
                 }
-                for (const auto& [id, ref]: m_idToInputSource)
+                for (const auto& [id, ref] : m_idToInputSource)
                 {
                     if (current.find(id) == current.end())
                     {
@@ -2967,7 +2967,7 @@ namespace Babylon
                 {
                     // Update the input sources array.
                     auto jsCurrent = Napi::Array::New(env);
-                    for (const auto id: current)
+                    for (const auto id : current)
                     {
                         jsCurrent.Set(jsCurrent.Length(), m_idToInputSource[id].Value());
                     }
@@ -2975,19 +2975,19 @@ namespace Babylon
 
                     // Create and send the sources changed event.
                     Napi::Array jsAdded = Napi::Array::New(env);
-                    for (const auto id: added)
+                    for (const auto id : added)
                     {
                         jsAdded.Set(jsAdded.Length(), m_idToInputSource[id].Value());
                     }
                     Napi::Array jsRemoved = Napi::Array::New(env);
-                    for (const auto id: removed)
+                    for (const auto id : removed)
                     {
                         jsRemoved.Set(jsRemoved.Length(), m_idToInputSource[id].Value());
                     }
                     auto sourcesChangeEvent = Napi::Object::New(env);
                     sourcesChangeEvent.Set("added", jsAdded);
                     sourcesChangeEvent.Set("removed", jsRemoved);
-                    for (const auto& [name, callback]: m_eventNamesAndCallbacks)
+                    for (const auto& [name, callback] : m_eventNamesAndCallbacks)
                     {
                         if (name == JS_EVENT_NAME_INPUT_SOURCES_CHANGE)
                         {
@@ -2996,7 +2996,7 @@ namespace Babylon
                     }
 
                     // Finally, remove the removed.
-                    for (const auto id: removed)
+                    for (const auto id : removed)
                     {
                         m_idToInputSource.erase(id);
                     }
@@ -3054,7 +3054,7 @@ namespace Babylon
 
             void FireInputSourceEvent(Napi::Object& inputSourceEvent, std::string eventName)
             {
-                for (const auto& [name, callback]: m_eventNamesAndCallbacks)
+                for (const auto& [name, callback] : m_eventNamesAndCallbacks)
                 {
                     if (name == eventName)
                     {
@@ -3070,7 +3070,7 @@ namespace Babylon
             const std::vector<xr::System::Session::Frame::InputSource::Identifier>& squeezeEnds,
             Napi::Env env)
             {
-                for (const auto& id: selectStarts)
+                for (const auto& id : selectStarts)
                 {
                     auto inputSourceIter = m_idToInputSource.find(id);
                     if (inputSourceIter != m_idToInputSource.end())
@@ -3083,7 +3083,7 @@ namespace Babylon
                     }
                 }
 
-                for (const auto& id: squeezeStarts)
+                for (const auto& id : squeezeStarts)
                 {
                     auto inputSourceIter = m_idToInputSource.find(id);
                     if (inputSourceIter != m_idToInputSource.end())
@@ -3096,7 +3096,7 @@ namespace Babylon
                     }
                 }
 
-                for (const auto& id: selectEnds)
+                for (const auto& id : selectEnds)
                 {
                     auto inputSourceIter = m_idToInputSource.find(id);
                     if (inputSourceIter != m_idToInputSource.end())
@@ -3112,7 +3112,7 @@ namespace Babylon
                     }
                 }
 
-                for (const auto& id: squeezeEnds)
+                for (const auto& id : squeezeEnds)
                 {
                     auto inputSourceIter = m_idToInputSource.find(id);
                     if (inputSourceIter != m_idToInputSource.end())
@@ -3148,7 +3148,7 @@ namespace Babylon
                         return;
                     }
 
-                    for (const auto& [name, callback]: m_eventNamesAndCallbacks)
+                    for (const auto& [name, callback] : m_eventNamesAndCallbacks)
                     {
                         if (name == JS_EVENT_NAME_END)
                         {
@@ -3220,7 +3220,7 @@ namespace Babylon
                 uint32_t index{0};
 
                 // Loop over the list of tracked image tracking results, and add them to the array.
-                for (const auto& score: *imageTrackingScores)
+                for (const auto& score : *imageTrackingScores)
                 {
                     const std::string scoreString = score == xr::ImageTrackingScore::TRACKABLE ? XRImageTrackingScore::TRACKABLE : XRImageTrackingScore::UNTRACKABLE;
                     results.Set(index++, Napi::Value::From(info.Env(), scoreString));

@@ -32,7 +32,7 @@ namespace Babylon::ShaderCompilerTraversers
         std::map<std::string, TIntermTyped*> nameToReplacement,
         std::vector<std::pair<TIntermSymbol*, TIntermNode*>> symbolToParent)
         {
-            for (const auto& [symbol, parent]: symbolToParent)
+            for (const auto& [symbol, parent] : symbolToParent)
             {
                 auto* replacement = nameToReplacement[symbol->getName().c_str()];
                 if (auto* aggregate = parent->getAsAggregate())
@@ -168,7 +168,7 @@ namespace Babylon::ShaderCompilerTraversers
                 auto* structMembers = scope.TypeLists.back().get();
 
                 // Create all the types for the members of the new struct.
-                for (const auto& [name, symbol]: traverser.m_uniformNameToSymbol)
+                for (const auto& [name, symbol] : traverser.m_uniformNameToSymbol)
                 {
                     const auto& type = symbol->getType();
                     if (type.isMatrix())
@@ -487,7 +487,7 @@ namespace Babylon::ShaderCompilerTraversers
                 // Create the new symbols with which to replace all of the original varying
                 // symbols. The primary purpose of these new symbols is to contain the required
                 // name and location.
-                for (const auto& [name, symbol]: traverser.m_varyingNameToSymbol)
+                for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
                 {
                     HandleVarying(name, symbol, publicType, intermediate, ids, originalNameToReplacement, replacementToOriginalName, traverser);
                 }
@@ -629,7 +629,7 @@ namespace Babylon::ShaderCompilerTraversers
                     // Create the new symbols with which to replace all of the original varying
                     // symbols. The primary purpose of these new symbols is to contain the required
                     // name and location.
-                    for (const auto& [name, symbol]: m_varyingNameToSymbol)
+                    for (const auto& [name, symbol] : m_varyingNameToSymbol)
                     {
                         const bool isInstance = IsInstance(name.c_str());
                         if ((pass == 0 && isInstance) || (pass == 1 && !isInstance))
@@ -678,7 +678,7 @@ namespace Babylon::ShaderCompilerTraversers
                 // UVs are effectively a special kind of generic attribute since they both use
                 // are implemented using texture coordinates, so we preprocess to pre-count the
                 // number of UV coordinate variables to prevent collisions.
-                for (const auto& [name, symbol]: traverser.m_varyingNameToSymbol)
+                for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
                 {
                     if (name.size() >= 2 && name[0] == 'u' && name[1] == 'v')
                     {
@@ -766,7 +766,7 @@ namespace Babylon::ShaderCompilerTraversers
                 std::map<std::string, std::pair<TIntermSymbol*, TIntermSymbol*>> nameToNewTextureAndSampler{};
 
                 // Create all the new replacers.
-                for (const auto& [name, symbol]: traverser.m_samplerNameToSymbol)
+                for (const auto& [name, symbol] : traverser.m_samplerNameToSymbol)
                 {
                     // For each name and symbol, create a replacer.
                     const auto& type = symbol->getType();

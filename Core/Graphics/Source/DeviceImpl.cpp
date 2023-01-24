@@ -216,7 +216,7 @@ namespace Babylon::Graphics
         // Unlock the update safe timespans.
         {
             std::scoped_lock lock{m_updateSafeTimespansMutex};
-            for (auto& [key, value]: m_updateSafeTimespans)
+            for (auto& [key, value] : m_updateSafeTimespans)
             {
                 value.Unlock();
             }
@@ -228,7 +228,7 @@ namespace Babylon::Graphics
         // Lock the update safe timespans.
         {
             std::scoped_lock lock{m_updateSafeTimespansMutex};
-            for (auto& [key, value]: m_updateSafeTimespans)
+            for (auto& [key, value] : m_updateSafeTimespans)
             {
                 value.Lock();
             }
@@ -427,7 +427,7 @@ namespace Babylon::Graphics
     {
         std::scoped_lock lock{m_threadIdToEncoderMutex};
 
-        for (auto [threadId, encoder]: m_threadIdToEncoder)
+        for (auto [threadId, encoder] : m_threadIdToEncoder)
         {
             bgfx::end(encoder);
         }
@@ -448,7 +448,7 @@ namespace Babylon::Graphics
             return;
         }
 
-        for (const auto& callback: m_captureCallbacks)
+        for (const auto& callback : m_captureCallbacks)
         {
             callback(data);
         }

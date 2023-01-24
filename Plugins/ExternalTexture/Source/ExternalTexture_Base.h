@@ -47,7 +47,7 @@ namespace Babylon::Plugins
         {
             std::scoped_lock lock{m_mutex};
 
-            for (auto handle: m_handles)
+            for (auto handle : m_handles)
             {
                 if (bgfx::overrideInternal(handle, ptr) == 0)
                 {

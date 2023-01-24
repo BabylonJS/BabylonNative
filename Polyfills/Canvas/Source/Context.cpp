@@ -94,7 +94,7 @@ namespace Babylon::Polyfills::Internal
     , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
     , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
-        for (auto& font: NativeCanvas::fontsInfos)
+        for (auto& font : NativeCanvas::fontsInfos)
         {
             m_fonts[font.first] = nvgCreateFontMem(m_nvg, font.first.c_str(), font.second.data(), font.second.size(), 0);
         }
@@ -120,7 +120,7 @@ namespace Babylon::Polyfills::Internal
     {
         if (m_nvg)
         {
-            for (auto& image: m_nvgImageIndices)
+            for (auto& image : m_nvgImageIndices)
             {
                 nvgDeleteImage(m_nvg, image.second);
             }
