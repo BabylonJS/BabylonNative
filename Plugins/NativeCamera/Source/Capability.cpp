@@ -195,7 +195,9 @@ namespace Babylon::Plugins
 
                 // The target value should fallback between the different possible constraint values in the order of exact, ideal, max, min
                 T targetValue =
-                    constraint.exact.has_value() ? constraint.exact.value() : constraint.ideal.has_value() ? constraint.ideal.value() : constraint.max.has_value() ? constraint.max.value() : constraint.min.value();
+                    constraint.exact.has_value() ? constraint.exact.value() : constraint.ideal.has_value() ? constraint.ideal.value()
+                    : constraint.max.has_value()                                                           ? constraint.max.value()
+                                                                                                           : constraint.min.value();
 
                 if (m_currentValue != targetValue)
                 {

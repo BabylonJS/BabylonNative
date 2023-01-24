@@ -12,6 +12,7 @@ BraceWrapping:
   AfterClass: true
   AfterUnion: true
   BeforeCatch: true
+  BeforeLambdaBody: true
 BreakBeforeBraces: Allman
 BreakConstructorInitializersBeforeComma: true
 BreakConstructorInitializers: BeforeComma
@@ -34,3 +35,4 @@ AlignAfterOpenBracket: DontAlign
 ConstructorInitializerIndentWidth: 4
 ContinuationIndentWidth: 4
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
+AllowShortLambdasOnASingleLine: All
