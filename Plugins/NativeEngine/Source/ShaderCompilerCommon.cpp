@@ -18,7 +18,7 @@ namespace Babylon::ShaderCompilerCommon
     {
         const uint8_t fragmentBit = (isFragment ? BGFX_UNIFORM_FRAGMENTBIT : 0);
 
-        for (const auto& uniform : uniformBuffer.Uniforms)
+        for (const auto& uniform: uniformBuffer.Uniforms)
         {
             bgfx::UniformType::Enum bgfxType;
 
@@ -45,7 +45,7 @@ namespace Babylon::ShaderCompilerCommon
 
     void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::unordered_map<std::string, uint8_t>& stages)
     {
-        for (const spirv_cross::Resource& sampler : samplers)
+        for (const spirv_cross::Resource& sampler: samplers)
         {
             AppendBytes(bytes, static_cast<uint8_t>(sampler.name.size()));
             AppendBytes(bytes, sampler.name);
@@ -203,7 +203,7 @@ namespace Babylon::ShaderCompilerCommon
 
             AppendBytes(vertexBytes, static_cast<uint8_t>(resources.stage_inputs.size()));
 
-            for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
+            for (const spirv_cross::Resource& stageInput: resources.stage_inputs)
             {
                 const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
                 AppendBytes(vertexBytes, bgfx::attribToId(static_cast<bgfx::Attrib::Enum>(location)));

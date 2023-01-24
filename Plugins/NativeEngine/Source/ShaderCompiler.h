@@ -14,9 +14,8 @@ namespace Babylon
 {
     /// This class is responsible for compiling the GLSL shader from Babylon.js into
     /// bgfx shader bytes with information about the shader attributes and uniforms.
-    class ShaderCompiler final
-    {
-    public:
+    class ShaderCompiler final {
+       public:
         ShaderCompiler();
         ~ShaderCompiler();
 

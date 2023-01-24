@@ -9,16 +9,14 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    class XMLHttpRequest final : public Napi::ObjectWrap<XMLHttpRequest>
-    {
-    public:
+    class XMLHttpRequest final : public Napi::ObjectWrap<XMLHttpRequest> {
+       public:
         static void Initialize(Napi::Env env);
 
         explicit XMLHttpRequest(const Napi::CallbackInfo& info);
 
-    private:
-        enum class ReadyState
-        {
+       private:
+        enum class ReadyState {
             Unsent = 0,
             Opened = 1,
             Done = 4,

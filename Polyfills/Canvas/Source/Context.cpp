@@ -31,76 +31,73 @@ namespace Babylon::Polyfills::Internal
         Napi::HandleScope scope{env};
 
         Napi::Function func = DefineClass(
-            env,
-            JS_CONTEXT_CONSTRUCTOR_NAME,
-            {
-                InstanceMethod("clearRect", &Context::ClearRect),
-                InstanceMethod("save", &Context::Save),
-                InstanceMethod("restore", &Context::Restore),
-                InstanceMethod("fillRect", &Context::FillRect),
-                InstanceMethod("scale", &Context::Scale),
-                InstanceMethod("rotate", &Context::Rotate),
-                InstanceMethod("translate", &Context::Translate),
-                InstanceMethod("strokeRect", &Context::StrokeRect),
-                InstanceMethod("rect", &Context::Rect),
-                InstanceMethod("clip", &Context::Clip),
-                InstanceMethod("putImageData", &Context::PutImageData),
-                InstanceMethod("arc", &Context::Arc),
-                InstanceMethod("beginPath", &Context::BeginPath),
-                InstanceMethod("closePath", &Context::ClosePath),
-                InstanceMethod("moveTo", &Context::MoveTo),
-                InstanceMethod("lineTo", &Context::LineTo),
-                InstanceMethod("quadraticCurveTo", &Context::QuadraticCurveTo),
-                InstanceMethod("measureText", &Context::MeasureText),
-                InstanceMethod("stroke", &Context::Stroke),
-                InstanceMethod("fill", &Context::Fill),
-                InstanceMethod("drawImage", &Context::DrawImage),
-                InstanceMethod("getImageData", &Context::GetImageData),
-                InstanceMethod("setLineDash", &Context::SetLineDash),
-                InstanceMethod("fillText", &Context::FillText),
-                InstanceMethod("strokeText", &Context::StrokeText),
-                InstanceMethod("createLinearGradient", &Context::CreateLinearGradient),
-                InstanceMethod("setTransform", &Context::SetTransform),
-                InstanceMethod("dispose", &Context::Dispose),
-                InstanceAccessor("lineJoin", &Context::GetLineJoin, &Context::SetLineJoin),
-                InstanceAccessor("miterLimit", &Context::GetMiterLimit, &Context::SetMiterLimit),
-                InstanceAccessor("font", &Context::GetFont, &Context::SetFont),
-                InstanceAccessor("strokeStyle", &Context::GetStrokeStyle, &Context::SetStrokeStyle),
-                InstanceAccessor("fillStyle", &Context::GetFillStyle, &Context::SetFillStyle),
-                InstanceAccessor("globalAlpha", nullptr, &Context::SetGlobalAlpha),
-                InstanceAccessor("shadowColor", &Context::GetShadowColor, &Context::SetShadowColor),
-                InstanceAccessor("shadowBlur", &Context::GetShadowBlur, &Context::SetShadowBlur),
-                InstanceAccessor("shadowOffsetX", &Context::GetShadowOffsetX, &Context::SetShadowOffsetX),
-                InstanceAccessor("shadowOffsetY", &Context::GetShadowOffsetY, &Context::SetShadowOffsetY),
-                InstanceAccessor("lineWidth", &Context::GetLineWidth, &Context::SetLineWidth),
-                InstanceAccessor("canvas", &Context::GetCanvas, nullptr)
-            });
+        env,
+        JS_CONTEXT_CONSTRUCTOR_NAME,
+        {InstanceMethod("clearRect", &Context::ClearRect),
+        InstanceMethod("save", &Context::Save),
+        InstanceMethod("restore", &Context::Restore),
+        InstanceMethod("fillRect", &Context::FillRect),
+        InstanceMethod("scale", &Context::Scale),
+        InstanceMethod("rotate", &Context::Rotate),
+        InstanceMethod("translate", &Context::Translate),
+        InstanceMethod("strokeRect", &Context::StrokeRect),
+        InstanceMethod("rect", &Context::Rect),
+        InstanceMethod("clip", &Context::Clip),
+        InstanceMethod("putImageData", &Context::PutImageData),
+        InstanceMethod("arc", &Context::Arc),
+        InstanceMethod("beginPath", &Context::BeginPath),
+        InstanceMethod("closePath", &Context::ClosePath),
+        InstanceMethod("moveTo", &Context::MoveTo),
+        InstanceMethod("lineTo", &Context::LineTo),
+        InstanceMethod("quadraticCurveTo", &Context::QuadraticCurveTo),
+        InstanceMethod("measureText", &Context::MeasureText),
+        InstanceMethod("stroke", &Context::Stroke),
+        InstanceMethod("fill", &Context::Fill),
+        InstanceMethod("drawImage", &Context::DrawImage),
+        InstanceMethod("getImageData", &Context::GetImageData),
+        InstanceMethod("setLineDash", &Context::SetLineDash),
+        InstanceMethod("fillText", &Context::FillText),
+        InstanceMethod("strokeText", &Context::StrokeText),
+        InstanceMethod("createLinearGradient", &Context::CreateLinearGradient),
+        InstanceMethod("setTransform", &Context::SetTransform),
+        InstanceMethod("dispose", &Context::Dispose),
+        InstanceAccessor("lineJoin", &Context::GetLineJoin, &Context::SetLineJoin),
+        InstanceAccessor("miterLimit", &Context::GetMiterLimit, &Context::SetMiterLimit),
+        InstanceAccessor("font", &Context::GetFont, &Context::SetFont),
+        InstanceAccessor("strokeStyle", &Context::GetStrokeStyle, &Context::SetStrokeStyle),
+        InstanceAccessor("fillStyle", &Context::GetFillStyle, &Context::SetFillStyle),
+        InstanceAccessor("globalAlpha", nullptr, &Context::SetGlobalAlpha),
+        InstanceAccessor("shadowColor", &Context::GetShadowColor, &Context::SetShadowColor),
+        InstanceAccessor("shadowBlur", &Context::GetShadowBlur, &Context::SetShadowBlur),
+        InstanceAccessor("shadowOffsetX", &Context::GetShadowOffsetX, &Context::SetShadowOffsetX),
+        InstanceAccessor("shadowOffsetY", &Context::GetShadowOffsetY, &Context::SetShadowOffsetY),
+        InstanceAccessor("lineWidth", &Context::GetLineWidth, &Context::SetLineWidth),
+        InstanceAccessor("canvas", &Context::GetCanvas, nullptr)});
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONTEXT_CONSTRUCTOR_NAME, func);
     }
 
     Napi::Value Context::CreateInstance(Napi::Env env, NativeCanvas* canvas)
     {
-        Napi::HandleScope scope{ env };
+        Napi::HandleScope scope{env};
 
         auto func = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_CONTEXT_CONSTRUCTOR_NAME).As<Napi::Function>();
-        return func.New({ Napi::External<NativeCanvas>::New(env, canvas)});
+        return func.New({Napi::External<NativeCanvas>::New(env, canvas)});
     }
 
     Context::Context(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<Context>{info}
-        , m_canvas{info[0].As<Napi::External<NativeCanvas>>().Data()}
-        , m_nvg{nvgCreate(1)}
-        , m_graphicsContext{m_canvas->GetGraphicsContext()}
-        , m_update{m_graphicsContext.GetUpdate("update")}
-        , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
-        , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
-        , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
+    : Napi::ObjectWrap<Context>{info}
+    , m_canvas{info[0].As<Napi::External<NativeCanvas>>().Data()}
+    , m_nvg{nvgCreate(1)}
+    , m_graphicsContext{m_canvas->GetGraphicsContext()}
+    , m_update{m_graphicsContext.GetUpdate("update")}
+    , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
+    , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
+    , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
-        for (auto& font : NativeCanvas::fontsInfos)
+        for (auto& font: NativeCanvas::fontsInfos)
         {
             m_fonts[font.first] = nvgCreateFontMem(m_nvg, font.first.c_str(), font.second.data(), font.second.size(), 0);
         }
-
     }
 
     Context::~Context()
@@ -123,7 +120,7 @@ namespace Babylon::Polyfills::Internal
     {
         if (m_nvg)
         {
-            for(auto& image : m_nvgImageIndices)
+            for (auto& image: m_nvgImageIndices)
             {
                 nvgDeleteImage(m_nvg, image.second);
             }
@@ -180,7 +177,7 @@ namespace Babylon::Polyfills::Internal
         SetDirty();
     }
 
-    Napi::Value Context::GetLineWidth(const Napi::CallbackInfo& )
+    Napi::Value Context::GetLineWidth(const Napi::CallbackInfo&)
     {
         return Napi::Value::From(Env(), m_lineWidth);
     }
@@ -227,12 +224,12 @@ namespace Babylon::Polyfills::Internal
         }
 
         nvgRect(m_nvg, x, y, width, height);
-        
+
         if (!m_isClipped)
         {
             nvgClosePath(m_nvg);
         }
-        
+
         nvgFillColor(m_nvg, TRANSPARENT_BLACK);
         nvgFill(m_nvg);
         nvgRestore(m_nvg);
@@ -388,8 +385,8 @@ namespace Babylon::Polyfills::Internal
         // Unlike other systems where it's cleared.
         bool needClear = m_canvas->UpdateRenderTarget();
 
-        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, needClear, cancellationSource{ m_cancellationSource }]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{ m_update.GetUpdateToken() }, cancellationSource{ m_cancellationSource }]() {
+        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, needClear, cancellationSource{m_cancellationSource}]() {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{m_update.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() {
                 // JS Thread
                 Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
                 bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
@@ -407,7 +404,8 @@ namespace Babylon::Polyfills::Internal
                 nvgEndFrame(m_nvg);
                 frameBuffer.Unbind(*encoder);
                 m_dirty = false;
-            }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }](const arcana::expected<void, std::exception_ptr>& result) {
+            })
+            .then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
                 if (!cancellationSource->cancelled() && result.has_error())
                 {
                     Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
@@ -418,7 +416,7 @@ namespace Babylon::Polyfills::Internal
 
     void Context::PutImageData(const Napi::CallbackInfo&)
     {
-        throw std::runtime_error{ "not implemented" };
+        throw std::runtime_error{"not implemented"};
     }
 
     void Context::Arc(const Napi::CallbackInfo& info)
@@ -468,7 +466,7 @@ namespace Babylon::Polyfills::Internal
             nvgFillPaint(m_nvg, imagePaint);
             nvgFill(m_nvg);
             SetDirty();
-        } 
+        }
         else if (info.Length() == 5)
         {
             const auto dx = info[1].As<Napi::Number>().Int32Value();
@@ -477,7 +475,7 @@ namespace Babylon::Polyfills::Internal
             const auto dHeight = info[4].As<Napi::Number>().Uint32Value();
 
             NVGpaint imagePaint = nvgImagePattern(m_nvg, static_cast<float>(dx), static_cast<float>(dy), static_cast<float>(dWidth), static_cast<float>(dHeight), 0.f, imageIndex, 1.f);
-            
+
             if (!m_isClipped)
             {
                 nvgBeginPath(m_nvg);
@@ -502,7 +500,7 @@ namespace Babylon::Polyfills::Internal
             const auto height = static_cast<float>(canvasImage->GetHeight());
 
             NVGpaint imagePaint = nvgImagePattern(m_nvg, static_cast<float>(dx), static_cast<float>(dy), static_cast<float>(dWidth), static_cast<float>(dHeight), 0.f, imageIndex, 1.f);
-            
+
             if (!m_isClipped)
             {
                 nvgBeginPath(m_nvg);

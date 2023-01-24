@@ -1,21 +1,28 @@
-# https://releases.llvm.org/8.0.0/tools/clang/docs/ClangFormatStyleOptions.html
----
-BasedOnStyle: LLVM
----
+BasedOnStyle: Google
 Language: Cpp
-
-AccessModifierOffset: -4
 AlignAfterOpenBracket: DontAlign
-AlignOperands: false
-AlwaysBreakTemplateDeclarations: true
-BreakBeforeBraces: Allman
-BreakConstructorInitializers: BeforeComma
+AlignOperands: true
+BraceWrapping:
+  AfterControlStatement: true
+  AfterFunction: true
+  AfterNamespace: true
+  BeforeElse: true
+  SplitEmptyRecord: true
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: true
+  BeforeElse: true
+BreakBeforeBraces: Custom
+BreakConstructorInitializersBeforeComma: true
 ColumnLimit: 0
+ConstructorInitializerIndentWidth: 0
+ContinuationIndentWidth: 0
 FixNamespaceComments: false
-IndentCaseLabels: true
+IndentCaseLabels: false
 IndentWidth: 4
-NamespaceIndentation: All
-PointerAlignment: Left
 SortIncludes: false
 SpaceAfterTemplateKeyword: false
----
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: false
+SpacesBeforeTrailingComments: 1
+NamespaceIndentation: All

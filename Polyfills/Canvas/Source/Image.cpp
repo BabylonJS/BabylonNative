@@ -21,27 +21,27 @@ namespace Babylon::Polyfills::Internal
         Napi::HandleScope scope{env};
 
         Napi::Function func = DefineClass(
-            env,
-            JS_IMAGE_CONSTRUCTOR_NAME,
-            {
-                InstanceAccessor("width", &NativeCanvasImage::GetWidth, nullptr),
-                InstanceAccessor("height", &NativeCanvasImage::GetHeight, nullptr),
-                InstanceAccessor("naturalWidth", &NativeCanvasImage::GetNaturalWidth, nullptr),
-                InstanceAccessor("naturalHeight", &NativeCanvasImage::GetNaturalHeight, nullptr),
-                InstanceAccessor("src", &NativeCanvasImage::GetSrc, &NativeCanvasImage::SetSrc),
-                InstanceAccessor("onload", nullptr, &NativeCanvasImage::SetOnload),
-                InstanceAccessor("onerror", nullptr, &NativeCanvasImage::SetOnerror),
-                // TODO: This should be set directly on the JS Object rather than via an instanceAccessor see: https://github.com/BabylonJS/BabylonNative/issues/1030
-                InstanceAccessor("_imageContainer", &NativeCanvasImage::GetImageContainer, nullptr),
-            });
+        env,
+        JS_IMAGE_CONSTRUCTOR_NAME,
+        {
+        InstanceAccessor("width", &NativeCanvasImage::GetWidth, nullptr),
+        InstanceAccessor("height", &NativeCanvasImage::GetHeight, nullptr),
+        InstanceAccessor("naturalWidth", &NativeCanvasImage::GetNaturalWidth, nullptr),
+        InstanceAccessor("naturalHeight", &NativeCanvasImage::GetNaturalHeight, nullptr),
+        InstanceAccessor("src", &NativeCanvasImage::GetSrc, &NativeCanvasImage::SetSrc),
+        InstanceAccessor("onload", nullptr, &NativeCanvasImage::SetOnload),
+        InstanceAccessor("onerror", nullptr, &NativeCanvasImage::SetOnerror),
+        // TODO: This should be set directly on the JS Object rather than via an instanceAccessor see: https://github.com/BabylonJS/BabylonNative/issues/1030
+        InstanceAccessor("_imageContainer", &NativeCanvasImage::GetImageContainer, nullptr),
+        });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_IMAGE_CONSTRUCTOR_NAME, func);
     }
 
     NativeCanvasImage::NativeCanvasImage(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<NativeCanvasImage>{info}
-        , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
-        , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
+    : Napi::ObjectWrap<NativeCanvasImage>{info}
+    , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
+    , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
     {
     }
 
@@ -120,7 +120,7 @@ namespace Babylon::Polyfills::Internal
             }
 
             m_imageContainer = bimg::imageParse(&m_allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
-            
+
             if (m_imageContainer == nullptr)
             {
                 HandleLoadImageError(Napi::Error::New(env, "Unable to decode image with provided src."));

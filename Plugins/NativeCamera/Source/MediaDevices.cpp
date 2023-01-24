@@ -12,11 +12,10 @@ namespace Babylon::Plugins::Internal
 {
     // The MediaDevices class is a native implementation that polyfills the MediaDevices web API
     // https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices
-    class MediaDevices : public Napi::ObjectWrap<MediaDevices>
-    {
-    public:
+    class MediaDevices : public Napi::ObjectWrap<MediaDevices> {
+       public:
         MediaDevices(const Napi::CallbackInfo& info)
-                : Napi::ObjectWrap<MediaDevices>{info}
+        : Napi::ObjectWrap<MediaDevices>{info}
         {
         }
 
@@ -39,8 +38,7 @@ namespace Babylon::Plugins::Internal
             }
 
             auto runtimeScheduler{std::make_unique<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env))};
-            MediaStream::NewAsync(env, videoConstraints).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler = std::move(runtimeScheduler), env, deferred](const arcana::expected<Napi::Object, std::exception_ptr>& result)
-            {
+            MediaStream::NewAsync(env, videoConstraints).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler = std::move(runtimeScheduler), env, deferred](const arcana::expected<Napi::Object, std::exception_ptr>& result) {
                 if (result.has_error())
                 {
                     deferred.Reject(Napi::Error::New(env, result.error()).Value());
@@ -52,7 +50,7 @@ namespace Babylon::Plugins::Internal
 
             return std::move(promise);
         }
-        
+
         static Napi::Value EnumerateDevices(const Napi::CallbackInfo& info)
         {
             auto env = info.Env();
@@ -61,22 +59,22 @@ namespace Babylon::Plugins::Internal
             auto promise = deferred.Promise();
 
             std::vector<CameraDevice> cameraDevices{CameraDevice::GetCameraDevices(env)};
-            
+
             Napi::Array devices{Napi::Array::New(env, cameraDevices.size())};
-            
-            for (unsigned long i=0; i<cameraDevices.size(); i++)
+
+            for (unsigned long i = 0; i < cameraDevices.size(); i++)
             {
                 Napi::Object device{Napi::Object::New(env)};
                 device.Set("deviceId", Napi::String::New(env, std::to_string(i)));
                 device.Set("groupId", Napi::String::New(env, ""));
                 device.Set("kind", Napi::String::New(env, "videoinput"));
                 device.Set("label", Napi::String::New(env, ""));
-                
+
                 devices.Set(static_cast<uint32_t>(i), device);
             }
-            
+
             deferred.Resolve(devices);
-            
+
             return std::move(promise);
         }
     };

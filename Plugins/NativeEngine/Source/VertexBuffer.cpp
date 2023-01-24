@@ -3,7 +3,8 @@
 
 namespace
 {
-    template<typename sourceType> void PromoteToFloats(std::vector<uint8_t>& bytes, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride)
+    template<typename sourceType>
+    void PromoteToFloats(std::vector<uint8_t>& bytes, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride)
     {
         const size_t count = bytes.size() / byteStride;
         const size_t destinationSize = count * numElements * sizeof(float);
@@ -27,8 +28,8 @@ namespace
 namespace Babylon
 {
     VertexBuffer::VertexBuffer(gsl::span<uint8_t> bytes, bool dynamic)
-        : m_bytes{{bytes.data(), bytes.data() + bytes.size()}}
-        , m_dynamic{dynamic}
+    : m_bytes{{bytes.data(), bytes.data() + bytes.size()}}
+    , m_dynamic{dynamic}
     {
     }
 
@@ -110,8 +111,7 @@ namespace Babylon
             return true;
         }
 
-        auto releaseFn = [](void*, void* userData)
-        {
+        auto releaseFn = [](void*, void* userData) {
             auto* bytes = reinterpret_cast<decltype(m_bytes)*>(userData);
             bytes->reset();
         };
@@ -134,31 +134,26 @@ namespace Babylon
     {
         switch (attribType)
         {
-            case bgfx::AttribType::Int8:
-            {
-                ::PromoteToFloats<int8_t>(*m_bytes, numElements, byteOffset, byteStride);
-                break;
-            }
-            case bgfx::AttribType::Uint8:
-            {
-                ::PromoteToFloats<uint8_t>(*m_bytes, numElements, byteOffset, byteStride);
-                break;
-            }
-            case bgfx::AttribType::Int16:
-            {
-                ::PromoteToFloats<int16_t>(*m_bytes, numElements, byteOffset, byteStride);
-                break;
-            }
-            case bgfx::AttribType::Uint16:
-            {
-                ::PromoteToFloats<uint16_t>(*m_bytes, numElements, byteOffset, byteStride);
-                break;
-            }
-            case bgfx::AttribType::Uint10: // is supported by any format ?
-            default:
-            {
-                throw std::runtime_error("Unable to promote vertex stream to a float array.");
-            }
+        case bgfx::AttribType::Int8: {
+            ::PromoteToFloats<int8_t>(*m_bytes, numElements, byteOffset, byteStride);
+            break;
+        }
+        case bgfx::AttribType::Uint8: {
+            ::PromoteToFloats<uint8_t>(*m_bytes, numElements, byteOffset, byteStride);
+            break;
+        }
+        case bgfx::AttribType::Int16: {
+            ::PromoteToFloats<int16_t>(*m_bytes, numElements, byteOffset, byteStride);
+            break;
+        }
+        case bgfx::AttribType::Uint16: {
+            ::PromoteToFloats<uint16_t>(*m_bytes, numElements, byteOffset, byteStride);
+            break;
+        }
+        case bgfx::AttribType::Uint10: // is supported by any format ?
+        default: {
+            throw std::runtime_error("Unable to promote vertex stream to a float array.");
+        }
         }
     }
 
@@ -181,7 +176,7 @@ namespace Babylon
     {
         uint16_t instanceStride{};
         uint32_t instanceCount{};
-        for (auto& pair : vertexBufferInstance)
+        for (auto& pair: vertexBufferInstance)
         {
             const auto vertexBuffer{pair.second.Buffer};
             instanceCount = static_cast<uint32_t>(vertexBuffer->m_bytes->size()) / pair.second.Stride;

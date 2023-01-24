@@ -3,10 +3,11 @@
 
 namespace Babylon::Graphics
 {
-    class Device::Impl : public DeviceImpl { };
+    class Device::Impl : public DeviceImpl {
+    };
 
     Device::Device()
-        : m_impl{std::make_unique<Impl>()}
+    : m_impl{std::make_unique<Impl>()}
     {
     }
 
@@ -82,16 +83,13 @@ namespace Babylon::Graphics
     {
         auto& guarantor = m_impl->GetSafeTimespanGuarantor(updateName);
         return {
-            [&guarantor]
-            { 
-                guarantor.Open();
-            },
-            [&guarantor](std::function<void()> callback)
-            {
-                guarantor.CloseScheduler()(std::move(callback));
-                guarantor.RequestClose();
-            }
-        };
+        [&guarantor] {
+            guarantor.Open();
+        },
+        [&guarantor](std::function<void()> callback) {
+            guarantor.CloseScheduler()(std::move(callback));
+            guarantor.RequestClose();
+        }};
     }
 
     void Device::StartRenderingCurrentFrame()

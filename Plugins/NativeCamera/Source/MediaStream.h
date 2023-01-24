@@ -10,42 +10,41 @@ namespace Babylon::Plugins
     // that enable control over selecting a camera stream available on the device and modifying capabilities
     // of the camera on the fly while the stream is rendering.
     // https://developer.mozilla.org/en-US/docs/Web/API/MediaStream
-    class MediaStream : public Napi::ObjectWrap<MediaStream>
-    {
+    class MediaStream : public Napi::ObjectWrap<MediaStream> {
         static constexpr auto JS_CLASS_NAME = "_MediaStream";
 
-    public:
+       public:
         static arcana::task<Napi::Object, std::exception_ptr> NewAsync(Napi::Env env, Napi::Object constraints);
         static Napi::Function GetConstructor(Napi::Env env);
-        
+
         MediaStream(const Napi::CallbackInfo& info);
         ~MediaStream();
 
         // MediaStream polyfill: https://developer.mozilla.org/en-US/docs/Web/API/MediaStream
         Napi::Value GetVideoTracks(const Napi::CallbackInfo& info);
         Napi::Value GetAudioTracks(const Napi::CallbackInfo& info);
-        
+
         // MediaStreamTrack polyfill: https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack
         Napi::Value ApplyConstraints(const Napi::CallbackInfo& info);
         Napi::Value GetCapabilities(const Napi::CallbackInfo& info);
         Napi::Value GetSettings(const Napi::CallbackInfo& info);
         Napi::Value GetConstraints(const Napi::CallbackInfo& info);
         void Stop(const Napi::CallbackInfo& info);
-        
+
         void UpdateTexture(bgfx::TextureHandle textureHandle);
-        
+
         int Width{0};
         int Height{0};
-        
-    private:
+
+       private:
         arcana::task<void, std::exception_ptr> ApplyInitialConstraintsAsync(Napi::Env env, Napi::Object constraints);
         std::optional<std::pair<CameraDevice, const CameraTrack&>> FindBestCameraStream(Napi::Env env, Napi::Object constraints);
         bool UpdateConstraints(Napi::Env env, Napi::Object constraints);
-        
+
         // Capture CameraDevice in a shared_ptr because the iOS implementation relies on the `shared_from_this` syntax for async work
         std::shared_ptr<CameraDevice> m_cameraDevice{nullptr};
         JsRuntimeScheduler m_runtimeScheduler;
-        
+
         Napi::ObjectReference m_currentConstraints{};
     };
 }

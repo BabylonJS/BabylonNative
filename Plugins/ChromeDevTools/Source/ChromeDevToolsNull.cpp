@@ -4,8 +4,7 @@
 
 namespace Babylon::Plugins
 {
-    class ChromeDevTools::Impl
-    {
+    class ChromeDevTools::Impl {
     };
 
     ChromeDevTools ChromeDevTools::Initialize(Napi::Env)
@@ -14,7 +13,7 @@ namespace Babylon::Plugins
     }
 
     ChromeDevTools::ChromeDevTools(std::shared_ptr<ChromeDevTools::Impl> impl)
-        : m_impl{std::move(impl)}
+    : m_impl{std::move(impl)}
     {
     }
 

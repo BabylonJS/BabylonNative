@@ -29,10 +29,10 @@ namespace Babylon::ShaderCompilerTraversers
         /// @param nameToReplacement Map from symbol names to the node which should replace that symbol.
         /// @param symbolToParent Vector of symbols to be replaced along with their parents in the AST.
         void MakeReplacements(
-            std::map<std::string, TIntermTyped*> nameToReplacement,
-            std::vector<std::pair<TIntermSymbol*, TIntermNode*>> symbolToParent)
+        std::map<std::string, TIntermTyped*> nameToReplacement,
+        std::vector<std::pair<TIntermSymbol*, TIntermNode*>> symbolToParent)
         {
-            for (const auto& [symbol, parent] : symbolToParent)
+            for (const auto& [symbol, parent]: symbolToParent)
             {
                 auto* replacement = nameToReplacement[symbol->getName().c_str()];
                 if (auto* aggregate = parent->getAsAggregate())
@@ -103,9 +103,8 @@ namespace Babylon::ShaderCompilerTraversers
         /// This traverser collects all non-sampler uniforms and creates a new struct
         /// called "Frame" to contain them. This is necessary to correctly transpile
         /// for DirectX and Metal.
-        class NonSamplerUniformToStructTraverser final : private TIntermTraverser
-        {
-        public:
+        class NonSamplerUniformToStructTraverser final : private TIntermTraverser {
+           public:
             static ScopeT Traverse(TProgram& program, IdGenerator& ids)
             {
                 auto* scope = new AllocationsScope();
@@ -114,13 +113,12 @@ namespace Babylon::ShaderCompilerTraversers
                 return std::unique_ptr<AllocationsScopeBase>(scope);
             }
 
-        private:
+           private:
             /// This scope contains the new allocations added to the AST to represent
             /// the new struct, information about the elements it contains, dereferencing
             /// operations, etc.
-            class AllocationsScope : AllocationsScopeBase
-            {
-            private:
+            class AllocationsScope : AllocationsScopeBase {
+               private:
                 friend NonSamplerUniformToStructTraverser;
                 std::vector<std::unique_ptr<TType>> Types{};
                 std::vector<std::unique_ptr<TTypeList>> TypeLists{};
@@ -170,7 +168,7 @@ namespace Babylon::ShaderCompilerTraversers
                 auto* structMembers = scope.TypeLists.back().get();
 
                 // Create all the types for the members of the new struct.
-                for (const auto& [name, symbol] : traverser.m_uniformNameToSymbol)
+                for (const auto& [name, symbol]: traverser.m_uniformNameToSymbol)
                 {
                     const auto& type = symbol->getType();
                     if (type.isMatrix())
@@ -273,9 +271,8 @@ namespace Babylon::ShaderCompilerTraversers
 
         /// Changes the types of all float, vec2, and vec3 uniforms to vec4. This is required
         /// for OpenGL and Metal.
-        class UniformTypeChangeTraverser final : private TIntermTraverser
-        {
-        public:
+        class UniformTypeChangeTraverser final : private TIntermTraverser {
+           public:
             static ScopeT Traverse(TProgram& program, IdGenerator& ids)
             {
                 auto* scope = new AllocationsScope();
@@ -284,17 +281,16 @@ namespace Babylon::ShaderCompilerTraversers
                 return std::unique_ptr<AllocationsScopeBase>(scope);
             }
 
-        private:
-            class AllocationsScope : AllocationsScopeBase
-            {
-            private:
+           private:
+            class AllocationsScope : AllocationsScopeBase {
+               private:
                 friend UniformTypeChangeTraverser;
                 std::vector<std::unique_ptr<TArraySizes>> ArraySizes{};
             };
 
             UniformTypeChangeTraverser(TIntermediate* intermediate, AllocationsScope& scope)
-                : m_intermediate{intermediate}
-                , m_scope{scope}
+            : m_intermediate{intermediate}
+            , m_scope{scope}
             {
             }
 
@@ -336,8 +332,7 @@ namespace Babylon::ShaderCompilerTraversers
 
                     // Helper function to correctly insert the shape conversion into the AST.
                     // More about shape conversion below.
-                    constexpr auto injectShapeConversion = [](TIntermTyped* node, TIntermNode* parent, TIntermTyped* shapeConversion)
-                    {
+                    constexpr auto injectShapeConversion = [](TIntermTyped* node, TIntermNode* parent, TIntermTyped* shapeConversion) {
                         if (auto* aggregate = parent->getAsAggregate())
                         {
                             auto& sequence = aggregate->getSequence();
@@ -453,9 +448,8 @@ namespace Babylon::ShaderCompilerTraversers
         /// bgfx's expectations regarding name and location. It is currently required for
         /// DirectX, OpenGL, and Metal. It is an abstract class which serves as the basis
         /// for platform-specific implementations.
-        class VertexVaryingInTraverser : protected TIntermTraverser
-        {
-        protected:
+        class VertexVaryingInTraverser : protected TIntermTraverser {
+           protected:
             virtual void visitSymbol(TIntermSymbol* symbol) override
             {
                 // Collect all vertex attributes, described by glslang as "varyings."
@@ -493,7 +487,7 @@ namespace Babylon::ShaderCompilerTraversers
                 // Create the new symbols with which to replace all of the original varying
                 // symbols. The primary purpose of these new symbols is to contain the required
                 // name and location.
-                for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
+                for (const auto& [name, symbol]: traverser.m_varyingNameToSymbol)
                 {
                     HandleVarying(name, symbol, publicType, intermediate, ids, originalNameToReplacement, replacementToOriginalName, traverser);
                 }
@@ -520,20 +514,20 @@ namespace Babylon::ShaderCompilerTraversers
                     publicType.setVector(type.getVectorSize());
                 }
 
-                TType newType{ publicType };
+                TType newType{publicType};
                 newType.setBasicType(symbol->getType().getBasicType());
-                auto* newSymbol = intermediate->addSymbol(TIntermSymbol{ ids.Next(), newName, newType });
+                auto* newSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), newName, newType});
                 originalNameToReplacement[name] = newSymbol;
                 replacementToOriginalName[newName] = name;
             }
-        
+
             static bool IsInstance(const char* name)
             {
                 return (!strcmp(name, "world0") ||
-                    !strcmp(name, "world1") ||
-                    !strcmp(name, "world2") ||
-                    !strcmp(name, "world3") ||
-                    !strcmp(name, "instanceColor"));
+                        !strcmp(name, "world1") ||
+                        !strcmp(name, "world2") ||
+                        !strcmp(name, "world3") ||
+                        !strcmp(name, "instanceColor"));
             }
 
             unsigned int m_genericAttributesRunningCount{0};
@@ -544,40 +538,39 @@ namespace Babylon::ShaderCompilerTraversers
             // copied from renderer_gl.cpp. Used by OpenGL and Metal
             constexpr static const char* s_attribName[] =
             {
-                "a_position",
-                "a_normal",
-                "a_tangent",
-                "a_bitangent",
-                "a_color0",
-                "a_color1",
-                "a_color2",
-                "a_color3",
-                "a_indices",
-                "a_weight",
-                "a_texcoord0",
-                "a_texcoord1",
-                "a_texcoord2",
-                "a_texcoord3",
-                "a_texcoord4",
-                "a_texcoord5",
-                "a_texcoord6",
-                "a_texcoord7",
+            "a_position",
+            "a_normal",
+            "a_tangent",
+            "a_bitangent",
+            "a_color0",
+            "a_color1",
+            "a_color2",
+            "a_color3",
+            "a_indices",
+            "a_weight",
+            "a_texcoord0",
+            "a_texcoord1",
+            "a_texcoord2",
+            "a_texcoord3",
+            "a_texcoord4",
+            "a_texcoord5",
+            "a_texcoord6",
+            "a_texcoord7",
             };
             BX_STATIC_ASSERT(bgfx::Attrib::Count == BX_COUNTOF(s_attribName));
             constexpr static const char* s_attribInstanceName[] =
             {
-                "i_data0",
-                "i_data1",
-                "i_data2",
-                "i_data3",
-                "i_data4",
+            "i_data0",
+            "i_data1",
+            "i_data2",
+            "i_data3",
+            "i_data4",
             };
         };
 
         /// Implementation of VertexVaryingInTraverser for OpenGL and Metal
-        class VertexVaryingInTraverserOpenGL final : private VertexVaryingInTraverser
-        {
-        public:
+        class VertexVaryingInTraverserOpenGL final : private VertexVaryingInTraverser {
+           public:
             static void Traverse(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
             {
                 auto intermediate{program.getIntermediate(EShLangVertex)};
@@ -586,8 +579,7 @@ namespace Babylon::ShaderCompilerTraversers
                 VertexVaryingInTraverser::Traverse(intermediate, ids, replacementToOriginalName, traverser);
             }
 
-        private:
-
+           private:
             std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
             {
                 // For OpenGL and Metal platforms, we have an issue where we have a hard limit on the number shader attributes supported.
@@ -607,9 +599,8 @@ namespace Babylon::ShaderCompilerTraversers
             unsigned int m_instanceAttributeIndex{0};
         };
 
-        class VertexVaryingInTraverserMetal final : private VertexVaryingInTraverser
-        {
-        public:
+        class VertexVaryingInTraverserMetal final : private VertexVaryingInTraverser {
+           public:
             static void Traverse(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
             {
                 auto intermediate{program.getIntermediate(EShLangVertex)};
@@ -618,7 +609,7 @@ namespace Babylon::ShaderCompilerTraversers
                 traverser.Traverse(intermediate, ids, replacementToOriginalName);
             }
 
-        private:
+           private:
             void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
             {
                 std::map<std::string, TIntermTyped*> originalNameToReplacement{};
@@ -633,12 +624,12 @@ namespace Babylon::ShaderCompilerTraversers
                 // - first for standard attributes
                 // - second for instancing attributes (instance divisor ==1)
                 // For Metal, instancing attributes must be last because of bgfx way of doing instancing
-                for (int pass = 0; pass < 2; pass ++)
+                for (int pass = 0; pass < 2; pass++)
                 {
                     // Create the new symbols with which to replace all of the original varying
                     // symbols. The primary purpose of these new symbols is to contain the required
                     // name and location.
-                    for (const auto& [name, symbol] : m_varyingNameToSymbol)
+                    for (const auto& [name, symbol]: m_varyingNameToSymbol)
                     {
                         const bool isInstance = IsInstance(name.c_str());
                         if ((pass == 0 && isInstance) || (pass == 1 && !isInstance))
@@ -675,11 +666,10 @@ namespace Babylon::ShaderCompilerTraversers
             }
             unsigned int m_instanceAttributeCount{0};
         };
-    
+
         /// Implementation of VertexVaryingInTraverser for DirectX
-        class VertexVaryingInTraverserD3D final : private VertexVaryingInTraverser
-        {
-        public:
+        class VertexVaryingInTraverserD3D final : private VertexVaryingInTraverser {
+           public:
             static void Traverse(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
             {
                 auto intermediate{program.getIntermediate(EShLangVertex)};
@@ -688,7 +678,7 @@ namespace Babylon::ShaderCompilerTraversers
                 // UVs are effectively a special kind of generic attribute since they both use
                 // are implemented using texture coordinates, so we preprocess to pre-count the
                 // number of UV coordinate variables to prevent collisions.
-                for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
+                for (const auto& [name, symbol]: traverser.m_varyingNameToSymbol)
                 {
                     if (name.size() >= 2 && name[0] == 'u' && name[1] == 'v')
                     {
@@ -698,7 +688,7 @@ namespace Babylon::ShaderCompilerTraversers
                 VertexVaryingInTraverser::Traverse(intermediate, ids, replacementToOriginalName, traverser);
             }
 
-        private:
+           private:
             std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
             {
 #define IF_NAME_RETURN_ATTRIB(varyingName, attrib, newName)  \
@@ -735,9 +725,8 @@ namespace Babylon::ShaderCompilerTraversers
         /// This is required for DirectX and Metal. Note that bgfx expects sequential bindings
         /// for samplers across both vertex and fragment shaders.
         /// </summary>
-        class SamplerSplitterTraverser final : TIntermTraverser
-        {
-        public:
+        class SamplerSplitterTraverser final : TIntermTraverser {
+           public:
             void visitSymbol(TIntermSymbol* symbol) override
             {
                 if (symbol->getType().getQualifier().storage == EvqUniform && symbol->getType().getBasicType() == EbtSampler)
@@ -764,7 +753,7 @@ namespace Babylon::ShaderCompilerTraversers
                 Traverse(program.getIntermediate(EShLangFragment), ids, layoutBinding);
             }
 
-        private:
+           private:
             static void Traverse(TIntermediate* intermediate, IdGenerator& ids, unsigned int& layoutBinding)
             {
                 SamplerSplitterTraverser traverser{};
@@ -777,7 +766,7 @@ namespace Babylon::ShaderCompilerTraversers
                 std::map<std::string, std::pair<TIntermSymbol*, TIntermSymbol*>> nameToNewTextureAndSampler{};
 
                 // Create all the new replacers.
-                for (const auto& [name, symbol] : traverser.m_samplerNameToSymbol)
+                for (const auto& [name, symbol]: traverser.m_samplerNameToSymbol)
                 {
                     // For each name and symbol, create a replacer.
                     const auto& type = symbol->getType();
@@ -869,9 +858,8 @@ namespace Babylon::ShaderCompilerTraversers
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
         };
 
-        class InvertYDerivativeOperandsTraverser : public TIntermTraverser
-        {
-        public:
+        class InvertYDerivativeOperandsTraverser : public TIntermTraverser {
+           public:
             static void Traverse(TProgram& program)
             {
                 auto intermediate{program.getIntermediate(EShLangFragment)};
@@ -879,7 +867,7 @@ namespace Babylon::ShaderCompilerTraversers
                 intermediate->getTreeRoot()->traverse(&invertYDerivativeOperandsTraverser);
             }
 
-        protected:
+           protected:
             virtual bool visitUnary(TVisit visit, TIntermUnary* unary) override
             {
                 if (visit == EvPreVisit)
@@ -895,9 +883,9 @@ namespace Babylon::ShaderCompilerTraversers
                 return true;
             }
 
-        private:
+           private:
             InvertYDerivativeOperandsTraverser(TIntermediate* intermediate)
-                : m_intermediate{intermediate}
+            : m_intermediate{intermediate}
             {
             }
 

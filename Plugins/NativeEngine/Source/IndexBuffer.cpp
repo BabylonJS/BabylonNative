@@ -3,9 +3,9 @@
 namespace Babylon
 {
     IndexBuffer::IndexBuffer(gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic)
-        : m_bytes{{bytes.data(), bytes.data() + bytes.size()}}
-        , m_flags{flags}
-        , m_dynamic{dynamic}
+    : m_bytes{{bytes.data(), bytes.data() + bytes.size()}}
+    , m_flags{flags}
+    , m_dynamic{dynamic}
     {
     }
 
@@ -62,8 +62,7 @@ namespace Babylon
             return true;
         }
 
-        auto releaseFn = [](void*, void* userData)
-        {
+        auto releaseFn = [](void*, void* userData) {
             auto* bytes = reinterpret_cast<decltype(m_bytes)*>(userData);
             bytes->reset();
         };

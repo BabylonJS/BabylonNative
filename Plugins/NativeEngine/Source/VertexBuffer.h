@@ -8,9 +8,8 @@
 
 namespace Babylon
 {
-    class VertexBuffer final
-    {
-    public:
+    class VertexBuffer final {
+       public:
         VertexBuffer(gsl::span<uint8_t> bytes, bool dynamic);
         ~VertexBuffer();
 
@@ -34,7 +33,7 @@ namespace Babylon
 
         static void BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceVertexBufferRecord>& vertexBufferInstance);
 
-    private:
+       private:
         std::optional<std::vector<uint8_t>> m_bytes{};
         bool m_dynamic{};
 

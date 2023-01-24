@@ -15,20 +15,20 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value ImageData::CreateInstance(Napi::Env env, Context* context, uint32_t width, uint32_t height)
     {
-        Napi::HandleScope scope{ env };
+        Napi::HandleScope scope{env};
         Napi::Function func = DefineClass(
-            env,
-            JS_IMAGEDATA_CONSTRUCTOR_NAME,
-            {
-                InstanceAccessor("width", &ImageData::GetWidth, nullptr),
-                InstanceAccessor("height", &ImageData::GetHeight, nullptr),
-                InstanceAccessor("data", &ImageData::GetData, nullptr),
-            });
+        env,
+        JS_IMAGEDATA_CONSTRUCTOR_NAME,
+        {
+        InstanceAccessor("width", &ImageData::GetWidth, nullptr),
+        InstanceAccessor("height", &ImageData::GetHeight, nullptr),
+        InstanceAccessor("data", &ImageData::GetData, nullptr),
+        });
         return func.New({Napi::External<Context>::New(env, context), Napi::Value::From(env, width), Napi::Value::From(env, height)});
     }
 
     ImageData::ImageData(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<ImageData>{info}
+    : Napi::ObjectWrap<ImageData>{info}
     {
         auto context{info[0].As<Napi::External<Context>>().Data()};
         auto width{info[1].As<Napi::Number>().Uint32Value()};
@@ -57,4 +57,3 @@ namespace Babylon::Polyfills::Internal
         return Napi::Value::From(info.Env(), data);
     }
 }
-

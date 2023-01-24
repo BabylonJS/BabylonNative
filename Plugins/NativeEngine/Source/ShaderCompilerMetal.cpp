@@ -42,13 +42,13 @@ namespace Babylon
             compiler->set_msl_options(opts);
 
             auto resources = compiler->get_shader_resources();
-            for (auto& resource : resources.uniform_buffers)
+            for (auto& resource: resources.uniform_buffers)
             {
                 compiler->set_name(resource.id, "_mtl_u");
             }
 
             // rename textures without the 'texture' suffix so it's bindable from .js
-            for (auto& resource : resources.separate_images)
+            for (auto& resource: resources.separate_images)
             {
                 std::string imageName = resource.name;
                 if (imageName.find("Texture") != std::string::npos)
@@ -61,7 +61,7 @@ namespace Babylon
             compiler->rename_entry_point("main", "xlatMtlMain", (stage == EShLangVertex) ? spv::ExecutionModelVertex : spv::ExecutionModelFragment);
 
             shaderResult = compiler->compile();
-            return{std::move(parser), std::move(compiler)};
+            return {std::move(parser), std::move(compiler)};
         }
     }
 }
@@ -95,7 +95,7 @@ namespace Babylon
 
         if (!program.link(EShMsgDefault))
         {
-            throw std::exception();//program.getInfoDebugLog());
+            throw std::exception(); //program.getInfoDebugLog());
         }
 
         ShaderCompilerTraversers::IdGenerator ids{};
@@ -113,7 +113,7 @@ namespace Babylon
         auto [fragmentParser, fragmentCompiler] = CompileShader(program, EShLangFragment, fragmentGLSL);
 
         return ShaderCompilerCommon::CreateBgfxShader(
-            {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(vertexGLSL.data()), vertexGLSL.size()), std::move(vertexAttributeRenaming)},
-            {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(fragmentGLSL.data()), fragmentGLSL.size()), {}});
+        {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(vertexGLSL.data()), vertexGLSL.size()), std::move(vertexAttributeRenaming)},
+        {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(fragmentGLSL.data()), fragmentGLSL.size()), {}});
     }
 }

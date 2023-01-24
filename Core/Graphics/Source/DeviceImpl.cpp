@@ -18,8 +18,8 @@ namespace
 namespace Babylon::Graphics
 {
     DeviceImpl::DeviceImpl()
-        : m_bgfxCallback{[this](const auto& data) { CaptureCallback(data); }}
-        , m_context{*this}
+    : m_bgfxCallback{[this](const auto& data) { CaptureCallback(data); }}
+    , m_context{*this}
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Initialized = false;
@@ -71,25 +71,25 @@ namespace Babylon::Graphics
         init.resolution.reset &= ~BGFX_RESET_MSAA_MASK;
         switch (value)
         {
-            case 0:
-            case 1:
-                // disable MSAA
-                break;
-            case 2:
-                init.resolution.reset |= BGFX_RESET_MSAA_X2;
-                break;
-            case 4:
-                init.resolution.reset |= BGFX_RESET_MSAA_X4;
-                break;
-            case 8:
-                init.resolution.reset |= BGFX_RESET_MSAA_X8;
-                break;
-            case 16:
-                init.resolution.reset |= BGFX_RESET_MSAA_X16;
-                break;
-            default:
-                m_bgfxCallback.trace(__FILE__, __LINE__,  "WARNING: Setting an incorrect value for SetMSAA (%d). Correct values are 0, 1 (disable MSAA) or 2, 4, 8, 16.", int(value));
-                break;
+        case 0:
+        case 1:
+            // disable MSAA
+            break;
+        case 2:
+            init.resolution.reset |= BGFX_RESET_MSAA_X2;
+            break;
+        case 4:
+            init.resolution.reset |= BGFX_RESET_MSAA_X4;
+            break;
+        case 8:
+            init.resolution.reset |= BGFX_RESET_MSAA_X8;
+            break;
+        case 16:
+            init.resolution.reset |= BGFX_RESET_MSAA_X16;
+            break;
+        default:
+            m_bgfxCallback.trace(__FILE__, __LINE__, "WARNING: Setting an incorrect value for SetMSAA (%d). Correct values are 0, 1 (disable MSAA) or 2, 4, 8, 16.", int(value));
+            break;
         }
     }
 
@@ -115,15 +115,15 @@ namespace Babylon::Graphics
     void DeviceImpl::AddToJavaScript(Napi::Env env)
     {
         JsRuntime::NativeObject::GetFromJavaScript(env)
-            .Set(JS_GRAPHICS_NAME, Napi::External<DeviceImpl>::New(env, this));
+        .Set(JS_GRAPHICS_NAME, Napi::External<DeviceImpl>::New(env, this));
     }
 
     DeviceImpl& DeviceImpl::GetFromJavaScript(Napi::Env env)
     {
         return *JsRuntime::NativeObject::GetFromJavaScript(env)
-                    .Get(JS_GRAPHICS_NAME)
-                    .As<Napi::External<DeviceImpl>>()
-                    .Data();
+                .Get(JS_GRAPHICS_NAME)
+                .As<Napi::External<DeviceImpl>>()
+                .Data();
     }
 
     Napi::Value DeviceImpl::CreateContext(Napi::Env env)
@@ -216,7 +216,7 @@ namespace Babylon::Graphics
         // Unlock the update safe timespans.
         {
             std::scoped_lock lock{m_updateSafeTimespansMutex};
-            for (auto& [key, value] : m_updateSafeTimespans)
+            for (auto& [key, value]: m_updateSafeTimespans)
             {
                 value.Unlock();
             }
@@ -228,12 +228,12 @@ namespace Babylon::Graphics
         // Lock the update safe timespans.
         {
             std::scoped_lock lock{m_updateSafeTimespansMutex};
-            for (auto& [key, value] : m_updateSafeTimespans)
+            for (auto& [key, value]: m_updateSafeTimespans)
             {
                 value.Lock();
             }
         }
-        
+
         arcana::trace_region finishRenderingRegion{"DeviceImpl::FinishRenderingCurrentFrame"};
 
         assert(m_renderThreadAffinity.check());
@@ -427,7 +427,7 @@ namespace Babylon::Graphics
     {
         std::scoped_lock lock{m_threadIdToEncoderMutex};
 
-        for (auto [threadId, encoder] : m_threadIdToEncoder)
+        for (auto [threadId, encoder]: m_threadIdToEncoder)
         {
             bgfx::end(encoder);
         }
@@ -448,7 +448,7 @@ namespace Babylon::Graphics
             return;
         }
 
-        for (const auto& callback : m_captureCallbacks)
+        for (const auto& callback: m_captureCallbacks)
         {
             callback(data);
         }

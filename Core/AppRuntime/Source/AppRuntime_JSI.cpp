@@ -7,11 +7,10 @@
 
 namespace
 {
-    class TaskRunnerAdapter : public v8runtime::JSITaskRunner
-    {
-    public:
+    class TaskRunnerAdapter : public v8runtime::JSITaskRunner {
+       public:
         TaskRunnerAdapter(Babylon::WorkQueue& workQueue)
-            : m_workQueue(workQueue)
+        : m_workQueue(workQueue)
         {
         }
 
@@ -23,7 +22,7 @@ namespace
             });
         }
 
-    private:
+       private:
         TaskRunnerAdapter(const TaskRunnerAdapter&) = delete;
         TaskRunnerAdapter& operator=(const TaskRunnerAdapter&) = delete;
 
@@ -38,12 +37,12 @@ namespace Babylon
         v8runtime::V8RuntimeArgs args{};
         args.inspectorPort = 5643;
         args.foreground_task_runner = std::make_shared<TaskRunnerAdapter>(*m_workQueue);
-        
+
         const auto runtime{v8runtime::makeV8Runtime(std::move(args))};
         const auto env{Napi::Attach<facebook::jsi::Runtime&>(*runtime)};
         Dispatch([&runtime](Napi::Env env) {
             JsRuntime::NativeObject::GetFromJavaScript(env)
-                .Set("_JSIRuntime", Napi::External<facebook::jsi::Runtime>::New(env, runtime.get()));
+            .Set("_JSIRuntime", Napi::External<facebook::jsi::Runtime>::New(env, runtime.get()));
         });
         Run(env);
         Napi::Detach(env);

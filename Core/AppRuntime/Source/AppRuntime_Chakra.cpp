@@ -22,11 +22,11 @@ namespace Babylon
     {
         using DispatchFunction = std::function<void(std::function<void()>)>;
         DispatchFunction dispatchFunction{
-            [this](std::function<void()> action) {
-                Dispatch([action = std::move(action)](Napi::Env) {
-                    action();
-                });
-            }};
+        [this](std::function<void()> action) {
+            Dispatch([action = std::move(action)](Napi::Env) {
+                action();
+            });
+        }};
 
         JsRuntimeHandle jsRuntime;
         ThrowIfFailed(JsCreateRuntime(JsRuntimeAttributeNone, nullptr, &jsRuntime));
@@ -43,7 +43,7 @@ namespace Babylon
                 ThrowIfFailed(JsRelease(task, nullptr));
             });
         },
-            &dispatchFunction));
+        &dispatchFunction));
         ThrowIfFailed(JsProjectWinRTNamespace(L"Windows"));
 
 #if defined(_DEBUG)

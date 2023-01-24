@@ -5,43 +5,42 @@
 
 namespace Babylon::Plugins
 {
-    class ChromeDevTools::Impl final : public std::enable_shared_from_this<ChromeDevTools::Impl>
-    {
-        public:
-            explicit Impl(Napi::Env env) 
-                : m_env(env)
-            {
-                JsRuntime::GetFromJavaScript(env).Dispatch([this](Napi::Env env) {
-                    m_runtime = JsRuntime::NativeObject::GetFromJavaScript(env).Get("_JSIRuntime").As<Napi::External<facebook::jsi::Runtime>>().Data();
-                });
-            }
+    class ChromeDevTools::Impl final : public std::enable_shared_from_this<ChromeDevTools::Impl> {
+       public:
+        explicit Impl(Napi::Env env)
+        : m_env(env)
+        {
+            JsRuntime::GetFromJavaScript(env).Dispatch([this](Napi::Env env) {
+                m_runtime = JsRuntime::NativeObject::GetFromJavaScript(env).Get("_JSIRuntime").As<Napi::External<facebook::jsi::Runtime>>().Data();
+            });
+        }
 
-            ~Impl()
-            {
-            }
+        ~Impl()
+        {
+        }
 
-            bool SupportsInspector()
-            {
-                return true;
-            }
+        bool SupportsInspector()
+        {
+            return true;
+        }
 
-            void StartInspector(const unsigned short, const std::string&)
-            {
-                JsRuntime::GetFromJavaScript(m_env).Dispatch([this](Napi::Env) {
-                    if (m_runtime != nullptr)
-                    {
-                        v8runtime::openInspector(*m_runtime);
-                    }
-                });
-            }
+        void StartInspector(const unsigned short, const std::string&)
+        {
+            JsRuntime::GetFromJavaScript(m_env).Dispatch([this](Napi::Env) {
+                if (m_runtime != nullptr)
+                {
+                    v8runtime::openInspector(*m_runtime);
+                }
+            });
+        }
 
-            void StopInspector()
-            {
-            }
+        void StopInspector()
+        {
+        }
 
-        private:
-            facebook::jsi::Runtime* m_runtime;
-            Napi::Env m_env;
+       private:
+        facebook::jsi::Runtime* m_runtime;
+        Napi::Env m_env;
     };
 
     ChromeDevTools ChromeDevTools::Initialize(Napi::Env env)
@@ -50,7 +49,7 @@ namespace Babylon::Plugins
     }
 
     ChromeDevTools::ChromeDevTools(std::shared_ptr<ChromeDevTools::Impl> impl)
-        : m_impl{std::move(impl)}
+    : m_impl{std::move(impl)}
     {
     }
 

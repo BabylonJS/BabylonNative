@@ -11,9 +11,8 @@
 
 namespace Babylon::Plugins
 {
-    class ExternalTexture::Impl final : public ImplBase
-    {
-    public:
+    class ExternalTexture::Impl final : public ImplBase {
+       public:
         // Implemented in ExternalTexture_Shared.h
         Impl(Graphics::TextureT);
         void Update(Graphics::TextureT);
@@ -23,7 +22,7 @@ namespace Babylon::Plugins
             throw std::runtime_error{"not implemented"};
         }
 
-    private:
+       private:
         void GetInfo(Graphics::TextureT, Info&)
         {
             throw std::runtime_error{"not implemented"};

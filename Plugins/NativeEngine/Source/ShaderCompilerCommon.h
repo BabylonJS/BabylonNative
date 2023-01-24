@@ -38,8 +38,7 @@ namespace Babylon::ShaderCompilerCommon
     {
         struct Uniform
         {
-            enum class TypeEnum
-            {
+            enum class TypeEnum {
                 Vec4,
                 Mat4
             };

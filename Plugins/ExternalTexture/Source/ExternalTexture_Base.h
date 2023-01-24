@@ -8,9 +8,8 @@
 
 namespace Babylon::Plugins
 {
-    class ExternalTexture::ImplBase
-    {
-    public:
+    class ExternalTexture::ImplBase {
+       public:
         uint16_t Width() const { return m_info.Width; }
         uint16_t Height() const { return m_info.Height; }
         bgfx::TextureFormat::Enum Format() const { return m_info.Format; }
@@ -38,7 +37,7 @@ namespace Babylon::Plugins
             }
         }
 
-    protected:
+       protected:
         static bool IsFullMipChain(uint16_t mipLevel, uint16_t width, uint16_t height)
         {
             return mipLevel == static_cast<uint16_t>(std::floor(std::log2(std::max(static_cast<float>(width), static_cast<float>(height))) + 1));
@@ -48,7 +47,7 @@ namespace Babylon::Plugins
         {
             std::scoped_lock lock{m_mutex};
 
-            for (auto handle : m_handles)
+            for (auto handle: m_handles)
             {
                 if (bgfx::overrideInternal(handle, ptr) == 0)
                 {
@@ -67,12 +66,7 @@ namespace Babylon::Plugins
 
             bool operator==(const Info& other)
             {
-                return
-                    Width == other.Width &&
-                    Height == other.Height &&
-                    MipLevels == other.MipLevels &&
-                    Format == other.Format &&
-                    Flags == other.Flags;
+                return Width == other.Width && Height == other.Height && MipLevels == other.MipLevels && Format == other.Format && Flags == other.Flags;
             }
 
             bool operator!=(const Info& other)
@@ -83,7 +77,7 @@ namespace Babylon::Plugins
 
         Info m_info{};
 
-    private:
+       private:
         struct TextureHandleLess
         {
             bool operator()(const bgfx::TextureHandle& a, const bgfx::TextureHandle& b) const

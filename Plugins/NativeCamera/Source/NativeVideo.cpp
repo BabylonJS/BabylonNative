@@ -8,21 +8,19 @@ namespace Babylon::Plugins
     void NativeVideo::Initialize(Napi::Env& env)
     {
         Napi::Function func = DefineClass(
-            env,
-            JS_CLASS_NAME,
-            {
-                InstanceMethod("addEventListener", &NativeVideo::AddEventListener),
-                InstanceMethod("removeEventListener", &NativeVideo::RemoveEventListener),
-                InstanceMethod("play", &NativeVideo::Play),
-                InstanceMethod("pause", &NativeVideo::Pause),
-                InstanceMethod("setAttribute", &NativeVideo::SetAttribute),
-                InstanceMethod("removeAttribute", &NativeVideo::RemoveAttribute),
-                InstanceAccessor("videoWidth", &NativeVideo::GetVideoWidth, nullptr),
-                InstanceAccessor("videoHeight", &NativeVideo::GetVideoHeight, nullptr),
-                InstanceAccessor("readyState", &NativeVideo::GetReadyState, nullptr),
-                InstanceAccessor("HAVE_CURRENT_DATA", &NativeVideo::GetHaveCurrentData, nullptr),
-                InstanceAccessor("srcObject", &NativeVideo::GetSrcObject, &NativeVideo::SetSrcObject)
-            });
+        env,
+        JS_CLASS_NAME,
+        {InstanceMethod("addEventListener", &NativeVideo::AddEventListener),
+        InstanceMethod("removeEventListener", &NativeVideo::RemoveEventListener),
+        InstanceMethod("play", &NativeVideo::Play),
+        InstanceMethod("pause", &NativeVideo::Pause),
+        InstanceMethod("setAttribute", &NativeVideo::SetAttribute),
+        InstanceMethod("removeAttribute", &NativeVideo::RemoveAttribute),
+        InstanceAccessor("videoWidth", &NativeVideo::GetVideoWidth, nullptr),
+        InstanceAccessor("videoHeight", &NativeVideo::GetVideoHeight, nullptr),
+        InstanceAccessor("readyState", &NativeVideo::GetReadyState, nullptr),
+        InstanceAccessor("HAVE_CURRENT_DATA", &NativeVideo::GetHaveCurrentData, nullptr),
+        InstanceAccessor("srcObject", &NativeVideo::GetSrcObject, &NativeVideo::SetSrcObject)});
 
         env.Global().Set(JS_CLASS_NAME, func);
     }
@@ -33,7 +31,7 @@ namespace Babylon::Plugins
     }
 
     NativeVideo::NativeVideo(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<NativeVideo>{info}
+    : Napi::ObjectWrap<NativeVideo>{info}
     {
     }
 
@@ -118,7 +116,7 @@ namespace Babylon::Plugins
         if (it != m_eventHandlerRefs.end())
         {
             const auto& eventHandlerRefs = it->second;
-            for (const auto& eventHandlerRef : eventHandlerRefs)
+            for (const auto& eventHandlerRef: eventHandlerRefs)
             {
                 eventHandlerRef.Call({});
             }
@@ -146,7 +144,8 @@ namespace Babylon::Plugins
         m_IsPlaying = false;
     }
 
-    void NativeVideo::SetSrcObject(const Napi::CallbackInfo& info, const Napi::Value& value) {
+    void NativeVideo::SetSrcObject(const Napi::CallbackInfo& info, const Napi::Value& value)
+    {
         auto env{info.Env()};
 
         if (value.IsNull() || value.IsUndefined() || !value.As<Napi::Object>().InstanceOf(MediaStream::GetConstructor(env)))
@@ -162,13 +161,14 @@ namespace Babylon::Plugins
         // We've received a MediaStream object
         m_streamObject = Napi::Persistent(value.As<Napi::Object>());
         auto mediaStream = MediaStream::Unwrap(m_streamObject.Value());
-        
+
         this->m_width = mediaStream->Width;
         this->m_height = mediaStream->Height;
         this->m_isReady = true;
     }
 
-    Napi::Value NativeVideo::GetSrcObject(const Napi::CallbackInfo& info) {
+    Napi::Value NativeVideo::GetSrcObject(const Napi::CallbackInfo& info)
+    {
         // If the streamObject has not yet been defined return Null instead to match the web API
         return m_streamObject.IsEmpty() ? info.Env().Null() : m_streamObject.Value();
     }

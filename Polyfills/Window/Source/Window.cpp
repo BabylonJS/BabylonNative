@@ -22,9 +22,9 @@ namespace Babylon::Polyfills::Internal
         Napi::HandleScope scope{env};
 
         Napi::Function constructor = DefineClass(
-            env,
-            JS_CLASS_NAME,
-            {});
+        env,
+        JS_CLASS_NAME,
+        {});
 
         auto global = env.Global();
         auto jsNative = JsRuntime::NativeObject::GetFromJavaScript(env);
@@ -53,7 +53,8 @@ namespace Babylon::Polyfills::Internal
             global.Set(JS_REMOVE_EVENT_LISTENER_NAME, Napi::Function::New(env, &Window::RemoveEventListener, JS_REMOVE_EVENT_LISTENER_NAME));
         }
 
-        if (global.Get(JS_DEVICE_PIXEL_RATIO_NAME).IsUndefined()){
+        if (global.Get(JS_DEVICE_PIXEL_RATIO_NAME).IsUndefined())
+        {
             // Create an accessor to add to the window object to define window.devicePixelRatio
             Napi::Object descriptor{Napi::Object::New(env)};
             descriptor.Set("enumerable", Napi::Value::From(env, true));
@@ -70,9 +71,9 @@ namespace Babylon::Polyfills::Internal
     }
 
     Window::Window(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<Window>{info}
-        , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
-        , m_timeoutDispatcher{m_runtime}
+    : Napi::ObjectWrap<Window>{info}
+    , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
+    , m_timeoutDispatcher{m_runtime}
     {
     }
 
@@ -80,8 +81,8 @@ namespace Babylon::Polyfills::Internal
     {
         auto& window = *static_cast<Window*>(info.Data());
         auto function = info[0].IsFunction()
-            ? std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>()))
-            : std::shared_ptr<Napi::FunctionReference>{};
+                        ? std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>()))
+                        : std::shared_ptr<Napi::FunctionReference>{};
 
         auto delay = std::chrono::milliseconds{info[1].ToNumber().Int32Value()};
 

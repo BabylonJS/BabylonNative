@@ -7,15 +7,13 @@
 
 namespace Babylon
 {
-    class NativeDataStream final : public Napi::ObjectWrap<NativeDataStream>
-    {
+    class NativeDataStream final : public Napi::ObjectWrap<NativeDataStream> {
         static constexpr auto JS_CLASS_NAME = "_NativeDataStream";
         static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "NativeDataStream";
 
         static constexpr auto VALIDATION_ENABLED = false;
 
-        enum class ValidationType : uint32_t
-        {
+        enum class ValidationType : uint32_t {
             Uint32,
             Int32,
             Float32,
@@ -39,10 +37,9 @@ namespace Babylon
             }
         }
 
-    public:
-        class Reader final
-        {
-        public:
+       public:
+        class Reader final {
+           public:
             Reader(const Reader&) = delete;
             Reader operator=(const Reader&) = delete;
 
@@ -104,7 +101,7 @@ namespace Babylon
                 return ReadNativeData<typename std::conditional<std::is_member_pointer<T>::value, T, T*>::type>();
             }
 
-        private:
+           private:
             gsl::span<uint32_t> m_buffer{};
             size_t m_position{0};
             const gsl::final_action<std::function<void()>> m_scopeGuard;
@@ -113,8 +110,8 @@ namespace Babylon
 
             template<typename CallableT>
             Reader(gsl::span<uint32_t> buffer, CallableT&& callable)
-                : m_buffer{buffer}
-                , m_scopeGuard{std::forward<CallableT>(callable)}
+            : m_buffer{buffer}
+            , m_scopeGuard{std::forward<CallableT>(callable)}
             {
             }
 
@@ -147,38 +144,36 @@ namespace Babylon
             if constexpr (VALIDATION_ENABLED)
             {
                 Napi::Function func = DefineClass(
-                    env,
-                    JS_CLASS_NAME,
-                    {
-                        InstanceMethod("writeBuffer", &NativeDataStream::WriteBuffer),
+                env,
+                JS_CLASS_NAME,
+                {
+                InstanceMethod("writeBuffer", &NativeDataStream::WriteBuffer),
 
-                        StaticValue("VALIDATION_ENABLED", Napi::Boolean::From(env, VALIDATION_ENABLED)),
-                        StaticValue("VALIDATION_UINT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Uint32))),
-                        StaticValue("VALIDATION_INT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Int32))),
-                        StaticValue("VALIDATION_FLOAT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Float32))),
-                        StaticValue("VALIDATION_UINT_32_ARRAY", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Uint32Array))),
-                        StaticValue("VALIDATION_INT_32_ARRAY", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Int32Array))),
-                        StaticValue("VALIDATION_FLOAT_32_ARRAY", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Float32Array))),
-                        StaticValue("VALIDATION_NATIVE_DATA", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::NativeData))),
-                        StaticValue("VALIDATION_BOOLEAN", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Boolean))),
-                    });
+                StaticValue("VALIDATION_ENABLED", Napi::Boolean::From(env, VALIDATION_ENABLED)),
+                StaticValue("VALIDATION_UINT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Uint32))),
+                StaticValue("VALIDATION_INT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Int32))),
+                StaticValue("VALIDATION_FLOAT_32", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Float32))),
+                StaticValue("VALIDATION_UINT_32_ARRAY", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Uint32Array))),
+                StaticValue("VALIDATION_INT_32_ARRAY", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Int32Array))),
+                StaticValue("VALIDATION_FLOAT_32_ARRAY", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Float32Array))),
+                StaticValue("VALIDATION_NATIVE_DATA", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::NativeData))),
+                StaticValue("VALIDATION_BOOLEAN", Napi::Number::From(env, static_cast<uint32_t>(ValidationType::Boolean))),
+                });
                 JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
             }
             else
             {
                 Napi::Function func = DefineClass(
-                    env,
-                    JS_CLASS_NAME,
-                    {
-                        InstanceMethod("writeBuffer", &NativeDataStream::WriteBuffer)
-                    });
+                env,
+                JS_CLASS_NAME,
+                {InstanceMethod("writeBuffer", &NativeDataStream::WriteBuffer)});
                 JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
             }
         }
 
         NativeDataStream(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<NativeDataStream>(info)
-            , m_requestFlushCallback{Napi::Persistent(info[0].As<Napi::Function>())}
+        : Napi::ObjectWrap<NativeDataStream>(info)
+        , m_requestFlushCallback{Napi::Persistent(info[0].As<Napi::Function>())}
         {
         }
 
@@ -199,12 +194,12 @@ namespace Babylon
             m_requestFlushCallback.Call({});
             m_locked = true;
             return {m_buffer, [this]() {
-                m_buffer.clear();
-                m_locked = false; 
-            }};
+                        m_buffer.clear();
+                        m_locked = false;
+                    }};
         }
 
-    private:
+       private:
         std::vector<uint32_t> m_buffer{};
         Napi::FunctionReference m_requestFlushCallback{};
         bool m_locked{false};

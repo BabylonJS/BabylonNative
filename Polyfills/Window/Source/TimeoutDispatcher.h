@@ -13,19 +13,18 @@
 
 namespace Babylon::Polyfills::Internal
 {
-    class TimeoutDispatcher
-    {
+    class TimeoutDispatcher {
         using TimeoutId = int32_t;
         struct Timeout;
 
-    public:
+       public:
         TimeoutDispatcher(Babylon::JsRuntime& runtime);
         ~TimeoutDispatcher();
 
         TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay);
         void Clear(TimeoutId id);
 
-    private:
+       private:
         using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::microseconds>;
 
         TimeoutId NextTimeoutId();

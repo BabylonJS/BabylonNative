@@ -27,7 +27,7 @@ namespace Babylon::Plugins
     }
 
     ExternalTexture::ExternalTexture(Graphics::TextureT ptr)
-        : m_impl{std::make_unique<Impl>(ptr)}
+    : m_impl{std::make_unique<Impl>(ptr)}
     {
     }
 
@@ -41,7 +41,7 @@ namespace Babylon::Plugins
 
     ExternalTexture::~ExternalTexture() = default;
 
-    uint32_t ExternalTexture::Width() const 
+    uint32_t ExternalTexture::Width() const
     {
         return m_impl->Width();
     }
@@ -60,36 +60,31 @@ namespace Babylon::Plugins
         auto promise{deferred.Promise()};
 
         arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(),
-            [&context, &runtime, deferred = std::move(deferred), impl = m_impl]()
-        {
+        [&context, &runtime, deferred = std::move(deferred), impl = m_impl]() {
             // REVIEW: The bgfx texture handle probably needs to be an RAII object to make sure it gets clean up during the asynchrony.
             //         For example, if any of the schedulers/dispatches below don't fire, then the texture handle will leak.
             bgfx::TextureHandle handle = bgfx::createTexture2D(impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
             if (!bgfx::isValid(handle))
             {
-                runtime.Dispatch([deferred{std::move(deferred)}](Napi::Env env)
-                {
+                runtime.Dispatch([deferred{std::move(deferred)}](Napi::Env env) {
                     deferred.Reject(Napi::Error::New(env, "Failed to create native texture").Value());
                 });
 
                 return;
             }
 
-            arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&runtime, deferred = std::move(deferred), handle, impl = std::move(impl)]()
-            {
+            arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&runtime, deferred = std::move(deferred), handle, impl = std::move(impl)]() {
                 if (bgfx::overrideInternal(handle, impl->Ptr()) == 0)
                 {
-                    runtime.Dispatch([deferred = std::move(deferred), handle](Napi::Env env)
-                    {
+                    runtime.Dispatch([deferred = std::move(deferred), handle](Napi::Env env) {
                         bgfx::destroy(handle);
-                        deferred.Reject(Napi::Error::New(env, "Failed to override native texture").Value()); 
+                        deferred.Reject(Napi::Error::New(env, "Failed to override native texture").Value());
                     });
 
                     return;
                 }
 
-                runtime.Dispatch([deferred = std::move(deferred), handle, impl = std::move(impl)](Napi::Env env)
-                {
+                runtime.Dispatch([deferred = std::move(deferred), handle, impl = std::move(impl)](Napi::Env env) {
                     auto* texture = new Graphics::Texture{};
                     texture->Attach(handle, true, impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
 

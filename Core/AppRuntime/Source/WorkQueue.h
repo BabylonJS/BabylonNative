@@ -10,9 +10,8 @@
 
 namespace Babylon
 {
-    class WorkQueue
-    {
-    public:
+    class WorkQueue {
+       public:
         WorkQueue(std::function<void()> threadProcedure);
         ~WorkQueue();
 
@@ -23,13 +22,11 @@ namespace Babylon
             // copyable callable if necessary.
             if constexpr (std::is_copy_constructible<CallableT>::value)
             {
-                m_dispatcher.queue([this, callable = std::move(callable)]()
-                    { Invoke(callable); });
+                m_dispatcher.queue([this, callable = std::move(callable)]() { Invoke(callable); });
             }
             else
             {
-                m_dispatcher.queue([this, callablePtr = std::make_shared<CallableT>(std::move(callable))]()
-                    { Invoke(*callablePtr); });
+                m_dispatcher.queue([this, callablePtr = std::make_shared<CallableT>(std::move(callable))]() { Invoke(*callablePtr); });
             }
         }
 
@@ -37,7 +34,7 @@ namespace Babylon
         void Resume();
         void Run(Napi::Env);
 
-    private:
+       private:
         template<typename CallableT>
         void Invoke(CallableT& callable)
         {

@@ -9,18 +9,17 @@ namespace Babylon
     // This type contains a per-frame value which automatically resets to
     // a provided default at the end of each frame.
     template<typename T>
-    class PerFrameValue
-    {
-    public:
+    class PerFrameValue {
+       public:
         PerFrameValue(Graphics::DeviceContext& context, arcana::cancellation_source& cancellation, T defaultValue)
-            : m_context{context}
-            , m_cancellationSource{cancellation}
-            , m_defaultValue{defaultValue}
-            , m_value{defaultValue}
-            , m_isResetScheduled{false}
+        : m_context{context}
+        , m_cancellationSource{cancellation}
+        , m_defaultValue{defaultValue}
+        , m_value{defaultValue}
+        , m_isResetScheduled{false}
         {
         }
-        
+
         T Get(bgfx::Encoder&) const
         {
             return m_value;
@@ -39,7 +38,7 @@ namespace Babylon
             }
         }
 
-    private:
+       private:
         Graphics::DeviceContext& m_context;
         arcana::cancellation_source& m_cancellationSource;
         const T m_defaultValue{};

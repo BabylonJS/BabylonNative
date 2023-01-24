@@ -26,10 +26,10 @@ namespace Babylon::Polyfills::Internal
             {
                 switch (value)
                 {
-                    case UrlLib::UrlResponseType::String:
-                        return Text;
-                    case UrlLib::UrlResponseType::Buffer:
-                        return ArrayBuffer;
+                case UrlLib::UrlResponseType::String:
+                    return Text;
+                case UrlLib::UrlResponseType::Buffer:
+                    return ArrayBuffer;
                 }
 
                 throw std::runtime_error{"Invalid response type"};
@@ -63,27 +63,27 @@ namespace Babylon::Polyfills::Internal
         static constexpr auto JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME = "XMLHttpRequest";
 
         Napi::Function func = DefineClass(
-            env,
-            JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME,
-            {
-                StaticValue("UNSENT", Napi::Value::From(env, 0)),
-                StaticValue("OPENED", Napi::Value::From(env, 1)),
-                StaticValue("HEADERS_RECEIVED", Napi::Value::From(env, 2)),
-                StaticValue("LOADING", Napi::Value::From(env, 3)),
-                StaticValue("DONE", Napi::Value::From(env, 4)),
-                InstanceAccessor("readyState", &XMLHttpRequest::GetReadyState, nullptr),
-                InstanceAccessor("response", &XMLHttpRequest::GetResponse, nullptr),
-                InstanceAccessor("responseText", &XMLHttpRequest::GetResponseText, nullptr),
-                InstanceAccessor("responseType", &XMLHttpRequest::GetResponseType, &XMLHttpRequest::SetResponseType),
-                InstanceAccessor("responseURL", &XMLHttpRequest::GetResponseURL, nullptr),
-                InstanceAccessor("status", &XMLHttpRequest::GetStatus, nullptr),
-                InstanceMethod("getResponseHeader", &XMLHttpRequest::GetResponseHeader),
-                InstanceMethod("addEventListener", &XMLHttpRequest::AddEventListener),
-                InstanceMethod("removeEventListener", &XMLHttpRequest::RemoveEventListener),
-                InstanceMethod("abort", &XMLHttpRequest::Abort),
-                InstanceMethod("open", &XMLHttpRequest::Open),
-                InstanceMethod("send", &XMLHttpRequest::Send),
-            });
+        env,
+        JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME,
+        {
+        StaticValue("UNSENT", Napi::Value::From(env, 0)),
+        StaticValue("OPENED", Napi::Value::From(env, 1)),
+        StaticValue("HEADERS_RECEIVED", Napi::Value::From(env, 2)),
+        StaticValue("LOADING", Napi::Value::From(env, 3)),
+        StaticValue("DONE", Napi::Value::From(env, 4)),
+        InstanceAccessor("readyState", &XMLHttpRequest::GetReadyState, nullptr),
+        InstanceAccessor("response", &XMLHttpRequest::GetResponse, nullptr),
+        InstanceAccessor("responseText", &XMLHttpRequest::GetResponseText, nullptr),
+        InstanceAccessor("responseType", &XMLHttpRequest::GetResponseType, &XMLHttpRequest::SetResponseType),
+        InstanceAccessor("responseURL", &XMLHttpRequest::GetResponseURL, nullptr),
+        InstanceAccessor("status", &XMLHttpRequest::GetStatus, nullptr),
+        InstanceMethod("getResponseHeader", &XMLHttpRequest::GetResponseHeader),
+        InstanceMethod("addEventListener", &XMLHttpRequest::AddEventListener),
+        InstanceMethod("removeEventListener", &XMLHttpRequest::RemoveEventListener),
+        InstanceMethod("abort", &XMLHttpRequest::Abort),
+        InstanceMethod("open", &XMLHttpRequest::Open),
+        InstanceMethod("send", &XMLHttpRequest::Send),
+        });
 
         if (env.Global().Get(JS_XML_HTTP_REQUEST_CONSTRUCTOR_NAME).IsUndefined())
         {
@@ -94,8 +94,8 @@ namespace Babylon::Polyfills::Internal
     }
 
     XMLHttpRequest::XMLHttpRequest(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<XMLHttpRequest>{info}
-        , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
+    : Napi::ObjectWrap<XMLHttpRequest>{info}
+    , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
     {
     }
 
@@ -212,8 +212,7 @@ namespace Babylon::Polyfills::Internal
             throw Napi::Error::New(info.Env(), "XMLHttpRequest must be opened before it can be sent");
         }
 
-        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result)
-        {
+        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
             if (result.has_error())
             {
                 Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
@@ -241,7 +240,7 @@ namespace Babylon::Polyfills::Internal
         if (it != m_eventHandlerRefs.end())
         {
             const auto& eventHandlerRefs = it->second;
-            for (const auto& eventHandlerRef : eventHandlerRefs)
+            for (const auto& eventHandlerRef: eventHandlerRefs)
             {
                 eventHandlerRef.Call({});
             }

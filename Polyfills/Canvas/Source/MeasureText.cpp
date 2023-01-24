@@ -25,4 +25,3 @@ namespace Babylon::Polyfills::Internal
         return obj.As<Napi::Value>();
     }
 }
-

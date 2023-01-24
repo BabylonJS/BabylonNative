@@ -8,9 +8,8 @@
 
 namespace Babylon::Polyfills
 {
-    class Canvas::Impl final : public std::enable_shared_from_this<Canvas::Impl>
-    {
-    public:
+    class Canvas::Impl final : public std::enable_shared_from_this<Canvas::Impl> {
+       public:
         explicit Impl(Napi::Env);
 
         void FlushGraphicResources();
@@ -19,7 +18,8 @@ namespace Babylon::Polyfills
 
         struct MonitoredResource
         {
-            MonitoredResource(Canvas::Impl& impl) : m_impl(impl)
+            MonitoredResource(Canvas::Impl& impl)
+            : m_impl(impl)
             {
                 m_impl.AddMonitoredResource(this);
             }
@@ -29,11 +29,12 @@ namespace Babylon::Polyfills
             }
 
             virtual void FlushGraphicResources() = 0;
-        private:
+
+           private:
             Canvas::Impl& m_impl;
         };
 
-    private:
+       private:
         Napi::Env m_env;
 
         void AddToJavaScript(Napi::Env env);
@@ -49,9 +50,8 @@ namespace Babylon::Polyfills
 
 namespace Babylon::Polyfills::Internal
 {
-    class NativeCanvas final : public Napi::ObjectWrap<NativeCanvas>, Polyfills::Canvas::Impl::MonitoredResource
-    {
-    public:
+    class NativeCanvas final : public Napi::ObjectWrap<NativeCanvas>, Polyfills::Canvas::Impl::MonitoredResource {
+       public:
         static void CreateInstance(Napi::Env env);
 
         explicit NativeCanvas(const Napi::CallbackInfo& info);
@@ -71,7 +71,7 @@ namespace Babylon::Polyfills::Internal
             return m_graphicsContext;
         }
 
-    private:
+       private:
         Napi::Value GetContext(const Napi::CallbackInfo&);
         Napi::Value GetWidth(const Napi::CallbackInfo&);
         void SetWidth(const Napi::CallbackInfo&, const Napi::Value& value);

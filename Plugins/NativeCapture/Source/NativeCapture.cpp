@@ -18,9 +18,8 @@ namespace
 
     FrameProviderTicket BeginFrameCapture(Babylon::Graphics::DeviceContext& graphicsContext, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
     {
-        class DefaultBufferFrameProvider final : public std::enable_shared_from_this<DefaultBufferFrameProvider>
-        {
-        public:
+        class DefaultBufferFrameProvider final : public std::enable_shared_from_this<DefaultBufferFrameProvider> {
+           public:
             static FrameProviderTicket Create(Babylon::Graphics::DeviceContext& graphicsContext, FrameCallback callback)
             {
                 std::shared_ptr<DefaultBufferFrameProvider> frameProvider{new DefaultBufferFrameProvider(graphicsContext, std::move(callback))};
@@ -30,10 +29,10 @@ namespace
                 });
             }
 
-        private:
+           private:
             DefaultBufferFrameProvider(Babylon::Graphics::DeviceContext& graphicsContext, FrameCallback callback)
-                : m_graphicsContext{graphicsContext}
-                , m_frameCallback{std::move(callback)}
+            : m_graphicsContext{graphicsContext}
+            , m_frameCallback{std::move(callback)}
             {
             }
 
@@ -44,15 +43,14 @@ namespace
                 }));
             }
 
-        private:
+           private:
             Babylon::Graphics::DeviceContext& m_graphicsContext;
             std::unique_ptr<Babylon::Graphics::DeviceContext::CaptureCallbackTicketT> m_ticket{};
             FrameCallback m_frameCallback{};
         };
 
-        class OffScreenBufferFrameProvider final : public std::enable_shared_from_this<OffScreenBufferFrameProvider>
-        {
-        public:
+        class OffScreenBufferFrameProvider final : public std::enable_shared_from_this<OffScreenBufferFrameProvider> {
+           public:
             static FrameProviderTicket Create(Babylon::Graphics::DeviceContext& graphicsContext, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
             {
                 std::shared_ptr<OffScreenBufferFrameProvider> frameProvider{new OffScreenBufferFrameProvider(graphicsContext, frameBufferHandle, std::move(callback))};
@@ -68,13 +66,13 @@ namespace
                 bgfx::destroy(m_blitTextureHandle);
             }
 
-        private:
+           private:
             OffScreenBufferFrameProvider(Babylon::Graphics::DeviceContext& graphicsContext, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
-                : m_graphicsContext{graphicsContext}
-                , m_frameBufferTextureHandle{bgfx::getTexture(frameBufferHandle)}
-                , m_frameCallback{std::move(callback)}
-                , m_textureInfo{m_graphicsContext.GetTextureInfo(m_frameBufferTextureHandle)}
-                , m_blitTextureHandle{bgfx::createTexture2D(m_textureInfo.Width, m_textureInfo.Height, m_textureInfo.HasMips, m_textureInfo.NumLayers, m_textureInfo.Format, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)}
+            : m_graphicsContext{graphicsContext}
+            , m_frameBufferTextureHandle{bgfx::getTexture(frameBufferHandle)}
+            , m_frameCallback{std::move(callback)}
+            , m_textureInfo{m_graphicsContext.GetTextureInfo(m_frameBufferTextureHandle)}
+            , m_blitTextureHandle{bgfx::createTexture2D(m_textureInfo.Width, m_textureInfo.Height, m_textureInfo.HasMips, m_textureInfo.NumLayers, m_textureInfo.Format, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)}
             {
                 bgfx::TextureInfo textureInfo{};
                 bgfx::calcTextureSize(textureInfo, m_textureInfo.Width, m_textureInfo.Height, 1, false, m_textureInfo.HasMips, m_textureInfo.NumLayers, m_textureInfo.Format);
@@ -92,20 +90,20 @@ namespace
 
                     // TODO: #1131 Address potential race condition during engine shutdown and ReadTextureAsync.
                     arcana::task<void, std::exception_ptr> readCurrentFrameTask{thisRef->m_graphicsContext.ReadTextureAsync(thisRef->m_blitTextureHandle, thisRef->m_textureBuffer)
-                        .then(arcana::inline_scheduler, thisRef->m_cancellationToken, [thisRef] {
-                            thisRef->m_frameCallback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, thisRef->m_textureInfo.Format, bgfx::getCaps()->originBottomLeft, thisRef->m_textureBuffer);
-                        })};
+                                                                                .then(arcana::inline_scheduler, thisRef->m_cancellationToken, [thisRef] {
+                                                                                    thisRef->m_frameCallback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, thisRef->m_textureInfo.Format, bgfx::getCaps()->originBottomLeft, thisRef->m_textureBuffer);
+                                                                                })};
 
                     arcana::task<void, std::exception_ptr> readNextFrameTask{thisRef->ReadTextureAsync()};
 
                     return arcana::when_all(readCurrentFrameTask, readNextFrameTask)
-                        .then(arcana::inline_scheduler, arcana::cancellation::none(), [](const auto&) {
-                            // Nothing to do, just converting to task<void, std::exception_ptr>
-                        });
+                    .then(arcana::inline_scheduler, arcana::cancellation::none(), [](const auto&) {
+                        // Nothing to do, just converting to task<void, std::exception_ptr>
+                    });
                 });
             }
 
-        private:
+           private:
             Babylon::Graphics::DeviceContext& m_graphicsContext;
             bgfx::TextureHandle m_frameBufferTextureHandle{bgfx::kInvalidHandle};
             FrameCallback m_frameCallback{};
@@ -129,9 +127,8 @@ namespace
 
 namespace Babylon::Plugins::Internal
 {
-    class NativeCapture : public Napi::ObjectWrap<NativeCapture>
-    {
-    public:
+    class NativeCapture : public Napi::ObjectWrap<NativeCapture> {
+       public:
         static constexpr auto JS_CLASS_NAME = "NativeCapture";
 
         static void Initialize(Napi::Env env)
@@ -139,27 +136,27 @@ namespace Babylon::Plugins::Internal
             Napi::HandleScope scope{env};
 
             Napi::Function func = NativeCapture::DefineClass(
-                env,
-                JS_CLASS_NAME,
-                {
-                    NativeCapture::InstanceMethod("addCallback", &NativeCapture::AddCallback),
-                    NativeCapture::InstanceMethod("dispose", &NativeCapture::Dispose),
-                });
+            env,
+            JS_CLASS_NAME,
+            {
+            NativeCapture::InstanceMethod("addCallback", &NativeCapture::AddCallback),
+            NativeCapture::InstanceMethod("dispose", &NativeCapture::Dispose),
+            });
 
             env.Global().Set(JS_CLASS_NAME, func);
         }
 
         NativeCapture(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<NativeCapture>{info}
-            , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
-            , m_jsData{Napi::Persistent(Napi::Object::New(info.Env()))}
+        : Napi::ObjectWrap<NativeCapture>{info}
+        , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
+        , m_jsData{Napi::Persistent(Napi::Object::New(info.Env()))}
         {
             auto& graphicsContext = Graphics::DeviceContext::GetFromJavaScript(info.Env());
 
             Napi::Object jsData = m_jsData.Value();
             jsData.Set("data", Napi::ArrayBuffer::New(info.Env(), 0));
 
-            FrameCallback frameCallback{[this](uint32_t width, uint32_t height, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data){
+            FrameCallback frameCallback{[this](uint32_t width, uint32_t height, bgfx::TextureFormat::Enum format, bool yFlip, gsl::span<const uint8_t> data) {
                 CaptureDataReceived(width, height, format, yFlip, data);
             }};
 
@@ -189,7 +186,7 @@ namespace Babylon::Plugins::Internal
             }
         }
 
-    private:
+       private:
         void AddCallback(const Napi::CallbackInfo& info)
         {
             auto listener = info[0].As<Napi::Function>();
@@ -208,15 +205,15 @@ namespace Babylon::Plugins::Internal
                 constexpr auto FORMAT_MEMBER_NAME = "format";
                 switch (format)
                 {
-                    case bgfx::TextureFormat::RGBA8:
-                        jsData.Set(FORMAT_MEMBER_NAME, "RGBA8");
-                        break;
-                    case bgfx::TextureFormat::BGRA8:
-                        jsData.Set(FORMAT_MEMBER_NAME, "BGRA8");
-                        break;
-                    default:
-                        jsData.Set(FORMAT_MEMBER_NAME, env.Undefined());
-                        break;
+                case bgfx::TextureFormat::RGBA8:
+                    jsData.Set(FORMAT_MEMBER_NAME, "RGBA8");
+                    break;
+                case bgfx::TextureFormat::BGRA8:
+                    jsData.Set(FORMAT_MEMBER_NAME, "BGRA8");
+                    break;
+                default:
+                    jsData.Set(FORMAT_MEMBER_NAME, env.Undefined());
+                    break;
                 }
                 jsData.Set("yFlip", yFlip);
 
@@ -229,7 +226,7 @@ namespace Babylon::Plugins::Internal
                 std::memcpy(jsBytes.Data(), bytes.data(), bytes.size());
                 bytes.clear();
 
-                for (const auto& callback : m_callbacks)
+                for (const auto& callback: m_callbacks)
                 {
                     callback.Call({jsData});
                 }

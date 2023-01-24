@@ -3,7 +3,7 @@
 namespace Babylon
 {
     WorkQueue::WorkQueue(std::function<void()> threadProcedure)
-        : m_thread{std::move(threadProcedure)}
+    : m_thread{std::move(threadProcedure)}
     {
     }
 

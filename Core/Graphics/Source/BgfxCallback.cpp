@@ -10,7 +10,7 @@
 namespace Babylon::Graphics
 {
     BgfxCallback::BgfxCallback(std::function<void(const CaptureData&)> captureCallback)
-        : m_captureCallback{std::move(captureCallback)}
+    : m_captureCallback{std::move(captureCallback)}
     {
     }
 

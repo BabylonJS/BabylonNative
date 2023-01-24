@@ -9,9 +9,8 @@ struct NVGcontext;
 
 namespace Babylon::Polyfills::Internal
 {
-    class Context final : public Napi::ObjectWrap<Context>, Polyfills::Canvas::Impl::MonitoredResource
-    {
-    public:
+    class Context final : public Napi::ObjectWrap<Context>, Polyfills::Canvas::Impl::MonitoredResource {
+       public:
         static void Initialize(Napi::Env);
         static Napi::Value CreateInstance(Napi::Env env, NativeCanvas* canvas);
 
@@ -20,7 +19,7 @@ namespace Babylon::Polyfills::Internal
 
         NVGcontext* GetNVGContext() const { return m_nvg; }
 
-    private:
+       private:
         void FillRect(const Napi::CallbackInfo&);
         Napi::Value MeasureText(const Napi::CallbackInfo&);
         void FillText(const Napi::CallbackInfo&);
@@ -81,11 +80,11 @@ namespace Babylon::Polyfills::Internal
         std::string m_font{};
         std::string m_fillStyle{};
         std::string m_strokeStyle{};
-        float m_lineWidth{ 0.f };
-        float m_globalAlpha{ 1.f };
+        float m_lineWidth{0.f};
+        float m_globalAlpha{1.f};
 
         std::map<std::string, int> m_fonts;
-        int m_currentFontId{ -1 };
+        int m_currentFontId{-1};
 
         Graphics::DeviceContext& m_graphicsContext;
         Graphics::Update m_update;

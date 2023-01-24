@@ -29,9 +29,9 @@ namespace Babylon
     struct UniformInfo final
     {
         UniformInfo(uint8_t stage, bgfx::UniformHandle handle, size_t maxElementLength)
-            : Stage{stage}
-            , Handle{handle}
-            , MaxElementLength{maxElementLength}
+        : Stage{stage}
+        , Handle{handle}
+        , MaxElementLength{maxElementLength}
         {
         }
 
@@ -92,19 +92,18 @@ namespace Babylon
         }
     };
 
-    class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
-    {
+    class NativeEngine final : public Napi::ObjectWrap<NativeEngine> {
         static constexpr auto JS_CLASS_NAME = "_NativeEngine";
         static constexpr auto JS_CONSTRUCTOR_NAME = "Engine";
 
-    public:
+       public:
         NativeEngine(const Napi::CallbackInfo& info);
         NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime);
         ~NativeEngine();
 
         static void Initialize(Napi::Env env);
 
-    private:
+       private:
         void Dispose();
 
         void Dispose(const Napi::CallbackInfo& info);

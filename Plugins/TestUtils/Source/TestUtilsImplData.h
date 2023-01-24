@@ -4,11 +4,10 @@
 
 namespace Babylon::Plugins::Internal
 {
-    class TestUtils::ImplData final : public std::enable_shared_from_this<TestUtils::ImplData>
-    {
-    public:
+    class TestUtils::ImplData final : public std::enable_shared_from_this<TestUtils::ImplData> {
+       public:
         ImplData(Graphics::WindowType window)
-            : m_window{window}
+        : m_window{window}
         {
         }
 
