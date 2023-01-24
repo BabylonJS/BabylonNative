@@ -26,10 +26,10 @@ namespace Babylon::Polyfills::Internal
             {
                 switch (value)
                 {
-                case UrlLib::UrlResponseType::String:
-                    return Text;
-                case UrlLib::UrlResponseType::Buffer:
-                    return ArrayBuffer;
+                    case UrlLib::UrlResponseType::String:
+                        return Text;
+                    case UrlLib::UrlResponseType::Buffer:
+                        return ArrayBuffer;
                 }
 
                 throw std::runtime_error{"Invalid response type"};

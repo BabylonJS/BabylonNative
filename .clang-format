@@ -18,7 +18,7 @@ ColumnLimit: 0
 ConstructorInitializerIndentWidth: 0
 ContinuationIndentWidth: 0
 FixNamespaceComments: false
-IndentCaseLabels: false
+IndentCaseLabels: true
 IndentWidth: 4
 SortIncludes: false
 SpaceAfterTemplateKeyword: false

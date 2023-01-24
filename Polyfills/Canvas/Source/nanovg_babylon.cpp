@@ -715,21 +715,21 @@ namespace
                 gl->state = BGFX_STATE_BLEND_FUNC_SEPARATE(blend->srcRGB, blend->dstRGB, blend->srcAlpha, blend->dstAlpha) | BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A;
                 switch (call->type)
                 {
-                case GLNVG_FILL:
-                    glnvg__fill(gl, call);
-                    break;
+                    case GLNVG_FILL:
+                        glnvg__fill(gl, call);
+                        break;
 
-                case GLNVG_CONVEXFILL:
-                    glnvg__convexFill(gl, call);
-                    break;
+                    case GLNVG_CONVEXFILL:
+                        glnvg__convexFill(gl, call);
+                        break;
 
-                case GLNVG_STROKE:
-                    glnvg__stroke(gl, call);
-                    break;
+                    case GLNVG_STROKE:
+                        glnvg__stroke(gl, call);
+                        break;
 
-                case GLNVG_TRIANGLES:
-                    glnvg__triangles(gl, call);
-                    break;
+                    case GLNVG_TRIANGLES:
+                        glnvg__triangles(gl, call);
+                        break;
                 }
             }
         }

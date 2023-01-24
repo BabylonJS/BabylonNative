@@ -175,22 +175,22 @@ namespace Babylon::Polyfills::Internal
             int bitShift{4};
             switch (str.length())
             {
-            case 4:
-                count = sscanf(str.c_str(), "#%1x%1x%1x", &components[0], &components[1], &components[2]);
-                break;
-            case 5:
-                count = sscanf(str.c_str(), "#%1x%1x%1x%1x", &components[0], &components[1], &components[2], &components[3]);
-                break;
-            case 7:
-                count = sscanf(str.c_str(), "#%02x%02x%02x", &components[0], &components[1], &components[2]);
-                bitShift = 0;
-                break;
-            case 9:
-                count = sscanf(str.c_str(), "#%02x%02x%02x%02x", &components[0], &components[1], &components[2], &components[3]);
-                bitShift = 0;
-                break;
-            default:
-                throw Napi::Error::New(env, std::string{"Unable to parse color : "} + str);
+                case 4:
+                    count = sscanf(str.c_str(), "#%1x%1x%1x", &components[0], &components[1], &components[2]);
+                    break;
+                case 5:
+                    count = sscanf(str.c_str(), "#%1x%1x%1x%1x", &components[0], &components[1], &components[2], &components[3]);
+                    break;
+                case 7:
+                    count = sscanf(str.c_str(), "#%02x%02x%02x", &components[0], &components[1], &components[2]);
+                    bitShift = 0;
+                    break;
+                case 9:
+                    count = sscanf(str.c_str(), "#%02x%02x%02x%02x", &components[0], &components[1], &components[2], &components[3]);
+                    bitShift = 0;
+                    break;
+                default:
+                    throw Napi::Error::New(env, std::string{"Unable to parse color : "} + str);
             }
 
             if (bitShift)

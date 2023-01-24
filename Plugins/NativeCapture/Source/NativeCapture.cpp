@@ -205,15 +205,15 @@ namespace Babylon::Plugins::Internal
                 constexpr auto FORMAT_MEMBER_NAME = "format";
                 switch (format)
                 {
-                case bgfx::TextureFormat::RGBA8:
-                    jsData.Set(FORMAT_MEMBER_NAME, "RGBA8");
-                    break;
-                case bgfx::TextureFormat::BGRA8:
-                    jsData.Set(FORMAT_MEMBER_NAME, "BGRA8");
-                    break;
-                default:
-                    jsData.Set(FORMAT_MEMBER_NAME, env.Undefined());
-                    break;
+                    case bgfx::TextureFormat::RGBA8:
+                        jsData.Set(FORMAT_MEMBER_NAME, "RGBA8");
+                        break;
+                    case bgfx::TextureFormat::BGRA8:
+                        jsData.Set(FORMAT_MEMBER_NAME, "BGRA8");
+                        break;
+                    default:
+                        jsData.Set(FORMAT_MEMBER_NAME, env.Undefined());
+                        break;
                 }
                 jsData.Set("yFlip", yFlip);
 

@@ -1824,43 +1824,43 @@ namespace Babylon
         uint64_t fillModeState{0}; // indexed triangle list
         switch (fillMode)
         {
-        case 0: // MATERIAL_TriangleFillMode
-        {
-            fillModeState = 0;
-            break;
-        }
-        case 1: // MATERIAL_WireFrameFillMode
-        case 4: // MATERIAL_LineListDrawMode
-        {
-            fillModeState = BGFX_STATE_PT_LINES;
-            break;
-        }
-        case 2: // MATERIAL_PointFillMode
-        case 3: // MATERIAL_PointListDrawMode
-        {
-            fillModeState = BGFX_STATE_PT_POINTS;
-            break;
-        }
-        case 5: // MATERIAL_LineLoopDrawMode
-        {
-            // TODO: unsupported mode
-            break;
-        }
-        case 6: // MATERIAL_LineStripDrawMode
-        {
-            fillModeState = BGFX_STATE_PT_LINESTRIP;
-            break;
-        }
-        case 7: // MATERIAL_TriangleStripDrawMode
-        {
-            fillModeState = BGFX_STATE_PT_TRISTRIP;
-            break;
-        }
-        case 8: // MATERIAL_TriangleFanDrawMode
-        {
-            // TODO: unsupported mode
-            break;
-        }
+            case 0: // MATERIAL_TriangleFillMode
+            {
+                fillModeState = 0;
+                break;
+            }
+            case 1: // MATERIAL_WireFrameFillMode
+            case 4: // MATERIAL_LineListDrawMode
+            {
+                fillModeState = BGFX_STATE_PT_LINES;
+                break;
+            }
+            case 2: // MATERIAL_PointFillMode
+            case 3: // MATERIAL_PointListDrawMode
+            {
+                fillModeState = BGFX_STATE_PT_POINTS;
+                break;
+            }
+            case 5: // MATERIAL_LineLoopDrawMode
+            {
+                // TODO: unsupported mode
+                break;
+            }
+            case 6: // MATERIAL_LineStripDrawMode
+            {
+                fillModeState = BGFX_STATE_PT_LINESTRIP;
+                break;
+            }
+            case 7: // MATERIAL_TriangleStripDrawMode
+            {
+                fillModeState = BGFX_STATE_PT_TRISTRIP;
+                break;
+            }
+            case 8: // MATERIAL_TriangleFanDrawMode
+            {
+                // TODO: unsupported mode
+                break;
+            }
         }
 
         for (const auto& it: m_currentProgram->Uniforms)

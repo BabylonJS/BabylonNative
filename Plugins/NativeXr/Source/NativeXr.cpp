@@ -25,22 +25,22 @@ namespace
     {
         switch (format)
         {
-        // Color Formats
-        // NOTE: Use linear formats even though XR requests sRGB to match what happens on the web.
-        //       WebGL shaders expect sRGB output while native shaders expect linear output.
-        case xr::TextureFormat::BGRA8_SRGB:
-            return bgfx::TextureFormat::BGRA8;
-        case xr::TextureFormat::RGBA8_SRGB:
-            return bgfx::TextureFormat::RGBA8;
+            // Color Formats
+            // NOTE: Use linear formats even though XR requests sRGB to match what happens on the web.
+            //       WebGL shaders expect sRGB output while native shaders expect linear output.
+            case xr::TextureFormat::BGRA8_SRGB:
+                return bgfx::TextureFormat::BGRA8;
+            case xr::TextureFormat::RGBA8_SRGB:
+                return bgfx::TextureFormat::RGBA8;
 
-        // Depth Formats
-        case xr::TextureFormat::D24S8:
-            return bgfx::TextureFormat::D24S8;
-        case xr::TextureFormat::D16:
-            return bgfx::TextureFormat::D16;
+            // Depth Formats
+            case xr::TextureFormat::D24S8:
+                return bgfx::TextureFormat::D24S8;
+            case xr::TextureFormat::D16:
+                return bgfx::TextureFormat::D16;
 
-        default:
-            throw std::runtime_error{"Unsupported texture format"};
+            default:
+                throw std::runtime_error{"Unsupported texture format"};
         }
     }
 
@@ -245,52 +245,52 @@ namespace
 
         switch (detectionBoundary.Type)
         {
-        case xr::DetectionBoundaryType::Box:
-            if (object.Has("extent"))
-            {
-                const auto& vector = object.Get("extent").As<Napi::Object>();
-                xr::Vector3f boxDimensions{};
-                boxDimensions.X = vector.Get("x").As<Napi::Number>();
-                boxDimensions.Y = vector.Get("y").As<Napi::Number>();
-                boxDimensions.Z = vector.Get("z").As<Napi::Number>();
-                detectionBoundary.Data = boxDimensions;
-            }
-            break;
-        case xr::DetectionBoundaryType::Frustum:
-            if (object.Has("frustum"))
-            {
-                const auto& frustum = object.Get("frustum").As<Napi::Object>();
-                xr::Frustum frustumData{};
-                frustumData.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
+            case xr::DetectionBoundaryType::Box:
+                if (object.Has("extent"))
+                {
+                    const auto& vector = object.Get("extent").As<Napi::Object>();
+                    xr::Vector3f boxDimensions{};
+                    boxDimensions.X = vector.Get("x").As<Napi::Number>();
+                    boxDimensions.Y = vector.Get("y").As<Napi::Number>();
+                    boxDimensions.Z = vector.Get("z").As<Napi::Number>();
+                    detectionBoundary.Data = boxDimensions;
+                }
+                break;
+            case xr::DetectionBoundaryType::Frustum:
+                if (object.Has("frustum"))
+                {
+                    const auto& frustum = object.Get("frustum").As<Napi::Object>();
+                    xr::Frustum frustumData{};
+                    frustumData.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
 
-                const auto& vector = frustum.Get("position").As<Napi::Object>();
-                frustumData.Pose.Position.X = vector.Get("x").As<Napi::Number>();
-                frustumData.Pose.Position.Y = vector.Get("y").As<Napi::Number>();
-                frustumData.Pose.Position.Z = vector.Get("z").As<Napi::Number>();
+                    const auto& vector = frustum.Get("position").As<Napi::Object>();
+                    frustumData.Pose.Position.X = vector.Get("x").As<Napi::Number>();
+                    frustumData.Pose.Position.Y = vector.Get("y").As<Napi::Number>();
+                    frustumData.Pose.Position.Z = vector.Get("z").As<Napi::Number>();
 
-                const auto& quaternion = frustum.Get("orientation").As<Napi::Object>();
-                frustumData.Pose.Orientation.X = quaternion.Get("x").As<Napi::Number>();
-                frustumData.Pose.Orientation.Y = quaternion.Get("y").As<Napi::Number>();
-                frustumData.Pose.Orientation.Z = quaternion.Get("z").As<Napi::Number>();
-                frustumData.Pose.Orientation.W = quaternion.Get("w").As<Napi::Number>();
+                    const auto& quaternion = frustum.Get("orientation").As<Napi::Object>();
+                    frustumData.Pose.Orientation.X = quaternion.Get("x").As<Napi::Number>();
+                    frustumData.Pose.Orientation.Y = quaternion.Get("y").As<Napi::Number>();
+                    frustumData.Pose.Orientation.Z = quaternion.Get("z").As<Napi::Number>();
+                    frustumData.Pose.Orientation.W = quaternion.Get("w").As<Napi::Number>();
 
-                const auto& fov = frustum.Get("fieldOfView").As<Napi::Object>();
-                frustumData.FOV.AngleLeft = fov.Get("angleLeft").As<Napi::Number>();
-                frustumData.FOV.AngleRight = fov.Get("angleRight").As<Napi::Number>();
-                frustumData.FOV.AngleUp = fov.Get("angleUp").As<Napi::Number>();
-                frustumData.FOV.AngleDown = fov.Get("angleDown").As<Napi::Number>();
+                    const auto& fov = frustum.Get("fieldOfView").As<Napi::Object>();
+                    frustumData.FOV.AngleLeft = fov.Get("angleLeft").As<Napi::Number>();
+                    frustumData.FOV.AngleRight = fov.Get("angleRight").As<Napi::Number>();
+                    frustumData.FOV.AngleUp = fov.Get("angleUp").As<Napi::Number>();
+                    frustumData.FOV.AngleDown = fov.Get("angleDown").As<Napi::Number>();
 
-                frustumData.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
+                    frustumData.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
 
-                detectionBoundary.Data = frustumData;
-            }
-            break;
-        case xr::DetectionBoundaryType::Sphere:
-            if (object.Has("radius"))
-            {
-                detectionBoundary.Data = object.Get("radius").As<Napi::Number>();
-            }
-            break;
+                    detectionBoundary.Data = frustumData;
+                }
+                break;
+            case xr::DetectionBoundaryType::Sphere:
+                if (object.Has("radius"))
+                {
+                    detectionBoundary.Data = object.Get("radius").As<Napi::Number>();
+                }
+                break;
         }
     }
 
@@ -817,14 +817,14 @@ namespace Babylon
             {
                 switch (idx)
                 {
-                case 0:
-                    return LEFT;
-                case 1:
-                    return RIGHT;
-                case 2:
-                    return NONE;
-                default:
-                    throw std::runtime_error{"Unsupported index"};
+                    case 0:
+                        return LEFT;
+                    case 1:
+                        return RIGHT;
+                    case 2:
+                        return NONE;
+                    default:
+                        throw std::runtime_error{"Unsupported index"};
                 }
             }
 

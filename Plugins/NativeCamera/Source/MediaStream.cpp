@@ -199,17 +199,17 @@ namespace Babylon::Plugins
                 Capability::MeetsConstraint constraintSatifaction{capability->MeetsConstraints(constraints)};
                 switch (constraintSatifaction)
                 {
-                case Capability::MeetsConstraint::FullySatisfied:
-                    fullySatisfiedCapabilityCount++;
-                    break;
-                case Capability::MeetsConstraint::PartiallySatisfied:
-                case Capability::MeetsConstraint::Unconstrained:
-                    // Don't weight partialy satisfied or unconstrained capabilites any higher than another device
-                    break;
-                case Capability::MeetsConstraint::Unsatisfied:
-                default:
-                    failedAConstraint = true;
-                    break;
+                    case Capability::MeetsConstraint::FullySatisfied:
+                        fullySatisfiedCapabilityCount++;
+                        break;
+                    case Capability::MeetsConstraint::PartiallySatisfied:
+                    case Capability::MeetsConstraint::Unconstrained:
+                        // Don't weight partialy satisfied or unconstrained capabilites any higher than another device
+                        break;
+                    case Capability::MeetsConstraint::Unsatisfied:
+                    default:
+                        failedAConstraint = true;
+                        break;
                 }
 
                 // Don't bother continuing to count capabilities if we've failed on
@@ -320,19 +320,19 @@ namespace Babylon::Plugins
 
             switch (constraintSatisfaction)
             {
-            case Capability::MeetsConstraint::FullySatisfied:
-            case Capability::MeetsConstraint::PartiallySatisfied:
-                m_currentConstraints.Set(capability->GetName(), constraints.Get(capability->GetName()));
-                break;
-            case Capability::MeetsConstraint::Unconstrained:
-                // Still apply the unconstrained capability so that it resets to it's default in case it was previously set
-                break;
-            case Capability::MeetsConstraint::Unsatisfied:
-            default:
-                // The constraint couldn't be satisfied ignore it and continue applying the remaining constraints
-                allConstraintsSatisfied = false;
-                continue;
-                ;
+                case Capability::MeetsConstraint::FullySatisfied:
+                case Capability::MeetsConstraint::PartiallySatisfied:
+                    m_currentConstraints.Set(capability->GetName(), constraints.Get(capability->GetName()));
+                    break;
+                case Capability::MeetsConstraint::Unconstrained:
+                    // Still apply the unconstrained capability so that it resets to it's default in case it was previously set
+                    break;
+                case Capability::MeetsConstraint::Unsatisfied:
+                default:
+                    // The constraint couldn't be satisfied ignore it and continue applying the remaining constraints
+                    allConstraintsSatisfied = false;
+                    continue;
+                    ;
             }
 
             if (!capability->ApplyConstraints(constraints))
