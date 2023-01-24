@@ -7,7 +7,6 @@ BreakBeforeBraces: Allman
 BreakConstructorInitializersBeforeComma: true
 BreakConstructorInitializers: BeforeComma
 ColumnLimit: 0
-ConstructorInitializerIndentWidth: 0
 ContinuationIndentWidth: 0
 FixNamespaceComments: false
 IndentCaseLabels: true
