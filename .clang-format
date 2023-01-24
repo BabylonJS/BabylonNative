@@ -3,15 +3,6 @@ BasedOnStyle: Google
 Language: Cpp
 
 AlignOperands: false
-BraceWrapping:
-  AfterControlStatement: true
-  AfterFunction: true
-  AfterNamespace: true
-  BeforeElse: true
-  AfterStruct: true
-  AfterClass: true
-  AfterUnion: true
-  BeforeCatch: true
 BreakBeforeBraces: Allman
 BreakConstructorInitializersBeforeComma: true
 BreakConstructorInitializers: BeforeComma
