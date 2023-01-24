@@ -10,8 +10,9 @@
 
 namespace Babylon
 {
-    class WorkQueue {
-       public:
+    class WorkQueue
+    {
+    public:
         WorkQueue(std::function<void()> threadProcedure);
         ~WorkQueue();
 
@@ -34,7 +35,7 @@ namespace Babylon
         void Resume();
         void Run(Napi::Env);
 
-       private:
+    private:
         template<typename CallableT>
         void Invoke(CallableT& callable)
         {

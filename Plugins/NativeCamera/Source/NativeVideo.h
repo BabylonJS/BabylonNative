@@ -12,8 +12,9 @@ namespace Babylon::Plugins
 {
     // NativeVideo provides a polyfill for the HTMLVideoElement which is used in conjunction with a MediaStream object to
     // pull frames out of a camera and render them into the Babylon scene.
-    class NativeVideo : public Napi::ObjectWrap<NativeVideo> {
-       public:
+    class NativeVideo : public Napi::ObjectWrap<NativeVideo>
+    {
+    public:
         static void Initialize(Napi::Env& env);
         static Napi::Object New(const Napi::CallbackInfo& info);
         NativeVideo(const Napi::CallbackInfo& info);
@@ -21,7 +22,7 @@ namespace Babylon::Plugins
 
         void UpdateTexture(bgfx::TextureHandle textureHandle);
 
-       private:
+    private:
         void AddEventListener(const Napi::CallbackInfo& info);
         void RemoveEventListener(const Napi::CallbackInfo& info);
         void RaiseEvent(const char* eventType);

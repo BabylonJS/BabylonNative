@@ -4,8 +4,9 @@
 
 namespace Babylon
 {
-    class ScriptLoader::Impl {
-       public:
+    class ScriptLoader::Impl
+    {
+    public:
         Impl(DispatchFunctionT dispatchFunction)
         : m_dispatchFunction{dispatchFunction}
         , m_task{arcana::task_from_result<std::exception_ptr>()}
@@ -53,7 +54,7 @@ namespace Babylon
             });
         }
 
-       private:
+    private:
         DispatchFunctionT m_dispatchFunction{};
         arcana::task<void, std::exception_ptr> m_task{};
     };

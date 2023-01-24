@@ -9,8 +9,9 @@ struct NVGcontext;
 
 namespace Babylon::Polyfills::Internal
 {
-    class Context final : public Napi::ObjectWrap<Context>, Polyfills::Canvas::Impl::MonitoredResource {
-       public:
+    class Context final : public Napi::ObjectWrap<Context>, Polyfills::Canvas::Impl::MonitoredResource
+    {
+    public:
         static void Initialize(Napi::Env);
         static Napi::Value CreateInstance(Napi::Env env, NativeCanvas* canvas);
 
@@ -19,7 +20,7 @@ namespace Babylon::Polyfills::Internal
 
         NVGcontext* GetNVGContext() const { return m_nvg; }
 
-       private:
+    private:
         void FillRect(const Napi::CallbackInfo&);
         Napi::Value MeasureText(const Napi::CallbackInfo&);
         void FillText(const Napi::CallbackInfo&);

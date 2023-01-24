@@ -8,8 +8,9 @@ namespace Babylon::Plugins::Internal
 {
     // NativeVideoAccessor maintains backwards compatibility with the Babylon.JS javascript contract
     // moving forward the NativeVideo object should be called directly instead of using this accessor class
-    class NativeCamera : public Napi::ObjectWrap<NativeCamera> {
-       public:
+    class NativeCamera : public Napi::ObjectWrap<NativeCamera>
+    {
+    public:
         static void Initialize(Napi::Env& env)
         {
             Napi::Function func = DefineClass(
@@ -28,7 +29,7 @@ namespace Babylon::Plugins::Internal
         {
         }
 
-       private:
+    private:
         Napi::Value CreateVideo(const Napi::CallbackInfo& info)
         {
             return NativeVideo::New(info);

@@ -28,8 +28,9 @@ namespace Babylon::Graphics
     struct DeviceConfiguration;
     struct BackBufferUpdateInfo;
 
-    class DeviceImpl {
-       public:
+    class DeviceImpl
+    {
+    public:
         /* ********** BEGIN DEVICE CONTRACT ********** */
 
         DeviceImpl();
@@ -90,7 +91,7 @@ namespace Babylon::Graphics
             return m_context;
         }
 
-       private:
+    private:
         friend class UpdateToken;
 
         static const bool s_bgfxFlipAfterRender;

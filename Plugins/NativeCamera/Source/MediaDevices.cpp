@@ -12,8 +12,9 @@ namespace Babylon::Plugins::Internal
 {
     // The MediaDevices class is a native implementation that polyfills the MediaDevices web API
     // https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices
-    class MediaDevices : public Napi::ObjectWrap<MediaDevices> {
-       public:
+    class MediaDevices : public Napi::ObjectWrap<MediaDevices>
+    {
+    public:
         MediaDevices(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<MediaDevices>{info}
         {

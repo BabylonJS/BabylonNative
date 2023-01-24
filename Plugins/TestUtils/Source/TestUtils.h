@@ -10,8 +10,9 @@
 
 namespace Babylon::Plugins::Internal
 {
-    class TestUtils final : public Napi::ObjectWrap<TestUtils> {
-       public:
+    class TestUtils final : public Napi::ObjectWrap<TestUtils>
+    {
+    public:
         class ImplData;
 
         static inline constexpr const char* JS_INSTANCE_NAME{"TestUtils"};
@@ -43,7 +44,7 @@ namespace Babylon::Plugins::Internal
         {
         }
 
-       private:
+    private:
         static inline Napi::FunctionReference constructor{};
 
         inline static std::shared_ptr<ImplData> m_implData;

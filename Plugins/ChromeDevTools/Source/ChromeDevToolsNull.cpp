@@ -4,7 +4,8 @@
 
 namespace Babylon::Plugins
 {
-    class ChromeDevTools::Impl {
+    class ChromeDevTools::Impl
+    {
     };
 
     ChromeDevTools ChromeDevTools::Initialize(Napi::Env)

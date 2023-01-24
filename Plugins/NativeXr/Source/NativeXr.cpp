@@ -324,8 +324,9 @@ namespace Babylon
 {
     namespace Plugins
     {
-        class NativeXr::Impl final : public std::enable_shared_from_this<NativeXr::Impl> {
-           public:
+        class NativeXr::Impl final : public std::enable_shared_from_this<NativeXr::Impl>
+        {
+        public:
             explicit Impl(Napi::Env);
 
             void UpdateWindow(void* windowPtr);
@@ -407,7 +408,7 @@ namespace Babylon
                 return m_system.GetNativeXrContextType();
             }
 
-           private:
+        private:
             Napi::Env m_env;
             JsRuntimeScheduler m_runtimeScheduler;
             std::mutex m_sessionStateChangedCallbackMutex{};
@@ -849,10 +850,11 @@ namespace Babylon
             }
         };
 
-        class PointerEvent : public Napi::ObjectWrap<PointerEvent> {
+        class PointerEvent : public Napi::ObjectWrap<PointerEvent>
+        {
             static constexpr auto JS_CLASS_NAME = "PointerEvent";
 
-           public:
+        public:
             static void Initialize(Napi::Env& env)
             {
                 Napi::Function func = DefineClass(
@@ -878,10 +880,11 @@ namespace Babylon
             }
         };
 
-        class XRWebGLBinding : public Napi::ObjectWrap<XRWebGLBinding> {
+        class XRWebGLBinding : public Napi::ObjectWrap<XRWebGLBinding>
+        {
             static constexpr auto JS_CLASS_NAME = "XRWebGLBinding";
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -905,10 +908,11 @@ namespace Babylon
             }
         };
 
-        class XRWebGLLayer : public Napi::ObjectWrap<XRWebGLLayer> {
+        class XRWebGLLayer : public Napi::ObjectWrap<XRWebGLLayer>
+        {
             static constexpr auto JS_CLASS_NAME = "XRWebGLLayer";
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -933,19 +937,20 @@ namespace Babylon
             {
             }
 
-           private:
+        private:
             Napi::Value GetViewport(const Napi::CallbackInfo& info)
             {
                 return info.This().As<Napi::Object>().Get("viewport");
             }
         };
 
-        class XRRigidTransform : public Napi::ObjectWrap<XRRigidTransform> {
+        class XRRigidTransform : public Napi::ObjectWrap<XRRigidTransform>
+        {
             static constexpr auto JS_CLASS_NAME = "XRRigidTransform";
             // static constexpr size_t VECTOR_SIZE = 4;
             static constexpr size_t MATRIX_SIZE = 16;
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -1047,7 +1052,7 @@ namespace Babylon
                 {orientation.Get("x").ToNumber().FloatValue(), orientation.Get("y").ToNumber().FloatValue(), orientation.Get("z").ToNumber().FloatValue(), orientation.Get("w").ToNumber().FloatValue()}};
             }
 
-           private:
+        private:
             Napi::ObjectReference m_position{};
             Napi::ObjectReference m_orientation{};
             Napi::Reference<Napi::Float32Array> m_matrix{};
@@ -1068,11 +1073,12 @@ namespace Babylon
             }
         };
 
-        class XRView : public Napi::ObjectWrap<XRView> {
+        class XRView : public Napi::ObjectWrap<XRView>
+        {
             static constexpr auto JS_CLASS_NAME = "XRView";
             static constexpr size_t MATRIX_SIZE = 16;
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -1118,7 +1124,7 @@ namespace Babylon
                 m_isFirstPersonObserver = isFirstPersonObserver;
             }
 
-           private:
+        private:
             size_t m_eyeIdx{};
             gsl::czstring m_eye{};
             Napi::Reference<Napi::Float32Array> m_projectionMatrix{};
@@ -1146,10 +1152,11 @@ namespace Babylon
             }
         };
 
-        class XRViewerPose : public Napi::ObjectWrap<XRViewerPose> {
+        class XRViewerPose : public Napi::ObjectWrap<XRViewerPose>
+        {
             static constexpr auto JS_CLASS_NAME = "XRViewerPose";
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -1226,7 +1233,7 @@ namespace Babylon
                 m_isEmulatedPosition = !frame.IsTracking;
             }
 
-           private:
+        private:
             Napi::ObjectReference m_jsTransform{};
             Napi::Reference<Napi::Array> m_jsViews{};
 
@@ -1251,10 +1258,11 @@ namespace Babylon
         };
 
         // Implementation of vanilla XRPose: https://immersive-web.github.io/webxr/#xrpose-interface
-        class XRPose : public Napi::ObjectWrap<XRPose> {
+        class XRPose : public Napi::ObjectWrap<XRPose>
+        {
             static constexpr auto JS_CLASS_NAME = "XRPose";
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -1293,7 +1301,7 @@ namespace Babylon
                 m_transform.Update(transform);
             }
 
-           private:
+        private:
             Napi::ObjectReference m_jsTransform{};
             XRRigidTransform& m_transform;
 
@@ -1304,10 +1312,11 @@ namespace Babylon
         };
 
         // Implementation of XRRay: https://immersive-web.github.io/hit-test/#xrray-interface
-        class XRRay : public Napi::ObjectWrap<XRRay> {
+        class XRRay : public Napi::ObjectWrap<XRRay>
+        {
             static constexpr auto JS_CLASS_NAME = "XRRay";
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -1429,7 +1438,7 @@ namespace Babylon
                 return nativeRay;
             }
 
-           private:
+        private:
             Napi::ObjectReference m_origin{};
             Napi::ObjectReference m_direction{};
 
@@ -1450,10 +1459,11 @@ namespace Babylon
         };
 
         // Implementation of the XRReferenceSpace interface: https://immersive-web.github.io/webxr/#xrreferencespace-interface
-        class XRReferenceSpace : public Napi::ObjectWrap<XRReferenceSpace> {
+        class XRReferenceSpace : public Napi::ObjectWrap<XRReferenceSpace>
+        {
             static constexpr auto JS_CLASS_NAME = "XRReferenceSpace";
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -1509,7 +1519,7 @@ namespace Babylon
                 return XRRigidTransform::Unwrap(m_jsTransform.Value());
             }
 
-           private:
+        private:
             Napi::Value GetOffsetReferenceSpace(const Napi::CallbackInfo& info)
             {
                 // TODO: Handle XRBoundedReferenceSpace case
@@ -1522,10 +1532,11 @@ namespace Babylon
         };
 
         // Implementation of the XRAnchor interface: https://immersive-web.github.io/anchors/#xr-anchor
-        class XRAnchor : public Napi::ObjectWrap<XRAnchor> {
+        class XRAnchor : public Napi::ObjectWrap<XRAnchor>
+        {
             static constexpr auto JS_CLASS_NAME = "XRAnchor";
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -1563,7 +1574,7 @@ namespace Babylon
                 m_nativeAnchor = nativeAnchor;
             }
 
-           private:
+        private:
             // Marks the anchor as no longer valid, and should be deleted on the next pass.
             void Delete(const Napi::CallbackInfo&)
             {
@@ -1576,10 +1587,11 @@ namespace Babylon
         };
 
         // Implementation of the XRHitTestSource interface: https://immersive-web.github.io/hit-test/#hit-test-source-interface
-        class XRHitTestSource : public Napi::ObjectWrap<XRHitTestSource> {
+        class XRHitTestSource : public Napi::ObjectWrap<XRHitTestSource>
+        {
             static constexpr auto JS_CLASS_NAME = "XRHitTestSource";
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -1664,7 +1676,7 @@ namespace Babylon
                 return m_entityTypes;
             }
 
-           private:
+        private:
             void Cancel(const Napi::CallbackInfo& /*info*/)
             {
                 // no-op we don't keep a persistent list of active XRHitTestSources..
@@ -1680,10 +1692,11 @@ namespace Babylon
         };
 
         // Implementation of the XRHitTestResult interface: https://immersive-web.github.io/hit-test/#xr-hit-test-result-interface
-        class XRHitTestResult : public Napi::ObjectWrap<XRHitTestResult> {
+        class XRHitTestResult : public Napi::ObjectWrap<XRHitTestResult>
+        {
             static constexpr auto JS_CLASS_NAME = "XRHitTestResult";
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -1720,7 +1733,7 @@ namespace Babylon
                 m_frame = frame;
             }
 
-           private:
+        private:
             // The hit hit result, which contains the pose in default AR Space, as well as the native entity.
             xr::HitResult m_hitResult{};
             XRFrame* m_frame{};
@@ -1739,10 +1752,11 @@ namespace Babylon
         };
 
         // Implementation of the XRPlane interface: https://github.com/immersive-web/real-world-geometry/blob/master/plane-detection-explainer.md
-        class XRPlane : public Napi::ObjectWrap<XRPlane> {
+        class XRPlane : public Napi::ObjectWrap<XRPlane>
+        {
             static constexpr auto JS_CLASS_NAME = "XRPlane";
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -1786,7 +1800,7 @@ namespace Babylon
                 m_lastUpdatedTimestamp = timestamp;
             }
 
-           private:
+        private:
             xr::System::Session::Frame::Plane& GetPlane();
 
             Napi::Value GetPolygon(const Napi::CallbackInfo& info)
@@ -1839,10 +1853,11 @@ namespace Babylon
             XRFrame* m_frame{};
         };
 
-        class XRMesh : public Napi::ObjectWrap<XRMesh> {
+        class XRMesh : public Napi::ObjectWrap<XRMesh>
+        {
             static constexpr auto JS_CLASS_NAME = "XRMesh";
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -1896,7 +1911,7 @@ namespace Babylon
                 m_frame = frame;
             }
 
-           private:
+        private:
             xr::System::Session::Frame::Mesh& GetMesh();
 
             Napi::Value GetPositions(const Napi::CallbackInfo& info)
@@ -2024,10 +2039,11 @@ namespace Babylon
             XRFrame* m_frame{};
         };
 
-        class XRHand : public Napi::ObjectWrap<XRHand> {
+        class XRHand : public Napi::ObjectWrap<XRHand>
+        {
             static constexpr auto JS_CLASS_NAME = "XRHand";
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -2060,17 +2076,18 @@ namespace Babylon
             {
             }
 
-           private:
+        private:
             static Napi::Value GetSize(const Napi::CallbackInfo& info)
             {
                 return Napi::Value::From(info.Env(), HAND_JOINT_NAMES.size());
             }
         };
 
-        class XRFrame : public Napi::ObjectWrap<XRFrame> {
+        class XRFrame : public Napi::ObjectWrap<XRFrame>
+        {
             static constexpr auto JS_CLASS_NAME = "XRFrame";
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -2206,7 +2223,7 @@ namespace Babylon
                 return m_sceneObjects.at(objectID).Value();
             }
 
-           private:
+        private:
             const xr::System::Session::Frame* m_frame{};
             Napi::ObjectReference m_jsXRViewerPose{};
             XRViewerPose& m_xrViewerPose;
@@ -2612,7 +2629,8 @@ namespace Babylon
         }
 
         // Implementation of the XRSession interface: https://immersive-web.github.io/webxr/#xrsession-interface
-        class XRSession : public Napi::ObjectWrap<XRSession> {
+        class XRSession : public Napi::ObjectWrap<XRSession>
+        {
             static constexpr auto JS_CLASS_NAME = "XRSession";
             static constexpr auto JS_EVENT_NAME_END = "end";
             static constexpr auto JS_EVENT_NAME_INPUT_SOURCES_CHANGE = "inputsourceschange";
@@ -2630,7 +2648,7 @@ namespace Babylon
                 static constexpr auto TRACKABLE{"trackable"};
             };
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::Function func = DefineClass(
@@ -2764,7 +2782,7 @@ namespace Babylon
                 return m_xrFrame.DeclareNativeAnchor(env, nativeAnchor);
             }
 
-           private:
+        private:
             JsRuntimeScheduler m_runtimeScheduler;
             std::shared_ptr<Plugins::NativeXr::Impl> m_xr;
             Napi::ObjectReference m_jsXRFrame{};
@@ -3230,10 +3248,11 @@ namespace Babylon
             }
         };
 
-        class NativeWebXRRenderTarget : public Napi::ObjectWrap<NativeWebXRRenderTarget> {
+        class NativeWebXRRenderTarget : public Napi::ObjectWrap<NativeWebXRRenderTarget>
+        {
             static constexpr auto JS_CLASS_NAME = "NativeWebXRRenderTarget";
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -3260,7 +3279,7 @@ namespace Babylon
             {
             }
 
-           private:
+        private:
             // Lifetime control to prevent the cleanup of the NativeEngine while XR is still alive.
             Napi::ObjectReference m_jsEngineReference{};
 
@@ -3283,10 +3302,11 @@ namespace Babylon
             }
         };
 
-        class NativeRenderTargetProvider : public Napi::ObjectWrap<NativeRenderTargetProvider> {
+        class NativeRenderTargetProvider : public Napi::ObjectWrap<NativeRenderTargetProvider>
+        {
             static constexpr auto JS_CLASS_NAME = "NativeRenderTargetProvider";
 
-           public:
+        public:
             static void Initialize(Napi::Env env)
             {
                 Napi::HandleScope scope{env};
@@ -3316,7 +3336,7 @@ namespace Babylon
                 m_session.SetRenderTextureFunctions(createRenderTexture, destroyRenderTexture);
             }
 
-           private:
+        private:
             Napi::ObjectReference m_jsSession{};
             XRSession& m_session;
 
@@ -3328,13 +3348,14 @@ namespace Babylon
         };
 
         // Implementation of the XR interface: https://immersive-web.github.io/webxr/#xr-interface
-        class XR : public Napi::ObjectWrap<XR> {
+        class XR : public Napi::ObjectWrap<XR>
+        {
             static constexpr auto JS_CLASS_NAME = "NativeXR";
             static constexpr auto JS_NAVIGATOR_NAME = "navigator";
             static constexpr auto JS_XR_NAME = "xr";
             static constexpr auto JS_NATIVE_NAME = "native";
 
-           public:
+        public:
             static void Initialize(Napi::Env env, std::shared_ptr<Plugins::NativeXr::Impl> nativeXr)
             {
                 Napi::HandleScope scope{env};
@@ -3377,7 +3398,7 @@ namespace Babylon
             {
             }
 
-           private:
+        private:
             JsRuntimeScheduler m_runtimeScheduler;
             std::shared_ptr<Plugins::NativeXr::Impl> m_xr{};
 

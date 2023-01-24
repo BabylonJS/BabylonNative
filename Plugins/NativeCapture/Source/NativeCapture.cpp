@@ -18,8 +18,9 @@ namespace
 
     FrameProviderTicket BeginFrameCapture(Babylon::Graphics::DeviceContext& graphicsContext, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
     {
-        class DefaultBufferFrameProvider final : public std::enable_shared_from_this<DefaultBufferFrameProvider> {
-           public:
+        class DefaultBufferFrameProvider final : public std::enable_shared_from_this<DefaultBufferFrameProvider>
+        {
+        public:
             static FrameProviderTicket Create(Babylon::Graphics::DeviceContext& graphicsContext, FrameCallback callback)
             {
                 std::shared_ptr<DefaultBufferFrameProvider> frameProvider{new DefaultBufferFrameProvider(graphicsContext, std::move(callback))};
@@ -29,7 +30,7 @@ namespace
                 });
             }
 
-           private:
+        private:
             DefaultBufferFrameProvider(Babylon::Graphics::DeviceContext& graphicsContext, FrameCallback callback)
             : m_graphicsContext{graphicsContext}
             , m_frameCallback{std::move(callback)}
@@ -43,14 +44,15 @@ namespace
                 }));
             }
 
-           private:
+        private:
             Babylon::Graphics::DeviceContext& m_graphicsContext;
             std::unique_ptr<Babylon::Graphics::DeviceContext::CaptureCallbackTicketT> m_ticket{};
             FrameCallback m_frameCallback{};
         };
 
-        class OffScreenBufferFrameProvider final : public std::enable_shared_from_this<OffScreenBufferFrameProvider> {
-           public:
+        class OffScreenBufferFrameProvider final : public std::enable_shared_from_this<OffScreenBufferFrameProvider>
+        {
+        public:
             static FrameProviderTicket Create(Babylon::Graphics::DeviceContext& graphicsContext, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
             {
                 std::shared_ptr<OffScreenBufferFrameProvider> frameProvider{new OffScreenBufferFrameProvider(graphicsContext, frameBufferHandle, std::move(callback))};
@@ -66,7 +68,7 @@ namespace
                 bgfx::destroy(m_blitTextureHandle);
             }
 
-           private:
+        private:
             OffScreenBufferFrameProvider(Babylon::Graphics::DeviceContext& graphicsContext, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
             : m_graphicsContext{graphicsContext}
             , m_frameBufferTextureHandle{bgfx::getTexture(frameBufferHandle)}
@@ -103,7 +105,7 @@ namespace
                 });
             }
 
-           private:
+        private:
             Babylon::Graphics::DeviceContext& m_graphicsContext;
             bgfx::TextureHandle m_frameBufferTextureHandle{bgfx::kInvalidHandle};
             FrameCallback m_frameCallback{};
@@ -127,8 +129,9 @@ namespace
 
 namespace Babylon::Plugins::Internal
 {
-    class NativeCapture : public Napi::ObjectWrap<NativeCapture> {
-       public:
+    class NativeCapture : public Napi::ObjectWrap<NativeCapture>
+    {
+    public:
         static constexpr auto JS_CLASS_NAME = "NativeCapture";
 
         static void Initialize(Napi::Env env)
@@ -186,7 +189,7 @@ namespace Babylon::Plugins::Internal
             }
         }
 
-       private:
+    private:
         void AddCallback(const Napi::CallbackInfo& info)
         {
             auto listener = info[0].As<Napi::Function>();

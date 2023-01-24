@@ -6,8 +6,9 @@
 
 namespace Babylon
 {
-    class VertexArray final {
-       public:
+    class VertexArray final
+    {
+    public:
         VertexArray() = default;
         ~VertexArray();
 
@@ -21,7 +22,7 @@ namespace Babylon
         void SetIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices);
         void SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices);
 
-       private:
+    private:
         struct IndexBufferRecord
         {
             IndexBuffer* Buffer{};

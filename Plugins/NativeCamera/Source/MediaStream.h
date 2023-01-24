@@ -10,10 +10,11 @@ namespace Babylon::Plugins
     // that enable control over selecting a camera stream available on the device and modifying capabilities
     // of the camera on the fly while the stream is rendering.
     // https://developer.mozilla.org/en-US/docs/Web/API/MediaStream
-    class MediaStream : public Napi::ObjectWrap<MediaStream> {
+    class MediaStream : public Napi::ObjectWrap<MediaStream>
+    {
         static constexpr auto JS_CLASS_NAME = "_MediaStream";
 
-       public:
+    public:
         static arcana::task<Napi::Object, std::exception_ptr> NewAsync(Napi::Env env, Napi::Object constraints);
         static Napi::Function GetConstructor(Napi::Env env);
 
@@ -36,7 +37,7 @@ namespace Babylon::Plugins
         int Width{0};
         int Height{0};
 
-       private:
+    private:
         arcana::task<void, std::exception_ptr> ApplyInitialConstraintsAsync(Napi::Env env, Napi::Object constraints);
         std::optional<std::pair<CameraDevice, const CameraTrack&>> FindBestCameraStream(Napi::Env env, Napi::Object constraints);
         bool UpdateConstraints(Napi::Env env, Napi::Object constraints);

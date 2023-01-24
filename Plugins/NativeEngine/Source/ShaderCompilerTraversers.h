@@ -13,8 +13,9 @@ namespace Babylon::ShaderCompilerTraversers
     /// modification which performed the allocation has exited. This helper class
     /// provides an opaque mechanism for placing those allocations in a transient
     /// "scope" which can persist as long as it needs to.
-    class AllocationsScopeBase {
-       public:
+    class AllocationsScopeBase
+    {
+    public:
         AllocationsScopeBase() = default;
         AllocationsScopeBase(const AllocationsScopeBase&) = delete;
 
@@ -29,8 +30,9 @@ namespace Babylon::ShaderCompilerTraversers
     /// and those IDs must not be allowed to conflict with one another, so this
     /// class provides a way for many modification techniques to generate new
     /// IDs that will not collide.
-    class IdGenerator {
-       public:
+    class IdGenerator
+    {
+    public:
         IdGenerator() = default;
         IdGenerator(const IdGenerator&) = delete;
 
@@ -39,7 +41,7 @@ namespace Babylon::ShaderCompilerTraversers
             return ++m_lastId;
         }
 
-       private:
+    private:
         int m_lastId{0};
     };
 

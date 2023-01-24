@@ -12,8 +12,9 @@ namespace Babylon::Plugins
     // A Setting represents a camera features current value.
     // For a better understanding of the Capabilities, Constraints, and Settings pattern see this article:
     // https://developer.mozilla.org/en-US/docs/Web/API/Media_Capture_and_Streams_API/Constraints
-    class Capability {
-       public:
+    class Capability
+    {
+    public:
         enum Feature {
             FacingMode,
             Torch,
@@ -37,13 +38,14 @@ namespace Babylon::Plugins
         virtual void AddAsCapability(Napi::Object target) = 0;
         virtual void AddAsSetting(Napi::Object target) = 0;
 
-       protected:
+    protected:
         const Feature m_feature;
     };
 
     template<typename T>
-    class CameraCapabilityTemplate : public Capability {
-       public:
+    class CameraCapabilityTemplate : public Capability
+    {
+    public:
         CameraCapabilityTemplate(
         Feature feature,
         T currentValue,
@@ -57,7 +59,7 @@ namespace Babylon::Plugins
         void AddAsCapability(Napi::Object target);
         void AddAsSetting(Napi::Object target);
 
-       private:
+    private:
         Constraint::Type GetConstraintType();
 
         T m_currentValue;

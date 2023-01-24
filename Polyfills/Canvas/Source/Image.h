@@ -12,8 +12,9 @@ struct NVGcontext;
 
 namespace Babylon::Polyfills::Internal
 {
-    class NativeCanvasImage final : public Napi::ObjectWrap<NativeCanvasImage> {
-       public:
+    class NativeCanvasImage final : public Napi::ObjectWrap<NativeCanvasImage>
+    {
+    public:
         static void CreateInstance(Napi::Env env);
 
         explicit NativeCanvasImage(const Napi::CallbackInfo& info);
@@ -24,7 +25,7 @@ namespace Babylon::Polyfills::Internal
         uint32_t GetWidth() const { return m_width; }
         uint32_t GetHeight() const { return m_height; }
 
-       private:
+    private:
         Napi::Value GetWidth(const Napi::CallbackInfo&);
         Napi::Value GetHeight(const Napi::CallbackInfo&);
         Napi::Value GetNaturalWidth(const Napi::CallbackInfo&);

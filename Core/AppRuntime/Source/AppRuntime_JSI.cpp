@@ -7,8 +7,9 @@
 
 namespace
 {
-    class TaskRunnerAdapter : public v8runtime::JSITaskRunner {
-       public:
+    class TaskRunnerAdapter : public v8runtime::JSITaskRunner
+    {
+    public:
         TaskRunnerAdapter(Babylon::WorkQueue& workQueue)
         : m_workQueue(workQueue)
         {
@@ -22,7 +23,7 @@ namespace
             });
         }
 
-       private:
+    private:
         TaskRunnerAdapter(const TaskRunnerAdapter&) = delete;
         TaskRunnerAdapter& operator=(const TaskRunnerAdapter&) = delete;
 

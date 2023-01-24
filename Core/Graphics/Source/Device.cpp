@@ -3,7 +3,8 @@
 
 namespace Babylon::Graphics
 {
-    class Device::Impl : public DeviceImpl {
+    class Device::Impl : public DeviceImpl
+    {
     };
 
     Device::Device()

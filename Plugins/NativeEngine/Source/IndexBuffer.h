@@ -8,8 +8,9 @@
 
 namespace Babylon
 {
-    class IndexBuffer final {
-       public:
+    class IndexBuffer final
+    {
+    public:
         IndexBuffer(gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic);
         ~IndexBuffer();
 
@@ -22,7 +23,7 @@ namespace Babylon
         bool CreateHandle();
         void Set(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices);
 
-       private:
+    private:
         std::optional<std::vector<uint8_t>> m_bytes{};
         uint16_t m_flags{};
         bool m_dynamic{};

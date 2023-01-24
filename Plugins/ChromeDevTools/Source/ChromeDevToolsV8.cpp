@@ -5,8 +5,9 @@
 
 namespace Babylon::Plugins
 {
-    class ChromeDevTools::Impl final : public std::enable_shared_from_this<ChromeDevTools::Impl> {
-       public:
+    class ChromeDevTools::Impl final : public std::enable_shared_from_this<ChromeDevTools::Impl>
+    {
+    public:
         explicit Impl(Napi::Env env)
         : m_env(env)
         {
@@ -50,7 +51,7 @@ namespace Babylon::Plugins
             });
         }
 
-       private:
+    private:
         std::unique_ptr<Babylon::V8InspectorAgent> m_inspector{};
         Napi::Env m_env;
     };

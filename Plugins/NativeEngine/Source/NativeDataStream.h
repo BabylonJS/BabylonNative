@@ -7,7 +7,8 @@
 
 namespace Babylon
 {
-    class NativeDataStream final : public Napi::ObjectWrap<NativeDataStream> {
+    class NativeDataStream final : public Napi::ObjectWrap<NativeDataStream>
+    {
         static constexpr auto JS_CLASS_NAME = "_NativeDataStream";
         static constexpr auto JS_ENGINE_CONSTRUCTOR_NAME = "NativeDataStream";
 
@@ -37,9 +38,10 @@ namespace Babylon
             }
         }
 
-       public:
-        class Reader final {
-           public:
+    public:
+        class Reader final
+        {
+        public:
             Reader(const Reader&) = delete;
             Reader operator=(const Reader&) = delete;
 
@@ -101,7 +103,7 @@ namespace Babylon
                 return ReadNativeData<typename std::conditional<std::is_member_pointer<T>::value, T, T*>::type>();
             }
 
-           private:
+        private:
             gsl::span<uint32_t> m_buffer{};
             size_t m_position{0};
             const gsl::final_action<std::function<void()>> m_scopeGuard;
@@ -199,7 +201,7 @@ namespace Babylon
                     }};
         }
 
-       private:
+    private:
         std::vector<uint32_t> m_buffer{};
         Napi::FunctionReference m_requestFlushCallback{};
         bool m_locked{false};

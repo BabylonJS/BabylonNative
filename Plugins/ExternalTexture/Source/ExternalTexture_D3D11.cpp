@@ -154,8 +154,9 @@ namespace
 
 namespace Babylon::Plugins
 {
-    class ExternalTexture::Impl final : public ImplBase {
-       public:
+    class ExternalTexture::Impl final : public ImplBase
+    {
+    public:
         // Implemented in ExternalTexture_Shared.h
         Impl(Graphics::TextureT);
         void Update(Graphics::TextureT);
@@ -165,7 +166,7 @@ namespace Babylon::Plugins
             return reinterpret_cast<uintptr_t>(m_ptr.get());
         }
 
-       private:
+    private:
         void GetInfo(Graphics::TextureT ptr, Info& info)
         {
             winrt::com_ptr<ID3D11Resource> resource;

@@ -9,9 +9,9 @@ BraceWrapping:
   BeforeElse: true
   SplitEmptyRecord: true
   AfterStruct: true
+  AfterClass: true
   AfterUnion: true
   BeforeCatch: true
-  BeforeElse: true
 BreakBeforeBraces: Custom
 BreakConstructorInitializersBeforeComma: true
 ColumnLimit: 0
@@ -26,3 +26,4 @@ SpaceBeforeParens: ControlStatements
 SpaceBeforeRangeBasedForLoopColon: true
 SpacesBeforeTrailingComments: 1
 NamespaceIndentation: All
+AccessModifierOffset: -4
