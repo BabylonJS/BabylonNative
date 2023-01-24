@@ -14,7 +14,8 @@ namespace Babylon
 
         static constexpr auto VALIDATION_ENABLED = false;
 
-        enum class ValidationType : uint32_t {
+        enum class ValidationType : uint32_t
+        {
             Uint32,
             Int32,
             Float32,

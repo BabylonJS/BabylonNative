@@ -104,7 +104,7 @@ namespace Babylon
             }
 
             if (image->m_format == bimg::TextureFormat::R8 ||
-                image->m_format == bimg::TextureFormat::RG8)
+            image->m_format == bimg::TextureFormat::RG8)
             {
                 static const TransformFn UnpackR8{[](const uint8_t* src, uint8_t* dst) { dst[0] = dst[1] = dst[2] = src[0]; dst[3] = 1; }};
                 static const TransformFn UnpackRG8{[](const uint8_t* src, uint8_t* dst) { dst[0] = dst[1] = dst[2] = src[0]; dst[3] = src[1]; }};
@@ -1294,8 +1294,8 @@ namespace Babylon
         auto addressModeW = data.ReadUint32();
 
         uint32_t addressMode = addressModeU +
-                               (addressModeV << BGFX_SAMPLER_V_SHIFT) +
-                               (addressModeW << BGFX_SAMPLER_W_SHIFT);
+        (addressModeV << BGFX_SAMPLER_V_SHIFT) +
+        (addressModeW << BGFX_SAMPLER_W_SHIFT);
 
         uint32_t flags = texture.SamplerFlags();
         flags &= ~(BGFX_SAMPLER_U_MASK | BGFX_SAMPLER_V_MASK | BGFX_SAMPLER_W_MASK);

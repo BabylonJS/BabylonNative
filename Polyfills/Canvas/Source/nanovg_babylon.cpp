@@ -52,7 +52,8 @@ namespace
 {
     static bgfx::VertexLayout s_nvgLayout;
 
-    enum GLNVGshaderType {
+    enum GLNVGshaderType
+    {
         NSVG_SHADER_FILLGRAD,
         NSVG_SHADER_FILLIMG,
         NSVG_SHADER_SIMPLE,
@@ -60,7 +61,8 @@ namespace
     };
 
     // These are additional flags on top of NVGimageFlags.
-    enum NVGimageFlagsGL {
+    enum NVGimageFlagsGL
+    {
         NVG_IMAGE_NODELETE = 1 << 16, // Do not delete GL texture handle.
     };
 
@@ -80,7 +82,8 @@ namespace
         uint64_t dstAlpha;
     };
 
-    enum GLNVGcallType {
+    enum GLNVGcallType
+    {
         GLNVG_FILL,
         GLNVG_CONVEXFILL,
         GLNVG_STROKE,
@@ -591,7 +594,8 @@ namespace
 
         for (i = 0; i < npaths; i++)
         {
-            if (paths[i].fillCount == 0) continue;
+            if (paths[i].fillCount == 0)
+                continue;
             gl->encoder->setState(gl->state);
             gl->encoder->setVertexBuffer(0, &gl->tvb);
             gl->encoder->setTexture(0, gl->s_tex, gl->th);
@@ -775,7 +779,8 @@ namespace
             GLNVGpath* paths;
             int cpaths = glnvg__maxi(gl->npaths + n, 128) + gl->cpaths / 2; // 1.5x Overallocate
             paths = (GLNVGpath*)BX_REALLOC(gl->allocator, gl->paths, sizeof(GLNVGpath) * cpaths);
-            if (paths == NULL) return -1;
+            if (paths == NULL)
+                return -1;
             gl->paths = paths;
             gl->cpaths = cpaths;
         }
@@ -792,7 +797,8 @@ namespace
             NVGvertex* verts;
             int cverts = glnvg__maxi(gl->nverts + n, 4096) + gl->cverts / 2; // 1.5x Overallocate
             verts = (NVGvertex*)BX_REALLOC(gl->allocator, gl->verts, sizeof(NVGvertex) * cverts);
-            if (verts == NULL) return -1;
+            if (verts == NULL)
+                return -1;
             gl->verts = verts;
             gl->cverts = cverts;
         }
@@ -1046,7 +1052,8 @@ NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator)
     gl->edgeAntiAlias = _edgeaa;
 
     ctx = nvgCreateInternal(&params);
-    if (ctx == NULL) goto error;
+    if (ctx == NULL)
+        goto error;
 
     return ctx;
 

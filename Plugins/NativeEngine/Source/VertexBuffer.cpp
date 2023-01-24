@@ -134,24 +134,29 @@ namespace Babylon
     {
         switch (attribType)
         {
-            case bgfx::AttribType::Int8: {
+            case bgfx::AttribType::Int8:
+            {
                 ::PromoteToFloats<int8_t>(*m_bytes, numElements, byteOffset, byteStride);
                 break;
             }
-            case bgfx::AttribType::Uint8: {
+            case bgfx::AttribType::Uint8:
+            {
                 ::PromoteToFloats<uint8_t>(*m_bytes, numElements, byteOffset, byteStride);
                 break;
             }
-            case bgfx::AttribType::Int16: {
+            case bgfx::AttribType::Int16:
+            {
                 ::PromoteToFloats<int16_t>(*m_bytes, numElements, byteOffset, byteStride);
                 break;
             }
-            case bgfx::AttribType::Uint16: {
+            case bgfx::AttribType::Uint16:
+            {
                 ::PromoteToFloats<uint16_t>(*m_bytes, numElements, byteOffset, byteStride);
                 break;
             }
             case bgfx::AttribType::Uint10: // is supported by any format ?
-            default: {
+            default:
+            {
                 throw std::runtime_error("Unable to promote vertex stream to a float array.");
             }
         }

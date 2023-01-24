@@ -162,8 +162,8 @@ namespace Babylon::Graphics
     bool ViewPort::Equals(const ViewPort& other) const
     {
         return std::abs(X - other.X) < std::numeric_limits<float>::epsilon() &&
-               std::abs(Y - other.Y) < std::numeric_limits<float>::epsilon() &&
-               std::abs(Width - other.Width) < std::numeric_limits<float>::epsilon() &&
-               std::abs(Height - other.Height) < std::numeric_limits<float>::epsilon();
+        std::abs(Y - other.Y) < std::numeric_limits<float>::epsilon() &&
+        std::abs(Width - other.Width) < std::numeric_limits<float>::epsilon() &&
+        std::abs(Height - other.Height) < std::numeric_limits<float>::epsilon();
     }
 }

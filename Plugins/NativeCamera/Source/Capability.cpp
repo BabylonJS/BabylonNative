@@ -63,7 +63,8 @@ namespace Babylon::Plugins
 
         switch (GetConstraintType())
         {
-            case Constraint::Type::Sequence: {
+            case Constraint::Type::Sequence:
+            {
                 auto capability{Napi::Array::New(env, m_acceptedValues.size())};
                 for (uint32_t i = 0; i < m_acceptedValues.size(); i++)
                 {
@@ -73,7 +74,8 @@ namespace Babylon::Plugins
                 target.Set(GetName(), capability);
                 return;
             }
-            case Constraint::Type::Range: {
+            case Constraint::Type::Range:
+            {
                 auto capability{Napi::Object::New(env)};
                 capability.Set("min", Constraint::AsNapiValue<T>(env, m_acceptedValues[0]));
                 capability.Set("max", Constraint::AsNapiValue<T>(env, m_acceptedValues[1]));
@@ -109,7 +111,8 @@ namespace Babylon::Plugins
 
         switch (GetConstraintType())
         {
-            case Constraint::Type::Sequence: {
+            case Constraint::Type::Sequence:
+            {
                 if (!constraint.ideal.has_value() && !constraint.exact.has_value())
                 {
                     // The constraint couldn't be parsed, but was configured. Consider it a failure to meet the constraint.
@@ -125,7 +128,8 @@ namespace Babylon::Plugins
                 // If the ideal constraint is in the allowed sequence then the constraint is still fully satisifed. If it's not then the constraint is still partially satisfied as the constraint didn't specify an exact requirement
                 return std::find(m_acceptedValues.begin(), m_acceptedValues.end(), constraint.ideal.value()) != m_acceptedValues.end() ? Capability::MeetsConstraint::FullySatisfied : Capability::MeetsConstraint::PartiallySatisfied;
             }
-            case Constraint::Type::Range: {
+            case Constraint::Type::Range:
+            {
                 if (!constraint.ideal.has_value() && !constraint.exact.has_value() && !constraint.min.has_value() && !constraint.max.has_value())
                 {
                     // The constraint couldn't be parsed, but was configured. Consider it a failure to meet the constraint.
@@ -182,7 +186,8 @@ namespace Babylon::Plugins
                 }
 
                 return true;
-            case Capability::MeetsConstraint::FullySatisfied: {
+            case Capability::MeetsConstraint::FullySatisfied:
+            {
                 // Get the constraint matching this capability
                 Napi::Value constraintValue{constraints.Get(GetName())};
 

@@ -347,8 +347,8 @@ namespace Babylon
             {
                 const auto& activeViewConfigs = m_sessionState->ActiveViewConfigurations;
                 if (activeViewConfigs.size() <= viewIndex ||
-                    activeViewConfigs[viewIndex] == nullptr ||
-                    !activeViewConfigs[viewIndex]->Initialized)
+                activeViewConfigs[viewIndex] == nullptr ||
+                !activeViewConfigs[viewIndex]->Initialized)
                 {
                     return m_env.Null();
                 }
@@ -510,7 +510,7 @@ namespace Babylon
                 m_sessionState = std::make_unique<SessionState>(context);
 
                 if (!m_system.IsInitialized() &&
-                    !m_system.TryInitialize())
+                !m_system.TryInitialize())
                 {
                     throw std::runtime_error{"Failed to initialize xr system."};
                 }
@@ -656,9 +656,9 @@ namespace Babylon
                 const auto& it{m_sessionState->TextureToViewConfigurationMap.find(view.ColorTexturePointer)};
 
                 if (it == m_sessionState->TextureToViewConfigurationMap.end() ||
-                    it->second.ViewTextureSize.Width != view.ColorTextureSize.Width ||
-                    it->second.ViewTextureSize.Height != view.ColorTextureSize.Height ||
-                    it->second.ViewTextureSize.Depth != view.ColorTextureSize.Depth)
+                it->second.ViewTextureSize.Width != view.ColorTextureSize.Width ||
+                it->second.ViewTextureSize.Height != view.ColorTextureSize.Height ||
+                it->second.ViewTextureSize.Depth != view.ColorTextureSize.Depth)
                 {
                     auto& viewConfig = m_sessionState->TextureToViewConfigurationMap[view.ColorTexturePointer] = {};
                     m_sessionState->ActiveViewConfigurations[viewIdx] = &viewConfig;
@@ -1498,7 +1498,7 @@ namespace Babylon
                         // TODO: Actually support the different types of reference spaces.
                         const auto referenceSpaceType = info[0].As<Napi::String>().Utf8Value();
                         assert(referenceSpaceType == XRReferenceSpaceType::UNBOUNDED ||
-                               referenceSpaceType == XRReferenceSpaceType::VIEWER);
+                        referenceSpaceType == XRReferenceSpaceType::VIEWER);
                         (void)XRReferenceSpaceType::UNBOUNDED;
                         (void)XRReferenceSpaceType::VIEWER;
                     }
@@ -1921,7 +1921,7 @@ namespace Babylon
                 constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
                 bool updateValues = false;
                 if (!m_jsPositions ||
-                    m_numJsPositions != VECTOR3_NUM_FLOATS * mesh.Positions.size())
+                m_numJsPositions != VECTOR3_NUM_FLOATS * mesh.Positions.size())
                 {
                     m_numJsPositions = VECTOR3_NUM_FLOATS * mesh.Positions.size();
                     m_jsPositions.Reset();
@@ -1953,7 +1953,7 @@ namespace Babylon
                 assert(sizeof(xr::System::Session::Frame::Mesh::IndexType) == sizeof(uint32_t));
                 const auto& mesh = GetMesh();
                 if (!m_jsIndices ||
-                    m_numJsIndices != mesh.Indices.size())
+                m_numJsIndices != mesh.Indices.size())
                 {
                     m_numJsIndices = mesh.Indices.size();
                     m_jsIndices.Reset();
@@ -1981,7 +1981,7 @@ namespace Babylon
 
                 constexpr uint8_t VECTOR3_NUM_FLOATS = 3;
                 if (!m_jsNormals ||
-                    m_numJsNormals != VECTOR3_NUM_FLOATS * mesh.Normals.size())
+                m_numJsNormals != VECTOR3_NUM_FLOATS * mesh.Normals.size())
                 {
                     m_numJsNormals = VECTOR3_NUM_FLOATS * mesh.Normals.size();
                     m_jsNormals.Reset();
@@ -2737,7 +2737,7 @@ namespace Babylon
             {
                 // Currently only immersive VR and immersive AR are supported.
                 assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR ||
-                       info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);
+                info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);
             }
 
             void InitializeXrLayer(Napi::Object layer)
@@ -3190,7 +3190,7 @@ namespace Babylon
             Napi::Value TrySetPreferredPlaneDetectorOptions(const Napi::CallbackInfo& info)
             {
                 if (info.Length() != 1 ||
-                    !info[0].IsObject())
+                !info[0].IsObject())
                 {
                     throw std::exception(/*invalid arguments*/);
                 }
@@ -3203,7 +3203,7 @@ namespace Babylon
             Napi::Value TrySetMeshDetectorEnabled(const Napi::CallbackInfo& info)
             {
                 if (info.Length() != 1 ||
-                    !info[0].IsBoolean())
+                !info[0].IsBoolean())
                 {
                     throw std::exception(/*invalid arguments*/);
                 }
@@ -3216,7 +3216,7 @@ namespace Babylon
             Napi::Value TrySetPreferredMeshDetectorOptions(const Napi::CallbackInfo& info)
             {
                 if (info.Length() != 1 ||
-                    !info[0].IsObject())
+                !info[0].IsObject())
                 {
                     throw std::exception(/*invalid arguments*/);
                 }
@@ -3473,7 +3473,7 @@ namespace Babylon
             Napi::Value GetNativeAnchor(const Napi::CallbackInfo& info)
             {
                 if (info.Length() != 1 ||
-                    !info[0].IsObject())
+                !info[0].IsObject())
                 {
                     throw std::runtime_error{"A single object argument is required."};
                 }
@@ -3491,8 +3491,8 @@ namespace Babylon
             Napi::Value DeclareNativeAnchor(const Napi::CallbackInfo& info)
             {
                 if (info.Length() != 2 ||
-                    !info[0].IsObject() /*XRSession*/ ||
-                    !info[1].IsNumber() /*NativeAnchorPtr*/)
+                !info[0].IsObject() /*XRSession*/ ||
+                !info[1].IsNumber() /*NativeAnchorPtr*/)
                 {
                     throw std::runtime_error{"Invalid argument provided."};
                 }

@@ -1,7 +1,8 @@
 BasedOnStyle: Google
+
 Language: Cpp
-AlignAfterOpenBracket: DontAlign
-AlignOperands: true
+
+AlignOperands: false
 BraceWrapping:
   AfterControlStatement: true
   AfterFunction: true
@@ -12,8 +13,9 @@ BraceWrapping:
   AfterClass: true
   AfterUnion: true
   BeforeCatch: true
-BreakBeforeBraces: Custom
+BreakBeforeBraces: Allman
 BreakConstructorInitializersBeforeComma: true
+BreakConstructorInitializers: BeforeComma
 ColumnLimit: 0
 ConstructorInitializerIndentWidth: 0
 ContinuationIndentWidth: 0
@@ -27,3 +29,6 @@ SpaceBeforeRangeBasedForLoopColon: true
 SpacesBeforeTrailingComments: 1
 NamespaceIndentation: All
 AccessModifierOffset: -4
+PointerAlignment: Left
+AlwaysBreakTemplateDeclarations: true
+AlignAfterOpenBracket: DontAlign

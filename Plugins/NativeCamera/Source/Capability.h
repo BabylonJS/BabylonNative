@@ -15,13 +15,15 @@ namespace Babylon::Plugins
     class Capability
     {
     public:
-        enum Feature {
+        enum Feature
+        {
             FacingMode,
             Torch,
             Zoom
         };
 
-        enum MeetsConstraint {
+        enum MeetsConstraint
+        {
             FullySatisfied,     // The constraint can be fully met
             PartiallySatisfied, // The constraint cannot be met, but satisfies the Exact, Min, and Max
             Unsatisfied,        // The constraint cannot be met, and fails the Exact, Min, or Max

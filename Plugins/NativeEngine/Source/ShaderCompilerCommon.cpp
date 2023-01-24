@@ -120,8 +120,8 @@ namespace Babylon::ShaderCompilerCommon
             parser.get_parsed_ir().for_each_typed_id<spirv_cross::SPIRVariable>([&](uint32_t id, spirv_cross::SPIRVariable& var) {
                 auto& type = compiler.get_type_from_variable(id);
                 if (var.storage == spv::StorageClassUniformConstant &&
-                    type.basetype != spirv_cross::SPIRType::BaseType::SampledImage &&
-                    type.basetype != spirv_cross::SPIRType::BaseType::Sampler)
+                type.basetype != spirv_cross::SPIRType::BaseType::SampledImage &&
+                type.basetype != spirv_cross::SPIRType::BaseType::Sampler)
                 {
                     auto& uniform = info.Uniforms.emplace_back();
                     uniform.Name = compiler.get_name(id);

@@ -10,7 +10,8 @@
 // https://developer.mozilla.org/en-US/docs/Web/API/Media_Capture_and_Streams_API/Constraints#applying_constraints
 namespace Babylon::Plugins::Constraint
 {
-    enum Type {
+    enum Type
+    {
         Sequence,
         Range,
     };

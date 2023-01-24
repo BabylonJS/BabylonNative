@@ -17,7 +17,8 @@ namespace Babylon::Polyfills::Internal
         explicit XMLHttpRequest(const Napi::CallbackInfo& info);
 
     private:
-        enum class ReadyState {
+        enum class ReadyState
+        {
             Unsent = 0,
             Opened = 1,
             Done = 4,
