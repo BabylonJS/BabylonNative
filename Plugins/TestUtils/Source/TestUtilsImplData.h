@@ -8,7 +8,7 @@ namespace Babylon::Plugins::Internal
     {
     public:
         ImplData(Graphics::WindowType window)
-        : m_window{window}
+            : m_window{window}
         {
         }
 

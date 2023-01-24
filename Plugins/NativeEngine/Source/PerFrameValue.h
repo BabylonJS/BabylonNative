@@ -13,11 +13,11 @@ namespace Babylon
     {
     public:
         PerFrameValue(Graphics::DeviceContext& context, arcana::cancellation_source& cancellation, T defaultValue)
-        : m_context{context}
-        , m_cancellationSource{cancellation}
-        , m_defaultValue{defaultValue}
-        , m_value{defaultValue}
-        , m_isResetScheduled{false}
+            : m_context{context}
+            , m_cancellationSource{cancellation}
+            , m_defaultValue{defaultValue}
+            , m_value{defaultValue}
+            , m_isResetScheduled{false}
         {
         }
 

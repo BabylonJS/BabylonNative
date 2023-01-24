@@ -11,7 +11,7 @@ namespace
     {
     public:
         TaskRunnerAdapter(Babylon::WorkQueue& workQueue)
-        : m_workQueue(workQueue)
+            : m_workQueue(workQueue)
         {
         }
 

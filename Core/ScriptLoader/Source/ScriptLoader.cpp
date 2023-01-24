@@ -8,8 +8,8 @@ namespace Babylon
     {
     public:
         Impl(DispatchFunctionT dispatchFunction)
-        : m_dispatchFunction{dispatchFunction}
-        , m_task{arcana::task_from_result<std::exception_ptr>()}
+            : m_dispatchFunction{dispatchFunction}
+            , m_task{arcana::task_from_result<std::exception_ptr>()}
         {
         }
 
@@ -60,7 +60,7 @@ namespace Babylon
     };
 
     ScriptLoader::ScriptLoader(DispatchFunctionT dispatchFunction)
-    : m_impl{std::make_unique<ScriptLoader::Impl>(std::move(dispatchFunction))}
+        : m_impl{std::make_unique<ScriptLoader::Impl>(std::move(dispatchFunction))}
     {
     }
 

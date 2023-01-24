@@ -28,8 +28,8 @@ namespace
 namespace Babylon
 {
     VertexBuffer::VertexBuffer(gsl::span<uint8_t> bytes, bool dynamic)
-    : m_bytes{{bytes.data(), bytes.data() + bytes.size()}}
-    , m_dynamic{dynamic}
+        : m_bytes{{bytes.data(), bytes.data() + bytes.size()}}
+        , m_dynamic{dynamic}
     {
     }
 

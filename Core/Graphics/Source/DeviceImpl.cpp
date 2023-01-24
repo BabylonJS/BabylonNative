@@ -18,8 +18,8 @@ namespace
 namespace Babylon::Graphics
 {
     DeviceImpl::DeviceImpl()
-    : m_bgfxCallback{[this](const auto& data) { CaptureCallback(data); }}
-    , m_context{*this}
+        : m_bgfxCallback{[this](const auto& data) { CaptureCallback(data); }}
+        , m_context{*this}
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Initialized = false;

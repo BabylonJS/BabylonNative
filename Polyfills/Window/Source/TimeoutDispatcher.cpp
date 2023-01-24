@@ -24,9 +24,9 @@ namespace Babylon::Polyfills::Internal
         TimePoint time;
 
         Timeout(TimeoutId id, std::shared_ptr<Napi::FunctionReference> function, TimePoint time)
-        : id{id}
-        , function{std::move(function)}
-        , time{time}
+            : id{id}
+            , function{std::move(function)}
+            , time{time}
         {
         }
 
@@ -35,8 +35,8 @@ namespace Babylon::Polyfills::Internal
     };
 
     TimeoutDispatcher::TimeoutDispatcher(Babylon::JsRuntime& runtime)
-    : m_runtime{runtime}
-    , m_thread{std::thread{&TimeoutDispatcher::ThreadFunction, this}}
+        : m_runtime{runtime}
+        , m_thread{std::thread{&TimeoutDispatcher::ThreadFunction, this}}
     {
     }
 

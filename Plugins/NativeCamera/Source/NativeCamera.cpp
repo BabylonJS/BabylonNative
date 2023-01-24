@@ -25,7 +25,7 @@ namespace Babylon::Plugins::Internal
         }
 
         NativeCamera(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<NativeCamera>{info}
+            : Napi::ObjectWrap<NativeCamera>{info}
         {
         }
 

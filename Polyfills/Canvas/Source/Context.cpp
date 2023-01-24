@@ -85,14 +85,14 @@ namespace Babylon::Polyfills::Internal
     }
 
     Context::Context(const Napi::CallbackInfo& info)
-    : Napi::ObjectWrap<Context>{info}
-    , m_canvas{info[0].As<Napi::External<NativeCanvas>>().Data()}
-    , m_nvg{nvgCreate(1)}
-    , m_graphicsContext{m_canvas->GetGraphicsContext()}
-    , m_update{m_graphicsContext.GetUpdate("update")}
-    , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
-    , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
-    , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
+        : Napi::ObjectWrap<Context>{info}
+        , m_canvas{info[0].As<Napi::External<NativeCanvas>>().Data()}
+        , m_nvg{nvgCreate(1)}
+        , m_graphicsContext{m_canvas->GetGraphicsContext()}
+        , m_update{m_graphicsContext.GetUpdate("update")}
+        , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
+        , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
+        , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
         for (auto& font : NativeCanvas::fontsInfos)
         {

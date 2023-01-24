@@ -40,7 +40,7 @@ namespace Babylon::Plugins::Internal
         }
 
         explicit TestUtils(const Napi::CallbackInfo& info)
-        : ParentT{info}
+            : ParentT{info}
         {
         }
 

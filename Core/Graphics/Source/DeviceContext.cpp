@@ -7,8 +7,8 @@
 namespace Babylon::Graphics
 {
     UpdateToken::UpdateToken(DeviceContext& context, SafeTimespanGuarantor& guarantor)
-    : m_context{context}
-    , m_guarantee{guarantor.GetSafetyGuarantee()}
+        : m_context{context}
+        , m_guarantee{guarantor.GetSafetyGuarantee()}
     {
     }
 
@@ -37,7 +37,7 @@ namespace Babylon::Graphics
     }
 
     DeviceContext::DeviceContext(DeviceImpl& graphicsImpl)
-    : m_graphicsImpl{graphicsImpl}
+        : m_graphicsImpl{graphicsImpl}
     {
     }
 

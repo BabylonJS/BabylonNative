@@ -28,7 +28,7 @@ namespace Babylon::Polyfills::Internal
     }
 
     ImageData::ImageData(const Napi::CallbackInfo& info)
-    : Napi::ObjectWrap<ImageData>{info}
+        : Napi::ObjectWrap<ImageData>{info}
     {
         auto context{info[0].As<Napi::External<Context>>().Data()};
         auto width{info[1].As<Napi::Number>().Uint32Value()};

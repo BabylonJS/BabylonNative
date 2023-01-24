@@ -32,3 +32,5 @@ AccessModifierOffset: -4
 PointerAlignment: Left
 AlwaysBreakTemplateDeclarations: true
 AlignAfterOpenBracket: DontAlign
+ConstructorInitializerIndentWidth: 4
+ConstructorInitializerAllOnOneLineOrOnePerLine: false

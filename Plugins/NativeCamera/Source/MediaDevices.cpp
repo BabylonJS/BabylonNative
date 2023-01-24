@@ -16,7 +16,7 @@ namespace Babylon::Plugins::Internal
     {
     public:
         MediaDevices(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<MediaDevices>{info}
+            : Napi::ObjectWrap<MediaDevices>{info}
         {
         }
 

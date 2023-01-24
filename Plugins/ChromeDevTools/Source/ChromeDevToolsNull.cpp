@@ -14,7 +14,7 @@ namespace Babylon::Plugins
     }
 
     ChromeDevTools::ChromeDevTools(std::shared_ptr<ChromeDevTools::Impl> impl)
-    : m_impl{std::move(impl)}
+        : m_impl{std::move(impl)}
     {
     }
 

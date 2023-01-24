@@ -9,7 +9,7 @@ namespace Babylon::Plugins
     {
     public:
         explicit Impl(Napi::Env env)
-        : m_env(env)
+            : m_env(env)
         {
             JsRuntime::GetFromJavaScript(env).Dispatch([this](Napi::Env env) {
                 m_runtime = JsRuntime::NativeObject::GetFromJavaScript(env).Get("_JSIRuntime").As<Napi::External<facebook::jsi::Runtime>>().Data();
@@ -50,7 +50,7 @@ namespace Babylon::Plugins
     }
 
     ChromeDevTools::ChromeDevTools(std::shared_ptr<ChromeDevTools::Impl> impl)
-    : m_impl{std::move(impl)}
+        : m_impl{std::move(impl)}
     {
     }
 

@@ -293,8 +293,8 @@ namespace Babylon::ShaderCompilerTraversers
             };
 
             UniformTypeChangeTraverser(TIntermediate* intermediate, AllocationsScope& scope)
-            : m_intermediate{intermediate}
-            , m_scope{scope}
+                : m_intermediate{intermediate}
+                , m_scope{scope}
             {
             }
 
@@ -895,7 +895,7 @@ namespace Babylon::ShaderCompilerTraversers
 
         private:
             InvertYDerivativeOperandsTraverser(TIntermediate* intermediate)
-            : m_intermediate{intermediate}
+                : m_intermediate{intermediate}
             {
             }
 

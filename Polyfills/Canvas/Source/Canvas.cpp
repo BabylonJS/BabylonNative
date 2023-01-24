@@ -34,9 +34,9 @@ namespace Babylon::Polyfills::Internal
     }
 
     NativeCanvas::NativeCanvas(const Napi::CallbackInfo& info)
-    : Napi::ObjectWrap<NativeCanvas>{info}
-    , m_graphicsContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
-    , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
+        : Napi::ObjectWrap<NativeCanvas>{info}
+        , m_graphicsContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
+        , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
     }
 
@@ -167,7 +167,7 @@ namespace Babylon::Polyfills::Internal
 namespace Babylon::Polyfills
 {
     Canvas::Impl::Impl(Napi::Env env)
-    : m_env{env}
+        : m_env{env}
     {
         AddToJavaScript(env);
     }
@@ -212,7 +212,7 @@ namespace Babylon::Polyfills
     }
 
     Canvas::Canvas(std::shared_ptr<Impl> impl)
-    : m_impl{std::move(impl)}
+        : m_impl{std::move(impl)}
     {
     }
 

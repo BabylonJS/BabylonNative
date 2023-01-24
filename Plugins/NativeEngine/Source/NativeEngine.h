@@ -29,9 +29,9 @@ namespace Babylon
     struct UniformInfo final
     {
         UniformInfo(uint8_t stage, bgfx::UniformHandle handle, size_t maxElementLength)
-        : Stage{stage}
-        , Handle{handle}
-        , MaxElementLength{maxElementLength}
+            : Stage{stage}
+            , Handle{handle}
+            , MaxElementLength{maxElementLength}
         {
         }
 

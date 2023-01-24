@@ -2,7 +2,7 @@
 namespace Babylon::Plugins
 {
     CameraTrack::CameraTrack(std::unique_ptr<CameraTrack::Impl> impl)
-    : m_impl{std::move(impl)}
+        : m_impl{std::move(impl)}
     {
     }
 
@@ -21,7 +21,7 @@ namespace Babylon::Plugins
     }
 
     CameraDevice::CameraDevice(std::unique_ptr<CameraDevice::Impl> impl)
-    : m_impl{std::move(impl)}
+        : m_impl{std::move(impl)}
     {
     }
 

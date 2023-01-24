@@ -3,7 +3,7 @@
 namespace Babylon::Graphics
 {
     SafeTimespanGuarantor::SafeTimespanGuarantor(std::optional<arcana::cancellation_source>& cancellation)
-    : m_cancellation{cancellation}
+        : m_cancellation{cancellation}
     {
     }
 

@@ -9,7 +9,7 @@ namespace Babylon
     }
 
     JsRuntime::JsRuntime(Napi::Env env, DispatchFunctionT dispatchFunction)
-    : m_dispatchFunction{std::move(dispatchFunction)}
+        : m_dispatchFunction{std::move(dispatchFunction)}
     {
         auto global = env.Global();
 

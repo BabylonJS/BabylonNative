@@ -51,8 +51,8 @@ namespace Babylon::Plugins
     }
 
     MediaStream::MediaStream(const Napi::CallbackInfo& info)
-    : Napi::ObjectWrap<MediaStream>{info}
-    , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
+        : Napi::ObjectWrap<MediaStream>{info}
+        , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
     {
     }
 

@@ -113,8 +113,8 @@ namespace Babylon
 
             template<typename CallableT>
             Reader(gsl::span<uint32_t> buffer, CallableT&& callable)
-            : m_buffer{buffer}
-            , m_scopeGuard{std::forward<CallableT>(callable)}
+                : m_buffer{buffer}
+                , m_scopeGuard{std::forward<CallableT>(callable)}
             {
             }
 
@@ -175,8 +175,8 @@ namespace Babylon
         }
 
         NativeDataStream(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<NativeDataStream>(info)
-        , m_requestFlushCallback{Napi::Persistent(info[0].As<Napi::Function>())}
+            : Napi::ObjectWrap<NativeDataStream>(info)
+            , m_requestFlushCallback{Napi::Persistent(info[0].As<Napi::Function>())}
         {
         }
 

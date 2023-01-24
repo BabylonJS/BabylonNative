@@ -39,9 +39,9 @@ namespace Babylon::Polyfills::Internal
     }
 
     NativeCanvasImage::NativeCanvasImage(const Napi::CallbackInfo& info)
-    : Napi::ObjectWrap<NativeCanvasImage>{info}
-    , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
-    , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
+        : Napi::ObjectWrap<NativeCanvasImage>{info}
+        , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
+        , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
     {
     }
 

@@ -4,7 +4,7 @@
 namespace Babylon::Plugins
 {
     Capability::Capability(Feature capability)
-    : m_feature{capability}
+        : m_feature{capability}
     {
     }
 
@@ -48,11 +48,11 @@ namespace Babylon::Plugins
     T defaultValue,
     std::vector<T> acceptedValues,
     std::function<bool(T)> setterFunction)
-    : Capability(feature)
-    , m_currentValue{currentValue}
-    , m_defaultValue{defaultValue}
-    , m_acceptedValues{acceptedValues}
-    , m_setterFunction{setterFunction}
+        : Capability(feature)
+        , m_currentValue{currentValue}
+        , m_defaultValue{defaultValue}
+        , m_acceptedValues{acceptedValues}
+        , m_setterFunction{setterFunction}
     {
     }
 

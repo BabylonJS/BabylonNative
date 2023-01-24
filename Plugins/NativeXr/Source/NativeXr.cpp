@@ -430,8 +430,8 @@ namespace Babylon
             struct SessionState final
             {
                 explicit SessionState(Graphics::DeviceContext& graphicsContext)
-                : GraphicsContext{graphicsContext}
-                , Update{GraphicsContext.GetUpdate("update")}
+                    : GraphicsContext{graphicsContext}
+                    , Update{GraphicsContext.GetUpdate("update")}
                 {
                 }
 
@@ -462,8 +462,8 @@ namespace Babylon
         };
 
         NativeXr::Impl::Impl(Napi::Env env)
-        : m_env{env}
-        , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(env)}
+            : m_env{env}
+            , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(env)}
         {
         }
 
@@ -871,7 +871,7 @@ namespace Babylon
             }
 
             PointerEvent(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<PointerEvent>{info}
+                : Napi::ObjectWrap<PointerEvent>{info}
             {
                 auto thisObject = info.This().As<Napi::Object>();
                 Napi::Object params = info[1].As<Napi::Object>();
@@ -903,7 +903,7 @@ namespace Babylon
             }
 
             XRWebGLBinding(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRWebGLBinding>{info}
+                : Napi::ObjectWrap<XRWebGLBinding>{info}
             {
             }
         };
@@ -933,7 +933,7 @@ namespace Babylon
             }
 
             XRWebGLLayer(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRWebGLLayer>{info}
+                : Napi::ObjectWrap<XRWebGLLayer>{info}
             {
             }
 
@@ -973,8 +973,8 @@ namespace Babylon
             }
 
             XRRigidTransform(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRRigidTransform>{info}
-            , m_matrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
+                : Napi::ObjectWrap<XRRigidTransform>{info}
+                , m_matrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
             {
                 if (info.Length() == 2)
                 {
@@ -1100,12 +1100,12 @@ namespace Babylon
             }
 
             XRView(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRView>{info}
-            , m_eyeIdx{0}
-            , m_eye{XREye::IndexToEye(m_eyeIdx)}
-            , m_projectionMatrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
-            , m_rigidTransform{Napi::Persistent(XRRigidTransform::New(info.Env()))}
-            , m_isFirstPersonObserver{false}
+                : Napi::ObjectWrap<XRView>{info}
+                , m_eyeIdx{0}
+                , m_eye{XREye::IndexToEye(m_eyeIdx)}
+                , m_projectionMatrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
+                , m_rigidTransform{Napi::Persistent(XRRigidTransform::New(info.Env()))}
+                , m_isFirstPersonObserver{false}
             {
             }
 
@@ -1179,11 +1179,11 @@ namespace Babylon
             }
 
             XRViewerPose(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRViewerPose>{info}
-            , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info.Env()))}
-            , m_jsViews{Napi::Persistent(Napi::Array::New(info.Env(), 0))}
-            , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
-            , m_isEmulatedPosition{true}
+                : Napi::ObjectWrap<XRViewerPose>{info}
+                , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info.Env()))}
+                , m_jsViews{Napi::Persistent(Napi::Array::New(info.Env(), 0))}
+                , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
+                , m_isEmulatedPosition{true}
             {
             }
 
@@ -1283,9 +1283,9 @@ namespace Babylon
             }
 
             XRPose(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRPose>{info}
-            , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info.Env()))}
-            , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
+                : Napi::ObjectWrap<XRPose>{info}
+                , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info.Env()))}
+                , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
             {
             }
 
@@ -1339,9 +1339,9 @@ namespace Babylon
             }
 
             XRRay(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRRay>{info}
-            , m_origin{Napi::Persistent(Napi::Object::New(info.Env()))}
-            , m_direction{Napi::Persistent(Napi::Object::New(info.Env()))}
+                : Napi::ObjectWrap<XRRay>{info}
+                , m_origin{Napi::Persistent(Napi::Object::New(info.Env()))}
+                , m_direction{Napi::Persistent(Napi::Object::New(info.Env()))}
             {
                 auto argLength{info.Length()};
                 xr::Ray tempVals{};
@@ -1489,7 +1489,7 @@ namespace Babylon
             }
 
             XRReferenceSpace(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRReferenceSpace>{info}
+                : Napi::ObjectWrap<XRReferenceSpace>{info}
             {
                 if (info.Length() > 0)
                 {
@@ -1557,8 +1557,8 @@ namespace Babylon
             }
 
             XRAnchor(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRAnchor>{info}
-            , m_jsAnchorSpace{Napi::External<xr::Space>::New(info.Env(), &m_nativeAnchor.Space)}
+                : Napi::ObjectWrap<XRAnchor>{info}
+                , m_jsAnchorSpace{Napi::External<xr::Space>::New(info.Env(), &m_nativeAnchor.Space)}
             {
                 auto jsThis = info.This().As<Napi::Object>();
                 jsThis.Set("anchorSpace", m_jsAnchorSpace);
@@ -1612,7 +1612,7 @@ namespace Babylon
             }
 
             XRHitTestSource(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRHitTestSource>{info}
+                : Napi::ObjectWrap<XRHitTestSource>{info}
             {
                 auto options = info[0].As<Napi::Object>();
 
@@ -1718,7 +1718,7 @@ namespace Babylon
             }
 
             XRHitTestResult(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRHitTestResult>{info}
+                : Napi::ObjectWrap<XRHitTestResult>{info}
             {
             }
 
@@ -1777,9 +1777,9 @@ namespace Babylon
             }
 
             XRPlane(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRPlane>{info}
-            , m_jsThis{Napi::Persistent(info.This().As<Napi::Object>())}
-            , m_jsPlaneSpace{Napi::External<xr::Space>::New(info.Env(), &m_planeSpace)}
+                : Napi::ObjectWrap<XRPlane>{info}
+                , m_jsThis{Napi::Persistent(info.This().As<Napi::Object>())}
+                , m_jsPlaneSpace{Napi::External<xr::Space>::New(info.Env(), &m_planeSpace)}
             {
                 m_jsThis.Set("planeSpace", m_jsPlaneSpace);
             }
@@ -1880,9 +1880,9 @@ namespace Babylon
             }
 
             XRMesh(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRMesh>{info}
-            , m_jsThis{Napi::Persistent(info.This().As<Napi::Object>())}
-            , m_jsMeshSpace{Napi::External<xr::Space>::New(info.Env(), &m_meshSpace)}
+                : Napi::ObjectWrap<XRMesh>{info}
+                , m_jsThis{Napi::Persistent(info.This().As<Napi::Object>())}
+                , m_jsMeshSpace{Napi::External<xr::Space>::New(info.Env(), &m_meshSpace)}
             {
                 // OpenXR positions vertices within reference space, so "meshSpace" is identity with respect to WebXR's
                 // interpretation and our current implementation.
@@ -2072,7 +2072,7 @@ namespace Babylon
             }
 
             XRHand(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRHand>{info}
+                : Napi::ObjectWrap<XRHand>{info}
             {
             }
 
@@ -2121,14 +2121,14 @@ namespace Babylon
             }
 
             XRFrame(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRFrame>{info}
-            , m_jsXRViewerPose{Napi::Persistent(XRViewerPose::New(info))}
-            , m_xrViewerPose{*XRViewerPose::Unwrap(m_jsXRViewerPose.Value())}
-            , m_imageTrackingResultsArray{Napi::Persistent(Napi::Array::New(info.Env()))}
-            , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info.Env()))}
-            , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
-            , m_jsPose{Napi::Persistent(Napi::Object::New(info.Env()))}
-            , m_jsJointPose{Napi::Persistent(Napi::Object::New(info.Env()))}
+                : Napi::ObjectWrap<XRFrame>{info}
+                , m_jsXRViewerPose{Napi::Persistent(XRViewerPose::New(info))}
+                , m_xrViewerPose{*XRViewerPose::Unwrap(m_jsXRViewerPose.Value())}
+                , m_imageTrackingResultsArray{Napi::Persistent(Napi::Array::New(info.Env()))}
+                , m_jsTransform{Napi::Persistent(XRRigidTransform::New(info.Env()))}
+                , m_transform{*XRRigidTransform::Unwrap(m_jsTransform.Value())}
+                , m_jsPose{Napi::Persistent(Napi::Object::New(info.Env()))}
+                , m_jsJointPose{Napi::Persistent(Napi::Object::New(info.Env()))}
             {
                 info.This().As<Napi::Object>().Set("_imageTrackingResults", m_imageTrackingResultsArray.Value());
                 m_jsPose.Set("transform", m_jsTransform.Value());
@@ -2729,11 +2729,11 @@ namespace Babylon
             }
 
             XRSession(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XRSession>{info}
-            , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
-            , m_jsXRFrame{Napi::Persistent(XRFrame::New(info))}
-            , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Get("_nativeImpl").As<Napi::Object>())}
-            , m_jsInputSources{Napi::Persistent(Napi::Array::New(info.Env()))}
+                : Napi::ObjectWrap<XRSession>{info}
+                , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
+                , m_jsXRFrame{Napi::Persistent(XRFrame::New(info))}
+                , m_xrFrame{*XRFrame::Unwrap(m_jsXRFrame.Get("_nativeImpl").As<Napi::Object>())}
+                , m_jsInputSources{Napi::Persistent(Napi::Array::New(info.Env()))}
             {
                 // Currently only immersive VR and immersive AR are supported.
                 assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR ||
@@ -3274,8 +3274,8 @@ namespace Babylon
             }
 
             NativeWebXRRenderTarget(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<NativeWebXRRenderTarget>{info}
-            , m_jsEngineReference{Napi::Persistent(info[0].As<Napi::Object>())}
+                : Napi::ObjectWrap<NativeWebXRRenderTarget>{info}
+                , m_jsEngineReference{Napi::Persistent(info[0].As<Napi::Object>())}
             {
             }
 
@@ -3327,9 +3327,9 @@ namespace Babylon
             }
 
             NativeRenderTargetProvider(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<NativeRenderTargetProvider>{info}
-            , m_jsSession{Napi::Persistent(info[0].As<Napi::Object>())}
-            , m_session{*XRSession::Unwrap(m_jsSession.Value())}
+                : Napi::ObjectWrap<NativeRenderTargetProvider>{info}
+                , m_jsSession{Napi::Persistent(info[0].As<Napi::Object>())}
+                , m_session{*XRSession::Unwrap(m_jsSession.Value())}
             {
                 auto createRenderTexture{info[1].As<Napi::Function>()};
                 auto destroyRenderTexture{info[2].As<Napi::Function>()};
@@ -3393,8 +3393,8 @@ namespace Babylon
             }
 
             XR(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<XR>{info}
-            , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
+                : Napi::ObjectWrap<XR>{info}
+                , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
             {
             }
 
@@ -3507,7 +3507,7 @@ namespace Babylon
     namespace Plugins
     {
         NativeXr::NativeXr(std::shared_ptr<Impl> impl)
-        : m_impl{std::move(impl)}
+            : m_impl{std::move(impl)}
         {
         }
 

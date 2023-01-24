@@ -20,7 +20,7 @@ namespace Babylon::Polyfills
         struct MonitoredResource
         {
             MonitoredResource(Canvas::Impl& impl)
-            : m_impl(impl)
+                : m_impl(impl)
             {
                 m_impl.AddMonitoredResource(this);
             }

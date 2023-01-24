@@ -495,20 +495,20 @@ namespace Babylon
     }
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info)
-    : NativeEngine(info, JsRuntime::GetFromJavaScript(info.Env()))
+        : NativeEngine(info, JsRuntime::GetFromJavaScript(info.Env()))
     {
     }
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime)
-    : Napi::ObjectWrap<NativeEngine>{info}
-    , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
-    , m_runtime{runtime}
-    , m_graphicsContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
-    , m_update{m_graphicsContext.GetUpdate("update")}
-    , m_runtimeScheduler{runtime}
-    , m_defaultFrameBuffer{m_graphicsContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
-    , m_boundFrameBuffer{&m_defaultFrameBuffer}
-    , m_boundFrameBufferNeedsRebinding{m_graphicsContext, *m_cancellationSource, true}
+        : Napi::ObjectWrap<NativeEngine>{info}
+        , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
+        , m_runtime{runtime}
+        , m_graphicsContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
+        , m_update{m_graphicsContext.GetUpdate("update")}
+        , m_runtimeScheduler{runtime}
+        , m_defaultFrameBuffer{m_graphicsContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
+        , m_boundFrameBuffer{&m_defaultFrameBuffer}
+        , m_boundFrameBufferNeedsRebinding{m_graphicsContext, *m_cancellationSource, true}
     {
     }
 

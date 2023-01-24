@@ -31,7 +31,7 @@ namespace Babylon::Plugins
     }
 
     NativeVideo::NativeVideo(const Napi::CallbackInfo& info)
-    : Napi::ObjectWrap<NativeVideo>{info}
+        : Napi::ObjectWrap<NativeVideo>{info}
     {
     }
 

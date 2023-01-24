@@ -27,7 +27,7 @@ namespace Babylon::Plugins
     }
 
     ExternalTexture::ExternalTexture(Graphics::TextureT ptr)
-    : m_impl{std::make_unique<Impl>(ptr)}
+        : m_impl{std::make_unique<Impl>(ptr)}
     {
     }
 

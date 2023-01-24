@@ -32,8 +32,8 @@ namespace
 
         private:
             DefaultBufferFrameProvider(Babylon::Graphics::DeviceContext& graphicsContext, FrameCallback callback)
-            : m_graphicsContext{graphicsContext}
-            , m_frameCallback{std::move(callback)}
+                : m_graphicsContext{graphicsContext}
+                , m_frameCallback{std::move(callback)}
             {
             }
 
@@ -70,11 +70,11 @@ namespace
 
         private:
             OffScreenBufferFrameProvider(Babylon::Graphics::DeviceContext& graphicsContext, bgfx::FrameBufferHandle frameBufferHandle, FrameCallback callback)
-            : m_graphicsContext{graphicsContext}
-            , m_frameBufferTextureHandle{bgfx::getTexture(frameBufferHandle)}
-            , m_frameCallback{std::move(callback)}
-            , m_textureInfo{m_graphicsContext.GetTextureInfo(m_frameBufferTextureHandle)}
-            , m_blitTextureHandle{bgfx::createTexture2D(m_textureInfo.Width, m_textureInfo.Height, m_textureInfo.HasMips, m_textureInfo.NumLayers, m_textureInfo.Format, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)}
+                : m_graphicsContext{graphicsContext}
+                , m_frameBufferTextureHandle{bgfx::getTexture(frameBufferHandle)}
+                , m_frameCallback{std::move(callback)}
+                , m_textureInfo{m_graphicsContext.GetTextureInfo(m_frameBufferTextureHandle)}
+                , m_blitTextureHandle{bgfx::createTexture2D(m_textureInfo.Width, m_textureInfo.Height, m_textureInfo.HasMips, m_textureInfo.NumLayers, m_textureInfo.Format, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)}
             {
                 bgfx::TextureInfo textureInfo{};
                 bgfx::calcTextureSize(textureInfo, m_textureInfo.Width, m_textureInfo.Height, 1, false, m_textureInfo.HasMips, m_textureInfo.NumLayers, m_textureInfo.Format);
@@ -150,9 +150,9 @@ namespace Babylon::Plugins::Internal
         }
 
         NativeCapture(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<NativeCapture>{info}
-        , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
-        , m_jsData{Napi::Persistent(Napi::Object::New(info.Env()))}
+            : Napi::ObjectWrap<NativeCapture>{info}
+            , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
+            , m_jsData{Napi::Persistent(Napi::Object::New(info.Env()))}
         {
             auto& graphicsContext = Graphics::DeviceContext::GetFromJavaScript(info.Env());
 

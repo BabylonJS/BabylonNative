@@ -8,7 +8,7 @@ namespace Babylon::Graphics
     };
 
     Device::Device()
-    : m_impl{std::make_unique<Impl>()}
+        : m_impl{std::make_unique<Impl>()}
     {
     }
 
