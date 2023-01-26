@@ -25,5 +25,4 @@ ContinuationIndentWidth: 4
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 AllowShortLambdasOnASingleLine: All
 AllowShortCaseLabelsOnASingleLine: true
-AllowShortEnumsOnASingleLine: true
 AllowShortIfStatementsOnASingleLine: WithoutElse
