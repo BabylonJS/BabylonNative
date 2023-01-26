@@ -33,7 +33,8 @@ namespace Babylon::Polyfills::Internal
         Napi::Function func = DefineClass(
             env,
             JS_CONTEXT_CONSTRUCTOR_NAME,
-            {InstanceMethod("clearRect", &Context::ClearRect),
+            {
+                InstanceMethod("clearRect", &Context::ClearRect),
                 InstanceMethod("save", &Context::Save),
                 InstanceMethod("restore", &Context::Restore),
                 InstanceMethod("fillRect", &Context::FillRect),
@@ -72,7 +73,8 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("shadowOffsetX", &Context::GetShadowOffsetX, &Context::SetShadowOffsetX),
                 InstanceAccessor("shadowOffsetY", &Context::GetShadowOffsetY, &Context::SetShadowOffsetY),
                 InstanceAccessor("lineWidth", &Context::GetLineWidth, &Context::SetLineWidth),
-                InstanceAccessor("canvas", &Context::GetCanvas, nullptr)});
+                InstanceAccessor("canvas", &Context::GetCanvas, nullptr),
+            });
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONTEXT_CONSTRUCTOR_NAME, func);
     }
 

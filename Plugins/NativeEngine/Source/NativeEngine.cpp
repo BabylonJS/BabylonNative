@@ -297,7 +297,6 @@ namespace Babylon
 
         auto limits = bgfx::getCaps()->limits;
 
-        // clang-format off
         Napi::Function func = DefineClass(
             env,
             JS_CLASS_NAME,
@@ -489,7 +488,6 @@ namespace Babylon
                 // REVIEW: Should this be here if only used by ValidationTest?
                 InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
             });
-        // clang-format on
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
     }

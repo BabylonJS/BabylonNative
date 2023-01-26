@@ -10,7 +10,8 @@ namespace Babylon::Plugins
         Napi::Function func = DefineClass(
             env,
             JS_CLASS_NAME,
-            {InstanceMethod("addEventListener", &NativeVideo::AddEventListener),
+            {
+                InstanceMethod("addEventListener", &NativeVideo::AddEventListener),
                 InstanceMethod("removeEventListener", &NativeVideo::RemoveEventListener),
                 InstanceMethod("play", &NativeVideo::Play),
                 InstanceMethod("pause", &NativeVideo::Pause),
@@ -20,7 +21,8 @@ namespace Babylon::Plugins
                 InstanceAccessor("videoHeight", &NativeVideo::GetVideoHeight, nullptr),
                 InstanceAccessor("readyState", &NativeVideo::GetReadyState, nullptr),
                 InstanceAccessor("HAVE_CURRENT_DATA", &NativeVideo::GetHaveCurrentData, nullptr),
-                InstanceAccessor("srcObject", &NativeVideo::GetSrcObject, &NativeVideo::SetSrcObject)});
+                InstanceAccessor("srcObject", &NativeVideo::GetSrcObject, &NativeVideo::SetSrcObject),
+            });
 
         env.Global().Set(JS_CLASS_NAME, func);
     }

@@ -169,7 +169,10 @@ namespace Babylon
                 Napi::Function func = DefineClass(
                     env,
                     JS_CLASS_NAME,
-                    {InstanceMethod("writeBuffer", &NativeDataStream::WriteBuffer)});
+                    {
+                        InstanceMethod("writeBuffer", &NativeDataStream::WriteBuffer),
+                    });
+
                 JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
             }
         }

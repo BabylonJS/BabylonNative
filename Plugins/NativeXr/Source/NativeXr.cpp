@@ -1081,10 +1081,12 @@ namespace Babylon
                 Napi::Function func = DefineClass(
                     env,
                     JS_CLASS_NAME,
-                    {InstanceAccessor("eye", &XRView::GetEye, nullptr),
+                    {
+                        InstanceAccessor("eye", &XRView::GetEye, nullptr),
                         InstanceAccessor("projectionMatrix", &XRView::GetProjectionMatrix, nullptr),
                         InstanceAccessor("transform", &XRView::GetTransform, nullptr),
-                        InstanceAccessor("isFirstPersonObserver", &XRView::IsFirstPersonObserver, nullptr)});
+                        InstanceAccessor("isFirstPersonObserver", &XRView::IsFirstPersonObserver, nullptr),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1759,9 +1761,11 @@ namespace Babylon
                 Napi::Function func = DefineClass(
                     env,
                     JS_CLASS_NAME,
-                    {InstanceAccessor("polygon", &XRPlane::GetPolygon, nullptr),
+                    {
+                        InstanceAccessor("polygon", &XRPlane::GetPolygon, nullptr),
                         InstanceAccessor("lastChangedTime", &XRPlane::GetLastChangedTime, nullptr),
-                        InstanceAccessor("parentSceneObject", &XRPlane::GetParentSceneObject, nullptr)});
+                        InstanceAccessor("parentSceneObject", &XRPlane::GetParentSceneObject, nullptr),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1860,11 +1864,13 @@ namespace Babylon
                 Napi::Function func = DefineClass(
                     env,
                     JS_CLASS_NAME,
-                    {InstanceAccessor("positions", &XRMesh::GetPositions, nullptr),
+                    {
+                        InstanceAccessor("positions", &XRMesh::GetPositions, nullptr),
                         InstanceAccessor("indices", &XRMesh::GetIndices, nullptr),
                         InstanceAccessor("normals", &XRMesh::GetNormals, nullptr),
                         InstanceAccessor("lastChangedTime", &XRMesh::GetLastChangedTime, nullptr),
-                        InstanceAccessor("parentSceneObject", &XRMesh::GetParentSceneObject, nullptr)});
+                        InstanceAccessor("parentSceneObject", &XRMesh::GetParentSceneObject, nullptr),
+                    });
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
