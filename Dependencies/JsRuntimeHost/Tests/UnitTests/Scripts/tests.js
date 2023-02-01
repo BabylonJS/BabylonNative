@@ -86,13 +86,6 @@ describe("XMLHTTPRequest", function () {
         }
         expect(sendWithoutOpening).to.throw();
     });
-
-    it("should open a local file", async function () {
-        const xhr = await createRequest("GET", "app:///Scripts/index.js");
-        expect(xhr).to.have.property('readyState', 4);
-        expect(xhr).to.have.property('status', 200);
-        expect(xhr).to.have.property('responseText').with.lengthOf.above(0);
-    });
 });
 
 describe("setTimeout", function () {

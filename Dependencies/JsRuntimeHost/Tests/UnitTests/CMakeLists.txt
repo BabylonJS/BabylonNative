@@ -1,31 +1,34 @@
-if(NOT((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID)))
+if(WINDOWS_STORE OR IOS)
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
 set(SCRIPTS
-    "index.js")
+    "Scripts/tests.js")
 
 set(EXTERNAL_SCRIPTS
     "../node_modules/chai/chai.js"
     "../node_modules/mocha/mocha.js")
 
 set(SOURCES
-    "App.cpp")
+    "Shared/Shared.cpp"
+    "Shared/Shared.h"
+    "Win32/App.cpp")
 
 if(APPLE)
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
-    set(ADDITIONAL_LIBRARIES ${JAVASCRIPTCORE_LIBRARY})
+    set(ADDITIONAL_LIBRARIES
+        PRIVATE ${JAVASCRIPTCORE_LIBRARY})
 endif()
 
 add_executable(UnitTests ${SOURCES} ${SCRIPTS} ${EXTERNAL_SCRIPTS})
 
 target_link_libraries(UnitTests
-    AppRuntime
-    Console
-    Scheduling
-    ScriptLoader
-    UrlLib
-    XMLHttpRequest
+    PRIVATE AppRuntime
+    PRIVATE Console
+    PRIVATE Scheduling
+    PRIVATE ScriptLoader
+    PRIVATE UrlLib
+    PRIVATE XMLHttpRequest
     ${ADDITIONAL_LIBRARIES})
 
 add_test(NAME UnitTests COMMAND UnitTests)

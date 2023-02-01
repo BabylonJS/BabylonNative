@@ -17,3 +17,6 @@ jobs:
       name: Win32_x64
       vmImage: 'windows-latest'
       platform: x64
+
+  # Android
+  - template: jobs/android.yml

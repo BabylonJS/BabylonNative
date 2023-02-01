@@ -1,6 +1,7 @@
 #pragma once
 
 #include "env.h"
+#include <JavaScriptCore/JavaScript.h>
 
 namespace Napi::JavaScriptCore
 {

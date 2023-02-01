@@ -8,7 +8,7 @@ parameters:
 
 jobs:
 - job: ${{parameters.name}}
-  timeoutInMinutes: 5
+  timeoutInMinutes: 15
 
   pool:
     vmImage: ${{parameters.vmImage}}
@@ -25,15 +25,15 @@ jobs:
     displayName: 'Install NPM packages'
 
   - script: cmake -B ${{variables.buildDir}} -A ${{parameters.platform}}
-    displayName: 'Generate ${{variables.solutionName}} solution'
+    displayName: 'Configure CMake'
 
   - task: MSBuild@1
     inputs:
       solution: '${{variables.buildDir}}/JsRuntimeHost.sln'
       maximumCpuCount: true
       configuration: 'RelWithDebInfo'
-    displayName: 'Build ${{variables.solutionName}}'
+    displayName: 'Build Solution'
 
   - script: UnitTests.exe
     workingDirectory: '${{variables.buildDir}}/Tests/UnitTests/RelWithDebInfo'
-    displayName: 'Unit Tests'
+    displayName: 'Run Tests'

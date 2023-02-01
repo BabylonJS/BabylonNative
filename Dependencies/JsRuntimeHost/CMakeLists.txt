@@ -44,13 +44,21 @@ if(NOT TARGET UrlLib AND JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST)
     FetchContent_Declare(
         UrlLib
         GIT_REPOSITORY https://github.com/BabylonJS/UrlLib.git
-        GIT_TAG        558af491b2ec413d2eefefef1629dc652a5f9a04)
+        GIT_TAG        6413ba699107d8114ca19e7646638d3c628eb956)
 
     message(STATUS "Fetching UrlLib")
     FetchContent_MakeAvailable(UrlLib)
     message(STATUS "Fetching UrlLib - done")
 
     set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
+endif()
+
+# Common Variables
+
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
+    set(NPM_COMMAND "npm.cmd")
+else()
+    set(NPM_COMMAND "npm")
 endif()
 
 # Subdirectories
