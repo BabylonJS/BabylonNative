@@ -13,10 +13,6 @@ jobs:
   pool:
     vmImage: ${{parameters.vmImage}}
 
-  variables:
-    solutionName: 'Win32_${{parameters.platform}}'
-    buildDir: 'Build/${{variables.solutionName}}'
-
   steps:
   - task: Npm@1
     inputs:
@@ -24,16 +20,16 @@ jobs:
       workingDir: 'Tests'
     displayName: 'Install NPM packages'
 
-  - script: cmake -B ${{variables.buildDir}} -A ${{parameters.platform}}
+  - script: cmake -B Build/Win32 -A ${{parameters.platform}}
     displayName: 'Configure CMake'
 
   - task: MSBuild@1
     inputs:
-      solution: '${{variables.buildDir}}/JsRuntimeHost.sln'
+      solution: 'Build/Win32/JsRuntimeHost.sln'
       maximumCpuCount: true
-      configuration: 'RelWithDebInfo'
+      configuration: 'Debug'
     displayName: 'Build Solution'
 
   - script: UnitTests.exe
-    workingDirectory: '${{variables.buildDir}}/Tests/UnitTests/RelWithDebInfo'
+    workingDirectory: 'Build/Win32/Tests/UnitTests/Debug'
     displayName: 'Run Tests'

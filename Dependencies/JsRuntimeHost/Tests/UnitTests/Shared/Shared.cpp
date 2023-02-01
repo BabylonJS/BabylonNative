@@ -5,6 +5,21 @@
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <future>
 
+const char* EnumToString(Babylon::Polyfills::Console::LogLevel logLevel)
+{
+    switch (logLevel)
+    {
+        case Babylon::Polyfills::Console::LogLevel::Log:
+            return "log";
+        case Babylon::Polyfills::Console::LogLevel::Warn:
+            return "warn";
+        case Babylon::Polyfills::Console::LogLevel::Error:
+            return "error";
+    }
+
+    return "unknown";
+}
+
 int RunTests(Babylon::Polyfills::Console::CallbackT consoleCallback)
 {
     std::promise<int32_t> exitCode;

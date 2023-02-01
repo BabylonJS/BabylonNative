@@ -1,0 +1,42 @@
+parameters:
+- name: name
+  type: string
+- name: vmImage
+  type: string
+- name: xcodeVersion
+  type: string
+
+jobs:
+- job: ${{parameters.name}}
+  timeoutInMinutes: 15
+
+  pool:
+    vmImage: ${{parameters.vmImage}}
+
+  steps:
+  - task: Npm@1
+    inputs:
+      command: 'install'
+      workingDir: 'Tests'
+    displayName: 'Install NPM packages'
+
+  - script: |
+      sudo xcode-select --switch /Applications/Xcode_${{parameters.xcodeVersion}}.app/Contents/Developer
+    displayName: 'Select Xcode ${{parameters.xcodeVersion}}'
+
+  - script: |
+      cmake -B Build/macOS -GXcode
+    displayName: 'Configure CMake'
+
+  - task: Xcode@5
+    inputs:
+      xcWorkspacePath: 'Build/macOS/JsRuntimeHost.xcodeproj'
+      scheme: 'UnitTests'
+      sdk: 'macosx'
+      useXcpretty: false
+      configuration: Debug
+    displayName: 'Build Xcode Project'
+
+  - script: ./UnitTests
+    workingDirectory: 'Build/macOS/Tests/UnitTests/Debug'
+    displayName: 'Run Tests'

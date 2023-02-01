@@ -59,6 +59,10 @@ if(NAPI_BUILD_ABI)
 
             set(ADDITIONAL_LINK_LIBRARIES
                 PUBLIC "${JSC_ANDROID_DIR}/jni/${ANDROID_ABI}/libjsc.so")
+        elseif(APPLE)
+            find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
+            set(ADDITIONAL_LINK_LIBRARIES
+                PUBLIC ${JAVASCRIPTCORE_LIBRARY})
         endif()
     elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
         set(SOURCES ${SOURCES}

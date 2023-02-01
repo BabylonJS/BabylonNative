@@ -11,13 +11,14 @@ set(EXTERNAL_SCRIPTS
 
 set(SOURCES
     "Shared/Shared.cpp"
-    "Shared/Shared.h"
-    "Win32/App.cpp")
-
-if(APPLE)
-    find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
-    set(ADDITIONAL_LIBRARIES
-        PRIVATE ${JAVASCRIPTCORE_LIBRARY})
+    "Shared/Shared.h")
+    
+if(WIN32)
+    set(SOURCES ${SOURCES}
+        Win32/App.cpp)
+elseif(APPLE)
+    set(SOURCES ${SOURCES}
+        Apple/App.mm)
 endif()
 
 add_executable(UnitTests ${SOURCES} ${SCRIPTS} ${EXTERNAL_SCRIPTS})
