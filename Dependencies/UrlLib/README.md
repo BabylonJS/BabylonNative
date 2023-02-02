@@ -1,6 +1,6 @@
 # UrlLib
 
-UrlLib is a cross-platform library that utilizes platform-specific implementations
+UrlLib is a cross-platform C++ library that utilizes platform-specific implementations
 for URL-related functionality. Although it was created as a subcomponent of
 [JsRuntimeHost](https://github.com/BabylonJS/JsRuntimeHost) for its polyfills, it may also be used standalone.
 
