@@ -511,6 +511,9 @@ namespace Babylon::Plugins
 
         GET_CAMERA_FUNCTION(ACameraDevice_close)(m_impl->aCameraDevice);
 
+        // Ensure any pending graphics commands are executed before deleting resources they may depend on
+        glFinish();
+
         // Capture request for SurfaceTexture
         ANativeWindow_release(m_impl->textureWindow);
         GET_CAMERA_FUNCTION(ACaptureRequest_free)(m_impl->request);
