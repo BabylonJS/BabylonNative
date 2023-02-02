@@ -2,7 +2,7 @@
 
 UrlLib is a cross-platform library that utilizes platform-specific implementations
 for URL-related functionality. Although it was created as a subcomponent of
-the JsRuntimeHost for its polyfills, it may also be used standalone.
+the [JsRuntimeHost](https://github.com/BabylonJS/JsRuntimeHost) for its polyfills, it may also be used standalone.
 
 ## Contributing
 
