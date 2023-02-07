@@ -51,7 +51,7 @@ namespace Babylon::Plugins
 
         arcana::task<CameraDimensions, std::exception_ptr> OpenAsync(const CameraTrack& track);
         void Close();
-        void UpdateCameraTexture(bgfx::TextureHandle textureHandle);
+        CameraDimensions UpdateCameraTexture(bgfx::TextureHandle textureHandle);
 
         const std::vector<CameraTrack>& SupportedResolutions() const;
         const std::vector<std::unique_ptr<Capability>>& Capabilities() const;

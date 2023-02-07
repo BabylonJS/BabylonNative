@@ -31,11 +31,12 @@ namespace Babylon::Plugins
         Napi::Value GetSettings(const Napi::CallbackInfo& info);
         Napi::Value GetConstraints(const Napi::CallbackInfo& info);
         void Stop(const Napi::CallbackInfo& info);
+
+        // Update the camera texture and return true if the dimensions have changed, false otherwise
+        bool UpdateTexture(bgfx::TextureHandle textureHandle);
         
-        void UpdateTexture(bgfx::TextureHandle textureHandle);
-        
-        int Width{0};
-        int Height{0};
+        uint32_t Width{0};
+        uint32_t Height{0};
         
     private:
         arcana::task<void, std::exception_ptr> ApplyInitialConstraintsAsync(Napi::Env env, Napi::Object constraints);

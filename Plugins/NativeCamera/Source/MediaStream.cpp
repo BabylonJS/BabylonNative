@@ -350,14 +350,25 @@ namespace Babylon::Plugins
         m_cameraDevice = nullptr;
     }
 
-    void MediaStream::UpdateTexture(bgfx::TextureHandle textureHandle)
+    bool MediaStream::UpdateTexture(bgfx::TextureHandle textureHandle)
     {
+        bool dimensionsChanged = false;
+
         if (m_cameraDevice == nullptr)
         {
             // We don't have a cameraDevice selected yet.
-            return;
+            return dimensionsChanged;
         }
 
-        m_cameraDevice->UpdateCameraTexture(textureHandle);
+        auto cameraDimensions{m_cameraDevice->UpdateCameraTexture(textureHandle)};
+
+        if (this->Width != cameraDimensions.width || this->Height != cameraDimensions.height)
+        {
+            dimensionsChanged = true;
+            this->Width = cameraDimensions.width;
+            this->Height = cameraDimensions.height;
+        }
+
+        return dimensionsChanged;
     }
 }
