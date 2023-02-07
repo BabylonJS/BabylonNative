@@ -46,6 +46,26 @@ namespace Babylon::Plugins
             return oesTexture;
         }
 
+        int GetCurrentSensorRotationDiff() {
+            // Get the phone's current rotation so we can determine if the camera image needs to be rotated based on the sensor's natural orientation
+            int32_t phoneRotation{GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation() * 90};
+
+            // The sensor rotation dictates the orientation of the camera when the phone is in it's default orientation
+            // Subtracting the phone's rotation from the camera's rotation will give us the current orientation
+            // of the sensor. Then add 360 and modulus 360 to ensure we're always talking about positive degrees.
+            int currentSensorRotationDiff{(sensorRotation - phoneRotation + 360) % 360};
+            bool sensorIsPortrait{currentSensorRotationDiff == 90 || currentSensorRotationDiff == 270};
+            if (facingUser && !sensorIsPortrait)
+            {
+                // Compensate for the front facing camera being naturally mirrored. In the portrait orientation
+                // the mirrored behavior matches the browser, but in landscape it would result in the image rendering
+                // upside down. Rotate the image by 180 to compensate.
+                currentSensorRotationDiff = (currentSensorRotationDiff + 180) % 360;
+            }
+
+            return currentSensorRotationDiff;
+        }
+
         Napi::Env env;
 
         arcana::affinity threadAffinity{};
@@ -56,6 +76,8 @@ namespace Babylon::Plugins
         int32_t sensorRotation{};
         bool facingUser{};
         CameraDimensions cameraDimensions{};
+        int32_t sensorRotationDiff{};
+        bool updateTextureDimensions{true};
 
         Graphics::DeviceContext* deviceContext{};
 
@@ -73,7 +95,6 @@ namespace Babylon::Plugins
         GLuint cameraRGBATextureId{};
         GLuint cameraShaderProgramId{};
         GLuint frameBufferId{};
-        const GLfloat* cameraUVs{};
 
         EGLContext context{EGL_NO_CONTEXT};
         EGLDisplay display{};
@@ -186,25 +207,10 @@ namespace Babylon::Plugins
         return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, &track]()
         {
             // Get the phone's current rotation so we can determine if the camera image needs to be rotated based on the sensor's natural orientation
-            int phoneRotation{GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation() * 90};
+            m_impl->sensorRotationDiff = m_impl->GetCurrentSensorRotationDiff();
 
-            // The sensor rotation dictates the orientation of the camera when the phone is in it's default orientation
-            // Subtracting the phone's rotation from the camera's rotation will give us the current orientation
-            // of the sensor. Then add 360 and modulus 360 to ensure we're always talking about positive degrees.
-            int sensorRotationDiff{(m_impl->sensorRotation - phoneRotation + 360) % 360};
-            bool sensorIsPortrait{sensorRotationDiff == 90 || sensorRotationDiff == 270};
-            if (m_impl->facingUser && !sensorIsPortrait)
-            {
-                // Compensate for the front facing camera being naturally mirrored. In the portrait orientation
-                // the mirrored behavior matches the browser, but in landscape it would result in the image rendering
-                // upside down. Rotate the image by 180 to compensate.
-                sensorRotationDiff = (sensorRotationDiff + 180) % 360;
-            }
-
-            // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
-            // of the video should be swapped
-            m_impl->cameraDimensions.width = !sensorIsPortrait ? track.Width() : track.Height();
-            m_impl->cameraDimensions.height = !sensorIsPortrait ? track.Height() : track.Width();
+            m_impl->cameraDimensions.width = track.Width();
+            m_impl->cameraDimensions.height = track.Height();
 
             // Check if there is an already available context for this thread
             EGLContext currentContext = eglGetCurrentContext();
@@ -242,26 +248,6 @@ namespace Babylon::Plugins
                     throw std::runtime_error{"Unable to create a shared GL context for camera texture."};
                 }
             }
-
-            glGenTextures(1, &m_impl->cameraRGBATextureId);
-            glBindTexture(GL_TEXTURE_2D, m_impl->cameraRGBATextureId);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_impl->cameraDimensions.width, m_impl->cameraDimensions.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glGenerateMipmap(GL_TEXTURE_2D);
-
-            glBindTexture(GL_TEXTURE_2D, 0);
-
-            glGenFramebuffers(1, &m_impl->frameBufferId);
-            glBindFramebuffer(GL_FRAMEBUFFER, m_impl->frameBufferId);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_impl->cameraRGBATextureId, 0);
-
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-            m_impl->cameraUVs = sensorRotationDiff == 90 ? CAMERA_UVS_ROTATION_90 :
-                          sensorRotationDiff == 180 ? CAMERA_UVS_ROTATION_180 :
-                          sensorRotationDiff == 270 ? CAMERA_UVS_ROTATION_270 :
-                          CAMERA_UVS_ROTATION_0;
 
             m_impl->cameraShaderProgramId = android::OpenGLHelpers::CreateShaderProgram(CAMERA_VERT_SHADER, CAMERA_FRAG_SHADER);
 
@@ -315,7 +301,12 @@ namespace Babylon::Plugins
                 throw std::runtime_error{"Unable to restore GL context for camera texture init."};
             }
 
-            return m_impl->cameraDimensions;
+            // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
+            // of the video should be swapped
+            bool sensorIsPortrait{m_impl->sensorRotationDiff == 90 || m_impl->sensorRotationDiff == 270};
+            return !sensorIsPortrait
+                   ? CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height}
+                   : CameraDimensions{m_impl->cameraDimensions.height, m_impl->cameraDimensions.width};
         });
     }
 
@@ -446,7 +437,7 @@ namespace Babylon::Plugins
         return cameraDevices;
     }
 
-    void CameraDevice::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
+    CameraDevice::CameraDimensions CameraDevice::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
         EGLContext currentContext = eglGetCurrentContext();
         if (m_impl->context != EGL_NO_CONTEXT)
@@ -458,17 +449,52 @@ namespace Babylon::Plugins
             }
         }
 
+        int currentSensorRotationDiff = m_impl->GetCurrentSensorRotationDiff();
+
+        // The UI Orientation has changed. Update our internal texture
+        if (currentSensorRotationDiff != m_impl->sensorRotationDiff)
+        {
+            m_impl->sensorRotationDiff = currentSensorRotationDiff;
+            m_impl->updateTextureDimensions = true;
+        }
+
+        bool sensorIsPortrait{m_impl->sensorRotationDiff == 90 || m_impl->sensorRotationDiff == 270};
+
+        if (m_impl->updateTextureDimensions)
+        {
+            glGenTextures(1, &m_impl->cameraRGBATextureId);
+            glBindTexture(GL_TEXTURE_2D, m_impl->cameraRGBATextureId);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, !sensorIsPortrait ? m_impl->cameraDimensions.width : m_impl->cameraDimensions.height, !sensorIsPortrait ? m_impl->cameraDimensions.height : m_impl->cameraDimensions.width, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glGenerateMipmap(GL_TEXTURE_2D);
+
+            glBindTexture(GL_TEXTURE_2D, 0);
+
+            glGenFramebuffers(1, &m_impl->frameBufferId);
+            glBindFramebuffer(GL_FRAMEBUFFER, m_impl->frameBufferId);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_impl->cameraRGBATextureId, 0);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            m_impl->updateTextureDimensions = false;
+        }
+
         m_impl->surfaceTexture.updateTexImage();
 
         glBindFramebuffer(GL_FRAMEBUFFER, m_impl->frameBufferId);
-        glViewport(0, 0, m_impl->cameraDimensions.width, m_impl->cameraDimensions.height);
+        glViewport(0, 0, !sensorIsPortrait ? m_impl->cameraDimensions.width : m_impl->cameraDimensions.height, !sensorIsPortrait ? m_impl->cameraDimensions.height : m_impl->cameraDimensions.width);
         glUseProgram(m_impl->cameraShaderProgramId);
 
         auto vertexPositionsUniformLocation{glGetUniformLocation(m_impl->cameraShaderProgramId, "positions")};
         glUniform2fv(vertexPositionsUniformLocation, CAMERA_VERTEX_COUNT, CAMERA_VERTEX_POSITIONS);
 
         auto uvsUniformLocation{glGetUniformLocation(m_impl->cameraShaderProgramId, "uvs")};
-        glUniform2fv(uvsUniformLocation, CAMERA_UVS_COUNT, m_impl->cameraUVs);
+        glUniform2fv(uvsUniformLocation, CAMERA_UVS_COUNT,
+             m_impl->sensorRotationDiff == 90 ? CAMERA_UVS_ROTATION_90 :
+             m_impl->sensorRotationDiff == 180 ? CAMERA_UVS_ROTATION_180 :
+             m_impl->sensorRotationDiff == 270 ? CAMERA_UVS_ROTATION_270 :
+            CAMERA_UVS_ROTATION_0);
 
         // Configure the camera texture
         auto cameraTextureUniformLocation{glGetUniformLocation(m_impl->cameraShaderProgramId, "cameraTexture")};
@@ -492,6 +518,10 @@ namespace Babylon::Plugins
         arcana::make_task(m_impl->deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [rgbaTextureId = m_impl->cameraRGBATextureId, textureHandle] {
             bgfx::overrideInternal(textureHandle, rgbaTextureId);
         });
+
+        return !sensorIsPortrait
+            ? CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height}
+            : CameraDimensions{m_impl->cameraDimensions.height, m_impl->cameraDimensions.width};
     }
 
     void CameraDevice::Close()

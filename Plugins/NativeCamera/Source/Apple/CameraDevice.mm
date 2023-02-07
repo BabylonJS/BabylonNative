@@ -189,6 +189,7 @@ namespace Babylon::Plugins
         id<MTLCommandBuffer> currentCommandBuffer{};
         bool isInitialized{false};
         bool refreshBgfxHandle{true};
+        bgfx::TextureHandle textureHandle{};
         
         arcana::background_dispatcher<32> cameraSessionDispatcher{};
         std::shared_ptr<arcana::cancellation_source> cancellationSource{std::make_shared<arcana::cancellation_source>()};
@@ -390,14 +391,7 @@ namespace Babylon::Plugins
         CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(resolution.m_impl->avDeviceFormat.formatDescription)};
         CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 
-        CameraDevice::CameraDimensions cameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
-
-        // For portrait orientations swap the height and width of the video format dimensions.
-        if (m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationPortrait
-            ||  m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationPortraitUpsideDown)
-        {
-            std::swap(cameraDimensions.width, cameraDimensions.height);
-        }
+        m_impl->cameraDimensions = CameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
         
         // Check for failed initialisation.
         if (!input)
@@ -406,7 +400,7 @@ namespace Babylon::Plugins
         }
         
         // Kick off camera session on a background thread.
-        return arcana::make_task(m_impl->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this(), pixelFormat = resolution.m_impl->pixelFormat, input, cameraDimensions]() mutable {
+        return arcana::make_task(m_impl->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this(), pixelFormat = resolution.m_impl->pixelFormat, input]() mutable {
             if (implObj->m_impl->avCaptureSession == nil) {
                 implObj->m_impl->avCaptureSession = [[AVCaptureSession alloc] init];
             } else {
@@ -436,11 +430,17 @@ namespace Babylon::Plugins
 
             // Actually start the camera session.
             [implObj->m_impl->avCaptureSession startRunning];
-            return cameraDimensions;
+
+            // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
+            // of the video should be swapped
+            return implObj->m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeLeft ||
+                implObj->m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeRight ?
+                CameraDimensions{implObj->m_impl->cameraDimensions.width, implObj->m_impl->cameraDimensions.height} :
+                CameraDimensions{implObj->m_impl->cameraDimensions.width, implObj->m_impl->cameraDimensions.height};
         });
     }
 
-    void CameraDevice::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
+    CameraDevice::CameraDimensions CameraDevice::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
         // Hook into AfterRender to copy over the texture, ensuring that the textureHandle has already been initialized by bgfx.
         // Capture the cancellation token so that the shared pointer is kept alive when arcana checks internally for cancellation.
@@ -474,6 +474,13 @@ namespace Babylon::Plugins
             // Skip processing this frame if width and height are invalid.
             if (width == 0 || height == 0) {
                 return;
+            }
+            
+            // Check if the we've been handed a new texture handle and if so refresh our override
+            if (m_impl->textureHandle.idx != textureHandle.idx)
+            {
+                m_impl->refreshBgfxHandle = true;
+                m_impl->textureHandle = textureHandle;
             }
 
             // Recreate the output texture when the camera dimensions change.
@@ -569,7 +576,13 @@ namespace Babylon::Plugins
                 [m_impl->currentCommandBuffer commit];
             }
         });
-    }
+
+        // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
+        // of the video should be swapped
+        return m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeLeft ||
+            m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeRight ?
+            CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height} :
+            CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height};    }
 
     void CameraDevice::Close()
     {

@@ -40,8 +40,6 @@ namespace Babylon::Plugins
 
         std::unordered_map<std::string, std::vector<Napi::FunctionReference>> m_eventHandlerRefs{};
 
-        uint32_t m_width{0};
-        uint32_t m_height{0};
         bool m_isReady{false};
 
         bool m_IsPlaying{};

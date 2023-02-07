@@ -39,12 +39,22 @@ namespace Babylon::Plugins
 
     Napi::Value NativeVideo::GetVideoWidth(const Napi::CallbackInfo& /*info*/)
     {
-        return Napi::Value::From(Env(), m_width);
+        if (!m_streamObject.Value().IsNull() && !m_streamObject.Value().IsUndefined())
+        {
+            return Napi::Value::From(Env(), MediaStream::Unwrap(m_streamObject.Value())->Width);
+        }
+
+        return Napi::Value::From(Env(), 0);
     }
 
     Napi::Value NativeVideo::GetVideoHeight(const Napi::CallbackInfo& /*info*/)
     {
-        return Napi::Value::From(Env(), m_height);
+        if (!m_streamObject.Value().IsNull() && !m_streamObject.Value().IsUndefined())
+        {
+            return Napi::Value::From(Env(), MediaStream::Unwrap(m_streamObject.Value())->Height);
+        }
+
+        return Napi::Value::From(Env(), 0);
     }
 
     void NativeVideo::SetAttribute(const Napi::CallbackInfo&)
@@ -72,7 +82,11 @@ namespace Babylon::Plugins
         // Only update the texture if we're playing and the srcObject is an instance of a MediaStream
         if (m_IsPlaying && !m_streamObject.Value().IsNull() && !m_streamObject.Value().IsUndefined())
         {
-            MediaStream::Unwrap(m_streamObject.Value())->UpdateTexture(textureHandle);
+            if (MediaStream::Unwrap(m_streamObject.Value())->UpdateTexture(textureHandle))
+            {
+                // The video dimensions have changed, raise the resize event to observers
+                RaiseEvent("resize");
+            }
         }
     }
 
@@ -152,8 +166,6 @@ namespace Babylon::Plugins
         if (value.IsNull() || value.IsUndefined() || !value.As<Napi::Object>().InstanceOf(MediaStream::GetConstructor(env)))
         {
             m_streamObject = Napi::ObjectReference();
-            this->m_width = 0;
-            this->m_height = 0;
             this->m_isReady = false;
             this->m_IsPlaying = false;
             return;
@@ -161,11 +173,11 @@ namespace Babylon::Plugins
 
         // We've received a MediaStream object
         m_streamObject = Napi::Persistent(value.As<Napi::Object>());
-        auto mediaStream = MediaStream::Unwrap(m_streamObject.Value());
-        
-        this->m_width = mediaStream->Width;
-        this->m_height = mediaStream->Height;
+
         this->m_isReady = true;
+
+        // Now that we have a src object the resize event should be fired to notify observers of the new video dimensions
+        RaiseEvent("resize");
     }
 
     Napi::Value NativeVideo::GetSrcObject(const Napi::CallbackInfo& info) {
