@@ -94,6 +94,10 @@ elseif(NOT IS_ABSOLUTE "${BGFX_DIR}")
 	get_filename_component(BGFX_DIR "${BGFX_DIR}" REALPATH BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 endif()
 
+file(TO_CMAKE_PATH "${BX_DIR}" BX_DIR)
+file(TO_CMAKE_PATH "${BIMG_DIR}" BIMG_DIR)
+file(TO_CMAKE_PATH "${BGFX_DIR}" BGFX_DIR)
+
 # sets project version from api ver / git rev
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake)
 if(BGFX_BUILD_TOOLS AND BGFX_CUSTOM_TARGETS)
