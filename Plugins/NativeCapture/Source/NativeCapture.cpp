@@ -93,10 +93,9 @@ namespace
                     // TODO: #1131 Address potential race condition during engine shutdown and ReadTextureAsync.
                     arcana::task<void, std::exception_ptr> readCurrentFrameTask{
                         thisRef->m_graphicsContext.ReadTextureAsync(thisRef->m_blitTextureHandle, thisRef->m_textureBuffer)
-                            .then(arcana::inline_scheduler, thisRef->m_cancellationToken,
-                                [thisRef] {
-                                    thisRef->m_frameCallback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, thisRef->m_textureInfo.Format, bgfx::getCaps()->originBottomLeft, thisRef->m_textureBuffer);
-                                })};
+                            .then(arcana::inline_scheduler, thisRef->m_cancellationToken, [thisRef] {
+                                thisRef->m_frameCallback(thisRef->m_textureInfo.Width, thisRef->m_textureInfo.Height, thisRef->m_textureInfo.Format, bgfx::getCaps()->originBottomLeft, thisRef->m_textureBuffer);
+                            })};
 
                     arcana::task<void, std::exception_ptr> readNextFrameTask{thisRef->ReadTextureAsync()};
 

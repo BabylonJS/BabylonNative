@@ -42,17 +42,18 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from 
 #include "fs_nanovg_fill.bin.h"
 
 static const bgfx::EmbeddedShader s_embeddedShadersBabylon[] =
-{
-BGFX_EMBEDDED_SHADER(vs_nanovg_fill),
-BGFX_EMBEDDED_SHADER(fs_nanovg_fill),
+    {
+        BGFX_EMBEDDED_SHADER(vs_nanovg_fill),
+        BGFX_EMBEDDED_SHADER(fs_nanovg_fill),
 
-BGFX_EMBEDDED_SHADER_END()};
+        BGFX_EMBEDDED_SHADER_END()};
 
 namespace
 {
     static bgfx::VertexLayout s_nvgLayout;
 
-    enum GLNVGshaderType {
+    enum GLNVGshaderType
+    {
         NSVG_SHADER_FILLGRAD,
         NSVG_SHADER_FILLIMG,
         NSVG_SHADER_SIMPLE,
@@ -60,7 +61,8 @@ namespace
     };
 
     // These are additional flags on top of NVGimageFlags.
-    enum NVGimageFlagsGL {
+    enum NVGimageFlagsGL
+    {
         NVG_IMAGE_NODELETE = 1 << 16, // Do not delete GL texture handle.
     };
 
@@ -80,7 +82,8 @@ namespace
         uint64_t dstAlpha;
     };
 
-    enum GLNVGcallType {
+    enum GLNVGcallType
+    {
         GLNVG_FILL,
         GLNVG_CONVEXFILL,
         GLNVG_STROKE,
@@ -275,10 +278,10 @@ namespace
         }
 
         s_nvgLayout
-        .begin()
-        .add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
-        .end();
+            .begin()
+            .add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float)
+            .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
+            .end();
 
         int align = 16;
         gl->fragSize = sizeof(struct GLNVGfragUniforms) + align - sizeof(struct GLNVGfragUniforms) % align;
@@ -287,7 +290,7 @@ namespace
     }
 
     static int nvgRenderCreateTexture(
-    void* _userPtr, int _type, int _width, int _height, int _flags, const unsigned char* _rgba)
+        void* _userPtr, int _type, int _width, int _height, int _flags, const unsigned char* _rgba)
     {
         struct GLNVGcontext* gl = (struct GLNVGcontext*)_userPtr;
         struct GLNVGtexture* tex = glnvg__allocTexture(gl);
@@ -312,12 +315,12 @@ namespace
         }
 
         tex->id = bgfx::createTexture2D(
-        tex->width, tex->height, false, 1, NVG_TEXTURE_RGBA == _type ? bgfx::TextureFormat::RGBA8 : bgfx::TextureFormat::R8, BGFX_SAMPLER_NONE);
+            tex->width, tex->height, false, 1, NVG_TEXTURE_RGBA == _type ? bgfx::TextureFormat::RGBA8 : bgfx::TextureFormat::R8, BGFX_SAMPLER_NONE);
 
         if (NULL != mem)
         {
             bgfx::updateTexture2D(
-            tex->id, 0, 0, 0, 0, tex->width, tex->height, mem);
+                tex->id, 0, 0, 0, 0, tex->width, tex->height, mem);
         }
 
         return bgfx::isValid(tex->id) ? tex->id.idx : 0;
@@ -342,14 +345,14 @@ namespace
         uint32_t pitch = tex->width * bytesPerPixel;
 
         const bgfx::Memory* mem = bgfx::alloc(w * h * bytesPerPixel);
-        bx::gather(mem->data,                 // dst
-        data + y * pitch + x * bytesPerPixel, // src
-        pitch,                                // srcStride
-        w * bytesPerPixel,                    // stride
-        h);                                   // num
+        bx::gather(mem->data,                     // dst
+            data + y * pitch + x * bytesPerPixel, // src
+            pitch,                                // srcStride
+            w * bytesPerPixel,                    // stride
+            h);                                   // num
 
         bgfx::updateTexture2D(
-        tex->id, 0, 0, x, y, w, h, mem, UINT16_MAX);
+            tex->id, 0, 0, x, y, w, h, mem, UINT16_MAX);
 
         return 1;
     }
@@ -395,7 +398,7 @@ namespace
     }
 
     static int glnvg__convertPaint(
-    struct GLNVGcontext* gl, struct GLNVGfragUniforms* frag, struct NVGpaint* paint, struct NVGscissor* scissor, float width, float fringe)
+        struct GLNVGcontext* gl, struct GLNVGfragUniforms* frag, struct NVGpaint* paint, struct NVGscissor* scissor, float width, float fringe)
     {
         struct GLNVGtexture* tex = NULL;
         float invxform[6] = {};
@@ -643,18 +646,18 @@ namespace
     }
 
     static const uint64_t s_blend[] =
-    {
-    BGFX_STATE_BLEND_ZERO,
-    BGFX_STATE_BLEND_ONE,
-    BGFX_STATE_BLEND_SRC_COLOR,
-    BGFX_STATE_BLEND_INV_SRC_COLOR,
-    BGFX_STATE_BLEND_DST_COLOR,
-    BGFX_STATE_BLEND_INV_DST_COLOR,
-    BGFX_STATE_BLEND_SRC_ALPHA,
-    BGFX_STATE_BLEND_INV_SRC_ALPHA,
-    BGFX_STATE_BLEND_DST_ALPHA,
-    BGFX_STATE_BLEND_INV_DST_ALPHA,
-    BGFX_STATE_BLEND_SRC_ALPHA_SAT,
+        {
+            BGFX_STATE_BLEND_ZERO,
+            BGFX_STATE_BLEND_ONE,
+            BGFX_STATE_BLEND_SRC_COLOR,
+            BGFX_STATE_BLEND_INV_SRC_COLOR,
+            BGFX_STATE_BLEND_DST_COLOR,
+            BGFX_STATE_BLEND_INV_DST_COLOR,
+            BGFX_STATE_BLEND_SRC_ALPHA,
+            BGFX_STATE_BLEND_INV_SRC_ALPHA,
+            BGFX_STATE_BLEND_DST_ALPHA,
+            BGFX_STATE_BLEND_INV_DST_ALPHA,
+            BGFX_STATE_BLEND_SRC_ALPHA_SAT,
     };
 
     static uint64_t glnvg_convertBlendFuncFactor(int factor)
@@ -689,7 +692,7 @@ namespace
         {
             bgfx::RendererType::Enum type = bgfx::getRendererType();
             gl->prog = bgfx::createProgram(
-            bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "vs_nanovg_fill"), bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "fs_nanovg_fill"), true);
+                bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "vs_nanovg_fill"), bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "fs_nanovg_fill"), true);
         }
 
         if (gl->ncalls > 0)
@@ -715,21 +718,21 @@ namespace
                 gl->state = BGFX_STATE_BLEND_FUNC_SEPARATE(blend->srcRGB, blend->dstRGB, blend->srcAlpha, blend->dstAlpha) | BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A;
                 switch (call->type)
                 {
-                case GLNVG_FILL:
-                    glnvg__fill(gl, call);
-                    break;
+                    case GLNVG_FILL:
+                        glnvg__fill(gl, call);
+                        break;
 
-                case GLNVG_CONVEXFILL:
-                    glnvg__convexFill(gl, call);
-                    break;
+                    case GLNVG_CONVEXFILL:
+                        glnvg__convexFill(gl, call);
+                        break;
 
-                case GLNVG_STROKE:
-                    glnvg__stroke(gl, call);
-                    break;
+                    case GLNVG_STROKE:
+                        glnvg__stroke(gl, call);
+                        break;
 
-                case GLNVG_TRIANGLES:
-                    glnvg__triangles(gl, call);
-                    break;
+                    case GLNVG_TRIANGLES:
+                        glnvg__triangles(gl, call);
+                        break;
                 }
             }
         }
@@ -823,7 +826,7 @@ namespace
     }
 
     static void nvgRenderFill(
-    void* _userPtr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, const float* bounds, const NVGpath* paths, int npaths)
+        void* _userPtr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, const float* bounds, const NVGpath* paths, int npaths)
     {
         struct GLNVGcontext* gl = (struct GLNVGcontext*)_userPtr;
 
@@ -901,7 +904,7 @@ namespace
     }
 
     static void nvgRenderStroke(
-    void* _userPtr, struct NVGpaint* paint, NVGcompositeOperationState compositeOperation, struct NVGscissor* scissor, float fringe, float strokeWidth, const struct NVGpath* paths, int npaths)
+        void* _userPtr, struct NVGpaint* paint, NVGcompositeOperationState compositeOperation, struct NVGscissor* scissor, float fringe, float strokeWidth, const struct NVGpath* paths, int npaths)
     {
         struct GLNVGcontext* gl = (struct GLNVGcontext*)_userPtr;
 
@@ -938,7 +941,7 @@ namespace
     }
 
     static void nvgRenderTriangles(void* _userPtr, struct NVGpaint* paint, NVGcompositeOperationState compositeOperation, struct NVGscissor* scissor,
-    const struct NVGvertex* verts, int nverts)
+        const struct NVGvertex* verts, int nverts)
     {
         struct GLNVGcontext* gl = (struct GLNVGcontext*)_userPtr;
         struct GLNVGcall* call = glnvg__allocCall(gl);
