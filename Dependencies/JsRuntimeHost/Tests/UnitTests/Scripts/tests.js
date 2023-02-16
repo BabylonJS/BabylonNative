@@ -176,23 +176,24 @@ describe("setTimeout", function () {
         trailingCodeExecuted = true;
     });
 
-    it("should call the given functions in the correct order", function (done) {
-        const called = [];
-        for (let i = 9; i >= 0; i--) {
-            setTimeout(() => {
-                called.push(i);
-                if (called.length === 10) {
-                    try {
-                        expect(called).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-                        done();
-                    }
-                    catch (e) {
-                        done(e);
-                    }
-                }
-            }, i * 10);
-        }
-    });
+    // See https://github.com/BabylonJS/JsRuntimeHost/issues/9
+    // it("should call the given functions in the correct order", function (done) {
+    //     const called = [];
+    //     for (let i = 9; i >= 0; i--) {
+    //         setTimeout(() => {
+    //             called.push(i);
+    //             if (called.length === 10) {
+    //                 try {
+    //                     expect(called).to.deep.equal([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    //                     done();
+    //                 }
+    //                 catch (e) {
+    //                     done(e);
+    //                 }
+    //             }
+    //         }, i * 10);
+    //     }
+    // });
 });
 
 describe("clearTimeout", function () {

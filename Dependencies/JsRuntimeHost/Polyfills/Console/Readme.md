@@ -9,6 +9,6 @@ Currently supports:
 When initializing, you should provide a callback which takes a message and a log level and outputs the message in whatever way you like. For example, you could initialize it like so:
 ```c++
 Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-    printf("%s", message);
+    fprintf(stdout, "%s", message);
     fflush(stdout);
 });

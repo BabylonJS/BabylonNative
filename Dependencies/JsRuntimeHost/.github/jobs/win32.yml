@@ -1,8 +1,6 @@
 parameters:
 - name: name
   type: string
-- name: vmImage
-  type: string
 - name: platform
   type: string
 
@@ -11,7 +9,7 @@ jobs:
   timeoutInMinutes: 15
 
   pool:
-    vmImage: ${{parameters.vmImage}}
+    vmImage: windows-latest
 
   steps:
   - task: Npm@1

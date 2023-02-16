@@ -1,17 +1,9 @@
-parameters:
-- name: name
-  type: string
-- name: vmImage
-  type: string
-- name: xcodeVersion
-  type: string
-
 jobs:
-- job: ${{parameters.name}}
+- job: macOS
   timeoutInMinutes: 15
 
   pool:
-    vmImage: ${{parameters.vmImage}}
+    vmImage: macos-latest
 
   steps:
   - task: Npm@1
@@ -21,8 +13,8 @@ jobs:
     displayName: 'Install NPM packages'
 
   - script: |
-      sudo xcode-select --switch /Applications/Xcode_${{parameters.xcodeVersion}}.app/Contents/Developer
-    displayName: 'Select Xcode ${{parameters.xcodeVersion}}'
+      sudo xcode-select --switch /Applications/Xcode_14.0.app/Contents/Developer
+    displayName: 'Select Xcode 14.0'
 
   - script: |
       cmake -B Build/macOS -GXcode

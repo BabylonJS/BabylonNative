@@ -9,13 +9,11 @@ jobs:
   - template: jobs/win32.yml
     parameters:
       name: Win32_x86
-      vmImage: 'windows-latest'
       platform: win32
 
   - template: jobs/win32.yml
     parameters:
       name: Win32_x64
-      vmImage: 'windows-latest'
       platform: x64
 
   # Android
@@ -23,7 +21,6 @@ jobs:
 
   # macOS
   - template: jobs/macos.yml
-    parameters:
-      name: macOS
-      vmImage: 'macos-latest'
-      xcodeVersion: 14.0
+
+  # iOS
+  - template: jobs/ios.yml

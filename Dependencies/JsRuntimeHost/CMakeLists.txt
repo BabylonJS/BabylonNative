@@ -1,11 +1,28 @@
 cmake_minimum_required(VERSION 3.18)
 
+include(FetchContent)
+
+if(IOS)
+    FetchContent_Declare(
+        ios-cmake
+        GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
+        GIT_TAG        04d91f6675dabb3c97df346a32f6184b0a7ef845)
+
+    message(STATUS "Fetching ios-cmake")
+    FetchContent_MakeAvailable(ios-cmake)
+    message(STATUS "Fetching ios-cmake - done")
+
+    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+    set(PLATFORM "OS64COMBINED" CACHE STRING "")
+    set(DEPLOYMENT_TARGET "12" CACHE STRING "")
+endif()
+
+project(JsRuntimeHost)
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-project(JsRuntimeHost)
 
 # Options
 
@@ -23,11 +40,7 @@ option(JSRUNTIMEHOST_TESTS "Include Babylon Native Tests." ON)
 
 # Dependencies
 
-include(FetchContent)
-
 if(NOT TARGET arcana)
-    include(FetchContent)
-
     FetchContent_Declare(
         arcana
         GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
@@ -77,12 +90,6 @@ elseif(UNIX)
     set(JSRUNTIMEHOST_PLATFORM "Unix")
 else()
     message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
-endif()
-
-if(APPLE)
-    set(JSRUNTIMEHOST_PLATFORM_IMPL_EXT "mm")
-else()
-    set(JSRUNTIMEHOST_PLATFORM_IMPL_EXT "cpp")
 endif()
 
 add_subdirectory(Core)

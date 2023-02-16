@@ -1,9 +1,15 @@
+if(APPLE)
+    set(IMPL_EXT "mm")
+else()
+    set(IMPL_EXT "cpp")
+endif()
+
 set(SOURCES
     "Include/Babylon/Dispatchable.h"
     "Include/Babylon/AppRuntime.h"
     "Source/AppRuntime.cpp"
     "Source/AppRuntime_${NAPI_JAVASCRIPT_ENGINE}.cpp"
-    "Source/AppRuntime_${JSRUNTIMEHOST_PLATFORM}.${JSRUNTIMEHOST_PLATFORM_IMPL_EXT}"
+    "Source/AppRuntime_${JSRUNTIMEHOST_PLATFORM}.${IMPL_EXT}"
     "Source/WorkQueue.cpp"
     "Source/WorkQueue.h")
 
