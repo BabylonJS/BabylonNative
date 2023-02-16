@@ -1495,7 +1495,7 @@ namespace Babylon
                         // TODO: Actually support the different types of reference spaces.
                         const auto referenceSpaceType = info[0].As<Napi::String>().Utf8Value();
                         assert(referenceSpaceType == XRReferenceSpaceType::UNBOUNDED ||
-                            referenceSpaceType == XRReferenceSpaceType::VIEWER);
+                               referenceSpaceType == XRReferenceSpaceType::VIEWER);
                         (void)XRReferenceSpaceType::UNBOUNDED;
                         (void)XRReferenceSpaceType::VIEWER;
                     }
@@ -2738,7 +2738,7 @@ namespace Babylon
             {
                 // Currently only immersive VR and immersive AR are supported.
                 assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR ||
-                    info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);
+                       info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);
             }
 
             void InitializeXrLayer(Napi::Object layer)

@@ -529,10 +529,10 @@ namespace Babylon::ShaderCompilerTraversers
             static bool IsInstance(const char* name)
             {
                 return (!strcmp(name, "world0") ||
-                    !strcmp(name, "world1") ||
-                    !strcmp(name, "world2") ||
-                    !strcmp(name, "world3") ||
-                    !strcmp(name, "instanceColor"));
+                        !strcmp(name, "world1") ||
+                        !strcmp(name, "world2") ||
+                        !strcmp(name, "world3") ||
+                        !strcmp(name, "instanceColor"));
             }
 
             unsigned int m_genericAttributesRunningCount{0};

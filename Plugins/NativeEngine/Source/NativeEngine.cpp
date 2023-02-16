@@ -1291,8 +1291,8 @@ namespace Babylon
         auto addressModeW = data.ReadUint32();
 
         uint32_t addressMode = addressModeU +
-            (addressModeV << BGFX_SAMPLER_V_SHIFT) +
-            (addressModeW << BGFX_SAMPLER_W_SHIFT);
+                               (addressModeV << BGFX_SAMPLER_V_SHIFT) +
+                               (addressModeW << BGFX_SAMPLER_W_SHIFT);
 
         uint32_t flags = texture.SamplerFlags();
         flags &= ~(BGFX_SAMPLER_U_MASK | BGFX_SAMPLER_V_MASK | BGFX_SAMPLER_W_MASK);

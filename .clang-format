@@ -2,7 +2,7 @@ BasedOnStyle: LLVM
 
 Language: Cpp
 
-AlignOperands: false
+AlignOperands: true
 BreakBeforeBraces: Allman
 BreakConstructorInitializersBeforeComma: true
 BreakConstructorInitializers: BeforeComma
@@ -26,3 +26,4 @@ ConstructorInitializerAllOnOneLineOrOnePerLine: false
 AllowShortLambdasOnASingleLine: All
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortIfStatementsOnASingleLine: WithoutElse
+BreakBeforeTernaryOperators: true

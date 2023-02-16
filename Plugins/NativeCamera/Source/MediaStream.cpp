@@ -235,14 +235,15 @@ namespace Babylon::Plugins
             auto heightConstraint{Constraint::ParseConstraint<int32_t>(constraints.Get("height"))};
 
             // Set the targetWidth and targetHeight as a fallback through the values exact, ideal, max, min
-            auto targetWidth = widthConstraint.exact.has_value() ? widthConstraint.exact
-                : widthConstraint.ideal.has_value()              ? widthConstraint.ideal
-                : widthConstraint.max.has_value()                ? widthConstraint.max
-                                                                 : widthConstraint.min;
-            auto targetHeight = heightConstraint.exact.has_value() ? heightConstraint.exact
-                : heightConstraint.ideal.has_value()               ? heightConstraint.ideal
-                : heightConstraint.max.has_value()                 ? heightConstraint.max
-                                                                   : heightConstraint.min;
+            auto targetWidth = widthConstraint.exact.has_value()   ? widthConstraint.exact
+                               : widthConstraint.ideal.has_value() ? widthConstraint.ideal
+                               : widthConstraint.max.has_value()   ? widthConstraint.max
+                                                                   : widthConstraint.min;
+
+            auto targetHeight = heightConstraint.exact.has_value()   ? heightConstraint.exact
+                                : heightConstraint.ideal.has_value() ? heightConstraint.ideal
+                                : heightConstraint.max.has_value()   ? heightConstraint.max
+                                                                     : heightConstraint.min;
 
             for (uint32_t j = 0; j < cameraDevice.SupportedResolutions().size(); j++)
             {
