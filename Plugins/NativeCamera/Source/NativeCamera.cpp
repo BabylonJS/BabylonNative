@@ -14,19 +14,21 @@ namespace Babylon::Plugins::Internal
         static void Initialize(Napi::Env& env)
         {
             Napi::Function func = DefineClass(
-                    env,
-                    "_NativeCamera",
-                    {
-                        InstanceMethod("createVideo", &NativeCamera::CreateVideo),
-                        InstanceMethod("updateVideoTexture", &NativeCamera::UpdateVideoTexture),
-                    });
+                env,
+                "_NativeCamera",
+                {
+                    InstanceMethod("createVideo", &NativeCamera::CreateVideo),
+                    InstanceMethod("updateVideoTexture", &NativeCamera::UpdateVideoTexture),
+                });
 
             JsRuntime::NativeObject::GetFromJavaScript(env).Set("Camera", func);
         }
 
-        NativeCamera(const Napi::CallbackInfo& info) : Napi::ObjectWrap<NativeCamera>{info}
+        NativeCamera(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<NativeCamera>{info}
         {
         }
+
     private:
         Napi::Value CreateVideo(const Napi::CallbackInfo& info)
         {

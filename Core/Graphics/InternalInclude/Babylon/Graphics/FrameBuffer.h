@@ -46,7 +46,6 @@ namespace Babylon::Graphics
         void Dispose();
 
     private:
-
         DeviceContext& m_context;
         bgfx::FrameBufferHandle m_handle;
         const uint16_t m_width;

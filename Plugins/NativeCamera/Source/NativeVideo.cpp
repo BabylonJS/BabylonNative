@@ -21,7 +21,7 @@ namespace Babylon::Plugins
                 InstanceAccessor("videoHeight", &NativeVideo::GetVideoHeight, nullptr),
                 InstanceAccessor("readyState", &NativeVideo::GetReadyState, nullptr),
                 InstanceAccessor("HAVE_CURRENT_DATA", &NativeVideo::GetHaveCurrentData, nullptr),
-                InstanceAccessor("srcObject", &NativeVideo::GetSrcObject, &NativeVideo::SetSrcObject)
+                InstanceAccessor("srcObject", &NativeVideo::GetSrcObject, &NativeVideo::SetSrcObject),
             });
 
         env.Global().Set(JS_CLASS_NAME, func);
@@ -160,7 +160,8 @@ namespace Babylon::Plugins
         m_IsPlaying = false;
     }
 
-    void NativeVideo::SetSrcObject(const Napi::CallbackInfo& info, const Napi::Value& value) {
+    void NativeVideo::SetSrcObject(const Napi::CallbackInfo& info, const Napi::Value& value)
+    {
         auto env{info.Env()};
 
         if (value.IsNull() || value.IsUndefined() || !value.As<Napi::Object>().InstanceOf(MediaStream::GetConstructor(env)))
@@ -173,14 +174,14 @@ namespace Babylon::Plugins
 
         // We've received a MediaStream object
         m_streamObject = Napi::Persistent(value.As<Napi::Object>());
-
         this->m_isReady = true;
 
         // Now that we have a src object the resize event should be fired to notify observers of the new video dimensions
         RaiseEvent("resize");
     }
 
-    Napi::Value NativeVideo::GetSrcObject(const Napi::CallbackInfo& info) {
+    Napi::Value NativeVideo::GetSrcObject(const Napi::CallbackInfo& info)
+    {
         // If the streamObject has not yet been defined return Null instead to match the web API
         return m_streamObject.IsEmpty() ? info.Env().Null() : m_streamObject.Value();
     }

@@ -14,7 +14,6 @@ namespace Babylon::Plugins
     // pull frames out of a camera and render them into the Babylon scene.
     class NativeVideo : public Napi::ObjectWrap<NativeVideo>
     {
-
     public:
         static void Initialize(Napi::Env& env);
         static Napi::Object New(const Napi::CallbackInfo& info);
@@ -43,7 +42,7 @@ namespace Babylon::Plugins
         bool m_isReady{false};
 
         bool m_IsPlaying{};
-        
+
         Napi::ObjectReference m_streamObject{};
     };
 }

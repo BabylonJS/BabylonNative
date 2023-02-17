@@ -63,14 +63,14 @@ namespace Babylon::Graphics
     void FrameBuffer::Bind(bgfx::Encoder& encoder)
     {
         m_viewId = m_context.AcquireNewViewId(encoder);
-        
+
         //Reset view state for next frame.
         m_viewPort = {0, 0, 1, 1};
         m_flags = BGFX_CLEAR_NONE;
         m_rgba = 0x000000ff;
         m_depth = 1.0f;
         m_stencil = 0;
-        
+
         SetDefaultClearMode(m_viewId, m_handle, BGFX_CLEAR_NONE, 0x000000ff, 1.0f, 0);
         setViewPort(m_viewId, m_viewPort, Width(), Height());
         m_hasViewIdBeenUsed = false;
@@ -161,10 +161,9 @@ namespace Babylon::Graphics
 
     bool ViewPort::Equals(const ViewPort& other) const
     {
-        return
-            std::abs(X - other.X) < std::numeric_limits<float>::epsilon() &&
-            std::abs(Y - other.Y) < std::numeric_limits<float>::epsilon() &&
-            std::abs(Width - other.Width) < std::numeric_limits<float>::epsilon() &&
-            std::abs(Height - other.Height) < std::numeric_limits<float>::epsilon();
+        return std::abs(X - other.X) < std::numeric_limits<float>::epsilon() &&
+               std::abs(Y - other.Y) < std::numeric_limits<float>::epsilon() &&
+               std::abs(Width - other.Width) < std::numeric_limits<float>::epsilon() &&
+               std::abs(Height - other.Height) < std::numeric_limits<float>::epsilon();
     }
 }

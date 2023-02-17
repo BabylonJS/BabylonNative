@@ -53,7 +53,8 @@ namespace Babylon::Polyfills::Internal
             global.Set(JS_REMOVE_EVENT_LISTENER_NAME, Napi::Function::New(env, &Window::RemoveEventListener, JS_REMOVE_EVENT_LISTENER_NAME));
         }
 
-        if (global.Get(JS_DEVICE_PIXEL_RATIO_NAME).IsUndefined()){
+        if (global.Get(JS_DEVICE_PIXEL_RATIO_NAME).IsUndefined())
+        {
             // Create an accessor to add to the window object to define window.devicePixelRatio
             Napi::Object descriptor{Napi::Object::New(env)};
             descriptor.Set("enumerable", Napi::Value::From(env, true));
@@ -79,9 +80,7 @@ namespace Babylon::Polyfills::Internal
     Napi::Value Window::SetTimeout(const Napi::CallbackInfo& info)
     {
         auto& window = *static_cast<Window*>(info.Data());
-        auto function = info[0].IsFunction()
-            ? std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>()))
-            : std::shared_ptr<Napi::FunctionReference>{};
+        auto function = info[0].IsFunction() ? std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>())) : std::shared_ptr<Napi::FunctionReference>{};
 
         auto delay = std::chrono::milliseconds{info[1].ToNumber().Int32Value()};
 

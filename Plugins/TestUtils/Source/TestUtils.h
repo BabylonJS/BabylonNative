@@ -2,7 +2,7 @@
 #include <napi/env.h>
 
 #if _MSC_VER
-#pragma warning( disable : 4324 ) // 'bx::DirectoryReader': structure was padded due to alignment specifier
+#pragma warning(disable : 4324) // 'bx::DirectoryReader': structure was padded due to alignment specifier
 #endif
 
 #include <bx/allocator.h>
@@ -15,14 +15,14 @@ namespace Babylon::Plugins::Internal
     public:
         class ImplData;
 
-        static inline constexpr const char* JS_INSTANCE_NAME{ "TestUtils" };
+        static inline constexpr const char* JS_INSTANCE_NAME{"TestUtils"};
 
         using ParentT = Napi::ObjectWrap<TestUtils>;
 
         static void CreateInstance(Napi::Env env, std::shared_ptr<ImplData> implData)
         {
             m_implData = std::move(implData);
-            Napi::HandleScope scope{ env };
+            Napi::HandleScope scope{env};
 
             Napi::Function func = ParentT::DefineClass(
                 env,
@@ -40,7 +40,7 @@ namespace Babylon::Plugins::Internal
         }
 
         explicit TestUtils(const Napi::CallbackInfo& info)
-            : ParentT{ info }
+            : ParentT{info}
         {
         }
 

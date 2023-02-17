@@ -36,13 +36,14 @@ namespace Babylon::Plugins
     class CameraDevice final : public std::enable_shared_from_this<CameraDevice>
     {
     public:
-        struct CameraDimensions {
+        struct CameraDimensions
+        {
             uint32_t width{};
             uint32_t height{};
         };
 
         ~CameraDevice();
-        
+
         // Move semantics
         CameraDevice(CameraDevice&&) noexcept;
         CameraDevice& operator=(CameraDevice&&) noexcept;

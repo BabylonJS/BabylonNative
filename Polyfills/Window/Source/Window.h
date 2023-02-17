@@ -17,6 +17,7 @@ namespace Babylon::Polyfills::Internal
         static Window& GetFromJavaScript(Napi::Env);
 
         Window(const Napi::CallbackInfo& info);
+
     private:
         JsRuntime& m_runtime;
         std::optional<TimeoutDispatcher> m_timeoutDispatcher;

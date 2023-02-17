@@ -8,7 +8,10 @@
 
 #include <bgfx/bgfx.h>
 #include <Babylon/Graphics/FrameBuffer.h>
-namespace bx { struct AllocatorI; }
+namespace bx
+{
+    struct AllocatorI;
+}
 
 struct NVGcontext;
 
