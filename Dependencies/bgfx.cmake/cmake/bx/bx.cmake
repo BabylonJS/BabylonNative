@@ -16,32 +16,6 @@ endif()
 
 include(GNUInstallDirs)
 
-add_library(bx STATIC)
-
-# Put in a "bgfx" folder in Visual Studio
-set_target_properties(bx PROPERTIES FOLDER "bgfx")
-
-# Build system specific configurations
-if(MINGW)
-	set(BX_COMPAT_PLATFORM mingw)
-elseif(WIN32)
-	set(BX_COMPAT_PLATFORM msvc)
-elseif(APPLE) # APPLE is technically UNIX... ORDERING MATTERS!
-	set(BX_COMPAT_PLATFORM osx)
-elseif(UNIX)
-	set(BX_COMPAT_PLATFORM linux)
-endif()
-
-# Add include directory of bx
-target_include_directories(
-	bx
-	PUBLIC $<BUILD_INTERFACE:${BX_DIR}/include> #
-		   $<BUILD_INTERFACE:${BX_DIR}/3rdparty> #
-		   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}> #
-		   $<BUILD_INTERFACE:${BX_DIR}/include/compat/${BX_COMPAT_PLATFORM}> #
-		   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/compat/${BX_COMPAT_PLATFORM}> #
-)
-
 # Grab the bx source files
 file(
 	GLOB_RECURSE
@@ -84,8 +58,31 @@ foreach(BX_SRC ${BX_NOBUILD})
 	set_source_files_properties(${BX_SRC} PROPERTIES HEADER_FILE_ONLY ON)
 endforeach()
 
-# Add sources to the project
-target_sources(bx PRIVATE ${BX_SOURCES})
+add_library(bx STATIC ${BX_SOURCES})
+
+# Put in a "bgfx" folder in Visual Studio
+set_target_properties(bx PROPERTIES FOLDER "bgfx")
+
+# Build system specific configurations
+if(MINGW)
+	set(BX_COMPAT_PLATFORM mingw)
+elseif(WIN32)
+	set(BX_COMPAT_PLATFORM msvc)
+elseif(APPLE) # APPLE is technically UNIX... ORDERING MATTERS!
+	set(BX_COMPAT_PLATFORM osx)
+elseif(UNIX)
+	set(BX_COMPAT_PLATFORM linux)
+endif()
+
+# Add include directory of bx
+target_include_directories(
+	bx
+	PUBLIC $<BUILD_INTERFACE:${BX_DIR}/include> #
+		   $<BUILD_INTERFACE:${BX_DIR}/3rdparty> #
+		   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}> #
+		   $<BUILD_INTERFACE:${BX_DIR}/include/compat/${BX_COMPAT_PLATFORM}> #
+		   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/compat/${BX_COMPAT_PLATFORM}> #
+)
 
 # All configurations
 target_compile_definitions(bx PUBLIC "BX_CONFIG_DEBUG=$<IF:$<CONFIG:Debug>,1,$<BOOL:${BX_CONFIG_DEBUG}>>")

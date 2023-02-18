@@ -15,8 +15,6 @@ if(BGFX_BUILD_TOOLS_BIN2C)
 endif()
 
 if(BGFX_BUILD_TESTS)
-	add_executable(bx_test)
-	target_compile_definitions(bx_test PRIVATE CATCH_AMALGAMATED_CUSTOM_MAIN)
 	file(
 		GLOB
 		BX_TEST_SOURCES #
@@ -25,11 +23,11 @@ if(BGFX_BUILD_TESTS)
 		${BX_DIR}/tests/*.h #
 		${BX_DIR}/tests/dbg.* #
 	)
-	target_sources(bx_test PRIVATE ${BX_TEST_SOURCES})
+	add_executable(bx_test ${BX_TEST_SOURCES})
+	target_compile_definitions(bx_test PRIVATE CATCH_AMALGAMATED_CUSTOM_MAIN)
 	target_link_libraries(bx_test PRIVATE bx)
 	add_test(NAME bx.test COMMAND bx_test)
 
-	add_executable(bx_bench)
 	file(
 		GLOB
 		BX_BENCH_SOURCES #
@@ -37,7 +35,7 @@ if(BGFX_BUILD_TESTS)
 		${BX_DIR}/tests/*_bench.h #
 		${BX_DIR}/tests/dbg.* #
 	)
-	target_sources(bx_bench PRIVATE ${BX_BENCH_SOURCES})
+	add_executable(bx_bench ${BX_BENCH_SOURCES})
 	target_link_libraries(bx_bench PRIVATE bx)
 	add_test(NAME bx.bench COMMAND bx_bench)
 endif()

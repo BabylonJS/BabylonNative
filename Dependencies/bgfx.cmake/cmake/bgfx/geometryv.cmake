@@ -8,18 +8,17 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-if(ANDROID)
-	add_library(geometryv SHARED)
-else()
-	add_executable(geometryv)
-endif()
-
 # Grab the geometryv source files
 file(GLOB_RECURSE GEOMETRYV_SOURCES #
 	 ${BGFX_DIR}/tools/geometryv/*
 )
 
-target_sources(geometryv PRIVATE ${GEOMETRYV_SOURCES})
+if(ANDROID)
+	add_library(geometryv SHARED ${GEOMETRYV_SOURCES})
+else()
+	add_executable(geometryv ${GEOMETRYV_SOURCES})
+endif()
+
 target_link_libraries(geometryv PRIVATE example-common)
 set_target_properties(
 	geometryv PROPERTIES FOLDER "bgfx/tools" #

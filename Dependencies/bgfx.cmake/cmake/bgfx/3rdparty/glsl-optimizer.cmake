@@ -16,20 +16,6 @@ endif()
 
 set(GLSL_OPTIMIZER ${BGFX_DIR}/3rdparty/glsl-optimizer)
 
-add_library(glsl-optimizer STATIC)
-
-# Put in a "bgfx" folder in Visual Studio
-set_target_properties(glsl-optimizer PROPERTIES FOLDER "bgfx")
-
-target_include_directories(
-	glsl-optimizer
-	PUBLIC ${GLSL_OPTIMIZER}/include #
-		   ${GLSL_OPTIMIZER}/src/glsl #
-	PRIVATE ${GLSL_OPTIMIZER}/src #
-			${GLSL_OPTIMIZER}/src/mesa #
-			${GLSL_OPTIMIZER}/src/mapi #
-)
-
 file(
 	GLOB
 	GLSL_OPTIMIZER_SOURCES
@@ -193,7 +179,19 @@ file(
 	${GLSL_OPTIMIZER}/src/util/ralloc.h
 )
 
-target_sources(glsl-optimizer PRIVATE ${GLSL_OPTIMIZER_SOURCES})
+add_library(glsl-optimizer STATIC ${GLSL_OPTIMIZER_SOURCES})
+
+# Put in a "bgfx" folder in Visual Studio
+set_target_properties(glsl-optimizer PROPERTIES FOLDER "bgfx")
+
+target_include_directories(
+	glsl-optimizer
+	PUBLIC ${GLSL_OPTIMIZER}/include #
+		   ${GLSL_OPTIMIZER}/src/glsl #
+	PRIVATE ${GLSL_OPTIMIZER}/src #
+			${GLSL_OPTIMIZER}/src/mesa #
+			${GLSL_OPTIMIZER}/src/mapi #
+)
 
 if(MSVC)
 	target_compile_definitions(

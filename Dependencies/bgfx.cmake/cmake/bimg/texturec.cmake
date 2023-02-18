@@ -8,15 +8,14 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-add_executable(texturec)
-
 # Grab the texturec source files
 file(GLOB_RECURSE TEXTUREC_SOURCES #
 	 ${BIMG_DIR}/tools/texturec/*.cpp #
 	 ${BIMG_DIR}/tools/texturec/*.h #
 )
 
-target_sources(texturec PRIVATE ${TEXTUREC_SOURCES})
+add_executable(texturec ${TEXTUREC_SOURCES})
+
 target_link_libraries(texturec PRIVATE bimg_decode bimg_encode bimg)
 set_target_properties(
 	texturec PROPERTIES FOLDER "bgfx/tools" #

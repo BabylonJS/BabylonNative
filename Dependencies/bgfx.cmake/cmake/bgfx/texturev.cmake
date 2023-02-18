@@ -8,18 +8,17 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-if(ANDROID)
-	add_library(texturev SHARED)
-else()
-	add_executable(texturev)
-endif()
-
 # Grab the texturev source files
 file(GLOB_RECURSE TEXTUREV_SOURCES #
 	 ${BGFX_DIR}/tools/texturev/*
 )
 
-target_sources(texturev PRIVATE ${TEXTUREV_SOURCES})
+if(ANDROID)
+	add_library(texturev SHARED ${TEXTUREV_SOURCES})
+else()
+	add_executable(texturev ${TEXTUREV_SOURCES})
+endif()
+
 target_link_libraries(texturev PRIVATE example-common)
 set_target_properties(
 	texturev PROPERTIES FOLDER "bgfx/tools" #

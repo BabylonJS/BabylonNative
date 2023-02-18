@@ -8,8 +8,6 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-add_executable(geometryc)
-
 # Grab the geometryc source files
 file(
 	GLOB_RECURSE
@@ -19,8 +17,8 @@ file(
 	#
 	${MESHOPTIMIZER_SOURCES}
 )
+add_executable(geometryc ${GEOMETRYC_SOURCES})
 
-target_sources(geometryc PRIVATE ${GEOMETRYC_SOURCES})
 target_include_directories(geometryc PRIVATE ${MESHOPTIMIZER_INCLUDE_DIR})
 target_link_libraries(geometryc PRIVATE bx bgfx-vertexlayout ${MESHOPTIMIZER_LIBRARIES})
 target_compile_definitions(geometryc PRIVATE "-D_CRT_SECURE_NO_WARNINGS")

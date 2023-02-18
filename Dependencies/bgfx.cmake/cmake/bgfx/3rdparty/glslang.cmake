@@ -17,27 +17,6 @@ endif()
 set(GLSLANG ${BGFX_DIR}/3rdparty/glslang)
 set(SPIRV_TOOLS ${BGFX_DIR}/3rdparty/spirv-tools)
 
-add_library(glslang STATIC)
-
-target_compile_definitions(
-	glslang
-	PRIVATE #
-			ENABLE_OPT=1 # spriv-tools
-			ENABLE_HLSL=1 #
-)
-
-# Put in a "bgfx" folder in Visual Studio
-set_target_properties(glslang PROPERTIES FOLDER "bgfx")
-
-target_include_directories(
-	glslang
-	PUBLIC ${GLSLANG} #
-		   ${GLSLANG}/glslang/Public #
-	PRIVATE ${GLSLANG}/.. #
-			${SPIRV_TOOLS}/include #
-			${SPIRV_TOOLS}/source #
-)
-
 file(
 	GLOB_RECURSE
 	GLSLANG_SOURCES
@@ -62,4 +41,23 @@ else()
 	list(FILTER GLSLANG_SOURCES EXCLUDE REGEX "glslang/OSDependent/Windows/.*.h")
 endif()
 
-target_sources(glslang PRIVATE ${GLSLANG_SOURCES})
+add_library(glslang STATIC ${GLSLANG_SOURCES})
+
+target_compile_definitions(
+	glslang
+	PRIVATE #
+			ENABLE_OPT=1 # spriv-tools
+			ENABLE_HLSL=1 #
+)
+
+# Put in a "bgfx" folder in Visual Studio
+set_target_properties(glslang PROPERTIES FOLDER "bgfx")
+
+target_include_directories(
+	glslang
+	PUBLIC ${GLSLANG} #
+		   ${GLSLANG}/glslang/Public #
+	PRIVATE ${GLSLANG}/.. #
+			${SPIRV_TOOLS}/include #
+			${SPIRV_TOOLS}/source #
+)

@@ -14,18 +14,6 @@ if(NOT IS_DIRECTORY ${BIMG_DIR})
 	return()
 endif()
 
-add_library(bimg_decode STATIC)
-
-# Put in a "bgfx" folder in Visual Studio
-set_target_properties(bimg_decode PROPERTIES FOLDER "bgfx")
-target_include_directories(
-	bimg_decode
-	PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/include> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-	PRIVATE ${LOADPNG_INCLUDE_DIR} #
-			${MINIZ_INCLUDE_DIR} #
-			${TINYEXR_INCLUDE_DIR} #
-)
-
 file(
 	GLOB_RECURSE
 	BIMG_DECODE_SOURCES #
@@ -36,7 +24,17 @@ file(
 	${MINIZ_SOURCES} #
 )
 
-target_sources(bimg_decode PRIVATE ${BIMG_DECODE_SOURCES})
+add_library(bimg_decode STATIC ${BIMG_DECODE_SOURCES})
+
+# Put in a "bgfx" folder in Visual Studio
+set_target_properties(bimg_decode PROPERTIES FOLDER "bgfx")
+target_include_directories(
+	bimg_decode
+	PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/include> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+	PRIVATE ${LOADPNG_INCLUDE_DIR} #
+			${MINIZ_INCLUDE_DIR} #
+			${TINYEXR_INCLUDE_DIR} #
+)
 
 target_link_libraries(
 	bimg_decode

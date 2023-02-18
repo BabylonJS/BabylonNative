@@ -8,17 +8,16 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-add_executable(shaderc)
+# Grab the shaderc source files
+file(
+	GLOB
+	SHADERC_SOURCES #
+	${BGFX_DIR}/tools/shaderc/*.cpp #
+	${BGFX_DIR}/tools/shaderc/*.h #
+	${BGFX_DIR}/src/shader* #
+)
 
-#target_include_directories(
-#	shaderc
-#	PRIVATE
-#    ${BIMG_DIR}/include #
-#    ${GLSL_OPTIMIZER}/include #
-#    ${GLSL_OPTIMIZER}/src/mesa #
-#    ${GLSL_OPTIMIZER}/src/mapi #
-#    ${GLSL_OPTIMIZER}/src/glsl #
-#)
+add_executable(shaderc ${SHADERC_SOURCES})
 
 target_link_libraries(
 	shaderc
@@ -45,17 +44,6 @@ target_link_libraries(
 if(BGFX_AMALGAMATED)
 	target_link_libraries(shaderc PRIVATE bgfx-shader)
 endif()
-
-# Grab the shaderc source files
-file(
-	GLOB
-	SHADERC_SOURCES #
-	${BGFX_DIR}/tools/shaderc/*.cpp #
-	${BGFX_DIR}/tools/shaderc/*.h #
-	${BGFX_DIR}/src/shader* #
-)
-
-target_sources(shaderc PRIVATE ${SHADERC_SOURCES})
 
 set_target_properties(
 	shaderc PROPERTIES FOLDER "bgfx/tools" #

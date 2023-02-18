@@ -16,7 +16,20 @@ endif()
 
 set(FCPP_DIR ${BGFX_DIR}/3rdparty/fcpp)
 
-add_library(fcpp STATIC)
+file(
+	GLOB
+	FCPP_SOURCES
+	${FCPP_DIR}/*.h
+	${FCPP_DIR}/cpp1.c
+	${FCPP_DIR}/cpp2.c
+	${FCPP_DIR}/cpp3.c
+	${FCPP_DIR}/cpp4.c
+	${FCPP_DIR}/cpp5.c
+	${FCPP_DIR}/cpp6.c
+	${FCPP_DIR}/cpp6.c
+)
+
+add_library(fcpp STATIC ${FCPP_SOURCES})
 
 target_compile_definitions(
 	fcpp
@@ -31,21 +44,6 @@ target_compile_definitions(
 set_target_properties(fcpp PROPERTIES FOLDER "bgfx")
 
 target_include_directories(fcpp PUBLIC ${FCPP_DIR})
-
-file(
-	GLOB
-	FCPP_SOURCES
-	${FCPP_DIR}/*.h
-	${FCPP_DIR}/cpp1.c
-	${FCPP_DIR}/cpp2.c
-	${FCPP_DIR}/cpp3.c
-	${FCPP_DIR}/cpp4.c
-	${FCPP_DIR}/cpp5.c
-	${FCPP_DIR}/cpp6.c
-	${FCPP_DIR}/cpp6.c
-)
-
-target_sources(fcpp PRIVATE ${FCPP_SOURCES})
 
 if(MSVC)
 	target_compile_options(

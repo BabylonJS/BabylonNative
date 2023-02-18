@@ -14,17 +14,6 @@ if(NOT IS_DIRECTORY ${BIMG_DIR})
 	return()
 endif()
 
-add_library(bimg STATIC)
-
-# Put in a "bgfx" folder in Visual Studio
-set_target_properties(bimg PROPERTIES FOLDER "bgfx")
-
-target_include_directories(
-	bimg PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/include>$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-	PRIVATE ${ASTC_ENCODER_INCLUDE_DIR} #
-			${MINIZ_INCLUDE_DIR} #
-)
-
 file(
 	GLOB_RECURSE
 	BIMG_SOURCES
@@ -36,7 +25,16 @@ file(
 	${MINIZ_SOURCES}
 )
 
-target_sources(bimg PRIVATE ${BIMG_SOURCES})
+add_library(bimg STATIC ${BIMG_SOURCES})
+
+# Put in a "bgfx" folder in Visual Studio
+set_target_properties(bimg PROPERTIES FOLDER "bgfx")
+
+target_include_directories(
+	bimg PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/include>$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+	PRIVATE ${ASTC_ENCODER_INCLUDE_DIR} #
+			${MINIZ_INCLUDE_DIR} #
+)
 
 target_link_libraries(
 	bimg

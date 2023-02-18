@@ -16,21 +16,6 @@ endif()
 
 set(SPIRV_CROSS ${BGFX_DIR}/3rdparty/spirv-cross)
 
-add_library(spirv-cross STATIC)
-
-target_compile_definitions(spirv-cross PRIVATE SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS)
-
-# Put in a "bgfx" folder in Visual Studio
-set_target_properties(spirv-cross PROPERTIES FOLDER "bgfx")
-
-target_include_directories(
-	spirv-cross #
-	PUBLIC #
-		   ${SPIRV_CROSS} #
-	PRIVATE #
-			${SPIRV_CROSS}/include #
-)
-
 file(
 	GLOB
 	SPIRV_CROSS_SOURCES
@@ -59,4 +44,17 @@ file(
 	${SPIRV_CROSS}/spirv_reflect.hpp
 )
 
-target_sources(spirv-cross PRIVATE ${SPIRV_CROSS_SOURCES})
+add_library(spirv-cross STATIC ${SPIRV_CROSS_SOURCES})
+
+target_compile_definitions(spirv-cross PRIVATE SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS)
+
+# Put in a "bgfx" folder in Visual Studio
+set_target_properties(spirv-cross PROPERTIES FOLDER "bgfx")
+
+target_include_directories(
+	spirv-cross #
+	PUBLIC #
+		   ${SPIRV_CROSS} #
+	PRIVATE #
+			${SPIRV_CROSS}/include #
+)

@@ -17,20 +17,6 @@ endif()
 set(SPIRV_HEADERS ${BGFX_DIR}/3rdparty/spirv-headers)
 set(SPIRV_TOOLS ${BGFX_DIR}/3rdparty/spirv-tools)
 
-add_library(spirv-opt STATIC)
-
-# Put in a "bgfx" folder in Visual Studio
-set_target_properties(spirv-opt PROPERTIES FOLDER "bgfx")
-
-target_include_directories(
-	spirv-opt
-	PUBLIC ${SPIRV_TOOLS}/include #
-	PRIVATE ${SPIRV_TOOLS} #
-			${SPIRV_TOOLS}/include/generated #
-			${SPIRV_TOOLS}/source #
-			${SPIRV_HEADERS}/include #
-)
-
 file(
 	GLOB
 	SPIRV_OPT_SOURCES
@@ -145,4 +131,16 @@ file(
 	${SPIRV_TOOLS}/source/val/validation_state.cpp
 )
 
-target_sources(spirv-opt PRIVATE ${SPIRV_OPT_SOURCES})
+add_library(spirv-opt STATIC ${SPIRV_OPT_SOURCES})
+
+# Put in a "bgfx" folder in Visual Studio
+set_target_properties(spirv-opt PROPERTIES FOLDER "bgfx")
+
+target_include_directories(
+	spirv-opt
+	PUBLIC ${SPIRV_TOOLS}/include #
+	PRIVATE ${SPIRV_TOOLS} #
+			${SPIRV_TOOLS}/include/generated #
+			${SPIRV_TOOLS}/source #
+			${SPIRV_HEADERS}/include #
+)
