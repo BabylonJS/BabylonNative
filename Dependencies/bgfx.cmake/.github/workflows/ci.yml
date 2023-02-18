@@ -15,7 +15,7 @@ jobs:
     name: Check compatibility with minimum cmake version
     runs-on: ubuntu-latest
     env:
-      CMAKE_VERSION: 3.6.0
+      CMAKE_VERSION: 3.10.2
     steps:
       - uses: actions/checkout@v2
         with:
