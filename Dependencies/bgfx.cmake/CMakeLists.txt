@@ -8,7 +8,7 @@
 # You should have received a copy of the CC0 Public Domain Dedication along with
 # this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.6.0) # version supported by android studio
 project(bgfx)
 cmake_policy(SET CMP0054 NEW)
 

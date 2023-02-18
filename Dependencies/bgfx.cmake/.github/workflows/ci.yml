@@ -1,4 +1,3 @@
-# https://github.com/openblack/bgfx.cmake/blob/master/.github/workflows/ci.yml
 name: CI
 
 on:
@@ -7,10 +6,41 @@ on:
   pull_request:
     branches: [ master ]
 
+env:
+  # Indicates the CMake build directory where project files and binaries are being produced.
+  CMAKE_BUILD_DIR: ${{ github.workspace }}/build/
+
 jobs:
+  minimum-cmake-version:
+    name: Check compatibility with minimum cmake version
+    runs-on: ubuntu-latest
+    env:
+      CMAKE_VERSION: 3.6.0
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt install -y libgl1-mesa-dev
+      - uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: ${{ env.CMAKE_VERSION }}
+      - name: Check cmake version
+        run: |
+          cmake --version | grep ${{ env.CMAKE_VERSION }}
+      - name: Test config
+        # old way of configuring a build directory
+        run: |
+          mkdir -p "${{ env.CMAKE_BUILD_DIR }}"
+          cd "${{ env.CMAKE_BUILD_DIR }}"
+          cmake ${{ github.workspace }} -GNinja -DCMAKE_BUILD_TYPE=Release
+
   native:
     name: ${{ matrix.os }} ${{ matrix.cc }}
     runs-on: ${{ matrix.os }}
+    needs: minimum-cmake-version
     strategy:
       fail-fast: false
       matrix:
@@ -23,14 +53,9 @@ jobs:
             cc: clang
             cxx: clang++
           - os: macos-latest
-
     env:
-      # Indicates the CMake build directory where project files and binaries are being produced.
-      CMAKE_BUILD_DIR: ${{ github.workspace }}/build/
-
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
-
     steps:
       - uses: actions/checkout@v2
         with:
@@ -65,13 +90,9 @@ jobs:
   cross-android:
     name: cross-android
     runs-on: ubuntu-latest
+    needs: minimum-cmake-version
     strategy:
       fail-fast: false
-
-    env:
-      # Indicates the CMake build directory where project files and binaries are being produced.
-      CMAKE_BUILD_DIR: ${{ github.workspace }}/build/
-
     steps:
       - uses: actions/checkout@v2
         with:
