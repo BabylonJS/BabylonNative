@@ -24,4 +24,5 @@ target_include_directories(
 	INTERFACE $<BUILD_INTERFACE:${BGFX_DIR}/3rdparty/webgpu/include>
 )
 
-set_target_properties(webgpu PROPERTIES FOLDER "bgfx/3rdparty" PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-")
+# These properties are not allowed on interface
+# set_target_properties(webgpu PROPERTIES FOLDER "bgfx/3rdparty" PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}bgfx-")
