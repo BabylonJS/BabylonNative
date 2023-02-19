@@ -85,3 +85,15 @@ foreach(flag "-Wno-class-memaccess" "-Wno-deprecated-copy")
 		endforeach()
 	endif()
 endforeach()
+
+if(BGFX_INSTALL AND NOT BGFX_LIBRARY_TYPE MATCHES "SHARED")
+	install(
+		TARGETS bimg_encode
+		EXPORT "${TARGETS_EXPORT_NAME}"
+		LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+		ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+		RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+		INCLUDES
+		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+	)
+endif()

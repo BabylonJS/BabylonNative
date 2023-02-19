@@ -31,3 +31,7 @@ if(ANDROID)
 elseif(IOS)
 	set_target_properties(texturec PROPERTIES MACOSX_BUNDLE ON MACOSX_BUNDLE_GUI_IDENTIFIER texturec)
 endif()
+
+if(BGFX_INSTALL)
+	install(TARGETS texturec EXPORT "${TARGETS_EXPORT_NAME}" DESTINATION "${CMAKE_INSTALL_BINDIR}")
+endif()

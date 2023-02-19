@@ -105,10 +105,6 @@ if(BGFX_BUILD_TOOLS AND BGFX_CUSTOM_TARGETS)
 	set_target_properties(tools PROPERTIES FOLDER "bgfx/tools")
 endif()
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bx)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bimg)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bgfx)
-
 if(BGFX_INSTALL)
 	include(GNUInstallDirs)
 
@@ -124,7 +120,13 @@ if(BGFX_INSTALL)
 	set(project_config "${generated_dir}/${PROJECT_NAME}Config.cmake")
 	set(TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
 	set(namespace "${PROJECT_NAME}::")
+endif()
 
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bx)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bimg)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cmake/bgfx)
+
+if(BGFX_INSTALL)
 	# Include module with fuction 'write_basic_package_version_file'
 	include(CMakePackageConfigHelpers)
 
@@ -158,38 +160,6 @@ if(BGFX_INSTALL)
 
 	install(FILES ${BGFX_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/licences/${PROJECT_NAME})
 
-	install(
-		TARGETS bgfx
-		EXPORT "${TARGETS_EXPORT_NAME}"
-		LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-		ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-		RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-		INCLUDES
-		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-	)
-	if(NOT BGFX_LIBRARY_TYPE MATCHES "SHARED")
-		install(
-			TARGETS bx bimg bimg_encode bimg_decode
-			EXPORT "${TARGETS_EXPORT_NAME}"
-			LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-			ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-			RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-			INCLUDES
-			DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-		)
-	endif()
-	if(BGFX_CONFIG_RENDERER_WEBGPU)
-		install(
-			TARGETS webgpu
-			EXPORT "${TARGETS_EXPORT_NAME}"
-			LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-			ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-			RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-			INCLUDES
-			DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-		)
-	endif()
-
 	# install headers (this should be done as a target probably... ^)
 	install(DIRECTORY ${BX_DIR}/include/bx ${BX_DIR}/include/compat ${BX_DIR}/include/tinystl
 			DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
@@ -207,28 +177,6 @@ if(BGFX_INSTALL)
 		install(FILES ${BGFX_CMAKE_USER_SCRIPT} DESTINATION "${config_install_dir}")
 	endif()
 	install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/cmake/bgfxToolUtils.cmake DESTINATION "${config_install_dir}")
-	if(BGFX_BUILD_TOOLS_BIN2C)
-		install(TARGETS bin2c EXPORT "${TARGETS_EXPORT_NAME}" DESTINATION "${CMAKE_INSTALL_BINDIR}")
-	endif()
-	if(BGFX_BUILD_TOOLS_SHADER)
-		install(TARGETS shaderc EXPORT "${TARGETS_EXPORT_NAME}" DESTINATION "${CMAKE_INSTALL_BINDIR}")
-	endif()
-	if(BGFX_BUILD_TOOLS_GEOMETRY)
-		install(TARGETS geometryc EXPORT "${TARGETS_EXPORT_NAME}" DESTINATION "${CMAKE_INSTALL_BINDIR}")
-		install(TARGETS geometryv EXPORT "${TARGETS_EXPORT_NAME}" DESTINATION "${CMAKE_INSTALL_BINDIR}")
-	endif()
-	if(BGFX_BUILD_TOOLS_TEXTURE)
-		install(TARGETS texturec EXPORT "${TARGETS_EXPORT_NAME}" DESTINATION "${CMAKE_INSTALL_BINDIR}")
-		install(TARGETS texturev EXPORT "${TARGETS_EXPORT_NAME}" DESTINATION "${CMAKE_INSTALL_BINDIR}")
-	endif()
-
-	# install examples
-	if(BGFX_BUILD_EXAMPLES AND BGFX_INSTALL_EXAMPLES)
-		install(DIRECTORY ${BGFX_DIR}/examples/runtime/ DESTINATION examples)
-		foreach(EXAMPLE ${BGFX_EXAMPLES})
-			install(TARGETS example-${EXAMPLE} DESTINATION examples)
-		endforeach()
-	endif()
 
 	# Config
 	#   * <prefix>/lib/cmake/bgfx/bgfxConfig.cmake

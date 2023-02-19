@@ -34,3 +34,7 @@ endif()
 if(IOS)
 	set_target_properties(geometryc PROPERTIES MACOSX_BUNDLE ON MACOSX_BUNDLE_GUI_IDENTIFIER geometryc)
 endif()
+
+if(BGFX_INSTALL)
+	install(TARGETS geometryc EXPORT "${TARGETS_EXPORT_NAME}" DESTINATION "${CMAKE_INSTALL_BINDIR}")
+endif()
