@@ -20,7 +20,8 @@ void main()
 }
 `;
 
-const fragmentShaderCode = `
+function getFragmentShaderCode() {
+  return `
 varying vec2 global_positionNormalized;
 
 uniform sampler2D mediaTexture0;
@@ -30,9 +31,12 @@ void main()
 gl_FragColor=texture(mediaTexture0,global_positionNormalized);
 }
 `;
+}
 
 let populateScene = function (scene) {
-  engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
+  if (window) {
+    engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
+  }
   let meshSize = new BABYLON.Vector2(0.8, 0.8);
   let texture1 = new BABYLON.Texture(url1, scene);
   let material = new BABYLON.ShaderMaterial(
@@ -40,7 +44,7 @@ let populateScene = function (scene) {
     scene,
     {
       vertexSource: vertexShaderCode,
-      fragmentSource: fragmentShaderCode,
+      fragmentSource: getFragmentShaderCode(),
     },
     {
       attributes: ["position"],
@@ -65,6 +69,7 @@ function StartAsync(scene) {
 
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
+var lastRenderTime = -1;
 
 StartAsync(scene).then(function () {
   try {
@@ -82,6 +87,12 @@ StartAsync(scene).then(function () {
   engine.runRenderLoop(function () {
     try {
       scene.render();
+      var renderTime = new Date().valueOf();
+      var span = renderTime - lastRenderTime;
+      if (lastRenderTime >= 0) {
+        console.log(`${span} ms since last render${span>33?" - very long!":""}.`);
+      }
+      lastRenderTime = renderTime;
     } catch (e) {
       BABYLON.Tools.Log(e.message);
     }
