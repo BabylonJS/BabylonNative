@@ -685,21 +685,17 @@ namespace Babylon
         return vertexSource;
     }
 
-    Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
+    void NativeEngine::CreateProgramSynchronous(const std::string vertexSource, const std::string fragmentSource, ProgramData& program, Napi::FunctionReference onSuccess, Napi::FunctionReference onError)
     {
-        const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
-        const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
-
-        ProgramData* program = new ProgramData{};
         ShaderCompiler::BgfxShaderInfo shaderInfo{};
 
         try
         {
             shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
         }
-        catch (const std::exception& ex)
+        catch (const std::exception&)
         {
-            throw Napi::Error::New(info.Env(), ex.what());
+            onError.Call({});
         }
 
         static auto InitUniformInfos{
@@ -721,13 +717,32 @@ namespace Babylon
             }};
 
         auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
-        InitUniformInfos(vertexShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformNameToIndex);
-        program->VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
+        InitUniformInfos(vertexShader, shaderInfo.UniformStages, program.UniformInfos, program.UniformNameToIndex);
+        program.VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
 
         auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
-        InitUniformInfos(fragmentShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformNameToIndex);
+        InitUniformInfos(fragmentShader, shaderInfo.UniformStages, program.UniformInfos, program.UniformNameToIndex);
 
-        program->Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
+        program.Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
+        onSuccess.Call({});
+    }
+
+    Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
+    {
+        const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
+        const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        const bool isAsync = info[2].As<Napi::Boolean>().Value();
+        const Napi::Function onSuccess = info[3].As<Napi::Function>();
+        const Napi::Function onError = info[4].As<Napi::Function>();
+        ProgramData* program = new ProgramData{};
+        if (isAsync)
+        {
+            CreateProgramSynchronous(vertexSource, fragmentSource, *program, Napi::Persistent(onSuccess), Napi::Persistent(onError));
+        }
+        else
+        {
+            CreateProgramSynchronous(vertexSource, fragmentSource, *program, Napi::Persistent(onSuccess), Napi::Persistent(onError));
+        }
         return Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
     }
 
