@@ -3,8 +3,13 @@
 /// <reference path="../../node_modules/babylonjs-materials/babylonjs.materials.module.d.ts" />
 /// <reference path="../../node_modules/babylonjs-gui/babylon.gui.module.d.ts" />
 
-
+const fragmentShaderComplexity = 30;
 const url1 = "https://i.imgur.com/B93vzrL.jpeg";
+
+function randomCharacter(str) {
+  if (!str) { return ""; }
+  return str[Math.floor(Math.random()*str.length)];
+}
 
 function glslFloat(float) {
   return ` ${float.toString(10)}${float % 1 === 0 ? '.' : ''} `;
@@ -31,8 +36,8 @@ void main()
 
 function getFragmentShaderCode() {
   var ifs = [];
-  for (var i = 0; i < 30; i++) {
-    ifs.push(`if(col.x${"<>"[Math.floor(Math.random() * 2)]}${randomGlslFloat()} && col.y${"<>"[Math.floor(Math.random() * 2)]}${randomGlslFloat()} && col.z${"<>"[Math.floor(Math.random() * 2)]}${randomGlslFloat()})
+  for (var i = 0; i < fragmentShaderComplexity; ++i) {
+    ifs.push(`if(col.x${randomCharacter("<>")}${randomGlslFloat()} && col.y${randomCharacter("<>")}${randomGlslFloat()} && col.z${randomCharacter("<>")}${randomGlslFloat()})
 {
 return vec4(${randomGlslFloat()},${randomGlslFloat()},${randomGlslFloat()},1.);
 }`);
