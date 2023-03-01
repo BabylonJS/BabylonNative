@@ -67,12 +67,7 @@ namespace Babylon::Plugins
 
             bool operator==(const Info& other)
             {
-                return
-                    Width == other.Width &&
-                    Height == other.Height &&
-                    MipLevels == other.MipLevels &&
-                    Format == other.Format &&
-                    Flags == other.Flags;
+                return Width == other.Width && Height == other.Height && MipLevels == other.MipLevels && Format == other.Format && Flags == other.Flags;
             }
 
             bool operator!=(const Info& other)

@@ -46,7 +46,7 @@ namespace Babylon
 
             glsl = compiler->compile();
 
-            return{std::move(parser), std::move(compiler)};
+            return {std::move(parser), std::move(compiler)};
         }
     }
 

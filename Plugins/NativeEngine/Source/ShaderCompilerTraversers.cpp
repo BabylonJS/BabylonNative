@@ -336,8 +336,7 @@ namespace Babylon::ShaderCompilerTraversers
 
                     // Helper function to correctly insert the shape conversion into the AST.
                     // More about shape conversion below.
-                    constexpr auto injectShapeConversion = [](TIntermTyped* node, TIntermNode* parent, TIntermTyped* shapeConversion)
-                    {
+                    constexpr auto injectShapeConversion = [](TIntermTyped* node, TIntermNode* parent, TIntermTyped* shapeConversion) {
                         if (auto* aggregate = parent->getAsAggregate())
                         {
                             auto& sequence = aggregate->getSequence();
@@ -520,20 +519,20 @@ namespace Babylon::ShaderCompilerTraversers
                     publicType.setVector(type.getVectorSize());
                 }
 
-                TType newType{ publicType };
+                TType newType{publicType};
                 newType.setBasicType(symbol->getType().getBasicType());
-                auto* newSymbol = intermediate->addSymbol(TIntermSymbol{ ids.Next(), newName, newType });
+                auto* newSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), newName, newType});
                 originalNameToReplacement[name] = newSymbol;
                 replacementToOriginalName[newName] = name;
             }
-        
+
             static bool IsInstance(const char* name)
             {
                 return (!strcmp(name, "world0") ||
-                    !strcmp(name, "world1") ||
-                    !strcmp(name, "world2") ||
-                    !strcmp(name, "world3") ||
-                    !strcmp(name, "instanceColor"));
+                        !strcmp(name, "world1") ||
+                        !strcmp(name, "world2") ||
+                        !strcmp(name, "world3") ||
+                        !strcmp(name, "instanceColor"));
             }
 
             unsigned int m_genericAttributesRunningCount{0};
@@ -543,35 +542,35 @@ namespace Babylon::ShaderCompilerTraversers
             // This table is a copy of the table bgfx uses for vertex attribute -> shader symbol association.
             // copied from renderer_gl.cpp. Used by OpenGL and Metal
             constexpr static const char* s_attribName[] =
-            {
-                "a_position",
-                "a_normal",
-                "a_tangent",
-                "a_bitangent",
-                "a_color0",
-                "a_color1",
-                "a_color2",
-                "a_color3",
-                "a_indices",
-                "a_weight",
-                "a_texcoord0",
-                "a_texcoord1",
-                "a_texcoord2",
-                "a_texcoord3",
-                "a_texcoord4",
-                "a_texcoord5",
-                "a_texcoord6",
-                "a_texcoord7",
-            };
+                {
+                    "a_position",
+                    "a_normal",
+                    "a_tangent",
+                    "a_bitangent",
+                    "a_color0",
+                    "a_color1",
+                    "a_color2",
+                    "a_color3",
+                    "a_indices",
+                    "a_weight",
+                    "a_texcoord0",
+                    "a_texcoord1",
+                    "a_texcoord2",
+                    "a_texcoord3",
+                    "a_texcoord4",
+                    "a_texcoord5",
+                    "a_texcoord6",
+                    "a_texcoord7",
+                };
             BX_STATIC_ASSERT(bgfx::Attrib::Count == BX_COUNTOF(s_attribName));
             constexpr static const char* s_attribInstanceName[] =
-            {
-                "i_data0",
-                "i_data1",
-                "i_data2",
-                "i_data3",
-                "i_data4",
-            };
+                {
+                    "i_data0",
+                    "i_data1",
+                    "i_data2",
+                    "i_data3",
+                    "i_data4",
+                };
         };
 
         /// Implementation of VertexVaryingInTraverser for OpenGL and Metal
@@ -587,7 +586,6 @@ namespace Babylon::ShaderCompilerTraversers
             }
 
         private:
-
             std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
             {
                 // For OpenGL and Metal platforms, we have an issue where we have a hard limit on the number shader attributes supported.
@@ -633,7 +631,7 @@ namespace Babylon::ShaderCompilerTraversers
                 // - first for standard attributes
                 // - second for instancing attributes (instance divisor ==1)
                 // For Metal, instancing attributes must be last because of bgfx way of doing instancing
-                for (int pass = 0; pass < 2; pass ++)
+                for (int pass = 0; pass < 2; pass++)
                 {
                     // Create the new symbols with which to replace all of the original varying
                     // symbols. The primary purpose of these new symbols is to contain the required
@@ -675,7 +673,7 @@ namespace Babylon::ShaderCompilerTraversers
             }
             unsigned int m_instanceAttributeCount{0};
         };
-    
+
         /// Implementation of VertexVaryingInTraverser for DirectX
         class VertexVaryingInTraverserD3D final : private VertexVaryingInTraverser
         {

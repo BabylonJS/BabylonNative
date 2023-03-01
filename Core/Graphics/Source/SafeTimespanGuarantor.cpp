@@ -71,8 +71,7 @@ namespace Babylon::Graphics
         }
         m_count++;
 
-        return gsl::finally(std::function<void()>{ [this]
-        {
+        return gsl::finally(std::function<void()>{[this] {
             std::scoped_lock lock{m_mutex};
             if (--m_count == 0 && m_state == State::Closing)
             {

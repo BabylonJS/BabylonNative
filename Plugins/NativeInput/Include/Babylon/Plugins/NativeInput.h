@@ -20,11 +20,11 @@ namespace Babylon::Plugins
         void TouchUp(uint32_t pointerId, int32_t x, int32_t y);
         void TouchMove(uint32_t pointerId, int32_t x, int32_t y);
 
-        static constexpr uint32_t LEFT_MOUSE_BUTTON_ID{ 0 };
-        static constexpr uint32_t MIDDLE_MOUSE_BUTTON_ID{ 1 };
-        static constexpr uint32_t RIGHT_MOUSE_BUTTON_ID{ 2 };
-        static constexpr uint32_t MOUSEWHEEL_Y_ID{ 8 };
-        static constexpr uint32_t TOUCH_BUTTON_ID{ 0 };
+        static constexpr uint32_t LEFT_MOUSE_BUTTON_ID{0};
+        static constexpr uint32_t MIDDLE_MOUSE_BUTTON_ID{1};
+        static constexpr uint32_t RIGHT_MOUSE_BUTTON_ID{2};
+        static constexpr uint32_t MOUSEWHEEL_Y_ID{8};
+        static constexpr uint32_t TOUCH_BUTTON_ID{0};
 
     private:
         NativeInput(const NativeInput&) = delete;

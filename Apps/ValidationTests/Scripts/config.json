@@ -195,6 +195,11 @@
             "referenceImage": "bwpp.png"
         },
         {
+            "title": "Multi camera rendering",
+            "playgroundId": "#1LK70I#22",
+            "referenceImage": "multiCameraRendering.png"
+        },
+        {
             "title": "setParent",
             "playgroundId": "#JD49CT#2",
             "referenceImage": "setParent.png"

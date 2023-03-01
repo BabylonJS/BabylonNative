@@ -12,9 +12,12 @@ namespace Babylon::Plugins
     {
         switch (m_feature)
         {
-            case FacingMode: return "facingMode";
-            case Torch: return "torch";
-            case Zoom: return "zoom";
+            case FacingMode:
+                return "facingMode";
+            case Torch:
+                return "torch";
+            case Zoom:
+                return "zoom";
             default:
                 assert(false);
                 return "";
@@ -22,44 +25,49 @@ namespace Babylon::Plugins
     }
 
     template<typename T>
-    Constraint::Type CameraCapabilityTemplate<T>::GetConstraintType() {
+    Constraint::Type CameraCapabilityTemplate<T>::GetConstraintType()
+    {
         switch (m_feature)
         {
-            case FacingMode: return Constraint::Type::Sequence;
-            case Torch: return Constraint::Type::Sequence;
-            case Zoom: return Constraint::Type::Range;
+            case FacingMode:
+                return Constraint::Type::Sequence;
+            case Torch:
+                return Constraint::Type::Sequence;
+            case Zoom:
+                return Constraint::Type::Range;
             default:
                 assert(false);
                 return Constraint::Type::Sequence;
         }
-
     }
 
     template<typename T>
     CameraCapabilityTemplate<T>::CameraCapabilityTemplate(
-            Capability::Feature feature,
-            T currentValue,
-            T defaultValue,
-            std::vector<T> acceptedValues,
-            std::function<bool(T)> setterFunction)
-            : Capability(feature)
-            , m_currentValue{currentValue}
-            , m_defaultValue{defaultValue}
-            , m_acceptedValues{acceptedValues}
-            , m_setterFunction{setterFunction}
+        Capability::Feature feature,
+        T currentValue,
+        T defaultValue,
+        std::vector<T> acceptedValues,
+        std::function<bool(T)> setterFunction)
+        : Capability(feature)
+        , m_currentValue{currentValue}
+        , m_defaultValue{defaultValue}
+        , m_acceptedValues{acceptedValues}
+        , m_setterFunction{setterFunction}
     {
     }
 
     template<typename T>
-    void CameraCapabilityTemplate<T>::AddAsCapability(Napi::Object target) {
+    void CameraCapabilityTemplate<T>::AddAsCapability(Napi::Object target)
+    {
         auto env{target.Env()};
-        
-        switch(GetConstraintType())
+
+        switch (GetConstraintType())
         {
             case Constraint::Type::Sequence:
             {
                 auto capability{Napi::Array::New(env, m_acceptedValues.size())};
-                for (uint32_t i = 0; i < m_acceptedValues.size(); i++) {
+                for (uint32_t i = 0; i < m_acceptedValues.size(); i++)
+                {
                     capability.Set(i, Constraint::AsNapiValue<T>(env, m_acceptedValues[i]));
                 }
 
@@ -79,19 +87,20 @@ namespace Babylon::Plugins
                 assert(false);
                 return;
         }
-
     }
 
     template<typename T>
-    void CameraCapabilityTemplate<T>::AddAsSetting(Napi::Object target) {
+    void CameraCapabilityTemplate<T>::AddAsSetting(Napi::Object target)
+    {
         target.Set(GetName(), Constraint::AsNapiValue<T>(target.Env(), m_currentValue));
     }
 
     template<typename T>
-    Capability::MeetsConstraint CameraCapabilityTemplate<T>::MeetsConstraints(Napi::Object constraints) {
+    Capability::MeetsConstraint CameraCapabilityTemplate<T>::MeetsConstraints(Napi::Object constraints)
+    {
         // Get the constraint matching this capability
         Napi::Value constraintValue{constraints.Get(GetName())};
-        
+
         if (constraintValue.IsEmpty() || constraintValue.IsUndefined() || constraintValue.IsNull())
         {
             // The constraints don't contain any restrictions for this capability.
@@ -126,7 +135,7 @@ namespace Babylon::Plugins
                     // The constraint couldn't be parsed, but was configured. Consider it a failure to meet the constraint.
                     return Capability::MeetsConstraint::Unsatisfied;
                 }
-                
+
                 T minAccepted = m_acceptedValues[0];
                 T maxAccepted = m_acceptedValues[1];
 
@@ -160,7 +169,7 @@ namespace Babylon::Plugins
     bool CameraCapabilityTemplate<T>::ApplyConstraints(Napi::Object constraints)
     {
         auto constraintSatisfaction{MeetsConstraints(constraints)};
-        
+
         switch (constraintSatisfaction)
         {
             case Capability::MeetsConstraint::Unsatisfied:
@@ -175,7 +184,7 @@ namespace Babylon::Plugins
                 {
                     m_currentValue = m_defaultValue;
                 }
-                
+
                 return true;
             case Capability::MeetsConstraint::FullySatisfied:
             {
@@ -185,14 +194,15 @@ namespace Babylon::Plugins
                 Constraint::ConstraintValue<T> constraint{Constraint::ParseConstraint<T>(constraintValue)};
 
                 // The target value should fallback between the different possible constraint values in the order of exact, ideal, max, min
-                T targetValue =
-                        constraint.exact.has_value() ? constraint.exact.value() :
-                        constraint.ideal.has_value() ? constraint.ideal.value() :
-                        constraint.max.has_value() ? constraint.max.value() :
-                        constraint.min.value();
+                T targetValue = constraint.exact.has_value()   ? constraint.exact.value()
+                                : constraint.ideal.has_value() ? constraint.ideal.value()
+                                : constraint.max.has_value()   ? constraint.max.value()
+                                                               : constraint.min.value();
 
-                if (m_currentValue != targetValue) {
-                    if (!m_setterFunction(targetValue)) {
+                if (m_currentValue != targetValue)
+                {
+                    if (!m_setterFunction(targetValue))
+                    {
                         // The value was valid, but setting it failed
                         return false;
                     }

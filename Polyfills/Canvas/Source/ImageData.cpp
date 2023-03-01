@@ -15,7 +15,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value ImageData::CreateInstance(Napi::Env env, Context* context, uint32_t width, uint32_t height)
     {
-        Napi::HandleScope scope{ env };
+        Napi::HandleScope scope{env};
         Napi::Function func = DefineClass(
             env,
             JS_IMAGEDATA_CONSTRUCTOR_NAME,
@@ -57,4 +57,3 @@ namespace Babylon::Polyfills::Internal
         return Napi::Value::From(info.Env(), data);
     }
 }
-

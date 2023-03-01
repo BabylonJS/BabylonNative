@@ -4,14 +4,16 @@
 #include <optional>
 #include "Constraint.h"
 
-namespace Babylon::Plugins {
+namespace Babylon::Plugins
+{
     // The Capability class fulfills the Capabilities, Constraints, and Settings web API pattern.
     // A Capability represents a camera feature as it's available values (either a min/max or a set of allowed values).
     // A Constraint represents a user request to set a camera feature to an ideal or exact value.
     // A Setting represents a camera features current value.
     // For a better understanding of the Capabilities, Constraints, and Settings pattern see this article:
     // https://developer.mozilla.org/en-US/docs/Web/API/Media_Capture_and_Streams_API/Constraints
-    class Capability {
+    class Capability
+    {
     public:
         enum Feature
         {
@@ -22,10 +24,10 @@ namespace Babylon::Plugins {
 
         enum MeetsConstraint
         {
-            FullySatisfied, // The constraint can be fully met
+            FullySatisfied,     // The constraint can be fully met
             PartiallySatisfied, // The constraint cannot be met, but satisfies the Exact, Min, and Max
-            Unsatisfied, // The constraint cannot be met, and fails the Exact, Min, or Max
-            Unconstrained, // There are no constraints that apply
+            Unsatisfied,        // The constraint cannot be met, and fails the Exact, Min, or Max
+            Unconstrained,      // There are no constraints that apply
         };
 
         Capability(Feature capability);
@@ -46,15 +48,16 @@ namespace Babylon::Plugins {
     class CameraCapabilityTemplate : public Capability
     {
     public:
-        CameraCapabilityTemplate(Feature feature,
-                                 T currentValue,
-                                 T defaultValue,
-                                 std::vector<T> acceptedValues,
-                                 std::function<bool(T)> setterFunction = [](T){return true;});
+        CameraCapabilityTemplate(
+            Feature feature,
+            T currentValue,
+            T defaultValue,
+            std::vector<T> acceptedValues,
+            std::function<bool(T)> setterFunction = [](T) { return true; });
 
         MeetsConstraint MeetsConstraints(Napi::Object constraints);
         bool ApplyConstraints(Napi::Object constraints);
-        
+
         void AddAsCapability(Napi::Object target);
         void AddAsSetting(Napi::Object target);
 

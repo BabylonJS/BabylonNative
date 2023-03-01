@@ -29,7 +29,7 @@ namespace Babylon
         LogMethod(env, "warn", message);
     }
 
-    void JsConsoleLogger::LogError(Napi::Env env, const char* message) 
+    void JsConsoleLogger::LogError(Napi::Env env, const char* message)
     {
         LogMethod(env, "error", message);
     }
