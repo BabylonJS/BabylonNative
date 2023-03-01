@@ -685,18 +685,9 @@ namespace Babylon
         return vertexSource;
     }
 
-    void NativeEngine::CreateProgramSynchronous(const std::string vertexSource, const std::string fragmentSource, ProgramData& program, Napi::FunctionReference onSuccess, Napi::FunctionReference onError)
+    void NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource, ProgramData& program)
     {
-        ShaderCompiler::BgfxShaderInfo shaderInfo{};
-
-        try
-        {
-            shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
-        }
-        catch (const std::exception&)
-        {
-            onError.Call({});
-        }
+        ShaderCompiler::BgfxShaderInfo shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
 
         static auto InitUniformInfos{
             [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex) {
@@ -724,7 +715,6 @@ namespace Babylon
         InitUniformInfos(fragmentShader, shaderInfo.UniformStages, program.UniformInfos, program.UniformNameToIndex);
 
         program.Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
-        onSuccess.Call({});
     }
 
     Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
@@ -737,11 +727,34 @@ namespace Babylon
         ProgramData* program = new ProgramData{};
         if (isAsync)
         {
-            CreateProgramSynchronous(vertexSource, fragmentSource, *program, Napi::Persistent(onSuccess), Napi::Persistent(onError));
+            arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
+                [this, vertexSource, fragmentSource, program, cancellationSource{m_cancellationSource}]()
+                {
+                    CreateProgramInternal(vertexSource, fragmentSource, *program);
+                })
+                .then(m_runtimeScheduler, *m_cancellationSource, [onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result)
+                {
+                    if (result.has_error())
+                    {
+                        onErrorRef.Call({});
+                    }
+                    else
+                    {
+                        onSuccessRef.Call({});
+                    }
+                });
         }
         else
         {
-            CreateProgramSynchronous(vertexSource, fragmentSource, *program, Napi::Persistent(onSuccess), Napi::Persistent(onError));
+            try
+            {
+                CreateProgramInternal(vertexSource, fragmentSource, *program);
+                onSuccess.Call({});
+            }
+            catch (const std::exception&)
+            {
+                onError.Call({});
+            }
         }
         return Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
     }
