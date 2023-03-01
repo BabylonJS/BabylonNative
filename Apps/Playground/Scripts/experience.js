@@ -95,6 +95,7 @@ let refreshShader = function () {
     },
     false
   );
+  waitingMaterial.forceCompilationAsync(rectMesh);
   waitingMaterial.setVector2("meshSize", meshSize);
   waitingMaterial.setTexture("mediaTexture0", texture);
   if (!material) {
