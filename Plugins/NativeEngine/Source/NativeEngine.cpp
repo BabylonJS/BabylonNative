@@ -21,6 +21,8 @@
 #include <stb/stb_image_resize.h>
 #include <bx/math.h>
 
+#include <cmath>
+
 namespace Babylon
 {
     namespace
@@ -1613,12 +1615,12 @@ namespace Babylon
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), m_graphicsContext.GetWidth());
+        return Napi::Value::From(info.Env(), std::floor(m_graphicsContext.GetWidth() / m_graphicsContext.GetHardwareScalingLevel()));
     }
 
     Napi::Value NativeEngine::GetRenderHeight(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), m_graphicsContext.GetHeight());
+        return Napi::Value::From(info.Env(), std::floor(m_graphicsContext.GetHeight() / m_graphicsContext.GetHardwareScalingLevel()));
     }
 
     Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info)

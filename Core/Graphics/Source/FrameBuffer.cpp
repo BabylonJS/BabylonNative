@@ -47,12 +47,12 @@ namespace Babylon::Graphics
 
     uint16_t FrameBuffer::Width() const
     {
-        return (m_width == 0 ? static_cast<uint16_t>(m_context.GetWidth()) : m_width);
+        return (m_width == 0 ? static_cast<uint16_t>(m_context.GetWidth() / m_context.GetHardwareScalingLevel()) : m_width);
     }
 
     uint16_t FrameBuffer::Height() const
     {
-        return (m_height == 0 ? static_cast<uint16_t>(m_context.GetHeight()) : m_height);
+        return (m_height == 0 ? static_cast<uint16_t>(m_context.GetHeight() / m_context.GetHardwareScalingLevel()) : m_height);
     }
 
     bool FrameBuffer::DefaultBackBuffer() const
