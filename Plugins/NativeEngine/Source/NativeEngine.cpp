@@ -21,6 +21,8 @@
 #include <stb/stb_image_resize.h>
 #include <bx/math.h>
 
+#include <cmath>
+
 namespace Babylon
 {
     namespace
