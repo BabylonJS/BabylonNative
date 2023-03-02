@@ -456,6 +456,7 @@ namespace Babylon
                 InstanceMethod("updateDynamicVertexBuffer", &NativeEngine::UpdateDynamicVertexBuffer),
 
                 InstanceMethod("createProgram", &NativeEngine::CreateProgram),
+                InstanceMethod("createProgramAsync", &NativeEngine::CreateProgramAsync),
                 InstanceMethod("getUniforms", &NativeEngine::GetUniforms),
                 InstanceMethod("getAttributes", &NativeEngine::GetAttributes),
 
@@ -721,41 +722,40 @@ namespace Babylon
     {
         const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
         const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
-        const bool isAsync = info[2].As<Napi::Boolean>().Value();
-        const Napi::Function onSuccess = info[3].As<Napi::Function>();
-        const Napi::Function onError = info[4].As<Napi::Function>();
         ProgramData* program = new ProgramData{};
-        if (isAsync)
+        try
         {
-            arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-                [this, vertexSource, fragmentSource, program, cancellationSource{m_cancellationSource}]()
-                {
-                    CreateProgramInternal(vertexSource, fragmentSource, *program);
-                })
-                .then(m_runtimeScheduler, *m_cancellationSource, [onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result)
-                {
-                    if (result.has_error())
-                    {
-                        onErrorRef.Call({});
-                    }
-                    else
-                    {
-                        onSuccessRef.Call({});
-                    }
-                });
+            CreateProgramInternal(vertexSource, fragmentSource, *program);
         }
-        else
+        catch (const std::exception& ex)
         {
-            try
+            throw Napi::Error::New(info.Env(), ex.what());
+        }
+        return Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
+    }
+
+    Napi::Value NativeEngine::CreateProgramAsync(const Napi::CallbackInfo& info)
+    {
+        const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
+        const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        const Napi::Function onSuccess = info[2].As<Napi::Function>();
+        const Napi::Function onError = info[3].As<Napi::Function>();
+        ProgramData* program = new ProgramData{};
+        arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
+            [this, vertexSource, fragmentSource, program, cancellationSource{m_cancellationSource}]()
             {
                 CreateProgramInternal(vertexSource, fragmentSource, *program);
-                onSuccess.Call({});
-            }
-            catch (const std::exception&)
-            {
-                onError.Call({});
-            }
-        }
+            })
+            .then(m_runtimeScheduler, *m_cancellationSource, [onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result)
+                {
+                if (result.has_error())
+                {
+                    onErrorRef.Call({});
+                }
+                else
+                {
+                    onSuccessRef.Call({});
+                } });
         return Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
     }
 
