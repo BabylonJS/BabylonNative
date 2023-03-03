@@ -686,7 +686,7 @@ namespace Babylon
         return vertexSource;
     }
 
-    void NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource, ProgramData& program)
+    bgfx::ProgramHandle NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource, ProgramData& program)
     {
         ShaderCompiler::BgfxShaderInfo shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
 
@@ -715,7 +715,7 @@ namespace Babylon
         auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
         InitUniformInfos(fragmentShader, shaderInfo.UniformStages, program.UniformInfos, program.UniformNameToIndex);
 
-        program.Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
+        return bgfx::createProgram(vertexShader, fragmentShader, true);
     }
 
     Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
@@ -725,7 +725,7 @@ namespace Babylon
         ProgramData* program = new ProgramData{};
         try
         {
-            CreateProgramInternal(vertexSource, fragmentSource, *program);
+            program->Handle = CreateProgramInternal(vertexSource, fragmentSource, *program);
         }
         catch (const std::exception& ex)
         {
@@ -742,11 +742,11 @@ namespace Babylon
         const Napi::Function onError = info[3].As<Napi::Function>();
         ProgramData* program = new ProgramData{};
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, vertexSource, fragmentSource, program, cancellationSource{m_cancellationSource}]()
+            [this, vertexSource, fragmentSource, program, cancellationSource{m_cancellationSource}]() -> bgfx::ProgramHandle
             {
-                CreateProgramInternal(vertexSource, fragmentSource, *program);
+                return CreateProgramInternal(vertexSource, fragmentSource, *program);
             })
-            .then(m_runtimeScheduler, *m_cancellationSource, [onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result)
+            .then(m_runtimeScheduler, *m_cancellationSource, [program, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<bgfx::ProgramHandle, std::exception_ptr> result)
                 {
                 if (result.has_error())
                 {
@@ -754,6 +754,7 @@ namespace Babylon
                 }
                 else
                 {
+                    program->Handle = result.value();
                     onSuccessRef.Call({});
                 } });
         return Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
