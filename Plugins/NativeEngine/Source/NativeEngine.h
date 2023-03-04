@@ -120,7 +120,7 @@ namespace Babylon
         void DeleteVertexBuffer(NativeDataStream::Reader& data);
         void RecordVertexBuffer(const Napi::CallbackInfo& info);
         void UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info);
-        bgfx::ProgramHandle CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource, ProgramData& program);
+        std::pair<bgfx::ProgramHandle, std::unordered_map<std::string, uint32_t>> CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource, ProgramData& program);
         Napi::Value CreateProgram(const Napi::CallbackInfo& info);
         Napi::Value CreateProgramAsync(const Napi::CallbackInfo& info);
         Napi::Value GetUniforms(const Napi::CallbackInfo& info);

@@ -686,7 +686,7 @@ namespace Babylon
         return vertexSource;
     }
 
-    bgfx::ProgramHandle NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource, ProgramData& program)
+    std::pair<bgfx::ProgramHandle,std::unordered_map<std::string,uint32_t>> NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource, ProgramData& program)
     {
         ShaderCompiler::BgfxShaderInfo shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
 
@@ -710,12 +710,11 @@ namespace Babylon
 
         auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
         InitUniformInfos(vertexShader, shaderInfo.UniformStages, program.UniformInfos, program.UniformNameToIndex);
-        program.VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
 
         auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
         InitUniformInfos(fragmentShader, shaderInfo.UniformStages, program.UniformInfos, program.UniformNameToIndex);
 
-        return bgfx::createProgram(vertexShader, fragmentShader, true);
+        return std::pair<bgfx::ProgramHandle, std::unordered_map<std::string, uint32_t>>{bgfx::createProgram(vertexShader, fragmentShader, true), std::move(shaderInfo.VertexAttributeLocations)};
     }
 
     Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
@@ -725,10 +724,13 @@ namespace Babylon
         ProgramData* program = new ProgramData{};
         try
         {
-            program->Handle = CreateProgramInternal(vertexSource, fragmentSource, *program);
+            std::pair<bgfx::ProgramHandle, std::unordered_map<std::string, uint32_t>> programInfo = CreateProgramInternal(vertexSource, fragmentSource, *program);
+            program->Handle = programInfo.first;
+            program->VertexAttributeLocations = std::move(programInfo.second);
         }
         catch (const std::exception& ex)
         {
+            delete program;
             throw Napi::Error::New(info.Env(), ex.what());
         }
         return Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
@@ -742,11 +744,11 @@ namespace Babylon
         const Napi::Function onError = info[3].As<Napi::Function>();
         ProgramData* program = new ProgramData{};
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, vertexSource, fragmentSource, program, cancellationSource{m_cancellationSource}]() -> bgfx::ProgramHandle
+            [this, vertexSource, fragmentSource, program, cancellationSource{m_cancellationSource}]() -> std::pair<bgfx::ProgramHandle, std::unordered_map<std::string, uint32_t>>
             {
                 return CreateProgramInternal(vertexSource, fragmentSource, *program);
             })
-            .then(m_runtimeScheduler, *m_cancellationSource, [program, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<bgfx::ProgramHandle, std::exception_ptr> result)
+            .then(m_runtimeScheduler, *m_cancellationSource, [program, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<std::pair<bgfx::ProgramHandle, std::unordered_map<std::string, uint32_t>>, std::exception_ptr> result)
                 {
                 if (result.has_error())
                 {
@@ -754,7 +756,9 @@ namespace Babylon
                 }
                 else
                 {
-                    program->Handle = result.value();
+                    std::pair<bgfx::ProgramHandle, std::unordered_map<std::string, uint32_t>> programInfo = result.value();
+                    program->Handle = programInfo.first;
+                    program->VertexAttributeLocations = std::move(programInfo.second);
                     onSuccessRef.Call({});
                 } });
         return Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
