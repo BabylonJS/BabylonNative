@@ -26,8 +26,7 @@ target_include_directories(Graphics
     PRIVATE "Include/Shared"
     PRIVATE "Include/Platform/${BABYLON_NATIVE_PLATFORM}"
     PRIVATE "Include/RendererType/${GRAPHICS_API}"
-    PRIVATE "InternalInclude/Babylon/Graphics"
-    PRIVATE "../../Dependencies/WindowsAppSDK/Generated Files")
+    PRIVATE "InternalInclude/Babylon/Graphics")
 
 if(WIN32 AND NOT WINDOWS_STORE)
     target_link_to_dependencies(Graphics
@@ -44,7 +43,8 @@ target_link_to_dependencies(Graphics
     PRIVATE JsRuntimeInternal
     PRIVATE bgfx
     PRIVATE bimg
-    PRIVATE bx)
+    PRIVATE bx
+    PRIVATE WindowsAppSDK)
 
 target_compile_definitions(Graphics
     PRIVATE NOMINMAX)

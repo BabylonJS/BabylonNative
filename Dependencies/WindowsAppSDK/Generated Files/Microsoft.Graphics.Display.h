@@ -406,6 +406,57 @@ typedef IAsyncOperation<ABI::Windows::Storage::Streams::IRandomAccessStream*> __
 
 
 
+namespace ABI {
+    namespace Microsoft {
+        namespace UI {
+            namespace Dispatching {
+                class DispatcherQueue;
+            } /* Dispatching */
+        } /* UI */
+    } /* Microsoft */
+} /* ABI */
+
+#ifndef ____x_ABI_CMicrosoft_CUI_CDispatching_CIDispatcherQueue_FWD_DEFINED__
+#define ____x_ABI_CMicrosoft_CUI_CDispatching_CIDispatcherQueue_FWD_DEFINED__
+namespace ABI {
+    namespace Microsoft {
+        namespace UI {
+            namespace Dispatching {
+                interface IDispatcherQueue;
+            } /* Dispatching */
+        } /* UI */
+    } /* Microsoft */
+} /* ABI */
+#define __x_ABI_CMicrosoft_CUI_CDispatching_CIDispatcherQueue ABI::Microsoft::UI::Dispatching::IDispatcherQueue
+
+#endif // ____x_ABI_CMicrosoft_CUI_CDispatching_CIDispatcherQueue_FWD_DEFINED__
+
+
+
+
+
+namespace ABI {
+    namespace Microsoft {
+        namespace UI {
+            
+            typedef struct DisplayId DisplayId;
+            
+        } /* UI */
+    } /* Microsoft */
+} /* ABI */
+
+namespace ABI {
+    namespace Microsoft {
+        namespace UI {
+            
+            typedef struct WindowId WindowId;
+            
+        } /* UI */
+    } /* Microsoft */
+} /* ABI */
+
+
+
 #ifndef ____x_ABI_CWindows_CFoundation_CIClosable_FWD_DEFINED__
 #define ____x_ABI_CWindows_CFoundation_CIClosable_FWD_DEFINED__
 namespace ABI {
@@ -991,6 +1042,24 @@ interface __FIAsyncOperation_1_Windows__CStorage__CStreams__CIRandomAccessStream
 #endif // WINDOWS_FOUNDATION_UNIVERSALAPICONTRACT_VERSION >= 0x10000
 
 
+
+
+
+#ifndef ____x_ABI_CMicrosoft_CUI_CDispatching_CIDispatcherQueue_FWD_DEFINED__
+#define ____x_ABI_CMicrosoft_CUI_CDispatching_CIDispatcherQueue_FWD_DEFINED__
+typedef interface __x_ABI_CMicrosoft_CUI_CDispatching_CIDispatcherQueue __x_ABI_CMicrosoft_CUI_CDispatching_CIDispatcherQueue;
+
+#endif // ____x_ABI_CMicrosoft_CUI_CDispatching_CIDispatcherQueue_FWD_DEFINED__
+
+
+
+
+
+
+typedef struct __x_ABI_CMicrosoft_CUI_CDisplayId __x_ABI_CMicrosoft_CUI_CDisplayId;
+
+
+typedef struct __x_ABI_CMicrosoft_CUI_CWindowId __x_ABI_CMicrosoft_CUI_CWindowId;
 
 
 
