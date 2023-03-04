@@ -28,7 +28,10 @@ target_include_directories(Graphics
     PRIVATE "Include/RendererType/${GRAPHICS_API}"
     PRIVATE "InternalInclude/Babylon/Graphics")
 
-if(WIN32 AND NOT WINDOWS_STORE)
+if(WINDOWS_STORE)
+    target_link_to_dependencies(Graphics
+        PRIVATE WindowsAppSDK)
+elseif(WIN32)
     target_link_to_dependencies(Graphics
         PRIVATE "shlwapi.lib")
 elseif(ANDROID)
@@ -43,8 +46,7 @@ target_link_to_dependencies(Graphics
     PRIVATE JsRuntimeInternal
     PRIVATE bgfx
     PRIVATE bimg
-    PRIVATE bx
-    PRIVATE WindowsAppSDK)
+    PRIVATE bx)
 
 target_compile_definitions(Graphics
     PRIVATE NOMINMAX)

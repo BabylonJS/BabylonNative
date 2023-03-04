@@ -176,6 +176,6 @@ endif()
 
 # --------------------------- WindowsAppSDK ---------------------------
 # Dependencies: none
-if(WIN32)
+if(WINDOWS_STORE)
     add_subdirectory(WindowsAppSDK)
 endif()
