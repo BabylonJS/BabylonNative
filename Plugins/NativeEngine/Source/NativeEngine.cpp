@@ -750,17 +750,25 @@ namespace Babylon
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [program, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<std::pair<bgfx::ProgramHandle, std::unordered_map<std::string, uint32_t>>, std::exception_ptr> result)
                 {
-                if (result.has_error())
-                {
-                    onErrorRef.Call({});
-                }
-                else
-                {
-                    std::pair<bgfx::ProgramHandle, std::unordered_map<std::string, uint32_t>> programInfo = result.value();
-                    program->Handle = programInfo.first;
-                    program->VertexAttributeLocations = std::move(programInfo.second);
-                    onSuccessRef.Call({});
-                } });
+                    if (result.has_error())
+                    {
+                        try
+                        {
+                            std::rethrow_exception(result.error());
+                        }
+                        catch (const std::exception& ex)
+                        {
+                            onErrorRef.Call({Napi::Error::New(onErrorRef.Env(), ex.what()).Value()});
+                        }
+                    }
+                    else
+                    {
+                        std::pair<bgfx::ProgramHandle, std::unordered_map<std::string, uint32_t>> programInfo = result.value();
+                        program->Handle = programInfo.first;
+                        program->VertexAttributeLocations = std::move(programInfo.second);
+                        onSuccessRef.Call({});
+                    }
+                });
         return Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
     }
 
