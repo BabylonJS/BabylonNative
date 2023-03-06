@@ -752,14 +752,7 @@ namespace Babylon
                 {
                     if (result.has_error())
                     {
-                        try
-                        {
-                            std::rethrow_exception(result.error());
-                        }
-                        catch (const std::exception& ex)
-                        {
-                            onErrorRef.Call({Napi::Error::New(onErrorRef.Env(), ex.what()).Value()});
-                        }
+                        onErrorRef.Call({Napi::Error::New(onErrorRef.Env(), result.error()).Value()});
                     }
                     else
                     {
