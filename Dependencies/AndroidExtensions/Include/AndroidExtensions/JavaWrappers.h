@@ -23,6 +23,8 @@ namespace java::io
 {
     class ByteArrayOutputStream;
     class InputStream;
+    class OutputStream;
+    class OutputStreamWriter;
 }
 
 namespace java::net
@@ -187,6 +189,22 @@ namespace java::io
 
         int Read(lang::ByteArray byteArray) const;
     };
+
+    class OutputStream : public lang::Object
+    {
+    public:
+        OutputStream(jobject object);
+    };
+
+    class OutputStreamWriter : public lang::Object
+    {
+    public:
+        OutputStreamWriter(jobject object);
+
+        void Write(std::string postBody);
+
+        void Close();
+    };
 }
 
 namespace java::net
@@ -199,6 +217,8 @@ namespace java::net
         HttpURLConnection(jobject object);
 
         int GetResponseCode() const;
+
+        void SetRequestMethod(const std::string& requestMethod);
     };
 
     class URL : public lang::Object
@@ -219,6 +239,12 @@ namespace java::net
 
         void Connect();
 
+        bool GetDoOutput() const;
+
+        void SetDoOutput(bool n);
+
+        void SetRequestProperty(const std::string& key, const std::string& value);
+
         URL GetURL() const;
 
         int GetContentLength() const;
@@ -228,6 +254,8 @@ namespace java::net
         lang::String GetHeaderFieldKey(int n) const;
 
         io::InputStream GetInputStream() const;
+
+        io::OutputStream GetOutputStream() const;
 
         explicit operator HttpURLConnection() const;
     };
