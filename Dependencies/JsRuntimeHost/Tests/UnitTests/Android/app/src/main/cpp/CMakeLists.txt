@@ -23,6 +23,7 @@ target_link_libraries(UnitTestsJNI
     PRIVATE log
     PRIVATE AndroidExtensions
     PRIVATE AppRuntime
+    PRIVATE AbortController
     PRIVATE Console
     PRIVATE Scheduling
     PRIVATE ScriptLoader

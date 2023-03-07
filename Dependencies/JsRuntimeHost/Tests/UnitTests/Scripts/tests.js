@@ -19,6 +19,20 @@ mocha.setup({ ui: "bdd", reporter: BabylonReporter });
 
 const expect = chai.expect;
 
+describe("AbortController", function () {
+    it("should not throw while aborting and correctly trigger callback", function (done) {
+        const controller = new AbortController();
+        expect(controller.signal.aborted).to.equal(false);
+
+        // Expect aborted to be true after abort()
+        controller.signal.onabort = () => {
+            expect(controller.signal.aborted).to.equal(true);
+            done();
+        }
+        controller.abort();
+    })
+})
+
 describe("XMLHTTPRequest", function () {
     function createRequest(method, url) {
         return new Promise((resolve) => {
