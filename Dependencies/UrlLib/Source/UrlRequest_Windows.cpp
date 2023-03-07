@@ -8,6 +8,7 @@
 #include <winrt/Windows.Web.Http.h>
 #include <winrt/Windows.ApplicationModel.h>
 #include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.Web.Http.Headers.h>
 
 namespace UrlLib
 {
@@ -21,6 +22,8 @@ namespace UrlLib
             {
                 case UrlMethod::Get:
                     return Web::Http::HttpMethod::Get();
+                case UrlMethod::Post:
+                    return Web::Http::HttpMethod::Post();
                 default:
                     throw std::runtime_error("Unsupported method");
             }
@@ -83,6 +86,34 @@ namespace UrlLib
                     requestMessage.RequestUri(m_uri);
                     requestMessage.Method(ConvertHttpMethod(m_method));
 
+                    std::string contentType;
+
+                    for (auto request : m_requestHeaders)
+                    {
+                        // content type needs to be set separately
+                        if (request.first == "Content-Type")
+                        {
+                            contentType = request.second;
+                        }
+                        else
+                        {
+                            requestMessage.Headers().Append(winrt::to_hstring(request.first), winrt::to_hstring(request.second));
+                        }
+                    }
+
+                    m_requestHeaders.clear();
+
+                    // check the method 
+                    if (m_method == UrlMethod::Post)
+                    {
+                        // if post, set the content type
+                        requestMessage.Content(Web::Http::HttpStringContent(
+                            winrt::to_hstring(m_requestBody),
+                            winrt::Windows::Storage::Streams::UnicodeEncoding::Utf8,
+                            winrt::to_hstring(contentType))
+                        );
+                    }
+
                     Web::Http::HttpClient client;
                     return arcana::create_task<std::exception_ptr>(client.SendRequestAsync(requestMessage))
                         .then(arcana::inline_scheduler, m_cancellationSource, [this](Web::Http::HttpResponseMessage responseMessage)
@@ -99,6 +130,10 @@ namespace UrlLib
                             {
                                 m_headers.insert(std::make_pair(winrt::to_string(iter.Key()), winrt::to_string(iter.Value())));
                             }
+                            // process the content type response header
+                            std::string contentTypeValue = winrt::to_string(responseMessage.Content().Headers().ContentType().ToString());
+                            std::string contentTypeKey = "content-type";
+                            m_headers.insert(std::make_pair(contentTypeKey, contentTypeValue));
 
                             switch (m_responseType)
                             {

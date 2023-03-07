@@ -21,6 +21,31 @@ namespace UrlLib
             m_cancellationSource.cancel();
         }
 
+        void SetRequestBody(std::string requestBody) {
+            m_requestBody = requestBody;
+        }
+
+        void SetRequestHeader(std::string name, std::string value)
+        {
+            m_requestHeaders[name] = value;
+        }
+
+        const std::unordered_map<std::string, std::string>& GetAllResponseHeaders() const
+        {
+            return m_headers;
+        }
+
+        std::optional<std::string> GetResponseHeader(const std::string& headerName) const
+        {
+            const auto it = m_headers.find(ToLower(headerName.data()));
+            if (it == m_headers.end())
+            {
+                return {};
+            }
+
+            return it->second;
+        }
+
         UrlResponseType ResponseType() const
         {
             return m_responseType;
@@ -46,17 +71,6 @@ namespace UrlLib
             return m_responseString;
         }
 
-        std::optional<std::string> GetResponseHeader(const std::string& headerName) const
-        {
-            const auto it = m_headers.find(ToLower(headerName.data()));
-            if (it == m_headers.end())
-            {
-                return {};
-            }
-
-            return it->second;
-        }
-
     protected:
         static std::string ToLower(const char* str)
         {
@@ -77,5 +91,7 @@ namespace UrlLib
         std::string m_responseUrl{};
         std::string m_responseString{};
         std::unordered_map<std::string, std::string> m_headers;
+        std::string m_requestBody{};
+        std::unordered_map<std::string, std::string> m_requestHeaders;
     };
 }

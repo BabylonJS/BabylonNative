@@ -37,6 +37,26 @@ namespace UrlLib
         m_impl->ResponseType(value);
     }
 
+    void UrlRequest::SetRequestBody(std::string requestBody)
+    {
+        m_impl->SetRequestBody(requestBody);
+    }
+
+    void UrlRequest::SetRequestHeader(std::string key, std::string value)
+    {
+        m_impl->SetRequestHeader(key, value);
+    }
+
+    const std::unordered_map<std::string, std::string>& UrlRequest::GetAllResponseHeaders() const
+    {
+        return m_impl->GetAllResponseHeaders();
+    }
+
+    std::optional<std::string> UrlRequest::GetResponseHeader(const std::string& headerName) const
+    {
+        return m_impl->GetResponseHeader(headerName);
+    }
+
     arcana::task<void, std::exception_ptr> UrlRequest::SendAsync()
     {
         return m_impl->SendAsync();
@@ -60,10 +80,5 @@ namespace UrlLib
     gsl::span<const std::byte> UrlRequest::ResponseBuffer() const
     {
         return m_impl->ResponseBuffer();
-    }
-
-    std::optional<std::string> UrlRequest::GetResponseHeader(const std::string& headerName) const
-    {
-        return m_impl->GetResponseHeader(headerName);
     }
 }

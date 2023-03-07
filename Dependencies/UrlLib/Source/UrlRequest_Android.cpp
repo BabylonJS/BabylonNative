@@ -91,8 +91,33 @@ namespace UrlLib
                         URL url{m_appPathOrUrl.data()};
 
                         URLConnection connection{url.OpenConnection()};
-                        connection.Connect();
 
+                        // set request headers
+                        for (auto request : m_requestHeaders)
+                        {
+                            const std::string& key = request.first;
+                            const std::string& value = request.second;
+                            connection.SetRequestProperty(key, value);
+                        }
+                        m_requestHeaders.clear();
+
+                        // if this a POST request
+                        if (m_method == UrlMethod::Post)
+                        {
+                            ((HttpURLConnection)connection).SetRequestMethod("POST");
+                            connection.SetDoOutput(true);
+
+                            // need to manually set the content length of the request body
+                            size_t numBytes = m_requestBody.size();
+                            connection.SetRequestProperty("Content-Length", std::to_string(numBytes));
+
+                            OutputStream outputStream{connection.GetOutputStream()};
+                            OutputStreamWriter writer{outputStream};
+                            writer.Write(m_requestBody);
+                            writer.Close();
+                        }
+
+                        connection.Connect();
                         if (connection.GetClass().IsAssignableFrom(HttpURLConnection::Class()))
                         {
                             m_statusCode = static_cast<UrlStatusCode>(((HttpURLConnection)connection).GetResponseCode());

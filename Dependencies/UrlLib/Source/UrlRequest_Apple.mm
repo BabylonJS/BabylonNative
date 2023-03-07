@@ -52,6 +52,25 @@ namespace UrlLib
             NSURLSession* session{[NSURLSession sharedSession]};
             NSURLRequest* request{[NSURLRequest requestWithURL:m_url]};
 
+            NSMutableURLRequest* mutableRequest{[request mutableCopy]};
+
+            // set header requests
+            for (auto request: m_requestHeaders)
+            {
+                [mutableRequest setValue:@(request.second.data()) forHTTPHeaderField:@(request.first.data())];
+            }
+
+            if (m_method == UrlMethod::Post)
+            {
+                mutableRequest.HTTPMethod = @"POST";
+                // set the body
+                NSString* stringBody = [NSString stringWithUTF8String:m_requestBody.data()];
+                NSData* requestBodyData = [stringBody dataUsingEncoding:NSUTF8StringEncoding];
+                mutableRequest.HTTPBody = requestBodyData;
+            }
+
+            request = [mutableRequest copy];
+
             __block arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
 
             id completionHandler{^(NSData* data, NSURLResponse* response, NSError* error)
