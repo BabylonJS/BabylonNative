@@ -686,9 +686,11 @@ namespace Babylon
         return vertexSource;
     }
 
-    std::pair<bgfx::ProgramHandle,std::unordered_map<std::string,uint32_t>> NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource, ProgramData& program)
+    ProgramData NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource)
     {
         ShaderCompiler::BgfxShaderInfo shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
+
+        ProgramData program;
 
         static auto InitUniformInfos{
             [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex) {
@@ -714,7 +716,10 @@ namespace Babylon
         auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
         InitUniformInfos(fragmentShader, shaderInfo.UniformStages, program.UniformInfos, program.UniformNameToIndex);
 
-        return std::pair<bgfx::ProgramHandle, std::unordered_map<std::string, uint32_t>>{bgfx::createProgram(vertexShader, fragmentShader, true), std::move(shaderInfo.VertexAttributeLocations)};
+        program.Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
+        program.VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
+
+        return program;
     }
 
     Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
@@ -724,9 +729,7 @@ namespace Babylon
         ProgramData* program = new ProgramData{};
         try
         {
-            std::pair<bgfx::ProgramHandle, std::unordered_map<std::string, uint32_t>> programInfo = CreateProgramInternal(vertexSource, fragmentSource, *program);
-            program->Handle = programInfo.first;
-            program->VertexAttributeLocations = std::move(programInfo.second);
+            *program = CreateProgramInternal(vertexSource, fragmentSource);
         }
         catch (const std::exception& ex)
         {
@@ -742,13 +745,21 @@ namespace Babylon
         const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
         const Napi::Function onSuccess = info[2].As<Napi::Function>();
         const Napi::Function onError = info[3].As<Napi::Function>();
+
         ProgramData* program = new ProgramData{};
+        Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
+
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, vertexSource, fragmentSource, program, cancellationSource{m_cancellationSource}]() -> std::pair<bgfx::ProgramHandle, std::unordered_map<std::string, uint32_t>>
+            [this, vertexSource, fragmentSource, program, cancellationSource{m_cancellationSource}]() -> ProgramData
             {
-                return CreateProgramInternal(vertexSource, fragmentSource, *program);
+                return CreateProgramInternal(vertexSource, fragmentSource);
             })
-            .then(m_runtimeScheduler, *m_cancellationSource, [program, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<std::pair<bgfx::ProgramHandle, std::unordered_map<std::string, uint32_t>>, std::exception_ptr> result)
+            .then(m_runtimeScheduler, *m_cancellationSource,
+                [program,
+                jsProgramRef{Napi::Persistent(jsProgram)},
+                onSuccessRef{Napi::Persistent(onSuccess)},
+                onErrorRef{Napi::Persistent(onError)},
+                cancellationSource{m_cancellationSource}](arcana::expected<ProgramData, std::exception_ptr> result)
                 {
                     if (result.has_error())
                     {
@@ -756,13 +767,12 @@ namespace Babylon
                     }
                     else
                     {
-                        std::pair<bgfx::ProgramHandle, std::unordered_map<std::string, uint32_t>> programInfo = result.value();
-                        program->Handle = programInfo.first;
-                        program->VertexAttributeLocations = std::move(programInfo.second);
+                        *program = std::move(result.value());
                         onSuccessRef.Call({});
                     }
                 });
-        return Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
+
+        return jsProgram;
     }
 
     Napi::Value NativeEngine::GetUniforms(const Napi::CallbackInfo& info)

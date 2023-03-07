@@ -43,10 +43,25 @@ namespace Babylon
     struct ProgramData final
     {
         ProgramData() = default;
-        ProgramData(ProgramData&& other) = delete;
         ProgramData(const ProgramData&) = delete;
-        ProgramData& operator=(ProgramData&& other) = delete;
         ProgramData& operator=(const ProgramData& other) = delete;
+
+        ProgramData(ProgramData&& other) noexcept
+        {
+            (*this) = std::move(other);
+        }
+
+        ProgramData& operator=(ProgramData&& other) noexcept
+        {
+            Handle = std::move(other.Handle);
+            other.Handle = bgfx::ProgramHandle{bgfx::kInvalidHandle};
+            Disposed = std::move(other.Disposed);
+            Uniforms = std::move(other.Uniforms);
+            UniformNameToIndex = std::move(other.UniformNameToIndex);
+            UniformInfos = std::move(other.UniformInfos);
+            VertexAttributeLocations = std::move(other.VertexAttributeLocations);
+            return *this;
+        }
 
         ~ProgramData()
         {
@@ -120,7 +135,7 @@ namespace Babylon
         void DeleteVertexBuffer(NativeDataStream::Reader& data);
         void RecordVertexBuffer(const Napi::CallbackInfo& info);
         void UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info);
-        std::pair<bgfx::ProgramHandle, std::unordered_map<std::string, uint32_t>> CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource, ProgramData& program);
+        ProgramData CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource);
         Napi::Value CreateProgram(const Napi::CallbackInfo& info);
         Napi::Value CreateProgramAsync(const Napi::CallbackInfo& info);
         Napi::Value GetUniforms(const Napi::CallbackInfo& info);
