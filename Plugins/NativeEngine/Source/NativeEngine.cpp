@@ -686,11 +686,11 @@ namespace Babylon
         return vertexSource;
     }
 
-    ProgramData NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource)
+    std::unique_ptr<ProgramData> NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource)
     {
         ShaderCompiler::BgfxShaderInfo shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
 
-        ProgramData program;
+        std::unique_ptr<ProgramData> program = std::make_unique<ProgramData>();
 
         static auto InitUniformInfos{
             [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex) {
@@ -711,13 +711,13 @@ namespace Babylon
             }};
 
         auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
-        InitUniformInfos(vertexShader, shaderInfo.UniformStages, program.UniformInfos, program.UniformNameToIndex);
+        InitUniformInfos(vertexShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformNameToIndex);
 
         auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
-        InitUniformInfos(fragmentShader, shaderInfo.UniformStages, program.UniformInfos, program.UniformNameToIndex);
+        InitUniformInfos(fragmentShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformNameToIndex);
 
-        program.Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
-        program.VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
+        program->Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
+        program->VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
 
         return program;
     }
@@ -729,7 +729,7 @@ namespace Babylon
         ProgramData* program = new ProgramData{};
         try
         {
-            *program = CreateProgramInternal(vertexSource, fragmentSource);
+            *program = std::move(*CreateProgramInternal(vertexSource, fragmentSource).release());
         }
         catch (const std::exception& ex)
         {
@@ -750,7 +750,7 @@ namespace Babylon
         Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, vertexSource, fragmentSource, program, cancellationSource{m_cancellationSource}]() -> ProgramData
+            [this, vertexSource, fragmentSource, program, cancellationSource{m_cancellationSource}]() -> std::unique_ptr<ProgramData>
             {
                 return CreateProgramInternal(vertexSource, fragmentSource);
             })
@@ -759,7 +759,7 @@ namespace Babylon
                 jsProgramRef{Napi::Persistent(jsProgram)},
                 onSuccessRef{Napi::Persistent(onSuccess)},
                 onErrorRef{Napi::Persistent(onError)},
-                cancellationSource{m_cancellationSource}](arcana::expected<ProgramData, std::exception_ptr> result)
+                cancellationSource{m_cancellationSource}](const arcana::expected<std::unique_ptr<ProgramData>, std::exception_ptr>& result)
                 {
                     if (result.has_error())
                     {
@@ -767,7 +767,7 @@ namespace Babylon
                     }
                     else
                     {
-                        *program = std::move(result.value());
+                        *program = std::move(*result.value());
                         onSuccessRef.Call({});
                     }
                 });

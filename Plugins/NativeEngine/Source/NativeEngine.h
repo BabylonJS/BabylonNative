@@ -135,7 +135,7 @@ namespace Babylon
         void DeleteVertexBuffer(NativeDataStream::Reader& data);
         void RecordVertexBuffer(const Napi::CallbackInfo& info);
         void UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info);
-        ProgramData CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource);
+        std::unique_ptr<ProgramData> CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource);
         Napi::Value CreateProgram(const Napi::CallbackInfo& info);
         Napi::Value CreateProgramAsync(const Napi::CallbackInfo& info);
         Napi::Value GetUniforms(const Napi::CallbackInfo& info);
