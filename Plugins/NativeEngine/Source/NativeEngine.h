@@ -44,7 +44,7 @@ namespace Babylon
     {
         ProgramData() = default;
         ProgramData(const ProgramData&) = delete;
-        ProgramData& operator=(const ProgramData& other) = delete;
+        ProgramData& operator=(const ProgramData&) = delete;
 
         ProgramData(ProgramData&& other) noexcept:
             Handle{other.Handle},
