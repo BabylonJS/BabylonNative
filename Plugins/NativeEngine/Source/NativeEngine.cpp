@@ -750,7 +750,7 @@ namespace Babylon
         Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, vertexSource, fragmentSource, program, cancellationSource{m_cancellationSource}]() -> std::unique_ptr<ProgramData>
+            [this, vertexSource, fragmentSource, cancellationSource{m_cancellationSource}]() -> std::unique_ptr<ProgramData>
             {
                 return CreateProgramInternal(vertexSource, fragmentSource);
             })
