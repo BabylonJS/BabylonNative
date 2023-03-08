@@ -727,16 +727,16 @@ namespace Babylon
         const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
         const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
         ProgramData* program = new ProgramData{};
+        Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
         try
         {
             *program = std::move(*CreateProgramInternal(vertexSource, fragmentSource));
         }
         catch (const std::exception& ex)
         {
-            delete program;
             throw Napi::Error::New(info.Env(), ex.what());
         }
-        return Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
+        return jsProgram;
     }
 
     Napi::Value NativeEngine::CreateProgramAsync(const Napi::CallbackInfo& info)
