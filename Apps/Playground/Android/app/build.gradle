@@ -42,7 +42,7 @@ android {
         applicationId "com.android.babylonnative.playground"
         minSdkVersion "${platformVersion}"
         targetSdkVersion 28
-        ndkVersion "21.4.7075529"
+        ndkVersion "23.1.7779620"
         if (project.hasProperty("NDK_VERSION")) {
             def NDKVersion = project.property("NDK_VERSION")
             ndkVersion  "${NDK_VERSION}"
