@@ -756,10 +756,10 @@ namespace Babylon
             })
             .then(m_runtimeScheduler, *m_cancellationSource,
                 [program,
-                jsProgramRef{Napi::Persistent(jsProgram)},
-                onSuccessRef{Napi::Persistent(onSuccess)},
-                onErrorRef{Napi::Persistent(onError)},
-                cancellationSource{m_cancellationSource}](const arcana::expected<std::unique_ptr<ProgramData>, std::exception_ptr>& result)
+                    jsProgramRef{Napi::Persistent(jsProgram)},
+                    onSuccessRef{Napi::Persistent(onSuccess)},
+                    onErrorRef{Napi::Persistent(onError)},
+                    cancellationSource{m_cancellationSource}](const arcana::expected<std::unique_ptr<ProgramData>, std::exception_ptr>& result)
                 {
                     if (result.has_error())
                     {
