@@ -36,7 +36,7 @@ namespace Babylon
         }
 
         uint8_t Stage{};
-        bgfx::UniformHandle Handle = BGFX_INVALID_HANDLE;
+        bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
         size_t MaxElementLength{};
     };
 
@@ -81,7 +81,7 @@ namespace Babylon
             }
         }
 
-        bgfx::ProgramHandle Handle = BGFX_INVALID_HANDLE;
+        bgfx::ProgramHandle Handle{bgfx::kInvalidHandle};
 
         struct UniformValue
         {
