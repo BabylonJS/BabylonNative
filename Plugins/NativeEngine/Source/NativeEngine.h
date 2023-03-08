@@ -36,7 +36,7 @@ namespace Babylon
         }
 
         uint8_t Stage{};
-        bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
+        bgfx::UniformHandle Handle = BGFX_INVALID_HANDLE;
         size_t MaxElementLength{};
     };
 
@@ -53,13 +53,13 @@ namespace Babylon
             UniformInfos{std::move(other.UniformInfos)},
             VertexAttributeLocations{std::move(other.VertexAttributeLocations)}
         {
-            other.Handle = bgfx::ProgramHandle{bgfx::kInvalidHandle};
+            other.Handle = BGFX_INVALID_HANDLE;
         }
 
         ProgramData& operator=(ProgramData&& other) noexcept
         {
             Handle = std::move(other.Handle);
-            other.Handle = bgfx::ProgramHandle{bgfx::kInvalidHandle};
+            other.Handle = BGFX_INVALID_HANDLE;
             Uniforms = std::move(other.Uniforms);
             UniformNameToIndex = std::move(other.UniformNameToIndex);
             UniformInfos = std::move(other.UniformInfos);
@@ -77,11 +77,11 @@ namespace Babylon
             if (bgfx::isValid(Handle))
             {
                 bgfx::destroy(Handle);
-                Handle = bgfx::ProgramHandle{bgfx::kInvalidHandle};
+                Handle = BGFX_INVALID_HANDLE;
             }
         }
 
-        bgfx::ProgramHandle Handle{bgfx::kInvalidHandle};
+        bgfx::ProgramHandle Handle = BGFX_INVALID_HANDLE;
 
         struct UniformValue
         {
