@@ -74,15 +74,14 @@ namespace Babylon
 
         void Dispose()
         {
-            if (!Disposed && bgfx::isValid(Handle))
+            if (bgfx::isValid(Handle))
             {
                 bgfx::destroy(Handle);
+                Handle = bgfx::ProgramHandle{bgfx::kInvalidHandle};
             }
-            Disposed = true;
         }
 
         bgfx::ProgramHandle Handle{bgfx::kInvalidHandle};
-        bool Disposed{false};
 
         struct UniformValue
         {
