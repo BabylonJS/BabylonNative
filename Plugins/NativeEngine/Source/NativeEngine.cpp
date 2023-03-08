@@ -458,6 +458,7 @@ namespace Babylon
                 InstanceMethod("updateDynamicVertexBuffer", &NativeEngine::UpdateDynamicVertexBuffer),
 
                 InstanceMethod("createProgram", &NativeEngine::CreateProgram),
+                InstanceMethod("createProgramAsync", &NativeEngine::CreateProgramAsync),
                 InstanceMethod("getUniforms", &NativeEngine::GetUniforms),
                 InstanceMethod("getAttributes", &NativeEngine::GetAttributes),
 
@@ -687,22 +688,11 @@ namespace Babylon
         return vertexSource;
     }
 
-    Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
+    std::unique_ptr<ProgramData> NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource)
     {
-        const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
-        const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        ShaderCompiler::BgfxShaderInfo shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
 
-        ProgramData* program = new ProgramData{};
-        ShaderCompiler::BgfxShaderInfo shaderInfo{};
-
-        try
-        {
-            shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
-        }
-        catch (const std::exception& ex)
-        {
-            throw Napi::Error::New(info.Env(), ex.what());
-        }
+        std::unique_ptr<ProgramData> program = std::make_unique<ProgramData>();
 
         static auto InitUniformInfos{
             [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex) {
@@ -724,13 +714,67 @@ namespace Babylon
 
         auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
         InitUniformInfos(vertexShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformNameToIndex);
-        program->VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
 
         auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
         InitUniformInfos(fragmentShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformNameToIndex);
 
         program->Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
-        return Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
+        program->VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
+
+        return program;
+    }
+
+    Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
+    {
+        const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
+        const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        ProgramData* program = new ProgramData{};
+        Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
+        try
+        {
+            *program = std::move(*CreateProgramInternal(vertexSource, fragmentSource));
+        }
+        catch (const std::exception& ex)
+        {
+            throw Napi::Error::New(info.Env(), ex.what());
+        }
+        return jsProgram;
+    }
+
+    Napi::Value NativeEngine::CreateProgramAsync(const Napi::CallbackInfo& info)
+    {
+        const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
+        const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        const Napi::Function onSuccess = info[2].As<Napi::Function>();
+        const Napi::Function onError = info[3].As<Napi::Function>();
+
+        ProgramData* program = new ProgramData{};
+        Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
+
+        arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
+            [this, vertexSource, fragmentSource, cancellationSource{m_cancellationSource}]() -> std::unique_ptr<ProgramData>
+            {
+                return CreateProgramInternal(vertexSource, fragmentSource);
+            })
+            .then(m_runtimeScheduler, *m_cancellationSource,
+                [program,
+                    jsProgramRef{Napi::Persistent(jsProgram)},
+                    onSuccessRef{Napi::Persistent(onSuccess)},
+                    onErrorRef{Napi::Persistent(onError)},
+                    cancellationSource{m_cancellationSource}](const arcana::expected<std::unique_ptr<ProgramData>, std::exception_ptr>& result)
+                {
+                    if (result.has_error())
+                    {
+                        onErrorRef.Call({Napi::Error::New(onErrorRef.Env(), result.error()).Value()});
+                    }
+                    else
+                    {
+                        *program = std::move(*result.value());
+                        onSuccessRef.Call({});
+                    }
+                });
+
+        return jsProgram;
     }
 
     Napi::Value NativeEngine::GetUniforms(const Napi::CallbackInfo& info)
