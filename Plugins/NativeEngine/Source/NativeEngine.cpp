@@ -729,7 +729,7 @@ namespace Babylon
         ProgramData* program = new ProgramData{};
         try
         {
-            *program = std::move(*CreateProgramInternal(vertexSource, fragmentSource).release());
+            *program = std::move(*CreateProgramInternal(vertexSource, fragmentSource));
         }
         catch (const std::exception& ex)
         {
