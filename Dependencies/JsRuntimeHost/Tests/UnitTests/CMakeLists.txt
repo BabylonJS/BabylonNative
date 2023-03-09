@@ -46,6 +46,7 @@ target_link_libraries(UnitTests
     PRIVATE AbortController
     PRIVATE Scheduling
     PRIVATE ScriptLoader
+    PRIVATE URL
     PRIVATE UrlLib
     PRIVATE XMLHttpRequest
     ${ADDITIONAL_LIBRARIES})

@@ -261,6 +261,202 @@ describe("clearTimeout", function () {
     });
 });
 
+// URL
+describe("URL", function () {
+
+    // Currently all of the properties that the polyfill has implemented
+    function checkURL(url, {
+            href,
+            hostname,
+            origin,
+            pathname,
+            search
+        }) {
+        expect(url).to.have.property("hostname", hostname);
+        expect(url).to.have.property("href", href);
+        expect(url).to.have.property("origin", origin);
+        expect(url).to.have.property("pathname", pathname);
+        expect(url).to.have.property("search", search);
+    }
+
+    // Base URLs:
+    const baseUrl = 'http://httpbin.org';
+
+    it('should load URL with no pathname / search', function () {
+        // Standard URL (No pathname, no search)
+        const url = new URL(baseUrl);
+        checkURL(url, {
+            href: 'http://httpbin.org',  
+            hostname: 'httpbin.org',          
+            origin: 'http://httpbin.org',  
+            pathname: '',                               
+            search: ''
+        });
+    });
+
+    it("should load URL with pathname (no search)", function () {
+        // Augment URL with pathname (no search)
+        const url = new URL(`${baseUrl}/en-US/docs`);
+        checkURL(url, {
+            href: 'http://httpbin.org/en-US/docs', 
+            hostname: 'httpbin.org',                    
+            origin: 'http://httpbin.org',            
+            pathname: '/en-US/docs',                              
+            search: ''                                          
+        });
+    })
+
+    it("should load URL with pathname and search", function () {
+        // Augment URL with pathname and search
+        const url = new URL(`${baseUrl}/en-US/docs?foo=1&bar=2`);
+        checkURL(url, {
+            href: 'http://httpbin.org/en-US/docs?foo=1&bar=2',  
+            hostname: 'httpbin.org',                                
+            origin: 'http://httpbin.org',                         
+            pathname: '/en-US/docs',                                
+            search: '?foo=1&bar=2'                                
+        });
+    })
+
+    it("should load URL with pathname and search with multiple key value pairs", function () {
+        const url = new URL(`${baseUrl}/en-US/docs?c=3&b=2&a=1&d=4`);
+        checkURL(url, {
+            href: 'http://httpbin.org/en-US/docs?c=3&b=2&a=1&d=4', 
+            hostname: 'httpbin.org',                                   
+            origin: 'http://httpbin.org',                            
+            pathname: '/en-US/docs',                                   
+            search: '?c=3&b=2&a=1&d=4'                               
+        });
+    });
+
+
+    it("should update href after URLSearchParams are changed", function () {
+        // Augment URL with pathname and search
+        const url = new URL(`${baseUrl}/en-US/docs?foo=1&bar=2`);
+        url.searchParams.set('foo', 999);
+        // href should change to reflect searchParams change
+        checkURL(url, {
+            href: 'http://httpbin.org/en-US/docs?foo=999&bar=2', 
+            hostname: 'httpbin.org',                                 
+            origin: 'http://httpbin.org',                          
+            pathname: '/en-US/docs',                                 
+            search: '?foo=999&bar=2'                               
+        });
+    })
+
+    it("should update href after URLSearchParams are changed (Starting with 0 params)", function () {
+        // Augment URL with pathname and search
+        const url = new URL(`${baseUrl}/en-US/docs`);
+        url.searchParams.set('foo', 999);
+        // href should change to reflect searchParams change
+        checkURL(url, {
+            href: 'http://httpbin.org/en-US/docs?foo=999', 
+            hostname: 'httpbin.org',                           
+            origin: 'http://httpbin.org',                    
+            pathname: '/en-US/docs',                           
+            search: '?foo=999'                               
+        });
+    })
+})
+
+// URLSearchParams
+describe("URLSearchParams", function () {
+
+    // -------------------------------- URLSearchParams Get --------------------------------
+
+    it("should retrieve null from empty searchParams", function () {
+        // Get Empty
+        const params = new URLSearchParams('');
+
+        expect(params.get('foo')).to.equal(null);
+    })
+
+    it("should retrieve value from searchParams", function () {
+        // Get Value
+        const params = new URLSearchParams('?foo=1');
+
+        expect(params.get('foo')).to.equal('1');
+    })
+
+    // -------------------------------- URLSearchParams Set --------------------------------
+
+    let paramsSet = new URLSearchParams('');
+
+    it("should throw exception when trying to set with less than 2 parameters", function () {
+        expect(() => paramsSet.set()).to.throw();
+	})
+
+    it("should add a number and retrieve it as a string from searchParams", function () {
+        // Set Number
+        paramsSet.set('foo', 400);
+        expect(paramsSet.get('foo')).to.equal('400');
+    })
+
+    it("should add a string and retrieve it as a string from searchParams", function () {
+        // Set String
+        paramsSet.set('bar', '50');
+        expect(paramsSet.get('bar')).to.equal('50');
+    })
+
+    it("should add a boolean and retrieve it as a string from searchParams", function () {
+        // Set Boolean
+        paramsSet.set('baz', true);
+        expect(paramsSet.get('baz')).to.equal('true');
+    })
+
+    it("should set an existing number and retrieve it as a string from searchParams", function () {
+        // Set Existing Value
+        paramsSet.set('foo', 9999);
+        expect(paramsSet.get('foo')).to.equal('9999');
+    })
+
+    // -------------------------------- URLSearchParams Has --------------------------------
+
+    let paramsHas = new URLSearchParams('?foo=1');
+
+    it("should check value is in searchParams (True)", function () {
+        // Check existing value
+        expect(paramsHas.has('foo')).to.equal(true);
+    })
+
+    it("should check value is in searchParams (False)", function () {
+        // Check non-existing value
+        expect(paramsHas.has('Microsoft')).to.equal(false);
+    })
+
+    it("should check empty searchParams for value (False)", function () {
+        // Check empty params
+        paramsHas = new URLSearchParams('');
+
+        expect(paramsHas.has('foo')).to.equal(false);
+    })
+
+    // -------------------------------- URLSearchParams Construction --------------------------------
+
+    const url = new URL('https://example.com?foo=1&bar=2');
+
+    it("should retrieve search params set at construction", function () {
+        // Retrieve params via url.search, passed into ctor
+        const params1 = new URLSearchParams(url.search);
+        expect(params1.get('foo')).to.equal('1');
+        expect(params1.get('bar')).to.equal('2');
+    })
+
+    it("should retrieve search params from url.searchParams object", function () {
+        // Get the URLSearchParams object directly from an URL object
+        const params1a = url.searchParams
+        expect(params1a.get('foo')).to.equal('1');
+        expect(params1a.get('bar')).to.equal('2');
+    })
+
+    it("should retrieve search params string constructed URLSearchParams", function () {
+        // Pass in a string literal
+        const params2 = new URLSearchParams("foo=1&bar=2");
+        expect(params2.get('foo')).to.equal('1');
+        expect(params2.get('bar')).to.equal('2');
+    })
+})
+
 mocha.run(failures => {
     // Test program will wait for code to be set before exiting
     if (failures > 0) {
