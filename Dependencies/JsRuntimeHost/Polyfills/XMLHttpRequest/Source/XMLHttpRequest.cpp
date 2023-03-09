@@ -39,11 +39,14 @@ namespace Babylon::Polyfills::Internal
         namespace MethodType
         {
             constexpr const char* Get = "GET";
+            constexpr const char* Post = "POST";
 
             UrlLib::UrlMethod StringToEnum(const std::string& value)
             {
                 if (value == Get)
                     return UrlLib::UrlMethod::Get;
+                else if (value == Post)
+                    return UrlLib::UrlMethod::Post;
 
                 throw std::runtime_error{"Unsupported url method: " + value};
             }
@@ -77,7 +80,9 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("responseType", &XMLHttpRequest::GetResponseType, &XMLHttpRequest::SetResponseType),
                 InstanceAccessor("responseURL", &XMLHttpRequest::GetResponseURL, nullptr),
                 InstanceAccessor("status", &XMLHttpRequest::GetStatus, nullptr),
+                InstanceMethod("getAllResponseHeaders", &XMLHttpRequest::GetAllResponseHeaders),
                 InstanceMethod("getResponseHeader", &XMLHttpRequest::GetResponseHeader),
+                InstanceMethod("setRequestHeader", &XMLHttpRequest::SetRequestHeader),
                 InstanceMethod("addEventListener", &XMLHttpRequest::AddEventListener),
                 InstanceMethod("removeEventListener", &XMLHttpRequest::RemoveEventListener),
                 InstanceMethod("abort", &XMLHttpRequest::Abort),
@@ -106,10 +111,17 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value XMLHttpRequest::GetResponse(const Napi::CallbackInfo&)
     {
-        const gsl::span<const std::byte> responseBuffer{m_request.ResponseBuffer()};
-        const auto arrayBuffer{Napi::ArrayBuffer::New(Env(), responseBuffer.size())};
-        std::memcpy(arrayBuffer.Data(), responseBuffer.data(), arrayBuffer.ByteLength());
-        return std::move(arrayBuffer);
+        if (m_request.ResponseType() == UrlLib::UrlResponseType::String)
+        {
+            return Napi::Value::From(Env(), m_request.ResponseString().data());
+        }
+        else
+        {
+            gsl::span<const std::byte> responseBuffer{ m_request.ResponseBuffer() };
+            auto arrayBuffer{ Napi::ArrayBuffer::New(Env(), responseBuffer.size()) };
+            std::memcpy(arrayBuffer.Data(), responseBuffer.data(), arrayBuffer.ByteLength());
+            return std::move(arrayBuffer);
+        }
     }
 
     Napi::Value XMLHttpRequest::GetResponseText(const Napi::CallbackInfo&)
@@ -127,13 +139,6 @@ namespace Babylon::Polyfills::Internal
         m_request.ResponseType(ResponseType::StringToEnum(value.As<Napi::String>().Utf8Value()));
     }
 
-    Napi::Value XMLHttpRequest::GetResponseHeader(const Napi::CallbackInfo& info)
-    {
-        const auto headerName = info[0].As<Napi::String>().Utf8Value();
-        const auto header = m_request.GetResponseHeader(headerName);
-        return header ? Napi::Value::From(Env(), header.value()) : info.Env().Null();
-    }
-
     Napi::Value XMLHttpRequest::GetResponseURL(const Napi::CallbackInfo&)
     {
         return Napi::Value::From(Env(), m_request.ResponseUrl().data());
@@ -142,6 +147,33 @@ namespace Babylon::Polyfills::Internal
     Napi::Value XMLHttpRequest::GetStatus(const Napi::CallbackInfo&)
     {
         return Napi::Value::From(Env(), arcana::underlying_cast(m_request.StatusCode()));
+    }
+
+    Napi::Value XMLHttpRequest::GetResponseHeader(const Napi::CallbackInfo& info)
+    {
+        const auto headerName = info[0].As<Napi::String>().Utf8Value();
+        const auto header = m_request.GetResponseHeader(headerName);
+        return header ? Napi::Value::From(Env(), header.value()) : info.Env().Null();
+    }
+
+    Napi::Value XMLHttpRequest::GetAllResponseHeaders(const Napi::CallbackInfo&)
+    {
+        auto responseHeaders = m_request.GetAllResponseHeaders();
+        Napi::Object responseHeadersObject = Napi::Object::New(Env());
+
+        for (auto& iter : responseHeaders)
+        {
+            auto key = Napi::String::New(Env(), iter.first);
+            auto value = Napi::String::New(Env(), iter.second);
+            responseHeadersObject.Set(key, value);
+        }
+
+        return responseHeadersObject;
+    }
+
+    void XMLHttpRequest::SetRequestHeader(const Napi::CallbackInfo& info)
+    {
+        m_request.SetRequestHeader(info[0].As<Napi::String>().Utf8Value(), info[1].As<Napi::String>().Utf8Value());
     }
 
     void XMLHttpRequest::AddEventListener(const Napi::CallbackInfo& info)
@@ -210,6 +242,19 @@ namespace Babylon::Polyfills::Internal
         if (m_readyState != ReadyState::Opened)
         {
             throw Napi::Error::New(info.Env(), "XMLHttpRequest must be opened before it can be sent");
+        }
+
+        if (info.Length() > 0)
+        {
+            if (!info[0].IsString() && !info[0].IsUndefined() && !info[0].IsNull())
+            {
+                throw Napi::Error::New(info.Env(), "Only strings are supported in XMLHttpRequest body");
+            }
+
+            if (info[0].IsString())
+            {
+                m_request.SetRequestBody(info[0].As<Napi::String>().Utf8Value());
+            }
         }
 
         m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result)

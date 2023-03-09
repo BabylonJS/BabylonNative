@@ -34,12 +34,22 @@ describe("AbortController", function () {
 })
 
 describe("XMLHTTPRequest", function () {
-    function createRequest(method, url) {
+    function createRequest(method, url, body) {
         return new Promise((resolve) => {
             const xhr = new XMLHttpRequest();
             xhr.open(method, url);
             xhr.addEventListener("loadend", () => resolve(xhr));
-            xhr.send();
+            xhr.send(body);
+        });
+    }
+
+    function createRequestWithHeaders(method, url, headers, body) {
+        return new Promise((resolve) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open(method, url);
+            headers.forEach((value, key) => xhr.setRequestHeader(key, value));
+            xhr.addEventListener("loadend", () => resolve(xhr));
+            xhr.send(body);
         });
     }
 
@@ -99,6 +109,32 @@ describe("XMLHTTPRequest", function () {
             xhr.send();
         }
         expect(sendWithoutOpening).to.throw();
+    });
+
+    it("should make a POST request with no body successfully", async function () {
+        const xhr = await createRequest("POST", "https://httpbin.org/post");
+        expect(xhr).to.have.property('readyState', 4);
+        expect(xhr).to.have.property('status', 200);
+    });
+
+    it("should make a POST request with body successfully", async function () {
+        const xhr = await createRequest("POST", "https://httpbin.org/post", "sampleBody");
+        expect(xhr).to.have.property('readyState', 4);
+        expect(xhr).to.have.property('status', 200);
+    });
+
+    it("should make a GET request with headers successfully", async function () {
+        const headersMap = new Map([['foo', '3'], ['bar', '3']]);
+        const xhr = await createRequestWithHeaders("GET", "https://httpbin.org/get", headersMap);
+        expect(xhr).to.have.property('readyState', 4);
+        expect(xhr).to.have.property('status', 200);
+    });
+
+    it("should make a POST request with body and headers successfully", async function () {
+        const headersMap = new Map([['foo', '3'], ['bar', '3']]);
+        const xhr = await createRequestWithHeaders("POST", "https://httpbin.org/post", headersMap, "testBody");
+        expect(xhr).to.have.property('readyState', 4);
+        expect(xhr).to.have.property('status', 200);
     });
 });
 
