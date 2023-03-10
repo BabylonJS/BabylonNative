@@ -45,6 +45,7 @@
         {
             "title": "Glow layer and LODs",
             "playgroundId": "#UNS6ZV#2",
+            "renderCount": 5,
             "referenceImage": "glowlayerandlods.png"
         },
         {
@@ -207,6 +208,7 @@
         {
             "title": "Billboard",
             "playgroundId": "#UJEIL#13",
+            "renderCount": 20,
             "referenceImage": "Billboard.png"
         },
         {
