@@ -24,6 +24,21 @@ apply plugin: 'com.android.library'
 
 def extractedLibDir = "${buildDir}/lib"
 
+def REACT_VERSION = 64
+def reactProperties = new Properties()
+def propertiesFile = file("$projectDir/../../../react-native/ReactAndroid/gradle.properties")
+if ( propertiesFile.isFile() ) {
+    def propertiesStream = new FileInputStream(propertiesFile)
+    reactProperties.load(propertiesStream)
+    REACT_VERSION = reactProperties.getProperty("VERSION_NAME").split("\\.")[1].toInteger()
+}
+
+def cpp_distribution = (REACT_VERSION >= 71) ? "c++_shared" : "c++_static";
+
+if (REACT_VERSION >= 71) {
+    DEFAULT_NDK_VERSION = '23.1.7779620'
+}
+
 buildscript {
     // The Android Gradle plugin is only required when opening the android folder stand-alone.
     // This avoids unnecessary downloads and potential conflicts when the library is included as a
@@ -61,7 +76,7 @@ android {
         externalNativeBuild {
             cmake {
                 abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
-                arguments '-DANDROID_STL=c++_static',
+                arguments "-DANDROID_STL=${cpp_distribution}",
                         "-DGRAPHICS_API=${graphics_api}",
                         "-DARCORE_LIBPATH=${extractedLibDir}/core-1.22.0.aar/jni",
                         "-DFBJNI_INCPATH=${extractedLibDir}/fbjni-0.3.0-headers.jar/",
@@ -97,6 +112,9 @@ android {
             version '3.19.6'
             path 'CMakeLists.txt'
         }
+    }
+    buildFeatures {
+        prefab true
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
