@@ -88,7 +88,7 @@ namespace Babylon::Graphics
                 init.resolution.reset |= BGFX_RESET_MSAA_X16;
                 break;
             default:
-                m_bgfxCallback.trace(__FILE__, __LINE__,  "WARNING: Setting an incorrect value for SetMSAA (%d). Correct values are 0, 1 (disable MSAA) or 2, 4, 8, 16.", int(value));
+                m_bgfxCallback.trace(__FILE__, __LINE__, "WARNING: Setting an incorrect value for SetMSAA (%d). Correct values are 0, 1 (disable MSAA) or 2, 4, 8, 16.", int(value));
                 break;
         }
     }
@@ -233,7 +233,7 @@ namespace Babylon::Graphics
                 value.Lock();
             }
         }
-        
+
         arcana::trace_region finishRenderingRegion{"DeviceImpl::FinishRenderingCurrentFrame"};
 
         assert(m_renderThreadAffinity.check());

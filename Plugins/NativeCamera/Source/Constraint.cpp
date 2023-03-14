@@ -1,8 +1,10 @@
 #include "Constraint.h"
 
-namespace Babylon::Plugins::Constraint {
+namespace Babylon::Plugins::Constraint
+{
     template<>
-    ConstraintValue<bool> ParseConstraint<bool>(Napi::Value value) {
+    ConstraintValue<bool> ParseConstraint<bool>(Napi::Value value)
+    {
         std::optional<bool> ideal{}, exact{};
 
         if (value.IsBoolean())
@@ -26,12 +28,14 @@ namespace Babylon::Plugins::Constraint {
     }
 
     template<>
-    Napi::Value AsNapiValue<bool>(Napi::Env env, bool value) {
+    Napi::Value AsNapiValue<bool>(Napi::Env env, bool value)
+    {
         return Napi::Boolean::New(env, value);
     }
 
     template<>
-    ConstraintValue<std::string> ParseConstraint<std::string>(Napi::Value value) {
+    ConstraintValue<std::string> ParseConstraint<std::string>(Napi::Value value)
+    {
         std::optional<std::string> ideal{}, exact{};
 
         if (value.IsString())
@@ -55,7 +59,8 @@ namespace Babylon::Plugins::Constraint {
     }
 
     template<>
-    Napi::Value AsNapiValue<std::string>(Napi::Env env, std::string value) {
+    Napi::Value AsNapiValue<std::string>(Napi::Env env, std::string value)
+    {
         return Napi::String::New(env, value);
     }
 

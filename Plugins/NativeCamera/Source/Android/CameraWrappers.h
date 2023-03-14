@@ -12,6 +12,13 @@
 #define __ORIG_ANDROID_API__ __ANDROID_API__
 #undef __ANDROID_API__
 #define __ANDROID_API__ 24
+
+// __INTRODUCED_IN changed in NDK newer than 21.4.7075529 so that it's impossible just to specify method names.
+// auto cameraManager{GET_CAMERA_FUNCTION(ACameraManager_create)()}; will produce an error even if the method is
+// not called explicitely.
+// A fix is to remove that #define. It's only meant to be done here, in the Android Camera context.
+#undef __INTRODUCED_IN
+#define __INTRODUCED_IN(x)
 namespace API24
 {
     #include <camera/NdkCameraManager.h>

@@ -161,7 +161,7 @@ namespace Babylon::Polyfills::Internal
             {"white", 0xffffff},
             {"whitesmoke", 0xf5f5f5},
             {"yellow", 0xffff00},
-            {"yellowgreen", 0x9acd32} };
+            {"yellowgreen", 0x9acd32}};
 
         if (str == "transparent" || !str.length())
         {
@@ -192,7 +192,7 @@ namespace Babylon::Polyfills::Internal
                 default:
                     throw Napi::Error::New(env, std::string{"Unable to parse color : "} + str);
             }
-            
+
             if (bitShift)
             {
                 for (int i = 0; i < count; i++)
@@ -210,14 +210,14 @@ namespace Babylon::Polyfills::Internal
                 uint32_t color = iter->second;
                 return nvgRGBA((color >> 16), (color >> 8) & 0xFF, (color & 0xFF), 0xFF);
             }
-            
+
             // matches strings of the form rgb(#,#,#) or rgba(#,#,#,#)
             static const std::regex rgbRegex("rgba?\\(\\s*(-?\\d{1,3})\\s*,\\s*(-?\\d{1,3})\\s*,\\s*(-?\\d{1,3})\\s*(?:,\\s*(-?\\d{1,3}))?\\s*\\)");
             std::smatch rgbMatch;
             if (std::regex_match(str, rgbMatch, rgbRegex))
             {
                 if (rgbMatch.size() == 5)
-                { 
+                {
                     if (rgbMatch[4].matched)
                     {
                         return nvgRGBA(std::clamp(std::stoi(rgbMatch[1]), 0, 255), std::clamp(std::stoi(rgbMatch[2]), 0, 255), std::clamp(std::stoi(rgbMatch[3]), 0, 255), std::clamp(std::stoi(rgbMatch[4]), 0, 255));

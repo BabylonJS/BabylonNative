@@ -21,6 +21,8 @@
 #include <stb/stb_image_resize.h>
 #include <bx/math.h>
 
+#include <cmath>
+
 namespace Babylon
 {
     namespace
@@ -287,7 +289,7 @@ namespace Babylon
             }
         }
 
-        using CommandFunctionPointerT = void(NativeEngine::*)(NativeDataStream::Reader&);
+        using CommandFunctionPointerT = void (NativeEngine::*)(NativeDataStream::Reader&);
     }
 
     void NativeEngine::Initialize(Napi::Env env)
@@ -297,13 +299,12 @@ namespace Babylon
 
         auto limits = bgfx::getCaps()->limits;
 
-        // clang-format off
         Napi::Function func = DefineClass(
             env,
             JS_CLASS_NAME,
             {
                 // This must match the version in nativeEngine.ts
-                StaticValue("PROTOCOL_VERSION", Napi::Number::From(env, 7)),
+                StaticValue("PROTOCOL_VERSION", Napi::Number::From(env, 8)),
 
                 StaticValue("CAPS_LIMITS_MAX_TEXTURE_SIZE", Napi::Number::From(env, limits.maxTextureSize)),
                 StaticValue("CAPS_LIMITS_MAX_TEXTURE_LAYERS", Napi::Number::From(env, limits.maxTextureLayers)),
@@ -440,6 +441,7 @@ namespace Babylon
                 StaticValue("COMMAND_DRAW", Napi::FunctionPointer::Create(env, &NativeEngine::Draw)),
                 StaticValue("COMMAND_CLEAR", Napi::FunctionPointer::Create(env, &NativeEngine::Clear)),
                 StaticValue("COMMAND_SETSTENCIL", Napi::FunctionPointer::Create(env, &NativeEngine::SetStencil)),
+                StaticValue("COMMAND_SETVIEWPORT", Napi::FunctionPointer::Create(env, &NativeEngine::SetViewPort)),
 
                 InstanceMethod("dispose", &NativeEngine::Dispose),
 
@@ -456,6 +458,7 @@ namespace Babylon
                 InstanceMethod("updateDynamicVertexBuffer", &NativeEngine::UpdateDynamicVertexBuffer),
 
                 InstanceMethod("createProgram", &NativeEngine::CreateProgram),
+                InstanceMethod("createProgramAsync", &NativeEngine::CreateProgramAsync),
                 InstanceMethod("getUniforms", &NativeEngine::GetUniforms),
                 InstanceMethod("getAttributes", &NativeEngine::GetAttributes),
 
@@ -482,15 +485,12 @@ namespace Babylon
                 InstanceMethod("getHardwareScalingLevel", &NativeEngine::GetHardwareScalingLevel),
                 InstanceMethod("setHardwareScalingLevel", &NativeEngine::SetHardwareScalingLevel),
 
-                InstanceMethod("setViewPort", &NativeEngine::SetViewPort),
-
                 InstanceMethod("setCommandDataStream", &NativeEngine::SetCommandDataStream),
                 InstanceMethod("submitCommands", &NativeEngine::SubmitCommands),
 
                 // REVIEW: Should this be here if only used by ValidationTest?
                 InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
             });
-        // clang-format on
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
     }
@@ -688,26 +688,14 @@ namespace Babylon
         return vertexSource;
     }
 
-    Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
+    std::unique_ptr<ProgramData> NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource)
     {
-        const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
-        const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        ShaderCompiler::BgfxShaderInfo shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
 
-        ProgramData* program = new ProgramData{};
-        ShaderCompiler::BgfxShaderInfo shaderInfo{};
-
-        try
-        {
-            shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
-        }
-        catch (const std::exception& ex)
-        {
-            throw Napi::Error::New(info.Env(), ex.what());
-        }
+        std::unique_ptr<ProgramData> program = std::make_unique<ProgramData>();
 
         static auto InitUniformInfos{
-            [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex)
-            {
+            [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex) {
                 auto numUniforms = bgfx::getShaderUniforms(shader);
                 std::vector<bgfx::UniformHandle> uniforms{numUniforms};
                 bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
@@ -726,13 +714,67 @@ namespace Babylon
 
         auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
         InitUniformInfos(vertexShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformNameToIndex);
-        program->VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
 
         auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
         InitUniformInfos(fragmentShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformNameToIndex);
 
         program->Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
-        return Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
+        program->VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
+
+        return program;
+    }
+
+    Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
+    {
+        const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
+        const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        ProgramData* program = new ProgramData{};
+        Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
+        try
+        {
+            *program = std::move(*CreateProgramInternal(vertexSource, fragmentSource));
+        }
+        catch (const std::exception& ex)
+        {
+            throw Napi::Error::New(info.Env(), ex.what());
+        }
+        return jsProgram;
+    }
+
+    Napi::Value NativeEngine::CreateProgramAsync(const Napi::CallbackInfo& info)
+    {
+        const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
+        const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        const Napi::Function onSuccess = info[2].As<Napi::Function>();
+        const Napi::Function onError = info[3].As<Napi::Function>();
+
+        ProgramData* program = new ProgramData{};
+        Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
+
+        arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
+            [this, vertexSource, fragmentSource, cancellationSource{m_cancellationSource}]() -> std::unique_ptr<ProgramData>
+            {
+                return CreateProgramInternal(vertexSource, fragmentSource);
+            })
+            .then(m_runtimeScheduler, *m_cancellationSource,
+                [program,
+                    jsProgramRef{Napi::Persistent(jsProgram)},
+                    onSuccessRef{Napi::Persistent(onSuccess)},
+                    onErrorRef{Napi::Persistent(onError)},
+                    cancellationSource{m_cancellationSource}](const arcana::expected<std::unique_ptr<ProgramData>, std::exception_ptr>& result)
+                {
+                    if (result.has_error())
+                    {
+                        onErrorRef.Call({Napi::Error::New(onErrorRef.Env(), result.error()).Value()});
+                    }
+                    else
+                    {
+                        *program = std::move(*result.value());
+                        onSuccessRef.Call({});
+                    }
+                });
+
+        return jsProgram;
     }
 
     Napi::Value NativeEngine::GetUniforms(const Napi::CallbackInfo& info)
@@ -797,8 +839,8 @@ namespace Babylon
     {
         const bool culling = data.ReadUint32();
         // TODO: zOffset
-        /*const float zOffset =*/ data.ReadFloat32();
-        /*const float zOffsetUnits =*/ data.ReadFloat32();
+        /*const float zOffset =*/data.ReadFloat32();
+        /*const float zOffsetUnits =*/data.ReadFloat32();
         const bool cullBackFaces = data.ReadUint32();
         const bool reverseSide = data.ReadUint32();
 
@@ -818,14 +860,14 @@ namespace Babylon
 
     void NativeEngine::SetZOffset(NativeDataStream::Reader& data)
     {
-        /*const auto zOffset =*/ data.ReadFloat32();
+        /*const auto zOffset =*/data.ReadFloat32();
 
         // STUB: Stub.
     }
 
     void NativeEngine::SetZOffsetUnits(NativeDataStream::Reader& data)
     {
-        /*const auto zOffsetUnits =*/ data.ReadFloat32();
+        /*const auto zOffsetUnits =*/data.ReadFloat32();
 
         // STUB: Stub.
     }
@@ -861,7 +903,7 @@ namespace Babylon
         m_engineState &= ~BGFX_STATE_BLEND_MASK;
         m_engineState |= blendMode;
     }
-    
+
     void NativeEngine::SetInt(NativeDataStream::Reader& data)
     {
         const auto& uniformInfo{*data.ReadPointer<UniformInfo>()};
@@ -1096,10 +1138,11 @@ namespace Babylon
 
         Graphics::DeviceContext& context = Graphics::DeviceContext::GetFromJavaScript(info.Env());
 
-        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [&context, this, flipY, textureDestination, textureSource, cancellationSource = m_cancellationSource]()
-        {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [&context, this, flipY, textureDestination, textureSource, updateToken = m_update.GetUpdateToken(), cancellationSource = m_cancellationSource]()
-            {
+        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, textureDestination, textureSource, flipY, &context, cancellationSource = m_cancellationSource]() {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, textureDestination, textureSource, flipY, &context, updateToken = m_update.GetUpdateToken(), cancellationSource = m_cancellationSource]() {
+                bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
+                GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
+
                 bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
 
                 // Flip texture in memory (maybe there is a way for bgfx to allow flipping to happen on the GPU?)
@@ -1145,7 +1188,8 @@ namespace Babylon
                 {
                     GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
                 }
-            }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{ m_cancellationSource }](const arcana::expected<void, std::exception_ptr>& result) {
+
+            }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
                 if (!cancellationSource->cancelled() && result.has_error())
                 {
                     Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
@@ -1208,7 +1252,7 @@ namespace Babylon
 
             uint8_t* dataPtr = static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset();
             size_t dataSize = data.ByteLength();
-            
+
             size_t textureSize = dataSize / static_cast<size_t>(depth);
 
             for (uint16_t i = 0; i < depth; i++)
@@ -1343,8 +1387,8 @@ namespace Babylon
         auto addressModeW = data.ReadUint32();
 
         uint32_t addressMode = addressModeU +
-            (addressModeV << BGFX_SAMPLER_V_SHIFT) +
-            (addressModeW << BGFX_SAMPLER_W_SHIFT);
+                               (addressModeV << BGFX_SAMPLER_V_SHIFT) +
+                               (addressModeW << BGFX_SAMPLER_W_SHIFT);
 
         uint32_t flags = texture.SamplerFlags();
         flags &= ~(BGFX_SAMPLER_U_MASK | BGFX_SAMPLER_V_MASK | BGFX_SAMPLER_W_MASK);
@@ -1457,58 +1501,61 @@ namespace Babylon
             std::vector<uint8_t> textureBuffer(sourceTextureInfo.storageSize);
 
             // Read the source texture.
-            m_graphicsContext.ReadTextureAsync(sourceTextureHandle, textureBuffer, mipLevel).then(arcana::inline_scheduler, *m_cancellationSource, [this, textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
-                // If the source texture format does not match the target texture format, convert it.
-                if (targetTextureInfo.format != sourceTextureInfo.format)
-                {
-                    std::vector<uint8_t> convertedTextureBuffer(targetTextureInfo.storageSize);
-                    if (!bimg::imageConvert(&m_allocator, convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
+            m_graphicsContext.ReadTextureAsync(sourceTextureHandle, textureBuffer, mipLevel)
+                .then(arcana::inline_scheduler, *m_cancellationSource, [this, textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
+                    // If the source texture format does not match the target texture format, convert it.
+                    if (targetTextureInfo.format != sourceTextureInfo.format)
                     {
-                        throw std::runtime_error{"Texture conversion to RBGA8 failed."};
+                        std::vector<uint8_t> convertedTextureBuffer(targetTextureInfo.storageSize);
+                        if (!bimg::imageConvert(&m_allocator, convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
+                        {
+                            throw std::runtime_error{"Texture conversion to RBGA8 failed."};
+                        }
+                        textureBuffer = convertedTextureBuffer;
                     }
-                    textureBuffer = convertedTextureBuffer;
-                }
 
-                // Ensure the final texture buffer has the expected size.
-                assert(textureBuffer.size() == targetTextureInfo.storageSize);
+                    // Ensure the final texture buffer has the expected size.
+                    assert(textureBuffer.size() == targetTextureInfo.storageSize);
 
-                // Flip the image vertically if needed.
-                if (bgfx::getCaps()->originBottomLeft)
-                {
-                    FlipImage(textureBuffer, targetTextureInfo.height);
-                }
+                    // Flip the image vertically if needed.
+                    if (bgfx::getCaps()->originBottomLeft)
+                    {
+                        FlipImage(textureBuffer, targetTextureInfo.height);
+                    }
 
-                return textureBuffer;
-            }).then(m_runtimeScheduler, *m_cancellationSource, [this, bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred, tempTexture, sourceTextureHandle](std::vector<uint8_t> textureBuffer) mutable {
-              // Double check the destination buffer length. This is redundant with prior checks, but we'll be extra sure before the memcpy.
-              assert(bufferRef.Value().ByteLength() - bufferOffset >= textureBuffer.size());
+                    return textureBuffer;
+                })
+                .then(m_runtimeScheduler, *m_cancellationSource, [this, bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred, tempTexture, sourceTextureHandle](std::vector<uint8_t> textureBuffer) mutable {
+                    // Double check the destination buffer length. This is redundant with prior checks, but we'll be extra sure before the memcpy.
+                    assert(bufferRef.Value().ByteLength() - bufferOffset >= textureBuffer.size());
 
-              // Copy the pixel data into the JS ArrayBuffer.
-              uint8_t* buffer{static_cast<uint8_t*>(bufferRef.Value().Data())};
-              std::memcpy(buffer + bufferOffset, textureBuffer.data(), textureBuffer.size());
+                    // Copy the pixel data into the JS ArrayBuffer.
+                    uint8_t* buffer{static_cast<uint8_t*>(bufferRef.Value().Data())};
+                    std::memcpy(buffer + bufferOffset, textureBuffer.data(), textureBuffer.size());
 
-              // Dispose of the texture handle before resolving the promise.
-              // TODO: Handle properly handle stale handles after BGFX shutdown
-              if (tempTexture && !m_cancellationSource->cancelled())
-              {
-                  bgfx::destroy(sourceTextureHandle);
-                  tempTexture = false;
-              }
+                    // Dispose of the texture handle before resolving the promise.
+                    // TODO: Handle properly handle stale handles after BGFX shutdown
+                    if (tempTexture && !m_cancellationSource->cancelled())
+                    {
+                        bgfx::destroy(sourceTextureHandle);
+                        tempTexture = false;
+                    }
 
-              deferred.Resolve(bufferRef.Value());
-            }).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
-              // Dispose of the texture handle if not yet disposed.
-              // TODO: Handle properly handle stale handles after BGFX shutdown
-              if (tempTexture && !m_cancellationSource->cancelled())
-              {
-                  bgfx::destroy(sourceTextureHandle);
-              }
+                    deferred.Resolve(bufferRef.Value());
+                })
+                .then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
+                    // Dispose of the texture handle if not yet disposed.
+                    // TODO: Handle properly handle stale handles after BGFX shutdown
+                    if (tempTexture && !m_cancellationSource->cancelled())
+                    {
+                        bgfx::destroy(sourceTextureHandle);
+                    }
 
-              if (result.has_error())
-              {
-                  deferred.Reject(Napi::Error::New(env, result.error()).Value());
-              }
-            });
+                    if (result.has_error())
+                    {
+                        deferred.Reject(Napi::Error::New(env, result.error()).Value());
+                    }
+                });
         }
 
         return deferred.Promise();
@@ -1662,25 +1709,12 @@ namespace Babylon
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), m_graphicsContext.GetWidth());
+        return Napi::Value::From(info.Env(), std::floor(m_graphicsContext.GetWidth() / m_graphicsContext.GetHardwareScalingLevel()));
     }
 
     Napi::Value NativeEngine::GetRenderHeight(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), m_graphicsContext.GetHeight());
-    }
-
-    void NativeEngine::SetViewPort(const Napi::CallbackInfo& info)
-    {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-
-        const auto x = info[0].As<Napi::Number>().FloatValue();
-        const auto y = info[1].As<Napi::Number>().FloatValue();
-        const auto width = info[2].As<Napi::Number>().FloatValue();
-        const auto height = info[3].As<Napi::Number>().FloatValue();
-        const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
-
-        GetBoundFrameBuffer(*encoder).SetViewPort(*encoder, x, yOrigin, width, height);
+        return Napi::Value::From(info.Env(), std::floor(m_graphicsContext.GetHeight() / m_graphicsContext.GetHardwareScalingLevel()));
     }
 
     Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info)
@@ -1842,6 +1876,19 @@ namespace Babylon
         m_stencilState |= BGFX_STENCIL_FUNC_REF(ref);
     }
 
+    void NativeEngine::SetViewPort(NativeDataStream::Reader& data)
+    {
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+
+        const float x{data.ReadFloat32()};
+        const float y{data.ReadFloat32()};
+        const float width{data.ReadFloat32()};
+        const float height{data.ReadFloat32()};
+        const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
+
+        GetBoundFrameBuffer(*encoder).SetViewPort(*encoder, x, yOrigin, width, height);
+    }
+
     void NativeEngine::SetCommandDataStream(const Napi::CallbackInfo& info)
     {
         // TODO: This should be moved to the constructor once multi-update is available.
@@ -1912,7 +1959,7 @@ namespace Babylon
         for (const auto& it : m_currentProgram->Uniforms)
         {
             const ProgramData::UniformValue& value = it.second;
-            encoder->setUniform({ it.first }, value.Data.data(), value.ElementLength);
+            encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
         }
 
         auto& boundFrameBuffer = GetBoundFrameBuffer(*encoder);
@@ -1951,12 +1998,13 @@ namespace Babylon
         {
             m_boundFrameBuffer = &m_defaultFrameBuffer;
             m_defaultFrameBuffer.Bind(encoder);
-        } else if (m_boundFrameBufferNeedsRebinding.Get(encoder))
+        }
+        else if (m_boundFrameBufferNeedsRebinding.Get(encoder))
         {
             m_boundFrameBuffer->Unbind(encoder);
             m_boundFrameBuffer->Bind(encoder);
         }
-        
+
         m_boundFrameBufferNeedsRebinding.Set(encoder, false);
         return *m_boundFrameBuffer;
     }

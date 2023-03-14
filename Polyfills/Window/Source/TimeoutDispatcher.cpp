@@ -63,12 +63,11 @@ namespace Babylon::Polyfills::Internal
         std::unique_lock<std::mutex> lk{m_mutex};
 
         const auto id = NextTimeoutId();
-        const auto earliestTime = m_timeMap.empty() ? TimePoint::max()
-                                                    : m_timeMap.cbegin()->second->time;
+        const auto earliestTime = m_timeMap.empty() ? TimePoint::max() : m_timeMap.cbegin()->second->time;
         const auto time = Now() + delay;
         const auto result = m_idMap.insert({id, std::make_unique<Timeout>(id, std::move(function), time)});
         m_timeMap.insert({time, result.first->second.get()});
-    
+
         if (time <= earliestTime)
         {
             m_runtime.Dispatch([this](Napi::Env) {
@@ -159,8 +158,7 @@ namespace Babylon::Polyfills::Internal
     {
         if (function)
         {
-            m_runtime.Dispatch([function = std::move(function)](Napi::Env)
-                { function->Call({}); });
+            m_runtime.Dispatch([function = std::move(function)](Napi::Env) { function->Call({}); });
         }
     }
 }

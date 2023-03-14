@@ -30,7 +30,7 @@ namespace Babylon::Graphics
 
         using SafetyGuarantee = gsl::final_action<std::function<void()>>;
         SafetyGuarantee GetSafetyGuarantee();
-        
+
         void Open();
         void RequestClose();
         void Lock();

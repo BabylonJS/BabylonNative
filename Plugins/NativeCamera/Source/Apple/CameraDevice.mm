@@ -23,10 +23,9 @@
 
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
-    @public AVCaptureVideoOrientation videoOrientation;
+    @public AVCaptureVideoOrientation VideoOrientation;
 
     CVMetalTextureCacheRef textureCache;
-    bool orientationUpdated;
 }
 
 - (id)init:(CVMetalTextureCacheRef)textureCache;
@@ -52,12 +51,31 @@ namespace {
         vector_float2 uv;
     };
 
-    constexpr Vertex vertices[] = {
-        // 2D positions, UV
+    // The shader will use different UV coordinates to rotate the video from its natural sensor orientation to the
+    // UI orientation. The format is 2D posistions to UV coordinates.
+    constexpr Vertex vertices_portrait[] = {
         {{-1, -1},   {0, 1}},
+        {{-1, 1},    {1, 1}},
+        {{1, -1},    {0, 0}},
+        {{1, 1},     {1, 0}},
+    };
+    constexpr Vertex vertices_landscape_right[] = {
+        {{-1, -1},   {0, 0}},
+        {{-1, 1},    {0, 1}},
+        {{1, -1},    {1, 0}},
+        {{1, 1},     {1, 1}},
+    };
+    constexpr Vertex vertices_landscape_left[] = {
+        {{-1, -1},   {1, 1}},
+        {{-1, 1},    {1, 0}},
+        {{1, -1},    {0, 1}},
+        {{1, 1},     {0, 0}},
+    };
+    constexpr Vertex vertices_portrait_upsideddown[] = {
+        {{-1, -1},   {1, 0}},
         {{-1, 1},    {0, 0}},
         {{1, -1},    {1, 1}},
-        {{1, 1},     {1, 0}},
+        {{1, 1},     {0, 1}},
     };
 
     constexpr char shaderSource[] = R"(
@@ -171,8 +189,10 @@ namespace Babylon::Plugins
         id<MTLCommandBuffer> currentCommandBuffer{};
         bool isInitialized{false};
         bool refreshBgfxHandle{true};
+        bgfx::TextureHandle textureHandle{};
         
         arcana::background_dispatcher<32> cameraSessionDispatcher{};
+        std::shared_ptr<arcana::cancellation_source> cancellationSource{std::make_shared<arcana::cancellation_source>()};
     };
 
     std::vector<CameraDevice> CameraDevice::GetCameraDevices(Napi::Env env)
@@ -371,14 +391,7 @@ namespace Babylon::Plugins
         CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(resolution.m_impl->avDeviceFormat.formatDescription)};
         CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 
-        CameraDevice::CameraDimensions cameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
-
-        // For portrait orientations swap the height and width of the video format dimensions.
-        if (m_impl->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortrait
-            ||  m_impl->cameraTextureDelegate->videoOrientation == AVCaptureVideoOrientationPortraitUpsideDown)
-        {
-            std::swap(cameraDimensions.width, cameraDimensions.height);
-        }
+        m_impl->cameraDimensions = CameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
         
         // Check for failed initialisation.
         if (!input)
@@ -387,7 +400,7 @@ namespace Babylon::Plugins
         }
         
         // Kick off camera session on a background thread.
-        return arcana::make_task(m_impl->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this(), pixelFormat = resolution.m_impl->pixelFormat, input, cameraDimensions]() mutable {
+        return arcana::make_task(m_impl->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this(), pixelFormat = resolution.m_impl->pixelFormat, input]() mutable {
             if (implObj->m_impl->avCaptureSession == nil) {
                 implObj->m_impl->avCaptureSession = [[AVCaptureSession alloc] init];
             } else {
@@ -417,13 +430,21 @@ namespace Babylon::Plugins
 
             // Actually start the camera session.
             [implObj->m_impl->avCaptureSession startRunning];
-            return cameraDimensions;
+
+            // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
+            // of the video should be swapped
+            return implObj->m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeLeft ||
+                implObj->m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeRight ?
+                CameraDimensions{implObj->m_impl->cameraDimensions.width, implObj->m_impl->cameraDimensions.height} :
+                CameraDimensions{implObj->m_impl->cameraDimensions.width, implObj->m_impl->cameraDimensions.height};
         });
     }
 
-    void CameraDevice::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
+    CameraDevice::CameraDimensions CameraDevice::UpdateCameraTexture(bgfx::TextureHandle textureHandle)
     {
-        arcana::make_task(m_impl->deviceContext->BeforeRenderScheduler(), arcana::cancellation::none(), [this, textureHandle] {
+        // Hook into AfterRender to copy over the texture, ensuring that the textureHandle has already been initialized by bgfx.
+        // Capture the cancellation token so that the shared pointer is kept alive when arcana checks internally for cancellation.
+        arcana::make_task(m_impl->deviceContext->AfterRenderScheduler(), *m_impl->cancellationSource, [this, textureHandle, cancellationSource{m_impl->cancellationSource}] {
             id<MTLTexture> textureY{};
             id<MTLTexture> textureCbCr{};
             int64_t width{0};
@@ -432,13 +453,34 @@ namespace Babylon::Plugins
             @synchronized(m_impl->cameraTextureDelegate) {
                 textureY = [m_impl->cameraTextureDelegate getCameraTextureY];
                 textureCbCr = [m_impl->cameraTextureDelegate getCameraTextureCbCr];
-                width = [textureY width];
-                height = [textureY height];
+                
+                switch (m_impl->cameraTextureDelegate->VideoOrientation)
+                {
+                    case AVCaptureVideoOrientationLandscapeRight:
+                    case AVCaptureVideoOrientationLandscapeLeft:
+                        width = [textureY width];
+                        height = [textureY height];
+                        break;
+                    case AVCaptureVideoOrientationPortrait:
+                    case AVCaptureVideoOrientationPortraitUpsideDown:
+                        // In portrait orientation the camera sensor is rotated 90 degrees so the width and height should be swapped
+                        width = [textureY height];
+                        height = [textureY width];
+                        break;
+                }
+                
             }
 
             // Skip processing this frame if width and height are invalid.
             if (width == 0 || height == 0) {
                 return;
+            }
+            
+            // Check if the we've been handed a new texture handle and if so refresh our override
+            if (m_impl->textureHandle.idx != textureHandle.idx)
+            {
+                m_impl->refreshBgfxHandle = true;
+                m_impl->textureHandle = textureHandle;
             }
 
             // Recreate the output texture when the camera dimensions change.
@@ -447,17 +489,18 @@ namespace Babylon::Plugins
                 MTLTextureDescriptor* textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:width height:height mipmapped:NO];
                 textureDescriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
                 m_impl->textureRGBA = [m_impl->metalDevice newTextureWithDescriptor:textureDescriptor];
-                bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_impl->textureRGBA));
                 m_impl->cameraDimensions.width = static_cast<uint32_t>(width);
                 m_impl->cameraDimensions.height = static_cast<uint32_t>(height);
-                m_impl->refreshBgfxHandle = false;
-            } else if (m_impl->refreshBgfxHandle) {
-                // On texture re-use across sessions set the bgfx texture handle.
-                bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_impl->textureRGBA));
-                m_impl->refreshBgfxHandle = false;
+                // Setting up the bgfx texture may fail if the textureHandle hasn't been initialized in a bgfx::frame call yet, if so try agin on
+                // the next frame to override it.
+                m_impl->refreshBgfxHandle = bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_impl->textureRGBA)) == 0;
+            }
+            else if (m_impl->refreshBgfxHandle)
+            {
+                m_impl->refreshBgfxHandle = bgfx::overrideInternal(textureHandle, reinterpret_cast<uintptr_t>(m_impl->textureRGBA)) == 0;
             }
 
-            if (textureY != nil && textureCbCr != nil && m_impl->textureRGBA != nil)
+            if (textureY != nil && textureCbCr != nil && m_impl->textureRGBA != nil && !m_impl->refreshBgfxHandle)
             {
                 m_impl->currentCommandBuffer = [m_impl->commandQueue commandBuffer];
                 m_impl->currentCommandBuffer.label = @"NativeCameraCommandBuffer";
@@ -476,8 +519,38 @@ namespace Babylon::Plugins
                     // Set the shader pipeline.
                     [renderEncoder setRenderPipelineState:m_impl->cameraPipelineState];
 
-                    // Set the vertex data.
-                    [renderEncoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
+                    // Set the vertex & UV data based on current orientation
+                    switch (m_impl->cameraTextureDelegate->VideoOrientation)
+                    {
+                        case AVCaptureVideoOrientationLandscapeLeft:
+                            if (m_impl->avDevice.position == AVCaptureDevicePositionFront)
+                            {
+                                // The front camera sensor is oriented 180 out of sync from the rear sensor on iOS devices. Swap landscape orientations.
+                                [renderEncoder setVertexBytes:vertices_landscape_right length:sizeof(vertices_landscape_right) atIndex:0];
+                            }
+                            else
+                            {
+                                [renderEncoder setVertexBytes:vertices_landscape_left length:sizeof(vertices_landscape_left) atIndex:0];
+                            }
+                            break;
+                        case AVCaptureVideoOrientationPortrait:
+                            [renderEncoder setVertexBytes:vertices_portrait length:sizeof(vertices_portrait) atIndex:0];
+                            break;
+                        case AVCaptureVideoOrientationPortraitUpsideDown:
+                            [renderEncoder setVertexBytes:vertices_portrait_upsideddown length:sizeof(vertices_portrait_upsideddown) atIndex:0];
+                            break;
+                        case AVCaptureVideoOrientationLandscapeRight:
+                            if (m_impl->avDevice.position == AVCaptureDevicePositionFront)
+                            {
+                                // The front camera sensor is oriented 180 out of sync from the rear sensor on iOS devices. Swap landscape orientations.
+                                [renderEncoder setVertexBytes:vertices_landscape_left length:sizeof(vertices_landscape_left) atIndex:0];
+                            }
+                            else
+                            {
+                                [renderEncoder setVertexBytes:vertices_landscape_right length:sizeof(vertices_landscape_right) atIndex:0];
+                            }
+                            break;
+                    }
 
                     // Set the textures.
                     [renderEncoder setFragmentTexture:textureY atIndex:1];
@@ -503,7 +576,13 @@ namespace Babylon::Plugins
                 [m_impl->currentCommandBuffer commit];
             }
         });
-    }
+
+        // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
+        // of the video should be swapped
+        return m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeLeft ||
+            m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeRight ?
+            CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height} :
+            CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height};    }
 
     void CameraDevice::Close()
     {
@@ -513,29 +592,37 @@ namespace Babylon::Plugins
             // No action is required.
             return;
         }
+        
+        // Cancel any pending async operations
+        m_impl->cancellationSource->cancel();
 
-        // Stop collecting frames, release camera texture delegate.
-        [m_impl->cameraTextureDelegate reset];
-        m_impl->cameraTextureDelegate = nil;
 
         // Complete any running command buffers before destroying the cache.
         if (m_impl->currentCommandBuffer != nil) {
             [m_impl->currentCommandBuffer waitUntilCompleted];
         }
 
-        // Free the texture cache.
-        if (m_impl->textureCache)
-        {
-            CVMetalTextureCacheFlush(m_impl->textureCache, 0);
-            CFRelease(m_impl->textureCache);
-            m_impl->textureCache = nil;
-        }
-
         if (m_impl->avCaptureSession != nil) {
-            // Stopping the capture session is a synchronous (and long running call). Complete the request on the dispatcher thread
-            // instead of the main thread.
-            arcana::make_task(arcana::threadpool_scheduler, arcana::cancellation::none(), [avCaptureSession = m_impl->avCaptureSession](){
+            // Stopping the capture session is a synchronous call that requires marshalling to the main thread. Calling it from background thread can lead
+            // to a deadlock where Babylon is waiting for the frame to finish render on the main thread and AVCaptureSession::stopRunning is waiting
+            // for the main thread to free up while blocking the current frame from rendering.
+            //
+            // Capturing textureRGBA, textureDelegate, and textureCache is done here because it's used in bgfx::overrideInternal but due to ARC being enabled in this project the lifetime of the texture
+            // needs to be maintained until after the render pass. Otherwise bgfx will try to access a destroyed texture handle during the render pass.
+            arcana::make_task(m_impl->deviceContext->AfterRenderScheduler(), arcana::cancellation::none(),
+                [avCaptureSession = m_impl->avCaptureSession, textureRGBA = m_impl->textureRGBA, textureDelegate = m_impl->cameraTextureDelegate, textureCache = m_impl->textureCache]
+            {
                 [avCaptureSession stopRunning];
+                
+                // Stop collecting frames, release camera texture delegate.
+                [textureDelegate reset];
+                
+                // Free the texture cache.
+                if (textureCache)
+                {
+                    CVMetalTextureCacheFlush(textureCache, 0);
+                    CFRelease(textureCache);
+                }
             });
         }
     }
@@ -553,11 +640,9 @@ namespace Babylon::Plugins
 #if (TARGET_OS_IPHONE)
     [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(OrientationDidChange:) name:UIDeviceOrientationDidChangeNotification object:nil];
     [self updateOrientation];
-    self->orientationUpdated = true;
 #else
-    // Orientation not supported on non-iOS devices.
-    self->videoOrientation = AVCaptureVideoOrientationLandscapeLeft;
-    self->orientationUpdated = false;
+    // Orientation not supported on non-iOS devices. LandscapeLeft assumes the video is already in the correct orientation.
+    self->VideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
 #endif
 
     return self;
@@ -613,31 +698,25 @@ namespace Babylon::Plugins
     }
 #endif
 
-    // Determine device orienation, and adjust output to match.
-    AVCaptureVideoOrientation newVideoOrientation{AVCaptureVideoOrientationPortraitUpsideDown};
+    // Convert from UIInterfaceOrientation to AVCaptureVideoOrientation. The conversion is only used becauase
+    // MacOS doesn't have access to UIInterfaceOrientation but it does have AVCaptureVideoOrientation which
+    // lets us share more code without ifdefs
     switch (orientation)
         {
             case UIInterfaceOrientationUnknown:
-                return;
-            case UIInterfaceOrientationPortrait:
-                newVideoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
-                break;
-            case UIInterfaceOrientationPortraitUpsideDown:
-                newVideoOrientation = AVCaptureVideoOrientationPortrait;
-                break;
             case UIInterfaceOrientationLandscapeLeft:
-                newVideoOrientation = AVCaptureVideoOrientationLandscapeRight;
+                self->VideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
                 break;
             case UIInterfaceOrientationLandscapeRight:
-                newVideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
+                self->VideoOrientation = AVCaptureVideoOrientationLandscapeRight;
+                break;
+            case UIInterfaceOrientationPortrait:
+                self->VideoOrientation = AVCaptureVideoOrientationPortrait;
+                break;
+            case UIInterfaceOrientationPortraitUpsideDown:
+                self->VideoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
                 break;
         }
-
-    if (newVideoOrientation != self->videoOrientation)
-    {
-        self->videoOrientation = newVideoOrientation;
-        self->orientationUpdated = true;
-    }
 }
 
 -(void)OrientationDidChange:(NSNotification*)notification
@@ -648,13 +727,6 @@ namespace Babylon::Plugins
 
 - (void)captureOutput:(AVCaptureOutput*)__unused captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection*) connection
 {
-    if (self->orientationUpdated)
-    {
-        connection.videoMirrored = true;
-        connection.videoOrientation = self->videoOrientation;
-        self->orientationUpdated = false;
-    }
-
     CVPixelBufferRef pixelBuffer{CMSampleBufferGetImageBuffer(sampleBuffer)};
 
     // Update both metal textures used by the renderer to display the camera image.

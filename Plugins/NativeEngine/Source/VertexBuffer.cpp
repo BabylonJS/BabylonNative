@@ -3,7 +3,8 @@
 
 namespace
 {
-    template<typename sourceType> void PromoteToFloats(std::vector<uint8_t>& bytes, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride)
+    template<typename sourceType>
+    void PromoteToFloats(std::vector<uint8_t>& bytes, uint32_t numElements, uint32_t byteOffset, uint32_t byteStride)
     {
         const size_t count = bytes.size() / byteStride;
         const size_t destinationSize = count * numElements * sizeof(float);
@@ -110,8 +111,7 @@ namespace Babylon
             return true;
         }
 
-        auto releaseFn = [](void*, void* userData)
-        {
+        auto releaseFn = [](void*, void* userData) {
             auto* bytes = reinterpret_cast<decltype(m_bytes)*>(userData);
             bytes->reset();
         };

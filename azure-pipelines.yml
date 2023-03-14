@@ -16,23 +16,23 @@ jobs:
 # Apple
   - template: .github/jobs/macos.yml
     parameters:
-      name: MacOS_Xcode13
+      name: MacOS_Xcode1341
       vmImage: 'macOS-latest'
-      xCodeVersion: 13.0
+      xCodeVersion: 13.4.1
 
   - template: .github/jobs/ios.yml
     parameters:
-      name: iOS_Xcode12_iOS14
+      name: iOS_Xcode1341_iOS155
       vmImage: 'macOS-latest'
-      xCodeVersion: 12.4
-      deploymentTarget: 14
+      xCodeVersion: 13.4.1
+      deploymentTarget: 15.5
 
   - template: .github/jobs/ios.yml
     parameters:
-      name: iOS_Xcode13_iOS15
+      name: iOS_Xcode142_iOS162
       vmImage: 'macOS-latest'
-      xCodeVersion: 13.0
-      deploymentTarget: 15
+      xCodeVersion: 14.2
+      deploymentTarget: 16.2
 
 # WIN32
   - template: .github/jobs/win32.yml
@@ -88,37 +88,25 @@ jobs:
       napiType: jsi
 
 # Ubuntu/Linux
-  - template: .github/jobs/linux.yml
-    parameters:
-      name: Ubuntu_Clang9_V8
-      vmImage: 'ubuntu-latest'
-      CC: clang-9
-      CXX: clang++-9
-      JSEngine: V8
+
+  # TODO: v8 is incompatible with curl for some reason
+  # See https://github.com/BabylonJS/BabylonNative/issues/1190
 
   - template: .github/jobs/linux.yml
     parameters:
-      name: Ubuntu_GCC9_JSC
+      name: Ubuntu_Clang_JavaScriptCore
       vmImage: 'ubuntu-latest'
-      CC: gcc-9
-      CXX: g++-9
+      CC: clang
+      CXX: clang++
       JSEngine: JavaScriptCore
 
   - template: .github/jobs/linux.yml
     parameters:
-      name: Ubuntu_GCC9_V8
+      name: Ubuntu_GCC_JavaScriptCore
       vmImage: 'ubuntu-latest'
-      CC: gcc-9
-      CXX: g++-9
-      JSEngine: V8
-
-  - template: .github/jobs/linux.yml
-    parameters:
-      name: Ubuntu_GCC10_V8
-      vmImage: 'ubuntu-latest'
-      CC: gcc-10
-      CXX: g++-10
-      JSEngine: V8
+      CC: gcc
+      CXX: g++
+      JSEngine: JavaScriptCore
 
 # Android
   - template: .github/jobs/android.yml

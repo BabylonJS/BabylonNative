@@ -36,13 +36,14 @@ namespace Babylon::Plugins
     class CameraDevice final : public std::enable_shared_from_this<CameraDevice>
     {
     public:
-        struct CameraDimensions {
+        struct CameraDimensions
+        {
             uint32_t width{};
             uint32_t height{};
         };
 
         ~CameraDevice();
-        
+
         // Move semantics
         CameraDevice(CameraDevice&&) noexcept;
         CameraDevice& operator=(CameraDevice&&) noexcept;
@@ -51,7 +52,7 @@ namespace Babylon::Plugins
 
         arcana::task<CameraDimensions, std::exception_ptr> OpenAsync(const CameraTrack& track);
         void Close();
-        void UpdateCameraTexture(bgfx::TextureHandle textureHandle);
+        CameraDimensions UpdateCameraTexture(bgfx::TextureHandle textureHandle);
 
         const std::vector<CameraTrack>& SupportedResolutions() const;
         const std::vector<std::unique_ptr<Capability>>& Capabilities() const;
