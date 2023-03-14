@@ -951,7 +951,7 @@ namespace Babylon
 
         assert(matrix.size() == size * size);
 
-        if constexpr (size < 4)
+        if constexpr (size < 3)
         {
             std::array<float, 16> matrixValues{};
             size_t index = 0;
