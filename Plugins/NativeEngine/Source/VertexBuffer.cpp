@@ -28,7 +28,7 @@ namespace
 namespace Babylon
 {
     VertexBuffer::VertexBuffer(gsl::span<uint8_t> bytes, bool dynamic)
-        : m_bytes{{bytes.data(), bytes.data() + bytes.size()}}
+        : m_bytes{std::make_shared<std::vector<uint8_t>>(bytes.data(), bytes.data() + bytes.size())}
         , m_dynamic{dynamic}
     {
     }
@@ -97,7 +97,7 @@ namespace Babylon
                 }
                 else
                 {
-                    m_bytes = {bytes.data(), bytes.data() + bytes.size()};
+                    m_bytes = std::make_shared<std::vector<uint8_t>>(bytes.data(), bytes.data() + bytes.size());
                 }
             }
         }
@@ -112,11 +112,10 @@ namespace Babylon
         }
 
         auto releaseFn = [](void*, void* userData) {
-            auto* bytes = reinterpret_cast<decltype(m_bytes)*>(userData);
-            bytes->reset();
+            delete reinterpret_cast<decltype(m_bytes)*>(userData);
         };
 
-        const bgfx::Memory* memory = bgfx::makeRef(m_bytes->data(), static_cast<uint32_t>(m_bytes->size()), releaseFn, &m_bytes);
+        const bgfx::Memory* memory = bgfx::makeRef(m_bytes->data(), static_cast<uint32_t>(m_bytes->size()), releaseFn, new std::shared_ptr<std::vector<uint8_t>>{m_bytes});
 
         if (m_dynamic)
         {

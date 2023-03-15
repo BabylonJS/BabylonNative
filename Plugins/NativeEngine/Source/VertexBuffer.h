@@ -4,7 +4,7 @@
 #include <napi/napi.h>
 #include <gsl/gsl>
 #include <map>
-#include <optional>
+#include <memory>
 
 namespace Babylon
 {
@@ -35,7 +35,7 @@ namespace Babylon
         static void BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceVertexBufferRecord>& vertexBufferInstance);
 
     private:
-        std::optional<std::vector<uint8_t>> m_bytes{};
+        std::shared_ptr<std::vector<uint8_t>> m_bytes{};
         bool m_dynamic{};
 
         union
