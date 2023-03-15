@@ -227,10 +227,11 @@ For iOS the XCode project needs to be generated with `CMake` as described [above
 
 | React Native | Babylon React Native |
 |---|---|
-| 0.64 | 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4, 1.5.0, 1.5.1 |
-| 0.65 -> 0.68 | 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4, 1.5.0, 1.5.1 |
-| 0.69 | 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4, 1.5.0, 1.5.1 |
-| 0.70 | 1.5.0, 1.5.1 |
+| 0.64 | 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4, 1.5.0, 1.5.1, 1.5.4-preview|
+| 0.65 -> 0.68 | 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4, 1.5.0, 1.5.1, 1.5.4-preview |
+| 0.69 | 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4, 1.5.0, 1.5.1, 1.5.4-preview |
+| 0.70 | 1.5.0, 1.5.1, 1.5.4-preview |
+| 0.71 | 1.5.4-preview |
 
 Here are the package names for Android/iOS and Windows:
 
@@ -240,7 +241,7 @@ Here are the package names for Android/iOS and Windows:
 | 0.65 -> 0.68 | [@babylonjs/react-native-iosandroid-0-65](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-65) | [@babylonjs/react-native-windows-0-65](https://www.npmjs.com/package/@babylonjs/react-native-windows-0-65) |
 | 0.69 | [@babylonjs/react-native-iosandroid-0-69](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-69) | [@babylonjs/react-native-windows-0-69](https://www.npmjs.com/package/@babylonjs/react-native-windows-0-69) |
 | 0.70 | [@babylonjs/react-native-iosandroid-0-70](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-70) | [@babylonjs/react-native-windows-0-70](https://www.npmjs.com/package/@babylonjs/react-native-windows-0-70) |
-| 0.71 | **NEW PACKAGE REQUIRED. RELEASE PENDING.** | **NEW PACKAGE REQUIRED. RELEASE PENDING.** |
+| 0.71 | [@babylonjs/react-native-iosandroid-0-71](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-71) | [@babylonjs/react-native-windows-0-71](https://www.npmjs.com/package/@babylonjs/react-native-windows-0-71) |
 
 Also, [@babylonjs/react-native](https://www.npmjs.com/package/@babylonjs/react-native) is a needed dependency for all platforms.
 
@@ -253,10 +254,11 @@ Depending on the Babylon React Native NPM package version, some Babylon.js NPM d
 | 1.4.0  | 5.27.1 |
 | 1.4.1  | 5.32.2, 5.33.0, 5.33.1, 5.33.2, 5.34.0, 5.35.0 |
 | 1.4.2  | 5.35.1, 5.36.0, 5.37.0, 5.38.0, 5.39.0, 5.42.0, 5.42.1 |
-| 1.4.3  | 5.42.2, 5.43.0, 5.43.1, 5.43.2, 5.44.0, 5.45.0, 5.45.1, 5.45.2, 5.46.0, 5.47.0 |
-| 1.4.4  | 5.42.2, 5.43.0, 5.43.1, 5.43.2, 5.44.0, 5.45.0, 5.45.1, 5.45.2, 5.46.0, 5.47.0 |
-| 1.5.0  | 5.42.2, 5.43.0, 5.43.1, 5.43.2, 5.44.0, 5.45.0, 5.45.1, 5.45.2, 5.46.0, 5.47.0 |
-| 1.5.1  | 5.42.2, 5.43.0, 5.43.1, 5.43.2, 5.44.0, 5.45.0, 5.45.1, 5.45.2, 5.46.0, 5.47.0 |
+| 1.4.3  | 5.42.2, 5.43.0, 5.43.1, 5.43.2, 5.44.0, 5.45.0, 5.45.1, 5.45.2, 5.46.0, 5.47.0, 5.47.1, 5.48.0, 5.48.1, 5.49.0, 5.49.1, 5.49.2, 5.50.0, 5.50.1 |
+| 1.4.4  | 5.42.2, 5.43.0, 5.43.1, 5.43.2, 5.44.0, 5.45.0, 5.45.1, 5.45.2, 5.46.0, 5.47.0, 5.47.1, 5.48.0, 5.48.1, 5.49.0, 5.49.1, 5.49.2, 5.50.0, 5.50.1 |
+| 1.5.0  | 5.42.2, 5.43.0, 5.43.1, 5.43.2, 5.44.0, 5.45.0, 5.45.1, 5.45.2, 5.46.0, 5.47.0, 5.47.1, 5.48.0, 5.48.1, 5.49.0, 5.49.1, 5.49.2, 5.50.0, 5.50.1 |
+| 1.5.1  | 5.42.2, 5.43.0, 5.43.1, 5.43.2, 5.44.0, 5.45.0, 5.45.1, 5.45.2, 5.46.0, 5.47.0, 5.47.1, 5.48.0, 5.48.1, 5.49.0, 5.49.1, 5.49.2, 5.50.0, 5.50.1 |
+| 1.5.4-preview  | 5.43.0, 5.43.1, 5.43.2, 5.44.0, 5.45.0, 5.45.1, 5.45.2, 5.46.0, 5.47.0, 5.47.1, 5.48.0, 5.48.1, 5.49.0, 5.49.1, 5.49.2, 5.50.0, 5.50.1 |
 
 ## Security
 
