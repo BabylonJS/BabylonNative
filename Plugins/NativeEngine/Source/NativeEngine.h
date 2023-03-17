@@ -46,12 +46,12 @@ namespace Babylon
         ProgramData(const ProgramData&) = delete;
         ProgramData& operator=(const ProgramData&) = delete;
 
-        ProgramData(ProgramData&& other) noexcept:
-            Handle{other.Handle},
-            Uniforms{std::move(other.Uniforms)},
-            UniformNameToIndex{std::move(other.UniformNameToIndex)},
-            UniformInfos{std::move(other.UniformInfos)},
-            VertexAttributeLocations{std::move(other.VertexAttributeLocations)}
+        ProgramData(ProgramData&& other) noexcept
+            : Handle{other.Handle}
+            , Uniforms{std::move(other.Uniforms)}
+            , UniformNameToIndex{std::move(other.UniformNameToIndex)}
+            , UniformInfos{std::move(other.UniformInfos)}
+            , VertexAttributeLocations{std::move(other.VertexAttributeLocations)}
         {
             other.Handle = BGFX_INVALID_HANDLE;
         }

@@ -8,8 +8,7 @@ namespace Babylon::Plugins
 
         static constexpr auto JS_CONSTRUCTOR_NAME = "DeviceInputSystem";
 
-        Napi::Function func
-        {
+        Napi::Function func{
             DefineClass(
                 env,
                 JS_CONSTRUCTOR_NAME,
@@ -17,8 +16,7 @@ namespace Babylon::Plugins
                     InstanceMethod("pollInput", &DeviceInputSystem::PollInput),
                     InstanceMethod("isDeviceAvailable", &DeviceInputSystem::IsDeviceAvailable),
                     InstanceMethod("dispose", &DeviceInputSystem::Dispose),
-                })
-        };
+                })};
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
     }
@@ -29,24 +27,18 @@ namespace Babylon::Plugins
         : Napi::ObjectWrap<DeviceInputSystem>{info}
         , m_nativeInput{*NativeInput::GetFromJavaScript(info.Env()).m_impl}
         , m_deviceConnectedTicket{m_nativeInput.AddDeviceConnectedCallback([this, callback = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>()))](DeviceType deviceType, int32_t deviceSlot) {
-            (*callback)({
-                Napi::Value::From(Env(), static_cast<uint32_t>(deviceType)),
-                Napi::Value::From(Env(), deviceSlot)
-            });
+            (*callback)({Napi::Value::From(Env(), static_cast<uint32_t>(deviceType)),
+                Napi::Value::From(Env(), deviceSlot)});
         })}
         , m_deviceDisconnectedTicket{m_nativeInput.AddDeviceDisconnectedCallback([this, callback = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[1].As<Napi::Function>()))](DeviceType deviceType, int32_t deviceSlot) {
-            (*callback)({
-                Napi::Value::From(Env(), static_cast<uint32_t>(deviceType)),
-                Napi::Value::From(Env(), deviceSlot)
-            });
+            (*callback)({Napi::Value::From(Env(), static_cast<uint32_t>(deviceType)),
+                Napi::Value::From(Env(), deviceSlot)});
         })}
         , m_InputChangedTicket{m_nativeInput.AddInputChangedCallback([this, callback = std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[2].As<Napi::Function>()))](DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, std::optional<int32_t> currentState) {
-            (*callback)({
-                Napi::Value::From(Env(), static_cast<uint32_t>(deviceType)),
+            (*callback)({Napi::Value::From(Env(), static_cast<uint32_t>(deviceType)),
                 Napi::Value::From(Env(), deviceSlot),
                 Napi::Value::From(Env(), inputIndex),
-                currentState ? Napi::Value::From(Env(), *currentState) : Env().Null()
-            });
+                currentState ? Napi::Value::From(Env(), *currentState) : Env().Null()});
         })}
     {
     }

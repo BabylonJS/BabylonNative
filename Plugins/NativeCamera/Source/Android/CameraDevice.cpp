@@ -30,13 +30,15 @@ namespace Babylon::Plugins
         int32_t height{};
     };
 
-    struct CameraDevice::Impl {
+    struct CameraDevice::Impl
+    {
         Impl(Napi::Env env)
-                : env{env}
+            : env{env}
         {
         }
 
-        GLuint GenerateOESTexture() {
+        GLuint GenerateOESTexture()
+        {
             GLuint oesTexture;
             glGenTextures(1, &oesTexture);
             glBindTexture(GL_TEXTURE_EXTERNAL_OES, oesTexture);
@@ -46,7 +48,8 @@ namespace Babylon::Plugins
             return oesTexture;
         }
 
-        int GetCurrentSensorRotationDiff() {
+        int GetCurrentSensorRotationDiff()
+        {
             // Get the phone's current rotation so we can determine if the camera image needs to be rotated based on the sensor's natural orientation
             int32_t phoneRotation{GetAppContext().getSystemService<android::view::WindowManager>().getDefaultDisplay().getRotation() * 90};
 
@@ -146,7 +149,7 @@ namespace Babylon::Plugins
     static API24::ACameraDevice_stateCallbacks cameraDeviceCallbacks = {
         .context = nullptr,
         .onDisconnected = onDisconnected,
-        .onError = onError
+        .onError = onError,
     };
 
     // session callbacks
@@ -162,12 +165,11 @@ namespace Babylon::Plugins
     {
     }
 
-    static API24::ACameraCaptureSession_stateCallbacks sessionStateCallbacks {
+    static API24::ACameraCaptureSession_stateCallbacks sessionStateCallbacks{
         .context = nullptr,
         .onClosed = onSessionClosed,
         .onReady = onSessionReady,
-        .onActive = onSessionActive
-    };
+        .onActive = onSessionActive};
 
     // capture callbacks
     static void onCaptureFailed(void* /*context*/, API24::ACameraCaptureSession* /*session*/, API24::ACaptureRequest* /*request*/, API24::ACameraCaptureFailure* /*failure*/)
@@ -182,11 +184,11 @@ namespace Babylon::Plugins
     {
     }
 
-    static void onCaptureCompleted (void* /*context*/, API24::ACameraCaptureSession* /*session*/, API24::ACaptureRequest* /*request*/, const API24::ACameraMetadata* /*result*/)
+    static void onCaptureCompleted(void* /*context*/, API24::ACameraCaptureSession* /*session*/, API24::ACaptureRequest* /*request*/, const API24::ACameraMetadata* /*result*/)
     {
     }
 
-    static API24::ACameraCaptureSession_captureCallbacks captureCallbacks {
+    static API24::ACameraCaptureSession_captureCallbacks captureCallbacks{
         .context = nullptr,
         .onCaptureStarted = nullptr,
         .onCaptureProgressed = nullptr,
@@ -199,13 +201,13 @@ namespace Babylon::Plugins
 
     arcana::task<CameraDevice::CameraDimensions, std::exception_ptr> CameraDevice::OpenAsync(const CameraTrack& track)
     {
-        if (!m_impl->deviceContext){
+        if (!m_impl->deviceContext)
+        {
             m_impl->deviceContext = &Graphics::DeviceContext::GetFromJavaScript(m_impl->env);
             m_impl->threadAffinity = std::this_thread::get_id();
         }
 
-        return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, &track]()
-        {
+        return android::Permissions::CheckCameraPermissionAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [this, &track]() {
             // Get the phone's current rotation so we can determine if the camera image needs to be rotated based on the sensor's natural orientation
             m_impl->sensorRotationDiff = m_impl->GetCurrentSensorRotationDiff();
 
@@ -220,7 +222,7 @@ namespace Babylon::Plugins
                 m_impl->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
                 eglInitialize(m_impl->display, nullptr, nullptr);
 
-                static const EGLint attrs[] ={
+                static const EGLint attrs[] = {
                     EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,
                     EGL_BLUE_SIZE, 8,
                     EGL_GREEN_SIZE, 8,
@@ -228,10 +230,9 @@ namespace Babylon::Plugins
                     EGL_ALPHA_SIZE, 8,
                     EGL_DEPTH_SIZE, 16,
                     EGL_STENCIL_SIZE, 8,
-                    EGL_NONE
-                };
+                    EGL_NONE};
 
-                EGLConfig  config;
+                EGLConfig config;
                 EGLint numConfig = 0;
                 eglChooseConfig(m_impl->display, attrs, &config, 1, &numConfig);
 
@@ -243,7 +244,7 @@ namespace Babylon::Plugins
                     EGL_NONE};
 
                 m_impl->context = eglCreateContext(m_impl->display, config, bgfx::getInternalData()->context, contextAttribs);
-                if (eglMakeCurrent(m_impl->display, 0/*surface*/, 0/*surface*/, m_impl->context) == EGL_FALSE)
+                if (eglMakeCurrent(m_impl->display, 0 /*surface*/, 0 /*surface*/, m_impl->context) == EGL_FALSE)
                 {
                     throw std::runtime_error{"Unable to create a shared GL context for camera texture."};
                 }
@@ -259,44 +260,36 @@ namespace Babylon::Plugins
             android::view::Surface surface(m_impl->surfaceTexture);
 
             // open the camera stream
-            auto cameraManager{GET_CAMERA_FUNCTION(ACameraManager_create)()};
-            GET_CAMERA_FUNCTION(ACameraManager_openCamera)(cameraManager, m_impl->cameraID.c_str(),
-                                                           &cameraDeviceCallbacks,
-                                                           &m_impl->aCameraDevice);
+            auto cameraManager{CAMERA_FUNCTION(ACameraManager_create)};
+            CAMERA_FUNCTION(ACameraManager_openCamera,
+                cameraManager, m_impl->cameraID.c_str(), &cameraDeviceCallbacks, &m_impl->aCameraDevice);
 
             m_impl->textureWindow = reinterpret_cast<ANativeWindow*>(ANativeWindow_fromSurface(
-                    GetEnvForCurrentThread(), surface));
+                GetEnvForCurrentThread(), surface));
 
             // Prepare request for texture target
-            GET_CAMERA_FUNCTION(ACameraDevice_createCaptureRequest)(m_impl->aCameraDevice,
-                                                                    API24::TEMPLATE_PREVIEW,
-                                                                    &m_impl->request);
+            CAMERA_FUNCTION(ACameraDevice_createCaptureRequest,
+                m_impl->aCameraDevice, API24::TEMPLATE_PREVIEW, &m_impl->request);
 
             // Prepare outputs for session
-            GET_CAMERA_FUNCTION(ACaptureSessionOutput_create)(m_impl->textureWindow,
-                                                              &m_impl->textureOutput);
-            GET_CAMERA_FUNCTION(ACaptureSessionOutputContainer_create)(&m_impl->outputs);
-            GET_CAMERA_FUNCTION(ACaptureSessionOutputContainer_add)(m_impl->outputs, m_impl->textureOutput);
+            CAMERA_FUNCTION(ACaptureSessionOutput_create, m_impl->textureWindow, &m_impl->textureOutput);
+            CAMERA_FUNCTION(ACaptureSessionOutputContainer_create, &m_impl->outputs);
+            CAMERA_FUNCTION(ACaptureSessionOutputContainer_add, m_impl->outputs, m_impl->textureOutput);
 
             // Prepare target surface
             ANativeWindow_acquire(m_impl->textureWindow);
-            GET_CAMERA_FUNCTION(ACameraOutputTarget_create)(m_impl->textureWindow, &m_impl->textureTarget);
-            GET_CAMERA_FUNCTION(ACaptureRequest_addTarget)(m_impl->request, m_impl->textureTarget);
+            CAMERA_FUNCTION(ACameraOutputTarget_create, m_impl->textureWindow, &m_impl->textureTarget);
+            CAMERA_FUNCTION(ACaptureRequest_addTarget, m_impl->request, m_impl->textureTarget);
 
             // Create the session
-            GET_CAMERA_FUNCTION(ACameraDevice_createCaptureSession)(m_impl->aCameraDevice, m_impl->outputs,
-                                                                    &sessionStateCallbacks,
-                                                                    &m_impl->textureSession);
+            CAMERA_FUNCTION(ACameraDevice_createCaptureSession, m_impl->aCameraDevice, m_impl->outputs, &sessionStateCallbacks, &m_impl->textureSession);
 
             // Start capturing continuously
-            GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(m_impl->textureSession,
-                                                                           &captureCallbacks,
-                                                                           1, &m_impl->request,
-                                                                           nullptr);
+            CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest, m_impl->textureSession, &captureCallbacks, 1, &m_impl->request, nullptr);
 
-            GET_CAMERA_FUNCTION(ACameraManager_delete)(cameraManager);
+            CAMERA_FUNCTION(ACameraManager_delete, cameraManager);
 
-            if (eglMakeCurrent(m_impl->display, 0/*surface*/, 0/*surface*/, currentContext) == EGL_FALSE)
+            if (eglMakeCurrent(m_impl->display, 0 /*surface*/, 0 /*surface*/, currentContext) == EGL_FALSE)
             {
                 throw std::runtime_error{"Unable to restore GL context for camera texture init."};
             }
@@ -304,9 +297,7 @@ namespace Babylon::Plugins
             // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
             // of the video should be swapped
             bool sensorIsPortrait{m_impl->sensorRotationDiff == 90 || m_impl->sensorRotationDiff == 270};
-            return !sensorIsPortrait
-                   ? CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height}
-                   : CameraDimensions{m_impl->cameraDimensions.height, m_impl->cameraDimensions.width};
+            return !sensorIsPortrait ? CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height} : CameraDimensions{m_impl->cameraDimensions.height, m_impl->cameraDimensions.width};
         });
     }
 
@@ -317,13 +308,13 @@ namespace Babylon::Plugins
             throw std::runtime_error{"Android Platform level < 24. NativeCameraPlugin is only supported on Android devices running API 24+"};
         }
 
-        auto cameraManager{GET_CAMERA_FUNCTION(ACameraManager_create)()};
+        auto cameraManager{CAMERA_FUNCTION(ACameraManager_create)};
 
         std::vector<CameraDevice> cameraDevices{};
 
         // Get the list of available cameras
         API24::ACameraIdList* cameraIds = nullptr;
-        GET_CAMERA_FUNCTION(ACameraManager_getCameraIdList)(cameraManager, &cameraIds);
+        CAMERA_FUNCTION(ACameraManager_getCameraIdList, cameraManager, &cameraIds);
 
         for (int i = 0; i < cameraIds->numCameras; ++i)
         {
@@ -331,18 +322,19 @@ namespace Babylon::Plugins
             auto cameraDeviceImpl{std::make_unique<CameraDevice::Impl>(env)};
 
             API24::ACameraMetadata* metadataObj;
-            GET_CAMERA_FUNCTION(ACameraManager_getCameraCharacteristics)(cameraManager, id, &metadataObj);
+            CAMERA_FUNCTION(ACameraManager_getCameraCharacteristics, cameraManager, id, &metadataObj);
 
             // Get all available stream configurations supported by the camera
             API24::ACameraMetadata_const_entry streamConfigurations = {};
-            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &streamConfigurations);
+            CAMERA_FUNCTION(ACameraMetadata_getConstEntry, metadataObj, API24::ACAMERA_SCALER_AVAILABLE_STREAM_CONFIGURATIONS, &streamConfigurations);
             // format of the data:
             // 0: format
             // 1: width
             // 2: height
             // 3: input?
 
-            for (uint32_t j = 0; j < streamConfigurations.count; j += 4) {
+            for (uint32_t j = 0; j < streamConfigurations.count; j += 4)
+            {
                 int32_t format{streamConfigurations.data.i32[j + 0]};
                 int32_t width{streamConfigurations.data.i32[j + 1]};
                 int32_t height{streamConfigurations.data.i32[j + 2]};
@@ -362,19 +354,19 @@ namespace Babylon::Plugins
 
             // Get camera hardware info
             API24::ACameraMetadata_const_entry metaDataEntry{};
-            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_LENS_FACING, &metaDataEntry);
+            CAMERA_FUNCTION(ACameraMetadata_getConstEntry, metadataObj, API24::ACAMERA_LENS_FACING, &metaDataEntry);
             auto facing{static_cast<API24::acamera_metadata_enum_android_lens_facing_t>(metaDataEntry.data.u8[0])};
 
-            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_SENSOR_ORIENTATION, &metaDataEntry);
+            CAMERA_FUNCTION(ACameraMetadata_getConstEntry, metadataObj, API24::ACAMERA_SENSOR_ORIENTATION, &metaDataEntry);
             int32_t sensorOrientation{metaDataEntry.data.i32[0]};
 
-            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_FLASH_INFO_AVAILABLE, &metaDataEntry);
+            CAMERA_FUNCTION(ACameraMetadata_getConstEntry, metadataObj, API24::ACAMERA_FLASH_INFO_AVAILABLE, &metaDataEntry);
             bool torchSupported = metaDataEntry.data.u8[0];
 
-            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_CONTROL_ZOOM_RATIO, &metaDataEntry);
+            CAMERA_FUNCTION(ACameraMetadata_getConstEntry, metadataObj, API24::ACAMERA_CONTROL_ZOOM_RATIO, &metaDataEntry);
             float zoomRatio{metaDataEntry.data.f[0]};
 
-            GET_CAMERA_FUNCTION(ACameraMetadata_getConstEntry)(metadataObj, API24::ACAMERA_CONTROL_ZOOM_RATIO_RANGE, &metaDataEntry);
+            CAMERA_FUNCTION(ACameraMetadata_getConstEntry, metadataObj, API24::ACAMERA_CONTROL_ZOOM_RATIO_RANGE, &metaDataEntry);
             float minZoomRatio{metaDataEntry.data.f[0]};
             float maxZoomRatio{metaDataEntry.data.f[1]};
 
@@ -384,55 +376,45 @@ namespace Babylon::Plugins
             cameraDeviceImpl->facingUser = facing == API24::ACAMERA_LENS_FACING_FRONT;
 
             // Create the capabilities
-            cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<std::string>>
-            (
+            cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<std::string>>(
                 Capability::Feature::FacingMode,
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment",
                 facing == API24::ACAMERA_LENS_FACING_FRONT ? "user" : "environment",
-                facing == API24::ACAMERA_LENS_FACING_FRONT ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"}
-            ));
+                facing == API24::ACAMERA_LENS_FACING_FRONT ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"}));
 
-            cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<bool>>
-            (
+            cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<bool>>(
                 Capability::Feature::Torch,
                 false,
                 false,
                 torchSupported ? std::vector<bool>{false, true} : std::vector<bool>{false},
-                    [impl{cameraDeviceImpl.get()}](bool newValue)
-                {
-                    uint8_t torchMode = newValue
-                                        ? API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_TORCH
-                                        : API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_OFF;
-                    GET_CAMERA_FUNCTION(ACaptureRequest_setEntry_u8)(impl->request, API24::ACAMERA_FLASH_MODE, 1, &torchMode);
+                [impl{cameraDeviceImpl.get()}](bool newValue) {
+                    uint8_t torchMode = newValue ? API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_TORCH : API24::acamera_metadata_enum_android_flash_mode_t::ACAMERA_FLASH_MODE_OFF;
+                    CAMERA_FUNCTION(ACaptureRequest_setEntry_u8, impl->request, API24::ACAMERA_FLASH_MODE, 1, &torchMode);
 
                     // Update the camera request
-                    GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(impl->textureSession, &captureCallbacks, 1, &impl->request, nullptr);
+                    CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest, impl->textureSession, &captureCallbacks, 1, &impl->request, nullptr);
                     return true;
-                }
-            ));
+                }));
 
-            cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<double>>
-            (
+            cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<double>>(
                 Capability::Feature::Zoom,
                 zoomRatio,
                 1.0, // Set the default target zoom to 1.0 (no zoom)
                 std::vector<double>{minZoomRatio, maxZoomRatio},
-                    [impl{cameraDeviceImpl.get()}](double newValue)
-                {
+                [impl{cameraDeviceImpl.get()}](double newValue) {
                     float newZoomRatio{static_cast<float>(newValue)};
-                    GET_CAMERA_FUNCTION(ACaptureRequest_setEntry_float)(impl->request, API24::ACAMERA_CONTROL_ZOOM_RATIO, 1, &newZoomRatio);
+                    CAMERA_FUNCTION(ACaptureRequest_setEntry_float, impl->request, API24::ACAMERA_CONTROL_ZOOM_RATIO, 1, &newZoomRatio);
 
                     // Update the camera request
-                    GET_CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest)(impl->textureSession, &captureCallbacks, 1, &impl->request, nullptr);
+                    CAMERA_FUNCTION(ACameraCaptureSession_setRepeatingRequest, impl->textureSession, &captureCallbacks, 1, &impl->request, nullptr);
                     return true;
-                }
-            ));
+                }));
 
             cameraDevices.push_back(CameraDevice{std::move(cameraDeviceImpl)});
         }
 
-        GET_CAMERA_FUNCTION(ACameraManager_deleteCameraIdList)(cameraIds);
-        GET_CAMERA_FUNCTION(ACameraManager_delete)(cameraManager);
+        CAMERA_FUNCTION(ACameraManager_deleteCameraIdList, cameraIds);
+        CAMERA_FUNCTION(ACameraManager_delete, cameraManager);
 
         return cameraDevices;
     }
@@ -443,7 +425,7 @@ namespace Babylon::Plugins
         if (m_impl->context != EGL_NO_CONTEXT)
         {
             // use the newly created shared context
-            if (eglMakeCurrent(m_impl->display, 0/*surface*/, 0/*surface*/, m_impl->context) == EGL_FALSE)
+            if (eglMakeCurrent(m_impl->display, 0 /*surface*/, 0 /*surface*/, m_impl->context) == EGL_FALSE)
             {
                 throw std::runtime_error{"Unable to make current shared GL context for camera texture."};
             }
@@ -491,10 +473,10 @@ namespace Babylon::Plugins
 
         auto uvsUniformLocation{glGetUniformLocation(m_impl->cameraShaderProgramId, "uvs")};
         glUniform2fv(uvsUniformLocation, CAMERA_UVS_COUNT,
-             m_impl->sensorRotationDiff == 90 ? CAMERA_UVS_ROTATION_90 :
-             m_impl->sensorRotationDiff == 180 ? CAMERA_UVS_ROTATION_180 :
-             m_impl->sensorRotationDiff == 270 ? CAMERA_UVS_ROTATION_270 :
-            CAMERA_UVS_ROTATION_0);
+            m_impl->sensorRotationDiff == 90    ? CAMERA_UVS_ROTATION_90
+            : m_impl->sensorRotationDiff == 180 ? CAMERA_UVS_ROTATION_180
+            : m_impl->sensorRotationDiff == 270 ? CAMERA_UVS_ROTATION_270
+                                                : CAMERA_UVS_ROTATION_0);
 
         // Configure the camera texture
         auto cameraTextureUniformLocation{glGetUniformLocation(m_impl->cameraShaderProgramId, "cameraTexture")};
@@ -510,7 +492,7 @@ namespace Babylon::Plugins
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // bind previously bound context
-        if (eglMakeCurrent(m_impl->display, 0/*surface*/, 0/*surface*/, currentContext) == EGL_FALSE)
+        if (eglMakeCurrent(m_impl->display, 0 /*surface*/, 0 /*surface*/, currentContext) == EGL_FALSE)
         {
             throw std::runtime_error{"Unable to make current shared GL context for camera texture."};
         }
@@ -520,8 +502,8 @@ namespace Babylon::Plugins
         });
 
         return !sensorIsPortrait
-            ? CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height}
-            : CameraDimensions{m_impl->cameraDimensions.height, m_impl->cameraDimensions.width};
+                   ? CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height}
+                   : CameraDimensions{m_impl->cameraDimensions.height, m_impl->cameraDimensions.width};
     }
 
     void CameraDevice::Close()
@@ -534,16 +516,16 @@ namespace Babylon::Plugins
         }
 
         // Stop recording to SurfaceTexture and do some cleanup
-        GET_CAMERA_FUNCTION(ACameraCaptureSession_stopRepeating)(m_impl->textureSession);
-        GET_CAMERA_FUNCTION(ACameraCaptureSession_close)(m_impl->textureSession);
-        GET_CAMERA_FUNCTION(ACaptureSessionOutputContainer_free)(m_impl->outputs);
-        GET_CAMERA_FUNCTION(ACaptureSessionOutput_free)(m_impl->output);
+        CAMERA_FUNCTION(ACameraCaptureSession_stopRepeating, m_impl->textureSession);
+        CAMERA_FUNCTION(ACameraCaptureSession_close, m_impl->textureSession);
+        CAMERA_FUNCTION(ACaptureSessionOutputContainer_free, m_impl->outputs);
+        CAMERA_FUNCTION(ACaptureSessionOutput_free, m_impl->output);
 
-        GET_CAMERA_FUNCTION(ACameraDevice_close)(m_impl->aCameraDevice);
+        CAMERA_FUNCTION(ACameraDevice_close, m_impl->aCameraDevice);
 
         // Capture request for SurfaceTexture
         ANativeWindow_release(m_impl->textureWindow);
-        GET_CAMERA_FUNCTION(ACaptureRequest_free)(m_impl->request);
+        CAMERA_FUNCTION(ACaptureRequest_free, m_impl->request);
 
         if (m_impl->context != EGL_NO_CONTEXT)
         {

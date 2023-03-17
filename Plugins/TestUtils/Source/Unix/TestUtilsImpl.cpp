@@ -34,7 +34,7 @@ namespace Babylon::Plugins::Internal
     {
     }
 
-    void TestUtils::SetTitle(const Napi::CallbackInfo & info)
+    void TestUtils::SetTitle(const Napi::CallbackInfo& info)
     {
         const auto title = info[0].As<Napi::String>().Utf8Value();
         Display* display = XOpenDisplay(NULL);
@@ -45,8 +45,8 @@ namespace Babylon::Plugins::Internal
     Napi::Value TestUtils::GetOutputDirectory(const Napi::CallbackInfo& info)
     {
         char exe[1024];
-        int ret = readlink("/proc/self/exe", exe, sizeof(exe)-1);
-        if(ret == -1)
+        int ret = readlink("/proc/self/exe", exe, sizeof(exe) - 1);
+        if (ret == -1)
         {
             throw Napi::Error::New(info.Env(), "Unable to get executable location");
         }
