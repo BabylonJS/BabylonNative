@@ -752,8 +752,7 @@ namespace Babylon
         Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, vertexSource, fragmentSource, cancellationSource{m_cancellationSource}]() -> std::unique_ptr<ProgramData>
-            {
+            [this, vertexSource, fragmentSource, cancellationSource{m_cancellationSource}]() -> std::unique_ptr<ProgramData> {
                 return CreateProgramInternal(vertexSource, fragmentSource);
             })
             .then(m_runtimeScheduler, *m_cancellationSource,
@@ -761,8 +760,7 @@ namespace Babylon
                     jsProgramRef{Napi::Persistent(jsProgram)},
                     onSuccessRef{Napi::Persistent(onSuccess)},
                     onErrorRef{Napi::Persistent(onError)},
-                    cancellationSource{m_cancellationSource}](const arcana::expected<std::unique_ptr<ProgramData>, std::exception_ptr>& result)
-                {
+                    cancellationSource{m_cancellationSource}](const arcana::expected<std::unique_ptr<ProgramData>, std::exception_ptr>& result) {
                     if (result.has_error())
                     {
                         onErrorRef.Call({Napi::Error::New(onErrorRef.Env(), result.error()).Value()});

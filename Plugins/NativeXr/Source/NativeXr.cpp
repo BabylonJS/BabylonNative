@@ -557,7 +557,8 @@ namespace Babylon
                                     // Block and burn frames until XR successfully shuts down.
                                     m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession);
                                     m_sessionState->Frame.reset();
-                                } while (!shouldEndSession);
+                                }
+                                while (!shouldEndSession);
 
                                 m_sessionState.reset();
                                 m_beginTask.reset();
