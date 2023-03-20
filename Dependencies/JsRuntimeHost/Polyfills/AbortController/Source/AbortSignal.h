@@ -13,7 +13,6 @@ namespace Babylon::Polyfills::Internal
     class AbortSignal final : public Napi::ObjectWrap<AbortSignal>
     {
     public:
-
         static constexpr auto JS_ABORT_SIGNAL_CONSTRUCTOR_NAME = "AbortSignal";
 
         static void Initialize(Napi::Env env);
@@ -21,7 +20,6 @@ namespace Babylon::Polyfills::Internal
         explicit AbortSignal(const Napi::CallbackInfo& info);
 
     private:
-
         Napi::Value GetAborted(const Napi::CallbackInfo& info);
         void SetAborted(const Napi::CallbackInfo&, const Napi::Value& value);
 

@@ -1,6 +1,5 @@
 #include "AbortController.h"
 
-
 namespace Babylon::Polyfills::Internal
 {
     void AbortController::Initialize(Napi::Env env)
@@ -25,12 +24,12 @@ namespace Babylon::Polyfills::Internal
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ABORT_CONTROLLER_CONSTRUCTOR_NAME, func);
     }
 
-    Napi::Value AbortController::GetSignal(const Napi::CallbackInfo& )
+    Napi::Value AbortController::GetSignal(const Napi::CallbackInfo&)
     {
         return m_signal.Value();
     }
 
-    void AbortController::Abort(const Napi::CallbackInfo& )
+    void AbortController::Abort(const Napi::CallbackInfo&)
     {
         m_signal.Set("aborted", true);
         m_signal.Get("onabort").As<Napi::Function>().Call({});

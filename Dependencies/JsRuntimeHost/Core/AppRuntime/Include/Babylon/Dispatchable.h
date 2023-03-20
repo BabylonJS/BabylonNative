@@ -29,7 +29,7 @@ namespace Babylon
         {
         public:
             DispatchableImpl(DispatchableImpl<CallableT, ReturnT(ArgsT...)>&& other) = default;
-        
+
             DispatchableImpl(CallableT&& callable)
                 : m_callable{std::forward<CallableT>(callable)}
             {

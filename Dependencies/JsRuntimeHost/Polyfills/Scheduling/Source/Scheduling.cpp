@@ -7,9 +7,10 @@ namespace
 
     Napi::Value SetTimeout(const Napi::CallbackInfo& info, Babylon::Polyfills::Internal::TimeoutDispatcher& timeoutDispatcher)
     {
-        auto function = info[0].IsFunction()
-            ? std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>()))
-            : std::shared_ptr<Napi::FunctionReference>{};
+        auto function =
+            info[0].IsFunction()
+                ? std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>()))
+                : std::shared_ptr<Napi::FunctionReference>{};
 
         auto delay = std::chrono::milliseconds{info[1].ToNumber().Int32Value()};
 
@@ -36,15 +37,19 @@ namespace Babylon::Polyfills::Scheduling
         {
             auto timeoutDispatcher = std::make_shared<Internal::TimeoutDispatcher>(JsRuntime::GetFromJavaScript(env));
 
-            global.Set(JS_SET_TIMEOUT_NAME, Napi::Function::New(env, [timeoutDispatcher](const Napi::CallbackInfo& info)
-            {
-                return SetTimeout(info, *timeoutDispatcher);
-            }, JS_SET_TIMEOUT_NAME));
+            global.Set(JS_SET_TIMEOUT_NAME,
+                Napi::Function::New(
+                    env, [timeoutDispatcher](const Napi::CallbackInfo& info) {
+                        return SetTimeout(info, *timeoutDispatcher);
+                    },
+                    JS_SET_TIMEOUT_NAME));
 
-            global.Set(JS_CLEAR_TIMEOUT_NAME, Napi::Function::New(env, [timeoutDispatcher](const Napi::CallbackInfo& info)
-            {
-                ClearTimeout(info, *timeoutDispatcher);
-            }, JS_CLEAR_TIMEOUT_NAME));
+            global.Set(JS_CLEAR_TIMEOUT_NAME,
+                Napi::Function::New(
+                    env, [timeoutDispatcher](const Napi::CallbackInfo& info) {
+                        ClearTimeout(info, *timeoutDispatcher);
+                    },
+                    JS_CLEAR_TIMEOUT_NAME));
         }
     }
 }

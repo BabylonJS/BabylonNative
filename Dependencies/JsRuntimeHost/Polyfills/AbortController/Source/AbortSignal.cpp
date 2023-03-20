@@ -46,7 +46,7 @@ namespace Babylon::Polyfills::Internal
         {
             return Napi::Value::From(Env(), Env().Null());
         }
-        
+
         return Napi::Value::From(Env(), m_onabort.Value());
     }
 

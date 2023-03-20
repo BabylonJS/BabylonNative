@@ -117,8 +117,8 @@ namespace Babylon::Polyfills::Internal
         }
         else
         {
-            gsl::span<const std::byte> responseBuffer{ m_request.ResponseBuffer() };
-            auto arrayBuffer{ Napi::ArrayBuffer::New(Env(), responseBuffer.size()) };
+            gsl::span<const std::byte> responseBuffer{m_request.ResponseBuffer()};
+            auto arrayBuffer{Napi::ArrayBuffer::New(Env(), responseBuffer.size())};
             std::memcpy(arrayBuffer.Data(), responseBuffer.data(), arrayBuffer.ByteLength());
             return std::move(arrayBuffer);
         }
@@ -257,8 +257,7 @@ namespace Babylon::Polyfills::Internal
             }
         }
 
-        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result)
-        {
+        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
             if (result.has_error())
             {
                 Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
