@@ -1,4 +1,5 @@
 #include "AppRuntime.h"
+#include <napi/env_v8.h>
 
 #if defined(_MSC_VER)
 #pragma warning(disable : 4100 4267 4127)
@@ -77,12 +78,12 @@ namespace Babylon
             v8::Local<v8::Context> context = v8::Context::New(isolate);
             v8::Context::Scope context_scope{context};
 
-            Napi::Env env = Napi::Attach(context);
+            Napi::Env env = Napi::V8::Attach(context);
             Dispatch([](Napi::Env env) {
                 Module::Instance().AddPlatformToJavaScript(env);
             });
             Run(env);
-            Napi::Detach(env);
+            Napi::V8::Detach(env);
         }
 
         // Destroy the isolate.

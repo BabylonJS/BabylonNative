@@ -2,6 +2,11 @@ plugins {
     id 'com.android.application'
 }
 
+def jsEngine = "V8"
+if (project.hasProperty("jsEngine")) {
+    jsEngine = project.property("jsEngine")
+}
+
 android {
     namespace 'com.jsruntimehost.unittests'
     compileSdk 33
@@ -20,7 +25,7 @@ android {
             cmake {
                 arguments (
                     "-DANDROID_STL=c++_shared",
-                    "-DNAPI_JAVASCRIPT_ENGINE=JavaScriptCore"
+                    "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}"
                 )
             }
         }

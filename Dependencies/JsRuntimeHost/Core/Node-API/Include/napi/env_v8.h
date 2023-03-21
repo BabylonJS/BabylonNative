@@ -1,6 +1,7 @@
 #pragma once
 
 #include "env.h"
+#include <v8.h>
 
 namespace Napi::V8
 {

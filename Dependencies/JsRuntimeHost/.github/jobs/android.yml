@@ -1,5 +1,11 @@
+parameters:
+- name: name
+  type: string
+- name: jsEngine
+  type: string
+
 jobs:
-- job: Android
+- job: ${{parameters.name}}
   timeoutInMinutes: 15
 
   pool:
@@ -32,7 +38,7 @@ jobs:
     inputs:
       gradleWrapperFile: 'Tests/UnitTests/Android/gradlew'
       workingDirectory: 'Tests/UnitTests/Android'
-      options: '-PabiFilters=x86_64'
+      options: '-PabiFilters=x86_64 -PjsEngine=${{parameters.jsEngine}}'
       tasks: 'connectedAndroidTest'
       jdkVersionOption: 1.11
     displayName: 'Run Connected Android Test'
