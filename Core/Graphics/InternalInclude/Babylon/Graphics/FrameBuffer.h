@@ -61,8 +61,6 @@ namespace Babylon::Graphics
         float m_depth{1.0f};
         uint8_t m_stencil{0};
 
-        bool m_hasViewIdBeenUsed{false};
-
         bool m_disposed{false};
     };
 }

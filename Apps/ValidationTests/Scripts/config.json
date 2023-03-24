@@ -1,6 +1,6 @@
 {
     "root": "https://cdn.babylonjs.com",
-    "tests": [
+    "tests": [       
         {
             "reason": "https://github.com/BabylonJS/BabylonNative/issues/1111",
             "title": "Thin Instances",
@@ -199,6 +199,18 @@
             "title": "Multi camera rendering",
             "playgroundId": "#1LK70I#22",
             "referenceImage": "multiCameraRendering.png"
+        },
+        {
+            "title": "Multi cameras and output render target with multiple viewports",
+            "renderCount": 2,
+            "playgroundId": "#DRBJLR#1",
+            "referenceImage": "multiCamerasAndViewportsOutputRenderTarget.png"
+        },
+        {
+            "title": "Multi cameras and output render target",
+            "renderCount": 2,
+            "playgroundId": "#BCYE7J#31",
+            "referenceImage": "multiCamerasOutputRenderTarget.png"
         },
         {
             "title": "setParent",

@@ -14,6 +14,13 @@ namespace Babylon::Graphics
             bgfx::setViewFrameBuffer(viewId, handle);
         }
 
+        void SetEmptyClearMode(bgfx::ViewId viewId, bgfx::FrameBufferHandle handle)
+        {
+            bgfx::setViewMode(viewId, bgfx::ViewMode::Sequential);
+            bgfx::setViewClear(viewId, BGFX_CLEAR_NONE, 0, 0.0f, 0);
+            bgfx::setViewFrameBuffer(viewId, handle);
+        }
+
         void setViewPort(bgfx::ViewId viewId, const ViewPort& viewPort, uint16_t width, uint16_t height)
         {
             bgfx::setViewRect(viewId,
@@ -63,17 +70,8 @@ namespace Babylon::Graphics
     void FrameBuffer::Bind(bgfx::Encoder& encoder)
     {
         m_viewId = m_context.AcquireNewViewId(encoder);
-
-        //Reset view state for next frame.
-        m_viewPort = {0, 0, 1, 1};
-        m_flags = BGFX_CLEAR_NONE;
-        m_rgba = 0x000000ff;
-        m_depth = 1.0f;
-        m_stencil = 0;
-
         SetDefaultClearMode(m_viewId, m_handle, BGFX_CLEAR_NONE, 0x000000ff, 1.0f, 0);
-        setViewPort(m_viewId, m_viewPort, Width(), Height());
-        m_hasViewIdBeenUsed = false;
+        setViewPort(m_viewId, m_viewPort, Width(), Height() );
     }
 
     void FrameBuffer::Unbind(bgfx::Encoder&)
@@ -86,19 +84,16 @@ namespace Babylon::Graphics
         m_rgba = rgba;
         m_depth = depth;
         m_stencil = stencil;
+       
+        m_viewId = m_context.AcquireNewViewId(encoder);
+        SetDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
+        setViewPort(m_viewId, ViewPort {0, 0, 1, 1}, Width(), Height() );
+        encoder.touch(m_viewId);
+        
+        m_viewId = m_context.AcquireNewViewId( encoder );
 
-        if (m_hasViewIdBeenUsed)
-        {
-            m_viewId = m_context.AcquireNewViewId(encoder);
-            SetDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
-            setViewPort(m_viewId, m_viewPort, Width(), Height());
-        }
-        else
-        {
-            bgfx::setViewClear(m_viewId, m_flags, m_rgba, m_depth, m_stencil);
-        }
-
-        m_hasViewIdBeenUsed = true;
+        SetDefaultClearMode( m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil );
+        setViewPort(m_viewId, m_viewPort, Width(), Height());        
         encoder.touch(m_viewId);
     }
 
@@ -111,20 +106,16 @@ namespace Babylon::Graphics
 
         m_viewPort = {x, y, width, height};
 
-        if (m_hasViewIdBeenUsed)
-        {
-            m_viewId = m_context.AcquireNewViewId(encoder);
-            SetDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
-        }
+        
+        m_viewId = m_context.AcquireNewViewId(encoder);
+        SetDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
 
         setViewPort(m_viewId, m_viewPort, Width(), Height());
-        m_hasViewIdBeenUsed = true;
     }
 
     void FrameBuffer::Submit(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint8_t flags)
     {
         encoder.submit(m_viewId, programHandle, 0, flags);
-        m_hasViewIdBeenUsed = true;
     }
 
     void FrameBuffer::Blit(bgfx::Encoder& encoder, bgfx::TextureHandle dst, uint16_t dstX, uint16_t dstY, bgfx::TextureHandle src, uint16_t srcX, uint16_t srcY, uint16_t width, uint16_t height)
@@ -136,7 +127,6 @@ namespace Babylon::Graphics
         setViewPort(m_viewId, m_viewPort, Width(), Height());
 
         encoder.blit(m_viewId, dst, dstX, dstY, src, srcX, srcY, width, height);
-        m_hasViewIdBeenUsed = true;
     }
 
     void FrameBuffer::SetStencil(bgfx::Encoder& encoder, uint32_t stencilState)
