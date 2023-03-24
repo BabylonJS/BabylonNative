@@ -14,13 +14,6 @@ namespace Babylon::Graphics
             bgfx::setViewFrameBuffer(viewId, handle);
         }
 
-        void SetEmptyClearMode(bgfx::ViewId viewId, bgfx::FrameBufferHandle handle)
-        {
-            bgfx::setViewMode(viewId, bgfx::ViewMode::Sequential);
-            bgfx::setViewClear(viewId, BGFX_CLEAR_NONE, 0, 0.0f, 0);
-            bgfx::setViewFrameBuffer(viewId, handle);
-        }
-
         void setViewPort(bgfx::ViewId viewId, const ViewPort& viewPort, uint16_t width, uint16_t height)
         {
             bgfx::setViewRect(viewId,
@@ -85,13 +78,14 @@ namespace Babylon::Graphics
         m_depth = depth;
         m_stencil = stencil;
        
+        //Clear must be done to the entire screen (following WebGL behavior)
         m_viewId = m_context.AcquireNewViewId(encoder);
         SetDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
         setViewPort(m_viewId, ViewPort {0, 0, 1, 1}, Width(), Height() );
         encoder.touch(m_viewId);
         
+        //Create a new view after, to keep the viewport value consitent to what it was before. 
         m_viewId = m_context.AcquireNewViewId( encoder );
-
         SetDefaultClearMode( m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil );
         setViewPort(m_viewId, m_viewPort, Width(), Height());        
         encoder.touch(m_viewId);
@@ -105,7 +99,6 @@ namespace Babylon::Graphics
         }
 
         m_viewPort = {x, y, width, height};
-
         
         m_viewId = m_context.AcquireNewViewId(encoder);
         SetDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
