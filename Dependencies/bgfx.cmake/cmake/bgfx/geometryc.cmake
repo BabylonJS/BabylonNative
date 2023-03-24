@@ -31,6 +31,12 @@ if(BGFX_BUILD_TOOLS_GEOMETRY AND BGFX_CUSTOM_TARGETS)
 	add_dependencies(tools geometryc)
 endif()
 
+if(BGFX_BUILD_TOOLS_GEOMETRY)
+	if(TARGET geometryc AND NOT TARGET bgfx::geometryc)
+		add_executable(bgfx::geometryc ALIAS geometryc)
+	endif()
+endif()
+
 if(IOS)
 	set_target_properties(geometryc PROPERTIES MACOSX_BUNDLE ON MACOSX_BUNDLE_GUI_IDENTIFIER geometryc)
 endif()

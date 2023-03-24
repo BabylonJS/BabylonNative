@@ -105,7 +105,7 @@ function(add_bgfx_shader FILE FOLDER)
 
 		foreach(OUT ${OUTPUTS})
 			list(APPEND OUTPUT_FILES ${${OUT}_OUTPUT})
-			list(APPEND COMMANDS COMMAND "$<TARGET_FILE:shaderc>" ${${OUT}})
+			list(APPEND COMMANDS COMMAND "bgfx::shaderc" ${${OUT}})
 			get_filename_component(OUT_DIR ${${OUT}_OUTPUT} DIRECTORY)
 			file(MAKE_DIRECTORY ${OUT_DIR})
 		endforeach()

@@ -54,6 +54,12 @@ if(BGFX_BUILD_TOOLS_SHADER AND BGFX_CUSTOM_TARGETS)
 	add_dependencies(tools shaderc)
 endif()
 
+if(BGFX_BUILD_TOOLS_SHADER)
+	if(TARGET shaderc AND NOT TARGET bgfx::shaderc)
+		add_executable(bgfx::shaderc ALIAS shaderc)
+	endif()
+endif()
+
 if(ANDROID)
 	target_link_libraries(shaderc PRIVATE log)
 elseif(IOS)

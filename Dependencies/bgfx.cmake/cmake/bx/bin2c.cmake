@@ -26,6 +26,12 @@ if(BGFX_BUILD_TOOLS_BIN2C AND BGFX_CUSTOM_TARGETS)
 	add_dependencies(tools bin2c)
 endif()
 
+if(BGFX_BUILD_TOOLS_BIN2C)
+	if(TARGET bin2c AND NOT TARGET bgfx::bin2c)
+		add_executable(bgfx::bin2c ALIAS bin2c)
+	endif()
+endif()
+
 if(ANDROID)
 	target_link_libraries(bin2c PRIVATE log)
 elseif(IOS)

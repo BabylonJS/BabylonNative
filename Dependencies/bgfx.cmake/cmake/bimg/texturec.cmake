@@ -26,6 +26,12 @@ if(BGFX_BUILD_TOOLS_TEXTURE AND BGFX_CUSTOM_TARGETS)
 	add_dependencies(tools texturec)
 endif()
 
+if(BGFX_BUILD_TOOLS_TEXTURE)
+	if(TARGET texturec AND NOT TARGET bgfx::texturec)
+		add_executable(bgfx::texturec ALIAS texturec)
+	endif()
+endif()
+
 if(ANDROID)
 	target_link_libraries(texturec PRIVATE log)
 elseif(IOS)
