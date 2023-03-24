@@ -72,7 +72,6 @@ namespace Babylon::Graphics
 
         bool m_disposed{false};
 
-        bool SetBgfxViewState(bgfx::Encoder& encoder, const ViewState& viewState, bool force = false);
-        void ClearBgfxViewState(bgfx::Encoder& encoder);
+        void SetBgfxViewState(bgfx::Encoder& encoder, const ViewState& viewState, bool force = false);
     };
 }

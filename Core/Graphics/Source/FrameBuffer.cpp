@@ -44,7 +44,16 @@ namespace Babylon::Graphics
 
     void FrameBuffer::Bind(bgfx::Encoder& encoder)
     {
-        ClearBgfxViewState(encoder);
+        //BGFX might reset view state after drawing is done.
+        //In order drawing using multiple render targets (like shadows) to work properly we must reset view clear state when we bind, making sure it is in a valid state.
+        ViewState emptyState{};
+        emptyState.Flags = BGFX_CLEAR_NONE;
+        emptyState.Rgba = 0x000000ff;
+        emptyState.Stencil = 0;
+        emptyState.Depth = 1.0f;
+        emptyState.ViewPort = m_bgfxViewState.ViewPort;
+
+        SetBgfxViewState(encoder, emptyState, true);
     }
 
     void FrameBuffer::Unbind(bgfx::Encoder&)
@@ -61,9 +70,11 @@ namespace Babylon::Graphics
         ViewState viewState = m_expectedViewState;
         viewState.ViewPort = {0, 0, 1, 1};
 
+        //Set state to full viewport to perform a clear (webGL clear does not consider viewport).
         SetBgfxViewState(encoder, viewState);
         encoder.touch(m_viewId);
 
+        //Set viewport back to the expected value.
         SetBgfxViewState(encoder, m_expectedViewState);
     }
 
@@ -80,6 +91,7 @@ namespace Babylon::Graphics
 
     void FrameBuffer::Blit(bgfx::Encoder& encoder, bgfx::TextureHandle dst, uint16_t dstX, uint16_t dstY, bgfx::TextureHandle src, uint16_t srcX, uint16_t srcY, uint16_t width, uint16_t height)
     {
+        //In order for Blit to work properly we need to force the creation of a new ViewID.
         SetBgfxViewState(encoder, m_expectedViewState, true);
         encoder.blit(m_viewId, dst, dstX, dstY, src, srcX, srcY, width, height);
     }
@@ -104,10 +116,10 @@ namespace Babylon::Graphics
         m_disposed = true;
     }
 
-    bool FrameBuffer::SetBgfxViewState(bgfx::Encoder& encoder, const ViewState& viewState, bool force)
+    void FrameBuffer::SetBgfxViewState(bgfx::Encoder& encoder, const ViewState& viewState, bool force)
     {
         if (viewState.Equals(m_bgfxViewState) && !force)
-            return false;
+            return;
 
         m_viewId = m_context.AcquireNewViewId(encoder);
 
@@ -116,33 +128,11 @@ namespace Babylon::Graphics
         bgfx::setViewMode(m_viewId, bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId, m_bgfxViewState.Flags, m_bgfxViewState.Rgba, m_bgfxViewState.Depth, m_bgfxViewState.Stencil);
         bgfx::setViewFrameBuffer(m_viewId, m_handle);
-
         bgfx::setViewRect(m_viewId,
             static_cast<uint16_t>(m_bgfxViewState.ViewPort.X * Width()),
             static_cast<uint16_t>(m_bgfxViewState.ViewPort.Y * Height()),
             static_cast<uint16_t>(m_bgfxViewState.ViewPort.Width * Width()),
             static_cast<uint16_t>(m_bgfxViewState.ViewPort.Height * Height()));
-
-        return true;
-    }
-
-    void FrameBuffer::ClearBgfxViewState(bgfx::Encoder& encoder)
-    {
-        m_viewId = m_context.AcquireNewViewId(encoder);
-        
-        bgfx::setViewMode(m_viewId, bgfx::ViewMode::Sequential);
-        bgfx::setViewClear(m_viewId, BGFX_CLEAR_NONE, 0x000000ff, 1.0f, 0);
-        bgfx::setViewFrameBuffer(m_viewId, m_handle);
-        bgfx::setViewRect(m_viewId,
-            static_cast<uint16_t>(m_bgfxViewState.ViewPort.X * Width()),
-            static_cast<uint16_t>(m_bgfxViewState.ViewPort.Y * Height()),
-            static_cast<uint16_t>(m_bgfxViewState.ViewPort.Width * Width()),
-            static_cast<uint16_t>(m_bgfxViewState.ViewPort.Height * Height()));
-
-        m_bgfxViewState.Flags = BGFX_CLEAR_NONE;
-        m_bgfxViewState.Rgba = 0x000000ff;
-        m_bgfxViewState.Stencil = 0;
-        m_bgfxViewState.Depth = 1.0f;
     }
 
     bool ViewPort::Equals(const ViewPort& other) const
