@@ -201,12 +201,6 @@
             "referenceImage": "multiCameraRendering.png"
         },
         {
-            "title": "Multi cameras and output render target with multiple viewports",
-            "renderCount": 2,
-            "playgroundId": "#DRBJLR#1",
-            "referenceImage": "multiCamerasAndViewportsOutputRenderTarget.png"
-        },
-        {
             "title": "Multi cameras and output render target",
             "renderCount": 2,
             "playgroundId": "#BCYE7J#31",
