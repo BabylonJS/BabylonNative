@@ -27,10 +27,10 @@ endif()
 target_include_directories(napi PUBLIC "include")
 
 # Install v8 SDK from NuGet
-function (install_v8_nuget V8_VERSION ARCH VS_PLAT_TOOLSET)
+function (install_v8_nuget V8_VERSION ARCH)
     download_nuget()
-    set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}")
-    set(V8_REDIST_PACKAGE_PATH "${NUGET_PATH}/packages/v8.redist-${VS_PLAT_TOOLSET}-${ARCH}.${V8_VERSION}")
+    set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v142-${ARCH}.${V8_VERSION}")
+    set(V8_REDIST_PACKAGE_PATH "${NUGET_PATH}/packages/v8.redist-v142-${ARCH}.${V8_VERSION}")
 
     add_library(v8_libbase SHARED IMPORTED)
     set_target_properties(v8_libbase PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libbase.dll.lib")
@@ -58,7 +58,7 @@ if(NOT TARGET javascript_engine)
         if(WIN32)
             set_cpu_platform_arch()
             set(V8_VERSION "8.4.371.15")
-            install_v8_nuget(${V8_VERSION} ${CPU_ARCH} ${CMAKE_VS_PLATFORM_TOOLSET})
+            install_v8_nuget(${V8_VERSION} ${CPU_ARCH})
             target_link_to_dependencies(javascript_engine INTERFACE v8)
 
             if (CPU_ARCH STREQUAL "x64")
