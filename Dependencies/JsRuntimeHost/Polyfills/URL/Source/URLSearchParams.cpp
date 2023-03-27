@@ -6,23 +6,19 @@ namespace Babylon::Polyfills::Internal
 {
     void URLSearchParams::Initialize(Napi::Env env)
     {
-        Napi::HandleScope scope{env};
-
-        Napi::Function func = DefineClass(
-            env,
-            JS_URL_SEARCH_PARAMS_CONSTRUCTOR_NAME,
-            {
-                InstanceMethod("get", &URLSearchParams::Get),
-                InstanceMethod("set", &URLSearchParams::Set),
-                InstanceMethod("has", &URLSearchParams::Has),
-            });
-
         if (env.Global().Get(JS_URL_SEARCH_PARAMS_CONSTRUCTOR_NAME).IsUndefined())
         {
+            Napi::Function func = DefineClass(
+                env,
+                JS_URL_SEARCH_PARAMS_CONSTRUCTOR_NAME,
+                {
+                    InstanceMethod("get", &URLSearchParams::Get),
+                    InstanceMethod("set", &URLSearchParams::Set),
+                    InstanceMethod("has", &URLSearchParams::Has),
+                });
+
             env.Global().Set(JS_URL_SEARCH_PARAMS_CONSTRUCTOR_NAME, func);
         }
-
-        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_URL_SEARCH_PARAMS_CONSTRUCTOR_NAME, func);
     }
 
     URLSearchParams::URLSearchParams(const Napi::CallbackInfo& info)

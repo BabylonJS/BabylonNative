@@ -3,28 +3,25 @@
 
 namespace Babylon::Polyfills::Internal
 {
+    static constexpr auto JS_URL_CONSTRUCTOR_NAME = "URL";
     void URL::Initialize(Napi::Env env)
     {
-        Napi::HandleScope scope{env};
-
-        Napi::Function func = DefineClass(
-            env,
-            JS_URL_CONSTRUCTOR_NAME,
-            {
-                InstanceAccessor("search", &URL::GetSearch, &URL::SetSearch),
-                InstanceAccessor("href", &URL::GetHref, &URL::SetHref),
-                InstanceAccessor("origin", &URL::GetOrigin, nullptr),
-                InstanceAccessor("pathname", &URL::GetPathname, nullptr),
-                InstanceAccessor("hostname", &URL::GetHostname, nullptr),
-                InstanceAccessor("searchParams", &URL::GetSearchParams, nullptr),
-            });
-
         if (env.Global().Get(JS_URL_CONSTRUCTOR_NAME).IsUndefined())
         {
+            Napi::Function func = DefineClass(
+                env,
+                JS_URL_CONSTRUCTOR_NAME,
+                {
+                    InstanceAccessor("search", &URL::GetSearch, &URL::SetSearch),
+                    InstanceAccessor("href", &URL::GetHref, &URL::SetHref),
+                    InstanceAccessor("origin", &URL::GetOrigin, nullptr),
+                    InstanceAccessor("pathname", &URL::GetPathname, nullptr),
+                    InstanceAccessor("hostname", &URL::GetHostname, nullptr),
+                    InstanceAccessor("searchParams", &URL::GetSearchParams, nullptr),
+                });
+
             env.Global().Set(JS_URL_CONSTRUCTOR_NAME, func);
         }
-
-        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_URL_CONSTRUCTOR_NAME, func);
     }
 
     URL& URL::GetFromJavaScript(Napi::Env env)

@@ -14,9 +14,7 @@ namespace Babylon::Polyfills::Internal
     {
     public:
         static constexpr auto JS_ABORT_SIGNAL_CONSTRUCTOR_NAME = "AbortSignal";
-
         static void Initialize(Napi::Env env);
-
         explicit AbortSignal(const Napi::CallbackInfo& info);
 
     private:

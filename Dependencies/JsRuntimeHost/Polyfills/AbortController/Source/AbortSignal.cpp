@@ -5,24 +5,20 @@ namespace Babylon::Polyfills::Internal
 {
     void AbortSignal::Initialize(Napi::Env env)
     {
-        Napi::HandleScope scope{env};
-
-        Napi::Function func = DefineClass(
-            env,
-            JS_ABORT_SIGNAL_CONSTRUCTOR_NAME,
-            {
-                InstanceAccessor("aborted", &AbortSignal::GetAborted, &AbortSignal::SetAborted),
-                InstanceAccessor("onabort", &AbortSignal::GetOnAbort, &AbortSignal::SetOnAbort),
-                InstanceMethod("addEventListener", &AbortSignal::AddEventListener),
-                InstanceMethod("removeEventListener", &AbortSignal::RemoveEventListener),
-            });
-
         if (env.Global().Get(JS_ABORT_SIGNAL_CONSTRUCTOR_NAME).IsUndefined())
         {
+            Napi::Function func = DefineClass(
+                env,
+                JS_ABORT_SIGNAL_CONSTRUCTOR_NAME,
+                {
+                    InstanceAccessor("aborted", &AbortSignal::GetAborted, &AbortSignal::SetAborted),
+                    InstanceAccessor("onabort", &AbortSignal::GetOnAbort, &AbortSignal::SetOnAbort),
+                    InstanceMethod("addEventListener", &AbortSignal::AddEventListener),
+                    InstanceMethod("removeEventListener", &AbortSignal::RemoveEventListener),
+                });
+
             env.Global().Set(JS_ABORT_SIGNAL_CONSTRUCTOR_NAME, func);
         }
-
-        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ABORT_SIGNAL_CONSTRUCTOR_NAME, func);
     }
 
     AbortSignal::AbortSignal(const Napi::CallbackInfo& info)

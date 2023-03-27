@@ -4,24 +4,19 @@ namespace Babylon::Polyfills::Internal
 {
     void AbortController::Initialize(Napi::Env env)
     {
-        Napi::HandleScope scope{env};
-
         static constexpr auto JS_ABORT_CONTROLLER_CONSTRUCTOR_NAME = "AbortController";
-
-        Napi::Function func = DefineClass(
-            env,
-            JS_ABORT_CONTROLLER_CONSTRUCTOR_NAME,
-            {
-                InstanceAccessor("signal", &AbortController::GetSignal, nullptr),
-                InstanceMethod("abort", &AbortController::Abort),
-            });
-
         if (env.Global().Get(JS_ABORT_CONTROLLER_CONSTRUCTOR_NAME).IsUndefined())
         {
+            Napi::Function func = DefineClass(
+                env,
+                JS_ABORT_CONTROLLER_CONSTRUCTOR_NAME,
+                {
+                    InstanceAccessor("signal", &AbortController::GetSignal, nullptr),
+                    InstanceMethod("abort", &AbortController::Abort),
+                });
+
             env.Global().Set(JS_ABORT_CONTROLLER_CONSTRUCTOR_NAME, func);
         }
-
-        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ABORT_CONTROLLER_CONSTRUCTOR_NAME, func);
     }
 
     Napi::Value AbortController::GetSignal(const Napi::CallbackInfo&)
