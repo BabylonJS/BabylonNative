@@ -1,6 +1,6 @@
 {
     "root": "https://cdn.babylonjs.com",
-    "tests": [       
+    "tests": [
         {
             "reason": "https://github.com/BabylonJS/BabylonNative/issues/1111",
             "title": "Thin Instances",
