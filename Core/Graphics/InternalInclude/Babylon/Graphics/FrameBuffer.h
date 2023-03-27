@@ -17,17 +17,6 @@ namespace Babylon::Graphics
         bool Equals(const ViewPort& other) const;
     };
 
-    struct ViewState
-    {
-        ViewPort ViewPort{};
-        uint16_t Flags{BGFX_CLEAR_NONE};
-        uint32_t Rgba{0x000000ff};
-        float Depth{1.0f};
-        uint8_t Stencil{0};
-
-        bool Equals(const ViewState& other) const;
-    };
-
     class FrameBuffer final
     {
     public:
@@ -65,13 +54,13 @@ namespace Babylon::Graphics
         const bool m_hasDepth;
         const bool m_hasStencil;
 
-        bgfx::ViewId m_viewId{};
+        std::optional<bgfx::ViewId> m_viewId;
 
-        ViewState m_bgfxViewState;
-        ViewState m_expectedViewState;
+        ViewPort m_bgfxViewPort;
+        ViewPort m_desiredViewPort;
 
         bool m_disposed{false};
 
-        void SetBgfxViewState(bgfx::Encoder& encoder, const ViewState& viewState, bool force = false);
+        void SetBgfxViewState(bgfx::Encoder& encoder, const ViewPort& viewState, bool force = false);
     };
 }
