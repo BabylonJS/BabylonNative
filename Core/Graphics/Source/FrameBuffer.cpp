@@ -53,11 +53,15 @@ namespace Babylon::Graphics
 
     void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)
     {
+        //BGFX requires us to create a new viewID, this will ensure that the view gets cleaned. 
         m_viewId = m_context.AcquireNewViewId(encoder);
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
         bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
+
+        //BGFX will consider the viewport when cleaning the screen, but WebGL always cleans the entire screen. 
+        //That's why we always set the viewport to {0, 0, 1, 1} when cleaning.
         bgfx::setViewRect(m_viewId.value(), 0, 0, Width(), Height());
         encoder.touch(m_viewId.value());
 
@@ -67,19 +71,19 @@ namespace Babylon::Graphics
     void FrameBuffer::SetViewPort(bgfx::Encoder& encoder, float x, float y, float width, float height)
     {
         m_desiredViewPort = {x, y, width, height};
-        SetBgfxViewState(encoder, m_desiredViewPort);
+        SetBgfxViewPort(encoder, m_desiredViewPort);
     }
 
     void FrameBuffer::Submit(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint8_t flags)
     {
-        SetBgfxViewState(encoder, m_desiredViewPort);
+        SetBgfxViewPort(encoder, m_desiredViewPort);
         encoder.submit(m_viewId.value(), programHandle, 0, flags);
     }
 
     void FrameBuffer::Blit(bgfx::Encoder& encoder, bgfx::TextureHandle dst, uint16_t dstX, uint16_t dstY, bgfx::TextureHandle src, uint16_t srcX, uint16_t srcY, uint16_t width, uint16_t height)
     {
         //In order for Blit to work properly we need to force the creation of a new ViewID.
-        SetBgfxViewState(encoder, m_desiredViewPort, true);
+        SetBgfxViewPort(encoder, m_desiredViewPort);
         encoder.blit(m_viewId.value(), dst, dstX, dstY, src, srcX, srcY, width, height);
     }
 
@@ -105,14 +109,14 @@ namespace Babylon::Graphics
 
     void FrameBuffer::SetBgfxViewPort(bgfx::Encoder& encoder, const ViewPort& viewPort)
     {
-        if (m_viewId.has_value() && viewState.Equals(m_bgfxViewPort))
+        if (m_viewId.has_value() && viewPort.Equals(m_bgfxViewPort))
         {
             return;
         }
 
         m_viewId = m_context.AcquireNewViewId(encoder);
 
-        m_bgfxViewPort = viewState;
+        m_bgfxViewPort = viewPort;
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), BGFX_CLEAR_NONE, 0, 1.0f, 0);
