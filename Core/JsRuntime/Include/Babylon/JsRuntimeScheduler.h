@@ -19,7 +19,7 @@ namespace Babylon
         template<typename CallableT>
         void operator()(CallableT&& callable) const
         {
-            m_runtime.Dispatch([callable{std::forward<CallableT>(callable)}](Napi::Env){
+            m_runtime.Dispatch([callable{std::forward<CallableT>(callable)}](Napi::Env) {
                 callable();
             });
         }

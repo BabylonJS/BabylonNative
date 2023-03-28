@@ -61,7 +61,7 @@ namespace Babylon
             compiler->rename_entry_point("main", "xlatMtlMain", (stage == EShLangVertex) ? spv::ExecutionModelVertex : spv::ExecutionModelFragment);
 
             shaderResult = compiler->compile();
-            return{std::move(parser), std::move(compiler)};
+            return {std::move(parser), std::move(compiler)};
         }
     }
 }
@@ -95,7 +95,7 @@ namespace Babylon
 
         if (!program.link(EShMsgDefault))
         {
-            throw std::exception();//program.getInfoDebugLog());
+            throw std::exception(); //program.getInfoDebugLog());
         }
 
         ShaderCompilerTraversers::IdGenerator ids{};

@@ -24,14 +24,14 @@ namespace Babylon::ShaderCompilerCommon
 
             switch (uniform.Type)
             {
-            case NonSamplerUniformsInfo::Uniform::TypeEnum::Vec4:
-                bgfxType = bgfx::UniformType::Vec4;
-                break;
-            case NonSamplerUniformsInfo::Uniform::TypeEnum::Mat4:
-                bgfxType = bgfx::UniformType::Mat4;
-                break;
-            default:
-                throw std::runtime_error{"Unrecognized uniform type."};
+                case NonSamplerUniformsInfo::Uniform::TypeEnum::Vec4:
+                    bgfxType = bgfx::UniformType::Vec4;
+                    break;
+                case NonSamplerUniformsInfo::Uniform::TypeEnum::Mat4:
+                    bgfxType = bgfx::UniformType::Mat4;
+                    break;
+                default:
+                    throw std::runtime_error{"Unrecognized uniform type."};
             }
 
             AppendBytes(bytes, static_cast<uint8_t>(uniform.Name.size()));

@@ -106,8 +106,7 @@ namespace
         }
     }
 
-    constexpr std::array<const char*, 25> HAND_JOINT_NAMES
-    {
+    constexpr std::array<const char*, 25> HAND_JOINT_NAMES{
         "wrist",
 
         "thumb-metacarpal",
@@ -137,8 +136,7 @@ namespace
         "pinky-finger-phalanx-proximal",
         "pinky-finger-phalanx-intermediate",
         "pinky-finger-phalanx-distal",
-        "pinky-finger-tip"
-    };
+        "pinky-finger-tip"};
 
     void SetXRInputSourceData(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
     {
@@ -238,12 +236,10 @@ namespace
     {
         if (object.Has("type"))
         {
-            const std::map<std::string, xr::DetectionBoundaryType> detectionBoundaryTypeMap
-            {
+            const std::map<std::string, xr::DetectionBoundaryType> detectionBoundaryTypeMap{
                 {"box", xr::DetectionBoundaryType::Box},
                 {"frustum", xr::DetectionBoundaryType::Frustum},
-                {"sphere", xr::DetectionBoundaryType::Sphere}
-            };
+                {"sphere", xr::DetectionBoundaryType::Sphere}};
             detectionBoundary.Type = detectionBoundaryTypeMap.at(object.Get("type").As<Napi::String>());
         }
 
@@ -356,7 +352,7 @@ namespace Babylon
                 {
                     return m_env.Null();
                 }
-                
+
                 const auto viewConfig = activeViewConfigs[viewIndex];
                 const auto startViewIdx = m_sessionState->ViewConfigurationStartViewIdx[viewConfig];
                 return viewConfig->JsTextures[viewConfig->FrameBuffers[viewIndex - startViewIdx]].Value();
@@ -392,11 +388,13 @@ namespace Babylon
                 return m_sessionState->Session->TrySetPreferredMeshDetectorOptions(options);
             }
 
-            std::vector<xr::ImageTrackingScore>* GetImageTrackingScores() {
+            std::vector<xr::ImageTrackingScore>* GetImageTrackingScores()
+            {
                 return m_sessionState->Session->GetImageTrackingScores();
             }
 
-            void CreateAugmentedImageDatabase(const std::vector<xr::System::Session::ImageTrackingRequest>& requests) {
+            void CreateAugmentedImageDatabase(const std::vector<xr::System::Session::ImageTrackingRequest>& requests)
+            {
                 m_sessionState->Session->CreateAugmentedImageDatabase(requests);
             }
 
@@ -542,28 +540,30 @@ namespace Babylon
 
             // Don't try to end the session while it is still starting.
             m_endTask = m_beginTask->then(arcana::inline_scheduler, arcana::cancellation::none(), [this, thisRef{shared_from_this()}] {
-                // Also don't try to end the session while a frame is in progress.
-                return m_sessionState->FrameTask;
-            }).then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
-                assert(m_sessionState != nullptr);
-                assert(m_sessionState->Session != nullptr);
-                assert(m_sessionState->Frame == nullptr);
+                                       // Also don't try to end the session while a frame is in progress.
+                                       return m_sessionState->FrameTask;
+                                   })
+                            .then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
+                                assert(m_sessionState != nullptr);
+                                assert(m_sessionState->Session != nullptr);
+                                assert(m_sessionState->Frame == nullptr);
 
-                m_sessionState->Session->RequestEndSession();
+                                m_sessionState->Session->RequestEndSession();
 
-                bool shouldEndSession{};
-                bool shouldRestartSession{};
-                do
-                {
-                    // Block and burn frames until XR successfully shuts down.
-                    m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession);
-                    m_sessionState->Frame.reset();
-                } while (!shouldEndSession);
+                                bool shouldEndSession{};
+                                bool shouldRestartSession{};
+                                do
+                                {
+                                    // Block and burn frames until XR successfully shuts down.
+                                    m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession);
+                                    m_sessionState->Frame.reset();
+                                }
+                                while (!shouldEndSession);
 
-                m_sessionState.reset();
-                m_beginTask.reset();
-                NotifySessionStateChanged(false);
-            });
+                                m_sessionState.reset();
+                                m_beginTask.reset();
+                                NotifySessionStateChanged(false);
+                            });
 
             return m_endTask;
         }
@@ -584,8 +584,7 @@ namespace Babylon
             m_sessionState->FrameTask = arcana::make_task(m_sessionState->Update.Scheduler(), m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}] {
                 BeginFrame();
 
-                return arcana::make_task(m_runtimeScheduler, m_sessionState->CancellationSource, [this, updateToken{m_sessionState->Update.GetUpdateToken()}, thisRef{shared_from_this()}]()
-                    {
+                return arcana::make_task(m_runtimeScheduler, m_sessionState->CancellationSource, [this, updateToken{m_sessionState->Update.GetUpdateToken()}, thisRef{shared_from_this()}]() {
                     m_sessionState->FrameScheduled = false;
 
                     BeginUpdate();
@@ -601,11 +600,11 @@ namespace Babylon
 
                     EndUpdate();
                 }).then(arcana::inline_scheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>& result) {
-                    if (!m_sessionState->CancellationSource.cancelled() && result.has_error())
-                    {
-                        Napi::Error::New(m_env, result.error()).ThrowAsJavaScriptException();
-                    }
-                }).then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
+                      if (!m_sessionState->CancellationSource.cancelled() && result.has_error())
+                      {
+                          Napi::Error::New(m_env, result.error()).ThrowAsJavaScriptException();
+                      }
+                  }).then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [this, thisRef{shared_from_this()}](const arcana::expected<void, std::exception_ptr>&) {
                     EndFrame();
                 });
             });
@@ -636,7 +635,7 @@ namespace Babylon
 
                         m_sessionState->TextureToViewConfigurationMap.erase(texturePointer);
                     }
-                }).then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), []{}); // Ensure continuations run on the render thread if they use inline_scheduler.
+                }).then(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [] {}); // Ensure continuations run on the render thread if they use inline_scheduler.
             });
 
             // Ending a session outside of calls to EndSessionAsync() is currently not supported.
@@ -654,8 +653,8 @@ namespace Babylon
                 const auto& view = m_sessionState->Frame->Views[viewIdx];
                 const auto& it{m_sessionState->TextureToViewConfigurationMap.find(view.ColorTexturePointer)};
 
-                if (it == m_sessionState->TextureToViewConfigurationMap.end() || 
-                    it->second.ViewTextureSize.Width != view.ColorTextureSize.Width || 
+                if (it == m_sessionState->TextureToViewConfigurationMap.end() ||
+                    it->second.ViewTextureSize.Width != view.ColorTextureSize.Width ||
                     it->second.ViewTextureSize.Height != view.ColorTextureSize.Height ||
                     it->second.ViewTextureSize.Depth != view.ColorTextureSize.Depth)
                 {
@@ -696,47 +695,47 @@ namespace Babylon
                         bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(viewConfig.ColorTexturePointer));
                         bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(viewConfig.DepthTexturePointer));
                     }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, requiresAppClear, &viewConfig]() {
-                        const auto eyeCount = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(viewConfig.ViewTextureSize.Depth));
-                        // TODO (rgerd): Remove old framebuffers from resource table?
-                        viewConfig.FrameBuffers.resize(eyeCount);
-                        for (uint16_t eyeIdx = 0; eyeIdx < eyeCount; eyeIdx++)
-                        {
-                            std::array<bgfx::Attachment, 2> attachments{};
-                            attachments[0].init(colorTexture, bgfx::Access::Write, eyeIdx);
-                            attachments[1].init(depthTexture, bgfx::Access::Write, eyeIdx);
-                            
-                            auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
+                          const auto eyeCount = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(viewConfig.ViewTextureSize.Depth));
+                          // TODO (rgerd): Remove old framebuffers from resource table?
+                          viewConfig.FrameBuffers.resize(eyeCount);
+                          for (uint16_t eyeIdx = 0; eyeIdx < eyeCount; eyeIdx++)
+                          {
+                              std::array<bgfx::Attachment, 2> attachments{};
+                              attachments[0].init(colorTexture, bgfx::Access::Write, eyeIdx);
+                              attachments[1].init(depthTexture, bgfx::Access::Write, eyeIdx);
 
-                            const auto frameBufferPtr = new Graphics::FrameBuffer(
-                                m_sessionState->GraphicsContext,
-                                frameBufferHandle,
-                                static_cast<uint16_t>(viewConfig.ViewTextureSize.Width),
-                                static_cast<uint16_t>(viewConfig.ViewTextureSize.Height),
-                                true,
-                                true,
-                                true);
+                              auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
-                            auto& frameBuffer = *frameBufferPtr;
+                              const auto frameBufferPtr = new Graphics::FrameBuffer(
+                                  m_sessionState->GraphicsContext,
+                                  frameBufferHandle,
+                                  static_cast<uint16_t>(viewConfig.ViewTextureSize.Width),
+                                  static_cast<uint16_t>(viewConfig.ViewTextureSize.Height),
+                                  true,
+                                  true,
+                                  true);
 
-                            // WebXR, at least in its current implementation, specifies an implicit default clear to black.
-                            // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
-                            frameBuffer.Clear(*m_sessionState->Update.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0); 
+                              auto& frameBuffer = *frameBufferPtr;
 
-                            viewConfig.FrameBuffers[eyeIdx] = frameBufferPtr;
+                              // WebXR, at least in its current implementation, specifies an implicit default clear to black.
+                              // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
+                              frameBuffer.Clear(*m_sessionState->Update.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
 
-                            auto jsWidth{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Width)};
-                            auto jsHeight{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Height)};
-                            auto jsFrameBuffer{Napi::Pointer<Graphics::FrameBuffer>::Create(m_env, frameBufferPtr, Napi::NapiPointerDeleter(frameBufferPtr))};
-                            viewConfig.JsTextures[frameBufferPtr] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
-                            // OpenXR doesn't pre-clear textures, and so we need to make sure the render target gets cleared before rendering the scene.
-                            // ARCore and ARKit effectively pre-clear by pre-compositing the camera feed.
-                            if (requiresAppClear)
-                            {
-                                viewConfig.JsTextures[frameBufferPtr].Set("skipInitialClear", false);
-                            }
-                        }
-                        viewConfig.Initialized = true;
-                    }).then(arcana::inline_scheduler, m_sessionState->CancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
+                              viewConfig.FrameBuffers[eyeIdx] = frameBufferPtr;
+
+                              auto jsWidth{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Width)};
+                              auto jsHeight{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Height)};
+                              auto jsFrameBuffer{Napi::Pointer<Graphics::FrameBuffer>::Create(m_env, frameBufferPtr, Napi::NapiPointerDeleter(frameBufferPtr))};
+                              viewConfig.JsTextures[frameBufferPtr] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
+                              // OpenXR doesn't pre-clear textures, and so we need to make sure the render target gets cleared before rendering the scene.
+                              // ARCore and ARKit effectively pre-clear by pre-compositing the camera feed.
+                              if (requiresAppClear)
+                              {
+                                  viewConfig.JsTextures[frameBufferPtr].Set("skipInitialClear", false);
+                              }
+                          }
+                          viewConfig.Initialized = true;
+                      }).then(arcana::inline_scheduler, m_sessionState->CancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
                         if (result.has_error())
                         {
                             Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
@@ -889,8 +888,7 @@ namespace Babylon
                 Napi::Function func = DefineClass(
                     env,
                     JS_CLASS_NAME,
-                    {
-                    });
+                    {});
 
                 env.Global().Set(JS_CLASS_NAME, func);
             }
@@ -1088,7 +1086,7 @@ namespace Babylon
                         InstanceAccessor("eye", &XRView::GetEye, nullptr),
                         InstanceAccessor("projectionMatrix", &XRView::GetProjectionMatrix, nullptr),
                         InstanceAccessor("transform", &XRView::GetTransform, nullptr),
-                        InstanceAccessor("isFirstPersonObserver", &XRView::IsFirstPersonObserver, nullptr)
+                        InstanceAccessor("isFirstPersonObserver", &XRView::IsFirstPersonObserver, nullptr),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1498,7 +1496,7 @@ namespace Babylon
                         // TODO: Actually support the different types of reference spaces.
                         const auto referenceSpaceType = info[0].As<Napi::String>().Utf8Value();
                         assert(referenceSpaceType == XRReferenceSpaceType::UNBOUNDED ||
-                            referenceSpaceType == XRReferenceSpaceType::VIEWER);
+                               referenceSpaceType == XRReferenceSpaceType::VIEWER);
                         (void)XRReferenceSpaceType::UNBOUNDED;
                         (void)XRReferenceSpaceType::VIEWER;
                     }
@@ -1767,7 +1765,7 @@ namespace Babylon
                     {
                         InstanceAccessor("polygon", &XRPlane::GetPolygon, nullptr),
                         InstanceAccessor("lastChangedTime", &XRPlane::GetLastChangedTime, nullptr),
-                        InstanceAccessor("parentSceneObject", &XRPlane::GetParentSceneObject, nullptr)
+                        InstanceAccessor("parentSceneObject", &XRPlane::GetParentSceneObject, nullptr),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -1872,7 +1870,7 @@ namespace Babylon
                         InstanceAccessor("indices", &XRMesh::GetIndices, nullptr),
                         InstanceAccessor("normals", &XRMesh::GetNormals, nullptr),
                         InstanceAccessor("lastChangedTime", &XRMesh::GetLastChangedTime, nullptr),
-                        InstanceAccessor("parentSceneObject", &XRMesh::GetParentSceneObject, nullptr)
+                        InstanceAccessor("parentSceneObject", &XRMesh::GetParentSceneObject, nullptr),
                     });
 
                 env.Global().Set(JS_CLASS_NAME, func);
@@ -2339,7 +2337,7 @@ namespace Babylon
 
             // NativeXRFrame on the JS side expects getImageTrackingResults to be defined at XR initialization time.
             // This dummy implementation is a placeholder until WebXR Image Tracking support is completed: https://github.com/BabylonJS/BabylonNative/issues/619
-            Napi::Value GetImageTrackingResults (const Napi::CallbackInfo& info)
+            Napi::Value GetImageTrackingResults(const Napi::CallbackInfo& info)
             {
                 return info.Env().Undefined();
             }
@@ -2571,9 +2569,7 @@ namespace Babylon
                     xr::System::Session::Frame::ImageTrackingResult& nativeResult{m_frame->GetImageTrackingResultByID(imageTrackingResultID)};
 
                     // Convert the image tracking state from the native result to a string.
-                    const std::string trackingStateString = nativeResult.TrackingState == xr::ImageTrackingState::TRACKED ?
-                        XRImageTrackingState::TRACKED :
-                        XRImageTrackingState::EMULATED;
+                    const std::string trackingStateString = nativeResult.TrackingState == xr::ImageTrackingState::TRACKED ? XRImageTrackingState::TRACKED : XRImageTrackingState::EMULATED;
 
                     // Result does not yet exist, create the JS object and insert it into the map.
                     if (trackedImageTrackingResultIterator == m_trackedImageIDToResultMap.end())
@@ -2699,7 +2695,7 @@ namespace Babylon
                         const auto napiImageRequest{napiTrackedImages.Get(idx).As<Napi::Object>()};
                         const auto napiImage{napiImageRequest.Get("image").As<Napi::Object>()};
                         const auto napiBuffer{napiImage.Get("data").As<Napi::Uint8Array>()};
-                        const uint32_t bufferSize{(uint32_t) napiBuffer.ByteLength()};
+                        const uint32_t bufferSize{(uint32_t)napiBuffer.ByteLength()};
                         const uint32_t imageHeight{napiImage.Get("height").ToNumber().Uint32Value()};
                         const uint32_t imageWidth{napiImage.Get("width").ToNumber().Uint32Value()};
                         const uint32_t imageDepth{napiImage.Get("depth").ToNumber().Uint32Value()};
@@ -2708,14 +2704,13 @@ namespace Babylon
 
                         // Construct the image tracking request object.
                         session.m_imageTrackingRequests[idx] =
-                        {
-                            napiBuffer.Data(),
-                            imageWidth,
-                            imageHeight,
-                            imageDepth,
-                            stride,
-                            estimatedWidth
-                        };
+                            {
+                                napiBuffer.Data(),
+                                imageWidth,
+                                imageHeight,
+                                imageDepth,
+                                stride,
+                                estimatedWidth};
                     }
                 }
 
@@ -2744,7 +2739,7 @@ namespace Babylon
             {
                 // Currently only immersive VR and immersive AR are supported.
                 assert(info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_VR ||
-                    info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);
+                       info[0].As<Napi::String>().Utf8Value() == XRSessionType::IMMERSIVE_AR);
             }
 
             void InitializeXrLayer(Napi::Object layer)
@@ -3041,7 +3036,8 @@ namespace Babylon
 
                     m_xrFrame.Update(Env(), frame, m_timestamp);
 
-                    if (m_imageTrackingRequests.size() > 0) {
+                    if (m_imageTrackingRequests.size() > 0)
+                    {
                         // Kick off creation of the augmented image database.
                         m_xr->CreateAugmentedImageDatabase(m_imageTrackingRequests);
 
@@ -3235,7 +3231,8 @@ namespace Babylon
             Napi::Value GetTrackedImageScores(const Napi::CallbackInfo& info)
             {
                 std::vector<xr::ImageTrackingScore>* imageTrackingScores{m_xr->GetImageTrackingScores()};
-                if (imageTrackingScores == nullptr) {
+                if (imageTrackingScores == nullptr)
+                {
                     return info.Env().Undefined();
                 }
 
@@ -3245,9 +3242,7 @@ namespace Babylon
                 // Loop over the list of tracked image tracking results, and add them to the array.
                 for (const auto& score : *imageTrackingScores)
                 {
-                    const std::string scoreString = score == xr::ImageTrackingScore::TRACKABLE ?
-                        XRImageTrackingScore::TRACKABLE :
-                        XRImageTrackingScore::UNTRACKABLE;
+                    const std::string scoreString = score == xr::ImageTrackingScore::TRACKABLE ? XRImageTrackingScore::TRACKABLE : XRImageTrackingScore::UNTRACKABLE;
                     results.Set(index++, Napi::Value::From(info.Env(), scoreString));
                 }
 
@@ -3485,8 +3480,8 @@ namespace Babylon
                     throw std::runtime_error{"A single object argument is required."};
                 }
 
-                const auto xrAnchor{ XRAnchor::Unwrap(info[0].ToObject()) };
-                const auto anchor{ xrAnchor->GetNativeAnchor() };
+                const auto xrAnchor{XRAnchor::Unwrap(info[0].ToObject())};
+                const auto anchor{xrAnchor->GetNativeAnchor()};
                 if (anchor.NativeAnchor != nullptr)
                 {
                     return Napi::Number::From(info.Env(), reinterpret_cast<uintptr_t>(anchor.NativeAnchor));

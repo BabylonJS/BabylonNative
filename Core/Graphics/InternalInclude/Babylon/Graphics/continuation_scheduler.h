@@ -45,7 +45,7 @@ namespace Babylon
         {
             m_dispatcher.tick(cancellation);
         }
-    
+
     private:
         arcana::manual_dispatcher<WorkSize> m_dispatcher{};
         continuation_scheduler<WorkSize> m_scheduler{};

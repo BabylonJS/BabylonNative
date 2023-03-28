@@ -14,11 +14,6 @@ set(SOURCES
 add_library(TestUtils ${SOURCES})
 warnings_as_errors(TestUtils)
 
-if(WINDOWS_STORE)
-    target_compile_options(TestUtils PRIVATE /ZW)
-    target_compile_options(TestUtils PRIVATE /await)
-endif()
-
 target_include_directories(TestUtils INTERFACE "Include")
 target_include_directories(TestUtils PRIVATE "Source")
 

@@ -14,7 +14,7 @@ namespace Babylon
         {
             friend class JsRuntime;
             static constexpr auto JS_NATIVE_NAME = "_native";
-        
+
         public:
             static Napi::Object GetFromJavaScript(Napi::Env env)
             {

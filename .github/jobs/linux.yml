@@ -4,13 +4,13 @@ parameters:
   CC: ''
   CXX: ''
   JSEngine: ''
-  
+
 jobs:
   - job: ${{ parameters.name }}
     timeoutInMinutes: 30
     pool:
       vmImage: ${{ parameters.vmImage }}
-  
+
     variables:
       CC: ${{ parameters.CC }}
       CXX: ${{ parameters.CXX }}
@@ -32,13 +32,13 @@ jobs:
 
     - script: |
         sudo apt-get update
-        sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev ${{ parameters.CC }} libc++-9-dev libc++abi-9-dev libnode-dev
+        sudo apt-get install libjavascriptcoregtk-4.0-dev libgl1-mesa-dev libcurl4-openssl-dev
       displayName: 'Install packages'
 
     - script: |
         mkdir build
         cd build
-        cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DNAPI_JAVASCRIPT_ENGINE=${{ parameters.JSEngine }} -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBGFX_CONFIG_MEMORY_TRACKING=ON -DBGFX_CONFIG_DEBUG=ON -DCMAKE_UNITY_BUILD=${UNITY_BUILD}
+        cmake .. -GNinja -DJSCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -DNAPI_JAVASCRIPT_ENGINE=${{ parameters.JSEngine }} -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBGFX_CONFIG_DEBUG=ON -DCMAKE_UNITY_BUILD=${UNITY_BUILD}
         ninja
       displayName: 'Build X11'
     

@@ -173,3 +173,9 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND ((WIN32 AND NOT (WINDOWS_STORE OR CM
     set_property(TARGET v8inspector PROPERTY UNITY_BUILD false)
     set_property(TARGET llhttp PROPERTY UNITY_BUILD false)
 endif()
+
+# --------------------------- WindowsAppSDK ---------------------------
+# Dependencies: none
+if(WINDOWS_STORE)
+    add_subdirectory(WindowsAppSDK)
+endif()

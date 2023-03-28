@@ -9,7 +9,6 @@
 #include <spirv_glsl.hpp>
 #include <bgfx/bgfx.h>
 
-
 namespace Babylon
 {
     extern const TBuiltInResource DefaultTBuiltInResource;
@@ -36,12 +35,12 @@ namespace Babylon
             spvOptions.validate = true;
             spvOptions.disableOptimizer = true;
             glslang::GlslangToSpv(*program.getIntermediate(stage), spirv, &logger, &spvOptions);
-            
+
             auto parser = std::make_unique<spirv_cross::Parser>(spirv);
             parser->parse();
 
             auto compiler = std::make_unique<spirv_cross::CompilerGLSL>(parser->get_parsed_ir());
-            return{std::move(parser), std::move(compiler)};
+            return {std::move(parser), std::move(compiler)};
         }
     }
 

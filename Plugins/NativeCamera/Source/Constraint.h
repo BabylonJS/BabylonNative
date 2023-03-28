@@ -8,7 +8,8 @@
 // that the platoform should try to match as closely as possible.
 // More info on the constraint pattern can be found here:
 // https://developer.mozilla.org/en-US/docs/Web/API/Media_Capture_and_Streams_API/Constraints#applying_constraints
-namespace Babylon::Plugins::Constraint {
+namespace Babylon::Plugins::Constraint
+{
     enum Type
     {
         Sequence,

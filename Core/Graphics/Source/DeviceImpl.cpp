@@ -28,7 +28,8 @@ namespace Babylon::Graphics
         init.type = s_bgfxRenderType;
         init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY;
         init.resolution.maxFrameLatency = 1;
-        if (s_bgfxFlipAfterRender) init.resolution.reset |= BGFX_RESET_FLIP_AFTER_RENDER;
+        if (s_bgfxFlipAfterRender)
+            init.resolution.reset |= BGFX_RESET_FLIP_AFTER_RENDER;
 
         init.callback = &m_bgfxCallback;
         init.platformData = {};
@@ -88,7 +89,7 @@ namespace Babylon::Graphics
                 init.resolution.reset |= BGFX_RESET_MSAA_X16;
                 break;
             default:
-                m_bgfxCallback.trace(__FILE__, __LINE__,  "WARNING: Setting an incorrect value for SetMSAA (%d). Correct values are 0, 1 (disable MSAA) or 2, 4, 8, 16.", int(value));
+                m_bgfxCallback.trace(__FILE__, __LINE__, "WARNING: Setting an incorrect value for SetMSAA (%d). Correct values are 0, 1 (disable MSAA) or 2, 4, 8, 16.", int(value));
                 break;
         }
     }
@@ -233,7 +234,7 @@ namespace Babylon::Graphics
                 value.Lock();
             }
         }
-        
+
         arcana::trace_region finishRenderingRegion{"DeviceImpl::FinishRenderingCurrentFrame"};
 
         assert(m_renderThreadAffinity.check());

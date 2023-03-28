@@ -22,15 +22,13 @@ namespace Babylon::Polyfills::Internal
         Napi::Function func = DefineClass(
             env,
             JS_CONSTRUCTOR_NAME,
-            {
-                StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
+            {StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
                 InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
                 InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
                 InstanceMethod("getContext", &NativeCanvas::GetContext),
                 InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
                 InstanceMethod("dispose", &NativeCanvas::Dispose),
-                StaticMethod("parseColor", &NativeCanvas::ParseColor)
-            });
+                StaticMethod("parseColor", &NativeCanvas::ParseColor)});
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
     }
@@ -60,11 +58,11 @@ namespace Babylon::Polyfills::Internal
 
         auto& graphicsContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())};
         auto update = graphicsContext.GetUpdate("update");
-        std::shared_ptr<JsRuntimeScheduler> runtimeScheduler{ std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(info.Env())) };
+        std::shared_ptr<JsRuntimeScheduler> runtimeScheduler{std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(info.Env()))};
         auto deferred{Napi::Promise::Deferred::New(info.Env())};
-        arcana::make_task(update.Scheduler(), arcana::cancellation::none(), [fontName{ info[0].As<Napi::String>().Utf8Value() }, fontData{ std::move(fontBuffer) }]() {
+        arcana::make_task(update.Scheduler(), arcana::cancellation::none(), [fontName{info[0].As<Napi::String>().Utf8Value()}, fontData{std::move(fontBuffer)}]() {
             fontsInfos[fontName] = fontData;
-        }).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler /*Keep reference alive*/, env{ info.Env() }, deferred]() {
+        }).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler /*Keep reference alive*/, env{info.Env()}, deferred]() {
             deferred.Resolve(env.Undefined());
         });
 
@@ -182,9 +180,9 @@ namespace Babylon::Polyfills
     Canvas::Impl& Canvas::Impl::GetFromJavaScript(Napi::Env env)
     {
         return *JsRuntime::NativeObject::GetFromJavaScript(env)
-            .Get(JS_CANVAS_NAME)
-            .As<Napi::External<Canvas::Impl>>()
-            .Data();
+                    .Get(JS_CANVAS_NAME)
+                    .As<Napi::External<Canvas::Impl>>()
+                    .Data();
     }
 
     void Canvas::Impl::AddMonitoredResource(MonitoredResource* monitoredResource)
@@ -206,7 +204,7 @@ namespace Babylon::Polyfills
 
     void Canvas::Impl::FlushGraphicResources()
     {
-        for(auto monitoredResource : m_monitoredResources)
+        for (auto monitoredResource : m_monitoredResources)
         {
             monitoredResource->FlushGraphicResources();
         }

@@ -36,7 +36,7 @@ namespace Babylon::Plugins
     }
 
     NativeInput::NativeInput(Napi::Env env)
-        : m_impl{ std::make_unique<Impl>(env) }
+        : m_impl{std::make_unique<Impl>(env)}
     {
         Napi::Value nativeInput = Napi::External<NativeInput>::New(env, this, [](Napi::Env, NativeInput* nativeInput) { delete nativeInput; });
         env.Global().Set(JS_NATIVE_INPUT_NAME, nativeInput);
@@ -110,7 +110,7 @@ namespace Babylon::Plugins
                     POINTER_MOUSEWHEEL_Z_INDEX,
                     POINTER_DELTA_HORIZONTAL_INDEX,
                     POINTER_DELTA_VERTICAL_INDEX,
-                    POINTER_MOVE_INDEX
+                    POINTER_MOVE_INDEX,
                 });
         }
     }
@@ -153,14 +153,16 @@ namespace Babylon::Plugins
     void NativeInput::Impl::PointerDown(uint32_t pointerId, uint32_t buttonIndex, int32_t x, int32_t y, DeviceType deviceType)
     {
         m_runtimeScheduler([pointerId, buttonIndex, x, y, deviceType, this]() {
-            const uint32_t inputIndex{ GetPointerButtonInputIndex(buttonIndex) };
-            std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, {
-                inputIndex,
-                POINTER_X_INPUT_INDEX,
-                POINTER_Y_INPUT_INDEX,
-                POINTER_DELTA_HORIZONTAL_INDEX,
-                POINTER_DELTA_VERTICAL_INDEX
-            })};
+            const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
+            std::vector<int32_t>& deviceInputs{
+                GetOrCreateInputMap(deviceType, pointerId,
+                    {
+                        inputIndex,
+                        POINTER_X_INPUT_INDEX,
+                        POINTER_Y_INPUT_INDEX,
+                        POINTER_DELTA_HORIZONTAL_INDEX,
+                        POINTER_DELTA_VERTICAL_INDEX,
+                    })};
 
             // Record the x/y, but don't raise associated events (this matches the behavior in the browser).
             SetInputState(deviceType, pointerId, POINTER_DELTA_HORIZONTAL_INDEX, 0, deviceInputs, false);
@@ -176,14 +178,16 @@ namespace Babylon::Plugins
     void NativeInput::Impl::PointerUp(uint32_t pointerId, uint32_t buttonIndex, int32_t x, int32_t y, DeviceType deviceType)
     {
         m_runtimeScheduler([pointerId, buttonIndex, x, y, deviceType, this]() {
-            const uint32_t inputIndex{ GetPointerButtonInputIndex(buttonIndex) };
-            std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, {
-                inputIndex,
-                POINTER_X_INPUT_INDEX,
-                POINTER_Y_INPUT_INDEX,
-                POINTER_DELTA_HORIZONTAL_INDEX,
-                POINTER_DELTA_VERTICAL_INDEX
-            })};
+            const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
+            std::vector<int32_t>& deviceInputs{
+                GetOrCreateInputMap(deviceType, pointerId,
+                    {
+                        inputIndex,
+                        POINTER_X_INPUT_INDEX,
+                        POINTER_Y_INPUT_INDEX,
+                        POINTER_DELTA_HORIZONTAL_INDEX,
+                        POINTER_DELTA_VERTICAL_INDEX,
+                    })};
 
             // Record the x/y, but don't raise associated events (this matches the behavior in the browser).
             SetInputState(deviceType, pointerId, POINTER_DELTA_HORIZONTAL_INDEX, 0, deviceInputs, false);
@@ -208,13 +212,15 @@ namespace Babylon::Plugins
     void NativeInput::Impl::PointerMove(uint32_t pointerId, int32_t x, int32_t y, DeviceType deviceType)
     {
         m_runtimeScheduler([pointerId, x, y, deviceType, this]() {
-            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(deviceType, pointerId, {
-                POINTER_X_INPUT_INDEX,
-                POINTER_Y_INPUT_INDEX,
-                POINTER_DELTA_HORIZONTAL_INDEX,
-                POINTER_DELTA_VERTICAL_INDEX,
-                POINTER_MOVE_INDEX
-            })};
+            std::vector<int32_t>& deviceInputs{
+                GetOrCreateInputMap(deviceType, pointerId,
+                    {
+                        POINTER_X_INPUT_INDEX,
+                        POINTER_Y_INPUT_INDEX,
+                        POINTER_DELTA_HORIZONTAL_INDEX,
+                        POINTER_DELTA_VERTICAL_INDEX,
+                        POINTER_MOVE_INDEX,
+                    })};
             int32_t deltaX = 0;
             int32_t deltaY = 0;
 
@@ -240,21 +246,19 @@ namespace Babylon::Plugins
             SetInputState(deviceType, pointerId, POINTER_DELTA_HORIZONTAL_INDEX, 0, deviceInputs, false);
             SetInputState(deviceType, pointerId, POINTER_DELTA_VERTICAL_INDEX, 0, deviceInputs, false);
             m_eventDispatcher.tick(arcana::cancellation::none());
-
         });
     }
 
     void NativeInput::Impl::PointerScroll(uint32_t pointerId, uint32_t scrollAxis, int32_t scrollValue, DeviceType deviceType)
     {
-        m_runtimeScheduler([pointerId, scrollAxis, scrollValue, deviceType, this]()
-            {
-                std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(deviceType, pointerId, {scrollAxis})};
-                SetInputState(deviceType, pointerId, scrollAxis, scrollValue, deviceInputs, true);
+        m_runtimeScheduler([pointerId, scrollAxis, scrollValue, deviceType, this]() {
+            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(deviceType, pointerId, {scrollAxis})};
+            SetInputState(deviceType, pointerId, scrollAxis, scrollValue, deviceInputs, true);
 
-                m_eventDispatcher.tick(arcana::cancellation::none());
-                SetInputState(deviceType, pointerId, scrollAxis, 0, deviceInputs, true);
-                m_eventDispatcher.tick(arcana::cancellation::none());
-            });
+            m_eventDispatcher.tick(arcana::cancellation::none());
+            SetInputState(deviceType, pointerId, scrollAxis, 0, deviceInputs, true);
+            m_eventDispatcher.tick(arcana::cancellation::none());
+        });
     }
 
     NativeInput::Impl::DeviceStatusChangedCallbackTicket NativeInput::Impl::AddDeviceConnectedCallback(NativeInput::Impl::DeviceStatusChangedCallback&& callback)
@@ -265,7 +269,7 @@ namespace Babylon::Plugins
             callback(key.first, key.second);
         }
 
-        return  m_deviceConnectedCallbacks.insert(std::move(callback));
+        return m_deviceConnectedCallbacks.insert(std::move(callback));
     }
 
     NativeInput::Impl::DeviceStatusChangedCallbackTicket NativeInput::Impl::AddDeviceDisconnectedCallback(NativeInput::Impl::DeviceStatusChangedCallback&& callback)
@@ -273,7 +277,7 @@ namespace Babylon::Plugins
         return m_deviceDisconnectedCallbacks.insert(std::move(callback));
     }
 
-    NativeInput::Impl::InputStateChangedCallbackTicket NativeInput::Impl::AddInputChangedCallback(NativeInput::Impl::InputStateChangedCallback &&callback)
+    NativeInput::Impl::InputStateChangedCallbackTicket NativeInput::Impl::AddInputChangedCallback(NativeInput::Impl::InputStateChangedCallback&& callback)
     {
         return m_inputChangedCallbacks.insert(std::move(callback));
     }
@@ -285,7 +289,7 @@ namespace Babylon::Plugins
         {
             std::ostringstream message;
             message << "Unable to find device of type " << static_cast<uint32_t>(deviceType) << " with slot " << deviceSlot;
-            throw std::runtime_error{ message.str() };
+            throw std::runtime_error{message.str()};
         }
 
         const auto& device = it->second;
@@ -293,7 +297,7 @@ namespace Babylon::Plugins
         {
             std::ostringstream message;
             message << "Unable to find " << inputIndex << " on device of type " << static_cast<uint32_t>(deviceType) << " with slot " << deviceSlot;
-            throw std::runtime_error{ message.str() };
+            throw std::runtime_error{message.str()};
         }
 
         return device.at(inputIndex);
@@ -331,7 +335,7 @@ namespace Babylon::Plugins
         if (m_inputs.erase({deviceType, deviceSlot}))
         {
             m_eventDispatcher.queue([this, deviceType, deviceSlot]() {
-                m_deviceDisconnectedCallbacks.apply_to_all([deviceType, deviceSlot](auto& callback){
+                m_deviceDisconnectedCallbacks.apply_to_all([deviceType, deviceSlot](auto& callback) {
                     callback(deviceType, deviceSlot);
                 });
             });
