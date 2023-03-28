@@ -61,6 +61,6 @@ namespace Babylon::Graphics
 
         bool m_disposed{false};
 
-        void SetBgfxViewState(bgfx::Encoder& encoder, const ViewPort& viewState, bool force = false);
+        void SetBgfxViewPort(bgfx::Encoder& encoder, const ViewPort& viewPort);
     };
 }
