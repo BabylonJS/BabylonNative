@@ -53,15 +53,15 @@ namespace Babylon::Graphics
 
     void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)
     {
-        //BGFX requires us to create a new viewID, this will ensure that the view gets cleaned. 
+        // BGFX requires us to create a new viewID, this will ensure that the view gets cleaned.
         m_viewId = m_context.AcquireNewViewId(encoder);
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
         bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
 
-        //BGFX will consider the viewport when cleaning the screen, but WebGL always cleans the entire screen. 
-        //That's why we always set the viewport to {0, 0, 1, 1} when cleaning.
+        // BGFX will consider the viewport when cleaning the screen, but WebGL always cleans the entire screen.
+        // That's why we always set the viewport to {0, 0, 1, 1} when cleaning.
         bgfx::setViewRect(m_viewId.value(), 0, 0, Width(), Height());
         encoder.touch(m_viewId.value());
 
