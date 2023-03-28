@@ -5,33 +5,15 @@
 
 namespace Babylon::Graphics
 {
-    namespace
-    {
-        void SetDefaultClearMode(bgfx::ViewId viewId, bgfx::FrameBufferHandle handle, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)
-        {
-            bgfx::setViewMode(viewId, bgfx::ViewMode::Sequential);
-            bgfx::setViewClear(viewId, flags, rgba, depth, stencil);
-            bgfx::setViewFrameBuffer(viewId, handle);
-        }
-
-        void setViewPort(bgfx::ViewId viewId, const ViewPort& viewPort, uint16_t width, uint16_t height)
-        {
-            bgfx::setViewRect(viewId,
-                static_cast<uint16_t>(viewPort.X * width),
-                static_cast<uint16_t>(viewPort.Y * height),
-                static_cast<uint16_t>(viewPort.Width * width),
-                static_cast<uint16_t>(viewPort.Height * height));
-        }
-    }
-
     FrameBuffer::FrameBuffer(DeviceContext& context, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil)
         : m_context{context}
         , m_handle{handle}
         , m_width{width}
         , m_height{height}
         , m_defaultBackBuffer{defaultBackBuffer}
-        , m_hasDepth(hasDepth)
-        , m_hasStencil(hasStencil)
+        , m_hasDepth{hasDepth}
+        , m_hasStencil{hasStencil}
+        , m_disposed{false}
     {
     }
 
@@ -60,20 +42,9 @@ namespace Babylon::Graphics
         return m_defaultBackBuffer;
     }
 
-    void FrameBuffer::Bind(bgfx::Encoder& encoder)
+    void FrameBuffer::Bind(bgfx::Encoder&)
     {
-        m_viewId = m_context.AcquireNewViewId(encoder);
-
-        //Reset view state for next frame.
-        m_viewPort = {0, 0, 1, 1};
-        m_flags = BGFX_CLEAR_NONE;
-        m_rgba = 0x000000ff;
-        m_depth = 1.0f;
-        m_stencil = 0;
-
-        SetDefaultClearMode(m_viewId, m_handle, BGFX_CLEAR_NONE, 0x000000ff, 1.0f, 0);
-        setViewPort(m_viewId, m_viewPort, Width(), Height());
-        m_hasViewIdBeenUsed = false;
+        m_viewId.reset();
     }
 
     void FrameBuffer::Unbind(bgfx::Encoder&)
@@ -82,61 +53,38 @@ namespace Babylon::Graphics
 
     void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)
     {
-        m_flags = flags;
-        m_rgba = rgba;
-        m_depth = depth;
-        m_stencil = stencil;
+        // BGFX requires us to create a new viewID, this will ensure that the view gets cleaned.
+        m_viewId = m_context.AcquireNewViewId(encoder);
 
-        if (m_hasViewIdBeenUsed)
-        {
-            m_viewId = m_context.AcquireNewViewId(encoder);
-            SetDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
-            setViewPort(m_viewId, m_viewPort, Width(), Height());
-        }
-        else
-        {
-            bgfx::setViewClear(m_viewId, m_flags, m_rgba, m_depth, m_stencil);
-        }
+        bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
+        bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
+        bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
 
-        m_hasViewIdBeenUsed = true;
-        encoder.touch(m_viewId);
+        // BGFX will consider the viewport when cleaning the screen, but WebGL always cleans the entire screen.
+        // That's why we always set the viewport to {0, 0, 1, 1} when cleaning.
+        bgfx::setViewRect(m_viewId.value(), 0, 0, Width(), Height());
+        encoder.touch(m_viewId.value());
+
+        m_bgfxViewPort = {0, 0, 1, 1};
     }
 
     void FrameBuffer::SetViewPort(bgfx::Encoder& encoder, float x, float y, float width, float height)
     {
-        if (m_viewPort.X == x && m_viewPort.Y == y && m_viewPort.Width == width && m_viewPort.Height == height)
-        {
-            return;
-        }
-
-        m_viewPort = {x, y, width, height};
-
-        if (m_hasViewIdBeenUsed)
-        {
-            m_viewId = m_context.AcquireNewViewId(encoder);
-            SetDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
-        }
-
-        setViewPort(m_viewId, m_viewPort, Width(), Height());
-        m_hasViewIdBeenUsed = true;
+        m_desiredViewPort = {x, y, width, height};
+        SetBgfxViewPort(encoder, m_desiredViewPort);
     }
 
     void FrameBuffer::Submit(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint8_t flags)
     {
-        encoder.submit(m_viewId, programHandle, 0, flags);
-        m_hasViewIdBeenUsed = true;
+        SetBgfxViewPort(encoder, m_desiredViewPort);
+        encoder.submit(m_viewId.value(), programHandle, 0, flags);
     }
 
     void FrameBuffer::Blit(bgfx::Encoder& encoder, bgfx::TextureHandle dst, uint16_t dstX, uint16_t dstY, bgfx::TextureHandle src, uint16_t srcX, uint16_t srcY, uint16_t width, uint16_t height)
     {
-        // 1 blit per view, create a new viewId for each blit
-        // TODO: Really? Why? Is this from the examples or something?
-        m_viewId = m_context.AcquireNewViewId(encoder);
-        SetDefaultClearMode(m_viewId, m_handle, m_flags, m_rgba, m_depth, m_stencil);
-        setViewPort(m_viewId, m_viewPort, Width(), Height());
-
-        encoder.blit(m_viewId, dst, dstX, dstY, src, srcX, srcY, width, height);
-        m_hasViewIdBeenUsed = true;
+        //In order for Blit to work properly we need to force the creation of a new ViewID.
+        SetBgfxViewPort(encoder, m_desiredViewPort);
+        encoder.blit(m_viewId.value(), dst, dstX, dstY, src, srcX, srcY, width, height);
     }
 
     void FrameBuffer::SetStencil(bgfx::Encoder& encoder, uint32_t stencilState)
@@ -157,6 +105,27 @@ namespace Babylon::Graphics
         }
         m_handle = BGFX_INVALID_HANDLE;
         m_disposed = true;
+    }
+
+    void FrameBuffer::SetBgfxViewPort(bgfx::Encoder& encoder, const ViewPort& viewPort)
+    {
+        if (m_viewId.has_value() && viewPort.Equals(m_bgfxViewPort))
+        {
+            return;
+        }
+
+        m_viewId = m_context.AcquireNewViewId(encoder);
+
+        m_bgfxViewPort = viewPort;
+
+        bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
+        bgfx::setViewClear(m_viewId.value(), BGFX_CLEAR_NONE, 0, 1.0f, 0);
+        bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
+        bgfx::setViewRect(m_viewId.value(),
+            static_cast<uint16_t>(m_bgfxViewPort.X * Width()),
+            static_cast<uint16_t>(m_bgfxViewPort.Y * Height()),
+            static_cast<uint16_t>(m_bgfxViewPort.Width * Width()),
+            static_cast<uint16_t>(m_bgfxViewPort.Height * Height()));
     }
 
     bool ViewPort::Equals(const ViewPort& other) const

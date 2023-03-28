@@ -54,15 +54,13 @@ namespace Babylon::Graphics
         const bool m_hasDepth;
         const bool m_hasStencil;
 
-        bgfx::ViewId m_viewId{};
-        ViewPort m_viewPort{};
-        uint16_t m_flags{BGFX_CLEAR_NONE};
-        uint32_t m_rgba{0x000000ff};
-        float m_depth{1.0f};
-        uint8_t m_stencil{0};
+        std::optional<bgfx::ViewId> m_viewId;
 
-        bool m_hasViewIdBeenUsed{false};
+        ViewPort m_bgfxViewPort;
+        ViewPort m_desiredViewPort;
 
         bool m_disposed{false};
+
+        void SetBgfxViewPort(bgfx::Encoder& encoder, const ViewPort& viewPort);
     };
 }

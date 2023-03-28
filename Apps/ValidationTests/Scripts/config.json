@@ -45,7 +45,7 @@
         {
             "title": "Glow layer and LODs",
             "playgroundId": "#UNS6ZV#2",
-            "renderCount": 5,
+            "renderCount": 50,
             "referenceImage": "glowlayerandlods.png"
         },
         {
@@ -199,6 +199,12 @@
             "title": "Multi camera rendering",
             "playgroundId": "#1LK70I#22",
             "referenceImage": "multiCameraRendering.png"
+        },
+        {
+            "title": "Multi cameras and output render target",
+            "renderCount": 2,
+            "playgroundId": "#BCYE7J#31",
+            "referenceImage": "multiCamerasOutputRenderTarget.png"
         },
         {
             "title": "setParent",
