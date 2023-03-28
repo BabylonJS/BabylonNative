@@ -103,7 +103,7 @@ namespace Babylon::Graphics
         m_disposed = true;
     }
 
-    void FrameBuffer::SetBgfxViewState(bgfx::Encoder& encoder, const ViewPort& viewState, bool)
+    void FrameBuffer::SetBgfxViewPort(bgfx::Encoder& encoder, const ViewPort& viewPort)
     {
         if (m_viewId.has_value() && viewState.Equals(m_bgfxViewPort))
         {
