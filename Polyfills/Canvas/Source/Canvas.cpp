@@ -22,15 +22,13 @@ namespace Babylon::Polyfills::Internal
         Napi::Function func = DefineClass(
             env,
             JS_CONSTRUCTOR_NAME,
-            {
-                StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
+            {StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
                 InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
                 InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
                 InstanceMethod("getContext", &NativeCanvas::GetContext),
                 InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
                 InstanceMethod("dispose", &NativeCanvas::Dispose),
-                StaticMethod("parseColor", &NativeCanvas::ParseColor)
-            });
+                StaticMethod("parseColor", &NativeCanvas::ParseColor)});
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
     }
@@ -187,9 +185,9 @@ namespace Babylon::Polyfills
     Canvas::Impl& Canvas::Impl::GetFromJavaScript(Napi::Env env)
     {
         return *JsRuntime::NativeObject::GetFromJavaScript(env)
-            .Get(JS_CANVAS_NAME)
-            .As<Napi::External<Canvas::Impl>>()
-            .Data();
+                    .Get(JS_CANVAS_NAME)
+                    .As<Napi::External<Canvas::Impl>>()
+                    .Data();
     }
 
     void Canvas::Impl::AddMonitoredResource(MonitoredResource* monitoredResource)
@@ -211,7 +209,7 @@ namespace Babylon::Polyfills
 
     void Canvas::Impl::FlushGraphicResources()
     {
-        for(auto monitoredResource : m_monitoredResources)
+        for (auto monitoredResource : m_monitoredResources)
         {
             monitoredResource->FlushGraphicResources();
         }

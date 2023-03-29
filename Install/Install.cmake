@@ -24,7 +24,7 @@ endfunction()
 install_targets(arcana)
 
 ## bgfx
-install_targets(astc astc-codec edtaa3 etc1 etc2 iqa nvtt pvrtc squish tinyexr bgfx bimg bx)
+install_targets(astc-encoder edtaa3 etc1 etc2 iqa nvtt pvrtc squish tinyexr bgfx bimg bx)
 
 ## glslang
 install_targets(GenericCodeGen glslang MachineIndependent OGLCompiler OSDependent SPIRV)
@@ -58,16 +58,7 @@ install_targets(JsRuntime)
 install_include(Core/JsRuntime/Include/Babylon)
 
 install_targets(Graphics)
-if(WINDOWS_STORE)
-    if(BABYLON_NATIVE_USE_SWAPCHAINPANEL)
-        set(PLATFORM_PATH ${BABYLON_NATIVE_PLATFORM}/SwapChainPanel)
-    else()
-        set(PLATFORM_PATH ${BABYLON_NATIVE_PLATFORM}/CoreWindow)
-    endif()
-else()
-    set(PLATFORM_PATH ${BABYLON_NATIVE_PLATFORM})
-endif()
-install_include(Core/Graphics/Include/Platform/${PLATFORM_PATH}/Babylon)
+install_include(Core/Graphics/Include/Platform/${BABYLON_NATIVE_PLATFORM}/Babylon)
 install_include(Core/Graphics/Include/RendererType/${GRAPHICS_API}/Babylon)
 install_include(Core/Graphics/Include/Shared/Babylon)
 

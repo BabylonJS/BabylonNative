@@ -62,8 +62,7 @@ namespace Babylon
             return true;
         }
 
-        auto releaseFn = [](void*, void* userData)
-        {
+        auto releaseFn = [](void*, void* userData) {
             auto* bytes = reinterpret_cast<decltype(m_bytes)*>(userData);
             bytes->reset();
         };

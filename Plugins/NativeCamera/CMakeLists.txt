@@ -6,11 +6,20 @@ endif()
 
 set(SOURCES
     "Include/Babylon/Plugins/NativeCamera.h"
+    "Source/Capability.h"
+    "Source/Capability.cpp"
+    "Source/Constraint.h"
+    "Source/Constraint.cpp"
+    "Source/MediaDevices.h"
+    "Source/MediaDevices.cpp"
+    "Source/MediaStream.h"
+    "Source/MediaStream.cpp"
     "Source/NativeCamera.cpp"
     "Source/NativeVideo.cpp"
     "Source/NativeVideo.h"
-    "Source/${PLATFORM}/NativeCameraImpl.h"
-    "Source/${PLATFORM}/NativeCameraImpl.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
+    "Source/CameraDevice.h"
+    "Source/CameraDeviceSharedPImpl.h"
+    "Source/${PLATFORM}/CameraDevice.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
 add_library(NativeCamera ${SOURCES})
 warnings_as_errors(NativeCamera)

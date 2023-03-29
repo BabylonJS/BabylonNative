@@ -20,7 +20,7 @@ namespace Babylon
             , m_isResetScheduled{false}
         {
         }
-        
+
         T Get(bgfx::Encoder&) const
         {
             return m_value;

@@ -43,10 +43,29 @@ namespace Babylon
     struct ProgramData final
     {
         ProgramData() = default;
-        ProgramData(ProgramData&& other) = delete;
         ProgramData(const ProgramData&) = delete;
-        ProgramData& operator=(ProgramData&& other) = delete;
-        ProgramData& operator=(const ProgramData& other) = delete;
+        ProgramData& operator=(const ProgramData&) = delete;
+
+        ProgramData(ProgramData&& other) noexcept
+            : Handle{other.Handle}
+            , Uniforms{std::move(other.Uniforms)}
+            , UniformNameToIndex{std::move(other.UniformNameToIndex)}
+            , UniformInfos{std::move(other.UniformInfos)}
+            , VertexAttributeLocations{std::move(other.VertexAttributeLocations)}
+        {
+            other.Handle = BGFX_INVALID_HANDLE;
+        }
+
+        ProgramData& operator=(ProgramData&& other) noexcept
+        {
+            Handle = std::move(other.Handle);
+            other.Handle = BGFX_INVALID_HANDLE;
+            Uniforms = std::move(other.Uniforms);
+            UniformNameToIndex = std::move(other.UniformNameToIndex);
+            UniformInfos = std::move(other.UniformInfos);
+            VertexAttributeLocations = std::move(other.VertexAttributeLocations);
+            return *this;
+        }
 
         ~ProgramData()
         {
@@ -55,15 +74,14 @@ namespace Babylon
 
         void Dispose()
         {
-            if (!Disposed && bgfx::isValid(Handle))
+            if (bgfx::isValid(Handle))
             {
                 bgfx::destroy(Handle);
+                Handle = BGFX_INVALID_HANDLE;
             }
-            Disposed = true;
         }
 
         bgfx::ProgramHandle Handle{bgfx::kInvalidHandle};
-        bool Disposed{false};
 
         struct UniformValue
         {
@@ -120,7 +138,9 @@ namespace Babylon
         void DeleteVertexBuffer(NativeDataStream::Reader& data);
         void RecordVertexBuffer(const Napi::CallbackInfo& info);
         void UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info);
+        std::unique_ptr<ProgramData> CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource);
         Napi::Value CreateProgram(const Napi::CallbackInfo& info);
+        Napi::Value CreateProgramAsync(const Napi::CallbackInfo& info);
         Napi::Value GetUniforms(const Napi::CallbackInfo& info);
         Napi::Value GetAttributes(const Napi::CallbackInfo& info);
         void SetProgram(NativeDataStream::Reader& data);
@@ -150,6 +170,7 @@ namespace Babylon
         void SetFloat3(NativeDataStream::Reader& data);
         void SetFloat4(NativeDataStream::Reader& data);
         Napi::Value CreateTexture(const Napi::CallbackInfo& info);
+        void InitializeTexture(const Napi::CallbackInfo& info);
         void LoadTexture(const Napi::CallbackInfo& info);
         void CopyTexture(const Napi::CallbackInfo& info);
         void LoadRawTexture(const Napi::CallbackInfo& info);
@@ -171,17 +192,17 @@ namespace Babylon
         void DrawIndexed(NativeDataStream::Reader& data);
         void Draw(NativeDataStream::Reader& data);
         void Clear(NativeDataStream::Reader& data);
-        void SetStencil(NativeDataStream::Reader& data);
         Napi::Value GetRenderWidth(const Napi::CallbackInfo& info);
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
-        void SetViewPort(const Napi::CallbackInfo& info);
         Napi::Value GetHardwareScalingLevel(const Napi::CallbackInfo& info);
         void SetHardwareScalingLevel(const Napi::CallbackInfo& info);
         Napi::Value CreateImageBitmap(const Napi::CallbackInfo& info);
         Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
+        void GetFrameBufferData(const Napi::CallbackInfo& info);
+        void SetStencil(NativeDataStream::Reader& data);
+        void SetViewPort(NativeDataStream::Reader& data);
         void SetCommandDataStream(const Napi::CallbackInfo& info);
         void SubmitCommands(const Napi::CallbackInfo& info);
-        void GetFrameBufferData(const Napi::CallbackInfo& info);
 
         void DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode);
         std::string ProcessShaderCoordinates(const std::string& vertexSource);

@@ -170,8 +170,9 @@ namespace Babylon
                     env,
                     JS_CLASS_NAME,
                     {
-                        InstanceMethod("writeBuffer", &NativeDataStream::WriteBuffer)
+                        InstanceMethod("writeBuffer", &NativeDataStream::WriteBuffer),
                     });
+
                 JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_ENGINE_CONSTRUCTOR_NAME, func);
             }
         }
@@ -199,9 +200,9 @@ namespace Babylon
             m_requestFlushCallback.Call({});
             m_locked = true;
             return {m_buffer, [this]() {
-                m_buffer.clear();
-                m_locked = false; 
-            }};
+                        m_buffer.clear();
+                        m_locked = false;
+                    }};
         }
 
     private:

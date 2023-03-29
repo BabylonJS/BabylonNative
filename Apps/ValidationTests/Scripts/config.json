@@ -1,7 +1,7 @@
 {
     "root": "https://cdn.babylonjs.com",
     "tests": [
-	    {
+        {
             "reason": "https://github.com/BabylonJS/BabylonNative/issues/1111",
             "title": "Thin Instances",
             "playgroundId": "#V1JE4Z#1",
@@ -34,17 +34,18 @@
         },
         {
             "title": "Edges",
-            "playgroundId": "#TYAHX#114",
+            "playgroundId": "#TYAHX#244",
             "referenceImage": "edges.png"
         },
         {
             "title": "Outline",
-            "playgroundId": "#10WJ5S#6",
+            "playgroundId": "#10WJ5S#14",
             "referenceImage": "outline.png"
         },
         {
             "title": "Glow layer and LODs",
             "playgroundId": "#UNS6ZV#2",
+            "renderCount": 50,
             "referenceImage": "glowlayerandlods.png"
         },
         {
@@ -52,6 +53,11 @@
             "playgroundId": "#ZG0C8B#6",
             "renderCount": 10,
             "referenceImage": "nested_BBG.png"
+        },
+        {
+            "title": "Dynamic Texture context clip",
+            "playgroundId": "#FU0ES5#37",
+            "referenceImage": "dynamicTextureClip.png"
         },
         {
             "title": "GUI3D SpherePanel",
@@ -190,6 +196,17 @@
             "referenceImage": "bwpp.png"
         },
         {
+            "title": "Multi camera rendering",
+            "playgroundId": "#1LK70I#22",
+            "referenceImage": "multiCameraRendering.png"
+        },
+        {
+            "title": "Multi cameras and output render target",
+            "renderCount": 2,
+            "playgroundId": "#BCYE7J#31",
+            "referenceImage": "multiCamerasOutputRenderTarget.png"
+        },
+        {
             "title": "setParent",
             "playgroundId": "#JD49CT#2",
             "referenceImage": "setParent.png"
@@ -197,6 +214,7 @@
         {
             "title": "Billboard",
             "playgroundId": "#UJEIL#13",
+            "renderCount": 20,
             "referenceImage": "Billboard.png"
         },
         {
@@ -375,9 +393,9 @@
             "referenceImage": "gltfTextureSampler1.png"
         },
         {
-            "title": "GLTF Serializer Morph Target Animation Group",
+            "title": "GLTF Alien",
             "playgroundId": "#XN37SR#5",
-            "referenceImage": "gltfSerializerMorphTargetAnimationGroup.png"
+            "referenceImage": "gltfAlien.png"
         }
     ]
 }

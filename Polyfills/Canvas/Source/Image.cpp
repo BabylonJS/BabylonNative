@@ -118,14 +118,16 @@ namespace Babylon::Polyfills::Internal
 
             Dispose();
 
-            auto buffer{request.ResponseBuffer()};
+            auto buffer = request.ResponseBuffer();
             if (buffer.data() == nullptr || buffer.size_bytes() == 0)
             {
                 HandleLoadImageError(Napi::Error::New(thisRef.Env(), "Image with provided source returned empty response."));
                 return;
             }
 
-            m_imageContainer = bimg::imageParse(&Graphics::DeviceContext::GetFromJavaScript(thisRef.Env()).Allocator(), buffer.data(), static_cast<uint32_t>(buffer.size_bytes()));
+            bx::AllocatorI* allocator = &Graphics::DeviceContext::GetFromJavaScript(thisRef.Env()).Allocator();
+            m_imageContainer = bimg::imageParse(allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
+
             if (m_imageContainer == nullptr)
             {
                 HandleLoadImageError(Napi::Error::New(thisRef.Env(), "Unable to decode image with provided src."));

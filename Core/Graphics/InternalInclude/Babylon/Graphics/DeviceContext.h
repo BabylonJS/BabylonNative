@@ -111,6 +111,7 @@ namespace Babylon::Graphics
 
         bgfx::ViewId AcquireNewViewId(bgfx::Encoder&);
 
+        // TODO: find a different way to get the texture info for frame capture
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
         void RemoveTexture(bgfx::TextureHandle handle);
         TextureInfo GetTextureInfo(bgfx::TextureHandle handle);

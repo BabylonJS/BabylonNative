@@ -24,20 +24,20 @@ namespace Babylon::ShaderCompilerCommon
 
             switch (uniform.Type)
             {
-            case NonSamplerUniformsInfo::Uniform::TypeEnum::Vec4:
-                bgfxType = bgfx::UniformType::Vec4;
-                break;
-            case NonSamplerUniformsInfo::Uniform::TypeEnum::Mat4:
-                bgfxType = bgfx::UniformType::Mat4;
-                break;
-            default:
-                throw std::runtime_error{"Unrecognized uniform type."};
+                case NonSamplerUniformsInfo::Uniform::TypeEnum::Vec4:
+                    bgfxType = bgfx::UniformType::Vec4;
+                    break;
+                case NonSamplerUniformsInfo::Uniform::TypeEnum::Mat4:
+                    bgfxType = bgfx::UniformType::Mat4;
+                    break;
+                default:
+                    throw std::runtime_error{"Unrecognized uniform type."};
             }
 
             AppendBytes(bytes, static_cast<uint8_t>(uniform.Name.size()));
             AppendBytes(bytes, uniform.Name);
             AppendBytes(bytes, static_cast<uint8_t>(bgfxType | fragmentBit));
-            AppendBytes(bytes, static_cast<uint8_t>(0)); // Value "num" not used by D3D11 pipeline.
+            AppendBytes(bytes, static_cast<uint8_t>(uniform.ElementLength));
             AppendBytes(bytes, static_cast<uint16_t>(uniform.Offset));
             AppendBytes(bytes, static_cast<uint16_t>(uniform.RegisterSize));
         }
@@ -103,9 +103,14 @@ namespace Babylon::ShaderCompilerCommon
                     throw std::runtime_error{"Unrecognized uniform type."};
                 }
 
-                for (const auto size : spirType.array)
+                if (spirType.array.size() == 1)
                 {
-                    uniform.RegisterSize *= static_cast<uint16_t>(size);
+                    uniform.ElementLength = static_cast<uint8_t>(spirType.array[0]);
+                    uniform.RegisterSize *= uniform.ElementLength;
+                }
+                else if (spirType.array.size() > 1)
+                {
+                    throw std::runtime_error{"Unsupported multidimensional array."};
                 }
             }
         }
@@ -137,9 +142,14 @@ namespace Babylon::ShaderCompilerCommon
                         throw std::runtime_error{"Unrecognized uniform type."};
                     }
 
-                    for (const auto size : type.array)
+                    if (type.array.size() == 1)
                     {
-                        uniform.RegisterSize *= static_cast<uint16_t>(size);
+                        uniform.ElementLength = static_cast<uint8_t>(type.array[0]);
+                        uniform.RegisterSize *= uniform.ElementLength;
+                    }
+                    else if (type.array.size() > 1)
+                    {
+                        throw std::runtime_error{"Unsupported multidimensional array."};
                     }
 
                     info.ByteSize += 4 * uniform.RegisterSize;

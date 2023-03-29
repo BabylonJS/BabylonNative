@@ -46,7 +46,6 @@ namespace Babylon::Graphics
         void Dispose();
 
     private:
-
         DeviceContext& m_context;
         bgfx::FrameBufferHandle m_handle;
         const uint16_t m_width;
@@ -55,10 +54,13 @@ namespace Babylon::Graphics
         const bool m_hasDepth;
         const bool m_hasStencil;
 
-        bgfx::ViewId m_viewId{};
-        ViewPort m_viewPort{};
-        bool m_hasViewIdBeenUsed{false};
+        std::optional<bgfx::ViewId> m_viewId;
+
+        ViewPort m_bgfxViewPort;
+        ViewPort m_desiredViewPort;
 
         bool m_disposed{false};
+
+        void SetBgfxViewPort(bgfx::Encoder& encoder, const ViewPort& viewPort);
     };
 }

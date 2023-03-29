@@ -63,7 +63,7 @@ namespace Babylon
                 throw std::runtime_error{static_cast<const char*>(errorMsgs->GetBufferPointer())};
             }
 
-            return{std::move(parser), std::move(compiler)};
+            return {std::move(parser), std::move(compiler)};
         }
     }
 

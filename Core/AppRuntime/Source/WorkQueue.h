@@ -29,13 +29,11 @@ namespace Babylon
             // copyable callable if necessary.
             if constexpr (std::is_copy_constructible<CallableT>::value)
             {
-                m_dispatcher.queue([this, callable = std::move(callable)]()
-                    { Invoke(callable); });
+                m_dispatcher.queue([this, callable = std::move(callable)]() { Invoke(callable); });
             }
             else
             {
-                m_dispatcher.queue([this, callablePtr = std::make_shared<CallableT>(std::move(callable))]()
-                    { Invoke(*callablePtr); });
+                m_dispatcher.queue([this, callablePtr = std::make_shared<CallableT>(std::move(callable))]() { Invoke(*callablePtr); });
             }
         }
 

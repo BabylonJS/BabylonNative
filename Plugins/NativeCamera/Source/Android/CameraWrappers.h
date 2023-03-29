@@ -12,38 +12,46 @@
 #define __ORIG_ANDROID_API__ __ANDROID_API__
 #undef __ANDROID_API__
 #define __ANDROID_API__ 24
+
+// __INTRODUCED_IN changed in NDK newer than 21.4.7075529 so that it's impossible just to specify method names.
+// auto cameraManager{GET_CAMERA_FUNCTION(ACameraManager_create)()}; will produce an error even if the method is
+// not called explicitely.
+// A fix is to remove that #define. It's only meant to be done here, in the Android Camera context.
+#undef __INTRODUCED_IN
+#define __INTRODUCED_IN(x)
 namespace API24
 {
-    #include <camera/NdkCameraManager.h>
-    #include <camera/NdkCameraCaptureSession.h>
-    #include <camera/NdkCameraDevice.h>
-    #include <camera/NdkCameraError.h>
-    #include <camera/NdkCameraManager.h>
-    #include <camera/NdkCameraMetadata.h>
-    #include <camera/NdkCameraMetadataTags.h>
-    #include <camera/NdkCameraWindowType.h>
-    #include <camera/NdkCaptureRequest.h>
+#include <camera/NdkCameraManager.h>
+#include <camera/NdkCameraCaptureSession.h>
+#include <camera/NdkCameraDevice.h>
+#include <camera/NdkCameraError.h>
+#include <camera/NdkCameraManager.h>
+#include <camera/NdkCameraMetadata.h>
+#include <camera/NdkCameraMetadataTags.h>
+#include <camera/NdkCameraWindowType.h>
+#include <camera/NdkCaptureRequest.h>
 }
 #undef __ANDROID_API__
 #define __ANDROID_API__ __ORIG_ANDROID_API__
 #undef __ORIG_ANDROID_API__
 
 // Helper macro to make calling camera NDK api's more type safe
-#define GET_CAMERA_FUNCTION(function) reinterpret_cast<decltype(&API24::function)>(Babylon::Plugins::GetCameraDynamicFunction(#function))
+#define CAMERA_FUNCTION(function, ...) reinterpret_cast<decltype(&API24::function)>(Babylon::Plugins::GetCameraDynamicFunction(#function))(__VA_ARGS__)
 
 namespace
 {
-    const int API_LEVEL{ android_get_device_api_level() };
+    const int API_LEVEL{android_get_device_api_level()};
 
     // Load the NDK camera lib dynamically. When running on OS 6.0 and below this will return nullptr,
     // on OS 7.0 and up this should return a pointer to access the library using dlsym. It is technically fine
     // to call dlopen when the API_LEVEL is below 24, but it's wasted effort on those devices.
-    void* libCamera2NDK{ API_LEVEL >= 24 ? dlopen("libcamera2ndk.so", RTLD_NOW): nullptr };
+    void* libCamera2NDK{API_LEVEL >= 24 ? dlopen("libcamera2ndk.so", RTLD_NOW) : nullptr};
 
     std::map<std::string, void*> CameraDynamicFunctions{};
 }
 
-namespace Babylon::Plugins {
+namespace Babylon::Plugins
+{
     inline void* GetCameraDynamicFunction(const char* functionName)
     {
         if (!libCamera2NDK)

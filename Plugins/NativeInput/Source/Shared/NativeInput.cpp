@@ -36,7 +36,7 @@ namespace Babylon::Plugins
     }
 
     NativeInput::NativeInput(Napi::Env env)
-        : m_impl{ std::make_unique<Impl>(env) }
+        : m_impl{std::make_unique<Impl>(env)}
     {
         Napi::Value nativeInput = Napi::External<NativeInput>::New(env, this, [](Napi::Env, NativeInput* nativeInput) { delete nativeInput; });
         env.Global().Set(JS_NATIVE_INPUT_NAME, nativeInput);
@@ -110,7 +110,7 @@ namespace Babylon::Plugins
                     POINTER_MOUSEWHEEL_Z_INDEX,
                     POINTER_DELTA_HORIZONTAL_INDEX,
                     POINTER_DELTA_VERTICAL_INDEX,
-                    POINTER_MOVE_INDEX
+                    POINTER_MOVE_INDEX,
                 });
         }
     }
@@ -264,7 +264,7 @@ namespace Babylon::Plugins
             callback(key.first, key.second);
         }
 
-        return  m_deviceConnectedCallbacks.insert(std::move(callback));
+        return m_deviceConnectedCallbacks.insert(std::move(callback));
     }
 
     NativeInput::Impl::DeviceStatusChangedCallbackTicket NativeInput::Impl::AddDeviceDisconnectedCallback(NativeInput::Impl::DeviceStatusChangedCallback&& callback)
@@ -272,7 +272,7 @@ namespace Babylon::Plugins
         return m_deviceDisconnectedCallbacks.insert(std::move(callback));
     }
 
-    NativeInput::Impl::InputStateChangedCallbackTicket NativeInput::Impl::AddInputChangedCallback(NativeInput::Impl::InputStateChangedCallback &&callback)
+    NativeInput::Impl::InputStateChangedCallbackTicket NativeInput::Impl::AddInputChangedCallback(NativeInput::Impl::InputStateChangedCallback&& callback)
     {
         return m_inputChangedCallbacks.insert(std::move(callback));
     }
@@ -284,7 +284,7 @@ namespace Babylon::Plugins
         {
             std::ostringstream message;
             message << "Unable to find device of type " << static_cast<uint32_t>(deviceType) << " with slot " << deviceSlot;
-            throw std::runtime_error{ message.str() };
+            throw std::runtime_error{message.str()};
         }
 
         const auto& device = it->second;
@@ -292,7 +292,7 @@ namespace Babylon::Plugins
         {
             std::ostringstream message;
             message << "Unable to find " << inputIndex << " on device of type " << static_cast<uint32_t>(deviceType) << " with slot " << deviceSlot;
-            throw std::runtime_error{ message.str() };
+            throw std::runtime_error{message.str()};
         }
 
         return device.at(inputIndex);
@@ -330,7 +330,7 @@ namespace Babylon::Plugins
         if (m_inputs.erase({deviceType, deviceSlot}))
         {
             m_eventDispatcher.queue([this, deviceType, deviceSlot]() {
-                m_deviceDisconnectedCallbacks.apply_to_all([deviceType, deviceSlot](auto& callback){
+                m_deviceDisconnectedCallbacks.apply_to_all([deviceType, deviceSlot](auto& callback) {
                     callback(deviceType, deviceSlot);
                 });
             });

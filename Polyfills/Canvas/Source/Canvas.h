@@ -19,7 +19,8 @@ namespace Babylon::Polyfills
 
         struct MonitoredResource
         {
-            MonitoredResource(Canvas::Impl& impl) : m_impl(impl)
+            MonitoredResource(Canvas::Impl& impl)
+                : m_impl(impl)
             {
                 m_impl.AddMonitoredResource(this);
             }
@@ -29,6 +30,7 @@ namespace Babylon::Polyfills
             }
 
             virtual void FlushGraphicResources() = 0;
+
         private:
             Canvas::Impl& m_impl;
         };

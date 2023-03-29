@@ -1,20 +1,5 @@
-cmake_dependent_option(BABYLON_NATIVE_USE_SWAPCHAINPANEL "Use swap chain panel." OFF WINDOWS_STORE OFF)
-
-if(WINDOWS_STORE)
-    if(BABYLON_NATIVE_USE_SWAPCHAINPANEL)
-        set(PLATFORM_NAME ${BABYLON_NATIVE_PLATFORM}_SwapChainPanel)
-        set(PLATFORM_PATH ${BABYLON_NATIVE_PLATFORM}/SwapChainPanel)
-    else()
-        set(PLATFORM_NAME ${BABYLON_NATIVE_PLATFORM}_CoreWindow)
-        set(PLATFORM_PATH ${BABYLON_NATIVE_PLATFORM}/CoreWindow)
-    endif()
-else()
-    set(PLATFORM_NAME ${BABYLON_NATIVE_PLATFORM})
-    set(PLATFORM_PATH ${BABYLON_NATIVE_PLATFORM})
-endif()
-
 set(SOURCES
-    "Include/Platform/${PLATFORM_PATH}/Babylon/Graphics/Platform.h"
+    "Include/Platform/${BABYLON_NATIVE_PLATFORM}/Babylon/Graphics/Platform.h"
     "Include/RendererType/${GRAPHICS_API}/Babylon/Graphics/RendererType.h"
     "Include/Shared/Babylon/Graphics/Device.h"
     "InternalInclude/Babylon/Graphics/BgfxCallback.h"
@@ -29,7 +14,7 @@ set(SOURCES
     "Source/DeviceContext.cpp"
     "Source/DeviceImpl.cpp"
     "Source/DeviceImpl.h"
-    "Source/DeviceImpl_${PLATFORM_NAME}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
+    "Source/DeviceImpl_${BABYLON_NATIVE_PLATFORM}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
     "Source/DeviceImpl_${GRAPHICS_API}.cpp"
     "Source/SafeTimespanGuarantor.cpp"
     "Source/Texture.cpp")
@@ -39,11 +24,14 @@ warnings_as_errors(Graphics)
 
 target_include_directories(Graphics
     PRIVATE "Include/Shared"
-    PRIVATE "Include/Platform/${PLATFORM_PATH}"
+    PRIVATE "Include/Platform/${BABYLON_NATIVE_PLATFORM}"
     PRIVATE "Include/RendererType/${GRAPHICS_API}"
     PRIVATE "InternalInclude/Babylon/Graphics")
 
-if(WIN32 AND NOT WINDOWS_STORE)
+if(WINDOWS_STORE)
+    target_link_to_dependencies(Graphics
+        PRIVATE WindowsAppSDK)
+elseif(WIN32)
     target_link_to_dependencies(Graphics
         PRIVATE "shlwapi.lib")
 elseif(ANDROID)
@@ -78,7 +66,7 @@ endif()
 add_library(GraphicsDevice INTERFACE)
 target_include_directories(GraphicsDevice
     INTERFACE "Include/Shared"
-    INTERFACE "Include/Platform/${PLATFORM_PATH}"
+    INTERFACE "Include/Platform/${BABYLON_NATIVE_PLATFORM}"
     INTERFACE "Include/RendererType/${GRAPHICS_API}")
 target_link_to_dependencies(GraphicsDevice
     INTERFACE Graphics

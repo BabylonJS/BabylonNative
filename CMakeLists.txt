@@ -37,7 +37,7 @@ option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." 
 
 if(APPLE)
     # without this option on azure pipelines, there is a mismatch with math.h giving a lot of undefined functions on macOS.
-    # only enabled for Apple as there is no issue for UWP/WIN32
+    # only enabled for Apple as there is no issue for Windows
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED TRUE)
 endif()
 
@@ -49,7 +49,7 @@ elseif(IOS)
 elseif(APPLE)
     set(BABYLON_NATIVE_PLATFORM "macOS")
 elseif(WINDOWS_STORE)
-    set(BABYLON_NATIVE_PLATFORM "UWP")
+    set(BABYLON_NATIVE_PLATFORM "WinRT")
 elseif(WIN32)
     set(BABYLON_NATIVE_PLATFORM "Win32")
 elseif(UNIX)
