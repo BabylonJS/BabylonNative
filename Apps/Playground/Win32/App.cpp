@@ -47,8 +47,6 @@ INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 
 namespace
 {
-    
-
     std::string GetUrlFromPath(const std::filesystem::path& path)
     {
         char url[1024];
