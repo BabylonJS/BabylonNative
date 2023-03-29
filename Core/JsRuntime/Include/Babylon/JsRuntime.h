@@ -42,12 +42,20 @@ namespace Babylon
         // Gets the JsRuntime from the given N-API environment.
         static JsRuntime& GetFromJavaScript(Napi::Env);
 
+        struct IDisposingCallback
+        {
+            virtual void Disposing() = 0;
+        };
+
         // Notifies the JsRuntime that the JavaScript environment will begin shutting down.
         // Calling this function will signal callbacks registered with RegisterDisposing.
         static void NotifyDisposing(JsRuntime&);
 
         // Registers a callback for when the JavaScript environment will begin shutting down.
-        static void RegisterDisposing(JsRuntime&, std::function<void()>);
+        static void RegisterDisposing(JsRuntime&, IDisposingCallback*);
+
+        // Unregisters a callback for when the JavaScript environment will begin shutting down.
+        static void UnregisterDisposing(JsRuntime&, IDisposingCallback*);
 
         // Dispatches work onto the JavaScript thread and provides access to the N-API
         // environment.
@@ -58,6 +66,6 @@ namespace Babylon
 
         std::mutex m_mutex{};
         DispatchFunctionT m_dispatchFunction{};
-        std::vector<std::function<void()>> m_disposingCallbacks{};
+        std::vector<IDisposingCallback*> m_disposingCallbacks{};
     };
 }

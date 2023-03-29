@@ -52,26 +52,27 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value NativeCanvas::LoadTTFAsync(const Napi::CallbackInfo& info)
     {
-        const auto fontName = info[0].As<Napi::String>().Utf8Value();
+        auto fontName = info[0].As<Napi::String>().Utf8Value();
         const auto buffer = info[1].As<Napi::ArrayBuffer>();
         std::vector<uint8_t> fontBuffer(buffer.ByteLength());
         memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
 
         auto& runtime = JsRuntime::GetFromJavaScript(info.Env());
         auto deferred = Napi::Promise::Deferred::New(info.Env());
+        auto promise = deferred.Promise();
 
         auto& deviceContext = Graphics::DeviceContext::GetFromJavaScript(info.Env());
         auto update = deviceContext.GetUpdate("update");
-        arcana::make_task(update.Scheduler(), arcana::cancellation::none(), [fontName = std::move(fontName), fontData = std::move(fontBuffer), &runtime, deferred]()
+        arcana::make_task(update.Scheduler(), arcana::cancellation::none(), [fontName = std::move(fontName), fontData = std::move(fontBuffer), &runtime, deferred = std::move(deferred)]() mutable
         {
             fontsInfos[fontName] = fontData;
-            runtime.Dispatch([deferred](Napi::Env env)
+            runtime.Dispatch([deferred = std::move(deferred)](Napi::Env env)
             {
                 deferred.Resolve(env.Undefined());
             });
         });
 
-        return deferred.Promise();
+        return promise;
     }
 
     Napi::Value NativeCanvas::GetContext(const Napi::CallbackInfo& info)
