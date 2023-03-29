@@ -13,6 +13,10 @@
 #include <v8.h>
 #include <libplatform/libplatform.h>
 
+#ifdef ENABLE_V8_INSPECTOR
+#include <V8InspectorAgent.h>
+#endif
+
 namespace Babylon
 {
     namespace
@@ -35,23 +39,19 @@ namespace Babylon
                 v8::V8::ShutdownPlatform();
             }
 
-            static Module& Instance()
-            {
-                return *s_module;
-            }
-
-            static void Initialize(const char* executablePath)
+            static Module& Initialize(const char* executablePath)
             {
                 if (s_module == nullptr)
                 {
                     s_module = std::make_unique<Module>(executablePath);
                 }
+
+                return *s_module;
             }
 
-            void AddPlatformToJavaScript(Napi::Env env)
+            v8::Platform& Platform()
             {
-                JsRuntime::NativeObject::GetFromJavaScript(env)
-                    .Set("_V8Platform", Napi::External<v8::Platform>::New(env, m_platform.get()));
+                return *m_platform;
             }
 
         private:
@@ -66,7 +66,7 @@ namespace Babylon
     void AppRuntime::RunEnvironmentTier(const char* executablePath)
     {
         // Create the isolate.
-        Module::Initialize(executablePath);
+        Module& module = Module::Initialize(executablePath);
         v8::Isolate::CreateParams create_params;
         create_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
         v8::Isolate* isolate = v8::Isolate::New(create_params);
@@ -79,10 +79,18 @@ namespace Babylon
             v8::Context::Scope context_scope{context};
 
             Napi::Env env = Napi::V8::Attach(context);
-            Dispatch([](Napi::Env env) {
-                Module::Instance().AddPlatformToJavaScript(env);
-            });
+
+#ifdef ENABLE_V8_INSPECTOR
+            V8InspectorAgent agent{module.Platform(), isolate, context, "Babylon"};
+            agent.start(5643, "JsRuntimeHost");
+#endif
+
             Run(env);
+
+#ifdef ENABLE_V8_INSPECTOR
+            agent.stop();
+#endif
+
             Napi::V8::Detach(env);
         }
 

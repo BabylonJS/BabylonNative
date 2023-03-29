@@ -21,12 +21,25 @@ target_include_directories(AppRuntime
     INTERFACE "Include")
 
 if(UNIX AND NOT APPLE AND NOT ANDROID)
-    target_include_directories(AppRuntime INTERFACE "/usr/include/webkitgtk-4.0/")
+    target_include_directories(AppRuntime INTERFACE "/usr/include/webkitgtk-4.0")
 endif()
 
 target_link_libraries(AppRuntime
     PRIVATE arcana
     PUBLIC JsRuntime)
+
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
+    add_subdirectory(V8Inspector)
+
+    target_link_libraries(AppRuntime
+        PRIVATE v8inspector)
+
+    target_compile_definitions(AppRuntime
+        PRIVATE ENABLE_V8_INSPECTOR)
+
+    target_link_libraries(AppRuntime
+        PRIVATE v8inspector)
+endif()
 
 set_property(TARGET AppRuntime PROPERTY FOLDER Core)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

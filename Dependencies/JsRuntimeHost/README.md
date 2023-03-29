@@ -27,7 +27,6 @@ cd Tests
 npm install
 ```
 
-
 ## **Building on Windows, Targeting Android**
 
 _Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
@@ -41,14 +40,12 @@ Only building with Android Studio is supported. CMake is not used directly. Inst
 is used for building and CMake is automatically invocated for building the native part.
 An `.apk` that can be executed on your device or simulator is the output.
 
-
 First, download the latest release of Ninja, extract the binary, and add it to your system path.
 
 Once you have Android Studio downloaded, you need to set up an Android emulator if you do not have a physical Android device. You can do this by selecting `Tools` -> `Device Manager` and then selecting a device. (We are using Pixel 2 API 27). 
 
 Open the project located at
 `JsRuntimeHost\Tests\UnitTests\Android` with Android Studio. Note that this can take a while to load. (The bottom right corner of the Android Studio window shows you what is currently being loaded.) 
-
 
 Then in the LEFT PANE, right click on `app`, and select `Run 'All Tests'`, as displayed in the image below.
 
@@ -58,8 +55,6 @@ If you don't have an Android device plugged in or no Android image in the Androi
 
 **Troubleshooting:**
 If the `app\cpp` folder on the left navigation pane is empty, select `File` -> `Sync Project with Gradle Files` and try to re-run the project by selecting `Run` -> `Run 'All Tests'`.
-
-Sometimes, you may need to clean the build. To do that, delete the `Debug` folder located at `JsRuntimeHost\Build\Android\Debug`.
 
 ## Contributing
 

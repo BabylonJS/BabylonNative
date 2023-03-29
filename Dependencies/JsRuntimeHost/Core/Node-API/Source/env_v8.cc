@@ -4,20 +4,20 @@
 
 namespace Napi::V8
 {
-    Env Attach(v8::Local<v8::Context> isolate)
-    {
-        return {new napi_env__(isolate)};
-    }
+  Env Attach(v8::Local<v8::Context> isolate)
+  {
+    return {new napi_env__(isolate)};
+  }
 
-    void Detach(Env env)
-    {
-        napi_env env_ptr{env};
-        delete env_ptr;
-    }
+  void Detach(Env env)
+  {
+    napi_env env_ptr{env};
+    delete env_ptr;
+  }
 
-    v8::Local<v8::Context> GetContext(Env env)
-    {
-        napi_env env_ptr{env};
-        return env_ptr->context();
-    }
+  v8::Local<v8::Context> GetContext(Env env)
+  {
+    napi_env env_ptr{env};
+    return env_ptr->context();
+  }
 }
