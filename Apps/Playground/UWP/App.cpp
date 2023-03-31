@@ -364,17 +364,17 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     size_t height = static_cast<size_t>(bounds.Height * m_displayScale);
     auto window = from_cx<winrt::Windows::Foundation::IInspectable>(CoreWindow::GetForCurrentThread());
 
-    Babylon::Graphics::WindowConfiguration graphicsConfig{};
+    Babylon::Graphics::Configuration graphicsConfig{};
     graphicsConfig.Window = window;
     graphicsConfig.Width = width;
     graphicsConfig.Height = height;
     graphicsConfig.MSAASamples = 4;
-    m_device = Babylon::Graphics::Device::Create(graphicsConfig);
-    m_update = std::make_unique<Babylon::Graphics::DeviceUpdate>(m_device->GetUpdate("update"));
+    m_device.emplace(graphicsConfig);
+    m_update.emplace(m_device->GetUpdate("update"));
     m_device->StartRenderingCurrentFrame();
     m_update->Start();
 
-    m_runtime = std::make_unique<Babylon::AppRuntime>();
+    m_runtime.emplace();
 
     m_runtime->Dispatch([this](Napi::Env env) {
         m_device->AddToJavaScript(env);
@@ -391,13 +391,13 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
 
         Babylon::Plugins::NativeOptimizations::Initialize(env);
 
-        m_nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
+        m_nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
 
         Babylon::Plugins::NativeXr::Initialize(env);
 
         m_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
-        m_chromeDevTools = std::make_unique<Babylon::Plugins::ChromeDevTools>(Babylon::Plugins::ChromeDevTools::Initialize(env));
+        m_chromeDevTools.emplace(Babylon::Plugins::ChromeDevTools::Initialize(env));
         if (m_chromeDevTools->SupportsInspector())
         {
             m_chromeDevTools->StartInspector(5643, "BabylonNative Playground");

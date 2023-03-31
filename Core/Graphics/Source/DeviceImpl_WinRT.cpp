@@ -24,7 +24,7 @@ namespace Babylon::Graphics
 
     float DeviceImpl::GetDevicePixelRatio(WindowT window)
     {
-        if (auto uiElement = config.Window.try_as<ABI::Microsoft::UI::Xaml::IUIElement>())
+        if (auto uiElement = window.try_as<ABI::Microsoft::UI::Xaml::IUIElement>())
         {
             // Use the ABI layer manually generated from the Windows App SDK winmd files to avoid C++/WinRT versioning issues.
             DOUBLE rasterizationScale{1};
