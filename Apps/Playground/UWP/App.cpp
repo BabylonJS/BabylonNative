@@ -171,9 +171,11 @@ void App::Uninitialize()
         m_device->FinishRenderingCurrentFrame();
     }
 
-    m_chromeDevTools.reset();
     m_nativeInput = {};
+    m_nativeCanvas.reset();
+    m_chromeDevTools.reset();
     m_runtime.reset();
+    m_update.reset();
     m_device.reset();
 }
 

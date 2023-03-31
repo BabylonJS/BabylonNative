@@ -122,7 +122,9 @@ void App::Uninitialize()
         m_device->FinishRenderingCurrentFrame();
     }
 
+    m_nativeCanvas.reset();
     m_runtime.reset();
+    m_update.reset();
     m_device.reset();
 }
 

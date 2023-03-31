@@ -47,9 +47,9 @@ private:
     std::optional<Babylon::Graphics::Device> m_device{};
     std::optional<Babylon::Graphics::DeviceUpdate> m_update{};
     std::optional<Babylon::AppRuntime> m_runtime{};
-    Babylon::Plugins::NativeInput* m_nativeInput{};
     std::optional<Babylon::Plugins::ChromeDevTools> m_chromeDevTools{};
     std::optional<Babylon::Polyfills::Canvas> m_nativeCanvas{};
+    Babylon::Plugins::NativeInput* m_nativeInput{};
     Windows::Foundation::Collections::IVectorView<Windows::Storage::IStorageItem^>^ m_files;
     bool m_windowClosed;
     bool m_windowVisible;
