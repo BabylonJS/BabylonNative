@@ -8,12 +8,12 @@ namespace Babylon::Graphics
 {
     const bool DeviceImpl::s_bgfxFlipAfterRender = false;
 
-    void DeviceImpl::ConfigureBgfxPlatformData(const WindowConfiguration& config, bgfx::PlatformData& pd)
+    void DeviceImpl::ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window)
     {
-        pd.nwh = config.Window;
+        pd.nwh = window;
     }
 
-    float DeviceImpl::GetDevicePixelRatio(const WindowConfiguration&)
+    float DeviceImpl::GetDevicePixelRatio(WindowT)
     {
         // In Android, the baseline DPI is 160dpi.
         // See https://developer.android.com/training/multiscreen/screendensities#dips-pels
