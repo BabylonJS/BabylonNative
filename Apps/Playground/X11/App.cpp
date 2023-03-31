@@ -25,8 +25,8 @@ static const char* s_applicationClass = "Playground";
 std::optional<Babylon::Graphics::Device> device{};
 std::optional<Babylon::Graphics::DeviceUpdate> update{};
 std::optional<Babylon::AppRuntime> runtime{};
-Babylon::Plugins::NativeInput* nativeInput{};
 std::optional<Babylon::Polyfills::Canvas> nativeCanvas{};
+Babylon::Plugins::NativeInput* nativeInput{};
 
 namespace
 {
@@ -55,8 +55,11 @@ namespace
             update->Finish();
             device->FinishRenderingCurrentFrame();
         }
-        runtime.reset();
+
         nativeInput = {};
+        nativeCanvas.reset();
+        runtime.reset();
+        update.reset();
         device.reset();
     }
 
