@@ -112,15 +112,15 @@ Babylon::Plugins::NativeInput* nativeInput{};
     {
         device->AddToJavaScript(env);
 
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+            NSLog(@"%s", message);
+        });
+
         Babylon::Polyfills::Window::Initialize(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
         nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
-
-        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-            NSLog(@"%s", message);
-        });
 
         Babylon::Plugins::NativeCamera::Initialize(env);
 
