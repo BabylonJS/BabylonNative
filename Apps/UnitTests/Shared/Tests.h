@@ -60,6 +60,6 @@ int Run(Babylon::Graphics::Device device)
     device.StartRenderingCurrentFrame();
     device.FinishRenderingCurrentFrame();
 
-    auto code{exitCode.get_future()..get()};
+    auto code{exitCode.get_future().get()};
     return code;
 }

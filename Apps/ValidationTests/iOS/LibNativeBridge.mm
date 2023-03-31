@@ -8,14 +8,18 @@
 #import <Babylon/Plugins/NativeXr.h>
 #import <Babylon/Plugins/TestUtils.h>
 #import <Babylon/Polyfills/Canvas.h>
+#import <Babylon/Polyfills/Console.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
+
 #import <UIKit/UIKit.h>
 
-std::unique_ptr<Babylon::Graphics::Device> device{};
-std::unique_ptr<Babylon::Graphics::DeviceUpdate> update{};
-std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
+#import <optional>
+
+std::optional<Babylon::Graphics::Device> device{};
+std::optional<Babylon::Graphics::DeviceUpdate> update{};
+std::optional<Babylon::AppRuntime> runtime{};
+std::optional<Babylon::Polyfills::Canvas> nativeCanvas{};
 
 @implementation LibNativeBridge
 
@@ -27,6 +31,16 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
 - (void)dealloc
 {
+    if (device)
+    {
+        update->Finish();
+        device->FinishRenderingCurrentFrame();
+    }
+    
+    nativeCanvas.reset();
+    runtime.reset();
+    update.reset();
+    device.reset();
 }
 
 - (void)init:(MTKView*)view width:(int)inWidth height:(int)inHeight
@@ -37,30 +51,38 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     float width = inWidth;
     float height = inHeight;
 
-    Babylon::Graphics::WindowConfiguration graphicsConfig{};
+    Babylon::Graphics::Configuration graphicsConfig{};
     graphicsConfig.Window = view;
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
-    device = Babylon::Graphics::Device::Create(graphicsConfig);
-    update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
+
+    device.emplace(graphicsConfig);
+    update.emplace(device->GetUpdate("update"));
+
     device->StartRenderingCurrentFrame();
     device->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
     update->Start();
 
-    runtime = std::make_unique<Babylon::AppRuntime>();
+    runtime.emplace();
 
     runtime->Dispatch([](Napi::Env env)
     {
-        Babylon::Polyfills::Window::Initialize(env);
-        Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-        nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
-
         device->AddToJavaScript(env);
+
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+            NSLog(@"%s", message);
+        });
+
+        nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
+
+        Babylon::Polyfills::Window::Initialize(env);
+
+        Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         Babylon::Plugins::NativeOptimizations::Initialize(env);
 
-        // Initialize NativeXr plugin.
         Babylon::Plugins::NativeXr::Initialize(env);
 
         Babylon::Plugins::TestUtils::Initialize(env, nullptr);
@@ -78,7 +100,13 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 {
     if (device)
     {
+        update->Finish();
+        device->FinishRenderingCurrentFrame();
+
         device->UpdateSize(static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
+
+        device->StartRenderingCurrentFrame();
+        update->Start();
     }
 }
 
