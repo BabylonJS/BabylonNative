@@ -8,6 +8,7 @@
 #include <Shlwapi.h>
 #include <filesystem>
 #include <stdio.h>
+#include <optional>
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
@@ -30,12 +31,12 @@
 HINSTANCE hInst;                     // current instance
 WCHAR szTitle[MAX_LOADSTRING];       // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
-std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<Babylon::Graphics::Device> device{};
-std::unique_ptr<Babylon::Graphics::DeviceUpdate> update{};
+std::optional<Babylon::AppRuntime> runtime{};
+std::optional<Babylon::Graphics::Device> device{};
+std::optional<Babylon::Graphics::DeviceUpdate> update{};
 Babylon::Plugins::NativeInput* nativeInput{};
-std::unique_ptr<Babylon::Plugins::ChromeDevTools> chromeDevTools{};
-std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
+std::optional<Babylon::Plugins::ChromeDevTools> chromeDevTools{};
+std::optional<Babylon::Polyfills::Canvas> nativeCanvas{};
 bool minimized{false};
 int buttonRefCount{0};
 
@@ -110,18 +111,19 @@ namespace
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
-        Babylon::Graphics::WindowConfiguration graphicsConfig{};
+        Babylon::Graphics::Configuration graphicsConfig{};
         graphicsConfig.Window = hWnd;
         graphicsConfig.Width = width;
         graphicsConfig.Height = height;
         graphicsConfig.MSAASamples = 4;
 
-        device = Babylon::Graphics::Device::Create(graphicsConfig);
-        update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
+        device.emplace(graphicsConfig);
+        update.emplace(device->GetUpdate("update"));
+
         device->StartRenderingCurrentFrame();
         update->Start();
 
-        runtime = std::make_unique<Babylon::AppRuntime>();
+        runtime.emplace();
 
         runtime->Dispatch([](Napi::Env env) {
             device->AddToJavaScript(env);
@@ -133,7 +135,7 @@ namespace
             Babylon::Polyfills::Window::Initialize(env);
 
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-            nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
+            nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
 
             Babylon::Plugins::NativeEngine::Initialize(env);
 
@@ -149,7 +151,7 @@ namespace
 
             nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
-            chromeDevTools = std::make_unique<Babylon::Plugins::ChromeDevTools>(Babylon::Plugins::ChromeDevTools::Initialize(env));
+            chromeDevTools.emplace(Babylon::Plugins::ChromeDevTools::Initialize(env));
             if (chromeDevTools->SupportsInspector())
             {
                 chromeDevTools->StartInspector(5643, "BabylonNative Playground");

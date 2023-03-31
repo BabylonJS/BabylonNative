@@ -6,5 +6,5 @@
 namespace Babylon::Plugins::TestUtils
 {
     extern int errorCode;
-    void Initialize(Napi::Env env, Graphics::WindowType window);
+    void Initialize(Napi::Env env, Graphics::WindowT window);
 }
