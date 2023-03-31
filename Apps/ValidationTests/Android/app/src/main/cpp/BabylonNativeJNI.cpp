@@ -3,7 +3,7 @@
 #include <string.h>
 #include <signal.h>
 #include <time.h>
-#include <memory>
+#include <optional>
 #include <android/native_window.h> // requires ndk r5 or newer
 #include <android/native_window_jni.h> // requires ndk r5 or newer
 #include <android/log.h>
@@ -22,10 +22,10 @@
 
 namespace
 {
-    std::unique_ptr<Babylon::Graphics::Device> g_device{};
-    std::unique_ptr<Babylon::Graphics::DeviceUpdate> g_deviceUpdate{};
-    std::unique_ptr<Babylon::AppRuntime> g_runtime{};
-    std::unique_ptr<Babylon::ScriptLoader> g_scriptLoader{};
+    std::optional<Babylon::Graphics::Device> device{};
+    std::optional<Babylon::Graphics::DeviceUpdate> deviceUpdate{};
+    std::optional<Babylon::AppRuntime> runtime{};
+    std::optional<Babylon::ScriptLoader> scriptLoader{};
 }
 
 extern "C"
@@ -38,21 +38,21 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jclass clazz)
     {
-        if (g_device)
+        if (device)
         {
-            g_deviceUpdate->Finish();
-            g_device->FinishRenderingCurrentFrame();
+            deviceUpdate->Finish();
+            device->FinishRenderingCurrentFrame();
         }
 
-        g_scriptLoader.reset();
-        g_runtime.reset();
-        g_device.reset();
+        scriptLoader.reset();
+        runtime.reset();
+        device.reset();
     }
 
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jclass clazz, jobject surface, jobject context)
     {
-        if (!g_runtime)
+        if (!runtime)
         {
             JavaVM* javaVM{};
             if (env->GetJavaVM(&javaVM) != JNI_OK)
@@ -66,20 +66,20 @@ extern "C"
             int32_t width  = 600;//ANativeWindow_getWidth(window);
             int32_t height = 400;//ANativeWindow_getHeight(window);
 
-            Babylon::Graphics::WindowConfiguration graphicsConfig{};
+            Babylon::Graphics::Configuration graphicsConfig{};
             graphicsConfig.Window = window;
             graphicsConfig.Width = static_cast<size_t>(width);
             graphicsConfig.Height = static_cast<size_t>(height);
 
-            g_device = Babylon::Graphics::Device::Create(graphicsConfig);
-            g_deviceUpdate = std::make_unique<Babylon::Graphics::DeviceUpdate>(g_device->GetUpdate("update"));
-            g_device->StartRenderingCurrentFrame();
-            g_deviceUpdate->Start();
+            device.emplace(graphicsConfig);
+            deviceUpdate.emplace(device->GetUpdate("update"));
+            device->StartRenderingCurrentFrame();
+            deviceUpdate->Start();
 
-            g_runtime = std::make_unique<Babylon::AppRuntime>();
-            g_runtime->Dispatch([window](Napi::Env env)
+            runtime.emplace();
+            runtime->Dispatch([window](Napi::Env env)
             {
-                g_device->AddToJavaScript(env);
+                device->AddToJavaScript(env);
 
                 Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel level)
                 {
@@ -110,31 +110,28 @@ extern "C"
                 Babylon::Plugins::TestUtils::Initialize(env, window);
             });
 
-            g_scriptLoader = std::make_unique<Babylon::ScriptLoader>(*g_runtime);
-            g_scriptLoader->Eval("document = {}", "");
-            g_scriptLoader->LoadScript("app:///Scripts/ammo.js");
-            g_scriptLoader->LoadScript("app:///Scripts/recast.js");
-            g_scriptLoader->LoadScript("app:///Scripts/babylon.max.js");
-            g_scriptLoader->LoadScript("app:///Scripts/babylonjs.loaders.js");
-            g_scriptLoader->LoadScript("app:///Scripts/babylonjs.materials.js");
-            g_scriptLoader->LoadScript("app:///Scripts/babylon.gui.js");
-            g_scriptLoader->LoadScript("app:///Scripts/validation_native.js");
+            scriptLoader = std::make_unique<Babylon::ScriptLoader>(*runtime);
+            scriptLoader->Eval("document = {}", "");
+            scriptLoader->LoadScript("app:///Scripts/ammo.js");
+            scriptLoader->LoadScript("app:///Scripts/recast.js");
+            scriptLoader->LoadScript("app:///Scripts/babylon.max.js");
+            scriptLoader->LoadScript("app:///Scripts/babylonjs.loaders.js");
+            scriptLoader->LoadScript("app:///Scripts/babylonjs.materials.js");
+            scriptLoader->LoadScript("app:///Scripts/babylon.gui.js");
+            scriptLoader->LoadScript("app:///Scripts/validation_native.js");
         }
     }
 
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_surfaceChanged(JNIEnv* env, jclass clazz, jint width, jint height, jobject surface)
     {
-        if (g_runtime)
+        if (runtime)
         {
-            ANativeWindow *window = ANativeWindow_fromSurface(env, surface);
-
-            Babylon::Graphics::WindowConfiguration graphicsConfig{};
-            graphicsConfig.Window = window;
-            graphicsConfig.Width = static_cast<size_t>(width);
-            graphicsConfig.Height = static_cast<size_t>(height);
-            g_device->UpdateWindow(graphicsConfig);
-            g_device->UpdateSize(graphicsConfig.Width, graphicsConfig.Height);
+            ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
+            runtime->Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto) {
+                device->UpdateWindow(window);
+                device->UpdateSize(width, height);
+            });
         }
     }
 
@@ -148,18 +145,18 @@ extern "C"
     Java_BabylonNative_Wrapper_activityOnPause(JNIEnv* env, jclass clazz)
     {
         android::global::Pause();
-        if (g_runtime)
+        if (runtime)
         {
-            g_runtime->Suspend();
+            runtime->Suspend();
         }
     }
 
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_activityOnResume(JNIEnv* env, jclass clazz)
     {
-        if (g_runtime)
+        if (runtime)
         {
-            g_runtime->Resume();
+            runtime->Resume();
         }
         android::global::Resume();
     }
@@ -187,32 +184,32 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_loadScript(JNIEnv* env, jclass clazz, jstring path)
     {
-        if (g_scriptLoader)
+        if (scriptLoader)
         {
-            g_scriptLoader->LoadScript(env->GetStringUTFChars(path, nullptr));
+            scriptLoader->LoadScript(env->GetStringUTFChars(path, nullptr));
         }
     }
 
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_eval(JNIEnv* env, jclass clazz, jstring source, jstring sourceURL)
     {
-        if (g_runtime)
+        if (runtime)
         {
             std::string url = env->GetStringUTFChars(sourceURL, nullptr);
             std::string src = env->GetStringUTFChars(source, nullptr);
-            g_scriptLoader->Eval(std::move(src), std::move(url));
+            scriptLoader->Eval(std::move(src), std::move(url));
         }
     }
 
     JNIEXPORT void JNICALL
     Java_BabylonNative_Wrapper_renderFrame(JNIEnv* env, jclass clazz)
     {
-        if (g_device)
+        if (device)
         {
-            g_deviceUpdate->Finish();
-            g_device->FinishRenderingCurrentFrame();
-            g_device->StartRenderingCurrentFrame();
-            g_deviceUpdate->Start();
+            deviceUpdate->Finish();
+            device->FinishRenderingCurrentFrame();
+            device->StartRenderingCurrentFrame();
+            deviceUpdate->Start();
         }
     }
 }

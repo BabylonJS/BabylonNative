@@ -151,7 +151,7 @@ extern "C"
         if (runtime)
         {
             ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
-            runtime->Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto env) {
+            runtime->Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto) {
                 device->UpdateWindow(window);
                 device->UpdateSize(width, height);
             });

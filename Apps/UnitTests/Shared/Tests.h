@@ -29,8 +29,9 @@ void SetExitCode(const Napi::CallbackInfo& info)
 int Run(Babylon::Graphics::Device device)
 {
     std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
-    std::unique_ptr<Babylon::AppRuntime> runtime = std::make_unique<Babylon::AppRuntime>();
-    runtime->Dispatch([&device, &nativeCanvas](Napi::Env env)
+
+    Babylon::AppRuntime runtime{};
+    runtime.Dispatch([&device, &nativeCanvas](Napi::Env env)
     {
         device.AddToJavaScript(env);
 
@@ -46,16 +47,19 @@ int Run(Babylon::Graphics::Device device)
         
         env.Global().Set(JS_FUNCTION_NAME, Napi::Function::New(env, SetExitCode, JS_FUNCTION_NAME));
     });
-    Babylon::ScriptLoader loader{*runtime};
+
+    Babylon::ScriptLoader loader{runtime};
     loader.Eval("global = {};", ""); // Required for Chai.js as we do not have global in Babylon Native
-    loader.Eval("location = {href: ''};", "");          // Required for Mocha.js as we do not have a location in Babylon Native
+    loader.Eval("location = { href: '' };", ""); // Required for Mocha.js as we do not have a location in Babylon Native
     loader.LoadScript("app:///Scripts/babylon.max.js");
     loader.LoadScript("app:///Scripts/babylonjs.materials.js");
     loader.LoadScript("app:///Scripts/chai.js");
     loader.LoadScript("app:///Scripts/mocha.js");
     loader.LoadScript("app:///Scripts/tests.js");
+
     device.StartRenderingCurrentFrame();
     device.FinishRenderingCurrentFrame();
-    auto code{exitCode.get_future().get()};
+
+    auto code{exitCode.get_future()..get()};
     return code;
 }
