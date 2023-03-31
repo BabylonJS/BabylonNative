@@ -30,10 +30,10 @@ namespace
     std::optional<Babylon::Graphics::DeviceUpdate> deviceUpdate{};
     std::optional<Babylon::AppRuntime> runtime{};
     std::optional<Babylon::Plugins::ChromeDevTools> chromeDevTools{};
-    Babylon::Plugins::NativeInput* nativeInput{};
-    std::optional<Babylon::ScriptLoader> scriptLoader{};
     std::optional<Babylon::Plugins::NativeXr> nativeXr{};
+    Babylon::Plugins::NativeInput* nativeInput{};
     std::optional<Babylon::Polyfills::Canvas> nativeCanvas{};
+    std::optional<Babylon::ScriptLoader> scriptLoader{};
     bool isXrActive{};
 }
 
@@ -53,14 +53,16 @@ extern "C"
             device->FinishRenderingCurrentFrame();
         }
 
+        isXrActive = false;
+
+        scriptLoader.reset();
+
+        nativeInput = {};
         chromeDevTools.reset();
         nativeXr.reset();
         scriptLoader.reset();
-        nativeInput = {};
         runtime.reset();
         device.reset();
-
-        isXrActive = false;
     }
 
     JNIEXPORT void JNICALL

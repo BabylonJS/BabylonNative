@@ -172,8 +172,8 @@ void App::Uninitialize()
     }
 
     m_nativeInput = {};
-    m_nativeCanvas.reset();
     m_chromeDevTools.reset();
+    m_nativeCanvas.reset();
     m_runtime.reset();
     m_update.reset();
     m_device.reset();
@@ -385,6 +385,8 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
             OutputDebugStringA(message);
         });
 
+        m_nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
+
         Babylon::Polyfills::Window::Initialize(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
@@ -392,8 +394,6 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         Babylon::Plugins::NativeOptimizations::Initialize(env);
-
-        m_nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
 
         Babylon::Plugins::NativeXr::Initialize(env);
 

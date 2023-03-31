@@ -55,8 +55,8 @@ namespace
             device->FinishRenderingCurrentFrame();
         }
 
-        runtime.reset();
         nativeCanvas.reset();
+        runtime.reset();
         update.reset();
         device.reset();
     }
@@ -93,7 +93,9 @@ namespace
             });
 
             Babylon::Polyfills::Window::Initialize(env);
+
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+
             nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
 
             Babylon::Plugins::NativeEngine::Initialize(env);

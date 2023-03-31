@@ -40,6 +40,7 @@ private:
     std::optional<Babylon::Graphics::DeviceUpdate> m_update{};
     std::optional<Babylon::AppRuntime> m_runtime{};
     std::optional<Babylon::Polyfills::Canvas> m_nativeCanvas{};
+
     Windows::Foundation::Collections::IVectorView<Windows::Storage::IStorageItem^>^ m_files;
     bool m_windowClosed;
     bool m_windowVisible;
