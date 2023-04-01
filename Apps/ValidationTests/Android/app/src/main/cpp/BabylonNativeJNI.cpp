@@ -110,7 +110,7 @@ extern "C"
                 Babylon::Plugins::TestUtils::Initialize(env, window);
             });
 
-            scriptLoader = std::make_unique<Babylon::ScriptLoader>(*runtime);
+            scriptLoader.emplace(*runtime);
             scriptLoader->Eval("document = {}", "");
             scriptLoader->LoadScript("app:///Scripts/ammo.js");
             scriptLoader->LoadScript("app:///Scripts/recast.js");
