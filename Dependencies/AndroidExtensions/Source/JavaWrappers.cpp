@@ -4,6 +4,8 @@
 #include <android/surface_texture_jni.h>
 #include <android/asset_manager_jni.h>
 #include <android/native_window_jni.h>
+#include <algorithm>
+#include <vector>
 
 using namespace android::global;
 
@@ -142,6 +144,13 @@ namespace java::lang
     {
     }
 
+    Object::Object(jclass classRef)
+        : m_env{GetEnvForCurrentThread()}
+        , m_class{classRef}
+        , m_object{nullptr}
+    {
+    }
+
     Object::Object(jobject object)
         : m_env{GetEnvForCurrentThread()}
         , m_class{m_env->GetObjectClass(object)}
@@ -271,6 +280,129 @@ namespace java::lang
     const char* Throwable::what() const noexcept
     {
         return m_message.c_str();
+    }
+}
+
+namespace java::websocket
+{
+    jclass WebSocketClient::s_webSocketClass{};
+    std::vector<std::pair<jobject, WebSocketClient*>> WebSocketClient::s_instances;
+
+    WebSocketClient::WebSocketClient(std::string url, std::function<void()> open_callback, std::function<void()> close_callback, std::function<void(std::string)> message_callback, std::function<void()> error_callback)
+        : Object{s_webSocketClass}
+        , m_openCallback{std::move(open_callback)}
+        , m_messageCallback{std::move(message_callback)}
+        , m_closeCallback{std::move(close_callback)}
+        , m_errorCallback{std::move(error_callback)}
+    {
+        static JNINativeMethod methods[] =
+        {
+            {"closeCallback", "()V", (void*)OnClose},
+            {"openCallback", "()V", (void*)OnOpen},
+            {"messageCallback", "(Ljava/lang/String;)V", (void*)OnMessage},
+            {"errorCallback", "()V", (void*)OnError},
+        };
+        m_env->RegisterNatives(m_class, methods, 4);
+
+        JObject(m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(Ljava/lang/String;)V"), m_env->NewStringUTF(url.c_str())));
+
+        s_instances.push_back(std::make_pair(JObject(), this));
+
+        jmethodID connectSocket{m_env->GetMethodID(m_class, "connectBlocking", "()Z")};
+        m_env->CallBooleanMethod(JObject(), connectSocket);
+        ThrowIfFaulted(m_env);
+    }
+
+    WebSocketClient::~WebSocketClient()
+    {
+        const auto it = std::find_if(s_instances.begin(), s_instances.end(), [this](const auto &it)
+        {
+            return it.second == this;
+        });
+
+        if (it != s_instances.end())
+        {
+            s_instances.erase(it);
+        }
+    }
+
+    void WebSocketClient::OnOpen(JNIEnv* env, jobject obj) 
+    {
+        auto itObject = FindInstance(env, obj);
+        if (itObject != nullptr)
+        {
+            itObject->m_openCallback();
+        }
+    }
+
+    void WebSocketClient::OnMessage(JNIEnv* env, jobject obj, jstring message) 
+    {
+        auto itObject = FindInstance(env, obj);
+        if (itObject != nullptr)
+        {
+            java::lang::String mystr{message};
+            itObject->m_messageCallback(mystr);
+        }
+    }
+
+    void WebSocketClient::OnClose(JNIEnv* env, jobject obj) 
+    {
+        auto itObject = FindInstance(env, obj);
+        if (itObject != nullptr)
+        {
+            itObject->m_closeCallback();
+        }
+    }
+
+    void WebSocketClient::OnError(JNIEnv* env, jobject obj) 
+    {
+        auto itObject = FindInstance(env, obj);
+        if (itObject != nullptr)
+        {
+            itObject->m_errorCallback();
+        }
+    }
+
+    java::websocket::WebSocketClient* WebSocketClient::FindInstance(JNIEnv* env, jobject obj)
+    {
+        const auto it = std::find_if(s_instances.begin(), s_instances.end(), [&obj, &env](const auto &it)
+        {
+            return env->IsSameObject(obj, it.first);
+        });
+
+        ThrowIfFaulted(env);
+
+        if (it != s_instances.end())
+        {
+            return it->second;
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
+
+    void WebSocketClient::Send(std::string message)
+    {
+        jmethodID sendMessage{m_env->GetMethodID(m_class, "send", "(Ljava/lang/String;)V")};
+        m_env->CallVoidMethod(JObject(), sendMessage, m_env->NewStringUTF(message.c_str()));
+        ThrowIfFaulted(m_env);
+    }
+
+    void WebSocketClient::Close()
+    {
+        jmethodID closeWebSocket{m_env->GetMethodID(m_class, "close", "()V")};
+        m_env->CallVoidMethod(JObject(), closeWebSocket);
+        ThrowIfFaulted(m_env);
+    }
+
+    void WebSocketClient::InitializeJavaWebSocketClass(jclass webSocketClass, JNIEnv* env)
+    {
+        s_webSocketClass = (jclass) env->NewGlobalRef(webSocketClass);
+    }
+    void WebSocketClient::DestructJavaWebSocketClass(JNIEnv* env)
+    {
+        env->DeleteGlobalRef(s_webSocketClass);
     }
 }
 
@@ -591,7 +723,7 @@ namespace android::content::res
 namespace android::view
 {
     Display::Display(jobject object)
-            : Object(object)
+        : Object(object)
     {
     }
 

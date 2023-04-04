@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <android/asset_manager.h>
 #include <android/native_window.h>
+#include <utility>
 
 // --------------------
 // Forward Declarations
@@ -17,6 +18,11 @@ namespace java::lang
     class Object;
     class String;
     class Throwable;
+}
+
+namespace java::websocket
+{
+    class WebSocketClient;
 }
 
 namespace java::io
@@ -116,6 +122,7 @@ namespace java::lang
 
     protected:
         Object(const char* className);
+        Object(jclass classObj);
         Object(jobject object);
 
         Object(const Object&);
@@ -163,6 +170,36 @@ namespace java::lang
     private:
         jobject m_throwableRef;
         std::string m_message;
+    };
+}
+
+namespace java::websocket
+{
+    class WebSocketClient : public lang::Object
+    {
+    public:
+        WebSocketClient(std::string url, std::function<void()> open_callback, std::function<void()> close_callback, std::function<void(std::string)> message_callback, std::function<void()> error_callback);
+        ~WebSocketClient();
+        void Send(std::string message);
+        void Close();
+
+        static void InitializeJavaWebSocketClass(jclass webSocketClass, JNIEnv* env);
+        static void DestructJavaWebSocketClass(JNIEnv* env);
+
+    private:
+        static void OnOpen(JNIEnv* env, jobject obj);
+        static void OnMessage(JNIEnv* env, jobject obj, jstring message);
+        static void OnClose(JNIEnv* env, jobject obj);
+        static void OnError(JNIEnv* env, jobject obj);
+
+        static WebSocketClient* FindInstance(JNIEnv* env, jobject obj);
+        static jclass s_webSocketClass;
+        static std::vector<std::pair<jobject, WebSocketClient*>> s_instances;
+
+        std::function<void()> m_openCallback;
+        std::function<void(std::string)> m_messageCallback;
+        std::function<void()> m_closeCallback;
+        std::function<void()> m_errorCallback;
     };
 }
 
