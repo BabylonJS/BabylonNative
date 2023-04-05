@@ -38,8 +38,7 @@ namespace Babylon::Plugins::Internal
                 }
             }
 
-            auto runtimeScheduler{std::make_unique<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env))};
-            MediaStream::NewAsync(env, videoConstraints).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler = std::move(runtimeScheduler), env, deferred](const arcana::expected<Napi::Object, std::exception_ptr>& result) {
+            MediaStream::NewAsync(env, videoConstraints).then(arcana::inline_scheduler, arcana::cancellation::none(), [env, deferred](const arcana::expected<Napi::Object, std::exception_ptr>& result) {
                 if (result.has_error())
                 {
                     deferred.Reject(Napi::Error::New(env, result.error()).Value());

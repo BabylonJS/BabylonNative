@@ -502,28 +502,29 @@ namespace Babylon
 
     NativeEngine::NativeEngine(const Napi::CallbackInfo& info, JsRuntime& runtime)
         : Napi::ObjectWrap<NativeEngine>{info}
-        , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
-        , m_runtime{runtime}
-        , m_graphicsContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
-        , m_update{m_graphicsContext.GetUpdate("update")}
         , m_runtimeScheduler{runtime}
-        , m_defaultFrameBuffer{m_graphicsContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
+        , m_deviceContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
+        , m_update{m_deviceContext.GetUpdate("update")}
+        , m_defaultFrameBuffer{m_deviceContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
         , m_boundFrameBuffer{&m_defaultFrameBuffer}
-        , m_boundFrameBufferNeedsRebinding{m_graphicsContext, *m_cancellationSource, true}
+        , m_boundFrameBufferNeedsRebinding{m_deviceContext, m_cancellationSource, true}
     {
     }
 
     NativeEngine::~NativeEngine()
     {
         Dispose();
+
+        // Wait for async operations to complete.
+        m_runtimeScheduler.Rundown();
     }
 
     void NativeEngine::Dispose()
     {
-        m_cancellationSource->cancel();
+        m_cancellationSource.cancel();
     }
 
-    void NativeEngine::Dispose(const Napi::CallbackInfo& /*info*/)
+    void NativeEngine::Dispose(const Napi::CallbackInfo&)
     {
         Dispose();
     }
@@ -751,16 +752,13 @@ namespace Babylon
         ProgramData* program = new ProgramData{};
         Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
 
-        arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, vertexSource, fragmentSource, cancellationSource{m_cancellationSource}]() -> std::unique_ptr<ProgramData> {
+        arcana::make_task(arcana::threadpool_scheduler, m_cancellationSource,
+            [this, vertexSource, fragmentSource]() {
                 return CreateProgramInternal(vertexSource, fragmentSource);
             })
-            .then(m_runtimeScheduler, *m_cancellationSource,
-                [program,
-                    jsProgramRef{Napi::Persistent(jsProgram)},
-                    onSuccessRef{Napi::Persistent(onSuccess)},
-                    onErrorRef{Napi::Persistent(onError)},
-                    cancellationSource{m_cancellationSource}](const arcana::expected<std::unique_ptr<ProgramData>, std::exception_ptr>& result) {
+            .then(m_runtimeScheduler.Get(), m_cancellationSource,
+                [thisRef = Napi::Persistent(info.This()), program, jsProgramRef = Napi::Persistent(jsProgram),
+                    onSuccessRef = Napi::Persistent(onSuccess), onErrorRef = Napi::Persistent(onError)](const arcana::expected<std::unique_ptr<ProgramData>, std::exception_ptr>& result) {
                     if (result.has_error())
                     {
                         onErrorRef.Call({Napi::Error::New(onErrorRef.Env(), result.error()).Value()});
@@ -1110,22 +1108,23 @@ namespace Babylon
 
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
 
-        arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, dataSpan, generateMips, invertY, srgb, texture, cancellationSource{m_cancellationSource}]() {
-                bimg::ImageContainer* image{ParseImage(m_allocator, dataSpan)};
-                image = PrepareImage(m_allocator, image, invertY, srgb, generateMips);
+        arcana::make_task(arcana::threadpool_scheduler, m_cancellationSource,
+            [this, dataSpan, generateMips, invertY, srgb, texture]() {
+                bimg::ImageContainer* image{ParseImage(m_deviceContext.Allocator(), dataSpan)};
+                image = PrepareImage(m_deviceContext.Allocator(), image, invertY, srgb, generateMips);
                 LoadTextureFromImage(texture, image, srgb);
             })
-            .then(m_runtimeScheduler, *m_cancellationSource, [dataRef{Napi::Persistent(data)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
-                if (result.has_error())
-                {
-                    onErrorRef.Call({});
-                }
-                else
-                {
-                    onSuccessRef.Call({});
-                }
-            });
+            .then(m_runtimeScheduler.Get(), m_cancellationSource,
+                [thisRef = Napi::Persistent(info.This()), dataRef = Napi::Persistent(data), onSuccessRef = Napi::Persistent(onSuccess), onErrorRef = Napi::Persistent(onError)](arcana::expected<void, std::exception_ptr> result) {
+                    if (result.has_error())
+                    {
+                        onErrorRef.Call({});
+                    }
+                    else
+                    {
+                        onSuccessRef.Call({});
+                    }
+                });
     }
 
     void NativeEngine::CopyTexture(const Napi::CallbackInfo& info)
@@ -1133,12 +1132,15 @@ namespace Babylon
         const auto textureDestination = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         const auto textureSource = info[1].As<Napi::Pointer<Graphics::Texture>>().Get();
 
-        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, textureDestination, textureSource, cancellationSource = m_cancellationSource]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, textureDestination, textureSource, updateToken = m_update.GetUpdateToken(), cancellationSource = m_cancellationSource]() {
-                bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
+        arcana::make_task(m_update.Scheduler(), m_cancellationSource, [this, textureDestination, textureSource]() mutable
+        {
+            return arcana::make_task(m_runtimeScheduler.Get(), m_cancellationSource, [this, textureDestination, textureSource, updateToken = m_update.GetUpdateToken()]() mutable
+            {
+                bgfx::Encoder* encoder = updateToken.GetEncoder();
                 GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
-            }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
-                if (!cancellationSource->cancelled() && result.has_error())
+            }).then(arcana::inline_scheduler, m_cancellationSource, [this](const arcana::expected<void, std::exception_ptr>& result)
+            {
+                if (result.has_error())
                 {
                     Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
                 }
@@ -1162,8 +1164,8 @@ namespace Babylon
             throw Napi::Error::New(Env(), "The data size does not match width, height, and format");
         }
 
-        bimg::ImageContainer* image{bimg::imageAlloc(&m_allocator, format, width, height, 1, 1, false, false, bytes)};
-        image = PrepareImage(m_allocator, image, invertY, false, generateMips);
+        bimg::ImageContainer* image{bimg::imageAlloc(&m_deviceContext.Allocator(), format, width, height, 1, 1, false, false, bytes)};
+        image = PrepareImage(m_deviceContext.Allocator(), image, invertY, false, generateMips);
         LoadTextureFromImage(texture, image, false);
     }
 
@@ -1229,18 +1231,18 @@ namespace Babylon
             const auto typedArray{data[face].As<Napi::TypedArray>()};
             const auto dataSpan{gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength())};
             dataRefs[face] = Napi::Persistent(typedArray);
-            tasks[face] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [this, dataSpan, invertY, generateMips, srgb]() {
-                bimg::ImageContainer* image{ParseImage(m_allocator, dataSpan)};
-                image = PrepareImage(m_allocator, image, invertY, srgb, generateMips);
+            tasks[face] = arcana::make_task(arcana::threadpool_scheduler, m_cancellationSource, [this, dataSpan, invertY, generateMips, srgb]() {
+                bimg::ImageContainer* image{ParseImage(m_deviceContext.Allocator(), dataSpan)};
+                image = PrepareImage(m_deviceContext.Allocator(), image, invertY, srgb, generateMips);
                 return image;
             });
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}](std::vector<bimg::ImageContainer*> images) {
+            .then(arcana::inline_scheduler, m_cancellationSource, [texture, srgb](std::vector<bimg::ImageContainer*> images) {
                 LoadCubeTextureFromImages(texture, images, srgb);
             })
-            .then(m_runtimeScheduler, *m_cancellationSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
+            .then(m_runtimeScheduler.Get(), m_cancellationSource, [thisRef = Napi::Persistent(info.This()), dataRefs = std::move(dataRefs), onSuccessRef = Napi::Persistent(onSuccess), onErrorRef = Napi::Persistent(onError)](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     onErrorRef.Call({});
@@ -1272,19 +1274,19 @@ namespace Babylon
                 const auto typedArray = faceData[face].As<Napi::TypedArray>();
                 const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength());
                 dataRefs[(face * numMips) + mip] = Napi::Persistent(typedArray);
-                tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [this, dataSpan, invertY, srgb]() {
-                    bimg::ImageContainer* image{ParseImage(m_allocator, dataSpan)};
-                    image = PrepareImage(m_allocator, image, invertY, srgb, false);
+                tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, m_cancellationSource, [this, dataSpan, invertY, srgb]() {
+                    bimg::ImageContainer* image{ParseImage(m_deviceContext.Allocator(), dataSpan)};
+                    image = PrepareImage(m_deviceContext.Allocator(), image, invertY, srgb, false);
                     return image;
                 });
             }
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}](std::vector<bimg::ImageContainer*> images) {
+            .then(arcana::inline_scheduler, m_cancellationSource, [texture, srgb](std::vector<bimg::ImageContainer*> images) {
                 LoadCubeTextureFromImages(texture, images, srgb);
             })
-            .then(m_runtimeScheduler, *m_cancellationSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
+            .then(m_runtimeScheduler.Get(), m_cancellationSource, [thisRef = Napi::Persistent(info.This()), dataRefs = std::move(dataRefs), onSuccessRef = Napi::Persistent(onSuccess), onErrorRef = Napi::Persistent(onError)](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     onErrorRef.Call({});
@@ -1376,7 +1378,7 @@ namespace Babylon
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
         Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
-        m_graphicsContext.RemoveTexture(texture->Handle());
+        m_deviceContext.RemoveTexture(texture->Handle());
         texture->Dispose();
     }
 
@@ -1435,7 +1437,7 @@ namespace Babylon
             if (x != 0 || y != 0 || width != (texture->Width() >> mipLevel) || height != (texture->Height() >> mipLevel) || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
             {
                 const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
-                bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+                bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
                 encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0, sourceTextureHandle, mipLevel, x, y, /*srcZ*/ 0, width, height, /*depth*/ 0);
 
                 sourceTextureHandle = blitTextureHandle;
@@ -1449,13 +1451,13 @@ namespace Babylon
             std::vector<uint8_t> textureBuffer(sourceTextureInfo.storageSize);
 
             // Read the source texture.
-            m_graphicsContext.ReadTextureAsync(sourceTextureHandle, textureBuffer, mipLevel)
-                .then(arcana::inline_scheduler, *m_cancellationSource, [this, textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
+            m_deviceContext.ReadTextureAsync(sourceTextureHandle, textureBuffer, mipLevel)
+                .then(arcana::inline_scheduler, m_cancellationSource, [this, textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
                     // If the source texture format does not match the target texture format, convert it.
                     if (targetTextureInfo.format != sourceTextureInfo.format)
                     {
                         std::vector<uint8_t> convertedTextureBuffer(targetTextureInfo.storageSize);
-                        if (!bimg::imageConvert(&m_allocator, convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
+                        if (!bimg::imageConvert(&m_deviceContext.Allocator(), convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
                         {
                             throw std::runtime_error{"Texture conversion to RBGA8 failed."};
                         }
@@ -1473,7 +1475,7 @@ namespace Babylon
 
                     return textureBuffer;
                 })
-                .then(m_runtimeScheduler, *m_cancellationSource, [this, bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred, tempTexture, sourceTextureHandle](std::vector<uint8_t> textureBuffer) mutable {
+                .then(m_runtimeScheduler.Get(), m_cancellationSource, [this, bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred, tempTexture, sourceTextureHandle](std::vector<uint8_t> textureBuffer) mutable {
                     // Double check the destination buffer length. This is redundant with prior checks, but we'll be extra sure before the memcpy.
                     assert(bufferRef.Value().ByteLength() - bufferOffset >= textureBuffer.size());
 
@@ -1483,7 +1485,7 @@ namespace Babylon
 
                     // Dispose of the texture handle before resolving the promise.
                     // TODO: Handle properly handle stale handles after BGFX shutdown
-                    if (tempTexture && !m_cancellationSource->cancelled())
+                    if (tempTexture && !m_cancellationSource.cancelled())
                     {
                         bgfx::destroy(sourceTextureHandle);
                         tempTexture = false;
@@ -1491,10 +1493,10 @@ namespace Babylon
 
                     deferred.Resolve(bufferRef.Value());
                 })
-                .then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
+                .then(m_runtimeScheduler.Get(), arcana::cancellation::none(), [this, env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
                     // Dispose of the texture handle if not yet disposed.
                     // TODO: Handle properly handle stale handles after BGFX shutdown
-                    if (tempTexture && !m_cancellationSource->cancelled())
+                    if (tempTexture && !m_cancellationSource.cancelled())
                     {
                         bgfx::destroy(sourceTextureHandle);
                     }
@@ -1546,7 +1548,7 @@ namespace Babylon
         bgfx::FrameBufferHandle frameBufferHandle = bgfx::createFrameBuffer(numAttachments, attachments.data(), true);
         assert(bgfx::isValid(frameBufferHandle));
 
-        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_graphicsContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
+        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
         return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
     }
 
@@ -1558,7 +1560,7 @@ namespace Babylon
 
     void NativeEngine::BindFrameBuffer(NativeDataStream::Reader& data)
     {
-        auto encoder = GetUpdateToken().GetEncoder();
+        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
 
         Graphics::FrameBuffer* frameBuffer = data.ReadPointer<Graphics::FrameBuffer>();
         m_boundFrameBuffer->Unbind(*encoder);
@@ -1583,7 +1585,7 @@ namespace Babylon
 
     void NativeEngine::DrawIndexed(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
 
         const uint32_t fillMode = data.ReadUint32();
         const uint32_t indexStart = data.ReadUint32();
@@ -1600,7 +1602,7 @@ namespace Babylon
 
     void NativeEngine::Draw(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
 
         const uint32_t fillMode = data.ReadUint32();
         const uint32_t verticesStart = data.ReadUint32();
@@ -1616,7 +1618,7 @@ namespace Babylon
 
     void NativeEngine::Clear(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
 
         uint16_t flags{0};
         uint32_t rgba{0x000000ff};
@@ -1657,23 +1659,23 @@ namespace Babylon
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), std::floor(m_graphicsContext.GetWidth() / m_graphicsContext.GetHardwareScalingLevel()));
+        return Napi::Value::From(info.Env(), std::floor(m_deviceContext.GetWidth() / m_deviceContext.GetHardwareScalingLevel()));
     }
 
     Napi::Value NativeEngine::GetRenderHeight(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), std::floor(m_graphicsContext.GetHeight() / m_graphicsContext.GetHardwareScalingLevel()));
+        return Napi::Value::From(info.Env(), std::floor(m_deviceContext.GetHeight() / m_deviceContext.GetHardwareScalingLevel()));
     }
 
     Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), m_graphicsContext.GetHardwareScalingLevel());
+        return Napi::Value::From(info.Env(), m_deviceContext.GetHardwareScalingLevel());
     }
 
     void NativeEngine::SetHardwareScalingLevel(const Napi::CallbackInfo& info)
     {
         const auto level = info[0].As<Napi::Number>().FloatValue();
-        m_graphicsContext.SetHardwareScalingLevel(level);
+        m_deviceContext.SetHardwareScalingLevel(level);
     }
 
     Napi::Value NativeEngine::CreateImageBitmap(const Napi::CallbackInfo& info)
@@ -1692,7 +1694,7 @@ namespace Babylon
                 throw Napi::Error::New(env, "CreateImageBitmap array buffer is empty.");
             }
 
-            image = ParseImage(m_allocator, gsl::make_span(static_cast<uint8_t*>(data.Data()), data.ByteLength()));
+            image = ParseImage(m_deviceContext.Allocator(), gsl::make_span(static_cast<uint8_t*>(data.Data()), data.ByteLength()));
             allocatedImage = true;
         }
         else if (info[0].IsObject())
@@ -1748,7 +1750,7 @@ namespace Babylon
 
         const Napi::Env env{info.Env()};
 
-        bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, data.Data());
+        bimg::ImageContainer* image = bimg::imageAlloc(&m_deviceContext.Allocator(), format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, data.Data());
         if (image == nullptr)
         {
             throw Napi::Error::New(env, "Unable to allocate image for ResizeImageBitmap.");
@@ -1760,7 +1762,7 @@ namespace Babylon
             {
                 image->m_format = bimg::TextureFormat::A8;
             }
-            bimg::ImageContainer* rgba = bimg::imageConvert(&m_allocator, bimg::TextureFormat::RGBA8, *image, false);
+            bimg::ImageContainer* rgba = bimg::imageConvert(&m_deviceContext.Allocator(), bimg::TextureFormat::RGBA8, *image, false);
             if (rgba == nullptr)
             {
                 throw Napi::Error::New(env, "Unable to convert image to RGBA pixel format for ResizeImageBitmap.");
@@ -1781,20 +1783,6 @@ namespace Babylon
         }
         bimg::imageFree(image);
         return Napi::Value::From(env, outputData);
-    }
-
-    void NativeEngine::GetFrameBufferData(const Napi::CallbackInfo& info)
-    {
-        const auto callback{info[0].As<Napi::Function>()};
-
-        auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
-        m_graphicsContext.RequestScreenShot([this, callbackPtr{std::move(callbackPtr)}](std::vector<uint8_t> array) {
-            m_runtime.Dispatch([callbackPtr{std::move(callbackPtr)}, array{std::move(array)}](Napi::Env env) {
-                auto arrayBuffer{Napi::ArrayBuffer::New(env, const_cast<uint8_t*>(array.data()), array.size())};
-                auto typedArray{Napi::Uint8Array::New(env, array.size(), arrayBuffer, 0)};
-                callbackPtr->Value().Call({typedArray});
-            });
-        });
     }
 
     void NativeEngine::SetStencil(NativeDataStream::Reader& data)
@@ -1858,6 +1846,18 @@ namespace Babylon
         {
             throw Napi::Error::New(info.Env(), exception);
         }
+    }
+
+    void NativeEngine::GetFrameBufferData(const Napi::CallbackInfo& info)
+    {
+        const auto callback{info[0].As<Napi::Function>()};
+
+        m_deviceContext.RequestScreenShotAsync()
+            .then(m_runtimeScheduler.Get(), m_cancellationSource, [thisRef = Napi::Persistent(info.This()), callback = Napi::Persistent(callback)](std::vector<uint8_t> bytes) {
+                auto arrayBuffer{Napi::ArrayBuffer::New(thisRef.Env(), const_cast<uint8_t*>(bytes.data()), bytes.size())};
+                auto typedArray{Napi::Uint8Array::New(thisRef.Env(), bytes.size(), arrayBuffer, 0)};
+                callback.Call({typedArray});
+            });
     }
 
     void NativeEngine::DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode)
@@ -1932,7 +1932,9 @@ namespace Babylon
         if (!m_updateToken)
         {
             m_updateToken.emplace(m_update.GetUpdateToken());
-            m_runtime.Dispatch([this](auto) {
+
+            // TODO: is there an issue with this?
+            m_runtimeScheduler.Get()([this]() {
                 m_updateToken.reset();
             });
         }
@@ -1966,8 +1968,8 @@ namespace Babylon
 
         m_requestAnimationFrameCallbacksScheduled = true;
 
-        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{m_update.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() {
+        arcana::make_task(m_update.Scheduler(), m_cancellationSource, [this]() {
+            return arcana::make_task(m_runtimeScheduler.Get(), m_cancellationSource, [this, updateToken = m_update.GetUpdateToken()]() {
                 m_requestAnimationFrameCallbacksScheduled = false;
 
                 arcana::trace_region scheduleRegion{"NativeEngine::ScheduleRequestAnimationFrameCallbacks invoke JS callbacks"};
@@ -1976,8 +1978,8 @@ namespace Babylon
                 {
                     callback.Value().Call({});
                 }
-            }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
-                if (!cancellationSource->cancelled() && result.has_error())
+            }).then(arcana::inline_scheduler, m_cancellationSource, [this](const arcana::expected<void, std::exception_ptr>& result) {
+                if (result.has_error())
                 {
                     Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
                 }

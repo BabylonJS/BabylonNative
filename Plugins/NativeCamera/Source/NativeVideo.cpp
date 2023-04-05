@@ -34,7 +34,16 @@ namespace Babylon::Plugins
 
     NativeVideo::NativeVideo(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeVideo>{info}
+        , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
     {
+    }
+
+    NativeVideo::~NativeVideo()
+    {
+        m_cancellationSource.cancel();
+
+        // Wait for async operations to complete.
+        m_runtimeScheduler.Rundown();
     }
 
     Napi::Value NativeVideo::GetVideoWidth(const Napi::CallbackInfo& /*info*/)
@@ -141,8 +150,7 @@ namespace Babylon::Plugins
 
     Napi::Value NativeVideo::Play(const Napi::CallbackInfo& info)
     {
-        auto env{info.Env()};
-        auto deferred{Napi::Promise::Deferred::New(env)};
+        auto deferred = Napi::Promise::Deferred::New(info.Env());
 
         if (!m_IsPlaying && !m_streamObject.Value().IsNull() && !m_streamObject.Value().IsUndefined())
         {
@@ -150,7 +158,7 @@ namespace Babylon::Plugins
             RaiseEvent("playing");
         }
 
-        deferred.Resolve(env.Undefined());
+        deferred.Resolve(info.Env().Undefined());
 
         return deferred.Promise();
     }

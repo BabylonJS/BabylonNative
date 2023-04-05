@@ -19,6 +19,12 @@ namespace Babylon
         template<typename CallableT>
         void Append(CallableT callable)
         {
+            if (m_cancellationSource.cancelled())
+            {
+                // There is likely a coding error if this exception is thrown.
+                throw std::runtime_error{"Cannot append to the work queue while shutting down"};
+            }
+
             // Manual dispatcher queueing requires a copyable CallableT, we use a shared pointer trick to make a
             // copyable callable if necessary.
             if constexpr (std::is_copy_constructible<CallableT>::value)
@@ -46,9 +52,9 @@ namespace Babylon
 
         std::optional<std::scoped_lock<std::mutex>> m_suspensionLock{};
 
-        arcana::cancellation_source m_cancelSource{};
+        arcana::cancellation_source m_cancellationSource{};
         arcana::manual_dispatcher<128> m_dispatcher{};
 
-        std::thread m_thread;
+        std::thread m_thread{};
     };
 }

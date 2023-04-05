@@ -3,59 +3,59 @@
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <sstream>
 
-namespace Babylon::Polyfills::Internal
+namespace
 {
-    namespace
+    namespace ResponseType
     {
-        namespace ResponseType
+        constexpr const char* Text = "text";
+        constexpr const char* ArrayBuffer = "arraybuffer";
+
+        UrlLib::UrlResponseType StringToEnum(const std::string& value)
         {
-            constexpr const char* Text = "text";
-            constexpr const char* ArrayBuffer = "arraybuffer";
+            if (value == Text)
+                return UrlLib::UrlResponseType::String;
+            if (value == ArrayBuffer)
+                return UrlLib::UrlResponseType::Buffer;
 
-            UrlLib::UrlResponseType StringToEnum(const std::string& value)
-            {
-                if (value == Text)
-                    return UrlLib::UrlResponseType::String;
-                if (value == ArrayBuffer)
-                    return UrlLib::UrlResponseType::Buffer;
-
-                throw std::runtime_error{"Unsupported response type: " + value};
-            }
-
-            const char* EnumToString(UrlLib::UrlResponseType value)
-            {
-                switch (value)
-                {
-                    case UrlLib::UrlResponseType::String:
-                        return Text;
-                    case UrlLib::UrlResponseType::Buffer:
-                        return ArrayBuffer;
-                }
-
-                throw std::runtime_error{"Invalid response type"};
-            }
+            throw std::runtime_error{"Unsupported response type: " + value};
         }
 
-        namespace MethodType
+        const char* EnumToString(UrlLib::UrlResponseType value)
         {
-            constexpr const char* Get = "GET";
-
-            UrlLib::UrlMethod StringToEnum(const std::string& value)
+            switch (value)
             {
-                if (value == Get)
-                    return UrlLib::UrlMethod::Get;
-
-                throw std::runtime_error{"Unsupported url method: " + value};
+                case UrlLib::UrlResponseType::String:
+                    return Text;
+                case UrlLib::UrlResponseType::Buffer:
+                    return ArrayBuffer;
             }
-        }
 
-        namespace EventType
-        {
-            constexpr const char* ReadyStateChange = "readystatechange";
-            constexpr const char* LoadEnd = "loadend";
+            throw std::runtime_error{"Invalid response type"};
         }
     }
 
+    namespace MethodType
+    {
+        constexpr const char* Get = "GET";
+
+        UrlLib::UrlMethod StringToEnum(const std::string& value)
+        {
+            if (value == Get)
+                return UrlLib::UrlMethod::Get;
+
+            throw std::runtime_error{"Unsupported url method: " + value};
+        }
+    }
+
+    namespace EventType
+    {
+        constexpr const char* ReadyStateChange = "readystatechange";
+        constexpr const char* LoadEnd = "loadend";
+    }
+}
+
+namespace Babylon::Polyfills::Internal
+{
     void XMLHttpRequest::Initialize(Napi::Env env)
     {
         Napi::HandleScope scope{env};
@@ -97,6 +97,15 @@ namespace Babylon::Polyfills::Internal
         : Napi::ObjectWrap<XMLHttpRequest>{info}
         , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
     {
+    }
+
+    XMLHttpRequest::~XMLHttpRequest()
+    {
+        m_request.Abort();
+        m_cancellationSource.cancel();
+
+        // Wait for async operations to complete.
+        m_runtimeScheduler.Rundown();
     }
 
     Napi::Value XMLHttpRequest::GetReadyState(const Napi::CallbackInfo&)
@@ -183,6 +192,7 @@ namespace Babylon::Polyfills::Internal
     void XMLHttpRequest::Abort(const Napi::CallbackInfo&)
     {
         m_request.Abort();
+        m_cancellationSource.cancel();
     }
 
     void XMLHttpRequest::Open(const Napi::CallbackInfo& info)
@@ -212,10 +222,13 @@ namespace Babylon::Polyfills::Internal
             throw Napi::Error::New(info.Env(), "XMLHttpRequest must be opened before it can be sent");
         }
 
-        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
+        m_request.SendAsync()
+            .then(m_runtimeScheduler.Get(), m_cancellationSource,
+                [this, thisRef = Napi::Persistent(info.This())](arcana::expected<void, std::exception_ptr> result)
+        {
             if (result.has_error())
             {
-                Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
+                Napi::Error::New(thisRef.Env(), result.error()).ThrowAsJavaScriptException();
                 return;
             }
 

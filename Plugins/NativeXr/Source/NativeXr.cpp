@@ -410,7 +410,6 @@ namespace Babylon
 
         private:
             Napi::Env m_env;
-            JsRuntimeScheduler m_runtimeScheduler;
             std::mutex m_sessionStateChangedCallbackMutex{};
             std::function<void(bool)> m_sessionStateChangedCallback{};
             void* m_windowPtr{};
@@ -459,6 +458,8 @@ namespace Babylon
             void EndFrame();
 
             void NotifySessionStateChanged(bool isSessionActive);
+
+            JsRuntimeScheduler m_runtimeScheduler;
         };
 
         NativeXr::Impl::Impl(Napi::Env env)
@@ -584,7 +585,7 @@ namespace Babylon
             m_sessionState->FrameTask = arcana::make_task(m_sessionState->Update.Scheduler(), m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}] {
                 BeginFrame();
 
-                return arcana::make_task(m_runtimeScheduler, m_sessionState->CancellationSource, [this, updateToken{m_sessionState->Update.GetUpdateToken()}, thisRef{shared_from_this()}]() {
+                return arcana::make_task(m_runtimeScheduler.Get(), m_sessionState->CancellationSource, [this, updateToken = m_sessionState->Update.GetUpdateToken(), thisRef = shared_from_this()]() {
                     m_sessionState->FrameScheduled = false;
 
                     BeginUpdate();
@@ -621,7 +622,7 @@ namespace Babylon
             bool shouldEndSession{};
             bool shouldRestartSession{};
             m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer) {
-                return arcana::make_task(m_runtimeScheduler, arcana::cancellation::none(), [this, texturePointer]() {
+                return arcana::make_task(m_runtimeScheduler.Get(), arcana::cancellation::none(), [this, texturePointer]() {
                     const auto itViewConfig{m_sessionState->TextureToViewConfigurationMap.find(texturePointer)};
                     if (itViewConfig != m_sessionState->TextureToViewConfigurationMap.end())
                     {
@@ -694,48 +695,48 @@ namespace Babylon
                     arcana::make_task(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &viewConfig]() {
                         bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(viewConfig.ColorTexturePointer));
                         bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(viewConfig.DepthTexturePointer));
-                    }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, requiresAppClear, &viewConfig]() {
-                          const auto eyeCount = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(viewConfig.ViewTextureSize.Depth));
-                          // TODO (rgerd): Remove old framebuffers from resource table?
-                          viewConfig.FrameBuffers.resize(eyeCount);
-                          for (uint16_t eyeIdx = 0; eyeIdx < eyeCount; eyeIdx++)
-                          {
-                              std::array<bgfx::Attachment, 2> attachments{};
-                              attachments[0].init(colorTexture, bgfx::Access::Write, eyeIdx);
-                              attachments[1].init(depthTexture, bgfx::Access::Write, eyeIdx);
+                    }).then(m_runtimeScheduler.Get(), m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, requiresAppClear, &viewConfig]() {
+                        const auto eyeCount = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(viewConfig.ViewTextureSize.Depth));
+                        // TODO (rgerd): Remove old framebuffers from resource table?
+                        viewConfig.FrameBuffers.resize(eyeCount);
+                        for (uint16_t eyeIdx = 0; eyeIdx < eyeCount; eyeIdx++)
+                        {
+                            std::array<bgfx::Attachment, 2> attachments{};
+                            attachments[0].init(colorTexture, bgfx::Access::Write, eyeIdx);
+                            attachments[1].init(depthTexture, bgfx::Access::Write, eyeIdx);
 
-                              auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
+                            auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 
-                              const auto frameBufferPtr = new Graphics::FrameBuffer(
-                                  m_sessionState->GraphicsContext,
-                                  frameBufferHandle,
-                                  static_cast<uint16_t>(viewConfig.ViewTextureSize.Width),
-                                  static_cast<uint16_t>(viewConfig.ViewTextureSize.Height),
-                                  true,
-                                  true,
-                                  true);
+                            const auto frameBufferPtr = new Graphics::FrameBuffer(
+                                m_sessionState->GraphicsContext,
+                                frameBufferHandle,
+                                static_cast<uint16_t>(viewConfig.ViewTextureSize.Width),
+                                static_cast<uint16_t>(viewConfig.ViewTextureSize.Height),
+                                true,
+                                true,
+                                true);
 
-                              auto& frameBuffer = *frameBufferPtr;
+                            auto& frameBuffer = *frameBufferPtr;
 
-                              // WebXR, at least in its current implementation, specifies an implicit default clear to black.
-                              // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
-                              frameBuffer.Clear(*m_sessionState->Update.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
+                            // WebXR, at least in its current implementation, specifies an implicit default clear to black.
+                            // https://immersive-web.github.io/webxr/#xrwebgllayer-interface
+                            frameBuffer.Clear(*m_sessionState->Update.GetUpdateToken().GetEncoder(), BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
 
-                              viewConfig.FrameBuffers[eyeIdx] = frameBufferPtr;
+                            viewConfig.FrameBuffers[eyeIdx] = frameBufferPtr;
 
-                              auto jsWidth{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Width)};
-                              auto jsHeight{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Height)};
-                              auto jsFrameBuffer{Napi::Pointer<Graphics::FrameBuffer>::Create(m_env, frameBufferPtr, Napi::NapiPointerDeleter(frameBufferPtr))};
-                              viewConfig.JsTextures[frameBufferPtr] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
-                              // OpenXR doesn't pre-clear textures, and so we need to make sure the render target gets cleared before rendering the scene.
-                              // ARCore and ARKit effectively pre-clear by pre-compositing the camera feed.
-                              if (requiresAppClear)
-                              {
-                                  viewConfig.JsTextures[frameBufferPtr].Set("skipInitialClear", false);
-                              }
-                          }
-                          viewConfig.Initialized = true;
-                      }).then(arcana::inline_scheduler, m_sessionState->CancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
+                            auto jsWidth{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Width)};
+                            auto jsHeight{Napi::Value::From(m_env, viewConfig.ViewTextureSize.Height)};
+                            auto jsFrameBuffer{Napi::Pointer<Graphics::FrameBuffer>::Create(m_env, frameBufferPtr, Napi::NapiPointerDeleter(frameBufferPtr))};
+                            viewConfig.JsTextures[frameBufferPtr] = Napi::Persistent(m_sessionState->CreateRenderTexture.Call({jsWidth, jsHeight, jsFrameBuffer}).As<Napi::Object>());
+                            // OpenXR doesn't pre-clear textures, and so we need to make sure the render target gets cleared before rendering the scene.
+                            // ARCore and ARKit effectively pre-clear by pre-compositing the camera feed.
+                            if (requiresAppClear)
+                            {
+                                viewConfig.JsTextures[frameBufferPtr].Set("skipInitialClear", false);
+                            }
+                        }
+                        viewConfig.Initialized = true;
+                    }).then(arcana::inline_scheduler, m_sessionState->CancellationSource, [env{m_env}](const arcana::expected<void, std::exception_ptr>& result) {
                         if (result.has_error())
                         {
                             Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
@@ -2716,7 +2717,7 @@ namespace Babylon
 
                 auto deferred{Napi::Promise::Deferred::New(info.Env())};
                 session.m_xr->BeginSessionAsync()
-                    .then(session.m_runtimeScheduler, arcana::cancellation::none(),
+                    .then(session.m_runtimeScheduler.Get(), arcana::cancellation::none(),
                         [deferred, jsSession{std::move(jsSession)}, env{info.Env()}](const arcana::expected<void, std::exception_ptr>& result) {
                             if (result.has_error())
                             {
@@ -3160,7 +3161,7 @@ namespace Babylon
             Napi::Value End(const Napi::CallbackInfo& info)
             {
                 auto deferred{Napi::Promise::Deferred::New(info.Env())};
-                m_xr->EndSessionAsync().then(m_runtimeScheduler, arcana::cancellation::none(),
+                m_xr->EndSessionAsync().then(m_runtimeScheduler.Get(), arcana::cancellation::none(),
                     [this, deferred](const arcana::expected<void, std::exception_ptr>& result) {
                         if (result.has_error())
                         {
@@ -3426,11 +3427,10 @@ namespace Babylon
 
                 // Fire off the IsSessionSupported task.
                 xr::System::IsSessionSupportedAsync(sessionType)
-                    .then(m_runtimeScheduler,
-                        arcana::cancellation::none(),
-                        [deferred, env = info.Env()](bool result) {
-                            deferred.Resolve(Napi::Boolean::New(env, result));
-                        });
+                    .then(m_runtimeScheduler.Get(), arcana::cancellation::none(), [deferred, thisRef = Napi::Persistent(info.This())](bool result)
+                {
+                    deferred.Resolve(Napi::Boolean::New(thisRef.Env(), result));
+                });
 
                 return deferred.Promise();
             }

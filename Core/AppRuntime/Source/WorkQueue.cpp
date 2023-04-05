@@ -14,8 +14,12 @@ namespace Babylon
             Resume();
         }
 
-        m_cancelSource.cancel();
-        m_dispatcher.cancelled();
+        // Dispatch a cancel to signal the Run function to gracefully end.
+        // It must be dispatched and not canceled directly to ensure that
+        // existing work is executed and executed in the correct order.
+        m_dispatcher([this]() {
+            m_cancellationSource.cancel();
+        });
 
         m_thread.join();
     }
@@ -39,11 +43,15 @@ namespace Babylon
         m_env = std::make_optional(env);
         m_dispatcher.set_affinity(std::this_thread::get_id());
 
-        while (!m_cancelSource.cancelled())
+        while (!m_cancellationSource.cancelled())
         {
-            m_dispatcher.blocking_tick(m_cancelSource);
+            m_dispatcher.blocking_tick(m_cancellationSource);
         }
 
-        m_dispatcher.clear();
+        // Drain the queue to complete work dispatched after cancellation.
+        m_dispatcher.tick(arcana::cancellation::none());
+
+        // There should no longer be any outstanding work once the queue is drained.
+        assert(m_dispatcher.empty());
     }
 }

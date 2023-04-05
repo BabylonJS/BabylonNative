@@ -18,7 +18,7 @@ namespace Babylon::Plugins
         static void Initialize(Napi::Env& env);
         static Napi::Object New(const Napi::CallbackInfo& info);
         NativeVideo(const Napi::CallbackInfo& info);
-        ~NativeVideo() = default;
+        ~NativeVideo();
 
         void UpdateTexture(bgfx::TextureHandle textureHandle);
 
@@ -36,6 +36,9 @@ namespace Babylon::Plugins
         Napi::Value GetHaveCurrentData(const Napi::CallbackInfo& info);
         Napi::Value GetSrcObject(const Napi::CallbackInfo& info);
         void SetSrcObject(const Napi::CallbackInfo& info, const Napi::Value& value);
+
+        arcana::cancellation_source m_cancellationSource;
+        JsRuntimeScheduler m_runtimeScheduler;
 
         std::unordered_map<std::string, std::vector<Napi::FunctionReference>> m_eventHandlerRefs{};
 

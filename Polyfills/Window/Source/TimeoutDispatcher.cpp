@@ -14,28 +14,8 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    struct TimeoutDispatcher::Timeout
-    {
-        TimeoutId id;
-
-        // Make this non-shared when JsRuntime::Dispatch supports it.
-        std::shared_ptr<Napi::FunctionReference> function;
-
-        TimePoint time;
-
-        Timeout(TimeoutId id, std::shared_ptr<Napi::FunctionReference> function, TimePoint time)
-            : id{id}
-            , function{std::move(function)}
-            , time{time}
-        {
-        }
-
-        Timeout(const Timeout&) = delete;
-        Timeout(Timeout&&) = delete;
-    };
-
     TimeoutDispatcher::TimeoutDispatcher(Babylon::JsRuntime& runtime)
-        : m_runtime{runtime}
+        : m_runtimeScheduler{runtime}
         , m_thread{std::thread{&TimeoutDispatcher::ThreadFunction, this}}
     {
     }
@@ -43,17 +23,20 @@ namespace Babylon::Polyfills::Internal
     TimeoutDispatcher::~TimeoutDispatcher()
     {
         {
-            std::unique_lock<std::mutex> lk{m_mutex};
+            std::unique_lock<std::mutex> lock{m_mutex};
             m_idMap.clear();
             m_timeMap.clear();
         }
 
-        m_shutdown = true;
+        m_cancellationSource.cancel();
         m_condVariable.notify_one();
         m_thread.join();
+
+        // Wait for async operations to complete.
+        m_runtimeScheduler.Rundown();
     }
 
-    TimeoutDispatcher::TimeoutId TimeoutDispatcher::Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay)
+    TimeoutId TimeoutDispatcher::Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay)
     {
         if (delay.count() < 0)
         {
@@ -70,7 +53,8 @@ namespace Babylon::Polyfills::Internal
 
         if (time <= earliestTime)
         {
-            m_runtime.Dispatch([this](Napi::Env) {
+            m_runtimeScheduler.Get()([this]()
+            {
                 m_condVariable.notify_one();
             });
         }
@@ -102,7 +86,7 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    TimeoutDispatcher::TimeoutId TimeoutDispatcher::NextTimeoutId()
+    TimeoutId TimeoutDispatcher::NextTimeoutId()
     {
         while (true)
         {
@@ -122,11 +106,11 @@ namespace Babylon::Polyfills::Internal
 
     void TimeoutDispatcher::ThreadFunction()
     {
-        while (!m_shutdown)
+        while (!m_cancellationSource.cancelled())
         {
-            std::unique_lock<std::mutex> lk{m_mutex};
-            TimePoint nextTimePoint{};
+            std::unique_lock<std::mutex> lock{m_mutex};
 
+            TimePoint nextTimePoint{};
             while (!m_timeMap.empty())
             {
                 nextTimePoint = m_timeMap.begin()->second->time;
@@ -135,7 +119,7 @@ namespace Babylon::Polyfills::Internal
                     break;
                 }
 
-                m_condVariable.wait_until(lk, nextTimePoint);
+                m_condVariable.wait_until(lock, nextTimePoint);
             }
 
             while (!m_timeMap.empty() && m_timeMap.begin()->second->time == nextTimePoint)
@@ -147,9 +131,9 @@ namespace Babylon::Polyfills::Internal
                 CallFunction(std::move(function));
             }
 
-            while (!m_shutdown && m_timeMap.empty())
+            while (!m_cancellationSource.cancelled() && m_timeMap.empty())
             {
-                m_condVariable.wait(lk);
+                m_condVariable.wait(lock);
             }
         }
     }
@@ -158,7 +142,10 @@ namespace Babylon::Polyfills::Internal
     {
         if (function)
         {
-            m_runtime.Dispatch([function = std::move(function)](Napi::Env) { function->Call({}); });
+            m_runtimeScheduler.Get()([function = std::move(function)]()
+            {
+                function->Call({});
+            });
         }
     }
 }

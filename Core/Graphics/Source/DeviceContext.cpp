@@ -56,9 +56,9 @@ namespace Babylon::Graphics
         return {m_graphicsImpl.GetSafeTimespanGuarantor(updateName), *this};
     }
 
-    void DeviceContext::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)
+    arcana::task<std::vector<uint8_t>, std::exception_ptr> DeviceContext::RequestScreenShotAsync()
     {
-        return m_graphicsImpl.RequestScreenShot(std::move(callback));
+        return m_graphicsImpl.RequestScreenShotAsync();
     }
 
     arcana::task<void, std::exception_ptr> DeviceContext::ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel)

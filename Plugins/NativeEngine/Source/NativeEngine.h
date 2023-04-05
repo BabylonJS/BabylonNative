@@ -203,31 +203,27 @@ namespace Babylon
         void SetViewPort(NativeDataStream::Reader& data);
         void SetCommandDataStream(const Napi::CallbackInfo& info);
         void SubmitCommands(const Napi::CallbackInfo& info);
+
         void DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode);
-
         std::string ProcessShaderCoordinates(const std::string& vertexSource);
-
         Graphics::UpdateToken& GetUpdateToken();
         Graphics::FrameBuffer& GetBoundFrameBuffer(bgfx::Encoder& encoder);
 
-        std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
+        arcana::cancellation_source m_cancellationSource{};
+        JsRuntimeScheduler m_runtimeScheduler;
 
         ShaderCompiler m_shaderCompiler{};
 
         ProgramData* m_currentProgram{nullptr};
 
-        JsRuntime& m_runtime;
-        Graphics::DeviceContext& m_graphicsContext;
+        Graphics::DeviceContext& m_deviceContext;
         Graphics::Update m_update;
-
-        JsRuntimeScheduler m_runtimeScheduler;
 
         std::optional<Graphics::UpdateToken> m_updateToken{};
 
         void ScheduleRequestAnimationFrameCallbacks();
         bool m_requestAnimationFrameCallbacksScheduled{};
 
-        bx::DefaultAllocator m_allocator{};
         uint64_t m_engineState{BGFX_STATE_DEFAULT};
         uint32_t m_stencilState{BGFX_STENCIL_TEST_ALWAYS | BGFX_STENCIL_FUNC_REF(0) | BGFX_STENCIL_FUNC_RMASK(0xFF) | BGFX_STENCIL_OP_FAIL_S_KEEP | BGFX_STENCIL_OP_FAIL_Z_KEEP | BGFX_STENCIL_OP_PASS_Z_REPLACE};
 
