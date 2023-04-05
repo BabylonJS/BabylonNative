@@ -58,13 +58,17 @@ namespace Babylon::Plugins
 
     MediaStream::~MediaStream()
     {
-        if (m_cameraDevice != nullptr)
-        {
-            // The cameraDevice should be destroyed on the JS thread as it may need to access main thread resources
-            // move ownership of the cameraDevice to a lambda and dispatch it with the runtimeScheduler so the destructor
-            // is called from that thread.
-            m_runtimeScheduler.Get()([cameraDevice = std::move(m_cameraDevice)]() {});
-        }
+        // TODO: Is this still necessary?
+//        if (m_cameraDevice != nullptr)
+//        {
+//            // The cameraDevice should be destroyed on the JS thread as it may need to access main thread resources
+//            // move ownership of the cameraDevice to a lambda and dispatch it with the runtimeScheduler so the destructor
+//            // is called from that thread.
+//            m_runtimeScheduler.Get()([cameraDevice = std::move(m_cameraDevice)]() {});
+//        }
+
+        // Wait for async operations to complete.
+        m_runtimeScheduler.Rundown();
     }
 
     Napi::Value MediaStream::GetVideoTracks(const Napi::CallbackInfo& info)
