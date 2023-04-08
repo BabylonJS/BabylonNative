@@ -17,6 +17,8 @@ namespace Babylon::Polyfills::Internal
         static void Initialize(Napi::Env env);
         explicit AbortSignal(const Napi::CallbackInfo& info);
 
+        void Abort();
+
     private:
         Napi::Value GetAborted(const Napi::CallbackInfo& info);
         void SetAborted(const Napi::CallbackInfo&, const Napi::Value& value);
@@ -26,6 +28,8 @@ namespace Babylon::Polyfills::Internal
 
         void AddEventListener(const Napi::CallbackInfo& info);
         void RemoveEventListener(const Napi::CallbackInfo& info);
+        void RaiseEvent(const char* eventType);
+
         std::unordered_map<std::string, std::vector<Napi::FunctionReference>> m_eventHandlerRefs;
 
         Napi::FunctionReference m_onabort;

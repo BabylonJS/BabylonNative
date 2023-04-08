@@ -23,16 +23,59 @@ mocha.setup({ ui: "bdd", reporter: BabylonReporter });
 const expect = chai.expect;
 
 describe("AbortController", function () {
-    it("should not throw while aborting and correctly trigger callback", function (done) {
+    it("should not throw while aborting with no callbacks", function () {
         const controller = new AbortController();
         expect(controller.signal.aborted).to.equal(false);
+
+        // Trigger with no callbacks
+        controller.abort();
+
+        expect(controller.signal.aborted).to.equal(true);
+    });
+
+    it("should not throw while aborting and correctly trigger both callbacks", function (done) {
+        const controller = new AbortController();
+        expect(controller.signal.aborted).to.equal(false);
+
+        let cb1 = false, cb2 = false;
 
         // Expect aborted to be true after abort()
         controller.signal.onabort = () => {
             expect(controller.signal.aborted).to.equal(true);
-            done();
+            cb1 = true;
+
+            if (cb1 && cb2) {
+                done();
+            }
         }
+
+        controller.signal.addEventListener('abort', () => {
+            expect(controller.signal.aborted).to.equal(true);
+            cb2 = true;
+
+            if (cb1 && cb2) {
+                done();
+            }
+        })
+
         controller.abort();
+    });
+
+    it("should remove listener and not invoke callback function", function () {
+        const controller = new AbortController();
+        expect(controller.signal.aborted).to.equal(false);
+
+        // If this function is unsuccessfully removed it will assert when called
+        const onAbort = () => {
+            expect(controller.signal.aborted).to.equal(false);
+        };
+
+        controller.signal.addEventListener('abort', onAbort);
+        controller.signal.removeEventListener('abort', onAbort);
+
+        controller.abort();
+
+        expect(controller.signal.aborted).to.equal(true);
     });
 });
 
