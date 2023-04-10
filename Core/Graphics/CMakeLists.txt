@@ -22,6 +22,10 @@ set(SOURCES
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
 
+if(BABYLON_NATIVE_CHECK_THREAD_AFINITY)
+    target_compile_definitions(Graphics PRIVATE BABYLON_NATIVE_CHECK_THREAD_AFINITY=1)
+endif()
+
 target_include_directories(Graphics
     PRIVATE "Include/Shared"
     PRIVATE "Include/Platform/${BABYLON_NATIVE_PLATFORM}"

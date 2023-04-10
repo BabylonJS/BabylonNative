@@ -168,7 +168,9 @@ namespace Babylon::Graphics
 
     void DeviceImpl::DisableRendering()
     {
+#ifdef BABYLON_NATIVE_CHECK_THREAD_AFINITY
         assert(m_renderThreadAffinity.check());
+#endif
 
         std::scoped_lock lock{m_state.Mutex};
 
@@ -199,7 +201,9 @@ namespace Babylon::Graphics
     {
         arcana::trace_region startRenderingRegion{"DeviceImpl::StartRenderingCurrentFrame"};
 
+#ifdef BABYLON_NATIVE_CHECK_THREAD_AFINITY
         assert(m_renderThreadAffinity.check());
+#endif
 
         if (m_rendering)
         {
@@ -237,8 +241,9 @@ namespace Babylon::Graphics
 
         arcana::trace_region finishRenderingRegion{"DeviceImpl::FinishRenderingCurrentFrame"};
 
+#ifdef BABYLON_NATIVE_CHECK_THREAD_AFINITY
         assert(m_renderThreadAffinity.check());
-
+#endif
         if (!m_rendering)
         {
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
@@ -268,7 +273,9 @@ namespace Babylon::Graphics
 
     void DeviceImpl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
     {
+#ifdef BABYLON_NATIVE_CHECK_THREAD_AFINITY
         assert(m_renderThreadAffinity.check());
+#endif
         m_bgfxCallback.SetDiagnosticOutput(std::move(diagnosticOutput));
     }
 
@@ -410,7 +417,9 @@ namespace Babylon::Graphics
 
     bgfx::Encoder* DeviceImpl::GetEncoderForThread()
     {
+#ifdef BABYLON_NATIVE_CHECK_THREAD_AFINITY
         assert(!m_renderThreadAffinity.check());
+#endif
         std::scoped_lock lock{m_threadIdToEncoderMutex};
 
         const auto threadId{std::this_thread::get_id()};
