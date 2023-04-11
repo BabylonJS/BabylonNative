@@ -22,8 +22,8 @@ set(SOURCES
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
 
-if(BABYLON_NATIVE_CHECK_THREAD_AFINITY)
-    target_compile_definitions(Graphics PRIVATE BABYLON_NATIVE_CHECK_THREAD_AFINITY=1)
+if(BABYLON_NATIVE_CHECK_THREAD_AFFINITY)
+    target_compile_definitions(Graphics PRIVATE BABYLON_NATIVE_CHECK_THREAD_AFFINITY=1)
 endif()
 
 target_include_directories(Graphics

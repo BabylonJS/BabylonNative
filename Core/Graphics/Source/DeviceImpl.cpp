@@ -15,6 +15,12 @@ namespace
     constexpr auto JS_GRAPHICS_NAME = "_Graphics";
 }
 
+#ifdef BABYLON_NATIVE_CHECK_THREAD_AFFINITY
+#define ASSERT_THREAD_AFFINITY(affinity) assert(affinity.check())
+#else
+#define ASSERT_THREAD_AFFINITY(affinity)
+#endif
+
 namespace Babylon::Graphics
 {
     DeviceImpl::DeviceImpl()
@@ -168,9 +174,7 @@ namespace Babylon::Graphics
 
     void DeviceImpl::DisableRendering()
     {
-#ifdef BABYLON_NATIVE_CHECK_THREAD_AFINITY
-        assert(m_renderThreadAffinity.check());
-#endif
+        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity)
 
         std::scoped_lock lock{m_state.Mutex};
 
@@ -201,9 +205,7 @@ namespace Babylon::Graphics
     {
         arcana::trace_region startRenderingRegion{"DeviceImpl::StartRenderingCurrentFrame"};
 
-#ifdef BABYLON_NATIVE_CHECK_THREAD_AFINITY
-        assert(m_renderThreadAffinity.check());
-#endif
+        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
 
         if (m_rendering)
         {
@@ -241,9 +243,8 @@ namespace Babylon::Graphics
 
         arcana::trace_region finishRenderingRegion{"DeviceImpl::FinishRenderingCurrentFrame"};
 
-#ifdef BABYLON_NATIVE_CHECK_THREAD_AFINITY
-        assert(m_renderThreadAffinity.check());
-#endif
+        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
+
         if (!m_rendering)
         {
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
@@ -273,9 +274,7 @@ namespace Babylon::Graphics
 
     void DeviceImpl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
     {
-#ifdef BABYLON_NATIVE_CHECK_THREAD_AFINITY
-        assert(m_renderThreadAffinity.check());
-#endif
+        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
         m_bgfxCallback.SetDiagnosticOutput(std::move(diagnosticOutput));
     }
 
