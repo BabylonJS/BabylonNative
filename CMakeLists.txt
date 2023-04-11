@@ -9,7 +9,7 @@ project(BabylonNative)
 # --------------------------------------------------
 option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ON)
 option(BABYLON_NATIVE_INSTALL "Include the install target." ON)
-option(BABYLON_NATIVE_CHECK_THREAD_AFINITY "Checks thread safety in the graphics device calls. It can be removed if hosting application ensures thread coherence." ON)
+option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphics device calls. It can be removed if hosting application ensures thread coherence." ON)
 
 ## Core
 option(BABYLON_NATIVE_CORE_JSRUNTIME "Include Babylon Native Core JsRuntime" ON)
