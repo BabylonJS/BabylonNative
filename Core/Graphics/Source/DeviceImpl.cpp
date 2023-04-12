@@ -174,7 +174,7 @@ namespace Babylon::Graphics
 
     void DeviceImpl::DisableRendering()
     {
-        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity)
+        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
 
         std::scoped_lock lock{m_state.Mutex};
 
