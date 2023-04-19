@@ -53,8 +53,7 @@ namespace Babylon::Polyfills::Internal
 
         if (time <= earliestTime)
         {
-            m_runtimeScheduler.Get()([this]()
-            {
+            m_runtimeScheduler.Get()([this]() {
                 m_condVariable.notify_one();
             });
         }
@@ -142,8 +141,7 @@ namespace Babylon::Polyfills::Internal
     {
         if (function)
         {
-            m_runtimeScheduler.Get()([function = std::move(function)]()
-            {
+            m_runtimeScheduler.Get()([function = std::move(function)]() {
                 function->Call({});
             });
         }
