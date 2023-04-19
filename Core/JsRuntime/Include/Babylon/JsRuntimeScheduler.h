@@ -108,7 +108,7 @@ namespace Babylon
             template<typename CallableT>
             void operator()(CallableT&& callable) const
             {
-                m_parent.Dispatch(callable);
+                m_parent.Dispatch(std::forward<CallableT>(callable));
             }
 
         private:
@@ -129,7 +129,7 @@ namespace Babylon
             }
             else
             {
-                m_disposingDispatcher(callable);
+                m_disposingDispatcher(std::forward<CallableT>(callable));
             }
 
             --m_count;
