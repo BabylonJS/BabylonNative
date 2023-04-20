@@ -13,23 +13,17 @@ if (APPLE)
 endif()
 
 target_include_directories(ExternalTexture
-    PUBLIC "Include"
-    PRIVATE "Source")
+    PUBLIC "Include")
 
 target_link_to_dependencies(ExternalTexture
-    PRIVATE napi_extensions
-    PUBLIC JsRuntime
+    PUBLIC napi
     PUBLIC GraphicsDevice
+    PRIVATE napi_extensions
     PRIVATE JsRuntimeInternal
-    PRIVATE GraphicsDeviceContext
-    PRIVATE Graphics
-    PRIVATE bgfx
-    PRIVATE bimg
-    PRIVATE bx)
+    PRIVATE GraphicsDeviceContext)
 
 target_compile_definitions(ExternalTexture
-    PRIVATE NOMINMAX
-    PRIVATE ${GRAPHICS_API_UPPER})
+    PRIVATE NOMINMAX)
 
 set_property(TARGET ExternalTexture PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

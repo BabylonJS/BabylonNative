@@ -108,16 +108,17 @@ target_include_directories(Playground PRIVATE "Source" ".")
 
 target_link_to_dependencies(Playground
     PRIVATE AppRuntime
-    PRIVATE NativeCapture
+    PRIVATE Canvas
     PRIVATE ChromeDevTools
+    PRIVATE Console
+    PRIVATE GraphicsDevice
+    PRIVATE NativeCapture
     PRIVATE NativeEngine
     PRIVATE NativeInput
     PRIVATE NativeOptimizations
-    PRIVATE Console
-    PRIVATE Window
     PRIVATE ScriptLoader
+    PRIVATE Window
     PRIVATE XMLHttpRequest
-    PRIVATE Canvas
     ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 

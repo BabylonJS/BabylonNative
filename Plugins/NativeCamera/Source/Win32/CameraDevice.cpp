@@ -1,4 +1,3 @@
-#include "NativeCamera.h"
 #include "../CameraDevice.h"
 #include <napi/napi.h>
 #include <arcana/threading/affinity.h>

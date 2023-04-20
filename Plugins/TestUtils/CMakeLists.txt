@@ -14,11 +14,12 @@ set(SOURCES
 add_library(TestUtils ${SOURCES})
 warnings_as_errors(TestUtils)
 
-target_include_directories(TestUtils INTERFACE "Include")
-target_include_directories(TestUtils PRIVATE "Source")
+target_include_directories(TestUtils PUBLIC
+    "Include")
 
 target_link_to_dependencies(TestUtils
-    PUBLIC JsRuntime
+    PUBLIC napi
+    PRIVATE JsRuntimeInternal
     PRIVATE GraphicsDevice
     PRIVATE GraphicsDeviceContext)
 

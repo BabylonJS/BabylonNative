@@ -17,11 +17,9 @@ set(NPM_SCRIPTS
 set(HEADERS
     "Shared/Tests.h")
 
-set(ADDITIONAL_LIBRARIES "")
-
 if(APPLE)
     find_library(JSCORE_LIBRARY JavaScriptCore)
-    set(ADDITIONAL_LIBRARIES ${JSCORE_LIBRARY})
+    set(ADDITIONAL_LIBRARIES PRIVATE ${JSCORE_LIBRARY})
     set(TEST_APP "Apple/App.mm")
 elseif(UNIX AND NOT ANDROID)
     set(TEST_APP "X11/App.cpp")
@@ -32,14 +30,15 @@ endif()
 add_executable(UnitTests ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_APP} ${HEADERS})
 
 target_link_to_dependencies(UnitTests
-    UrlLib
-    AppRuntime
-    XMLHttpRequest
-    NativeEngine
-    ScriptLoader
-    Console
-    Window
-    Canvas
+    PRIVATE AppRuntime
+    PRIVATE Canvas
+    PRIVATE Console
+    PRIVATE GraphicsDevice
+    PRIVATE NativeEngine
+    PRIVATE ScriptLoader
+    PRIVATE UrlLib
+    PRIVATE Window
+    PRIVATE XMLHttpRequest
     ${ADDITIONAL_LIBRARIES})
 
 add_test(NAME UnitTests COMMAND UnitTests)

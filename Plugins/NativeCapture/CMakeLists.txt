@@ -5,11 +5,11 @@ set(SOURCES
 add_library(NativeCapture ${SOURCES})
 warnings_as_errors(NativeCapture)
 
-target_include_directories(NativeCapture INTERFACE "Include")
-target_include_directories(NativeCapture PRIVATE "Include/Babylon/Plugins")
+target_include_directories(NativeCapture PUBLIC
+    "Include")
 
 target_link_to_dependencies(NativeCapture
-    PUBLIC JsRuntime
+    PUBLIC JsRuntimeInternal
     PRIVATE GraphicsDeviceContext
     PRIVATE napi_extensions)
 

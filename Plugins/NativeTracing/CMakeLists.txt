@@ -7,14 +7,14 @@ warnings_as_errors(NativeTracing)
 
 if (APPLE)
     set_target_properties(NativeTracing PROPERTIES
-        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
-    )
+        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
 endif()
 
 target_include_directories(NativeTracing PUBLIC "Include")
 
 target_link_to_dependencies(NativeTracing
-    PUBLIC JsRuntime
+    PUBLIC napi
+    PRIVATE JsRuntimeInternal
     PRIVATE arcana
     PRIVATE napi_extensions)
 

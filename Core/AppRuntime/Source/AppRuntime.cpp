@@ -1,5 +1,6 @@
 #include "AppRuntime.h"
 #include "WorkQueue.h"
+#include <Babylon/JsRuntime.h>
 
 namespace Babylon
 {

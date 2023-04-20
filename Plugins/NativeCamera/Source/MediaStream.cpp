@@ -16,7 +16,7 @@ namespace Babylon::Plugins
         auto mediaStreamObject{Napi::Persistent(GetConstructor(env).New({}))};
         auto mediaStream{MediaStream::Unwrap(mediaStreamObject.Value())};
 
-        return mediaStream->ApplyInitialConstraintsAsync(env, constraints).then(mediaStream->m_runtimeScheduler, arcana::cancellation::none(), [mediaStreamObject{std::move(mediaStreamObject)}]() {
+        return mediaStream->ApplyInitialConstraintsAsync(constraints).then(mediaStream->m_runtimeScheduler, arcana::cancellation::none(), [mediaStreamObject{std::move(mediaStreamObject)}]() {
             return mediaStreamObject.Value();
         });
     }
@@ -91,7 +91,7 @@ namespace Babylon::Plugins
         auto promise{deferred.Promise()};
 
         // Apply the constraints to the existing device
-        if (!UpdateConstraints(env, constraints))
+        if (!UpdateConstraints(constraints))
         {
             // Setting the constraint to the capability failed
             deferred.Reject(Napi::Error::New(env, "OverconstrainedError: Unable to match constraints to a supported camera configuration.").Value());
@@ -102,10 +102,10 @@ namespace Babylon::Plugins
         return static_cast<Napi::Value>(promise);
     }
 
-    arcana::task<void, std::exception_ptr> MediaStream::ApplyInitialConstraintsAsync(Napi::Env env, Napi::Object constraints)
+    arcana::task<void, std::exception_ptr> MediaStream::ApplyInitialConstraintsAsync(Napi::Object constraints)
     {
         // A camera device hasn't been selected yet. Find the best device and open the stream
-        auto bestCamera = FindBestCameraStream(env, constraints);
+        auto bestCamera = FindBestCameraStream(constraints);
 
         // If m_cameraDevice is still null that means a camera device could not be found that meets the constraints
         if (!bestCamera.has_value())
@@ -120,11 +120,11 @@ namespace Babylon::Plugins
         // Create a persistent ref to the constraints object so it isn't destructed during our async work
         auto constraintsRef{Napi::Persistent(constraints)};
 
-        return m_cameraDevice->OpenAsync(bestCamera.value().second).then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, constraintsRef{std::move(constraintsRef)}](CameraDevice::CameraDimensions cameraDimensions) {
+        return m_cameraDevice->OpenAsync(bestCamera.value().second).then(m_runtimeScheduler, arcana::cancellation::none(), [this, constraintsRef{std::move(constraintsRef)}](CameraDevice::CameraDimensions cameraDimensions) {
             this->Width = cameraDimensions.width;
             this->Height = cameraDimensions.height;
 
-            if (!UpdateConstraints(env, constraintsRef.Value()))
+            if (!UpdateConstraints(constraintsRef.Value()))
             {
                 // Setting the constraint to the capability failed
                 throw std::runtime_error{"ConstraintError: Unable to match constraints to a supported camera configuration."};
@@ -180,10 +180,10 @@ namespace Babylon::Plugins
         return Napi::Object::From(env, m_currentConstraints.Value());
     }
 
-    std::optional<std::pair<CameraDevice, const CameraTrack&>> MediaStream::FindBestCameraStream(Napi::Env env, Napi::Object constraints)
+    std::optional<std::pair<CameraDevice, const CameraTrack&>> MediaStream::FindBestCameraStream(Napi::Object constraints)
     {
         // Get the available camera devices
-        std::vector<CameraDevice> cameraDevices{CameraDevice::GetCameraDevices(env)};
+        std::vector<CameraDevice> cameraDevices{CameraDevice::GetCameraDevices(Env())};
 
         std::optional<std::pair<CameraDevice, const CameraTrack&>> bestCameraConfiguration{};
         int32_t bestFullySatisfiedCapabilityCount{0};
@@ -304,10 +304,10 @@ namespace Babylon::Plugins
         return bestCameraConfiguration;
     }
 
-    bool MediaStream::UpdateConstraints(Napi::Env env, Napi::Object constraints)
+    bool MediaStream::UpdateConstraints(Napi::Object constraints)
     {
-        bool allConstraintsSatisfied{true};
-        m_currentConstraints = Napi::Persistent(Napi::Object::New(env));
+        bool allConstraintsSatisfied = true;
+        m_currentConstraints = Napi::Persistent(Napi::Object::New(Env()));
 
         if (m_cameraDevice == nullptr)
         {

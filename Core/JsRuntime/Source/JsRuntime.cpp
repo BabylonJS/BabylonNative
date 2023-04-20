@@ -1,4 +1,4 @@
-#include "JsRuntime.h"
+#include <Babylon/JsRuntime.h>
 
 namespace Babylon
 {
@@ -42,7 +42,6 @@ namespace Babylon
 
     void JsRuntime::Dispatch(std::function<void(Napi::Env)> function)
     {
-        std::scoped_lock lock{m_mutex};
         m_dispatchFunction([function = std::move(function)](Napi::Env env) {
             function(env);
 

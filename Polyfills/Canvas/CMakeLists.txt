@@ -21,7 +21,8 @@ set(ATLAS_SOURCES ${BGFX_DIR}/examples/common/cube_atlas.cpp)
 
 add_library(Canvas ${SOURCES} ${FONT_SOURCES} ${ATLAS_SOURCES} ${NANOVG_SOURCES})
 
-target_include_directories(Canvas PUBLIC "Include"
+target_include_directories(Canvas
+    PUBLIC "Include"
     PRIVATE "${BGFX_DIR}/3rdparty"
     PRIVATE "${BGFX_DIR}/examples/common"
     PRIVATE "${BGFX_DIR}/examples/common/nanovg")
@@ -31,7 +32,7 @@ target_link_to_dependencies(Canvas
     PRIVATE bgfx
     PRIVATE bimg
     PRIVATE bx
-    PRIVATE JsRuntime
+    PRIVATE JsRuntimeInternal
     PRIVATE GraphicsDeviceContext
     PRIVATE UrlLib
     PRIVATE napi_extensions)

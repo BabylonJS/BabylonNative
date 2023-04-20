@@ -1,4 +1,4 @@
-#include "ChromeDevTools.h"
+#include <Babylon/Plugins/ChromeDevTools.h>
 
 #include <Babylon/JsRuntime.h>
 

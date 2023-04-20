@@ -42,7 +42,6 @@ endif()
 
 target_link_to_dependencies(Graphics
     PRIVATE napi_extensions
-    PRIVATE JsRuntime
     PRIVATE JsRuntimeInternal
     PRIVATE bgfx
     PRIVATE bimg

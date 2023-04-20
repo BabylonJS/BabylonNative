@@ -1,8 +1,7 @@
 #pragma once
 
 #include "Dispatchable.h"
-
-#include <Babylon/JsRuntime.h>
+#include <napi/napi.h>
 
 #include <memory>
 #include <functional>

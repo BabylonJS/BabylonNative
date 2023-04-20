@@ -47,6 +47,5 @@ namespace Babylon
         JsRuntime(Napi::Env, DispatchFunctionT);
 
         DispatchFunctionT m_dispatchFunction{};
-        std::mutex m_mutex{};
     };
 }

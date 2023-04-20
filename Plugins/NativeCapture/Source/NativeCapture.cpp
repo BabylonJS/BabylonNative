@@ -1,5 +1,4 @@
-#include "NativeCapture.h"
-
+#include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Graphics/DeviceContext.h>
 #include <Babylon/Graphics/FrameBuffer.h>

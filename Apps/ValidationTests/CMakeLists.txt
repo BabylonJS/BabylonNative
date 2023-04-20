@@ -110,19 +110,17 @@ if(WINDOWS_STORE)
 endif()
 
 target_link_to_dependencies(ValidationTests
-    PRIVATE bgfx
-    PRIVATE bimg
-    PRIVATE bx
     PRIVATE AppRuntime
+    PRIVATE Canvas
+    PRIVATE Console
+    PRIVATE GraphicsDevice
     PRIVATE NativeEngine
     PRIVATE NativeOptimizations
-    PRIVATE Console
-    PRIVATE Window
     PRIVATE ScriptLoader
-    PRIVATE Canvas
     PRIVATE TestUtils
-    ${ADDITIONAL_LIBRARIES}
-    PRIVATE XMLHttpRequest)
+    PRIVATE Window
+    PRIVATE XMLHttpRequest
+    ${ADDITIONAL_LIBRARIES})
 
 if(APPLE)
     target_link_libraries(ValidationTests PRIVATE "-framework MetalKit")
