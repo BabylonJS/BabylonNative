@@ -100,6 +100,12 @@ if (MSVC)
     add_compile_options(/Zc:__cplusplus)
 endif()
 
+if((MSVC_VERSION GREATER_EQUAL 1928)
+    AND (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    AND ((NOT (CMAKE_CXX_COMPILER_ID MATCHES "Clang")) OR (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13.0)))
+        add_compile_options("$<$<NOT:$<CONFIG:DEBUG>>:/guard:ehcont>")
+endif()
+
 add_subdirectory(Dependencies)
 add_subdirectory(Core)
 add_subdirectory(Plugins)
