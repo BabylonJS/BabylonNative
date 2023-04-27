@@ -307,10 +307,6 @@ namespace java::websocket
         JObject(m_env->NewObject(m_class, m_env->GetMethodID(m_class, "<init>", "(Ljava/lang/String;)V"), m_env->NewStringUTF(url.c_str())));
 
         s_instances.push_back(std::make_pair(JObject(), this));
-
-        jmethodID connectSocket{m_env->GetMethodID(m_class, "connectBlocking", "()Z")};
-        m_env->CallBooleanMethod(JObject(), connectSocket);
-        ThrowIfFaulted(m_env);
     }
 
     WebSocketClient::~WebSocketClient()
@@ -380,6 +376,13 @@ namespace java::websocket
         {
             return nullptr;
         }
+    }
+
+    void WebSocketClient::Open()
+    {
+        jmethodID connectSocket{m_env->GetMethodID(m_class, "connectBlocking", "()Z")};
+        m_env->CallBooleanMethod(JObject(), connectSocket);
+        ThrowIfFaulted(m_env);
     }
 
     void WebSocketClient::Send(std::string message)
