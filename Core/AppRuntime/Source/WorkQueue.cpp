@@ -40,8 +40,9 @@ namespace Babylon
 
     void WorkQueue::Run(Napi::Env env)
     {
-        m_env = std::make_optional(env);
         m_dispatcher.set_affinity(std::this_thread::get_id());
+
+        m_env = std::make_optional(env);
 
         while (!m_cancellationSource.cancelled())
         {
@@ -53,5 +54,10 @@ namespace Babylon
 
         // There should no longer be any outstanding work once the queue is drained.
         assert(m_dispatcher.empty());
+
+        // Clear the shutdown queue to make sure the callables are destroyed on this thread.
+        m_shutdownQueue.clear();
+
+        m_env.reset();
     }
 }
