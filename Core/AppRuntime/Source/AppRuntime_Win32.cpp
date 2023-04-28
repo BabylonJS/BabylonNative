@@ -1,7 +1,7 @@
 #include "AppRuntime.h"
 
-#include <Objbase.h>
-#include <Windows.h>
+#include <winrt/base.h>
+#include <roapi.h>
 
 #include <gsl/gsl>
 #include <cassert>
@@ -10,23 +10,14 @@
 
 namespace Babylon
 {
-    namespace
-    {
-        constexpr size_t FILENAME_BUFFER_SIZE = 1024;
-    }
-
     void AppRuntime::RunPlatformTier()
     {
-        HRESULT hr = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-        assert(SUCCEEDED(hr));
-        _CRT_UNUSED(hr);
-        auto coInitScopeGuard = gsl::finally([] { CoUninitialize(); });
+        winrt::check_hresult(Windows::Foundation::Initialize(RO_INIT_MULTITHREADED));
 
-        char filename[FILENAME_BUFFER_SIZE];
-        auto result = GetModuleFileNameA(nullptr, filename, static_cast<DWORD>(std::size(filename)));
-        assert(result != 0);
-        (void)result;
-        RunEnvironmentTier(filename);
+        char executablePath[1024];
+        winrt::check_win32(GetModuleFileNameA(nullptr, executablePath, ARRAYSIZE(executablePath)));
+
+        RunEnvironmentTier(executablePath);
     }
 
     void AppRuntime::DefaultUnhandledExceptionHandler(const std::exception& error)

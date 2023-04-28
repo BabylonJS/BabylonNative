@@ -1,6 +1,7 @@
 #include "AppRuntime.h"
 
-#include <Windows.h>
+#include <winrt/base.h>
+#include <roapi.h>
 
 #include <exception>
 #include <sstream>
@@ -9,6 +10,8 @@ namespace Babylon
 {
     void AppRuntime::RunPlatformTier()
     {
+        winrt::check_hresult(Windows::Foundation::Initialize(RO_INIT_MULTITHREADED));
+
         RunEnvironmentTier();
     }
 

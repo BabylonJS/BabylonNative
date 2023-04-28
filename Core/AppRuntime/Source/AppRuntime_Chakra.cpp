@@ -20,30 +20,21 @@ namespace Babylon
 
     void AppRuntime::RunEnvironmentTier(const char*)
     {
-        using DispatchFunction = std::function<void(std::function<void()>)>;
-        DispatchFunction dispatchFunction{
-            [this](std::function<void()> action) {
-                Dispatch([action = std::move(action)](Napi::Env) {
-                    action();
-                });
-            }};
-
         JsRuntimeHandle jsRuntime;
         ThrowIfFailed(JsCreateRuntime(JsRuntimeAttributeNone, nullptr, &jsRuntime));
         JsContextRef context;
         ThrowIfFailed(JsCreateContext(jsRuntime, &context));
         ThrowIfFailed(JsSetCurrentContext(context));
         ThrowIfFailed(JsSetPromiseContinuationCallback([](JsValueRef task, void* callbackState) {
+            auto* pThis = reinterpret_cast<AppRuntime*>(callbackState);
             ThrowIfFailed(JsAddRef(task, nullptr));
-            auto* dispatch = reinterpret_cast<DispatchFunction*>(callbackState);
-            dispatch->operator()([task]() {
-                JsValueRef undefined;
-                ThrowIfFailed(JsGetUndefinedValue(&undefined));
-                ThrowIfFailed(JsCallFunction(task, &undefined, 1, nullptr));
+            pThis->Dispatch([task](auto) {
+                JsValueRef global;
+                ThrowIfFailed(JsGetGlobalObject(&global));
+                ThrowIfFailed(JsCallFunction(task, &global, 1, nullptr));
                 ThrowIfFailed(JsRelease(task, nullptr));
             });
-        },
-            &dispatchFunction));
+        }, this));
         ThrowIfFailed(JsProjectWinRTNamespace(L"Windows"));
 
 #if defined(_DEBUG)
