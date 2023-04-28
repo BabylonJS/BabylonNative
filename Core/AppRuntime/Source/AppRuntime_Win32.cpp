@@ -15,7 +15,7 @@ namespace Babylon
         winrt::check_hresult(Windows::Foundation::Initialize(RO_INIT_MULTITHREADED));
 
         char executablePath[1024];
-        winrt::check_win32(GetModuleFileNameA(nullptr, executablePath, ARRAYSIZE(executablePath)));
+        winrt::check_bool(GetModuleFileNameA(nullptr, executablePath, ARRAYSIZE(executablePath)) != 0);
 
         RunEnvironmentTier(executablePath);
     }
