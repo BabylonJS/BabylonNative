@@ -73,4 +73,31 @@ namespace UrlLib
 
         std::shared_ptr<Impl> m_impl{};
     };
+
+    class WebSocket final
+    {
+    public:
+        WebSocket(std::string url, std::function<void()> onOpen, std::function<void()> onClose, std::function<void(std::string)> onMessage, std::function<void()> onError);
+        ~WebSocket();
+
+        // Copy semantics
+        WebSocket(const WebSocket&);
+        WebSocket& operator=(const WebSocket&);
+
+        // Move semantics
+        WebSocket(WebSocket&&) noexcept;
+        WebSocket& operator=(WebSocket&&) noexcept;
+
+        std::string GetURL();
+
+        void Open();
+        void Close();
+        void Send(std::string message);
+
+    private:
+        class Impl;
+        class ImplBase;
+
+        std::shared_ptr<Impl> m_impl{};
+    };
 }

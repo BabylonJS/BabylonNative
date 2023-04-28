@@ -26,7 +26,7 @@ if(ANDROID AND NOT TARGET AndroidExtensions)
     FetchContent_Declare(
         AndroidExtensions
         GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-        GIT_TAG        4a54e636bde25d4b9f1b02e2414ee642005ff244)
+        GIT_TAG        82f22e834c4fb1eb2d08d560dcbdaac735e7ec30)
 
     message(STATUS "Fetching AndroidExtensions")
     FetchContent_MakeAvailable(AndroidExtensions)
@@ -35,14 +35,18 @@ endif()
 
 if(ANDROID)
     set(ADDITIONAL_SOURCES
-        "Source/UrlRequest_Android.cpp")
+        "Source/UrlRequest_Android.cpp"
+        "Source/WebSocket_Android.cpp")
     set(ADDITIONAL_LIBRARIES
         PRIVATE android
         PRIVATE AndroidExtensions
         PRIVATE log)
 elseif(APPLE)
     set(ADDITIONAL_SOURCES
-        "Source/UrlRequest_Apple.mm")
+        "Source/UrlRequest_Apple.mm"
+        "Source/WebSocket_Apple.mm"
+        "Source/WebSocket_Apple_ObjC.h"
+        "Source/WebSocket_Apple_ObjC.m")
 elseif(UNIX)
     set(ADDITIONAL_SOURCES
         "Source/UrlRequest_Unix.cpp")
@@ -50,7 +54,8 @@ elseif(UNIX)
         PRIVATE curl)
 elseif(WIN32)
     set(ADDITIONAL_SOURCES
-        "Source/UrlRequest_Windows.cpp")
+        "Source/UrlRequest_Windows.cpp"
+        "Source/WebSocket_Windows.cpp")
     if(NOT WINDOWS_STORE)
         set(ADDITIONAL_LIBRARIES
             PUBLIC onecoreuap.lib)
@@ -63,6 +68,8 @@ set(SOURCES
     "Include/UrlLib/UrlLib.h"
     "Source/UrlRequest_Base.h"
     "Source/UrlRequest_Shared.h"
+    "Source/WebSocket_Base.h"
+    "Source/WebSocket_Shared.h"
     ${ADDITIONAL_SOURCES})
 
 add_library(UrlLib ${SOURCES})
