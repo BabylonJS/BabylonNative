@@ -1,5 +1,4 @@
 #include <napi/napi.h>
-#include "NativeCamera.h"
 #include "../CameraDevice.h"
 #include <string>
 #include <android/native_window_jni.h>
