@@ -574,6 +574,7 @@ function(bgfx_compile_shader_to_header)
 		message(error "shaderc: Unsupported platform")
 	endif()
 
+	set(ALL_OUTPUTS "")
 	foreach(SHADER_FILE ${ARGS_SHADERS})
 		source_group("Shaders" FILES "${SHADER}")
 		get_filename_component(SHADER_FILE_BASENAME ${SHADER_FILE} NAME)
@@ -602,11 +603,9 @@ function(bgfx_compile_shader_to_header)
 				BIN2C BIN2C ${SHADER_FILE_NAME_WE}_${PROFILE_EXT}
 			)
 			list(APPEND OUTPUTS ${OUTPUT})
+			list(APPEND ALL_OUTPUTS ${OUTPUT})
 			list(APPEND COMMANDS COMMAND bgfx::shaderc ${CLI})
 		endforeach()
-		if(DEFINED ARGS_OUT_FILES_VAR)
-			set(${ARGS_OUT_FILES_VAR} ${OUTPUTS} PARENT_SCOPE)
-		endif()
 
 		add_custom_command(
 			OUTPUT ${OUTPUTS}
@@ -615,4 +614,8 @@ function(bgfx_compile_shader_to_header)
 			DEPENDS ${ARGS_VARYING_DEF}
 		)
 	endforeach()
+
+	if(DEFINED ARGS_OUT_FILES_VAR)
+		set(${ARGS_OUT_FILES_VAR} ${ALL_OUTPUTS} PARENT_SCOPE)
+	endif()
 endfunction()
