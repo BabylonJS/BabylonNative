@@ -23,29 +23,15 @@ namespace Babylon
             // copyable callable if necessary.
             if constexpr (std::is_copy_constructible<CallableT>::value)
             {
-                if (m_cancellationSource.cancelled())
-                {
-                    m_shutdownQueue.push([callable = std::move(callable)] {});
-                }
-                else
-                {
-                    m_dispatcher.queue([this, callable = std::move(callable)]() {
-                        callable(m_env.value());
-                    });
-                }
+                m_dispatcher.queue([this, callable = std::move(callable)]() {
+                    callable(m_env.value());
+                });
             }
             else
             {
-                if (m_cancellationSource.cancelled())
-                {
-                    m_shutdownQueue.push([callablePtr = std::make_shared<CallableT>(std::move(callable))] {});
-                }
-                else
-                {
-                    m_dispatcher.queue([this, callablePtr = std::make_shared<CallableT>(std::move(callable))]() {
-                        (*callablePtr)(m_env.value());
-                    });
-                }
+                m_dispatcher.queue([this, callablePtr = std::make_shared<CallableT>(std::move(callable))]() {
+                    (*callablePtr)(m_env.value());
+                });
             }
         }
 
@@ -55,17 +41,9 @@ namespace Babylon
 
     private:
         std::optional<Napi::Env> m_env{};
-
         std::optional<std::scoped_lock<std::mutex>> m_suspensionLock{};
-
         arcana::cancellation_source m_cancellationSource{};
-
-        using DispatcherT = arcana::manual_dispatcher<128>;
-        DispatcherT m_dispatcher{};
-
-        // Put the callables in a separate queue during shutdown to ensure the callables are destroyed on the right thread.
-        arcana::blocking_concurrent_queue<DispatcherT::callback_t> m_shutdownQueue{};
-
+        arcana::manual_dispatcher<128> m_dispatcher{};
         std::thread m_thread{};
     };
 }
