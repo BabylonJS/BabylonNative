@@ -40,23 +40,19 @@ namespace Babylon
 
     void WorkQueue::Run(Napi::Env env)
     {
-        m_dispatcher.set_affinity(std::this_thread::get_id());
-
         m_env = std::make_optional(env);
+
+        m_dispatcher.set_affinity(std::this_thread::get_id());
 
         while (!m_cancellationSource.cancelled())
         {
             m_dispatcher.blocking_tick(m_cancellationSource);
         }
 
-        // Drain the queue to complete work dispatched after cancellation.
-        m_dispatcher.tick(arcana::cancellation::none());
-
-        // There should no longer be any outstanding work once the queue is drained.
-        assert(m_dispatcher.empty());
-
-        // Clear the shutdown queue to make sure the callables are destroyed on this thread.
-        m_shutdownQueue.clear();
+        // The dispatcher can be non-empty if something is dispatched after cancellation.
+        // For example, Chakra's JsSetPromiseContinuationCallback may potentially dispatch
+        // a continuation after cancellation.
+        m_dispatcher.clear();
 
         m_env.reset();
     }
