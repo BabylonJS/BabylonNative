@@ -1,5 +1,7 @@
 #include "AppRuntime.h"
 
+#include <Babylon/JsRuntime.h>
+
 #if defined(_MSC_VER)
 #pragma warning(disable : 4100 4267 4127)
 #endif
