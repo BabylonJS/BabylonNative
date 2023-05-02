@@ -53,17 +53,17 @@ target_link_libraries(BabylonNativeJNI
         EGL
         log
         -lz
+        AndroidExtensions
         AppRuntime
+        Canvas
+        Console
+        ChromeDevTools
+        GraphicsDevice
+        NativeCamera
         NativeEngine
         NativeInput
-        NativeXr
         NativeOptimizations
-        Console
-        Canvas
-        Window
+        NativeXr
         ScriptLoader
         XMLHttpRequest
-        NativeCamera
-        AndroidExtensions
-        ChromeDevTools
-        )
+        Window)
