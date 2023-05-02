@@ -87,6 +87,10 @@ namespace UrlLib
     private:
         void OnWebSocketClosed(Windows::Networking::Sockets::IWebSocket const& /* sender */, Windows::Networking::Sockets::WebSocketClosedEventArgs const& args)
         {
+            if (args.Code() != 1000)
+            {
+                m_onError();
+            }
             m_onClose();
         }
 

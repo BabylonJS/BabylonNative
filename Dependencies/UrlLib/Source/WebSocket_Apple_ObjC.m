@@ -74,8 +74,20 @@
     [self receiveMessage];
 }
 
+- (void)URLSession:(NSURLSession *)session task:(NSURLSessionTask *)task didCompleteWithError:(NSError *)error 
+{
+    if (error)
+    {
+        errorCallback();
+    }
+}
+
 - (void)URLSession:(NSURLSession *)session webSocketTask:(NSURLSessionWebSocketTask *)webSocketTask didCloseWithCloseCode:(NSInteger)code reason:(NSData *)reason  API_AVAILABLE(ios(13.0))
 {
+    if (code != 1000)
+    {
+        errorCallback();
+    }
     [self invalidateAndCancel];
 }
 
