@@ -10,6 +10,7 @@
 namespace Babylon
 {
     class WorkQueue;
+
     class AppRuntime final
     {
     public:

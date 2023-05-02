@@ -2,7 +2,7 @@
 #include "WorkQueue.h"
 
 #include <Babylon/JsRuntime.h>
-#include <napi/env.h>
+
 #include <V8JsiRuntime.h>
 #include <ScriptStore.h>
 
