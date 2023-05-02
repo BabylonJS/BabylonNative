@@ -307,6 +307,122 @@ describe("clearTimeout", function () {
     });
 });
 
+
+// Websocket
+
+describe("WebSocket", function () {
+    it("should connect correctly with one websocket connection", function (done) {
+        const ws = new WebSocket('wss://ws.postman-echo.com/raw');
+        const testMessage = "testMessage";
+        ws.onopen = () => {
+            try {
+                expect(ws).to.have.property('readyState', 1);
+                expect(ws).to.have.property('url', 'wss://ws.postman-echo.com/raw');
+                ws.send(testMessage);
+            }
+            catch (e) {
+                done(e);
+            }
+        }
+
+        ws.onmessage = (msg) => {
+            try {
+                expect(msg.data).to.equal(testMessage);
+                ws.close();
+            }
+            catch (e) {
+                done(e);
+            }
+        }
+
+        ws.onclose = () => {
+            try {
+                expect(ws).to.have.property('readyState', 3);
+                done();
+            }
+            catch (e) {
+                done(e);
+            }
+        }
+    });
+
+    it("should connect correctly with multiple websocket connections", function (done) {
+        const testMessage1 = "testMessage1";
+        const testMessage2 = "testMessage2";
+
+        const ws1 = new WebSocket('wss://ws.postman-echo.com/raw');
+        ws1.onopen = () => {
+            const ws2 = new WebSocket('wss://ws.postman-echo.com/raw');
+            ws2.onopen = () => {
+                try {
+                    expect(ws2).to.have.property('readyState', 1);
+                    expect(ws2).to.have.property('url', 'wss://ws.postman-echo.com/raw');
+                    ws2.send(testMessage2);
+                }
+                catch (e) {
+                    done(e);
+                }
+            }
+
+            ws2.onmessage = (msg) => {
+                try {
+                    expect(msg.data).to.equal(testMessage2);
+                    ws2.close();
+                }
+                catch (e) {
+                    done(e);
+                }
+            }
+
+            ws2.onclose = () => {
+                try {
+                    expect(ws2).to.have.property('readyState', 3);
+                    ws1.send(testMessage1);
+                }
+                catch (e) {
+                    done(e);
+                }
+            }
+        }
+
+        ws1.onmessage = (msg) => {
+            try {
+                expect(msg.data).to.equal(testMessage1);
+                ws1.close();
+            }
+            catch (e) {
+                done(e);
+            }
+        }
+
+        ws1.onclose = () => {
+            try {
+                expect(ws1).to.have.property('readyState', 3);
+                done();
+            }
+            catch (e) {
+                done(e);
+            }
+        }
+    });
+
+    it("should trigger error callback with invalid server", function (done) {
+        const ws = new WebSocket('wss://example.com');
+        ws.onerror = () => {
+            done();
+        }
+    });
+
+    it("should trigger error callback with invalid domain", function (done) {
+        this.timeout(10000);
+        const ws = new WebSocket('wss://example');
+        ws.onerror = () => {
+            done();
+        }
+    });
+})
+
+
 // URL
 describe("URL", function () {
 

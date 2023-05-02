@@ -49,6 +49,7 @@ target_link_libraries(UnitTests
     PRIVATE URL
     PRIVATE UrlLib
     PRIVATE XMLHttpRequest
+    PRIVATE WebSocket
     ${ADDITIONAL_LIBRARIES})
 
 add_test(NAME UnitTests COMMAND UnitTests)

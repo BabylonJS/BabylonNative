@@ -17,3 +17,7 @@ endif()
 if(JSRUNTIMEHOST_POLYFILL_ABORT_CONTROLLER)
     add_subdirectory(AbortController)
 endif()
+
+if(JSRUNTIMEHOST_POLYFILL_WEBSOCKET)
+    add_subdirectory(WebSocket)
+endif()

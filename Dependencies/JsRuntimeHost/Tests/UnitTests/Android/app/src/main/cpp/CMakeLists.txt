@@ -29,4 +29,5 @@ target_link_libraries(UnitTestsJNI
     PRIVATE ScriptLoader
     PRIVATE URL
     PRIVATE UrlLib
-    PRIVATE XMLHttpRequest)
+    PRIVATE XMLHttpRequest
+    PRIVATE WebSocket)

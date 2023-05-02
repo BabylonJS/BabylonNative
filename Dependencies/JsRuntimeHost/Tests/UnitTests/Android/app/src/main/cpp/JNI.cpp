@@ -1,6 +1,8 @@
 #include <jni.h>
 #include <Android/log.h>
 #include <AndroidExtensions/Globals.h>
+#include <AndroidExtensions/JavaWrappers.h>
+
 #include <Shared/Shared.h>
 
 extern "C" JNIEXPORT jint JNICALL
@@ -11,6 +13,8 @@ Java_com_jsruntimehost_unittests_Native_javaScriptTests(JNIEnv* env, jclass claz
         throw std::runtime_error{"Failed to get Java VM"};
     }
 
+    jclass webSocketClass{env->FindClass("com/jsruntimehost/unittests/WebSocket")};
+    java::websocket::WebSocketClient::InitializeJavaWebSocketClass(webSocketClass, env);
     android::global::Initialize(javaVM, context);
 
     auto consoleCallback = [](const char* message, Babylon::Polyfills::Console::LogLevel level)
@@ -29,5 +33,7 @@ Java_com_jsruntimehost_unittests_Native_javaScriptTests(JNIEnv* env, jclass claz
         }
     };
 
-    return RunTests(consoleCallback);
+    auto testResult = RunTests(consoleCallback);
+    java::websocket::WebSocketClient::DestructJavaWebSocketClass(env);
+    return testResult;
 }
