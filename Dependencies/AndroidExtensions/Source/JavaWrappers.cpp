@@ -545,12 +545,12 @@ namespace java::net
     {
         auto output = m_env->CallBooleanMethod(JObject(), m_env->GetMethodID(m_class, "getDoOutput", "()Z"));
         ThrowIfFaulted(m_env);
-        return {static_cast<bool>(output)};
+        return output != 0;
     }
 
-    void URLConnection::SetDoOutput(bool n)
+    void URLConnection::SetDoOutput(bool value)
     {
-        m_env->CallVoidMethod(JObject(),  m_env->GetMethodID(m_class, "setDoOutput", "(Z)V"), true);
+        m_env->CallVoidMethod(JObject(),  m_env->GetMethodID(m_class, "setDoOutput", "(Z)V"), value ? 1 : 0);
         ThrowIfFaulted(m_env);
     }
 
