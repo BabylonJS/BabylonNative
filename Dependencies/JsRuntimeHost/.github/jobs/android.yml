@@ -1,12 +1,10 @@
 parameters:
-- name: name
-  type: string
 - name: jsEngine
   type: string
 
 jobs:
-- job: ${{parameters.name}}
-  timeoutInMinutes: 15
+- job: Android_${{parameters.jsEngine}}
+  timeoutInMinutes: 30
 
   pool:
     vmImage: macos-latest
@@ -54,6 +52,6 @@ jobs:
   - task: PublishBuildArtifacts@1
     inputs:
       pathToPublish: 'Tests/UnitTests/Android/app/build/outputs/androidTest-results/connected'
-      artifactName: 'AndroidTestResults'
+      artifactName: 'AndroidTestResults_${{parameters.jsEngine}}'
     condition: succeededOrFailed()
     displayName: 'Publish Test Results'

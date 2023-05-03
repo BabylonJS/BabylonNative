@@ -19,12 +19,10 @@ jobs:
   # Android
   - template: jobs/android.yml
     parameters:
-      name: Android_JavaScriptCore
       jsEngine: JavaScriptCore
 
   - template: jobs/android.yml
     parameters:
-      name: Android_V8
       jsEngine: V8
 
   # macOS
