@@ -5,13 +5,13 @@ set(SOURCES
     "Source/Shared/DeviceInputSystem.cpp"
     "Source/Shared/DeviceInputSystem.h")
 
-if (ANDROID)
+if(ANDROID)
     set(SOURCES ${SOURCES}
         "Source/Android/NativeInput.cpp")
-elseif (IOS)
+elseif(IOS)
     set(SOURCES ${SOURCES}
         "Source/iOS/NativeInput.cpp")
-elseif (APPLE)
+elseif(APPLE)
     set(SOURCES ${SOURCES}
          "Source/macOS/NativeInput.cpp")
 elseif(UNIX)
@@ -28,7 +28,8 @@ warnings_as_errors(NativeInput)
 target_include_directories(NativeInput PUBLIC "Include")
 
 target_link_to_dependencies(NativeInput
-    PUBLIC JsRuntime
+    PUBLIC napi
+    PRIVATE JsRuntimeInternal
     PRIVATE arcana)
 
 set_property(TARGET NativeInput PROPERTY FOLDER Plugins)

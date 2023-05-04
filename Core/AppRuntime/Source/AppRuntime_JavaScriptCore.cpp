@@ -1,5 +1,6 @@
 #include "AppRuntime.h"
 
+#include <napi/env.h>
 #include <JavaScriptCore/JavaScript.h>
 
 namespace Babylon

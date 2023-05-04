@@ -5,7 +5,6 @@
 #import <MetalKit/MetalKit.h>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
-#include "NativeCamera.h"
 #include <arcana/macros.h>
 #include <arcana/threading/task.h>
 #include <arcana/threading/dispatcher.h>

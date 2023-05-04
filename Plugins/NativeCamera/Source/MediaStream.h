@@ -39,12 +39,12 @@ namespace Babylon::Plugins
         uint32_t Height{0};
 
     private:
-        arcana::task<void, std::exception_ptr> ApplyInitialConstraintsAsync(Napi::Env env, Napi::Object constraints);
-        std::optional<std::pair<CameraDevice, const CameraTrack&>> FindBestCameraStream(Napi::Env env, Napi::Object constraints);
-        bool UpdateConstraints(Napi::Env env, Napi::Object constraints);
+        arcana::task<void, std::exception_ptr> ApplyInitialConstraintsAsync(Napi::Object constraints);
+        std::optional<std::pair<CameraDevice, const CameraTrack&>> FindBestCameraStream(Napi::Object constraints);
+        bool UpdateConstraints(Napi::Object constraints);
 
         // Capture CameraDevice in a shared_ptr because the iOS implementation relies on the `shared_from_this` syntax for async work
-        std::shared_ptr<CameraDevice> m_cameraDevice{nullptr};
+        std::shared_ptr<CameraDevice> m_cameraDevice{};
         JsRuntimeScheduler m_runtimeScheduler;
 
         Napi::ObjectReference m_currentConstraints{};

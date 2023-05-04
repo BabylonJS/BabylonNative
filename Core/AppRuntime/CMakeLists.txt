@@ -24,7 +24,7 @@ endif()
 
 target_link_to_dependencies(AppRuntime
     PRIVATE arcana
-    PUBLIC JsRuntime)
+    PRIVATE JsRuntime)
 
 target_compile_definitions(AppRuntime
     PRIVATE NOMINMAX)

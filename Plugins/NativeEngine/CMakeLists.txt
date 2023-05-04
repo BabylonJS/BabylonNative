@@ -33,8 +33,9 @@ target_include_directories(NativeEngine
     PRIVATE "${BIMG_DIR}/3rdparty")
 
 target_link_to_dependencies(NativeEngine
-    PUBLIC JsRuntime
-    INTERFACE GraphicsDevice
+    PUBLIC napi
+    PRIVATE JsRuntime
+    PRIVATE GraphicsDevice
     PRIVATE arcana
     PRIVATE bgfx
     PRIVATE bimg

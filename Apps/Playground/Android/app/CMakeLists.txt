@@ -41,29 +41,28 @@ set(BABYLON_NATIVE_PLAYGROUND_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
 add_subdirectory(${BABYLON_NATIVE_PLAYGROUND_DIR}/../../ ${BABYLON_NATIVE_PLAYGROUND_DIR}/../../build/Android_${CMAKE_ANDROID_ARCH_ABI}/)
 
 add_library(BabylonNativeJNI SHARED
-            src/main/cpp/BabylonNativeJNI.cpp)
+    src/main/cpp/BabylonNativeJNI.cpp)
 
 target_include_directories(BabylonNativeJNI
-        PRIVATE
-        ${BABYLON_NATIVE_PLAYGROUND_DIR}/Shared)
+    PRIVATE ${BABYLON_NATIVE_PLAYGROUND_DIR}/Shared)
 
 target_link_libraries(BabylonNativeJNI
-        GLESv3
-        android
-        EGL
-        log
-        -lz
-        AppRuntime
-        NativeEngine
-        NativeInput
-        NativeXr
-        NativeOptimizations
-        Console
-        Canvas
-        Window
-        ScriptLoader
-        XMLHttpRequest
-        NativeCamera
-        AndroidExtensions
-        ChromeDevTools
-        )
+    GLESv3
+    android
+    EGL
+    log
+    -lz
+    AndroidExtensions
+    AppRuntime
+    Canvas
+    Console
+    ChromeDevTools
+    GraphicsDevice
+    NativeCamera
+    NativeEngine
+    NativeInput
+    NativeOptimizations
+    NativeXr
+    ScriptLoader
+    XMLHttpRequest
+    Window)

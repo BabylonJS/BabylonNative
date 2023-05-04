@@ -23,10 +23,12 @@ if (NAPI_JAVASCRIPT_ENGINE IN_LIST CHROME_DEVTOOLS_SUPPORTED_ENGINES AND NAPI_JA
     target_link_to_dependencies(ChromeDevTools PRIVATE v8inspector)
 endif()
 
-target_include_directories(ChromeDevTools INTERFACE "Include")
-target_include_directories(ChromeDevTools PRIVATE "Include/Babylon/Plugins")
+target_include_directories(ChromeDevTools
+    PUBLIC "Include")
 
-target_link_to_dependencies(ChromeDevTools PUBLIC JsRuntime)
+target_link_to_dependencies(ChromeDevTools
+    PUBLIC napi
+    PRIVATE JsRuntime)
 
 set_property(TARGET ChromeDevTools PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
