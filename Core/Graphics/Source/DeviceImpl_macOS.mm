@@ -5,13 +5,13 @@ namespace Babylon::Graphics
 {
     const bool DeviceImpl::s_bgfxFlipAfterRender = true;
 
-    void DeviceImpl::ConfigureBgfxPlatformData(const WindowConfiguration& config, bgfx::PlatformData& pd)
+    void DeviceImpl::ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window)
     {
-        pd.nwh = config.Window;
+        pd.nwh = window;
     }
 
-    float DeviceImpl::GetDevicePixelRatio(const WindowConfiguration& config)
+    float DeviceImpl::GetDevicePixelRatio(WindowT window)
     {
-        return config.Window.window.screen.backingScaleFactor;
+        return window.window.screen.backingScaleFactor;
     }
 }

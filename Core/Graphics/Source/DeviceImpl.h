@@ -24,23 +24,27 @@
 
 namespace Babylon::Graphics
 {
-    struct WindowConfiguration;
-    struct DeviceConfiguration;
-    struct BackBufferUpdateInfo;
-
     class DeviceImpl
     {
     public:
-        /* ********** BEGIN DEVICE CONTRACT ********** */
-
-        DeviceImpl();
+        DeviceImpl(const Configuration& config);
         virtual ~DeviceImpl();
 
-        void UpdateWindow(const WindowConfiguration& config);
-        void UpdateContext(const DeviceConfiguration& config);
-        void Resize(size_t width, size_t height);
-        void SetMSAA(uint8_t value);
-        void SetAlphaPremultiplied(bool enabled);
+        // Copy semantics
+        DeviceImpl(const DeviceImpl&) = delete;
+        DeviceImpl& operator=(const DeviceImpl&) = delete;
+
+        // Move semantics
+        DeviceImpl(DeviceImpl&&) noexcept = delete;
+        DeviceImpl& operator=(DeviceImpl&&) noexcept = delete;
+
+        /* ********** BEGIN DEVICE CONTRACT ********** */
+
+        void UpdateWindow(WindowT window);
+        void UpdateSize(size_t width, size_t height);
+        void UpdateMSAA(uint8_t value);
+        void UpdateAlphaPremultiplied(bool enabled);
+        void UpdateDevicePixelRatio(float value);
 
         void AddToJavaScript(Napi::Env);
         static DeviceImpl& GetFromJavaScript(Napi::Env);
@@ -50,33 +54,33 @@ namespace Babylon::Graphics
         void EnableRendering();
         void DisableRendering();
 
+        SafeTimespanGuarantor& GetSafeTimespanGuarantor(const char* updateName);
+
         void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
 
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
 
-        SafeTimespanGuarantor& GetSafeTimespanGuarantor(const char* updateName);
+        float GetHardwareScalingLevel() const;
+        void SetHardwareScalingLevel(float level);
+
+        float GetDevicePixelRatio() const;
+
+        PlatformInfo GetPlatformInfo() const;
 
         /* ********** END DEVICE CONTRACT ********** */
 
         /* ********** BEGIN DEVICE CONTEXT CONTRACT ********** */
 
+        size_t GetWidth() const { return m_state.Resolution.Width; }
+        size_t GetHeight() const { return m_state.Resolution.Height; }
+
         continuation_scheduler<>& BeforeRenderScheduler();
         continuation_scheduler<>& AfterRenderScheduler();
-
-        Update GetUpdate(const char* updateName);
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
 
         arcana::task<void, std::exception_ptr> ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel);
-
-        float GetHardwareScalingLevel() const;
-        void SetHardwareScalingLevel(float level);
-
-        size_t GetWidth() const;
-        size_t GetHeight() const;
-        float GetDevicePixelRatio() const;
-        PlatformInfo GetPlatformInfo() const;
 
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
@@ -96,9 +100,8 @@ namespace Babylon::Graphics
 
         static const bool s_bgfxFlipAfterRender;
         static const bgfx::RendererType::Enum s_bgfxRenderType;
-        static void ConfigureBgfxPlatformData(const WindowConfiguration& config, bgfx::PlatformData& platformData);
-        static void ConfigureBgfxPlatformData(const DeviceConfiguration& config, bgfx::PlatformData& platformData);
-        static float GetDevicePixelRatio(const WindowConfiguration& config);
+        static void ConfigureBgfxPlatformData(bgfx::PlatformData& platformData, WindowT window);
+        static float GetDevicePixelRatio(WindowT window);
 
         void UpdateBgfxState();
         void UpdateBgfxResolution();

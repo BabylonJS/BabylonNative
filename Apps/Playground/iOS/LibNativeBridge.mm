@@ -3,25 +3,25 @@
 #import <Babylon/AppRuntime.h>
 #import <Babylon/Graphics/Device.h>
 #import <Babylon/ScriptLoader.h>
+#import <Babylon/Plugins/NativeCamera.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeInput.h>
-#import <Babylon/Plugins/NativeXr.h>
-#import <Babylon/Plugins/NativeCamera.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
-#import <Babylon/Polyfills/Window.h>
-#import <Babylon/Polyfills/XMLHttpRequest.h>
+#import <Babylon/Plugins/NativeXr.h>
 #import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/Polyfills/Console.h>
+#import <Babylon/Polyfills/Window.h>
+#import <Babylon/Polyfills/XMLHttpRequest.h>
 
 #import <optional>
 
-std::unique_ptr<Babylon::Graphics::Device> device{};
-std::unique_ptr<Babylon::Graphics::DeviceUpdate> update{};
-std::unique_ptr<Babylon::AppRuntime> runtime{};
+std::optional<Babylon::Graphics::Device> device{};
+std::optional<Babylon::Graphics::DeviceUpdate> update{};
+std::optional<Babylon::AppRuntime> runtime{};
+std::optional<Babylon::Polyfills::Canvas> nativeCanvas{};
+std::optional<Babylon::Plugins::NativeXr> nativeXr{};
 Babylon::Plugins::NativeInput* nativeInput{};
-std::optional<Babylon::Plugins::NativeXr> g_nativeXr{};
-std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
-bool g_isXrActive{};
+bool isXrActive{};
 
 @implementation LibNativeBridge
 
@@ -33,50 +33,61 @@ bool g_isXrActive{};
 
 - (void)dealloc
 {
+    if (device)
+    {
+        update->Finish();
+        device->FinishRenderingCurrentFrame();
+    }
+    
+    nativeInput = {};
+    nativeXr.reset();
+    nativeCanvas.reset();
+    runtime.reset();
+    update.reset();
+    device.reset();
 }
 
 - (void)init:(MTKView*)view width:(int)inWidth height:(int)inHeight xrView:(void*)xrView
 {
-    nativeInput = {};
-    runtime.reset();
-    device.reset();
-
     float width = inWidth;
     float height = inHeight;
 
-    Babylon::Graphics::WindowConfiguration graphicsConfig{};
+    Babylon::Graphics::Configuration graphicsConfig{};
     graphicsConfig.Window = view;
     graphicsConfig.Width = static_cast<size_t>(width);
     graphicsConfig.Height = static_cast<size_t>(height);
-    device = Babylon::Graphics::Device::Create(graphicsConfig);
-    update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
-    runtime = std::make_unique<Babylon::AppRuntime>();
+
+    device.emplace(graphicsConfig);
+    update.emplace(device->GetUpdate("update"));
+
+    device->StartRenderingCurrentFrame();
+    update->Start();
+
+    runtime.emplace();
 
     runtime->Dispatch([xrView](Napi::Env env)
     {
         device->AddToJavaScript(env);
 
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+            NSLog(@"%s", message);
+        });
+
+        nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
+
         Babylon::Polyfills::Window::Initialize(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-        nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
-
-        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-            NSLog(@"%s", message);
-        });
+        Babylon::Plugins::NativeCamera::Initialize(env);
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         Babylon::Plugins::NativeOptimizations::Initialize(env);
 
-        // Initialize NativeXr plugin.
-        g_nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
-        g_nativeXr->UpdateWindow(xrView);
-        g_nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ g_isXrActive = isXrActive; });
-
-        // Initialize Camera 
-        Babylon::Plugins::NativeCamera::Initialize(env);
+        nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
+        nativeXr->UpdateWindow(xrView);
+        nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ ::isXrActive = isXrActive; });
 
         nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
     });
@@ -96,7 +107,13 @@ bool g_isXrActive{};
 {
     if (device)
     {
+        update->Finish();
+        device->FinishRenderingCurrentFrame();
+
         device->UpdateSize(static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
+
+        device->StartRenderingCurrentFrame();
+        update->Start();
     }
 }
 
@@ -104,10 +121,10 @@ bool g_isXrActive{};
 {
     if (device)
     {
-        device->StartRenderingCurrentFrame();
-        update->Start();
         update->Finish();
         device->FinishRenderingCurrentFrame();
+        device->StartRenderingCurrentFrame();
+        update->Start();
     }
 }
 
@@ -134,7 +151,7 @@ bool g_isXrActive{};
 
 - (bool)isXRActive
 {
-    return g_isXrActive;
+    return ::isXrActive;
 }
 
 @end

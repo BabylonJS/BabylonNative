@@ -6,6 +6,7 @@
 #include <unistd.h> // syscall
 #undef None
 #include <filesystem>
+#include <optional>
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
@@ -21,11 +22,11 @@
 static const char* s_applicationName  = "BabylonNative Playground";
 static const char* s_applicationClass = "Playground";
 
-std::unique_ptr<Babylon::Graphics::Device> device{};
-std::unique_ptr<Babylon::Graphics::DeviceUpdate> update{};
-std::unique_ptr<Babylon::AppRuntime> runtime{};
+std::optional<Babylon::Graphics::Device> device{};
+std::optional<Babylon::Graphics::DeviceUpdate> update{};
+std::optional<Babylon::AppRuntime> runtime{};
+std::optional<Babylon::Polyfills::Canvas> nativeCanvas{};
 Babylon::Plugins::NativeInput* nativeInput{};
-std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 
 namespace
 {
@@ -54,8 +55,11 @@ namespace
             update->Finish();
             device->FinishRenderingCurrentFrame();
         }
-        runtime.reset();
+
         nativeInput = {};
+        nativeCanvas.reset();
+        runtime.reset();
+        update.reset();
         device.reset();
     }
 
@@ -66,21 +70,19 @@ namespace
 
         Uninitialize();
 
-        // Separately call reset and make_unique to ensure prior state is destroyed before new one is created.
-        Babylon::Graphics::WindowConfiguration graphicsConfig{};
+        Babylon::Graphics::Configuration graphicsConfig{};
         graphicsConfig.Window = window;
         graphicsConfig.Width = static_cast<size_t>(width);
         graphicsConfig.Height = static_cast<size_t>(height);
         graphicsConfig.MSAASamples = 4;
 
-        device = Babylon::Graphics::Device::Create(graphicsConfig);
-        update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
+        device.emplace(graphicsConfig);
+        update.emplace(device->GetUpdate("update"));
         device->StartRenderingCurrentFrame();
         update->Start();
 
-        runtime = std::make_unique<Babylon::AppRuntime>();
+        runtime.emplace();
 
-        // Initialize console plugin.
         runtime->Dispatch([](Napi::Env env) {
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 printf("%s", message);
@@ -89,7 +91,7 @@ namespace
 
             Babylon::Polyfills::Window::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-            nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
+            nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
 
             // Initialize NativeEngine plugin.
             device->AddToJavaScript(env);
@@ -127,7 +129,7 @@ namespace
 
     void UpdateWindowSize(float width, float height)
     {
-        if (device != nullptr)
+        if (device)
         {
             device->UpdateSize(width, height);
         }

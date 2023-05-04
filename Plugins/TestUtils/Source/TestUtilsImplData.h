@@ -7,12 +7,12 @@ namespace Babylon::Plugins::Internal
     class TestUtils::ImplData final : public std::enable_shared_from_this<TestUtils::ImplData>
     {
     public:
-        ImplData(Graphics::WindowType window)
+        ImplData(Graphics::WindowT window)
             : m_window{window}
         {
         }
 
-        Graphics::WindowType m_window{};
+        Graphics::WindowT m_window{};
     };
 
 } // namespace

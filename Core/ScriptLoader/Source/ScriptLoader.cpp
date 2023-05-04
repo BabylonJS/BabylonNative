@@ -60,7 +60,7 @@ namespace Babylon
     };
 
     ScriptLoader::ScriptLoader(DispatchFunctionT dispatchFunction)
-        : m_impl{std::make_unique<ScriptLoader::Impl>(std::move(dispatchFunction))}
+        : m_impl{std::make_unique<Impl>(std::move(dispatchFunction))}
     {
     }
 
