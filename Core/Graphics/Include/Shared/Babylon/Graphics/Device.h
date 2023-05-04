@@ -14,17 +14,32 @@ namespace Babylon::Graphics
         DeviceT Device;
     };
 
+    struct Configuration
+    {
+        // Custom device to use instead of creating one internally.
+        DeviceT Device{};
+
+        // The platform specific window.
+        WindowT Window{};
+
+        // The resolution width.
+        size_t Width{};
+
+        // The resolution height.
+        size_t Height{};
+
+        // MSAA sample values can be 2, 4, 8 or 16. Other values will disable MSAA.
+        uint8_t MSAASamples{};
+
+        // When enabled, back buffer will be premultiplied with alpha value.
+        bool AlphaPremultiplied{};
+    };
+
     class Device;
 
     class DeviceUpdate
     {
     public:
-        DeviceUpdate(const DeviceUpdate&) = default;
-        DeviceUpdate& operator=(const DeviceUpdate&) = default;
-
-        DeviceUpdate(DeviceUpdate&&) noexcept = default;
-        DeviceUpdate& operator=(DeviceUpdate&&) noexcept = default;
-
         void Start()
         {
             m_start();
@@ -57,9 +72,12 @@ namespace Babylon::Graphics
         std::function<void(std::function<void()>)> m_requestFinish{};
     };
 
+    class DeviceImpl;
+
     class Device
     {
     public:
+        Device(const Configuration& config);
         ~Device();
 
         // Move semantics
@@ -70,15 +88,13 @@ namespace Babylon::Graphics
         // Features and functionalities will be added and
         // method and structure might change.
 
-        static std::unique_ptr<Device> Create(const WindowConfiguration& config);
-        static std::unique_ptr<Device> Create(const DeviceConfiguration& config);
-
-        void UpdateWindow(const WindowConfiguration& config);
+        void UpdateWindow(WindowT window);
         void UpdateSize(size_t width, size_t height);
         void UpdateMSAA(uint8_t value);
         void UpdateAlphaPremultiplied(bool enabled);
 
         void AddToJavaScript(Napi::Env);
+
         Napi::Value CreateContext(Napi::Env);
 
         void EnableRendering();
@@ -99,11 +115,6 @@ namespace Babylon::Graphics
         PlatformInfo GetPlatformInfo() const;
 
     private:
-        Device();
-
-        void UpdateContext(const DeviceConfiguration& config);
-
-        class Impl;
-        std::unique_ptr<Impl> m_impl{};
+        std::unique_ptr<DeviceImpl> m_impl{};
     };
 }

@@ -14,7 +14,7 @@ target_include_directories(Window
 target_link_to_dependencies(Window
     PUBLIC napi
     PRIVATE base-n
-    PRIVATE JsRuntime
+    PRIVATE JsRuntimeInternal
     PRIVATE GraphicsDeviceContext)
 
 set_property(TARGET Window PROPERTY FOLDER Polyfills)

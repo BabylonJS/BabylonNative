@@ -1,4 +1,4 @@
-#include "TestUtilsImplData.h"
+#include "../TestUtilsImplData.h"
 #define XK_MISCELLANY
 #define XK_LATIN1
 #include <X11/keysymdef.h>
@@ -59,7 +59,7 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::TestUtils
 {
-    void Initialize(Napi::Env env, Graphics::WindowType window)
+    void Initialize(Napi::Env env, Graphics::WindowT window)
     {
         auto implData{std::make_shared<Internal::TestUtils::ImplData>(window)};
         Internal::TestUtils::CreateInstance(env, implData);

@@ -1,4 +1,4 @@
-#include "TestUtilsImplData.h"
+#include "../TestUtilsImplData.h"
 
 namespace Babylon::Plugins::Internal
 {
@@ -23,7 +23,7 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::TestUtils
 {
-    void Initialize(Napi::Env env, Graphics::WindowType window)
+    void Initialize(Napi::Env env, Graphics::WindowT window)
     {
         auto implData{std::make_shared<Internal::TestUtils::ImplData>(window)};
         Internal::TestUtils::CreateInstance(env, implData);

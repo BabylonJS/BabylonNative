@@ -10,6 +10,7 @@
 #include <Shlwapi.h>
 #include <filesystem>
 #include <algorithm>
+#include <optional>
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
@@ -30,10 +31,10 @@
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
-std::unique_ptr<Babylon::Graphics::Device> device{};
-std::unique_ptr<Babylon::Graphics::DeviceUpdate> update{};
-std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
+std::optional<Babylon::Graphics::Device> device{};
+std::optional<Babylon::Graphics::DeviceUpdate> update{};
+std::optional<Babylon::AppRuntime> runtime{};
+std::optional<Babylon::Polyfills::Canvas> nativeCanvas{};
 
 // 600, 400 mandatory size for CI tests
 static const int TEST_WIDTH = 600;
@@ -54,27 +55,31 @@ namespace
             device->FinishRenderingCurrentFrame();
         }
 
-        runtime.reset();
         nativeCanvas.reset();
+        runtime.reset();
         update.reset();
         device.reset();
     }
 
     void Initialize(HWND hWnd)
     {
-        Babylon::Graphics::WindowConfiguration graphicsConfig{};
+        Babylon::Graphics::Configuration graphicsConfig{};
         graphicsConfig.Window = hWnd;
         graphicsConfig.Width = static_cast<size_t>(TEST_WIDTH);
         graphicsConfig.Height = static_cast<size_t>(TEST_HEIGHT);
         graphicsConfig.MSAASamples = 4;
 
-        device = Babylon::Graphics::Device::Create(graphicsConfig);
-        update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
+        device.emplace(graphicsConfig);
+        update.emplace(device->GetUpdate("update"));
         device->SetDiagnosticOutput([](const char* outputString) { printf("%s", outputString); fflush(stdout); });
         device->StartRenderingCurrentFrame();
         update->Start();
 
-        runtime = std::make_unique<Babylon::AppRuntime>();
+        runtime.emplace([](const std::exception& ex) {
+            printf("Uncaught Error: %s", ex.what());
+            fflush(stdout);
+            abort();
+        });
 
         // Initialize console plugin.
         runtime->Dispatch([hWnd](Napi::Env env) {
@@ -88,8 +93,10 @@ namespace
             });
 
             Babylon::Polyfills::Window::Initialize(env);
+
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-            nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
+
+            nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
 
             Babylon::Plugins::NativeEngine::Initialize(env);
 

@@ -3,12 +3,8 @@
 
 namespace Babylon::Graphics
 {
-    class Device::Impl : public DeviceImpl
-    {
-    };
-
-    Device::Device()
-        : m_impl{std::make_unique<Impl>()}
+    Device::Device(const Configuration& config)
+        : m_impl{new DeviceImpl{config}}
     {
     }
 
@@ -18,46 +14,24 @@ namespace Babylon::Graphics
     Device::Device(Device&&) noexcept = default;
     Device& Device::operator=(Device&&) noexcept = default;
 
-    void Device::UpdateWindow(const WindowConfiguration& config)
+    void Device::UpdateWindow(WindowT window)
     {
-        m_impl->UpdateWindow(config);
-    }
-
-    void Device::UpdateContext(const DeviceConfiguration& config)
-    {
-        m_impl->UpdateContext(config);
-    }
-
-    std::unique_ptr<Device> Device::Create(const WindowConfiguration& config)
-    {
-        std::unique_ptr<Device> device{new Device()};
-        device->UpdateWindow(config);
-        device->UpdateSize(config.Width, config.Height);
-        device->UpdateMSAA(config.MSAASamples);
-        device->UpdateAlphaPremultiplied(config.AlphaPremultiplied);
-        return device;
-    }
-
-    std::unique_ptr<Device> Device::Create(const DeviceConfiguration& config)
-    {
-        std::unique_ptr<Device> device{new Device()};
-        device->UpdateContext(config);
-        return device;
+        m_impl->UpdateWindow(window);
     }
 
     void Device::UpdateSize(size_t width, size_t height)
     {
-        m_impl->Resize(width, height);
+        m_impl->UpdateSize(width, height);
     }
 
     void Device::UpdateMSAA(uint8_t value)
     {
-        m_impl->SetMSAA(value);
+        m_impl->UpdateMSAA(value);
     }
 
     void Device::UpdateAlphaPremultiplied(bool enabled)
     {
-        m_impl->SetAlphaPremultiplied(enabled);
+        m_impl->UpdateAlphaPremultiplied(enabled);
     }
 
     void Device::AddToJavaScript(Napi::Env env)

@@ -1,4 +1,4 @@
-#import "TestUtilsImplData.h"
+#import "../TestUtilsImplData.h"
 
 // can't externalize variable with ObjC++. Using a function instead.
 int errorCode{};
@@ -49,7 +49,7 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::TestUtils
 {
-    void Initialize(Napi::Env env, Graphics::WindowType window)
+    void Initialize(Napi::Env env, Graphics::WindowT window)
     {
         auto implData{std::make_shared<Internal::TestUtils::ImplData>(window)};
         Internal::TestUtils::CreateInstance(env, implData);

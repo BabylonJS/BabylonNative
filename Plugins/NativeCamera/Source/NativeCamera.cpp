@@ -1,6 +1,6 @@
+#include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Graphics/Texture.h>
 #include <napi/napi_pointer.h>
-#include <NativeCamera.h>
 #include "NativeVideo.h"
 #include "MediaDevices.h"
 

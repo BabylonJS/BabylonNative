@@ -17,7 +17,7 @@ namespace
 
 namespace Babylon::Graphics
 {
-    DeviceImpl::DeviceImpl()
+    DeviceImpl::DeviceImpl(const Configuration& config)
         : m_bgfxCallback{[this](const auto& data) { CaptureCallback(data); }}
         , m_context{*this}
     {
@@ -29,10 +29,17 @@ namespace Babylon::Graphics
         init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY;
         init.resolution.maxFrameLatency = 1;
         if (s_bgfxFlipAfterRender)
+        {
             init.resolution.reset |= BGFX_RESET_FLIP_AFTER_RENDER;
+        }
 
         init.callback = &m_bgfxCallback;
-        init.platformData = {};
+
+        init.platformData.context = config.Device;
+        UpdateWindow(config.Window);
+        UpdateSize(config.Width, config.Height);
+        UpdateMSAA(config.MSAASamples);
+        UpdateAlphaPremultiplied(config.AlphaPremultiplied);
     }
 
     DeviceImpl::~DeviceImpl()
@@ -40,23 +47,15 @@ namespace Babylon::Graphics
         DisableRendering();
     }
 
-    void DeviceImpl::UpdateWindow(const WindowConfiguration& config)
+    void DeviceImpl::UpdateWindow(WindowT window)
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
-        ConfigureBgfxPlatformData(config, m_state.Bgfx.InitState.platformData);
-        m_state.Resolution.DevicePixelRatio = GetDevicePixelRatio(config);
+        ConfigureBgfxPlatformData(m_state.Bgfx.InitState.platformData, window);
+        m_state.Resolution.DevicePixelRatio = GetDevicePixelRatio(window);
     }
 
-    void DeviceImpl::UpdateContext(const DeviceConfiguration& config)
-    {
-        std::scoped_lock lock{m_state.Mutex};
-        m_state.Bgfx.Dirty = true;
-        ConfigureBgfxPlatformData(config, m_state.Bgfx.InitState.platformData);
-        m_state.Resolution.DevicePixelRatio = config.DevicePixelRatio;
-    }
-
-    void DeviceImpl::Resize(size_t width, size_t height)
+    void DeviceImpl::UpdateSize(size_t width, size_t height)
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Resolution.Width = width;
@@ -64,7 +63,7 @@ namespace Babylon::Graphics
         UpdateBgfxResolution();
     }
 
-    void DeviceImpl::SetMSAA(uint8_t value)
+    void DeviceImpl::UpdateMSAA(uint8_t value)
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
@@ -94,7 +93,7 @@ namespace Babylon::Graphics
         }
     }
 
-    void DeviceImpl::SetAlphaPremultiplied(bool enabled)
+    void DeviceImpl::UpdateAlphaPremultiplied(bool enabled)
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
@@ -103,14 +102,11 @@ namespace Babylon::Graphics
         init.resolution.reset |= enabled ? BGFX_RESET_TRANSPARENT_BACKBUFFER : 0;
     }
 
-    size_t DeviceImpl::GetWidth() const
+    void DeviceImpl::UpdateDevicePixelRatio(float value)
     {
-        return m_state.Resolution.Width;
-    }
-
-    size_t DeviceImpl::GetHeight() const
-    {
-        return m_state.Resolution.Height;
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Bgfx.Dirty = true;
+        m_state.Resolution.DevicePixelRatio = value;
     }
 
     void DeviceImpl::AddToJavaScript(Napi::Env env)
@@ -130,16 +126,6 @@ namespace Babylon::Graphics
     Napi::Value DeviceImpl::CreateContext(Napi::Env env)
     {
         return DeviceContext::Create(env, *this);
-    }
-
-    continuation_scheduler<>& DeviceImpl::BeforeRenderScheduler()
-    {
-        return m_beforeRenderDispatcher.scheduler();
-    }
-
-    continuation_scheduler<>& DeviceImpl::AfterRenderScheduler()
-    {
-        return m_afterRenderDispatcher.scheduler();
     }
 
     void DeviceImpl::EnableRendering()
@@ -193,6 +179,25 @@ namespace Babylon::Graphics
 
             m_renderThreadAffinity = {};
         }
+    }
+
+    SafeTimespanGuarantor& DeviceImpl::GetSafeTimespanGuarantor(const char* updateName)
+    {
+        std::scoped_lock lock{m_updateSafeTimespansMutex};
+        std::string updateNameStr{updateName};
+        auto found = m_updateSafeTimespans.find(updateNameStr);
+        if (found == m_updateSafeTimespans.end())
+        {
+            m_updateSafeTimespans.emplace(std::piecewise_construct, std::forward_as_tuple(updateNameStr), std::forward_as_tuple(m_cancellationSource));
+            found = m_updateSafeTimespans.find(updateNameStr);
+        }
+        return found->second;
+    }
+
+    void DeviceImpl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
+    {
+        assert(m_renderThreadAffinity.check());
+        m_bgfxCallback.SetDiagnosticOutput(std::move(diagnosticOutput));
     }
 
     void DeviceImpl::StartRenderingCurrentFrame()
@@ -253,44 +258,6 @@ namespace Babylon::Graphics
         m_rendering = false;
     }
 
-    SafeTimespanGuarantor& DeviceImpl::GetSafeTimespanGuarantor(const char* updateName)
-    {
-        std::scoped_lock lock{m_updateSafeTimespansMutex};
-        std::string updateNameStr{updateName};
-        auto found = m_updateSafeTimespans.find(updateNameStr);
-        if (found == m_updateSafeTimespans.end())
-        {
-            m_updateSafeTimespans.emplace(std::piecewise_construct, std::forward_as_tuple(updateNameStr), std::forward_as_tuple(m_cancellationSource));
-            found = m_updateSafeTimespans.find(updateNameStr);
-        }
-        return found->second;
-    }
-
-    void DeviceImpl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
-    {
-        assert(m_renderThreadAffinity.check());
-        m_bgfxCallback.SetDiagnosticOutput(std::move(diagnosticOutput));
-    }
-
-    arcana::task<std::vector<uint8_t>, std::exception_ptr> DeviceImpl::RequestScreenShotAsync()
-    {
-        arcana::task_completion_source<std::vector<uint8_t>, std::exception_ptr> taskCompletionSource{};
-
-        m_screenShotCallbacks.push([taskCompletionSource](std::vector<uint8_t> bytes) mutable
-        {
-            taskCompletionSource.complete(std::move(bytes));
-        });
-
-        return taskCompletionSource.as_task();
-    }
-
-    arcana::task<void, std::exception_ptr> DeviceImpl::ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel)
-    {
-        arcana::task_completion_source<void, std::exception_ptr> completionSource{};
-        m_readTextureRequests.emplace(bgfx::readTexture(handle, data.data(), mipLevel), completionSource);
-        return completionSource.as_task();
-    }
-
     float DeviceImpl::GetHardwareScalingLevel() const
     {
         std::scoped_lock lock{m_state.Mutex};
@@ -303,12 +270,46 @@ namespace Babylon::Graphics
         {
             throw std::runtime_error{"HardwareScalingValue cannot be less than or equal to 0."};
         }
+
         {
             std::scoped_lock lock{m_state.Mutex};
             m_state.Resolution.HardwareScalingLevel = level;
         }
 
         UpdateBgfxResolution();
+    }
+
+    float DeviceImpl::GetDevicePixelRatio() const
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        return m_state.Resolution.DevicePixelRatio;
+    }
+
+    PlatformInfo DeviceImpl::GetPlatformInfo() const
+    {
+        return {static_cast<DeviceT>(bgfx::getInternalData()->context)};
+    }
+
+    continuation_scheduler<>& DeviceImpl::BeforeRenderScheduler()
+    {
+        return m_beforeRenderDispatcher.scheduler();
+    }
+
+    continuation_scheduler<>& DeviceImpl::AfterRenderScheduler()
+    {
+        return m_afterRenderDispatcher.scheduler();
+    }
+
+    void DeviceImpl::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)
+    {
+        m_screenShotCallbacks.push(std::move(callback));
+    }
+
+    arcana::task<void, std::exception_ptr> DeviceImpl::ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel)
+    {
+        arcana::task_completion_source<void, std::exception_ptr> completionSource{};
+        m_readTextureRequests.emplace(bgfx::readTexture(handle, data.data(), mipLevel), completionSource);
+        return completionSource.as_task();
     }
 
     DeviceImpl::CaptureCallbackTicketT DeviceImpl::AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback)
@@ -460,16 +461,5 @@ namespace Babylon::Graphics
         {
             callback(data);
         }
-    }
-
-    float DeviceImpl::GetDevicePixelRatio() const
-    {
-        std::scoped_lock lock{m_state.Mutex};
-        return m_state.Resolution.DevicePixelRatio;
-    }
-
-    PlatformInfo DeviceImpl::GetPlatformInfo() const
-    {
-        return {static_cast<DeviceT>(bgfx::getInternalData()->context)};
     }
 }

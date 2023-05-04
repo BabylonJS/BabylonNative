@@ -1,5 +1,7 @@
 #include "AppRuntime.h"
 
+#include <napi/env.h>
+
 #include <jsrt.h>
 
 #include <gsl/gsl>
@@ -25,7 +27,8 @@ namespace Babylon
         JsContextRef context;
         ThrowIfFailed(JsCreateContext(jsRuntime, &context));
         ThrowIfFailed(JsSetCurrentContext(context));
-        ThrowIfFailed(JsSetPromiseContinuationCallback([](JsValueRef task, void* callbackState) {
+        ThrowIfFailed(JsSetPromiseContinuationCallback(
+            [](JsValueRef task, void* callbackState) {
             auto* pThis = reinterpret_cast<AppRuntime*>(callbackState);
             ThrowIfFailed(JsAddRef(task, nullptr));
             pThis->Dispatch([task](auto) {

@@ -6,10 +6,12 @@ set(SOURCES
 add_library(XMLHttpRequest ${SOURCES})
 warnings_as_errors(XMLHttpRequest)
 
-target_include_directories(XMLHttpRequest PUBLIC "Include")
+target_include_directories(XMLHttpRequest
+    PUBLIC "Include")
 
 target_link_to_dependencies(XMLHttpRequest
-    PUBLIC JsRuntime
+    PUBLIC napi
+    PRIVATE JsRuntimeInternal
     PRIVATE arcana
     PRIVATE UrlLib)
 

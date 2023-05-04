@@ -1,22 +1,24 @@
 #import "ViewController.h"
 
 #import <filesystem>
+#import <optional>
 
 #import <Babylon/AppRuntime.h>
 #import <Babylon/Graphics/Device.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
 #import <Babylon/Plugins/TestUtils.h>
+#import <Babylon/Polyfills/Console.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/ScriptLoader.h>
 #import <MetalKit/MetalKit.h>
 
-std::unique_ptr<Babylon::Graphics::Device> device{};
-std::unique_ptr<Babylon::Graphics::DeviceUpdate> update{};
-std::unique_ptr<Babylon::AppRuntime> runtime{};
-std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
+std::optional<Babylon::Graphics::Device> device{};
+std::optional<Babylon::Graphics::DeviceUpdate> update{};
+std::optional<Babylon::AppRuntime> runtime{};
+std::optional<Babylon::Polyfills::Canvas> nativeCanvas{};
 
 @interface EngineView : MTKView <MTKViewDelegate>
 
@@ -27,7 +29,13 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
 - (void)mtkView:(MTKView *)__unused view drawableSizeWillChange:(CGSize) size
 {
     if (device) {
+        update->Finish();
+        device->FinishRenderingCurrentFrame();
+
         device->UpdateSize(static_cast<size_t>(size.width), static_cast<size_t>(size.height));
+
+        device->StartRenderingCurrentFrame();
+        update->Start();
     }
 }
 
@@ -58,7 +66,9 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
         device->FinishRenderingCurrentFrame();
     }
 
+    nativeCanvas.reset();
     runtime.reset();
+    update.reset();
     device.reset();
 }
 
@@ -77,17 +87,19 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
     [[self view] addSubview:engineView];
     engineView.delegate = engineView;
 
-    Babylon::Graphics::WindowConfiguration graphicsConfig{};
+    Babylon::Graphics::Configuration graphicsConfig{};
     graphicsConfig.Window = engineView;
     graphicsConfig.Width = static_cast<size_t>(600);
     graphicsConfig.Height = static_cast<size_t>(400);
     graphicsConfig.MSAASamples = 4;
-    device = Babylon::Graphics::Device::Create(graphicsConfig);
-    update = std::make_unique<Babylon::Graphics::DeviceUpdate>(device->GetUpdate("update"));
+
+    device.emplace(graphicsConfig);
+    update.emplace(device->GetUpdate("update"));
+
     device->StartRenderingCurrentFrame();
     update->Start();
 
-    runtime = std::make_unique<Babylon::AppRuntime>();
+    runtime.emplace();
 
     runtime->Dispatch([engineView](Napi::Env env)
     {
@@ -96,7 +108,12 @@ std::unique_ptr<Babylon::Polyfills::Canvas> nativeCanvas{};
         Babylon::Polyfills::Window::Initialize(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-        nativeCanvas = std::make_unique <Babylon::Polyfills::Canvas>(Babylon::Polyfills::Canvas::Initialize(env));
+
+        nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
+
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+            NSLog(@"%s", message);
+        });
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 

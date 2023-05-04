@@ -5,12 +5,12 @@ namespace Babylon::Graphics
 {
     const bool DeviceImpl::s_bgfxFlipAfterRender = false;
 
-    void DeviceImpl::ConfigureBgfxPlatformData(const WindowConfiguration& config, bgfx::PlatformData& pd)
+    void DeviceImpl::ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window)
     {
-        pd.nwh = reinterpret_cast<void*>(config.Window);
+        pd.nwh = reinterpret_cast<void*>(window);
     }
 
-    float DeviceImpl::GetDevicePixelRatio(const WindowConfiguration&)
+    float DeviceImpl::GetDevicePixelRatio(WindowT)
     {
         // TODO: We should persist a Display object instead of opening a new display.
         // See https://github.com/BabylonJS/BabylonNative/issues/625

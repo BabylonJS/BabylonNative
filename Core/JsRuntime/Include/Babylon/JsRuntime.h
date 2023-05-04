@@ -64,7 +64,6 @@ namespace Babylon
     private:
         JsRuntime(Napi::Env, DispatchFunctionT);
 
-        std::mutex m_mutex{};
         DispatchFunctionT m_dispatchFunction{};
         std::vector<IDisposingCallback*> m_disposingCallbacks{};
     };

@@ -1,7 +1,8 @@
 #include "AppRuntime.h"
 #include "WorkQueue.h"
 
-#include <napi/env.h>
+#include <Babylon/JsRuntime.h>
+
 #include <V8JsiRuntime.h>
 #include <ScriptStore.h>
 

@@ -6,6 +6,8 @@
 #include <Babylon/Plugins/ChromeDevTools.h>
 #include <Babylon/Polyfills/Canvas.h>
 
+#include <optional>
+
 // Main entry point for our app. Connects the app with the Windows shell and handles application lifecycle events.
 ref class App sealed : public Windows::ApplicationModel::Core::IFrameworkView
 {
@@ -42,12 +44,13 @@ private:
 
     void RestartRuntime(Windows::Foundation::Rect bounds);
 
-    std::unique_ptr<Babylon::Graphics::Device> m_device{};
-    std::unique_ptr<Babylon::Graphics::DeviceUpdate> m_update{};
-    std::unique_ptr<Babylon::AppRuntime> m_runtime{};
+    std::optional<Babylon::Graphics::Device> m_device{};
+    std::optional<Babylon::Graphics::DeviceUpdate> m_update{};
+    std::optional<Babylon::AppRuntime> m_runtime{};
+    std::optional<Babylon::Polyfills::Canvas> m_nativeCanvas{};
+    std::optional<Babylon::Plugins::ChromeDevTools> m_chromeDevTools{};
     Babylon::Plugins::NativeInput* m_nativeInput{};
-    std::unique_ptr<Babylon::Plugins::ChromeDevTools> m_chromeDevTools{};
-    std::unique_ptr<Babylon::Polyfills::Canvas> m_nativeCanvas{};
+
     Windows::Foundation::Collections::IVectorView<Windows::Storage::IStorageItem^>^ m_files;
     bool m_windowClosed;
     bool m_windowVisible;

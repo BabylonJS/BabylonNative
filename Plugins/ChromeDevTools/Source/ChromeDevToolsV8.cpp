@@ -1,4 +1,4 @@
-#include "ChromeDevTools.h"
+#include <Babylon/Plugins/ChromeDevTools.h>
 
 #include <V8InspectorAgent.h>
 #include <Babylon/JsRuntime.h>
