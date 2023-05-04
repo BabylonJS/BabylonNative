@@ -46,6 +46,7 @@ namespace Babylon::Plugins
         // Capture CameraDevice in a shared_ptr because the iOS implementation relies on the `shared_from_this` syntax for async work
         std::shared_ptr<CameraDevice> m_cameraDevice{};
         JsRuntimeScheduler m_runtimeScheduler;
+        arcana::cancellation_source m_cancellationSource;
 
         Napi::ObjectReference m_currentConstraints{};
     };

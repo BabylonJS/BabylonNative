@@ -300,9 +300,16 @@ namespace Babylon::Graphics
         return m_afterRenderDispatcher.scheduler();
     }
 
-    void DeviceImpl::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)
+    arcana::task<std::vector<uint8_t>, std::exception_ptr> DeviceImpl::RequestScreenShotAsync()
     {
-        m_screenShotCallbacks.push(std::move(callback));
+        arcana::task_completion_source<std::vector<uint8_t>, std::exception_ptr> taskCompletionSource{};
+
+        m_screenShotCallbacks.push([taskCompletionSource](std::vector<uint8_t> bytes) mutable
+        {
+            taskCompletionSource.complete(std::move(bytes));
+        });
+
+        return taskCompletionSource.as_task();
     }
 
     arcana::task<void, std::exception_ptr> DeviceImpl::ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel)

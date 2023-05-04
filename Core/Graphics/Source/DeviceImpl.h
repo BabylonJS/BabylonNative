@@ -78,8 +78,6 @@ namespace Babylon::Graphics
         continuation_scheduler<>& BeforeRenderScheduler();
         continuation_scheduler<>& AfterRenderScheduler();
 
-        Update GetUpdate(const char* updateName);
-
         arcana::task<std::vector<uint8_t>, std::exception_ptr> RequestScreenShotAsync();
 
         arcana::task<void, std::exception_ptr> ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel);
