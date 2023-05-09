@@ -224,21 +224,20 @@ namespace Babylon::Polyfills::Internal
 
         m_request.SendAsync()
             .then(m_runtimeScheduler.Get(), m_cancellationSource,
-                [this, thisRef = Napi::Persistent(info.This())](arcana::expected<void, std::exception_ptr> result)
-        {
-            if (result.has_error())
-            {
-                Napi::Error::New(thisRef.Env(), result.error()).ThrowAsJavaScriptException();
-                return;
-            }
+                [this, thisRef = Napi::Persistent(info.This())](arcana::expected<void, std::exception_ptr> result) {
+                    if (result.has_error())
+                    {
+                        Napi::Error::New(thisRef.Env(), result.error()).ThrowAsJavaScriptException();
+                        return;
+                    }
 
-            SetReadyState(ReadyState::Done);
-            RaiseEvent(EventType::LoadEnd);
+                    SetReadyState(ReadyState::Done);
+                    RaiseEvent(EventType::LoadEnd);
 
-            // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
-            // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
-            m_eventHandlerRefs.clear();
-        });
+                    // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
+                    // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
+                    m_eventHandlerRefs.clear();
+                });
     }
 
     void XMLHttpRequest::SetReadyState(ReadyState readyState)

@@ -22,13 +22,15 @@ namespace Babylon::Polyfills::Internal
         Napi::Function func = DefineClass(
             env,
             JS_CONSTRUCTOR_NAME,
-            {StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
+            {
+                StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
                 InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
                 InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
                 InstanceMethod("getContext", &NativeCanvas::GetContext),
                 InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
                 InstanceMethod("dispose", &NativeCanvas::Dispose),
-                StaticMethod("parseColor", &NativeCanvas::ParseColor)});
+                StaticMethod("parseColor", &NativeCanvas::ParseColor),
+            });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
     }
@@ -63,11 +65,9 @@ namespace Babylon::Polyfills::Internal
 
         auto& deviceContext = Graphics::DeviceContext::GetFromJavaScript(info.Env());
         auto update = deviceContext.GetUpdate("update");
-        arcana::make_task(update.Scheduler(), arcana::cancellation::none(), [fontName = std::move(fontName), fontData = std::move(fontBuffer), &runtime, deferred = std::move(deferred)]() mutable
-        {
+        arcana::make_task(update.Scheduler(), arcana::cancellation::none(), [fontName = std::move(fontName), fontData = std::move(fontBuffer), &runtime, deferred = std::move(deferred)]() mutable {
             fontsInfos[fontName] = fontData;
-            runtime.Dispatch([deferred = std::move(deferred)](Napi::Env env)
-            {
+            runtime.Dispatch([deferred = std::move(deferred)](Napi::Env env) {
                 deferred.Resolve(env.Undefined());
             });
         });

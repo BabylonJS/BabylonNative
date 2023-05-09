@@ -28,11 +28,11 @@ namespace Babylon
     //           // Wait for asynchronous operations to complete.
     //           m_runtimeScheduler.Rundown();
     //       }
-    // 
+    //
     //       void MyFunction(const Napi::CallbackInfo& info)
     //       {
     //           const auto callback{info[0].As<Napi::Function>()};
-    //           
+    //
     //           arcana::make_task(arcana::threadpool_scheduler, m_cancellationSource, []() {
     //               // do some asynchronous work
     //           }).then(m_runtimeScheduler.Get(), m_cancellationSource, [thisRef = Napi::Persistent(info.This()), callback = Napi::Persistent(callback)]() {
@@ -101,7 +101,8 @@ namespace Babylon
         class SchedulerImpl
         {
         public:
-            explicit SchedulerImpl(JsRuntimeScheduler& parent) : m_parent{parent}
+            explicit SchedulerImpl(JsRuntimeScheduler& parent)
+                : m_parent{parent}
             {
             }
 
@@ -122,8 +123,7 @@ namespace Babylon
 
             if (m_runtime != nullptr)
             {
-                m_runtime->Dispatch([callable{std::forward<CallableT>(callable)}](Napi::Env)
-                {
+                m_runtime->Dispatch([callable{std::forward<CallableT>(callable)}](Napi::Env) {
                     callable();
                 });
             }

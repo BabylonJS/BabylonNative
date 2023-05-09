@@ -29,15 +29,16 @@ namespace Babylon
         ThrowIfFailed(JsSetCurrentContext(context));
         ThrowIfFailed(JsSetPromiseContinuationCallback(
             [](JsValueRef task, void* callbackState) {
-            auto* pThis = reinterpret_cast<AppRuntime*>(callbackState);
-            ThrowIfFailed(JsAddRef(task, nullptr));
-            pThis->Dispatch([task](auto) {
-                JsValueRef global;
-                ThrowIfFailed(JsGetGlobalObject(&global));
-                ThrowIfFailed(JsCallFunction(task, &global, 1, nullptr));
-                ThrowIfFailed(JsRelease(task, nullptr));
-            });
-        }, this));
+                auto* pThis = reinterpret_cast<AppRuntime*>(callbackState);
+                ThrowIfFailed(JsAddRef(task, nullptr));
+                pThis->Dispatch([task](auto) {
+                    JsValueRef global;
+                    ThrowIfFailed(JsGetGlobalObject(&global));
+                    ThrowIfFailed(JsCallFunction(task, &global, 1, nullptr));
+                    ThrowIfFailed(JsRelease(task, nullptr));
+                });
+            },
+            this));
         ThrowIfFailed(JsProjectWinRTNamespace(L"Windows"));
 
 #if defined(_DEBUG)

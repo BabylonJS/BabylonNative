@@ -304,8 +304,7 @@ namespace Babylon::Graphics
     {
         arcana::task_completion_source<std::vector<uint8_t>, std::exception_ptr> taskCompletionSource{};
 
-        m_screenShotCallbacks.push([taskCompletionSource](std::vector<uint8_t> bytes) mutable
-        {
+        m_screenShotCallbacks.push([taskCompletionSource](std::vector<uint8_t> bytes) mutable {
             taskCompletionSource.complete(std::move(bytes));
         });
 

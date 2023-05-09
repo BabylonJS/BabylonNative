@@ -471,7 +471,7 @@ namespace Babylon::Polyfills::Internal
             nvgFillPaint(m_nvg, imagePaint);
             nvgFill(m_nvg);
             SetDirty(info.This());
-        } 
+        }
         else if (info.Length() == 5)
         {
             const auto dx = info[1].As<Napi::Number>().Int32Value();

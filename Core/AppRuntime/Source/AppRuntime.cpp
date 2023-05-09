@@ -13,8 +13,7 @@ namespace Babylon
         : m_workQueue{std::make_unique<WorkQueue>([this] { RunPlatformTier(); })}
         , m_unhandledExceptionHandler{unhandledExceptionHandler}
     {
-        Dispatch([this](Napi::Env env)
-        {
+        Dispatch([this](Napi::Env env) {
             JsRuntime::CreateForJavaScript(env, [this](auto func) { Dispatch(std::move(func)); });
         });
     }
@@ -24,8 +23,7 @@ namespace Babylon
         // Notify the JsRuntime on the JavaScript thread that the JavaScript
         // runtime shutdown sequence has begun. The JsRuntimeScheduler will
         // use this signal to gracefully cancel asynchronous operations.
-        Dispatch([](Napi::Env env)
-        {
+        Dispatch([](Napi::Env env) {
             JsRuntime::NotifyDisposing(JsRuntime::GetFromJavaScript(env));
         });
     }
@@ -47,10 +45,8 @@ namespace Babylon
 
     void AppRuntime::Dispatch(Dispatchable<void(Napi::Env)> func)
     {
-        m_workQueue->Append([this, func{std::move(func)}](Napi::Env env) mutable
-        {
-            Execute([this, env, func{std::move(func)}]() mutable
-            {
+        m_workQueue->Append([this, func{std::move(func)}](Napi::Env env) mutable {
+            Execute([this, env, func{std::move(func)}]() mutable {
                 try
                 {
                     func(env);

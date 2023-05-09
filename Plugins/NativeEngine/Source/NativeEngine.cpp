@@ -1132,14 +1132,11 @@ namespace Babylon
         const auto textureDestination = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         const auto textureSource = info[1].As<Napi::Pointer<Graphics::Texture>>().Get();
 
-        arcana::make_task(m_update.Scheduler(), m_cancellationSource, [this, textureDestination, textureSource]() mutable
-        {
-            return arcana::make_task(m_runtimeScheduler.Get(), m_cancellationSource, [this, textureDestination, textureSource, updateToken = m_update.GetUpdateToken()]() mutable
-            {
+        arcana::make_task(m_update.Scheduler(), m_cancellationSource, [this, textureDestination, textureSource]() mutable {
+            return arcana::make_task(m_runtimeScheduler.Get(), m_cancellationSource, [this, textureDestination, textureSource, updateToken = m_update.GetUpdateToken()]() mutable {
                 bgfx::Encoder* encoder = updateToken.GetEncoder();
                 GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
-            }).then(arcana::inline_scheduler, m_cancellationSource, [this](const arcana::expected<void, std::exception_ptr>& result)
-            {
+            }).then(arcana::inline_scheduler, m_cancellationSource, [this](const arcana::expected<void, std::exception_ptr>& result) {
                 if (result.has_error())
                 {
                     Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
