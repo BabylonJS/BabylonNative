@@ -18,7 +18,7 @@ namespace Babylon
     //      to pump this dispatcher in its destructor to prevent deadlocks.
     //
     // The typical pattern for an arcana task will look something like this:
-    //   class MyClass
+    //   class MyClass : public ObjectWrap<MyClass>
     //   {
     //   public:
     //       ~MyClass()
