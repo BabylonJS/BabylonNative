@@ -153,14 +153,9 @@ namespace Babylon::Plugins
     void NativeInput::Impl::PointerDown(uint32_t pointerId, uint32_t buttonIndex, int32_t x, int32_t y, DeviceType deviceType)
     {
         m_runtime.Dispatch([pointerId, buttonIndex, x, y, deviceType, this](auto) {
-            const uint32_t inputIndex{ GetPointerButtonInputIndex(buttonIndex) };
-            std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, {
-                inputIndex,
-                POINTER_X_INPUT_INDEX,
-                POINTER_Y_INPUT_INDEX,
-                POINTER_DELTA_HORIZONTAL_INDEX,
-                POINTER_DELTA_VERTICAL_INDEX
-            })};
+            const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
+            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(deviceType, pointerId,
+                {inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX, POINTER_DELTA_HORIZONTAL_INDEX, POINTER_DELTA_VERTICAL_INDEX})};
 
             // Record the x/y, but don't raise associated events (this matches the behavior in the browser).
             SetInputState(deviceType, pointerId, POINTER_DELTA_HORIZONTAL_INDEX, 0, deviceInputs, false);
@@ -176,14 +171,9 @@ namespace Babylon::Plugins
     void NativeInput::Impl::PointerUp(uint32_t pointerId, uint32_t buttonIndex, int32_t x, int32_t y, DeviceType deviceType)
     {
         m_runtime.Dispatch([pointerId, buttonIndex, x, y, deviceType, this](auto) {
-            const uint32_t inputIndex{ GetPointerButtonInputIndex(buttonIndex) };
-            std::vector<int32_t>& deviceInputs{ GetOrCreateInputMap(deviceType, pointerId, {
-                inputIndex,
-                POINTER_X_INPUT_INDEX,
-                POINTER_Y_INPUT_INDEX,
-                POINTER_DELTA_HORIZONTAL_INDEX,
-                POINTER_DELTA_VERTICAL_INDEX
-            })};
+            const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
+            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(deviceType, pointerId,
+                {inputIndex, POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX, POINTER_DELTA_HORIZONTAL_INDEX, POINTER_DELTA_VERTICAL_INDEX})};
 
             // Record the x/y, but don't raise associated events (this matches the behavior in the browser).
             SetInputState(deviceType, pointerId, POINTER_DELTA_HORIZONTAL_INDEX, 0, deviceInputs, false);
@@ -208,13 +198,8 @@ namespace Babylon::Plugins
     void NativeInput::Impl::PointerMove(uint32_t pointerId, int32_t x, int32_t y, DeviceType deviceType)
     {
         m_runtime.Dispatch([pointerId, x, y, deviceType, this](auto) {
-            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(deviceType, pointerId, {
-                POINTER_X_INPUT_INDEX,
-                POINTER_Y_INPUT_INDEX,
-                POINTER_DELTA_HORIZONTAL_INDEX,
-                POINTER_DELTA_VERTICAL_INDEX,
-                POINTER_MOVE_INDEX
-            })};
+            std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(deviceType, pointerId,
+                {POINTER_X_INPUT_INDEX, POINTER_Y_INPUT_INDEX, POINTER_DELTA_HORIZONTAL_INDEX, POINTER_DELTA_VERTICAL_INDEX, POINTER_MOVE_INDEX})};
             int32_t deltaX = 0;
             int32_t deltaY = 0;
 
@@ -245,8 +230,7 @@ namespace Babylon::Plugins
 
     void NativeInput::Impl::PointerScroll(uint32_t pointerId, uint32_t scrollAxis, int32_t scrollValue, DeviceType deviceType)
     {
-        m_runtime.Dispatch([pointerId, scrollAxis, scrollValue, deviceType, this](auto)
-        {
+        m_runtime.Dispatch([pointerId, scrollAxis, scrollValue, deviceType, this](auto) {
             std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(deviceType, pointerId, {scrollAxis})};
             SetInputState(deviceType, pointerId, scrollAxis, scrollValue, deviceInputs, true);
 

@@ -108,40 +108,39 @@ namespace Babylon::Polyfills::Internal
         request.ResponseType(UrlLib::UrlResponseType::Buffer);
         request.SendAsync()
             .then(m_runtimeScheduler.Get(), m_cancellationSource,
-                [this, thisRef = Napi::Persistent(info.This()), request](arcana::expected<void, std::exception_ptr> result)
-        {
-            if (result.has_error())
-            {
-                HandleLoadImageError(Napi::Error::New(thisRef.Env(), result.error()));
-                return;
-            }
+                [this, thisRef = Napi::Persistent(info.This()), request](arcana::expected<void, std::exception_ptr> result) {
+                    if (result.has_error())
+                    {
+                        HandleLoadImageError(Napi::Error::New(Env(), result.error()));
+                        return;
+                    }
 
-            Dispose();
+                    Dispose();
 
-            auto buffer = request.ResponseBuffer();
-            if (buffer.data() == nullptr || buffer.size_bytes() == 0)
-            {
-                HandleLoadImageError(Napi::Error::New(thisRef.Env(), "Image with provided source returned empty response."));
-                return;
-            }
+                    auto buffer = request.ResponseBuffer();
+                    if (buffer.data() == nullptr || buffer.size_bytes() == 0)
+                    {
+                        HandleLoadImageError(Napi::Error::New(Env(), "Image with provided source returned empty response."));
+                        return;
+                    }
 
-            bx::AllocatorI* allocator = &Graphics::DeviceContext::GetFromJavaScript(thisRef.Env()).Allocator();
-            m_imageContainer = bimg::imageParse(allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
+                    bx::AllocatorI* allocator = &Graphics::DeviceContext::GetFromJavaScript(thisRef.Env()).Allocator();
+                    m_imageContainer = bimg::imageParse(allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
 
-            if (m_imageContainer == nullptr)
-            {
-                HandleLoadImageError(Napi::Error::New(thisRef.Env(), "Unable to decode image with provided src."));
-                return;
-            }
+                    if (m_imageContainer == nullptr)
+                    {
+                        HandleLoadImageError(Napi::Error::New(Env(), "Unable to decode image with provided src."));
+                        return;
+                    }
 
-            m_width = m_imageContainer->m_width;
-            m_height = m_imageContainer->m_height;
+                    m_width = m_imageContainer->m_width;
+                    m_height = m_imageContainer->m_height;
 
-            if (!m_onloadHandlerRef.IsEmpty())
-            {
-                m_onloadHandlerRef.Call({});
-            }
-        });
+                    if (!m_onloadHandlerRef.IsEmpty())
+                    {
+                        m_onloadHandlerRef.Call({});
+                    }
+                });
     }
 
     void NativeCanvasImage::SetOnload(const Napi::CallbackInfo&, const Napi::Value& value)

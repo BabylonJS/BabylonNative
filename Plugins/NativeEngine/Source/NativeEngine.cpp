@@ -1933,7 +1933,6 @@ namespace Babylon
         {
             m_updateToken.emplace(m_update.GetUpdateToken());
 
-            // TODO: is there an issue with this?
             m_runtimeScheduler.Get()([this]() {
                 m_updateToken.reset();
             });
