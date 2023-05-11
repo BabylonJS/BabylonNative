@@ -12,7 +12,9 @@ namespace
     {
         if (code != CURLE_OK)
         {
-            throw std::runtime_error{(std::stringstream{} << "CURL call failed with code (" << code << ")").str()};
+            std::stringstream message;
+            message << "CURL call failed with code (" << code << ")";
+            throw std::runtime_error{message.str()};
         }
     }
 
@@ -20,7 +22,9 @@ namespace
     {
         if (code != CURLUE_OK)
         {
-            throw std::runtime_error{(std::stringstream{} << "CURLU call failed with code (" << code << ")").str()};
+            std::stringstream message;
+            message << "CURLU call failed with code (" << code << ")";
+            throw std::runtime_error{message.str()};
         }
     }
 }
