@@ -381,7 +381,7 @@ const copyARM64ReleaseUWPFiles = () => {
 }
 
 const copyVCXProjUWPFiles = () => {
-  return gulp.src('../Modules/@babylonjs/react-native-windows/windows/BabylonReactNative/*.*')
+  return gulp.src('../Modules/@babylonjs/react-native-windows/windows/BabylonReactNative/*.*', '!*.pfx')
     .pipe(gulp.dest('Assembled-Windows/windows/BabylonReactNative'));
 }
 
@@ -499,6 +499,11 @@ const validateAssemblediOSAndroid = async () => {
     'Assembled-iOSAndroid/android/src/main/jniLibs/x86',
     'Assembled-iOSAndroid/android/src/main/jniLibs/x86/libBabylonNative.so',
     'Assembled-iOSAndroid/android/src/main/jniLibs/x86/libturbomodulejsijni.so',
+    'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64',
+    'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libBabylonNative.so',
+    'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libturbomodulejsijni.so',
+    'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libarcore_sdk_c.so',
+    'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libfbjni.so',
     'Assembled-iOSAndroid/ios',
     'Assembled-iOSAndroid/ios/BabylonModule.mm',
     'Assembled-iOSAndroid/ios/BabylonNativeInterop.h',
@@ -615,7 +620,26 @@ const validateAssemblediOSAndroid = async () => {
           'Assembled-iOSAndroid/android/src/main/jniLibs/x86/librrc_view.so',
           'Assembled-iOSAndroid/android/src/main/jniLibs/x86/libruntimeexecutor.so',
           'Assembled-iOSAndroid/android/src/main/jniLibs/x86/libyoga.so',
-          'Assembled-iOSAndroid/android/src/main/jniLibs/x86/libc++_shared.so'
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86/libc++_shared.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libfabricjni.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libfolly_runtime.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libglog.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libjsi.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libreact_codegen_rncore.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libreact_debug.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libreact_nativemodule_core.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libreact_newarchdefaults.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libreact_render_componentregistry.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libreact_render_core.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libreact_render_debug.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libreact_render_graphics.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libreact_render_imagemanager.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libreact_render_mapbuffer.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/librrc_image.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/librrc_view.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libruntimeexecutor.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libyoga.so',
+          'Assembled-iOSAndroid/android/src/main/jniLibs/x86_64/libc++_shared.so'
         ];
 
         expectediosandroid = expectediosandroid.concat(expectediosandroid071);
