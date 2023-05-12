@@ -288,7 +288,7 @@ namespace java::websocket
     jclass WebSocketClient::s_webSocketClass{};
     std::vector<std::pair<jobject, WebSocketClient*>> WebSocketClient::s_instances;
 
-    WebSocketClient::WebSocketClient(std::string url, std::function<void()> open_callback, std::function<void()> close_callback, std::function<void(std::string)> message_callback, std::function<void()> error_callback)
+    WebSocketClient::WebSocketClient(std::string url, std::function<void()> open_callback, std::function<void(int, std::string)> close_callback, std::function<void(std::string)> message_callback, std::function<void(std::string)> error_callback)
         : Object{s_webSocketClass}
         , m_openCallback{std::move(open_callback)}
         , m_messageCallback{std::move(message_callback)}
@@ -297,10 +297,10 @@ namespace java::websocket
     {
         static JNINativeMethod methods[] =
         {
-            {"closeCallback", "()V", (void*)OnClose},
+            {"closeCallback", "(ILjava/lang/String;)V", (void*)OnClose},
             {"openCallback", "()V", (void*)OnOpen},
             {"messageCallback", "(Ljava/lang/String;)V", (void*)OnMessage},
-            {"errorCallback", "()V", (void*)OnError},
+            {"errorCallback", "(Ljava/lang/String;)V", (void*)OnError},
         };
         m_env->RegisterNatives(m_class, methods, 4);
 
@@ -336,26 +336,28 @@ namespace java::websocket
         auto itObject = FindInstance(env, obj);
         if (itObject != nullptr)
         {
-            java::lang::String mystr{message};
-            itObject->m_messageCallback(mystr);
+            java::lang::String messageStr{message};
+            itObject->m_messageCallback(messageStr);
         }
     }
 
-    void WebSocketClient::OnClose(JNIEnv* env, jobject obj) 
+    void WebSocketClient::OnClose(JNIEnv* env, jobject obj, int code, jstring reason)
     {
         auto itObject = FindInstance(env, obj);
         if (itObject != nullptr)
         {
-            itObject->m_closeCallback();
+            java::lang::String reasonStr{reason};
+            itObject->m_closeCallback(code, reasonStr);
         }
     }
 
-    void WebSocketClient::OnError(JNIEnv* env, jobject obj) 
+    void WebSocketClient::OnError(JNIEnv* env, jobject obj, jstring message)
     {
         auto itObject = FindInstance(env, obj);
         if (itObject != nullptr)
         {
-            itObject->m_errorCallback();
+            java::lang::String messageStr{message};
+            itObject->m_errorCallback(messageStr);
         }
     }
 

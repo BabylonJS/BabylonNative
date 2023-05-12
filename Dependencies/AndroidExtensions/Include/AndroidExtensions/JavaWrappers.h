@@ -178,7 +178,7 @@ namespace java::websocket
     class WebSocketClient : public lang::Object
     {
     public:
-        WebSocketClient(std::string url, std::function<void()> open_callback, std::function<void()> close_callback, std::function<void(std::string)> message_callback, std::function<void()> error_callback);
+        WebSocketClient(std::string url, std::function<void()> open_callback, std::function<void(int, std::string)> close_callback, std::function<void(std::string)> message_callback, std::function<void(std::string)> error_callback);
         ~WebSocketClient();
         void Open();
         void Send(std::string message);
@@ -190,8 +190,8 @@ namespace java::websocket
     private:
         static void OnOpen(JNIEnv* env, jobject obj);
         static void OnMessage(JNIEnv* env, jobject obj, jstring message);
-        static void OnClose(JNIEnv* env, jobject obj);
-        static void OnError(JNIEnv* env, jobject obj);
+        static void OnClose(JNIEnv* env, jobject obj, jint code, jstring reason);
+        static void OnError(JNIEnv* env, jobject obj, jstring message);
 
         static WebSocketClient* FindInstance(JNIEnv* env, jobject obj);
         static jclass s_webSocketClass;
@@ -199,8 +199,8 @@ namespace java::websocket
 
         std::function<void()> m_openCallback;
         std::function<void(std::string)> m_messageCallback;
-        std::function<void()> m_closeCallback;
-        std::function<void()> m_errorCallback;
+        std::function<void(int, std::string)> m_closeCallback;
+        std::function<void(std::string)> m_errorCallback;
     };
 }
 
