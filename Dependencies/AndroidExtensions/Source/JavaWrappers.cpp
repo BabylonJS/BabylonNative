@@ -288,7 +288,7 @@ namespace java::websocket
     jclass WebSocketClient::s_webSocketClass{};
     std::vector<std::pair<jobject, WebSocketClient*>> WebSocketClient::s_instances;
 
-    WebSocketClient::WebSocketClient(std::string url, std::function<void()> open_callback, std::function<void(int, std::string)> close_callback, std::function<void(std::string)> message_callback, std::function<void(std::string)> error_callback)
+    WebSocketClient::WebSocketClient(const std::string& url, std::function<void()> open_callback, std::function<void(int, const std::string&)> close_callback, std::function<void(const std::string&)> message_callback, std::function<void(const std::string&)> error_callback)
         : Object{s_webSocketClass}
         , m_openCallback{std::move(open_callback)}
         , m_messageCallback{std::move(message_callback)}
