@@ -14,7 +14,7 @@ namespace UrlLib
     class WebSocket::Impl : public ImplBase
     {
     public:
-        Impl(std::string url, std::function<void()> onOpen, std::function<void()> onClose, std::function<void(std::string)> onMessage, std::function<void()> onError)
+        Impl(const std::string& url, std::function<void()> onOpen, std::function<void(int, const std::string&)> onClose, std::function<void(const std::string&)> onMessage, std::function<void(const std::string&)> onError)
         : ImplBase{url, onOpen, onClose, onMessage, onError}
         {
         }
@@ -40,13 +40,21 @@ namespace UrlLib
                     {
                         if (result.has_error())
                         {
-                            m_onError();
+                            try
+                            {
+                                std::rethrow_exception(result.error());
+                            }
+                            catch (const std::exception& ex)
+                            {
+                                m_onError(ex.what());
+                            }
                         }
                     });
             }
-            catch (winrt::hresult_error const&)
+            catch (winrt::hresult_error const& ex)
             {
-                m_onError();
+                std::string errorMessage = winrt::to_string(ex.message());
+                m_onError(errorMessage);
             }
         }
 
@@ -69,13 +77,21 @@ namespace UrlLib
                     {
                         if (result.has_error())
                         {
-                            m_onError();
+                            try
+                            {
+                                std::rethrow_exception(result.error());
+                            }
+                            catch (const std::exception& ex)
+                            {
+                                m_onError(ex.what());
+                            }
                         }
                     });
             }
-            catch (hresult_error const&)
+            catch (hresult_error const& ex)
             {
-                m_onError();
+                std::string errorMessage = winrt::to_string(ex.message());
+                m_onError(errorMessage);
             }
         }
 
@@ -89,9 +105,9 @@ namespace UrlLib
         {
             if (args.Code() != 1000)
             {
-                m_onError();
+                m_onError(winrt::to_string(args.Reason()));
             }
-            m_onClose();
+            m_onClose(args.Code(), winrt::to_string(args.Reason()));
         }
 
         void OnMessageReceived(Windows::Networking::Sockets::MessageWebSocket const& /* sender */, Windows::Networking::Sockets::MessageWebSocketMessageReceivedEventArgs const& args)
@@ -104,9 +120,10 @@ namespace UrlLib
 
                 m_onMessage(message);
             }
-            catch (winrt::hresult_error const& )
+            catch (winrt::hresult_error const& ex)
             {
-                m_onError();
+                std::string errorMessage = winrt::to_string(ex.message());
+                m_onError(errorMessage);
             }
         }
        

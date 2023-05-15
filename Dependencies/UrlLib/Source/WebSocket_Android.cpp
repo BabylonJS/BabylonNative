@@ -14,7 +14,7 @@ namespace UrlLib
     class WebSocket::Impl : public ImplBase
     {
     public:
-        Impl(std::string url, std::function<void()> onopen, std::function<void()> onclose, std::function<void(std::string)> onmessage, std::function<void()> onerror)
+        Impl(const std::string& url, std::function<void()> onopen, std::function<void(int, const std::string&)> onclose, std::function<void(const std::string&)> onmessage, std::function<void(const std::string&)> onerror)
             : ImplBase{url, onopen, onclose, onmessage, onerror}
             , m_webSocket{url, onopen, onclose, onmessage, onerror}
         {

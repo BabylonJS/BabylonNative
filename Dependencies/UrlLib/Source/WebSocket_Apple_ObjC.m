@@ -7,15 +7,15 @@
     NSString *websocketUrl;
     // store callbacks here
     void (^openCallback)();
-    void (^closeCallback)();
+    void (^closeCallback)(int, NSString *);
     void (^messageCallback)(NSString *);
-    void (^errorCallback)();
+    void (^errorCallback)(NSString *);
 }
 @end
 
 @implementation WebSocket_ObjC
 
-- (instancetype)initWithCallbacks:(NSString *)url onOpen:(void (^)(void))onOpen onClose:(void (^)(void))onClose onMessage:(void (^)(NSString *))onMessage onError:(void (^)(void))onError
+- (instancetype)initWithCallbacks:(NSString *)url onOpen:(void (^)(void))onOpen onClose:(void (^)(int, NSString *))onClose onMessage:(void (^)(NSString *))onMessage onError:(void (^)(NSString *))onError
 {
     self = [super init];
     websocketUrl = url;
@@ -37,7 +37,8 @@
 - (void) close 
 {
     [webSocketTask cancel];
-    [self invalidateAndCancel];
+    NSString *closeStr = [NSString stringWithUTF8String:"Normal close."];
+    [self invalidateAndCancelWithCloseCode:1000 reason:closeStr];
 }
 
 - (void) sendMessage:(NSString *)message
@@ -46,8 +47,9 @@
     {
         if (error) 
         {
-            errorCallback();
-        } 
+            NSString *errorMessage = [error localizedDescription];
+            errorCallback(errorMessage);
+        }
     }];
 }
 
@@ -57,7 +59,8 @@
     {
         if (error) 
         {
-            errorCallback();
+            NSString *errorMessage = [error localizedDescription];
+            errorCallback(errorMessage);
         }
         else if (message.type == NSURLSessionWebSocketMessageTypeString)
         {
@@ -78,25 +81,28 @@
 {
     if (error)
     {
-        errorCallback();
+        NSString *errorMessage = [error localizedDescription];
+        errorCallback(errorMessage);
     }
 }
 
 - (void)URLSession:(NSURLSession *)session webSocketTask:(NSURLSessionWebSocketTask *)webSocketTask didCloseWithCloseCode:(NSInteger)code reason:(NSData *)reason  API_AVAILABLE(ios(13.0))
 {
+    NSString *reasonStr = [[NSString alloc] initWithData:reason encoding:NSUTF8StringEncoding];
     if (code != 1000)
     {
-        errorCallback();
+        errorCallback(reasonStr);
     }
-    [self invalidateAndCancel];
+
+    [self invalidateAndCancelWithCloseCode:(int)code reason:reasonStr];
 }
 
-- (void)invalidateAndCancel
+- (void)invalidateAndCancelWithCloseCode:(int)code reason:(NSString *) reason
 {
     webSocketTask = nil;
     [session invalidateAndCancel];
     session = nil;
-    closeCallback();
+    closeCallback(code, reason);
 }
 
 @end

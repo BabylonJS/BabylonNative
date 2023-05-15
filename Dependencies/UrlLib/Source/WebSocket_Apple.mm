@@ -6,25 +6,27 @@ namespace UrlLib
 class API_AVAILABLE(ios(13.0)) WebSocket::Impl : public ImplBase
     {
     public:
-        Impl(std::string url, std::function<void()> onOpen, std::function<void()> onClose, std::function<void(std::string)> onMessage, std::function<void()> onError)
+        Impl(const std::string& url, std::function<void()> onOpen, std::function<void(int, const std::string&)> onClose, std::function<void(const std::string&)> onMessage, std::function<void(const std::string&)> onError)
         : ImplBase{url, onOpen, onClose, onMessage, onError}
         {
             void (^openCallback)() =  [this]()
             {
                 m_onOpen();
             };
-            void (^closeCallback)() =  [this]()
+            void (^closeCallback)(int code, NSString* reason) =  [this](int code, NSString* reason)
             {
-                m_onClose();
+                std::string cppString( [reason UTF8String] );
+                m_onClose(code, cppString);
             };
             void (^messageCallback)(NSString* messageStr) =  [this](NSString* messageStr)
             {
                 std::string cppString( [messageStr UTF8String] );
                 m_onMessage(cppString);
             };
-            void (^errorCallback)() =  [this]()
+            void (^errorCallback)(NSString* errorStr) =  [this](NSString* errorStr)
             {
-                m_onError();
+                std::string cppString( [errorStr UTF8String] );
+                m_onError(cppString);
             };
 
             webSocket = [[WebSocket_ObjC alloc] initWithCallbacks:@(url.data()) onOpen:openCallback onClose:closeCallback onMessage:messageCallback onError:errorCallback];
