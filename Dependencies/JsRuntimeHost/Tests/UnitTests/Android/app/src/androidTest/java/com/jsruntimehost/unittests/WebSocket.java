@@ -29,20 +29,20 @@ public class WebSocket extends WebSocketClient {
         // For all other close frames, we need to trigger the error callback
         if (code != CloseFrame.NORMAL && code != CloseFrame.ABNORMAL_CLOSE && code != CloseFrame.NEVER_CONNECTED)
         {
-            this.errorCallback();
+            this.errorCallback(reason);
         }
 
-        this.closeCallback();
+        this.closeCallback(code, reason);
     }
 
     @Override
     public void onError(Exception ex)
     {
-        this.errorCallback();
+        this.errorCallback(ex.getMessage());
     }
 
     public native void openCallback();
-    public native void closeCallback();
+    public native void closeCallback(int code, String reason);
     public native void messageCallback(String message);
-    public native void errorCallback();
+    public native void errorCallback(String message);
 }

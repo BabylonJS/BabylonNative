@@ -37,11 +37,11 @@ namespace Babylon::Polyfills::Internal
         , m_webSocket(
               info[0].As<Napi::String>(),
               [this] { OpenCallback(); },
-              [this] { CloseCallback(); },
-              [this](std::string message) { MessageCallback(message); },
-              [this] { ErrorCallback(); })
+              [this](int code, const std::string& reason) { CloseCallback(code, reason); },
+              [this](const std::string& message) { MessageCallback(message); },
+              [this](const std::string& message) { ErrorCallback(message); })
+        , m_url(info[0].As<Napi::String>())
     {
-        m_url = info[0].As<Napi::String>();
         m_webSocket.Open();
     }
 
@@ -182,13 +182,15 @@ namespace Babylon::Polyfills::Internal
         });
     };
 
-    void WebSocket::CloseCallback()
+    void WebSocket::CloseCallback(int code, const std::string& reason)
     {
-        m_runtimeScheduler([this]() {
+        m_runtimeScheduler([this, code, reason]() {
             m_readyState = ReadyState::Closed;
             try
             {
                 Napi::Object closeEvent = Napi::Object::New(Env());
+                closeEvent.Set("code", code);
+                closeEvent.Set("reason", reason);
                 if (!m_onclose.IsEmpty())
                 {
                     m_onclose.Call({closeEvent});
@@ -207,9 +209,9 @@ namespace Babylon::Polyfills::Internal
         });
     }
 
-    void WebSocket::MessageCallback(std::string message)
+    void WebSocket::MessageCallback(const std::string& message)
     {
-        m_runtimeScheduler([this, message = std::move(message)]() {
+        m_runtimeScheduler([this, message]() {
             try
             {
                 if (!m_onmessage.IsEmpty())
@@ -227,14 +229,15 @@ namespace Babylon::Polyfills::Internal
         });
     }
 
-    void WebSocket::ErrorCallback()
+    void WebSocket::ErrorCallback(const std::string& message)
     {
-        m_runtimeScheduler([this]() {
+        m_runtimeScheduler([this, message]() {
             try
             {
                 if (!m_onerror.IsEmpty())
                 {
                     Napi::Object errorEvent = Napi::Object::New(Env());
+                    errorEvent.Set("message", message);
                     m_onerror.Call({errorEvent});
                 }
             }
