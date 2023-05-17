@@ -386,7 +386,8 @@ const copyARM64ReleaseUWPFiles = () => {
 }
 
 const copyVCXProjUWPFiles = () => {
-  return gulp.src('../Modules/@babylonjs/react-native-windows/windows/BabylonReactNative/*.*', '!*.pfx')
+  const uwpFilesDir = '../Modules/@babylonjs/react-native-windows/windows/BabylonReactNative';
+  return gulp.src([`${uwpFilesDir}/*.*`, `!${uwpFilesDir}/*.pfx`])
     .pipe(gulp.dest('Assembled-Windows/windows/BabylonReactNative'));
 }
 
