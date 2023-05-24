@@ -1,11 +1,11 @@
-#include "AppRuntime.h"
+#include "AppRuntimeImpl.h"
 
 #include <napi/env.h>
 #include <JavaScriptCore/JavaScript.h>
 
 namespace Babylon
 {
-    void AppRuntime::RunEnvironmentTier(const char*)
+    void AppRuntimeImpl::RunEnvironmentTier(const char*)
     {
         auto globalContext = JSGlobalContextCreateInGroup(nullptr, nullptr);
         Napi::Env env = Napi::Attach(globalContext);

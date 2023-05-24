@@ -2,10 +2,10 @@ set(SOURCES
     "Include/Babylon/Dispatchable.h"
     "Include/Babylon/AppRuntime.h"
     "Source/AppRuntime.cpp"
-    "Source/AppRuntime_${NAPI_JAVASCRIPT_ENGINE}.cpp"
-    "Source/AppRuntime_${BABYLON_NATIVE_PLATFORM}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
-    "Source/WorkQueue.cpp"
-    "Source/WorkQueue.h")
+    "Source/AppRuntimeImpl.h"
+    "Source/AppRuntimeImpl.cpp"
+    "Source/AppRuntimeImpl_${NAPI_JAVASCRIPT_ENGINE}.cpp"
+    "Source/AppRuntimeImpl_${BABYLON_NATIVE_PLATFORM}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
 add_library(AppRuntime ${SOURCES})
 warnings_as_errors(AppRuntime)

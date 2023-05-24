@@ -1,5 +1,4 @@
-#include "AppRuntime.h"
-#include "WorkQueue.h"
+#include "AppRuntimeImpl.h"
 
 #include <Babylon/JsRuntime.h>
 
@@ -11,15 +10,15 @@ namespace
     class TaskRunnerAdapter : public v8runtime::JSITaskRunner
     {
     public:
-        TaskRunnerAdapter(Babylon::WorkQueue& workQueue)
-            : m_workQueue(workQueue)
+        TaskRunnerAdapter(Babylon::AppRuntimeImpl& appRuntimeImpl)
+            : m_appRuntimeImpl(appRuntimeImpl)
         {
         }
 
         void postTask(std::unique_ptr<v8runtime::JSITask> task) override
         {
             std::shared_ptr<v8runtime::JSITask> shared_task(task.release());
-            m_workQueue.Append([shared_task2 = std::move(shared_task)](Napi::Env) {
+            m_appRuntimeImpl.Dispatch([shared_task2 = std::move(shared_task)](Napi::Env) {
                 shared_task2->run();
             });
         }
@@ -28,17 +27,17 @@ namespace
         TaskRunnerAdapter(const TaskRunnerAdapter&) = delete;
         TaskRunnerAdapter& operator=(const TaskRunnerAdapter&) = delete;
 
-        Babylon::WorkQueue& m_workQueue;
+        Babylon::AppRuntimeImpl& m_appRuntimeImpl;
     };
 }
 
 namespace Babylon
 {
-    void AppRuntime::RunEnvironmentTier(const char*)
+    void AppRuntimeImpl::RunEnvironmentTier(const char*)
     {
         v8runtime::V8RuntimeArgs args{};
         args.inspectorPort = 5643;
-        args.foreground_task_runner = std::make_shared<TaskRunnerAdapter>(*m_workQueue);
+        args.foreground_task_runner = std::make_shared<TaskRunnerAdapter>(*this);
 
         const auto runtime{v8runtime::makeV8Runtime(std::move(args))};
         const auto env{Napi::Attach<facebook::jsi::Runtime&>(*runtime)};

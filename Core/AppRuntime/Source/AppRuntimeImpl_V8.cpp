@@ -1,4 +1,4 @@
-#include "AppRuntime.h"
+#include "AppRuntimeImpl.h"
 
 #include <Babylon/JsRuntime.h>
 
@@ -64,7 +64,7 @@ namespace Babylon
         std::unique_ptr<Module> Module::s_module;
     }
 
-    void AppRuntime::RunEnvironmentTier(const char* executablePath)
+    void AppRuntimeImpl::RunEnvironmentTier(const char* executablePath)
     {
         // Create the isolate.
         Module::Initialize(executablePath);
