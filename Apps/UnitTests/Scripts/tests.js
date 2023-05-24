@@ -31,11 +31,11 @@ const expect = chai.expect;
 describe("XMLHTTPRequest", function () {
     this.timeout(0);
     it("should have readyState=4 when load ends", async function () {
-        const xhr = await createRequest("GET", "https://httpbin.org/get");
+        const xhr = await createRequest("GET", "https://httpstat.us/");
         expect(xhr.readyState).to.equal(4);
     });
     it("should have status=200 for a file that exists", async function () {
-        const xhr = await createRequest("GET", "https://httpbin.org/status/200");
+        const xhr = await createRequest("GET", "https://httpstat.us/200");
         expect(xhr.status).to.equal(200);
     });
     it("should load URLs with escaped unicode characters", async function () {
@@ -51,7 +51,7 @@ describe("XMLHTTPRequest", function () {
         expect(xhr.status).to.equal(200);
     });
     it("should have status=404 for a file that does not exist", async function () {
-        const xhr = await createRequest("GET", "https://httpbin.org/status/404");
+        const xhr = await createRequest("GET", "https://httpstat.us/404");
         expect(xhr.status).to.equal(404);
     });
     it("should throw something when opening //", async function () {

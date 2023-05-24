@@ -43,7 +43,7 @@ jobs:
       - script: |
           mkdir build${{ variables.solutionName }}
           cd build${{ variables.solutionName }}
-          cmake -G "Visual Studio 16 2019" -A ${{ parameters.platform }} ${{ variables.jsEngineDefine }} -DBGFX_CONFIG_DEBUG=ON -DGRAPHICS_API=${{ parameters.graphics_api }} -DCMAKE_UNITY_BUILD=${UNITY_BUILD} ..
+          cmake -A ${{ parameters.platform }} ${{ variables.jsEngineDefine }} -DBGFX_CONFIG_DEBUG=ON -DGRAPHICS_API=${{ parameters.graphics_api }} -DCMAKE_UNITY_BUILD=${UNITY_BUILD} ..
         displayName: 'Generate ${{ variables.solutionName }} solution'
     
       - task: MSBuild@1

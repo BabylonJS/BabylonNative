@@ -75,9 +75,14 @@ android {
 
     externalNativeBuild {
         cmake {
-            version '3.19.6'
+            version '3.19.6+'
             path 'CMakeLists.txt'
         }
+    }
+
+    packagingOptions {
+        pickFirst 'lib/*/libv8android.so'
+        pickFirst 'lib/*/libjsc.so'
     }
 }
 
