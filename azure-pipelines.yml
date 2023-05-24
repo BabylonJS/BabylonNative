@@ -6,7 +6,7 @@ pr:
 
 variables:
 - name: CMAKE_VERSION
-  value: 3.19.6
+  value: 3.26.3
 - name: NDK_VERSION
   value: 21.4.7075529
 - name: UNITY_BUILD
@@ -38,20 +38,20 @@ jobs:
   - template: .github/jobs/win32.yml
     parameters:
       name: Win32_x64_D3D11
-      vmImage: 'windows-2019'
+      vmImage: 'windows-latest'
       platform: x64
 
   - template: .github/jobs/win32.yml
     parameters:
       name: Win32_x64_JSI_D3D11
-      vmImage: 'windows-2019'
+      vmImage: 'windows-latest'
       platform: x64
       napiType: jsi
 
   - template: .github/jobs/win32.yml
     parameters:
       name: Win32_x64_D3D12
-      vmImage: 'windows-2019'
+      vmImage: 'windows-latest'
       platform: x64
       graphics_api: D3D12
 
@@ -59,19 +59,19 @@ jobs:
   - template: .github/jobs/uwp.yml
     parameters:
       name: UWP_x64
-      vmImage: 'windows-2019'
+      vmImage: 'windows-latest'
       platform: x64
 
   - template: .github/jobs/uwp.yml
     parameters:
       name: UWP_arm64
-      vmImage: 'windows-2019'
+      vmImage: 'windows-latest'
       platform: arm64
 
   - template: .github/jobs/uwp.yml
     parameters:
       name: UWP_arm64_JSI
-      vmImage: 'windows-2019'
+      vmImage: 'windows-latest'
       platform: arm64
       napiType: jsi
 
