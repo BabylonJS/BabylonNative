@@ -79,6 +79,11 @@ android {
             path 'CMakeLists.txt'
         }
     }
+
+    packagingOptions {
+        pickFirst 'lib/*/libv8android.so'
+        pickFirst 'lib/*/libjsc.so'
+    }
 }
 
 dependencies {
