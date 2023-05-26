@@ -245,7 +245,6 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     });
 
     Babylon::ScriptLoader loader{*m_runtime};
-    loader.Eval("document = {}", "");
     loader.LoadScript("app:///Scripts/babylon.max.js");
     loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
     loader.LoadScript("app:///Scripts/babylon.glTF2FileLoader.js");

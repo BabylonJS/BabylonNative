@@ -101,7 +101,6 @@ namespace
         });
 
         Babylon::ScriptLoader loader{*runtime};
-        loader.Eval("document = {}", "");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.loaders.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");

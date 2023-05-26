@@ -104,7 +104,6 @@ namespace
 
 
         Babylon::ScriptLoader loader{*runtime};
-        loader.Eval("document = {}", "");
         loader.LoadScript(moduleRootUrl + "/Scripts/ammo.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/recast.js");
         loader.LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");

@@ -407,7 +407,6 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     });
 
     Babylon::ScriptLoader loader{*m_runtime};
-    loader.Eval("document = {}", "");
     loader.LoadScript("app:///Scripts/ammo.js");
     // Commenting out recast.js for now as v8jsi is incompatible with asm.js.
     // loader.LoadScript("app:///Scripts/recast.js");

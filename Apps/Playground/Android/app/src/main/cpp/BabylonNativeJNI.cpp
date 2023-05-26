@@ -135,7 +135,6 @@ extern "C"
             });
 
             scriptLoader.emplace(*runtime);
-            scriptLoader->Eval("document = {}", "");
             scriptLoader->LoadScript("app:///Scripts/ammo.js");
             scriptLoader->LoadScript("app:///Scripts/recast.js");
             scriptLoader->LoadScript("app:///Scripts/babylon.max.js");
