@@ -67,9 +67,9 @@ jobs:
         displayName: 'Validation Tests'
     
       - script: |
-          cmake --install build${{ variables.solutionName }}
+          cmake --build build${{ variables.solutionName }} --target INSTALL --config RelWithDebInfo
           cd Install/Test
-          cmake . -DINSTALL_DIR=../../build${{ variables.solutionName }}/install && cmake --build .
+          cmake . -DINSTALL_DIR=../../build${{ variables.solutionName }}/install && cmake --build . --config RelWithDebInfo
         displayName: 'Install'
 
       - task: PublishBuildArtifacts@1
