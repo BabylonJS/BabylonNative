@@ -66,6 +66,12 @@ jobs:
           ValidationTests
         displayName: 'Validation Tests'
     
+      - script: |
+          cmake --install build${{ variables.solutionName }}
+          cd Install/Test
+          cmake . -DINSTALL_DIR=../../build${{ variables.solutionName }}/install && cmake --build .
+        displayName: 'Install'
+
       - task: PublishBuildArtifacts@1
         inputs:
           artifactName: '${{ variables.solutionName }} - ${{ parameters.graphics_api }} Rendered Pictures'
