@@ -19,8 +19,18 @@ add_executable(TestInstall TestInstall.cpp)
 target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
 target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_NODE_SPECIFIC)
 
-target_include_directories(TestInstall PRIVATE "${INSTALL_DIR}/include")
-target_link_directories(TestInstall PRIVATE "${INSTALL_DIR}/lib")
+target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")
+target_link_directories(TestInstall PRIVATE "${BINARY_DIR}/install/lib")
+
+# Nuget/JSI
+# TODO: more it to generic cmake
+set(NUGET_PATH "${BINARY_DIR}/NuGet")
+set(V8JSI_VERSION "0.64.33")
+set(CPU_ARCH "x64")
+set(PLATFORM_FOLDER "win32")
+set(V8JSI_PACKAGE_PATH "${NUGET_PATH}/packages/ReactNative.V8Jsi.Windows.${V8JSI_VERSION}")
+set(V8JSI_LIB_PATH_RELEASE "${V8JSI_PACKAGE_PATH}/lib/${PLATFORM_FOLDER}/Release/${CPU_ARCH}/v8jsi.dll.lib")
+target_link_directories(TestInstall PRIVATE "${V8JSI_LIB_PATH_RELEASE}")
 
 target_link_libraries(TestInstall PRIVATE 
     AppRuntime
@@ -70,4 +80,5 @@ target_link_libraries(TestInstall PRIVATE
     d3d12
     d3dcompiler
     Pathcch
+    v8jsi.dll
     )
