@@ -36,12 +36,12 @@ target_link_libraries(TestInstall PRIVATE
     etc1
     etc2
     ExternalTexture
-    GenericCodeGend
-    glslangd
+    GenericCodeGen
+    glslang
     Graphics
     iqa
     JsRuntime
-    MachineIndependentd
+    MachineIndependent
     napi
     NativeCamera
     NativeCapture
@@ -51,15 +51,15 @@ target_link_libraries(TestInstall PRIVATE
     NativeTracing
 #    NativeXr
     nvtt
-    OGLCompilerd
-    openxr_loaderd
-    OSDependentd
+    OGLCompiler
+    openxr_loader
+    OSDependent
     pvrtc
     ScriptLoader
-    spirv-cross-cored
-    spirv-cross-glsld
-    spirv-cross-hlsld
-    SPIRVd
+    spirv-cross-core
+    spirv-cross-glsl
+    spirv-cross-hlsl
+    SPIRV
     squish
     tinyexr
     UrlLib
