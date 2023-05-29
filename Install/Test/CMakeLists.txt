@@ -33,7 +33,7 @@ set(V8JSI_LIB_PATH_RELEASE "${V8JSI_PACKAGE_PATH}/lib/${PLATFORM_FOLDER}/Release
 target_link_directories(TestInstall PRIVATE "${V8JSI_LIB_PATH_RELEASE}")
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
-    set(EXTRA_LIBS "v8jsi.dll")
+    set(EXTRA_LIBS "v8jsi.dll.lib")
 endif()
 
 target_link_libraries(TestInstall PRIVATE 
