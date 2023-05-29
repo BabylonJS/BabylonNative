@@ -69,7 +69,7 @@ jobs:
       - script: |
           cmake --build build${{ variables.solutionName }} --target INSTALL --config RelWithDebInfo
           cd Install/Test
-          cmake . -DBINARY_DIR=../../build${{ variables.solutionName }} && cmake --build . --config RelWithDebInfo
+          cmake . -DBINARY_DIR=../../build${{ variables.solutionName }} ${{ variables.jsEngineDefine }} && cmake --build . --config RelWithDebInfo
         displayName: 'Install'
 
       - task: PublishBuildArtifacts@1
