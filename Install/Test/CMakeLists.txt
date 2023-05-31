@@ -13,14 +13,26 @@ if (MSVC)
     add_compile_options(/Zc:__cplusplus)
 endif()
 
+function(check_files_exist FILE_LIST)
+    foreach(FILE ${${FILE_LIST}})
+        if(NOT EXISTS "${INSTALL_LIBS_DIR}/${FILE}.lib")
+            message(FATAL_ERROR "File '${FILE}' does not exist.")
+        else()
+            message(STATUS "File '${FILE}' exists.")
+        endif()
+    endforeach()
+endfunction()
+
+# executable stub
 add_executable(TestInstall TestInstall.cpp)
 
 # for napi
 target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
 target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_NODE_SPECIFIC)
 
+set(INSTALL_LIBS_DIR "${BINARY_DIR}/install/lib")
 target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")
-target_link_directories(TestInstall PRIVATE "${BINARY_DIR}/install/lib")
+target_link_directories(TestInstall PRIVATE ${INSTALL_LIBS_DIR})
 
 # Nuget/JSI
 # TODO: more it to generic cmake
@@ -36,8 +48,7 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     set(EXTRA_LIBS "v8jsi.dll.lib")
 endif()
 
-target_link_libraries(TestInstall PRIVATE 
-    AppRuntime
+set(STD_LIBS AppRuntime
     arcana
     astc-encoder
     bgfx
@@ -79,10 +90,16 @@ target_link_libraries(TestInstall PRIVATE
     UrlLib
     Window
     XMLHttpRequest
+    )
+
+check_files_exist(STD_LIBS)
+
+target_link_libraries(TestInstall PRIVATE 
+    ${STD_LIBS}
+    ${EXTRA_LIBS}
     chakrart
     d3d11
     d3d12
     d3dcompiler
     Pathcch
-    ${EXTRA_LIBS}
     )
