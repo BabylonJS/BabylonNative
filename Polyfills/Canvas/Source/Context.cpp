@@ -290,8 +290,8 @@ namespace Babylon::Polyfills::Internal
         m_isClipped = true;
 
         //By default m_rectangleClipping is not set, in this case we use the default render target width and height.
-        auto w = m_rectangleClipping.height != 0 ? m_rectangleClipping.height : m_canvas->GetFrameBuffer().Width();
-        auto h = m_rectangleClipping.width != 0 ? m_rectangleClipping.width : m_canvas->GetFrameBuffer().Height();
+        auto w = m_rectangleClipping.width != 0 ? m_rectangleClipping.width : m_canvas->GetFrameBuffer().Width();
+        auto h = m_rectangleClipping.height != 0 ? m_rectangleClipping.height : m_canvas->GetFrameBuffer().Height();
 
         // expand clipping 1pix in each direction because nanovg AA gets cut a bit short.
         nvgScissor(m_nvg, m_rectangleClipping.left - 1, m_rectangleClipping.top - 1, w + 1, h + 1);
