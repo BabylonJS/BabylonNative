@@ -32,9 +32,9 @@ jobs:
       run: msbuild buildWin32_x64/BabylonNative.sln -p:Configuration="RelWithDebInfo" -p:Platform=x64 
     - name: Run Validation Tests
       run: |
-          ValidationTests.exe
+          Playground.exe app:///Scripts/validation_native.js
       shell: cmd
-      working-directory: buildWin32_x64/Apps/ValidationTests/RelWithDebInfo
+      working-directory: buildWin32_x64/Apps/Playground/RelWithDebInfo
     - name: Upload Errors images artifact
       uses: actions/upload-artifact@v2
       if: failure()

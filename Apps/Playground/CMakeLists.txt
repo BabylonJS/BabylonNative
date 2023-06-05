@@ -1,3 +1,5 @@
+FILE(GLOB REFERENCE_IMAGES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "ReferenceImages/*")
+
 set(BABYLON_SCRIPTS
     "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
     "../node_modules/babylonjs-loaders/babylonjs.loaders.js.map"
@@ -15,7 +17,9 @@ set(DEPENDENCIES
 
 set(SCRIPTS
     "Scripts/experience.js"
-    "Scripts/playground_runner.js")
+    "Scripts/playground_runner.js"
+    "Scripts/validation_native.js"
+    "Scripts/config.json")
 
 if(APPLE)
     find_library(JSCORE_LIBRARY JavaScriptCore)
@@ -90,9 +94,9 @@ endif()
 
 if(WIN32)
     set(WIN32_EXECUTABLE TRUE)
-    add_executable(Playground WIN32 ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+    add_executable(Playground WIN32 ${REFERENCE_IMAGES} ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 else()
-    add_executable(Playground ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+    add_executable(Playground ${REFERENCE_IMAGES} ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 endif()
 
 warnings_as_errors(Playground)
@@ -119,6 +123,7 @@ target_link_to_dependencies(Playground
     PRIVATE ScriptLoader
     PRIVATE Window
     PRIVATE XMLHttpRequest
+    PRIVATE TestUtils
     ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 
