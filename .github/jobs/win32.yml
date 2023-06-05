@@ -62,6 +62,8 @@ jobs:
     
       - script: |
           cd build${{ variables.solutionName }}\Apps\Playground
+          mkdir Errors
+          mkdir Results
           cd RelWithDebInfo
           Playground app:///Scripts/validation_native.js 
         displayName: 'Validation Tests'
