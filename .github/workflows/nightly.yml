@@ -41,10 +41,10 @@ jobs:
       with:
           name: ErrorImages
           path: |
-            buildWin32_x64/Apps/ValidationTests/Errors
+            buildWin32_x64/Apps/Playground/Errors
     - name: Upload Result images artifact
       uses: actions/upload-artifact@v2
       with:
           name: ResultImages
           path: |
-            buildWin32_x64/Apps/ValidationTests/Results
+            buildWin32_x64/Apps/Playground/Results
