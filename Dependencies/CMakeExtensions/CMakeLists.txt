@@ -153,3 +153,21 @@ function (download_nuget)
     execute_process(COMMAND ${NUGET_EXE} restore WORKING_DIRECTORY ${NUGET_PATH})
     execute_process(COMMAND ${NUGET_EXE} install WORKING_DIRECTORY ${NUGET_PATH})
 endfunction()
+
+# NPM Command
+
+function(NPM operation)
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
+        set(NPM_COMMAND "npm.cmd")
+    else()
+        set(NPM_COMMAND "npm")
+    endif()
+
+    execute_process(COMMAND ${NPM_COMMAND} ${operation} --silent --no-package-lock WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR} RESULT_VARIABLE NPM_RESULT)
+    if(NPM_RESULT EQUAL 0)
+        message(STATUS "Installing ${name}-android module - done")
+    else()
+        message(FATAL_ERROR "npm command failed: ${NPM_RESULT}")
+    endif()
+endfunction()
+
