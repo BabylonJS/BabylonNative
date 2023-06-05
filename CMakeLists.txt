@@ -6,7 +6,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 include(FetchContent)
 FetchContent_Declare(cmake-extensions
         GIT_REPOSITORY https://github.com/CedricGuillemet/CMakeExtensions.git
-        GIT_TAG f2f345bb30833711b1c817eb1d6b846e739173a7)
+        GIT_TAG 44ba11b4cb62661c3f1823a0c25ea6c79df7f610)
 set(cmake-extensions_SOURCE_DIR "${CMAKE_SOURCE_DIR}/Dependencies/CMakeExtensions")
 FetchContent_MakeAvailable(cmake-extensions)
 add_subdirectory(${cmake-extensions_SOURCE_DIR})
