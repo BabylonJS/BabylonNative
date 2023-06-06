@@ -1,6 +1,3 @@
-# -------------------------------- CMakeExtensions --------------------------------
-add_subdirectory(CMakeExtensions)
-
 # -------------------------------- arcana --------------------------------
 # Dependencies: GSL
 add_subdirectory(arcana.cpp)
