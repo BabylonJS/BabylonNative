@@ -11,6 +11,21 @@ set(cmake-extensions_SOURCE_DIR "${CMAKE_SOURCE_DIR}/Dependencies/CMakeExtension
 FetchContent_MakeAvailable(cmake-extensions)
 add_subdirectory(${cmake-extensions_SOURCE_DIR})
 
+# JSRuntime Host
+FetchContent_Declare(jsruntimehost
+        GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
+        GIT_TAG 305bad0a8bcc0404e296f4b5e748e78e307a8b71)
+set(jsruntimehost_SOURCE_DIR "${CMAKE_SOURCE_DIR}/Dependencies/JsRuntimeHost")
+FetchContent_MakeAvailable(jsruntimehost)
+add_subdirectory(${jsruntimehost_SOURCE_DIR})
+
+
+message ("********")
+message(${cmake-extensions_SOURCE_DIR})
+message("${CMAKE_SOURCE_DIR}/Dependencies/CMakeExtensions")
+message(${Jjsruntimehost_SOURCE_DIR})
+message("${CMAKE_SOURCE_DIR}/Dependencies/JsRuntimeHost")
+
 project(BabylonNative)
 
 # --------------------------------------------------
