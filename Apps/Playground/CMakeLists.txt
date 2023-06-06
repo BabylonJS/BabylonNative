@@ -1,3 +1,5 @@
+FILE(GLOB REFERENCE_IMAGES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "ReferenceImages/*")
+
 set(BABYLON_SCRIPTS
     "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
     "../node_modules/babylonjs-loaders/babylonjs.loaders.js.map"
@@ -15,7 +17,9 @@ set(DEPENDENCIES
 
 set(SCRIPTS
     "Scripts/experience.js"
-    "Scripts/playground_runner.js")
+    "Scripts/playground_runner.js"
+    "Scripts/validation_native.js"
+    "Scripts/config.json")
 
 if(APPLE)
     find_library(JSCORE_LIBRARY JavaScriptCore)
@@ -34,6 +38,7 @@ if(APPLE)
             "iOS/LibNativeBridge.h"
             "iOS/LibNativeBridge.mm")
         set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
+        set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "ReferenceImages")
     else()
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
@@ -46,6 +51,7 @@ if(APPLE)
             "macOS/ViewController.mm"
             "macOS/ViewController.h")
         set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/Scripts")
+        set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/ReferenceImages")
     endif()
     set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES}
         PRIVATE ${JSCORE_LIBRARY}
@@ -90,9 +96,9 @@ endif()
 
 if(WIN32)
     set(WIN32_EXECUTABLE TRUE)
-    add_executable(Playground WIN32 ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+    add_executable(Playground WIN32 ${REFERENCE_IMAGES} ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 else()
-    add_executable(Playground ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+    add_executable(Playground ${REFERENCE_IMAGES} ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
 endif()
 
 warnings_as_errors(Playground)
@@ -119,6 +125,7 @@ target_link_to_dependencies(Playground
     PRIVATE ScriptLoader
     PRIVATE Window
     PRIVATE XMLHttpRequest
+    PRIVATE TestUtils
     ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 
@@ -174,6 +181,7 @@ endif()
 if(WINDOWS_STORE)
     set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
     set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
+        set_property(SOURCE ${REFERENCE_IMAGES} PROPERTY VS_DEPLOYMENT_LOCATION "ReferenceImages")
 else()
     foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES})
         get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
@@ -182,6 +190,14 @@ else()
             COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
             COMMENT "Copying ${SCRIPT_NAME}"
             MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}")
+    endforeach()
+    foreach(IMAGE ${REFERENCE_IMAGES})
+        get_filename_component(IMAGE_NAME "${IMAGE}" NAME)
+        add_custom_command(
+            OUTPUT "${CMAKE_CFG_INTDIR}/ReferenceImages/${IMAGE_NAME}"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${IMAGE}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/ReferenceImages/${IMAGE_NAME}"
+            COMMENT "Copying ${IMAGE_NAME}"
+            MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${IMAGE}")
     endforeach()
 endif()
 

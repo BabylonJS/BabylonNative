@@ -31,9 +31,9 @@ In order to add a new test scene, first thing to do is to add a few lines in `Ap
 # Generate Reference Images
 
 Your test list is updated and your playground is ready to test. it's now time to generate a reference image.
-open `Apps\ValidationTests\Scripts\validation_native.js` and change `var generateReferences = false;` to true.
-Run ValidationTest program, all reference images will be generated in `Apps/ValidationTests/Results` subfolder of your build directory.
-Copy the reference image for your test from that folder to `Apps/ValidationTests/ReferenceImages` and add it with Git.
+open `Apps\Playground\Scripts\validation_native.js` and change `var generateReferences = false;` to true.
+Run ValidationTest program, all reference images will be generated in `Apps/Playground/Results` subfolder of your build directory.
+Copy the reference image for your test from that folder to `Apps/Playground/ReferenceImages` and add it with Git.
 
 # Test new reference
 

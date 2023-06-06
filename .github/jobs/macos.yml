@@ -41,15 +41,6 @@ jobs:
     - task: Xcode@5
       inputs:
         xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
-        scheme: 'ValidationTests'
-        sdk: 'macosx'
-        useXcpretty: false
-        configuration: RelWithDebInfo
-      displayName: 'Build ValidationTests macOS'
-
-    - task: Xcode@5
-      inputs:
-        xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
         scheme: 'UnitTests'
         sdk: 'macosx'
         useXcpretty: false

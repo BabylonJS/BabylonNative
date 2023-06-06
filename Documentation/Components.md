@@ -249,11 +249,3 @@ The longer-term vision for the Babylon Native Playground app is much more
 sophisticated and beyond the scope of this overview. For more information,
 please read the 
 [dedicated documentation page for the Playground app](Playground.md).
-
-### ValidationTests
-
-The ValidationTests app is exactly what its name implies: it is a mechanism
-for easily running validation tests to ensure Babylon Native continues to 
-run and render correctly under expected circumstances. The ValidationTests
-are designed to be run by the Babylon Native team as part of common 
-workflows and CI and are not intended to be highly customizable.
