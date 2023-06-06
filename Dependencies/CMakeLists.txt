@@ -133,12 +133,6 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEXR AND (WIN32 OR ANDROID OR IOS))
     endif()
 endif()
 
-# -------------------------------- AndroidExtensions --------------------------------
-# Dependencies: none
-if(ANDROID)
-    add_subdirectory(AndroidExtensions)
-endif()
-
 # --------------------------- WindowsAppSDK ---------------------------
 # Dependencies: none
 if(WINDOWS_STORE)
