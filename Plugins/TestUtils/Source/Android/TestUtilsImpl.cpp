@@ -16,7 +16,7 @@ namespace Babylon::Plugins::Internal
 
     Napi::Value TestUtils::GetOutputDirectory(const Napi::CallbackInfo& info)
     {
-        auto path = "/data/data/com.android.babylonnative.validationtests/cache";
+        auto path = "/data/data/com.android.babylonnative.playground/cache";
         return Napi::Value::From(info.Env(), path);
     }
 }
