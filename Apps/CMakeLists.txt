@@ -3,7 +3,7 @@ if(NOT ANDROID)
 endif()
 
 if((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID))
-    add_subdirectory(JSUnitTests)
+    add_subdirectory(UnitTests)
 endif()
 
 # NPM install

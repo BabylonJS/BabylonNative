@@ -27,9 +27,9 @@ elseif(WIN32)
     set(TEST_APP "Win32/App.cpp")
 endif()
 
-add_executable(JSUnitTests ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_APP} ${HEADERS})
+add_executable(UnitTests ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_APP} ${HEADERS})
 
-target_link_to_dependencies(JSUnitTests
+target_link_to_dependencies(UnitTests
     PRIVATE AppRuntime
     PRIVATE Canvas
     PRIVATE Console
@@ -41,7 +41,7 @@ target_link_to_dependencies(JSUnitTests
     PRIVATE XMLHttpRequest
     ${ADDITIONAL_LIBRARIES})
 
-add_test(NAME JSUnitTests COMMAND JSUnitTests)
+add_test(NAME UnitTests COMMAND UnitTests)
 
 foreach(SCRIPT ${LOCAL_SCRIPTS} ${NPM_SCRIPTS})
     get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
@@ -52,6 +52,6 @@ foreach(SCRIPT ${LOCAL_SCRIPTS} ${NPM_SCRIPTS})
         MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}")
 endforeach()
 
-set_property(TARGET JSUnitTests PROPERTY FOLDER Apps)
+set_property(TARGET UnitTests PROPERTY FOLDER Apps)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${LOCAL_SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${NPM_SCRIPTS})
