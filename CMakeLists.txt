@@ -13,6 +13,7 @@ FetchContent_MakeAvailable(cmake-extensions)
 FetchContent_Declare(jsruntimehost
         GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
         GIT_TAG 305bad0a8bcc0404e296f4b5e748e78e307a8b71)
+set(JSRUNTIMEHOST_TESTS OFF)
 FetchContent_MakeAvailable(jsruntimehost)
 
 project(BabylonNative)
