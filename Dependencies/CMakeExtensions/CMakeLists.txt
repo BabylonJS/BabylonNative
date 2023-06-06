@@ -155,7 +155,7 @@ function (download_nuget)
 endfunction()
 
 # NPM Command
-function(NPM operation)
+function(npm operation)
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
         set(NPM_COMMAND "npm.cmd")
     else()
