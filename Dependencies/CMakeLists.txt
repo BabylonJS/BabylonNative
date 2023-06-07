@@ -1,7 +1,3 @@
-# -------------------------------- GSL -----------------------------------
-# Dependencies: none
-add_subdirectory("${arcana_SOURCE_DIR}/Source/Submodules/GSL")
-
 # -------------------------------- base-n --------------------------------
 # Dependencies: none
 add_library(base-n INTERFACE)
