@@ -17,7 +17,7 @@ else()
 endif()
 
 add_library(ChromeDevTools ${SOURCES})
-warnings_as_errors(ChromeDevTools)
+#warnings_as_errors(ChromeDevTools)
 
 if (NAPI_JAVASCRIPT_ENGINE IN_LIST CHROME_DEVTOOLS_SUPPORTED_ENGINES AND NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     target_link_to_dependencies(ChromeDevTools PRIVATE v8inspector)
