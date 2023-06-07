@@ -163,7 +163,7 @@ function(npm operation working_directory module_name)
     endif()
 
     message("Installing ${module_name} module")
-    execute_process(COMMAND ${NPM_COMMAND} ${operation} --no-package-lock --silent WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} RESULT_VARIABLE NPM_RESULT)
+    execute_process(COMMAND ${NPM_COMMAND} ${operation} --no-package-lock --silent WORKING_DIRECTORY ${working_directory} RESULT_VARIABLE NPM_RESULT)
     if(NOT ${NPM_RESULT} EQUAL 0)
         message(FATAL_ERROR "npm command failed: ${NPM_RESULT}")
     else()
