@@ -1,6 +1,6 @@
 # -------------------------------- GSL -----------------------------------
 # Dependencies: none
-#add_subdirectory(arcana.cpp/Source/Submodules/GSL)
+add_subdirectory("${arcana_SOURCE_DIR}/Source/Submodules/GSL")
 
 # -------------------------------- base-n --------------------------------
 # Dependencies: none
