@@ -5,7 +5,7 @@
 
 var engine = new BABYLON.NativeEngine();
 
-// See https://playground.babylonjs.com/#1LK70I#30
+// See https://playground.babylonjs.com/#1LK70I#32
 //
 var createScene = function () {
     const scene = new BABYLON.Scene(engine);
@@ -76,7 +76,7 @@ var createScene = function () {
         engine.clear(camera.clearColor, true, false, false);
     });
     scene.onAfterCameraRenderObservable.add(camera => {
-        engine.scissorClear();
+        engine.disableScissor();
     });
 
   return scene;

@@ -59,6 +59,8 @@ namespace Babylon::Graphics
 
         ViewPort m_bgfxViewPort;
         ViewPort m_desiredViewPort;
+        ViewPort m_desiredScissor{0.0, 0.0, 0.0, 0.0};
+
 
         bool m_disposed{false};
 

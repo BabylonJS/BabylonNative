@@ -74,13 +74,22 @@ namespace Babylon::Graphics
         SetBgfxViewPort(encoder, m_desiredViewPort);
     }
 
-    void FrameBuffer::SetScissor(bgfx::Encoder& encoder, float x, float y, float width, float height)
+    void FrameBuffer::SetScissor(bgfx::Encoder& /*encoder*/, float x, float y, float width, float height)
     {
-        encoder.setScissor(
-            static_cast<uint16_t>(x),
-            static_cast<uint16_t>(y),
-            static_cast<uint16_t>(width),
-            static_cast<uint16_t>(height));
+        m_desiredScissor = {x, y, width, height};
+
+        //m_viewId = m_context.AcquireNewViewId(encoder);
+
+        //bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
+        //bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
+
+        //bgfx::setViewScissor(
+        //    m_viewId.value(),
+        //    static_cast<uint16_t>(x),
+        //    static_cast<uint16_t>(y),
+        //    static_cast<uint16_t>(width),
+        //    static_cast<uint16_t>(height));
+        //encoder.touch(m_viewId.value());
     }
 
     void FrameBuffer::Submit(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint8_t flags)
@@ -128,6 +137,11 @@ namespace Babylon::Graphics
         m_bgfxViewPort = viewPort;
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
+        bgfx::setViewScissor(m_viewId.value(),
+            static_cast<uint16_t>(m_desiredScissor.X),
+            static_cast<uint16_t>(m_desiredScissor.Y),
+            static_cast<uint16_t>(m_desiredScissor.Width),
+            static_cast<uint16_t>(m_desiredScissor.Height));
         bgfx::setViewClear(m_viewId.value(), BGFX_CLEAR_NONE, 0, 1.0f, 0);
         bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
         bgfx::setViewRect(m_viewId.value(),
