@@ -442,9 +442,7 @@ namespace Babylon
                 StaticValue("COMMAND_CLEAR", Napi::FunctionPointer::Create(env, &NativeEngine::Clear)),
                 StaticValue("COMMAND_SETSTENCIL", Napi::FunctionPointer::Create(env, &NativeEngine::SetStencil)),
                 StaticValue("COMMAND_SETVIEWPORT", Napi::FunctionPointer::Create(env, &NativeEngine::SetViewPort)),
-                StaticValue("COMMAND_ENABLESCISSOR", Napi::FunctionPointer::Create(env, &NativeEngine::EnableScissor)),
-                StaticValue("COMMAND_DISABLESCISSOR", Napi::FunctionPointer::Create(env, &NativeEngine::DisableScissor)),
-                StaticValue("COMMAND_SCISSORCLEAR", Napi::FunctionPointer::Create(env, &NativeEngine::ScissorClear)),
+                StaticValue("COMMAND_SETSCISSOR", Napi::FunctionPointer::Create(env, &NativeEngine::SetScissor)),
 
                 InstanceMethod("dispose", &NativeEngine::Dispose),
 
@@ -480,10 +478,6 @@ namespace Babylon
 
                 InstanceMethod("createImageBitmap", &NativeEngine::CreateImageBitmap),
                 InstanceMethod("resizeImageBitmap", &NativeEngine::ResizeImageBitmap),
-
-                InstanceMethod("enableScissor", &NativeEngine::EnableScissor),
-                InstanceMethod("disableScissor", &NativeEngine::DisableScissor),
-                InstanceMethod("scissorClear", &NativeEngine::ScissorClear),
 
                 InstanceMethod("createFrameBuffer", &NativeEngine::CreateFrameBuffer),
 
@@ -1844,27 +1838,16 @@ namespace Babylon
         GetBoundFrameBuffer(*encoder).SetViewPort(*encoder, x, yOrigin, width, height);
     }
 
-    void NativeEngine::EnableScissor(const Napi::CallbackInfo& info)
+    void NativeEngine::SetScissor(NativeDataStream::Reader& data)
     {
         bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
 
-        const auto x = info[0].As<Napi::Number>();
-        const auto y = info[1].As<Napi::Number>();
-        const auto width = info[2].As<Napi::Number>();
-        const auto height = info[3].As<Napi::Number>();
+        const float x{data.ReadFloat32()};
+        const float y{data.ReadFloat32()};
+        const float width{data.ReadFloat32()};
+        const float height{data.ReadFloat32()};
 
         GetBoundFrameBuffer(*encoder).SetScissor(*encoder, x, y, width, height);
-    }
-
-    void NativeEngine::DisableScissor(const Napi::CallbackInfo& info)
-    {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-        GetBoundFrameBuffer(*encoder).SetScissor(*encoder, 0, 0, 0, 0);
-    }
-
-    void NativeEngine::ScissorClear(const Napi::CallbackInfo& info)
-    {
-        DisableScissor(data);
     }
 
     void NativeEngine::SetCommandDataStream(const Napi::CallbackInfo& info)
