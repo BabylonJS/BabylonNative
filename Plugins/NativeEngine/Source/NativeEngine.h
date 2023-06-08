@@ -201,6 +201,9 @@ namespace Babylon
         void GetFrameBufferData(const Napi::CallbackInfo& info);
         void SetStencil(NativeDataStream::Reader& data);
         void SetViewPort(NativeDataStream::Reader& data);
+        void EnableScissor(const Napi::CallbackInfo& info);
+        void DisableScissor(const Napi::CallbackInfo& info);
+        void ScissorClear(const Napi::CallbackInfo& info);
         void SetCommandDataStream(const Napi::CallbackInfo& info);
         void SubmitCommands(const Napi::CallbackInfo& info);
         void DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode);

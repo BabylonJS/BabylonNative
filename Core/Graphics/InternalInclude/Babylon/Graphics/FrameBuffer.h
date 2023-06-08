@@ -34,6 +34,7 @@ namespace Babylon::Graphics
         void Bind(bgfx::Encoder& encoder);
         void Unbind(bgfx::Encoder& encoder);
 
+        void SetScissor(bgfx::Encoder& encoder, float x, float y, float width, float height);
         void Clear(bgfx::Encoder& encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil);
         void SetViewPort(bgfx::Encoder& encoder, float x, float y, float width, float height);
         void Submit(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint8_t flags);

@@ -51,6 +51,15 @@ namespace Babylon::Graphics
     {
     }
 
+    void FrameBuffer::SetScissor(bgfx::Encoder& encoder, float x, float y, float width, float height)
+    {
+        encoder.setScissor(
+            static_cast<uint16_t>(x),
+            static_cast<uint16_t>(y),
+            static_cast<uint16_t>(width),
+            static_cast<uint16_t>(height));
+    }
+
     void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)
     {
         // BGFX requires us to create a new viewID, this will ensure that the view gets cleaned.
