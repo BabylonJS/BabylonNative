@@ -52,7 +52,11 @@ target_link_libraries(UnitTests
     PRIVATE WebSocket
     ${ADDITIONAL_LIBRARIES})
 
-add_test(NAME UnitTests COMMAND UnitTests)
+
+# See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
+# If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.
+add_custom_command(TARGET UnitTests POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:UnitTests>>,copy,true> $<TARGET_RUNTIME_DLLS:UnitTests> $<TARGET_FILE_DIR:UnitTests>)
 
 if(IOS)
     set_target_properties(UnitTests PROPERTIES

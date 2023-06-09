@@ -1,8 +1,8 @@
-#include <napi/env_javascriptcore.h>
+#include <napi/env.h>
 #include <napi/js_native_api_types.h>
 #include "js_native_api_javascriptcore.h"
 
-namespace Napi::JavaScriptCore
+namespace Napi
 {
     Napi::Env Attach(JSGlobalContextRef context)
     {

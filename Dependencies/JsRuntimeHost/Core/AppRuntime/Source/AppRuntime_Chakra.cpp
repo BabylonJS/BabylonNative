@@ -1,5 +1,5 @@
 #include "AppRuntime.h"
-#include <napi/env_chakra.h>
+#include <napi/env.h>
 
 #define USE_EDGEMODE_JSRT
 #include <jsrt.h>
@@ -59,7 +59,7 @@ namespace Babylon
         }
 #endif
 
-        Napi::Env env = Napi::Chakra::Attach();
+        Napi::Env env = Napi::Attach();
 
         Run(env);
 
@@ -67,6 +67,6 @@ namespace Babylon
         ThrowIfFailed(JsDisposeRuntime(jsRuntime));
 
         // Detach must come after JsDisposeRuntime since it triggers finalizers which require env.
-        Napi::Chakra::Detach(env);
+        Napi::Detach(env);
     }
 }

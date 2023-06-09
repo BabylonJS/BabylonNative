@@ -1,5 +1,5 @@
 #include "AppRuntime.h"
-#include <napi/env_v8.h>
+#include <napi/env.h>
 
 #if defined(_MSC_VER)
 #pragma warning(disable : 4100 4267 4127)
@@ -78,7 +78,7 @@ namespace Babylon
             v8::Local<v8::Context> context = v8::Context::New(isolate);
             v8::Context::Scope context_scope{context};
 
-            Napi::Env env = Napi::V8::Attach(context);
+            Napi::Env env = Napi::Attach(context);
 
 #ifdef ENABLE_V8_INSPECTOR
             V8InspectorAgent agent{module.Platform(), isolate, context, "Babylon"};
@@ -91,7 +91,7 @@ namespace Babylon
             agent.stop();
 #endif
 
-            Napi::V8::Detach(env);
+            Napi::Detach(env);
         }
 
         // Destroy the isolate.

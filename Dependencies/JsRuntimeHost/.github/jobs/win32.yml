@@ -3,6 +3,8 @@ parameters:
   type: string
 - name: platform
   type: string
+- name: jsEngine
+  type: string
 
 jobs:
 - job: ${{parameters.name}}
@@ -18,7 +20,7 @@ jobs:
       workingDir: 'Tests'
     displayName: 'Install NPM packages'
 
-  - script: cmake -B Build/Win32 -A ${{parameters.platform}}
+  - script: cmake -B Build/Win32 -A ${{parameters.platform}} -D NAPI_JAVASCRIPT_ENGINE=${{parameters.jsEngine}}
     displayName: 'Configure CMake'
 
   - task: MSBuild@1

@@ -1,8 +1,8 @@
-#include <napi/env_v8.h>
+#include <napi/env.h>
 #include <napi/js_native_api_types.h>
 #include "js_native_api_v8.h"
 
-namespace Napi::V8
+namespace Napi
 {
   Env Attach(v8::Local<v8::Context> isolate)
   {

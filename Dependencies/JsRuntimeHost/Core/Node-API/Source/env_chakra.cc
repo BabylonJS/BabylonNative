@@ -1,4 +1,4 @@
-#include <napi/env_chakra.h>
+#include <napi/env.h>
 #include "js_native_api_chakra.h"
 #include <jsrt.h>
 #include <strsafe.h>
@@ -14,7 +14,7 @@ namespace
     }
 }
 
-namespace Napi::Chakra
+namespace Napi
 {
     Env Attach()
     {
