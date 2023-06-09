@@ -75,9 +75,9 @@ var createScene = function () {
         );
         engine.clear(camera.clearColor, true, false, false);
     });
-    scene.onAfterCameraRenderObservable.add(camera => {
-        engine.disableScissor();
-    });
+    // scene.onAfterCameraRenderObservable.add(camera => {
+    //     engine.disableScissor();
+    // });
 
   return scene;
 };

@@ -57,12 +57,24 @@ namespace Babylon::Graphics
         m_viewId = m_context.AcquireNewViewId(encoder);
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
-        bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
+        //bgfx::setViewRect(m_viewId.value(),
+        //    static_cast<uint16_t>(m_desiredViewPort.X * Width()),
+        //    static_cast<uint16_t>(m_desiredViewPort.Y * Height()),
+        //    static_cast<uint16_t>(m_desiredViewPort.Width * Width()),
+        //    static_cast<uint16_t>(m_desiredViewPort.Height * Height()));
+        bgfx::setViewRect(
+            m_viewId.value(),
+            static_cast<uint16_t>(m_desiredScissor.X),
+            static_cast<uint16_t>(Height() - m_desiredScissor.Y),
+            static_cast<uint16_t>(m_desiredScissor.Width),
+            static_cast<uint16_t>(m_desiredScissor.Height));
         bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
+        encoder.touch(m_viewId.value());
+        bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
 
         // BGFX will consider the viewport when cleaning the screen, but WebGL always cleans the entire screen.
         // That's why we always set the viewport to {0, 0, 1, 1} when cleaning.
-        bgfx::setViewRect(m_viewId.value(), 0, 0, Width(), Height());
+        //bgfx::setViewRect(m_viewId.value(), 0, 0, Width(), Height());
         encoder.touch(m_viewId.value());
 
         m_bgfxViewPort = {0, 0, 1, 1};
@@ -70,12 +82,19 @@ namespace Babylon::Graphics
 
     void FrameBuffer::SetViewPort(bgfx::Encoder& encoder, float x, float y, float width, float height)
     {
+        //(void)encoder;
+        //(void)x;
+        //(void)y;
+        //(void)width;
+        //(void)height;
         m_desiredViewPort = {x, y, width, height};
         SetBgfxViewPort(encoder, m_desiredViewPort);
     }
 
-    void FrameBuffer::SetScissor(bgfx::Encoder& /*encoder*/, float x, float y, float width, float height)
+    void FrameBuffer::SetScissor(bgfx::Encoder& encoder, float x, float y, float width, float height)
     {
+        (void)encoder;
+
         m_desiredScissor = {x, y, width, height};
 
         //m_viewId = m_context.AcquireNewViewId(encoder);
@@ -86,7 +105,7 @@ namespace Babylon::Graphics
         //bgfx::setViewScissor(
         //    m_viewId.value(),
         //    static_cast<uint16_t>(x),
-        //    static_cast<uint16_t>(y),
+        //    static_cast<uint16_t>(Height() - y),
         //    static_cast<uint16_t>(width),
         //    static_cast<uint16_t>(height));
         //encoder.touch(m_viewId.value());
@@ -137,11 +156,6 @@ namespace Babylon::Graphics
         m_bgfxViewPort = viewPort;
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
-        bgfx::setViewScissor(m_viewId.value(),
-            static_cast<uint16_t>(m_desiredScissor.X),
-            static_cast<uint16_t>(m_desiredScissor.Y),
-            static_cast<uint16_t>(m_desiredScissor.Width),
-            static_cast<uint16_t>(m_desiredScissor.Height));
         bgfx::setViewClear(m_viewId.value(), BGFX_CLEAR_NONE, 0, 1.0f, 0);
         bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
         bgfx::setViewRect(m_viewId.value(),
@@ -149,6 +163,7 @@ namespace Babylon::Graphics
             static_cast<uint16_t>(m_bgfxViewPort.Y * Height()),
             static_cast<uint16_t>(m_bgfxViewPort.Width * Width()),
             static_cast<uint16_t>(m_bgfxViewPort.Height * Height()));
+        //bgfx::setViewScissor(m_viewId.value(), 0, 0, 600, 300);
     }
 
     bool ViewPort::Equals(const ViewPort& other) const
