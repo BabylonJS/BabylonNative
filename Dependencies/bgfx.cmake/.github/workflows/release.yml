@@ -75,7 +75,7 @@ jobs:
       # Run CMake to generate project files
       - name: Generate project files
         run: |
-          cmake -B "${{ env.CMAKE_BUILD_DIR }}" -DCMAKE_INSTALL_PREFIX="${{ env.CMAKE_INSTALL_DIR }}" -DCMAKE_DEBUG_POSTFIX=d -DBGFX_BUILD_EXAMPLES=OFF -DBGFX_BUILD_TOOLS=ON -DBGFX_INSTALL=ON -DBGFX_AMALGAMATED=ON -DCMAKE_BUILD_TYPE=Release
+          cmake -B "${{ env.CMAKE_BUILD_DIR }}" "-DCMAKE_INSTALL_PREFIX=${{ env.CMAKE_INSTALL_DIR }}" -DCMAKE_DEBUG_POSTFIX=d -DBGFX_BUILD_EXAMPLES=OFF -DBGFX_BUILD_TOOLS=ON -DBGFX_INSTALL=ON -DBGFX_AMALGAMATED=ON -DCMAKE_BUILD_TYPE=Release
       # Build the install targets
       - name: Build
         run: |
@@ -90,11 +90,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ version, build ]
     if: github.repository == 'bkaradzic/bgfx.cmake' && github.event_name == 'push'
+    permissions:
+      contents: write
     steps:
+      - uses: actions/checkout@v3
       - name: Create Release
-        uses: actions/create-release@v1
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: ${{ needs.version.outputs.tag }}
-          release_name: ${{ needs.version.outputs.tag }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ needs.version.outputs.tag }}
