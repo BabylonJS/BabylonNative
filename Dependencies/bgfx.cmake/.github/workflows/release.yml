@@ -114,13 +114,17 @@ jobs:
         with:
           type: 'zip'
           filename: 'release.${{ needs.version.outputs.tag }}.zip'
-          exclusions: '*.git* .cmake-format.py release* install/*'
+          directory: '..'
+          path: 'bgfx.cmake'
+          exclusions: '.git* .cmake-format.py .editorconfig install'
       - name: Create Source Tar
         uses: thedoctor0/zip-release@0.7.1
         with:
           type: 'tar'
           filename: 'release.${{ needs.version.outputs.tag }}.tar.gz'
-          exclusions: '.git/ .gitmodules .gitignore .cmake-format.py .github/ install/ release.${{ needs.version.outputs.tag }}.tar.gz'
+          directory: '..'
+          path: 'bgfx.cmake'
+          exclusions: '.git* .cmake-format.py .editorconfig install'
       - name: Create Windows Zip
         uses: thedoctor0/zip-release@0.7.1
         with:
