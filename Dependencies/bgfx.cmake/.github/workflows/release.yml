@@ -167,14 +167,9 @@ jobs:
           filename: 'macos.${{ needs.version.outputs.tag }}.tar.gz'
           directory: 'install'
           path: 'macos'
-      - run: |
-          pwd
-          ls
-          ls ..
-          ls install
-      #- name: Create Release
-      #  uses: ncipollo/release-action@v1
-      #  with:
-      #    tag: ${{ needs.version.outputs.tag }}
-      #    artifacts: "../release.${{ needs.version.outputs.tag }}.zip ../release.${{ needs.version.outputs.tag }}.tar.gz install/*.${{ needs.version.outputs.tag }}.zip install/*.${{ needs.version.outputs.tag }}.tar.gz"
-      #    generateReleaseNotes: true
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ needs.version.outputs.tag }}
+          artifacts: "../release.${{ needs.version.outputs.tag }}.zip,../release.${{ needs.version.outputs.tag }}.tar.gz,install/*.${{ needs.version.outputs.tag }}.zip,install/*.${{ needs.version.outputs.tag }}.tar.gz"
+          generateReleaseNotes: true
