@@ -120,7 +120,7 @@ jobs:
         with:
           type: 'tar'
           filename: 'release.${{ needs.version.outputs.tag }}.tar.gz'
-          exclusions: '*.git* .cmake-format.py release* install/*'
+          exclusions: '.git/ .gitmodules .gitignore .cmake-format.py .github/ install/ release.${{ needs.version.outputs.tag }}.tar.gz'
       - name: Create Windows Zip
         uses: thedoctor0/zip-release@0.7.1
         with:
