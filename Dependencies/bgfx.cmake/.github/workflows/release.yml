@@ -97,11 +97,11 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-          path: src/bgfx-cmake
+          path: src/bgfx.cmake
       - run: |
-          find src/bgfx-cmake -name ".git*" -exec rm -rf {} +
-          find src/bgfx-cmake -name ".editorconfig" -delete
-          rm src/bgfx-cmake/.cmake-format.py
+          find src/bgfx.cmake -name ".git*" -exec rm -rf {} +
+          find src/bgfx.cmake -name ".editorconfig" -delete
+          rm src/bgfx.cmake/.cmake-format.py
       - uses: actions/download-artifact@v3
         with:
           name: windows-latest
