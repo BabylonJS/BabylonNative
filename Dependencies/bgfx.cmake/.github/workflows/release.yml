@@ -97,6 +97,11 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
+          path: src/bgfx-cmake
+      - run: |
+          find src/bgfx-cmake -name ".git*" -exec rm -rf {} +
+          find src/bgfx-cmake -name ".editorconfig" -delete
+          rm src/bgfx-cmake/.cmake-format.py
       - uses: actions/download-artifact@v3
         with:
           name: windows-latest
@@ -114,17 +119,15 @@ jobs:
         with:
           type: 'zip'
           filename: 'bgfx.cmake.${{ needs.version.outputs.tag }}.zip'
-          directory: '..'
+          directory: 'src'
           path: 'bgfx.cmake'
-          exclusions: '.git* .cmake-format.py .editorconfig install'
       - name: Create Source Tar
         uses: thedoctor0/zip-release@0.7.1
         with:
           type: 'tar'
           filename: 'bgfx.cmake.${{ needs.version.outputs.tag }}.tar.gz'
-          directory: '..'
+          directory: 'src'
           path: 'bgfx.cmake'
-          exclusions: '.git* .cmake-format.py .editorconfig install'
       - name: Create Windows Zip
         uses: thedoctor0/zip-release@0.7.1
         with:
@@ -171,5 +174,5 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ needs.version.outputs.tag }}
-          artifacts: "../bgfx.cmake.${{ needs.version.outputs.tag }}.zip,../bgfx.cmake.${{ needs.version.outputs.tag }}.tar.gz,install/*/*.${{ needs.version.outputs.tag }}.zip,install/*/*.${{ needs.version.outputs.tag }}.tar.gz"
+          artifacts: "src/bgfx.cmake.${{ needs.version.outputs.tag }}.zip,src/bgfx.cmake.${{ needs.version.outputs.tag }}.tar.gz,install/*/*.${{ needs.version.outputs.tag }}.zip,install/*/*.${{ needs.version.outputs.tag }}.tar.gz"
           generateReleaseNotes: true
