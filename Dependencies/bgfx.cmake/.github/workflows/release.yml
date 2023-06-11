@@ -145,7 +145,7 @@ jobs:
           type: 'zip'
           filename: 'linux.${{ needs.version.outputs.tag }}.zip'
           directory: 'install'
-          path: 'linx'
+          path: 'linux'
       - name: Create Linux Tar
         uses: thedoctor0/zip-release@0.7.1
         with:
