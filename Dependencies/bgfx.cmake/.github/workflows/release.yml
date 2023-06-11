@@ -147,7 +147,6 @@ jobs:
         with:
           type: 'tar'
           filename: 'linux.${{ needs.version.outputs.tag }}.tar.gz'
-          directory: 'install/linux'
           directory: 'install'
           path: 'linux'
       - name: Create MacOS Zip
