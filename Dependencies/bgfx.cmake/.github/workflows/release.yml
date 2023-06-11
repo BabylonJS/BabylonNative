@@ -171,5 +171,5 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ needs.version.outputs.tag }}
-          artifacts: "release.${{ needs.version.outputs.tag }}.zip release.${{ needs.version.outputs.tag }}.tar.gz"
+          artifacts: "../release.${{ needs.version.outputs.tag }}.zip ../release.${{ needs.version.outputs.tag }}.tar.gz install/*.${{ needs.version.outputs.tag }}.zip install/*.${{ needs.version.outputs.tag }}.tar.gz"
           generateReleaseNotes: true
