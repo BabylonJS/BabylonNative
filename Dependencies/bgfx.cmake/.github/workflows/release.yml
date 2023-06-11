@@ -29,9 +29,9 @@ jobs:
           BGFX_CMAKE_REVISION=$(git rev-list HEAD --count)
           SHA=$(cd bgfx && git rev-parse HEAD)
           TAG="v1.${API_VERSION}.${BGFX_REVISION}-${BGFX_CMAKE_REVISION}"
-          echo "::set-output name=revision::${BGFX_REVISION}"
-          echo "::set-output name=sha::${SHA}"
-          echo "::set-output name=tag::${TAG}"
+          echo "revision=${BGFX_REVISION}" >> $GITHUB_OUTPUT
+          echo "sha=${SHA}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
 
   build:
     name: ${{ matrix.os }}
