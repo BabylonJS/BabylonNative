@@ -80,7 +80,7 @@ jobs:
       - name: Build
         run: |
           cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target install --config Release
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.os }}
           path: ${{ github.workspace }}/install/
@@ -97,18 +97,73 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-      - name: Create Zip
+      - uses: actions/download-artifact@v3
+        with:
+          name: windows-latest
+          path: ${{ github.workspace }}/install/windows
+      - uses: actions/download-artifact@v3
+        with:
+          name: ubuntu-latest
+          path: ${{ github.workspace }}/install/linux
+      - uses: actions/download-artifact@v3
+        with:
+          name: macos-latest
+          path: ${{ github.workspace }}/install/macos
+      - name: Create Source Zip
         uses: thedoctor0/zip-release@0.7.1
         with:
           type: 'zip'
           filename: 'release.${{ needs.version.outputs.tag }}.zip'
-          exclusions: '*.git* .cmake-format.py'
-      - name: Create Tar
+          exclusions: '*.git* .cmake-format.py release* install/*'
+      - name: Create Source Tar
         uses: thedoctor0/zip-release@0.7.1
         with:
           type: 'tar'
           filename: 'release.${{ needs.version.outputs.tag }}.tar.gz'
-          exclusions: '*.git* .cmake-format.py'
+          exclusions: '*.git* .cmake-format.py release* install/*'
+      - name: Create Windows Zip
+        uses: thedoctor0/zip-release@0.7.1
+        with:
+          type: 'zip'
+          filename: 'windows.${{ needs.version.outputs.tag }}.zip'
+          directory: 'install'
+          path: 'windows'
+      - name: Create Windows Tar
+        uses: thedoctor0/zip-release@0.7.1
+        with:
+          type: 'tar'
+          filename: 'windows.${{ needs.version.outputs.tag }}.tar.gz'
+          directory: 'install'
+          path: 'windows'
+      - name: Create Linux Zip
+        uses: thedoctor0/zip-release@0.7.1
+        with:
+          type: 'zip'
+          filename: 'linux.${{ needs.version.outputs.tag }}.zip'
+          directory: 'install'
+          path: 'linx'
+      - name: Create Linux Tar
+        uses: thedoctor0/zip-release@0.7.1
+        with:
+          type: 'tar'
+          filename: 'linux.${{ needs.version.outputs.tag }}.tar.gz'
+          directory: 'install/linux'
+          directory: 'install'
+          path: 'linux'
+      - name: Create MacOS Zip
+        uses: thedoctor0/zip-release@0.7.1
+        with:
+          type: 'zip'
+          filename: 'macos.${{ needs.version.outputs.tag }}.zip'
+          directory: 'install'
+          path: 'macos'
+      - name: Create MacOS Tar
+        uses: thedoctor0/zip-release@0.7.1
+        with:
+          type: 'tar'
+          filename: 'macos.${{ needs.version.outputs.tag }}.tar.gz'
+          directory: 'install'
+          path: 'macos'
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
