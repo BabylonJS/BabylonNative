@@ -93,8 +93,25 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Create Zip
+        uses: thedoctor0/zip-release@0.7.1
+        with:
+          type: 'zip'
+          filename: 'release.${{ needs.version.outputs.tag }}.zip'
+          exclusions: '*.git* .cmake-format.py'
+      - name: Create Tar
+        uses: thedoctor0/zip-release@0.7.1
+        with:
+          type: 'tar'
+          filename: 'release.${{ needs.version.outputs.tag }}.tar.gz'
+          exclusions: '*.git* .cmake-format.py'
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ needs.version.outputs.tag }}
+          artifacts: "release.${{ needs.version.outputs.tag }}.zip release.${{ needs.version.outputs.tag }}.tar.gz"
           generateReleaseNotes: true
