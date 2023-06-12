@@ -5,7 +5,7 @@
 
 var engine = new BABYLON.NativeEngine();
 
-// See https://playground.babylonjs.com/#1LK70I#32
+// See https://playground.babylonjs.com/#1LK70I#33  <- for viewports
 //
 var createScene = function () {
     const scene = new BABYLON.Scene(engine);
@@ -63,10 +63,9 @@ var createScene = function () {
   // Our built-in 'ground' shape.
   BABYLON.MeshBuilder.CreateGround('ground', {width: 6, height: 6}, scene);
 
-    const renderWidth = engine.getRenderWidth();
-    const renderHeight = engine.getRenderHeight();
-
     scene.onBeforeCameraRenderObservable.add(camera => {
+        const renderWidth = engine.getRenderWidth();
+        const renderHeight = engine.getRenderHeight();
         engine.enableScissor(
             renderWidth * (camera.viewport.x + 0.1),
             renderHeight * (camera.viewport.y + 0.1),
@@ -75,9 +74,9 @@ var createScene = function () {
         );
         engine.clear(camera.clearColor, true, false, false);
     });
-    // scene.onAfterCameraRenderObservable.add(camera => {
-    //     engine.disableScissor();
-    // });
+    scene.onAfterCameraRenderObservable.add(camera => {
+        engine.disableScissor();
+    });
 
   return scene;
 };
