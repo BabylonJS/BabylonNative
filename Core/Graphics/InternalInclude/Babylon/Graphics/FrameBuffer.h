@@ -7,14 +7,14 @@ namespace Babylon::Graphics
 {
     class DeviceContext;
 
-    struct ViewPort
+    struct Rect
     {
         float X{0.0f};
         float Y{0.0f};
         float Width{1.0f};
         float Height{1.0f};
 
-        bool Equals(const ViewPort& other) const;
+        bool Equals(const Rect& other) const;
     };
 
     class FrameBuffer final
@@ -36,6 +36,7 @@ namespace Babylon::Graphics
 
         void Clear(bgfx::Encoder& encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil);
         void SetViewPort(bgfx::Encoder& encoder, float x, float y, float width, float height);
+        void SetScissor(bgfx::Encoder& encoder, float x, float y, float width, float height);
         void Submit(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint8_t flags);
         void SetStencil(bgfx::Encoder& encoder, uint32_t stencilState);
         void Blit(bgfx::Encoder& encoder, bgfx::TextureHandle _dst, uint16_t _dstX, uint16_t _dstY, bgfx::TextureHandle _src, uint16_t _srcX = 0, uint16_t _srcY = 0, uint16_t _width = UINT16_MAX, uint16_t _height = UINT16_MAX);
@@ -56,11 +57,15 @@ namespace Babylon::Graphics
 
         std::optional<bgfx::ViewId> m_viewId;
 
-        ViewPort m_bgfxViewPort;
-        ViewPort m_desiredViewPort;
+        Rect m_bgfxViewPort;
+        Rect m_desiredViewPort;
+
+        Rect m_bgfxScissor{0.0f, 0.0f, 0.0f, 0.0f};
+        Rect m_desiredScissor{0.0f, 0.0f, 0.0f, 0.0f};
+
 
         bool m_disposed{false};
 
-        void SetBgfxViewPort(bgfx::Encoder& encoder, const ViewPort& viewPort);
+        void SetBgfxViewPortAndScissor(bgfx::Encoder& encoder, const Rect& viewPort, const Rect& scissor);
     };
 }

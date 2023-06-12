@@ -442,6 +442,7 @@ namespace Babylon
                 StaticValue("COMMAND_CLEAR", Napi::FunctionPointer::Create(env, &NativeEngine::Clear)),
                 StaticValue("COMMAND_SETSTENCIL", Napi::FunctionPointer::Create(env, &NativeEngine::SetStencil)),
                 StaticValue("COMMAND_SETVIEWPORT", Napi::FunctionPointer::Create(env, &NativeEngine::SetViewPort)),
+                StaticValue("COMMAND_SETSCISSOR", Napi::FunctionPointer::Create(env, &NativeEngine::SetScissor)),
 
                 InstanceMethod("dispose", &NativeEngine::Dispose),
 
@@ -1835,6 +1836,18 @@ namespace Babylon
         const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
 
         GetBoundFrameBuffer(*encoder).SetViewPort(*encoder, x, yOrigin, width, height);
+    }
+
+    void NativeEngine::SetScissor(NativeDataStream::Reader& data)
+    {
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+
+        const float x{data.ReadFloat32()};
+        const float y{data.ReadFloat32()};
+        const float width{data.ReadFloat32()};
+        const float height{data.ReadFloat32()};
+
+        GetBoundFrameBuffer(*encoder).SetScissor(*encoder, x, y, width, height);
     }
 
     void NativeEngine::SetCommandDataStream(const Napi::CallbackInfo& info)
