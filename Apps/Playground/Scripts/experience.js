@@ -6,77 +6,94 @@
 var engine = new BABYLON.NativeEngine();
 
 // See https://playground.babylonjs.com/#1LK70I#33  <- for viewports
+// See https://playground.babylonjs.com/#BCYE7J#41  <- for multiple cameras
 //
 var createScene = function () {
-    const scene = new BABYLON.Scene(engine);
+  var scene = new BABYLON.Scene(engine);
 
-  // Create cameras
-  let cameras = [];
-  const numX = 2;
-  const numY = 3;
-  for (let i = 0; i < numX; ++i) {
-    for (let j = 0; j < numY; ++j) {
-      const x = 2 * i - numX + 1;
-      const y = 2 * j - numY + 1;
+  var cameraDefault = new BABYLON.FreeCamera("camera1", new BABYLON.Vector3(0, 5, -10), scene);
+  cameraDefault.setTarget(BABYLON.Vector3.Zero());
+  // cameraDefault.attachControl(canvas, true);
+  cameraDefault.layerMask = 0xFFFFFFFF;
 
-      // This creates and positions a free camera (non-mesh)
-      const camera = new BABYLON.FreeCamera(
-        `camera-${i}-${j}`,
-        new BABYLON.Vector3(x, y + 10, -10),
-        scene,
-      );
-      camera.viewport = new BABYLON.Viewport(
-        i / numX,
-        j / numY,
-        1 / numX,
-        1 / numY,
-      );
-      camera.clearColor = new BABYLON.Color3(i / numX, j / numY, 0.5);
+  var cameraDefault2 = new BABYLON.FreeCamera("camera2", new BABYLON.Vector3(-4, 8, -10), scene);
+  cameraDefault2.setTarget(new BABYLON.Vector3(1,1,3));
+  // cameraDefault2.attachControl(canvas, true);
+  cameraDefault2.layerMask = 0xFFFFFFFF;
 
-      camera.setTarget(new BABYLON.Vector3(x, y, 0));
-      scene.activeCameras.push(camera);
+  var cameraRTT = new BABYLON.FreeCamera("cameraRTT1", new BABYLON.Vector3(0, 5, -10), scene);
+  cameraRTT.setTarget(BABYLON.Vector3.Zero());
 
-      cameras.push(camera);
-    }
-  }
+  var cameraRTT2 = new BABYLON.FreeCamera("cameraRTT2", new BABYLON.Vector3(4, 8, -10), scene);
+  cameraRTT2.setTarget(new BABYLON.Vector3(1,2,3));
 
-  // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
-  const light = new BABYLON.HemisphericLight(
-    'light',
-    new BABYLON.Vector3(0, 1, 0),
-    scene,
-  );
+  const renderTarget = new BABYLON.RenderTargetTexture('render target', 512, scene, false, false);
+  renderTarget.clearColor = new BABYLON.Color4(0, 1, 0, 1);
+  renderTarget.renderPassId = undefined;
 
-  // Default intensity is 1. Let's dim the light a small amount
+  renderTarget.onClearObservable.add(() => {
+      if (scene.activeCamera === cameraRTT) {
+          engine.clear(renderTarget.clearColor || scene.clearColor, true, true, true);
+      }
+  });
+
+  cameraRTT.outputRenderTarget = renderTarget;
+  cameraRTT2.outputRenderTarget = renderTarget;
+
+  var light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
   light.intensity = 0.7;
 
-  // Our built-in 'sphere' shape.
-  const sphere = BABYLON.MeshBuilder.CreateSphere(
-    'sphere',
-    {diameter: 2, segments: 32},
-    scene,
-  );
-
-  // Move the sphere upward 1/2 its height
+  var sphere = BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 2, segments: 32}, scene);
   sphere.position.y = 1;
 
-  // Our built-in 'ground' shape.
-  BABYLON.MeshBuilder.CreateGround('ground', {width: 6, height: 6}, scene);
+  var plane = BABYLON.MeshBuilder.CreatePlane("plane", { size: 3 }, scene);
+  plane.position.set(-3, 2.5, 0);
+  plane.layerMask = 0x10000000;
 
-    scene.onBeforeCameraRenderObservable.add(camera => {
-        const renderWidth = engine.getRenderWidth();
-        const renderHeight = engine.getRenderHeight();
-        engine.enableScissor(
-            renderWidth * (camera.viewport.x + 0.1),
-            renderHeight * (camera.viewport.y + 0.1),
-            renderWidth * (camera.viewport.width - 0.2),
-            renderHeight * (camera.viewport.height - 0.2)
-        );
-        engine.clear(camera.clearColor, true, false, false);
-    });
-    scene.onAfterCameraRenderObservable.add(camera => {
-        engine.disableScissor();
-    });
+  const mat = new BABYLON.StandardMaterial("mat", scene);
+  mat.disableLighting = true;
+  mat.emissiveTexture = renderTarget;
+
+  plane.material = mat;
+
+  var ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 6, height: 6}, scene);
+  // ground.material = new BABYLON.StandardMaterial("ground.material", scene);
+  // ground.material.wireframe = true;
+
+  scene.onBeforeRenderObservable.add(() => {
+      ground.rotate(BABYLON.Axis.Y, 0.01);
+  });
+
+  scene.activeCameras = [cameraDefault, cameraRTT, cameraRTT2, cameraDefault2];
+
+  //   scene.onBeforeCameraRenderObservable.add(camera => {
+  //       let renderWidth = -1;
+  //       let renderHeight = -1;
+  //       if (!camera.logged) console.log(`camera: "${camera.name}:`);
+  //       if (camera.outputRenderTarget) {
+  //           if (!camera.logged) console.log(`    outputRenderTarget:`);
+  //           renderWidth = camera.outputRenderTarget.getRenderWidth();
+  //           renderHeight = camera.outputRenderTarget.getRenderHeight();
+  //           return;
+  //       }
+  //       else {
+  //           if (!camera.logged) console.log(`    engine:`);
+  //           renderWidth = engine.getRenderWidth();
+  //           renderHeight = engine.getRenderHeight();
+  //       }
+  //       if (!camera.logged) console.log(`        render size = ${renderWidth} x ${renderHeight}`);
+  //       camera.logged = true;
+  //       engine.enableScissor(
+  //           renderWidth * (camera.viewport.x + 0.2),
+  //           renderHeight * (camera.viewport.y + 0.2),
+  //           renderWidth * (camera.viewport.width - 0.4),
+  //           renderHeight * (camera.viewport.height - 0.4)
+  //       );
+  //       // engine.clear(camera.clearColor, true, false, false);
+  // });
+  // scene.onAfterCameraRenderObservable.add(camera => {
+  //     engine.disableScissor();
+  // });
 
   return scene;
 };
