@@ -96,12 +96,43 @@ namespace Babylon::Graphics
     {
         (void)encoder;
 
+        //if( width == 0.0 && height == 0.0 )
+        //{
+        //    return;
+        //}
+
+        //m_viewId = m_context.AcquireNewViewId(encoder);
+
+        //bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
+        //bgfx::setViewClear(m_viewId.value(), BGFX_CLEAR_NONE, 0, 1.0f, 0);
+        //bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
+        //bgfx::setViewScissor(
+        //    m_viewId.value(),
+        //    static_cast<uint16_t>(x),
+        //    static_cast<uint16_t>((Height() - y) - height),
+        //    static_cast<uint16_t>(width),
+        //    static_cast<uint16_t>(height));
+
+        //encoder.setScissor(
+        //     static_cast<uint16_t>(x),
+        //     static_cast<uint16_t>((Height() - y) - height),
+        //     static_cast<uint16_t>(width),
+        //     static_cast<uint16_t>(height));
+
+        //encoder.touch(m_viewId.value());
+
         m_desiredScissor = {x, y, width, height};
+        //encoder.setScissor(
+        //    static_cast<uint16_t>(m_desiredScissor.X),
+        //    static_cast<uint16_t>((Height() - m_desiredScissor.Y) - m_desiredScissor.Height),
+        //    static_cast<uint16_t>(m_desiredScissor.Width),
+        //    static_cast<uint16_t>(m_desiredScissor.Height));
     }
 
     void FrameBuffer::Submit(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint8_t flags)
     {
         SetBgfxViewPort(encoder, m_desiredViewPort);
+        //SetScissor(encoder, m_desiredScissor.X, m_desiredScissor.Y, m_desiredScissor.Width, m_desiredScissor.Height);
         encoder.submit(m_viewId.value(), programHandle, 0, flags);
     }
 
@@ -151,12 +182,12 @@ namespace Babylon::Graphics
             static_cast<uint16_t>(m_bgfxViewPort.Y * Height()),
             static_cast<uint16_t>(m_bgfxViewPort.Width * Width()),
             static_cast<uint16_t>(m_bgfxViewPort.Height * Height()));
-        bgfx::setViewScissor(
-            m_viewId.value(),
-            static_cast<uint16_t>(m_desiredScissor.X),
-            static_cast<uint16_t>((Height() - m_desiredScissor.Y) - m_desiredScissor.Height),
-            static_cast<uint16_t>(m_desiredScissor.Width),
-            static_cast<uint16_t>(m_desiredScissor.Height));
+        //bgfx::setViewScissor(
+        //    m_viewId.value(),
+        //    static_cast<uint16_t>(m_desiredScissor.X),
+        //    static_cast<uint16_t>((Height() - m_desiredScissor.Y) - m_desiredScissor.Height),
+        //    static_cast<uint16_t>(m_desiredScissor.Width),
+        //    static_cast<uint16_t>(m_desiredScissor.Height));
     }
 
     bool ViewPort::Equals(const ViewPort& other) const

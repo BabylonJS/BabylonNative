@@ -16,10 +16,10 @@ var createScene = function () {
   // cameraDefault.attachControl(canvas, true);
   cameraDefault.layerMask = 0xFFFFFFFF;
 
-  var cameraDefault2 = new BABYLON.FreeCamera("camera2", new BABYLON.Vector3(-4, 8, -10), scene);
-  cameraDefault2.setTarget(new BABYLON.Vector3(1,1,3));
-  // cameraDefault2.attachControl(canvas, true);
-  cameraDefault2.layerMask = 0xFFFFFFFF;
+  // var cameraDefault2 = new BABYLON.FreeCamera("camera2", new BABYLON.Vector3(-4, 8, -10), scene);
+  // cameraDefault2.setTarget(new BABYLON.Vector3(1,1,3));
+  // // cameraDefault2.attachControl(canvas, true);
+  // cameraDefault2.layerMask = 0xFFFFFFFF;
 
   var cameraRTT = new BABYLON.FreeCamera("cameraRTT1", new BABYLON.Vector3(0, 5, -10), scene);
   cameraRTT.setTarget(BABYLON.Vector3.Zero());
@@ -64,36 +64,36 @@ var createScene = function () {
       ground.rotate(BABYLON.Axis.Y, 0.01);
   });
 
-  scene.activeCameras = [cameraDefault, cameraRTT, cameraRTT2, cameraDefault2];
+  // scene.activeCameras = [cameraDefault, cameraRTT, cameraRTT2, cameraDefault2];
+  scene.activeCameras = [cameraDefault, cameraRTT, cameraRTT2];
 
-  //   scene.onBeforeCameraRenderObservable.add(camera => {
-  //       let renderWidth = -1;
-  //       let renderHeight = -1;
-  //       if (!camera.logged) console.log(`camera: "${camera.name}:`);
-  //       if (camera.outputRenderTarget) {
-  //           if (!camera.logged) console.log(`    outputRenderTarget:`);
-  //           renderWidth = camera.outputRenderTarget.getRenderWidth();
-  //           renderHeight = camera.outputRenderTarget.getRenderHeight();
-  //           return;
-  //       }
-  //       else {
-  //           if (!camera.logged) console.log(`    engine:`);
-  //           renderWidth = engine.getRenderWidth();
-  //           renderHeight = engine.getRenderHeight();
-  //       }
-  //       if (!camera.logged) console.log(`        render size = ${renderWidth} x ${renderHeight}`);
-  //       camera.logged = true;
-  //       engine.enableScissor(
-  //           renderWidth * (camera.viewport.x + 0.2),
-  //           renderHeight * (camera.viewport.y + 0.2),
-  //           renderWidth * (camera.viewport.width - 0.4),
-  //           renderHeight * (camera.viewport.height - 0.4)
-  //       );
-  //       // engine.clear(camera.clearColor, true, false, false);
-  // });
-  // scene.onAfterCameraRenderObservable.add(camera => {
-  //     engine.disableScissor();
-  // });
+    scene.onBeforeCameraRenderObservable.add(camera => {
+        let renderWidth = -1;
+        let renderHeight = -1;
+        if (!camera.logged) console.log(`camera: "${camera.name}:`);
+        if (camera.outputRenderTarget) {
+            if (!camera.logged) console.log(`    outputRenderTarget:`);
+            renderWidth = camera.outputRenderTarget.getRenderWidth();
+            renderHeight = camera.outputRenderTarget.getRenderHeight();
+        }
+        else {
+            if (!camera.logged) console.log(`    engine:`);
+            renderWidth = engine.getRenderWidth();
+            renderHeight = engine.getRenderHeight();
+        }
+        if (!camera.logged) console.log(`        render size = ${renderWidth} x ${renderHeight}`);
+        camera.logged = true;
+        engine.enableScissor(
+            renderWidth * (camera.viewport.x + 0.2),
+            renderHeight * (camera.viewport.y + 0.2),
+            renderWidth * (camera.viewport.width - 0.4),
+            renderHeight * (camera.viewport.height - 0.4)
+        );
+        // engine.clear(camera.clearColor, true, false, false);
+  });
+  scene.onAfterCameraRenderObservable.add(camera => {
+      engine.disableScissor();
+  });
 
   return scene;
 };
