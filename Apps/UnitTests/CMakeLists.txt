@@ -28,6 +28,7 @@ elseif(WIN32)
 endif()
 
 add_executable(UnitTests ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_APP} ${HEADERS})
+set_property(TARGET UnitTests PROPERTY UNITY_BUILD false)
 
 target_link_to_dependencies(UnitTests
     PRIVATE AppRuntime

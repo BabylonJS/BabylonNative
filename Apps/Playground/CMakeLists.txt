@@ -176,6 +176,7 @@ if(APPLE)
             RESOURCE "${RESOURCE_FILES}"
             FOLDER "Playground")
     endif()
+    set_property(TARGET Playground PROPERTY UNITY_BUILD false)
 endif()
 
 if(WINDOWS_STORE)
