@@ -95,6 +95,8 @@ endif()
 
 if(APPLE)
     set(BABYLON_NATIVE_PLATFORM_IMPL_EXT "mm")
+    set_property(TARGET JsRuntime PROPERTY UNITY_BUILD false)
+    set_property(TARGET AppRuntime PROPERTY UNITY_BUILD false)
 else()
     set(BABYLON_NATIVE_PLATFORM_IMPL_EXT "cpp")
 endif()
