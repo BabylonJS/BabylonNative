@@ -207,6 +207,17 @@
             "referenceImage": "multiCamerasOutputRenderTarget.png"
         },
         {
+            "title": "Multi camera rendering",
+            "playgroundId": "#1LK70I#35",
+            "referenceImage": "multiCameraRenderingWithScissors.png"
+        },
+        {
+            "title": "Multi cameras and output render target",
+            "renderCount": 2,
+            "playgroundId": "#BCYE7J#44",
+            "referenceImage": "multiCamerasOutputRenderTargetWithScissors.png"
+        },
+        {
             "title": "setParent",
             "playgroundId": "#JD49CT#2",
             "referenceImage": "setParent.png"
