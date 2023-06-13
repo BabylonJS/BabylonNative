@@ -6,10 +6,7 @@ set(SOURCES
     "Source/Window.cpp")
 
 add_library(Window ${SOURCES})
-# V8 and V8Inspector have unused parameters. Unable to set warning as error.
-if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
-    warnings_as_errors(Window)
-endif()
+warnings_as_errors(Window)
 
 target_include_directories(Window
     PUBLIC "Include")

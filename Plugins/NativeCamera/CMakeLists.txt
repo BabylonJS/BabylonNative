@@ -22,10 +22,7 @@ set(SOURCES
     "Source/${PLATFORM}/CameraDevice.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
 add_library(NativeCamera ${SOURCES})
-# V8 and V8Inspector have unused parameters. Unable to set warning as error.
-if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
-    warnings_as_errors(NativeCamera)
-endif()
+warnings_as_errors(NativeCamera)
 
 target_include_directories(NativeCamera
     PUBLIC "Include")

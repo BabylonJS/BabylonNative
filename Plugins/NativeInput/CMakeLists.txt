@@ -23,10 +23,7 @@ else()
 endif()
 
 add_library(NativeInput ${SOURCES})
-# V8 and V8Inspector have unused parameters. Unable to set warning as error.
-if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
-    warnings_as_errors(NativeInput)
-endif()
+warnings_as_errors(NativeInput)
 
 target_include_directories(NativeInput PUBLIC "Include")
 

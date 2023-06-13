@@ -3,10 +3,7 @@ set(SOURCES
     "Source/NativeOptimizations.cpp")
 
 add_library(NativeOptimizations ${SOURCES})
-# V8 and V8Inspector have unused parameters. Unable to set warning as error.
-if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
-    warnings_as_errors(NativeOptimizations)
-endif()
+warnings_as_errors(NativeOptimizations)
 
 if(APPLE)
     set_target_properties(NativeOptimizations PROPERTIES
