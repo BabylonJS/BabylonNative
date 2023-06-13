@@ -90,7 +90,6 @@ namespace Babylon::Graphics
         }
         encoder.touch(m_viewId.value());
 
-        m_bgfxScissor = {0, 0, static_cast<float>(Width()), static_cast<float>(Height())};
     }
 
     void FrameBuffer::SetViewPort(bgfx::Encoder& encoder, float x, float y, float width, float height)
