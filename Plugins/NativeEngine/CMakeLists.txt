@@ -44,7 +44,10 @@ target_link_to_dependencies(NativeEngine
     PRIVATE SPIRV
     PRIVATE GraphicsDeviceContext
     PRIVATE napi_extensions)
-warnings_as_errors(NativeEngine)
+# V8 and V8Inspector have unused parameters. Unable to set warning as error.
+if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
+    warnings_as_errors(NativeEngine)
+endif()
 
 if(TARGET spirv-cross-hlsl)
     target_link_to_dependencies(NativeEngine
