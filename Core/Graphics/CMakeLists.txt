@@ -20,7 +20,10 @@ set(SOURCES
     "Source/Texture.cpp")
 
 add_library(Graphics ${SOURCES})
-warnings_as_errors(Graphics)
+# V8 and V8Inspector have unused parameters. Unable to set warning as error.
+if(NOT NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
+    warnings_as_errors(Graphics)
+endif()
 
 target_include_directories(Graphics
     PRIVATE "Include/Shared"
