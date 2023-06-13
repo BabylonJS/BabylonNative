@@ -49,7 +49,8 @@ elseif(APPLE)
         "Source/WebSocket_Apple_ObjC.m")
 elseif(UNIX)
     set(ADDITIONAL_SOURCES
-        "Source/UrlRequest_Unix.cpp")
+        "Source/UrlRequest_Unix.cpp"
+        "Source/WebSocket_Unix.cpp")
     set(ADDITIONAL_LIBRARIES
         PRIVATE curl)
 elseif(WIN32)
