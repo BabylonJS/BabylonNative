@@ -212,10 +212,10 @@
             "referenceImage": "multiCameraRenderingWithScissors.png"
         },
         {
-            "title": "Multi cameras and output render target with scissors",
-            "renderCount": 2,
-            "playgroundId": "#BCYE7J#45",
-            "referenceImage": "multiCamerasOutputRenderTargetWithScissors.png"
+            "title": "Scissor test",
+            "renderCount": 10,
+            "playgroundId": "#W7E7CF#12",
+            "referenceImage": "scissor-test.png"
         },
         {
             "title": "setParent",
