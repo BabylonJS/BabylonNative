@@ -407,7 +407,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_DESTROY:
         {
             Uninitialize();
-            PostQuitMessage(0);
+            PostQuitMessage(Babylon::Plugins::TestUtils::errorCode);
             break;
         }
         case WM_KEYDOWN:
