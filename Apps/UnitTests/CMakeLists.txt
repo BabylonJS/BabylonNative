@@ -18,8 +18,8 @@ set(HEADERS
     "Shared/Tests.h")
 
 if(APPLE)
-    find_library(JSCORE_LIBRARY JavaScriptCore)
-    set(ADDITIONAL_LIBRARIES PRIVATE ${JSCORE_LIBRARY})
+    find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
+    set(ADDITIONAL_LIBRARIES PRIVATE ${JAVASCRIPTCORE_LIBRARY})
     set(TEST_APP "Apple/App.mm")
 elseif(UNIX AND NOT ANDROID)
     set(TEST_APP "X11/App.cpp")

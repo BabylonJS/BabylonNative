@@ -22,7 +22,7 @@ set(SCRIPTS
     "Scripts/config.json")
 
 if(APPLE)
-    find_library(JSCORE_LIBRARY JavaScriptCore)
+    find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
     if(IOS)
         set(PLIST_FILE
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Info.plist")
@@ -54,7 +54,7 @@ if(APPLE)
         set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/ReferenceImages")
     endif()
     set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES}
-        PRIVATE ${JSCORE_LIBRARY}
+        PRIVATE ${JAVASCRIPTCORE_LIBRARY}
         PRIVATE NativeCamera)
     set(RESOURCE_FILES ${STORYBOARD})
 elseif(UNIX)
