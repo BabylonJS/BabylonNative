@@ -102,7 +102,7 @@ namespace Babylon::Graphics
 
     void FrameBuffer::SetScissor(bgfx::Encoder& encoder, float x, float y, float width, float height)
     {
-        m_desiredScissor = {x, y, width, height};
+        m_desiredScissor = {std::round(x), std::round(y), std::round(width), std::round(height)};
         SetBgfxViewPortAndScissor(encoder, m_desiredViewPort, m_desiredScissor);
     }
 
@@ -153,7 +153,7 @@ namespace Babylon::Graphics
     Rect FrameBuffer::GetFlippedScissor() const
     {
         Rect scissor = m_desiredScissor;
-        scissor.Y = m_desiredScissor.Height == 0.0f ? 0.0f : std::max(0.0f, (Height() - m_desiredScissor.Y) - m_desiredScissor.Height);
+        scissor.Y = m_desiredScissor.Height == 0.0f ? 0.0f : std::max(0.0f, std::round((Height() - m_desiredScissor.Y) - m_desiredScissor.Height));
         return scissor;
     }
 
