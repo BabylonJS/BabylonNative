@@ -68,7 +68,7 @@ namespace Babylon::Graphics
         // clearing to match WebGL's behavior; otherwise BGFX will only clear the view rect.
         //
         // Note that the view rect and view scissor are reset to the desired dimensions before the encoder is submitted.
-        if (m_desiredScissor.Width != 0.0 || m_desiredScissor.Height != 0.0)
+        if (m_desiredScissor.Width != 0.0f || m_desiredScissor.Height != 0.0f)
         {
             const auto flippedScissor = GetFlippedScissor();
             bgfx::setViewRect(

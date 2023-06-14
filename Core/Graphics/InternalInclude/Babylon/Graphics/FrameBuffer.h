@@ -9,10 +9,10 @@ namespace Babylon::Graphics
 
     struct Rect
     {
-        float X{0.0f};
-        float Y{0.0f};
-        float Width{1.0f};
-        float Height{1.0f};
+        float X{};
+        float Y{};
+        float Width{};
+        float Height{};
 
         bool Equals(const Rect& other) const;
     };
@@ -57,11 +57,11 @@ namespace Babylon::Graphics
 
         std::optional<bgfx::ViewId> m_viewId;
 
-        Rect m_bgfxViewPort;
-        Rect m_desiredViewPort;
+        Rect m_bgfxViewPort{0.0f, 0.0f, 1.0f, 1.0f};
+        Rect m_desiredViewPort{0.0f, 0.0f, 1.0f, 1.0f};
 
-        Rect m_bgfxScissor{0.0f, 0.0f, 0.0f, 0.0f};
-        Rect m_desiredScissor{0.0f, 0.0f, 0.0f, 0.0f};
+        Rect m_bgfxScissor;
+        Rect m_desiredScissor;
 
 
         bool m_disposed{false};
