@@ -139,18 +139,17 @@ namespace Babylon::Graphics
         m_disposed = true;
     }
 
-    /// <summary>
     /// Returns the desired scissor rect with the Y coordinate flipped.
-    /// 
+    ///
     /// In WebGL the scissor x/y coords are the lower left of the rect, but in BGFX the scissor x/y coords are the
     /// upper left. This function returns the given WebGL scissor rect converted to a BGFX scissor rect and makes sure
     /// y is not negative.
-    /// 
-    /// Note that this functions sets the y coord to 0 if the desired scissor's height is 0 because BGFX requires the
-    /// the x, y, width, and height to all be zero to disable the scissor. Without this extra check this function will
-    /// set the y coord to the framebuffer's height, which will make BGFX set an invalid scissor rect (the top and
-    /// bottom of the scissor rect will have the same value), and may crash the renderer in some cases.
-    /// </summary>
+    ///
+    /// Note that this function sets the y coord to 0 if the desired scissor's height is 0 because BGFX requires the
+    /// x, y, width, and height to all be zero to disable the scissor. Without this extra check this function will set
+    /// the y coord to the framebuffer's height, which will make BGFX set an invalid scissor rect (the top and bottom
+    /// of the scissor rect will have the same value), and may crash the renderer in some cases.
+    ///
     Rect FrameBuffer::GetFlippedScissor() const
     {
         Rect scissor = m_desiredScissor;
