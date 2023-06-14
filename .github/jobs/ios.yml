@@ -27,7 +27,7 @@ jobs:
     - script: |
         mkdir buildiOS
         cd buildiOS
-        cmake .. -G Xcode -D IOS=ON -DDEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -DENABLE_GLSLANG_BINARIES=OFF -DSPIRV_CROSS_CLI=OFF -DCMAKE_UNITY_BUILD=${UNITY_BUILD}
+        cmake .. -G Xcode -D IOS=ON -D DEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -D ENABLE_GLSLANG_BINARIES=OFF -D SPIRV_CROSS_CLI=OFF -D CMAKE_UNITY_BUILD=${UNITY_BUILD}
       displayName: 'Generate iOS solution'
 
     - task: Xcode@5

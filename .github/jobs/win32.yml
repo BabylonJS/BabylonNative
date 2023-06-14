@@ -37,7 +37,7 @@ jobs:
       - script: |
           mkdir build${{ variables.solutionName }}
           cd build${{ variables.solutionName }}
-          cmake -A ${{ parameters.platform }} ${{ variables.jsEngineDefine }} -DBGFX_CONFIG_DEBUG=ON -DGRAPHICS_API=${{ parameters.graphics_api }} -DCMAKE_UNITY_BUILD=${UNITY_BUILD} ..
+          cmake -A ${{ parameters.platform }} ${{ variables.jsEngineDefine }} -D BGFX_CONFIG_DEBUG=ON -D GRAPHICS_API=${{ parameters.graphics_api }} -D CMAKE_UNITY_BUILD=${UNITY_BUILD} ..
         displayName: 'Generate ${{ variables.solutionName }} solution'
     
       - task: MSBuild@1
