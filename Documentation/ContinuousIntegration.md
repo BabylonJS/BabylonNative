@@ -7,14 +7,14 @@ CI will also take care of code quality: Warnings are treated as error and will b
 
 CI validation is composed of 3 main parts:
 - The test datas
-- The ValidationTests app
+- The ValidationTests script
 - The platform integration
 
 For adding new Validation Tests, [you'll find extensive documentation here.](Documentation/AddingNewValidationTests.md)
 
 # Test datas
 They are shared with babylonjs for the most part.
-Validation test scenes are listed in `Apps\ValidationTests\Scripts\config.json`. It lists playground identifier that will be opened sequentialy. Per PG is may have additional parameters for validation pixels difference threshold.
+Validation test scenes are listed in `Apps\Playground\Scripts\config.json`. It lists playground identifier that will be opened sequentialy. Per PG is may have additional parameters for validation pixels difference threshold.
 This json is a subset of babylonjs' one. The goal is to use the exact same file once the engine is in a sufficiently stable state.
 
 ```json
@@ -38,7 +38,7 @@ If a new feature or a bug fix makes the reference image different, it must also 
 
 # ValidationTests app
 
-To make it simple, the validationTests app initialize the engine and runs `Apps\ValidationTests\Scripts\validation_native.js`.
+To make it simple, the playground app initialize the engine and runs `Apps\Playground\Scripts\validation_native.js`.
 That js script is responsible for loading the json, running each test PG, make the screen capture and compare images.
 When completed, the executable returns a value (0 for success, any other value for failure) that is used by the pipeline to determine the build success.
 

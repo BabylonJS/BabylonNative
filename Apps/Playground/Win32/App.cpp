@@ -20,6 +20,7 @@
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Plugins/NativeInput.h>
+#include <Babylon/Plugins/TestUtils.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -125,7 +126,7 @@ namespace
 
         runtime.emplace();
 
-        runtime->Dispatch([](Napi::Env env) {
+        runtime->Dispatch([hWnd](Napi::Env env) {
             device->AddToJavaScript(env);
 
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
@@ -155,10 +156,10 @@ namespace
             {
                 chromeDevTools->StartInspector(5643, "BabylonNative Playground");
             }
+            Babylon::Plugins::TestUtils::Initialize(env, hWnd);
         });
 
         Babylon::ScriptLoader loader{*runtime};
-        loader.Eval("document = {}", "");
         loader.LoadScript("app:///Scripts/ammo.js");
         // Commenting out recast.js for now because v8jsi is incompatible with asm.js.
         // loader.LoadScript("app:///Scripts/recast.js");

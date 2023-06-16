@@ -7,44 +7,41 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2019
+    runs-on: windows-latest
 
     steps:
     - name: Checkout
       uses: actions/checkout@master
       with:
         submodules: 'recursive'
-    - name: NPM Install
-      run: npm install
-      working-directory: ./Apps
-    - name: NPM download nightly
-      run: npm run getNightly
-      working-directory: ./Apps
     - name: View Apps\node_modules content
       run: Get-ChildItem -Path .\Apps\node_modules -Recurse
     - name: Make Solution
       run: mkdir buildWin32_x64 && 
         cd buildWin32_x64 &&
-        cmake -G "Visual Studio 16 2019" -A x64 -DBGFX_CONFIG_DEBUG=ON ..
+        cmake -A x64 -DBGFX_CONFIG_DEBUG=ON ..
+    - name: NPM download nightly
+      run: npm run getNightly
+      working-directory: ./Apps
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v1.0.2
     - name: Build Win32
       run: msbuild buildWin32_x64/BabylonNative.sln -p:Configuration="RelWithDebInfo" -p:Platform=x64 
     - name: Run Validation Tests
       run: |
-          ValidationTests.exe
+          Playground.exe app:///Scripts/validation_native.js
       shell: cmd
-      working-directory: buildWin32_x64/Apps/ValidationTests/RelWithDebInfo
+      working-directory: buildWin32_x64/Apps/Playground/RelWithDebInfo
     - name: Upload Errors images artifact
       uses: actions/upload-artifact@v2
       if: failure()
       with:
           name: ErrorImages
           path: |
-            buildWin32_x64/Apps/ValidationTests/Errors
+            buildWin32_x64/Apps/Playground/Errors
     - name: Upload Result images artifact
       uses: actions/upload-artifact@v2
       with:
           name: ResultImages
           path: |
-            buildWin32_x64/Apps/ValidationTests/Results
+            buildWin32_x64/Apps/Playground/Results

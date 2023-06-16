@@ -20,12 +20,6 @@ jobs:
         git submodule update --init --recursive
       displayName: 'Checkout dependencies'
 
-    - task: Npm@1
-      inputs:
-        command: 'install'
-        workingDir: 'Apps'
-      displayName: 'Install Babylon.js NPM packages'
-
     - template: cmake.yml
       parameters:
         vmImage: ${{ parameters.vmImage }}
@@ -51,19 +45,19 @@ jobs:
 #      # Only test with V8 for now as ValidationTests with JSC are pretty unstable
 #      condition: contains('${{ parameters.JSEngine }}', 'V8')
 #      displayName: 'Validation Tests'
-
-    - task: PublishBuildArtifacts@1
-      inputs:
-        artifactName: '${{ parameters.name }} Rendered Pictures'
-        pathtoPublish: 'build/Apps/ValidationTests/Results'
-      displayName: 'Publish Tests ${{ parameters.name }} Results'
-      condition: always()
-    - task: PublishBuildArtifacts@1
-      inputs:
-        artifactName: '${{ parameters.name }} Error Pictures'
-        pathtoPublish: 'build/Apps/ValidationTests/Errors'
-      displayName: 'Publish Tests ${{ parameters.name }} Errors'
-      condition: failed()
+#
+#    - task: PublishBuildArtifacts@1
+#      inputs:
+#        artifactName: '${{ parameters.name }} Rendered Pictures'
+#        pathtoPublish: 'build/Apps/Playground/Results'
+#      displayName: 'Publish Tests ${{ parameters.name }} Results'
+#      condition: always()
+#    - task: PublishBuildArtifacts@1
+#      inputs:
+#        artifactName: '${{ parameters.name }} Error Pictures'
+#        pathtoPublish: 'build/Apps/Playground/Errors'
+#      displayName: 'Publish Tests ${{ parameters.name }} Errors'
+#      condition: failed()
 
     - script: |
         export DISPLAY=:99
