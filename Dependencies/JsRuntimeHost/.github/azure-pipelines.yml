@@ -40,3 +40,6 @@ jobs:
 
   # iOS
   - template: jobs/ios.yml
+
+  # Linux
+  - template: jobs/linux.yml

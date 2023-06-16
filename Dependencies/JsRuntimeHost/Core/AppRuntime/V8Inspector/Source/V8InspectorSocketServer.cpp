@@ -15,26 +15,12 @@ namespace Babylon
 
     namespace
     {
-
-        // We don't support protocol http end point.
-        static const uint8_t PROTOCOL_JSON[] = {0};
-        //    #include "v8_inspector_protocol_json.h"  // NOLINT(build/include_order)
-        //};
-
         void Escape(std::string* string)
         {
             for (char& c : *string)
             {
                 c = (c == '\"' || c == '\\') ? '_' : c;
             }
-        }
-
-        std::string FormatWsAddress(const std::string& /*host*/, int /*port*/,
-            const std::string& /*target_id*/,
-            bool /*include_protocol*/)
-        {
-            // return FormatAddress(FormatHostPort(host, port), target_id, include_protocol);
-            return "formatted address!!";
         }
 
         std::string FormatHostPort(const std::string& host, int port)
@@ -111,25 +97,6 @@ namespace Babylon
                     return path + len;
             }
             return nullptr;
-        }
-
-        void PrintDebuggerReadyMessage(const std::string& host,
-            int port,
-            const std::vector<std::string>& ids,
-            FILE* out)
-        {
-            if (out == nullptr)
-            {
-                return;
-            }
-            for (const std::string& id : ids)
-            {
-                fprintf(out, "Debugger listening on %s\n",
-                    FormatWsAddress(host, port, id, true).c_str());
-            }
-            fprintf(out, "For help, see: %s\n",
-                "https://nodejs.org/en/docs/inspector");
-            fflush(out);
         }
 
         void SendHttpResponse(InspectorSocket* socket, const std::string& response)

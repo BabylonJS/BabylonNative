@@ -3,7 +3,7 @@ set(SOURCES
     "Source/Console.cpp")
 
 add_library(Console ${SOURCES})
-#warnings_as_errors(Console)
+warnings_as_errors(Console)
 
 target_include_directories(Console PUBLIC "Include")
 

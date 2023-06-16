@@ -274,7 +274,6 @@ namespace Babylon
 
     private:
         AgentImpl& agent_;
-        v8::Platform* platform_;
         std::atomic<bool> waiting_for_resume_{false};
         bool running_nested_loop_;
         std::unique_ptr<V8Inspector> inspector_;
@@ -285,15 +284,15 @@ namespace Babylon
         v8::Isolate* isolate,
         v8::Local<v8::Context> context,
         const char* context_name)
-        : platform_(platform)
-        , isolate_(isolate)
-        , wait_(false)
+        : wait_(false)
         , shutting_down_(false)
         , state_(State::kNew)
         , inspector_(nullptr)
+        , isolate_(isolate)
         , dispatching_messages_(false)
         , session_id_(0)
         , server_(nullptr)
+        , platform_(platform)
     {
         inspector_ = std::make_unique<V8NodeInspector>(*this);
         inspector_->setupContext(context, context_name);
@@ -701,7 +700,6 @@ namespace Babylon
         bool wait)
         : agent_(agent)
         , connected_(false)
-        , session_id_(0)
         , script_name_(script_name)
         , script_path_(script_path)
         , target_id_(utils::GenerateUniqueID())

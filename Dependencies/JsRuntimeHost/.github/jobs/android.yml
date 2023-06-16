@@ -12,12 +12,6 @@ jobs:
     vmImage: macos-latest
 
   steps:
-  - task: Npm@1
-    inputs:
-      command: 'install'
-      workingDir: 'Tests'
-    displayName: 'Install NPM packages'
-
   - script: |
       echo Install Android image
       echo 'y' | $ANDROID_HOME/tools/bin/sdkmanager --install 'system-images;android-27;default;x86_64'

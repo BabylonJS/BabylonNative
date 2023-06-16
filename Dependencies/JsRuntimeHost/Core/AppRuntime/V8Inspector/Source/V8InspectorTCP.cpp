@@ -12,8 +12,8 @@ namespace Babylon
         : io_service_()
         , acceptor_(io_service_)
         , socket_(io_service_)
-        , connectionCallback_(callback)
         , callbackData_(data)
+        , connectionCallback_(callback)
     {
         asio::ip::tcp::endpoint endpoint(asio::ip::tcp::v4(), port);
         acceptor_.open(endpoint.protocol());
@@ -96,7 +96,7 @@ namespace Babylon
     void tcp_connection::write_async(std::vector<char> message)
     {
         async_write(socket_, asio::buffer(message),
-            [self = shared_from_this(), message = std::move(message)](asio::error_code ec, std::size_t bytes_transferred) {
+            [self = shared_from_this(), message = std::move(message)](asio::error_code ec, std::size_t /*bytes_transferred*/) {
                 if (ec == asio::error::operation_aborted)
                 {
                     std::abort();

@@ -621,8 +621,9 @@ std::string ProtocolHandler::GetHost() const {
 
 // RAII uv_tcp_t wrapper
 TcpHolder::TcpHolder(std::shared_ptr<tcp_connection> connection, std::unique_ptr<InspectorSocket::Delegate> delegate)
-                     : delegate_(std::move(delegate)),
-                       connection_(connection), handler_(nullptr) {
+                     : connection_(connection),
+                       delegate_(std::move(delegate)),
+                       handler_(nullptr) {
   connection_->registerReadCallback(TcpHolder::OnDataReceivedCb, this);
   connection_->read_loop_async();
 }

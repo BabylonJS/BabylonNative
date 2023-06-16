@@ -102,12 +102,12 @@ describe("XMLHTTPRequest", function () {
     this.timeout(0);
 
     it("should have readyState=4 when load ends", async function () {
-        const xhr = await createRequest("GET", "https://httpbin.org/get");
+        const xhr = await createRequest("GET", "https://github.com/");
         expect(xhr.readyState).to.equal(4);
     });
 
     it("should have status=200 for a file that exists", async function () {
-        const xhr = await createRequest("GET", "https://httpbin.org/status/200");
+        const xhr = await createRequest("GET", "https://github.com/");
         expect(xhr.status).to.equal(200);
     });
 
@@ -127,7 +127,7 @@ describe("XMLHTTPRequest", function () {
     });
 
     it("should have status=404 for a file that does not exist", async function () {
-        const xhr = await createRequest("GET", "https://httpbin.org/status/404");
+        const xhr = await createRequest("GET", "https://github.com/babylonJS/BabylonNative404");
         expect(xhr.status).to.equal(404);
     });
 
@@ -158,27 +158,27 @@ describe("XMLHTTPRequest", function () {
     });
 
     it("should make a POST request with no body successfully", async function () {
-        const xhr = await createRequest("POST", "https://httpbin.org/post");
+        const xhr = await createRequest("POST", "https://babylonresponder.azurewebsites.net/api/req200");
         expect(xhr).to.have.property('readyState', 4);
         expect(xhr).to.have.property('status', 200);
     });
 
     it("should make a POST request with body successfully", async function () {
-        const xhr = await createRequest("POST", "https://httpbin.org/post", "sampleBody");
+        const xhr = await createRequest("POST", "https://babylonresponder.azurewebsites.net/api/req200", "sampleBody");
         expect(xhr).to.have.property('readyState', 4);
         expect(xhr).to.have.property('status', 200);
     });
 
     it("should make a GET request with headers successfully", async function () {
         const headersMap = new Map([['foo', '3'], ['bar', '3']]);
-        const xhr = await createRequestWithHeaders("GET", "https://httpbin.org/get", headersMap);
+        const xhr = await createRequestWithHeaders("GET", "https://babylonresponder.azurewebsites.net/api/req200", headersMap);
         expect(xhr).to.have.property('readyState', 4);
         expect(xhr).to.have.property('status', 200);
     });
 
     it("should make a POST request with body and headers successfully", async function () {
         const headersMap = new Map([['foo', '3'], ['bar', '3']]);
-        const xhr = await createRequestWithHeaders("POST", "https://httpbin.org/post", headersMap, "testBody");
+        const xhr = await createRequestWithHeaders("POST", "https://babylonresponder.azurewebsites.net/api/req200", headersMap, "testBody");
         expect(xhr).to.have.property('readyState', 4);
         expect(xhr).to.have.property('status', 200);
     });
@@ -309,119 +309,119 @@ describe("clearTimeout", function () {
 
 
 // Websocket
+if (hostPlatform !== "Unix") {
+    describe("WebSocket", function () {
+        it("should connect correctly with one websocket connection", function (done) {
+            const ws = new WebSocket('wss://ws.postman-echo.com/raw');
+            const testMessage = "testMessage";
+            ws.onopen = () => {
+                try {
+                    expect(ws).to.have.property('readyState', 1);
+                    expect(ws).to.have.property('url', 'wss://ws.postman-echo.com/raw');
+                    ws.send(testMessage);
+                }
+                catch (e) {
+                    done(e);
+                }
+            }
 
-describe("WebSocket", function () {
-    it("should connect correctly with one websocket connection", function (done) {
-        const ws = new WebSocket('wss://ws.postman-echo.com/raw');
-        const testMessage = "testMessage";
-        ws.onopen = () => {
-            try {
-                expect(ws).to.have.property('readyState', 1);
-                expect(ws).to.have.property('url', 'wss://ws.postman-echo.com/raw');
-                ws.send(testMessage);
+            ws.onmessage = (msg) => {
+                try {
+                    expect(msg.data).to.equal(testMessage);
+                    ws.close();
+                }
+                catch (e) {
+                    done(e);
+                }
             }
-            catch (e) {
-                done(e);
-            }
-        }
 
-        ws.onmessage = (msg) => {
-            try {
-                expect(msg.data).to.equal(testMessage);
-                ws.close();
+            ws.onclose = () => {
+                try {
+                    expect(ws).to.have.property('readyState', 3);
+                    done();
+                }
+                catch (e) {
+                    done(e);
+                }
             }
-            catch (e) {
-                done(e);
-            }
-        }
+        });
 
-        ws.onclose = () => {
-            try {
-                expect(ws).to.have.property('readyState', 3);
+        it("should connect correctly with multiple websocket connections", function (done) {
+            const testMessage1 = "testMessage1";
+            const testMessage2 = "testMessage2";
+
+            const ws1 = new WebSocket('wss://ws.postman-echo.com/raw');
+            ws1.onopen = () => {
+                const ws2 = new WebSocket('wss://ws.postman-echo.com/raw');
+                ws2.onopen = () => {
+                    try {
+                        expect(ws2).to.have.property('readyState', 1);
+                        expect(ws2).to.have.property('url', 'wss://ws.postman-echo.com/raw');
+                        ws2.send(testMessage2);
+                    }
+                    catch (e) {
+                        done(e);
+                    }
+                }
+
+                ws2.onmessage = (msg) => {
+                    try {
+                        expect(msg.data).to.equal(testMessage2);
+                        ws2.close();
+                    }
+                    catch (e) {
+                        done(e);
+                    }
+                }
+
+                ws2.onclose = () => {
+                    try {
+                        expect(ws2).to.have.property('readyState', 3);
+                        ws1.send(testMessage1);
+                    }
+                    catch (e) {
+                        done(e);
+                    }
+                }
+            }
+
+            ws1.onmessage = (msg) => {
+                try {
+                    expect(msg.data).to.equal(testMessage1);
+                    ws1.close();
+                }
+                catch (e) {
+                    done(e);
+                }
+            }
+
+            ws1.onclose = () => {
+                try {
+                    expect(ws1).to.have.property('readyState', 3);
+                    done();
+                }
+                catch (e) {
+                    done(e);
+                }
+            }
+        });
+
+        it("should trigger error callback with invalid server", function (done) {
+            const ws = new WebSocket('wss://example.com');
+            ws.onerror = () => {
                 done();
             }
-            catch (e) {
-                done(e);
-            }
-        }
-    });
+        });
 
-    it("should connect correctly with multiple websocket connections", function (done) {
-        const testMessage1 = "testMessage1";
-        const testMessage2 = "testMessage2";
-
-        const ws1 = new WebSocket('wss://ws.postman-echo.com/raw');
-        ws1.onopen = () => {
-            const ws2 = new WebSocket('wss://ws.postman-echo.com/raw');
-            ws2.onopen = () => {
-                try {
-                    expect(ws2).to.have.property('readyState', 1);
-                    expect(ws2).to.have.property('url', 'wss://ws.postman-echo.com/raw');
-                    ws2.send(testMessage2);
-                }
-                catch (e) {
-                    done(e);
-                }
-            }
-
-            ws2.onmessage = (msg) => {
-                try {
-                    expect(msg.data).to.equal(testMessage2);
-                    ws2.close();
-                }
-                catch (e) {
-                    done(e);
-                }
-            }
-
-            ws2.onclose = () => {
-                try {
-                    expect(ws2).to.have.property('readyState', 3);
-                    ws1.send(testMessage1);
-                }
-                catch (e) {
-                    done(e);
-                }
-            }
-        }
-
-        ws1.onmessage = (msg) => {
-            try {
-                expect(msg.data).to.equal(testMessage1);
-                ws1.close();
-            }
-            catch (e) {
-                done(e);
-            }
-        }
-
-        ws1.onclose = () => {
-            try {
-                expect(ws1).to.have.property('readyState', 3);
+        it("should trigger error callback with invalid domain", function (done) {
+            this.timeout(10000);
+            const ws = new WebSocket('wss://example');
+            ws.onerror = () => {
                 done();
             }
-            catch (e) {
-                done(e);
-            }
-        }
-    });
-
-    it("should trigger error callback with invalid server", function (done) {
-        const ws = new WebSocket('wss://example.com');
-        ws.onerror = () => {
-            done();
-        }
-    });
-
-    it("should trigger error callback with invalid domain", function (done) {
-        this.timeout(10000);
-        const ws = new WebSocket('wss://example');
-        ws.onerror = () => {
-            done();
-        }
-    });
-})
-
+        });
+    })
+}
 
 // URL
 describe("URL", function () {

@@ -6,12 +6,6 @@ jobs:
     vmImage: macos-latest
 
   steps:
-  - task: Npm@1
-    inputs:
-      command: 'install'
-      workingDir: 'Tests'
-    displayName: 'Install NPM packages'
-
   - script: |
       sudo xcode-select --switch /Applications/Xcode_14.0.app/Contents/Developer
     displayName: 'Select XCode 14.0'

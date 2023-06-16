@@ -5,7 +5,18 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
     cmake_policy(SET CMP0135 NEW)
 endif()
 
+# fetch necessary modules
+
 include(FetchContent)
+
+# CMakeExtensions
+include(FetchContent)
+message(STATUS "Fetching CMakeExtensions")
+FetchContent_Declare(cmake-extensions
+    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
+    GIT_TAG 7bdd0664181ce3d90dc94474464cea9b25b22db7)
+FetchContent_MakeAvailable(cmake-extensions)
+message(STATUS "Fetching CMakeExtensions - done")
 
 if(IOS)
     FetchContent_Declare(ios-cmake
@@ -67,7 +78,7 @@ if(NOT TARGET UrlLib AND JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST)
     FetchContent_Declare(
         UrlLib
         GIT_REPOSITORY https://github.com/BabylonJS/UrlLib.git
-        GIT_TAG f4bae6043c690132a6b219ec80f68f0c252aaa7d)
+        GIT_TAG 4182996cbe3b85a960e38bd8a61892688ed55213)
 
     message(STATUS "Fetching UrlLib")
     FetchContent_MakeAvailable(UrlLib)
@@ -104,14 +115,6 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INS
 
         set_property(TARGET llhttp_static PROPERTY FOLDER Dependencies)
     endif()
-endif()
-
-# Common Variables
-
-if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
-    set(NPM_COMMAND "npm.cmd")
-else()
-    set(NPM_COMMAND "npm")
 endif()
 
 # Subdirectories

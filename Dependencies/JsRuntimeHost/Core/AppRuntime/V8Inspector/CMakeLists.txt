@@ -12,7 +12,7 @@ set(SOURCES
     "Source/V8InspectorUtils.cpp")
 
 add_library(v8inspector ${SOURCES})
-#warnings_as_errors(v8inspector)
+warnings_as_errors(v8inspector)
 
 target_include_directories(v8inspector
     PUBLIC "Include"

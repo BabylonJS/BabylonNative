@@ -50,7 +50,6 @@ namespace Babylon
         std::string utf16toUTF8(const uint16_t* utf16String, size_t utf16Len) noexcept;
         std::basic_string<char16_t> Utf8ToUtf16(const char* utf8, size_t utf8Len);
 
-        static char ToLower(char c);
         std::string ToLower(const std::string& in);
         bool StringEqualNoCase(const char* a, const char* b);
         bool StringEqualNoCaseN(const char* a, const char* b, size_t length);

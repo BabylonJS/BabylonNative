@@ -5,7 +5,7 @@ set(SOURCES
     "Source/WebSocket.h")
 
 add_library(WebSocket ${SOURCES})
-#warnings_as_errors(WebSocket)
+warnings_as_errors(WebSocket)
 
 target_include_directories(WebSocket PUBLIC "Include")
 

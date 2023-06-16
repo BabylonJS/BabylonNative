@@ -11,10 +11,13 @@ get_filename_component(REPO_ROOT_DIR "${UNIT_TESTS_DIR}/../.." ABSOLUTE)
 set(JSRUNTIMEHOST_TESTS OFF) # Turn off the tests folder for Android Studio path
 add_subdirectory(${REPO_ROOT_DIR} "${CMAKE_CURRENT_BINARY_DIR}/JsRuntimeHost")
 
+npm(install "${UNIT_TESTS_DIR}/../" "UnitTests")
+
 add_library(UnitTestsJNI SHARED
     JNI.cpp
     ${UNIT_TESTS_DIR}/Shared/Shared.h
     ${UNIT_TESTS_DIR}/Shared/Shared.cpp)
+target_compile_definitions(UnitTestsJNI PRIVATE JSRUNTIMEHOST_PLATFORM="${JSRUNTIMEHOST_PLATFORM}")
 
 target_include_directories(UnitTestsJNI
     PRIVATE ${UNIT_TESTS_DIR})

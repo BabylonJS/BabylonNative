@@ -6,7 +6,7 @@ set(SOURCES
     "Source/Scheduling.cpp")
 
 add_library(Scheduling ${SOURCES})
-#warnings_as_errors(Scheduling)
+warnings_as_errors(Scheduling)
 
 target_include_directories(Scheduling
     PUBLIC "Include")

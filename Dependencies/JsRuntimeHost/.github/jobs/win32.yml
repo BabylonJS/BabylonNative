@@ -14,12 +14,6 @@ jobs:
     vmImage: windows-latest
 
   steps:
-  - task: Npm@1
-    inputs:
-      command: 'install'
-      workingDir: 'Tests'
-    displayName: 'Install NPM packages'
-
   - script: cmake -B Build/Win32 -A ${{parameters.platform}} -D NAPI_JAVASCRIPT_ENGINE=${{parameters.jsEngine}}
     displayName: 'Configure CMake'
 

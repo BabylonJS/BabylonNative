@@ -38,7 +38,6 @@ namespace Babylon
     private:
         AgentImpl& agent_;
         bool connected_;
-        int session_id_;
         const std::string script_name_;
         const std::string script_path_;
         const std::string target_id_;

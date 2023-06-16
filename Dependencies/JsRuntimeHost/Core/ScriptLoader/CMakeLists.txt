@@ -3,7 +3,7 @@ set(SOURCES
     "Source/ScriptLoader.cpp")
 
 add_library(ScriptLoader ${SOURCES})
-#warnings_as_errors(ScriptLoader)
+warnings_as_errors(ScriptLoader)
 
 target_include_directories(ScriptLoader PUBLIC "Include")
 
