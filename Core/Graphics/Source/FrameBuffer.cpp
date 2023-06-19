@@ -90,8 +90,12 @@ namespace Babylon::Graphics
             bgfx::setViewRect(m_viewId.value(), 0, 0, Width(), Height());
             m_bgfxViewPort = {0, 0, 1, 1};
         }
-        encoder.touch(m_viewId.value());
 
+        // Reset the scissor rect now that we have a new view.
+        bgfx::setViewScissor(m_viewId.value());
+        m_bgfxScissor = {};
+
+        encoder.touch(m_viewId.value());
     }
 
     void FrameBuffer::SetViewPort(bgfx::Encoder& encoder, float x, float y, float width, float height)
@@ -166,25 +170,25 @@ namespace Babylon::Graphics
 
         m_viewId = m_context.AcquireNewViewId(encoder);
 
-        m_bgfxViewPort = viewPort;
-        m_bgfxScissor = scissor;
-
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), BGFX_CLEAR_NONE, 0, 1.0f, 0);
         bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
+
         bgfx::setViewRect(m_viewId.value(),
             static_cast<uint16_t>(m_bgfxViewPort.X * Width()),
             static_cast<uint16_t>(m_bgfxViewPort.Y * Height()),
             static_cast<uint16_t>(m_bgfxViewPort.Width * Width()),
             static_cast<uint16_t>(m_bgfxViewPort.Height * Height()));
+        m_bgfxViewPort = viewPort;
 
-        const auto flippedScissor = GetFlippedScissor();        
+        const auto flippedScissor = GetFlippedScissor();
         bgfx::setViewScissor(
             m_viewId.value(),
             static_cast<uint16_t>(flippedScissor.X),
             static_cast<uint16_t>(flippedScissor.Y),
             static_cast<uint16_t>(flippedScissor.Width),
             static_cast<uint16_t>(flippedScissor.Height));
+        m_bgfxScissor = scissor;
     }
 
     bool Rect::Equals(const Rect& other) const
