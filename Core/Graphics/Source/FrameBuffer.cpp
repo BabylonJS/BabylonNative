@@ -63,7 +63,7 @@ namespace Babylon::Graphics
         // If a scissor is set, we need to set the BGFX view rect to match it before clearing.
         // We set the view rect instead of the view scissor because BGFX clears after the view rect is set and before
         // the view scissor is set.
-        // 
+        //
         // If no scissor is set, WebGL cleans the entire screen, so set the view rect to cover the entire screen before
         // clearing to match WebGL's behavior; otherwise BGFX will only clear the view rect.
         //
