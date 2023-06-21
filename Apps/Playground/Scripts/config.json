@@ -218,6 +218,18 @@
             "referenceImage": "scissor-test.png"
         },
         {
+            "title": "Scissor test with 0.9 hardware scaling",
+            "renderCount": 10,
+            "playgroundId": "#W7E7CF#27",
+            "referenceImage": "scissorTestWith0.9HardwareScaling.png"
+        },
+        {
+            "title": "Scissor test with 1.5 hardware scaling",
+            "renderCount": 10,
+            "playgroundId": "#W7E7CF#28",
+            "referenceImage": "scissorTestWith1.5HardwareScaling.png"
+        },
+        {
             "title": "Scissor test with negative x and y",
             "playgroundId": "#3L5BCD#2",
             "referenceImage": "scissorTestNegativeXandY.png"
