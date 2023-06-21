@@ -131,6 +131,8 @@ namespace
 
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 OutputDebugStringA(message);
+                printf("%s", message);
+                fflush(stdout);
             });
 
             Babylon::Polyfills::Window::Initialize(env);
@@ -407,7 +409,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_DESTROY:
         {
             Uninitialize();
-            PostQuitMessage(0);
+            PostQuitMessage(Babylon::Plugins::TestUtils::errorCode);
             break;
         }
         case WM_KEYDOWN:
