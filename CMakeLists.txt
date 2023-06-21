@@ -25,13 +25,9 @@ option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ON)
 option(BABYLON_NATIVE_INSTALL "Include the install target." ON)
 
 ## Core
-option(BABYLON_NATIVE_CORE_JSRUNTIME "Include Babylon Native Core JsRuntime" ON)
-option(BABYLON_NATIVE_CORE_APPRUNTIME "Include Babylon Native Core AppRuntime" ON)
-option(BABYLON_NATIVE_CORE_SCRIPTLOADER "Include Babylon Native Core ScriptLoader" ON)
 option(BABYLON_NATIVE_CORE_GRAPHICS "Include Babylon Native Core Graphics" ON)
 
 ## Plugins
-option(BABYLON_NATIVE_PLUGIN_CHROMEDEVTOOLS "Include Babylon Native Plugin ChromeDevTools." ON)
 option(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE "Include Babylon Native Plugin ExternalTexture." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAMERA "Include Babylon Native Plugin NativeCamera." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE "Include Babylon Native Plugin NativeCapture." ON)
@@ -43,9 +39,7 @@ option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils.
 option(BABYLON_NATIVE_PLUGIN_NATIVEXR "Include Babylon Native Plugin XR." ON)
 
 ## Polyfills
-option(BABYLON_NATIVE_POLYFILL_CONSOLE "Include Babylon Native Polyfill Console." ON)
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
-option(BABYLON_NATIVE_POLYFILL_XMLHTTPREQUEST "Include Babylon Native Polyfill XMLHttpRequest." ON)
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
 # --------------------------------------------------
 
