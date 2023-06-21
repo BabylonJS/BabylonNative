@@ -60,23 +60,27 @@ namespace Babylon::Graphics
         bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
         bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
 
+        // If a scissor is not set, WebGL clears the entire screen, so set the view rect to cover the entire screen
+        // before clearing to match WebGL's behavior; otherwise BGFX will only clear the view rect.
+        //
         // If a scissor is set, we need to set the BGFX view rect to match it before clearing.
         // We set the view rect instead of the view scissor because BGFX clears after the view rect is set and before
         // the view scissor is set.
         //
-        // If no scissor is set, WebGL cleans the entire screen, so set the view rect to cover the entire screen before
-        // clearing to match WebGL's behavior; otherwise BGFX will only clear the view rect.
-        //
         // Note that the view rect and view scissor are reset to the desired dimensions before the encoder is submitted.
-        if (m_desiredScissor.Width != 0.0f || m_desiredScissor.Height != 0.0f)
+        if (m_desiredScissor.X == 0.0f && m_desiredScissor.Y == 0.0f && m_desiredScissor.Width == 0.0f && m_desiredScissor.Height == 0.0f)
         {
-            const auto flippedScissor = GetFlippedScissor();
+            bgfx::setViewRect(m_viewId.value(), 0, 0, Width(), Height());
+            m_bgfxViewPort = {0, 0, 1, 1};
+        }
+        else
+        {
             bgfx::setViewRect(
                 m_viewId.value(),
-                static_cast<uint16_t>(flippedScissor.X),
-                static_cast<uint16_t>(flippedScissor.Y),
-                static_cast<uint16_t>(flippedScissor.Width),
-                static_cast<uint16_t>(flippedScissor.Height));
+                static_cast<uint16_t>(m_desiredScissor.X),
+                static_cast<uint16_t>(m_desiredScissor.Y),
+                static_cast<uint16_t>(m_desiredScissor.Width),
+                static_cast<uint16_t>(m_desiredScissor.Height));
 
             m_bgfxViewPort = {
                 m_desiredScissor.X / Width(),
@@ -84,11 +88,6 @@ namespace Babylon::Graphics
                 m_desiredScissor.Width / Width(),
                 m_desiredScissor.Height / Height(),
             };
-        }
-        else
-        {
-            bgfx::setViewRect(m_viewId.value(), 0, 0, Width(), Height());
-            m_bgfxViewPort = {0, 0, 1, 1};
         }
 
         // Reset the scissor rect now that we have a new view.
@@ -106,7 +105,7 @@ namespace Babylon::Graphics
 
     void FrameBuffer::SetScissor(bgfx::Encoder& encoder, float x, float y, float width, float height)
     {
-        m_desiredScissor = {std::round(x), std::round(y), std::round(width), std::round(height)};
+        m_desiredScissor = GetBgfxScissor(x, y, width, height);
         SetBgfxViewPortAndScissor(encoder, m_desiredViewPort, m_desiredScissor);
     }
 
@@ -143,22 +142,46 @@ namespace Babylon::Graphics
         m_disposed = true;
     }
 
-    /// Returns the desired scissor rect with the Y coordinate flipped.
+    /// Returns the given scissor rect converted to the rect used by BGFX.
     ///
-    /// In WebGL the scissor x/y coords are the lower left of the rect, but in BGFX the scissor x/y coords are the
-    /// upper left. This function returns the given WebGL scissor rect converted to a BGFX scissor rect and makes sure
-    /// y is not negative.
-    ///
-    /// Note that this function sets the y coord to 0 if the desired scissor's height is 0 because BGFX requires the
-    /// x, y, width, and height to all be zero to disable the scissor. Without this extra check this function will set
-    /// the y coord to the framebuffer's height, which will make BGFX set an invalid scissor rect (the top and bottom
-    /// of the scissor rect will have the same value), and may crash the renderer in some cases.
-    ///
-    Rect FrameBuffer::GetFlippedScissor() const
+    Rect FrameBuffer::GetBgfxScissor(float x, float y, float width, float height) const
     {
-        Rect scissor = m_desiredScissor;
-        scissor.Y = m_desiredScissor.Height == 0.0f ? 0.0f : std::max(0.0f, std::round((Height() - m_desiredScissor.Y) - m_desiredScissor.Height));
-        return scissor;
+        // If the given args are all zero then the scissor is being disabled.
+        if (x == 0.0f && y == 0.0f && width == 0.0f && height == 0.0f)
+        {
+            return Rect{};
+        }
+
+        x = std::round(x);
+        y = std::round(y);
+        width = std::round(width);
+        height = std::round(height);
+
+        if (x < 0.0f)
+        {
+            width += x;
+            x = 0.0f;
+        }
+
+        if (y < 0.0f)
+        {
+            height += y;
+            y = 0.0f;
+        }
+
+        if (Width() < x + width)
+        {
+            width = Width() - x;
+        }
+
+        if (Height() < y + height)
+        {
+            height = Height() - y;
+        }
+
+        y = (Height() - y) - height;
+
+        return Rect{x, y, width, height};
     }
 
     void FrameBuffer::SetBgfxViewPortAndScissor(bgfx::Encoder& encoder, const Rect& viewPort, const Rect& scissor)
@@ -174,21 +197,20 @@ namespace Babylon::Graphics
         bgfx::setViewClear(m_viewId.value(), BGFX_CLEAR_NONE, 0, 1.0f, 0);
         bgfx::setViewFrameBuffer(m_viewId.value(), m_handle);
 
+        m_bgfxViewPort = viewPort;
         bgfx::setViewRect(m_viewId.value(),
             static_cast<uint16_t>(m_bgfxViewPort.X * Width()),
             static_cast<uint16_t>(m_bgfxViewPort.Y * Height()),
             static_cast<uint16_t>(m_bgfxViewPort.Width * Width()),
             static_cast<uint16_t>(m_bgfxViewPort.Height * Height()));
-        m_bgfxViewPort = viewPort;
 
-        const auto flippedScissor = GetFlippedScissor();
+        m_bgfxScissor = scissor;
         bgfx::setViewScissor(
             m_viewId.value(),
-            static_cast<uint16_t>(flippedScissor.X),
-            static_cast<uint16_t>(flippedScissor.Y),
-            static_cast<uint16_t>(flippedScissor.Width),
-            static_cast<uint16_t>(flippedScissor.Height));
-        m_bgfxScissor = scissor;
+            static_cast<uint16_t>(m_bgfxScissor.X),
+            static_cast<uint16_t>(m_bgfxScissor.Y),
+            static_cast<uint16_t>(m_bgfxScissor.Width),
+            static_cast<uint16_t>(m_bgfxScissor.Height));
     }
 
     bool Rect::Equals(const Rect& other) const

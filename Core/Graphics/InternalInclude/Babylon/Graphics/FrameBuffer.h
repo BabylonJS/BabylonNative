@@ -66,7 +66,7 @@ namespace Babylon::Graphics
 
         bool m_disposed{false};
 
-        Rect GetFlippedScissor() const;
+        Rect GetBgfxScissor(float x, float y, float width, float height) const;
         void SetBgfxViewPortAndScissor(bgfx::Encoder& encoder, const Rect& viewPort, const Rect& scissor);
     };
 }

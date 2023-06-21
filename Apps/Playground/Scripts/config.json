@@ -218,6 +218,16 @@
             "referenceImage": "scissor-test.png"
         },
         {
+            "title": "Scissor test with negative x and y",
+            "playgroundId": "#3L5BCD#2",
+            "referenceImage": "scissorTestNegativeXandY.png"
+        },
+        {
+            "title": "Scissor test with out of bounds width and height",
+            "playgroundId": "#3L5BCD#3",
+            "referenceImage": "scissorTestOobWidthAndHeight.png"
+        },
+        {
             "title": "setParent",
             "playgroundId": "#JD49CT#2",
             "referenceImage": "setParent.png"
