@@ -11,8 +11,8 @@ FetchContent_MakeAvailable(cmake-extensions)
 
 # JSRuntime Host
 FetchContent_Declare(jsruntimehost
-        GIT_REPOSITORY https://github.com/CedricGuillemet/JsRuntimeHost.git
-        GIT_TAG 5ede2c0c7b848237bfa8934a42d362dcfed3a6d4)
+        GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
+        GIT_TAG c9cff63b42f8b854b3331275ba23203839f780b5)
 set(JSRUNTIMEHOST_TESTS OFF)
 FetchContent_MakeAvailable(jsruntimehost)
 
