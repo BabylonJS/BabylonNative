@@ -2,6 +2,37 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "GLTF Texture Linear Interpolation Test",
+            "playgroundId": "#WGZLGJ#3009",
+            "referenceImage": "gltfTextureLinearInterpolation.png",
+            "renderCount": 10
+        },
+        {
+            "title": "GLTF Extension KHR_materials_volume with attenuation",
+            "playgroundId": "#YG3BBF#18",
+            "referenceImage": "gltfExtensionKhrMaterialsVolumeAttenuation.png",
+            "errorRatio": 1.2,
+            "renderCount": 10
+        },
+        {
+            "title": "GLTF ClearCoat",
+            "playgroundId": "#YG3BBF#4",
+            "referenceImage": "glTFClearCoat.png",
+            "renderCount": 50,
+            "excludeFromAutomaticTesting": false
+        },
+        {
+            "title": "Iridescence GLTF",
+            "playgroundId": "#2FDQT5#1508",
+            "referenceImage": "iridescence_gltf.png"
+        },
+        {
+            "title": "GLTF Animation Skin Type",
+            "playgroundId": "#DS8AA7#27",
+            "replace": "__folder__, Animation_SkinType, __page__, 0, __disableSRGBBuffers__, 0",
+            "referenceImage": "gltfAnimationSkinType.png"
+        },
+        {
             "reason": "https://github.com/BabylonJS/BabylonNative/issues/1111",
             "title": "Thin Instances",
             "playgroundId": "#V1JE4Z#1",
@@ -364,7 +395,7 @@
             "replace": "__folder__, Mesh_PrimitiveMode, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitiveMode0.png",
             "errorRatio": 8.0,
-            "excludedEngines": ["webgpu"]
+            "excludedEngines": [ "webgpu" ]
         },
         {
             "title": "GLTF Mesh Primitive Mode (1)",
@@ -372,7 +403,7 @@
             "replace": "__folder__, Mesh_PrimitiveMode, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitiveMode1.png",
             "errorRatio": 8.0,
-            "excludedEngines": ["webgpu"]
+            "excludedEngines": [ "webgpu" ]
         },
         {
             "title": "GLTF Mesh Primitives",
