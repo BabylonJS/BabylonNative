@@ -56,7 +56,6 @@ target_link_libraries(BabylonNativeJNI
     AppRuntime
     Canvas
     Console
-    ChromeDevTools
     GraphicsDevice
     NativeCamera
     NativeEngine
