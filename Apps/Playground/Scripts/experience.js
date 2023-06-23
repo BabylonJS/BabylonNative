@@ -125,10 +125,9 @@ CreateBoxAsync(scene).then(function () {
     if (wireframe) {
         var material = new BABYLON.StandardMaterial("wireframe", scene);
         material.wireframe = true;
-        material.pointsCloud = true;
 
         for (var index = 0; index < scene.meshes.length; index++) {
-            scene.meshes[0].material = material;
+            scene.meshes[index].material = material;
         }
     }
 
