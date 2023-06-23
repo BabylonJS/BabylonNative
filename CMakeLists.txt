@@ -6,13 +6,15 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 include(FetchContent)
 FetchContent_Declare(cmake-extensions
         GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-        GIT_TAG 7bdd0664181ce3d90dc94474464cea9b25b22db7)
+        GIT_TAG 17baf9e349afea90677e69cdd273d773c894f7b5)
+message(STATUS "Fetching cmake-extensions")
 FetchContent_MakeAvailable(cmake-extensions)
+message(STATUS "Fetching cmake-extensions - done")
 
 # JSRuntime Host
 FetchContent_Declare(jsruntimehost
         GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-        GIT_TAG c9cff63b42f8b854b3331275ba23203839f780b5)
+        GIT_TAG 7d4c1966b54dca290be44646998cbeec431fca50)
 set(JSRUNTIMEHOST_TESTS OFF)
 FetchContent_MakeAvailable(jsruntimehost)
 
