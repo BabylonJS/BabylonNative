@@ -16,13 +16,6 @@ namespace Babylon::Plugins
 
     void ExternalTexture::Impl::Update(Graphics::TextureT ptr)
     {
-        Info info;
-        GetInfo(ptr, info);
-        if (info != m_info)
-        {
-            throw std::runtime_error{"Textures must have same info"};
-        }
-
         Assign(ptr);
     }
 

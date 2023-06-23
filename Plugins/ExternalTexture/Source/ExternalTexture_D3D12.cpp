@@ -167,7 +167,7 @@ namespace Babylon::Plugins
         }
 
     private:
-        void GetInfo(Graphics::TextureT ptr, Info& info)
+        static void GetInfo(Graphics::TextureT ptr, Info& info)
         {
             D3D12_RESOURCE_DESC desc = ptr->GetDesc();
 

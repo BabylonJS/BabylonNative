@@ -167,7 +167,7 @@ namespace Babylon::Plugins
         }
 
     private:
-        void GetInfo(Graphics::TextureT ptr, Info& info)
+        static void GetInfo(Graphics::TextureT ptr, Info& info)
         {
             winrt::com_ptr<ID3D11Resource> resource;
             resource.copy_from(ptr);
