@@ -128,11 +128,6 @@ target_link_to_dependencies(Playground
     ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 
-if(WIN32)
-    target_link_to_dependencies(Playground
-        PRIVATE "shlwapi.lib")
-endif()
-
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
 # If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.
 add_custom_command(TARGET Playground POST_BUILD
