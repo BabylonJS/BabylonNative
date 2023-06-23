@@ -24,6 +24,25 @@ jobs:
       platform: x64
       jsEngine: JSI
 
+  # UWP
+  - template: jobs/uwp.yml
+    parameters:
+      name: UWP_x64_Chakra
+      platform: x64
+      jsEngine: Chakra
+
+  - template: jobs/uwp.yml
+    parameters:
+      name: UWP_x64_JSI
+      platform: x64
+      jsEngine: JSI
+
+  - template: jobs/uwp.yml
+    parameters:
+      name: UWP_arm64_JSI
+      platform: arm64
+      jsEngine: JSI
+
   # Android
   - template: jobs/android.yml
     parameters:
