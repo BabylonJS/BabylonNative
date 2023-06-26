@@ -11,7 +11,7 @@ jobs:
       sudo apt-get install libjavascriptcoregtk-4.0-dev libcurl4-openssl-dev ninja-build
     displayName: 'Install packages'
 
-  - script: cmake -B Build/ubuntu -GNinja -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -D NAPI_JAVASCRIPT_ENGINE=JavaScriptCore -D CMAKE_BUILD_TYPE=RelWithDebInfo
+  - script: cmake -B Build/ubuntu -GNinja -D CMAKE_BUILD_TYPE=RelWithDebInfo
     displayName: 'Configure CMake'
 
   - script: |
