@@ -2,23 +2,27 @@
 cmake_minimum_required(VERSION 3.18)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-# CMakeExtensions
 include(FetchContent)
+
+# Modules declaration
 FetchContent_Declare(cmake-extensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG 7bdd0664181ce3d90dc94474464cea9b25b22db7)
-message(STATUS "Fetching cmake-extensions")
-FetchContent_MakeAvailable(cmake-extensions)
-message(STATUS "Fetching cmake-extensions - done")
 
 # JSRuntime Host
 FetchContent_Declare(jsruntimehost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 7d4c1966b54dca290be44646998cbeec431fca50)
+    GIT_TAG d1667b827c5b80c07c959780e582ea0d9a11c0ad)
 set(JSRUNTIMEHOST_TESTS OFF)
-FetchContent_MakeAvailable(jsruntimehost)
+
+set(CONTENT_TO_FETCH cmake-extensions jsruntimehost)
 
 project(BabylonNative)
+
+# Fetching content
+message(STATUS "Fetching dependencies for ${PROJECT_NAME} (${CONTENT_TO_FETCH})")
+FetchContent_MakeAvailable(${CONTENT_TO_FETCH})
+message(STATUS "Fetching dependencies for ${PROJECT_NAME} - done")
 
 # --------------------------------------------------
 # Options
