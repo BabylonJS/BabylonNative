@@ -9,29 +9,26 @@ project(UrlLib)
 
 include(FetchContent)
 
+# Modules declaration
+FetchContent_Declare(arcana
+    GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
+    GIT_TAG        10d167ffe0f86b2ddaccd93fd78ff2240cbb0c49)
+FetchContent_Declare(AndroidExtensions
+    GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
+    GIT_TAG        883c4a286116e51ee989e39ee8e216d632997329)
+
 if(NOT TARGET arcana)
-    include(FetchContent)
-
-    FetchContent_Declare(
-        arcana
-        GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-        GIT_TAG        10d167ffe0f86b2ddaccd93fd78ff2240cbb0c49)
-
-    message(STATUS "Fetching arcana.cpp")
-    FetchContent_MakeAvailable(arcana)
-    message(STATUS "Fetching arcana.cpp - done")
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} arcana)
 endif()
 
 if(ANDROID AND NOT TARGET AndroidExtensions)
-    FetchContent_Declare(
-        AndroidExtensions
-        GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-        GIT_TAG        c7c8b44a9d021ee5e1159c4fec98d2ef0735401a)
-
-    message(STATUS "Fetching AndroidExtensions")
-    FetchContent_MakeAvailable(AndroidExtensions)
-    message(STATUS "Fetching AndroidExtensions - done")
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} AndroidExtensions)
 endif()
+
+# Fetching content
+message(STATUS "Fetching dependencies for ${PROJECT_NAME} (${CONTENT_TO_FETCH})")
+FetchContent_MakeAvailable(${CONTENT_TO_FETCH})
+message(STATUS "Fetching dependencies for ${PROJECT_NAME} - done")
 
 if(ANDROID)
     set(ADDITIONAL_SOURCES
