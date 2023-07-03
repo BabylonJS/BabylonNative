@@ -19,11 +19,6 @@ set(CONTENT_TO_FETCH cmake-extensions jsruntimehost)
 
 project(BabylonNative)
 
-# Fetching content
-message(STATUS "Fetching dependencies for ${PROJECT_NAME} (${CONTENT_TO_FETCH})")
-FetchContent_MakeAvailable(${CONTENT_TO_FETCH})
-message(STATUS "Fetching dependencies for ${PROJECT_NAME} - done")
-
 # --------------------------------------------------
 # Options
 # --------------------------------------------------
@@ -92,6 +87,11 @@ elseif(WIN32)
         endif()
     endif()
 endif()
+
+# Fetching content
+message(STATUS "Fetching dependencies for ${PROJECT_NAME} (${CONTENT_TO_FETCH})")
+FetchContent_MakeAvailable(${CONTENT_TO_FETCH})
+message(STATUS "Fetching dependencies for ${PROJECT_NAME} - done")
 
 if(APPLE)
     set(BABYLON_NATIVE_PLATFORM_IMPL_EXT "mm")
