@@ -8,14 +8,22 @@ include(FetchContent)
 FetchContent_Declare(cmake-extensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG 7bdd0664181ce3d90dc94474464cea9b25b22db7)
-
-# JSRuntime Host
+FetchContent_Declare(ios-cmake
+    GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
+    GIT_TAG 04d91f6675dabb3c97df346a32f6184b0a7ef845)
 FetchContent_Declare(jsruntimehost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
     GIT_TAG d1667b827c5b80c07c959780e582ea0d9a11c0ad)
 set(JSRUNTIMEHOST_TESTS OFF)
 
 set(CONTENT_TO_FETCH cmake-extensions jsruntimehost)
+
+if(IOS)
+    FetchContent_MakeAvailable(ios-cmake)
+    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+    set(PLATFORM "OS64COMBINED" CACHE STRING "")
+    set(DEPLOYMENT_TARGET "12" CACHE STRING "")
+endif()
 
 project(BabylonNative)
 
