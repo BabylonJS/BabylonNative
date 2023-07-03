@@ -5,33 +5,37 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
     cmake_policy(SET CMP0135 NEW)
 endif()
 
-# fetch necessary modules
-
 include(FetchContent)
 
-# CMakeExtensions
-include(FetchContent)
-message(STATUS "Fetching CMakeExtensions")
+# Modules declaration
 FetchContent_Declare(cmake-extensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG 7bdd0664181ce3d90dc94474464cea9b25b22db7)
-FetchContent_MakeAvailable(cmake-extensions)
-message(STATUS "Fetching CMakeExtensions - done")
+FetchContent_Declare(ios-cmake
+    GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
+    GIT_TAG 04d91f6675dabb3c97df346a32f6184b0a7ef845)
+FetchContent_Declare(arcana
+    GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
+    GIT_TAG 10d167ffe0f86b2ddaccd93fd78ff2240cbb0c49)
+FetchContent_Declare(UrlLib
+    GIT_REPOSITORY https://github.com/BabylonJS/UrlLib.git
+    GIT_TAG 7a48d1b5a036cbf6c6fddb03aca3aee58484ec9c)
+FetchContent_Declare(asio
+    GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+    GIT_TAG f693a3eb7fe72a5f19b975289afc4f437d373d9c)
+FetchContent_Declare(llhttp
+    URL "https://github.com/nodejs/llhttp/archive/refs/tags/release/v8.1.0.tar.gz")
+
+set(CONTENT_TO_FETCH cmake-extensions)
 
 if(IOS)
-    FetchContent_Declare(ios-cmake
-        GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
-        GIT_TAG 04d91f6675dabb3c97df346a32f6184b0a7ef845)
-
-    message(STATUS "Fetching ios-cmake")
     FetchContent_MakeAvailable(ios-cmake)
-    message(STATUS "Fetching ios-cmake - done")
-
     set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
     set(PLATFORM "OS64COMBINED" CACHE STRING "")
     set(DEPLOYMENT_TARGET "12" CACHE STRING "")
 endif()
 
+# Project
 project(JsRuntimeHost)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -63,56 +67,46 @@ option(NAPI_BUILD_ABI "Build the ABI layer." ON)
 # Dependencies
 
 if(NOT TARGET arcana)
-    FetchContent_Declare(arcana
-        GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-        GIT_TAG 10d167ffe0f86b2ddaccd93fd78ff2240cbb0c49)
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} arcana)
+endif()
 
-    message(STATUS "Fetching arcana.cpp")
-    FetchContent_MakeAvailable(arcana)
-    message(STATUS "Fetching arcana.cpp - done")
+if(NOT TARGET UrlLib AND JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST)
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} UrlLib)
+endif()
 
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
+    if(NOT TARGET asio)
+        set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} asio)
+    endif()
+
+    if(NOT TARGET llhttp_static)
+        set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
+        set(BUILD_STATIC_LIBS ON CACHE INTERNAL "")
+        set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} llhttp)
+    endif()
+endif()
+
+# Fetching content
+message(STATUS "Fetching dependencies for ${PROJECT_NAME} (${CONTENT_TO_FETCH})")
+FetchContent_MakeAvailable(${CONTENT_TO_FETCH})
+message(STATUS "Fetching dependencies for ${PROJECT_NAME} - done")
+
+# Set properties after fetching content
+if(NOT TARGET arcana)
     set_property(TARGET arcana PROPERTY FOLDER Dependencies)
 endif()
 
 if(NOT TARGET UrlLib AND JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST)
-    FetchContent_Declare(
-        UrlLib
-        GIT_REPOSITORY https://github.com/BabylonJS/UrlLib.git
-        GIT_TAG 4182996cbe3b85a960e38bd8a61892688ed55213)
-
-    message(STATUS "Fetching UrlLib")
-    FetchContent_MakeAvailable(UrlLib)
-    message(STATUS "Fetching UrlLib - done")
-
     set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
 endif()
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
     if(NOT TARGET asio)
-        FetchContent_Declare(asio
-            GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
-            GIT_TAG f693a3eb7fe72a5f19b975289afc4f437d373d9c)
-
-        message(STATUS "Fetching asio")
-        FetchContent_MakeAvailable(asio)
-        message(STATUS "Fetching asio - done")
-
         add_library(asio INTERFACE)
         target_include_directories(asio INTERFACE "${asio_SOURCE_DIR}/asio/include")
-
         set_property(TARGET asio PROPERTY FOLDER Dependencies)
     endif()
-
     if(NOT TARGET llhttp_static)
-        FetchContent_Declare(llhttp
-            URL "https://github.com/nodejs/llhttp/archive/refs/tags/release/v8.1.0.tar.gz")
-
-        message(STATUS "Fetching llhttp")
-        set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
-        set(BUILD_STATIC_LIBS ON CACHE INTERNAL "")
-        FetchContent_MakeAvailable(llhttp)
-        message(STATUS "Fetching llhttp - done")
-
         set_property(TARGET llhttp_static PROPERTY FOLDER Dependencies)
     endif()
 endif()
