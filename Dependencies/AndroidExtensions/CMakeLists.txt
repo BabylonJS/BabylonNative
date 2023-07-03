@@ -7,21 +7,22 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+include(FetchContent)
+
+# Modules declaration
+FetchContent_Declare(arcana
+    GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
+    GIT_TAG        10d167ffe0f86b2ddaccd93fd78ff2240cbb0c49)
+    
 if(NOT ANDROID)
     message(FATAL_ERROR "This project can only build for Android")
 endif()
 
 if(NOT TARGET arcana)
-    include(FetchContent)
-
-    FetchContent_Declare(
-        arcana
-        GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-        GIT_TAG        10d167ffe0f86b2ddaccd93fd78ff2240cbb0c49)
-
-    message(STATUS "Fetching arcana.cpp")
-    FetchContent_MakeAvailable(arcana)
-    message(STATUS "Fetching arcana.cpp - done")
+    set(${CONTENT_TO_FETCH} arcana)
+    message(STATUS "Fetching dependencies for ${PROJECT_NAME} (${CONTENT_TO_FETCH})")
+    FetchContent_MakeAvailable(${CONTENT_TO_FETCH})
+    message(STATUS "Fetching dependencies for ${PROJECT_NAME} - done")
 endif()
 
 set(SOURCES
