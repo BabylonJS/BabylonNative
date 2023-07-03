@@ -23,6 +23,7 @@ if(IOS)
     set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
     set(PLATFORM "OS64COMBINED" CACHE STRING "")
     set(DEPLOYMENT_TARGET "12" CACHE STRING "")
+    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
 endif()
 
 project(BabylonNative)
