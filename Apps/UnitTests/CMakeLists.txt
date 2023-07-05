@@ -40,9 +40,8 @@ target_link_to_dependencies(UnitTests
     PRIVATE UrlLib
     PRIVATE Window
     PRIVATE XMLHttpRequest
+    PRIVATE gtest_main
     ${ADDITIONAL_LIBRARIES})
-
-add_test(NAME UnitTests COMMAND UnitTests)
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
 # If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.

@@ -18,6 +18,12 @@ FetchContent_Declare(jsruntimehost
 set(JSRUNTIMEHOST_TESTS OFF)
 FetchContent_MakeAvailable(jsruntimehost)
 
+FetchContent_Declare(googletest
+    URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
 project(BabylonNative)
 
 # --------------------------------------------------
