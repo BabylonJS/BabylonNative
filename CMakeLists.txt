@@ -22,7 +22,9 @@ FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
+if(NOT WINDOWS_STORE)
+    FetchContent_MakeAvailable(googletest)
+endif()
 
 project(BabylonNative)
 
