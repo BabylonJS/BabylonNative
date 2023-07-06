@@ -179,7 +179,7 @@ task extractJSEngineLibraries() {
     // Always extract, this insures the native libs are updated if the version changes.
     outputs.upToDateWhen { false }
     def jsconfig
-    if ("${jsEngineLibName}" == "jsc" ) {
+    if ("${jsEngine}" == "JavaScriptCore" ) {
         jsconfig = configurations.jscAndroid
     } else {
         jsconfig = configurations.v8Android
