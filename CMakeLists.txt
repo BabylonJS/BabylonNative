@@ -18,6 +18,11 @@ FetchContent_Declare(jsruntimehost
 set(JSRUNTIMEHOST_TESTS OFF)
 FetchContent_MakeAvailable(jsruntimehost)
 
+FetchContent_Declare(AndroidExtensions
+    GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
+    GIT_TAG        883c4a286116e51ee989e39ee8e216d632997329)
+FetchContent_MakeAvailable(AndroidExtensions)
+
 project(BabylonNative)
 
 # --------------------------------------------------
