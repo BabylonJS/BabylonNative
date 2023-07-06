@@ -23,12 +23,12 @@ def arcore_libpath = "${buildDir}/arcore-native"
 configurations { natives }
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 29
 
     defaultConfig {
         applicationId "com.android.babylonnative.playground"
         minSdkVersion "${platformVersion}"
-        targetSdkVersion 28
+        targetSdkVersion 29
         ndkVersion "23.1.7779620"
         if (project.hasProperty("NDK_VERSION")) {
             def NDKVersion = project.property("NDK_VERSION")
