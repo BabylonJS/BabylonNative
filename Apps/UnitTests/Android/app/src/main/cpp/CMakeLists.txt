@@ -15,8 +15,7 @@ npm(install "${UNIT_TESTS_DIR}/../" "UnitTests")
 
 add_library(UnitTestsJNI SHARED
     JNI.cpp
-    ${UNIT_TESTS_DIR}/Shared/Shared.h
-    ${UNIT_TESTS_DIR}/Shared/Shared.cpp)
+    ${UNIT_TESTS_DIR}/Shared/Tests.h)
 target_compile_definitions(UnitTestsJNI PRIVATE JSRUNTIMEHOST_PLATFORM="${JSRUNTIMEHOST_PLATFORM}")
 
 target_include_directories(UnitTestsJNI
