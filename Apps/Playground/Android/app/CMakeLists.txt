@@ -61,7 +61,7 @@ target_link_libraries(BabylonNativeJNI
     NativeEngine
     NativeInput
     NativeOptimizations
-    NativeXr
+    #NativeXr
     ScriptLoader
     XMLHttpRequest
     Window)
