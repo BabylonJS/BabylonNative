@@ -22,6 +22,9 @@ target_include_directories(UnitTestsJNI
     PRIVATE ${UNIT_TESTS_DIR})
 
 target_link_libraries(UnitTestsJNI
+    PRIVATE GLESv3
+    PRIVATE android
+    PRIVATE EGL
     PRIVATE log
     PRIVATE AndroidExtensions
     PRIVATE AppRuntime
@@ -33,4 +36,15 @@ target_link_libraries(UnitTestsJNI
     PRIVATE UrlLib
     PRIVATE XMLHttpRequest
     PRIVATE gtest_main
-    PRIVATE WebSocket)
+    PRIVATE WebSocket
+    PRIVATE Canvas
+    PRIVATE GraphicsDevice
+    PRIVATE NativeCamera
+    PRIVATE NativeEngine
+    PRIVATE NativeInput
+    PRIVATE NativeOptimizations
+    PRIVATE NativeXr
+    PRIVATE Window)
+
+
+    
