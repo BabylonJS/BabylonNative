@@ -21,7 +21,6 @@ FetchContent_MakeAvailable(jsruntimehost)
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
     GIT_TAG        883c4a286116e51ee989e39ee8e216d632997329)
-FetchContent_MakeAvailable(AndroidExtensions)
 
 project(BabylonNative)
 
@@ -59,6 +58,7 @@ endif()
 # Setting Platform
 if(ANDROID)
     set(BABYLON_NATIVE_PLATFORM "Android")
+    FetchContent_MakeAvailable(AndroidExtensions)
 elseif(IOS)
     set(BABYLON_NATIVE_PLATFORM "iOS")
 elseif(APPLE)
