@@ -107,7 +107,7 @@ jobs:
 #    parameters:
 #      name: Android_Ubuntu_V8
 #      vmImage: 'ubuntu-latest'
-#      JSEngine: v8android
+#      JSEngine: V8
 #
 #  - template: .github/jobs/android.yml
 #    parameters:
@@ -119,4 +119,4 @@ jobs:
     parameters:
       name: Android_MacOS_V8
       vmImage: 'macOS-latest'
-      JSEngine: v8android
+      JSEngine: V8

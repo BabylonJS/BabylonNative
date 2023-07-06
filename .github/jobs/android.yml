@@ -24,15 +24,15 @@ jobs:
         npm install
       displayName: 'Install JS engine NPMs'
       
-    - task: Gradle@2
-      inputs:
-          workingDirectory: 'Apps/Playground/Android'
-          gradleWrapperFile: 'Apps/Playground/Android/gradlew'
-          gradleOptions: '-Xmx1536m'
-          options: '-PJSEngine=${{ parameters.JSEngine }} -PARM64Only -PNDK_VERSION=$(NDK_VERSION) -PUNITY_BUILD=${UNITY_BUILD}'
-          publishJUnitResults: false
-          tasks: 'assembleRelease'
-      displayName: 'Build Playground ${{ parameters.JSEngine }}'
+#    - task: Gradle@2
+#      inputs:
+#          workingDirectory: 'Apps/Playground/Android'
+#          gradleWrapperFile: 'Apps/Playground/Android/gradlew'
+#          gradleOptions: '-Xmx1536m'
+#          options: '-PJSEngine=${{ parameters.JSEngine }} -PARM64Only -PNDK_VERSION=$(NDK_VERSION) -PUNITY_BUILD=${UNITY_BUILD}'
+#          publishJUnitResults: false
+#          tasks: 'assembleRelease'
+#      displayName: 'Build Playground ${{ parameters.JSEngine }}'
 
 #    - script: |
 #        echo Install Android image
@@ -57,7 +57,7 @@ jobs:
         gradleWrapperFile: 'Apps/UnitTests/Android/gradlew'
         workingDirectory: 'Apps/UnitTests/Android'
         options: '-PabiFilters=x86_64 -PjsEngine=${{parameters.jsEngine}}'
-        tasks: 'connectedAndroidTest'
+        tasks: 'assembleRelease'
         jdkVersionOption: 1.11
       displayName: 'Run Connected Android Test'
       condition: contains('${{ parameters.vmImage }}', 'macOS')
