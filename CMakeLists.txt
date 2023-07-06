@@ -29,10 +29,6 @@ if(IOS)
     set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
 endif()
 
-FetchContent_Declare(AndroidExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG        883c4a286116e51ee989e39ee8e216d632997329)
-
 project(BabylonNative)
 
 # --------------------------------------------------
@@ -69,7 +65,7 @@ endif()
 # Setting Platform
 if(ANDROID)
     set(BABYLON_NATIVE_PLATFORM "Android")
-    FetchContent_MakeAvailable(AndroidExtensions)
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} android-extensions)
 elseif(IOS)
     set(BABYLON_NATIVE_PLATFORM "iOS")
 elseif(APPLE)
