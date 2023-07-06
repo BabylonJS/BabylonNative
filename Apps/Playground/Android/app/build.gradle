@@ -1,21 +1,8 @@
 apply plugin: 'com.android.application'
 
-// When no project property is set for Gradle ('-PJSEngine=')
-// default JS engine is set to v8android
-// JSEngine property can be:
-// - jsc for JavaScriptCore
-// - v8android for V8
-
-def jsEngineBaseDir = "${buildDir}/JS"
-def jsEngineIncDir = "${jsEngineBaseDir}/include/V8"
-def jsEngineLibDir = "${rootDir}/app/src/main/jniLibs"
-
-def jsEngineLibName = "v8android"
-if (project.hasProperty("JSEngine")) {
-    jsEngineLibName = project.property("JSEngine")
-    if ("${jsEngineLibName}" == "jsc" ) {
-        jsEngineIncDir = "${jsEngineBaseDir}/include"
-    }
+def jsEngine = "V8"
+if (project.hasProperty("jsEngine")) {
+    jsEngine = project.property("jsEngine")
 }
 
 def graphics_api = "OpenGL"
@@ -54,9 +41,8 @@ android {
                     "-DENABLE_PCH=OFF",
                     "-DGRAPHICS_API=${graphics_api}",
                     "-DARCORE_LIBPATH=${arcore_libpath}/jni",
-                    "-DANDROID_JSENGINE_LIBPATH=${jsEngineLibDir}",
-                    "-DANDROID_JSENGINE_LIBNAME=${jsEngineLibName}",
-                    "-DANDROID_JSENGINE_INCPATH=${jsEngineIncDir}",
+                    "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
+                    "-DJSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR=ON"
                     "-DCMAKE_UNITY_BUILD=${unity_build}"
             }
         }
