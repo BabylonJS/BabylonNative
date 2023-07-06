@@ -9,6 +9,8 @@ if (project.hasProperty("jsEngine")) {
 
 def arcore_libpath = "${buildDir}/arcore-native"
 
+configurations { natives }
+
 android {
     namespace 'com.jsruntimehost.unittests'
     compileSdk 33
