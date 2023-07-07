@@ -43,19 +43,14 @@ if(TARGET openxr_loader)
     install_targets(openxr_loader)
 endif()
 
-## napi
-install_include(Dependencies/napi/napi-direct/include/napi)
-install_targets(napi)
-
 ## UrlLib
 install_targets(UrlLib)
 
 # ----------------
 # Core
 # ----------------
-
 install_targets(JsRuntime)
-install_include(Core/JsRuntime/Include/Babylon)
+install_include(${jsruntimehost_SOURCE_DIR}/Core/JsRuntime/Include/Babylon)
 
 install_targets(Graphics)
 install_include(Core/Graphics/Include/Platform/${BABYLON_NATIVE_PLATFORM}/Babylon)
@@ -64,12 +59,22 @@ install_include(Core/Graphics/Include/Shared/Babylon)
 
 if(TARGET AppRuntime)
     install_targets(AppRuntime)
-    install_include(Core/AppRuntime/Include/Babylon)
+    install_include(${jsruntimehost_SOURCE_DIR}/Core/AppRuntime/Include/Babylon)
 endif()
 
 if(TARGET ScriptLoader)
     install_targets(ScriptLoader)
-    install_include(Core/ScriptLoader/Include/Babylon)
+    install_include(${jsruntimehost_SOURCE_DIR}/Core/ScriptLoader/Include/Babylon)
+endif()
+
+if(TARGET Node-API)
+    install_targets(Node-API)
+    install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API/Include)
+endif()
+
+if(TARGET Node-API-JSI)
+    install_targets(Node-API-JSI)
+    install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API-JSI/Include)
 endif()
 
 # ----------------
@@ -126,7 +131,7 @@ endif()
 
 if(TARGET Console)
     install_targets(Console)
-    install_include(Polyfills/Console/Include/Babylon)
+    install_include(${jsruntimehost_SOURCE_DIR}/Polyfills/Console/Include/Babylon)
 endif()
 
 if(TARGET Window)
@@ -136,5 +141,5 @@ endif()
 
 if(TARGET XMLHttpRequest)
     install_targets(XMLHttpRequest)
-    install_include(Polyfills/XMLHttpRequest/Include/Babylon)
+    install_include(${jsruntimehost_SOURCE_DIR}/Polyfills/XMLHttpRequest/Include/Babylon)
 endif()
