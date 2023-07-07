@@ -9,7 +9,7 @@ get_filename_component(UNIT_TESTS_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../../.."
 get_filename_component(REPO_ROOT_DIR "${UNIT_TESTS_DIR}/../.." ABSOLUTE)
 
 set(JSRUNTIMEHOST_TESTS OFF) # Turn off the tests folder for Android Studio path
-add_subdirectory(${REPO_ROOT_DIR} "${CMAKE_CURRENT_BINARY_DIR}/JsRuntimeHost")
+add_subdirectory(${REPO_ROOT_DIR} "${CMAKE_CURRENT_BINARY_DIR}/BabylonNative")
 
 npm(install "${UNIT_TESTS_DIR}/../" "UnitTests")
 
@@ -26,25 +26,20 @@ target_link_libraries(UnitTestsJNI
     PRIVATE android
     PRIVATE EGL
     PRIVATE log
+    PRIVATE -lz
     PRIVATE AndroidExtensions
     PRIVATE AppRuntime
-    PRIVATE AbortController
-    PRIVATE Console
-    PRIVATE Scheduling
-    PRIVATE ScriptLoader
-    PRIVATE URL
-    PRIVATE UrlLib
-    PRIVATE XMLHttpRequest
-    PRIVATE gtest_main
-    PRIVATE WebSocket
     PRIVATE Canvas
+    PRIVATE Console
     PRIVATE GraphicsDevice
     PRIVATE NativeCamera
     PRIVATE NativeEngine
     PRIVATE NativeInput
     PRIVATE NativeOptimizations
-    PRIVATE NativeXr
+    #NativeXr
+    PRIVATE ScriptLoader
+    PRIVATE XMLHttpRequest
+    PRIVATE gtest_main
     PRIVATE Window)
-
 
     

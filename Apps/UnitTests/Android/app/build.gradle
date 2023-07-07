@@ -7,17 +7,15 @@ if (project.hasProperty("jsEngine")) {
     jsEngine = project.property("jsEngine")
 }
 
-def arcore_libpath = "${buildDir}/arcore-native"
-
 configurations { natives }
 
 android {
-    namespace 'com.jsruntimehost.unittests'
+    namespace 'com.babylonnative.unittests'
     compileSdk 33
     ndkVersion = "21.4.7075529"
 
     defaultConfig {
-        applicationId "com.jsruntimehost.unittests"
+        applicationId "com.babylonnative.unittests"
         minSdk 21
         targetSdk 33
         versionCode 1
@@ -31,7 +29,6 @@ android {
                     "-DANDROID_STL=c++_shared",
                     "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
                     "-DJSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR=ON",
-                    "-DARCORE_LIBPATH=${arcore_libpath}/jni",
                 )
             }
         }
@@ -66,8 +63,8 @@ android {
 }
 
 dependencies {
-    implementation 'com.google.ar:core:1.14.0'
-    natives 'com.google.ar:core:1.14.0'
+    implementation 'com.google.ar:core:1.16.0'
+    natives 'com.google.ar:core:1.16.0'
     implementation 'androidx.appcompat:appcompat:1.6.0'
     implementation 'com.google.android.material:material:1.7.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.3'
@@ -75,28 +72,6 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-}
-
-// Extracts the shared libraries from aars in the natives configuration.
-// This is done so that NDK builds can access these libraries.
-task extractNativeLibraries() {
-    // Always extract, this insures the native libs are updated if the version changes.
-    outputs.upToDateWhen { false }
-    doFirst {
-        configurations.natives.files.each { f ->
-            copy {
-                from zipTree(f)
-                into arcore_libpath
-                include "jni/**/*"
-            }
-        }
-    }
-}
-
-tasks.whenTaskAdded { task ->
-    if (task.name.contains("external") && !task.name.contains("Clean")) {
-        task.dependsOn(extractNativeLibraries)
-    }
 }
 
 task copyScripts {
