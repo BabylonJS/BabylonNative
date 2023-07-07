@@ -101,7 +101,7 @@ jobs:
 #    parameters:
 #      name: Android_Ubuntu_JSC
 #      vmImage: 'ubuntu-latest'
-#      JSEngine: jsc
+#      JSEngine: JavaScriptCore
 #
 #  - template: .github/jobs/android.yml
 #    parameters:
@@ -113,7 +113,7 @@ jobs:
 #    parameters:
 #      name: Android_MacOS_JSC
 #      vmImage: 'macOS-latest'
-#      JSEngine: jsc
+#      JSEngine: JavaScriptCore
 
   - template: .github/jobs/android.yml
     parameters:
