@@ -4,3 +4,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    group:
+      # Name of the group
+      submodules:
+        patterns:
+          - "*"
