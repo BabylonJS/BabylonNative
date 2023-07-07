@@ -97,26 +97,38 @@ jobs:
 #      JSEngine: JavaScriptCore
 #
 # Android
-#  - template: .github/jobs/android.yml
-#    parameters:
-#      name: Android_Ubuntu_JSC
-#      vmImage: 'ubuntu-latest'
-#      JSEngine: JavaScriptCore
-#
-#  - template: .github/jobs/android.yml
-#    parameters:
-#      name: Android_Ubuntu_V8
-#      vmImage: 'ubuntu-latest'
-#      JSEngine: V8
-#
-#  - template: .github/jobs/android.yml
-#    parameters:
-#      name: Android_MacOS_JSC
-#      vmImage: 'macOS-latest'
-#      JSEngine: JavaScriptCore
+  - template: .github/jobs/android.yml
+    parameters:
+      name: Android_Ubuntu_JSC
+      vmImage: 'ubuntu-latest'
+      JSEngine: JavaScriptCore
+
+  - template: .github/jobs/android.yml
+    parameters:
+      name: Android_Ubuntu_V8
+      vmImage: 'ubuntu-latest'
+      JSEngine: V8
+
+  - template: .github/jobs/android.yml
+    parameters:
+      name: Android_MacOS_JSC
+      vmImage: 'macOS-latest'
+      JSEngine: JavaScriptCore
 
   - template: .github/jobs/android.yml
     parameters:
       name: Android_MacOS_V8
+      vmImage: 'macOS-latest'
+      JSEngine: V8
+
+  - template: .github/jobs/android_tests.yml
+    parameters:
+      name: Android_Tests_MacOS_JSC
+      vmImage: 'macOS-latest'
+      JSEngine: JavaScriptCore
+
+  - template: .github/jobs/android_tests.yml
+    parameters:
+      name: Android_Tests_MacOS_V8
       vmImage: 'macOS-latest'
       JSEngine: V8
