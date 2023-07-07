@@ -59,6 +59,8 @@ jobs:
 
     - script: |
         ls
+        ls ./app/build/outputs/
+        ls ./app/build/outputs/androidTest-results
         export results=$(find ./app/build/outputs/androidTest-results -name "*.txt")
         echo cat "$results"
         cat "$results"
