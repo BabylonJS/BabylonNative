@@ -63,6 +63,7 @@ jobs:
       condition: contains('${{ parameters.vmImage }}', 'macOS')
 
     - script: |
+        ls
         export results=$(find ./app/build/outputs/androidTest-results -name "*.txt")
         echo cat "$results"
         cat "$results"
