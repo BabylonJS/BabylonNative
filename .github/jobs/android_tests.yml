@@ -40,12 +40,11 @@ jobs:
         gradleWrapperFile: 'Apps/UnitTests/Android/gradlew'
         workingDirectory: 'Apps/UnitTests/Android'
         options: '-PabiFilters=x86_64 -PjsEngine=${{parameters.jsEngine}}'
-        tasks: 'assembleRelease'
+        tasks: 'connectedAndroidTest'
         jdkVersionOption: 1.11
       displayName: 'Run Connected Android Test'
 
     - script: |
-        ls -R
         export results=$(find ./app/build/outputs/androidTest-results -name "*.txt")
         echo cat "$results"
         cat "$results"
