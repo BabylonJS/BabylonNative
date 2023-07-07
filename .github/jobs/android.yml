@@ -67,12 +67,12 @@ jobs:
         echo cat "$results"
         cat "$results"
       workingDirectory: 'Apps/UnitTests/Android'
-      condition: succeededOrFailed() && contains('${{ parameters.vmImage }}', 'macOS')
+      condition: and(succeededOrFailed(), contains('${{ parameters.vmImage }}', 'macOS'))
       displayName: 'Dump logcat from Test Results'
 
     - task: PublishBuildArtifacts@1
       inputs:
         pathToPublish: 'Apps/UnitTests/Android/app/build/outputs/androidTest-results/connected'
         artifactName: 'AndroidTestResults_${{parameters.jsEngine}}'
-      condition: succeededOrFailed() && contains('${{ parameters.vmImage }}', 'macOS')
+      condition: and(succeededOrFailed(), contains('${{ parameters.vmImage }}', 'macOS'))
       displayName: 'Publish Test Results'
