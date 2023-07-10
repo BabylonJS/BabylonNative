@@ -43,13 +43,13 @@ if(TARGET openxr_loader)
     install_targets(openxr_loader)
 endif()
 
-install_targets(Node-API)
-install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API/Include)
+#install_targets(Node-API)
+#install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API/Include)
 
-if(TARGET Node-API-JSI)
-    install_targets(Node-API-JSI)
-    install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API-JSI/Include)
-endif()
+#if(TARGET Node-API-JSI)
+    #install_targets(Node-API-JSI)
+    #install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API-JSI/Include)
+#endif()
 
 ## UrlLib
 install_targets(UrlLib)
