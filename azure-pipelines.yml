@@ -37,7 +37,7 @@ jobs:
   - template: .github/jobs/ios.yml
     parameters:
       name: iOS_Xcode15_iOS17
-      vmImage: 'macOS-latest'
+      vmImage: 'macOS-13'
       xCodeVersion: 15.0
       deploymentTarget: 17.0
 
