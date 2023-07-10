@@ -38,5 +38,6 @@ jobs:
         sdk: 'iphoneos'
         useXcpretty: false
         configuration: RelWithDebInfo
+        destinationPlatformOption: 'iOS'
       displayName: 'Build Playground iOS'
 
