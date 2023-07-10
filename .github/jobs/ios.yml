@@ -33,11 +33,12 @@ jobs:
 
     - task: Xcode@5
       inputs:
+        actions: 'build'
         xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
         scheme: 'Playground'
         sdk: 'iphoneos'
         useXcpretty: false
         configuration: RelWithDebInfo
-        destinationPlatformOption: 'iOS'
+        destinationTypeOption: devices
       displayName: 'Build Playground iOS'
 
