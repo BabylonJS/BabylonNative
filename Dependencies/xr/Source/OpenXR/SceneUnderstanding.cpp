@@ -80,7 +80,7 @@ public:
 
     void Initialize(const InitOptions& options)
     {
-        if (options.Extensions.SceneUnderstandingSupported)
+        if (options.Extensions.SceneUnderstandingSupported())
         {
             m_updateInterval = static_cast<XrTime>(NANOSECONDS_IN_SECOND * options.UpdateIntervalInSeconds);
 
@@ -215,7 +215,7 @@ private:
 
     void Enable(const InitOptions& options)
     {
-        if (!options.Extensions.SceneUnderstandingSupported)
+        if (!options.Extensions.SceneUnderstandingSupported())
         {
             return;
         }
