@@ -60,7 +60,7 @@ if (ANDROID)
     add_library(glm INTERFACE)
     set_target_properties(glm PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/arcore-android-sdk/libraries/glm)
 
-    target_link_libraries(xr PRIVATE glm arcore AndroidExtensions)
+    target_link_libraries(xr PRIVATE glm arcore GSL AndroidExtensions)
 elseif (IOS)    
     target_link_libraries(xr PRIVATE "-framework ARKit")
 else()

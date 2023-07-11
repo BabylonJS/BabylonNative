@@ -18,8 +18,8 @@ set(HEADERS
     "Shared/Tests.h")
 
 if(APPLE)
-    find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
-    set(ADDITIONAL_LIBRARIES PRIVATE ${JAVASCRIPTCORE_LIBRARY})
+    find_library(JSCORE_LIBRARY JavaScriptCore)
+    set(ADDITIONAL_LIBRARIES PRIVATE ${JSCORE_LIBRARY})
     set(TEST_APP "Apple/App.mm")
 elseif(UNIX AND NOT ANDROID)
     set(TEST_APP "X11/App.cpp")
@@ -28,7 +28,6 @@ elseif(WIN32)
 endif()
 
 add_executable(UnitTests ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_APP} ${HEADERS})
-set_property(TARGET UnitTests PROPERTY UNITY_BUILD false)
 
 target_link_to_dependencies(UnitTests
     PRIVATE AppRuntime
@@ -43,11 +42,6 @@ target_link_to_dependencies(UnitTests
     ${ADDITIONAL_LIBRARIES})
 
 add_test(NAME UnitTests COMMAND UnitTests)
-
-# See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
-# If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.
-add_custom_command(TARGET UnitTests POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:UnitTests>>,copy,true> $<TARGET_RUNTIME_DLLS:UnitTests> $<TARGET_FILE_DIR:UnitTests>)
 
 foreach(SCRIPT ${LOCAL_SCRIPTS} ${NPM_SCRIPTS})
     get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)

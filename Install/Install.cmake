@@ -75,6 +75,12 @@ endif()
 # ----------------
 # Plugins
 # ----------------
+
+if(TARGET ChromeDevTools)
+    install_targets(ChromeDevTools)
+    install_include(Plugins/ChromeDevTools/Include/Babylon)
+endif()
+
 if(TARGET ExternalTexture)
     install_targets(ExternalTexture)
     install_include(Plugins/ExternalTexture/Include/Babylon)

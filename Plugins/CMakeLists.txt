@@ -1,3 +1,7 @@
+if(BABYLON_NATIVE_PLUGIN_CHROMEDEVTOOLS)
+    add_subdirectory(ChromeDevTools)
+endif()
+
 if(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE)
     add_subdirectory(ExternalTexture)
 endif()
