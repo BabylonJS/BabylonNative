@@ -16,14 +16,6 @@ Babylon Native makes extensive use of submodules for dependencies.
 git clone --recursive https://github.com/BabylonJS/BabylonNative.git
 ```
 
-Babylon Native requires Babylon.js. You will need to install NPM packages to resolve these dependencies. From the root
-of the repository on the command line, run the following commands:
-
-```
-cd Apps
-npm install
-```
-
 Babylon Native's build system is based on CMake, which customarily uses a separate
 build directory. Build directory location is up to you, but we highly recommend using
 the `build` directory from the repository root. The `.gitignore` file is set up to
