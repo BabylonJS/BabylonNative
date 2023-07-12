@@ -22,7 +22,7 @@ set(SCRIPTS
     "Scripts/config.json")
 
 if(APPLE)
-    find_library(JSCORE_LIBRARY JavaScriptCore)
+    find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
     if(IOS)
         set(PLIST_FILE
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Info.plist")
@@ -54,7 +54,7 @@ if(APPLE)
         set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/ReferenceImages")
     endif()
     set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES}
-        PRIVATE ${JSCORE_LIBRARY}
+        PRIVATE ${JAVASCRIPTCORE_LIBRARY}
         PRIVATE NativeCamera)
     set(RESOURCE_FILES ${STORYBOARD})
 elseif(UNIX)
@@ -115,7 +115,6 @@ target_include_directories(Playground PRIVATE "Source" ".")
 target_link_to_dependencies(Playground
     PRIVATE AppRuntime
     PRIVATE Canvas
-    PRIVATE ChromeDevTools
     PRIVATE Console
     PRIVATE GraphicsDevice
     PRIVATE NativeCapture
@@ -129,10 +128,10 @@ target_link_to_dependencies(Playground
     ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 
-if(WIN32)
-    target_link_to_dependencies(Playground
-        PRIVATE "shlwapi.lib")
-endif()
+# See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
+# If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.
+add_custom_command(TARGET Playground POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:Playground>>,copy,true> $<TARGET_RUNTIME_DLLS:Playground> $<TARGET_FILE_DIR:Playground>)
 
 if (UNIX AND NOT APPLE AND NOT ANDROID)
     # Ubuntu mixes old experimental header and new runtime libraries
@@ -176,6 +175,7 @@ if(APPLE)
             RESOURCE "${RESOURCE_FILES}"
             FOLDER "Playground")
     endif()
+    set_property(TARGET Playground PROPERTY UNITY_BUILD false)
 endif()
 
 if(WINDOWS_STORE)
