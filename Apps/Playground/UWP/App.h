@@ -3,6 +3,7 @@
 #include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
+#include <Babylon/Plugins/ChromeDevTools.h>
 #include <Babylon/Polyfills/Canvas.h>
 
 #include <optional>
@@ -47,6 +48,7 @@ private:
     std::optional<Babylon::Graphics::DeviceUpdate> m_update{};
     std::optional<Babylon::AppRuntime> m_runtime{};
     std::optional<Babylon::Polyfills::Canvas> m_nativeCanvas{};
+    std::optional<Babylon::Plugins::ChromeDevTools> m_chromeDevTools{};
     Babylon::Plugins::NativeInput* m_nativeInput{};
 
     Windows::Foundation::Collections::IVectorView<Windows::Storage::IStorageItem^>^ m_files;

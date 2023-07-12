@@ -5,18 +5,11 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # CMakeExtensions
 include(FetchContent)
 FetchContent_Declare(cmake-extensions
-    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG 7bdd0664181ce3d90dc94474464cea9b25b22db7)
+        GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
+        GIT_TAG 17baf9e349afea90677e69cdd273d773c894f7b5)
 message(STATUS "Fetching cmake-extensions")
 FetchContent_MakeAvailable(cmake-extensions)
 message(STATUS "Fetching cmake-extensions - done")
-
-# JSRuntime Host
-FetchContent_Declare(jsruntimehost
-    GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 7d4c1966b54dca290be44646998cbeec431fca50)
-set(JSRUNTIMEHOST_TESTS OFF)
-FetchContent_MakeAvailable(jsruntimehost)
 
 project(BabylonNative)
 
@@ -27,9 +20,13 @@ option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ON)
 option(BABYLON_NATIVE_INSTALL "Include the install target." ON)
 
 ## Core
+option(BABYLON_NATIVE_CORE_JSRUNTIME "Include Babylon Native Core JsRuntime" ON)
+option(BABYLON_NATIVE_CORE_APPRUNTIME "Include Babylon Native Core AppRuntime" ON)
+option(BABYLON_NATIVE_CORE_SCRIPTLOADER "Include Babylon Native Core ScriptLoader" ON)
 option(BABYLON_NATIVE_CORE_GRAPHICS "Include Babylon Native Core Graphics" ON)
 
 ## Plugins
+option(BABYLON_NATIVE_PLUGIN_CHROMEDEVTOOLS "Include Babylon Native Plugin ChromeDevTools." ON)
 option(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE "Include Babylon Native Plugin ExternalTexture." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAMERA "Include Babylon Native Plugin NativeCamera." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE "Include Babylon Native Plugin NativeCapture." ON)
@@ -41,7 +38,9 @@ option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils.
 option(BABYLON_NATIVE_PLUGIN_NATIVEXR "Include Babylon Native Plugin XR." ON)
 
 ## Polyfills
+option(BABYLON_NATIVE_POLYFILL_CONSOLE "Include Babylon Native Polyfill Console." ON)
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
+option(BABYLON_NATIVE_POLYFILL_XMLHTTPREQUEST "Include Babylon Native Polyfill XMLHttpRequest." ON)
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
 # --------------------------------------------------
 
@@ -91,8 +90,6 @@ endif()
 
 if(APPLE)
     set(BABYLON_NATIVE_PLATFORM_IMPL_EXT "mm")
-    set_property(TARGET JsRuntime PROPERTY UNITY_BUILD false)
-    set_property(TARGET AppRuntime PROPERTY UNITY_BUILD false)
 else()
     set(BABYLON_NATIVE_PLATFORM_IMPL_EXT "cpp")
 endif()

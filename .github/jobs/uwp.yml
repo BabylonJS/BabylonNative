@@ -34,7 +34,7 @@ jobs:
     - script: |
         mkdir build${{ variables.solutionName }}
         cd build${{ variables.solutionName }}
-        cmake .. -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 ${{ variables.jsEngineDefine }} -A ${{ parameters.platform }} -D CMAKE_UNITY_BUILD=${UNITY_BUILD}
+        cmake .. -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0 ${{ variables.jsEngineDefine }} -A ${{ parameters.platform }} -DCMAKE_UNITY_BUILD=${UNITY_BUILD}
       displayName: 'Generate ${{ variables.solutionName }} solution'
   
     - task: VSBuild@1

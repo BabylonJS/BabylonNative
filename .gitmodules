@@ -1,6 +1,9 @@
 [submodule "base-n"]
 	path = Dependencies/base-n
 	url = https://github.com/azawadzki/base-n
+[submodule "arcana.cpp"]
+	path = Dependencies/arcana.cpp
+	url = https://github.com/microsoft/arcana.cpp
 [submodule "glslang"]
 	path = Dependencies/glslang
 	url = https://github.com/KhronosGroup/glslang
@@ -10,6 +13,9 @@
 [submodule "bgfx.cmake"]
 	path = Dependencies/bgfx.cmake
 	url = https://github.com/BabylonJS/bgfx.cmake
+[submodule "Dependencies/ios-cmake"]
+	path = Dependencies/ios-cmake
+	url = https://github.com/leetal/ios-cmake.git
 [submodule "Dependencies/xr/Dependencies/OpenXR-SDK"]
 	path = Dependencies/xr/Dependencies/OpenXR-SDK
 	url = https://github.com/KhronosGroup/OpenXR-SDK
