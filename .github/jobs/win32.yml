@@ -25,10 +25,10 @@ jobs:
       ${{ if eq(parameters.napiType, 'jsi') }}:
         napiSuffix: '_JSI'
         jsEngineDefine: '-DNAPI_JAVASCRIPT_ENGINE=JSI'
-      ${{ if eq(parameters.napiType, 'V8') }}:
+      ${{ elseif eq(parameters.napiType, 'V8') }}:
         napiSuffix: '_V8'
         jsEngineDefine: '-DNAPI_JAVASCRIPT_ENGINE=V8'
-      ${{ if ne(parameters.napiType, 'jsi') }}:
+      ${{ else }}:
         napiSuffix: ''
         jsEngineDefine: ''
       solutionName: 'Win32_${{ parameters.platform }}${{variables.napiSuffix}}'
