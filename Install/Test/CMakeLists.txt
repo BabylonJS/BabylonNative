@@ -48,7 +48,6 @@ target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_NODE_SPECIF
 
 set(INSTALL_LIBS_DIR "${BINARY_DIR}/install/lib")
 target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")
-target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include/Engine/${NAPI_JAVASCRIPT_ENGINE}")
 target_link_directories(TestInstall PRIVATE ${INSTALL_LIBS_DIR})
 
 # Nuget/JSI
