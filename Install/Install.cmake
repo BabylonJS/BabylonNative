@@ -69,6 +69,12 @@ endif()
 
 install_targets(napi)
 
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
+    install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API-JSI/Include)
+else()
+    install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API/Include/Engine/${NAPI_JAVASCRIPT_ENGINE}/napi)
+endif()
+
 # ----------------
 # Plugins
 # ----------------
