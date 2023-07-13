@@ -67,15 +67,7 @@ if(TARGET ScriptLoader)
     install_include(${jsruntimehost_SOURCE_DIR}/Core/ScriptLoader/Include/Babylon)
 endif()
 
-if(TARGET Node-API)
-    install_targets(Node-API)
-    install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API/Include)
-endif()
-
-if(TARGET Node-API-JSI)
-    install_targets(Node-API-JSI)
-    install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API-JSI/Include)
-endif()
+install_targets(napi)
 
 # ----------------
 # Plugins
