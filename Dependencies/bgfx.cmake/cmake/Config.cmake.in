@@ -13,7 +13,7 @@ if(@CMAKE_CROSSCOMPILING@)
 	macro(_bgfx_crosscompile_use_host_tool TOOL_NAME)
 		if(NOT TARGET bgfx::${TOOL_NAME})
 			find_program(
-				${TOOL_NAME}_EXECUTABLE REQUIRED
+				${TOOL_NAME}_EXECUTABLE
 				NAMES bgfx-${TOOL_NAME} ${TOOL_NAME}
 				PATHS /usr/bin #
 					  ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/packages/bgfx_x64-linux/tools/bgfx

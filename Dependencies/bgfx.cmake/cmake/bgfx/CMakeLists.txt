@@ -12,9 +12,6 @@ include(bgfx.cmake)
 include(3rdparty/meshoptimizer.cmake)
 include(3rdparty/dear-imgui.cmake)
 
-include(shared.cmake)
-include(examples.cmake)
-
 if(BGFX_BUILD_TOOLS_TEXTURE)
 	include(texturev.cmake)
 endif()
@@ -31,3 +28,6 @@ if(BGFX_BUILD_TOOLS_SHADER)
 	include(3rdparty/webgpu.cmake)
 	include(shaderc.cmake)
 endif()
+
+include(shared.cmake)
+include(examples.cmake)
