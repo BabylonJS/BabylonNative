@@ -160,18 +160,6 @@ if(BGFX_INSTALL)
 
 	install(FILES ${BGFX_DIR}/LICENSE DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/licences/${PROJECT_NAME})
 
-	# install headers (this should be done as a target probably... ^)
-	install(DIRECTORY ${BX_DIR}/include/bx ${BX_DIR}/include/compat ${BX_DIR}/include/tinystl
-			DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-	)
-	install(DIRECTORY ${BIMG_DIR}/include/bimg DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-	install(DIRECTORY ${BGFX_DIR}/include/bgfx DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
-
-	# header required for shader compilation
-	install(FILES ${BGFX_DIR}/src/bgfx_shader.sh ${BGFX_DIR}/src/bgfx_compute.sh
-			DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/bgfx"
-	)
-
 	# install tools
 	if(BGFX_CMAKE_USER_SCRIPT)
 		install(FILES ${BGFX_CMAKE_USER_SCRIPT} DESTINATION "${config_install_dir}")

@@ -81,7 +81,7 @@ target_include_directories(
 		   $<BUILD_INTERFACE:${BX_DIR}/3rdparty> #
 		   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}> #
 		   $<BUILD_INTERFACE:${BX_DIR}/include/compat/${BX_COMPAT_PLATFORM}> #
-		   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/compat/${BX_COMPAT_PLATFORM}> #
+		   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/bx/compat/${BX_COMPAT_PLATFORM}> #
 )
 
 # All configurations
@@ -121,14 +121,18 @@ endif()
 # Put in a "bgfx" folder in Visual Studio
 set_target_properties(bx PROPERTIES FOLDER "bgfx")
 
-if(NOT BGFX_LIBRARY_TYPE MATCHES "SHARED")
+if(BGFX_INSTALL)
 	install(
 		TARGETS bx
 		EXPORT "${TARGETS_EXPORT_NAME}"
 		LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 		ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 		RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-		INCLUDES
-		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 	)
+	# We will make sure tinystl and compat are not installed in /usr/include
+	install(DIRECTORY "${BX_DIR}/include/bx" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+	install(DIRECTORY "${BX_DIR}/include/compat/${BX_COMPAT_PLATFORM}"
+			DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/bx/compat"
+	)
+	install(DIRECTORY "${BX_DIR}/include/tinystl" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/bx")
 endif()
