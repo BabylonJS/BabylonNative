@@ -48,8 +48,9 @@ Adding these `INPUT_FILE` as source files to a target will run `bin2c` at build 
 #### Examples: Generating an image as a header
 ```cmake
 bgfx_compile_binary_to_header(
-  INPUT_FILE image.png
+  INPUT_FILE ${CMAKE_CURRENT_SOURCE_DIR}/image.png
   OUTPUT_FILE ${CMAKE_BINARY_DIR}/include/generated/images/image.png.h
+  ARRAY_NAME image_bytes
 )
 add_library(myLib image.png)
 target_include_directories(myLib ${CMAKE_BINARY_DIR}/include/generated/images)
@@ -58,6 +59,7 @@ target_include_directories(myLib ${CMAKE_BINARY_DIR}/include/generated/images)
 ```cpp
 // main.cpp
 #include <image.png.h>
+// You now have access to a static const uint8_t or char array named image_bytes
 ```
 
 ### `bgfx_compile_texture`
