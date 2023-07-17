@@ -289,6 +289,23 @@ namespace Babylon
             }
         }
 
+        auto RenderTargetSamplesToBgfxMsaaFlag(uint32_t renderTargetSamples)
+        {
+            switch (renderTargetSamples)
+            {
+                case 2:
+                    return BGFX_TEXTURE_RT_MSAA_X2;
+                case 4:
+                    return BGFX_TEXTURE_RT_MSAA_X4;
+                case 8:
+                    return BGFX_TEXTURE_RT_MSAA_X8;
+                case 16:
+                    return BGFX_TEXTURE_RT_MSAA_X16;
+            }
+
+            return BGFX_TEXTURE_NONE;
+        }
+
         using CommandFunctionPointerT = void (NativeEngine::*)(NativeDataStream::Reader&);
     }
 
@@ -1084,11 +1101,17 @@ namespace Babylon
         const bgfx::TextureFormat::Enum format = static_cast<bgfx::TextureFormat::Enum>(info[4].As<Napi::Number>().Uint32Value());
         const bool renderTarget = info[5].As<Napi::Boolean>();
         const bool srgb = info[6].As<Napi::Boolean>();
+        const uint32_t samples = info[7].IsUndefined() ? 1 : info[7].As<Napi::Number>().Uint32Value();
 
         auto flags = BGFX_TEXTURE_NONE;
         if (renderTarget)
         {
             flags |= BGFX_TEXTURE_RT;
+
+            if (samples > 1)
+            {
+                flags |= BGFX_TEXTURE_MSAA_SAMPLE | RenderTargetSamplesToBgfxMsaaFlag(samples);
+            }
         }
         if (srgb)
         {
@@ -1516,6 +1539,7 @@ namespace Babylon
         const uint16_t height = static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value());
         const bool generateStencilBuffer = info[3].As<Napi::Boolean>();
         const bool generateDepth = info[4].As<Napi::Boolean>();
+        const uint32_t samples = info[5].IsUndefined() ? 1 : info[5].As<Napi::Number>().Uint32Value();
 
         std::array<bgfx::Attachment, 2> attachments{};
         uint8_t numAttachments = 0;
@@ -1533,14 +1557,15 @@ namespace Babylon
                 JsConsoleLogger::LogWarn(info.Env(), "Stencil without depth is not supported, assuming depth and stencil");
             }
 
+            auto flags = BGFX_TEXTURE_RT_WRITE_ONLY | RenderTargetSamplesToBgfxMsaaFlag(samples);
             const auto depthStencilFormat{generateStencilBuffer ? bgfx::TextureFormat::D24S8 : bgfx::TextureFormat::D32};
-            assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, BGFX_TEXTURE_RT));
+            assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, flags));
 
             // bgfx doesn't add flag D3D11_RESOURCE_MISC_GENERATE_MIPS for depth textures (missing that flag will crash D3D with resolving)
             // And not sure it makes sense to generate mipmaps from a depth buffer with exponential values.
             // only allows mipmaps resolve step when mipmapping is asked and for the color texture, not the depth.
             // https://github.com/bkaradzic/bgfx/blob/2c21f68998595fa388e25cb6527e82254d0e9bff/src/renderer_d3d11.cpp#L4525
-            attachments[numAttachments++].init(bgfx::createTexture2D(width, height, false, 1, depthStencilFormat, BGFX_TEXTURE_RT));
+            attachments[numAttachments++].init(bgfx::createTexture2D(width, height, false, 1, depthStencilFormat, flags));
         }
 
         bgfx::FrameBufferHandle frameBufferHandle = bgfx::createFrameBuffer(numAttachments, attachments.data(), true);
