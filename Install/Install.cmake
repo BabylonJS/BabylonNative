@@ -71,6 +71,7 @@ install_targets(napi)
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API-JSI/Include/napi)
+    install_include(${V8JSI_PACKAGE_PATH}/build/native/jsi/jsi)
 else()
     install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API/Include/Engine/${NAPI_JAVASCRIPT_ENGINE}/napi)
     install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API/Include/Shared/napi)

@@ -14,32 +14,32 @@ variables:
 
 jobs:
 # Apple
-  - template: .github/jobs/macos.yml
-    parameters:
-      name: MacOS_Xcode1341
-      vmImage: 'macOS-latest'
-      xCodeVersion: 13.4.1
-
-  - template: .github/jobs/ios.yml
-    parameters:
-      name: iOS_Xcode1341_iOS155
-      vmImage: 'macOS-latest'
-      xCodeVersion: 13.4.1
-      deploymentTarget: 15.5
-
-  - template: .github/jobs/ios.yml
-    parameters:
-      name: iOS_Xcode142_iOS162
-      vmImage: 'macOS-latest'
-      xCodeVersion: 14.2
-      deploymentTarget: 16.2
-
-# WIN32
-  - template: .github/jobs/win32.yml
-    parameters:
-      name: Win32_x64_D3D11
-      vmImage: 'windows-latest'
-      platform: x64
+#  - template: .github/jobs/macos.yml
+#    parameters:
+#      name: MacOS_Xcode1341
+#      vmImage: 'macOS-latest'
+#      xCodeVersion: 13.4.1
+#
+#  - template: .github/jobs/ios.yml
+#    parameters:
+#      name: iOS_Xcode1341_iOS155
+#      vmImage: 'macOS-latest'
+#      xCodeVersion: 13.4.1
+#      deploymentTarget: 15.5
+#
+#  - template: .github/jobs/ios.yml
+#    parameters:
+#      name: iOS_Xcode142_iOS162
+#      vmImage: 'macOS-latest'
+#      xCodeVersion: 14.2
+#      deploymentTarget: 16.2
+#
+## WIN32
+#  - template: .github/jobs/win32.yml
+#    parameters:
+#      name: Win32_x64_D3D11
+#      vmImage: 'windows-latest'
+#      platform: x64
 
   - template: .github/jobs/win32.yml
     parameters:
@@ -48,82 +48,82 @@ jobs:
       platform: x64
       napiType: jsi
 
-  - template: .github/jobs/win32.yml
-    parameters:
-      name: Win32_x64_V8_D3D11
-      vmImage: 'windows-latest'
-      platform: x64
-      napiType: V8
-
-  - template: .github/jobs/win32.yml
-    parameters:
-      name: Win32_x64_D3D12
-      vmImage: 'windows-latest'
-      platform: x64
-      graphics_api: D3D12
-
-# UWP
-  - template: .github/jobs/uwp.yml
-    parameters:
-      name: UWP_x64
-      vmImage: 'windows-latest'
-      platform: x64
-
-  - template: .github/jobs/uwp.yml
-    parameters:
-      name: UWP_arm64
-      vmImage: 'windows-latest'
-      platform: arm64
-
-  - template: .github/jobs/uwp.yml
-    parameters:
-      name: UWP_arm64_JSI
-      vmImage: 'windows-latest'
-      platform: arm64
-      napiType: jsi
-
-# Ubuntu/Linux
-
-  # TODO: v8 is incompatible with curl for some reason
-  # See https://github.com/BabylonJS/BabylonNative/issues/1190
-
-  - template: .github/jobs/linux.yml
-    parameters:
-      name: Ubuntu_Clang_JavaScriptCore
-      vmImage: 'ubuntu-latest'
-      CC: clang
-      CXX: clang++
-      JSEngine: JavaScriptCore
-
-  - template: .github/jobs/linux.yml
-    parameters:
-      name: Ubuntu_GCC_JavaScriptCore
-      vmImage: 'ubuntu-latest'
-      CC: gcc
-      CXX: g++
-      JSEngine: JavaScriptCore
-
-# Android
-  - template: .github/jobs/android.yml
-    parameters:
-      name: Android_Ubuntu_JSC
-      vmImage: 'ubuntu-latest'
-      JSEngine: JavaScriptCore
-
-  - template: .github/jobs/android.yml
-    parameters:
-      name: Android_Ubuntu_V8
-      vmImage: 'ubuntu-latest'
-      JSEngine: V8
-
-  - template: .github/jobs/android.yml
-    parameters:
-      name: Android_MacOS_JSC
-      vmImage: 'macOS-latest'
-      JSEngine: JavaScriptCore
-
-  - template: .github/jobs/android.yml
-    parameters:
-      name: Android_MacOS_V8
-      vmImage: 'macOS-latest'
-      JSEngine: V8
+#  - template: .github/jobs/win32.yml
+#    parameters:
+#      name: Win32_x64_V8_D3D11
+#      vmImage: 'windows-latest'
+#      platform: x64
+#      napiType: V8
+#
+#  - template: .github/jobs/win32.yml
+#    parameters:
+#      name: Win32_x64_D3D12
+#      vmImage: 'windows-latest'
+#      platform: x64
+#      graphics_api: D3D12
+#
+## UWP
+#  - template: .github/jobs/uwp.yml
+#    parameters:
+#      name: UWP_x64
+#      vmImage: 'windows-latest'
+#      platform: x64
+#
+#  - template: .github/jobs/uwp.yml
+#    parameters:
+#      name: UWP_arm64
+#      vmImage: 'windows-latest'
+#      platform: arm64
+#
+#  - template: .github/jobs/uwp.yml
+#    parameters:
+#      name: UWP_arm64_JSI
+#      vmImage: 'windows-latest'
+#      platform: arm64
+#      napiType: jsi
+#
+## Ubuntu/Linux
+#
+#  # TODO: v8 is incompatible with curl for some reason
+#  # See https://github.com/BabylonJS/BabylonNative/issues/1190
+#
+#  - template: .github/jobs/linux.yml
+#    parameters:
+#      name: Ubuntu_Clang_JavaScriptCore
+#      vmImage: 'ubuntu-latest'
+#      CC: clang
+#      CXX: clang++
+#      JSEngine: JavaScriptCore
+#
+#  - template: .github/jobs/linux.yml
+#    parameters:
+#      name: Ubuntu_GCC_JavaScriptCore
+#      vmImage: 'ubuntu-latest'
+#      CC: gcc
+#      CXX: g++
+#      JSEngine: JavaScriptCore
+#
+## Android
+#  - template: .github/jobs/android.yml
+#    parameters:
+#      name: Android_Ubuntu_JSC
+#      vmImage: 'ubuntu-latest'
+#      JSEngine: JavaScriptCore
+#
+#  - template: .github/jobs/android.yml
+#    parameters:
+#      name: Android_Ubuntu_V8
+#      vmImage: 'ubuntu-latest'
+#      JSEngine: V8
+#
+#  - template: .github/jobs/android.yml
+#    parameters:
+#      name: Android_MacOS_JSC
+#      vmImage: 'macOS-latest'
+#      JSEngine: JavaScriptCore
+#
+#  - template: .github/jobs/android.yml
+#    parameters:
+#      name: Android_MacOS_V8
+#      vmImage: 'macOS-latest'
+#      JSEngine: V8
