@@ -107,7 +107,7 @@ set(STD_LIBS AppRuntime
     XMLHttpRequest
     )
 
-target_link_libraries(TestInstall PRIVATE 
+target_link_libraries(TestInstall
     ${STD_LIBS}
     ${EXTRA_LIBS}
     chakrart
