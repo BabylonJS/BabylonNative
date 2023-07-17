@@ -40,7 +40,20 @@ else()
 	message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-add_executable(TestInstall ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_INSTALL_APP} ${HEADERS})
+# Nuget/JSI
+# TODO: move it to generic cmake
+set(NUGET_PATH "${BINARY_DIR}/NuGet")
+set(V8JSI_VERSION "0.64.33")
+set(CPU_ARCH "x64")
+set(PLATFORM_FOLDER "win32")
+set(V8JSI_PACKAGE_PATH "${NUGET_PATH}/packages/ReactNative.V8Jsi.Windows.${V8JSI_VERSION}")
+set(V8JSI_LIB_PATH_RELEASE "${V8JSI_PACKAGE_PATH}/lib/${PLATFORM_FOLDER}/Release/${CPU_ARCH}/")
+
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
+    set(JSI_CPP "${V8JSI_PACKAGE_PATH}/build/native/jsi/jsi/jsi.cpp")
+endif()
+
+add_executable(TestInstall ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_INSTALL_APP} ${HEADERS} ${JSI_CPP})
 
 # for napi
 target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
@@ -50,14 +63,7 @@ set(INSTALL_LIBS_DIR "${BINARY_DIR}/install/lib")
 target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")
 target_link_directories(TestInstall PRIVATE ${INSTALL_LIBS_DIR})
 
-# Nuget/JSI
-# TODO: move it to generic cmake
-set(NUGET_PATH "${BINARY_DIR}/NuGet")
-set(V8JSI_VERSION "0.64.33")
-set(CPU_ARCH "x64")
-set(PLATFORM_FOLDER "win32")
-set(V8JSI_PACKAGE_PATH "${NUGET_PATH}/packages/ReactNative.V8Jsi.Windows.${V8JSI_VERSION}")
-set(V8JSI_LIB_PATH_RELEASE "${V8JSI_PACKAGE_PATH}/lib/${PLATFORM_FOLDER}/Release/${CPU_ARCH}/")
+
 target_link_directories(TestInstall PRIVATE "${V8JSI_LIB_PATH_RELEASE}")
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
@@ -89,7 +95,7 @@ set(STD_LIBS AppRuntime
     NativeInput
     NativeOptimizations
     NativeTracing
-#    NativeXr
+    NativeXr
     nvtt
     OGLCompiler
     openxr_loader
