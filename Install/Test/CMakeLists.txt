@@ -105,7 +105,6 @@ set(STD_LIBS AppRuntime
     UrlLib
     Window
     XMLHttpRequest
-    gtest_main
     )
 
 target_link_libraries(TestInstall PRIVATE 
