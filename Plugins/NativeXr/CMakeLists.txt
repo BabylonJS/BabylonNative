@@ -8,7 +8,7 @@ warnings_as_errors(NativeXr)
 target_include_directories(NativeXr
     PUBLIC "Include")
 
-target_link_to_dependencies(NativeXr
+target_link_libraries(NativeXr
     PUBLIC napi
     PRIVATE arcana
     PRIVATE bgfx

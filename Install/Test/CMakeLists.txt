@@ -51,7 +51,7 @@ target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")
 target_link_directories(TestInstall PRIVATE ${INSTALL_LIBS_DIR})
 
 # Nuget/JSI
-# TODO: more it to generic cmake
+# TODO: move it to generic cmake
 set(NUGET_PATH "${BINARY_DIR}/NuGet")
 set(V8JSI_VERSION "0.64.33")
 set(CPU_ARCH "x64")

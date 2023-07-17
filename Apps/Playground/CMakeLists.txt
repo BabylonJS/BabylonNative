@@ -112,7 +112,7 @@ endif()
 
 target_include_directories(Playground PRIVATE "Source" ".")
 
-target_link_to_dependencies(Playground
+target_link_libraries(Playground
     PRIVATE AppRuntime
     PRIVATE Canvas
     PRIVATE Console

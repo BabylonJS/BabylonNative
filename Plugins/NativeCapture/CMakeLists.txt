@@ -8,7 +8,7 @@ warnings_as_errors(NativeCapture)
 target_include_directories(NativeCapture PUBLIC
     "Include")
 
-target_link_to_dependencies(NativeCapture
+target_link_libraries(NativeCapture
     PUBLIC JsRuntimeInternal
     PRIVATE GraphicsDeviceContext
     PRIVATE napi_extensions)

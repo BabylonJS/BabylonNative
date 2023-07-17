@@ -12,7 +12,7 @@ endif()
 
 target_include_directories(NativeTracing PUBLIC "Include")
 
-target_link_to_dependencies(NativeTracing
+target_link_libraries(NativeTracing
     PUBLIC napi
     PRIVATE JsRuntimeInternal
     PRIVATE arcana
