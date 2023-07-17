@@ -39,6 +39,6 @@ jobs:
         sdk: 'iphoneos'
         useXcpretty: false
         configuration: RelWithDebInfo
-        destinationTypeOption: devices
+        destinationTypeOption: simulators
       displayName: 'Build Playground iOS'
 
