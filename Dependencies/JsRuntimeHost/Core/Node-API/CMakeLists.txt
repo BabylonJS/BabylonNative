@@ -29,7 +29,7 @@ if(NAPI_BUILD_ABI)
         function(napi_install_android_package name aar_path output_directory)
             file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/package-${name}.json" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
             file(RENAME "${CMAKE_CURRENT_BINARY_DIR}/package-${name}.json" "${CMAKE_CURRENT_BINARY_DIR}/package.json")
-            npm(install ${CMAKE_CURRENT_BINARY_DIR} "${name}-android")
+            npm(install ${CMAKE_CURRENT_BINARY_DIR} "${name}-android" "--no-package-lock --silent")
 
             file(GLOB_RECURSE ANDROID_ARCHIVE "${CMAKE_CURRENT_BINARY_DIR}/node_modules/${name}-android/${aar_path}/*.aar")
             file(ARCHIVE_EXTRACT INPUT ${ANDROID_ARCHIVE} DESTINATION ${output_directory} PATTERNS jni)
@@ -95,6 +95,56 @@ if(NAPI_BUILD_ABI)
 
             set(LINK_LIBRARIES ${LINK_LIBRARIES}
                 PUBLIC "${V8_ANDROID_DIR}/jni/${ANDROID_ABI}/libv8android.so")
+        elseif(WIN32)
+            set_cpu_platform_arch()
+            set(V8_VERSION "8.4.371.15")
+            download_nuget()
+            set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v142-${CPU_ARCH}.${V8_VERSION}")
+            set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v142-${CPU_ARCH}.${V8_VERSION}")
+            set(V8_REDIST_PACKAGE_PATH "${NUGET_PATH}/packages/v8.redist-v142-${CPU_ARCH}.${V8_VERSION}")
+
+            add_library(v8_libbase SHARED IMPORTED)
+            set_target_properties(v8_libbase PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libbase.dll.lib")
+            add_library(v8_libplatform SHARED IMPORTED)
+            set_target_properties(v8_libplatform PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libplatform.dll.lib")
+            add_library(v8 SHARED IMPORTED)
+            set_target_properties(v8 PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8.dll.lib")
+            target_link_libraries(v8 INTERFACE v8_libbase INTERFACE v8_libplatform)
+            target_include_directories(v8 INTERFACE "${V8_PACKAGE_PATH}/include")
+            
+            set(V8_DIST
+                "${V8_REDIST_PACKAGE_PATH}/lib/Release/icudtl.dat"
+                "${V8_REDIST_PACKAGE_PATH}/lib/Release/icui18n.dll"
+                "${V8_REDIST_PACKAGE_PATH}/lib/Release/icuuc.dll"
+                "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8.dll"
+                "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8_libbase.dll"
+                "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8_libplatform.dll"
+                "${V8_REDIST_PACKAGE_PATH}/lib/Release/zlib.dll")
+
+            # only 1 imported location per library -> Adding 1 library per file
+            foreach(V8FILE ${V8_DIST})
+                get_filename_component(V8FILE_NAME "${V8FILE}" NAME_WE)
+                add_library("v8::${V8FILE_NAME}" SHARED IMPORTED)
+                set_target_properties("v8::${V8FILE_NAME}" PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libbase.dll.lib")
+                set_target_properties("v8::${V8FILE_NAME}" PROPERTIES IMPORTED_LOCATION ${V8FILE})
+            endforeach()
+
+            set(LINK_LIBRARIES ${LINK_LIBRARIES}
+                PUBLIC v8
+                PRIVATE v8::icudtl
+                PRIVATE v8::icui18n
+                PRIVATE v8::icuuc
+                PRIVATE v8::v8
+                PRIVATE v8::v8_libbase
+                PRIVATE v8::v8_libplatform
+                PRIVATE v8::zlib)
+            
+            if(CPU_ARCH STREQUAL "x64")
+                # Enable V8 Pointer Compression
+                # https://v8.dev/blog/pointer-compression
+                # https://stackoverflow.com/q/62921373
+                set(NAPI_DEFINITIONS PUBLIC V8_COMPRESS_POINTERS)
+            endif()
         else()
             message(FATAL_ERROR "Unsupported JavaScript engine: ${NAPI_JAVASCRIPT_ENGINE}")
         endif()
@@ -109,7 +159,8 @@ add_library(napi ${SOURCES})
 
 target_compile_definitions(napi
     PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED
-    PUBLIC NODE_ADDON_API_DISABLE_NODE_SPECIFIC)
+    PUBLIC NODE_ADDON_API_DISABLE_NODE_SPECIFIC
+    ${NAPI_DEFINITIONS})
 
 target_include_directories(napi ${INCLUDE_DIRECTORIES})
 target_link_libraries(napi ${LINK_LIBRARIES})

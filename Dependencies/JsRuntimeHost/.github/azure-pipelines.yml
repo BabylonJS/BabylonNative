@@ -24,6 +24,12 @@ jobs:
       platform: x64
       jsEngine: JSI
 
+  - template: jobs/win32.yml
+    parameters:
+      name: Win32_x64_V8
+      platform: x64
+      jsEngine: V8
+
   # UWP
   - template: jobs/uwp.yml
     parameters:
