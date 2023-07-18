@@ -48,7 +48,7 @@ jobs:
         inputs:
           solution: 'build${{ variables.solutionName }}/BabylonNative.sln'
           maximumCpuCount: true
-          configuration: 'RelWithDebInfo'
+          configuration: 'Debug'
         displayName: 'Build ${{ variables.solutionName }}'
     
       - script: |
@@ -60,14 +60,14 @@ jobs:
     
       - script: |
           cd build${{ variables.solutionName }}\Apps\Playground
-          cd RelWithDebInfo
+          cd Debug
           Playground app:///Scripts/validation_native.js 
         displayName: 'Validation Tests'
     
       - script: |
-          cmake --build build${{ variables.solutionName }} --target INSTALL --config RelWithDebInfo
+          cmake --build build${{ variables.solutionName }} --target INSTALL --config Debug
           cd Install/Test
-          cmake . -DBINARY_DIR=../../build${{ variables.solutionName }} ${{ variables.jsEngineDefine }} && cmake --build . --config RelWithDebInfo
+          cmake . -DBINARY_DIR=../../build${{ variables.solutionName }} ${{ variables.jsEngineDefine }} && cmake --build . --config Debug
         displayName: 'Install'
 
       - task: PublishBuildArtifacts@1
@@ -86,7 +86,7 @@ jobs:
     
       - task: CopyFiles@2
         inputs:
-          sourceFolder: 'build${{ variables.solutionName }}/Apps/Playground/RelWithDebInfo'
+          sourceFolder: 'build${{ variables.solutionName }}/Apps/Playground/Debug'
           contents: Playground.*
           targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
           cleanTargetFolder: false
@@ -102,6 +102,6 @@ jobs:
 
       - script: |
           cd build${{ variables.solutionName }}\Apps\UnitTests
-          cd RelWithDebInfo
+          cd Debug
           UnitTests
         displayName: 'Unit Tests'
