@@ -39,7 +39,7 @@ namespace xr
         {
             if (Instance.Get() == XR_NULL_HANDLE)
             {
-                throw std::runtime_error{ "Attempted to populate extensions when instance was null" };
+                throw std::runtime_error{ "Attempted to initialize extensions when instance was null" };
             }
             Extensions->Initialize();
         }
