@@ -25,7 +25,7 @@ namespace xr
         bool OPENXR_CONTEXT_INTERFACE_API IsSessionRunning() const override;
         XrResult OPENXR_CONTEXT_INTERFACE_API GetInstanceProcAddr(const char* name, PFN_xrVoidFunction* function) const override;
 
-        const std::unique_ptr<XrSupportedExtensions>& XrSessionContext::Extensions() const;
+        const std::unique_ptr<XrSupportedExtensions>& Extensions() const;
         const SceneUnderstanding& SceneUnderstanding() const;
 
         struct Impl;

@@ -35,13 +35,21 @@ namespace xr
         XrSessionContext::Impl()
             : Extensions(std::make_unique<XrSupportedExtensions>()) {}
 
+        void InitializeExtensions()
+        {
+            if (Instance.Get() == XR_NULL_HANDLE)
+            {
+                throw std::runtime_error{ "Attempted to initialize extensions when instance was null" };
+            }
+            Extensions->Initialize();
+        }
+
         void PopulateExtensions()
         {
             if (Instance.Get() == XR_NULL_HANDLE)
             {
                 throw std::runtime_error{ "Attempted to populate extensions when instance was null" };
             }
-
             Extensions->PopulateDispatchTable(Instance.Get());
         }
 
@@ -210,12 +218,13 @@ namespace xr
         // Phase one of initialization. Cannot fail without crashing.
         void InitializeXrInstanceAndExtensions()
         {
+            Context.ContextImpl->InitializeExtensions();
             auto& extensions = Context.ContextImpl->Extensions;
             auto& instanceHandle = Context.ContextImpl->Instance;
             
             XrInstanceCreateInfo createInfo{ XR_TYPE_INSTANCE_CREATE_INFO };
-            createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions->Names.size());
-            createInfo.enabledExtensionNames = extensions->Names.data();
+            createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions->Names().size());
+            createInfo.enabledExtensionNames = extensions->Names().data();
             createInfo.applicationInfo = { "", 1, "BabylonNative", 1, XR_CURRENT_API_VERSION };
             strcpy_s(createInfo.applicationInfo.applicationName, ApplicationName.c_str());
             XrCheck(xrCreateInstance(&createInfo, instanceHandle.Put()));
@@ -344,7 +353,7 @@ namespace xr
             XrCheck(xrCreateSession(instance, &createInfo, sessionHandle.Put()));
 
             // Initialize scene space
-            if (extensions->UnboundedRefSpaceSupported)
+            if (extensions->UnboundedRefSpaceSupported())
             {
                 sceneSpaceType = XR_REFERENCE_SPACE_TYPE_UNBOUNDED_MSFT;
             }
@@ -441,7 +450,7 @@ namespace xr
             const auto& apiExtensions = *HmdImpl.Context.Extensions();
             const auto& sceneSpace = HmdImpl.Context.Space();
 
-            if (!apiExtensions.SpatialAnchorSupported)
+            if (!apiExtensions.SpatialAnchorSupported())
             {
                 throw std::runtime_error("Spatial anchors are not supported for this device.");
             }
@@ -578,7 +587,7 @@ namespace xr
             {
                 XR_TYPE_SECONDARY_VIEW_CONFIGURATION_SWAPCHAIN_CREATE_INFO_MSFT
             };
-            if (HmdImpl.Context.Extensions()->SecondaryViewConfigurationSupported && 
+            if (HmdImpl.Context.Extensions()->SecondaryViewConfigurationSupported() && 
                 viewConfigType == XR_VIEW_CONFIGURATION_TYPE_SECONDARY_MONO_FIRST_PERSON_OBSERVER_MSFT)
             {
                 secondaryViewConfigCreateInfo.viewConfigurationType = viewConfigType;
@@ -654,8 +663,8 @@ namespace xr
                     XR_TYPE_SECONDARY_VIEW_CONFIGURATION_SESSION_BEGIN_INFO_MSFT
                 };
                 const auto& supportedSecondaryViewConfigTypes = HmdImpl.SupportedSecondaryViewConfigurationTypes;
-                if (HmdImpl.Context.Extensions()->SecondaryViewConfigurationSupported &&
-                    HmdImpl.Context.Extensions()->FirstPersonObserverSupported &&
+                if (HmdImpl.Context.Extensions()->SecondaryViewConfigurationSupported() &&
+                    HmdImpl.Context.Extensions()->FirstPersonObserverSupported() &&
                     supportedSecondaryViewConfigTypes.size() > 0)
                 {
                     secondaryViewConfigSessionBeginInfo.viewConfigurationCount = static_cast<uint32_t>(supportedSecondaryViewConfigTypes.size());
@@ -755,7 +764,7 @@ namespace xr
             assert(viewCountOutput == renderResource.DepthSwapchain.ArraySize);
 
             renderResource.ProjectionLayerViews.resize(viewCountOutput);
-            if (context.Extensions()->DepthExtensionSupported)
+            if (context.Extensions()->DepthExtensionSupported())
             {
                 renderResource.DepthInfoViews.resize(viewCountOutput);
             }
@@ -983,7 +992,7 @@ namespace xr
         {
             const auto& context = sessionImpl.HmdImpl.Context;
             const auto& sceneSpace = context.Space();
-            const auto depthSupported = context.Extensions()->DepthExtensionSupported;
+            const auto depthSupported = context.Extensions()->DepthExtensionSupported();
 
             uint32_t totalViewCount = 0;
             uint32_t primaryViewCount;
@@ -1085,7 +1094,7 @@ namespace xr
         const auto& supportedSecondaryViewConfigTypes = m_impl->sessionImpl.HmdImpl.SupportedSecondaryViewConfigurationTypes;
         std::vector<XrSecondaryViewConfigurationLayerInfoMSFT> activeSecondaryViewConfigLayerInfos;
         XrSecondaryViewConfigurationFrameEndInfoMSFT frameEndSecondaryViewConfigInfo{ XR_TYPE_SECONDARY_VIEW_CONFIGURATION_FRAME_END_INFO_MSFT };
-        if (extensions->SecondaryViewConfigurationSupported && supportedSecondaryViewConfigTypes.size() > 0) 
+        if (extensions->SecondaryViewConfigurationSupported() && supportedSecondaryViewConfigTypes.size() > 0) 
         {
             activeSecondaryViewConfigLayerInfos.reserve(supportedSecondaryViewConfigTypes.size());
             const auto& resourceMap = m_impl->sessionImpl.RenderResources.ResourceMap;
@@ -1151,7 +1160,7 @@ namespace xr
             frameEndInfo.layerCount = 1;
             frameEndInfo.layers = &layersPtr;
 
-            if (extensions->SecondaryViewConfigurationSupported &&
+            if (extensions->SecondaryViewConfigurationSupported() &&
                 activeSecondaryViewConfigLayerInfos.size() > 0) 
             {
                 for (size_t i = 0; i < activeSecondaryViewConfigLayerInfos.size(); i++) 
