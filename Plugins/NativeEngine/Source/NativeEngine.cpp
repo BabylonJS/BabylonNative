@@ -1569,7 +1569,10 @@ namespace Babylon
         }
 
         bgfx::FrameBufferHandle frameBufferHandle = bgfx::createFrameBuffer(numAttachments, attachments.data(), true);
-        assert(bgfx::isValid(frameBufferHandle));
+        if (!bgfx::isValid(frameBufferHandle))
+        {
+            throw Napi::Error::New(info.Env(), "Failed to create frame buffer");
+        }
 
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_graphicsContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
         return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
