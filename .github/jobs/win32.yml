@@ -56,6 +56,11 @@ jobs:
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpType /t REG_DWORD /d 2
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpCount /t REG_DWORD /d 1
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe"
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpType /t REG_DWORD /d 2
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpCount /t REG_DWORD /d 1
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
+
         displayName: 'Enable Crash Dumps'
     
       - script: |
@@ -92,6 +97,21 @@ jobs:
           cleanTargetFolder: false
         displayName: 'Stage test app exe/pdb for publishing'
         condition: failed()
+
+      - script: |
+          cd build${{ variables.solutionName }}\Apps\UnitTests
+          cd RelWithDebInfo
+          UnitTests
+        displayName: 'Unit Tests'
+
+      - task: CopyFiles@2
+        inputs:
+          sourceFolder: 'build${{ variables.solutionName }}/Apps/UnitTests/RelWithDebInfo'
+          contents: UnitTests.*
+          targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
+          cleanTargetFolder: false
+        displayName: 'Stage test app exe/pdb for publishing'
+        condition: failed()
     
       - task: PublishBuildArtifacts@1
         inputs:
@@ -99,9 +119,3 @@ jobs:
           pathtoPublish: '$(Build.ArtifactStagingDirectory)/Dumps'
         displayName: 'Publish Tests ${{ variables.solutionName }} Dumps'
         condition: failed()
-
-      - script: |
-          cd build${{ variables.solutionName }}\Apps\UnitTests
-          cd RelWithDebInfo
-          UnitTests
-        displayName: 'Unit Tests'
