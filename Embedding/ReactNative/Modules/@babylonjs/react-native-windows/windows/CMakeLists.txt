@@ -30,7 +30,7 @@ target_include_directories(BabylonNative PRIVATE ${SHARED_INCLUDES})
 
 target_link_libraries(BabylonNative
     arcana
-    Graphics
+    GraphicsDevice
     jsi
     JsRuntime
     NativeCamera

@@ -23,8 +23,8 @@ namespace BabylonNative
     namespace
     {
         Dispatcher g_inlineDispatcher{ [](const std::function<void()>& func) { func(); } };
-        std::unique_ptr<Babylon::Graphics::Device> g_graphics{};
-        std::unique_ptr<Babylon::Graphics::DeviceUpdate> g_update{};
+        std::optional<Babylon::Graphics::Device> g_graphicsDevice{};
+        std::optional<Babylon::Graphics::DeviceUpdate> g_update{};
         std::unique_ptr<Babylon::Polyfills::Canvas> g_nativeCanvas{};
     }
 
@@ -75,34 +75,34 @@ namespace BabylonNative
 
         void UpdateView(WindowType window, size_t width, size_t height)
         {
-            m_windowConfig.Window = window;
-            m_windowConfig.Width = width;
-            m_windowConfig.Height = height;
+            m_graphicsConfig.Window = window;
+            m_graphicsConfig.Width = width;
+            m_graphicsConfig.Height = height;
             UpdateGraphicsConfiguration();
         }
 
         void UpdateGraphicsConfiguration()
         {
-            if (!g_graphics)
+            if (!g_graphicsDevice)
             {
-                g_graphics = Babylon::Graphics::Device::Create(m_windowConfig);
-                g_update = std::make_unique<Babylon::Graphics::DeviceUpdate>(g_graphics->GetUpdate("update"));
+                g_graphicsDevice.emplace(m_graphicsConfig);
+                g_update.emplace(g_graphicsDevice->GetUpdate("update"));
             }
             else
             {
-                g_graphics->UpdateWindow(m_windowConfig);
-                g_graphics->UpdateSize(m_windowConfig.Width, m_windowConfig.Height);
+                g_graphicsDevice->UpdateWindow(m_graphicsConfig.Window);
+                g_graphicsDevice->UpdateSize(m_graphicsConfig.Width, m_graphicsConfig.Height);
             }
-            g_graphics->UpdateMSAA(mMSAAValue);
-            g_graphics->UpdateAlphaPremultiplied(mAlphaPremultiplied);
+            g_graphicsDevice->UpdateMSAA(mMSAAValue);
+            g_graphicsDevice->UpdateAlphaPremultiplied(mAlphaPremultiplied);
 
-            g_graphics->EnableRendering();
+            g_graphicsDevice->EnableRendering();
 
             std::call_once(m_isGraphicsInitialized, [this]()
             {
                 m_jsDispatcher([this]()
                 {
-                    g_graphics->AddToJavaScript(m_env);
+                    g_graphicsDevice->AddToJavaScript(m_env);
                     Babylon::Plugins::NativeEngine::Initialize(m_env);
                 });
             });
@@ -121,18 +121,18 @@ namespace BabylonNative
         void UpdateMSAA(uint8_t value)
         {
             mMSAAValue = value;
-            if (g_graphics)
+            if (g_graphicsDevice)
             {
-                g_graphics->UpdateMSAA(value);
+                g_graphicsDevice->UpdateMSAA(value);
             }
         }
 
         void UpdateAlphaPremultiplied(bool enabled)
         {
             mAlphaPremultiplied = enabled;
-            if (g_graphics)
+            if (g_graphicsDevice)
             {
-                g_graphics->UpdateAlphaPremultiplied(enabled);
+                g_graphicsDevice->UpdateAlphaPremultiplied(enabled);
             }
         }
 
@@ -144,12 +144,12 @@ namespace BabylonNative
             }
             // If rendering has not been explicitly enabled, or has been explicitly disabled, then don't try to render.
             // Otherwise rendering can be implicitly enabled, which may not be desirable (e.g. after the engine is disposed).
-            if (g_graphics && m_isRenderingEnabled)
+            if (g_graphicsDevice && m_isRenderingEnabled)
             {
-                g_graphics->StartRenderingCurrentFrame();
+                g_graphicsDevice->StartRenderingCurrentFrame();
                 g_update->Start();
                 g_update->Finish();
-                g_graphics->FinishRenderingCurrentFrame();
+                g_graphicsDevice->FinishRenderingCurrentFrame();
             }
         }
 
@@ -160,10 +160,10 @@ namespace BabylonNative
 
         void ResetView()
         {
-            if (g_graphics)
+            if (g_graphicsDevice)
             {
                 g_nativeCanvas->FlushGraphicResources();
-                g_graphics->DisableRendering();
+                g_graphicsDevice->DisableRendering();
             }
 
             m_isRenderingEnabled = false;
@@ -264,7 +264,7 @@ namespace BabylonNative
         Babylon::Plugins::NativeInput* m_nativeInput{};
         std::optional<Babylon::Plugins::NativeXr> m_nativeXr{};
 
-        Babylon::Graphics::WindowConfiguration m_windowConfig{};
+        Babylon::Graphics::Configuration m_graphicsConfig{};
 
         std::shared_ptr<bool> m_isXRActive{};
         uint8_t mMSAAValue{};

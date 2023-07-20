@@ -134,7 +134,7 @@ if (EXISTS "${TURBOMODULE_DIR}/CMakeLists.txt")
         turbomodulejsijni                   # prefab ready
         yoga                                # prefab ready
         AndroidExtensions
-        Graphics
+        GraphicsDevice
         JsRuntime
         NativeCamera
         NativeCapture
@@ -196,7 +196,7 @@ else()
         jsi
         turbomodulejsijni
         AndroidExtensions
-        Graphics
+        GraphicsDevice
         JsRuntime
         NativeCamera
         NativeCapture
