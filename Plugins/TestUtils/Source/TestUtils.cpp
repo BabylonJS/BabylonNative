@@ -26,6 +26,8 @@ namespace Babylon::Plugins::Internal
         bx::MemoryBlock mb(&allocator);
         bx::FileWriter writer;
         bx::FilePath filepath(filename.c_str());
+        bx::FilePath filedir(filepath.getPath());
+        bx::makeAll(filedir);
         bx::Error err;
         if (writer.open(filepath, false, &err))
         {

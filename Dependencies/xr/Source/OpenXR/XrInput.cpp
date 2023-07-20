@@ -228,7 +228,7 @@ namespace xr
             SupportsEyeTracking = args.EyeGazeInteractionProps.supportsEyeGazeInteraction;
 
             // Initialize the hand resources
-            HandData.SupportsArticulatedHandTracking = args.HandTrackingInteractionProps.supportsHandTracking && args.Extensions.HandTrackingSupported;
+            HandData.SupportsArticulatedHandTracking = args.HandTrackingInteractionProps.supportsHandTracking && args.Extensions.HandTrackingSupported();
             InitializeHandResources(args.Session, args.Extensions);
 
             m_destroyHandTrackers = [this, extensions = args.Extensions]() {
@@ -348,7 +348,7 @@ namespace xr
                     microsoftControllerBindings.push_back({ ActionResources.ControllerGetGripPoseAction });
                     XrCheck(xrStringToPath(instance, path.data(), &microsoftControllerBindings.back().binding));
 
-                    if (extensions.HandInteractionSupported)
+                    if (extensions.HandInteractionSupported())
                     {
                         microsoftHandBindings.push_back({ ActionResources.ControllerGetGripPoseAction });
                         XrCheck(xrStringToPath(instance, path.data(), &microsoftHandBindings.back().binding));
@@ -385,7 +385,7 @@ namespace xr
                     microsoftControllerBindings.push_back({ ActionResources.ControllerGetAimPoseAction });
                     XrCheck(xrStringToPath(instance, path.data(), &microsoftControllerBindings.back().binding));
 
-                    if (extensions.HandInteractionSupported)
+                    if (extensions.HandInteractionSupported())
                     {
                         microsoftHandBindings.push_back({ ActionResources.ControllerGetAimPoseAction });
                         XrCheck(xrStringToPath(instance, path.data(), &microsoftHandBindings.back().binding));
@@ -512,7 +512,7 @@ namespace xr
                     instance,
                     idx);
 
-                if (extensions.HandInteractionSupported)
+                if (extensions.HandInteractionSupported())
                 {
                     // Create action and suggested bindings specific to hands
                     CreateControllerActionAndBinding(
@@ -551,7 +551,7 @@ namespace xr
             microsoftControllerSuggestedBindings.countSuggestedBindings = (uint32_t)microsoftControllerBindings.size();
             XrCheck(xrSuggestInteractionProfileBindings(instance, &microsoftControllerSuggestedBindings));
 
-            if (extensions.HandInteractionSupported)
+            if (extensions.HandInteractionSupported())
             {
                 // Provide Microsoft hand suggested binding to instance
                 XrInteractionProfileSuggestedBinding microsoftHandSuggestedBindings{ XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
@@ -689,7 +689,7 @@ namespace xr
                     else if (interactionProfilePath == actionResources.MicrosoftHandInteractionPath)
                     {
                         // Get hand interaction data
-                        if (args.Extensions.HandInteractionSupported)
+                        if (args.Extensions.HandInteractionSupported())
                         {
                             const auto& controllerInfo = ControllerInfo;
                             auto& gamepadObject = inputSource.GamepadObject;

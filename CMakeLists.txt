@@ -5,10 +5,11 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # CMakeExtensions
 include(FetchContent)
 FetchContent_Declare(cmake-extensions
-        GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-        GIT_TAG 17baf9e349afea90677e69cdd273d773c894f7b5)
-set(cmake-extensions_SOURCE_DIR "${CMAKE_SOURCE_DIR}/Dependencies/CMakeExtensions")
+    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
+    GIT_TAG 366dc4a84fb20f4060d97e89948c343e74c51fc3)
+message(STATUS "Fetching cmake-extensions")
 FetchContent_MakeAvailable(cmake-extensions)
+message(STATUS "Fetching cmake-extensions - done")
 
 project(BabylonNative)
 
