@@ -69,6 +69,10 @@ endif()
 
 install_targets(napi)
 
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
+    install_targets(v8inspector)
+endif()
+
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API-JSI/Include/napi)
     set(V8JSI_VERSION "0.64.33")
