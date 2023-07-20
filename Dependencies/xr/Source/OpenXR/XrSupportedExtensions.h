@@ -8,8 +8,99 @@ namespace xr
     struct XrSupportedExtensions : ExtensionDispatchTable
     {
         XrSupportedExtensions()
-            : Names{}
+            : m_names{}
         {
+        }
+
+        bool TryEnableExtension(const char* extensionName)
+        {
+            assert(m_initialized);
+            if (m_supportedExtensionNames.count(extensionName) > 0)
+            {
+                return true;
+            }
+
+            for (const auto& extensionProperty : m_extensionProperties)
+            {
+                if (strcmp(extensionProperty.extensionName, extensionName) == 0)
+                {
+                    m_names.push_back(extensionName);
+                    m_supportedExtensionNames.insert(extensionName);
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        bool IsExtensionSupported(const std::string& extensionName) const
+        {
+            assert(m_initialized);
+            return m_supportedExtensionNames.count(extensionName) > 0;
+        }
+
+        bool DepthExtensionSupported() const
+        {
+            assert(m_initialized);
+            return m_depthExtensionSupported;
+        }
+        bool UnboundedRefSpaceSupported() const
+        {
+            assert(m_initialized);
+            return m_unboundedRefSpaceSupported;
+        }
+        bool SpatialAnchorSupported() const
+        {
+            assert(m_initialized);
+            return m_spatialAnchorSupported;
+        }
+        bool SpatialAnchorInteropSupported() const
+        {
+            assert(m_initialized);
+            return m_spatialAnchorInteropSupported;
+        }
+        bool SecondaryViewConfigurationSupported() const
+        {
+            assert(m_initialized);
+            return m_secondaryViewConfigurationSupported;
+        }
+        bool FirstPersonObserverSupported() const
+        {
+            assert(m_initialized);
+            return m_firstPersonObserverSupported;
+        }
+        bool HandInteractionSupported() const
+        {
+            assert(m_initialized);
+            return m_handInteractionSupported;
+        }
+        bool HandTrackingSupported() const
+        {
+            assert(m_initialized);
+            return m_handTrackingSupported;
+        }
+        bool SceneUnderstandingSupported() const
+        {
+            assert(m_initialized);
+            return m_sceneUnderstandingSupported;
+        }
+        bool SceneUnderstandingSerializationSupported() const
+        {
+            assert(m_initialized);
+            return m_sceneUnderstandingSerializationSupported;
+        }
+        bool EyeTrackingSupported() const
+        {
+            assert(m_initialized);
+            return m_eyeTrackingSupported;
+        }
+
+        void Initialize()
+        {
+            if (m_initialized)
+            {
+                return;
+            }
+            m_initialized = true;
             uint32_t extensionCount{};
             XrResult result{ xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr) };
             if (result != XR_SUCCESS)
@@ -31,59 +122,41 @@ namespace xr
             }
 
             // Additional optional extensions for enhanced functionality. Track whether enabled in m_optionalExtensions.
-            DepthExtensionSupported = TryEnableExtension(XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME);
-            UnboundedRefSpaceSupported = TryEnableExtension(XR_MSFT_UNBOUNDED_REFERENCE_SPACE_EXTENSION_NAME);
-            SpatialAnchorSupported = TryEnableExtension(XR_MSFT_SPATIAL_ANCHOR_EXTENSION_NAME);
-            SpatialAnchorInteropSupported = TryEnableExtension(XR_MSFT_PERCEPTION_ANCHOR_INTEROP_EXTENSION_NAME);
-            SecondaryViewConfigurationSupported = TryEnableExtension(XR_MSFT_SECONDARY_VIEW_CONFIGURATION_EXTENSION_NAME);
-            FirstPersonObserverSupported = TryEnableExtension(XR_MSFT_FIRST_PERSON_OBSERVER_EXTENSION_NAME);
-            HandInteractionSupported = TryEnableExtension(XR_MSFT_HAND_INTERACTION_EXTENSION_NAME);
-            HandTrackingSupported = TryEnableExtension(XR_EXT_HAND_TRACKING_EXTENSION_NAME);
-            SceneUnderstandingSupported = TryEnableExtension(XR_MSFT_SCENE_UNDERSTANDING_EXTENSION_NAME);
-            SceneUnderstandingSerializationSupported = TryEnableExtension(XR_MSFT_SCENE_UNDERSTANDING_SERIALIZATION_EXTENSION_NAME);
-            EyeTrackingSupported = TryEnableExtension(XR_EXT_EYE_GAZE_INTERACTION_EXTENSION_NAME);
+            m_depthExtensionSupported = TryEnableExtension(XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME);
+            m_unboundedRefSpaceSupported = TryEnableExtension(XR_MSFT_UNBOUNDED_REFERENCE_SPACE_EXTENSION_NAME);
+            m_spatialAnchorSupported = TryEnableExtension(XR_MSFT_SPATIAL_ANCHOR_EXTENSION_NAME);
+            m_spatialAnchorInteropSupported = TryEnableExtension(XR_MSFT_PERCEPTION_ANCHOR_INTEROP_EXTENSION_NAME);
+            m_secondaryViewConfigurationSupported = TryEnableExtension(XR_MSFT_SECONDARY_VIEW_CONFIGURATION_EXTENSION_NAME);
+            m_firstPersonObserverSupported = TryEnableExtension(XR_MSFT_FIRST_PERSON_OBSERVER_EXTENSION_NAME);
+            m_handInteractionSupported = TryEnableExtension(XR_MSFT_HAND_INTERACTION_EXTENSION_NAME);
+            m_handTrackingSupported = TryEnableExtension(XR_EXT_HAND_TRACKING_EXTENSION_NAME);
+            m_sceneUnderstandingSupported = TryEnableExtension(XR_MSFT_SCENE_UNDERSTANDING_EXTENSION_NAME);
+            m_sceneUnderstandingSerializationSupported = TryEnableExtension(XR_MSFT_SCENE_UNDERSTANDING_SERIALIZATION_EXTENSION_NAME);
+            m_eyeTrackingSupported = TryEnableExtension(XR_EXT_EYE_GAZE_INTERACTION_EXTENSION_NAME);
         }
-
-        bool TryEnableExtension(const char* extensionName)
+        const std::vector<const char*>& Names() const
         {
-            if (m_supportedExtensionNames.count(extensionName) > 0)
-            {
-                return true;
-            }
-
-            for (const auto& extensionProperty : m_extensionProperties)
-            {
-                if (strcmp(extensionProperty.extensionName, extensionName) == 0)
-                {
-                    Names.push_back(extensionName);
-                    m_supportedExtensionNames.insert(extensionName);
-                    return true;
-                }
-            }
-            return false;
-        };
-
-        bool IsExtensionSupported(const std::string& extensionName) const
-        {
-            return m_supportedExtensionNames.count(extensionName) > 0;
+            assert(m_initialized);
+            return m_names;
         }
-
-        std::vector<const char*> Names{};
-        bool DepthExtensionSupported{ false };
-        bool UnboundedRefSpaceSupported{ false };
-        bool SpatialAnchorSupported{ false };
-        bool SpatialAnchorInteropSupported{ false };
-        bool SecondaryViewConfigurationSupported{ false };
-        bool FirstPersonObserverSupported{ false };
-        bool HandInteractionSupported{ false };
-        bool HandTrackingSupported{ false };
-        bool SceneUnderstandingSupported{ false };
-        bool SceneUnderstandingSerializationSupported{ false };
-        bool EyeTrackingSupported{ false };
-
     private:
+        std::vector<const char*> m_names{};
         std::vector<XrExtensionProperties> m_extensionProperties{};
         std::unordered_set<std::string> m_supportedExtensionNames{};
+
+        bool m_depthExtensionSupported{ false };
+        bool m_unboundedRefSpaceSupported{ false };
+        bool m_spatialAnchorSupported{ false };
+        bool m_spatialAnchorInteropSupported{ false };
+        bool m_secondaryViewConfigurationSupported{ false };
+        bool m_firstPersonObserverSupported{ false };
+        bool m_handInteractionSupported{ false };
+        bool m_handTrackingSupported{ false };
+        bool m_sceneUnderstandingSupported{ false };
+        bool m_sceneUnderstandingSerializationSupported{ false };
+        bool m_eyeTrackingSupported{ false };
+
+        bool m_initialized{ false };
     };
 }
 #endif
