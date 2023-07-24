@@ -44,17 +44,22 @@ function compare(test, renderData, referenceImage, threshold, errorRatio) {
 
     let error = (differencesCount * 100) / (size / 4) > errorRatio;
 
+    const width = testWidth / engine.getHardwareScalingLevel();
+    const height = testHeight / engine.getHardwareScalingLevel();
+
     if (error) {
-        TestUtils.writePNG(referenceData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Errors/" + test.referenceImage);
+        TestUtils.writePNG(referenceData, width, height, TestUtils.getOutputDirectory() + "/Errors/" + test.referenceImage);
     }
     if (saveResult || error) {
-        TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Results/" + test.referenceImage);
+        TestUtils.writePNG(renderData, width, height, TestUtils.getOutputDirectory() + "/Results/" + test.referenceImage);
     }
     return error;
 }
 
 function saveRenderedResult(test, renderData) {
-    TestUtils.writePNG(renderData, testWidth, testHeight, TestUtils.getOutputDirectory() + "/Results/" + test.referenceImage);
+    const width = testWidth / engine.getHardwareScalingLevel();
+    const height = testHeight / engine.getHardwareScalingLevel();
+    TestUtils.writePNG(renderData, width, height, TestUtils.getOutputDirectory() + "/Results/" + test.referenceImage);
     return false; // no error
 }
 
