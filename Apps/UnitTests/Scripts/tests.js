@@ -1,4 +1,4 @@
-﻿mocha.setup({ ui: "bdd", reporter: "tap", retries: 5 });
+﻿mocha.setup({ ui: "bdd", reporter: "list", retries: 5, color: true });
 
 const expect = chai.expect;
 
