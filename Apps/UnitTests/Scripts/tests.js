@@ -1,4 +1,4 @@
-﻿mocha.setup({ ui: "bdd", reporter: "list", retries: 5, color: true });
+﻿mocha.setup({ ui: "bdd", reporter: "tap", retries: 5});
 
 const expect = chai.expect;
 
@@ -355,11 +355,12 @@ describe("clearTimeout", function () {
 
 mocha.run(failures => {
     // Test program will wait for code to be set before exiting
-    if (failures > 0) {
-        // Failure
-        SetExitCode(1);
-    } else {
-        // Success
-        SetExitCode(0);
-    }
+    setTimeout(() => {
+        if (failures > 0) {
+            // Failure
+            SetExitCode(1);
+        } else {
+            // Success
+            SetExitCode(0);
+        }, 0);
 });
