@@ -114,7 +114,9 @@ namespace
         { MTLPixelFormatDepth32Float,                   MTLPixelFormatInvalid                       }, // D32F
         { MTLPixelFormatStencil8,                       MTLPixelFormatInvalid                       }, // D0S8
     };
+  #ifndef TARGET_OS_OSX
     BX_STATIC_ASSERT(bgfx::TextureFormat::Count == BX_COUNTOF(s_textureFormat));
+  #endif
 }
 
 // clang-format on
