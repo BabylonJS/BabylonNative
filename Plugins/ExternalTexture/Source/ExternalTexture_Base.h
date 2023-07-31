@@ -44,6 +44,23 @@ namespace Babylon::Plugins
             return mipLevel == static_cast<uint16_t>(std::floor(std::log2(std::max(static_cast<float>(width), static_cast<float>(height))) + 1));
         }
 
+        static auto RenderTargetSamplesToBgfxMsaaFlag(uint32_t renderTargetSamples)
+        {
+            switch (renderTargetSamples)
+            {
+                case 2:
+                    return BGFX_TEXTURE_RT_MSAA_X2;
+                case 4:
+                    return BGFX_TEXTURE_RT_MSAA_X4;
+                case 8:
+                    return BGFX_TEXTURE_RT_MSAA_X8;
+                case 16:
+                    return BGFX_TEXTURE_RT_MSAA_X16;
+            }
+
+            return BGFX_TEXTURE_NONE;
+        }
+
         void UpdateHandles(uintptr_t ptr)
         {
             std::scoped_lock lock{m_mutex};

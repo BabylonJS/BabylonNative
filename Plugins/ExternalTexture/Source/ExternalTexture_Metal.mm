@@ -136,7 +136,7 @@ namespace Babylon::Plugins
     private:
         void GetInfo(Graphics::TextureT ptr, Info& info)
         {
-            if (ptr.textureType != MTLTextureType2D)
+            if (ptr.textureType != MTLTextureType2D && ptr.textureType != MTLTextureType2DMultisample)
             {
                 throw std::runtime_error{"Unsupported texture type"};
             }
@@ -148,6 +148,11 @@ namespace Babylon::Plugins
             if ((ptr.usage & MTLTextureUsageRenderTarget) != 0)
             {
                 info.Flags |= BGFX_TEXTURE_RT;
+
+                if (ptr.sampleCount > 1)
+                {
+                    info.Flags |= BGFX_TEXTURE_MSAA_SAMPLE | RenderTargetSamplesToBgfxMsaaFlag(ptr.sampleCount);
+                }
             }
 
             const auto pixelFormat = m_ptr.pixelFormat;

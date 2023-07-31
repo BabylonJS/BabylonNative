@@ -183,6 +183,11 @@ namespace Babylon::Plugins
             if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0)
             {
                 info.Flags |= BGFX_TEXTURE_RT;
+
+                if (desc.SampleDesc.Count > 1)
+                {
+                    info.Flags |= BGFX_TEXTURE_MSAA_SAMPLE | RenderTargetSamplesToBgfxMsaaFlag(desc.SampleDesc.Count);
+                }
             }
 
             for (int i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
