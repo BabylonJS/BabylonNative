@@ -117,6 +117,7 @@ target_link_to_dependencies(Playground
     PRIVATE Canvas
     PRIVATE ChromeDevTools
     PRIVATE Console
+    PRIVATE ExternalTexture
     PRIVATE GraphicsDevice
     PRIVATE NativeCapture
     PRIVATE NativeEngine

@@ -44,7 +44,7 @@ namespace Babylon::Plugins
             return mipLevel == static_cast<uint16_t>(std::floor(std::log2(std::max(static_cast<float>(width), static_cast<float>(height))) + 1));
         }
 
-        static auto RenderTargetSamplesToBgfxMsaaFlag(uint32_t renderTargetSamples)
+        static auto RenderTargetSamplesToBgfxMsaaFlag(uint64_t renderTargetSamples)
         {
             switch (renderTargetSamples)
             {
