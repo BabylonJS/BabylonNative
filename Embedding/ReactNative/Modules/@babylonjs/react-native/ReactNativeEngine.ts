@@ -10,7 +10,7 @@ declare const BabylonNative: {
 };
 
 export class ReactNativeEngine extends NativeEngine {
-    private _isDisposed = false;
+    public _isDisposed = false;
 
     public static async tryCreateAsync(abortSignal: AbortSignal): Promise<ReactNativeEngine | null> {
         if (!await ensureInitialized() || abortSignal.aborted) {
