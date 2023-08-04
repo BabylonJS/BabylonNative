@@ -32,7 +32,7 @@ target_include_directories(NativeEngine
     PUBLIC "Include"
     PRIVATE "${BIMG_DIR}/3rdparty")
 
-target_link_to_dependencies(NativeEngine
+target_link_libraries(NativeEngine
     PUBLIC napi
     PRIVATE JsRuntime
     PRIVATE GraphicsDevice
@@ -47,18 +47,18 @@ target_link_to_dependencies(NativeEngine
 warnings_as_errors(NativeEngine)
 
 if(TARGET spirv-cross-hlsl)
-    target_link_to_dependencies(NativeEngine
+    target_link_libraries(NativeEngine
         PRIVATE spirv-cross-hlsl)
 elseif(TARGET spirv-cross-msl)
-    target_link_to_dependencies(NativeEngine
+    target_link_libraries(NativeEngine
         PRIVATE spirv-cross-msl)
 else()
-    target_link_to_dependencies(NativeEngine
+    target_link_libraries(NativeEngine
         PRIVATE spirv-cross-glsl)
 endif()
 
 if(WIN32)
-    target_link_to_dependencies(NativeEngine
+    target_link_libraries(NativeEngine
         PRIVATE "d3dcompiler.lib")
 endif()
 

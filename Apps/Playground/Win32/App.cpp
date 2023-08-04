@@ -16,7 +16,6 @@
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
-#include <Babylon/Plugins/ChromeDevTools.h>
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Plugins/NativeInput.h>
@@ -36,7 +35,6 @@ std::optional<Babylon::AppRuntime> runtime{};
 std::optional<Babylon::Graphics::Device> device{};
 std::optional<Babylon::Graphics::DeviceUpdate> update{};
 Babylon::Plugins::NativeInput* nativeInput{};
-std::optional<Babylon::Plugins::ChromeDevTools> chromeDevTools{};
 std::optional<Babylon::Polyfills::Canvas> nativeCanvas{};
 bool minimized{false};
 int buttonRefCount{0};
@@ -92,7 +90,6 @@ namespace
         }
 
         nativeCanvas.reset();
-        chromeDevTools.reset();
         nativeInput = {};
         runtime.reset();
         update.reset();
@@ -154,11 +151,6 @@ namespace
 
             nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
-            chromeDevTools.emplace(Babylon::Plugins::ChromeDevTools::Initialize(env));
-            if (chromeDevTools->SupportsInspector())
-            {
-                chromeDevTools->StartInspector(5643, "BabylonNative Playground");
-            }
             Babylon::Plugins::TestUtils::Initialize(env, hWnd);
         });
 

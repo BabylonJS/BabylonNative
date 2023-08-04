@@ -12,7 +12,7 @@ endif()
 
 target_include_directories(NativeOptimizations PUBLIC "Include")
 
-target_link_to_dependencies(NativeOptimizations
+target_link_libraries(NativeOptimizations
     PUBLIC napi
     PRIVATE JsRuntimeInternal)
 

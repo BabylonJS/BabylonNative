@@ -50,6 +50,13 @@ jobs:
 
   - template: .github/jobs/win32.yml
     parameters:
+      name: Win32_x64_V8_D3D11
+      vmImage: 'windows-latest'
+      platform: x64
+      napiType: V8
+
+  - template: .github/jobs/win32.yml
+    parameters:
       name: Win32_x64_D3D12
       vmImage: 'windows-latest'
       platform: x64
@@ -101,22 +108,22 @@ jobs:
     parameters:
       name: Android_Ubuntu_JSC
       vmImage: 'ubuntu-latest'
-      JSEngine: jsc
+      JSEngine: JavaScriptCore
 
   - template: .github/jobs/android.yml
     parameters:
       name: Android_Ubuntu_V8
       vmImage: 'ubuntu-latest'
-      JSEngine: v8android
+      JSEngine: V8
 
   - template: .github/jobs/android.yml
     parameters:
       name: Android_MacOS_JSC
       vmImage: 'macOS-latest'
-      JSEngine: jsc
+      JSEngine: JavaScriptCore
 
   - template: .github/jobs/android.yml
     parameters:
       name: Android_MacOS_V8
       vmImage: 'macOS-latest'
-      JSEngine: v8android
+      JSEngine: V8

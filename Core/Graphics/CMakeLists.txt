@@ -29,18 +29,18 @@ target_include_directories(Graphics
     PRIVATE "InternalInclude/Babylon/Graphics")
 
 if(WINDOWS_STORE)
-    target_link_to_dependencies(Graphics
+    target_link_libraries(Graphics
         PRIVATE WindowsAppSDK)
 elseif(WIN32)
-    target_link_to_dependencies(Graphics
+    target_link_libraries(Graphics
         PRIVATE "shlwapi.lib")
 elseif(ANDROID)
-    target_link_to_dependencies(Graphics
+    target_link_libraries(Graphics
         PRIVATE android
         PRIVATE AndroidExtensions)
 endif()
 
-target_link_to_dependencies(Graphics
+target_link_libraries(Graphics
     PRIVATE napi_extensions
     PRIVATE JsRuntimeInternal
     PRIVATE bgfx
@@ -67,7 +67,7 @@ target_include_directories(GraphicsDevice
     INTERFACE "Include/Shared"
     INTERFACE "Include/Platform/${BABYLON_NATIVE_PLATFORM}"
     INTERFACE "Include/RendererType/${GRAPHICS_API}")
-target_link_to_dependencies(GraphicsDevice
+target_link_libraries(GraphicsDevice
     INTERFACE Graphics
     INTERFACE JsRuntime)
 
@@ -75,7 +75,7 @@ add_library(GraphicsDeviceContext INTERFACE)
 target_include_directories(GraphicsDeviceContext
     INTERFACE "InternalInclude"
     INTERFACE "InternalInclude/${BABYLON_NATIVE_PLATFORM}")
-target_link_to_dependencies(GraphicsDeviceContext
+target_link_libraries(GraphicsDeviceContext
     INTERFACE Graphics
     INTERFACE JsRuntimeInternal
     INTERFACE arcana

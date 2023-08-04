@@ -60,7 +60,7 @@ if (ANDROID)
     add_library(glm INTERFACE)
     set_target_properties(glm PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/arcore-android-sdk/libraries/glm)
 
-    target_link_libraries(xr PRIVATE glm arcore GSL AndroidExtensions)
+    target_link_libraries(xr PRIVATE glm arcore AndroidExtensions)
 elseif (IOS)    
     target_link_libraries(xr PRIVATE "-framework ARKit")
 else()
@@ -88,5 +88,5 @@ target_include_directories(xr PRIVATE "Source/Shared")
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
 target_include_directories(xrInternal INTERFACE "Source")
-target_link_to_dependencies(xrInternal
+target_link_libraries(xrInternal
     INTERFACE xr)

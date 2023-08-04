@@ -15,7 +15,7 @@ endif()
 target_include_directories(ExternalTexture
     PUBLIC "Include")
 
-target_link_to_dependencies(ExternalTexture
+target_link_libraries(ExternalTexture
     PUBLIC napi
     PUBLIC GraphicsDevice
     PRIVATE napi_extensions

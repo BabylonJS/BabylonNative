@@ -2,14 +2,32 @@
 cmake_minimum_required(VERSION 3.18)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-# CMakeExtensions
 include(FetchContent)
+
+# Modules declaration
 FetchContent_Declare(cmake-extensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG 366dc4a84fb20f4060d97e89948c343e74c51fc3)
-message(STATUS "Fetching cmake-extensions")
-FetchContent_MakeAvailable(cmake-extensions)
-message(STATUS "Fetching cmake-extensions - done")
+FetchContent_Declare(ios-cmake
+    GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
+    GIT_TAG 04d91f6675dabb3c97df346a32f6184b0a7ef845)
+FetchContent_Declare(JsRuntimeHost
+    GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
+    GIT_TAG 1ff3a500b98264c15a08f6aca9baee0e662d3eaf)
+FetchContent_Declare(AndroidExtensions
+    GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
+    GIT_TAG 883c4a286116e51ee989e39ee8e216d632997329)
+set(JSRUNTIMEHOST_TESTS OFF)
+
+set(CONTENT_TO_FETCH cmake-extensions JsRuntimeHost)
+
+if(IOS)
+    FetchContent_MakeAvailable(ios-cmake)
+    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+    set(PLATFORM "OS64COMBINED" CACHE STRING "")
+    set(DEPLOYMENT_TARGET "12" CACHE STRING "")
+    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
+endif()
 
 project(BabylonNative)
 
@@ -20,13 +38,9 @@ option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ON)
 option(BABYLON_NATIVE_INSTALL "Include the install target." ON)
 
 ## Core
-option(BABYLON_NATIVE_CORE_JSRUNTIME "Include Babylon Native Core JsRuntime" ON)
-option(BABYLON_NATIVE_CORE_APPRUNTIME "Include Babylon Native Core AppRuntime" ON)
-option(BABYLON_NATIVE_CORE_SCRIPTLOADER "Include Babylon Native Core ScriptLoader" ON)
 option(BABYLON_NATIVE_CORE_GRAPHICS "Include Babylon Native Core Graphics" ON)
 
 ## Plugins
-option(BABYLON_NATIVE_PLUGIN_CHROMEDEVTOOLS "Include Babylon Native Plugin ChromeDevTools." ON)
 option(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE "Include Babylon Native Plugin ExternalTexture." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAMERA "Include Babylon Native Plugin NativeCamera." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE "Include Babylon Native Plugin NativeCapture." ON)
@@ -38,9 +52,7 @@ option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils.
 option(BABYLON_NATIVE_PLUGIN_NATIVEXR "Include Babylon Native Plugin XR." ON)
 
 ## Polyfills
-option(BABYLON_NATIVE_POLYFILL_CONSOLE "Include Babylon Native Polyfill Console." ON)
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
-option(BABYLON_NATIVE_POLYFILL_XMLHTTPREQUEST "Include Babylon Native Polyfill XMLHttpRequest." ON)
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
 # --------------------------------------------------
 
@@ -53,6 +65,7 @@ endif()
 # Setting Platform
 if(ANDROID)
     set(BABYLON_NATIVE_PLATFORM "Android")
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} AndroidExtensions)
 elseif(IOS)
     set(BABYLON_NATIVE_PLATFORM "iOS")
 elseif(APPLE)
@@ -88,8 +101,15 @@ elseif(WIN32)
     endif()
 endif()
 
+# Fetching content
+message(STATUS "Fetching dependencies for ${PROJECT_NAME} (${CONTENT_TO_FETCH})")
+FetchContent_MakeAvailable(${CONTENT_TO_FETCH})
+message(STATUS "Fetching dependencies for ${PROJECT_NAME} - done")
+
 if(APPLE)
     set(BABYLON_NATIVE_PLATFORM_IMPL_EXT "mm")
+    set_property(TARGET JsRuntime PROPERTY UNITY_BUILD false)
+    set_property(TARGET AppRuntime PROPERTY UNITY_BUILD false)
 else()
     set(BABYLON_NATIVE_PLATFORM_IMPL_EXT "cpp")
 endif()

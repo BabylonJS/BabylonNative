@@ -1,14 +1,3 @@
-# -------------------------------- arcana --------------------------------
-# Dependencies: GSL
-add_subdirectory(arcana.cpp)
-if(WIN32)
-    set_property(TARGET arcana PROPERTY FOLDER Dependencies)
-endif()
-
-# -------------------------------- GSL -----------------------------------
-# Dependencies: none
-add_subdirectory(arcana.cpp/Source/Submodules/GSL)
-
 # -------------------------------- base-n --------------------------------
 # Dependencies: none
 add_library(base-n INTERFACE)
@@ -96,14 +85,6 @@ disable_warnings(OSDependent)
 disable_warnings(MachineIndependent)
 disable_warnings(SPIRV)
 
-# -------------------------------- ios-cmake --------------------------------
-# Nothing to do here.
-
-# -------------------------------- napi --------------------------------
-# Dependencies: none
-add_subdirectory(napi)
-set_property(TARGET napi PROPERTY FOLDER Dependencies)
-
 # -------------------------------- SPIRV-Cross --------------------------------
 # Dependencies: none
 set(SPIRV_CROSS_CLI OFF CACHE BOOL "")
@@ -148,31 +129,11 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEXR AND (WIN32 OR ANDROID OR IOS))
     endif()
 endif()
 
-# -------------------------------- AndroidExtensions --------------------------------
-# Dependencies: none
-if(ANDROID)
-    add_subdirectory(AndroidExtensions)
-endif()
-
-# -------------------------------- UrlLib --------------------------------
-# Dependencies: arcana, AndroidExtensions
-if(BABYLON_NATIVE_POLYFILL_XMLHTTPREQUEST)
-    add_subdirectory(UrlLib)
-    set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
-endif()
-
-# --------------------------- v8inspector ---------------------------
-# Dependencies: none
-# Currently only supported on Win32 x86/x64 and Android
-if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND ((WIN32 AND NOT (WINDOWS_STORE OR CMAKE_GENERATOR_PLATFORM_UPPER MATCHES "ARM.*")) OR ANDROID))
-    add_subdirectory(v8inspector)
-    set_property(TARGET v8inspector PROPERTY FOLDER Dependencies)
-    set_property(TARGET v8inspector PROPERTY UNITY_BUILD false)
-    set_property(TARGET llhttp PROPERTY UNITY_BUILD false)
-endif()
-
 # --------------------------- WindowsAppSDK ---------------------------
 # Dependencies: none
 if(WINDOWS_STORE)
     add_subdirectory(WindowsAppSDK)
 endif()
+
+# --------------------------- NAPI Extensions ---------------------------
+add_subdirectory(napi-extensions)

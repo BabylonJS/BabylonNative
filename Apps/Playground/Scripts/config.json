@@ -183,7 +183,7 @@
         },
         {
             "title": "LightFalloff",
-            "playgroundId": "#20OAV9#201",
+            "playgroundId": "#20OAV9#11218",
             "referenceImage": "lightFalloff.png"
         },
         {
@@ -207,7 +207,7 @@
         {
             "title": "Capsule",
             "renderCount": 10,
-            "playgroundId": "#JAFIIU#2",
+            "playgroundId": "#JAFIIU#4",
             "referenceImage": "CreateCapsule.png"
         },
         {
