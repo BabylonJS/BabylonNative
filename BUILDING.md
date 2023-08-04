@@ -170,7 +170,7 @@ what toolchain to use, which provides additional information about how to genera
 iOS Xcode project correctly. Run the following command from the repository root:
 
 ```
-cmake -B build/iOS -G Xcode -D CMAKE_TOOLCHAIN_FILE=Dependencies/ios-cmake/ios.toolchain.cmake -D PLATFORM=OS64COMBINED -D DEPLOYMENT_TARGET=12
+cmake -B build/iOS -G Xcode -D IOS=ON
 ```
 
 To enable bitcode support, add this option to the cmake command line parameters:
