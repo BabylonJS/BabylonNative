@@ -31,6 +31,10 @@ jobs:
       reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
     displayName: 'Enable Crash Dumps'
 
+  - script: UnitTests.exe
+    workingDirectory: 'Build/Win32/Tests/UnitTests/Debug'
+    displayName: 'Run Tests'
+
   - task: CopyFiles@2
     inputs:
       sourceFolder: 'Build/Win32/Tests/UnitTests/Debug'
@@ -46,7 +50,3 @@ jobs:
       pathtoPublish: '$(Build.ArtifactStagingDirectory)/Dumps'
     displayName: 'Publish Tests Dumps'
     condition: failed()
-
-  - script: UnitTests.exe
-    workingDirectory: 'Build/Win32/Tests/UnitTests/Debug'
-    displayName: 'Run Tests'

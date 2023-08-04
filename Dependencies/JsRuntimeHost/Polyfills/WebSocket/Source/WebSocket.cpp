@@ -41,8 +41,14 @@ namespace Babylon::Polyfills::Internal
               [this](const std::string& message) { MessageCallback(message); },
               [this](const std::string& message) { ErrorCallback(message); })
         , m_url(info[0].As<Napi::String>())
+        , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
     {
         m_webSocket.Open();
+    }
+
+    WebSocket::~WebSocket()
+    {
+        m_cancellationSource->cancel();
     }
 
     void WebSocket::Close(const Napi::CallbackInfo& info)
@@ -165,7 +171,11 @@ namespace Babylon::Polyfills::Internal
 
     void WebSocket::OpenCallback()
     {
-        m_runtimeScheduler([this]() {
+        m_runtimeScheduler([this, cancellationSource{m_cancellationSource}]() {
+            if (cancellationSource->cancelled())
+            {
+                return;
+            }
             m_readyState = ReadyState::Open;
             try
             {
@@ -184,7 +194,11 @@ namespace Babylon::Polyfills::Internal
 
     void WebSocket::CloseCallback(int code, const std::string& reason)
     {
-        m_runtimeScheduler([this, code, reason]() {
+        m_runtimeScheduler([this, code, reason, cancellationSource{m_cancellationSource}]() {
+            if (cancellationSource->cancelled())
+            {
+                return;
+            }
             m_readyState = ReadyState::Closed;
             try
             {
@@ -211,14 +225,21 @@ namespace Babylon::Polyfills::Internal
 
     void WebSocket::MessageCallback(const std::string& message)
     {
-        m_runtimeScheduler([this, message]() {
+        m_runtimeScheduler([this, message, cancellationSource{m_cancellationSource}]() {
+            if (cancellationSource->cancelled())
+            {
+                return;
+            }
             try
             {
                 if (!m_onmessage.IsEmpty())
                 {
                     Napi::Object messageEvent = Napi::Object::New(Env());
                     messageEvent.Set("data", message);
-                    m_onmessage.Call({messageEvent});
+                    if (!cancellationSource->cancelled())
+                    {
+                        m_onmessage.Call({messageEvent});
+                    }
                 }
             }
             catch (...)
@@ -231,14 +252,21 @@ namespace Babylon::Polyfills::Internal
 
     void WebSocket::ErrorCallback(const std::string& message)
     {
-        m_runtimeScheduler([this, message]() {
+        m_runtimeScheduler([this, message, cancellationSource{m_cancellationSource}]() {
+            if (cancellationSource->cancelled())
+            {
+                return;
+            }
             try
             {
                 if (!m_onerror.IsEmpty())
                 {
                     Napi::Object errorEvent = Napi::Object::New(Env());
                     errorEvent.Set("message", message);
-                    m_onerror.Call({errorEvent});
+                    if (!cancellationSource->cancelled())
+                    {
+                        m_onerror.Call({errorEvent});
+                    }
                 }
             }
             catch (...)

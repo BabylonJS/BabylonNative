@@ -11,6 +11,7 @@ namespace Babylon::Polyfills::Internal
     public:
         static void Initialize(Napi::Env env);
         explicit WebSocket(const Napi::CallbackInfo& info);
+        virtual ~WebSocket();
 
     private:
         enum class ReadyState
@@ -52,5 +53,7 @@ namespace Babylon::Polyfills::Internal
         UrlLib::WebSocket m_webSocket;
         const std::string m_url{};
         ReadyState m_readyState{ReadyState::Connecting};
+
+        std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
     };
 }

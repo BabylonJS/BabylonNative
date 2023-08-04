@@ -1,7 +1,7 @@
 ﻿// Set this to true to make attaching a debugging easier.
 const waitForDebugger = false;
 
-mocha.setup({ ui: "bdd", reporter: "tap", retries: 5 });
+mocha.setup({ ui: "bdd", reporter: "spec", retries: 5 });
 
 const expect = chai.expect;
 
@@ -597,15 +597,13 @@ describe("URLSearchParams", function () {
 function runTests() {
     mocha.run(failures => {
         // Test program will wait for code to be set before exiting
-        setTimeout(() => {
-            if (failures > 0) {
-                // Failure
-                SetExitCode(1);
-            } else {
-                // Success
-                SetExitCode(0);
-            }
-        }, 0);
+        if (failures > 0) {
+            // Failure
+            SetExitCode(1);
+        } else {
+            // Success
+            SetExitCode(0);
+        }
     });
 }
 
