@@ -39,6 +39,10 @@ namespace UrlLib
                     })
                     .then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result)
                     {
+                        if (cancellationSource->cancelled())
+                        {
+                            return;
+                        }
                         if (result.has_error())
                         {
                             try
@@ -47,10 +51,7 @@ namespace UrlLib
                             }
                             catch (const std::exception& ex)
                             {
-                                if (!cancellationSource->cancelled())
-                                {
-                                    m_onError(ex.what());
-                                }
+                                m_onError(ex.what());
                             }
                         }
                     });
@@ -79,6 +80,10 @@ namespace UrlLib
                     })
                     .then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result)
                     {
+                        if (cancellationSource->cancelled())
+                        {
+                            return;
+                        }
                         if (result.has_error())
                         {
                             try
@@ -87,10 +92,7 @@ namespace UrlLib
                             }
                             catch (const std::exception& ex)
                             {
-                                if (!cancellationSource->cancelled())
-                                {
-                                    m_onError(ex.what());
-                                }
+                                m_onError(ex.what());
                             }
                         }
                     });
