@@ -16,12 +16,13 @@ namespace UrlLib
     public:
         Impl(const std::string& url, std::function<void()> onOpen, std::function<void(int, const std::string&)> onClose, std::function<void(const std::string&)> onMessage, std::function<void(const std::string&)> onError)
         : ImplBase{url, onOpen, onClose, onMessage, onError}
+        , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         {
         }
 
         ~Impl()
         {
-            m_cancellationSource.cancel();
+            m_cancellationSource->cancel();
         }
         
         void Send(std::string message)
@@ -32,11 +33,11 @@ namespace UrlLib
                 dataWriter.WriteString(winrt::to_hstring(message));
 
                 arcana::create_task<std::exception_ptr>(dataWriter.StoreAsync())
-                    .then(arcana::inline_scheduler, m_cancellationSource, [this, dataWriter](int)
+                    .then(arcana::inline_scheduler, *m_cancellationSource, [this, dataWriter](int)
                     {
                         dataWriter.DetachStream();
                     })
-                    .then(arcana::inline_scheduler, m_cancellationSource, [this](const arcana::expected<void, std::exception_ptr>& result)
+                    .then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result)
                     {
                         if (result.has_error())
                         {
@@ -46,7 +47,10 @@ namespace UrlLib
                             }
                             catch (const std::exception& ex)
                             {
-                                m_onError(ex.what());
+                                if (!cancellationSource->cancelled())
+                                {
+                                    m_onError(ex.what());
+                                }
                             }
                         }
                     });
@@ -69,11 +73,11 @@ namespace UrlLib
                 hstring hURL = to_hstring(m_url);
 
                 arcana::create_task<std::exception_ptr>(m_webSocket.ConnectAsync(Windows::Foundation::Uri{hURL}))
-                    .then(arcana::inline_scheduler, m_cancellationSource, [this]()
+                    .then(arcana::inline_scheduler, *m_cancellationSource, [this]()
                     {
                         m_onOpen();
                     })
-                    .then(arcana::inline_scheduler, m_cancellationSource, [this](const arcana::expected<void, std::exception_ptr>& result)
+                    .then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result)
                     {
                         if (result.has_error())
                         {
@@ -83,7 +87,10 @@ namespace UrlLib
                             }
                             catch (const std::exception& ex)
                             {
-                                m_onError(ex.what());
+                                if (!cancellationSource->cancelled())
+                                {
+                                    m_onError(ex.what());
+                                }
                             }
                         }
                     });
@@ -128,7 +135,7 @@ namespace UrlLib
         }
        
         Windows::Networking::Sockets::MessageWebSocket m_webSocket;
-        arcana::cancellation_source m_cancellationSource{};
+        std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
 
         event_token m_messageReceivedEventToken;
         event_token m_closedEventToken;
