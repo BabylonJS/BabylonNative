@@ -68,12 +68,6 @@ jobs:
           cd RelWithDebInfo
           Playground app:///Scripts/validation_native.js 
         displayName: 'Validation Tests'
-    
-      - script: |
-          cmake --build build${{ variables.solutionName }} --target INSTALL --config RelWithDebInfo
-          cd Install/Test
-          cmake . -DBINARY_DIR=../../build${{ variables.solutionName }} ${{ variables.jsEngineDefine }} && cmake --build . --config RelWithDebInfo
-        displayName: 'Install'
 
       - task: PublishBuildArtifacts@1
         inputs:
