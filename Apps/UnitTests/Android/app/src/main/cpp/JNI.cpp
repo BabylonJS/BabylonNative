@@ -30,10 +30,10 @@ int start_logger()
     setvbuf(stderr, 0, _IONBF, 0);
 
     /* create the pipe and redirect stdout and stderr */
-    pipe(pfd);
+    /*pipe(pfd);
     dup2(pfd[1], 1);
     dup2(pfd[1], 2);
-
+*/
     /* spawn the logging thread */
 /*    if(pthread_create(&thr, 0, thread_func, 0) == -1)
         return -1;
@@ -55,7 +55,7 @@ Java_com_babylonnative_unittests_Native_javaScriptTests(JNIEnv* env, jclass claz
     android::global::Initialize(javaVM, context);
     auto testResult = Run();
 
-    close(pfd[1]);
-    close(pfd[0]);
+    //close(pfd[1]);
+    //close(pfd[0]);
     return testResult;
 }
