@@ -26,8 +26,8 @@ int start_logger()
     pthread_t thr;
 
     /* make stdout line-buffered and stderr unbuffered */
-    setvbuf(stdout, 0, _IOLBF, 0);
-    setvbuf(stderr, 0, _IONBF, 0);
+    //setvbuf(stdout, 0, _IOLBF, 0);
+    //setvbuf(stderr, 0, _IONBF, 0);
 
     /* create the pipe and redirect stdout and stderr */
     /*pipe(pfd);
