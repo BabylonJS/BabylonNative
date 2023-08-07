@@ -42,9 +42,8 @@ int main()
     XMapWindow(display, window);
     XStoreName(display, window, applicationName);
 
-    Babylon::Graphics::Configuration graphicsConfig{};
-    graphicsConfig.Window = window;
-    graphicsConfig.Width = static_cast<size_t>(width);
-    graphicsConfig.Height = static_cast<size_t>(height);
-    return Run({graphicsConfig});
+    deviceTestConfig.Window = window;
+    deviceTestConfig.Width = static_cast<size_t>(width);
+    deviceTestConfig.Height = static_cast<size_t>(height);
+    return Run();
 }

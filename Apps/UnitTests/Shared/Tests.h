@@ -13,6 +13,7 @@
 #include <napi/env.h>
 
 std::promise<int32_t> exitCode;
+Babylon::Graphics::Configuration deviceTestConfig{};
 
 static inline constexpr const char* JS_FUNCTION_NAME{ "SetExitCode" };
 void SetExitCode(const Napi::CallbackInfo& info)
@@ -25,8 +26,10 @@ void SetExitCode(const Napi::CallbackInfo& info)
     exitCode.set_value(info[0].As<Napi::Number>().Int32Value());
 }
 
-int Run(Babylon::Graphics::Device device)
+TEST(JSTest, Test0)
 {
+    Babylon::Graphics::Device device = deviceTestConfig;
+
     std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
 
     Babylon::AppRuntime runtime{};
@@ -61,4 +64,10 @@ int Run(Babylon::Graphics::Device device)
 
     auto code{exitCode.get_future().get()};
     return code;
+}
+
+int Run()
+{
+    testing::InitGoogleTest();
+    return RUN_ALL_TESTS();
 }

@@ -17,6 +17,8 @@ FetchContent_Declare(JsRuntimeHost
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
     GIT_TAG 883c4a286116e51ee989e39ee8e216d632997329)
+FetchContent_Declare(googletest
+    URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
 set(JSRUNTIMEHOST_TESTS OFF)
 
 set(CONTENT_TO_FETCH cmake-extensions JsRuntimeHost)
@@ -60,6 +62,13 @@ if(APPLE)
     # without this option on azure pipelines, there is a mismatch with math.h giving a lot of undefined functions on macOS.
     # only enabled for Apple as there is no issue for Windows
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED TRUE)
+endif()
+
+
+if(NOT WINDOWS_STORE)
+    # For Windows: Prevent overriding the parent project's compiler/linker settings
+    set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} googletest)
 endif()
 
 # Setting Platform
