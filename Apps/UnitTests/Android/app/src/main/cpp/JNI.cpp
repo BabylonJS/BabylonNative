@@ -17,6 +17,7 @@ void *thread_func(void*)
         buf[rdsz] = 0;  /* add null-terminator */
         __android_log_write(ANDROID_LOG_DEBUG, "UnitTests", buf);
     }
+    android_log_write(ANDROID_LOG_DEBUG, "UnitTests", "Logger shutdown");
     return 0;
 }
 
@@ -39,7 +40,6 @@ int start_logger()
     pthread_detach(thr);
     return 0;
 }
-
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_babylonnative_unittests_Native_javaScriptTests(JNIEnv* env, jclass clazz, jobject context) {
