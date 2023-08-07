@@ -64,7 +64,7 @@ TEST(JSTest, Test0)
     device.FinishRenderingCurrentFrame();
 
     auto code{exitCode.get_future().get()};
-    return code;
+    EXPECT_EQ(code, 0);
 }
 
 int Run()
