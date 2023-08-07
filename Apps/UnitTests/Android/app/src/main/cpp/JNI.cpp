@@ -33,6 +33,9 @@ void pumpStdoutToLog() {
         }
     }
     fclose(exitEndFd);
+    close(stdoutPipe[1]);
+    close(stdoutPipe[0]);
+    __android_log_print(ANDROID_LOG_INFO, "GTEST_SETUP", "STDOUT pipe to adb log closed");
 }
 
 void gtestLogInit() {
