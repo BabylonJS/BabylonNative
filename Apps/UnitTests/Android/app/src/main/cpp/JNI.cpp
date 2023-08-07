@@ -14,11 +14,12 @@ Java_com_babylonnative_unittests_Native_javaScriptTests(JNIEnv* env, jclass claz
         throw std::runtime_error{"Failed to get Java VM"};
     }
 
+    // Do we want websocket for BabylonNative?
     //jclass webSocketClass{env->FindClass("com/jsruntimehost/unittests/WebSocket")};
     //java::websocket::WebSocketClient::InitializeJavaWebSocketClass(webSocketClass, env);
     android::global::Initialize(javaVM, context);
 
-    auto consoleCallback = [](const char* message, Babylon::Polyfills::Console::LogLevel level)
+    consoleCallback = [](const char* message, Babylon::Polyfills::Console::LogLevel level)
     {
         switch (level)
         {

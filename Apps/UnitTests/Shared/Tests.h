@@ -15,6 +15,11 @@
 
 std::promise<int32_t> exitCode;
 Babylon::Graphics::Configuration deviceTestConfig{};
+Babylon::Polyfills::Console::CallbackT consoleCallback = [](const char* message, Babylon::Polyfills::Console::LogLevel)
+{
+    printf("%s", message);
+    fflush(stdout);
+};
 
 static inline constexpr const char* JS_FUNCTION_NAME{ "SetExitCode" };
 void SetExitCode(const Napi::CallbackInfo& info)
@@ -39,11 +44,7 @@ TEST(JSTest, Test0)
         device.AddToJavaScript(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto)
-        {
-            printf("%s", message);
-            fflush(stdout);
-        });
+        Babylon::Polyfills::Console::Initialize(env, consoleCallback);
         Babylon::Polyfills::Window::Initialize(env);
         nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
         Babylon::Plugins::NativeEngine::Initialize(env);
