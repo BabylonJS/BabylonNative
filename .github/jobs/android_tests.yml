@@ -32,6 +32,7 @@ jobs:
         $ANDROID_HOME/platform-tools/adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do echo '.'; sleep 1; done'
         $ANDROID_HOME/platform-tools/adb devices
       displayName: 'Start Android Emulator'
+
     - task: Gradle@3
       inputs:
         gradleWrapperFile: 'Apps/UnitTests/Android/gradlew'
@@ -48,6 +49,7 @@ jobs:
       workingDirectory: 'Apps/UnitTests/Android'
       condition: succeededOrFailed()
       displayName: 'Dump logcat from Test Results'
+
     - task: PublishBuildArtifacts@1
       inputs:
         pathToPublish: 'Apps/UnitTests/Android/app/build/outputs/androidTest-results/connected'
