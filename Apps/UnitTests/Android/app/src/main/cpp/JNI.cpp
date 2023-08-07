@@ -32,6 +32,7 @@ void pumpStdoutToLog() {
             break;
         }
     }
+    fclose(exitEndFd);
 }
 
 void gtestLogInit() {
