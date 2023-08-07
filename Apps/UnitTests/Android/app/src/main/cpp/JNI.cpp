@@ -45,8 +45,8 @@ void gtestLogInit() {
 
 void gtestLogFinish() {
     if (stdoutPump) {
-        stdoutLogging = false;
         fflush(stdout);
+        stdoutLogging = false;
         stdoutPump->join();
     }
 }
