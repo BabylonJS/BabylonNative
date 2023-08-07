@@ -6,53 +6,40 @@
 #include <atomic>
 #include <Shared/Tests.h>
 
-std::atomic_bool stdoutLogging{false};
-std::thread* stdoutPump{nullptr};
+static int pfd[2];
 
-void pumpStdoutToLog() {
-    using namespace std;
-    __android_log_print(ANDROID_LOG_INFO, "GTEST_SETUP", "Setting up STDOUT pipe to adb log");
-    int stdoutPipe[2];
-    pipe(stdoutPipe);
-    dup2(stdoutPipe[1], STDOUT_FILENO);
-    FILE *exitEndFd = fdopen(stdoutPipe[0], "r");
-    stringstream outStm;
-    int c;
-    stdoutLogging = true;
-    // It is okay to keep it running like this.
-    while (stdoutLogging) {
-        c = fgetc(exitEndFd);
-        if (c == '\n' || c == EOF) {
-            __android_log_print(ANDROID_LOG_ERROR, "APP_STDOUT", "%s", outStm.str().c_str());
-            outStm.str("");
-        } else {
-            outStm << (char) c;
-        }
-        if (c == EOF) {
-            break;
-        }
+void *thread_func(void*)
+{
+    ssize_t rdsz;
+    char buf[128];
+    while((rdsz = read(pfd[0], buf, sizeof buf - 1)) > 0) {
+        if(buf[rdsz - 1] == '\n') --rdsz;
+        buf[rdsz] = 0;  /* add null-terminator */
+        __android_log_write(ANDROID_LOG_DEBUG, "UnitTests", buf);
     }
-    fclose(exitEndFd);
-    close(stdoutPipe[1]);
-    close(stdoutPipe[0]);
-    __android_log_print(ANDROID_LOG_INFO, "GTEST_SETUP", "STDOUT pipe to adb log closed");
+    return 0;
 }
 
-void gtestLogInit() {
-    if (!stdoutPump) {
-        stdoutPump = new std::thread(pumpStdoutToLog);
-        usleep(400);
-        fflush(stdout);
-    }
+int start_logger()
+{
+    pthread_t thr;
+
+    /* make stdout line-buffered and stderr unbuffered */
+    setvbuf(stdout, 0, _IOLBF, 0);
+    setvbuf(stderr, 0, _IONBF, 0);
+
+    /* create the pipe and redirect stdout and stderr */
+    pipe(pfd);
+    dup2(pfd[1], 1);
+    dup2(pfd[1], 2);
+
+    /* spawn the logging thread */
+    if(pthread_create(&thr, 0, thread_func, 0) == -1)
+        return -1;
+    pthread_detach(thr);
+    return 0;
 }
 
-void gtestLogFinish() {
-    if (stdoutPump) {
-        fflush(stdout);
-        stdoutLogging = false;
-        stdoutPump->join();
-    }
-}
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_babylonnative_unittests_Native_javaScriptTests(JNIEnv* env, jclass clazz, jobject context) {
@@ -62,11 +49,9 @@ Java_com_babylonnative_unittests_Native_javaScriptTests(JNIEnv* env, jclass claz
         throw std::runtime_error{"Failed to get Java VM"};
     }
 
-    gtestLogInit();
+    start_logger();
 
     android::global::Initialize(javaVM, context);
-
     auto testResult = Run();
-    gtestLogFinish();
     return testResult;
 }
