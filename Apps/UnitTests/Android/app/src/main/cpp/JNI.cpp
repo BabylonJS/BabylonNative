@@ -17,7 +17,7 @@ void *thread_func(void*)
         buf[rdsz] = 0;  /* add null-terminator */
         __android_log_write(ANDROID_LOG_DEBUG, "UnitTests", buf);
     }
-    android_log_write(ANDROID_LOG_DEBUG, "UnitTests", "Logger shutdown");
+    __android_log_write(ANDROID_LOG_DEBUG, "UnitTests", "Logger shutdown");
     return 0;
 }
 
@@ -35,9 +35,10 @@ int start_logger()
     dup2(pfd[1], 2);
 
     /* spawn the logging thread */
-    if(pthread_create(&thr, 0, thread_func, 0) == -1)
+/*    if(pthread_create(&thr, 0, thread_func, 0) == -1)
         return -1;
     pthread_detach(thr);
+*/
     return 0;
 }
 
