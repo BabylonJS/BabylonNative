@@ -55,7 +55,7 @@ Java_com_babylonnative_unittests_Native_javaScriptTests(JNIEnv* env, jclass claz
     android::global::Initialize(javaVM, context);
     auto testResult = Run();
 
-    close(pfd[0]);
     close(pfd[1]);
+    close(pfd[2]);
     return testResult;
 }
