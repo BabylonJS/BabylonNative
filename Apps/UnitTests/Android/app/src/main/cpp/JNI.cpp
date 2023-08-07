@@ -56,6 +56,6 @@ Java_com_babylonnative_unittests_Native_javaScriptTests(JNIEnv* env, jclass claz
     auto testResult = Run();
 
     close(pfd[1]);
-    close(pfd[2]);
+    close(pfd[0]);
     return testResult;
 }
