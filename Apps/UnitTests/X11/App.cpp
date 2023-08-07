@@ -1,3 +1,5 @@
+// gtest.h included here and in Shared/Tests.h because of a preprocessor conflict
+#include "gtest/gtest.h"
 #define XK_MISCELLANY
 #define XK_LATIN1
 #include <X11/Xlib.h> // will include X11 which #defines None... Don't mess with order of includes.

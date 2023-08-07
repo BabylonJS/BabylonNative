@@ -1,3 +1,4 @@
+#include "gtest/gtest.h"
 #include <optional>
 #include <future>
 #include <Babylon/AppRuntime.h>
