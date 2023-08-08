@@ -101,7 +101,6 @@ task copyScripts {
             include "babylonjs.materials.js"
             into 'src/main/assets/Scripts'
         }
-
     }
 }
 

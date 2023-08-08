@@ -5,7 +5,7 @@
 #include <AndroidExtensions/JavaWrappers.h>
 #include <atomic>
 #include <Shared/Tests.h>
-/*
+
 static int pfd[2];
 static int fd_saved[2];
 void *thread_func(void*)
@@ -49,7 +49,7 @@ void stop_logger()
     setvbuf(stdout, NULL, fd_saved[0], 0);
     setvbuf(stderr, NULL, fd_saved[1], 0);
 }
-*/
+
 extern "C" JNIEXPORT jint JNICALL
 Java_com_babylonnative_unittests_Native_javaScriptTests(JNIEnv* env, jclass clazz, jobject context) {
     JavaVM* javaVM{};
@@ -58,11 +58,11 @@ Java_com_babylonnative_unittests_Native_javaScriptTests(JNIEnv* env, jclass claz
         throw std::runtime_error{"Failed to get Java VM"};
     }
 
-    //start_logger();
+    start_logger();
 
     android::global::Initialize(javaVM, context);
     auto testResult = Run();
 
-    //stop_logger();
+    stop_logger();
     return testResult;
 }

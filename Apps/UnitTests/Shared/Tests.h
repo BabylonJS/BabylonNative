@@ -27,7 +27,7 @@ void SetExitCode(const Napi::CallbackInfo& info)
     exitCode.set_value(info[0].As<Napi::Number>().Int32Value());
 }
 
-TEST(JSTest, Test0)
+TEST(JSTest, JavaScriptTests)
 {
     Babylon::Graphics::Device device = deviceTestConfig;
 
