@@ -363,5 +363,5 @@ mocha.run(failures => {
             // Success
             SetExitCode(0);
         }
-    }, 0);
+    }, 1000);
 });
