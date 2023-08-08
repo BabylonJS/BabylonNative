@@ -13,22 +13,11 @@
 #include <thread>
 #include <napi/env.h>
 
-std::promise<int32_t> exitCode;
 Babylon::Graphics::Configuration deviceTestConfig{};
-
-static inline constexpr const char* JS_FUNCTION_NAME{ "SetExitCode" };
-void SetExitCode(const Napi::CallbackInfo& info)
-{
-    Napi::Env env = info.Env();
-    if (info.Length() < 1)
-    {
-        throw Napi::TypeError::New(env, "Must provide an exit code");
-    }
-    exitCode.set_value(info[0].As<Napi::Number>().Int32Value());
-}
 
 TEST(JSTest, JavaScriptTests)
 {
+    std::promise<int32_t> exitCode;
     Babylon::Graphics::Device device = deviceTestConfig;
 
     std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
@@ -48,7 +37,11 @@ TEST(JSTest, JavaScriptTests)
         nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
         Babylon::Plugins::NativeEngine::Initialize(env);
         
-        env.Global().Set(JS_FUNCTION_NAME, Napi::Function::New(env, SetExitCode, JS_FUNCTION_NAME));
+        env.Global().Set("SetExitCode", Napi::Function::New(env, [&exitCode](const Napi::CallbackInfo& info)
+        {
+            Napi::Env env = info.Env();
+            exitCode.set_value(info[0].As<Napi::Number>().Int32Value());
+        }, "SetExitCode"));
     });
 
     Babylon::ScriptLoader loader{runtime};
