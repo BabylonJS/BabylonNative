@@ -69,7 +69,7 @@ endif()
 
 install_targets(napi)
 
-if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
+if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
     install_targets(v8inspector)
 endif()
 
