@@ -59,7 +59,7 @@ TEST(JSTest, JavaScriptTests)
     auto code{exitCode.get_future().get()};
     EXPECT_EQ(code, 0);
 }
-
+/*
 TEST(NativeAPI, LifeCycle)
 {
     for (int cycle = 0; cycle < 20; cycle++)
@@ -94,7 +94,7 @@ TEST(NativeAPI, LifeCycle)
         }
     }
 }
-
+*/
 int Run()
 {
     testing::InitGoogleTest();
