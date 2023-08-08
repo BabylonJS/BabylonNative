@@ -23,7 +23,7 @@ TEST(JSTest, JavaScriptTests)
     std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
 
     Babylon::AppRuntime runtime{};
-    runtime.Dispatch([&exitCode, &device, &nativeCanvas](Napi::Env env)
+    runtime.Dispatch([&device, &nativeCanvas](Napi::Env env)
     {
         device.AddToJavaScript(env);
 
@@ -45,13 +45,12 @@ TEST(JSTest, JavaScriptTests)
     });
 
     Babylon::ScriptLoader loader{runtime};
-    /*loader.Eval("global = {};", ""); // Required for Chai.js as we do not have global in Babylon Native
+    loader.Eval("global = {};", ""); // Required for Chai.js as we do not have global in Babylon Native
     loader.Eval("location = { href: '' };", ""); // Required for Mocha.js as we do not have a location in Babylon Native
     loader.LoadScript("app:///Scripts/babylon.max.js");
     loader.LoadScript("app:///Scripts/babylonjs.materials.js");
     loader.LoadScript("app:///Scripts/chai.js");
     loader.LoadScript("app:///Scripts/mocha.js");
-    */
     loader.LoadScript("app:///Scripts/tests.js");
 
     device.StartRenderingCurrentFrame();
@@ -60,7 +59,7 @@ TEST(JSTest, JavaScriptTests)
     auto code{exitCode.get_future().get()};
     EXPECT_EQ(code, 0);
 }
-/*
+
 TEST(NativeAPI, LifeCycle)
 {
     for (int cycle = 0; cycle < 20; cycle++)
@@ -95,7 +94,7 @@ TEST(NativeAPI, LifeCycle)
         }
     }
 }
-*/
+
 int Run()
 {
     testing::InitGoogleTest();
