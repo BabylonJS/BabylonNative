@@ -67,6 +67,41 @@ TEST(JSTest, JavaScriptTests)
     EXPECT_EQ(code, 0);
 }
 
+TEST(NativeAPI, LifeCycle)
+{
+    for (int cycle = 0; cycle < 20; cycle++)
+    {
+        Babylon::Graphics::Device device = deviceTestConfig;
+        std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
+
+        Babylon::AppRuntime runtime{};
+        runtime.Dispatch([&device, &nativeCanvas](Napi::Env env) {
+            device.AddToJavaScript(env);
+
+            Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+            Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+                printf("%s", message);
+                fflush(stdout);
+            });
+            Babylon::Polyfills::Window::Initialize(env);
+            nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
+            Babylon::Plugins::NativeEngine::Initialize(env);
+
+            env.Global().Set(JS_FUNCTION_NAME, Napi::Function::New(env, SetExitCode, JS_FUNCTION_NAME));
+        });
+
+        Babylon::ScriptLoader loader{runtime};
+        loader.LoadScript("app:///Scripts/babylon.max.js");
+        loader.LoadScript("app:///Scripts/babylonjs.materials.js");
+
+        for (int frame = 0; frame < 10; frame++)
+        {
+            device.StartRenderingCurrentFrame();
+            device.FinishRenderingCurrentFrame();
+        }
+    }
+}
+
 int Run()
 {
     testing::InitGoogleTest();
