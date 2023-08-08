@@ -23,7 +23,7 @@ TEST(JSTest, JavaScriptTests)
     std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
 
     Babylon::AppRuntime runtime{};
-    runtime.Dispatch([&device, &nativeCanvas](Napi::Env env)
+    runtime.Dispatch([&exitCode, &device, &nativeCanvas](Napi::Env env)
     {
         device.AddToJavaScript(env);
 
@@ -79,8 +79,6 @@ TEST(NativeAPI, LifeCycle)
             Babylon::Polyfills::Window::Initialize(env);
             nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
             Babylon::Plugins::NativeEngine::Initialize(env);
-
-            env.Global().Set(JS_FUNCTION_NAME, Napi::Function::New(env, SetExitCode, JS_FUNCTION_NAME));
         });
 
         Babylon::ScriptLoader loader{runtime};
