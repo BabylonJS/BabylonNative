@@ -116,6 +116,7 @@ target_link_libraries(Playground
     PRIVATE AppRuntime
     PRIVATE Canvas
     PRIVATE Console
+    PRIVATE ExternalTexture
     PRIVATE GraphicsDevice
     PRIVATE NativeCapture
     PRIVATE NativeEngine
