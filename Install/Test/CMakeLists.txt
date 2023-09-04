@@ -16,7 +16,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # __cplusplus value is not in sync with language version used. MVSC needs this flag to update it accordingly
 # https://gitlab.kitware.com/cmake/cmake/-/issues/18837
-if (MSVC)
+if(MSVC)
     add_compile_options(/Zc:__cplusplus)
 endif()
 
@@ -48,16 +48,16 @@ else()
 endif()
 
 # Nuget/JSI
-# TODO: move it to generic cmake
 set(NUGET_PATH "${BINARY_DIR}/NuGet")
-set(V8JSI_VERSION "0.64.33")
-set(CPU_ARCH "x64")
-set(PLATFORM_FOLDER "win32")
-set(V8JSI_PACKAGE_PATH "${NUGET_PATH}/packages/ReactNative.V8Jsi.Windows.${V8JSI_VERSION}")
-set(V8JSI_LIB_PATH_RELEASE "${V8JSI_PACKAGE_PATH}/lib/${PLATFORM_FOLDER}/Release/${CPU_ARCH}/")
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
+    set(V8JSI_VERSION "0.64.33")
+    set(CPU_ARCH "x64")
+    set(PLATFORM_FOLDER "win32")
+    set(V8JSI_PACKAGE_PATH "${NUGET_PATH}/packages/ReactNative.V8Jsi.Windows.${V8JSI_VERSION}")
+    set(V8JSI_LIB_PATH_RELEASE "${V8JSI_PACKAGE_PATH}/lib/${PLATFORM_FOLDER}/Release/${CPU_ARCH}/")
     set(JSI_CPP "${V8JSI_PACKAGE_PATH}/build/native/jsi/jsi/jsi.cpp")
+    set(ADDITIONAL_LIBRARIES "v8jsi.dll.lib")
 elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     set_cpu_platform_arch()
     set(V8_VERSION "8.4.371.15")
@@ -92,7 +92,7 @@ elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
         set_target_properties("v8::${V8FILE_NAME}" PROPERTIES IMPORTED_LOCATION ${V8FILE})
     endforeach()
 
-    set(EXTRA_LIBS
+    set(ADDITIONAL_LIBRARIES
         v8
         v8inspector
         llhttp
@@ -120,16 +120,10 @@ target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_NODE_SPECIF
 
 set(INSTALL_LIBS_DIR "${BINARY_DIR}/install/lib")
 target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")
-target_link_directories(TestInstall PRIVATE ${INSTALL_LIBS_DIR})
+target_link_directories(TestInstall PRIVATE ${INSTALL_LIBS_DIR} ${V8JSI_LIB_PATH_RELEASE})
 
-
-target_link_directories(TestInstall PRIVATE "${V8JSI_LIB_PATH_RELEASE}")
-
-if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
-    set(EXTRA_LIBS "v8jsi.dll.lib")
-endif()
-
-set(STD_LIBS AppRuntime
+target_link_libraries(TestInstall
+    AppRuntime
     arcana
     astc-encoder
     bgfx
@@ -170,16 +164,12 @@ set(STD_LIBS AppRuntime
     UrlLib
     Window
     XMLHttpRequest
-    )
-
-target_link_libraries(TestInstall
-    ${STD_LIBS}
-    ${EXTRA_LIBS}
     chakrart
     d3d11
     d3d12
     d3dcompiler
     Pathcch
+    ${ADDITIONAL_LIBRARIES}
     )
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
