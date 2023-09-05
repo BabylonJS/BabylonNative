@@ -18,7 +18,7 @@ Babylon::Graphics::Configuration deviceTestConfig{};
 TEST(JSTest, JavaScriptTests)
 {
     std::promise<int32_t> exitCode;
-    Babylon::Graphics::Device device = deviceTestConfig;
+    Babylon::Graphics::Device device{deviceTestConfig};
 
     std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
 
