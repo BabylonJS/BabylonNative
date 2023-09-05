@@ -11,7 +11,8 @@ get_filename_component(REPO_ROOT_DIR "${UNIT_TESTS_DIR}/../.." ABSOLUTE)
 set(JSRUNTIMEHOST_TESTS OFF) # Turn off the tests folder for Android Studio path
 add_subdirectory(${REPO_ROOT_DIR} "${CMAKE_CURRENT_BINARY_DIR}/BabylonNative")
 
-npm(install "${UNIT_TESTS_DIR}/../" "UnitTests" "--silent")
+get_filename_component(UNIT_TESTS_DIR_ABS "${UNIT_TESTS_DIR}/../" ABSOLUTE)
+npm(install "${UNIT_TESTS_DIR_ABS}" "UnitTests" "--silent")
 
 add_library(UnitTestsJNI SHARED
     JNI.cpp
