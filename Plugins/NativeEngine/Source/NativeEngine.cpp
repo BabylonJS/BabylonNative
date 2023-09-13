@@ -1107,12 +1107,7 @@ namespace Babylon
         auto flags = BGFX_TEXTURE_NONE;
         if (renderTarget)
         {
-            flags |= BGFX_TEXTURE_RT;
-
-            if (samples > 1)
-            {
-                flags |= BGFX_TEXTURE_MSAA_SAMPLE | RenderTargetSamplesToBgfxMsaaFlag(samples);
-            }
+            flags |= BGFX_TEXTURE_RT | RenderTargetSamplesToBgfxMsaaFlag(samples);
         }
         if (srgb)
         {
