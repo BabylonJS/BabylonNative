@@ -22,6 +22,7 @@ std::optional<Babylon::Polyfills::Canvas> nativeCanvas{};
 std::optional<Babylon::Plugins::NativeXr> nativeXr{};
 Babylon::Plugins::NativeInput* nativeInput{};
 bool isXrActive{};
+float screenScale{1.0f};
 
 @implementation LibNativeBridge
 
@@ -47,8 +48,9 @@ bool isXrActive{};
     device.reset();
 }
 
-- (void)init:(MTKView*)view width:(int)inWidth height:(int)inHeight xrView:(void*)xrView
+- (void)init:(MTKView*)view screenScale:(float)inScreenScale width:(int)inWidth height:(int)inHeight xrView:(void*)xrView
 {
+    screenScale = inScreenScale;
     float width = inWidth;
     float height = inHeight;
 
@@ -130,21 +132,21 @@ bool isXrActive{};
 - (void)setTouchDown:(int)pointerId x:(int)inX y:(int)inY
 {
     if (nativeInput != nullptr) {
-        nativeInput->TouchDown(pointerId, inX, inY);
+        nativeInput->TouchDown(pointerId, inX * screenScale, inY * screenScale);
     }
 }
 
 - (void)setTouchMove:(int)pointerId x:(int)inX y:(int)inY
 {
     if (nativeInput != nullptr) {
-        nativeInput->TouchMove(pointerId, inX, inY);
+        nativeInput->TouchMove(pointerId, inX * screenScale, inY * screenScale);
     }
 }
 
 - (void)setTouchUp:(int)pointerId x:(int)inX y:(int)inY
 {
     if (nativeInput != nullptr) {
-        nativeInput->TouchUp(pointerId, inX, inY);
+        nativeInput->TouchUp(pointerId, inX * screenScale, inY * screenScale);
     }
 }
 
