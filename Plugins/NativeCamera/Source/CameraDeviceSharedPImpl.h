@@ -47,4 +47,14 @@ namespace Babylon::Plugins
     {
         return m_impl->capabilities;
     }
+
+    Plugins::PhotoCapabilities CameraDevice::PhotoCapabilities() const
+    {
+        return m_impl->photoCapabilities.value();
+    }
+
+    Plugins::PhotoSettings CameraDevice::DefaultPhotoSettings() const
+    {
+        return m_impl->defaultPhotoSettings.value();
+    }
 }

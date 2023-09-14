@@ -35,16 +35,21 @@ namespace Babylon::Plugins
         // Update the camera texture and return true if the dimensions have changed, false otherwise
         bool UpdateTexture(bgfx::TextureHandle textureHandle);
 
+        std::shared_ptr<CameraDevice> CameraDevice() const
+        {
+            return m_cameraDevice;
+        }
+
         uint32_t Width{0};
         uint32_t Height{0};
 
     private:
         arcana::task<void, std::exception_ptr> ApplyInitialConstraintsAsync(Napi::Object constraints);
-        std::optional<std::pair<CameraDevice, const CameraTrack&>> FindBestCameraStream(Napi::Object constraints);
+        std::optional<std::pair<Plugins::CameraDevice, const CameraTrack&>> FindBestCameraStream(Napi::Object constraints);
         bool UpdateConstraints(Napi::Object constraints);
 
         // Capture CameraDevice in a shared_ptr because the iOS implementation relies on the `shared_from_this` syntax for async work
-        std::shared_ptr<CameraDevice> m_cameraDevice{};
+        std::shared_ptr<Plugins::CameraDevice> m_cameraDevice{};
         JsRuntimeScheduler m_runtimeScheduler;
 
         Napi::ObjectReference m_currentConstraints{};

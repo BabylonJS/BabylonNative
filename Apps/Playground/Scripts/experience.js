@@ -15,7 +15,8 @@ var xrFeaturePoints = false;
 var meshDetection = false;
 var text = false;
 var hololens = false;
-var cameraTexture = false;
+var cameraTexture = true;
+var imageCapture = true;
 var imageTracking = false;
 const readPixels = false;
 
@@ -88,14 +89,26 @@ CreateBoxAsync(scene).then(function () {
         var mat = new BABYLON.StandardMaterial("mat", scene);
         mat.diffuseColor = BABYLON.Color3.Black();
 
-        var tex = BABYLON.VideoTexture.CreateFromWebCam(scene, function(videoTexture) {
-            const videoSize = videoTexture.getSize();
-            mat.emissiveTexture = videoTexture;
-            plane.material = mat;
-            plane.scaling.x = 5;
-            plane.scaling.y = 5 * (videoSize.height / videoSize.width);
-            console.log("Video texture size: " + videoSize);
-        }, { maxWidth: 1280, maxHeight: 720, facingMode: 'environment'});
+        const constraints = { maxWidth: 1280, maxHeight: 720, facingMode: 'environment'};
+         navigator.mediaDevices.getUserMedia({ video: constraints }).then((stream) => {
+            BABYLON.VideoTexture.CreateFromStreamAsync(scene, stream, constraints).then((videoTexture) => {
+                const videoSize = videoTexture.getSize();
+                mat.emissiveTexture = videoTexture;
+                plane.material = mat;
+                plane.scaling.x = 5;
+                plane.scaling.y = 5 * (videoSize.height / videoSize.width);
+                console.log("Video texture size (NEW): " + videoSize);
+            });
+
+            if (imageCapture) {
+                new Promise(resolve => setTimeout(resolve, 1000)).then(() => {
+                    console.log("BEGIN IMAGE CAPTURE");
+                    const imageCapture = new ImageCapture(stream.getVideoTracks()[0]);
+                    console.log(`Capabilities: ${JSON.stringify(imageCapture.getPhotoCapabilities(), null, 2)}`);
+                    console.log(`Settings: ${JSON.stringify(imageCapture.getPhotoSettings(), null, 2)}`);
+                });
+            }
+        });
     }
 
     if (readPixels) {

@@ -7,6 +7,44 @@
 
 namespace Babylon::Plugins
 {
+    enum class RedEyeReduction
+    {
+        Never,
+        Always,
+        Controllable
+    };
+
+    enum class FillLightMode
+    {
+        Auto,
+        Off,
+        Flash
+    };
+
+    class PhotoCapabilities final
+    {
+    public:
+        RedEyeReduction RedEyeReduction{};
+        FillLightMode FillLightMode{};
+
+        int32_t MinWidth{};
+        int32_t MaxWidth{};
+        int32_t StepWidth{};
+
+        int32_t MinHeight{};
+        int32_t MaxHeight{};
+        int32_t StepHeight{};
+    };
+
+    class PhotoSettings final
+    {
+    public:
+        bool RedEyeReduction{};
+        FillLightMode FillLightMode{};
+        int32_t Width{};
+        int32_t Height{};
+    };
+
     // The CameraTrack class is a platform agnostic representation of a specific stream
     // available on the CameraDevice. Typically a CameraDevice provides a different CameraTrack
     // for each different resolution it supports.
@@ -53,9 +91,14 @@ namespace Babylon::Plugins
         arcana::task<CameraDimensions, std::exception_ptr> OpenAsync(const CameraTrack& track);
         void Close();
         CameraDimensions UpdateCameraTexture(bgfx::TextureHandle textureHandle);
+        arcana::task<std::vector<uint8_t>, std::exception_ptr> TakePhoto(PhotoSettings photoSettings);
 
         const std::vector<CameraTrack>& SupportedResolutions() const;
         const std::vector<std::unique_ptr<Capability>>& Capabilities() const;
+
+        // Gets high resolution photo capture capabilities for the currently opened stream/track.
+        Plugins::PhotoCapabilities PhotoCapabilities() const;
+        Plugins::PhotoSettings DefaultPhotoSettings() const;
 
     private:
         struct Impl;

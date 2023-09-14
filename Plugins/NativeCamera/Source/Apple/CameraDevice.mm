@@ -151,11 +151,12 @@ namespace {
 namespace Babylon::Plugins
 {
     struct CameraTrack::Impl
-{
+    {
         int32_t width{};
         int32_t height{};
         AVCaptureDeviceFormat* avDeviceFormat{};
         uint32_t pixelFormat{};
+        std::vector<const Plugins::PhotoCapabilities> photoCapabilities{};
     };
 
     struct CameraDevice::Impl
@@ -165,16 +166,18 @@ namespace Babylon::Plugins
             , env{env}
         {
         }
-        
+
         Graphics::DeviceContext* deviceContext;
         Napi::Env env;
-        
+
         arcana::affinity threadAffinity{};
-        
+
         std::vector<CameraTrack> supportedResolutions{};
         std::vector<std::unique_ptr<Capability>> capabilities{};
+        std::optional<Plugins::PhotoCapabilities> photoCapabilities{};
+        std::optional<Plugins::PhotoSettings> defaultPhotoSettings{};
         AVCaptureDevice* avDevice{};
-        
+
         bool overrideCameraTexture{};
         CameraDimensions cameraDimensions{};
 
@@ -189,7 +192,7 @@ namespace Babylon::Plugins
         bool isInitialized{false};
         bool refreshBgfxHandle{true};
         bgfx::TextureHandle textureHandle{};
-        
+
         arcana::background_dispatcher<32> cameraSessionDispatcher{};
         std::shared_ptr<arcana::cancellation_source> cancellationSource{std::make_shared<arcana::cancellation_source>()};
     };
@@ -391,13 +394,39 @@ namespace Babylon::Plugins
         CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 
         m_impl->cameraDimensions = CameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
+
+        // TODO: For iOS 16+, I beleive we should use:
+        // const auto minPhotoDimensions = [resolution.m_impl->avDeviceFormat.supportedMaxPhotoDimensions firstObject].CMVideoDimensionsValue;
+        // const auto maxPhotoDimensions = [resolution.m_impl->avDeviceFormat.supportedMaxPhotoDimensions lastObject].CMVideoDimensionsValue;
+        const auto minPhotoDimensions = dimensions;
+        const auto maxPhotoDimensions = resolution.m_impl->avDeviceFormat.highResolutionStillImageDimensions;
+
+        m_impl->photoCapabilities =
+        {
+            RedEyeReduction::Controllable, // TODO: Query for this capability
+            FillLightMode::Auto, // TODO: Query for this capability
+            minPhotoDimensions.width,
+            maxPhotoDimensions.width,
+            1,
+            minPhotoDimensions.height,
+            maxPhotoDimensions.height,
+            1,
+        };
         
+        m_impl->defaultPhotoSettings =
+        {
+            false, // TODO
+            FillLightMode::Auto, // TODO
+            m_impl->photoCapabilities->MaxWidth, // TODO: Pick some reasonable width that is not the max
+            m_impl->photoCapabilities->MaxHeight, // TODO: Pick some reasonable heibht that is not the max
+        };
+
         // Check for failed initialisation.
         if (!input)
         {
             return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"}));
         }
-        
+
         // Kick off camera session on a background thread.
         return arcana::make_task(m_impl->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this(), pixelFormat = resolution.m_impl->pixelFormat, input]() mutable {
             if (implObj->m_impl->avCaptureSession == nil) {
@@ -452,7 +481,7 @@ namespace Babylon::Plugins
             @synchronized(m_impl->cameraTextureDelegate) {
                 textureY = [m_impl->cameraTextureDelegate getCameraTextureY];
                 textureCbCr = [m_impl->cameraTextureDelegate getCameraTextureCbCr];
-                
+
                 switch (m_impl->cameraTextureDelegate->VideoOrientation)
                 {
                     case AVCaptureVideoOrientationLandscapeRight:
@@ -467,7 +496,7 @@ namespace Babylon::Plugins
                         height = [textureY width];
                         break;
                 }
-                
+
             }
 
             // Skip processing this frame if width and height are invalid.
@@ -581,7 +610,21 @@ namespace Babylon::Plugins
         return m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeLeft ||
             m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeRight ?
             CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height} :
-            CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height};    }
+            CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height};
+    }
+
+    arcana::task<std::vector<uint8_t>, std::exception_ptr> CameraDevice::TakePhoto(PhotoSettings /*photoSettings*/)
+    {
+        // TODO
+        // 1. When the AVCaptureSession is created in OpenAsync, we need to also add an AVCapturePhotoOutput
+        // 2. Then when this TakePhoto function is called, we need to call capturePhotoWithSettings on the AVCapturePhotoOutput
+        //    (passing in an AVCapturePhotoSettings based on the photoSettings passed in to this function)
+        // 3. We then create and store an arcana task_completion_source, and return the associated task from this function.
+        // 4. In a delegate that is passed into capturePhotoWithSettings, we need to read the fileDataRepresentation from the photo object passed to the delegate
+        // 5. The fileDataRepresentation is an NSData, from which we can access the raw underlying bytes via the bytes member, which can be used to complete the stored arcana task_completion_source
+
+        throw std::runtime_error{"TODO"};
+    }
 
     void CameraDevice::Close()
     {
@@ -624,6 +667,9 @@ namespace Babylon::Plugins
                 }
             });
         }
+
+        m_impl->photoCapabilities.reset();
+        m_impl->defaultPhotoSettings.reset();
     }
 }
 
