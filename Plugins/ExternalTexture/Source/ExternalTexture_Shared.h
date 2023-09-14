@@ -17,6 +17,8 @@ namespace Babylon::Plugins
     void ExternalTexture::Impl::Update(Graphics::TextureT ptr)
     {
         Assign(ptr);
+
+        UpdateHandles(Ptr());
     }
 
     ExternalTexture::ExternalTexture(Graphics::TextureT ptr)
