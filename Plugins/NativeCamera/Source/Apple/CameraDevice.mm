@@ -423,19 +423,16 @@ namespace Babylon::Plugins
             maxPhotoDimensions = resolution.m_impl->avDeviceFormat.highResolutionStillImageDimensions;
         }
 
-        //FillLightMode fillLightModeCapability = FillLightMode::Off;
         std::set<FillLightMode> fillLightModes{};
         fillLightModes.insert(FillLightMode::Off);
         FillLightMode defaultFillLightMode = FillLightMode::Off;
         if ([m_impl->avCapturePhotoOutput.supportedFlashModes containsObject:@(AVCaptureFlashModeAuto)])
         {
-            //fillLightModeCapability |= FillLightMode::Auto;
             fillLightModes.insert(FillLightMode::Auto);
             defaultFillLightMode = FillLightMode::Auto;
         }
         if ([m_impl->avCapturePhotoOutput.supportedFlashModes containsObject:@(AVCaptureFlashModeOn)])
         {
-            //fillLightModeCapability |= FillLightMode::Flash;
             fillLightModes.insert(FillLightMode::Flash);
         }
 
