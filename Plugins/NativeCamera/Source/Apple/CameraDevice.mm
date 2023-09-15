@@ -414,6 +414,7 @@ namespace Babylon::Plugins
         m_impl->cameraDimensions = CameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
 
         m_impl->supportedMaxPhotoDimensions.clear();
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 160000)
         if (@available(iOS 16.0, *))
         {
             for (NSValue* dimensions in resolution.m_impl->avDeviceFormat.supportedMaxPhotoDimensions)
@@ -422,9 +423,12 @@ namespace Babylon::Plugins
             }
         }
         else
+#endif
         {
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED < 160000)
             m_impl->supportedMaxPhotoDimensions.push_back(dimensions);
             m_impl->supportedMaxPhotoDimensions.push_back(resolution.m_impl->avDeviceFormat.highResolutionStillImageDimensions);
+#endif
         }
 
         std::set<FillLightMode> fillLightModes{};
