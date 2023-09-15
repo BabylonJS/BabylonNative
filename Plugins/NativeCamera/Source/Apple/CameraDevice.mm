@@ -15,10 +15,10 @@
 #include <Foundation/Foundation.h>
 #include <AVFoundation/AVFoundation.h>
 
-@class CameraTextureDelegate;
-
 #include "../CameraDevice.h"
 #include <napi/napi.h>
+
+@class CameraTextureDelegate;
 
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
@@ -31,6 +31,19 @@
 - (id<MTLTexture>)getCameraTextureY;
 - (id<MTLTexture>)getCameraTextureCbCr;
 - (void)reset;
+
+@end
+
+@class PhotoCaptureDelegate;
+
+using CaptureCompletionSource = arcana::task_completion_source<std::vector<uint8_t>, std::exception_ptr>;
+
+@interface PhotoCaptureDelegate : NSObject <AVCapturePhotoCaptureDelegate>
+{
+    CaptureCompletionSource captureCompletionSource;
+}
+
+- (id)init:(CaptureCompletionSource)captureCompletionSource;
 
 @end
 
@@ -182,7 +195,9 @@ namespace Babylon::Plugins
         CameraDimensions cameraDimensions{};
 
         CameraTextureDelegate* cameraTextureDelegate{};
+        PhotoCaptureDelegate* photoCaptureDelegate{};
         AVCaptureSession* avCaptureSession{};
+        AVCapturePhotoOutput* avCapturePhotoOutput{};
         CVMetalTextureCacheRef textureCache{};
         id<MTLTexture> textureRGBA{};
         id<MTLRenderPipelineState> cameraPipelineState{};
@@ -200,7 +215,7 @@ namespace Babylon::Plugins
     std::vector<CameraDevice> CameraDevice::GetCameraDevices(Napi::Env env)
     {
         std::vector<CameraDevice> cameraDevices{};
-        
+
         NSArray* deviceTypes{@[
             // Use the main camera on the device which is best for general use and will typically be 1x optical zoom and the highest resolution.
             // https://developer.apple.com/documentation/avfoundation/avcapturedevice/devicetype/2361449-builtinwideanglecamera
@@ -227,11 +242,11 @@ namespace Babylon::Plugins
                                                            discoverySessionWithDeviceTypes:deviceTypes
                                                            mediaType:AVMediaTypeVideo
                                                            position:AVCaptureDevicePositionUnspecified]};
-        
+
         for (AVCaptureDevice* device in discoverySession.devices)
         {
             auto cameraDeviceImpl{std::make_unique<CameraDevice::Impl>(env)};
-            
+
             for (AVCaptureDeviceFormat* format in device.formats)
             {
                 CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(format.formatDescription)};
@@ -243,16 +258,16 @@ namespace Babylon::Plugins
                 {
                     continue;
                 }
-                
+
                 auto trackImpl = std::make_unique<CameraTrack::Impl>();
                 trackImpl->width = dimensions.width;
                 trackImpl->height = dimensions.height;
                 trackImpl->avDeviceFormat = format;
                 trackImpl->pixelFormat = pixelFormat;
-                
+
                 cameraDeviceImpl->supportedResolutions.push_back(CameraTrack{std::move(trackImpl)});
             }
-                        
+
             // update the cameraDevice information
             cameraDeviceImpl->avDevice = device;
 
@@ -263,7 +278,7 @@ namespace Babylon::Plugins
                 device.position == AVCaptureDevicePositionFront ? "user" : "environment",
                 device.position == AVCaptureDevicePositionFront ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"}
             ));
-            
+
             cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<bool>>
             (
                     Capability::Feature::Torch,
@@ -284,7 +299,7 @@ namespace Babylon::Plugins
                     return true;
                 }
             ));
-            
+
 #if (TARGET_OS_IPHONE)
             // iOS Zoom factors always start at 1.0 and go up from there slide the scale based on
             // the device type (if it starts with an ultrawide sensor or telephoto)
@@ -304,7 +319,7 @@ namespace Babylon::Plugins
                 // as I can tell there is no API to determine the default real world zoom of the telephoto lens
                 zoomFactorScale = 2.0;
             }
-            
+
             cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<double>>
             (
                 Capability::Feature::Zoom,
@@ -333,7 +348,7 @@ namespace Babylon::Plugins
                 break;
             }
         }
-        
+
         return cameraDevices;
     }
 
@@ -395,30 +410,56 @@ namespace Babylon::Plugins
 
         m_impl->cameraDimensions = CameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
 
-        // TODO: For iOS 16+, I beleive we should use:
-        // const auto minPhotoDimensions = [resolution.m_impl->avDeviceFormat.supportedMaxPhotoDimensions firstObject].CMVideoDimensionsValue;
-        // const auto maxPhotoDimensions = [resolution.m_impl->avDeviceFormat.supportedMaxPhotoDimensions lastObject].CMVideoDimensionsValue;
-        const auto minPhotoDimensions = dimensions;
-        const auto maxPhotoDimensions = resolution.m_impl->avDeviceFormat.highResolutionStillImageDimensions;
+        CMVideoDimensions minPhotoDimensions{};
+        CMVideoDimensions maxPhotoDimensions{};
+        if (@available(iOS 16.0, *))
+        {
+            minPhotoDimensions = [resolution.m_impl->avDeviceFormat.supportedMaxPhotoDimensions firstObject].CMVideoDimensionsValue;
+            maxPhotoDimensions = [resolution.m_impl->avDeviceFormat.supportedMaxPhotoDimensions lastObject].CMVideoDimensionsValue;
+        }
+        else
+        {
+            minPhotoDimensions = dimensions;
+            maxPhotoDimensions = resolution.m_impl->avDeviceFormat.highResolutionStillImageDimensions;
+        }
 
+        //FillLightMode fillLightModeCapability = FillLightMode::Off;
+        std::set<FillLightMode> fillLightModes{};
+        fillLightModes.insert(FillLightMode::Off);
+        FillLightMode defaultFillLightMode = FillLightMode::Off;
+        if ([m_impl->avCapturePhotoOutput.supportedFlashModes containsObject:@(AVCaptureFlashModeAuto)])
+        {
+            //fillLightModeCapability |= FillLightMode::Auto;
+            fillLightModes.insert(FillLightMode::Auto);
+            defaultFillLightMode = FillLightMode::Auto;
+        }
+        if ([m_impl->avCapturePhotoOutput.supportedFlashModes containsObject:@(AVCaptureFlashModeOn)])
+        {
+            //fillLightModeCapability |= FillLightMode::Flash;
+            fillLightModes.insert(FillLightMode::Flash);
+        }
+
+        // TODO: Setting step to max-min maybe isn't correct. If supportedMaxPhotoDimensions has more than two entries, and has an inconsistent
+        //       delta between each pair of adjacent entries, then we probably need to report step as 1 and then just pick the largest resolution
+        //       that does not exceed the requested max.
         m_impl->photoCapabilities =
         {
-            RedEyeReduction::Controllable, // TODO: Query for this capability
-            FillLightMode::Auto, // TODO: Query for this capability
+            m_impl->avCapturePhotoOutput.isAutoRedEyeReductionSupported ? RedEyeReduction::Controllable : RedEyeReduction::Never,
+            fillLightModes,
             minPhotoDimensions.width,
             maxPhotoDimensions.width,
-            1,
+            maxPhotoDimensions.width - minPhotoDimensions.width,
             minPhotoDimensions.height,
             maxPhotoDimensions.height,
-            1,
+            maxPhotoDimensions.height - minPhotoDimensions.height,
         };
-        
+
         m_impl->defaultPhotoSettings =
         {
-            false, // TODO
-            FillLightMode::Auto, // TODO
-            m_impl->photoCapabilities->MaxWidth, // TODO: Pick some reasonable width that is not the max
-            m_impl->photoCapabilities->MaxHeight, // TODO: Pick some reasonable heibht that is not the max
+            m_impl->photoCapabilities->RedEyeReduction != RedEyeReduction::Never,
+            defaultFillLightMode,
+            m_impl->photoCapabilities->MaxWidth,
+            m_impl->photoCapabilities->MaxHeight,
         };
 
         // Check for failed initialisation.
@@ -455,6 +496,18 @@ namespace Babylon::Plugins
             [dataOutput setVideoSettings:@{(id)kCVPixelBufferPixelFormatTypeKey: @(pixelFormat)}];
             [dataOutput setSampleBufferDelegate:implObj->m_impl->cameraTextureDelegate queue:sampleBufferQueue];
             [implObj->m_impl->avCaptureSession addOutput:dataOutput];
+
+            // Setup high resolution photo capture.
+            implObj->m_impl->avCapturePhotoOutput = [[AVCapturePhotoOutput alloc] init];
+            [implObj->m_impl->avCaptureSession addOutput:implObj->m_impl->avCapturePhotoOutput];
+            if (@available(iOS 16.0, *))
+            {
+                implObj->m_impl->avCapturePhotoOutput.maxPhotoDimensions = {implObj->m_impl->photoCapabilities->MaxWidth, implObj->m_impl->photoCapabilities->MaxHeight};
+            }
+            else
+            {
+                implObj->m_impl->avCapturePhotoOutput.highResolutionCaptureEnabled = true;
+            }
 
             // Actually start the camera session.
             [implObj->m_impl->avCaptureSession startRunning];
@@ -503,7 +556,7 @@ namespace Babylon::Plugins
             if (width == 0 || height == 0) {
                 return;
             }
-            
+
             // Check if the we've been handed a new texture handle and if so refresh our override
             if (m_impl->textureHandle.idx != textureHandle.idx)
             {
@@ -613,17 +666,40 @@ namespace Babylon::Plugins
             CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height};
     }
 
-    arcana::task<std::vector<uint8_t>, std::exception_ptr> CameraDevice::TakePhoto(PhotoSettings /*photoSettings*/)
+    arcana::task<std::vector<uint8_t>, std::exception_ptr> CameraDevice::TakePhoto(PhotoSettings photoSettings)
     {
-        // TODO
-        // 1. When the AVCaptureSession is created in OpenAsync, we need to also add an AVCapturePhotoOutput
-        // 2. Then when this TakePhoto function is called, we need to call capturePhotoWithSettings on the AVCapturePhotoOutput
-        //    (passing in an AVCapturePhotoSettings based on the photoSettings passed in to this function)
-        // 3. We then create and store an arcana task_completion_source, and return the associated task from this function.
-        // 4. In a delegate that is passed into capturePhotoWithSettings, we need to read the fileDataRepresentation from the photo object passed to the delegate
-        // 5. The fileDataRepresentation is an NSData, from which we can access the raw underlying bytes via the bytes member, which can be used to complete the stored arcana task_completion_source
+        AVCapturePhotoSettings* capturePhotoSettings{[AVCapturePhotoSettings photoSettingsWithFormat:@{ AVVideoCodecKey : AVVideoCodecTypeJPEG}]};
+        if (@available(iOS 16.0, *))
+        {
+            capturePhotoSettings.maxPhotoDimensions = {photoSettings.Width, photoSettings.Height};
+        }
+        else
+        {
+            // TODO: If we can't control the resolution on older iOS versions, we could resize the image we get back to "simulate" a lower res capture.
+            capturePhotoSettings.highResolutionPhotoEnabled = true;
+        }
 
-        throw std::runtime_error{"TODO"};
+        switch (photoSettings.FillLightMode)
+        {
+            case FillLightMode::Auto:
+                capturePhotoSettings.flashMode = AVCaptureFlashMode::AVCaptureFlashModeAuto;
+                break;
+            case FillLightMode::Flash:
+                capturePhotoSettings.flashMode = AVCaptureFlashMode::AVCaptureFlashModeOn;
+                break;
+            case FillLightMode::Off:
+                capturePhotoSettings.flashMode = AVCaptureFlashMode::AVCaptureFlashModeOff;
+                break;
+        }
+
+        capturePhotoSettings.autoRedEyeReductionEnabled = photoSettings.RedEyeReduction;
+
+        arcana::task_completion_source<std::vector<uint8_t>, std::exception_ptr> captureCompletionSource{};
+        m_impl->photoCaptureDelegate = [[PhotoCaptureDelegate alloc]init: captureCompletionSource];
+
+        [m_impl->avCapturePhotoOutput capturePhotoWithSettings:capturePhotoSettings delegate:m_impl->photoCaptureDelegate];
+
+        return captureCompletionSource.as_task();
     }
 
     void CameraDevice::Close()
@@ -634,10 +710,9 @@ namespace Babylon::Plugins
             // No action is required.
             return;
         }
-        
+
         // Cancel any pending async operations
         m_impl->cancellationSource->cancel();
-
 
         // Complete any running command buffers before destroying the cache.
         if (m_impl->currentCommandBuffer != nil) {
@@ -655,10 +730,10 @@ namespace Babylon::Plugins
                 [avCaptureSession = m_impl->avCaptureSession, textureRGBA = m_impl->textureRGBA, textureDelegate = m_impl->cameraTextureDelegate, textureCache = m_impl->textureCache]
             {
                 [avCaptureSession stopRunning];
-                
+
                 // Stop collecting frames, release camera texture delegate.
                 [textureDelegate reset];
-                
+
                 // Free the texture cache.
                 if (textureCache)
                 {
@@ -839,6 +914,34 @@ namespace Babylon::Plugins
 #endif
 
     [self reset];
+}
+
+@end
+
+@implementation PhotoCaptureDelegate {
+}
+
+- (id)init:(CaptureCompletionSource)captureCompletionSource
+{
+    self->captureCompletionSource = std::move(captureCompletionSource);
+    return self;
+}
+
+- (void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhoto:(AVCapturePhoto *)photo error:(NSError *)error
+{
+    NSData *imageData = [photo fileDataRepresentation];
+    std::vector<uint8_t> bytes{};
+    bytes.resize(imageData.length);
+    std::memcpy(bytes.data(), imageData.bytes, imageData.length);
+    self->captureCompletionSource.complete(std::move(bytes));
+}
+
+-(void)dealloc
+{
+    if (!self->captureCompletionSource.completed())
+    {
+        self->captureCompletionSource.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{"PhotoCaptureDelegate deallocated before capture completed."})));
+    }
 }
 
 @end

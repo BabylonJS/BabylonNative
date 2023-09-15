@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include <bgfx/bgfx.h>
 #include <napi/napi.h>
 #include <arcana/threading/task.h>
@@ -11,21 +12,21 @@ namespace Babylon::Plugins
     {
         Never,
         Always,
-        Controllable
+        Controllable,
     };
 
     enum class FillLightMode
     {
-        Auto,
         Off,
-        Flash
+        Flash,
+        Auto,
     };
 
     class PhotoCapabilities final
     {
     public:
         RedEyeReduction RedEyeReduction{};
-        FillLightMode FillLightMode{};
+        std::set<FillLightMode> FillLightModes{};
 
         int32_t MinWidth{};
         int32_t MaxWidth{};

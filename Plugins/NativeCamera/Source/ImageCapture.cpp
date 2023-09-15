@@ -1,6 +1,8 @@
 #include "ImageCapture.h"
 #include "CameraDevice.h"
 #include "MediaStream.h"
+#include <Babylon/JsRuntime.h>
+#include <Babylon/JsRuntimeScheduler.h>
 
 namespace Babylon::Plugins::Internal
 {
@@ -20,6 +22,18 @@ namespace Babylon::Plugins::Internal
                 fillLightMode == FillLightMode::Flash ? "flash" : "off";
         }
 
+        Napi::Array FillLightModesToNapi(const Napi::Env& env, const std::set<FillLightMode>& fillLightModes)
+        {
+            auto arrayJS = Napi::Array::New(env, fillLightModes.size());
+            uint32_t index = 0;
+            for (FillLightMode fillLightMode : fillLightModes)
+            {
+                arrayJS.Set(index, FillLightModeToString(fillLightMode));
+            }
+
+            return arrayJS;
+        }
+
         Napi::Object PhotoCapabilitiesToNapi(const Napi::Env& env, PhotoCapabilities photoCapabilities)
         {
             auto imageWidthJS = Napi::Object::New(env);
@@ -34,7 +48,7 @@ namespace Babylon::Plugins::Internal
 
             auto photoCapabilitiesJS = Napi::Object::New(env);
             photoCapabilitiesJS.Set("redEyeReduction", RedEyeReductionToString(photoCapabilities.RedEyeReduction));
-            photoCapabilitiesJS.Set("fillLightMode", FillLightModeToString(photoCapabilities.FillLightMode));
+            photoCapabilitiesJS.Set("fillLightMode", FillLightModesToNapi(env, photoCapabilities.FillLightModes));
             photoCapabilitiesJS.Set("imageWidth", imageWidthJS);
             photoCapabilitiesJS.Set("imageHeight", imageHeightJS);
 
@@ -78,6 +92,7 @@ namespace Babylon::Plugins::Internal
 
         ImageCapture(const Napi::CallbackInfo& info)
             : Napi::ObjectWrap<ImageCapture>{info}
+            , m_runtimeScheduler{JsRuntime::GetFromJavaScript(info.Env())}
             , m_cameraDevice{MediaStream::Unwrap(info[0].As<Napi::Object>())->CameraDevice()}
             , m_photoSettings{m_cameraDevice->DefaultPhotoSettings()}
         {
@@ -100,33 +115,70 @@ namespace Babylon::Plugins::Internal
             if (info.Length() > 0)
             {
                 const auto photoSettingsJS = info[0].As<Napi::Object>();
-                m_photoSettings.RedEyeReduction = photoSettingsJS.Get("redEyeReduction").ToBoolean();
-                m_photoSettings.Width = photoSettingsJS.Get("imageWidth").ToNumber().Int32Value();
-                m_photoSettings.Height = photoSettingsJS.Get("imageHeight").ToNumber().Int32Value();
+                if (photoSettingsJS.Has("redEyeReduction"))
+                {
+                    m_photoSettings.RedEyeReduction = photoSettingsJS.Get("redEyeReduction").ToBoolean();
+                }
 
-                const auto fillLightMode = photoSettingsJS.Get("fillLightMode").ToString().Utf8Value();
-                if (fillLightMode == "auto")
+                if (photoSettingsJS.Has("imageWidth"))
                 {
-                    m_photoSettings.FillLightMode = FillLightMode::Auto;
+                    m_photoSettings.Width = photoSettingsJS.Get("imageWidth").ToNumber().Int32Value();
                 }
-                else if (fillLightMode == "flash")
+
+                if (photoSettingsJS.Has("imageHeight"))
                 {
-                    m_photoSettings.FillLightMode = FillLightMode::Flash;
+                    m_photoSettings.Height = photoSettingsJS.Get("imageHeight").ToNumber().Int32Value();
                 }
-                else
+
+                if (photoSettingsJS.Has("fillLightMode"))
                 {
-                    m_photoSettings.FillLightMode = FillLightMode::Off;
+                    const auto fillLightMode = photoSettingsJS.Get("fillLightMode").ToString().Utf8Value();
+                    if (fillLightMode == "auto")
+                    {
+                        m_photoSettings.FillLightMode = FillLightMode::Auto;
+                    }
+                    else if (fillLightMode == "flash")
+                    {
+                        m_photoSettings.FillLightMode = FillLightMode::Flash;
+                    }
+                    else
+                    {
+                        m_photoSettings.FillLightMode = FillLightMode::Off;
+                    }
                 }
             }
 
-            // TODO
-            // 1. Call m_cameraDevice->TakePhoto(m_photoSettings)
-            // 2. Use a Napi::Deferred to return a promise
-            // 3. From the task returned from m_cameraDevice->TakePhoto, create a continuation that copies the resulting std::vector<uint8_t>
-            //    (the raw bytes of the jpeg) into a Napi::ArrayBuffer, and return a Blob polyfill with an arrayBuffer() function that returns
-            //    a completed Promise with the Napi::ArrayBuffer
+            auto env = info.Env();
+            auto deferred = Napi::Promise::Deferred::New(env);
+            // Call TakePhoto and when it finishes, continue back on the JS thread (with m_runtimeScheduler).
+            m_cameraDevice->TakePhoto(m_photoSettings).then(m_runtimeScheduler, arcana::cancellation::none(), [env, deferred](const arcana::expected<std::vector<uint8_t>, std::exception_ptr>& result) {
+                if (result.has_error())
+                {
+                    deferred.Reject(Napi::Error::New(env, result.error()).Value());
+                    return;
+                }
 
-            return info.Env().Undefined();
+                // Create a JS ArrayBuffer and copy the image into the buffer.
+                auto arrayBuffer = Napi::ArrayBuffer::New(env, result.value().size());
+                std::memcpy(arrayBuffer.Data(), result.value().data(), result.value().size());
+
+                // Ideally we'd have a real Blob polyfill, but we can also create a partial polyfill object inline here (enough to access the underlying ArrayBuffer).
+                auto arrayBufferDeferred = Napi::Promise::Deferred::New(env);
+                arrayBufferDeferred.Resolve(arrayBuffer);
+
+                auto arrayBufferFunction = Napi::Function::New(env, [arrayBufferDeferred](const Napi::CallbackInfo&) {
+                    return arrayBufferDeferred.Promise();
+                }, "arrayBuffer");
+
+                auto blob = Napi::Object::New(env);
+                blob.Set("arrayBuffer", arrayBufferFunction);
+                blob.Set("size", arrayBuffer.ByteLength());
+                blob.Set("type", "image/jpeg");
+
+                deferred.Resolve(blob);
+            });
+
+            return deferred.Promise();
         }
 
         Napi::Value GrabFrame(const Napi::CallbackInfo& info)
@@ -135,6 +187,7 @@ namespace Babylon::Plugins::Internal
             throw Napi::Error::New(info.Env(), "Not implemented.");
         }
 
+        JsRuntimeScheduler m_runtimeScheduler;
         const std::shared_ptr<Plugins::CameraDevice> m_cameraDevice{};
         PhotoSettings m_photoSettings{};
     };

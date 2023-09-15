@@ -102,10 +102,18 @@ CreateBoxAsync(scene).then(function () {
 
             if (imageCapture) {
                 new Promise(resolve => setTimeout(resolve, 1000)).then(() => {
-                    console.log("BEGIN IMAGE CAPTURE");
                     const imageCapture = new ImageCapture(stream.getVideoTracks()[0]);
                     console.log(`Capabilities: ${JSON.stringify(imageCapture.getPhotoCapabilities(), null, 2)}`);
                     console.log(`Settings: ${JSON.stringify(imageCapture.getPhotoSettings(), null, 2)}`);
+                    imageCapture.takePhoto().then((blob) => {
+                        console.log(`takePhoto finished with a blob of size ${blob.size} and type '${blob.type}'`);
+                        blob.arrayBuffer().then((buffer) => {
+                            const imageData = new Uint8Array(buffer);
+                            console.log(`Retrieved photo ArrayBuffer of size ${imageData.byteLength}`);
+                            console.log(`JPEG header bytes should be 0xff, 0xd8, 0xff.`);
+                            console.log(`Header bytes are 0x${imageData[0].toString(16)}, 0x${imageData[1].toString(16)}, 0x${imageData[2].toString(16)}`);
+                        });
+                    });
                 });
             }
         });
