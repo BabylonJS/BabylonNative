@@ -3,6 +3,7 @@
 #endif
 
 #import <MetalKit/MetalKit.h>
+#include <napi/napi.h>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 #include <arcana/macros.h>
@@ -16,7 +17,6 @@
 #include <AVFoundation/AVFoundation.h>
 
 #include "../CameraDevice.h"
-#include <napi/napi.h>
 
 @class CameraTextureDelegate;
 
@@ -25,6 +25,8 @@
     @public AVCaptureVideoOrientation VideoOrientation;
 
     CVMetalTextureCacheRef textureCache;
+    CVMetalTextureRef cameraTextureY;
+    CVMetalTextureRef cameraTextureCbCr;
 }
 
 - (id)init:(CVMetalTextureCacheRef)textureCache;
@@ -36,14 +38,14 @@
 
 @class PhotoCaptureDelegate;
 
-using CaptureCompletionSource = arcana::task_completion_source<std::vector<uint8_t>, std::exception_ptr>;
+using TakePhotoTaskCompletionSource = arcana::task_completion_source<Babylon::Plugins::CameraDevice::TakePhotoTask::result_type, Babylon::Plugins::CameraDevice::TakePhotoTask::error_type>;
 
 @interface PhotoCaptureDelegate : NSObject <AVCapturePhotoCaptureDelegate>
 {
-    CaptureCompletionSource captureCompletionSource;
+    TakePhotoTaskCompletionSource taskCompletionSource;
 }
 
-- (id)init:(CaptureCompletionSource)captureCompletionSource;
+- (id)init:(TakePhotoTaskCompletionSource)taskCompletionSource;
 
 @end
 
@@ -187,6 +189,7 @@ namespace Babylon::Plugins
 
         std::vector<CameraTrack> supportedResolutions{};
         std::vector<std::unique_ptr<Capability>> capabilities{};
+        std::vector<CMVideoDimensions> supportedMaxPhotoDimensions{};
         std::optional<Plugins::PhotoCapabilities> photoCapabilities{};
         std::optional<Plugins::PhotoSettings> defaultPhotoSettings{};
         AVCaptureDevice* avDevice{};
@@ -410,17 +413,18 @@ namespace Babylon::Plugins
 
         m_impl->cameraDimensions = CameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
 
-        CMVideoDimensions minPhotoDimensions{};
-        CMVideoDimensions maxPhotoDimensions{};
+        m_impl->supportedMaxPhotoDimensions.clear();
         if (@available(iOS 16.0, *))
         {
-            minPhotoDimensions = [resolution.m_impl->avDeviceFormat.supportedMaxPhotoDimensions firstObject].CMVideoDimensionsValue;
-            maxPhotoDimensions = [resolution.m_impl->avDeviceFormat.supportedMaxPhotoDimensions lastObject].CMVideoDimensionsValue;
+            for (NSValue* dimensions in resolution.m_impl->avDeviceFormat.supportedMaxPhotoDimensions)
+            {
+                m_impl->supportedMaxPhotoDimensions.push_back(dimensions.CMVideoDimensionsValue);
+            }
         }
         else
         {
-            minPhotoDimensions = dimensions;
-            maxPhotoDimensions = resolution.m_impl->avDeviceFormat.highResolutionStillImageDimensions;
+            m_impl->supportedMaxPhotoDimensions.push_back(dimensions);
+            m_impl->supportedMaxPhotoDimensions.push_back(resolution.m_impl->avDeviceFormat.highResolutionStillImageDimensions);
         }
 
         std::set<FillLightMode> fillLightModes{};
@@ -436,19 +440,16 @@ namespace Babylon::Plugins
             fillLightModes.insert(FillLightMode::Flash);
         }
 
-        // TODO: Setting step to max-min maybe isn't correct. If supportedMaxPhotoDimensions has more than two entries, and has an inconsistent
-        //       delta between each pair of adjacent entries, then we probably need to report step as 1 and then just pick the largest resolution
-        //       that does not exceed the requested max.
         m_impl->photoCapabilities =
         {
             m_impl->avCapturePhotoOutput.isAutoRedEyeReductionSupported ? RedEyeReduction::Controllable : RedEyeReduction::Never,
             fillLightModes,
-            minPhotoDimensions.width,
-            maxPhotoDimensions.width,
-            maxPhotoDimensions.width - minPhotoDimensions.width,
-            minPhotoDimensions.height,
-            maxPhotoDimensions.height,
-            maxPhotoDimensions.height - minPhotoDimensions.height,
+            m_impl->supportedMaxPhotoDimensions.front().width,
+            m_impl->supportedMaxPhotoDimensions.back().width,
+            1,
+            m_impl->supportedMaxPhotoDimensions.front().height,
+            m_impl->supportedMaxPhotoDimensions.back().height,
+            1,
         };
 
         m_impl->defaultPhotoSettings =
@@ -663,8 +664,25 @@ namespace Babylon::Plugins
             CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height};
     }
 
-    arcana::task<std::vector<uint8_t>, std::exception_ptr> CameraDevice::TakePhoto(PhotoSettings photoSettings)
+    CameraDevice::TakePhotoTask CameraDevice::TakePhoto(PhotoSettings photoSettings)
     {
+        bool foundMaxPhotoDimensions = false;
+        for (auto maxSupportedPhotoDimensions = m_impl->supportedMaxPhotoDimensions.rbegin(); maxSupportedPhotoDimensions != m_impl->supportedMaxPhotoDimensions.rend(); ++maxSupportedPhotoDimensions)
+        {
+            if (maxSupportedPhotoDimensions->width <= photoSettings.Width && maxSupportedPhotoDimensions->height <= photoSettings.Height)
+            {
+                photoSettings.Width = maxSupportedPhotoDimensions->width;
+                photoSettings.Height = maxSupportedPhotoDimensions->height;
+                foundMaxPhotoDimensions = true;
+                break;
+            }
+        }
+
+        if (!foundMaxPhotoDimensions)
+        {
+            return arcana::task_from_error<CameraDevice::TakePhotoTask::result_type>(std::make_exception_ptr(std::runtime_error{"All supported resolutions exceed the requested resolution."}));
+        }
+
         AVCapturePhotoSettings* capturePhotoSettings{[AVCapturePhotoSettings photoSettingsWithFormat:@{ AVVideoCodecKey : AVVideoCodecTypeJPEG}]};
         if (@available(iOS 16.0, *))
         {
@@ -691,12 +709,12 @@ namespace Babylon::Plugins
 
         capturePhotoSettings.autoRedEyeReductionEnabled = photoSettings.RedEyeReduction;
 
-        arcana::task_completion_source<std::vector<uint8_t>, std::exception_ptr> captureCompletionSource{};
-        m_impl->photoCaptureDelegate = [[PhotoCaptureDelegate alloc]init: captureCompletionSource];
+        TakePhotoTaskCompletionSource taskCompletionSource{};
+        m_impl->photoCaptureDelegate = [[PhotoCaptureDelegate alloc]init: taskCompletionSource];
 
         [m_impl->avCapturePhotoOutput capturePhotoWithSettings:capturePhotoSettings delegate:m_impl->photoCaptureDelegate];
 
-        return captureCompletionSource.as_task();
+        return taskCompletionSource.as_task();
     }
 
     void CameraDevice::Close()
@@ -742,12 +760,11 @@ namespace Babylon::Plugins
 
         m_impl->photoCapabilities.reset();
         m_impl->defaultPhotoSettings.reset();
+        m_impl->supportedMaxPhotoDimensions.clear();
     }
 }
 
 @implementation CameraTextureDelegate {
-    CVMetalTextureRef cameraTextureY;
-    CVMetalTextureRef cameraTextureCbCr;
 }
 
 - (id)init:(CVMetalTextureCacheRef)textureCache
@@ -918,26 +935,30 @@ namespace Babylon::Plugins
 @implementation PhotoCaptureDelegate {
 }
 
-- (id)init:(CaptureCompletionSource)captureCompletionSource
+- (id)init:(TakePhotoTaskCompletionSource)taskCompletionSource
 {
-    self->captureCompletionSource = std::move(captureCompletionSource);
+    self->taskCompletionSource = std::move(taskCompletionSource);
     return self;
 }
 
 - (void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhoto:(AVCapturePhoto *)photo error:(NSError *)error
 {
-    NSData *imageData = [photo fileDataRepresentation];
-    std::vector<uint8_t> bytes{};
-    bytes.resize(imageData.length);
-    std::memcpy(bytes.data(), imageData.bytes, imageData.length);
-    self->captureCompletionSource.complete(std::move(bytes));
+    if (error)
+    {
+        self->taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{[error.localizedDescription UTF8String]})));
+    }
+    else
+    {
+        NSData *imageData = [photo fileDataRepresentation];
+        self->taskCompletionSource.complete(gsl::make_span(static_cast<const uint8_t*>(imageData.bytes), imageData.length));
+    }
 }
 
 -(void)dealloc
 {
-    if (!self->captureCompletionSource.completed())
+    if (!self->taskCompletionSource.completed())
     {
-        self->captureCompletionSource.complete(arcana::make_unexpected(make_exception_ptr(std::runtime_error{"PhotoCaptureDelegate deallocated before capture completed."})));
+        self->taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{"PhotoCaptureDelegate deallocated before capture completed."})));
     }
 }
 

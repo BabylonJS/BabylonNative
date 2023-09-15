@@ -4,6 +4,7 @@
 #include <bgfx/bgfx.h>
 #include <napi/napi.h>
 #include <arcana/threading/task.h>
+#include <gsl/gsl>
 #include "Capability.h"
 
 namespace Babylon::Plugins
@@ -75,6 +76,8 @@ namespace Babylon::Plugins
     class CameraDevice final : public std::enable_shared_from_this<CameraDevice>
     {
     public:
+        using TakePhotoTask = arcana::task<gsl::span<const uint8_t>, std::exception_ptr>;
+
         struct CameraDimensions
         {
             uint32_t width{};
@@ -92,7 +95,7 @@ namespace Babylon::Plugins
         arcana::task<CameraDimensions, std::exception_ptr> OpenAsync(const CameraTrack& track);
         void Close();
         CameraDimensions UpdateCameraTexture(bgfx::TextureHandle textureHandle);
-        arcana::task<std::vector<uint8_t>, std::exception_ptr> TakePhoto(PhotoSettings photoSettings);
+        TakePhotoTask TakePhoto(PhotoSettings photoSettings);
 
         const std::vector<CameraTrack>& SupportedResolutions() const;
         const std::vector<std::unique_ptr<Capability>>& Capabilities() const;

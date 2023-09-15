@@ -112,6 +112,9 @@ CreateBoxAsync(scene).then(function () {
                             console.log(`Retrieved photo ArrayBuffer of size ${imageData.byteLength}`);
                             console.log(`JPEG header bytes should be 0xff, 0xd8, 0xff.`);
                             console.log(`Header bytes are 0x${imageData[0].toString(16)}, 0x${imageData[1].toString(16)}, 0x${imageData[2].toString(16)}`);
+
+                            const imageTexture = new BABYLON.Texture("data:fromblob", scene, true, undefined, undefined, undefined, undefined, imageData);
+                            mat.emissiveTexture = imageTexture;
                         });
                     });
                 });
