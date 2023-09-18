@@ -414,13 +414,6 @@ namespace Babylon::Plugins
         m_impl->cameraDimensions = CameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
 
         m_impl->supportedMaxPhotoDimensions.clear();
-#if (TARGET_OS_OSX)
-        for (NSValue* dimensions in resolution.m_impl->avDeviceFormat.supportedMaxPhotoDimensions)
-        {
-            m_impl->supportedMaxPhotoDimensions.push_back(dimensions.CMVideoDimensionsValue);
-        }
-#endif
-
 #if (TARGET_OS_IOS)
 #if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 160000)
         if (@available(iOS 16.0, *))
