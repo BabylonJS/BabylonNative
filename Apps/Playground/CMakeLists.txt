@@ -114,19 +114,14 @@ target_include_directories(Playground PRIVATE "Source" ".")
 
 target_link_libraries(Playground
     PRIVATE AppRuntime
-    PRIVATE Canvas
     PRIVATE Console
     PRIVATE ExternalTexture
     PRIVATE GraphicsDevice
-    PRIVATE NativeCapture
     PRIVATE NativeEngine
     PRIVATE NativeInput
-    PRIVATE NativeOptimizations
     PRIVATE ScriptLoader
     PRIVATE Window
     PRIVATE XMLHttpRequest
-    PRIVATE TestUtils
-    ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
