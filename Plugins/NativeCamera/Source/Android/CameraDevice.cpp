@@ -74,6 +74,8 @@ namespace Babylon::Plugins
 
         std::vector<CameraTrack> supportedResolutions{};
         std::vector<std::unique_ptr<Capability>> capabilities{};
+        std::optional<Plugins::PhotoCapabilities> photoCapabilities{};
+        std::optional<Plugins::PhotoSettings> defaultPhotoSettings{};
         std::string cameraID{};
         int32_t sensorRotation{};
         bool facingUser{};
@@ -503,6 +505,11 @@ namespace Babylon::Plugins
         return !sensorIsPortrait
                    ? CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height}
                    : CameraDimensions{m_impl->cameraDimensions.height, m_impl->cameraDimensions.width};
+    }
+
+    CameraDevice::TakePhotoTask CameraDevice::TakePhoto(PhotoSettings photoSettings)
+    {
+        throw std::runtime_error{"TakePhoto not implemented for this platform."};
     }
 
     void CameraDevice::Close()
