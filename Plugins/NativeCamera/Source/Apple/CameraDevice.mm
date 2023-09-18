@@ -414,6 +414,14 @@ namespace Babylon::Plugins
         m_impl->cameraDimensions = CameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
 
         m_impl->supportedMaxPhotoDimensions.clear();
+#if (TARGET_OS_OSX)
+        for (NSValue* dimensions in resolution.m_impl->avDeviceFormat.supportedMaxPhotoDimensions)
+        {
+            m_impl->supportedMaxPhotoDimensions.push_back(dimensions.CMVideoDimensionsValue);
+        }
+#endif
+
+#if (TARGET_OS_IOS)
 #if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 160000)
         if (@available(iOS 16.0, *))
         {
@@ -430,10 +438,20 @@ namespace Babylon::Plugins
             m_impl->supportedMaxPhotoDimensions.push_back(resolution.m_impl->avDeviceFormat.highResolutionStillImageDimensions);
 #endif
         }
+#endif
+
+        auto redEyeReduction = RedEyeReduction::Never;
+#if (TARGET_OS_IOS)
+        if (m_impl->avCapturePhotoOutput.isAutoRedEyeReductionSupported)
+        {
+            redEyeReduction = RedEyeReduction::Controllable;
+        }
+#endif
 
         std::set<FillLightMode> fillLightModes{};
         fillLightModes.insert(FillLightMode::Off);
         FillLightMode defaultFillLightMode = FillLightMode::Off;
+#if (TARGET_OS_IOS)
         if ([m_impl->avCapturePhotoOutput.supportedFlashModes containsObject:@(AVCaptureFlashModeAuto)])
         {
             fillLightModes.insert(FillLightMode::Auto);
@@ -443,10 +461,11 @@ namespace Babylon::Plugins
         {
             fillLightModes.insert(FillLightMode::Flash);
         }
+#endif
 
         m_impl->photoCapabilities =
         {
-            m_impl->avCapturePhotoOutput.isAutoRedEyeReductionSupported ? RedEyeReduction::Controllable : RedEyeReduction::Never,
+            redEyeReduction,
             fillLightModes,
             m_impl->supportedMaxPhotoDimensions.front().width,
             m_impl->supportedMaxPhotoDimensions.back().width,
@@ -502,14 +521,20 @@ namespace Babylon::Plugins
             // Setup high resolution photo capture.
             implObj->m_impl->avCapturePhotoOutput = [[AVCapturePhotoOutput alloc] init];
             [implObj->m_impl->avCaptureSession addOutput:implObj->m_impl->avCapturePhotoOutput];
+#if (TARGET_OS_IOS)
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 160000)
             if (@available(iOS 16.0, *))
             {
                 implObj->m_impl->avCapturePhotoOutput.maxPhotoDimensions = {implObj->m_impl->photoCapabilities->MaxWidth, implObj->m_impl->photoCapabilities->MaxHeight};
             }
             else
+#endif
             {
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED < 160000)
                 implObj->m_impl->avCapturePhotoOutput.highResolutionCaptureEnabled = true;
+#endif
             }
+#endif
 
             // Actually start the camera session.
             [implObj->m_impl->avCaptureSession startRunning];
@@ -688,16 +713,23 @@ namespace Babylon::Plugins
         }
 
         AVCapturePhotoSettings* capturePhotoSettings{[AVCapturePhotoSettings photoSettingsWithFormat:@{ AVVideoCodecKey : AVVideoCodecTypeJPEG}]};
+#if (TARGET_OS_IOS)
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 160000)
         if (@available(iOS 16.0, *))
         {
             capturePhotoSettings.maxPhotoDimensions = {photoSettings.Width, photoSettings.Height};
         }
         else
+#endif
         {
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED < 160000)
             // TODO: If we can't control the resolution on older iOS versions, we could resize the image we get back to "simulate" a lower res capture.
             capturePhotoSettings.highResolutionPhotoEnabled = true;
+#endif
         }
+#endif
 
+#if (TARGET_OS_IOS)
         switch (photoSettings.FillLightMode)
         {
             case FillLightMode::Auto:
@@ -710,8 +742,11 @@ namespace Babylon::Plugins
                 capturePhotoSettings.flashMode = AVCaptureFlashMode::AVCaptureFlashModeOff;
                 break;
         }
+#endif
 
+#if (TARGET_OS_IPHONE)
         capturePhotoSettings.autoRedEyeReductionEnabled = photoSettings.RedEyeReduction;
+#endif
 
         TakePhotoTaskCompletionSource taskCompletionSource{};
         m_impl->photoCaptureDelegate = [[PhotoCaptureDelegate alloc]init: taskCompletionSource];
