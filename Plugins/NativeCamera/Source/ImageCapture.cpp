@@ -171,9 +171,10 @@ namespace Babylon::Plugins::Internal
                 // Ideally we'd have a real Blob polyfill, but we can also create a partial polyfill object inline here (enough to access the underlying ArrayBuffer).
                 auto arrayBufferDeferred = Napi::Promise::Deferred::New(env);
                 arrayBufferDeferred.Resolve(arrayBuffer);
+                auto arrayBufferPromise = arrayBufferDeferred.Promise();
 
-                auto arrayBufferFunction = Napi::Function::New(env, [arrayBufferDeferred](const Napi::CallbackInfo&) {
-                    return arrayBufferDeferred.Promise();
+                auto arrayBufferFunction = Napi::Function::New(env, [arrayBufferPromise](const Napi::CallbackInfo&) {
+                    return std::move(arrayBufferPromise);
                 }, "arrayBuffer");
 
                 auto blob = Napi::Object::New(env);
