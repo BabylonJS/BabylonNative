@@ -191,11 +191,10 @@ namespace Babylon
     };
 
     InspectorSocketServer::InspectorSocketServer(
-        std::unique_ptr<InspectorAgentDelegate>&& delegate, unsigned short port, FILE* out)
+        std::unique_ptr<InspectorAgentDelegate>&& delegate, unsigned short port)
         : delegate_(std::move(delegate))
         , port_(port)
         , next_session_id_(0)
-        , out_(out)
     {
         state_ = ServerState::kNew;
     }
@@ -230,6 +229,10 @@ namespace Babylon
 
     void InspectorSocketServer::SessionTerminated(int session_id)
     {
+        if (this->state_ == ServerState::kStopped)
+        {
+            return;
+        }
         if (Session(session_id) == nullptr)
         {
             return;
@@ -351,6 +354,7 @@ namespace Babylon
 
     void InspectorSocketServer::Stop()
     {
+        std::lock_guard<std::mutex> guard{m_mutex};
         if (state_ == ServerState::kStopped)
             return;
         CHECK_EQ(state_, ServerState::kRunning);

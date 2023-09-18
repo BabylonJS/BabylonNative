@@ -50,8 +50,7 @@ namespace Babylon
     class InspectorSocketServer
     {
     public:
-        InspectorSocketServer(std::unique_ptr<InspectorAgentDelegate>&& delegate, unsigned short port,
-            FILE* out = stderr);
+        InspectorSocketServer(std::unique_ptr<InspectorAgentDelegate>&& delegate, unsigned short port);
         ~InspectorSocketServer();
 
         // Start listening on host/port
@@ -84,8 +83,6 @@ namespace Babylon
         static void SocketClosedCallback(void* callbackData_);
 
     private:
-        static void CloseServerSocket(ServerSocket*);
-
         void SendListResponse(InspectorSocket* socket, const std::string& host, SocketSession* session);
         std::string GetFrontendURL(bool is_compat, const std::string& formatted_address);
         bool TargetExists(const std::string& id);
@@ -104,10 +101,10 @@ namespace Babylon
         std::shared_ptr<tcp_server> tcp_server_;
 
         int next_session_id_;
-        FILE* out_;
         ServerState state_;
 
         std::map<int, std::pair<std::string, std::unique_ptr<SocketSession>>> connected_sessions_;
+        mutable std::mutex m_mutex;
     };
 
 } // namespace inspector

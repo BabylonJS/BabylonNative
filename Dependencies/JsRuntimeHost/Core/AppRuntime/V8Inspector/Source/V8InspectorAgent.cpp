@@ -366,6 +366,11 @@ namespace Babylon
         this->port_ = port;
         this->script_name_ = appName;
 
+        // be sure server_ is not still in use here or its allocation will be replace in the thread func
+        // this can happen if reusing the same AgentImpl object, stopping and restarting before the InspectorSocketServer is properly pulled down 
+        if (server_) {
+            throw std::runtime_error("can't start again the server as previous InspectorSocketServer is still active.");
+        }
         auto self(shared_from_this());
         std::thread([this, self]() {
             auto delegate = std::make_unique<InspectorAgentDelegate>(*this, "", script_name_, wait_);
@@ -382,8 +387,7 @@ namespace Babylon
             server_->Stop();
 
             server_.reset();
-        })
-            .detach();
+        }).detach();
     }
 
     void AgentImpl::waitForDebugger()
@@ -414,7 +418,7 @@ namespace Babylon
         {
             server_->Stop();
             inspector_.reset();
-            server_.reset();
+            // server_ is not resetted here. memory deallocation is done in thread func after the server has stopped.
         }
     }
 
