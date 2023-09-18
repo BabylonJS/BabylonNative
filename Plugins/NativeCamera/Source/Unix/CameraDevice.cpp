@@ -34,7 +34,7 @@ namespace Babylon::Plugins
         throw std::runtime_error{"HW Camera not implemented for this platform."};
     }
 
-    CameraDevice::TakePhotoTask CameraDevice::TakePhoto(PhotoSettings photoSettings)
+    CameraDevice::TakePhotoTask CameraDevice::TakePhoto(PhotoSettings /*photoSettings*/)
     {
         throw std::runtime_error{"HW Camera not implemented for this platform."};
     }
