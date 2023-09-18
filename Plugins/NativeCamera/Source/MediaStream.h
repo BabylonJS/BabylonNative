@@ -35,7 +35,7 @@ namespace Babylon::Plugins
         // Update the camera texture and return true if the dimensions have changed, false otherwise
         bool UpdateTexture(bgfx::TextureHandle textureHandle);
 
-        std::shared_ptr<CameraDevice> CameraDevice() const
+        std::shared_ptr<Babylon::Plugins::CameraDevice> CameraDevice() const
         {
             return m_cameraDevice;
         }

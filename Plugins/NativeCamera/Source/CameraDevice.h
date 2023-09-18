@@ -26,8 +26,8 @@ namespace Babylon::Plugins
     class PhotoCapabilities final
     {
     public:
-        RedEyeReduction RedEyeReduction{};
-        std::set<FillLightMode> FillLightModes{};
+        Babylon::Plugins::RedEyeReduction RedEyeReduction{};
+        std::set<Babylon::Plugins::FillLightMode> FillLightModes{};
 
         int32_t MinWidth{};
         int32_t MaxWidth{};
@@ -42,7 +42,7 @@ namespace Babylon::Plugins
     {
     public:
         bool RedEyeReduction{};
-        FillLightMode FillLightMode{};
+        Babylon::Plugins::FillLightMode FillLightMode{};
         int32_t Width{};
         int32_t Height{};
     };
