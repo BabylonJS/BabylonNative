@@ -128,14 +128,15 @@ jobs:
       vmImage: 'macOS-latest'
       JSEngine: V8
 
-  - template: .github/jobs/android_tests.yml
-    parameters:
-      name: Android_Tests_MacOS_JSC
-      vmImage: 'macOS-latest'
-      JSEngine: JavaScriptCore
-
-  - template: .github/jobs/android_tests.yml
-    parameters:
-      name: Android_Tests_MacOS_V8
-      vmImage: 'macOS-latest'
-      JSEngine: V8
+# These Android tests are unstable on the CI emulator. Disabled until a more reliable solution is found.
+#  - template: .github/jobs/android_tests.yml
+#    parameters:
+#      name: Android_Tests_MacOS_JSC
+#      vmImage: 'macOS-latest'
+#      JSEngine: JavaScriptCore
+#
+#  - template: .github/jobs/android_tests.yml
+#    parameters:
+#      name: Android_Tests_MacOS_V8
+#      vmImage: 'macOS-latest'
+#      JSEngine: V8
