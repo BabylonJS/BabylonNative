@@ -1,4 +1,5 @@
 # cmake 3.18+ to have the ARCHIVE_EXTRACT sub-command for files
+# Test PR CI.
 cmake_minimum_required(VERSION 3.18)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
