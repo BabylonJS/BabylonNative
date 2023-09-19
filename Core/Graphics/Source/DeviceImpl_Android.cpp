@@ -11,6 +11,12 @@ namespace Babylon::Graphics
     void DeviceImpl::ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window)
     {
         pd.nwh = window;
+
+        // on Android, having no window or context set the renderer API to no op.
+        if (!pd.nwh && !pd.context)
+        {
+            m_state.Bgfx.InitState.type = bgfx::RendererType::Noop;
+        }
     }
 
     float DeviceImpl::GetDevicePixelRatio(WindowT)

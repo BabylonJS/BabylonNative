@@ -25,12 +25,7 @@ namespace Babylon::Graphics
         m_state.Bgfx.Initialized = false;
 
         auto& init = m_state.Bgfx.InitState;
-#ifdef ANDROID
-        // on Android, having no window or context set the renderer API to no op. 
-        init.type = (config.Window || config.Device) ? s_bgfxRenderType : bgfx::RendererType::Noop;
-#else
         init.type = s_bgfxRenderType;
-#endif
         init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY;
         init.resolution.maxFrameLatency = 1;
         if (s_bgfxFlipAfterRender)
