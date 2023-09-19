@@ -1,10 +1,10 @@
 #include "ShaderCompiler.h"
 #include "ShaderCompilerCommon.h"
 #include "ShaderCompilerTraversers.h"
-#include "ResourceLimits.h"
 #include <arcana/experimental/array.h>
 #include <bgfx/bgfx.h>
 #include <glslang/Public/ShaderLang.h>
+#include <glslang/Public/ResourceLimits.h>
 #include <SPIRV/GlslangToSpv.h>
 #include <spirv_parser.hpp>
 #include <spirv_msl.hpp>
@@ -18,7 +18,9 @@ namespace Babylon
             const std::array<const char*, 1> sources{source.data()};
             shader.setStrings(sources.data(), gsl::narrow_cast<int>(sources.size()));
 
-            if (!shader.parse(&DefaultTBuiltInResource, 310, EProfile::EEsProfile, true, true, EShMsgDefault))
+            auto DefaultTBuiltInResource = GetDefaultResources();
+
+            if (!shader.parse(DefaultTBuiltInResource, 310, EProfile::EEsProfile, true, true, EShMsgDefault))
             {
                 throw std::runtime_error(shader.getInfoLog());
             }
