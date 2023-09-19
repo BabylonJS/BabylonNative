@@ -56,10 +56,15 @@ TEST(JSTest, JavaScriptTests)
     device.StartRenderingCurrentFrame();
     device.FinishRenderingCurrentFrame();
 
+    // Add CPP tests here
+
     auto code{exitCode.get_future().get()};
     EXPECT_EQ(code, 0);
 }
 
+/*
+This test does a serie of initialization and shutdowns.
+It needs the shutdown PR to be merged before running properly.
 TEST(NativeAPI, LifeCycle)
 {
     for (int cycle = 0; cycle < 20; cycle++)
@@ -92,7 +97,7 @@ TEST(NativeAPI, LifeCycle)
         }
     }
 }
-
+*/
 int Run()
 {
     testing::InitGoogleTest();
