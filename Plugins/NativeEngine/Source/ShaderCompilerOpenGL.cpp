@@ -10,8 +10,6 @@
 
 namespace Babylon
 {
-    extern const TBuiltInResource DefaultTBuiltInResource;
-
     namespace
     {
         void AddShader(glslang::TProgram& program, glslang::TShader& shader, std::string_view source)
@@ -19,9 +17,9 @@ namespace Babylon
             const std::array<const char*, 1> sources{source.data()};
             shader.setStrings(sources.data(), gsl::narrow_cast<int>(sources.size()));
 
-            auto DefaultTBuiltInResource = GetDefaultResources();
+            auto defaultTBuiltInResource = GetDefaultResources();
 
-            if (!shader.parse(DefaultTBuiltInResource, 310, EProfile::EEsProfile, true, true, EShMsgDefault))
+            if (!shader.parse(defaultTBuiltInResource, 310, EProfile::EEsProfile, true, true, EShMsgDefault))
             {
                 throw std::runtime_error(shader.getInfoLog());
             }
