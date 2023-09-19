@@ -2,6 +2,7 @@
 //
 
 #include "App.h"
+#include "../Shared/GraphicsApi.h"
 
 #include <Windows.h>
 #include <Windowsx.h>
@@ -152,6 +153,8 @@ namespace
             nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
             Babylon::Plugins::TestUtils::Initialize(env, hWnd);
+
+            Playground::GraphicsApi::Initialize(env);
         });
 
         Babylon::ScriptLoader loader{*runtime};

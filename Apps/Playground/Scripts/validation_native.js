@@ -7,6 +7,9 @@ var saveResult = true;
 var testWidth = 600;
 var testHeight = 400;
 var generateReferences = false;
+
+console.log(`BN - Graphics API: ${GraphicsApi.Name}`);
+
 // Random replacement
 var seed = 1;
 Math.random = function () {
@@ -269,6 +272,11 @@ function runTest(index, done) {
     var test = config.tests[index];
     if (test.onlyVisual || test.excludeFromAutomaticTesting) {
         done(true);
+        return;
+    }
+    if (test.excludedGraphicsApis && test.excludedGraphicsApis.includes(GraphicsApi.Name)) {
+        done(true);
+        return;
     }
     let testInfo = "Running " + test.title;
     console.log(testInfo);

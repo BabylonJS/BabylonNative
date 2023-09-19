@@ -21,6 +21,10 @@ set(SCRIPTS
     "Scripts/validation_native.js"
     "Scripts/config.json")
 
+set(SOURCES
+    "Shared/GraphicsApi.cpp"
+    "Shared/GraphicsApi.h")
+
 if(APPLE)
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
     if(IOS)
@@ -104,6 +108,7 @@ endif()
 warnings_as_errors(Playground)
 target_compile_definitions(Playground PRIVATE UNICODE)
 target_compile_definitions(Playground PRIVATE _UNICODE)
+target_compile_definitions(Playground PRIVATE GRAPHICS_API=${GRAPHICS_API})
 
 if(WINDOWS_STORE)
     target_compile_options(Playground PRIVATE /ZW)
@@ -138,7 +143,7 @@ if (UNIX AND NOT APPLE AND NOT ANDROID)
     # Ubuntu mixes old experimental header and new runtime libraries
     # Resulting in crash at runtime for std::filesystem
     # https://stackoverflow.com/questions/56738708/c-stdbad-alloc-on-stdfilesystempath-append
-    target_link_libraries(Playground 
+    target_link_libraries(Playground
         PRIVATE stdc++fs)
 endif()
 

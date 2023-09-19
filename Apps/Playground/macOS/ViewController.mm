@@ -1,4 +1,5 @@
 #import "ViewController.h"
+#import "../Shared/GraphicsApi.h"
 
 #import <Babylon/AppRuntime.h>
 #import <Babylon/Graphics/Device.h>
@@ -127,6 +128,8 @@ Babylon::Plugins::NativeInput* nativeInput{};
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         Babylon::Plugins::NativeOptimizations::Initialize(env);
+
+        Playground::GraphicsApi::Initialize(env);
 
         nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
     });

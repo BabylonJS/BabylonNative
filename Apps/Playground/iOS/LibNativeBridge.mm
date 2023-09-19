@@ -1,4 +1,5 @@
 #include "LibNativeBridge.h"
+#include "../Shared/GraphicsApi.h"
 
 #import <Babylon/AppRuntime.h>
 #import <Babylon/Graphics/Device.h>
@@ -84,6 +85,8 @@ bool isXrActive{};
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         Babylon::Plugins::NativeOptimizations::Initialize(env);
+
+        Playground::GraphicsApi::Initialize(env);
 
         nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
         nativeXr->UpdateWindow(xrView);

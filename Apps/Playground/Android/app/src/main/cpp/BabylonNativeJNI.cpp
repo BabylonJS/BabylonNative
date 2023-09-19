@@ -9,6 +9,8 @@
 #include <time.h>
 #include <optional>
 
+#include <GraphicsApi.h>
+
 #include <AndroidExtensions/Globals.h>
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
@@ -123,6 +125,8 @@ extern "C"
 
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
                 nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
+
+                Playground::GraphicsApi::Initialize(env);
             });
 
             scriptLoader.emplace(*runtime);

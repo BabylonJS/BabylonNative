@@ -1,4 +1,5 @@
 #include "App.h"
+#include "../Shared/GraphicsApi.h"
 
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/ScriptLoader.h>
@@ -395,6 +396,8 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
         Babylon::Plugins::NativeOptimizations::Initialize(env);
 
         Babylon::Plugins::NativeXr::Initialize(env);
+
+        Playground::GraphicsApi::Initialize(env);
 
         m_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
     });
