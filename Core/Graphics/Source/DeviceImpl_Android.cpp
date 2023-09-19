@@ -11,11 +11,14 @@ namespace Babylon::Graphics
     void DeviceImpl::ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window)
     {
         pd.nwh = window;
+    }
 
+    void DeviceImpl::ConfigureBgfxRenderType(bgfx::PlatformData& pd, bgfx::RendererType::Enum& renderType)
+    {
         // on Android, having no window or context set the renderer API to no op.
         if (!pd.nwh && !pd.context)
         {
-            m_state.Bgfx.InitState.type = bgfx::RendererType::Noop;
+            renderType = bgfx::RendererType::Noop;
         }
     }
 
