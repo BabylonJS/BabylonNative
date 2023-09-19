@@ -171,7 +171,6 @@ namespace Babylon::Plugins
         int32_t height{};
         AVCaptureDeviceFormat* avDeviceFormat{};
         uint32_t pixelFormat{};
-        std::vector<const Plugins::PhotoCapabilities> photoCapabilities{};
     };
 
     struct CameraDevice::Impl

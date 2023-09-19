@@ -15,8 +15,8 @@ var xrFeaturePoints = false;
 var meshDetection = false;
 var text = false;
 var hololens = false;
-var cameraTexture = true;
-var imageCapture = true;
+var cameraTexture = false;
+var imageCapture = false;
 var imageTracking = false;
 const readPixels = false;
 
