@@ -6,8 +6,11 @@
 #include <atomic>
 #include <Shared/Tests.h>
 
-static int pfd[2];
-static int fd_saved[2];
+namespace
+{
+    int pfd[2];
+    int fd_saved[2];
+}
 void* thread_func(void*)
 {
     ssize_t rdsz;
