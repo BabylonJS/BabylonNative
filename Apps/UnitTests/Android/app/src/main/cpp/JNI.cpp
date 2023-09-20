@@ -15,7 +15,8 @@ void* thread_func(void*)
 {
     ssize_t rdsz;
     char buf[128];
-    while((rdsz = read(pfd[0], buf, sizeof buf - 1)) > 0) {
+    while ((rdsz = read(pfd[0], buf, sizeof buf - 1)) > 0)
+    {
         if(buf[rdsz - 1] == '\n') --rdsz;
         buf[rdsz] = 0;
         __android_log_write(ANDROID_LOG_DEBUG, "UnitTests", buf);
