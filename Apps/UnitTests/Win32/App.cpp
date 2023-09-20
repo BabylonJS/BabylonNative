@@ -13,9 +13,8 @@ int main() {
     ::RegisterClassEx(&wc);
     HWND hwnd = ::CreateWindow(wc.lpszClassName, "BabylonNative", WS_OVERLAPPEDWINDOW, -1, -1, -1, -1, NULL, NULL, wc.hInstance, NULL);
 
-    Babylon::Graphics::Configuration config{};
-    config.Window = hwnd;
-    config.Width = 600;
-    config.Height = 400;
-    return Run({config});
+    deviceTestConfig.Window = hwnd;
+    deviceTestConfig.Width = 600;
+    deviceTestConfig.Height = 400;
+    return Run();
 }
