@@ -100,7 +100,7 @@ namespace Babylon::Graphics
 
         static const bool s_bgfxFlipAfterRender;
         static const bgfx::RendererType::Enum s_bgfxRenderType;
-        static void ConfigureBgfxPlatformData(bgfx::PlatformData& platformData, WindowT window);
+        static void ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window);
         static void ConfigureBgfxRenderType(bgfx::PlatformData& pd, bgfx::RendererType::Enum& renderType);
         static float GetDevicePixelRatio(WindowT window);
 
