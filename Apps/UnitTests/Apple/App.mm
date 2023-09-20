@@ -1,5 +1,5 @@
 #include "../Shared/Tests.h"
 
 int main() {
-    return Run({{}});
+    return Run();
 }

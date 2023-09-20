@@ -52,6 +52,7 @@ namespace Babylon::Graphics
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Dirty = true;
         ConfigureBgfxPlatformData(m_state.Bgfx.InitState.platformData, window);
+        ConfigureBgfxRenderType(m_state.Bgfx.InitState.platformData, m_state.Bgfx.InitState.type);
         m_state.Resolution.DevicePixelRatio = GetDevicePixelRatio(window);
     }
 
