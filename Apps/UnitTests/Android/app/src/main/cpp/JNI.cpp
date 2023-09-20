@@ -39,7 +39,7 @@ void start_logger()
     dup2(pfd[1], 2);
 
     // spawn the logging thread
-    if(pthread_create(&thr, 0, thread_func, 0) == -1)
+    if (pthread_create(&thr, 0, thread_func, 0) == -1)
     {
         return;
     }
