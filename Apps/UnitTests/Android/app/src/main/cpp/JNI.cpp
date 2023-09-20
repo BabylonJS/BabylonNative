@@ -8,7 +8,7 @@
 
 static int pfd[2];
 static int fd_saved[2];
-void *thread_func(void*)
+void* thread_func(void*)
 {
     ssize_t rdsz;
     char buf[128];
