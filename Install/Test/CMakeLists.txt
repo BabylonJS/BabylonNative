@@ -171,6 +171,7 @@ target_link_libraries(TestInstall
     d3d12
     d3dcompiler
     Pathcch
+    glslang-default-resource-limits
     gtest_main
     ${ADDITIONAL_LIBRARIES}
     )
