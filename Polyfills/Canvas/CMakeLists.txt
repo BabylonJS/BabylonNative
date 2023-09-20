@@ -27,7 +27,7 @@ target_include_directories(Canvas
     PRIVATE "${BGFX_DIR}/examples/common"
     PRIVATE "${BGFX_DIR}/examples/common/nanovg")
 
-target_link_to_dependencies(Canvas
+target_link_libraries(Canvas
     PUBLIC napi
     PRIVATE bgfx
     PRIVATE bimg

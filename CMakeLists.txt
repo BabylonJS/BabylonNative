@@ -2,21 +2,34 @@
 cmake_minimum_required(VERSION 3.18)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-# CMakeExtensions
 include(FetchContent)
+
+# Modules declaration
 FetchContent_Declare(cmake-extensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG 7bdd0664181ce3d90dc94474464cea9b25b22db7)
-message(STATUS "Fetching cmake-extensions")
-FetchContent_MakeAvailable(cmake-extensions)
-message(STATUS "Fetching cmake-extensions - done")
-
-# JSRuntime Host
-FetchContent_Declare(jsruntimehost
+    GIT_TAG 366dc4a84fb20f4060d97e89948c343e74c51fc3)
+FetchContent_Declare(ios-cmake
+    GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
+    GIT_TAG 04d91f6675dabb3c97df346a32f6184b0a7ef845)
+FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 7d4c1966b54dca290be44646998cbeec431fca50)
+    GIT_TAG 4ef1c3eb3c557bb8120d2bc2b5c06cbcfb54238f)
+FetchContent_Declare(AndroidExtensions
+    GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
+    GIT_TAG 883c4a286116e51ee989e39ee8e216d632997329)
+FetchContent_Declare(googletest
+    URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
 set(JSRUNTIMEHOST_TESTS OFF)
-FetchContent_MakeAvailable(jsruntimehost)
+
+set(CONTENT_TO_FETCH cmake-extensions JsRuntimeHost)
+
+if(IOS)
+    FetchContent_MakeAvailable(ios-cmake)
+    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+    set(PLATFORM "OS64COMBINED" CACHE STRING "")
+    set(DEPLOYMENT_TARGET "12" CACHE STRING "")
+    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
+endif()
 
 project(BabylonNative)
 
@@ -51,9 +64,22 @@ if(APPLE)
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED TRUE)
 endif()
 
+
+if(NOT WINDOWS_STORE)
+	if(WIN32)
+		# For Windows: Prevent overriding the parent project's compiler/linker settings
+		# Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
+		# see https://github.com/google/googletest/blob/main/googletest/README.md
+		# "Enabling this option will make gtest link the runtimes dynamically too, and match the project in which it is included."
+		set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
+	endif()
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} googletest)
+endif()
+
 # Setting Platform
 if(ANDROID)
     set(BABYLON_NATIVE_PLATFORM "Android")
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} AndroidExtensions)
 elseif(IOS)
     set(BABYLON_NATIVE_PLATFORM "iOS")
 elseif(APPLE)
@@ -88,6 +114,11 @@ elseif(WIN32)
         endif()
     endif()
 endif()
+
+# Fetching content
+message(STATUS "Fetching dependencies for ${PROJECT_NAME} (${CONTENT_TO_FETCH})")
+FetchContent_MakeAvailable(${CONTENT_TO_FETCH})
+message(STATUS "Fetching dependencies for ${PROJECT_NAME} - done")
 
 if(APPLE)
     set(BABYLON_NATIVE_PLATFORM_IMPL_EXT "mm")

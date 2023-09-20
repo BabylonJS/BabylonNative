@@ -37,7 +37,7 @@ elseif(APPLE)
         XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
 endif()
 
-target_link_to_dependencies(NativeCamera
+target_link_libraries(NativeCamera
     PUBLIC napi
     PRIVATE JsRuntimeInternal
     PRIVATE GraphicsDeviceContext

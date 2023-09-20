@@ -1,21 +1,4 @@
-﻿// TODO: use premade reporter (once Console Polyfill is fixed)
-function BabylonReporter(runner) {
-    const stats = runner.stats;
-
-    runner.on("pass", test => {
-        console.log(`Passed: ${test.fullTitle()}`);
-    });
-
-    runner.on("fail", (test, err) => {
-        console.log(`Failed: ${test.fullTitle()} with error: ${err.message}`);
-    });
-
-    runner.on("end", () => {
-        console.log(`Tests passed: ${stats.passes}/${stats.tests}`);
-    });
-}
-
-mocha.setup({ ui: "bdd", reporter: BabylonReporter });
+﻿mocha.setup({ ui: "bdd", reporter: "spec", retries: 5 });
 
 const expect = chai.expect;
 

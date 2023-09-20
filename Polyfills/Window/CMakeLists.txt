@@ -11,7 +11,7 @@ warnings_as_errors(Window)
 target_include_directories(Window
     PUBLIC "Include")
 
-target_link_to_dependencies(Window
+target_link_libraries(Window
     PUBLIC napi
     PRIVATE base-n
     PRIVATE JsRuntimeInternal

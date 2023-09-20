@@ -78,12 +78,14 @@ set_property(TARGET OGLCompiler PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET OSDependent PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET MachineIndependent PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
+set_property(TARGET glslang-default-resource-limits PROPERTY FOLDER Dependencies/glslang)
 disable_warnings(GenericCodeGen)
 disable_warnings(glslang)
 disable_warnings(OGLCompiler)
 disable_warnings(OSDependent)
 disable_warnings(MachineIndependent)
 disable_warnings(SPIRV)
+disable_warnings(glslang-default-resource-limits)
 
 # -------------------------------- SPIRV-Cross --------------------------------
 # Dependencies: none

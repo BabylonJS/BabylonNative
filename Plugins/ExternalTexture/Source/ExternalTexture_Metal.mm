@@ -39,21 +39,37 @@ namespace
         { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ATC
         { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ATCE
         { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ATCI
-    #if BX_PLATFORM_IOS && !TARGET_OS_MACCATALYST
+#if BX_PLATFORM_IOS && !TARGET_OS_MACCATALYST
         { MTLPixelFormatASTC_4x4_LDR,                   MTLPixelFormatASTC_4x4_sRGB                 }, // ASTC4x4
+        { MTLPixelFormatASTC_5x4_LDR,                   MTLPixelFormatASTC_5x4_sRGB                 }, // ASTC5x4
         { MTLPixelFormatASTC_5x5_LDR,                   MTLPixelFormatASTC_5x5_sRGB                 }, // ASTC5x5
+        { MTLPixelFormatASTC_6x5_LDR,                   MTLPixelFormatASTC_6x5_sRGB                 }, // ASTC6x5
         { MTLPixelFormatASTC_6x6_LDR,                   MTLPixelFormatASTC_6x6_sRGB                 }, // ASTC6x6
         { MTLPixelFormatASTC_8x5_LDR,                   MTLPixelFormatASTC_8x5_sRGB                 }, // ASTC8x5
         { MTLPixelFormatASTC_8x6_LDR,                   MTLPixelFormatASTC_8x6_sRGB                 }, // ASTC8x6
+        { MTLPixelFormatASTC_8x8_LDR,                   MTLPixelFormatASTC_8x8_sRGB                 }, // ASTC8x8
         { MTLPixelFormatASTC_10x5_LDR,                  MTLPixelFormatASTC_10x5_sRGB                }, // ASTC10x5
-    #else
+        { MTLPixelFormatASTC_10x6_LDR,                  MTLPixelFormatASTC_10x6_sRGB                }, // ASTC10x6
+        { MTLPixelFormatASTC_10x8_LDR,                  MTLPixelFormatASTC_10x8_sRGB                }, // ASTC10x8
+        { MTLPixelFormatASTC_10x10_LDR,                 MTLPixelFormatASTC_10x10_sRGB               }, // ASTC10x10
+        { MTLPixelFormatASTC_12x10_LDR,                 MTLPixelFormatASTC_12x10_sRGB               }, // ASTC12x10
+        { MTLPixelFormatASTC_12x12_LDR,                 MTLPixelFormatASTC_12x12_sRGB               }, // ASTC12x12
+#else
         { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ASTC4x4
+        { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ASTC5x4
         { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ASTC5x5
+        { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ASTC6x5
         { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ASTC6x6
         { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ASTC8x5
         { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ASTC8x6
+        { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ASTC8x8
         { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ASTC10x5
-    #endif // BX_PLATFORM_IOS && !TARGET_OS_MACCATALYST
+        { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ASTC10x6
+        { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ASTC10x8
+        { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ASTC10x10
+        { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ASTC12x10
+        { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // ASTC12x12
+#endif // BX_PLATFORM_IOS && !TARGET_OS_MACCATALYST
         { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // Unknown
         { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // R1
         { MTLPixelFormatA8Unorm,                        MTLPixelFormatInvalid                       }, // A8
@@ -99,9 +115,12 @@ namespace
         { MTLPixelFormatRGBA32Sint,                     MTLPixelFormatInvalid                       }, // RGBA32I
         { MTLPixelFormatRGBA32Uint,                     MTLPixelFormatInvalid                       }, // RGBA32U
         { MTLPixelFormatRGBA32Float,                    MTLPixelFormatInvalid                       }, // RGBA32F
-        { MTLPixelFormat(40/*B5G6R5Unorm*/),            MTLPixelFormatInvalid                       }, // R5G6B5
-        { MTLPixelFormat(42/*ABGR4Unorm*/),             MTLPixelFormatInvalid                       }, // RGBA4
-        { MTLPixelFormat(41/*A1BGR5Unorm*/),            MTLPixelFormatInvalid                       }, // RGB5A1
+        { MTLPixelFormatB5G6R5Unorm,                    MTLPixelFormatInvalid                       }, // B5G6R5
+        { MTLPixelFormatB5G6R5Unorm,                    MTLPixelFormatInvalid                       }, // R5G6B5
+        { MTLPixelFormatABGR4Unorm,                     MTLPixelFormatInvalid                       }, // BGRA4
+        { MTLPixelFormatABGR4Unorm,                     MTLPixelFormatInvalid                       }, // RGBA4
+        { MTLPixelFormatBGR5A1Unorm,                    MTLPixelFormatInvalid                       }, // BGR5A1
+        { MTLPixelFormatBGR5A1Unorm,                    MTLPixelFormatInvalid                       }, // RGB5A1
         { MTLPixelFormatRGB10A2Unorm,                   MTLPixelFormatInvalid                       }, // RGB10A2
         { MTLPixelFormatRG11B10Float,                   MTLPixelFormatInvalid                       }, // RG11B10F
         { MTLPixelFormatInvalid,                        MTLPixelFormatInvalid                       }, // UnknownDepth
@@ -136,7 +155,7 @@ namespace Babylon::Plugins
     private:
         void GetInfo(Graphics::TextureT ptr, Info& info)
         {
-            if (ptr.textureType != MTLTextureType2D)
+            if (ptr.textureType != MTLTextureType2D && ptr.textureType != MTLTextureType2DMultisample)
             {
                 throw std::runtime_error{"Unsupported texture type"};
             }
@@ -148,6 +167,11 @@ namespace Babylon::Plugins
             if ((ptr.usage & MTLTextureUsageRenderTarget) != 0)
             {
                 info.Flags |= BGFX_TEXTURE_RT;
+
+                if (ptr.sampleCount > 1)
+                {
+                    info.Flags |= BGFX_TEXTURE_MSAA_SAMPLE | RenderTargetSamplesToBgfxMsaaFlag(ptr.sampleCount);
+                }
             }
 
             const auto pixelFormat = m_ptr.pixelFormat;

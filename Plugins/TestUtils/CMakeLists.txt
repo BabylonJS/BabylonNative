@@ -17,7 +17,7 @@ warnings_as_errors(TestUtils)
 target_include_directories(TestUtils PUBLIC
     "Include")
 
-target_link_to_dependencies(TestUtils
+target_link_libraries(TestUtils
     PUBLIC napi
     PRIVATE JsRuntimeInternal
     PRIVATE GraphicsDevice

@@ -11,6 +11,7 @@ parameters:
   values:
   - direct
   - jsi
+  - V8
 - name: graphics_api
   type: string
   default: D3D11
@@ -24,7 +25,10 @@ jobs:
       ${{ if eq(parameters.napiType, 'jsi') }}:
         napiSuffix: '_JSI'
         jsEngineDefine: '-DNAPI_JAVASCRIPT_ENGINE=JSI'
-      ${{ if ne(parameters.napiType, 'jsi') }}:
+      ${{ elseif eq(parameters.napiType, 'V8') }}:
+        napiSuffix: '_V8'
+        jsEngineDefine: '-DNAPI_JAVASCRIPT_ENGINE=V8'
+      ${{ else }}:
         napiSuffix: ''
         jsEngineDefine: ''
       solutionName: 'Win32_${{ parameters.platform }}${{variables.napiSuffix}}'
@@ -37,7 +41,8 @@ jobs:
       - script: |
           mkdir build${{ variables.solutionName }}
           cd build${{ variables.solutionName }}
-          cmake -A ${{ parameters.platform }} ${{ variables.jsEngineDefine }} -D BGFX_CONFIG_DEBUG=ON -D GRAPHICS_API=${{ parameters.graphics_api }} -D CMAKE_UNITY_BUILD=${UNITY_BUILD} ..
+          # BGFX_CONFIG_MAX_FRAME_BUFFERS is set so enough Framebuffers are available before V8 starts disposing unused ones
+          cmake -A ${{ parameters.platform }} ${{ variables.jsEngineDefine }} -D BGFX_CONFIG_DEBUG=ON -D GRAPHICS_API=${{ parameters.graphics_api }} -D CMAKE_UNITY_BUILD=${UNITY_BUILD} -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256 ..
         displayName: 'Generate ${{ variables.solutionName }} solution'
     
       - task: MSBuild@1
@@ -52,6 +57,11 @@ jobs:
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpType /t REG_DWORD /d 2
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpCount /t REG_DWORD /d 1
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe"
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpType /t REG_DWORD /d 2
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpCount /t REG_DWORD /d 1
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
+
         displayName: 'Enable Crash Dumps'
     
       - script: |
@@ -59,7 +69,14 @@ jobs:
           cd RelWithDebInfo
           Playground app:///Scripts/validation_native.js 
         displayName: 'Validation Tests'
-    
+
+      - script: |
+          cmake --build build${{ variables.solutionName }} --target INSTALL --config RelWithDebInfo
+          cd Install/Test
+          cmake . -DBINARY_DIR=../../build${{ variables.solutionName }} ${{ variables.jsEngineDefine }}
+          cmake --build . --config RelWithDebInfo
+        displayName: 'Install'
+
       - task: PublishBuildArtifacts@1
         inputs:
           artifactName: '${{ variables.solutionName }} - ${{ parameters.graphics_api }} Rendered Pictures'
@@ -82,6 +99,21 @@ jobs:
           cleanTargetFolder: false
         displayName: 'Stage test app exe/pdb for publishing'
         condition: failed()
+
+      - script: |
+          cd build${{ variables.solutionName }}\Apps\UnitTests
+          cd RelWithDebInfo
+          UnitTests
+        displayName: 'Unit Tests'
+
+      - task: CopyFiles@2
+        inputs:
+          sourceFolder: 'build${{ variables.solutionName }}/Apps/UnitTests/RelWithDebInfo'
+          contents: UnitTests.*
+          targetFolder: '$(Build.ArtifactStagingDirectory)/Dumps'
+          cleanTargetFolder: false
+        displayName: 'Stage test app exe/pdb for publishing'
+        condition: failed()
     
       - task: PublishBuildArtifacts@1
         inputs:
@@ -89,9 +121,3 @@ jobs:
           pathtoPublish: '$(Build.ArtifactStagingDirectory)/Dumps'
         displayName: 'Publish Tests ${{ variables.solutionName }} Dumps'
         condition: failed()
-
-      - script: |
-          cd build${{ variables.solutionName }}\Apps\UnitTests
-          cd RelWithDebInfo
-          UnitTests
-        displayName: 'Unit Tests'

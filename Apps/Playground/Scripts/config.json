@@ -183,7 +183,7 @@
         },
         {
             "title": "LightFalloff",
-            "playgroundId": "#20OAV9#201",
+            "playgroundId": "#20OAV9#11218",
             "referenceImage": "lightFalloff.png"
         },
         {
@@ -207,7 +207,7 @@
         {
             "title": "Capsule",
             "renderCount": 10,
-            "playgroundId": "#JAFIIU#2",
+            "playgroundId": "#JAFIIU#4",
             "referenceImage": "CreateCapsule.png"
         },
         {
@@ -236,6 +236,42 @@
             "renderCount": 2,
             "playgroundId": "#BCYE7J#31",
             "referenceImage": "multiCamerasOutputRenderTarget.png"
+        },
+        {
+            "title": "Multi camera rendering with scissors",
+            "playgroundId": "#1LK70I#35",
+            "referenceImage": "multiCameraRenderingWithScissors.png"
+        },
+        {
+            "title": "Scissor test",
+            "renderCount": 10,
+            "playgroundId": "#W7E7CF#29",
+            "referenceImage": "scissor-test.png",
+            "comments": "Reset playgroundId to #W7E7CF#12 when d3d12 mip-map issue is fixed"
+        },
+        {
+            "title": "Scissor test with 0.9 hardware scaling",
+            "renderCount": 10,
+            "playgroundId": "#W7E7CF#30",
+            "referenceImage": "scissorTestWith0.9HardwareScaling.png",
+            "comments": "Reset playgroundId to #W7E7CF#27 when d3d12 mip-map issue is fixed"
+        },
+        {
+            "title": "Scissor test with 1.5 hardware scaling",
+            "renderCount": 10,
+            "playgroundId": "#W7E7CF#31",
+            "referenceImage": "scissorTestWith1.5HardwareScaling.png",
+            "comments": "Reset playgroundId to #W7E7CF#28 when d3d12 mip-map issue is fixed"
+        },
+        {
+            "title": "Scissor test with negative x and y",
+            "playgroundId": "#3L5BCD#2",
+            "referenceImage": "scissorTestNegativeXandY.png"
+        },
+        {
+            "title": "Scissor test with out of bounds width and height",
+            "playgroundId": "#3L5BCD#3",
+            "referenceImage": "scissorTestOobWidthAndHeight.png"
         },
         {
             "title": "setParent",

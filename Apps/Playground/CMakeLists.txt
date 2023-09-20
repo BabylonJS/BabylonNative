@@ -112,10 +112,11 @@ endif()
 
 target_include_directories(Playground PRIVATE "Source" ".")
 
-target_link_to_dependencies(Playground
+target_link_libraries(Playground
     PRIVATE AppRuntime
     PRIVATE Canvas
     PRIVATE Console
+    PRIVATE ExternalTexture
     PRIVATE GraphicsDevice
     PRIVATE NativeCapture
     PRIVATE NativeEngine
@@ -131,7 +132,7 @@ target_link_to_dependencies(Playground
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
 # If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.
 add_custom_command(TARGET Playground POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:Playground>>,copy,true> $<TARGET_RUNTIME_DLLS:Playground> $<TARGET_FILE_DIR:Playground>)
+    COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:Playground>>,copy,true> $<TARGET_RUNTIME_DLLS:Playground> $<TARGET_FILE_DIR:Playground> COMMAND_EXPAND_LISTS)
 
 if (UNIX AND NOT APPLE AND NOT ANDROID)
     # Ubuntu mixes old experimental header and new runtime libraries

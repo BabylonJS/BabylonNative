@@ -27,7 +27,7 @@ warnings_as_errors(NativeInput)
 
 target_include_directories(NativeInput PUBLIC "Include")
 
-target_link_to_dependencies(NativeInput
+target_link_libraries(NativeInput
     PUBLIC napi
     PRIVATE JsRuntimeInternal
     PRIVATE arcana)

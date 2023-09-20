@@ -88,5 +88,5 @@ target_include_directories(xr PRIVATE "Source/Shared")
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
 target_include_directories(xrInternal INTERFACE "Source")
-target_link_to_dependencies(xrInternal
+target_link_libraries(xrInternal
     INTERFACE xr)
