@@ -1,3 +1,5 @@
+// gtest.h included here and in Shared/Tests.h because of a preprocessor conflict
+#include "gtest/gtest.h"
 #define XK_MISCELLANY
 #define XK_LATIN1
 #include <X11/Xlib.h> // will include X11 which #defines None... Don't mess with order of includes.
@@ -42,9 +44,8 @@ int main()
     XMapWindow(display, window);
     XStoreName(display, window, applicationName);
 
-    Babylon::Graphics::Configuration graphicsConfig{};
-    graphicsConfig.Window = window;
-    graphicsConfig.Width = static_cast<size_t>(width);
-    graphicsConfig.Height = static_cast<size_t>(height);
-    return Run({graphicsConfig});
+    deviceTestConfig.Window = window;
+    deviceTestConfig.Width = static_cast<size_t>(width);
+    deviceTestConfig.Height = static_cast<size_t>(height);
+    return Run();
 }

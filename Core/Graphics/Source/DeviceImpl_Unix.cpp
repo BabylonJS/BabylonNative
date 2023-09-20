@@ -10,6 +10,10 @@ namespace Babylon::Graphics
         pd.nwh = reinterpret_cast<void*>(window);
     }
 
+    void DeviceImpl::ConfigureBgfxRenderType(bgfx::PlatformData& /*pd*/, bgfx::RendererType::Enum& /*renderType*/)
+    {
+    }
+
     float DeviceImpl::GetDevicePixelRatio(WindowT)
     {
         // TODO: We should persist a Display object instead of opening a new display.

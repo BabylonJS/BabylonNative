@@ -7,8 +7,6 @@ set(SOURCES
     "Source/NativeEngine.cpp"
     "Source/NativeEngine.h"
     "Source/PerFrameValue.h"
-    "Source/ResourceLimits.cpp"
-    "Source/ResourceLimits.h"
     "Source/ShaderCompiler.h"
     "Source/ShaderCompilerCommon.h"
     "Source/ShaderCompilerCommon.cpp"
@@ -41,6 +39,7 @@ target_link_libraries(NativeEngine
     PRIVATE bimg
     PRIVATE bx
     PRIVATE glslang
+    PRIVATE glslang-default-resource-limits
     PRIVATE SPIRV
     PRIVATE GraphicsDeviceContext
     PRIVATE napi_extensions)
