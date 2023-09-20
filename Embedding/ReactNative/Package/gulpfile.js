@@ -707,7 +707,7 @@ exports.buildAndroid = buildAndroid;
 exports.packAndroid = packAndroid;
 
 const copyPackageFilesUWP = gulp.series(copyUWPFiles);
-const buildUWPPublish = gulp.series(buildUWP, copyPackageFilesUWP, switchToBaseKit, buildUWP, copyPackageFilesUWP);
+const buildUWPPublish = gulp.series(buildUWP, copyPackageFilesUWP, switchToBaseKit, patchPackageVersion, buildUWP, copyPackageFilesUWP);
 const packUWP = gulp.series(clean, buildUWP, copyPackageFilesUWP, createPackage, createPackageUWP);
 const packUWPNoBuild = gulp.series(clean, copyPackageFilesUWP, createPackage, createPackageUWP);
 
