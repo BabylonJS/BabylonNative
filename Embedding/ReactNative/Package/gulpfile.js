@@ -650,13 +650,13 @@ const patchPackageVersion = async () => {
 
         if (basekitBuild)
         {
-          packageJsoniOSAndroid["name"] = "@babylonjs/react-native-iosandroid" + packageNamePostfix;
-          packageJsonWindows["name"] = "@babylonjs/react-native-windows" + packageNamePostfix;
+          packageJsoniOSAndroid["name"] = "@babylonjs/react-native-basekit-iosandroid" + packageNamePostfix;
+          packageJsonWindows["name"] = "@babylonjs/react-native-basekit-windows" + packageNamePostfix;
           delete packageJsoniOSAndroid['peerDependencies']['react-native-permissions'];
           delete packageJsonWindows['peerDependencies']['react-native-permissions'];
         } else {
-          packageJsoniOSAndroid["name"] = "@babylonjs/react-native-basekit-iosandroid" + packageNamePostfix;
-          packageJsonWindows["name"] = "@babylonjs/react-native-basekit-windows" + packageNamePostfix;
+          packageJsoniOSAndroid["name"] = "@babylonjs/react-native-iosandroid" + packageNamePostfix;
+          packageJsonWindows["name"] = "@babylonjs/react-native-windows" + packageNamePostfix;
         }
         packageJson.peerDependencies['react-native'] = peerDep;
         packageJsoniOSAndroid.peerDependencies['react-native'] = peerDep;
