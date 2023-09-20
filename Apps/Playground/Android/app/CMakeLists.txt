@@ -33,7 +33,13 @@ set(BABYLON_NATIVE_PLAYGROUND_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
 add_subdirectory(${BABYLON_NATIVE_PLAYGROUND_DIR}/../../ ${BABYLON_NATIVE_PLAYGROUND_DIR}/../../build/Android_${CMAKE_ANDROID_ARCH_ABI}/)
 
 add_library(BabylonNativeJNI SHARED
+    ${BABYLON_NATIVE_PLAYGROUND_DIR}/Shared/Playground/GraphicsApiInfo.cpp
     src/main/cpp/BabylonNativeJNI.cpp)
+
+if(NOT GRAPHICS_API)
+    message(FATAL_ERROR "GRAPHICS_API must be set")
+endif()
+target_compile_definitions(BabylonNativeJNI PRIVATE GRAPHICS_API=${GRAPHICS_API})
 
 target_include_directories(BabylonNativeJNI
     PRIVATE ${BABYLON_NATIVE_PLAYGROUND_DIR}/Shared)

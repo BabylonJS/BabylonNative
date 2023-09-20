@@ -22,8 +22,8 @@ set(SCRIPTS
     "Scripts/config.json")
 
 set(SOURCES
-    "Shared/GraphicsApi.cpp"
-    "Shared/GraphicsApi.h")
+    "Shared/Playground/GraphicsApiInfo.cpp"
+    "Shared/Playground/GraphicsApiInfo.h")
 
 if(APPLE)
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
@@ -115,7 +115,7 @@ if(WINDOWS_STORE)
     target_compile_options(Playground PRIVATE /await)
 endif()
 
-target_include_directories(Playground PRIVATE "Source" ".")
+target_include_directories(Playground PRIVATE "Source" "." "Shared")
 
 target_link_libraries(Playground
     PRIVATE AppRuntime

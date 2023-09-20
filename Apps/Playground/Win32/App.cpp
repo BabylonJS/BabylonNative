@@ -2,7 +2,6 @@
 //
 
 #include "App.h"
-#include "../Shared/GraphicsApi.h"
 
 #include <Windows.h>
 #include <Windowsx.h>
@@ -25,6 +24,7 @@
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Canvas.h>
+#include <Playground/GraphicsApiInfo.h>
 
 #define MAX_LOADSTRING 100
 
@@ -154,7 +154,7 @@ namespace
 
             Babylon::Plugins::TestUtils::Initialize(env, hWnd);
 
-            Playground::GraphicsApi::Initialize(env);
+            Playground::GraphicsApiInfo::Initialize(env);
         });
 
         Babylon::ScriptLoader loader{*runtime};

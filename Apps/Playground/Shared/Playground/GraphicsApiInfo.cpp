@@ -1,4 +1,4 @@
-#include "GraphicsApi.h"
+#include "GraphicsApiInfo.h"
 
 #define STRINGIZEX(x) #x
 #define STRINGIZE(x) STRINGIZEX(x)
@@ -7,10 +7,10 @@ namespace Playground::Internal
 {
     namespace
     {
-        constexpr auto JS_CLASS_NAME = "GraphicsApi";
+        constexpr auto JS_CLASS_NAME = "GraphicsApiInfo";
     }
 
-    class GraphicsApi final : public Napi::ObjectWrap<GraphicsApi>
+    class GraphicsApiInfo final : public Napi::ObjectWrap<GraphicsApiInfo>
     {
     public:
         static void Initialize(Napi::Env env)
@@ -19,14 +19,14 @@ namespace Playground::Internal
                 env,
                 JS_CLASS_NAME,
                 {
-                    StaticAccessor("Name", &GraphicsApi::Name, nullptr)
+                    StaticAccessor("Name", &GraphicsApiInfo::Name, nullptr)
                 });
 
             env.Global().Set(JS_CLASS_NAME, func);
         }
 
-        GraphicsApi(const Napi::CallbackInfo& info)
-            : Napi::ObjectWrap<GraphicsApi>{info}
+        GraphicsApiInfo(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<GraphicsApiInfo>{info}
         {
         }
 
@@ -38,10 +38,10 @@ namespace Playground::Internal
     };
 }
 
-namespace Playground::GraphicsApi
+namespace Playground::GraphicsApiInfo
 {
     void Initialize(Napi::Env env)
     {
-        Playground::Internal::GraphicsApi::Initialize(env);
+        Playground::Internal::GraphicsApiInfo::Initialize(env);
     }
 }
