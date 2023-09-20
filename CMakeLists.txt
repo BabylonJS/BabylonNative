@@ -65,7 +65,7 @@ if(APPLE)
 endif()
 
 
-if(NOT WINDOWS_STORE)
+if(WIN32 AND NOT WINDOWS_STORE)
     # For Windows: Prevent overriding the parent project's compiler/linker settings
 	# Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
 	# see https://github.com/google/googletest/blob/main/googletest/README.md
