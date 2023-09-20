@@ -10,6 +10,10 @@ namespace Babylon::Graphics
         pd.nwh = window;
     }
 
+    void DeviceImpl::ConfigureBgfxRenderType(bgfx::PlatformData& /*pd*/, bgfx::RendererType::Enum& /*renderType*/)
+    {
+    }
+
     float DeviceImpl::GetDevicePixelRatio(WindowT window)
     {
         return window.window.screen.backingScaleFactor;

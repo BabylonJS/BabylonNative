@@ -13,10 +13,12 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 04d91f6675dabb3c97df346a32f6184b0a7ef845)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 85d8d91be3c157bf61857c1e1346444024794142)
+    GIT_TAG 4ef1c3eb3c557bb8120d2bc2b5c06cbcfb54238f)
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
     GIT_TAG 883c4a286116e51ee989e39ee8e216d632997329)
+FetchContent_Declare(googletest
+    URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
 set(JSRUNTIMEHOST_TESTS OFF)
 
 set(CONTENT_TO_FETCH cmake-extensions JsRuntimeHost)
@@ -60,6 +62,18 @@ if(APPLE)
     # without this option on azure pipelines, there is a mismatch with math.h giving a lot of undefined functions on macOS.
     # only enabled for Apple as there is no issue for Windows
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED TRUE)
+endif()
+
+
+if(NOT WINDOWS_STORE)
+	if(WIN32)
+		# For Windows: Prevent overriding the parent project's compiler/linker settings
+		# Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
+		# see https://github.com/google/googletest/blob/main/googletest/README.md
+		# "Enabling this option will make gtest link the runtimes dynamically too, and match the project in which it is included."
+		set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
+	endif()
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} googletest)
 endif()
 
 # Setting Platform
