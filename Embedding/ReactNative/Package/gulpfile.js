@@ -654,6 +654,7 @@ const patchPackageVersion = async () => {
           packageJsonWindows["name"] = "@babylonjs/react-native-basekit-windows" + packageNamePostfix;
           delete packageJsoniOSAndroid['peerDependencies']['react-native-permissions'];
           delete packageJsonWindows['peerDependencies']['react-native-permissions'];
+          delete packageJson['peerDependencies']['react-native-permissions'];
         } else {
           packageJsoniOSAndroid["name"] = "@babylonjs/react-native-iosandroid" + packageNamePostfix;
           packageJsonWindows["name"] = "@babylonjs/react-native-windows" + packageNamePostfix;
