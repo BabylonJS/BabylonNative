@@ -36,6 +36,10 @@ add_subdirectory(${BABYLON_REACT_NATIVE_SHARED_DIR} ${CMAKE_CURRENT_BINARY_DIR}/
 add_library(BabylonNative
     ${SHARED_SOURCES})
 
+if (${BASEKIT_BUILD})
+    target_compile_definitions(BabylonNative PRIVATE BASEKIT_BUILD)
+endif()
+
 target_include_directories(BabylonNative PRIVATE ${SHARED_INCLUDES})
 target_include_directories(BabylonNative PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 

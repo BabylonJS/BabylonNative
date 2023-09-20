@@ -35,6 +35,11 @@ if ( propertiesFile.isFile() ) {
 
 def cpp_distribution = (REACT_VERSION >= 71) ? "c++_shared" : "c++_static";
 
+def basekitBuild = 0
+if (project.hasProperty("BASEKIT_BUILD")) {
+    basekitBuild = project.getProperty("BASEKIT_BUILD")
+}
+
 if (REACT_VERSION >= 71) {
     DEFAULT_NDK_VERSION = '23.1.7779620'
 }
@@ -81,7 +86,8 @@ android {
                         "-DARCORE_LIBPATH=${extractedLibDir}/core-1.22.0.aar/jni",
                         "-DFBJNI_INCPATH=${extractedLibDir}/fbjni-0.3.0-headers.jar/",
                         "-DFBJNI_LIBPATH=${extractedLibDir}/fbjni-0.3.0.aar/jni",
-                        "-DREACTNATIVE_DIR=${rootDir}/../node_modules/react-native/"
+                        "-DREACTNATIVE_DIR=${rootDir}/../node_modules/react-native/",
+                        "-DBASEKIT_BUILD=${basekitBuild}"
             }
         }
         ndk {

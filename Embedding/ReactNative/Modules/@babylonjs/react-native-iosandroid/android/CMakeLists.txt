@@ -51,6 +51,9 @@ add_library(BabylonNative SHARED
     src/main/cpp/BabylonNativeInterop.cpp
     ${SHARED_SOURCES})
 
+if (${BASEKIT_BUILD})
+    target_compile_definitions(BabylonNative PRIVATE BASEKIT_BUILD)
+endif()
 
 set(TURBOMODULE_DIR "${REACTNATIVE_DIR_CMAKE}/ReactAndroid/src/main/jni/react/turbomodule/")
 if (EXISTS "${TURBOMODULE_DIR}/CMakeLists.txt")

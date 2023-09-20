@@ -2,13 +2,15 @@
 
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/JsRuntime.h>
+#ifndef BASEKIT_BUILD
 #include <Babylon/Plugins/NativeCamera.h>
+#include <Babylon/Plugins/NativeXr.h>
+#endif
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeTracing.h>
-#include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Canvas.h>
@@ -48,13 +50,15 @@ namespace BabylonNative
             Babylon::JsRuntime::CreateForJavaScript(m_env, Babylon::CreateJsRuntimeDispatcher(m_env, jsiRuntime, m_jsDispatcher, m_isRunning));
 
             // Initialize Babylon Native plugins
+#ifndef BASEKIT_BUILD
             m_nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(m_env));
             m_nativeXr->SetSessionStateChangedCallback([isXRActive{ m_isXRActive }](bool isSessionActive) { *isXRActive = isSessionActive; });
+            Babylon::Plugins::NativeCamera::Initialize(m_env);
+#endif
             Babylon::Plugins::NativeCapture::Initialize(m_env);
             m_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(m_env);
             Babylon::Plugins::NativeOptimizations::Initialize(m_env);
             Babylon::Plugins::NativeTracing::Initialize(m_env);
-            Babylon::Plugins::NativeCamera::Initialize(m_env);
 
             // Initialize Babylon Native polyfills
             Babylon::Polyfills::Window::Initialize(m_env);
@@ -211,7 +215,9 @@ namespace BabylonNative
 #if defined(__APPLE__) || defined(ANDROID)
         void UpdateXRView(WindowType window)
         {
+#ifndef BASEKIT_BUILD
             m_nativeXr->UpdateWindow(window);
+#endif
         }
 #endif
 
@@ -262,8 +268,9 @@ namespace BabylonNative
         bool m_isRenderingEnabled{};
         std::once_flag m_isGraphicsInitialized{};
         Babylon::Plugins::NativeInput* m_nativeInput{};
+#ifndef BASEKIT_BUILD
         std::optional<Babylon::Plugins::NativeXr> m_nativeXr{};
-
+#endif
         Babylon::Graphics::Configuration m_graphicsConfig{};
 
         std::shared_ptr<bool> m_isXRActive{};
