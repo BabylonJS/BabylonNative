@@ -40,6 +40,7 @@ target_link_libraries(UnitTests
     PRIVATE UrlLib
     PRIVATE Window
     PRIVATE XMLHttpRequest
+    PRIVATE gtest_main
     ${ADDITIONAL_LIBRARIES})
 
 add_test(NAME UnitTests COMMAND UnitTests)

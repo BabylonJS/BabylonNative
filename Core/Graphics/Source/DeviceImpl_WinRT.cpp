@@ -22,6 +22,10 @@ namespace Babylon::Graphics
         pd.nwh = winrt::get_abi(window);
     }
 
+    void DeviceImpl::ConfigureBgfxRenderType(bgfx::PlatformData& /*pd*/, bgfx::RendererType::Enum& /*renderType*/)
+    {
+    }
+
     float DeviceImpl::GetDevicePixelRatio(WindowT window)
     {
         if (auto uiElement = window.try_as<ABI::Microsoft::UI::Xaml::IUIElement>())

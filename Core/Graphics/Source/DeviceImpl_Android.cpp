@@ -13,6 +13,15 @@ namespace Babylon::Graphics
         pd.nwh = window;
     }
 
+    void DeviceImpl::ConfigureBgfxRenderType(bgfx::PlatformData& pd, bgfx::RendererType::Enum& renderType)
+    {
+        // on Android, having no window or context set the renderer API to no op.
+        if (!pd.nwh && !pd.context)
+        {
+            renderType = bgfx::RendererType::Noop;
+        }
+    }
+
     float DeviceImpl::GetDevicePixelRatio(WindowT)
     {
         // In Android, the baseline DPI is 160dpi.

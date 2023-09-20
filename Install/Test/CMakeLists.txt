@@ -9,7 +9,9 @@ project(TestInstall)
 FetchContent_Declare(cmake-extensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG 366dc4a84fb20f4060d97e89948c343e74c51fc3)
-FetchContent_MakeAvailable(cmake-extensions)
+FetchContent_Declare(googletest
+    URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
+FetchContent_MakeAvailable(cmake-extensions googletest)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -169,6 +171,8 @@ target_link_libraries(TestInstall
     d3d12
     d3dcompiler
     Pathcch
+    glslang-default-resource-limits
+    gtest_main
     ${ADDITIONAL_LIBRARIES}
     )
 

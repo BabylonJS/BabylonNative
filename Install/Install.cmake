@@ -1,5 +1,9 @@
 include(GNUInstallDirs)
 
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  set(CMAKE_INSTALL_PREFIX "./install/" CACHE PATH "..." FORCE)
+endif()
+
 function(install_targets)
     install(TARGETS ${ARGN})
 
@@ -27,7 +31,7 @@ install_targets(arcana)
 install_targets(astc-encoder edtaa3 etc1 etc2 iqa nvtt pvrtc squish tinyexr bgfx bimg bx)
 
 ## glslang
-install_targets(GenericCodeGen glslang MachineIndependent OGLCompiler OSDependent SPIRV)
+install_targets(GenericCodeGen glslang MachineIndependent OGLCompiler OSDependent SPIRV glslang-default-resource-limits)
 
 ## SPIRV-Cross
 install_targets(spirv-cross-core spirv-cross-glsl)
