@@ -65,12 +65,14 @@ if(APPLE)
 endif()
 
 
-if(WIN32 AND NOT WINDOWS_STORE)
-    # For Windows: Prevent overriding the parent project's compiler/linker settings
-	# Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
-	# see https://github.com/google/googletest/blob/main/googletest/README.md
-	# "Enabling this option will make gtest link the runtimes dynamically too, and match the project in which it is included."
-    set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
+if(NOT WINDOWS_STORE)
+	if(WIN32)
+		# For Windows: Prevent overriding the parent project's compiler/linker settings
+		# Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
+		# see https://github.com/google/googletest/blob/main/googletest/README.md
+		# "Enabling this option will make gtest link the runtimes dynamically too, and match the project in which it is included."
+		set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
+	endif()
     set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} googletest)
 endif()
 
