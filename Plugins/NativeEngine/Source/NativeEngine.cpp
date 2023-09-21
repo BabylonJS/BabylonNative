@@ -1736,7 +1736,7 @@ namespace Babylon
         DrawInternal(encoder, fillMode);
     }
 
-    // Note: For legay reasons JS might call this function for instance drawing. 
+    // Note: For legacy reasons JS might call this function for instance drawing. 
     // In that case the instanceCount will be calculated inside the SetVertexBuffers method.
     void NativeEngine::Draw(NativeDataStream::Reader& data)
     {
