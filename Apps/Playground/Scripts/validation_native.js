@@ -8,8 +8,6 @@ var testWidth = 600;
 var testHeight = 400;
 var generateReferences = false;
 
-console.log(`BN - Graphics API: ${TestUtils.getGraphicsApiName()}`);
-
 // Random replacement
 var seed = 1;
 Math.random = function () {
@@ -67,7 +65,7 @@ function saveRenderedResult(test, renderData) {
 }
 
 function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction) {
-    /*var canvasImageData =*/ engine._engine.getFrameBufferData(function (screenshot) { 
+    /*var canvasImageData =*/ engine._engine.getFrameBufferData(function (screenshot) {
         var testRes = true;
         // Visual check
         if (!test.onlyVisual) {
@@ -295,7 +293,7 @@ function runTest(index, done) {
 
         var referenceImage = TestUtils.decodeImage(data);
         loadPlayground(test, done, index, referenceImage, compare);
-        
+
     };
 
     if (generateReferences) {
