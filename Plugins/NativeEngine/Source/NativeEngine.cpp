@@ -1708,7 +1708,6 @@ namespace Babylon
         const uint32_t fillMode = data.ReadUint32();
         const uint32_t indexStart = data.ReadUint32();
         const uint32_t indexCount = data.ReadUint32();
-        
 
         if (m_boundVertexArray != nullptr)
         {
