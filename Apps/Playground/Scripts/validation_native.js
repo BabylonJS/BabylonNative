@@ -7,6 +7,7 @@ var saveResult = true;
 var testWidth = 600;
 var testHeight = 400;
 var generateReferences = false;
+
 // Random replacement
 var seed = 1;
 Math.random = function () {
@@ -64,7 +65,7 @@ function saveRenderedResult(test, renderData) {
 }
 
 function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction) {
-    /*var canvasImageData =*/ engine._engine.getFrameBufferData(function (screenshot) { 
+    /*var canvasImageData =*/ engine._engine.getFrameBufferData(function (screenshot) {
         var testRes = true;
         // Visual check
         if (!test.onlyVisual) {
@@ -269,6 +270,11 @@ function runTest(index, done) {
     var test = config.tests[index];
     if (test.onlyVisual || test.excludeFromAutomaticTesting) {
         done(true);
+        return;
+    }
+    if (test.excludedGraphicsApis && test.excludedGraphicsApis.includes(TestUtils.getGraphicsApiName())) {
+        done(true);
+        return;
     }
     let testInfo = "Running " + test.title;
     console.log(testInfo);
@@ -287,7 +293,7 @@ function runTest(index, done) {
 
         var referenceImage = TestUtils.decodeImage(data);
         loadPlayground(test, done, index, referenceImage, compare);
-        
+
     };
 
     if (generateReferences) {

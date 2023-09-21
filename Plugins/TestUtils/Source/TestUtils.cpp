@@ -9,8 +9,16 @@
 #include <sstream>
 #include <Babylon/JsRuntime.h>
 
+#define STRINGIZEX(x) #x
+#define STRINGIZE(x) STRINGIZEX(x)
+
 namespace Babylon::Plugins::Internal
 {
+    Napi::Value TestUtils::GetGraphicsApiName(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(info.Env(), STRINGIZE(GRAPHICS_API));
+    }
+
     void TestUtils::WritePNG(const Napi::CallbackInfo& info)
     {
         const auto buffer = info[0].As<Napi::Uint8Array>();
