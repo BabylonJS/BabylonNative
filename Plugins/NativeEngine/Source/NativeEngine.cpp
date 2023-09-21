@@ -1704,11 +1704,12 @@ namespace Babylon
         const uint32_t fillMode = data.ReadUint32();
         const uint32_t indexStart = data.ReadUint32();
         const uint32_t indexCount = data.ReadUint32();
+        const uint32_t instanceCount = data.ReadUint32();
 
         if (m_boundVertexArray != nullptr)
         {
             m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
-            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max());
+            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), instanceCount);
         }
 
         DrawInternal(encoder, fillMode);
@@ -1721,10 +1722,11 @@ namespace Babylon
         const uint32_t fillMode = data.ReadUint32();
         const uint32_t verticesStart = data.ReadUint32();
         const uint32_t verticesCount = data.ReadUint32();
+        const uint32_t instanceCount = data.ReadUint32();
 
         if (m_boundVertexArray != nullptr)
         {
-            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount);
+            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, instanceCount);
         }
 
         DrawInternal(encoder, fillMode);
