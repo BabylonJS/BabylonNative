@@ -115,7 +115,7 @@ namespace Babylon
         }
     }
 
-    void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices)
+    void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount)
     {
         const bgfx::Caps* caps = bgfx::getCaps();
 
@@ -124,7 +124,7 @@ namespace Babylon
         if (!m_vertexBufferInstanceRecords.empty() && instancingSupported)
         {
             bgfx::InstanceDataBuffer instanceDataBuffer{};
-            VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstanceRecords);
+            VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstanceRecords, instanceCount);
             encoder->setInstanceDataBuffer(&instanceDataBuffer);
         }
 

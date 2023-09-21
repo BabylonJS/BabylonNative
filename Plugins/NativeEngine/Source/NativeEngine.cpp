@@ -547,7 +547,9 @@ namespace Babylon
                 StaticValue("COMMAND_UNBINDFRAMEBUFFER", Napi::FunctionPointer::Create(env, &NativeEngine::UnbindFrameBuffer)),
                 StaticValue("COMMAND_DELETEFRAMEBUFFER", Napi::FunctionPointer::Create(env, &NativeEngine::DeleteFrameBuffer)),
                 StaticValue("COMMAND_DRAWINDEXED", Napi::FunctionPointer::Create(env, &NativeEngine::DrawIndexed)),
+                StaticValue("COMMAND_DRAWINDEXEDINSTANCED", Napi::FunctionPointer::Create(env, &NativeEngine::DrawIndexedInstanced)),
                 StaticValue("COMMAND_DRAW", Napi::FunctionPointer::Create(env, &NativeEngine::Draw)),
+                StaticValue("COMMAND_DRAWINSTANCED", Napi::FunctionPointer::Create(env, &NativeEngine::DrawInstanced)),
                 StaticValue("COMMAND_CLEAR", Napi::FunctionPointer::Create(env, &NativeEngine::Clear)),
                 StaticValue("COMMAND_SETSTENCIL", Napi::FunctionPointer::Create(env, &NativeEngine::SetStencil)),
                 StaticValue("COMMAND_SETVIEWPORT", Napi::FunctionPointer::Create(env, &NativeEngine::SetViewPort)),
@@ -1697,6 +1699,8 @@ namespace Babylon
         m_boundFrameBufferNeedsRebinding.Set(*encoder, false);
     }
 
+    // Note: For legacy reasons JS might call this function for instance drawing. 
+    // In that case the instanceCount will be calculated inside the SetVertexBuffers method.
     void NativeEngine::DrawIndexed(NativeDataStream::Reader& data)
     {
         bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
@@ -1714,6 +1718,26 @@ namespace Babylon
         DrawInternal(encoder, fillMode);
     }
 
+    void NativeEngine::DrawIndexedInstanced(NativeDataStream::Reader& data)
+    {
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+
+        const uint32_t fillMode = data.ReadUint32();
+        const uint32_t indexStart = data.ReadUint32();
+        const uint32_t indexCount = data.ReadUint32();
+        const uint32_t instanceCount = data.ReadUint32();
+
+        if (m_boundVertexArray != nullptr)
+        {
+            m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
+            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), instanceCount);
+        }
+
+        DrawInternal(encoder, fillMode);
+    }
+
+    // Note: For legacy reasons JS might call this function for instance drawing. 
+    // In that case the instanceCount will be calculated inside the SetVertexBuffers method.
     void NativeEngine::Draw(NativeDataStream::Reader& data)
     {
         bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
@@ -1725,6 +1749,23 @@ namespace Babylon
         if (m_boundVertexArray != nullptr)
         {
             m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount);
+        }
+
+        DrawInternal(encoder, fillMode);
+    }
+
+    void NativeEngine::DrawInstanced(NativeDataStream::Reader& data)
+    {
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+
+        const uint32_t fillMode = data.ReadUint32();
+        const uint32_t verticesStart = data.ReadUint32();
+        const uint32_t verticesCount = data.ReadUint32();
+        const uint32_t instanceCount = data.ReadUint32();
+
+        if (m_boundVertexArray != nullptr)
+        {
+            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, instanceCount);
         }
 
         DrawInternal(encoder, fillMode);

@@ -177,14 +177,17 @@ namespace Babylon
         }
     }
 
-    void VertexBuffer::BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceVertexBufferRecord>& vertexBufferInstance)
+    void VertexBuffer::BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceVertexBufferRecord>& vertexBufferInstance, uint32_t instanceCount)
     {
         uint16_t instanceStride{};
-        uint32_t instanceCount{};
         for (auto& pair : vertexBufferInstance)
         {
-            const auto vertexBuffer{pair.second.Buffer};
-            instanceCount = static_cast<uint32_t>(vertexBuffer->m_bytes->size()) / pair.second.Stride;
+            if (instanceCount == 0)
+            {
+                const auto vertexBuffer{pair.second.Buffer};
+                instanceCount = static_cast<uint32_t>(vertexBuffer->m_bytes->size()) / pair.second.Stride;
+            }
+
             instanceStride += static_cast<uint16_t>(pair.second.ElementSize);
         }
 

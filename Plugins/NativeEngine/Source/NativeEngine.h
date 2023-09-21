@@ -190,7 +190,9 @@ namespace Babylon
         void BindFrameBuffer(NativeDataStream::Reader& data);
         void UnbindFrameBuffer(NativeDataStream::Reader& data);
         void DrawIndexed(NativeDataStream::Reader& data);
+        void DrawIndexedInstanced(NativeDataStream::Reader& data);
         void Draw(NativeDataStream::Reader& data);
+        void DrawInstanced(NativeDataStream::Reader& data);
         void Clear(NativeDataStream::Reader& data);
         Napi::Value GetRenderWidth(const Napi::CallbackInfo& info);
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
