@@ -115,7 +115,7 @@ namespace Babylon
         }
     }
 
-    void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount)
+    void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount = 0)
     {
         const bgfx::Caps* caps = bgfx::getCaps();
 
