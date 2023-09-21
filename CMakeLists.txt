@@ -2,6 +2,9 @@
 cmake_minimum_required(VERSION 3.18)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+# Set fetched URL contents to the time of extraction, not the timestamps in the archive.
+cmake_policy(SET CMP0135 NEW)
+
 include(FetchContent)
 
 # Modules declaration
