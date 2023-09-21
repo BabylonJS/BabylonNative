@@ -21,10 +21,6 @@ set(SCRIPTS
     "Scripts/validation_native.js"
     "Scripts/config.json")
 
-set(SOURCES
-    "Shared/Playground/GraphicsApiInfo.cpp"
-    "Shared/Playground/GraphicsApiInfo.h")
-
 if(APPLE)
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
     if(IOS)
@@ -108,14 +104,13 @@ endif()
 warnings_as_errors(Playground)
 target_compile_definitions(Playground PRIVATE UNICODE)
 target_compile_definitions(Playground PRIVATE _UNICODE)
-target_compile_definitions(Playground PRIVATE GRAPHICS_API=${GRAPHICS_API})
 
 if(WINDOWS_STORE)
     target_compile_options(Playground PRIVATE /ZW)
     target_compile_options(Playground PRIVATE /await)
 endif()
 
-target_include_directories(Playground PRIVATE "Source" "." "Shared")
+target_include_directories(Playground PRIVATE "Source" ".")
 
 target_link_libraries(Playground
     PRIVATE AppRuntime

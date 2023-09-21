@@ -22,7 +22,6 @@
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Canvas.h>
-#include <Playground/GraphicsApiInfo.h>
 
 namespace
 {
@@ -124,8 +123,6 @@ extern "C"
 
                 Babylon::Polyfills::XMLHttpRequest::Initialize(env);
                 nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
-
-                Playground::GraphicsApiInfo::Initialize(env);
             });
 
             scriptLoader.emplace(*runtime);

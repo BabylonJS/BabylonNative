@@ -8,7 +8,7 @@ var testWidth = 600;
 var testHeight = 400;
 var generateReferences = false;
 
-console.log(`BN - Graphics API: ${GraphicsApiInfo.Name}`);
+console.log(`BN - Graphics API: ${TestUtils.getGraphicsApiName()}`);
 
 // Random replacement
 var seed = 1;
@@ -274,7 +274,7 @@ function runTest(index, done) {
         done(true);
         return;
     }
-    if (test.excludedGraphicsApis && test.excludedGraphicsApis.includes(GraphicsApiInfo.Name)) {
+    if (test.excludedGraphicsApis && test.excludedGraphicsApis.includes(TestUtils.getGraphicsApiName())) {
         done(true);
         return;
     }

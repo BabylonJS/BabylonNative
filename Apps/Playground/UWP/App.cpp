@@ -9,7 +9,6 @@
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Canvas.h>
-#include <Playground/GraphicsApiInfo.h>
 
 #include <winrt/windows.ui.core.h>
 
@@ -396,8 +395,6 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
         Babylon::Plugins::NativeOptimizations::Initialize(env);
 
         Babylon::Plugins::NativeXr::Initialize(env);
-
-        Playground::GraphicsApiInfo::Initialize(env);
 
         m_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
     });

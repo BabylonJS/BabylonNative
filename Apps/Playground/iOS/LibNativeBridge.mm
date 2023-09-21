@@ -12,7 +12,6 @@
 #import <Babylon/Polyfills/Console.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
-#import <Playground/GraphicsApiInfo.h>
 
 #import <optional>
 
@@ -85,8 +84,6 @@ bool isXrActive{};
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         Babylon::Plugins::NativeOptimizations::Initialize(env);
-
-        Playground::GraphicsApiInfo::Initialize(env);
 
         nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
         nativeXr->UpdateWindow(xrView);
