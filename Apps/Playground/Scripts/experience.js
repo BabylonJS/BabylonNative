@@ -19,63 +19,8 @@ var cameraTexture = false;
 var imageTracking = false;
 const readPixels = false;
 
-const getGroundPosition = (ground, scene) =>
-{
-    t = scene.pick(scene.pointerX, scene.pointerY, (t) => {
-        return t == ground;
-    });
-    return t.hit ? t.pickedPoint : null;
-}
-
 function CreateBoxAsync(scene) {
-    const rootMesh = new BABYLON.TransformNode("root", scene);
-    const plane = BABYLON.MeshBuilder.CreateGround("ground1", { width: 20, height: 20, subdivisions: 25 }, scene);
-    plane.setParent(rootMesh);
-    const trees = ["https://creazilla-store.fra1.digitaloceanspaces.com/cliparts/20835/tree-clipart-md.png"]
-    for (let index = 0; index < trees.length; index++) {
-        const s = trees[Math.round(Math.random() * trees.length - 1)]
-        var l = new BABYLON.StandardMaterial("tree" + index, scene);
-        l.diffuseTexture = new BABYLON.Texture(s, scene);
-        const box = BABYLON.MeshBuilder.CreatePlane('box' + index, { size: .25 }, scene);
-        // box.position.y = 1;
-        box.billboardMode = BABYLON.Mesh.BILLBOARDMODE_Y;
-        box.bakeTransformIntoVertices(BABYLON.Matrix.Translation(0, .25 / 2, 0));
-        (l.diffuseTexture.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE);
-        (l.diffuseTexture.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE);
-        l.diffuseTexture.hasAlpha = true;
-        l.emissiveColor = new BABYLON.Color3(0.95, 0.95, 0.95);
-        box.material = l;
-        box.position.x = Math.random() * 2;
-        box.position.z = Math.random() * 2 - 4;
-        box.setParent(rootMesh);
-
-        for (let index1 = 0; index1 < 5; index1++) {
-            const o = box.createInstance(box.name + index1);
-            o.billboardMode = BABYLON.Mesh.BILLBOARDMODE_Y;
-            o.position.x = Math.random() * 2;
-            o.position.z = Math.random() * 3;
-            o.setParent(rootMesh);
-        }
-    }
-    //var groundPosition, groundPositionLocal;
-    //scene.onPointerDown = () => {
-    //    const p = getGroundPosition(plane, scene);
-    //    p && (groundPosition = p, groundPositionLocal = groundPosition);
-    //};
-
-    //scene.onPointerUp = () => {
-    //    if (!groundPosition) return;
-    //    var e = groundPosition.subtract(groundPositionLocal);
-    //    e && camera.position.addInPlace(e), groundPosition = null;
-    //};
-    //scene.onPointerMove = () => {
-    //    const e = getGroundPosition(plane, scene);
-    //    const t = groundPosition;
-    //    if (!e) return;
-    //    var i = e.subtract(groundPositionLocal);
-    //    var cmp = camera.position.add(t.subtract(e));
-    //    t && e && (rootMesh.position.addInPlace(i), groundPositionLocal = e);
-    //};
+    BABYLON.Mesh.CreateBox("box1", 0.2, scene);
     return Promise.resolve();
 }
 
