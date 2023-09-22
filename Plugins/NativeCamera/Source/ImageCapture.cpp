@@ -34,7 +34,7 @@ namespace Babylon::Plugins::Internal
             return arrayJS;
         }
 
-        Napi::Object PhotoCapabilitiesToNapi(const Napi::Env& env, PhotoCapabilities photoCapabilities)
+        Napi::Object PhotoCapabilitiesToNapi(const Napi::Env& env, const PhotoCapabilities& photoCapabilities)
         {
             auto imageWidthJS = Napi::Object::New(env);
             imageWidthJS.Set("min", photoCapabilities.MinWidth);
@@ -55,7 +55,7 @@ namespace Babylon::Plugins::Internal
             return photoCapabilitiesJS;
         }
 
-        Napi::Object PhotoSettingsToNapi(const Napi::Env& env, PhotoSettings photoSettings)
+        Napi::Object PhotoSettingsToNapi(const Napi::Env& env, const PhotoSettings& photoSettings)
         {
             auto photoSettingsJS = Napi::Object::New(env);
 

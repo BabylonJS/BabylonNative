@@ -101,8 +101,8 @@ namespace Babylon::Plugins
         const std::vector<std::unique_ptr<Capability>>& Capabilities() const;
 
         // Gets high resolution photo capture capabilities for the currently opened stream/track.
-        const Plugins::PhotoCapabilities PhotoCapabilities() const;
-        const Plugins::PhotoSettings DefaultPhotoSettings() const;
+        const Plugins::PhotoCapabilities& PhotoCapabilities() const;
+        const Plugins::PhotoSettings& DefaultPhotoSettings() const;
 
     private:
         struct Impl;

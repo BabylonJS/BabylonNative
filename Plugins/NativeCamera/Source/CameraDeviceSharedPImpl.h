@@ -48,12 +48,12 @@ namespace Babylon::Plugins
         return m_impl->capabilities;
     }
 
-    const Plugins::PhotoCapabilities CameraDevice::PhotoCapabilities() const
+    const Plugins::PhotoCapabilities& CameraDevice::PhotoCapabilities() const
     {
         return m_impl->photoCapabilities.value();
     }
 
-    const Plugins::PhotoSettings CameraDevice::DefaultPhotoSettings() const
+    const Plugins::PhotoSettings& CameraDevice::DefaultPhotoSettings() const
     {
         return m_impl->defaultPhotoSettings.value();
     }
