@@ -459,11 +459,11 @@ namespace Babylon::Plugins
         {
             redEyeReduction,
             fillLightModes,
-            m_impl->supportedMaxPhotoDimensions.front().width,
-            m_impl->supportedMaxPhotoDimensions.back().width,
+            gsl::narrow<uint32_t>(m_impl->supportedMaxPhotoDimensions.front().width),
+            gsl::narrow<uint32_t>(m_impl->supportedMaxPhotoDimensions.back().width),
             1,
-            m_impl->supportedMaxPhotoDimensions.front().height,
-            m_impl->supportedMaxPhotoDimensions.back().height,
+            gsl::narrow<uint32_t>(m_impl->supportedMaxPhotoDimensions.front().height),
+            gsl::narrow<uint32_t>(m_impl->supportedMaxPhotoDimensions.back().height),
             1,
         };
 
@@ -517,7 +517,10 @@ namespace Babylon::Plugins
 #if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 160000)
             if (@available(iOS 16.0, *))
             {
-                implObj->m_impl->avCapturePhotoOutput.maxPhotoDimensions = {implObj->m_impl->photoCapabilities->MaxWidth, implObj->m_impl->photoCapabilities->MaxHeight};
+                implObj->m_impl->avCapturePhotoOutput.maxPhotoDimensions = {
+                    gsl::narrow<int32_t>(implObj->m_impl->photoCapabilities->MaxWidth),
+                    gsl::narrow<int32_t>(implObj->m_impl->photoCapabilities->MaxHeight)
+                };
             }
             else
 #endif
@@ -685,12 +688,12 @@ namespace Babylon::Plugins
             CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height};
     }
 
-    CameraDevice::TakePhotoTask CameraDevice::TakePhoto(PhotoSettings photoSettings)
+    CameraDevice::TakePhotoTask CameraDevice::TakePhotoAsync(PhotoSettings photoSettings)
     {
         bool foundMaxPhotoDimensions = false;
         for (auto maxSupportedPhotoDimensions = m_impl->supportedMaxPhotoDimensions.rbegin(); maxSupportedPhotoDimensions != m_impl->supportedMaxPhotoDimensions.rend(); ++maxSupportedPhotoDimensions)
         {
-            if (maxSupportedPhotoDimensions->width <= photoSettings.Width && maxSupportedPhotoDimensions->height <= photoSettings.Height)
+            if (gsl::narrow<uint32_t>(maxSupportedPhotoDimensions->width) <= photoSettings.Width && gsl::narrow<uint32_t>(maxSupportedPhotoDimensions->height) <= photoSettings.Height)
             {
                 photoSettings.Width = maxSupportedPhotoDimensions->width;
                 photoSettings.Height = maxSupportedPhotoDimensions->height;
@@ -709,7 +712,7 @@ namespace Babylon::Plugins
 #if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 160000)
         if (@available(iOS 16.0, *))
         {
-            capturePhotoSettings.maxPhotoDimensions = {photoSettings.Width, photoSettings.Height};
+            capturePhotoSettings.maxPhotoDimensions = {gsl::narrow<int32_t>(photoSettings.Width), gsl::narrow<int32_t>(photoSettings.Height)};
         }
         else
 #endif

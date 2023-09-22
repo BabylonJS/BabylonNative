@@ -29,13 +29,13 @@ namespace Babylon::Plugins
         Babylon::Plugins::RedEyeReduction RedEyeReduction{};
         std::set<Babylon::Plugins::FillLightMode> FillLightModes{};
 
-        int32_t MinWidth{};
-        int32_t MaxWidth{};
-        int32_t StepWidth{};
+        uint32_t MinWidth{};
+        uint32_t MaxWidth{};
+        uint32_t StepWidth{};
 
-        int32_t MinHeight{};
-        int32_t MaxHeight{};
-        int32_t StepHeight{};
+        uint32_t MinHeight{};
+        uint32_t MaxHeight{};
+        uint32_t StepHeight{};
     };
 
     class PhotoSettings final
@@ -43,8 +43,8 @@ namespace Babylon::Plugins
     public:
         bool RedEyeReduction{};
         Babylon::Plugins::FillLightMode FillLightMode{};
-        int32_t Width{};
-        int32_t Height{};
+        uint32_t Width{};
+        uint32_t Height{};
     };
 
     // The CameraTrack class is a platform agnostic representation of a specific stream
@@ -95,14 +95,14 @@ namespace Babylon::Plugins
         arcana::task<CameraDimensions, std::exception_ptr> OpenAsync(const CameraTrack& track);
         void Close();
         CameraDimensions UpdateCameraTexture(bgfx::TextureHandle textureHandle);
-        TakePhotoTask TakePhoto(PhotoSettings photoSettings);
+        TakePhotoTask TakePhotoAsync(PhotoSettings photoSettings);
 
         const std::vector<CameraTrack>& SupportedResolutions() const;
         const std::vector<std::unique_ptr<Capability>>& Capabilities() const;
 
         // Gets high resolution photo capture capabilities for the currently opened stream/track.
-        Plugins::PhotoCapabilities PhotoCapabilities() const;
-        Plugins::PhotoSettings DefaultPhotoSettings() const;
+        const Plugins::PhotoCapabilities PhotoCapabilities() const;
+        const Plugins::PhotoSettings DefaultPhotoSettings() const;
 
     private:
         struct Impl;

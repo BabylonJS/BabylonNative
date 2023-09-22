@@ -507,7 +507,7 @@ namespace Babylon::Plugins
                    : CameraDimensions{m_impl->cameraDimensions.height, m_impl->cameraDimensions.width};
     }
 
-    CameraDevice::TakePhotoTask CameraDevice::TakePhoto(PhotoSettings /*photoSettings*/)
+    CameraDevice::TakePhotoTask CameraDevice::TakePhotoAsync(PhotoSettings /*photoSettings*/)
     {
         throw std::runtime_error{"TakePhoto not implemented for this platform."};
     }

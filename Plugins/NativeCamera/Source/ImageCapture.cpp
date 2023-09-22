@@ -152,7 +152,7 @@ namespace Babylon::Plugins::Internal
             auto deferred = Napi::Promise::Deferred::New(env);
             // Take a photo and synchronously (via inline_scheduler) make a copy of the data (since we know nothing about its lifetime) before
             // transitioning back to the JavaScript thread to complete the promise.
-            m_cameraDevice->TakePhoto(m_photoSettings).then(arcana::inline_scheduler, arcana::cancellation::none(), [](gsl::span<const uint8_t> result) {
+            m_cameraDevice->TakePhotoAsync(m_photoSettings).then(arcana::inline_scheduler, arcana::cancellation::none(), [](gsl::span<const uint8_t> result) {
                 std::vector<uint8_t> bytes{};
                 bytes.resize(result.size());
                 std::memcpy(bytes.data(), result.data(), result.size());
