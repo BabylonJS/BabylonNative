@@ -3,6 +3,7 @@
 #endif
 
 #import <MetalKit/MetalKit.h>
+#include <napi/napi.h>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 #include <arcana/macros.h>
@@ -15,22 +16,36 @@
 #include <Foundation/Foundation.h>
 #include <AVFoundation/AVFoundation.h>
 
-@class CameraTextureDelegate;
-
 #include "../CameraDevice.h"
-#include <napi/napi.h>
+
+@class CameraTextureDelegate;
 
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
     @public AVCaptureVideoOrientation VideoOrientation;
 
     CVMetalTextureCacheRef textureCache;
+    CVMetalTextureRef cameraTextureY;
+    CVMetalTextureRef cameraTextureCbCr;
 }
 
 - (id)init:(CVMetalTextureCacheRef)textureCache;
 - (id<MTLTexture>)getCameraTextureY;
 - (id<MTLTexture>)getCameraTextureCbCr;
 - (void)reset;
+
+@end
+
+@class PhotoCaptureDelegate;
+
+using TakePhotoTaskCompletionSource = arcana::task_completion_source<Babylon::Plugins::CameraDevice::TakePhotoTask::result_type, Babylon::Plugins::CameraDevice::TakePhotoTask::error_type>;
+
+@interface PhotoCaptureDelegate : NSObject <AVCapturePhotoCaptureDelegate>
+{
+    TakePhotoTaskCompletionSource taskCompletionSource;
+}
+
+- (id)init:(TakePhotoTaskCompletionSource)taskCompletionSource;
 
 @end
 
@@ -151,7 +166,7 @@ namespace {
 namespace Babylon::Plugins
 {
     struct CameraTrack::Impl
-{
+    {
         int32_t width{};
         int32_t height{};
         AVCaptureDeviceFormat* avDeviceFormat{};
@@ -165,21 +180,26 @@ namespace Babylon::Plugins
             , env{env}
         {
         }
-        
+
         Graphics::DeviceContext* deviceContext;
         Napi::Env env;
-        
+
         arcana::affinity threadAffinity{};
-        
+
         std::vector<CameraTrack> supportedResolutions{};
         std::vector<std::unique_ptr<Capability>> capabilities{};
+        std::vector<CMVideoDimensions> supportedMaxPhotoDimensions{};
+        std::optional<Plugins::PhotoCapabilities> photoCapabilities{};
+        std::optional<Plugins::PhotoSettings> defaultPhotoSettings{};
         AVCaptureDevice* avDevice{};
-        
+
         bool overrideCameraTexture{};
         CameraDimensions cameraDimensions{};
 
         CameraTextureDelegate* cameraTextureDelegate{};
+        PhotoCaptureDelegate* photoCaptureDelegate{};
         AVCaptureSession* avCaptureSession{};
+        AVCapturePhotoOutput* avCapturePhotoOutput{};
         CVMetalTextureCacheRef textureCache{};
         id<MTLTexture> textureRGBA{};
         id<MTLRenderPipelineState> cameraPipelineState{};
@@ -189,7 +209,7 @@ namespace Babylon::Plugins
         bool isInitialized{false};
         bool refreshBgfxHandle{true};
         bgfx::TextureHandle textureHandle{};
-        
+
         arcana::background_dispatcher<32> cameraSessionDispatcher{};
         std::shared_ptr<arcana::cancellation_source> cancellationSource{std::make_shared<arcana::cancellation_source>()};
     };
@@ -197,7 +217,7 @@ namespace Babylon::Plugins
     std::vector<CameraDevice> CameraDevice::GetCameraDevices(Napi::Env env)
     {
         std::vector<CameraDevice> cameraDevices{};
-        
+
         NSArray* deviceTypes{@[
             // Use the main camera on the device which is best for general use and will typically be 1x optical zoom and the highest resolution.
             // https://developer.apple.com/documentation/avfoundation/avcapturedevice/devicetype/2361449-builtinwideanglecamera
@@ -224,11 +244,11 @@ namespace Babylon::Plugins
                                                            discoverySessionWithDeviceTypes:deviceTypes
                                                            mediaType:AVMediaTypeVideo
                                                            position:AVCaptureDevicePositionUnspecified]};
-        
+
         for (AVCaptureDevice* device in discoverySession.devices)
         {
             auto cameraDeviceImpl{std::make_unique<CameraDevice::Impl>(env)};
-            
+
             for (AVCaptureDeviceFormat* format in device.formats)
             {
                 CMVideoFormatDescriptionRef videoFormatRef{static_cast<CMVideoFormatDescriptionRef>(format.formatDescription)};
@@ -240,16 +260,16 @@ namespace Babylon::Plugins
                 {
                     continue;
                 }
-                
+
                 auto trackImpl = std::make_unique<CameraTrack::Impl>();
                 trackImpl->width = dimensions.width;
                 trackImpl->height = dimensions.height;
                 trackImpl->avDeviceFormat = format;
                 trackImpl->pixelFormat = pixelFormat;
-                
+
                 cameraDeviceImpl->supportedResolutions.push_back(CameraTrack{std::move(trackImpl)});
             }
-                        
+
             // update the cameraDevice information
             cameraDeviceImpl->avDevice = device;
 
@@ -260,7 +280,7 @@ namespace Babylon::Plugins
                 device.position == AVCaptureDevicePositionFront ? "user" : "environment",
                 device.position == AVCaptureDevicePositionFront ? std::vector<std::string>{"user"} : std::vector<std::string>{"environment"}
             ));
-            
+
             cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<bool>>
             (
                     Capability::Feature::Torch,
@@ -281,7 +301,7 @@ namespace Babylon::Plugins
                     return true;
                 }
             ));
-            
+
 #if (TARGET_OS_IPHONE)
             // iOS Zoom factors always start at 1.0 and go up from there slide the scale based on
             // the device type (if it starts with an ultrawide sensor or telephoto)
@@ -301,7 +321,7 @@ namespace Babylon::Plugins
                 // as I can tell there is no API to determine the default real world zoom of the telephoto lens
                 zoomFactorScale = 2.0;
             }
-            
+
             cameraDeviceImpl->capabilities.push_back(std::make_unique<CameraCapabilityTemplate<double>>
             (
                 Capability::Feature::Zoom,
@@ -330,7 +350,7 @@ namespace Babylon::Plugins
                 break;
             }
         }
-        
+
         return cameraDevices;
     }
 
@@ -391,13 +411,76 @@ namespace Babylon::Plugins
         CMVideoDimensions dimensions{CMVideoFormatDescriptionGetDimensions(videoFormatRef)};
 
         m_impl->cameraDimensions = CameraDimensions{static_cast<uint32_t>(dimensions.width), static_cast<uint32_t>(dimensions.height)};
-        
+
+        m_impl->supportedMaxPhotoDimensions.clear();
+#if (TARGET_OS_IOS)
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 160000)
+        if (@available(iOS 16.0, *))
+        {
+            for (NSValue* dimensions in resolution.m_impl->avDeviceFormat.supportedMaxPhotoDimensions)
+            {
+                m_impl->supportedMaxPhotoDimensions.push_back(dimensions.CMVideoDimensionsValue);
+            }
+        }
+        else
+#endif
+        {
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED < 160000)
+            m_impl->supportedMaxPhotoDimensions.push_back(dimensions);
+            m_impl->supportedMaxPhotoDimensions.push_back(resolution.m_impl->avDeviceFormat.highResolutionStillImageDimensions);
+#endif
+        }
+#endif
+
+        auto redEyeReduction = RedEyeReduction::Never;
+#if (TARGET_OS_IOS)
+        if (m_impl->avCapturePhotoOutput.isAutoRedEyeReductionSupported)
+        {
+            redEyeReduction = RedEyeReduction::Controllable;
+        }
+#endif
+
+        std::set<FillLightMode> fillLightModes{};
+        fillLightModes.insert(FillLightMode::Off);
+        FillLightMode defaultFillLightMode = FillLightMode::Off;
+#if (TARGET_OS_IOS)
+        if ([m_impl->avCapturePhotoOutput.supportedFlashModes containsObject:@(AVCaptureFlashModeAuto)])
+        {
+            fillLightModes.insert(FillLightMode::Auto);
+            defaultFillLightMode = FillLightMode::Auto;
+        }
+        if ([m_impl->avCapturePhotoOutput.supportedFlashModes containsObject:@(AVCaptureFlashModeOn)])
+        {
+            fillLightModes.insert(FillLightMode::Flash);
+        }
+#endif
+
+        m_impl->photoCapabilities =
+        {
+            redEyeReduction,
+            fillLightModes,
+            gsl::narrow<uint32_t>(m_impl->supportedMaxPhotoDimensions.front().width),
+            gsl::narrow<uint32_t>(m_impl->supportedMaxPhotoDimensions.back().width),
+            1,
+            gsl::narrow<uint32_t>(m_impl->supportedMaxPhotoDimensions.front().height),
+            gsl::narrow<uint32_t>(m_impl->supportedMaxPhotoDimensions.back().height),
+            1,
+        };
+
+        m_impl->defaultPhotoSettings =
+        {
+            m_impl->photoCapabilities->RedEyeReduction != RedEyeReduction::Never,
+            defaultFillLightMode,
+            m_impl->photoCapabilities->MaxWidth,
+            m_impl->photoCapabilities->MaxHeight,
+        };
+
         // Check for failed initialisation.
         if (!input)
         {
             return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{"Error Getting Camera Input"}));
         }
-        
+
         // Kick off camera session on a background thread.
         return arcana::make_task(m_impl->cameraSessionDispatcher, arcana::cancellation::none(), [implObj = shared_from_this(), pixelFormat = resolution.m_impl->pixelFormat, input]() mutable {
             if (implObj->m_impl->avCaptureSession == nil) {
@@ -427,6 +510,27 @@ namespace Babylon::Plugins
             [dataOutput setSampleBufferDelegate:implObj->m_impl->cameraTextureDelegate queue:sampleBufferQueue];
             [implObj->m_impl->avCaptureSession addOutput:dataOutput];
 
+            // Setup high resolution photo capture.
+            implObj->m_impl->avCapturePhotoOutput = [[AVCapturePhotoOutput alloc] init];
+            [implObj->m_impl->avCaptureSession addOutput:implObj->m_impl->avCapturePhotoOutput];
+#if (TARGET_OS_IOS)
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 160000)
+            if (@available(iOS 16.0, *))
+            {
+                implObj->m_impl->avCapturePhotoOutput.maxPhotoDimensions = {
+                    gsl::narrow<int32_t>(implObj->m_impl->photoCapabilities->MaxWidth),
+                    gsl::narrow<int32_t>(implObj->m_impl->photoCapabilities->MaxHeight)
+                };
+            }
+            else
+#endif
+            {
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED < 160000)
+                implObj->m_impl->avCapturePhotoOutput.highResolutionCaptureEnabled = true;
+#endif
+            }
+#endif
+
             // Actually start the camera session.
             [implObj->m_impl->avCaptureSession startRunning];
 
@@ -452,7 +556,7 @@ namespace Babylon::Plugins
             @synchronized(m_impl->cameraTextureDelegate) {
                 textureY = [m_impl->cameraTextureDelegate getCameraTextureY];
                 textureCbCr = [m_impl->cameraTextureDelegate getCameraTextureCbCr];
-                
+
                 switch (m_impl->cameraTextureDelegate->VideoOrientation)
                 {
                     case AVCaptureVideoOrientationLandscapeRight:
@@ -467,14 +571,14 @@ namespace Babylon::Plugins
                         height = [textureY width];
                         break;
                 }
-                
+
             }
 
             // Skip processing this frame if width and height are invalid.
             if (width == 0 || height == 0) {
                 return;
             }
-            
+
             // Check if the we've been handed a new texture handle and if so refresh our override
             if (m_impl->textureHandle.idx != textureHandle.idx)
             {
@@ -581,7 +685,71 @@ namespace Babylon::Plugins
         return m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeLeft ||
             m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeRight ?
             CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height} :
-            CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height};    }
+            CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height};
+    }
+
+    CameraDevice::TakePhotoTask CameraDevice::TakePhotoAsync(PhotoSettings photoSettings)
+    {
+        bool foundMaxPhotoDimensions = false;
+        for (auto maxSupportedPhotoDimensions = m_impl->supportedMaxPhotoDimensions.rbegin(); maxSupportedPhotoDimensions != m_impl->supportedMaxPhotoDimensions.rend(); ++maxSupportedPhotoDimensions)
+        {
+            if (gsl::narrow<uint32_t>(maxSupportedPhotoDimensions->width) <= photoSettings.Width && gsl::narrow<uint32_t>(maxSupportedPhotoDimensions->height) <= photoSettings.Height)
+            {
+                photoSettings.Width = maxSupportedPhotoDimensions->width;
+                photoSettings.Height = maxSupportedPhotoDimensions->height;
+                foundMaxPhotoDimensions = true;
+                break;
+            }
+        }
+
+        if (!foundMaxPhotoDimensions)
+        {
+            return arcana::task_from_error<CameraDevice::TakePhotoTask::result_type>(std::make_exception_ptr(std::runtime_error{"All supported resolutions exceed the requested resolution."}));
+        }
+
+        AVCapturePhotoSettings* capturePhotoSettings{[AVCapturePhotoSettings photoSettingsWithFormat:@{ AVVideoCodecKey : AVVideoCodecTypeJPEG}]};
+#if (TARGET_OS_IOS)
+#if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 160000)
+        if (@available(iOS 16.0, *))
+        {
+            capturePhotoSettings.maxPhotoDimensions = {gsl::narrow<int32_t>(photoSettings.Width), gsl::narrow<int32_t>(photoSettings.Height)};
+        }
+        else
+#endif
+        {
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED < 160000)
+            // TODO: If we can't control the resolution on older iOS versions, we could resize the image we get back to "simulate" a lower res capture.
+            capturePhotoSettings.highResolutionPhotoEnabled = true;
+#endif
+        }
+#endif
+
+#if (TARGET_OS_IOS)
+        switch (photoSettings.FillLightMode)
+        {
+            case FillLightMode::Auto:
+                capturePhotoSettings.flashMode = AVCaptureFlashMode::AVCaptureFlashModeAuto;
+                break;
+            case FillLightMode::Flash:
+                capturePhotoSettings.flashMode = AVCaptureFlashMode::AVCaptureFlashModeOn;
+                break;
+            case FillLightMode::Off:
+                capturePhotoSettings.flashMode = AVCaptureFlashMode::AVCaptureFlashModeOff;
+                break;
+        }
+#endif
+
+#if (TARGET_OS_IPHONE)
+        capturePhotoSettings.autoRedEyeReductionEnabled = photoSettings.RedEyeReduction;
+#endif
+
+        TakePhotoTaskCompletionSource taskCompletionSource{};
+        m_impl->photoCaptureDelegate = [[PhotoCaptureDelegate alloc]init: taskCompletionSource];
+
+        [m_impl->avCapturePhotoOutput capturePhotoWithSettings:capturePhotoSettings delegate:m_impl->photoCaptureDelegate];
+
+        return taskCompletionSource.as_task();
+    }
 
     void CameraDevice::Close()
     {
@@ -591,10 +759,9 @@ namespace Babylon::Plugins
             // No action is required.
             return;
         }
-        
+
         // Cancel any pending async operations
         m_impl->cancellationSource->cancel();
-
 
         // Complete any running command buffers before destroying the cache.
         if (m_impl->currentCommandBuffer != nil) {
@@ -612,10 +779,10 @@ namespace Babylon::Plugins
                 [avCaptureSession = m_impl->avCaptureSession, textureRGBA = m_impl->textureRGBA, textureDelegate = m_impl->cameraTextureDelegate, textureCache = m_impl->textureCache]
             {
                 [avCaptureSession stopRunning];
-                
+
                 // Stop collecting frames, release camera texture delegate.
                 [textureDelegate reset];
-                
+
                 // Free the texture cache.
                 if (textureCache)
                 {
@@ -624,12 +791,14 @@ namespace Babylon::Plugins
                 }
             });
         }
+
+        m_impl->photoCapabilities.reset();
+        m_impl->defaultPhotoSettings.reset();
+        m_impl->supportedMaxPhotoDimensions.clear();
     }
 }
 
 @implementation CameraTextureDelegate {
-    CVMetalTextureRef cameraTextureY;
-    CVMetalTextureRef cameraTextureCbCr;
 }
 
 - (id)init:(CVMetalTextureCacheRef)textureCache
@@ -793,6 +962,38 @@ namespace Babylon::Plugins
 #endif
 
     [self reset];
+}
+
+@end
+
+@implementation PhotoCaptureDelegate {
+}
+
+- (id)init:(TakePhotoTaskCompletionSource)taskCompletionSource
+{
+    self->taskCompletionSource = std::move(taskCompletionSource);
+    return self;
+}
+
+- (void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhoto:(AVCapturePhoto *)photo error:(NSError *)error
+{
+    if (error)
+    {
+        self->taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{[error.localizedDescription UTF8String]})));
+    }
+    else
+    {
+        NSData *imageData = [photo fileDataRepresentation];
+        self->taskCompletionSource.complete(gsl::make_span(static_cast<const uint8_t*>(imageData.bytes), imageData.length));
+    }
+}
+
+-(void)dealloc
+{
+    if (!self->taskCompletionSource.completed())
+    {
+        self->taskCompletionSource.complete(arcana::make_unexpected(std::make_exception_ptr(std::runtime_error{"PhotoCaptureDelegate deallocated before capture completed."})));
+    }
 }
 
 @end

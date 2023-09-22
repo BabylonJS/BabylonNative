@@ -15,6 +15,8 @@ namespace Babylon::Plugins
         arcana::affinity threadAffinity{};
         std::vector<CameraTrack> supportedResolutions{};
         std::vector<std::unique_ptr<Capability>> capabilities{};
+        std::optional<Plugins::PhotoCapabilities> photoCapabilities{};
+        std::optional<Plugins::PhotoSettings> defaultPhotoSettings{};
     };
 
     std::vector<CameraDevice> CameraDevice::GetCameraDevices(Napi::Env /*env*/)
@@ -30,6 +32,11 @@ namespace Babylon::Plugins
     }
 
     CameraDevice::CameraDimensions CameraDevice::UpdateCameraTexture(bgfx::TextureHandle /*textureHandle*/)
+    {
+        throw std::runtime_error{"HW Camera not implemented for this platform."};
+    }
+
+    CameraDevice::TakePhotoTask CameraDevice::TakePhotoAsync(PhotoSettings /*photoSettings*/)
     {
         throw std::runtime_error{"HW Camera not implemented for this platform."};
     }
