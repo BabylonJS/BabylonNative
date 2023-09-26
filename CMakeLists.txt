@@ -18,7 +18,7 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 04d91f6675dabb3c97df346a32f6184b0a7ef845)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 4ef1c3eb3c557bb8120d2bc2b5c06cbcfb54238f)
+    GIT_TAG 5fefa63d9af36df062ef7cb275ce97cac506057e)
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
     GIT_TAG 883c4a286116e51ee989e39ee8e216d632997329)
