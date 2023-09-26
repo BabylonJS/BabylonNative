@@ -1,3 +1,15 @@
+#ifdef _MSC_VER
+    #define DISABLE_DEPRECATION_WARNINGS \
+        __pragma(warning(push)) \
+        __pragma(warning(disable : 4996))
+    #define ENABLE_DEPRECATION_WARNINGS __pragma(warning(pop))
+#else
+    #define DISABLE_DEPRECATION_WARNINGS \
+        _Pragma("GCC diagnostic push") \
+        _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+    #define ENABLE_DEPRECATION_WARNINGS _Pragma("GCC diagnostic pop")
+#endif
+
 #include <stdexcept>
 #include <locale>
 #include <codecvt>
@@ -386,7 +398,9 @@ inline String String::New(napi_env env, const char* val) {
 }
 
 inline String String::New(napi_env env, const char16_t* val) {
+DISABLE_DEPRECATION_WARNINGS
   std::string u8{std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(val)};
+ENABLE_DEPRECATION_WARNINGS
   return {env, {env->rt, jsi::String::createFromUtf8(env->rt, u8)}};
 }
 
@@ -395,7 +409,9 @@ inline String String::New(napi_env env, const char* val, size_t length) {
 }
 
 inline String String::New(napi_env env, const char16_t* val, size_t length) {
+DISABLE_DEPRECATION_WARNINGS
   std::string u8{std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(val, val + length)};
+ENABLE_DEPRECATION_WARNINGS
   return {env, {env->rt, jsi::String::createFromUtf8(env->rt, u8)}};
 }
 
