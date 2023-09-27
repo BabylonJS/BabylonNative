@@ -30,6 +30,9 @@ namespace Babylon::ShaderCompilerCommon
                 case NonSamplerUniformsInfo::Uniform::TypeEnum::Mat4:
                     bgfxType = bgfx::UniformType::Mat4;
                     break;
+                case NonSamplerUniformsInfo::Uniform::TypeEnum::Mat3:
+                    bgfxType = bgfx::UniformType::Mat3;
+                    break;
                 default:
                     throw std::runtime_error{"Unrecognized uniform type."};
             }
@@ -98,6 +101,11 @@ namespace Babylon::ShaderCompilerCommon
                     uniform.Type = NonSamplerUniformsInfo::Uniform::TypeEnum::Mat4;
                     uniform.RegisterSize = 4;
                 }
+                else if (spirType.columns == 3 && spirType.vecsize == 3)
+                {
+                    uniform.Type = NonSamplerUniformsInfo::Uniform::TypeEnum::Mat3;
+                    uniform.RegisterSize = 4;
+                }
                 else
                 {
                     throw std::runtime_error{"Unrecognized uniform type."};
@@ -135,6 +143,11 @@ namespace Babylon::ShaderCompilerCommon
                     else if (type.columns == 4 && type.vecsize == 4)
                     {
                         uniform.Type = NonSamplerUniformsInfo::Uniform::TypeEnum::Mat4;
+                        uniform.RegisterSize = 4;
+                    }
+                    else if (type.columns == 3 && type.vecsize == 3)
+                    {
+                        uniform.Type = NonSamplerUniformsInfo::Uniform::TypeEnum::Mat3;
                         uniform.RegisterSize = 4;
                     }
                     else
