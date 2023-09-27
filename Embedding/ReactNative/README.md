@@ -123,6 +123,7 @@ export PATH=$PATH:$ANDROID_HOME/platform-tools
 - Android Studio is the tool of choice for downloading the various versions of NDK.
 - If something goes wrong with the build `npm run android --verbose` can give some hints.
 - If the emulator is not launched by the build, you can run `~/Android/Sdk/emulator/emulator @name_of_your_image`.
+- If `ld: library not found for -lBabylonNative` appears when building for iOS, this is because of CMake 3.26+. use 3.24 or remove `CONFIGURATION_BUILD_DIR`entries for every `.pbxproj` file.
 - For other emulator issues, follow the [instructions](https://github.com/BabylonJS/BabylonNative/blob/master/Documentation/AndroidEmulator.md) from Babylon Native documentation.
 - Refer to the [Babylon Native documentation](https://github.com/BabylonJS/BabylonNative/tree/master/Documentation#babylon-native-documention) for additional information that may help troubleshoot issues.
 

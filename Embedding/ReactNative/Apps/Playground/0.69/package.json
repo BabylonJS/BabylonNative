@@ -21,7 +21,7 @@
     "@babylonjs/react-native-windows": "file:../../../Modules/@babylonjs/react-native-windows",
     "@react-native-community/slider": "^4.0.0-rc.3",
     "react": "18.0.0",
-    "react-native": "0.69.3",
+    "react-native": "0.69.9",
     "react-native-permissions": "^3.0.0",
     "react-native-windows": "0.69.3"
   },
