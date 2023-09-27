@@ -163,7 +163,7 @@ namespace Babylon::Polyfills::Internal
             responseHeadersObject.Set(key, value);
         }
 
-        return responseHeadersObject;
+        return std::move(responseHeadersObject);
     }
 
     void XMLHttpRequest::SetRequestHeader(const Napi::CallbackInfo& info)
