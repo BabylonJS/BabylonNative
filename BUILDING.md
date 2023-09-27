@@ -213,7 +213,7 @@ used by default if no engine is specified. To change the engine to JavaScriptCor
 the file `Apps\Playground\Android\gradle.properties` and add the following line:
 
 ```
-JSEngine=jsc
+jsEngine=JavaScriptCore
 ```
 
 Once the npm packages are installed, open the project located at
