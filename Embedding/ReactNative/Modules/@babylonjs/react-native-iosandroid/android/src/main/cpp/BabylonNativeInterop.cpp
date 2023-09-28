@@ -4,7 +4,6 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeInput.h>
-#include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 

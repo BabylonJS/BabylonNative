@@ -27,7 +27,9 @@ add_library(BabylonNative
     ${SHARED_SOURCES})
 
 if (${BASEKIT_BUILD})
-    target_compile_definitions(BabylonNative PRIVATE BASEKIT_BUILD)
+    target_compile_definitions(BabylonNative PRIVATE BASEKIT_BUILD=1)
+else()
+    set(ADDITIONAL_LIBRARIES NativeXr NativeCamera)
 endif()
 
 target_include_directories(BabylonNative PRIVATE ${SHARED_INCLUDES})
@@ -37,13 +39,12 @@ target_link_libraries(BabylonNative
     GraphicsDevice
     jsi
     JsRuntime
-    NativeCamera
     NativeCapture
     NativeEngine
     NativeInput
     NativeOptimizations
     NativeTracing
-    NativeXr
     Window
     XMLHttpRequest
-    Canvas)
+    Canvas
+    ${ADDITIONAL_LIBRARIES})
