@@ -10,7 +10,7 @@ include(FetchContent)
 # Modules declaration
 FetchContent_Declare(cmake-extensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG 704b21c0d55d4e3fb916cd681dc1f739ff2fd6ef)
+    GIT_TAG efe7101be5e04391b9e55f68a01d534f54d3026e)
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
     GIT_TAG 04d91f6675dabb3c97df346a32f6184b0a7ef845)
@@ -59,7 +59,7 @@ option(JSRUNTIMEHOST_POLYFILL_ABORT_CONTROLLER "Include JsRuntimeHost Polyfills 
 option(JSRUNTIMEHOST_POLYFILL_WEBSOCKET "Include JsRuntimeHost Polyfill WebSocket." ON)
 
 ## Tests
-option(JSRUNTIMEHOST_TESTS "Include JsRuntimeHost Tests." ON)
+option(JSRUNTIMEHOST_TESTS "Include JsRuntimeHost Tests." ${PROJECT_IS_TOP_LEVEL})
 
 ## Node-API
 option(NAPI_BUILD_ABI "Build the ABI layer." ON)
@@ -92,11 +92,11 @@ FetchContent_MakeAvailable(${CONTENT_TO_FETCH})
 message(STATUS "Fetching dependencies for ${PROJECT_NAME} - done")
 
 # Set properties after fetching content
-if(NOT TARGET arcana)
+if(TARGET arcana)
     set_property(TARGET arcana PROPERTY FOLDER Dependencies)
 endif()
 
-if(NOT TARGET UrlLib AND JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST)
+if(TARGET UrlLib AND JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST)
     set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
 endif()
 

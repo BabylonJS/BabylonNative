@@ -29,7 +29,7 @@ if(NAPI_BUILD_ABI)
         function(napi_install_android_package name aar_path output_directory)
             file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/package-${name}.json" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
             file(RENAME "${CMAKE_CURRENT_BINARY_DIR}/package-${name}.json" "${CMAKE_CURRENT_BINARY_DIR}/package.json")
-            npm(install ${CMAKE_CURRENT_BINARY_DIR} "${name}-android" "--no-package-lock --silent")
+            npm(install --no-package-lock --silent WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
             file(GLOB_RECURSE ANDROID_ARCHIVE "${CMAKE_CURRENT_BINARY_DIR}/node_modules/${name}-android/${aar_path}/*.aar")
             file(ARCHIVE_EXTRACT INPUT ${ANDROID_ARCHIVE} DESTINATION ${output_directory} PATTERNS jni)
