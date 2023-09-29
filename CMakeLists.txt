@@ -1,5 +1,4 @@
-# cmake 3.18+ to have the ARCHIVE_EXTRACT sub-command for files
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.21)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Set fetched URL contents to the time of extraction, not the timestamps in the archive.
@@ -12,19 +11,18 @@ include(FetchContent)
 # Modules declaration
 FetchContent_Declare(cmake-extensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG 366dc4a84fb20f4060d97e89948c343e74c51fc3)
+    GIT_TAG efe7101be5e04391b9e55f68a01d534f54d3026e)
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
     GIT_TAG 04d91f6675dabb3c97df346a32f6184b0a7ef845)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG b3d4f2cb8c86fb55dc4e8ae78ba5f5a98a5be6ba)
+    GIT_TAG 23d2b5320efb87e7ee7d558e9a52006a7f5712eb)
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
     GIT_TAG 883c4a286116e51ee989e39ee8e216d632997329)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
-set(JSRUNTIMEHOST_TESTS OFF)
 
 set(CONTENT_TO_FETCH cmake-extensions JsRuntimeHost)
 
@@ -41,8 +39,8 @@ project(BabylonNative)
 # --------------------------------------------------
 # Options
 # --------------------------------------------------
-option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ON)
-option(BABYLON_NATIVE_INSTALL "Include the install target." ON)
+option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ${PROJECT_IS_TOP_LEVEL})
+option(BABYLON_NATIVE_INSTALL "Include the install target." ${PROJECT_IS_TOP_LEVEL})
 
 ## Core
 option(BABYLON_NATIVE_CORE_GRAPHICS "Include Babylon Native Core Graphics" ON)
@@ -64,20 +62,19 @@ option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." 
 # --------------------------------------------------
 
 if(APPLE)
-    # without this option on azure pipelines, there is a mismatch with math.h giving a lot of undefined functions on macOS.
-    # only enabled for Apple as there is no issue for Windows
+    # Without this option on azure pipelines, there is a mismatch with math.h giving a lot of undefined functions on macOS.
+    # Only enabled for Apple as there is no issue for Windows.
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED TRUE)
 endif()
 
-
-if(NOT WINDOWS_STORE)
-	if(WIN32)
-		# For Windows: Prevent overriding the parent project's compiler/linker settings
-		# Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
-		# see https://github.com/google/googletest/blob/main/googletest/README.md
-		# "Enabling this option will make gtest link the runtimes dynamically too, and match the project in which it is included."
-		set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
-	endif()
+if(BABYLON_NATIVE_BUILD_APPS AND ((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID)))
+    if(WIN32)
+        # For Windows: Prevent overriding the parent project's compiler/linker settings
+        # Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
+        # see https://github.com/google/googletest/blob/main/googletest/README.md
+        # "Enabling this option will make gtest link the runtimes dynamically too, and match the project in which it is included."
+        set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
+    endif()
     set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} googletest)
 endif()
 
@@ -125,6 +122,13 @@ message(STATUS "Fetching dependencies for ${PROJECT_NAME} (${CONTENT_TO_FETCH})"
 FetchContent_MakeAvailable(${CONTENT_TO_FETCH})
 message(STATUS "Fetching dependencies for ${PROJECT_NAME} - done")
 
+if(BABYLON_NATIVE_BUILD_APPS AND ((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID)))
+    set_property(TARGET gmock PROPERTY FOLDER Dependencies/GoogleTest)
+    set_property(TARGET gmock_main PROPERTY FOLDER Dependencies/GoogleTest)
+    set_property(TARGET gtest PROPERTY FOLDER Dependencies/GoogleTest)
+    set_property(TARGET gtest_main PROPERTY FOLDER Dependencies/GoogleTest)
+endif()
+
 if(APPLE)
     set(BABYLON_NATIVE_PLATFORM_IMPL_EXT "mm")
     set_property(TARGET JsRuntime PROPERTY UNITY_BUILD false)
@@ -143,7 +147,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # __cplusplus value is not in sync with language version used. MVSC needs this flag to update it accordingly
 # https://gitlab.kitware.com/cmake/cmake/-/issues/18837
-if (MSVC)
+if(MSVC)
     add_compile_options(/Zc:__cplusplus)
 endif()
 
