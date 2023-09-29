@@ -39,7 +39,7 @@ project(BabylonNative)
 # --------------------------------------------------
 # Options
 # --------------------------------------------------
-option(BABYLON_NATIVE_BUILD_APPS "Include Babylon Native apps." ${PROJECT_IS_TOP_LEVEL})
+option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ${PROJECT_IS_TOP_LEVEL})
 option(BABYLON_NATIVE_INSTALL "Include the install target." ${PROJECT_IS_TOP_LEVEL})
 
 ## Core
