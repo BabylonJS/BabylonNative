@@ -365,7 +365,7 @@ if(TARGET bgfx::shaderc)
 	#	OUTPUT filename
 	#	FRAGMENT|VERTEX|COMPUTE
 	#	ANDROID|ASM_JS|IOS|LINUX|NACL|OSX|WINDOWS
-	#	[PROFILE profile]
+	#	PROFILE profile
 	#	[O 0|1|2|3]
 	#	[VARYINGDEF filename]
 	#	[BIN2C filename]
@@ -392,6 +392,8 @@ if(TARGET bgfx::shaderc)
 		# -f
 		if(ARG_FILE)
 			list(APPEND CLI "-f" "${ARG_FILE}")
+		else()
+			message(SEND_ERROR "Call to _bgfx_shaderc_parse() must have an input file path specified.")
 		endif()
 
 		# -i
@@ -405,6 +407,8 @@ if(TARGET bgfx::shaderc)
 		# -o
 		if(ARG_OUTPUT)
 			list(APPEND CLI "-o" "${ARG_OUTPUT}")
+		else()
+			message(SEND_ERROR "Call to _bgfx_shaderc_parse() must have an output file path specified.")
 		endif()
 
 		# --bin2c
@@ -518,6 +522,8 @@ if(TARGET bgfx::shaderc)
 		# --profile
 		if(ARG_PROFILE)
 			list(APPEND CLI "--profile" "${ARG_PROFILE}")
+		else()
+			message(SEND_ERROR "Call to _bgfx_shaderc_parse() must have a shader profile.")
 		endif()
 
 		# -O
