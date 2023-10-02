@@ -4,6 +4,16 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
 
+#ifdef _MSC_VER
+    #define DISABLE_UNREACHABLE_CODE_WARNINGS \
+        __pragma(warning(push)) \
+        __pragma(warning(disable : 4702))
+    #define ENABLE_UNREACHABLE_CODE_WARNINGS __pragma(warning(pop))
+#else
+    #define DISABLE_UNREACHABLE_CODE_WARNINGS
+    #define ENABLE_UNREACHABLE_CODE_WARNINGS
+#endif
+
 namespace Babylon::Plugins::Internal
 {
     namespace
@@ -147,7 +157,8 @@ namespace Babylon::Plugins::Internal
                     }
                 }
             }
-
+            //unreachable code is detected below in x86 Release build. Not obvious fix so Warning as error doesn't break the build. Disabling warning for now.
+DISABLE_UNREACHABLE_CODE_WARNINGS
             auto env = info.Env();
             auto deferred = Napi::Promise::Deferred::New(env);
             // Take a photo and synchronously (via inline_scheduler) make a copy of the data (since we know nothing about its lifetime) before
@@ -183,7 +194,7 @@ namespace Babylon::Plugins::Internal
 
                 deferred.Resolve(blob);
             });
-
+ENABLE_UNREACHABLE_CODE_WARNINGS
             return deferred.Promise();
         }
 
