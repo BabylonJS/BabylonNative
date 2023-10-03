@@ -52,9 +52,14 @@ elseif(UNIX)
         PRIVATE curl)
 elseif(WIN32)
     set(ADDITIONAL_SOURCES
-        "Source/UrlRequest_Windows.cpp"
+        "Source/UrlRequest_Windows_Shared.h"
         "Source/WebSocket_Windows.cpp")
-    if(NOT WINDOWS_STORE)
+    if(WINDOWS_STORE)
+        set(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES}
+            "Source/UrlRequest_UWP.cpp")
+    else()
+        set(ADDITIONAL_SOURCES ${ADDITIONAL_SOURCES}
+            "Source/UrlRequest_Win32.cpp")
         set(ADDITIONAL_LIBRARIES
             PUBLIC onecoreuap.lib)
     endif()
