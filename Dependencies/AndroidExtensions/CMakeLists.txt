@@ -12,7 +12,7 @@ include(FetchContent)
 # Modules declaration
 FetchContent_Declare(arcana
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG        10d167ffe0f86b2ddaccd93fd78ff2240cbb0c49)
+    GIT_TAG        f2757396e80bc4169f2ddb938ce25367a98ffdd0)
     
 if(NOT ANDROID)
     message(FATAL_ERROR "This project can only build for Android")
