@@ -1,5 +1,20 @@
 cmake_minimum_required(VERSION 3.13.2)
+
+include(FetchContent)
+
+FetchContent_Declare(ios-cmake
+    GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
+    GIT_TAG 04d91f6675dabb3c97df346a32f6184b0a7ef845)
+
+FetchContent_MakeAvailable(ios-cmake)
+set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+set(PLATFORM "OS64COMBINED" CACHE STRING "")
+set(DEPLOYMENT_TARGET "12" CACHE STRING "")
+set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
+set(ENABLE_PCH OFF CACHE STRING "Enables or disables precompiled headers.")
+
 project(ReactNativeBabylon)
+
 include(${CMAKE_CURRENT_LIST_DIR}/../../react-native/shared/CMakeLists.txt)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")

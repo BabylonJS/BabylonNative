@@ -1,4 +1,18 @@
 cmake_minimum_required(VERSION 3.13.2)
+
+include(FetchContent)
+
+FetchContent_Declare(ios-cmake
+    GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
+    GIT_TAG 04d91f6675dabb3c97df346a32f6184b0a7ef845)
+
+FetchContent_MakeAvailable(ios-cmake)
+set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+set(PLATFORM "OS64COMBINED" CACHE STRING "")
+set(DEPLOYMENT_TARGET "12" CACHE STRING "")
+set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
+set(ENABLE_PCH OFF CACHE STRING "Enables or disables precompiled headers.")
+
 project(ReactNativeBabylon)
 
 # Clang will by default emit objc_msgSend stubs in Xcode 14, which ld from earlier Xcodes doesn't understand.
@@ -24,6 +38,7 @@ set(PACKAGED_LIBS
     Canvas
     GenericCodeGen
     glslang
+    glslang-default-resource-limits
     Graphics
     JsRuntime
     OGLCompiler

@@ -9,7 +9,7 @@
     "test": "jest",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "postinstall": "node scripts/tools.js postinstall",
-    "iosCmake": "node scripts/tools.js iosCMake",
+    "iosCMake": "node scripts/tools.js iosCMake",
     "windows": "react-native run-windows"
   },
   "dependencies": {
@@ -21,7 +21,7 @@
     "@babylonjs/playground-shared": "file:../playground-shared",
     "@react-native-community/slider": "^4.0.0-rc.3",
     "react": "18.1.0",
-    "react-native": "0.70.6",
+    "react-native": "0.70.8",
     "react-native-permissions": "^3.0.0",
     "react-native-windows": "0.70.7"
   },
@@ -32,7 +32,7 @@
     "@tsconfig/react-native": "^2.0.2",
     "@types/jest": "^26.0.23",
     "@types/react": "^18.0.21",
-    "@types/react-native": "^0.70.6",
+    "@types/react-native": "^0.70.8",
     "@types/react-test-renderer": "^18.0.0",
     "@typescript-eslint/eslint-plugin": "^5.37.0",
     "@typescript-eslint/parser": "^5.37.0",

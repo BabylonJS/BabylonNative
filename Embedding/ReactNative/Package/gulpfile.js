@@ -75,7 +75,7 @@ const buildTypeScript = async () => {
 
 const makeXCodeProj = async () => {
   shelljs.mkdir('-p', 'iOS/Build');
-  exec(`cmake -G Xcode -DCMAKE_TOOLCHAIN_FILE=../../../Apps/Playground/Playground/node_modules/@babylonjs/react-native-iosandroid/submodules/BabylonNative/Dependencies/ios-cmake/ios.toolchain.cmake -DPLATFORM=OS64COMBINED -DENABLE_ARC=0 -DENABLE_BITCODE=1 -DDEPLOYMENT_TARGET=12 -DENABLE_PCH=OFF ${cmakeBasekitBuildDefinition} ..`, 'iOS/Build');
+  exec(`cmake -B Build -G Xcode ${cmakeBasekitBuildDefinition}`, 'iOS');
 };
 
 const buildIphoneOS = async () => {
@@ -131,7 +131,7 @@ const initializeSubmodulesMostRecentBabylonNative = async () => {
 
 const makeUWPProjectPlatform = async (name, arch) => {
   shelljs.mkdir('-p', `./../Modules/@babylonjs/react-native/Build/uwp_${name}`);
-  exec(`cmake -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -DCMAKE_UNITY_BUILD=true ${cmakeBasekitBuildDefinition} -A ${arch} ./../../../react-native-windows/windows`, `./../Modules/@babylonjs/react-native/Build/uwp_${name}`);
+  exec(`cmake -G "Visual Studio 16 2019" -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 -DCMAKE_UNITY_BUILD=true ${cmakeBasekitBuildDefinition} -A ${arch} ./../../../react-native-windows/windows`, `./../Modules/@babylonjs/react-native/Build/uwp_${name}`);
 };
 
 const makeUWPProjectx86 = async () => makeUWPProjectPlatform('x86', 'Win32');
@@ -539,6 +539,7 @@ const validateAssemblediOSAndroid = async () => {
     `${assemblediOSAndroidDir}/ios/libs/libCanvas.a`,
     `${assemblediOSAndroidDir}/ios/libs/libGenericCodeGen.a`,
     `${assemblediOSAndroidDir}/ios/libs/libglslang.a`,
+    `${assemblediOSAndroidDir}/ios/libs/libglslang-default-resource-limits.a`,
     `${assemblediOSAndroidDir}/ios/libs/libGraphics.a`,
     `${assemblediOSAndroidDir}/ios/libs/libJsRuntime.a`,
     `${assemblediOSAndroidDir}/ios/libs/libMachineIndependent.a`,

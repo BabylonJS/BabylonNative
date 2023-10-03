@@ -48,7 +48,7 @@ Copy over the [scripts/tools.js](./0.65/scripts/tools.js) which contains postins
     "test": "jest",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "postinstall": "node scripts/tools.js postinstall",
-    "iosCmake": "node scripts/tools.js iosCMake",
+    "iosCMake": "node scripts/tools.js iosCMake",
     "windows": "react-native run-windows"
   }
 ```
@@ -60,7 +60,7 @@ Add BabylonReactNative in the Xcode workspace:
 <Workspace
    version = "1.0">
    <FileRef
-      location = "group:../node_modules/@babylonjs/react-native-iosandroid/ios/ReactNativeBabylon.xcodeproj">
+      location = "group:../../../../Build/iOS/ReactNativeBabylon.xcodeproj">
    </FileRef>
    ...
 ```

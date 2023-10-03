@@ -38,7 +38,7 @@ namespace BabylonNative
     {
     public:
         ReactNativeModule(jsi::Runtime& jsiRuntime, Dispatcher jsDispatcher)
-            : m_env{ Napi::Attach<facebook::jsi::Runtime&>(jsiRuntime) }
+            : m_env{ Napi::Attach(jsiRuntime) }
             , m_jsDispatcher{ std::move(jsDispatcher) }
             , m_isRunning{ std::make_shared<bool>(true) }
             , m_isXRActive{ std::make_shared<bool>(false) }

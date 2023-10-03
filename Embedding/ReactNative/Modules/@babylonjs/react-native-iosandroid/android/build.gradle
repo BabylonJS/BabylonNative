@@ -22,7 +22,8 @@ def safeExtGet(prop, fallback) {
 
 apply plugin: 'com.android.library'
 
-def extractedLibDir = "${buildDir}/lib"
+def rootBuildDir = "${rootProject.rootDir}/../../../../Build/Android"
+def extractedLibDir = "${rootBuildDir}/lib"
 
 def REACT_VERSION = 64
 def reactProperties = new Properties()
@@ -94,19 +95,31 @@ android {
             abiFilters "arm64-v8a", "armeabi-v7a", "x86", 'x86_64'
         }
         packagingOptions {
-            // .so files referenced by cmake should be autolinked with Android gradle plugin 4.0.0+
-            // We exclude these libs here to support Android gradle plugin 4.0.0+ builds
-            exclude 'lib/armeabi-v7a/libfbjni.so'
-            exclude 'lib/arm64-v8a/libfbjni.so'
-            exclude 'lib/x86/libfbjni.so'
+            exclude '**/libfbjni.so'
+            exclude '**/libarcore_sdk_c.so'
 
-            exclude 'lib/armeabi-v7a/libarcore_sdk_c.so'
-            exclude 'lib/arm64-v8a/libarcore_sdk_c.so'
-            exclude 'lib/x86/libarcore_sdk_c.so'
-
-            exclude 'lib/armeabi-v7a/libturbomodulejsijni.so'
-            exclude 'lib/arm64-v8a/libturbomodulejsijni.so'
-            exclude 'lib/x86/libturbomodulejsijni.so'
+            // Those are prefab libraries distributed via ReactAndroid
+            // Due to a bug in AGP, they fire a warning on console as both the JNI
+            // and the prefab .so files gets considered.
+            exclude "**/libfabricjni.so"
+            exclude "**/libfolly_runtime.so"
+            exclude "**/libglog.so"
+            exclude "**/libjsi.so"
+            exclude "**/libreact_codegen_rncore.so"
+            exclude "**/libreact_debug.so"
+            exclude "**/libreact_nativemodule_core.so"
+            exclude "**/libreact_newarchdefaults.so"
+            exclude "**/libreact_render_componentregistry.so"
+            exclude "**/libreact_render_core.so"
+            exclude "**/libreact_render_debug.so"
+            exclude "**/libreact_render_graphics.so"
+            exclude "**/libreact_render_imagemanager.so"
+            exclude "**/libreact_render_mapbuffer.so"
+            exclude "**/librrc_image.so"
+            exclude "**/librrc_view.so"
+            exclude "**/libruntimeexecutor.so"
+            exclude "**/libturbomodulejsijni.so"
+            exclude "**/libyoga.so"
         }
 
     }
@@ -117,6 +130,7 @@ android {
         cmake {
             version '3.19.6+'
             path 'CMakeLists.txt'
+            buildStagingDirectory "${rootBuildDir}"
         }
     }
     buildFeatures {
@@ -171,34 +185,19 @@ def configureReactNativePom(def pom) {
     }
 }
 
-task extractHeaders {
-    doLast {
-        configurations.extractHeaders.files.each { file ->
-            copy {
-                from zipTree(file)
-                into "$extractedLibDir/" + file.name
-                include "**/*.h"
-            }
-        }
+configurations.extractHeaders.files.each { file ->
+    copy {
+        from zipTree(file)
+        into "$extractedLibDir/" + file.name
+        include "**/*.h"
     }
 }
 
-task extractLibs {
-    doLast {
-        configurations.extractLibs.files.each { file ->
-            copy {
-                from zipTree(file)
-                into "$extractedLibDir/" + file.name
-                include "jni/**/*"
-            }
-        }
-    }
-}
-
-tasks.whenTaskAdded { task ->
-    if (task.name.contains("configureCMake")) {
-        task.dependsOn(extractHeaders)
-        task.dependsOn(extractLibs)
+configurations.extractLibs.files.each { file ->
+    copy {
+        from zipTree(file)
+        into "$extractedLibDir/" + file.name
+        include "jni/**/*"
     }
 }
 

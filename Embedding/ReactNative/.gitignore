@@ -12,3 +12,6 @@ WorkspaceSettings.xcsettings
 
 # npm
 node_modules
+
+# Build output, largely Babylon Native
+Build

@@ -129,15 +129,12 @@
       <AdditionalLibraryDirectories Condition="'$(BabylonNativeBuildDir)' != ''">
         $(BabylonNativeBuildDir)BabylonNative\Core\JsRuntime\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Core\Graphics\$(Configuration);
-        $(BabylonNativeBuildDir)BabylonNative\Dependencies\arcana.cpp\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Dependencies\bgfx.cmake\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Dependencies\glslang\glslang\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Dependencies\glslang\glslang\OSDependent\Windows\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Dependencies\glslang\OGLCompilersDLL\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Dependencies\glslang\SPIRV\$(Configuration);
-        $(BabylonNativeBuildDir)BabylonNative\Dependencies\napi\napi-jsi\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Dependencies\SPIRV-Cross\$(Configuration);
-        $(BabylonNativeBuildDir)BabylonNative\Dependencies\UrlLib\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Dependencies\xr\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Dependencies\xr\Dependencies\OpenXR-SDK\src\loader\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Plugins\NativeCamera\$(Configuration);
@@ -148,10 +145,14 @@
         $(BabylonNativeBuildDir)BabylonNative\Plugins\NativeTracing\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Plugins\NativeXr\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Polyfills\Window\$(Configuration);
-        $(BabylonNativeBuildDir)BabylonNative\Polyfills\XMLHttpRequest\$(Configuration);
         $(BabylonNativeBuildDir)BabylonNative\Polyfills\Canvas\$(Configuration);
         $(BabylonNativeBuildDir)jsi\$(Configuration);
         $(BabylonNativeBuildDir)$(Configuration);
+        $(BabylonNativeBuildDir)_deps\arcana-build\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Core\JsRuntime\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Core\Node-API-JSI\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Polyfills\XMLHttpRequest\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\urllib-build\$(Configuration);
         %(AdditionalLibraryDirectories);
       </AdditionalLibraryDirectories>
       <!-- Library directories when building from npm package -->
@@ -185,6 +186,7 @@
         etc2.lib;
         GenericCodeGend.lib;
         glslangd.lib;
+        glslang-default-resource-limitsd.lib;
         Graphics.lib;
         iqa.lib;
         jsi.lib;
@@ -246,6 +248,7 @@
         etc2.lib;
         GenericCodeGen.lib;
         glslang.lib;
+        glslang-default-resource-limits.lib;
         Graphics.lib;
         iqa.lib;
         jsi.lib;

@@ -17,9 +17,9 @@
 	"@babylonjs/react-native-windows-0-69": "^1.4.1",
     "@babylonjs/packagetest-shared": "file:../packagetest-shared",
     "react": "^18.0.0",
-    "react-native": "^0.69.0",
+    "react-native": "^0.69.9",
     "react-native-permissions": "^3.0.0",
-    "react-native-windows": "0.69.4"
+    "react-native-windows": "0.69.9"
   },
   "devDependencies": {
     "@babel/core": "^7.12.9",
@@ -27,7 +27,7 @@
     "@react-native-community/eslint-config": "^2.0.0",
     "@tsconfig/react-native": "^2.0.2",
     "@types/jest": "^26.0.23",
-    "@types/react-native": "^0.69.0",
+    "@types/react-native": "^0.69.9",
     "@types/react-test-renderer": "^18.0.0",
     "@typescript-eslint/eslint-plugin": "^5.29.0",
     "@typescript-eslint/parser": "^5.29.0",

@@ -22,6 +22,8 @@ set(BABYLON_NATIVE_BUILD_APPS OFF CACHE BOOL "")
 set(BABYLON_NATIVE_USE_SWAPCHAINPANEL ON CACHE BOOL "")
 set(BABYLON_NATIVE_DIR "${BABYLON_REACT_NATIVE_IOSANDROID}/submodules/BabylonNative")
 add_subdirectory(${BABYLON_NATIVE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/BabylonNative EXCLUDE_FROM_ALL)
+# Disable Unity build for UrlLib because of conflict in header between windows.h and winrt
+set_property(TARGET UrlLib PROPERTY UNITY_BUILD false)
 
 add_library(BabylonNative
     ${SHARED_SOURCES})

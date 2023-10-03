@@ -10,7 +10,7 @@
     "test": "jest",
     "windows": "react-native run-windows",
     "postinstall": "node scripts/tools.js postinstall",
-    "iosCmake": "node scripts/tools.js iosCMake"
+    "iosCMake": "node scripts/tools.js iosCMake"
   },
   "dependencies": {
     "@babylonjs/core": "6.14.0",
