@@ -12,10 +12,10 @@ include(FetchContent)
 # Modules declaration
 FetchContent_Declare(arcana
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG        10d167ffe0f86b2ddaccd93fd78ff2240cbb0c49)
+    GIT_TAG        f2757396e80bc4169f2ddb938ce25367a98ffdd0)
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG        883c4a286116e51ee989e39ee8e216d632997329)
+    GIT_TAG        1a47db416ec2aae3f51b28b94f73e8f54e412d0d)
 
 if(NOT TARGET arcana)
     set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} arcana)
