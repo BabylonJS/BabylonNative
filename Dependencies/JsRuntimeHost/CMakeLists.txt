@@ -16,10 +16,10 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 04d91f6675dabb3c97df346a32f6184b0a7ef845)
 FetchContent_Declare(arcana
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG 10d167ffe0f86b2ddaccd93fd78ff2240cbb0c49)
+    GIT_TAG f2757396e80bc4169f2ddb938ce25367a98ffdd0)
 FetchContent_Declare(UrlLib
     GIT_REPOSITORY https://github.com/BabylonJS/UrlLib.git
-    GIT_TAG f09f431f24cac7ffb0f17e5a83ce6c2f11d29e31)
+    GIT_TAG 72348d7e500c5c633e6eb23a5c41f1f0e8ebd781)
 FetchContent_Declare(asio
     GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
     GIT_TAG f693a3eb7fe72a5f19b975289afc4f437d373d9c)
