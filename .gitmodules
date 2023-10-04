@@ -3,7 +3,7 @@
 	url = https://github.com/azawadzki/base-n
 [submodule "glslang"]
 	path = Dependencies/glslang
-	url = https://github.com/KhronosGroup/glslang
+	url = https://github.com/BabylonJS/glslang
 [submodule "SPIRV-Cross"]
 	path = Dependencies/SPIRV-Cross
 	url = https://github.com/KhronosGroup/SPIRV-Cross
