@@ -94,7 +94,9 @@ namespace UrlLib
                         throw std::runtime_error{msg.str()};
                     }
 
-                    file.read(reinterpret_cast<char*>(m_fileResponseBuffer.data()), std::filesystem::file_size(path));
+                    const auto fileSize = std::filesystem::file_size(path);
+                    m_fileResponseBuffer.resize(fileSize);
+                    file.read(reinterpret_cast<char*>(m_fileResponseBuffer.data()), fileSize);
                     m_statusCode = UrlStatusCode::Ok;
                 });
             }
