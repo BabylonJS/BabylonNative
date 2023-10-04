@@ -63,10 +63,13 @@ describe("AbortController", function () {
 });
 
 describe("XMLHTTPRequest", function () {
-    function createRequest(method, url, body) {
+    function createRequest(method, url, body, responseType) {
         return new Promise((resolve) => {
             const xhr = new XMLHttpRequest();
             xhr.open(method, url);
+            if (responseType !== undefined) {
+                xhr.responseType = responseType;
+            }
             xhr.addEventListener("loadend", () => resolve(xhr));
             xhr.send(body);
         });
@@ -177,6 +180,13 @@ describe("XMLHTTPRequest", function () {
             expect(xhr).to.have.property('responseText', 'var symlink_target_js = true;');
         });
     }
+
+    it("should load URL as array buffer", async function () {
+        const xhr = await createRequest("GET", "app:///Scripts/symlink_target.js", undefined, "arraybuffer");
+        var expected = new Uint8Array("var symlink_target_js = true;".split("").map(x => x.charCodeAt(0)));
+        var response = new Uint8Array(xhr.response);
+        expect(response).to.eql(expected);
+    });
 });
 
 describe("setTimeout", function () {
