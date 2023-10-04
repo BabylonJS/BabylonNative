@@ -6,7 +6,7 @@ pr:
 
 
 jobs:
-- job: Component Detection
+- job: ComponentDetection
   pool:
     vmImage: 'windows-latest'
   steps:
