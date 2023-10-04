@@ -45,9 +45,6 @@ project(BabylonNative)
 option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ${PROJECT_IS_TOP_LEVEL})
 option(BABYLON_NATIVE_INSTALL "Include the install target." ${PROJECT_IS_TOP_LEVEL})
 
-## Core
-option(BABYLON_NATIVE_CORE_GRAPHICS "Include Babylon Native Core Graphics" ON)
-
 ## Plugins
 option(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE "Include Babylon Native Plugin ExternalTexture." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAMERA "Include Babylon Native Plugin NativeCamera." ON)
