@@ -1,8 +1,5 @@
 #include "ShaderCompilerTraversers.h"
 
-#define GLSLANG_WEB
-#pragma warning (disable : 4100 )
-
 #include <glslang/Include/intermediate.h>
 #include <glslang/MachineIndependent/localintermediate.h>
 #include <glslang/MachineIndependent/RemoveTree.h>
