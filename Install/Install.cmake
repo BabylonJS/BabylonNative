@@ -28,7 +28,9 @@ endfunction()
 install_targets(arcana)
 
 ## bgfx
-install_targets(astc-encoder edtaa3 etc1 etc2 iqa nvtt pvrtc squish tinyexr bgfx bimg bx)
+if(NOT bgfx_CACHED_BUILD)
+    install_targets(astc-encoder edtaa3 etc1 etc2 iqa nvtt pvrtc squish tinyexr bgfx bimg bx)
+endif()
 
 ## glslang
 install_targets(GenericCodeGen glslang MachineIndependent OGLCompiler OSDependent SPIRV glslang-default-resource-limits)
