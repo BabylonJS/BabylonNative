@@ -40,12 +40,11 @@ jobs:
 
       - task: Cache@2
         inputs:
-          key: '"bgfx" | "$(Agent.OS)" | "$(Build.SourceVersion)"'
-          restoreKeys: |
-            "bgfx" | "$(Agent.OS)" | "$(Build.SourceVersion)"
-          path: build\Dependencies\bgfx.cmake\RelWithDebInfo
+          key: 'bgfx_$(Agent.OS)_$(Build.SourceVersion)'
+          restoreKeys: 'bgfx_$(Agent.OS)_$(Build.SourceVersion)'
+          path: 'build${{ variables.solutionName }}\Dependencies\bgfx.cmake\RelWithDebInfo'
         displayName: Cache bgfx
-        
+
       - script: |
           mkdir build${{ variables.solutionName }}
           cd build${{ variables.solutionName }}
