@@ -38,6 +38,14 @@ jobs:
           git submodule update --init --recursive
         displayName: 'Checkout dependencies'
 
+      - task: Cache@2
+        inputs:
+          key: '"bgfx" | "$(Agent.OS)" | "$(Build.SourceVersion)"'
+          restoreKeys: |
+            "bgfx" | "$(Agent.OS)" | "$(Build.SourceVersion)"
+          path: build\Dependencies\bgfx.cmake\RelWithDebInfo
+        displayName: Cache bgfx
+        
       - script: |
           mkdir build${{ variables.solutionName }}
           cd build${{ variables.solutionName }}
