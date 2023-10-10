@@ -1,7 +1,7 @@
 # -------------------------------- base-n --------------------------------
 # Dependencies: none
 add_library(base-n INTERFACE)
-target_include_directories(base-n INTERFACE "base-n/include")
+target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}base-n/include")
 
 # -------------------------------- bgfx.cmake --------------------------------
 # Dependencies: none
