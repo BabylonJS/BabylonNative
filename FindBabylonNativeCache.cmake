@@ -14,7 +14,6 @@ function(import_prebuilt_targets)
     endforeach()
 endfunction()
 
-
 if(EXISTS "${PREBUILT_LIBRARY_DIR}/bgfx.lib")
     set(BGFX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/bgfx.cmake/bgfx" CACHE STRING "Location of bgfx." )
     set(BIMG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/bgfx.cmake/bimg" CACHE STRING "Location of bimg." )
