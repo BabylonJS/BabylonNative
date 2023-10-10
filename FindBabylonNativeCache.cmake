@@ -1,18 +1,30 @@
-if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/Dependencies/bgfx.cmake/RelWithDebInfo/bgfx.lib")
+#set(USE_CACHE_BUILD true)
+
+set(PREBUILT_LIBRARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/install/lib")
+
+function(import_prebuilt_target target)
+    add_library(${target} STATIC IMPORTED GLOBAL)
+    set_property(TARGET ${target} PROPERTY IMPORTED_LOCATION "${PREBUILT_LIBRARY_DIR}/${target}.lib")
+endfunction()
+
+
+function(import_prebuilt_targets)
+    foreach(target IN LISTS ARGN)
+        import_prebuilt_target(${target})
+    endforeach()
+endfunction()
+
+
+if(EXISTS "${PREBUILT_LIBRARY_DIR}/bgfx.lib")
     set(BGFX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/bgfx.cmake/bgfx" CACHE STRING "Location of bgfx." )
     set(BIMG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/bgfx.cmake/bimg" CACHE STRING "Location of bimg." )
     set(BX_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/bgfx.cmake/bx" CACHE STRING "Location of bx." )
 
-    add_library(bgfx STATIC IMPORTED GLOBAL)
-    set_property(TARGET bgfx PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/Dependencies/bgfx.cmake/RelWithDebInfo/bgfx.lib")
+    import_prebuilt_targets(bgfx bx bimg)
+    import_prebuilt_targets(astc-encoder edtaa3 etc1 etc2 iqa nvtt pvrtc squish tinyexr)
+
     target_include_directories(bgfx INTERFACE "${BGFX_DIR}/include")
-
-    add_library(bx STATIC IMPORTED GLOBAL)
-    set_property(TARGET bx PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/Dependencies/bgfx.cmake/RelWithDebInfo/bx.lib")
     target_include_directories(bx INTERFACE "${BX_DIR}/include" "${BX_DIR}/include/compat/msvc")
-
-    add_library(bimg STATIC IMPORTED GLOBAL)
-    set_property(TARGET bimg PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/Dependencies/bgfx.cmake/RelWithDebInfo/bimg.lib")
     target_include_directories(bimg INTERFACE "${BIMG_DIR}/include" )
 
     if (BGFX_CONFIG_DEBUG)
@@ -21,27 +33,46 @@ if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/Dependencies/bgfx.cmake/RelWithDebInfo/bg
         target_compile_definitions( bgfx INTERFACE "BX_CONFIG_DEBUG=0" )
     endif()
 
-    add_library(astc-encoder STATIC IMPORTED GLOBAL)
-    set_property(TARGET astc-encoder PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/Dependencies/bgfx.cmake/RelWithDebInfo/astc-encoder.lib")
-    add_library(edtaa3 STATIC IMPORTED GLOBAL)
-    set_property(TARGET edtaa3 PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/Dependencies/bgfx.cmake/RelWithDebInfo/edtaa3.lib")
-    add_library(etc1 STATIC IMPORTED GLOBAL)
-    set_property(TARGET etc1 PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/Dependencies/bgfx.cmake/RelWithDebInfo/etc1.lib")
-    add_library(etc2 STATIC IMPORTED GLOBAL)
-    set_property(TARGET etc2 PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/Dependencies/bgfx.cmake/RelWithDebInfo/etc2.lib")
-    add_library(iqa STATIC IMPORTED GLOBAL)
-    set_property(TARGET iqa PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/Dependencies/bgfx.cmake/RelWithDebInfo/iqa.lib")
-    add_library(nvtt STATIC IMPORTED GLOBAL)
-    set_property(TARGET nvtt PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/Dependencies/bgfx.cmake/RelWithDebInfo/nvtt.lib")
-    add_library(pvrtc STATIC IMPORTED GLOBAL)
-    set_property(TARGET pvrtc PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/Dependencies/bgfx.cmake/RelWithDebInfo/pvrtc.lib")
-    add_library(squish STATIC IMPORTED GLOBAL)
-    set_property(TARGET squish PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/Dependencies/bgfx.cmake/RelWithDebInfo/squish.lib")
-    add_library(tinyexr STATIC IMPORTED GLOBAL)
-    set_property(TARGET tinyexr PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/Dependencies/bgfx.cmake/RelWithDebInfo/tinyexr.lib")
-
     target_link_libraries(bimg INTERFACE astc-encoder edtaa3 etc1 etc2 iqa nvtt pvrtc squish tinyexr)
 
     set(bgfx_CACHED_BUILD true GLOBAL)
     message("Using bgfx cache build")
+endif()
+
+
+if(EXISTS "${PREBUILT_LIBRARY_DIR}/spirv-cross-core.lib")
+    set(SPIRV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/SPIRV-Cross" CACHE STRING "Location of spirv." )
+
+    import_prebuilt_targets(spirv-cross-core spirv-cross-glsl)
+
+    target_include_directories(spirv-cross-core INTERFACE "${SPIRV_DIR}/include" "${SPIRV_DIR}")
+    target_link_libraries(spirv-cross-glsl INTERFACE spirv-cross-core)
+
+    if(GRAPHICS_API STREQUAL "D3D11" OR GRAPHICS_API STREQUAL "D3D12")
+        import_prebuilt_target(spirv-cross-hlsl)
+        target_link_libraries(spirv-cross-hlsl INTERFACE spirv-cross-core spirv-cross-glsl)
+    endif()
+
+    set(spirvcross_CACHED_BUILD true GLOBAL)
+    message("Using spirv cross cache build")
+endif()
+
+if(EXISTS "${PREBUILT_LIBRARY_DIR}/glslang.lib")
+    set(GLSLANG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/glslang" CACHE STRING "Location of glslang." )
+
+    import_prebuilt_targets(GenericCodeGen glslang OGLCompiler OSDependent MachineIndependent SPIRV glslang-default-resource-limits)
+
+    target_include_directories(GenericCodeGen INTERFACE "${GLSLANG_DIR}/glslang/Include")
+    target_include_directories(glslang INTERFACE "${GLSLANG_DIR}/glslang/Include" "${GLSLANG_DIR}")
+    target_include_directories(OGLCompiler INTERFACE "${GLSLANG_DIR}/glslang/Include")
+    target_include_directories(OSDependent INTERFACE "${GLSLANG_DIR}/glslang/Include")
+    target_include_directories(MachineIndependent INTERFACE "${GLSLANG_DIR}/glslang/Include")
+    target_include_directories(SPIRV INTERFACE "${GLSLANG_DIR}/glslang/Include")
+    target_include_directories(glslang-default-resource-limits INTERFACE "${GLSLANG_DIR}/glslang/Include")
+
+    target_link_libraries(glslang INTERFACE OGLCompiler GenericCodeGen OSDependent MachineIndependent)
+
+    set(glslang_CACHED_BUILD true GLOBAL)
+    message("Using glslang cross cache build")
+
 endif()

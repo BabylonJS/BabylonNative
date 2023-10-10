@@ -33,15 +33,19 @@ if(NOT bgfx_CACHED_BUILD)
 endif()
 
 ## glslang
-install_targets(GenericCodeGen glslang MachineIndependent OGLCompiler OSDependent SPIRV glslang-default-resource-limits)
+if(NOT glslang_CACHED_BUILD)
+    install_targets(GenericCodeGen glslang MachineIndependent OGLCompiler OSDependent SPIRV glslang-default-resource-limits)
+endif()
 
 ## SPIRV-Cross
-install_targets(spirv-cross-core spirv-cross-glsl)
-if(TARGET spirv-cross-msl)
-    install_targets(spirv-cross-msl)
-endif()
-if(TARGET spirv-cross-hlsl)
-    install_targets(spirv-cross-hlsl)
+if(NOT spirvcross_CACHED_BUILD)
+    install_targets(spirv-cross-core spirv-cross-glsl)
+    if(TARGET spirv-cross-msl)
+        install_targets(spirv-cross-msl)
+    endif()
+    if(TARGET spirv-cross-hlsl)
+        install_targets(spirv-cross-hlsl)
+    endif()
 endif()
 
 ## XR

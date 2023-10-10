@@ -38,8 +38,6 @@ if(IOS)
 endif()
 
 project(BabylonNative)
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/")
-find_package(BabylonNativeCache)
 
 # --------------------------------------------------
 # Options
@@ -152,6 +150,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(MSVC)
     add_compile_options(/Zc:__cplusplus)
 endif()
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/")
+find_package(BabylonNativeCache)
 
 add_subdirectory(Dependencies)
 add_subdirectory(Core)
