@@ -66,3 +66,18 @@ if(EXISTS "${PREBUILT_LIBRARY_DIR}/glslang.lib")
     set(glslang_CACHED_BUILD true GLOBAL)
     message("Using glslang cross cache build")
 endif()
+
+
+if(EXISTS "${PREBUILT_LIBRARY_DIR}/openxr_loader.lib")
+    set(OPENXR_LOADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/xr/Dependencies/OpenXR-SDK" CACHE STRING "Location of open xr loader." )
+
+    import_prebuilt_targets(openxr_loader)
+
+    target_include_directories(openxr_loader INTERFACE "${OPENXR_LOADER_DIR}/Include")
+
+    #target_link_libraries(glslang INTERFACE OGLCompiler GenericCodeGen OSDependent MachineIndependent)
+
+    set(openxr_loader_CACHED_BUILD true GLOBAL)
+    message("Using openxr_loader cache build")
+endif()
+

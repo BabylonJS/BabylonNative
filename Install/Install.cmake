@@ -49,7 +49,7 @@ if(NOT spirvcross_CACHED_BUILD)
 endif()
 
 ## XR
-if(TARGET openxr_loader)
+if(NOT openxr_loader_CACHED_BUILD AND TARGET openxr_loader)
     install_targets(openxr_loader)
 endif()
 

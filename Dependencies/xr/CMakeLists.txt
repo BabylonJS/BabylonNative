@@ -16,7 +16,9 @@ elseif (IOS)
 else()
     # Avoid picking up system installed jsoncpp in favor of source distributed with openxr_loader project
     set(BUILD_WITH_SYSTEM_JSONCPP OFF CACHE BOOL "disable using system installed jsoncpp")
-    add_subdirectory(Dependencies/OpenXR-SDK)
+    if(NOT TARGET openxr_loader)
+        add_subdirectory(Dependencies/OpenXR-SDK)
+    endif()
 
     set(SOURCES ${SOURCES}
         "Source/OpenXR/XR.cpp")

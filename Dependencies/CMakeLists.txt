@@ -1,7 +1,7 @@
 # -------------------------------- base-n --------------------------------
 # Dependencies: none
 add_library(base-n INTERFACE)
-target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}base-n/include")
+target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
 
 # -------------------------------- bgfx.cmake --------------------------------
 # Dependencies: none
@@ -130,12 +130,14 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEXR AND (WIN32 OR ANDROID OR IOS))
     add_subdirectory(xr)
     set_property(TARGET xr PROPERTY FOLDER Dependencies/xr)
     warnings_as_errors(xr)
-    if(WIN32 OR WINDOWS_STORE)
-        set_property(TARGET openxr_loader PROPERTY FOLDER Dependencies/xr/OpenXR)
-        set_property(TARGET generate_openxr_header PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
-        set_property(TARGET xr_global_generated_files PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
-        set_property(TARGET uninstall PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
-        disable_warnings(openxr_loader)
+    if(NOT TARGET openxr_loader)
+        if(WIN32 OR WINDOWS_STORE)
+            set_property(TARGET openxr_loader PROPERTY FOLDER Dependencies/xr/OpenXR)
+            set_property(TARGET generate_openxr_header PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
+            set_property(TARGET xr_global_generated_files PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
+            set_property(TARGET uninstall PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
+            disable_warnings(openxr_loader)
+        endif()
     endif()
 endif()
 
