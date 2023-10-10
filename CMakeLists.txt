@@ -26,8 +26,11 @@ FetchContent_Declare(AndroidExtensions
     GIT_TAG 1a47db416ec2aae3f51b28b94f73e8f54e412d0d)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
+FetchContent_Declare(base-n
+    GIT_REPOSITORY https://github.com/azawadzki/base-n.git
+    GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4)
 
-set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost)
+set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost base-n)
 
 if(IOS)
     FetchContent_MakeAvailable(ios-cmake)
