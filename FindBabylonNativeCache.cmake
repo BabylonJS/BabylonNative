@@ -75,9 +75,18 @@ if(EXISTS "${PREBUILT_LIBRARY_DIR}/openxr_loader.lib")
 
     target_include_directories(openxr_loader INTERFACE "${OPENXR_LOADER_DIR}/Include")
 
-    #target_link_libraries(glslang INTERFACE OGLCompiler GenericCodeGen OSDependent MachineIndependent)
-
     set(openxr_loader_CACHED_BUILD true GLOBAL)
     message("Using openxr_loader cache build")
 endif()
 
+
+if(EXISTS "${PREBUILT_LIBRARY_DIR}/gtest_main.lib")
+    import_prebuilt_targets(gtest_main gtest)
+
+    target_include_directories(gtest_main INTERFACE "${googletest_SOURCE_DIR}/googletest/include" "${googletest_SOURCE_DIR}/googletest/include")
+
+    target_link_libraries(gtest_main INTERFACE gtest)
+
+    set(gtest_CACHED_BUILD true GLOBAL)
+    message("Using GoogleTests cache build")
+endif()

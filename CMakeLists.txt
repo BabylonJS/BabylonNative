@@ -70,17 +70,6 @@ if(APPLE)
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED TRUE)
 endif()
 
-if(BABYLON_NATIVE_BUILD_APPS AND ((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID)))
-    if(WIN32)
-        # For Windows: Prevent overriding the parent project's compiler/linker settings
-        # Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
-        # see https://github.com/google/googletest/blob/main/googletest/README.md
-        # "Enabling this option will make gtest link the runtimes dynamically too, and match the project in which it is included."
-        set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
-    endif()
-    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} googletest)
-endif()
-
 # Setting Platform
 if(ANDROID)
     set(BABYLON_NATIVE_PLATFORM "Android")
@@ -120,18 +109,6 @@ elseif(WIN32)
     endif()
 endif()
 
-# Fetching content
-message(STATUS "Fetching dependencies for ${PROJECT_NAME} (${CONTENT_TO_FETCH})")
-FetchContent_MakeAvailable(${CONTENT_TO_FETCH})
-message(STATUS "Fetching dependencies for ${PROJECT_NAME} - done")
-
-if(BABYLON_NATIVE_BUILD_APPS AND ((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID)))
-    set_property(TARGET gmock PROPERTY FOLDER Dependencies/GoogleTest)
-    set_property(TARGET gmock_main PROPERTY FOLDER Dependencies/GoogleTest)
-    set_property(TARGET gtest PROPERTY FOLDER Dependencies/GoogleTest)
-    set_property(TARGET gtest_main PROPERTY FOLDER Dependencies/GoogleTest)
-endif()
-
 if(APPLE)
     set(BABYLON_NATIVE_PLATFORM_IMPL_EXT "mm")
     set_property(TARGET JsRuntime PROPERTY UNITY_BUILD false)
@@ -154,8 +131,35 @@ if(MSVC)
     add_compile_options(/Zc:__cplusplus)
 endif()
 
+if(BABYLON_NATIVE_BUILD_APPS AND ((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID)))
+    if(WIN32)
+        # For Windows: Prevent overriding the parent project's compiler/linker settings
+        # Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
+        # see https://github.com/google/googletest/blob/main/googletest/README.md
+        # "Enabling this option will make gtest link the runtimes dynamically too, and match the project in which it is included."
+        set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
+    endif()
+    # Populate instead of making available so projects are not defined (basically, add_subdirectory is not called on the directory)
+    # So, sources can be used for header includes and libraries come from the cache.
+    FetchContent_Populate(googletest)
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/")
 find_package(BabylonNativeCache)
+
+# Fetching content
+message(STATUS "Fetching dependencies for ${PROJECT_NAME} (${CONTENT_TO_FETCH})")
+FetchContent_MakeAvailable(${CONTENT_TO_FETCH})
+message(STATUS "Fetching dependencies for ${PROJECT_NAME} - done")
+
+if(NOT gtest_CACHED_BUILD AND BABYLON_NATIVE_BUILD_APPS AND ((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID)))
+    # no build cache found for gtest, so create the target projects
+    add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
+    set_property(TARGET gmock PROPERTY FOLDER Dependencies/GoogleTest)
+    set_property(TARGET gmock_main PROPERTY FOLDER Dependencies/GoogleTest)
+    set_property(TARGET gtest PROPERTY FOLDER Dependencies/GoogleTest)
+    set_property(TARGET gtest_main PROPERTY FOLDER Dependencies/GoogleTest)
+endif()
 
 add_subdirectory(Dependencies)
 add_subdirectory(Core)
