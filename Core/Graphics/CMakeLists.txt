@@ -1,3 +1,4 @@
+set(DeviceImplPlatform "Source/DeviceImpl_${BABYLON_NATIVE_PLATFORM}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 set(SOURCES
     "Include/Platform/${BABYLON_NATIVE_PLATFORM}/Babylon/Graphics/Platform.h"
     "Include/RendererType/${GRAPHICS_API}/Babylon/Graphics/RendererType.h"
@@ -14,7 +15,7 @@ set(SOURCES
     "Source/DeviceContext.cpp"
     "Source/DeviceImpl.cpp"
     "Source/DeviceImpl.h"
-    "Source/DeviceImpl_${BABYLON_NATIVE_PLATFORM}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
+    ${DeviceImplPlatform}
     "Source/DeviceImpl_${GRAPHICS_API}.cpp"
     "Source/SafeTimespanGuarantor.cpp"
     "Source/Texture.cpp")
@@ -49,6 +50,11 @@ target_link_libraries(Graphics
 
 target_compile_definitions(Graphics
     PRIVATE NOMINMAX)
+
+if(WIN32 AND NOT WINDOWS_STORE)
+    set_source_files_properties(
+        ${DeviceImplPlatform} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+endif()
 
 # TODO: remove this once the #define in GraphicsImpl is removed
 target_compile_definitions(Graphics

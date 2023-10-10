@@ -7,7 +7,6 @@ function(import_prebuilt_target target)
     set_property(TARGET ${target} PROPERTY IMPORTED_LOCATION "${PREBUILT_LIBRARY_DIR}/${target}.lib")
 endfunction()
 
-
 function(import_prebuilt_targets)
     foreach(target IN LISTS ARGN)
         import_prebuilt_target(${target})
@@ -38,7 +37,6 @@ if(EXISTS "${PREBUILT_LIBRARY_DIR}/bgfx.lib")
     message("Using bgfx cache build")
 endif()
 
-
 if(EXISTS "${PREBUILT_LIBRARY_DIR}/spirv-cross-core.lib")
     set(SPIRV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/SPIRV-Cross" CACHE STRING "Location of spirv." )
 
@@ -61,17 +59,10 @@ if(EXISTS "${PREBUILT_LIBRARY_DIR}/glslang.lib")
 
     import_prebuilt_targets(GenericCodeGen glslang OGLCompiler OSDependent MachineIndependent SPIRV glslang-default-resource-limits)
 
-    target_include_directories(GenericCodeGen INTERFACE "${GLSLANG_DIR}/glslang/Include")
     target_include_directories(glslang INTERFACE "${GLSLANG_DIR}/glslang/Include" "${GLSLANG_DIR}")
-    target_include_directories(OGLCompiler INTERFACE "${GLSLANG_DIR}/glslang/Include")
-    target_include_directories(OSDependent INTERFACE "${GLSLANG_DIR}/glslang/Include")
-    target_include_directories(MachineIndependent INTERFACE "${GLSLANG_DIR}/glslang/Include")
-    target_include_directories(SPIRV INTERFACE "${GLSLANG_DIR}/glslang/Include")
-    target_include_directories(glslang-default-resource-limits INTERFACE "${GLSLANG_DIR}/glslang/Include")
 
     target_link_libraries(glslang INTERFACE OGLCompiler GenericCodeGen OSDependent MachineIndependent)
 
     set(glslang_CACHED_BUILD true GLOBAL)
     message("Using glslang cross cache build")
-
 endif()
