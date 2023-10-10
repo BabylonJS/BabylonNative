@@ -68,5 +68,9 @@ target_compile_definitions(NativeEngine
 target_compile_definitions(NativeEngine
     PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
 
+if(BABYLON_NATIVE_ASYNC_SHADER_COMPILATION)
+    target_compile_definitions(NativeEngine PRIVATE BABYLON_ASYNC_SHADER_COMPILATION)
+endif()
+
 set_property(TARGET NativeEngine PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

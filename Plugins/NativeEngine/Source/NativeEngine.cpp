@@ -570,7 +570,9 @@ namespace Babylon
                 InstanceMethod("updateDynamicVertexBuffer", &NativeEngine::UpdateDynamicVertexBuffer),
 
                 InstanceMethod("createProgram", &NativeEngine::CreateProgram),
+#ifdef BABYLON_ASYNC_SHADER_COMPILATION
                 InstanceMethod("createProgramAsync", &NativeEngine::CreateProgramAsync),
+#endif
                 InstanceMethod("getUniforms", &NativeEngine::GetUniforms),
                 InstanceMethod("getAttributes", &NativeEngine::GetAttributes),
 
