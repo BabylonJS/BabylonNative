@@ -64,9 +64,9 @@ else()
         target_include_directories(xr PRIVATE "Source/OpenXR/Windows")
     endif()
 
-    target_include_directories(xr PRIVATE "${OpenXR-MixedReality_SOURCE_DIR}/openxr_preview/include")
-    target_include_directories(xr PRIVATE "${OpenXR-MixedReality_SOURCE_DIR}/shared")
-    target_include_directories(xr PRIVATE "Source/OpenXR")
+    target_include_directories(xr INTERFACE "${OpenXR-MixedReality_SOURCE_DIR}/openxr_preview/include")
+    target_include_directories(xr INTERFACE "${OpenXR-MixedReality_SOURCE_DIR}/shared")
+    target_include_directories(xr INTERFACE "Source/OpenXR")
 
     target_include_directories(xrInternal INTERFACE "${OpenXR-MixedReality_SOURCE_DIR}/openxr_preview/include")
     target_include_directories(xrInternal INTERFACE "${OpenXR-MixedReality_SOURCE_DIR}/shared")
