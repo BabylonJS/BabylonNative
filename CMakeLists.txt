@@ -26,8 +26,17 @@ FetchContent_Declare(AndroidExtensions
     GIT_TAG 1a47db416ec2aae3f51b28b94f73e8f54e412d0d)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
+FetchContent_Declare(base-n
+    GIT_REPOSITORY https://github.com/azawadzki/base-n.git
+    GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4)
+FetchContent_Declare(glslang
+    GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
+    GIT_TAG d7a79e06a000889d98f5d8cc82cdda0e15444690)
+FetchContent_Declare(SPIRV-Cross
+    GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
+    GIT_TAG 54997fb4bc3adeb47b9b9f7bb67f1c25eaca2204)
 
-set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost)
+set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost base-n glslang SPIRV-Cross)
 
 if(IOS)
     FetchContent_MakeAvailable(ios-cmake)
@@ -59,6 +68,32 @@ option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils.
 ## Polyfills
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
+
+## SPIRV-Cross
+set(SPIRV_CROSS_CLI OFF CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_C_API OFF CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "")
+set(SPIRV_CROSS_SKIP_INSTALL ON CACHE BOOL "")
+if(NOT GRAPHICS_API STREQUAL "Metal")
+    set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "")
+endif()
+if(NOT GRAPHICS_API STREQUAL "D3D11" AND NOT GRAPHICS_API STREQUAL "D3D12")
+    set(SPIRV_CROSS_ENABLE_HLSL OFF CACHE BOOL "")
+endif()
+
+## GLSlang
+set(BUILD_EXTERNAL OFF CACHE BOOL "")
+set(ENABLE_SPVREMAPPER OFF CACHE BOOL "")
+set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "")
+set(ENABLE_HLSL OFF CACHE BOOL "")
+set(ENABLE_OPT OFF CACHE BOOL "")
+set(ENABLE_CTEST OFF CACHE BOOL "")
+set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "")
+set(ENABLE_GLSLANG_WEBMIN ON CACHE BOOL "")
+set(ENABLE_GLSLANG_WEBMIN_DEVEL OFF CACHE BOOL "")
 # --------------------------------------------------
 
 if(APPLE)

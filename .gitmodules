@@ -1,12 +1,3 @@
-[submodule "base-n"]
-	path = Dependencies/base-n
-	url = https://github.com/azawadzki/base-n
-[submodule "glslang"]
-	path = Dependencies/glslang
-	url = https://github.com/BabylonJS/glslang
-[submodule "SPIRV-Cross"]
-	path = Dependencies/SPIRV-Cross
-	url = https://github.com/KhronosGroup/SPIRV-Cross
 [submodule "bgfx.cmake"]
 	path = Dependencies/bgfx.cmake
 	url = https://github.com/BabylonJS/bgfx.cmake
@@ -19,9 +10,4 @@
 [submodule "Dependencies/xr/Dependencies/OpenXR-MixedReality"]
 	path = Dependencies/xr/Dependencies/OpenXR-MixedReality
 	url = https://github.com/microsoft/OpenXR-MixedReality.git
-[submodule "Dependencies/asio"]
-	path = Dependencies/v8inspector/Dependencies/asio
-	url = https://github.com/chriskohlhoff/asio.git
-[submodule "Dependencies/llhttp"]
-	path = Dependencies/v8inspector/Dependencies/llhttp
-	url = https://github.com/nodejs/llhttp
+

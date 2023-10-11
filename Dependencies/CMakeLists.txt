@@ -1,7 +1,7 @@
 # -------------------------------- base-n --------------------------------
 # Dependencies: none
 add_library(base-n INTERFACE)
-target_include_directories(base-n INTERFACE "base-n/include")
+target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
 
 # -------------------------------- bgfx.cmake --------------------------------
 # Dependencies: none
@@ -64,16 +64,6 @@ endif()
 
 # -------------------------------- glslang --------------------------------
 # Dependencies: none
-set(BUILD_EXTERNAL OFF CACHE BOOL "")
-set(ENABLE_SPVREMAPPER OFF CACHE BOOL "")
-set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "")
-set(ENABLE_HLSL OFF CACHE BOOL "")
-set(ENABLE_OPT OFF CACHE BOOL "")
-set(ENABLE_CTEST OFF CACHE BOOL "")
-set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "")
-set(ENABLE_GLSLANG_WEBMIN ON CACHE BOOL "")
-set(ENABLE_GLSLANG_WEBMIN_DEVEL OFF CACHE BOOL "")
-add_subdirectory(glslang)
 set_property(TARGET GenericCodeGen PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET glslang PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET OGLCompiler PROPERTY FOLDER Dependencies/glslang)
@@ -91,20 +81,6 @@ disable_warnings(glslang-default-resource-limits)
 
 # -------------------------------- SPIRV-Cross --------------------------------
 # Dependencies: none
-set(SPIRV_CROSS_CLI OFF CACHE BOOL "")
-set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "")
-set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "")
-set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "")
-set(SPIRV_CROSS_ENABLE_C_API OFF CACHE BOOL "")
-set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "")
-set(SPIRV_CROSS_SKIP_INSTALL ON CACHE BOOL "")
-if(NOT GRAPHICS_API STREQUAL "Metal")
-    set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "")
-endif()
-if(NOT GRAPHICS_API STREQUAL "D3D11" AND NOT GRAPHICS_API STREQUAL "D3D12")
-    set(SPIRV_CROSS_ENABLE_HLSL OFF CACHE BOOL "")
-endif()
-add_subdirectory(SPIRV-Cross)
 set_property(TARGET spirv-cross-core PROPERTY FOLDER Dependencies/SPIRV-Cross)
 set_property(TARGET spirv-cross-glsl PROPERTY FOLDER Dependencies/SPIRV-Cross)
 disable_warnings(spirv-cross-core)
