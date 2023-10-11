@@ -44,6 +44,9 @@ FetchContent_Declare(OpenXR-SDK
 FetchContent_Declare(OpenXR-MixedReality
     GIT_REPOSITORY https://github.com/microsoft/OpenXR-MixedReality.git
     GIT_TAG 67424511525b96a36847f2a96d689d99e5879503)
+FetchContent_Declare(bgfx
+    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
+    GIT_TAG 3274a0b5755756d32cef18ed1859a342c1b90abd)
 
 set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost base-n glslang SPIRV-Cross)
 
@@ -103,6 +106,7 @@ set(ENABLE_CTEST OFF CACHE BOOL "")
 set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "")
 set(ENABLE_GLSLANG_WEBMIN ON CACHE BOOL "")
 set(ENABLE_GLSLANG_WEBMIN_DEVEL OFF CACHE BOOL "")
+
 # --------------------------------------------------
 
 if(APPLE)
@@ -145,6 +149,10 @@ if(NOT ANDROID AND NOT IOS)
     set(BUILD_WITH_SYSTEM_JSONCPP OFF CACHE BOOL "disable using system installed jsoncpp")
     set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} OpenXR-SDK OpenXR-MixedReality)
 endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE)
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} bgfx)
+endif
 
 # Setting Graphics API
 if(APPLE)

@@ -1,3 +1,0 @@
-[submodule "bgfx.cmake"]
-	path = Dependencies/bgfx.cmake
-	url = https://github.com/BabylonJS/bgfx.cmake
