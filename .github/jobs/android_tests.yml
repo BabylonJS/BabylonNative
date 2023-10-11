@@ -11,9 +11,6 @@ jobs:
       vmImage: ${{ parameters.vmImage }}
 
     steps:
-    - script: |
-        git submodule update --init --recursive
-      displayName: 'Checkout dependencies'
     - template: cmake.yml
       parameters:
         vmImage: ${{ parameters.vmImage }}

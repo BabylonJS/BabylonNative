@@ -9,11 +9,10 @@ for developers familiar with common native development practices.
 **Required Tools:** [git](https://git-scm.com/), [CMake](https://cmake.org/), [node.js](https://nodejs.org/en/)
 
 The first step for all development environments and targets is to clone the repo. Use a
-git-enabled terminal to follow the steps below. The `--recursive` flag is necessary as
-Babylon Native makes extensive use of submodules for dependencies.
+git-enabled terminal to follow the steps below.
 
 ```
-git clone --recursive https://github.com/BabylonJS/BabylonNative.git
+git clone https://github.com/BabylonJS/BabylonNative.git
 ```
 
 Babylon Native's build system is based on CMake, which customarily uses a separate

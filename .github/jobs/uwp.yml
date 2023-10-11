@@ -28,10 +28,6 @@ jobs:
 
     steps:
     - script: |
-        git submodule update --init --recursive
-      displayName: 'Checkout dependencies'
-
-    - script: |
         mkdir build${{ variables.solutionName }}
         cd build${{ variables.solutionName }}
         cmake .. -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 ${{ variables.jsEngineDefine }} -A ${{ parameters.platform }} -D CMAKE_UNITY_BUILD=${UNITY_BUILD}

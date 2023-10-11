@@ -35,10 +35,6 @@ jobs:
 
     steps:
       - script: |
-          git submodule update --init --recursive
-        displayName: 'Checkout dependencies'
-
-      - script: |
           mkdir build${{ variables.solutionName }}
           cd build${{ variables.solutionName }}
           # BGFX_CONFIG_MAX_FRAME_BUFFERS is set so enough Framebuffers are available before V8 starts disposing unused ones

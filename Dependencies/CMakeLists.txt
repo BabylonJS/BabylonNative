@@ -5,13 +5,6 @@ target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
 
 # -------------------------------- bgfx.cmake --------------------------------
 # Dependencies: none
-set(BGFX_BUILD_TOOLS OFF CACHE BOOL "")
-set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "")
-set(BGFX_INSTALL OFF CACHE BOOL "")
-set(BGFX_CUSTOM_TARGETS OFF CACHE BOOL "")
-set(BGFX_USE_DEBUG_SUFFIX OFF CACHE BOOL "")
-set(BGFX_OPENGL_USE_EGL ON CACHE BOOL "")
-add_subdirectory(bgfx.cmake)
 target_compile_definitions(bgfx PRIVATE $<$<CONFIG:Debug>:BGFX_CONFIG_DEBUG=1>)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MULTITHREADED=1)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_VERTEX_STREAMS=18)
