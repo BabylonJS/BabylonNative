@@ -135,6 +135,15 @@ if(TARGET spirv-cross-hlsl)
     disable_warnings(spirv-cross-hlsl)
 endif()
 
+# HACK: Re-enabled disabled warnings in SPIRV-Cross as they cause alerts in BinSkim
+foreach(target spirv-cross-core spirv-cross-glsl spirv-cross-msl spirv-cross-hlsl)
+    if(TARGET ${target})
+        get_target_property(compileOptions ${target} COMPILE_OPTIONS)
+        list(REMOVE_ITEM compileOptions /wd4267 /wd4996)
+        set_target_properties(${target} PROPERTIES COMPILE_OPTIONS "${compileOptions}")
+    endif()
+endforeach()
+
 # -------------------------------- xr --------------------------------
 # Dependencies: none
 # Currently supported on Windows via OpenXR, Android via ARCore, and iOS via ARKit.
