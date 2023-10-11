@@ -35,6 +35,15 @@ FetchContent_Declare(glslang
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
     GIT_TAG 54997fb4bc3adeb47b9b9f7bb67f1c25eaca2204)
+FetchContent_Declare(arcore-android-sdk
+    GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
+    GIT_TAG 98cb803de5482fb2b36effe8be3b5a0d3b726976)
+FetchContent_Declare(OpenXR-SDK
+    GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK.git
+    GIT_TAG 458984d7f59d1ae6dc1b597d94b02e4f7132eaba)
+FetchContent_Declare(OpenXR-MixedReality
+    GIT_REPOSITORY https://github.com/microsoft/OpenXR-MixedReality.git
+    GIT_TAG 67424511525b96a36847f2a96d689d99e5879503)
 
 set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost base-n glslang SPIRV-Cross)
 
@@ -116,7 +125,7 @@ endif()
 # Setting Platform
 if(ANDROID)
     set(BABYLON_NATIVE_PLATFORM "Android")
-    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} AndroidExtensions)
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} AndroidExtensions arcore-android-sdk)
 elseif(IOS)
     set(BABYLON_NATIVE_PLATFORM "iOS")
 elseif(APPLE)
@@ -129,6 +138,10 @@ elseif(UNIX)
     set(BABYLON_NATIVE_PLATFORM "Unix")
 else()
     message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
+endif()
+
+if(NOT ANDROID AND NOT IOS)
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} OpenXR-SDK OpenXR-MixedReality)
 endif()
 
 # Setting Graphics API
