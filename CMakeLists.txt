@@ -118,7 +118,7 @@ else()
     message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-if(NOT ANDROID AND NOT IOS)
+if(WIN32 AND NOT ANDROID AND NOT IOS)
     # Avoid picking up system installed jsoncpp in favor of source distributed with openxr_loader project
     set(BUILD_WITH_SYSTEM_JSONCPP OFF CACHE BOOL "disable using system installed jsoncpp")
     set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} OpenXR-SDK OpenXR-MixedReality)
