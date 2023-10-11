@@ -14,10 +14,6 @@ elseif (IOS)
         "Source/ARKit/Include/IXrContextARKit.h"
         "Source/ARKit/XR.mm")
 else()
-    # Avoid picking up system installed jsoncpp in favor of source distributed with openxr_loader project
-    set(BUILD_WITH_SYSTEM_JSONCPP OFF CACHE BOOL "disable using system installed jsoncpp")
-    add_subdirectory(Dependencies/OpenXR-SDK)
-
     set(SOURCES ${SOURCES}
         "Source/OpenXR/XR.cpp")
 
@@ -55,10 +51,10 @@ if (ANDROID)
     add_library(arcore SHARED IMPORTED)
     set_target_properties(arcore PROPERTIES IMPORTED_LOCATION
                           ${ARCORE_LIBPATH}/${ANDROID_ABI}/libarcore_sdk_c.so
-                          INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/arcore-android-sdk/libraries/include)
+                          INTERFACE_INCLUDE_DIRECTORIES ${arcore-android-sdk_SOURCE_DIR}/libraries/include)
 
     add_library(glm INTERFACE)
-    set_target_properties(glm PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/arcore-android-sdk/libraries/glm)
+    set_target_properties(glm PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${arcore-android-sdk_SOURCE_DIR}/libraries/glm)
 
     target_link_libraries(xr PRIVATE glm arcore AndroidExtensions)
 elseif (IOS)    
@@ -68,12 +64,12 @@ else()
         target_include_directories(xr PRIVATE "Source/OpenXR/Windows")
     endif()
 
-    target_include_directories(xr PRIVATE "Dependencies/OpenXR-MixedReality/openxr_preview/include")
-    target_include_directories(xr PRIVATE "Dependencies/OpenXR-MixedReality/shared")
+    target_include_directories(xr PRIVATE "${OpenXR-MixedReality_SOURCE_DIR}/openxr_preview/include")
+    target_include_directories(xr PRIVATE "${OpenXR-MixedReality_SOURCE_DIR}/shared")
     target_include_directories(xr PRIVATE "Source/OpenXR")
 
-    target_include_directories(xrInternal INTERFACE "Dependencies/OpenXR-MixedReality/openxr_preview/include")
-    target_include_directories(xrInternal INTERFACE "Dependencies/OpenXR-MixedReality/shared")
+    target_include_directories(xrInternal INTERFACE "${OpenXR-MixedReality_SOURCE_DIR}/openxr_preview/include")
+    target_include_directories(xrInternal INTERFACE "${OpenXR-MixedReality_SOURCE_DIR}/shared")
     target_include_directories(xrInternal INTERFACE "Source/OpenXR")
 
     target_link_libraries(xr PRIVATE openxr_loader)
