@@ -28,7 +28,7 @@ jobs:
     - script: |
         mkdir build
         cd build
-        cmake .. -G Ninja -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -D NAPI_JAVASCRIPT_ENGINE=${{ parameters.JSEngine }} -D CMAKE_BUILD_TYPE=RelWithDebInfo -D BGFX_CONFIG_DEBUG=ON -D CMAKE_UNITY_BUILD=${UNITY_BUILD}
+        cmake .. -G Ninja -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -D NAPI_JAVASCRIPT_ENGINE=${{ parameters.JSEngine }} -D CMAKE_BUILD_TYPE=RelWithDebInfo -D BGFX_CONFIG_DEBUG=ON -D CMAKE_UNITY_BUILD=$(UNITY_BUILD)
         ninja
       displayName: 'Build X11'
     
