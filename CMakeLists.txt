@@ -219,7 +219,7 @@ if(MSVC)
 endif()
 
 if(WIN32)
-    set_property(TARGET XMLHttpRequest PROPERTY UNITY_BUILD false)
+    # UrlLib does not support unity build on win32
     set_property(TARGET UrlLib PROPERTY UNITY_BUILD false)
 endif()
 
