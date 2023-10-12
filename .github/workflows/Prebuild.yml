@@ -18,9 +18,9 @@ jobs:
         with:
           submodules: 'recursive'
       - name: Make Solution
-        run: cmake -B build -A ${{ matrix.platform }} -DBGFX_CONFIG_DEBUG=ON .
+        run: cmake -B build -A ${{ matrix.platform }} -D BGFX_CONFIG_DEBUG=ON -D BABYLON_NATIVE_BUILD_APPS=false -D CMAKE_UNITY_BUILD=true . 
       - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.0.2
+        uses: microsoft/setup-msbuild@v1.3.1
       - name: Build
         run: msbuild build/BabylonNative.sln -p:Configuration="${{ matrix.config }}" -p:Platform=${{ matrix.platform }} 
       - name: Install
@@ -31,8 +31,17 @@ jobs:
           name: 'Assembled-${{ matrix.config }}${{ matrix.platform }}'
           path: build/install
 
+  build-scripts:
+    runs-on: windows-latest
+    steps:
+      - name: Upload Package scripts
+        uses: actions/upload-artifact@v2
+        with:
+          name: 'Assembled-Scripts'
+          path: Install/FindBabylonNative.cmake
+
   package:
-    needs: [build-windows]
+    needs: [build-windows, build-scripts]
     runs-on: windows-latest
     steps:
       - name: Download Debug x86 
@@ -80,8 +89,29 @@ jobs:
         with:
           name: 'Assembled-RelWithDebInfoARM64'
           path: Package/Windows/RelWithDebInfo/Arm64
+      - name: Download Scripts
+        uses: actions/download-artifact@v2
+        with:
+          name: 'Assembled-Scripts'
+          path: Package
+          
       - name: Upload Install Windows
         uses: actions/upload-artifact@v2
         with:
           name: 'Assembled-Windows'
           path: Package
+
+      #- name: Create Release
+      #  id: create_release
+      #  uses: actions/create-release@v1
+      #  env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      #  with:
+      #    tag_name: ${{ github.ref }}
+      #    release_name: Release ${{ github.ref }}
+      #    body: |
+      #      Changes in this Release
+      #      - First Change
+      #      - Second Change
+      #    draft: false
+      #    prerelease: false
