@@ -56,6 +56,7 @@ target_compile_definitions(Graphics
 
 set_property(TARGET Graphics PROPERTY FOLDER Core)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+set_property(TARGET Graphics PROPERTY UNITY_BUILD false)
 
 if(APPLE)
     # compile as objc++
