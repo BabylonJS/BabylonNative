@@ -220,6 +220,7 @@ endif()
 
 if(WIN32)
     set_property(TARGET XMLHttpRequest PROPERTY UNITY_BUILD false)
+    set_property(TARGET UrlLib PROPERTY UNITY_BUILD false)
 endif()
 
 add_subdirectory(Dependencies)
