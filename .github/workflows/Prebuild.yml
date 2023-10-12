@@ -118,8 +118,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ github.ref }}-${{ github.sha }}
+          release_name: Release ${{ github.ref }}${{ github.sha }}
           body: |
             Test release
           draft: false
@@ -130,6 +130,6 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ReleasePackage.tar.gz
           asset_name: ReleasePackage
-          tag: ${{ github.ref }}
+          tag: ${{ github.ref }}-${{ github.sha }}
           overwrite: true
           body: "This is my release text"
