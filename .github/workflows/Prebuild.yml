@@ -1,5 +1,10 @@
 name: prebuild
 
+on:
+  push:
+    branches:
+      - 'master'
+      
 jobs:
   build-windows:
     runs-on: windows-latest
