@@ -26,7 +26,7 @@ jobs:
       - name: Install
         run: cmake --build build --target INSTALL --config ${{ matrix.config }}
       - name: Upload Install Folder
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: 'Assembled-${{ matrix.config }}${{ matrix.platform }}'
           path: build/install
@@ -37,7 +37,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@master
       - name: Upload Package scripts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: 'Assembled-Scripts'
           path: Install/FindBabylonNative.cmake
@@ -47,58 +47,58 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Download Debug x86 
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: 'Assembled-Debugwin32'
           path: Package/Windows/Debug/x86
       - name: Download Debug x64 
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: 'Assembled-Debugx64'
           path: Package/Windows/Debug/x64
       - name: Download Debug ARM64 
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: 'Assembled-DebugARM64'
           path: Package/Windows/Debug/ARM64
       - name: Download Release x86 
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: 'Assembled-Releasewin32'
           path: Package/Windows/Release/x86
       - name: Download Release x64 
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: 'Assembled-Releasex64'
           path: Package/Windows/Release/x64
       - name: Download Release ARM64 
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: 'Assembled-ReleaseARM64'
           path: Package/Windows/Release/ARM64
       - name: Download RelWithDebInfo x86 
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: 'Assembled-RelWithDebInfowin32'
           path: Package/Windows/RelWithDebInfo/x86
       - name: Download RelWithDebInfo x64 
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: 'Assembled-RelWithDebInfox64'
           path: Package/Windows/RelWithDebInfo/x64
       - name: Download RelWithDebInfo ARM64 
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: 'Assembled-RelWithDebInfoARM64'
           path: Package/Windows/RelWithDebInfo/Arm64
       - name: Download Scripts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: 'Assembled-Scripts'
           path: Package
           
       - name: Upload Install Windows
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: 'Assembled-Windows'
           path: Package
@@ -108,9 +108,8 @@ jobs:
         id: compress
         with:
           command: c
-          cwd: ./Package
-          files: |
-            ./ReleasePackage
+          cwd: ./
+          files: Package
           outPath: ReleasePackage.tar.gz
 
       - name: Create Release
