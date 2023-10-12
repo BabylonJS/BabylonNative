@@ -151,6 +151,11 @@ if(MSVC)
     add_compile_options(/Zc:__cplusplus)
 endif()
 
+if(WIN32)
+    # UrlLib does not support unity build on win32
+    set_property(TARGET UrlLib PROPERTY UNITY_BUILD false)
+endif()
+
 add_subdirectory(Dependencies)
 add_subdirectory(Core)
 add_subdirectory(Plugins)
