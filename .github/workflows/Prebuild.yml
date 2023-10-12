@@ -34,6 +34,8 @@ jobs:
   build-scripts:
     runs-on: windows-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@master
       - name: Upload Package scripts
         uses: actions/upload-artifact@v2
         with:
