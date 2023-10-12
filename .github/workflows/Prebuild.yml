@@ -1,0 +1,82 @@
+name: Prebuild
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+  strategy:
+      matrix:
+        platform: [x86, x64, ARM64]
+        config: [Debug, Release, RelWithDebInfo]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@master
+      with:
+        submodules: 'recursive'
+      - name: Make Solution
+        run: cmake -B build -A ${{ matrix.platform }} -DBGFX_CONFIG_DEBUG=ON ..
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.0.2
+      - name: Build
+        run: msbuild build/BabylonNative.sln -p:Configuration="${{ matrix.config }}" -p:Platform=${{ matrix.platform }} 
+      - name: Install
+          cmake --build build --target INSTALL --config ${{ matrix.config }}
+      - name: Upload Install Folder
+        uses: actions/upload-artifact@v2
+        with:
+          name: 'Assembled-${{ matrix.config }}${{ matrix.platform }}'
+          path: build/install
+
+ package:
+    needs: [build-windows]
+    runs-on: windows-latest
+    steps:
+      - name: Download Debug x86 
+        uses: actions/download-artifact@v2
+        with:
+          name: 'Assembled-Debugx86'
+          path: Package/Windows/Debug/x86
+      - name: Download Debug x64 
+        uses: actions/download-artifact@v2
+        with:
+          name: 'Assembled-Debugx64'
+          path: Package/Windows/Debug/x64
+      - name: Download Debug ARM64 
+        uses: actions/download-artifact@v2
+        with:
+          name: 'Assembled-DebugARM64'
+          path: Package/Windows/Debug/ARM64
+      - name: Download Release x86 
+        uses: actions/download-artifact@v2
+        with:
+          name: 'Assembled-Releasex86'
+          path: Package/Windows/Release/x86
+      - name: Download Release x64 
+        uses: actions/download-artifact@v2
+        with:
+          name: 'Assembled-Releasex64'
+          path: Package/Windows/Release/x64
+      - name: Download Release ARM64 
+        uses: actions/download-artifact@v2
+        with:
+          name: 'Assembled-ReleaseARM64'
+          path: Package/Windows/Release/ARM64
+      - name: Download RelWithDebInfo x86 
+        uses: actions/download-artifact@v2
+        with:
+          name: 'Assembled-RelWithDebInfox86'
+          path: Package/Windows/RelWithDebInfo/x86
+      - name: Download RelWithDebInfo x64 
+        uses: actions/download-artifact@v2
+        with:
+          name: 'Assembled-RelWithDebInfox64'
+          path: Package/Windows/RelWithDebInfo/x64
+      - name: Download RelWithDebInfo ARM64 
+        uses: actions/download-artifact@v2
+        with:
+          name: 'Assembled-RelWithDebInfoARM64'
+          path: Package/Windows/RelWithDebInfo/ARM64
+      - name: Upload Install Windows
+        uses: actions/upload-artifact@v2
+        with:
+          name: 'Assembled-Windows'
+          path: Package
