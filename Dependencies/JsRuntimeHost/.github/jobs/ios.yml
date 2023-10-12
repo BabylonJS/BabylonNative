@@ -20,14 +20,14 @@ jobs:
       scheme: 'UnitTests'
       sdk: 'iphonesimulator'
       useXcpretty: false
-      configuration: Debug
+      configuration: RelWithDebInfo
     displayName: 'Build Xcode Project'
 
   - script: |
       echo Boot iOS Simulator
       xcrun simctl boot "iPhone 11"
       echo Install UnitTests app
-      xcrun simctl install booted "Build/iOS/Tests/UnitTests/Debug-iphonesimulator/UnitTests.app"
+      xcrun simctl install booted "Build/iOS/Tests/UnitTests/RelWithDebInfo-iphonesimulator/UnitTests.app"
       echo Launch UnitTests app
       xcrun simctl launch --console booted "com.jsruntimehost.unittests" 2> /tmp/exitCode
       (exit $(cat /tmp/exitCode))

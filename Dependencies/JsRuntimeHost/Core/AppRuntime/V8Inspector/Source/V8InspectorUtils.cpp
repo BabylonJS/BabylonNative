@@ -11,6 +11,18 @@
 #include <stdexcept>
 #include <codecvt>
 
+#ifdef _MSC_VER
+#define DISABLE_DEPRECATION_WARNINGS \
+    __pragma(warning(push))          \
+        __pragma(warning(disable : 4996))
+#define ENABLE_DEPRECATION_WARNINGS __pragma(warning(pop))
+#else
+#define DISABLE_DEPRECATION_WARNINGS \
+    _Pragma("GCC diagnostic push")   \
+        _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+#define ENABLE_DEPRECATION_WARNINGS _Pragma("GCC diagnostic pop")
+#endif
+
 namespace Babylon {
 namespace utils {
 
@@ -98,8 +110,10 @@ std::string utf16toUTF8(const uint16_t* utf16String, size_t utf16StringLen) noex
 
 std::basic_string<char16_t> Utf8ToUtf16(const char* utf8, size_t utf8Len)
 {
+DISABLE_DEPRECATION_WARNINGS
   std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter;
   return converter.from_bytes(utf8, utf8 + (utf8Len - 1));
+ENABLE_DEPRECATION_WARNINGS
 }
 
 std::string StringViewToUtf8(const v8_inspector::StringView& view)

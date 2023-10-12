@@ -2,7 +2,9 @@
 // Licensed under the MIT license.
 // This code is based on the old node inspector implementation. See NOTICE.md for Node.js' project license details
 #pragma once
-
+#ifdef WIN32
+#include <Winsock2.h>
+#endif
 #include <asio.hpp>
 
 namespace Babylon

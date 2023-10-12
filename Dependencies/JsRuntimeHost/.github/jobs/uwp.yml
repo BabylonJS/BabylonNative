@@ -21,6 +21,6 @@ jobs:
     inputs:
       solution: 'Build/UWP/JsRuntimeHost.sln'
       maximumCpuCount: true
-      configuration: 'Debug'
+      configuration: 'RelWithDebInfo'
     displayName: 'Build Solution'
 

@@ -49,6 +49,12 @@ jobs:
       platform: arm64
       jsEngine: JSI
 
+  - template: jobs/uwp.yml
+    parameters:
+      name: UWP_x64_V8
+      platform: x64
+      jsEngine: V8
+
   # Android
   - template: jobs/android.yml
     parameters:
