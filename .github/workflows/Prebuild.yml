@@ -1,4 +1,4 @@
-name: Prebuild
+name: prebuild
 on: push
 jobs:
   build-windows:
