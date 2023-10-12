@@ -19,7 +19,7 @@ jobs:
       - name: Build
         run: msbuild build/BabylonNative.sln -p:Configuration="${{ matrix.config }}" -p:Platform=${{ matrix.platform }} 
       - name: Install
-          cmake --build build --target INSTALL --config ${{ matrix.config }}
+        run: cmake --build build --target INSTALL --config ${{ matrix.config }}
       - name: Upload Install Folder
         uses: actions/upload-artifact@v2
         with:
