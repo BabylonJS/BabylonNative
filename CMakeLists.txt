@@ -19,8 +19,8 @@ FetchContent_Declare(arcana
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG f2757396e80bc4169f2ddb938ce25367a98ffdd0)
 FetchContent_Declare(JsRuntimeHost
-    GIT_REPOSITORY https://github.com/CedricGuillemet/JsRuntimeHost.git
-    GIT_TAG af6c521edb36c62cf546b0d89cba0a4f34837992)
+    GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
+    GIT_TAG d5f2813958b136a288e28f213a0d5a24a1164b9e)
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
     GIT_TAG 1a47db416ec2aae3f51b28b94f73e8f54e412d0d)
@@ -122,6 +122,7 @@ if(WIN32 AND NOT ANDROID AND NOT IOS)
     # Avoid picking up system installed jsoncpp in favor of source distributed with openxr_loader project
     set(BUILD_WITH_SYSTEM_JSONCPP OFF CACHE BOOL "disable using system installed jsoncpp")
     set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} OpenXR-SDK OpenXR-MixedReality)
+    set_property(TARGET XMLHttpRequest PROPERTY UNITY_BUILD false)
 endif()
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE)
