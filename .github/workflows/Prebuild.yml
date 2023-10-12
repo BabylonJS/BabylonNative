@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - 'master'
-      
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -18,7 +18,7 @@ jobs:
         with:
           submodules: 'recursive'
       - name: Make Solution
-        run: cmake -B build -A ${{ matrix.platform }} -DBGFX_CONFIG_DEBUG=ON ..
+        run: cmake -B build -A ${{ matrix.platform }} -DBGFX_CONFIG_DEBUG=ON .
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.0.2
       - name: Build
