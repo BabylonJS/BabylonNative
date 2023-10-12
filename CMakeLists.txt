@@ -122,7 +122,6 @@ if(WIN32 AND NOT ANDROID AND NOT IOS)
     # Avoid picking up system installed jsoncpp in favor of source distributed with openxr_loader project
     set(BUILD_WITH_SYSTEM_JSONCPP OFF CACHE BOOL "disable using system installed jsoncpp")
     set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} OpenXR-SDK OpenXR-MixedReality)
-    set_property(TARGET XMLHttpRequest PROPERTY UNITY_BUILD false)
 endif()
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE)
@@ -217,6 +216,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # https://gitlab.kitware.com/cmake/cmake/-/issues/18837
 if(MSVC)
     add_compile_options(/Zc:__cplusplus)
+endif()
+
+if(WIN32)
+    set_property(TARGET XMLHttpRequest PROPERTY UNITY_BUILD false)
 endif()
 
 add_subdirectory(Dependencies)
