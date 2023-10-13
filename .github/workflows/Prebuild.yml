@@ -41,8 +41,8 @@ jobs:
         with:
           name: 'Assembled-Scripts'
           path: |
-            Install/FindBabylonNative.cmake
-            Install/CMakeLists.txt
+            Install/FindPackage/FindBabylonNative.cmake
+            Install/FindPackage/CMakeLists.txt
 
   package:
     needs: [build-windows, build-scripts]
@@ -98,12 +98,6 @@ jobs:
         with:
           name: 'Assembled-Scripts'
           path: Package
-#          
-#      - name: Upload Install Windows
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: 'Assembled-Windows'
-#          path: Package
 
       - name: Compress Package
         uses: a7ul/tar-action@v1.1.3
