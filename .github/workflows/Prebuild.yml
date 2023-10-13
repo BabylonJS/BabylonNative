@@ -96,12 +96,12 @@ jobs:
         with:
           name: 'Assembled-Scripts'
           path: Package
-          
-      - name: Upload Install Windows
-        uses: actions/upload-artifact@v3
-        with:
-          name: 'Assembled-Windows'
-          path: Package
+#          
+#      - name: Upload Install Windows
+#        uses: actions/upload-artifact@v3
+#        with:
+#          name: 'Assembled-Windows'
+#          path: Package
 
       - name: Compress Package
         uses: a7ul/tar-action@v1.1.0
@@ -112,24 +112,34 @@ jobs:
           files: Package
           outPath: ReleasePackage.tar.gz
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      - name: Release
+        uses: softprops/action-gh-release@v1
         with:
+          files: ReleasePackage.tar.gz
           tag_name: V${{ github.sha }}
-          release_name: Release ${{ github.sha }}
-          body: |
-            Test release
+          name: V${{ github.sha }}
+          body: "Release for ${{ github.sha }}"
           draft: false
-          prerelease: false
-      - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ReleasePackage.tar.gz
-          asset_name: ReleasePackage
-          tag: V${{ github.sha }}
-          overwrite: true
-          body: "This is my release text"
+          prerelease: true
+
+#      - name: Create Release
+#        id: create_release
+#        uses: actions/create-release@v1.1.4
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        with:
+#          tag_name: V${{ github.sha }}
+#          release_name: Release ${{ github.sha }}
+#          body: |
+#            Release ${{ github.sha }}
+#          draft: false
+#          prerelease: false
+#      - name: Upload binaries to release
+#        uses: svenstaro/upload-release-action@v2
+#        with:
+#          repo_token: ${{ secrets.GITHUB_TOKEN }}
+#          file: ReleasePackage.tar.gz
+#          asset_name: ReleasePackage
+#          tag: V${{ github.sha }}
+#          overwrite: true
+#          body: "Release ${{ github.sha }}"
