@@ -131,6 +131,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@master
+      - uses: benjlevesque/short-sha@v2.2
+        id: short-sha
+        with:
+          length: 6
       - name: Make Solution
         run: |
           cd Install/TestPackage
