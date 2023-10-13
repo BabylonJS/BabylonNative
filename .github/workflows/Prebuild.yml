@@ -135,11 +135,10 @@ jobs:
         id: short-sha
         with:
           length: 6
-      - name: Make Solution
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.3.1
+      - name: Build Solution
         run: |
           cd Install/TestPackage
           cmake . -B build -D BABYLON_NATIVE_TAG=${{ env.SHA }}
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.3.1
-      - name: Build
-        run: cmake --build build --config RelWithDebInfo
+          cmake --build build --config RelWithDebInfo
