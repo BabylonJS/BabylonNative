@@ -112,15 +112,34 @@ jobs:
           files: Package
           outPath: ReleasePackage.tar.gz
 
+      - uses: benjlevesque/short-sha@v2.2
+        id: short-sha
+        with:
+          length: 6
+
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: ReleasePackage.tar.gz
-          tag_name: V${{ github.sha }}
-          name: V${{ github.sha }}
-          body: "Release for ${{ github.sha }}"
+          tag_name: V${{ env.SHA }}
+          name: V${{ env.SHA }}
+          body: "Release for ${{ env.SHA }}"
+          draft: false
+          prerelease: false
+        env:
+          SHA: ${{ steps.short-sha.outputs.sha }}
+
+      - name: Latest Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ReleasePackage.tar.gz
+          tag_name: V${{ env.SHA }}
+          name: Latest
+          body: "Latest Release for ${{ env.SHA }}"
           draft: false
           prerelease: true
+        env:
+          SHA: ${{ steps.short-sha.outputs.sha }}
 
 #      - name: Create Release
 #        id: create_release
