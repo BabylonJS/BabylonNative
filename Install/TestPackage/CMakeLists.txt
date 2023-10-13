@@ -2,6 +2,15 @@
 cmake_minimum_required(VERSION 3.18)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+# Set fetched URL contents to the time of extraction, not the timestamps in the archive.
+if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+endif()
+# An imported target missing its location property fails during generation.
+if(POLICY CMP0111)
+    cmake_policy(SET CMP0111 NEW)
+endif()
+
 include(FetchContent)
 
 project(TestPackage)
@@ -31,11 +40,11 @@ endif()
 
 # executable stub
 
-set(APPS_DIR "../../Apps")
+set(APPS_DIR "${CMAKE_CURRENT_LIST_DIR}/../../Apps")
 set(UNITTESTS_DIR "${APPS_DIR}/UnitTests")
 set(LOCAL_SCRIPTS "${UNITTESTS_DIR}/Scripts/tests.js")
 
-npm(install --silent WORKING_DIRECTORY ${APPS_DIR})
+#npm(install --silent WORKING_DIRECTORY ${APPS_DIR})
 
 set(NPM_SCRIPTS
     "${APPS_DIR}/node_modules/babylonjs/babylon.max.js"
@@ -64,24 +73,14 @@ target_include_directories(TestPackage PRIVATE "${BINARY_DIR}/install/include")
 target_link_directories(TestPackage PRIVATE ${INSTALL_LIBS_DIR} ${V8JSI_LIB_PATH_RELEASE})
 
 target_link_libraries(TestPackage
+    babylonnative_static
     AppRuntime
     arcana
-    astc-encoder
-    bgfx
-    bimg
-    bx
     Canvas
     Console
-    edtaa3
-    etc1
-    etc2
     ExternalTexture
-    GenericCodeGen
-    glslang
     Graphics
-    iqa
     JsRuntime
-    MachineIndependent
     napi
     NativeCamera
     NativeCapture
@@ -90,18 +89,7 @@ target_link_libraries(TestPackage
     NativeOptimizations
     NativeTracing
     NativeXr
-    nvtt
-    OGLCompiler
-    openxr_loader
-    OSDependent
-    pvrtc
     ScriptLoader
-    spirv-cross-core
-    spirv-cross-glsl
-    spirv-cross-hlsl
-    SPIRV
-    squish
-    tinyexr
     UrlLib
     Window
     XMLHttpRequest
@@ -110,7 +98,6 @@ target_link_libraries(TestPackage
     d3d12
     d3dcompiler
     Pathcch
-    glslang-default-resource-limits
     gtest_main
     ${ADDITIONAL_LIBRARIES}
     )

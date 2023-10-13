@@ -131,3 +131,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@master
+      - name: Make Solution
+        run: |
+          cd Install/TestPackage
+          cmake . -B build -D BABYLON_NATIVE_TAG=${{ env.SHA }}
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.3.1
+      - name: Build
+        run: cmake --build build --config RelWithDebInfo
