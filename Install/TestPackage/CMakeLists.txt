@@ -17,7 +17,7 @@ project(TestPackage)
 
 FetchContent_Declare(cmake-extensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG 366dc4a84fb20f4060d97e89948c343e74c51fc3)
+    GIT_TAG efe7101be5e04391b9e55f68a01d534f54d3026e)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
 FetchContent_Declare(babylonnative
@@ -44,7 +44,7 @@ set(APPS_DIR "${CMAKE_CURRENT_LIST_DIR}/../../Apps")
 set(UNITTESTS_DIR "${APPS_DIR}/UnitTests")
 set(LOCAL_SCRIPTS "${UNITTESTS_DIR}/Scripts/tests.js")
 
-#npm(install --silent WORKING_DIRECTORY ${APPS_DIR})
+npm(install --silent WORKING_DIRECTORY ${APPS_DIR})
 
 set(NPM_SCRIPTS
     "${APPS_DIR}/node_modules/babylonjs/babylon.max.js"
