@@ -73,26 +73,7 @@ target_include_directories(TestPackage PRIVATE "${BINARY_DIR}/install/include")
 target_link_directories(TestPackage PRIVATE ${INSTALL_LIBS_DIR} ${V8JSI_LIB_PATH_RELEASE})
 
 target_link_libraries(TestPackage
-    babylonnative_static
-    AppRuntime
-    arcana
-    Canvas
-    Console
-    ExternalTexture
-    Graphics
-    JsRuntime
-    napi
-    NativeCamera
-    NativeCapture
-    NativeEngine
-    NativeInput
-    NativeOptimizations
-    NativeTracing
-    NativeXr
-    ScriptLoader
-    UrlLib
-    Window
-    XMLHttpRequest
+    babylonnative
     chakrart
     d3d11
     d3d12
