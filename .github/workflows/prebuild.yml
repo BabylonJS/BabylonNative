@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2019
     strategy:
       matrix:
         platform: [win32, x64, ARM64]
@@ -32,7 +32,7 @@ jobs:
           path: build/install
 
   build-scripts:
-    runs-on: windows-latest
+    runs-on: windows-2019
     steps:
       - name: Checkout
         uses: actions/checkout@master
@@ -46,7 +46,7 @@ jobs:
 
   package:
     needs: [build-windows, build-scripts]
-    runs-on: windows-latest
+    runs-on: windows-2019
     steps:
       - name: Download Debug x86 
         uses: actions/download-artifact@v3
@@ -127,7 +127,7 @@ jobs:
 
   test-release:
     needs: [package]
-    runs-on: windows-latest
+    runs-on: windows-2019
     steps:
       - name: Checkout
         uses: actions/checkout@master
