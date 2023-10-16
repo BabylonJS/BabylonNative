@@ -60,17 +60,12 @@ endif()
 set_property(TARGET bgfx PROPERTY FOLDER Dependencies/bgfx)
 set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx)
 set_property(TARGET bx PROPERTY FOLDER Dependencies/bgfx)
-disable_warnings(astc-encoder)
 disable_warnings(edtaa3)
 disable_warnings(etc1)
 disable_warnings(etc2)
-disable_warnings(iqa)
 disable_warnings(nvtt)
 disable_warnings(pvrtc)
 disable_warnings(squish)
-disable_warnings(bgfx)
-disable_warnings(bimg)
-disable_warnings(bx)
 
 if(APPLE)
     set_property(TARGET bgfx PROPERTY UNITY_BUILD false)
@@ -94,10 +89,6 @@ set_property(TARGET MachineIndependent PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
 disable_warnings(GenericCodeGen)
 disable_warnings(glslang)
-disable_warnings(OGLCompiler)
-disable_warnings(OSDependent)
-disable_warnings(MachineIndependent)
-disable_warnings(SPIRV)
 
 # -------------------------------- ios-cmake --------------------------------
 # Nothing to do here.
@@ -125,14 +116,11 @@ endif()
 add_subdirectory(SPIRV-Cross)
 set_property(TARGET spirv-cross-core PROPERTY FOLDER Dependencies/SPIRV-Cross)
 set_property(TARGET spirv-cross-glsl PROPERTY FOLDER Dependencies/SPIRV-Cross)
-disable_warnings(spirv-cross-core)
-disable_warnings(spirv-cross-glsl)
 if(TARGET spirv-cross-msl)
     set_property(TARGET spirv-cross-msl PROPERTY FOLDER Dependencies/SPIRV-Cross)
 endif()
 if(TARGET spirv-cross-hlsl)
     set_property(TARGET spirv-cross-hlsl PROPERTY FOLDER Dependencies/SPIRV-Cross)
-    disable_warnings(spirv-cross-hlsl)
 endif()
 
 # HACK: Re-enabled disabled warnings in SPIRV-Cross as they cause alerts in BinSkim
@@ -143,6 +131,16 @@ foreach(target spirv-cross-core spirv-cross-glsl spirv-cross-msl spirv-cross-hls
         set_target_properties(${target} PROPERTIES COMPILE_OPTIONS "${compileOptions}")
     endif()
 endforeach()
+
+# HACK: Re-enabled disabled warnings in SPIRV-Cross as they cause alerts in BinSkim
+foreach(target astc-encoder bgfx bimg bx iqa MachineIndependent OGLCompiler OSDependent spirv-cross-core spirv-cross-glsl spirv-cross-hlsl SPIRV)
+    if(TARGET ${target})
+        get_target_property(compileOptions ${target} COMPILE_OPTIONS)
+        list(ADD_ITEM compileOptions /W3)
+        set_target_properties(${target} PROPERTIES COMPILE_OPTIONS "${compileOptions}")
+    endif()
+endforeach()
+
 
 # -------------------------------- xr --------------------------------
 # Dependencies: none
