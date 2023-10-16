@@ -48,7 +48,7 @@ import_prebuilt_targets(arcana)
 
 # static/no JS babylon native
 add_library(babylonnative_static INTERFACE IMPORTED GLOBAL)
-target_link_libraries(babylonnative_static INTERFACE openxr_loader glslang spirv-cross-hlsl bimg bx bgfx arcana)
+target_link_libraries(babylonnative_static INTERFACE openxr_loader glslang spirv-cross-hlsl bimg bx bgfx BN::arcana)
 target_include_directories(babylonnative_static INTERFACE "${PREBUILT_HEADERS_DIR}")
 
 # The rest with JS
