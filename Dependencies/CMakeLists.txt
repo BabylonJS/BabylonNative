@@ -143,7 +143,6 @@ else()
     target_link_libraries(spirv-cross-glsl INTERFACE spirv-cross-core)
 
     if(GRAPHICS_API STREQUAL "D3D11" OR GRAPHICS_API STREQUAL "D3D12")
-        import_prebuilt_target(spirv-cross-hlsl)
         target_link_libraries(spirv-cross-hlsl INTERFACE spirv-cross-core spirv-cross-glsl)
     endif()
 endif()

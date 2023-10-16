@@ -18,7 +18,7 @@ jobs:
         with:
           submodules: 'recursive'
       - name: Make Solution
-        run: cmake -B build -A ${{ matrix.platform }} -D BGFX_CONFIG_DEBUG=ON -D BABYLON_NATIVE_BUILD_APPS=false -D CMAKE_UNITY_BUILD=false . 
+        run: cmake -B build -A ${{ matrix.platform }} -D BGFX_CONFIG_DEBUG=ON -D BABYLON_NATIVE_BUILD_APPS=false -D CMAKE_UNITY_BUILD=true . 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@v1.3.1
       - name: Build

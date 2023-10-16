@@ -11,6 +11,7 @@ function(install_targets)
     foreach(target IN LISTS ARGN)
         get_target_property(target_type ${target} TYPE)
         if(NOT target_type STREQUAL "INTERFACE_LIBRARY")
+            #FIX: this does not install target with a postfix ( "d" ) in the library name
             install(FILES $<TARGET_FILE_DIR:${target}>/${target}.pdb DESTINATION lib OPTIONAL)
         endif()
     endforeach()
