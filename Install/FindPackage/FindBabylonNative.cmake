@@ -53,10 +53,12 @@ target_include_directories(babylonnative_static INTERFACE "${PREBUILT_HEADERS_DI
 
 # The rest with JS
 set(JS_LIBS AppRuntime Canvas Console ExternalTexture Graphics JsRuntime napi NativeCamera NativeCapture NativeEngine NativeInput NativeOptimizations NativeTracing NativeXr ScriptLoader UrlLib Window XMLHttpRequest)
+set(JS_LIBS_BN BN::AppRuntime BN::Canvas BN::Console BN::ExternalTexture BN::Graphics BN::JsRuntime BN::napi BN::NativeCamera BN::NativeCapture BN::NativeEngine BN::NativeInput BN::NativeOptimizations 
+    BN::NativeTracing BN::NativeXr BN::ScriptLoader BN::UrlLib BN::Window BN::XMLHttpRequest)
 import_prebuilt_targets(${JS_LIBS})
 
 add_library(babylonnative_js INTERFACE IMPORTED GLOBAL)
-target_link_libraries(babylonnative_js INTERFACE ${JS_LIBS})
+target_link_libraries(babylonnative_js INTERFACE ${JS_LIBS_BN})
 
 # Aggregate
 add_library(babylonnative_prebuilt INTERFACE IMPORTED GLOBAL)
