@@ -26,7 +26,10 @@ FetchContent_Declare(AndroidExtensions
     GIT_TAG 1a47db416ec2aae3f51b28b94f73e8f54e412d0d)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
+FetchContent_Declare(BabylonNativePrebuilt
+    URL "https://github.com/CedricGuillemet/BabylonNative/releases/download/V1a4268/ReleasePackage.tar.gz")
 
+#set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost BabylonNativePrebuilt)
 set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost)
 
 if(IOS)

@@ -73,7 +73,7 @@ target_include_directories(TestPackage PRIVATE "${BINARY_DIR}/install/include")
 target_link_directories(TestPackage PRIVATE ${INSTALL_LIBS_DIR} ${V8JSI_LIB_PATH_RELEASE})
 
 target_link_libraries(TestPackage
-    babylonnative
+    babylonnative_prebuilt
     chakrart
     d3d11
     d3d12
