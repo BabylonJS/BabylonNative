@@ -173,10 +173,13 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# __cplusplus value is not in sync with language version used. MVSC needs this flag to update it accordingly
-# https://gitlab.kitware.com/cmake/cmake/-/issues/18837
 if(MSVC)
+    # __cplusplus value is not in sync with language version used. MVSC needs this flag to update it accordingly
+    # https://gitlab.kitware.com/cmake/cmake/-/issues/18837
     add_compile_options(/Zc:__cplusplus)
+
+    # default to /W3
+    add_compile_options(/W3)
 endif()
 
 if(WIN32)
