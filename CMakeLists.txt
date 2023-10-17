@@ -29,8 +29,8 @@ FetchContent_Declare(googletest
 FetchContent_Declare(BabylonNativePrebuilt
     URL "https://github.com/CedricGuillemet/BabylonNative/releases/download/V4cc5a8/ReleasePackage.tar.gz")
 
-set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost BabylonNativePrebuilt)
-#set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost)
+#set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost BabylonNativePrebuilt)
+set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost)
 
 if(IOS)
     FetchContent_MakeAvailable(ios-cmake)
