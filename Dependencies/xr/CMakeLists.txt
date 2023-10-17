@@ -25,9 +25,6 @@ else()
             set_property(TARGET uninstall PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
             disable_warnings(openxr_loader)
         endif()
-    #else()
-    #    set(OPENXR_LOADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/OpenXR-SDK" CACHE STRING "Location of open xr loader." )
-    #    target_include_directories(openxr_loader INTERFACE "${OPENXR_LOADER_DIR}/Include")
     endif()
 
     set(SOURCES ${SOURCES}
