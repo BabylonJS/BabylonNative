@@ -98,18 +98,6 @@ function(warnings_as_errors target)
     endif()
 endfunction()
 
-function(disable_warnings target)
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-      target_compile_options(${target} PRIVATE /W0)
-      # Link warning 4264 : archiving object file compiled with /ZW into a static library; note that when authoring Windows Runtime types it is not recommended to link with a static library that contains Windows Runtime metadata unless /WHOLEARCHIVE is specified to include everything from the static library
-      set_property(TARGET ${target} PROPERTY STATIC_LIBRARY_OPTIONS /ignore:4264)
-    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-      target_compile_options(${target} PRIVATE -Wno-cpp)
-    else()
-      target_compile_options(${target} PRIVATE -Wno-everything)
-    endif()
-endfunction()
-
 # Sets CPU_ARCH and PLATFORM_ARCH variables in the calling scope.
 function(set_cpu_platform_arch)
     if(${CMAKE_CXX_COMPILER} MATCHES "x86/cl.exe$")

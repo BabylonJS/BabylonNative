@@ -3,15 +3,23 @@
 #include <algorithm>
 #include <cassert>
 #include <regex>
+
+#ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+
 #include "nanovg/nanovg.h"
 #include "nanovg_babylon.h"
+
+#ifdef __GNUC__
 #pragma GCC diagnostic pop
+#endif
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb/stb_truetype.h"
 #undef STB_TRUETYPE_IMPLEMENTATION
+
 #include "Canvas.h"
 #include "Context.h"
 #include "MeasureText.h"
@@ -97,7 +105,7 @@ namespace Babylon::Polyfills::Internal
     {
         for (auto& font : NativeCanvas::fontsInfos)
         {
-            m_fonts[font.first] = nvgCreateFontMem(m_nvg, font.first.c_str(), font.second.data(), font.second.size(), 0);
+            m_fonts[font.first] = nvgCreateFontMem(m_nvg, font.first.c_str(), font.second.data(), static_cast<int>(font.second.size()), 0);
         }
     }
 
@@ -426,11 +434,11 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Arc(const Napi::CallbackInfo& info)
     {
-        const double x = info[0].As<Napi::Number>().DoubleValue();
-        const double y = info[1].As<Napi::Number>().DoubleValue();
-        const double radius = info[2].As<Napi::Number>().DoubleValue();
-        const double startAngle = info[3].As<Napi::Number>().DoubleValue();
-        const double endAngle = info[4].As<Napi::Number>().DoubleValue();
+        const auto x = static_cast<float>(info[0].As<Napi::Number>().DoubleValue());
+        const auto y = static_cast<float>(info[1].As<Napi::Number>().DoubleValue());
+        const auto radius = static_cast<float>(info[2].As<Napi::Number>().DoubleValue());
+        const auto startAngle = static_cast<float>(info[3].As<Napi::Number>().DoubleValue());
+        const auto endAngle = static_cast<float>(info[4].As<Napi::Number>().DoubleValue());
         const NVGwinding winding = (info.Length() == 6 && info[5].As<Napi::Boolean>()) ? NVGwinding::NVG_CCW : NVGwinding::NVG_CW;
         nvgArc(m_nvg, x, y, radius, startAngle, endAngle, winding);
         SetDirty(info.This());
@@ -455,8 +463,8 @@ namespace Babylon::Polyfills::Internal
 
         if (info.Length() == 3)
         {
-            const auto dx = info[1].As<Napi::Number>().Int32Value();
-            const auto dy = info[2].As<Napi::Number>().Int32Value();
+            const auto dx = static_cast<float>(info[1].As<Napi::Number>().Int32Value());
+            const auto dy = static_cast<float>(info[2].As<Napi::Number>().Int32Value());
             const auto width = static_cast<float>(canvasImage->GetWidth());
             const auto height = static_cast<float>(canvasImage->GetHeight());
 
@@ -474,12 +482,12 @@ namespace Babylon::Polyfills::Internal
         } 
         else if (info.Length() == 5)
         {
-            const auto dx = info[1].As<Napi::Number>().Int32Value();
-            const auto dy = info[2].As<Napi::Number>().Int32Value();
-            const auto dWidth = info[3].As<Napi::Number>().Uint32Value();
-            const auto dHeight = info[4].As<Napi::Number>().Uint32Value();
+            const auto dx = static_cast<float>(info[1].As<Napi::Number>().Int32Value());
+            const auto dy = static_cast<float>(info[2].As<Napi::Number>().Int32Value());
+            const auto dWidth = static_cast<float>(info[3].As<Napi::Number>().Uint32Value());
+            const auto dHeight = static_cast<float>(info[4].As<Napi::Number>().Uint32Value());
 
-            NVGpaint imagePaint = nvgImagePattern(m_nvg, static_cast<float>(dx), static_cast<float>(dy), static_cast<float>(dWidth), static_cast<float>(dHeight), 0.f, imageIndex, 1.f);
+            NVGpaint imagePaint = nvgImagePattern(m_nvg, dx, dy, dWidth, dHeight, 0.f, imageIndex, 1.f);
 
             if (!m_isClipped)
             {
@@ -497,14 +505,14 @@ namespace Babylon::Polyfills::Internal
             const auto sy = info[2].As<Napi::Number>().Int32Value();
             const auto sWidth = info[3].As<Napi::Number>().Uint32Value();
             const auto sHeight = info[4].As<Napi::Number>().Uint32Value();
-            const auto dx = info[5].As<Napi::Number>().Int32Value();
-            const auto dy = info[6].As<Napi::Number>().Int32Value();
-            const auto dWidth = info[7].As<Napi::Number>().Uint32Value();
-            const auto dHeight = info[8].As<Napi::Number>().Uint32Value();
+            const auto dx = static_cast<float>(info[5].As<Napi::Number>().Int32Value());
+            const auto dy = static_cast<float>(info[6].As<Napi::Number>().Int32Value());
+            const auto dWidth = static_cast<float>(info[7].As<Napi::Number>().Uint32Value());
+            const auto dHeight = static_cast<float>(info[8].As<Napi::Number>().Uint32Value());
             const auto width = static_cast<float>(canvasImage->GetWidth());
             const auto height = static_cast<float>(canvasImage->GetHeight());
 
-            NVGpaint imagePaint = nvgImagePattern(m_nvg, static_cast<float>(dx), static_cast<float>(dy), static_cast<float>(dWidth), static_cast<float>(dHeight), 0.f, imageIndex, 1.f);
+            NVGpaint imagePaint = nvgImagePattern(m_nvg, dx, dy, dWidth, dHeight, 0.f, imageIndex, 1.f);
 
             if (!m_isClipped)
             {
@@ -614,7 +622,7 @@ namespace Babylon::Polyfills::Internal
         }
 
         // Set font size on the current context.
-        nvgFontSize(m_nvg, fontSize);
+        nvgFontSize(m_nvg, static_cast<float>(fontSize));
     }
 
     void Context::SetGlobalAlpha(const Napi::CallbackInfo& info, const Napi::Value& value)
