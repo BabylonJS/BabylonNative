@@ -162,7 +162,7 @@ if(DEFINED EXTENSIONS_DIRS)
     endforeach()
 endif()
 
-if(BABYLON_NATIVE_BUILD_APPS)
+if(BABYLON_NATIVE_BUILD_APPS OR ANDROID)
     add_subdirectory(Apps)
 endif()
 
