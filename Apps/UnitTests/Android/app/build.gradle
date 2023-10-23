@@ -29,7 +29,7 @@ android {
                     "-DANDROID_STL=c++_shared",
                     "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
                     "-DJSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR=ON",
-                    "-DBABYLON_NATIVE_BUILD_APPS=ON",
+                    "-DBABYLON_NATIVE_BUILD_APPS=ON"
                 )
             }
         }
