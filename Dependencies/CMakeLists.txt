@@ -5,6 +5,13 @@ target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
 
 # -------------------------------- bgfx.cmake --------------------------------
 # Dependencies: none
+set(BGFX_BUILD_TOOLS OFF CACHE BOOL "")
+set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "")
+set(BGFX_INSTALL OFF CACHE BOOL "")
+set(BGFX_CUSTOM_TARGETS OFF CACHE BOOL "")
+set(BGFX_USE_DEBUG_SUFFIX OFF CACHE BOOL "")
+set(BGFX_OPENGL_USE_EGL ON CACHE BOOL "")
+FetchContent_MakeAvailable(bgfx)
 target_compile_definitions(bgfx PRIVATE $<$<CONFIG:Debug>:BGFX_CONFIG_DEBUG=1>)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MULTITHREADED=1)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_VERTEX_STREAMS=18)
@@ -57,6 +64,16 @@ endif()
 
 # -------------------------------- glslang --------------------------------
 # Dependencies: none
+set(BUILD_EXTERNAL OFF CACHE BOOL "")
+set(ENABLE_SPVREMAPPER OFF CACHE BOOL "")
+set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "")
+set(ENABLE_HLSL OFF CACHE BOOL "")
+set(ENABLE_OPT OFF CACHE BOOL "")
+set(ENABLE_CTEST OFF CACHE BOOL "")
+set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "")
+set(ENABLE_GLSLANG_WEBMIN ON CACHE BOOL "")
+set(ENABLE_GLSLANG_WEBMIN_DEVEL OFF CACHE BOOL "")
+FetchContent_MakeAvailable(glslang)
 set_property(TARGET GenericCodeGen PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET glslang PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET OGLCompiler PROPERTY FOLDER Dependencies/glslang)
@@ -74,6 +91,14 @@ disable_warnings(glslang-default-resource-limits)
 
 # -------------------------------- SPIRV-Cross --------------------------------
 # Dependencies: none
+set(SPIRV_CROSS_CLI OFF CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_C_API OFF CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "")
+set(SPIRV_CROSS_SKIP_INSTALL ON CACHE BOOL "")
+FetchContent_MakeAvailable(SPIRV-Cross)
 set_property(TARGET spirv-cross-core PROPERTY FOLDER Dependencies/SPIRV-Cross)
 set_property(TARGET spirv-cross-glsl PROPERTY FOLDER Dependencies/SPIRV-Cross)
 disable_warnings(spirv-cross-core)
