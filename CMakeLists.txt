@@ -20,14 +20,35 @@ FetchContent_Declare(arcana
     GIT_TAG f2757396e80bc4169f2ddb938ce25367a98ffdd0)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 3f7714335799554b54c64f035db8dc26d3dcf517)
+    GIT_TAG d5f2813958b136a288e28f213a0d5a24a1164b9e)
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
     GIT_TAG 1a47db416ec2aae3f51b28b94f73e8f54e412d0d)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
+FetchContent_Declare(base-n
+    GIT_REPOSITORY https://github.com/azawadzki/base-n.git
+    GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4)
+FetchContent_Declare(glslang
+    GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
+    GIT_TAG d7a79e06a000889d98f5d8cc82cdda0e15444690)
+FetchContent_Declare(SPIRV-Cross
+    GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
+    GIT_TAG 54997fb4bc3adeb47b9b9f7bb67f1c25eaca2204)
+FetchContent_Declare(arcore-android-sdk
+    GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
+    GIT_TAG 98cb803de5482fb2b36effe8be3b5a0d3b726976)
+FetchContent_Declare(OpenXR-SDK
+    GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK.git
+    GIT_TAG 458984d7f59d1ae6dc1b597d94b02e4f7132eaba)
+FetchContent_Declare(OpenXR-MixedReality
+    GIT_REPOSITORY https://github.com/microsoft/OpenXR-MixedReality.git
+    GIT_TAG 67424511525b96a36847f2a96d689d99e5879503)
+FetchContent_Declare(bgfx
+    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
+    GIT_TAG 3274a0b5755756d32cef18ed1859a342c1b90abd)
 
-set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost)
+set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost base-n)
 
 if(IOS)
     FetchContent_MakeAvailable(ios-cmake)
@@ -59,6 +80,7 @@ option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils.
 ## Polyfills
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
+
 # --------------------------------------------------
 
 if(APPLE)
@@ -81,7 +103,7 @@ endif()
 # Setting Platform
 if(ANDROID)
     set(BABYLON_NATIVE_PLATFORM "Android")
-    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} AndroidExtensions)
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} AndroidExtensions arcore-android-sdk)
 elseif(IOS)
     set(BABYLON_NATIVE_PLATFORM "iOS")
 elseif(APPLE)
@@ -94,6 +116,12 @@ elseif(UNIX)
     set(BABYLON_NATIVE_PLATFORM "Unix")
 else()
     message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
+endif()
+
+if(WIN32 AND NOT ANDROID AND NOT IOS)
+    # Avoid picking up system installed jsoncpp in favor of source distributed with openxr_loader project
+    set(BUILD_WITH_SYSTEM_JSONCPP OFF BOOL "disable using system installed jsoncpp")
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} OpenXR-SDK OpenXR-MixedReality)
 endif()
 
 # Setting Graphics API
@@ -149,6 +177,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # https://gitlab.kitware.com/cmake/cmake/-/issues/18837
 if(MSVC)
     add_compile_options(/Zc:__cplusplus)
+endif()
+
+if(WIN32)
+    # UrlLib does not support unity build on win32
+    set_property(TARGET UrlLib PROPERTY UNITY_BUILD false)
 endif()
 
 add_subdirectory(Dependencies)
