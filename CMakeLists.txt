@@ -145,13 +145,6 @@ elseif(WIN32)
     endif()
 endif()
 
-if(NOT GRAPHICS_API STREQUAL "Metal")
-    set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "")
-endif()
-if(NOT GRAPHICS_API STREQUAL "D3D11" AND NOT GRAPHICS_API STREQUAL "D3D12")
-    set(SPIRV_CROSS_ENABLE_HLSL OFF CACHE BOOL "")
-endif()
-
 # Fetching content
 message(STATUS "Fetching dependencies for ${PROJECT_NAME} (${CONTENT_TO_FETCH})")
 FetchContent_MakeAvailable(${CONTENT_TO_FETCH})
