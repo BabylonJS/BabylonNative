@@ -1,3 +1,0 @@
-[submodule "Modules/@babylonjs/react-native-iosandroid/submodules/BabylonNative"]
-	path = Modules/@babylonjs/react-native-iosandroid/submodules/BabylonNative
-	url = https://github.com/BabylonJS/BabylonNative.git
