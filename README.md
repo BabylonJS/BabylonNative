@@ -40,7 +40,8 @@ Check out the [home page](https://aka.ms/Bnative) for a project overview.
 
 Babylon Native is currently available as a public preview in source form only. While many
 features are supported and functional, there are still features that are under active
-development. Please note that this project is not at the point where updates are fully backward compatible yet, and thus the contract for consuming Babylon Native can still
+development. Please note that this project is not at the point where updates are fully
+backward compatible yet, and thus the contract for consuming Babylon Native can still
 and probably will change in the future.
 
 ### What is Supported from Babylon.js
@@ -114,7 +115,8 @@ the scope of what this project will support.
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests.
+Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code of conduct, and
+the process for submitting pull requests.
 
 ## Reporting Security Issues
 
