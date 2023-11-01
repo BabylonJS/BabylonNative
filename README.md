@@ -115,7 +115,7 @@ the scope of what this project will support.
 
 ## Contributing
 
-Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code of conduct, and
+Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for details on our code of conduct, and 
 the process for submitting pull requests.
 
 ## Reporting Security Issues
