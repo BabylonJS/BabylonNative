@@ -12,6 +12,7 @@
 #import <Babylon/Plugins/NativeOptimizations.h>
 #import <Babylon/ScriptLoader.h>
 #import <MetalKit/MetalKit.h>
+#include <Babylon/Plugins/TestUtils.h>
 
 #import <math.h>
 #import <optional>
@@ -100,15 +101,10 @@ Babylon::Plugins::NativeInput* nativeInput{};
     [[self view] addSubview:engineView];
     engineView.delegate = engineView;
 
-    NSScreen *mainScreen = [NSScreen mainScreen];
-    CGFloat screenScale = mainScreen.backingScaleFactor;
-    size_t width = [self view].frame.size.width * screenScale;
-    size_t height = [self view].frame.size.height * screenScale;
-
     Babylon::Graphics::Configuration graphicsConfig{};
     graphicsConfig.Window = engineView;
-    graphicsConfig.Width = width;
-    graphicsConfig.Height = height;
+    graphicsConfig.Width = static_cast<size_t>(600);
+    graphicsConfig.Height = static_cast<size_t>(400);
     graphicsConfig.MSAASamples = 4;
 
     device.emplace(graphicsConfig);
@@ -118,7 +114,7 @@ Babylon::Plugins::NativeInput* nativeInput{};
 
     runtime.emplace();
 
-    runtime->Dispatch([](Napi::Env env)
+    runtime->Dispatch([engineView](Napi::Env env)
     {
         device->AddToJavaScript(env);
 
@@ -139,6 +135,7 @@ Babylon::Plugins::NativeInput* nativeInput{};
         Babylon::Plugins::NativeOptimizations::Initialize(env);
 
         nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
+        Babylon::Plugins::TestUtils::Initialize(env, engineView);
     });
 
     Babylon::ScriptLoader loader{ *runtime };
