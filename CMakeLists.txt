@@ -14,23 +14,44 @@ FetchContent_Declare(cmake-extensions
     GIT_TAG efe7101be5e04391b9e55f68a01d534f54d3026e)
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
-    GIT_TAG 04d91f6675dabb3c97df346a32f6184b0a7ef845)
+    GIT_TAG 4.4.1)
 FetchContent_Declare(arcana
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG f2757396e80bc4169f2ddb938ce25367a98ffdd0)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 3f7714335799554b54c64f035db8dc26d3dcf517)
+    GIT_TAG d5f2813958b136a288e28f213a0d5a24a1164b9e)
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
     GIT_TAG 1a47db416ec2aae3f51b28b94f73e8f54e412d0d)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
+FetchContent_Declare(base-n
+    GIT_REPOSITORY https://github.com/azawadzki/base-n.git
+    GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4)
+FetchContent_Declare(glslang
+    GIT_REPOSITORY https://github.com/KhronosGroup/glslang.git
+    GIT_TAG 12.3.1)
+FetchContent_Declare(SPIRV-Cross
+    GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
+    GIT_TAG 54997fb4bc3adeb47b9b9f7bb67f1c25eaca2204)
+FetchContent_Declare(arcore-android-sdk
+    GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
+    GIT_TAG 98cb803de5482fb2b36effe8be3b5a0d3b726976)
+FetchContent_Declare(OpenXR-SDK
+    GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK.git
+    GIT_TAG 458984d7f59d1ae6dc1b597d94b02e4f7132eaba)
+FetchContent_Declare(OpenXR-MixedReality
+    GIT_REPOSITORY https://github.com/microsoft/OpenXR-MixedReality.git
+    GIT_TAG 67424511525b96a36847f2a96d689d99e5879503)
+FetchContent_Declare(bgfx
+    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
+    GIT_TAG 3274a0b5755756d32cef18ed1859a342c1b90abd)
+
 FetchContent_Declare(BabylonNativePrebuilt
     URL "https://github.com/CedricGuillemet/BabylonNative/releases/download/V4cc5a8/ReleasePackage.tar.gz")
-
-#set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost BabylonNativePrebuilt)
-set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost)
+    
+set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost base-n)
 
 if(IOS)
     FetchContent_MakeAvailable(ios-cmake)
@@ -62,6 +83,7 @@ option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils.
 ## Polyfills
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
+
 # --------------------------------------------------
 
 if(APPLE)
@@ -84,7 +106,7 @@ endif()
 # Setting Platform
 if(ANDROID)
     set(BABYLON_NATIVE_PLATFORM "Android")
-    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} AndroidExtensions)
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} AndroidExtensions arcore-android-sdk)
 elseif(IOS)
     set(BABYLON_NATIVE_PLATFORM "iOS")
 elseif(APPLE)
@@ -97,6 +119,12 @@ elseif(UNIX)
     set(BABYLON_NATIVE_PLATFORM "Unix")
 else()
     message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
+endif()
+
+if(WIN32 AND NOT ANDROID AND NOT IOS)
+    # Avoid picking up system installed jsoncpp in favor of source distributed with openxr_loader project
+    set(BUILD_WITH_SYSTEM_JSONCPP OFF BOOL "disable using system installed jsoncpp")
+    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} OpenXR-SDK OpenXR-MixedReality)
 endif()
 
 # Setting Graphics API
@@ -148,10 +176,18 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# __cplusplus value is not in sync with language version used. MVSC needs this flag to update it accordingly
-# https://gitlab.kitware.com/cmake/cmake/-/issues/18837
 if(MSVC)
+    # __cplusplus value is not in sync with language version used. MVSC needs this flag to update it accordingly
+    # https://gitlab.kitware.com/cmake/cmake/-/issues/18837
     add_compile_options(/Zc:__cplusplus)
+
+    # default to /W3
+    add_compile_options(/W3)
+endif()
+
+if(WIN32)
+    # UrlLib does not support unity build on win32
+    set_property(TARGET UrlLib PROPERTY UNITY_BUILD false)
 endif()
 
 add_subdirectory(Dependencies)

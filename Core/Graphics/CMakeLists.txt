@@ -55,6 +55,8 @@ target_compile_definitions(Graphics
     PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
 
 set_property(TARGET Graphics PROPERTY FOLDER Core)
+set_property(TARGET Graphics PROPERTY UNITY_BUILD false)
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 set_property(TARGET Graphics PROPERTY UNITY_BUILD false)
 
