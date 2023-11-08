@@ -81,3 +81,9 @@ target_link_libraries_ns(babylonnative_js "BN" ${JS_LIBS})
 # Aggregate
 add_library(babylonnative_prebuilt INTERFACE IMPORTED GLOBAL)
 target_link_libraries(babylonnative_prebuilt INTERFACE babylonnative_static babylonnative_js)
+
+if (BGFX_CONFIG_DEBUG)
+    target_compile_definitions( bgfx INTERFACE "BX_CONFIG_DEBUG=1" )
+else()
+    target_compile_definitions( bgfx INTERFACE "BX_CONFIG_DEBUG=0" )
+endif()

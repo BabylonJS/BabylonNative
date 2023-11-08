@@ -48,9 +48,6 @@ FetchContent_Declare(bgfx
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
     GIT_TAG 3274a0b5755756d32cef18ed1859a342c1b90abd)
 
-FetchContent_Declare(BabylonNativePrebuilt
-    URL "https://github.com/CedricGuillemet/BabylonNative/releases/download/V4cc5a8/ReleasePackage.tar.gz")
-
 set(CONTENT_TO_FETCH cmake-extensions arcana JsRuntimeHost base-n)
 
 if(IOS)
@@ -121,7 +118,7 @@ else()
     message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-if(WIN32 AND NOT ANDROID AND NOT IOS)
+if(WIN32 AND NOT ANDROID AND NOT IOS AND NOT TARGET openxr_loader)
     # Avoid picking up system installed jsoncpp in favor of source distributed with openxr_loader project
     set(BUILD_WITH_SYSTEM_JSONCPP OFF BOOL "disable using system installed jsoncpp")
     set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} OpenXR-SDK OpenXR-MixedReality)
