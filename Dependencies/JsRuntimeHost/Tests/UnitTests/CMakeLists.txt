@@ -1,7 +1,3 @@
-if(WINDOWS_STORE)
-    message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
-endif()
-
 set(SCRIPTS
     "Scripts/symlink_target.js"
     "Scripts/tests.js")
@@ -34,6 +30,23 @@ if(APPLE)
         set(SOURCES ${SOURCES}
             macOS/App.mm)
     endif()
+elseif(WINDOWS_STORE)
+    set(APPX_FILES "UWP/Package.appxmanifest" "UWP/TemporaryKey.pfx")
+    set_property(SOURCE ${APPX_FILES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set(APPX_ASSETS
+        "UWP/Assets/LockScreenLogo.scale-200.png"
+        "UWP/Assets/SplashScreen.scale-200.png"
+        "UWP/Assets/Square44x44Logo.scale-200.png"
+        "UWP/Assets/Square44x44Logo.targetsize-24_altform-unplated.png"
+        "UWP/Assets/Square150x150Logo.scale-200.png"
+        "UWP/Assets/StoreLogo.png"
+        "UWP/Assets/Wide310x150Logo.scale-200.png")
+    set_property(SOURCE ${APPX_ASSETS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
+    set_property(SOURCE ${APPX_ASSETS} PROPERTY VS_DEPLOYMENT_LOCATION "Assets")
+    set(SOURCES ${SOURCES}
+        ${APPX_FILES}
+        ${APPX_ASSETS}
+        UWP/App.cpp)
 elseif(WIN32)
     set(SOURCES ${SOURCES}
         Win32/App.cpp)
@@ -44,6 +57,11 @@ endif()
 
 add_executable(UnitTests ${SOURCES} ${SCRIPTS} ${EXTERNAL_SCRIPTS})
 target_compile_definitions(UnitTests PRIVATE JSRUNTIMEHOST_PLATFORM="${JSRUNTIMEHOST_PLATFORM}")
+
+if(WINDOWS_STORE)
+    target_compile_options(UnitTests PRIVATE /ZW)
+    target_compile_options(UnitTests PRIVATE /await)
+endif()
 
 target_link_libraries(UnitTests
     PRIVATE AppRuntime
