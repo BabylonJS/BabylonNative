@@ -1,34 +1,45 @@
 cmake_minimum_required(VERSION 3.18)
 
+include(FetchContent)
+
+# --------------------------------------------------
+# Declarations
+# --------------------------------------------------
+FetchContent_Declare(arcana.cpp
+    GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
+    GIT_TAG        f2757396e80bc4169f2ddb938ce25367a98ffdd0)
+FetchContent_Declare(AndroidExtensions
+    GIT_REPOSITORY https://github.com/bghgary/AndroidExtensions.git
+    GIT_TAG        97ebfb5046ed4e553e306a75e5fafc9c6b72cb39)
+FetchContent_Declare(CMakeExtensions
+    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
+    GIT_TAG 36383052398767cbb3a7daa2bc96e62163bd549a)
+FetchContent_Declare(ios-cmake
+    GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
+    GIT_TAG 4.4.1)
+# --------------------------------------------------
+
+FetchContent_MakeAvailable(CMakeExtensions)
+
+if(IOS)
+    FetchContent_MakeAvailable_With_Message(ios-cmake)
+    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+    set(PLATFORM "OS64COMBINED" CACHE STRING "")
+    set(DEPLOYMENT_TARGET "13" CACHE STRING "")
+endif()
+
+project(UrlLib)
+
+FetchContent_MakeAvailable_With_Message(arcana.cpp)
+
+if(ANDROID)
+    FetchContent_MakeAvailable_With_Message(AndroidExtensions)
+endif()
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-project(UrlLib)
-
-include(FetchContent)
-
-# Modules declaration
-FetchContent_Declare(arcana
-    GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG        f2757396e80bc4169f2ddb938ce25367a98ffdd0)
-FetchContent_Declare(AndroidExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG        1a47db416ec2aae3f51b28b94f73e8f54e412d0d)
-
-if(NOT TARGET arcana)
-    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} arcana)
-endif()
-
-if(ANDROID AND NOT TARGET AndroidExtensions)
-    set(CONTENT_TO_FETCH ${CONTENT_TO_FETCH} AndroidExtensions)
-endif()
-
-# Fetching content
-message(STATUS "Fetching dependencies for ${PROJECT_NAME} (${CONTENT_TO_FETCH})")
-FetchContent_MakeAvailable(${CONTENT_TO_FETCH})
-message(STATUS "Fetching dependencies for ${PROJECT_NAME} - done")
 
 if(ANDROID)
     set(ADDITIONAL_SOURCES
