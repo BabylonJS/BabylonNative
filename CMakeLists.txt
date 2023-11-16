@@ -30,8 +30,8 @@ FetchContent_Declare(base-n
     GIT_REPOSITORY https://github.com/azawadzki/base-n.git
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4)
 FetchContent_Declare(glslang
-    GIT_REPOSITORY https://github.com/KhronosGroup/glslang.git
-    GIT_TAG 12.3.1)
+    GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
+    GIT_TAG 81f27a4399562459191e0506c0c1c353d99ba6e4)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
     GIT_TAG 54997fb4bc3adeb47b9b9f7bb67f1c25eaca2204)
