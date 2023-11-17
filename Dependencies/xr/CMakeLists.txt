@@ -1,5 +1,39 @@
 cmake_minimum_required(VERSION 3.12)
 
+include(FetchContent)
+
+# --------------------------------------------------
+# Declarations
+# --------------------------------------------------
+FetchContent_Declare(CMakeExtensions
+    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
+    GIT_TAG 36383052398767cbb3a7daa2bc96e62163bd549a)
+FetchContent_Declare(ios-cmake
+    GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
+    GIT_TAG 4.4.1)
+# --------------------------------------------------
+
+FetchContent_MakeAvailable(CMakeExtensions)
+
+if(IOS)
+    FetchContent_MakeAvailable_With_Message(ios-cmake)
+    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+    set(PLATFORM "OS64COMBINED" CACHE STRING "")
+    set(DEPLOYMENT_TARGET "13" CACHE STRING "")
+endif()
+
+project(xr)
+
+# Avoid picking up system installed jsoncpp in favor of source distributed with openxr_loader project
+set(BUILD_WITH_SYSTEM_JSONCPP OFF BOOL "disable using system installed jsoncpp")
+FetchContent_MakeAvailable_With_Message(OpenXR-SDK OpenXR-MixedReality)
+if(WIN32)
+    set_property(TARGET openxr_loader PROPERTY FOLDER Dependencies/xr/OpenXR)
+    set_property(TARGET generate_openxr_header PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
+    set_property(TARGET xr_global_generated_files PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
+    set_property(TARGET uninstall PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
+endif()
+
 set(DYNAMIC_LOADER OFF CACHE BOOL "Build the loader as a .dll library")
 
 set(SOURCES "Include/XR.h"

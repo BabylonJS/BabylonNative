@@ -1,20 +1,27 @@
-# cmake 3.18+ to have the ARCHIVE_EXTRACT sub-command for files
 cmake_minimum_required(VERSION 3.18)
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 include(FetchContent)
 
-project(TestInstall)
-
-FetchContent_Declare(cmake-extensions
+# --------------------------------------------------
+# Declarations
+# --------------------------------------------------
+FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG 366dc4a84fb20f4060d97e89948c343e74c51fc3)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
-FetchContent_MakeAvailable(cmake-extensions googletest)
+# --------------------------------------------------
+
+FetchContent_MakeAvailable(CMakeExtensions)
+
+project(TestInstall)
+
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+FetchContent_MakeAvailable_With_Message(googletest)
 
 # __cplusplus value is not in sync with language version used. MVSC needs this flag to update it accordingly
 # https://gitlab.kitware.com/cmake/cmake/-/issues/18837
