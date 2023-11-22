@@ -1224,7 +1224,7 @@ namespace Babylon
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, dataSpan, generateMips, invertY, srgb, texture, cancellationSource{m_cancellationSource}]() {
+            [dataSpan, generateMips, invertY, srgb, texture, cancellationSource{m_cancellationSource}]() {
                 bimg::ImageContainer* image{ParseImage(m_allocator, dataSpan)};
                 image = PrepareImage(m_allocator, image, invertY, srgb, generateMips);
                 LoadTextureFromImage(texture, image, srgb);
@@ -1342,7 +1342,7 @@ namespace Babylon
             const auto typedArray{data[face].As<Napi::TypedArray>()};
             const auto dataSpan{gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength())};
             dataRefs[face] = Napi::Persistent(typedArray);
-            tasks[face] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [this, dataSpan, invertY, generateMips, srgb]() {
+            tasks[face] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [dataSpan, invertY, generateMips, srgb]() {
                 bimg::ImageContainer* image{ParseImage(m_allocator, dataSpan)};
                 image = PrepareImage(m_allocator, image, invertY, srgb, generateMips);
                 return image;
@@ -1385,7 +1385,7 @@ namespace Babylon
                 const auto typedArray = faceData[face].As<Napi::TypedArray>();
                 const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength());
                 dataRefs[(face * numMips) + mip] = Napi::Persistent(typedArray);
-                tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [this, dataSpan, invertY, srgb]() {
+                tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [dataSpan, invertY, srgb]() {
                     bimg::ImageContainer* image{ParseImage(m_allocator, dataSpan)};
                     image = PrepareImage(m_allocator, image, invertY, srgb, false);
                     return image;
@@ -1563,7 +1563,7 @@ namespace Babylon
 
             // Read the source texture.
             m_graphicsContext.ReadTextureAsync(sourceTextureHandle, textureBuffer, mipLevel)
-                .then(arcana::inline_scheduler, *m_cancellationSource, [this, textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
+                .then(arcana::inline_scheduler, *m_cancellationSource, [textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
                     // If the source texture format does not match the target texture format, convert it.
                     if (targetTextureInfo.format != sourceTextureInfo.format)
                     {
