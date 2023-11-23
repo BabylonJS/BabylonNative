@@ -11,6 +11,7 @@
 #include "nanovg.h"
 #include <cassert>
 #include <napi/napi_pointer.h>
+#include <basen.hpp>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -97,42 +98,62 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
+    bool NativeCanvasImage::SetBuffer(gsl::span<const std::byte> buffer)
+    {
+        m_imageContainer = bimg::imageParse(&m_allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
+
+        if (m_imageContainer == nullptr)
+        {
+            return false;
+        }
+
+        m_width = m_imageContainer->m_width;
+        m_height = m_imageContainer->m_height;
+
+        if (!m_onloadHandlerRef.IsEmpty())
+        {
+            m_onloadHandlerRef.Call({});
+        }
+        return true;
+    }
+
     void NativeCanvasImage::SetSrc(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         auto text{value.As<Napi::String>().Utf8Value()};
         UrlLib::UrlRequest request{};
         request.Open(UrlLib::UrlMethod::Get, text);
         request.ResponseType(UrlLib::UrlResponseType::Buffer);
-        request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, request{std::move(request)}](arcana::expected<void, std::exception_ptr> result) {
-            if (result.has_error())
+        request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, cancellationSource{m_cancellationSource}, request{std::move(request)}, text](arcana::expected<void, std::exception_ptr> result) {
+            if (!cancellationSource->cancelled())
             {
-                HandleLoadImageError(Napi::Error::New(env, result.error()));
-                return;
-            }
+                if (result.has_error())
+                {
+                    HandleLoadImageError(Napi::Error::New(env, result.error()));
+                    return;
+                }
 
-            Dispose();
+                Dispose();
 
-            auto buffer{request.ResponseBuffer()};
-            if (buffer.data() == nullptr || buffer.size_bytes() == 0)
-            {
-                HandleLoadImageError(Napi::Error::New(env, "Image with provided source returned empty response."));
-                return;
-            }
-
-            m_imageContainer = bimg::imageParse(&m_allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
-
-            if (m_imageContainer == nullptr)
-            {
-                HandleLoadImageError(Napi::Error::New(env, "Unable to decode image with provided src."));
-                return;
-            }
-
-            m_width = m_imageContainer->m_width;
-            m_height = m_imageContainer->m_height;
-
-            if (!m_onloadHandlerRef.IsEmpty())
-            {
-                m_onloadHandlerRef.Call({});
+                auto buffer{request.ResponseBuffer()};
+                std::vector<uint8_t> base64Buffer;
+                if (buffer.data() == nullptr || buffer.size_bytes() == 0)
+                {
+                    // try with base64
+                    static const std::string base64{"base64,"};
+                    const auto pos = text.find(base64);
+                    if (pos == std::string::npos)
+                    {
+                        HandleLoadImageError(Napi::Error::New(env, "Image with provided source returned empty response or invalid base64."));
+                        return;
+                    }
+                    bn::decode_b64(text.begin() + pos + base64.length(), text.end(), std::back_inserter(base64Buffer));
+                    buffer = {reinterpret_cast<std::byte*>(base64Buffer.data()), base64Buffer.size()};
+                }
+                if (!SetBuffer(buffer))
+                {
+                    HandleLoadImageError(Napi::Error::New(env, "Unable to decode image with provided src."));
+                    return;
+                }
             }
         });
     }
