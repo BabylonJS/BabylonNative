@@ -49,7 +49,6 @@ namespace Babylon::Plugins::Internal
         static inline Napi::FunctionReference constructor{};
 
         inline static std::shared_ptr<ImplData> m_implData;
-        inline static bx::DefaultAllocator allocator{};
 
         void Exit(const Napi::CallbackInfo& info);
         void UpdateSize(const Napi::CallbackInfo& info);

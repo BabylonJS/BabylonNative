@@ -1106,8 +1106,7 @@ NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator)
 {
     if (NULL == _allocator)
     {
-        static bx::DefaultAllocator allocator;
-        _allocator = &allocator;
+        _allocator = &Babylon::Graphics::DeviceContext::allocator;
     }
 
     struct NVGparams params;

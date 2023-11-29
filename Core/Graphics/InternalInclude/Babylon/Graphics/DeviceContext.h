@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BgfxCallback.h"
+#include <bx/allocator.h>
 #include "continuation_scheduler.h"
 #include "SafeTimespanGuarantor.h"
 
@@ -114,7 +115,7 @@ namespace Babylon::Graphics
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
         void RemoveTexture(bgfx::TextureHandle handle);
         TextureInfo GetTextureInfo(bgfx::TextureHandle handle);
-
+        static inline bx::DefaultAllocator allocator{};
     private:
         friend UpdateToken;
 
