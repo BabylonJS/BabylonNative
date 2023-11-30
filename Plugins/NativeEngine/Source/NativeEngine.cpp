@@ -1225,8 +1225,8 @@ namespace Babylon
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
             [dataSpan, generateMips, invertY, srgb, texture, cancellationSource{m_cancellationSource}]() {
-                bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::allocator, dataSpan)};
-                image = PrepareImage(Graphics::DeviceContext::allocator, image, invertY, srgb, generateMips);
+                bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan)};
+                image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, srgb, generateMips);
                 LoadTextureFromImage(texture, image, srgb);
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [dataRef{Napi::Persistent(data)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
@@ -1275,8 +1275,8 @@ namespace Babylon
             throw Napi::Error::New(Env(), "The data size does not match width, height, and format");
         }
 
-        bimg::ImageContainer* image{bimg::imageAlloc(&Graphics::DeviceContext::allocator, format, width, height, 1, 1, false, false, bytes)};
-        image = PrepareImage(Graphics::DeviceContext::allocator, image, invertY, false, generateMips);
+        bimg::ImageContainer* image{bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, 1, 1, false, false, bytes)};
+        image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, false, generateMips);
         LoadTextureFromImage(texture, image, false);
     }
 
@@ -1343,8 +1343,8 @@ namespace Babylon
             const auto dataSpan{gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength())};
             dataRefs[face] = Napi::Persistent(typedArray);
             tasks[face] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [dataSpan, invertY, generateMips, srgb]() {
-                bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::allocator, dataSpan)};
-                image = PrepareImage(Graphics::DeviceContext::allocator, image, invertY, srgb, generateMips);
+                bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan)};
+                image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, srgb, generateMips);
                 return image;
             });
         }
@@ -1386,8 +1386,8 @@ namespace Babylon
                 const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength());
                 dataRefs[(face * numMips) + mip] = Napi::Persistent(typedArray);
                 tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [dataSpan, invertY, srgb]() {
-                    bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::allocator, dataSpan)};
-                    image = PrepareImage(Graphics::DeviceContext::allocator, image, invertY, srgb, false);
+                    bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan)};
+                    image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, srgb, false);
                     return image;
                 });
             }
@@ -1568,7 +1568,7 @@ namespace Babylon
                     if (targetTextureInfo.format != sourceTextureInfo.format)
                     {
                         std::vector<uint8_t> convertedTextureBuffer(targetTextureInfo.storageSize);
-                        if (!bimg::imageConvert(&Graphics::DeviceContext::allocator, convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
+                        if (!bimg::imageConvert(&Graphics::DeviceContext::GetDefaultAllocator(), convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
                         {
                             throw std::runtime_error{"Texture conversion to RBGA8 failed."};
                         }
@@ -1849,7 +1849,7 @@ namespace Babylon
                 throw Napi::Error::New(env, "CreateImageBitmap array buffer is empty.");
             }
 
-            image = ParseImage(Graphics::DeviceContext::allocator, gsl::make_span(static_cast<uint8_t*>(data.Data()), data.ByteLength()));
+            image = ParseImage(Graphics::DeviceContext::GetDefaultAllocator(), gsl::make_span(static_cast<uint8_t*>(data.Data()), data.ByteLength()));
             allocatedImage = true;
         }
         else if (info[0].IsObject())
@@ -1905,7 +1905,7 @@ namespace Babylon
 
         const Napi::Env env{info.Env()};
 
-        bimg::ImageContainer* image = bimg::imageAlloc(&Graphics::DeviceContext::allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, data.Data());
+        bimg::ImageContainer* image = bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, data.Data());
         if (image == nullptr)
         {
             throw Napi::Error::New(env, "Unable to allocate image for ResizeImageBitmap.");
@@ -1917,7 +1917,7 @@ namespace Babylon
             {
                 image->m_format = bimg::TextureFormat::A8;
             }
-            bimg::ImageContainer* rgba = bimg::imageConvert(&Graphics::DeviceContext::allocator, bimg::TextureFormat::RGBA8, *image, false);
+            bimg::ImageContainer* rgba = bimg::imageConvert(&Graphics::DeviceContext::GetDefaultAllocator(), bimg::TextureFormat::RGBA8, *image, false);
             if (rgba == nullptr)
             {
                 throw Napi::Error::New(env, "Unable to convert image to RGBA pixel format for ResizeImageBitmap.");

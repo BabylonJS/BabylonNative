@@ -119,7 +119,7 @@ namespace Babylon::Polyfills::Internal
                 return;
             }
 
-            m_imageContainer = bimg::imageParse(&Graphics::DeviceContext::allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
+            m_imageContainer = bimg::imageParse(&Graphics::DeviceContext::GetDefaultAllocator(), buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
 
             if (m_imageContainer == nullptr)
             {

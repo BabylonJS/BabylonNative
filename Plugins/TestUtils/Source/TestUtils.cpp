@@ -32,7 +32,7 @@ namespace Babylon::Plugins::Internal
             return;
         }
 
-        bx::MemoryBlock mb(&Graphics::DeviceContext::allocator);
+        bx::MemoryBlock mb(&Graphics::DeviceContext::GetDefaultAllocator());
         bx::FileWriter writer;
         bx::FilePath filepath(filename.c_str());
         bx::FilePath filedir(filepath.getPath());
@@ -50,7 +50,7 @@ namespace Babylon::Plugins::Internal
         Image* image = new Image;
         const auto buffer = info[0].As<Napi::ArrayBuffer>();
 
-        image->m_Image = bimg::imageParse(&Graphics::DeviceContext::allocator, buffer.Data(), static_cast<uint32_t>(buffer.ByteLength()));
+        image->m_Image = bimg::imageParse(&Graphics::DeviceContext::GetDefaultAllocator(), buffer.Data(), static_cast<uint32_t>(buffer.ByteLength()));
 
         auto finalizer = [](Napi::Env, Image* image) { delete image; };
         return Napi::External<Image>::New(info.Env(), image, std::move(finalizer));
