@@ -100,7 +100,7 @@ namespace Babylon::Polyfills::Internal
 
     bool NativeCanvasImage::SetBuffer(gsl::span<const std::byte> buffer)
     {
-        m_imageContainer = bimg::imageParse(&m_allocator, buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
+        m_imageContainer = bimg::imageParse(&Graphics::DeviceContext::GetDefaultAllocator(), buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
 
         if (m_imageContainer == nullptr)
         {
@@ -120,6 +120,26 @@ namespace Babylon::Polyfills::Internal
     void NativeCanvasImage::SetSrc(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         auto text{value.As<Napi::String>().Utf8Value()};
+
+        // try with base64
+        static const std::string base64{"base64,"};
+        const auto pos = text.find(base64);
+        if (pos != std::string::npos)
+        {
+            arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, text{std::move(text)}, pos]() {
+                std::vector<uint8_t> base64Buffer;
+                bn::decode_b64(text.begin() + pos + base64.length(), text.end(), std::back_inserter(base64Buffer));
+                gsl::span<const std::byte> buffer = {reinterpret_cast<std::byte*>(base64Buffer.data()), base64Buffer.size()};
+
+                if (!SetBuffer(buffer))
+                {
+                    HandleLoadImageError(Napi::Error::New(env, "Unable to decode image with provided base64 source."));
+                }
+            });
+            return;
+        }
+
+        // try with URL
         UrlLib::UrlRequest request{};
         request.Open(UrlLib::UrlMethod::Get, text);
         request.ResponseType(UrlLib::UrlResponseType::Buffer);
@@ -137,24 +157,15 @@ namespace Babylon::Polyfills::Internal
             Dispose();
 
             auto buffer{request.ResponseBuffer()};
-            std::vector<uint8_t> base64Buffer;
             if (buffer.data() == nullptr || buffer.size_bytes() == 0)
             {
-                // try with base64
-                static const std::string base64{"base64,"};
-                const auto pos = text.find(base64);
-                if (pos == std::string::npos)
-                {
-                    HandleLoadImageError(Napi::Error::New(env, "Image with provided source returned empty response or invalid base64."));
-                    return;
-                }
-                bn::decode_b64(text.begin() + pos + base64.length(), text.end(), std::back_inserter(base64Buffer));
-                buffer = {reinterpret_cast<std::byte*>(base64Buffer.data()), base64Buffer.size()};
+                HandleLoadImageError(Napi::Error::New(env, "Image with provided source returned empty response or invalid base64."));
+                return;
             }
+
             if (!SetBuffer(buffer))
             {
-                HandleLoadImageError(Napi::Error::New(env, "Unable to decode image with provided src."));
-                return;
+                HandleLoadImageError(Napi::Error::New(env, "Unable to decode image with provided source URL."));
             }
         });
     }
