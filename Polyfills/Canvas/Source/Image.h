@@ -36,6 +36,7 @@ namespace Babylon::Polyfills::Internal
         void SetOnload(const Napi::CallbackInfo&, const Napi::Value&);
         void SetOnerror(const Napi::CallbackInfo&, const Napi::Value&);
         void HandleLoadImageError(const Napi::Error& error);
+        bool SetBuffer(gsl::span<const std::byte> buffer);
         void Dispose();
 
         uint32_t m_width{1};
@@ -47,7 +48,6 @@ namespace Babylon::Polyfills::Internal
         Napi::FunctionReference m_onloadHandlerRef;
         Napi::FunctionReference m_onerrorHandlerRef;
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
-        bx::DefaultAllocator m_allocator{};
         bimg::ImageContainer* m_imageContainer{};
     };
 }
