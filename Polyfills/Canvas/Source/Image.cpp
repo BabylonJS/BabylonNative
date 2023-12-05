@@ -144,10 +144,6 @@ namespace Babylon::Polyfills::Internal
         request.Open(UrlLib::UrlMethod::Get, text);
         request.ResponseType(UrlLib::UrlResponseType::Buffer);
         request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, cancellationSource{m_cancellationSource}, request{std::move(request)}, text](arcana::expected<void, std::exception_ptr> result) {
-            if (cancellationSource->cancelled())
-            {
-                return;
-            }
             if (result.has_error())
             {
                 HandleLoadImageError(Napi::Error::New(env, result.error()));
