@@ -195,6 +195,10 @@ namespace Babylon::Polyfills
 
     void Canvas::Impl::RemoveMonitoredResource(MonitoredResource* monitoredResource)
     {
+        if (m_monitoredResources.empty())
+        {
+            return;
+        }
         auto iter = std::find(m_monitoredResources.begin(), m_monitoredResources.end(), monitoredResource);
         if (iter != m_monitoredResources.end())
         {
