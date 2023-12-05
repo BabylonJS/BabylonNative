@@ -33,8 +33,8 @@ FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
     GIT_TAG 6388a301b23edf0ae6a9342d46efa9cb21f05d9b)
 FetchContent_Declare(SPIRV-Cross
-    GIT_REPOSITORY https://github.com/SergioRZMasson/SPIRV-Cross.git
-    GIT_TAG feature/size-reduction)
+    GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
+    GIT_TAG 1cb52786a911e91ce027c565f6370ad51777da52)
 FetchContent_Declare(arcore-android-sdk
     GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
     GIT_TAG 98cb803de5482fb2b36effe8be3b5a0d3b726976)
