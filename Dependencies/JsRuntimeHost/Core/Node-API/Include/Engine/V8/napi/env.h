@@ -15,6 +15,7 @@
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4100)  // unreferenced formal parameter
+#pragma warning(disable: 4127) // Suppress warning in v8-internal.h, Line 317 inside of V8_COMPRESS_POINTERS conditional
 #endif
 
 #include <v8.h>
