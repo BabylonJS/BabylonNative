@@ -20,7 +20,7 @@ FetchContent_Declare(arcana
     GIT_TAG f2757396e80bc4169f2ddb938ce25367a98ffdd0)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG d5f2813958b136a288e28f213a0d5a24a1164b9e)
+    GIT_TAG 2518f6c4be108edfd23a9de856c996f1b2bc2f9f)
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
     GIT_TAG 1a47db416ec2aae3f51b28b94f73e8f54e412d0d)
