@@ -228,11 +228,11 @@ For iOS the XCode project needs to be generated with `CMake` as described [above
 
 | React Native | Babylon React Native |
 |---|---|
-| 0.64 | 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.3 |
-| 0.65 -> 0.68 | 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.3 |
-| 0.69 | 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.3 |
-| 0.70 | 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.3 |
-| 0.71 -> 0.72 | 1.6.0, 1.6.1, 1.6.3 |
+| 0.64 | 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.3, 1.8.1 |
+| 0.65 -> 0.68 | 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.3, 1.8.1 |
+| 0.69 | 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.3, 1.8.1 |
+| 0.70 | 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.3, 1.8.1 |
+| 0.71 -> 0.73 | 1.6.0, 1.6.1, 1.6.3, 1.8.1 |
 
 Here are the package names for Android/iOS and Windows:
 
@@ -242,7 +242,7 @@ Here are the package names for Android/iOS and Windows:
 | 0.65 -> 0.68 | [@babylonjs/react-native-iosandroid-0-65](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-65) | [@babylonjs/react-native-windows-0-65](https://www.npmjs.com/package/@babylonjs/react-native-windows-0-65) |
 | 0.69 | [@babylonjs/react-native-iosandroid-0-69](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-69) | [@babylonjs/react-native-windows-0-69](https://www.npmjs.com/package/@babylonjs/react-native-windows-0-69) |
 | 0.70 | [@babylonjs/react-native-iosandroid-0-70](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-70) | [@babylonjs/react-native-windows-0-70](https://www.npmjs.com/package/@babylonjs/react-native-windows-0-70) |
-| 0.71 -> 0.72 | [@babylonjs/react-native-iosandroid-0-71](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-71) | [@babylonjs/react-native-windows-0-71](https://www.npmjs.com/package/@babylonjs/react-native-windows-0-71) |
+| 0.71 -> 0.73 | [@babylonjs/react-native-iosandroid-0-71](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-71) | [@babylonjs/react-native-windows-0-71](https://www.npmjs.com/package/@babylonjs/react-native-windows-0-71) |
 
 Also, [@babylonjs/react-native](https://www.npmjs.com/package/@babylonjs/react-native) is a needed dependency for all platforms.
 
