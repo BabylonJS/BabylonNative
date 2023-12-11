@@ -158,7 +158,6 @@ target_link_libraries(TestInstall
     pvrtc
     ScriptLoader
     spirv-cross-core
-    spirv-cross-glsl
     spirv-cross-hlsl
     SPIRV
     squish
