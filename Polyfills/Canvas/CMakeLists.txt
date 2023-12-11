@@ -35,6 +35,7 @@ target_link_libraries(Canvas
     PRIVATE JsRuntimeInternal
     PRIVATE GraphicsDeviceContext
     PRIVATE UrlLib
+    PRIVATE base-n
     PRIVATE napi_extensions)
 
 set_property(TARGET Canvas PROPERTY FOLDER Polyfills)
