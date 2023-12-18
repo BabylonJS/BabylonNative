@@ -161,7 +161,7 @@ namespace Babylon::Graphics
 
     void DeviceImpl::DisableRendering()
     {
-        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity.check());
+        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
 
         std::scoped_lock lock{m_state.Mutex};
 
@@ -203,7 +203,7 @@ namespace Babylon::Graphics
 
     void DeviceImpl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
     {
-        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity.check());
+        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
         m_bgfxCallback.SetDiagnosticOutput(std::move(diagnosticOutput));
     }
 
@@ -211,7 +211,7 @@ namespace Babylon::Graphics
     {
         arcana::trace_region startRenderingRegion{"DeviceImpl::StartRenderingCurrentFrame"};
 
-        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity.check());
+        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
 
         if (m_rendering)
         {
@@ -249,7 +249,7 @@ namespace Babylon::Graphics
 
         arcana::trace_region finishRenderingRegion{"DeviceImpl::FinishRenderingCurrentFrame"};
 
-        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity.check());
+        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
 
         if (!m_rendering)
         {
