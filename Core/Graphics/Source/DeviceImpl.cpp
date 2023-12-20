@@ -32,7 +32,7 @@ namespace Babylon::Graphics
 
         auto& init = m_state.Bgfx.InitState;
         init.type = s_bgfxRenderType;
-        init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY | BGFX_RESET_FLIP_AFTER_RENDER | BGFX_RESET_FLUSH_AFTER_RENDER;
+        init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY | BGFX_RESET_FLIP_AFTER_RENDER;
         init.resolution.maxFrameLatency = 1;
 
         init.callback = &m_bgfxCallback;
