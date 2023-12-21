@@ -517,7 +517,6 @@ const validateAssemblediOSAndroid = async () => {
     `${assemblediOSAndroidDir}/ios/libs/libOGLCompiler.a`,
     `${assemblediOSAndroidDir}/ios/libs/libOSDependent.a`,
     `${assemblediOSAndroidDir}/ios/libs/libspirv-cross-core.a`,
-    `${assemblediOSAndroidDir}/ios/libs/libspirv-cross-glsl.a`,
     `${assemblediOSAndroidDir}/ios/libs/libspirv-cross-msl.a`,
     `${assemblediOSAndroidDir}/ios/libs/libSPIRV.a`,
     `${assemblediOSAndroidDir}/ios/libs/libtinyexr.a`,

@@ -205,7 +205,6 @@
         OSDependentd.lib;
         pvrtc.lib;
         spirv-cross-cored.lib;
-        spirv-cross-glsld.lib;
         spirv-cross-hlsld.lib;
         SPIRVd.lib;
         squish.lib;
@@ -267,7 +266,6 @@
         OSDependent.lib;
         pvrtc.lib;
         spirv-cross-core.lib;
-        spirv-cross-glsl.lib;
         spirv-cross-hlsl.lib;
         SPIRV.lib;
         squish.lib;

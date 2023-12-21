@@ -49,7 +49,6 @@ Pod::Spec.new do |s|
                 'NativeXR',
                 'SPIRV',
                 'spirv-cross-core',
-                'spirv-cross-glsl',
                 'spirv-cross-msl',
                 'tinyexr',
                 'UrlLib',

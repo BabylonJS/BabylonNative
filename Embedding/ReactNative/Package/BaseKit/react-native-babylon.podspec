@@ -44,7 +44,6 @@ Pod::Spec.new do |s|
     'ios/libs/libOSDependent.a',
     'ios/libs/libpvrtc.a',
     'ios/libs/libspirv-cross-core.a',
-    'ios/libs/libspirv-cross-glsl.a',
     'ios/libs/libspirv-cross-msl.a',
     'ios/libs/libSPIRV.a',
     'ios/libs/libsquish.a',

@@ -4,7 +4,7 @@ include(FetchContent)
 
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
-    GIT_TAG 04d91f6675dabb3c97df346a32f6184b0a7ef845)
+    GIT_TAG 4.4.1)
 
 FetchContent_MakeAvailable(ios-cmake)
 set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
