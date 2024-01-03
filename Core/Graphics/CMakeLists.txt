@@ -21,6 +21,7 @@ set(SOURCES
 
 add_library(Graphics ${SOURCES})
 warnings_as_errors(Graphics)
+add_msvc_security_flags(Graphics)
 
 target_include_directories(Graphics
     PRIVATE "Include/Shared"
@@ -65,6 +66,7 @@ if(APPLE)
 endif()
 
 add_library(GraphicsDevice INTERFACE)
+
 target_include_directories(GraphicsDevice
     INTERFACE "Include/Shared"
     INTERFACE "Include/Platform/${BABYLON_NATIVE_PLATFORM}"
@@ -74,6 +76,7 @@ target_link_libraries(GraphicsDevice
     INTERFACE JsRuntime)
 
 add_library(GraphicsDeviceContext INTERFACE)
+
 target_include_directories(GraphicsDeviceContext
     INTERFACE "InternalInclude"
     INTERFACE "InternalInclude/${BABYLON_NATIVE_PLATFORM}")

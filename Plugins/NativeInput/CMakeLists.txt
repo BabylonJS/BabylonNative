@@ -24,6 +24,7 @@ endif()
 
 add_library(NativeInput ${SOURCES})
 warnings_as_errors(NativeInput)
+add_msvc_security_flags(NativeInput)
 
 target_include_directories(NativeInput PUBLIC "Include")
 

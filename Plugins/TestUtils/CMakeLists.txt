@@ -13,6 +13,7 @@ set(SOURCES
 
 add_library(TestUtils ${SOURCES})
 warnings_as_errors(TestUtils)
+add_msvc_security_flags(TestUtils)
 
 target_include_directories(TestUtils PUBLIC
     "Include")

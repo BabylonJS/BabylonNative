@@ -7,6 +7,7 @@ set(SOURCES
 
 add_library(Window ${SOURCES})
 warnings_as_errors(Window)
+add_msvc_security_flags(Window)
 
 target_include_directories(Window
     PUBLIC "Include")

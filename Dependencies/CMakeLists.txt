@@ -53,6 +53,23 @@ if(APPLE)
     set_property(TARGET bgfx PROPERTY UNITY_BUILD false)
 endif()
 
+add_msvc_security_flags(bgfx)
+add_msvc_security_flags(bimg)
+add_msvc_security_flags(bx)
+add_msvc_security_flags(astc-encoder)
+add_msvc_security_flags(edtaa3)
+add_msvc_security_flags(etc1)
+add_msvc_security_flags(etc2)
+add_msvc_security_flags(iqa)
+add_msvc_security_flags(nvtt)
+add_msvc_security_flags(nvtt)
+add_msvc_security_flags(pvrtc)
+add_msvc_security_flags(squish)
+add_msvc_security_flags(squish)
+if(TARGET tinyexr)
+    add_msvc_security_flags(tinyexr)
+endif()
+
 # -------------------------------- glslang --------------------------------
 # Dependencies: none
 set(BUILD_EXTERNAL OFF CACHE BOOL "")
@@ -73,6 +90,13 @@ set_property(TARGET OSDependent PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET MachineIndependent PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
 
+add_msvc_security_flags(GenericCodeGen)
+add_msvc_security_flags(glslang)
+add_msvc_security_flags(glslang-default-resource-limits)
+add_msvc_security_flags(OGLCompiler)
+add_msvc_security_flags(OSDependent)
+add_msvc_security_flags(MachineIndependent)
+add_msvc_security_flags(SPIRV)
 # -------------------------------- SPIRV-Cross --------------------------------
 # Dependencies: none
 set(SPIRV_CROSS_CLI OFF CACHE BOOL "")
@@ -110,6 +134,7 @@ foreach(target spirv-cross-core spirv-cross-glsl spirv-cross-msl spirv-cross-hls
         get_target_property(compileOptions ${target} COMPILE_OPTIONS)
         list(REMOVE_ITEM compileOptions /wd4267 /wd4996)
         set_target_properties(${target} PROPERTIES COMPILE_OPTIONS "${compileOptions}")
+        add_msvc_security_flags(${target})
     endif()
 endforeach()
 
@@ -120,11 +145,17 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEXR AND (WIN32 OR ANDROID OR IOS))
     add_subdirectory(xr)
     set_property(TARGET xr PROPERTY FOLDER Dependencies/xr)
     warnings_as_errors(xr)
+    add_msvc_security_flags(xr)
     if(WIN32 OR WINDOWS_STORE)
         set_property(TARGET openxr_loader PROPERTY FOLDER Dependencies/xr/OpenXR)
         set_property(TARGET generate_openxr_header PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
         set_property(TARGET xr_global_generated_files PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
         set_property(TARGET uninstall PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
+
+        add_msvc_security_flags(openxr_loader)
+        add_msvc_security_flags(generate_openxr_header)
+        add_msvc_security_flags(xr_global_generated_files)
+        add_msvc_security_flags(uninstall)
     endif()
 endif()
 
@@ -136,3 +167,11 @@ endif()
 
 # --------------------------- NAPI Extensions ---------------------------
 add_subdirectory(napi-extensions)
+
+# --------------------------- JSRuntimeHost -----------------------------
+add_msvc_security_flags(arcana)
+add_msvc_security_flags(Console)
+add_msvc_security_flags(JsRuntime)
+add_msvc_security_flags(ScriptLoader)
+add_msvc_security_flags(UrlLib)
+add_msvc_security_flags(XMLHttpRequest)

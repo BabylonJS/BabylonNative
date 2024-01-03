@@ -4,6 +4,7 @@ set(SOURCES
 
 add_library(NativeTracing ${SOURCES})
 warnings_as_errors(NativeTracing)
+add_msvc_security_flags(NativeTracing)
 
 if (APPLE)
     set_target_properties(NativeTracing PROPERTIES

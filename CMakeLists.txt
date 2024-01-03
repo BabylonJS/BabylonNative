@@ -8,6 +8,22 @@ endif()
 
 include(FetchContent)
 
+function(add_msvc_security_flags target)
+	# enable /Qspectre compiler flag in Visual Studio 2017 version 15.5.5 and later.
+	if(MSVC_VERSION GREATER_EQUAL 1913)
+		target_compile_options(${target} PRIVATE "/Qspectre")
+	endif()
+	# enable /ZH:SHA_256 compiler flag in Visual Studio 2019 version 16.4 and later.
+	if(MSVC_VERSION GREATER_EQUAL 1924)
+		target_compile_options(${target} PRIVATE "/ZH:SHA_256")
+	endif()
+	# The /guard:ehcont option is available in Visual Studio 2019 version 16.7 and later. The feature is supported for 64-bit processes on a 64-bit OS.
+	if((MSVC_VERSION GREATER_EQUAL 1928) AND (CMAKE_SIZEOF_VOID_P EQUAL 8))
+		target_compile_options(${target} PRIVATE "$<$<NOT:$<CONFIG:DEBUG>>:/guard:ehcont>")
+		target_link_options(${target} PRIVATE "$<$<NOT:$<CONFIG:DEBUG>>:/guard:ehcont>")
+	endif()
+endfunction()
+
 # Modules declaration
 FetchContent_Declare(cmake-extensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
@@ -183,22 +199,6 @@ if(MSVC)
 
     # default to /W3
     add_compile_options(/W3)
-
-    # enable /Qspectre compiler flag in Visual Studio 2017 version 15.5.5 and later.
-	if(MSVC_VERSION GREATER_EQUAL 1913)
-        add_compile_options("/Qspectre")
-    endif()
-
-    # enable /ZH:SHA_256 compiler flag in Visual Studio 2019 version 16.4 and later.
-    if(MSVC_VERSION GREATER_EQUAL 1924)
-        add_compile_options("/ZH:SHA_256")
-    endif()
-
-    # The /guard:ehcont option is available in Visual Studio 2019 version 16.7 and later. The feature is supported for 64-bit processes on a 64-bit OS.
-    if((MSVC_VERSION GREATER_EQUAL 1928) AND (CMAKE_SIZEOF_VOID_P EQUAL 8))
-        add_compile_options("$<$<NOT:$<CONFIG:DEBUG>>:/guard:ehcont>")
-        add_link_options("$<$<NOT:$<CONFIG:DEBUG>>:/guard:ehcont>")
-    endif()
 endif()
 
 if(WIN32)

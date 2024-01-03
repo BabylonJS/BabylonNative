@@ -20,6 +20,7 @@ file(GLOB NANOVG_SOURCES ${BGFX_DIR}/examples/common/nanovg/nanovg.cpp)
 set(ATLAS_SOURCES ${BGFX_DIR}/examples/common/cube_atlas.cpp)
 
 add_library(Canvas ${SOURCES} ${FONT_SOURCES} ${ATLAS_SOURCES} ${NANOVG_SOURCES})
+add_msvc_security_flags(Canvas)
 
 target_include_directories(Canvas
     PUBLIC "Include"

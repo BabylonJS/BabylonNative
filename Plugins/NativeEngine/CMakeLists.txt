@@ -44,6 +44,7 @@ target_link_libraries(NativeEngine
     PRIVATE GraphicsDeviceContext
     PRIVATE napi_extensions)
 warnings_as_errors(NativeEngine)
+add_msvc_security_flags(NativeEngine)
 
 if(TARGET spirv-cross-hlsl)
     target_link_libraries(NativeEngine
