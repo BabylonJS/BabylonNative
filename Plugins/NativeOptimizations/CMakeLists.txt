@@ -4,6 +4,7 @@ set(SOURCES
 
 add_library(NativeOptimizations ${SOURCES})
 warnings_as_errors(NativeOptimizations)
+add_msvc_security_flags(NativeOptimizations)
 
 if(APPLE)
     set_target_properties(NativeOptimizations PROPERTIES

@@ -6,6 +6,7 @@ set(SOURCES
 
 add_library(ExternalTexture ${SOURCES})
 warnings_as_errors(ExternalTexture)
+add_msvc_security_flags(ExternalTexture)
 
 if (APPLE)
     set_target_properties(ExternalTexture PROPERTIES

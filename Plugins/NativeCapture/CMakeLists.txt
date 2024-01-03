@@ -4,6 +4,7 @@ set(SOURCES
 
 add_library(NativeCapture ${SOURCES})
 warnings_as_errors(NativeCapture)
+add_msvc_security_flags(NativeCapture)
 
 target_include_directories(NativeCapture PUBLIC
     "Include")

@@ -4,6 +4,7 @@ set(SOURCES
 
 add_library(NativeXr ${SOURCES})
 warnings_as_errors(NativeXr)
+add_msvc_security_flags(NativeXr)
 
 target_include_directories(NativeXr
     PUBLIC "Include")

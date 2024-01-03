@@ -25,6 +25,7 @@ set(SOURCES
 
 add_library(NativeCamera ${SOURCES})
 warnings_as_errors(NativeCamera)
+add_msvc_security_flags(NativeCamera)
 
 target_include_directories(NativeCamera
     PUBLIC "Include")
