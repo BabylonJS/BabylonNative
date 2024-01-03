@@ -8,22 +8,6 @@ endif()
 
 include(FetchContent)
 
-function(add_msvc_security_flags target)
-	# enable /Qspectre compiler flag in Visual Studio 2017 version 15.5.5 and later.
-	if(MSVC_VERSION GREATER_EQUAL 1913)
-		target_compile_options(${target} PRIVATE "/Qspectre")
-	endif()
-	# enable /ZH:SHA_256 compiler flag in Visual Studio 2019 version 16.4 and later.
-	if(MSVC_VERSION GREATER_EQUAL 1924)
-		target_compile_options(${target} PRIVATE "/ZH:SHA_256")
-	endif()
-	# The /guard:ehcont option is available in Visual Studio 2019 version 16.7 and later. The feature is supported for 64-bit processes on a 64-bit OS.
-	if((MSVC_VERSION GREATER_EQUAL 1928) AND (CMAKE_SIZEOF_VOID_P EQUAL 8))
-		target_compile_options(${target} PRIVATE "$<$<NOT:$<CONFIG:DEBUG>>:/guard:ehcont>")
-		target_link_options(${target} PRIVATE "$<$<NOT:$<CONFIG:DEBUG>>:/guard:ehcont>")
-	endif()
-endfunction()
-
 # Modules declaration
 FetchContent_Declare(cmake-extensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
@@ -81,6 +65,7 @@ project(BabylonNative)
 # --------------------------------------------------
 option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ${PROJECT_IS_TOP_LEVEL})
 option(BABYLON_NATIVE_INSTALL "Include the install target." ${PROJECT_IS_TOP_LEVEL})
+option(BABYLON_NATIVE_MSVC_SECURITY_FLAGS "Enable MSVC secuirity flags", OFF)
 
 # WARNING: This is experimental. Only use it if you can ensure that your application will properly handle thread affinity.
 option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphics device calls. It can be removed if hosting application ensures thread coherence." ON)
@@ -101,6 +86,24 @@ option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." 
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
 
 # --------------------------------------------------
+
+function(add_msvc_security_flags target)
+    if(BABYLON_NATIVE_MSVC_SECURITY_FLAGS)
+        # enable /Qspectre compiler flag in Visual Studio 2017 version 15.5.5 and later.
+        if(MSVC_VERSION GREATER_EQUAL 1913)
+            target_compile_options(${target} PRIVATE "/Qspectre")
+        endif()
+        # enable /ZH:SHA_256 compiler flag in Visual Studio 2019 version 16.4 and later.
+        if(MSVC_VERSION GREATER_EQUAL 1924)
+            target_compile_options(${target} PRIVATE "/ZH:SHA_256")
+        endif()
+        # The /guard:ehcont option is available in Visual Studio 2019 version 16.7 and later. The feature is supported for 64-bit processes on a 64-bit OS.
+        if((MSVC_VERSION GREATER_EQUAL 1928) AND (CMAKE_SIZEOF_VOID_P EQUAL 8))
+            target_compile_options(${target} PRIVATE "$<$<NOT:$<CONFIG:DEBUG>>:/guard:ehcont>")
+            target_link_options(${target} PRIVATE "$<$<NOT:$<CONFIG:DEBUG>>:/guard:ehcont>")
+        endif()
+    endif()
+endfunction()
 
 if(APPLE)
     # Without this option on azure pipelines, there is a mismatch with math.h giving a lot of undefined functions on macOS.
