@@ -28,6 +28,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("getContext", &NativeCanvas::GetContext),
                 InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
                 InstanceMethod("dispose", &NativeCanvas::Dispose),
+                InstanceMethod("remove", &NativeCanvas::Remove),
                 StaticMethod("parseColor", &NativeCanvas::ParseColor)});
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
@@ -48,6 +49,11 @@ namespace Babylon::Polyfills::Internal
     void NativeCanvas::FlushGraphicResources()
     {
         Dispose();
+    }
+
+    void NativeCanvas::Remove(const Napi::CallbackInfo&)
+    {
+        // called when removed from document which has no meaning for Native
     }
 
     Napi::Value NativeCanvas::LoadTTFAsync(const Napi::CallbackInfo& info)
