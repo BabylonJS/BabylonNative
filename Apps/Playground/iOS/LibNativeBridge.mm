@@ -89,7 +89,7 @@ float screenScale{1.0f};
 
         nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
         nativeXr->UpdateWindow(xrView);
-        nativeXr->SetSessionStateChangedCallback([](bool XrGetsActive){ ::isXrActive = XrGetsActive; });
+        nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ ::isXrActive = isXrActive; });
 
         nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
     });
