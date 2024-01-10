@@ -114,7 +114,7 @@ extern "C"
                 Babylon::Plugins::NativeOptimizations::Initialize(env);
 
                 nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
-                nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ isXrActive = isXrActive; });
+                nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ ::isXrActive = isXrActive; });
                 
                 nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
