@@ -797,7 +797,6 @@ namespace Babylon::Plugins
         [m_impl->avCapturePhotoOutput capturePhotoWithSettings:capturePhotoSettings delegate:m_impl->photoCaptureDelegate];
 
         return taskCompletionSource.as_task();
->>>>>>> 08784536a7f4eeb0c12a141a51b6384ef4ada524
     }
 
     void CameraDevice::Close()
@@ -855,11 +854,18 @@ namespace Babylon::Plugins
     self = [super init];
     self->textureCache = textureCache;
 #if (TARGET_OS_IPHONE)
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED >= 170000)
+#else
     [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(OrientationDidChange:) name:UIDeviceOrientationDidChangeNotification object:nil];
     [self updateOrientation];
+#endif
 #else
     // Orientation not supported on non-iOS devices. LandscapeLeft assumes the video is already in the correct orientation.
+#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140000)
+    self->videoRotationAngle = 0;
+#else
     self->VideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
+#endif
 #endif
 
     return self;
