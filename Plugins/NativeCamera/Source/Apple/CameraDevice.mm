@@ -22,7 +22,7 @@
 
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
-#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 130000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 140000)
+#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000)
     @public CGFloat videoRotationAngle;
 #else
     @public AVCaptureVideoOrientation VideoOrientation;
@@ -434,6 +434,11 @@ namespace Babylon::Plugins
             m_impl->supportedMaxPhotoDimensions.push_back(resolution.m_impl->avDeviceFormat.highResolutionStillImageDimensions);
 #endif
         }
+#else // MacOS
+        for (NSValue* dimensions in resolution.m_impl->avDeviceFormat.supportedMaxPhotoDimensions)
+        {
+            m_impl->supportedMaxPhotoDimensions.push_back(dimensions.CMVideoDimensionsValue);
+        }
 #endif
 
         auto redEyeReduction = RedEyeReduction::Never;
@@ -540,7 +545,7 @@ namespace Babylon::Plugins
 
             // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
             // of the video should be swapped
-#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 130000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 140000)
+#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 140000)
             return CameraDimensions{implObj->m_impl->cameraDimensions.width, implObj->m_impl->cameraDimensions.height};
 #else
             return implObj->m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeLeft ||
@@ -564,7 +569,7 @@ namespace Babylon::Plugins
             @synchronized(m_impl->cameraTextureDelegate) {
                 textureY = [m_impl->cameraTextureDelegate getCameraTextureY];
                 textureCbCr = [m_impl->cameraTextureDelegate getCameraTextureCbCr];
-#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 130000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 140000)
+#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 140000)
 #else
 
                 switch (m_impl->cameraTextureDelegate->VideoOrientation)
@@ -633,7 +638,7 @@ namespace Babylon::Plugins
                     [renderEncoder setRenderPipelineState:m_impl->cameraPipelineState];
                     
                     // Set the vertex & UV data based on current orientation
-#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 130000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 140000)
+#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 140000)
                     if (m_impl->cameraTextureDelegate->videoRotationAngle < 90.f)
                     {
                         if (m_impl->avDevice.position == AVCaptureDevicePositionFront)
@@ -921,7 +926,7 @@ namespace Babylon::Plugins
     }
 #endif
 
-#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 130000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 140000)
+#if (__IPHONE_OS_VERSION_MIN_REQUIRED >= 140000)
     switch (orientation)
     {
         case UIInterfaceOrientationUnknown:
