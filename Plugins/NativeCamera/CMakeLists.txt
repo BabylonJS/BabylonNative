@@ -10,6 +10,8 @@ set(SOURCES
     "Source/Capability.cpp"
     "Source/Constraint.h"
     "Source/Constraint.cpp"
+    "Source/ImageCapture.h"
+    "Source/ImageCapture.cpp"
     "Source/MediaDevices.h"
     "Source/MediaDevices.cpp"
     "Source/MediaStream.h"

@@ -153,7 +153,7 @@ namespace Babylon::Plugins
         }
 
     private:
-        void GetInfo(Graphics::TextureT ptr, Info& info)
+        static void GetInfo(Graphics::TextureT ptr, Info& info)
         {
             if (ptr.textureType != MTLTextureType2D && ptr.textureType != MTLTextureType2DMultisample)
             {
@@ -174,7 +174,7 @@ namespace Babylon::Plugins
                 }
             }
 
-            const auto pixelFormat = m_ptr.pixelFormat;
+            const auto pixelFormat = ptr.pixelFormat;
             for (size_t i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
             {
                 const auto& format = s_textureFormat[i];

@@ -10,6 +10,12 @@
 #include <TargetConditionals.h>
 #endif
 
+#ifdef BABYLON_NATIVE_CHECK_THREAD_AFFINITY
+#define ASSERT_THREAD_AFFINITY(affinity) assert(affinity.check())
+#else
+#define ASSERT_THREAD_AFFINITY(affinity)
+#endif
+
 namespace
 {
     constexpr auto JS_GRAPHICS_NAME = "_Graphics";
@@ -26,12 +32,8 @@ namespace Babylon::Graphics
 
         auto& init = m_state.Bgfx.InitState;
         init.type = s_bgfxRenderType;
-        init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY;
+        init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY | BGFX_RESET_FLIP_AFTER_RENDER;
         init.resolution.maxFrameLatency = 1;
-        if (s_bgfxFlipAfterRender)
-        {
-            init.resolution.reset |= BGFX_RESET_FLIP_AFTER_RENDER;
-        }
 
         init.callback = &m_bgfxCallback;
 
@@ -155,7 +157,7 @@ namespace Babylon::Graphics
 
     void DeviceImpl::DisableRendering()
     {
-        assert(m_renderThreadAffinity.check());
+        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
 
         std::scoped_lock lock{m_state.Mutex};
 
@@ -197,7 +199,7 @@ namespace Babylon::Graphics
 
     void DeviceImpl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
     {
-        assert(m_renderThreadAffinity.check());
+        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
         m_bgfxCallback.SetDiagnosticOutput(std::move(diagnosticOutput));
     }
 
@@ -205,7 +207,7 @@ namespace Babylon::Graphics
     {
         arcana::trace_region startRenderingRegion{"DeviceImpl::StartRenderingCurrentFrame"};
 
-        assert(m_renderThreadAffinity.check());
+        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
 
         if (m_rendering)
         {
@@ -243,7 +245,7 @@ namespace Babylon::Graphics
 
         arcana::trace_region finishRenderingRegion{"DeviceImpl::FinishRenderingCurrentFrame"};
 
-        assert(m_renderThreadAffinity.check());
+        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
 
         if (!m_rendering)
         {

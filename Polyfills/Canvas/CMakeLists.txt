@@ -35,11 +35,10 @@ target_link_libraries(Canvas
     PRIVATE JsRuntimeInternal
     PRIVATE GraphicsDeviceContext
     PRIVATE UrlLib
+    PRIVATE base-n
     PRIVATE napi_extensions)
 
 set_property(TARGET Canvas PROPERTY FOLDER Polyfills)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 source_group("3rd party Sources" ${CMAKE_CURRENT_SOURCE_DIR} FILES ${FONT_SOURCES} ${NANOVG_SOURCES} ${ATLAS_SOURCES})
-# disable warnings because of 3rd party issue with anonymous struct
-disable_warnings(Canvas)
 target_compile_definitions(Canvas PRIVATE _CRT_SECURE_NO_WARNINGS)

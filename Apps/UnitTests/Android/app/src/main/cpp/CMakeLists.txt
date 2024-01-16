@@ -6,13 +6,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project(UnitTestsJNI)
 
 get_filename_component(UNIT_TESTS_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../../.." ABSOLUTE)
-get_filename_component(REPO_ROOT_DIR "${UNIT_TESTS_DIR}/../.." ABSOLUTE)
+get_filename_component(APPS_DIR "${UNIT_TESTS_DIR}/.." ABSOLUTE)
+get_filename_component(REPO_ROOT_DIR "${APPS_DIR}/.." ABSOLUTE)
 
 set(JSRUNTIMEHOST_TESTS OFF) # Turn off the tests folder for Android Studio path
 add_subdirectory(${REPO_ROOT_DIR} "${CMAKE_CURRENT_BINARY_DIR}/BabylonNative")
 
-get_filename_component(APPS_DIR "${UNIT_TESTS_DIR}/.." ABSOLUTE)
-npm(install "${APPS_DIR}" "Apps" "--silent")
+npm(install --silent WORKING_DIRECTORY ${APPS_DIR})
 
 add_library(UnitTestsJNI SHARED
     JNI.cpp

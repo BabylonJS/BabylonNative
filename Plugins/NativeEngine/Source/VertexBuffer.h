@@ -32,7 +32,7 @@ namespace Babylon
             uint32_t ElementSize{};
         };
 
-        static void BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceVertexBufferRecord>& vertexBufferInstance);
+        static void BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceVertexBufferRecord>& vertexBufferInstance, uint32_t instanceCount);
 
     private:
         std::optional<std::vector<uint8_t>> m_bytes{};

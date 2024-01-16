@@ -427,11 +427,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 POINTER_INFO info;
                 auto pointerId = GET_POINTERID_WPARAM(wParam);
+                POINT origin{0, 0};
 
-                if (GetPointerInfo(pointerId, &info))
+                if (GetPointerInfo(pointerId, &info) && ClientToScreen(hWnd, &origin))
                 {
-                    auto x = GET_X_LPARAM(lParam);
-                    auto y = GET_Y_LPARAM(lParam);
+                    auto x = GET_X_LPARAM(lParam) - origin.x;
+                    auto y = GET_Y_LPARAM(lParam) - origin.y;
 
                     if (info.pointerType == PT_MOUSE)
                     {
@@ -449,13 +450,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             if (nativeInput != nullptr)
             {
-                POINTER_INFO info;
                 auto pointerId = GET_POINTERID_WPARAM(wParam);
+                POINTER_INFO info;
+                POINT origin{0, 0};
 
-                if (GetPointerInfo(pointerId, &info))
+                if (GetPointerInfo(pointerId, &info) && ClientToScreen(hWnd, &origin))
                 {
-                    auto x = GET_X_LPARAM(lParam);
-                    auto y = GET_Y_LPARAM(lParam);
+                    auto x = GET_X_LPARAM(lParam) - origin.x;
+                    auto y = GET_Y_LPARAM(lParam) - origin.y;
 
                     if (info.pointerType == PT_MOUSE)
                     {
@@ -474,13 +476,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             if (nativeInput != nullptr)
             {
-                POINTER_INFO info;
                 auto pointerId = GET_POINTERID_WPARAM(wParam);
+                POINTER_INFO info;
+                POINT origin{0, 0};
 
-                if (GetPointerInfo(pointerId, &info))
+                if (GetPointerInfo(pointerId, &info) && ClientToScreen(hWnd, &origin))
                 {
-                    auto x = GET_X_LPARAM(lParam);
-                    auto y = GET_Y_LPARAM(lParam);
+                    auto x = GET_X_LPARAM(lParam) - origin.x;
+                    auto y = GET_Y_LPARAM(lParam) - origin.y;
 
                     if (info.pointerType == PT_MOUSE)
                     {

@@ -31,6 +31,7 @@ namespace Babylon::Plugins::Internal
                     ParentT::InstanceMethod("exit", &TestUtils::Exit),
                     ParentT::InstanceMethod("updateSize", &TestUtils::UpdateSize),
                     ParentT::InstanceMethod("setTitle", &TestUtils::SetTitle),
+                    ParentT::InstanceMethod("getGraphicsApiName", &TestUtils::GetGraphicsApiName),
                     ParentT::InstanceMethod("writePNG", &TestUtils::WritePNG),
                     ParentT::InstanceMethod("decodeImage", &TestUtils::DecodeImage),
                     ParentT::InstanceMethod("getImageData", &TestUtils::GetImageData),
@@ -48,13 +49,13 @@ namespace Babylon::Plugins::Internal
         static inline Napi::FunctionReference constructor{};
 
         inline static std::shared_ptr<ImplData> m_implData;
-        inline static bx::DefaultAllocator allocator{};
 
         void Exit(const Napi::CallbackInfo& info);
         void UpdateSize(const Napi::CallbackInfo& info);
         void SetTitle(const Napi::CallbackInfo& info);
         Napi::Value GetOutputDirectory(const Napi::CallbackInfo& info);
 
+        Napi::Value GetGraphicsApiName(const Napi::CallbackInfo& info);
         void WritePNG(const Napi::CallbackInfo& info);
         Napi::Value DecodeImage(const Napi::CallbackInfo& info);
         Napi::Value GetImageData(const Napi::CallbackInfo& info);

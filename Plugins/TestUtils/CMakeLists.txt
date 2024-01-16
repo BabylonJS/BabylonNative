@@ -23,5 +23,7 @@ target_link_libraries(TestUtils
     PRIVATE GraphicsDevice
     PRIVATE GraphicsDeviceContext)
 
+target_compile_definitions(TestUtils PRIVATE GRAPHICS_API=${GRAPHICS_API})
+
 set_property(TARGET TestUtils PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

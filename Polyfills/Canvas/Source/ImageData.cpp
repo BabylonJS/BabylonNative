@@ -3,11 +3,17 @@
 #include "Canvas.h"
 #include "Context.h"
 #include "ImageData.h"
-// disable anonymous struct warning
+
+#ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+
 #include "nanovg/nanovg.h"
+
+#ifdef __GNUC__
 #pragma GCC diagnostic pop
+#endif
 
 namespace Babylon::Polyfills::Internal
 {

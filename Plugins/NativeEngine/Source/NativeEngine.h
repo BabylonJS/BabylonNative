@@ -190,7 +190,9 @@ namespace Babylon
         void BindFrameBuffer(NativeDataStream::Reader& data);
         void UnbindFrameBuffer(NativeDataStream::Reader& data);
         void DrawIndexed(NativeDataStream::Reader& data);
+        void DrawIndexedInstanced(NativeDataStream::Reader& data);
         void Draw(NativeDataStream::Reader& data);
+        void DrawInstanced(NativeDataStream::Reader& data);
         void Clear(NativeDataStream::Reader& data);
         Napi::Value GetRenderWidth(const Napi::CallbackInfo& info);
         Napi::Value GetRenderHeight(const Napi::CallbackInfo& info);
@@ -228,7 +230,6 @@ namespace Babylon
         void ScheduleRequestAnimationFrameCallbacks();
         bool m_requestAnimationFrameCallbacksScheduled{};
 
-        bx::DefaultAllocator m_allocator{};
         uint64_t m_engineState{BGFX_STATE_DEFAULT};
         uint32_t m_stencilState{BGFX_STENCIL_TEST_ALWAYS | BGFX_STENCIL_FUNC_REF(0) | BGFX_STENCIL_FUNC_RMASK(0xFF) | BGFX_STENCIL_OP_FAIL_S_KEEP | BGFX_STENCIL_OP_FAIL_Z_KEEP | BGFX_STENCIL_OP_PASS_Z_REPLACE};
 

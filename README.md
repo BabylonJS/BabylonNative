@@ -1,5 +1,5 @@
 [![Build Status](https://dev.azure.com/babylonjs/ContinousIntegration/_apis/build/status/BabylonNative%20CI?branchName=master)](https://dev.azure.com/babylonjs/ContinousIntegration/_build/latest?definitionId=6&branchName=master)
-[![Nightly build](https://github.com/BabylonJS/BabylonNative/workflows/Nightly%20build/badge.svg)](https://github.com/BabylonJS/BabylonNative/actions?query=workflow%3A%22Nightly+build%22)
+[![Nightly build](https://github.com/BabylonJS/BabylonNative/actions/workflows/nightly.yml/badge.svg?branch=master)](https://github.com/BabylonJS/BabylonNative/actions/workflows/nightly.yml)
 
 # Babylon Native
 
@@ -41,7 +41,7 @@ Check out the [home page](https://aka.ms/Bnative) for a project overview.
 Babylon Native is currently available as a public preview in source form only. While many
 features are supported and functional, there are still features that are under active
 development. Please note that this project is not at the point where updates are fully
-backwards compatibility yet, and thus the contract for consuming Babylon Native can still
+backward compatible yet, and thus the contract for consuming Babylon Native can still
 and probably will change in the future.
 
 ### What is Supported from Babylon.js

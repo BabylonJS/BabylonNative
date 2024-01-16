@@ -41,7 +41,8 @@ namespace Babylon::ShaderCompilerCommon
             enum class TypeEnum
             {
                 Vec4,
-                Mat4
+                Mat4,
+                Mat3,
             };
 
             std::string Name{};

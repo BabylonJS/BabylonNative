@@ -55,6 +55,8 @@ target_compile_definitions(Graphics
     PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
 
 set_property(TARGET Graphics PROPERTY FOLDER Core)
+set_property(TARGET Graphics PROPERTY UNITY_BUILD false)
+
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
 if(APPLE)
@@ -85,3 +87,7 @@ target_link_libraries(GraphicsDeviceContext
 
 target_compile_definitions(GraphicsDeviceContext
     INTERFACE NOMINMAX)
+
+if(BABYLON_NATIVE_CHECK_THREAD_AFFINITY)
+    target_compile_definitions(Graphics PRIVATE BABYLON_NATIVE_CHECK_THREAD_AFFINITY=1)
+endif()

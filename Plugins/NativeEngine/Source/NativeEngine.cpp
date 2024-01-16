@@ -358,10 +358,102 @@ namespace Babylon
                 StaticValue("ADDRESS_MODE_BORDER", Napi::Number::From(env, BGFX_SAMPLER_U_BORDER)),
                 StaticValue("ADDRESS_MODE_MIRROR_ONCE", Napi::Number::From(env, BGFX_SAMPLER_U_MIRROR)),
 
+                StaticValue("TEXTURE_FORMAT_BC1", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::BC1))),
+                StaticValue("TEXTURE_FORMAT_BC2", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::BC2))),
+                StaticValue("TEXTURE_FORMAT_BC3", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::BC3))),
+                StaticValue("TEXTURE_FORMAT_BC4", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::BC4))),
+                StaticValue("TEXTURE_FORMAT_BC5", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::BC5))),
+                StaticValue("TEXTURE_FORMAT_BC6H", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::BC6H))),
+                StaticValue("TEXTURE_FORMAT_BC7", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::BC7))),
+                StaticValue("TEXTURE_FORMAT_ETC1", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ETC1))),
+                StaticValue("TEXTURE_FORMAT_ETC2", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ETC2))),
+                StaticValue("TEXTURE_FORMAT_ETC2A", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ETC2A))),
+                StaticValue("TEXTURE_FORMAT_ETC2A1", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ETC2A1))),
+                StaticValue("TEXTURE_FORMAT_PTC12", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::PTC12))),
+                StaticValue("TEXTURE_FORMAT_PTC14", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::PTC14))),
+                StaticValue("TEXTURE_FORMAT_PTC12A", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::PTC12A))),
+                StaticValue("TEXTURE_FORMAT_PTC14A", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::PTC14A))),
+                StaticValue("TEXTURE_FORMAT_PTC22", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::PTC22))),
+                StaticValue("TEXTURE_FORMAT_PTC24", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::PTC24))),
+                StaticValue("TEXTURE_FORMAT_ATC", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ATC))),
+                StaticValue("TEXTURE_FORMAT_ATCE", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ATCE))),
+                StaticValue("TEXTURE_FORMAT_ATCI", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ATCI))),
+                StaticValue("TEXTURE_FORMAT_ASTC4x4", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ASTC4x4))),
+                StaticValue("TEXTURE_FORMAT_ASTC5x4", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ASTC5x4))),
+                StaticValue("TEXTURE_FORMAT_ASTC5x5", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ASTC5x5))),
+                StaticValue("TEXTURE_FORMAT_ASTC6x5", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ASTC6x5))),
+                StaticValue("TEXTURE_FORMAT_ASTC6x6", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ASTC6x6))),
+                StaticValue("TEXTURE_FORMAT_ASTC8x5", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ASTC8x5))),
+                StaticValue("TEXTURE_FORMAT_ASTC8x6", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ASTC8x6))),
+                StaticValue("TEXTURE_FORMAT_ASTC8x8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ASTC8x8))),
+                StaticValue("TEXTURE_FORMAT_ASTC10x5", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ASTC10x5))),
+                StaticValue("TEXTURE_FORMAT_ASTC10x6", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ASTC10x6))),
+                StaticValue("TEXTURE_FORMAT_ASTC10x8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ASTC10x8))),
+                StaticValue("TEXTURE_FORMAT_ASTC10x10", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ASTC10x10))),
+                StaticValue("TEXTURE_FORMAT_ASTC12x10", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ASTC12x10))),
+                StaticValue("TEXTURE_FORMAT_ASTC12x12", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::ASTC12x12))),
+
+                StaticValue("TEXTURE_FORMAT_R1", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::R1))),
+                StaticValue("TEXTURE_FORMAT_A8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::A8))),
+                StaticValue("TEXTURE_FORMAT_R8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::R8))),
+                StaticValue("TEXTURE_FORMAT_R8I", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::R8I))),
+                StaticValue("TEXTURE_FORMAT_R8U", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::R8U))),
+                StaticValue("TEXTURE_FORMAT_R8S", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::R8S))),
+                StaticValue("TEXTURE_FORMAT_R16", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::R16))),
+                StaticValue("TEXTURE_FORMAT_R16I", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::R16I))),
+                StaticValue("TEXTURE_FORMAT_R16U", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::R16U))),
+                StaticValue("TEXTURE_FORMAT_R16F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::R16F))),
+                StaticValue("TEXTURE_FORMAT_R16S", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::R16S))),
+                StaticValue("TEXTURE_FORMAT_R32I", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::R32I))),
+                StaticValue("TEXTURE_FORMAT_R32U", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::R32U))),
+                StaticValue("TEXTURE_FORMAT_R32F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::R32F))),
+                StaticValue("TEXTURE_FORMAT_RG8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RG8))),
+                StaticValue("TEXTURE_FORMAT_RG8I", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RG8I))),
+                StaticValue("TEXTURE_FORMAT_RG8U", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RG8U))),
+                StaticValue("TEXTURE_FORMAT_RG8S", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RG8S))),
+                StaticValue("TEXTURE_FORMAT_RG16", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RG16))),
+                StaticValue("TEXTURE_FORMAT_RG16I", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RG16I))),
+                StaticValue("TEXTURE_FORMAT_RG16U", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RG16U))),
+                StaticValue("TEXTURE_FORMAT_RG16F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RG16F))),
+                StaticValue("TEXTURE_FORMAT_RG16S", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RG16S))),
+                StaticValue("TEXTURE_FORMAT_RG32I", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RG32I))),
+                StaticValue("TEXTURE_FORMAT_RG32U", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RG32U))),
+                StaticValue("TEXTURE_FORMAT_RG32F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RG32F))),
                 StaticValue("TEXTURE_FORMAT_RGB8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGB8))),
+                StaticValue("TEXTURE_FORMAT_RGB8I", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGB8I))),
+                StaticValue("TEXTURE_FORMAT_RGB8U", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGB8U))),
+                StaticValue("TEXTURE_FORMAT_RGB8S", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGB8S))),
+                StaticValue("TEXTURE_FORMAT_RGB9E5F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGB9E5F))),
+                StaticValue("TEXTURE_FORMAT_BGRA8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::BGRA8))),
                 StaticValue("TEXTURE_FORMAT_RGBA8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA8))),
+                StaticValue("TEXTURE_FORMAT_RGBA8I", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA8I))),
+                StaticValue("TEXTURE_FORMAT_RGBA8U", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA8U))),
+                StaticValue("TEXTURE_FORMAT_RGBA8S", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA8S))),
+                StaticValue("TEXTURE_FORMAT_RGBA16", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA16))),
+                StaticValue("TEXTURE_FORMAT_RGBA16I", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA16I))),
+                StaticValue("TEXTURE_FORMAT_RGBA16U", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA16U))),
                 StaticValue("TEXTURE_FORMAT_RGBA16F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA16F))),
+                StaticValue("TEXTURE_FORMAT_RGBA16S", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA16S))),
+                StaticValue("TEXTURE_FORMAT_RGBA32I", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA32I))),
+                StaticValue("TEXTURE_FORMAT_RGBA32U", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA32U))),
                 StaticValue("TEXTURE_FORMAT_RGBA32F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA32F))),
+                StaticValue("TEXTURE_FORMAT_B5G6R5", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::B5G6R5))),
+                StaticValue("TEXTURE_FORMAT_R5G6B5", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::R5G6B5))),
+                StaticValue("TEXTURE_FORMAT_BGRA4", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::BGRA4))),
+                StaticValue("TEXTURE_FORMAT_RGBA4", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGBA4))),
+                StaticValue("TEXTURE_FORMAT_BGR5A1", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::BGR5A1))),
+                StaticValue("TEXTURE_FORMAT_RGB5A1", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGB5A1))),
+                StaticValue("TEXTURE_FORMAT_RGB10A2", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RGB10A2))),
+                StaticValue("TEXTURE_FORMAT_RG11B10F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::RG11B10F))),
+
+                StaticValue("TEXTURE_FORMAT_D16", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::D16))),
+                StaticValue("TEXTURE_FORMAT_D24", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::D24))),
+                StaticValue("TEXTURE_FORMAT_D24S8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::D24S8))),
+                StaticValue("TEXTURE_FORMAT_D32", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::D32))),
+                StaticValue("TEXTURE_FORMAT_D16F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::D16F))),
+                StaticValue("TEXTURE_FORMAT_D24F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::D24F))),
+                StaticValue("TEXTURE_FORMAT_D32F", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::D32F))),
+                StaticValue("TEXTURE_FORMAT_D0S8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::TextureFormat::D0S8))),
 
                 StaticValue("ATTRIB_TYPE_INT8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Int8))),
                 StaticValue("ATTRIB_TYPE_UINT8", Napi::Number::From(env, static_cast<uint32_t>(bgfx::AttribType::Uint8))),
@@ -455,7 +547,9 @@ namespace Babylon
                 StaticValue("COMMAND_UNBINDFRAMEBUFFER", Napi::FunctionPointer::Create(env, &NativeEngine::UnbindFrameBuffer)),
                 StaticValue("COMMAND_DELETEFRAMEBUFFER", Napi::FunctionPointer::Create(env, &NativeEngine::DeleteFrameBuffer)),
                 StaticValue("COMMAND_DRAWINDEXED", Napi::FunctionPointer::Create(env, &NativeEngine::DrawIndexed)),
+                StaticValue("COMMAND_DRAWINDEXEDINSTANCED", Napi::FunctionPointer::Create(env, &NativeEngine::DrawIndexedInstanced)),
                 StaticValue("COMMAND_DRAW", Napi::FunctionPointer::Create(env, &NativeEngine::Draw)),
+                StaticValue("COMMAND_DRAWINSTANCED", Napi::FunctionPointer::Create(env, &NativeEngine::DrawInstanced)),
                 StaticValue("COMMAND_CLEAR", Napi::FunctionPointer::Create(env, &NativeEngine::Clear)),
                 StaticValue("COMMAND_SETSTENCIL", Napi::FunctionPointer::Create(env, &NativeEngine::SetStencil)),
                 StaticValue("COMMAND_SETVIEWPORT", Napi::FunctionPointer::Create(env, &NativeEngine::SetViewPort)),
@@ -967,7 +1061,7 @@ namespace Babylon
 
         assert(matrix.size() == size * size);
 
-        if constexpr (size < 4)
+        if constexpr (size < 3)
         {
             std::array<float, 16> matrixValues{};
             size_t index = 0;
@@ -1130,9 +1224,9 @@ namespace Babylon
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, dataSpan, generateMips, invertY, srgb, texture, cancellationSource{m_cancellationSource}]() {
-                bimg::ImageContainer* image{ParseImage(m_allocator, dataSpan)};
-                image = PrepareImage(m_allocator, image, invertY, srgb, generateMips);
+            [dataSpan, generateMips, invertY, srgb, texture, cancellationSource{m_cancellationSource}]() {
+                bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan)};
+                image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, srgb, generateMips);
                 LoadTextureFromImage(texture, image, srgb);
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [dataRef{Napi::Persistent(data)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
@@ -1181,8 +1275,8 @@ namespace Babylon
             throw Napi::Error::New(Env(), "The data size does not match width, height, and format");
         }
 
-        bimg::ImageContainer* image{bimg::imageAlloc(&m_allocator, format, width, height, 1, 1, false, false, bytes)};
-        image = PrepareImage(m_allocator, image, invertY, false, generateMips);
+        bimg::ImageContainer* image{bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, 1, 1, false, false, bytes)};
+        image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, false, generateMips);
         LoadTextureFromImage(texture, image, false);
     }
 
@@ -1248,9 +1342,9 @@ namespace Babylon
             const auto typedArray{data[face].As<Napi::TypedArray>()};
             const auto dataSpan{gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength())};
             dataRefs[face] = Napi::Persistent(typedArray);
-            tasks[face] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [this, dataSpan, invertY, generateMips, srgb]() {
-                bimg::ImageContainer* image{ParseImage(m_allocator, dataSpan)};
-                image = PrepareImage(m_allocator, image, invertY, srgb, generateMips);
+            tasks[face] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [dataSpan, invertY, generateMips, srgb]() {
+                bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan)};
+                image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, srgb, generateMips);
                 return image;
             });
         }
@@ -1291,9 +1385,9 @@ namespace Babylon
                 const auto typedArray = faceData[face].As<Napi::TypedArray>();
                 const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(typedArray.ArrayBuffer().Data()) + typedArray.ByteOffset(), typedArray.ByteLength());
                 dataRefs[(face * numMips) + mip] = Napi::Persistent(typedArray);
-                tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [this, dataSpan, invertY, srgb]() {
-                    bimg::ImageContainer* image{ParseImage(m_allocator, dataSpan)};
-                    image = PrepareImage(m_allocator, image, invertY, srgb, false);
+                tasks[(face * numMips) + mip] = arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [dataSpan, invertY, srgb]() {
+                    bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan)};
+                    image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, srgb, false);
                     return image;
                 });
             }
@@ -1469,12 +1563,12 @@ namespace Babylon
 
             // Read the source texture.
             m_graphicsContext.ReadTextureAsync(sourceTextureHandle, textureBuffer, mipLevel)
-                .then(arcana::inline_scheduler, *m_cancellationSource, [this, textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
+                .then(arcana::inline_scheduler, *m_cancellationSource, [textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
                     // If the source texture format does not match the target texture format, convert it.
                     if (targetTextureInfo.format != sourceTextureInfo.format)
                     {
                         std::vector<uint8_t> convertedTextureBuffer(targetTextureInfo.storageSize);
-                        if (!bimg::imageConvert(&m_allocator, convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
+                        if (!bimg::imageConvert(&Graphics::DeviceContext::GetDefaultAllocator(), convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
                         {
                             throw std::runtime_error{"Texture conversion to RBGA8 failed."};
                         }
@@ -1605,6 +1699,8 @@ namespace Babylon
         m_boundFrameBufferNeedsRebinding.Set(*encoder, false);
     }
 
+    // Note: For legacy reasons JS might call this function for instance drawing. 
+    // In that case the instanceCount will be calculated inside the SetVertexBuffers method.
     void NativeEngine::DrawIndexed(NativeDataStream::Reader& data)
     {
         bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
@@ -1622,6 +1718,26 @@ namespace Babylon
         DrawInternal(encoder, fillMode);
     }
 
+    void NativeEngine::DrawIndexedInstanced(NativeDataStream::Reader& data)
+    {
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+
+        const uint32_t fillMode = data.ReadUint32();
+        const uint32_t indexStart = data.ReadUint32();
+        const uint32_t indexCount = data.ReadUint32();
+        const uint32_t instanceCount = data.ReadUint32();
+
+        if (m_boundVertexArray != nullptr)
+        {
+            m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
+            m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), instanceCount);
+        }
+
+        DrawInternal(encoder, fillMode);
+    }
+
+    // Note: For legacy reasons JS might call this function for instance drawing. 
+    // In that case the instanceCount will be calculated inside the SetVertexBuffers method.
     void NativeEngine::Draw(NativeDataStream::Reader& data)
     {
         bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
@@ -1633,6 +1749,23 @@ namespace Babylon
         if (m_boundVertexArray != nullptr)
         {
             m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount);
+        }
+
+        DrawInternal(encoder, fillMode);
+    }
+
+    void NativeEngine::DrawInstanced(NativeDataStream::Reader& data)
+    {
+        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+
+        const uint32_t fillMode = data.ReadUint32();
+        const uint32_t verticesStart = data.ReadUint32();
+        const uint32_t verticesCount = data.ReadUint32();
+        const uint32_t instanceCount = data.ReadUint32();
+
+        if (m_boundVertexArray != nullptr)
+        {
+            m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, instanceCount);
         }
 
         DrawInternal(encoder, fillMode);
@@ -1716,7 +1849,7 @@ namespace Babylon
                 throw Napi::Error::New(env, "CreateImageBitmap array buffer is empty.");
             }
 
-            image = ParseImage(m_allocator, gsl::make_span(static_cast<uint8_t*>(data.Data()), data.ByteLength()));
+            image = ParseImage(Graphics::DeviceContext::GetDefaultAllocator(), gsl::make_span(static_cast<uint8_t*>(data.Data()), data.ByteLength()));
             allocatedImage = true;
         }
         else if (info[0].IsObject())
@@ -1772,7 +1905,7 @@ namespace Babylon
 
         const Napi::Env env{info.Env()};
 
-        bimg::ImageContainer* image = bimg::imageAlloc(&m_allocator, format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, data.Data());
+        bimg::ImageContainer* image = bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, data.Data());
         if (image == nullptr)
         {
             throw Napi::Error::New(env, "Unable to allocate image for ResizeImageBitmap.");
@@ -1784,7 +1917,7 @@ namespace Babylon
             {
                 image->m_format = bimg::TextureFormat::A8;
             }
-            bimg::ImageContainer* rgba = bimg::imageConvert(&m_allocator, bimg::TextureFormat::RGBA8, *image, false);
+            bimg::ImageContainer* rgba = bimg::imageConvert(&Graphics::DeviceContext::GetDefaultAllocator(), bimg::TextureFormat::RGBA8, *image, false);
             if (rgba == nullptr)
             {
                 throw Napi::Error::New(env, "Unable to convert image to RGBA pixel format for ResizeImageBitmap.");

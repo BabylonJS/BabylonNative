@@ -12,10 +12,6 @@ jobs:
       vmImage: ${{ parameters.vmImage }}
   
     steps:
-    - script: |
-        git submodule update --init --recursive
-      displayName: 'Checkout dependencies'
-
     - template: cmake.yml
       parameters:
         vmImage: ${{ parameters.vmImage }}
@@ -28,7 +24,7 @@ jobs:
     - script: |
         mkdir buildiOS
         cd buildiOS
-        cmake .. -G Xcode -D IOS=ON -D DEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -D CMAKE_UNITY_BUILD=${UNITY_BUILD}
+        cmake .. -G Xcode -D IOS=ON -D DEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD)
       displayName: 'Generate iOS solution'
 
     - task: Xcode@5

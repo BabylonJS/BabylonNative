@@ -18,12 +18,17 @@ namespace Babylon::Plugins
     {
         Info info;
         GetInfo(ptr, info);
-        if (info != m_info)
+
+        if (info.Width != m_info.Width || info.Height != m_info.Height || info.MipLevels != m_info.MipLevels)
         {
-            throw std::runtime_error{"Textures must have same info"};
+            throw std::runtime_error{"Textures must have same width, height, and mip levels"};
         }
 
+        m_info = info;
+
         Assign(ptr);
+
+        UpdateHandles(Ptr());
     }
 
     ExternalTexture::ExternalTexture(Graphics::TextureT ptr)

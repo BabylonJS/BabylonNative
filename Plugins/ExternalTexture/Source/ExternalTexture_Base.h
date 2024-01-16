@@ -81,16 +81,6 @@ namespace Babylon::Plugins
             uint16_t MipLevels{};
             bgfx::TextureFormat::Enum Format{bgfx::TextureFormat::Unknown};
             uint64_t Flags{};
-
-            bool operator==(const Info& other)
-            {
-                return Width == other.Width && Height == other.Height && MipLevels == other.MipLevels && Format == other.Format && Flags == other.Flags;
-            }
-
-            bool operator!=(const Info& other)
-            {
-                return !operator==(other);
-            }
         };
 
         Info m_info{};

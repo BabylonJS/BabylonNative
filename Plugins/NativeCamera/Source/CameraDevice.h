@@ -1,12 +1,52 @@
 #pragma once
 
+#include <set>
 #include <bgfx/bgfx.h>
 #include <napi/napi.h>
 #include <arcana/threading/task.h>
+#include <gsl/gsl>
 #include "Capability.h"
 
 namespace Babylon::Plugins
 {
+    enum class RedEyeReduction
+    {
+        Never,
+        Always,
+        Controllable,
+    };
+
+    enum class FillLightMode
+    {
+        Off,
+        Flash,
+        Auto,
+    };
+
+    class PhotoCapabilities final
+    {
+    public:
+        Babylon::Plugins::RedEyeReduction RedEyeReduction{};
+        std::set<Babylon::Plugins::FillLightMode> FillLightModes{};
+
+        uint32_t MinWidth{};
+        uint32_t MaxWidth{};
+        uint32_t StepWidth{};
+
+        uint32_t MinHeight{};
+        uint32_t MaxHeight{};
+        uint32_t StepHeight{};
+    };
+
+    class PhotoSettings final
+    {
+    public:
+        bool RedEyeReduction{};
+        Babylon::Plugins::FillLightMode FillLightMode{};
+        uint32_t Width{};
+        uint32_t Height{};
+    };
+
     // The CameraTrack class is a platform agnostic representation of a specific stream
     // available on the CameraDevice. Typically a CameraDevice provides a different CameraTrack
     // for each different resolution it supports.
@@ -36,6 +76,8 @@ namespace Babylon::Plugins
     class CameraDevice final : public std::enable_shared_from_this<CameraDevice>
     {
     public:
+        using TakePhotoTask = arcana::task<gsl::span<const uint8_t>, std::exception_ptr>;
+
         struct CameraDimensions
         {
             uint32_t width{};
@@ -53,9 +95,14 @@ namespace Babylon::Plugins
         arcana::task<CameraDimensions, std::exception_ptr> OpenAsync(const CameraTrack& track);
         void Close();
         CameraDimensions UpdateCameraTexture(bgfx::TextureHandle textureHandle);
+        TakePhotoTask TakePhotoAsync(PhotoSettings photoSettings);
 
         const std::vector<CameraTrack>& SupportedResolutions() const;
         const std::vector<std::unique_ptr<Capability>>& Capabilities() const;
+
+        // Gets high resolution photo capture capabilities for the currently opened stream/track.
+        const Plugins::PhotoCapabilities& PhotoCapabilities() const;
+        const Plugins::PhotoSettings& DefaultPhotoSettings() const;
 
     private:
         struct Impl;

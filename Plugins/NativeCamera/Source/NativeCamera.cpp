@@ -3,6 +3,7 @@
 #include <napi/napi_pointer.h>
 #include "NativeVideo.h"
 #include "MediaDevices.h"
+#include "ImageCapture.h"
 
 namespace Babylon::Plugins::Internal
 {
@@ -51,6 +52,7 @@ namespace Babylon::Plugins::NativeCamera
     {
         Babylon::Plugins::NativeVideo::Initialize(env);
         Babylon::Plugins::MediaDevices::Initialize(env);
+        Babylon::Plugins::ImageCapture::Initialize(env);
         Babylon::Plugins::Internal::NativeCamera::Initialize(env);
     }
 }
