@@ -652,10 +652,10 @@ namespace Babylon::Plugins
                     // Create and end the render encoder.
                     id<MTLRenderCommandEncoder> renderEncoder = [m_impl->currentCommandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
                     renderEncoder.label = @"NativeCameraEncoder";
-                    
+
                     // Set the shader pipeline.
                     [renderEncoder setRenderPipelineState:m_impl->cameraPipelineState];
-                    
+
 #if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000)
                     const VideoRotationAngle::Enum angle = m_impl->cameraTextureDelegate->VideoRotation;
 #else
