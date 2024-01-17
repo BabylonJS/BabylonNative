@@ -20,7 +20,7 @@
 
 @class CameraTextureDelegate;
 
-@interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
+@interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate, NSObject>
 {
 #if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000)
     // angle in half PI (0 = 0, 1 = 0.5PI, 2 = PI, 3 = 1.5PI)
@@ -705,12 +705,12 @@ namespace Babylon::Plugins
                     [renderEncoder endEncoding];
 
                     [m_impl->currentCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
-                        if (textureCbCr != nil) {
-                            [textureCbCr setPurgeableState:MTLPurgeableStateEmpty];
-                        }
-                        
                         if (textureY != nil) {
-                            [textureY setPurgeableState:MTLPurgeableStateEmpty];
+                            [textureY setPurgeableState:MTLPurgeableStateVolatile];
+                        }
+
+                        if (textureCbCr != nil) {
+                            [textureCbCr setPurgeableState:MTLPurgeableStateVolatile];
                         }
                     }];
                 }
