@@ -17,7 +17,6 @@ jobs:
         vmImage: ${{ parameters.vmImage }}
 
     - script: |
-        ls /Applications
         sudo xcode-select --switch /Applications/Xcode_${{ parameters.xCodeVersion }}.app/Contents/Developer
       displayName: 'Select XCode ${{ parameters.xCodeVersion }}'
 
