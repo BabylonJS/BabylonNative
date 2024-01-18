@@ -648,7 +648,7 @@ namespace Babylon::Plugins
                     renderPassDescriptor.colorAttachments[0].texture = m_impl->textureRGBA;
                     renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionDontCare;
                     renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
-                    
+
                     // Create and end the render encoder.
                     id<MTLRenderCommandEncoder> renderEncoder = [m_impl->currentCommandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
                     renderEncoder.label = @"NativeCameraEncoder";
