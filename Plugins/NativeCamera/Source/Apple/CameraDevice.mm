@@ -22,7 +22,6 @@
 
 struct VideoRotationAngle
 {
-    /// Texture formats:
     enum Enum
     {
         LandscapeRight,
@@ -35,8 +34,6 @@ struct VideoRotationAngle
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate, NSObject>
 {
 #if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000)
-    // angle in half PI (0 = 0, 1 = 0.5PI, 2 = PI, 3 = 1.5PI)
-    // Might change in the future for a float.
     @public VideoRotationAngle::Enum VideoRotation;
 #else
     @public AVCaptureVideoOrientation VideoOrientation;
