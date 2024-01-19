@@ -671,17 +671,19 @@ namespace Babylon::Plugins
 
                     [m_impl->currentCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer>) {
                         if (textureY != nil) {
-                            [textureY setPurgeableState:MTLPurgeableStateVolatile];
+                            [textureY setPurgeableState:MTLPurgeableStateEmpty];
                         }
 
                         if (textureCbCr != nil) {
-                            [textureCbCr setPurgeableState:MTLPurgeableStateVolatile];
+                            [textureCbCr setPurgeableState:MTLPurgeableStateEmpty];
                         }
                     }];
                 }
 
                 // Finalize rendering here & push the command buffer to the GPU.
                 [m_impl->currentCommandBuffer commit];
+                
+                [m_impl->currentCommandBuffer waitUntilCompleted];
             }
         });
         // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
@@ -814,9 +816,8 @@ namespace Babylon::Plugins
     [self updateOrientation];
 #else
     // Orientation not supported on non-iOS devices. LandscapeLeft assumes the video is already in the correct orientation.
-    self->VideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
+    self->VideoOrientation = VideoOrientationAngle::LandscapeLeft;
 #endif
-
     return self;
 }
 
