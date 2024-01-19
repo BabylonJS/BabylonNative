@@ -31,7 +31,7 @@ struct VideoRotationAngle
     };
 };
 
-@interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate, NSObject>
+@interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
 #if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000)
     @public VideoRotationAngle::Enum VideoRotation;
