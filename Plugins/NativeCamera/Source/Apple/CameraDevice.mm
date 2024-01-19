@@ -20,24 +20,17 @@
 
 @class CameraTextureDelegate;
 
-struct VideoRotationAngle
+enum class VideoOrientationAngle
 {
-    enum Enum
-    {
-        LandscapeRight,
-        LandscapeLeft,
-        Portrait,
-        PortraitUpsideDown
-    };
+    LandscapeRight,
+    LandscapeLeft,
+    Portrait,
+    PortraitUpsideDown
 };
 
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
-#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000)
-    @public VideoRotationAngle::Enum VideoRotation;
-#else
-    @public AVCaptureVideoOrientation VideoOrientation;
-#endif
+    @public VideoOrientationAngle VideoOrientation;
     CVMetalTextureCacheRef textureCache;
     CVMetalTextureRef cameraTextureY;
     CVMetalTextureRef cameraTextureCbCr;
@@ -547,16 +540,12 @@ namespace Babylon::Plugins
 
             // Actually start the camera session.
             [implObj->m_impl->avCaptureSession startRunning];
-#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000)
-            return CameraDimensions{implObj->m_impl->cameraDimensions.width, implObj->m_impl->cameraDimensions.height};
-#else
             // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
             // of the video should be swapped
-            return implObj->m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeLeft ||
-                implObj->m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeRight ?
+            return implObj->m_impl->cameraTextureDelegate->VideoOrientation == VideoOrientationAngle::LandscapeLeft ||
+                implObj->m_impl->cameraTextureDelegate->VideoOrientation == VideoOrientationAngle::LandscapeRight ?
                 CameraDimensions{implObj->m_impl->cameraDimensions.width, implObj->m_impl->cameraDimensions.height} :
-                CameraDimensions{implObj->m_impl->cameraDimensions.width, implObj->m_impl->cameraDimensions.height};
-#endif
+                CameraDimensions{implObj->m_impl->cameraDimensions.height, implObj->m_impl->cameraDimensions.width};
         });
     }
 
@@ -573,36 +562,21 @@ namespace Babylon::Plugins
             @synchronized(m_impl->cameraTextureDelegate) {
                 textureY = [m_impl->cameraTextureDelegate getCameraTextureY];
                 textureCbCr = [m_impl->cameraTextureDelegate getCameraTextureCbCr];
-#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000)
-                switch (m_impl->cameraTextureDelegate->VideoRotation)
-                {
-                    case VideoRotationAngle::LandscapeRight:
-                    case VideoRotationAngle::LandscapeLeft:
-                        width = [textureY width];
-                        height = [textureY height];
-                        break;
-                    case VideoRotationAngle::Portrait:
-                    case VideoRotationAngle::PortraitUpsideDown:
-                        width = [textureY height];
-                        height = [textureY width];
-                        break;
-                }
-#else
+
                 switch (m_impl->cameraTextureDelegate->VideoOrientation)
                 {
-                    case AVCaptureVideoOrientationLandscapeRight:
-                    case AVCaptureVideoOrientationLandscapeLeft:
+                    case VideoOrientationAngle::LandscapeRight:
+                    case VideoOrientationAngle::LandscapeLeft:
                         width = [textureY width];
                         height = [textureY height];
                         break;
-                    case AVCaptureVideoOrientationPortrait:
-                    case AVCaptureVideoOrientationPortraitUpsideDown:
+                    case VideoOrientationAngle::Portrait:
+                    case VideoOrientationAngle::PortraitUpsideDown:
                         // In portrait orientation the camera sensor is rotated 90 degrees so the width and height should be swapped
                         width = [textureY height];
                         height = [textureY width];
                         break;
                 }
-#endif
             }
 
             // Skip processing this frame if width and height are invalid.
@@ -653,30 +627,10 @@ namespace Babylon::Plugins
                     // Set the shader pipeline.
                     [renderEncoder setRenderPipelineState:m_impl->cameraPipelineState];
 
-#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000)
-                    const VideoRotationAngle::Enum angle = m_impl->cameraTextureDelegate->VideoRotation;
-#else
-                    int angle = 0;
+                    // Set the vertex & UV data based on current orientation
                     switch (m_impl->cameraTextureDelegate->VideoOrientation)
                     {
-                        case AVCaptureVideoOrientationLandscapeLeft:
-                            angle = VideoRotationAngle::LandscapeLeft;
-                            break;
-                        case AVCaptureVideoOrientationPortrait:
-                            angle = VideoRotationAngle::Portrait;
-                            break;
-                        case AVCaptureVideoOrientationLandscapeRight:
-                            angle = VideoRotationAngle::LandscapeRight;
-                            break;
-                        case AVCaptureVideoOrientationPortraitUpsideDown:
-                            angle = VideoRotationAngle::PortraitUpsideDown;
-                            break;
-                    }
-#endif
-                    // Set the vertex & UV data based on current orientation
-                    switch (angle)
-                    {
-                        case VideoRotationAngle::LandscapeLeft:
+                        case VideoOrientationAngle::LandscapeLeft:
                             if (m_impl->avDevice.position == AVCaptureDevicePositionFront)
                             {
                                 // The front camera sensor is oriented 180 out of sync from the rear sensor on iOS devices. Swap landscape orientations.
@@ -687,13 +641,13 @@ namespace Babylon::Plugins
                                 [renderEncoder setVertexBytes:vertices_landscape_left length:sizeof(vertices_landscape_left) atIndex:0];
                             }
                             break;
-                        case VideoRotationAngle::Portrait:
+                        case VideoOrientationAngle::Portrait:
                             [renderEncoder setVertexBytes:vertices_portrait length:sizeof(vertices_portrait) atIndex:0];
                             break;
-                        case VideoRotationAngle::PortraitUpsideDown:
+                        case VideoOrientationAngle::PortraitUpsideDown:
                             [renderEncoder setVertexBytes:vertices_portrait_upsideddown length:sizeof(vertices_portrait_upsideddown) atIndex:0];
                             break;
-                        case VideoRotationAngle::LandscapeRight:
+                        case VideoOrientationAngle::LandscapeRight:
                             if (m_impl->avDevice.position == AVCaptureDevicePositionFront)
                             {
                                 // The front camera sensor is oriented 180 out of sync from the rear sensor on iOS devices. Swap landscape orientations.
@@ -730,16 +684,12 @@ namespace Babylon::Plugins
                 [m_impl->currentCommandBuffer commit];
             }
         });
-#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000)
-        return CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height};
-#else
         // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
         // of the video should be swapped
-        return m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeLeft ||
-            m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeRight ?
+        return m_impl->cameraTextureDelegate->VideoOrientation == VideoOrientationAngle::LandscapeLeft ||
+            m_impl->cameraTextureDelegate->VideoOrientation == VideoOrientationAngle::LandscapeRight ?
             CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height} :
-            CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height};
-#endif
+            CameraDimensions{m_impl->cameraDimensions.height, m_impl->cameraDimensions.width};
     }
 
     CameraDevice::TakePhotoTask CameraDevice::TakePhotoAsync(PhotoSettings photoSettings)
@@ -920,44 +870,23 @@ namespace Babylon::Plugins
     }
 #endif
 
-#if (__MAC_OS_X_VERSION_MIN_REQUIRED >= 140000 || __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000)
+    // Convert from UIInterfaceOrientation to VideoOrientationAngle.
     switch (orientation)
     {
         case UIInterfaceOrientationUnknown:
         case UIInterfaceOrientationLandscapeLeft:
-            self->VideoRotation = VideoRotationAngle::LandscapeLeft;
-            break;
-        case UIInterfaceOrientationPortrait:
-            self->VideoRotation = VideoRotationAngle::Portrait;
+            self->VideoOrientation = VideoOrientationAngle::LandscapeLeft;
             break;
         case UIInterfaceOrientationLandscapeRight:
-            self->VideoRotation = VideoRotationAngle::LandscapeRight;
-            break;
-        case UIInterfaceOrientationPortraitUpsideDown:
-            self->VideoRotation = VideoRotationAngle::PortraitUpsideDown;
-            break;
-    }
-#else
-    // Convert from UIInterfaceOrientation to AVCaptureVideoOrientation. The conversion is only used becauase
-    // MacOS doesn't have access to UIInterfaceOrientation but it does have AVCaptureVideoOrientation which
-    // lets us share more code without ifdefs
-    switch (orientation)
-    {
-        case UIInterfaceOrientationUnknown:
-        case UIInterfaceOrientationLandscapeLeft:
-            self->VideoOrientation = AVCaptureVideoOrientationLandscapeLeft;
-            break;
-        case UIInterfaceOrientationLandscapeRight:
-            self->VideoOrientation = AVCaptureVideoOrientationLandscapeRight;
+            self->VideoOrientation = VideoOrientationAngle::LandscapeRight;
             break;
         case UIInterfaceOrientationPortrait:
-            self->VideoOrientation = AVCaptureVideoOrientationPortrait;
+            self->VideoOrientation = VideoOrientationAngle::Portrait;
             break;
         case UIInterfaceOrientationPortraitUpsideDown:
-            self->VideoOrientation = AVCaptureVideoOrientationPortraitUpsideDown;
+            self->VideoOrientation = VideoOrientationAngle::PortraitUpsideDown;
             break;
     }
-#endif
 }
 
 -(void)OrientationDidChange:(NSNotification*)notification
