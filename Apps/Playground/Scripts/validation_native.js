@@ -373,6 +373,8 @@ xhr.addEventListener("readystatechange", function() {
 BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
     _native.Canvas.loadTTFAsync("droidsans", data).then(function () {
         _native.RootUrl = "https://playground.babylonjs.com";
+        // TODO: remove when empty flush method is added to nativeEngine and Package version updated
+        engine.flushFramebuffer = function () { };
         console.log("Starting");
         TestUtils.setTitle("Starting Native Validation Tests");
         TestUtils.updateSize(testWidth, testHeight);
