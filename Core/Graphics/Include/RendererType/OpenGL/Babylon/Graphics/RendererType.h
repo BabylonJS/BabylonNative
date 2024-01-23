@@ -12,4 +12,9 @@ namespace Babylon::Graphics
         DeviceT Device;
         float DevicePixelRatio{1.f};
     };
+
+    struct PlatformInfo
+    {
+        DeviceT Device;
+    };
 }
