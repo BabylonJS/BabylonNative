@@ -204,6 +204,7 @@ const buildUWP = gulp.series(makeUWPProject, buildUWPProject);
 
 const copyCommonFiles = () => {
   return gulp.src('../Modules/@babylonjs/react-native/README.md')
+    .pipe(gulp.src('../NOTICE.html'))
     .pipe(gulp.dest('Assembled'));
 };
 
@@ -217,6 +218,7 @@ const copySharedFiles = () => {
 const copyIOSAndroidCommonFiles = () => {
   return gulp.src('../Modules/@babylonjs/react-native-iosandroid/package.json')
     .pipe(gulp.src('../Modules/@babylonjs/react-native-iosandroid/README.md'))
+    .pipe(gulp.src('../NOTICE.html'))
     .pipe(gulp.src(`${basekitPackagePath}react-native-babylon.podspec`))
     .pipe(gulp.dest(`${assemblediOSAndroidDir}/`));
 };
@@ -304,6 +306,7 @@ const createUWPDirectories = async () => {
 const copyCommonFilesUWP = () => {
   return gulp.src('../Modules/@babylonjs/react-native-windows/package.json')
     .pipe(gulp.src('../Modules/@babylonjs/react-native-windows/README.md'))
+    .pipe(gulp.src('../NOTICE.html'))
     .pipe(gulp.src('../Modules/@babylonjs/react-native-windows/*.ts*'))
     .pipe(gulp.dest(`${assembledWindowsDir}`));
 }
@@ -448,6 +451,7 @@ const validateAssembled = async () => {
     'Assembled/ReactNativeEngine.js',
     'Assembled/ReactNativeEngine.js.map',
     'Assembled/README.md',
+    'Assembled/NOTICE.html',
     'Assembled/shared',
     'Assembled/shared/BabylonNative.h',
     'Assembled/shared/XrAnchorHelper.h',
@@ -541,6 +545,7 @@ const validateAssemblediOSAndroid = async () => {
     `${assemblediOSAndroidDir}/package.json`,
     `${assemblediOSAndroidDir}/react-native-babylon.podspec`,
     `${assemblediOSAndroidDir}/README.md`,
+    `${assemblediOSAndroidDir}/NOTICE.html`,
   ];
 
   const versionIndex = process.argv.indexOf('--reactNative');	
