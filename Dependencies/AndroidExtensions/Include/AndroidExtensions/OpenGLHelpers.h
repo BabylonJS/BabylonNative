@@ -26,7 +26,10 @@ namespace android::OpenGLHelpers
             EGLSurface previousDrawSurface{ eglGetCurrentSurface(EGL_DRAW) };
             EGLSurface previousReadSurface{ eglGetCurrentSurface(EGL_READ) };
             EGLContext previousContext{ eglGetCurrentContext() };
-            eglMakeCurrent(display, drawSurface, readSurface, context);
+            if (!eglMakeCurrent(display, drawSurface, readSurface, context))
+            {
+                throw std::runtime_error{"Failed to make the specified surface current."};
+            }
             return gsl::finally([previousDisplay, previousDrawSurface, previousReadSurface, previousContext]() { eglMakeCurrent(previousDisplay, previousDrawSurface, previousReadSurface, previousContext); });
         }
 
