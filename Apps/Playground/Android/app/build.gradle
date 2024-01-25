@@ -72,11 +72,13 @@ android {
             path 'CMakeLists.txt'
         }
     }
-
     packagingOptions {
-        pickFirst 'lib/*/libv8android.so'
-        pickFirst 'lib/*/libjsc.so'
+        jniLibs {
+            pickFirsts += ['lib/*/libv8android.so', 'lib/*/libjsc.so']
+        }
     }
+
+    namespace 'com.android.babylonnative.playground'
 }
 
 dependencies {
