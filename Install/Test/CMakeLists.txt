@@ -35,9 +35,7 @@ set(LOCAL_SCRIPTS "${UNITTESTS_DIR}/Scripts/tests.js")
 
 set(NPM_SCRIPTS
     "${APPS_DIR}/node_modules/babylonjs/babylon.max.js"
-    "${APPS_DIR}/node_modules/babylonjs/babylon.max.js.map"
     "${APPS_DIR}/node_modules/babylonjs-materials/babylonjs.materials.js"
-    "${APPS_DIR}/node_modules/babylonjs-materials/babylonjs.materials.js.map"
     "${APPS_DIR}/node_modules/chai/chai.js"
     "${APPS_DIR}/node_modules/mocha/mocha.js")
 
