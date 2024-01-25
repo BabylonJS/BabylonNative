@@ -27,6 +27,10 @@ steps:
       sudo ln -s /opt/cmake/cmake-$(CMAKE_VERSION)-linux-x86_64/bin/cmake /usr/local/bin/cmake
       sudo apt-get update
       sudo apt-get install ninja-build
+      sudp cp /usr/bin/ninja /usr/local/bin/cmake
       cmake --version
+      ninja --version
+      which ninja
+      which cmake
     condition: contains('${{ parameters.vmImage }}', 'ubuntu')
     displayName: 'CMake version'
