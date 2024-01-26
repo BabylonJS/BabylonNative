@@ -108,7 +108,7 @@ task extractNativeLibraries() {
 }
 
 tasks.whenTaskAdded { task ->
-    if (task.name.contains("external") && !task.name.contains("Clean")) {
+    if ((task.name.contains("buildCMake") || task.name.contains("configureCMake")) && !task.name.contains("Clean")) {
         task.dependsOn(extractNativeLibraries)
     }
 }
