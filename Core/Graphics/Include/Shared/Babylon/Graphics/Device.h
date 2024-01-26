@@ -9,11 +9,6 @@
 
 namespace Babylon::Graphics
 {
-    struct PlatformInfo
-    {
-        DeviceT Device;
-    };
-
     struct Configuration
     {
         // Custom device to use instead of creating one internally.

@@ -23,7 +23,7 @@ FetchContent_Declare(JsRuntimeHost
     GIT_TAG 0b1e30c6db15adeb86a81c95cc9bd8ff42e30f2b)
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG 1a47db416ec2aae3f51b28b94f73e8f54e412d0d)
+    GIT_TAG 7fd1d3dadacc3f7d85b24bd6783f492cb5fb09b9)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
 FetchContent_Declare(base-n

@@ -4,4 +4,9 @@
 namespace Babylon::Graphics
 {
     const bgfx::RendererType::Enum DeviceImpl::s_bgfxRenderType = bgfx::RendererType::OpenGLES;
+
+    PlatformInfo DeviceImpl::GetPlatformInfo() const
+    {
+        return {static_cast<DeviceT>(bgfx::getInternalData()->context)};
+    }
 }
