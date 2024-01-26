@@ -107,7 +107,7 @@ task extractNativeLibraries() {
     }
 }
 
-tasks.whenTaskAdded { task ->
+tasks.configureEach { task ->
     if ((task.name.contains("buildCMake") || task.name.contains("configureCMake")) && !task.name.contains("Clean")) {
         task.dependsOn(extractNativeLibraries)
     }

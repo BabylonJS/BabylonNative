@@ -107,7 +107,7 @@ task copyScripts {
 
 // Run copyScripts task after CMake external build
 // And make sure merging assets into output is performed after the scripts copy
-tasks.whenTaskAdded { task ->
+tasks.configureEach { task ->
     if (task.name == 'mergeDebugNativeLibs') {
         task.finalizedBy(copyScripts)
     }
