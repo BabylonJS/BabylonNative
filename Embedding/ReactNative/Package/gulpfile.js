@@ -100,13 +100,11 @@ const makeUWPProjectPlatform = async (name, arch) => {
 
 const makeUWPProjectx86 = async () => makeUWPProjectPlatform('x86', 'Win32');
 const makeUWPProjectx64 = async () => makeUWPProjectPlatform('x64', 'x64');
-const makeUWPProjectARM = async () => makeUWPProjectPlatform('arm', 'arm');
 const makeUWPProjectARM64 = async () => makeUWPProjectPlatform('arm64', 'arm64');
 
 const makeUWPProject = gulp.parallel(
   makeUWPProjectx86,
   makeUWPProjectx64,
-  makeUWPProjectARM,
   makeUWPProjectARM64
 );
 
@@ -126,14 +124,6 @@ const buildUWPx64Release = async () => {
   exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\Build.bat -Platform x64 -Configuration Release');
 }
 
-const buildUWPARMDebug = async () => {
-  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\Build.bat -Platform ARM -Configuration Debug');
-}
-
-const buildUWPARMRelease = async () => {
-  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\Build.bat -Platform ARM -Configuration Release');
-}
-
 const buildUWPARM64Debug = async () => {
   exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\Build.bat -Platform ARM64 -Configuration Debug');
 }
@@ -147,8 +137,6 @@ const buildUWPProject = gulp.parallel(
   buildUWPx86Release,
   buildUWPx64Debug,
   buildUWPx64Release,
-  buildUWPARMDebug,
-  buildUWPARMRelease,
   buildUWPARM64Debug,
   buildUWPARM64Release
 );
@@ -173,14 +161,6 @@ const buildUWPPlaygroundx64Release = async () => {
   exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\BuildPlayground.bat -Platform x64 -Configuration Release');
 }
 
-const buildUWPPlaygroundARMDebug = async () => {
-  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\BuildPlayground.bat -Platform ARM -Configuration Debug');
-}
-
-const buildUWPPlaygroundARMRelease = async () => {
-  exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\BuildPlayground.bat -Platform ARM -Configuration Release');
-}
-
 const buildUWPPlaygroundARM64Debug = async () => {
   exec('.\\..\\Modules\\@babylonjs\\react-native-windows\\windows\\scripts\\BuildPlayground.bat -Platform ARM64 -Configuration Debug');
 }
@@ -194,8 +174,6 @@ const buildUWPPlayground = gulp.parallel(
   buildUWPPlaygroundx86Release,
   buildUWPPlaygroundx64Debug,
   buildUWPPlaygroundx64Release,
-  buildUWPPlaygroundARMDebug,
-  buildUWPPlaygroundARMRelease,
   buildUWPPlaygroundARM64Debug,
   buildUWPPlaygroundARM64Release
 );
@@ -285,9 +263,6 @@ const createUWPDirectories = async () => {
   shelljs.mkdir('-p', `${assembledWindowsDir}`);
   shelljs.mkdir('-p', `${assembledWindowsDir}/windows`);
   shelljs.mkdir('-p', `${assembledWindowsDir}/windows/libs`);
-  shelljs.mkdir('-p', `${assembledWindowsDir}/windows/libs/arm`);
-  shelljs.mkdir('-p', `${assembledWindowsDir}/windows/libs/arm/Debug`);
-  shelljs.mkdir('-p', `${assembledWindowsDir}/windows/libs/arm/Release`);
   shelljs.mkdir('-p', `${assembledWindowsDir}/windows/libs/arm64`);
   shelljs.mkdir('-p', `${assembledWindowsDir}/windows/libs/arm64/Debug`);
   shelljs.mkdir('-p', `${assembledWindowsDir}/windows/libs/arm64/Release`);
@@ -333,18 +308,6 @@ const copyx64ReleaseUWPFiles = () => {
   return gulp.src('../Modules/@babylonjs/react-native/Build/uwp_x64/**/Release/**/*.{lib,pri}')
     .pipe(rename({ dirname: '' }))
     .pipe(gulp.dest(`${assembledWindowsDir}/windows/libs/x64/Release`));
-}
-
-const copyARMDebugUWPFiles = () => {
-  return gulp.src('../Modules/@babylonjs/react-native/Build/uwp_arm/**/Debug/**/*.{lib,pri}')
-    .pipe(rename({ dirname: '' }))
-    .pipe(gulp.dest(`${assembledWindowsDir}/windows/libs/arm/Debug`));
-}
-
-const copyARMReleaseUWPFiles = () => {
-  return gulp.src('../Modules/@babylonjs/react-native/Build/uwp_arm/**/Release/**/*.{lib,pri}')
-    .pipe(rename({ dirname: '' }))
-    .pipe(gulp.dest(`${assembledWindowsDir}/windows/libs/arm/Release`));
 }
 
 const copyARM64DebugUWPFiles = () => {
@@ -396,8 +359,6 @@ const copyUWPFiles = gulp.series(
     copyx86ReleaseUWPFiles,
     copyx64DebugUWPFiles,
     copyx64ReleaseUWPFiles,
-    copyARMDebugUWPFiles,
-    copyARMReleaseUWPFiles,
     copyARM64DebugUWPFiles,
     copyARM64ReleaseUWPFiles,
     copyVCXProjUWPFiles)
@@ -408,8 +369,6 @@ const copyUWPFiles = gulp.series(
     copyx86ReleaseUWPFiles,
     copyx64DebugUWPFiles,
     copyx64ReleaseUWPFiles,
-    copyARMDebugUWPFiles,
-    copyARMReleaseUWPFiles,
     copyARM64DebugUWPFiles,
     copyARM64ReleaseUWPFiles,
     copyVCXProjUWPFiles,
@@ -682,7 +641,6 @@ const packUWPNoBuild = gulp.series(clean, copyPackageFilesUWP, createPackage, cr
 exports.buildTS = buildTS;
 exports.makeUWPProjectx86 = makeUWPProjectx86;
 exports.makeUWPProjectx64 = makeUWPProjectx64;
-exports.makeUWPProjectARM = makeUWPProjectARM;
 exports.makeUWPProjectARM64 = makeUWPProjectARM64;
 exports.makeUWPProject = makeUWPProject;
 
@@ -690,8 +648,6 @@ exports.buildUWPx86Debug = buildUWPx86Debug;
 exports.buildUWPx86Release = buildUWPx86Release;
 exports.buildUWPx64Debug = buildUWPx64Debug;
 exports.buildUWPx64Release = buildUWPx64Release;
-exports.buildUWPARMDebug = buildUWPARMDebug;
-exports.buildUWPARMRelease = buildUWPARMRelease;
 exports.buildUWPARM64Debug = buildUWPARM64Debug;
 exports.buildUWPARM64Release = buildUWPARM64Release;
 exports.buildUWPProject = buildUWPProject;
@@ -701,8 +657,6 @@ exports.buildUWPPlaygroundx86Debug = buildUWPPlaygroundx86Debug;
 exports.buildUWPPlaygroundx86Release = buildUWPPlaygroundx86Release;
 exports.buildUWPPlaygroundx64Debug = buildUWPPlaygroundx64Debug;
 exports.buildUWPPlaygroundx64Release = buildUWPPlaygroundx64Release;
-exports.buildUWPPlaygroundARMDebug = buildUWPPlaygroundARMDebug;
-exports.buildUWPPlaygroundARMRelease = buildUWPPlaygroundARMRelease;
 exports.buildUWPPlaygroundARM64Debug = buildUWPPlaygroundARM64Debug;
 exports.buildUWPPlaygroundARM64Release = buildUWPPlaygroundARM64Release;
 exports.buildUWPPlayground = buildUWPPlayground;
