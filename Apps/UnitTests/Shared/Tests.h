@@ -106,52 +106,43 @@ TEST(Performance, Spheres)
         console.log("Setting up Performance test.");
         var engine = new BABYLON.NativeEngine();
         var scene = new BABYLON.Scene(engine);
-        function CreateSpheresAsync(scene) {
-            var size = 12;
-            for (var i = 0; i < size; i++) {
-                for (var j = 0; j < size; j++) {
-                    for (var k = 0; k < size; k++) {
-                        var sphere = BABYLON.Mesh.CreateSphere("sphere" + i + j + k, 32, 0.9, scene);
-                        sphere.position.x = i;
-                        sphere.position.y = j;
-                        sphere.position.z = k;
-                    }
+
+        var size = 12;
+        for (var i = 0; i < size; i++) {
+            for (var j = 0; j < size; j++) {
+                for (var k = 0; k < size; k++) {
+                    var sphere = BABYLON.Mesh.CreateSphere("sphere" + i + j + k, 32, 0.9, scene);
+                    sphere.position.x = i;
+                    sphere.position.y = j;
+                    sphere.position.z = k;
                 }
             }
-
-            return Promise.resolve();
         }
-        CreateSpheresAsync(scene).then(function () {
-            scene.createDefaultCamera(true, true, true);
-            scene.activeCamera.alpha += Math.PI;
-            scene.createDefaultLight(true);
-            engine.runRenderLoop(function () {
-                scene.render();
-            });
-            console.log("Ready!");
-            SetReady();
-        }, function (ex) {
-            console.log(ex.message, ex.stack);
+
+        scene.createDefaultCamera(true, true, true);
+        scene.activeCamera.alpha += Math.PI;
+        scene.createDefaultLight(true);
+        engine.runRenderLoop(function () {
+            scene.render();
         });
+        console.log("Ready!");
+        SetReady();
         )" };
 
     Babylon::Graphics::Device device = deviceTestConfig;
-    std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
     std::optional<Babylon::Graphics::DeviceUpdate> update{};
     std::promise<int32_t> ready;
     update.emplace(device.GetUpdate("update"));
 
     Babylon::AppRuntime runtime{};
-    runtime.Dispatch([&ready, &device, &nativeCanvas](Napi::Env env) {
+    runtime.Dispatch([&ready, &device](Napi::Env env) {
         device.AddToJavaScript(env);
 
-        Babylon::Polyfills::XMLHttpRequest::Initialize(env);
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
             printf("%s", message);
             fflush(stdout);
             });
         Babylon::Polyfills::Window::Initialize(env);
-        nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
         Babylon::Plugins::NativeEngine::Initialize(env);
         env.Global().Set("SetReady", Napi::Function::New(env, [&ready](const Napi::CallbackInfo& info)
         {
