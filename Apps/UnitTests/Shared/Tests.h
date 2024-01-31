@@ -126,7 +126,7 @@ TEST(Performance, Spheres)
             scene.render();
         });
         console.log("Ready!");
-        SetReady();
+        setReady();
         )" };
 
     Babylon::Graphics::Device device = deviceTestConfig;
@@ -144,11 +144,11 @@ TEST(Performance, Spheres)
             });
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
-        env.Global().Set("SetReady", Napi::Function::New(env, [&ready](const Napi::CallbackInfo& info)
+        env.Global().Set("setReady", Napi::Function::New(env, [&ready](const Napi::CallbackInfo& info)
         {
             Napi::Env env = info.Env();
             ready.set_value(1);
-        }, "SetReady"));
+        }, "setReady"));
     });
 
     Babylon::ScriptLoader loader{ runtime };
@@ -170,8 +170,9 @@ TEST(Performance, Spheres)
     // Stop measuring time
     const auto stop = std::chrono::high_resolution_clock::now();
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-    const float durationSeconds = float(double(duration.count()) / 1000.);
+    const float durationSeconds = float(duration.count()) / 1000.f;
     printf("Duration is %f seconds.\n", durationSeconds);
+    fflush(stdout);
 }
 
 int Run()
