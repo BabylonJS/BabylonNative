@@ -73,6 +73,10 @@ set_property(TARGET OSDependent PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET MachineIndependent PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
 
+# seen with Sergio, disable warnings until unused parameter [-Wunused-parameter] get fixed. 
+disable_warnings(SPIRV)
+disable_warnings(MachineIndependent)
+
 # -------------------------------- SPIRV-Cross --------------------------------
 # Dependencies: none
 set(SPIRV_CROSS_CLI OFF CACHE BOOL "")
