@@ -146,6 +146,10 @@ set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "")
 set(SPIRV_CROSS_ENABLE_C_API OFF CACHE BOOL "")
 set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "")
 set(SPIRV_CROSS_SKIP_INSTALL ON CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_WEBMIN ON CACHE BOOL "")
+if(NOT GRAPHICS_API STREQUAL "OpenGL")
+    set(SPIRV_CROSS_ENABLE_GLSL OFF CACHE BOOL "")
+endif()
 if(NOT GRAPHICS_API STREQUAL "Metal")
     set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "")
 endif()
@@ -154,7 +158,9 @@ if(NOT GRAPHICS_API STREQUAL "D3D11" AND NOT GRAPHICS_API STREQUAL "D3D12")
 endif()
 FetchContent_MakeAvailable_With_Message(SPIRV-Cross)
 set_property(TARGET spirv-cross-core PROPERTY FOLDER Dependencies/SPIRV-Cross)
-set_property(TARGET spirv-cross-glsl PROPERTY FOLDER Dependencies/SPIRV-Cross)
+if(TARGET spirv-cross-glsl)
+    set_property(TARGET spirv-cross-glsl PROPERTY FOLDER Dependencies/SPIRV-Cross)
+endif()
 if(TARGET spirv-cross-msl)
     set_property(TARGET spirv-cross-msl PROPERTY FOLDER Dependencies/SPIRV-Cross)
 endif()
@@ -170,6 +176,10 @@ foreach(target spirv-cross-core spirv-cross-glsl spirv-cross-msl spirv-cross-hls
         set_target_properties(${target} PROPERTIES COMPILE_OPTIONS "${compileOptions}")
     endif()
 endforeach()
+
+# seen with Sergio, disable warnings until unused parameter [-Wunused-parameter] get fixed. 
+disable_warnings(SPIRV)
+disable_warnings(MachineIndependent)
 
 # --------------------------------------------------
 # xr

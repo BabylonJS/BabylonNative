@@ -285,28 +285,58 @@ namespace xr
         void Initialize()
         {
             {
+                // Get the config from the current surface.
+                // This assumes a surface has already been created for the context that was passed in.
+                // If not, it will fail, but in the context of Babylon Native, this should always work.
+                // If the same exact config is not used, the eglMakeCurrent will fail, and XR rendering
+                // will not work. Getting the config from the current surface is a more reliable way
+                // of ensuring this than trying to manually specify the same attributes to search for a
+                // config.
+
                 display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-
-                EGLint attributes[]
+                if (display == EGL_NO_DISPLAY)
                 {
-                    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,
+                    throw std::runtime_error{"No default display."};
+                }
 
-                    EGL_BLUE_SIZE, 8,
-                    EGL_GREEN_SIZE, 8,
-                    EGL_RED_SIZE, 8,
-                    EGL_ALPHA_SIZE, 8,
+                EGLSurface currentDrawSurface{ eglGetCurrentSurface(EGL_DRAW) };
+                if (currentDrawSurface == EGL_NO_SURFACE)
+                {
+                    throw std::runtime_error{"No current surface."};
+                }
 
-                    EGL_DEPTH_SIZE, 16,
-                    EGL_STENCIL_SIZE, 8,
-
-                    EGL_NONE
-                };
+                EGLint configID{};
+                if (!eglQuerySurface(display, currentDrawSurface, EGL_CONFIG_ID, &configID))
+                {
+                    throw std::runtime_error{"Failed to query surface."};
+                }
 
                 EGLint numConfigs{};
-                if (!eglChooseConfig(display, attributes, &config, 1, &numConfigs))
+                if (!eglGetConfigs(display, nullptr, 0, &numConfigs))
                 {
-                    throw std::runtime_error{"Failed to choose EGL config."};
+                    throw std::runtime_error{"Failed to get configs."};
                 }
+
+                std::vector<EGLConfig> configs(numConfigs);
+                if (!eglGetConfigs(display, configs.data(), numConfigs, &numConfigs))
+                {
+                    throw std::runtime_error{"Failed to get configs."};
+                }
+
+                auto it = std::find_if(configs.begin(), configs.end(), [display{display}, configID](const auto& config) {
+                    EGLint id{};
+                    if (!eglGetConfigAttrib(display, config, EGL_CONFIG_ID, &id))
+                    {
+                        throw std::runtime_error{"Failed to get config attribute."};
+                    }
+                    return id == configID;
+                });
+
+                if (it == configs.end()) {
+                    throw std::runtime_error{"Config not found."};
+                }
+
+                config = *it;
             }
 
             // Generate a texture id for the camera texture (ARCore will allocate the texture itself)
@@ -631,6 +661,11 @@ namespace xr
 
                 // Draw the quad
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
+
+                // Present to the screen
+                // NOTE: For a yet to be determined reason, bgfx is also doing an eglSwapBuffers when running in the Babylon Native and Babylon React Native Playground apps.
+                //       The "double" eglSwapBuffers causes rendering issues, so until we figure out this issue, comment out this line while testing in the BN/BRN playground apps.
+                eglSwapBuffers(eglGetCurrentDisplay(), eglGetCurrentSurface(EGL_DRAW));
             }
         }
 

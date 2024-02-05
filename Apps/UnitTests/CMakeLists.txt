@@ -8,9 +8,7 @@ set(LOCAL_SCRIPTS
 
 set(NPM_SCRIPTS
     "../node_modules/babylonjs/babylon.max.js"
-    "../node_modules/babylonjs/babylon.max.js.map"
     "../node_modules/babylonjs-materials/babylonjs.materials.js"
-    "../node_modules/babylonjs-materials/babylonjs.materials.js.map"
     "../node_modules/chai/chai.js"
     "../node_modules/mocha/mocha.js")
 

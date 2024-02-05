@@ -10,8 +10,8 @@ include(FetchContent)
 # Declarations
 # --------------------------------------------------
 FetchContent_Declare(AndroidExtensions
-    GIT_REPOSITORY https://github.com/bghgary/AndroidExtensions.git
-    GIT_TAG 97ebfb5046ed4e553e306a75e5fafc9c6b72cb39)
+    GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
+    GIT_TAG 7fd1d3dadacc3f7d85b24bd6783f492cb5fb09b9)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG f2757396e80bc4169f2ddb938ce25367a98ffdd0)
@@ -29,15 +29,15 @@ FetchContent_Declare(CMakeExtensions
     GIT_TAG 4d3ed5a16f3660ba0f144fb08b5021cf024d5d2d)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
-    GIT_TAG 81f27a4399562459191e0506c0c1c353d99ba6e4)
+    GIT_TAG 6388a301b23edf0ae6a9342d46efa9cb21f05d9b)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
     GIT_TAG 4.4.1)
 FetchContent_Declare(JsRuntimeHost
-    GIT_REPOSITORY https://github.com/bghgary/JsRuntimeHost.git
-    GIT_TAG 8ac284dba4df8fc271c6bf05813530007935d6c7)
+    GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
+    GIT_TAG c147df420a5c7ca01a9c35e6962ab940e2a75912)
 FetchContent_Declare(OpenXR-MixedReality
     GIT_REPOSITORY https://github.com/microsoft/OpenXR-MixedReality.git
     GIT_TAG 67424511525b96a36847f2a96d689d99e5879503)
@@ -45,8 +45,8 @@ FetchContent_Declare(OpenXR-SDK
     GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK.git
     GIT_TAG 458984d7f59d1ae6dc1b597d94b02e4f7132eaba)
 FetchContent_Declare(SPIRV-Cross
-    GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
-    GIT_TAG 54997fb4bc3adeb47b9b9f7bb67f1c25eaca2204)
+    GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
+    GIT_TAG 43e7999af1c9af7d3ed9d4fc3a44cf3e68235cfd)
 # --------------------------------------------------
 
 FetchContent_MakeAvailable(CMakeExtensions)
@@ -72,6 +72,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # General
 option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ${PROJECT_IS_TOP_LEVEL})
 option(BABYLON_NATIVE_INSTALL "Include the install target." ${PROJECT_IS_TOP_LEVEL})
+
+# WARNING: This is experimental. Only use it if you can ensure that your application will properly handle thread affinity.
+option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphics device calls. It can be removed if hosting application ensures thread coherence." ON)
 
 # Plugins
 option(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE "Include Babylon Native Plugin ExternalTexture." ON)

@@ -82,6 +82,7 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetCanvasTexture(const Napi::CallbackInfo& info);
         static Napi::Value LoadTTFAsync(const Napi::CallbackInfo& info);
         static Napi::Value ParseColor(const Napi::CallbackInfo& info);
+        void Remove(const Napi::CallbackInfo& info);
         void Dispose(const Napi::CallbackInfo& info);
         void Dispose();
 

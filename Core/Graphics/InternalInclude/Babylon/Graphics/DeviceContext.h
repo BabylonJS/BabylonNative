@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BgfxCallback.h"
+#include <bx/allocator.h>
 #include "continuation_scheduler.h"
 #include "SafeTimespanGuarantor.h"
 
@@ -114,6 +115,7 @@ namespace Babylon::Graphics
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
         void RemoveTexture(bgfx::TextureHandle handle);
         TextureInfo GetTextureInfo(bgfx::TextureHandle handle);
+        static bx::AllocatorI& GetDefaultAllocator() { return m_allocator; }
 
     private:
         friend UpdateToken;
@@ -122,5 +124,7 @@ namespace Babylon::Graphics
 
         std::unordered_map<uint16_t, TextureInfo> m_textureHandleToInfo{};
         std::mutex m_textureHandleToInfoMutex{};
+
+        static inline bx::DefaultAllocator m_allocator{};
     };
 }

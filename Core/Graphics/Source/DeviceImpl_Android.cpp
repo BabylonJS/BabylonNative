@@ -6,8 +6,6 @@
 
 namespace Babylon::Graphics
 {
-    const bool DeviceImpl::s_bgfxFlipAfterRender = false;
-
     void DeviceImpl::ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window)
     {
         pd.nwh = window;

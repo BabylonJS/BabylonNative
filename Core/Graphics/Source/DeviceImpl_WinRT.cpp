@@ -7,8 +7,6 @@
 
 namespace Babylon::Graphics
 {
-    const bool DeviceImpl::s_bgfxFlipAfterRender = false;
-
     void DeviceImpl::ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window)
     {
         // Assume window is a xaml swap chain panel if not a core window.

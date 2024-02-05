@@ -12,4 +12,10 @@ namespace Babylon::Graphics
         DeviceT Device;
         float DevicePixelRatio{1.f};
     };
+
+    struct PlatformInfo
+    {
+        struct MTLDevice* Device;
+        struct MTLCommandQueue* CommandQueue;
+    };
 }

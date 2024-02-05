@@ -87,3 +87,7 @@ target_link_libraries(GraphicsDeviceContext
 
 target_compile_definitions(GraphicsDeviceContext
     INTERFACE NOMINMAX)
+
+if(BABYLON_NATIVE_CHECK_THREAD_AFFINITY)
+    target_compile_definitions(Graphics PRIVATE BABYLON_NATIVE_CHECK_THREAD_AFFINITY=1)
+endif()
