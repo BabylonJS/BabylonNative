@@ -8,7 +8,7 @@ endif()
 # --------------------------------------------------
 # arcana.cpp
 # --------------------------------------------------
-FetchContent_MakeAvailable_With_Message(arcana.cpp)
+FetchContent_MakeAvailable_With_Message(arcana)
 
 # --------------------------------------------------
 # arcore-android-sdk

@@ -12,7 +12,7 @@ include(FetchContent)
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
     GIT_TAG 7fd1d3dadacc3f7d85b24bd6783f492cb5fb09b9)
-FetchContent_Declare(arcana.cpp
+FetchContent_Declare(arcana
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG f2757396e80bc4169f2ddb938ce25367a98ffdd0)
 FetchContent_Declare(arcore-android-sdk
