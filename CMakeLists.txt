@@ -26,7 +26,7 @@ FetchContent_Declare(bgfx.cmake
     GIT_TAG 756234edf3105d6551fdfccd67570962d1641ef9)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG 36383052398767cbb3a7daa2bc96e62163bd549a)
+    GIT_TAG 3bd56b589bd48c6f68a127310e339f5ddee7174e)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
     GIT_TAG 6388a301b23edf0ae6a9342d46efa9cb21f05d9b)
@@ -37,7 +37,7 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 4.4.1)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/cedricguillemet/JsRuntimeHost.git
-    GIT_TAG e6046e45870d91761e830f8bc30c29cafab2f47c)
+    GIT_TAG 35f85d6ee75905901c9a594fd5a07d127f1d5e67)
 FetchContent_Declare(OpenXR-MixedReality
     GIT_REPOSITORY https://github.com/microsoft/OpenXR-MixedReality.git
     GIT_TAG 67424511525b96a36847f2a96d689d99e5879503)

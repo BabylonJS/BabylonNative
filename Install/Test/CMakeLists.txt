@@ -11,7 +11,7 @@ include(FetchContent)
 # --------------------------------------------------
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG 36383052398767cbb3a7daa2bc96e62163bd549a)
+    GIT_TAG 3bd56b589bd48c6f68a127310e339f5ddee7174e)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
 # --------------------------------------------------
