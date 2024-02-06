@@ -20,6 +20,11 @@ function(install_include)
     install(DIRECTORY ${ARGV0} TYPE INCLUDE)
 endfunction()
 
+function(install_include_for_target)
+    get_target_property(TARGET_INCLUDE_DIRECTORIES ${ARGV0} INCLUDE_DIRECTORIES)
+    install_include(${TARGET_INCLUDE_DIRECTORIES})
+endfunction()
+
 # ----------------
 # Dependencies
 # ----------------
@@ -57,7 +62,7 @@ install_targets(UrlLib)
 # Core
 # ----------------
 install_targets(JsRuntime)
-install_include(${jsruntimehost_SOURCE_DIR}/Core/JsRuntime/Include/Babylon)
+install_include_for_target(JsRuntime)
 
 install_targets(Graphics)
 install_include(Core/Graphics/Include/Platform/${BABYLON_NATIVE_PLATFORM}/Babylon)
@@ -66,12 +71,12 @@ install_include(Core/Graphics/Include/Shared/Babylon)
 
 if(TARGET AppRuntime)
     install_targets(AppRuntime)
-    install_include(${jsruntimehost_SOURCE_DIR}/Core/AppRuntime/Include/Babylon)
+    install_include_for_target(AppRuntime)
 endif()
 
 if(TARGET ScriptLoader)
     install_targets(ScriptLoader)
-    install_include(${jsruntimehost_SOURCE_DIR}/Core/ScriptLoader/Include/Babylon)
+    install_include_for_target(ScriptLoader)
 endif()
 
 install_targets(napi)
@@ -80,8 +85,9 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INS
     install_targets(v8inspector)
 endif()
 
+get_target_property(NAPI_INCLUDE_DIRECTORIES napi INCLUDE_DIRECTORIES)
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
-    install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API-JSI/Include/napi)
+    install_include("${NAPI_INCLUDE_DIRECTORIES}/napi")
     set(V8JSI_VERSION "0.64.33")
     set(NUGET_PATH "${CMAKE_BINARY_DIR}/NuGet")
     if (WINDOWS_STORE)
@@ -91,8 +97,9 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     endif()
     install_include(${V8JSI_PACKAGE_PATH}/build/native/jsi/jsi)
 else()
-    install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API/Include/Engine/${NAPI_JAVASCRIPT_ENGINE}/napi)
-    install_include(${jsruntimehost_SOURCE_DIR}/Core/Node-API/Include/Shared/napi)
+    foreach(include_dir ${NAPI_INCLUDE_DIRECTORIES})
+        install_include("${include_dir}/napi")
+    endforeach()
 endif()
 
 # ----------------
@@ -149,7 +156,7 @@ endif()
 
 if(TARGET Console)
     install_targets(Console)
-    install_include(${jsruntimehost_SOURCE_DIR}/Polyfills/Console/Include/Babylon)
+    install_include_for_target(Console)
 endif()
 
 if(TARGET Window)
@@ -159,5 +166,5 @@ endif()
 
 if(TARGET XMLHttpRequest)
     install_targets(XMLHttpRequest)
-    install_include(${jsruntimehost_SOURCE_DIR}/Polyfills/XMLHttpRequest/Include/Babylon)
+    install_include_for_target(XMLHttpRequest)
 endif()
