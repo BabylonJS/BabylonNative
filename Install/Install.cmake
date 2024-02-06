@@ -22,7 +22,7 @@ endfunction()
 
 function(install_include_for_target)
     get_target_property(TARGET_INCLUDE_DIRECTORIES ${ARGV0} INCLUDE_DIRECTORIES)
-    install_include(${TARGET_INCLUDE_DIRECTORIES})
+    install_include("${TARGET_INCLUDE_DIRECTORIES}/Babylon")
 endfunction()
 
 # ----------------
