@@ -117,6 +117,7 @@ add_executable(TestInstall ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_INSTALL_APP} $
 # for napi
 target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
 target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_NODE_SPECIFIC)
+target_compile_definitions(TestInstall PUBLIC NAPI_VERSION=3)
 
 set(INSTALL_LIBS_DIR "${BINARY_DIR}/install/lib")
 target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")
