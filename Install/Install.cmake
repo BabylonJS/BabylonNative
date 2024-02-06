@@ -22,7 +22,13 @@ endfunction()
 
 function(install_include_for_target)
     get_target_property(TARGET_INCLUDE_DIRECTORIES ${ARGV0} INCLUDE_DIRECTORIES)
-    install_include("${TARGET_INCLUDE_DIRECTORIES}/Babylon")
+    foreach(include_dir ${TARGET_INCLUDE_DIRECTORIES})
+        if(${ARGC} STREQUAL "1")
+            install_include("${TARGET_INCLUDE_DIRECTORIES}")
+        else()
+            install_include("${TARGET_INCLUDE_DIRECTORIES}/${ARGV1}")
+        endif()
+    endforeach()
 endfunction()
 
 # ----------------
@@ -76,7 +82,7 @@ endif()
 
 if(TARGET ScriptLoader)
     install_targets(ScriptLoader)
-    install_include_for_target(ScriptLoader)
+    install_include_for_target(ScriptLoader "/Babylon")
 endif()
 
 install_targets(napi)
@@ -85,9 +91,7 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INS
     install_targets(v8inspector)
 endif()
 
-get_target_property(NAPI_INCLUDE_DIRECTORIES napi INCLUDE_DIRECTORIES)
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
-    install_include("${NAPI_INCLUDE_DIRECTORIES}/napi")
     set(V8JSI_VERSION "0.64.33")
     set(NUGET_PATH "${CMAKE_BINARY_DIR}/NuGet")
     if (WINDOWS_STORE)
@@ -96,12 +100,9 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
         set(V8JSI_PACKAGE_PATH "${NUGET_PATH}/packages/ReactNative.V8Jsi.Windows.${V8JSI_VERSION}")
     endif()
     install_include(${V8JSI_PACKAGE_PATH}/build/native/jsi/jsi)
-else()
-    foreach(include_dir ${NAPI_INCLUDE_DIRECTORIES})
-        install_include("${include_dir}/napi")
-    endforeach()
 endif()
-
+install_include_for_target(napi "/napi")
+    
 # ----------------
 # Plugins
 # ----------------
@@ -156,7 +157,7 @@ endif()
 
 if(TARGET Console)
     install_targets(Console)
-    install_include_for_target(Console)
+    install_include_for_target(Console "/Babylon")
 endif()
 
 if(TARGET Window)
@@ -166,5 +167,5 @@ endif()
 
 if(TARGET XMLHttpRequest)
     install_targets(XMLHttpRequest)
-    install_include_for_target(XMLHttpRequest)
+    install_include_for_target(XMLHttpRequest "/Babylon")
 endif()
