@@ -183,7 +183,7 @@ describe("PostProcesses", function() {
             new BABYLON.RefractionPostProcess("Refraction", "https://playground.babylonjs.com/textures/grass.jpg", new BABYLON.Color3(1.0, 1.0, 1.0), 0.5, 0.5, 1.0, camera);
         }, done);
     });
-    it("DefaultPipeline", function (done) {
+    it("DefaultPipeline", function(done) {
         createSceneAndWait((engine, scene) => {
             const camera = scene._activeCamera;
             new BABYLON.DefaultRenderingPipeline(
