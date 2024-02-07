@@ -22,11 +22,11 @@ endfunction()
 
 function(install_include_for_target)
     get_target_property(TARGET_INCLUDE_DIRECTORIES ${ARGV0} INCLUDE_DIRECTORIES)
-    foreach(include_dir ${TARGET_INCLUDE_DIRECTORIES})
+    foreach(include_directory IN LISTS TARGET_INCLUDE_DIRECTORIES)
         if(${ARGC} STREQUAL "1")
-            install_include("${TARGET_INCLUDE_DIRECTORIES}")
+            install_include("${include_directory}")
         else()
-            install_include("${TARGET_INCLUDE_DIRECTORIES}/${ARGV1}")
+            install_include("${include_directory}/${ARGV1}")
         endif()
     endforeach()
 endfunction()
@@ -82,7 +82,7 @@ endif()
 
 if(TARGET ScriptLoader)
     install_targets(ScriptLoader)
-    install_include_for_target(ScriptLoader "/Babylon")
+    install_include_for_target(ScriptLoader "Babylon")
 endif()
 
 install_targets(napi)
@@ -101,7 +101,7 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     endif()
     install_include(${V8JSI_PACKAGE_PATH}/build/native/jsi/jsi)
 endif()
-install_include_for_target(napi "/napi")
+install_include_for_target(napi "napi")
     
 # ----------------
 # Plugins
@@ -157,7 +157,7 @@ endif()
 
 if(TARGET Console)
     install_targets(Console)
-    install_include_for_target(Console "/Babylon")
+    install_include_for_target(Console "Babylon")
 endif()
 
 if(TARGET Window)
@@ -167,5 +167,5 @@ endif()
 
 if(TARGET XMLHttpRequest)
     install_targets(XMLHttpRequest)
-    install_include_for_target(XMLHttpRequest "/Babylon")
+    install_include_for_target(XMLHttpRequest "Babylon")
 endif()
