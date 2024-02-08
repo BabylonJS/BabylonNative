@@ -19,7 +19,7 @@ jobs:
     - name: Make Solution
       run: mkdir buildWin32_x64 && 
         cd buildWin32_x64 &&
-        cmake -A x64 -DBGFX_CONFIG_DEBUG=ON ..
+        cmake -A x64 -D BX_CONFIG_DEBUG=ON ..
     - name: NPM download nightly
       run: npm run getNightly
       working-directory: ./Apps
