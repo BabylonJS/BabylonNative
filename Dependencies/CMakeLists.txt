@@ -1,18 +1,41 @@
-# -------------------------------- base-n --------------------------------
-# Dependencies: none
+# --------------------------------------------------
+# AndroidExtensions
+# --------------------------------------------------
+if(ANDROID)
+    FetchContent_MakeAvailable_With_Message(AndroidExtensions)
+endif()
+
+# --------------------------------------------------
+# arcana.cpp
+# --------------------------------------------------
+FetchContent_MakeAvailable_With_Message(arcana.cpp)
+
+# --------------------------------------------------
+# arcore-android-sdk
+# --------------------------------------------------
+if(ANDROID)
+    FetchContent_MakeAvailable_With_Message(arcore-android-sdk)
+endif()
+
+# --------------------------------------------------
+# base-n
+# --------------------------------------------------
+FetchContent_MakeAvailable_With_Message(base-n)
+
 add_library(base-n INTERFACE)
 target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
 
-# -------------------------------- bgfx.cmake --------------------------------
-# Dependencies: none
+# --------------------------------------------------
+# bgfx.cmake
+# --------------------------------------------------
 set(BGFX_BUILD_TOOLS OFF CACHE BOOL "")
 set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "")
 set(BGFX_INSTALL OFF CACHE BOOL "")
 set(BGFX_CUSTOM_TARGETS OFF CACHE BOOL "")
 set(BGFX_USE_DEBUG_SUFFIX OFF CACHE BOOL "")
 set(BGFX_OPENGL_USE_EGL ON CACHE BOOL "")
-FetchContent_MakeAvailable(bgfx)
-target_compile_definitions(bgfx PRIVATE $<$<CONFIG:Debug>:BGFX_CONFIG_DEBUG=1>)
+FetchContent_MakeAvailable_With_Message(bgfx.cmake)
+
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MULTITHREADED=1)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_VERTEX_STREAMS=18)
 target_compile_definitions(bgfx PRIVATE BGFX_GL_CONFIG_BLIT_EMULATION=1)
@@ -53,8 +76,14 @@ if(APPLE)
     set_property(TARGET bgfx PROPERTY UNITY_BUILD false)
 endif()
 
-# -------------------------------- glslang --------------------------------
-# Dependencies: none
+if(UNIX AND NOT APPLE AND NOT ANDROID)
+    # Use GLVND libraries for EGL support in bgfx
+    set(OpenGL_GL_PREFERENCE GLVND)
+endif()
+
+# --------------------------------------------------
+# glslang
+# --------------------------------------------------
 set(BUILD_EXTERNAL OFF CACHE BOOL "")
 set(ENABLE_SPVREMAPPER OFF CACHE BOOL "")
 set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "")
@@ -64,7 +93,8 @@ set(ENABLE_CTEST OFF CACHE BOOL "")
 set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "")
 set(ENABLE_GLSLANG_WEBMIN ON CACHE BOOL "")
 set(ENABLE_GLSLANG_WEBMIN_DEVEL OFF CACHE BOOL "")
-FetchContent_MakeAvailable(glslang)
+FetchContent_MakeAvailable_With_Message(glslang)
+
 set_property(TARGET GenericCodeGen PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET glslang PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET glslang-default-resource-limits PROPERTY FOLDER Dependencies/glslang)
@@ -73,12 +103,42 @@ set_property(TARGET OSDependent PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET MachineIndependent PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
 
-# seen with Sergio, disable warnings until unused parameter [-Wunused-parameter] get fixed. 
-disable_warnings(SPIRV)
-disable_warnings(MachineIndependent)
+# --------------------------------------------------
+# googletest
+# --------------------------------------------------
+if(BABYLON_NATIVE_BUILD_APPS AND ((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID)))
+    if(WIN32)
+        # For Windows: Prevent overriding the parent project's compiler/linker settings
+        # Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
+        # see https://github.com/google/googletest/blob/main/googletest/README.md
+        # "Enabling this option will make gtest link the runtimes dynamically too, and match the project in which it is included."
+        set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
+    endif()
 
-# -------------------------------- SPIRV-Cross --------------------------------
-# Dependencies: none
+    FetchContent_MakeAvailable_With_Message(googletest)
+
+    set_property(TARGET gmock PROPERTY FOLDER Dependencies/GoogleTest)
+    set_property(TARGET gmock_main PROPERTY FOLDER Dependencies/GoogleTest)
+    set_property(TARGET gtest PROPERTY FOLDER Dependencies/GoogleTest)
+    set_property(TARGET gtest_main PROPERTY FOLDER Dependencies/GoogleTest)
+endif()
+
+# --------------------------------------------------
+# JsRuntimeHost
+# --------------------------------------------------
+FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
+
+set_property(TARGET JsRuntime PROPERTY UNITY_BUILD false)
+set_property(TARGET AppRuntime PROPERTY UNITY_BUILD false)
+
+if(WIN32)
+    # UrlLib does not support unity build on win32
+    set_property(TARGET UrlLib PROPERTY UNITY_BUILD false)
+endif()
+
+# --------------------------------------------------
+# SPIRV-Cross
+# --------------------------------------------------
 set(SPIRV_CROSS_CLI OFF CACHE BOOL "")
 set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "")
 set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "")
@@ -96,7 +156,7 @@ endif()
 if(NOT GRAPHICS_API STREQUAL "D3D11" AND NOT GRAPHICS_API STREQUAL "D3D12")
     set(SPIRV_CROSS_ENABLE_HLSL OFF CACHE BOOL "")
 endif()
-FetchContent_MakeAvailable(SPIRV-Cross)
+FetchContent_MakeAvailable_With_Message(SPIRV-Cross)
 set_property(TARGET spirv-cross-core PROPERTY FOLDER Dependencies/SPIRV-Cross)
 if(TARGET spirv-cross-glsl)
     set_property(TARGET spirv-cross-glsl PROPERTY FOLDER Dependencies/SPIRV-Cross)
@@ -117,26 +177,28 @@ foreach(target spirv-cross-core spirv-cross-glsl spirv-cross-msl spirv-cross-hls
     endif()
 endforeach()
 
-# -------------------------------- xr --------------------------------
-# Dependencies: none
+# seen with Sergio, disable warnings until unused parameter [-Wunused-parameter] get fixed. 
+disable_warnings(SPIRV)
+disable_warnings(MachineIndependent)
+
+# --------------------------------------------------
+# xr
+# --------------------------------------------------
 # Currently supported on Windows via OpenXR, Android via ARCore, and iOS via ARKit.
 if(BABYLON_NATIVE_PLUGIN_NATIVEXR AND (WIN32 OR ANDROID OR IOS))
     add_subdirectory(xr)
     set_property(TARGET xr PROPERTY FOLDER Dependencies/xr)
     warnings_as_errors(xr)
-    if(WIN32 OR WINDOWS_STORE)
-        set_property(TARGET openxr_loader PROPERTY FOLDER Dependencies/xr/OpenXR)
-        set_property(TARGET generate_openxr_header PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
-        set_property(TARGET xr_global_generated_files PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
-        set_property(TARGET uninstall PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
-    endif()
 endif()
 
-# --------------------------- WindowsAppSDK ---------------------------
-# Dependencies: none
+# --------------------------------------------------
+# WindowsAppSDK
+# --------------------------------------------------
 if(WINDOWS_STORE)
     add_subdirectory(WindowsAppSDK)
 endif()
 
-# --------------------------- NAPI Extensions ---------------------------
+# --------------------------------------------------
+# NAPI Extensions
+# --------------------------------------------------
 add_subdirectory(napi-extensions)
