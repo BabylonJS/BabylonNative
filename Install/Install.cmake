@@ -11,23 +11,15 @@ function(install_targets)
     foreach(target IN LISTS ARGN)
         get_target_property(target_type ${target} TYPE)
         if(NOT target_type STREQUAL "INTERFACE_LIBRARY")
-            install(FILES $<TARGET_FILE_DIR:${target}>/${target}.pdb DESTINATION lib OPTIONAL)
+            install(FILES "$<TARGET_FILE_DIR:${target}>/${target}.pdb" DESTINATION lib OPTIONAL)
         endif()
     endforeach()
 endfunction()
 
-function(install_include)
-    install(DIRECTORY ${ARGV0} TYPE INCLUDE)
-endfunction()
-
 function(install_include_for_target)
-    get_target_property(TARGET_INCLUDE_DIRECTORIES ${ARGV0} INCLUDE_DIRECTORIES)
-    foreach(include_directory IN LISTS TARGET_INCLUDE_DIRECTORIES)
-        if(${ARGC} STREQUAL "1")
-            install_include("${include_directory}")
-        else()
-            install_include("${include_directory}/${ARGV1}")
-        endif()
+    get_target_property(target_interface_include_directories ${ARGV0} INTERFACE_INCLUDE_DIRECTORIES)
+    foreach(include_directory IN LISTS target_interface_include_directories)
+        install(DIRECTORY "${include_directory}/${ARGV1}" TYPE INCLUDE)
     endforeach()
 endfunction()
 
@@ -68,24 +60,23 @@ install_targets(UrlLib)
 # Core
 # ----------------
 install_targets(JsRuntime)
-install_include_for_target(JsRuntime)
+install_include_for_target(JsRuntime Babylon)
 
-install_targets(Graphics)
-install_include(Core/Graphics/Include/Platform/${BABYLON_NATIVE_PLATFORM}/Babylon)
-install_include(Core/Graphics/Include/RendererType/${GRAPHICS_API}/Babylon)
-install_include(Core/Graphics/Include/Shared/Babylon)
+install_targets(GraphicsDevice)
+install_include_for_target(GraphicsDevice Babylon)
 
 if(TARGET AppRuntime)
     install_targets(AppRuntime)
-    install_include_for_target(AppRuntime)
+    install_include_for_target(AppRuntime Babylon)
 endif()
 
 if(TARGET ScriptLoader)
     install_targets(ScriptLoader)
-    install_include_for_target(ScriptLoader "Babylon")
+    install_include_for_target(ScriptLoader Babylon)
 endif()
 
 install_targets(napi)
+install_include_for_target(napi napi)
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
     install_targets(v8inspector)
@@ -99,51 +90,51 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     else()
         set(V8JSI_PACKAGE_PATH "${NUGET_PATH}/packages/ReactNative.V8Jsi.Windows.${V8JSI_VERSION}")
     endif()
-    install_include(${V8JSI_PACKAGE_PATH}/build/native/jsi/jsi)
+    #TODO
+    #install_include(${V8JSI_PACKAGE_PATH}/build/native/jsi/jsi)
 endif()
-install_include_for_target(napi "napi")
-    
+
 # ----------------
 # Plugins
 # ----------------
 if(TARGET ExternalTexture)
     install_targets(ExternalTexture)
-    install_include(Plugins/ExternalTexture/Include/Babylon)
+    install_include_for_target(ExternalTexture Babylon)
 endif()
 
 if(TARGET NativeCamera)
     install_targets(NativeCamera)
-    install_include(Plugins/NativeCamera/Include/Babylon)
+    install_include_for_target(NativeCamera Babylon)
 endif()
 
 if(TARGET NativeCapture)
     install_targets(NativeCapture)
-    install_include(Plugins/NativeCapture/Include/Babylon)
+    install_include_for_target(NativeCapture Babylon)
 endif()
 
 if(TARGET NativeEngine)
     install_targets(NativeEngine)
-    install_include(Plugins/NativeEngine/Include/Babylon)
+    install_include_for_target(NativeEngine Babylon)
 endif()
 
 if(TARGET NativeInput)
     install_targets(NativeInput)
-    install_include(Plugins/NativeInput/Include/Babylon)
+    install_include_for_target(NativeInput Babylon)
 endif()
 
 if(TARGET NativeOptimizations)
     install_targets(NativeOptimizations)
-    install_include(Plugins/NativeOptimizations/Include/Babylon)
+    install_include_for_target(NativeOptimizations Babylon)
 endif()
 
 if(TARGET NativeTracing)
     install_targets(NativeTracing)
-    install_include(Plugins/NativeTracing/Include/Babylon)
+    install_include_for_target(NativeTracing)
 endif()
 
 if(TARGET NativeXr)
     install_targets(NativeXr)
-    install_include(Plugins/NativeXr/Include/Babylon)
+    install_include_for_target(NativeXr)
 endif()
 
 # ----------------
@@ -152,20 +143,20 @@ endif()
 
 if(TARGET Canvas)
     install_targets(Canvas)
-    install_include(Polyfills/Canvas/Include/Babylon)
+    install_include_for_target(Canvas)
 endif()
 
 if(TARGET Console)
     install_targets(Console)
-    install_include_for_target(Console "Babylon")
+    install_include_for_target(Console)
 endif()
 
 if(TARGET Window)
     install_targets(Window)
-    install_include(Polyfills/Window/Include/Babylon)
+    install_include_for_target(Window)
 endif()
 
 if(TARGET XMLHttpRequest)
     install_targets(XMLHttpRequest)
-    install_include_for_target(XMLHttpRequest "Babylon")
+    install_include_for_target(XMLHttpRequest)
 endif()
