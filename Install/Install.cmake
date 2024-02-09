@@ -62,7 +62,8 @@ install_targets(UrlLib)
 install_targets(JsRuntime)
 install_include_for_target(JsRuntime Babylon)
 
-install_targets(GraphicsDevice)
+ # Note libs are in the `Graphics` target but includes are in `GraphicsDevice` target
+install_targets(Graphics)
 install_include_for_target(GraphicsDevice Babylon)
 
 if(TARGET AppRuntime)
