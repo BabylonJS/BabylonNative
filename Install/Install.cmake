@@ -16,10 +16,14 @@ function(install_targets)
     endforeach()
 endfunction()
 
-function(install_include_for_target)
-    get_target_property(target_interface_include_directories ${ARGV0} INTERFACE_INCLUDE_DIRECTORIES)
-    foreach(include_directory IN LISTS target_interface_include_directories)
-        install(DIRECTORY "${include_directory}/${ARGV1}" TYPE INCLUDE)
+function(install_include_for_targets)
+    foreach(target IN LISTS ARGN)
+        get_target_property(target_interface_include_directories ${target} INTERFACE_INCLUDE_DIRECTORIES)
+        foreach(include_directory IN LISTS target_interface_include_directories)
+            # Trailing slash is required for proper behavior
+            # See https://cmake.org/cmake/help/latest/command/install.html#directory
+            install(DIRECTORY "${include_directory}/" TYPE INCLUDE)
+        endforeach()
     endforeach()
 endfunction()
 
@@ -60,24 +64,24 @@ install_targets(UrlLib)
 # Core
 # ----------------
 install_targets(JsRuntime)
-install_include_for_target(JsRuntime Babylon)
+install_include_for_targets(JsRuntime)
 
  # Note libs are in the `Graphics` target but includes are in `GraphicsDevice` target
 install_targets(Graphics)
-install_include_for_target(GraphicsDevice Babylon)
+install_include_for_targets(GraphicsDevice)
 
 if(TARGET AppRuntime)
     install_targets(AppRuntime)
-    install_include_for_target(AppRuntime Babylon)
+    install_include_for_targets(AppRuntime)
 endif()
 
 if(TARGET ScriptLoader)
     install_targets(ScriptLoader)
-    install_include_for_target(ScriptLoader Babylon)
+    install_include_for_targets(ScriptLoader)
 endif()
 
 install_targets(napi)
-install_include_for_target(napi napi)
+install_include_for_targets(napi)
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
     install_targets(v8inspector)
@@ -100,42 +104,42 @@ endif()
 # ----------------
 if(TARGET ExternalTexture)
     install_targets(ExternalTexture)
-    install_include_for_target(ExternalTexture Babylon)
+    install_include_for_targets(ExternalTexture)
 endif()
 
 if(TARGET NativeCamera)
     install_targets(NativeCamera)
-    install_include_for_target(NativeCamera Babylon)
+    install_include_for_targets(NativeCamera)
 endif()
 
 if(TARGET NativeCapture)
     install_targets(NativeCapture)
-    install_include_for_target(NativeCapture Babylon)
+    install_include_for_targets(NativeCapture)
 endif()
 
 if(TARGET NativeEngine)
     install_targets(NativeEngine)
-    install_include_for_target(NativeEngine Babylon)
+    install_include_for_targets(NativeEngine)
 endif()
 
 if(TARGET NativeInput)
     install_targets(NativeInput)
-    install_include_for_target(NativeInput Babylon)
+    install_include_for_targets(NativeInput)
 endif()
 
 if(TARGET NativeOptimizations)
     install_targets(NativeOptimizations)
-    install_include_for_target(NativeOptimizations Babylon)
+    install_include_for_targets(NativeOptimizations)
 endif()
 
 if(TARGET NativeTracing)
     install_targets(NativeTracing)
-    install_include_for_target(NativeTracing)
+    install_include_for_targets(NativeTracing)
 endif()
 
 if(TARGET NativeXr)
     install_targets(NativeXr)
-    install_include_for_target(NativeXr)
+    install_include_for_targets(NativeXr)
 endif()
 
 # ----------------
@@ -144,20 +148,20 @@ endif()
 
 if(TARGET Canvas)
     install_targets(Canvas)
-    install_include_for_target(Canvas)
+    install_include_for_targets(Canvas)
 endif()
 
 if(TARGET Console)
     install_targets(Console)
-    install_include_for_target(Console)
+    install_include_for_targets(Console)
 endif()
 
 if(TARGET Window)
     install_targets(Window)
-    install_include_for_target(Window)
+    install_include_for_targets(Window)
 endif()
 
 if(TARGET XMLHttpRequest)
     install_targets(XMLHttpRequest)
-    install_include_for_target(XMLHttpRequest)
+    install_include_for_targets(XMLHttpRequest)
 endif()
