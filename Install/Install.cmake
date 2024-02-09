@@ -83,6 +83,7 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INS
     install_targets(v8inspector)
 endif()
 
+# Manually install the JSI headers
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     set(V8JSI_VERSION "0.64.33")
     set(NUGET_PATH "${CMAKE_BINARY_DIR}/NuGet")
@@ -91,8 +92,7 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     else()
         set(V8JSI_PACKAGE_PATH "${NUGET_PATH}/packages/ReactNative.V8Jsi.Windows.${V8JSI_VERSION}")
     endif()
-    #TODO
-    #install_include(${V8JSI_PACKAGE_PATH}/build/native/jsi/jsi)
+    install(DIRECTORY ${V8JSI_PACKAGE_PATH}/build/native/jsi/jsi TYPE INCLUDE)
 endif()
 
 # ----------------
