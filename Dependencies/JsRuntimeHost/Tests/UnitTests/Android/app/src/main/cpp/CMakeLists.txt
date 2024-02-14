@@ -34,4 +34,5 @@ target_link_libraries(UnitTestsJNI
     PRIVATE URL
     PRIVATE UrlLib
     PRIVATE XMLHttpRequest
-    PRIVATE WebSocket)
+    PRIVATE WebSocket
+    PRIVATE gtest_main)
