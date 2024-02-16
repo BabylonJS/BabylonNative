@@ -2445,7 +2445,6 @@ napi_status napi_add_finalizer(napi_env env,
 
   WrapperInfo* info{};
   CHECK_NAPI(WrapperInfo::Wrap(env, js_object, &info));
-  RETURN_STATUS_IF_FALSE(env, info->Data() == nullptr, napi_invalid_arg);
 
   info->AddFinalizer([finalize_cb, finalize_data, finalize_hint](WrapperInfo* info) {
     finalize_cb(info->Env(), finalize_data, finalize_hint);
