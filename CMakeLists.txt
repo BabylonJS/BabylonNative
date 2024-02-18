@@ -31,13 +31,13 @@ FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
     GIT_TAG 6388a301b23edf0ae6a9342d46efa9cb21f05d9b)
 FetchContent_Declare(googletest
-    URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
+    URL "https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz")
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
     GIT_TAG 4.4.1)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 90d62dfcb0f678e2a98d0b3bfb50cbda141e6654)
+    GIT_TAG 397c12a0f17111715177cb59364361b21905f3de)
 FetchContent_Declare(OpenXR-MixedReality
     GIT_REPOSITORY https://github.com/microsoft/OpenXR-MixedReality.git
     GIT_TAG 67424511525b96a36847f2a96d689d99e5879503)
