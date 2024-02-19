@@ -124,15 +124,13 @@ describe("Materials", function() {
         }
         createEmptyShaderMat()
     });
-    /*
-    TODO: Uncomment tests for materials as we implement more features
     it("GradientMaterial should compile", function(done) {
         createSceneAndWait((engine, scene) => {
             const sphere = BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 2, segments: 32}, scene);
             const gradientMaterial = new BABYLON.GradientMaterial("grad", scene);
             sphere.material = gradientMaterial;
         }, done);
-    });*/
+    });
 });
 
 describe("PostProcesses", function() {
@@ -179,24 +177,10 @@ describe("PostProcesses", function() {
             new BABYLON.ImageProcessingPostProcess("processing", 1.0, camera);
         }, done);
     });
-    /*
-    TODO: Uncomment tests for post processes as we implement more features
-    it("FxaaPostProcess", function(done) {
-        createSceneAndWait((engine, scene) => {
-            const camera = scene._activeCamera;
-            new BABYLON.FxaaPostProcess("fxaa", 1.0, camera);
-        }, done);
-    });
     it("RefractionPostProcess", function(done) {
         createSceneAndWait((engine, scene) => {
             const camera = scene._activeCamera;
             new BABYLON.RefractionPostProcess("Refraction", "https://playground.babylonjs.com/textures/grass.jpg", new BABYLON.Color3(1.0, 1.0, 1.0), 0.5, 0.5, 1.0, camera);
-        }, done);
-    });
-    it("ColorCorrectionPostProcess", function(done) {
-        createSceneAndWait((engine, scene) => {
-            const camera = scene._activeCamera;
-            new BABYLON.ColorCorrectionPostProcess("color_correction", "https://doc.babylonjs.com/_next/image?url=%2Fimg%2Fhow_to%2Fpost-processes%2Flut-inverted.png&w=256&q=16", 1.0, camera);
         }, done);
     });
     it("DefaultPipeline", function(done) {
@@ -208,6 +192,19 @@ describe("PostProcesses", function() {
                 scene, // The scene instance
                 [camera] // The list of cameras to be attached to
             );
+        }, done);
+    });
+    /*
+    it("FxaaPostProcess", function(done) {
+        createSceneAndWait((engine, scene) => {
+            const camera = scene._activeCamera;
+            new BABYLON.FxaaPostProcess("fxaa", 1.0, camera);
+        }, done);
+    });
+    it("ColorCorrectionPostProcess", function(done) {
+        createSceneAndWait((engine, scene) => {
+            const camera = scene._activeCamera;
+            new BABYLON.ColorCorrectionPostProcess("color_correction", "https://doc.babylonjs.com/_next/image?url=%2Fimg%2Fhow_to%2Fpost-processes%2Flut-inverted.png&w=256&q=16", 1.0, camera);
         }, done);
     });
     it("LensRenderingPipeline", function(done) {
