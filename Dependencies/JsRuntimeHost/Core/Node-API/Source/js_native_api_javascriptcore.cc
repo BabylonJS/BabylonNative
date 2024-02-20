@@ -1784,9 +1784,10 @@ napi_status napi_remove_wrap(napi_env env, napi_value js_object, void** result) 
   WrapperInfo* info{};
   CHECK_NAPI(WrapperInfo::Unwrap(env, js_object, &info));
   RETURN_STATUS_IF_FALSE(env, info != nullptr && info->Data() != nullptr, napi_invalid_arg);
-  info->Data(nullptr);
 
   *result = info->Data();
+  info->Data(nullptr);
+  
   return napi_ok;
 }
 
