@@ -1,4 +1,3 @@
-#include "gtest/gtest.h"
 #include "Shared.h"
 #include <Babylon/AppRuntime.h>
 #include <Babylon/ScriptLoader.h>
@@ -7,6 +6,7 @@
 #include <Babylon/Polyfills/URL.h>
 #include <Babylon/Polyfills/AbortController.h>
 #include <Babylon/Polyfills/WebSocket.h>
+#include <gtest/gtest.h>
 #include <future>
 
 const char* EnumToString(Babylon::Polyfills::Console::LogLevel logLevel)
