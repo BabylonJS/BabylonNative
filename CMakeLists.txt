@@ -11,7 +11,7 @@ include(FetchContent)
 # --------------------------------------------------
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG 7fd1d3dadacc3f7d85b24bd6783f492cb5fb09b9)
+    GIT_TAG c84cb305205338b6fd6ff121a0349a810967bbc8)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG f2757396e80bc4169f2ddb938ce25367a98ffdd0)
@@ -37,7 +37,7 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 4.4.1)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 6191427ee29c525f4b81d00b8875cdd1d5e9bf15)
+    GIT_TAG 02055e8ead071ba04a4cd52d34e7f6a2e86527de)
 FetchContent_Declare(OpenXR-MixedReality
     GIT_REPOSITORY https://github.com/microsoft/OpenXR-MixedReality.git
     GIT_TAG 67424511525b96a36847f2a96d689d99e5879503)

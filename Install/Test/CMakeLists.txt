@@ -71,11 +71,11 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     set(ADDITIONAL_LIBRARIES "v8jsi.dll.lib")
 elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     set_cpu_platform_arch()
-    set(V8_VERSION "8.4.371.15")
+    set(V8_VERSION "11.9.169.4")
     download_nuget()
-    set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v142-${CPU_ARCH}.${V8_VERSION}")
-    set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v142-${CPU_ARCH}.${V8_VERSION}")
-    set(V8_REDIST_PACKAGE_PATH "${NUGET_PATH}/packages/v8.redist-v142-${CPU_ARCH}.${V8_VERSION}")
+    set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v143-${CPU_ARCH}.${V8_VERSION}")
+    set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v143-${CPU_ARCH}.${V8_VERSION}")
+    set(V8_REDIST_PACKAGE_PATH "${NUGET_PATH}/packages/v8.redist-v143-${CPU_ARCH}.${V8_VERSION}")
 
     add_library(v8_libbase SHARED IMPORTED)
     set_target_properties(v8_libbase PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libbase.dll.lib")
@@ -88,12 +88,13 @@ elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
 
     set(V8_DIST
         "${V8_REDIST_PACKAGE_PATH}/lib/Release/icudtl.dat"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/icui18n.dll"
+        "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_icu_icui18n.dll"
+        "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_abseil-cpp_absl.dll"
         "${V8_REDIST_PACKAGE_PATH}/lib/Release/icuuc.dll"
         "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8.dll"
         "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8_libbase.dll"
         "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8_libplatform.dll"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/zlib.dll")
+        "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_zlib.dll")
 
     # only 1 imported location per library -> Adding 1 library per file
     foreach(V8FILE ${V8_DIST})
@@ -108,12 +109,12 @@ elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
         v8inspector
         llhttp
         v8::icudtl
-        v8::icui18n
+        v8::third_party_icu_icui18n
         v8::icuuc
         v8::v8
         v8::v8_libbase
         v8::v8_libplatform
-        v8::zlib)
+        v8::third_party_zlib)
 
     if(CPU_ARCH STREQUAL "x64")
         # Enable V8 Pointer Compression
@@ -128,6 +129,7 @@ add_executable(TestInstall ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_INSTALL_APP} $
 # for napi
 target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
 target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_NODE_SPECIFIC)
+target_compile_definitions(TestInstall PUBLIC NAPI_VERSION=3)
 
 set(INSTALL_LIBS_DIR "${BINARY_DIR}/install/lib")
 target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")
