@@ -43,9 +43,10 @@ using TakePhotoTaskCompletionSource = arcana::task_completion_source<Babylon::Pl
 @interface PhotoCaptureDelegate : NSObject <AVCapturePhotoCaptureDelegate>
 {
     TakePhotoTaskCompletionSource taskCompletionSource;
+    AVCaptureVideoOrientation orientation;
 }
 
-- (id)init:(TakePhotoTaskCompletionSource)taskCompletionSource;
+- (id)init:(TakePhotoTaskCompletionSource)taskCompletionSource orientation:(AVCaptureVideoOrientation)orientation;
 
 @end
 
@@ -432,49 +433,6 @@ namespace Babylon::Plugins
         }
 #endif
 
-        auto redEyeReduction = RedEyeReduction::Never;
-#if (TARGET_OS_IOS)
-        if (m_impl->avCapturePhotoOutput.isAutoRedEyeReductionSupported)
-        {
-            redEyeReduction = RedEyeReduction::Controllable;
-        }
-#endif
-
-        std::set<FillLightMode> fillLightModes{};
-        fillLightModes.insert(FillLightMode::Off);
-        FillLightMode defaultFillLightMode = FillLightMode::Off;
-#if (TARGET_OS_IOS)
-        if ([m_impl->avCapturePhotoOutput.supportedFlashModes containsObject:@(AVCaptureFlashModeAuto)])
-        {
-            fillLightModes.insert(FillLightMode::Auto);
-            defaultFillLightMode = FillLightMode::Auto;
-        }
-        if ([m_impl->avCapturePhotoOutput.supportedFlashModes containsObject:@(AVCaptureFlashModeOn)])
-        {
-            fillLightModes.insert(FillLightMode::Flash);
-        }
-#endif
-
-        m_impl->photoCapabilities =
-        {
-            redEyeReduction,
-            fillLightModes,
-            gsl::narrow<uint32_t>(m_impl->supportedMaxPhotoDimensions.front().width),
-            gsl::narrow<uint32_t>(m_impl->supportedMaxPhotoDimensions.back().width),
-            1,
-            gsl::narrow<uint32_t>(m_impl->supportedMaxPhotoDimensions.front().height),
-            gsl::narrow<uint32_t>(m_impl->supportedMaxPhotoDimensions.back().height),
-            1,
-        };
-
-        m_impl->defaultPhotoSettings =
-        {
-            m_impl->photoCapabilities->RedEyeReduction != RedEyeReduction::Never,
-            defaultFillLightMode,
-            m_impl->photoCapabilities->MaxWidth,
-            m_impl->photoCapabilities->MaxHeight,
-        };
-
         // Check for failed initialisation.
         if (!input)
         {
@@ -513,6 +471,50 @@ namespace Babylon::Plugins
             // Setup high resolution photo capture.
             implObj->m_impl->avCapturePhotoOutput = [[AVCapturePhotoOutput alloc] init];
             [implObj->m_impl->avCaptureSession addOutput:implObj->m_impl->avCapturePhotoOutput];
+
+            auto redEyeReduction = RedEyeReduction::Never;
+#if (TARGET_OS_IOS)
+            if (implObj->m_impl->avCapturePhotoOutput.isAutoRedEyeReductionSupported)
+            {
+                redEyeReduction = RedEyeReduction::Controllable;
+            }
+#endif
+
+            std::set<FillLightMode> fillLightModes{};
+            fillLightModes.insert(FillLightMode::Off);
+            FillLightMode defaultFillLightMode = FillLightMode::Off;
+#if (TARGET_OS_IOS)
+            if ([implObj->m_impl->avCapturePhotoOutput.supportedFlashModes containsObject:@(AVCaptureFlashModeAuto)])
+            {
+                fillLightModes.insert(FillLightMode::Auto);
+                defaultFillLightMode = FillLightMode::Auto;
+            }
+            if ([implObj->m_impl->avCapturePhotoOutput.supportedFlashModes containsObject:@(AVCaptureFlashModeOn)])
+            {
+                fillLightModes.insert(FillLightMode::Flash);
+            }
+#endif
+
+            implObj->m_impl->photoCapabilities =
+            {
+                redEyeReduction,
+                fillLightModes,
+                gsl::narrow<uint32_t>(implObj->m_impl->supportedMaxPhotoDimensions.front().width),
+                gsl::narrow<uint32_t>(implObj->m_impl->supportedMaxPhotoDimensions.back().width),
+                1,
+                gsl::narrow<uint32_t>(implObj->m_impl->supportedMaxPhotoDimensions.front().height),
+                gsl::narrow<uint32_t>(implObj->m_impl->supportedMaxPhotoDimensions.back().height),
+                1,
+            };
+
+            implObj->m_impl->defaultPhotoSettings =
+            {
+                implObj->m_impl->photoCapabilities->RedEyeReduction != RedEyeReduction::Never,
+                defaultFillLightMode,
+                implObj->m_impl->photoCapabilities->MaxWidth,
+                implObj->m_impl->photoCapabilities->MaxHeight,
+            };
+            
 #if (TARGET_OS_IOS)
 #if (__IPHONE_OS_VERSION_MAX_ALLOWED >= 160000)
             if (@available(iOS 16.0, *))
@@ -744,7 +746,7 @@ namespace Babylon::Plugins
 #endif
 
         TakePhotoTaskCompletionSource taskCompletionSource{};
-        m_impl->photoCaptureDelegate = [[PhotoCaptureDelegate alloc]init: taskCompletionSource];
+        m_impl->photoCaptureDelegate = [[PhotoCaptureDelegate alloc]init: taskCompletionSource orientation:m_impl->cameraTextureDelegate->VideoOrientation];
 
         [m_impl->avCapturePhotoOutput capturePhotoWithSettings:capturePhotoSettings delegate:m_impl->photoCaptureDelegate];
 
@@ -969,9 +971,10 @@ namespace Babylon::Plugins
 @implementation PhotoCaptureDelegate {
 }
 
-- (id)init:(TakePhotoTaskCompletionSource)taskCompletionSource
+- (id)init:(TakePhotoTaskCompletionSource)taskCompletionSource orientation:(AVCaptureVideoOrientation)orientation
 {
     self->taskCompletionSource = std::move(taskCompletionSource);
+    self->orientation = orientation;
     return self;
 }
 
@@ -983,7 +986,32 @@ namespace Babylon::Plugins
     }
     else
     {
-        NSData *imageData = [photo fileDataRepresentation];
+        // Determine the orientation to apply based on the device orientation
+        CGImagePropertyOrientation orientation{kCGImagePropertyOrientationUp};
+        switch (self->orientation) {
+            case AVCaptureVideoOrientationPortrait:
+                orientation = kCGImagePropertyOrientationRight;
+                break;
+            case AVCaptureVideoOrientationPortraitUpsideDown:
+                orientation = kCGImagePropertyOrientationLeft;
+                break;
+            case AVCaptureVideoOrientationLandscapeLeft:
+                orientation = kCGImagePropertyOrientationDown;
+                break;
+            case AVCaptureVideoOrientationLandscapeRight:
+                orientation = kCGImagePropertyOrientationUp;
+                break;
+        }
+
+        // Create a CIImage that we can manipulate (e.g. rotate) from the AVCapturePhoto's fileDataRepresentation (jpeg)
+        CIImage* ciImage = [CIImage imageWithData:[photo fileDataRepresentation]];
+
+        // Create a new CIImage with the correct orientation
+        ciImage = [ciImage imageByApplyingOrientation:orientation];
+
+        // Create a UIImage from the CIImage and convert back to jpeg data
+        NSData* imageData = UIImageJPEGRepresentation([UIImage imageWithCIImage:ciImage], 1.0);
+
         self->taskCompletionSource.complete(gsl::make_span(static_cast<const uint8_t*>(imageData.bytes), imageData.length));
     }
 }

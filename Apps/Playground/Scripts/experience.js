@@ -105,7 +105,7 @@ CreateBoxAsync(scene).then(function () {
                     const imageCapture = new ImageCapture(stream.getVideoTracks()[0]);
                     console.log(`Capabilities: ${JSON.stringify(imageCapture.getPhotoCapabilities(), null, 2)}`);
                     console.log(`Settings: ${JSON.stringify(imageCapture.getPhotoSettings(), null, 2)}`);
-                    imageCapture.takePhoto().then((blob) => {
+                    imageCapture.takePhoto({fillLightMode: "off"}).then((blob) => {
                         console.log(`takePhoto finished with a blob of size ${blob.size} and type '${blob.type}'`);
                         blob.arrayBuffer().then((buffer) => {
                             const imageData = new Uint8Array(buffer);
