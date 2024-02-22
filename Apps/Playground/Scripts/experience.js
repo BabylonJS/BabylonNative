@@ -81,6 +81,7 @@ CreateBoxAsync(scene).then(function () {
 
         scene.meshes[0].setEnabled(false);
         var plane = BABYLON.MeshBuilder.CreatePlane("plane", {size: 1, sideOrientation: BABYLON.Mesh.DOUBLESIDE});
+        // Mirror the plane vertically since invertY is not supported for textures in Babylon Native.
         plane.rotation.y = Math.PI;
         plane.rotation.z = Math.PI;
 
@@ -105,13 +106,17 @@ CreateBoxAsync(scene).then(function () {
                     const imageCapture = new ImageCapture(stream.getVideoTracks()[0]);
                     console.log(`Capabilities: ${JSON.stringify(imageCapture.getPhotoCapabilities(), null, 2)}`);
                     console.log(`Settings: ${JSON.stringify(imageCapture.getPhotoSettings(), null, 2)}`);
-                    imageCapture.takePhoto({fillLightMode: "off"}).then((blob) => {
+                    imageCapture.takePhoto({fillLightMode: "flash"}).then((blob) => {
                         console.log(`takePhoto finished with a blob of size ${blob.size} and type '${blob.type}'`);
                         blob.arrayBuffer().then((buffer) => {
                             const imageData = new Uint8Array(buffer);
                             console.log(`Retrieved photo ArrayBuffer of size ${imageData.byteLength}`);
                             console.log(`JPEG header bytes should be 0xff, 0xd8, 0xff.`);
                             console.log(`Header bytes are 0x${imageData[0].toString(16)}, 0x${imageData[1].toString(16)}, 0x${imageData[2].toString(16)}`);
+
+                            // Un-mirror the plane since the photo is not mirrored (this matches WebAPI behavior).
+                            plane.rotation.y = 0;
+                            plane.rotation.z = 0;
 
                             const imageTexture = new BABYLON.Texture("data:fromblob", scene, true, undefined, undefined, undefined, undefined, imageData);
                             mat.emissiveTexture = imageTexture;
