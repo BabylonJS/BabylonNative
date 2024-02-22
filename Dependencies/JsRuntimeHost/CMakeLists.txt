@@ -26,7 +26,7 @@ FetchContent_Declare(ios-cmake
 FetchContent_Declare(llhttp
     URL "https://github.com/nodejs/llhttp/archive/refs/tags/release/v8.1.0.tar.gz")
 FetchContent_Declare(UrlLib
-    GIT_REPOSITORY https://github.com/bghgary/UrlLib.git
+    GIT_REPOSITORY https://github.com/BabylonJS/UrlLib.git
     GIT_TAG 59917f32f6ddfa26af07dd981842c51ce02dafcd)
 # --------------------------------------------------
 

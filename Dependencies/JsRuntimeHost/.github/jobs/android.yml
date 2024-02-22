@@ -32,7 +32,7 @@ jobs:
     inputs:
       gradleWrapperFile: 'Tests/UnitTests/Android/gradlew'
       workingDirectory: 'Tests/UnitTests/Android'
-      options: '-PabiFilters=x86_64 -PjsEngine=${{parameters.jsEngine}}'
+      options: '-PabiFilters=x86_64 -PjsEngine=${{parameters.jsEngine}} -PndkVersion=$(ndkVersion)'
       tasks: 'connectedAndroidTest'
       jdkVersionOption: 1.11
     displayName: 'Run Connected Android Test'

@@ -36,7 +36,7 @@ namespace Babylon
             ~Module()
             {
                 v8::V8::Dispose();
-                v8::V8::ShutdownPlatform();
+                v8::V8::DisposePlatform();
             }
 
             static Module& Initialize(const char* executablePath)

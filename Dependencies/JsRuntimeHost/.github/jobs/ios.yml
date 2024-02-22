@@ -1,14 +1,20 @@
+parameters:
+  name: ''
+  vmImage: ''
+  xCodeVersion: ''
+  simulator: ''
+
 jobs:
-- job: iOS
+- job: ${{parameters.name}}
   timeoutInMinutes: 15
 
   pool:
-    vmImage: macos-latest
+    vmImage: ${{parameters.vmImage}}
 
   steps:
   - script: |
-      sudo xcode-select --switch /Applications/Xcode_14.0.app/Contents/Developer
-    displayName: 'Select XCode 14.0'
+      sudo xcode-select --switch /Applications/Xcode_${{parameters.xCodeVersion}}.app/Contents/Developer
+    displayName: 'Select XCode ${{parameters.xCodeVersion}}'
 
   - script: |
       cmake -B Build/iOS -G Xcode -D IOS=ON
@@ -24,8 +30,8 @@ jobs:
     displayName: 'Build Xcode Project'
 
   - script: |
-      echo Boot iOS Simulator
-      xcrun simctl boot "iPhone 11"
+      echo Boot "${{parameters.simulator}}"
+      xcrun simctl boot "${{parameters.simulator}}"
       echo Install UnitTests app
       xcrun simctl install booted "Build/iOS/Tests/UnitTests/RelWithDebInfo-iphonesimulator/UnitTests.app"
       echo Launch UnitTests app

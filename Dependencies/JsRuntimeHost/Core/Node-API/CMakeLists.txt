@@ -31,11 +31,11 @@ if(NAPI_BUILD_ABI)
             file(RENAME "${CMAKE_CURRENT_BINARY_DIR}/package-${name}.json" "${CMAKE_CURRENT_BINARY_DIR}/package.json")
             npm(install --no-package-lock --silent WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-            file(GLOB_RECURSE ANDROID_ARCHIVE "${CMAKE_CURRENT_BINARY_DIR}/node_modules/${name}-android/${aar_path}/*.aar")
+            file(GLOB_RECURSE ANDROID_ARCHIVE "${CMAKE_CURRENT_BINARY_DIR}/node_modules/${V8_PACKAGE_NAME}/${aar_path}/*.aar")
             file(ARCHIVE_EXTRACT INPUT ${ANDROID_ARCHIVE} DESTINATION ${output_directory} PATTERNS jni)
-            message(STATUS "Extracting ${name}-android archive - done")
+            message(STATUS "Extracting ${V8_PACKAGE_NAME} archive - done")
 
-            file(COPY "${CMAKE_CURRENT_BINARY_DIR}/node_modules/${name}-android/dist/include" DESTINATION ${output_directory})
+            file(COPY "${CMAKE_CURRENT_BINARY_DIR}/node_modules/${V8_PACKAGE_NAME}/dist/include" DESTINATION ${output_directory})
         endfunction()
     endif()
 
@@ -54,7 +54,8 @@ if(NAPI_BUILD_ABI)
             "Source/js_native_api_javascriptcore.h")
 
         if(ANDROID)
-            set(JSC_ANDROID_DIR "${CMAKE_CURRENT_BINARY_DIR}/jsc-android")
+            set(V8_PACKAGE_NAME "jsc-android")
+            set(JSC_ANDROID_DIR "${CMAKE_CURRENT_BINARY_DIR}/${V8_PACKAGE_NAME}")
             napi_install_android_package(jsc "dist/org/webkit/android-jsc" ${JSC_ANDROID_DIR})
 
             # Add `JavaScriptCore` prefix to the include path
@@ -87,7 +88,8 @@ if(NAPI_BUILD_ABI)
             "Source/js_native_api_v8_internals.h")
 
         if(ANDROID)
-            set(V8_ANDROID_DIR "${CMAKE_CURRENT_BINARY_DIR}/v8-android")
+            set(V8_PACKAGE_NAME "v8-android-jit-nointl-nosnapshot")
+            set(V8_ANDROID_DIR "${CMAKE_CURRENT_BINARY_DIR}/${V8_PACKAGE_NAME}")
             napi_install_android_package(v8 "dist/org/chromium" ${V8_ANDROID_DIR})
 
             set(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES}
@@ -95,13 +97,15 @@ if(NAPI_BUILD_ABI)
 
             set(LINK_LIBRARIES ${LINK_LIBRARIES}
                 PUBLIC "${V8_ANDROID_DIR}/jni/${ANDROID_ABI}/libv8android.so")
+
+            set(NAPI_DEFINITIONS PUBLIC V8_COMPRESS_POINTERS)
         elseif(WIN32)
             set_cpu_platform_arch()
-            set(V8_VERSION "8.4.371.15")
+            set(V8_VERSION "11.9.169.4")
             download_nuget()
-            set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v142-${CPU_ARCH}.${V8_VERSION}")
-            set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v142-${CPU_ARCH}.${V8_VERSION}")
-            set(V8_REDIST_PACKAGE_PATH "${NUGET_PATH}/packages/v8.redist-v142-${CPU_ARCH}.${V8_VERSION}")
+            set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v143-${CPU_ARCH}.${V8_VERSION}")
+            set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v143-${CPU_ARCH}.${V8_VERSION}")
+            set(V8_REDIST_PACKAGE_PATH "${NUGET_PATH}/packages/v8.redist-v143-${CPU_ARCH}.${V8_VERSION}")
 
             add_library(v8_libbase SHARED IMPORTED)
             set_target_properties(v8_libbase PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libbase.dll.lib")
@@ -111,15 +115,16 @@ if(NAPI_BUILD_ABI)
             set_target_properties(v8 PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8.dll.lib")
             target_link_libraries(v8 INTERFACE v8_libbase INTERFACE v8_libplatform)
             target_include_directories(v8 INTERFACE "${V8_PACKAGE_PATH}/include")
-            
+
             set(V8_DIST
                 "${V8_REDIST_PACKAGE_PATH}/lib/Release/icudtl.dat"
-                "${V8_REDIST_PACKAGE_PATH}/lib/Release/icui18n.dll"
+                "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_icu_icui18n.dll"
+                "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_abseil-cpp_absl.dll"
                 "${V8_REDIST_PACKAGE_PATH}/lib/Release/icuuc.dll"
                 "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8.dll"
                 "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8_libbase.dll"
                 "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8_libplatform.dll"
-                "${V8_REDIST_PACKAGE_PATH}/lib/Release/zlib.dll")
+                "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_zlib.dll")
 
             # only 1 imported location per library -> Adding 1 library per file
             foreach(V8FILE ${V8_DIST})
@@ -132,18 +137,18 @@ if(NAPI_BUILD_ABI)
             set(LINK_LIBRARIES ${LINK_LIBRARIES}
                 PUBLIC v8
                 PRIVATE v8::icudtl
-                PRIVATE v8::icui18n
+                PRIVATE v8::third_party_icu_icui18n
                 PRIVATE v8::icuuc
                 PRIVATE v8::v8
                 PRIVATE v8::v8_libbase
                 PRIVATE v8::v8_libplatform
-                PRIVATE v8::zlib)
-            
+                PRIVATE v8::third_party_zlib)
+
             if(CPU_ARCH STREQUAL "x64")
                 # Enable V8 Pointer Compression
                 # https://v8.dev/blog/pointer-compression
                 # https://stackoverflow.com/q/62921373
-                set(NAPI_DEFINITIONS PUBLIC V8_COMPRESS_POINTERS)
+                set(NAPI_DEFINITIONS PUBLIC V8_COMPRESS_POINTERS V8_ENABLE_SANDBOX)
             endif()
         else()
             message(FATAL_ERROR "Unsupported JavaScript engine: ${NAPI_JAVASCRIPT_ENGINE}")
@@ -160,6 +165,8 @@ add_library(napi ${SOURCES})
 target_compile_definitions(napi
     PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED
     PUBLIC NODE_ADDON_API_DISABLE_NODE_SPECIFIC
+    PUBLIC NAPI_VERSION=5
+    PUBLIC NAPI_HAS_THREADS=0
     ${NAPI_DEFINITIONS})
 
 target_include_directories(napi ${INCLUDE_DIRECTORIES})

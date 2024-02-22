@@ -234,7 +234,13 @@ namespace Babylon
         void connectFrontend()
         {
             session_ = inspector_->connect(
-                1, new ChannelImpl(agent_), v8_inspector::StringView());
+                1, new ChannelImpl(agent_), v8_inspector::StringView()
+// v8-android package and v8 nuget do not share the same V8 version. A change in V8_inspector API forces us to add this
+// ifndef check. This will be fixed in a future nuget package update.
+#ifndef ANDROID
+                , v8_inspector::V8Inspector::kFullyTrusted
+#endif
+            );
         }
 
         void disconnectFrontend()
@@ -471,7 +477,7 @@ namespace Babylon
         v8::Local<v8::Context> context =
             v8::Isolate::GetCurrent()->GetCurrentContext();
 
-        int script_id = static_cast<int>(message->GetScriptOrigin().ScriptID()->Value());
+        int script_id = message->GetScriptOrigin().ScriptId();
 
         v8::Local<v8::StackTrace> stack_trace = message->GetStackTrace();
 

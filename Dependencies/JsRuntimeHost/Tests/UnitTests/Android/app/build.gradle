@@ -11,6 +11,9 @@ android {
     namespace 'com.jsruntimehost.unittests'
     compileSdk 33
     ndkVersion = "21.4.7075529"
+    if (project.hasProperty("ndkVersion")) {
+        ndkVersion = project.property("ndkVersion")
+    }
 
     defaultConfig {
         applicationId "com.jsruntimehost.unittests"
@@ -96,7 +99,7 @@ task copyScripts {
 
 // Run copyScripts task after CMake external build
 // And make sure merging assets into output is performed after the scripts copy
-tasks.whenTaskAdded { task ->
+tasks.configureEach { task ->
     if (task.name == 'mergeDebugNativeLibs') {
         task.finalizedBy(copyScripts)
     }
