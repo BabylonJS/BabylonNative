@@ -2,6 +2,17 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "GLTF Extension EXT_mesh_gpu_instancing",
+            "playgroundId": "#QFIGLW#9",
+            "renderCount": 10,
+            "referenceImage": "gltfExtensionExtMeshGpuInstancingTest.png"
+        },
+        {
+            "title": "GLTF ext MSFT_LOD",
+            "playgroundId": "#2YZFA0#234",
+            "referenceImage": "gltfMSFTLOD.png"
+        },
+        {
             "title": "GLTF Texture Linear Interpolation Test",
             "playgroundId": "#WGZLGJ#3009",
             "referenceImage": "gltfTextureLinearInterpolation.png",

@@ -2,13 +2,9 @@ FILE(GLOB REFERENCE_IMAGES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "ReferenceImag
 
 set(BABYLON_SCRIPTS
     "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
-    "../node_modules/babylonjs-loaders/babylonjs.loaders.js.map"
     "../node_modules/babylonjs/babylon.max.js"
-    "../node_modules/babylonjs/babylon.max.js.map"
     "../node_modules/babylonjs-materials/babylonjs.materials.js"
-    "../node_modules/babylonjs-materials/babylonjs.materials.js.map"
-    "../node_modules/babylonjs-gui/babylon.gui.js"
-    "../node_modules/babylonjs-gui/babylon.gui.js.map")
+    "../node_modules/babylonjs-gui/babylon.gui.js")
 
 set(DEPENDENCIES
     "../Dependencies/ammo.js"

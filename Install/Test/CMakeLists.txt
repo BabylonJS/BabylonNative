@@ -1,20 +1,31 @@
-# cmake 3.18+ to have the ARCHIVE_EXTRACT sub-command for files
 cmake_minimum_required(VERSION 3.18)
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+endif()
 
 include(FetchContent)
 
-project(TestInstall)
-
-FetchContent_Declare(cmake-extensions
+# --------------------------------------------------
+# Declarations
+# --------------------------------------------------
+FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG 366dc4a84fb20f4060d97e89948c343e74c51fc3)
+    GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
-FetchContent_MakeAvailable(cmake-extensions googletest)
+# --------------------------------------------------
+
+FetchContent_MakeAvailable(CMakeExtensions)
+
+project(TestInstall)
+
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+FetchContent_MakeAvailable_With_Message(googletest)
 
 # __cplusplus value is not in sync with language version used. MVSC needs this flag to update it accordingly
 # https://gitlab.kitware.com/cmake/cmake/-/issues/18837
@@ -35,9 +46,7 @@ set(LOCAL_SCRIPTS "${UNITTESTS_DIR}/Scripts/tests.js")
 
 set(NPM_SCRIPTS
     "${APPS_DIR}/node_modules/babylonjs/babylon.max.js"
-    "${APPS_DIR}/node_modules/babylonjs/babylon.max.js.map"
     "${APPS_DIR}/node_modules/babylonjs-materials/babylonjs.materials.js"
-    "${APPS_DIR}/node_modules/babylonjs-materials/babylonjs.materials.js.map"
     "${APPS_DIR}/node_modules/chai/chai.js"
     "${APPS_DIR}/node_modules/mocha/mocha.js")
 
@@ -62,11 +71,11 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     set(ADDITIONAL_LIBRARIES "v8jsi.dll.lib")
 elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     set_cpu_platform_arch()
-    set(V8_VERSION "8.4.371.15")
+    set(V8_VERSION "11.9.169.4")
     download_nuget()
-    set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v142-${CPU_ARCH}.${V8_VERSION}")
-    set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v142-${CPU_ARCH}.${V8_VERSION}")
-    set(V8_REDIST_PACKAGE_PATH "${NUGET_PATH}/packages/v8.redist-v142-${CPU_ARCH}.${V8_VERSION}")
+    set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v143-${CPU_ARCH}.${V8_VERSION}")
+    set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v143-${CPU_ARCH}.${V8_VERSION}")
+    set(V8_REDIST_PACKAGE_PATH "${NUGET_PATH}/packages/v8.redist-v143-${CPU_ARCH}.${V8_VERSION}")
 
     add_library(v8_libbase SHARED IMPORTED)
     set_target_properties(v8_libbase PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libbase.dll.lib")
@@ -79,12 +88,13 @@ elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
 
     set(V8_DIST
         "${V8_REDIST_PACKAGE_PATH}/lib/Release/icudtl.dat"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/icui18n.dll"
+        "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_icu_icui18n.dll"
+        "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_abseil-cpp_absl.dll"
         "${V8_REDIST_PACKAGE_PATH}/lib/Release/icuuc.dll"
         "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8.dll"
         "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8_libbase.dll"
         "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8_libplatform.dll"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/zlib.dll")
+        "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_zlib.dll")
 
     # only 1 imported location per library -> Adding 1 library per file
     foreach(V8FILE ${V8_DIST})
@@ -99,12 +109,12 @@ elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
         v8inspector
         llhttp
         v8::icudtl
-        v8::icui18n
+        v8::third_party_icu_icui18n
         v8::icuuc
         v8::v8
         v8::v8_libbase
         v8::v8_libplatform
-        v8::zlib)
+        v8::third_party_zlib)
 
     if(CPU_ARCH STREQUAL "x64")
         # Enable V8 Pointer Compression
@@ -119,6 +129,7 @@ add_executable(TestInstall ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_INSTALL_APP} $
 # for napi
 target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
 target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_NODE_SPECIFIC)
+target_compile_definitions(TestInstall PUBLIC NAPI_VERSION=3)
 
 set(INSTALL_LIBS_DIR "${BINARY_DIR}/install/lib")
 target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")

@@ -288,11 +288,6 @@ namespace Babylon::Graphics
         return m_state.Resolution.DevicePixelRatio;
     }
 
-    PlatformInfo DeviceImpl::GetPlatformInfo() const
-    {
-        return {static_cast<DeviceT>(bgfx::getInternalData()->context)};
-    }
-
     continuation_scheduler<>& DeviceImpl::BeforeRenderScheduler()
     {
         return m_beforeRenderDispatcher.scheduler();
