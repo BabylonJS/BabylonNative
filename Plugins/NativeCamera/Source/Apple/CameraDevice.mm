@@ -542,10 +542,12 @@ namespace Babylon::Plugins
             [implObj->m_impl->avCaptureSession startRunning];
             // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
             // of the video should be swapped
-            return implObj->m_impl->cameraTextureDelegate->VideoOrientation == VideoOrientationAngle::LandscapeLeft ||
-                implObj->m_impl->cameraTextureDelegate->VideoOrientation == VideoOrientationAngle::LandscapeRight ?
+            // NOTE: This code returns (width, height) independently of the VideoOrientation. As no bug as been reported, this code
+            // remains unchanged. Fix when a proper test procedure has been found.
+            return implObj->m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeLeft ||
+                implObj->m_impl->cameraTextureDelegate->VideoOrientation == AVCaptureVideoOrientationLandscapeRight ?
                 CameraDimensions{implObj->m_impl->cameraDimensions.width, implObj->m_impl->cameraDimensions.height} :
-                CameraDimensions{implObj->m_impl->cameraDimensions.height, implObj->m_impl->cameraDimensions.width};
+                CameraDimensions{implObj->m_impl->cameraDimensions.width, implObj->m_impl->cameraDimensions.height};
         });
     }
 
@@ -688,10 +690,12 @@ namespace Babylon::Plugins
         });
         // To match the web implementation if the sensor is rotated into a portrait orientation then the width and height
         // of the video should be swapped
+        // NOTE: This code returns (width, height) independently of the VideoOrientation. As no bug as been reported, this code
+        // remains unchanged. Fix when a proper test procedure has been found.
         return m_impl->cameraTextureDelegate->VideoOrientation == VideoOrientationAngle::LandscapeLeft ||
             m_impl->cameraTextureDelegate->VideoOrientation == VideoOrientationAngle::LandscapeRight ?
             CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height} :
-            CameraDimensions{m_impl->cameraDimensions.height, m_impl->cameraDimensions.width};
+            CameraDimensions{m_impl->cameraDimensions.width, m_impl->cameraDimensions.height};
     }
 
     CameraDevice::TakePhotoTask CameraDevice::TakePhotoAsync(PhotoSettings photoSettings)
