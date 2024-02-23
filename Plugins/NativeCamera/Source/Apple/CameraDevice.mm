@@ -550,7 +550,7 @@ namespace Babylon::Plugins
                 CameraDimensions{implObj->m_impl->cameraDimensions.width, implObj->m_impl->cameraDimensions.height} :
                 CameraDimensions{implObj->m_impl->cameraDimensions.height, implObj->m_impl->cameraDimensions.width};
             */
-            return CameraDimensions{implObj->m_impl->cameraDimensions.width, implObj->m_impl->cameraDimensions.height}:
+            return CameraDimensions{implObj->m_impl->cameraDimensions.width, implObj->m_impl->cameraDimensions.height};
         });
     }
 
