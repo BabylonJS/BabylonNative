@@ -16,6 +16,8 @@ namespace Babylon
     {
         std::stringstream ss{};
         ss << "Uncaught Error: " << error.what() << std::endl;
+        ss << GetErrorInfos() << std::endl;
+
         OutputDebugStringA(ss.str().data());
     }
 

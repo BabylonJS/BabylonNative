@@ -1,6 +1,6 @@
 #include "AppRuntime.h"
 #include <exception>
-
+#include <sstream>
 #import <Foundation/NSObjCRuntime.h>
 
 namespace Babylon
@@ -12,7 +12,11 @@ namespace Babylon
 
     void AppRuntime::DefaultUnhandledExceptionHandler(const std::exception& error)
     {
-        NSLog(@"Uncaught Error: %s", error.what());
+        std::stringstream ss{};
+        ss << error.what() << std::endl;
+        ss << GetErrorInfos() << std::endl;
+
+        NSLog(@"Uncaught Error: %s", ss.str().data());
     }
 
     void AppRuntime::Execute(Dispatchable<void()> callback)

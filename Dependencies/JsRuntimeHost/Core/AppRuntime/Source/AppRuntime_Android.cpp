@@ -14,6 +14,7 @@ namespace Babylon
     {
         std::stringstream ss{};
         ss << "Uncaught Error: " << error.what() << std::endl;
+        ss << GetErrorInfos() << std::endl;
         __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", ss.str().data());
     }
 

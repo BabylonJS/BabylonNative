@@ -46,5 +46,6 @@ namespace Babylon
 
         std::unique_ptr<WorkQueue> m_workQueue{};
         std::function<void(const std::exception&)> m_unhandledExceptionHandler{};
+        static std::string GetErrorInfos();
     };
 }
