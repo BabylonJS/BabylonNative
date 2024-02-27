@@ -39,6 +39,7 @@ namespace Babylon::Plugins::Internal
             for (FillLightMode fillLightMode : fillLightModes)
             {
                 arrayJS.Set(index, FillLightModeToString(fillLightMode));
+                index++;
             }
 
             return arrayJS;
