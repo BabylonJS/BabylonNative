@@ -3,7 +3,6 @@
 #endif
 
 #import <MetalKit/MetalKit.h>
-//#import <Photos/Photos.h>
 #include <napi/napi.h>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -1001,7 +1000,7 @@ namespace Babylon::Plugins
 
         // Saving the photo to storage can be helpful for testing and diagnosing any photo issues. To do so:
         // 1. In the Playground target, go to Build Phases, scroll down to Link Binary with Libraries, and add Photos.framework
-        // 2. Uncomment #import <Photos/Photos.h> at the top of this file
+        // 2. Add #import <Photos/Photos.h> at the top of this file
         // 3. Uncomment the block below
         /*
         [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
