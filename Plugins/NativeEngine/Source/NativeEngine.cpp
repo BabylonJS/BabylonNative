@@ -97,6 +97,86 @@ namespace Babylon
             }
         }
 
+        void FlipImage(gsl::span<uint8_t> image, uint32_t height)
+        {
+            const size_t rowPitch{image.size() / height};
+
+            std::vector<uint8_t> buffer(rowPitch);
+            for (size_t row = 0; row < height / 2; row++)
+            {
+                uint8_t* frontPtr{image.data() + (row * rowPitch)};
+                uint8_t* backPtr{image.data() + ((height - row - 1) * rowPitch)};
+
+                std::memcpy(buffer.data(), frontPtr, rowPitch);
+                std::memcpy(frontPtr, backPtr, rowPitch);
+                std::memcpy(backPtr, buffer.data(), rowPitch);
+            }
+        }
+
+        std::function<std::pair<uint32_t, uint32_t>(uint32_t x, uint32_t y)> GetPixelMapper(bimg::Orientation::Enum orientation, uint32_t width, uint32_t height)
+        {
+            switch (orientation)
+            {
+                case bimg::Orientation::R0: return [](uint32_t x, uint32_t y) { return std::make_pair(x, y); };
+                case bimg::Orientation::R90: return [height](uint32_t x, uint32_t y) { return std::make_pair(height - y - 1, x); };
+                case bimg::Orientation::R180: return [width, height](uint32_t x, uint32_t y) { return std::make_pair(width - x - 1, height - y - 1); };
+                case bimg::Orientation::R270: return [width](uint32_t x, uint32_t y) { return std::make_pair(y, width - x - 1); };
+                case bimg::Orientation::HFlip: return [width](uint32_t x, uint32_t y) { return std::make_pair(width - x - 1, y); };
+                case bimg::Orientation::HFlipR90: return [width, height](uint32_t x, uint32_t y) { return std::make_pair(height - y - 1, width - x - 1); };
+                case bimg::Orientation::HFlipR270: return [](uint32_t x, uint32_t y) { return std::make_pair(y, x); };
+                case bimg::Orientation::VFlip: return [height](uint32_t x, uint32_t y) { return std::make_pair(x, height - y - 1); };
+                default: throw std::runtime_error{"Unexpected image orientation."};
+            }
+        }
+
+        using RGBA8ImageData = gsl::span<uint32_t>;
+        void ReorientImage(RGBA8ImageData image, uint32_t& width, uint32_t& height, bimg::Orientation::Enum orientation)
+        {
+            // If the orientation is the default, nothing needs to be done.
+            if (orientation == bimg::Orientation::R0)
+            {
+                // No-op
+            }
+            // If we only need a vflip, use the more efficient FlipImage function.
+            else if (orientation == bimg::Orientation::VFlip)
+            {
+                FlipImage(gsl::make_span(reinterpret_cast<uint8_t*>(image.data()), image.size_bytes()), height);
+            }
+            // Otherwise we'll do a pixel by pixel transformation, using a temporary image buffer.
+            else if (orientation != bimg::Orientation::R0)
+            {
+                uint32_t newWidth = width;
+                uint32_t newHeight = height;
+
+                // If the orientation is 90 or 270, the final image width and height will be swapped.
+                if (orientation == bimg::Orientation::R90 || orientation == bimg::Orientation::R270 || orientation == bimg::Orientation::HFlipR90 || orientation == bimg::Orientation::HFlipR270)
+                {
+                    std::swap(newWidth, newHeight);
+                }
+
+                // Transform the pixels from the original image data to a temp image buffer.
+                std::vector<uint32_t> buffer(image.size());
+                auto mapPixel = GetPixelMapper(orientation, width, height);
+                for (uint32_t y = 0; y < height; y++)
+                {
+                    for (uint32_t x = 0; x < width; x++)
+                    {
+                        const RGBA8ImageData::size_type index = y * width + x;
+                        const std::pair<uint32_t, uint32_t> mappedPixel{mapPixel(x, y)};
+                        const RGBA8ImageData::size_type newIndex = mappedPixel.second * newWidth + mappedPixel.first;
+                        buffer[newIndex] = image[index];
+                    }
+                }
+
+                // Copy the temp image buffer over the original image data.
+                std::memcpy(image.data(), buffer.data(), image.size_bytes());
+
+                // Update the final width and height.
+                width = newWidth;
+                height = newHeight;
+            }
+        }
+
         bimg::ImageContainer* ParseImage(bx::AllocatorI& allocator, gsl::span<uint8_t> data)
         {
             bimg::ImageContainer* image{bimg::imageParse(&allocator, data.data(), static_cast<uint32_t>(data.size()))};
@@ -104,6 +184,12 @@ namespace Babylon
             {
                 throw std::runtime_error{"Failed to parse image."};
             }
+
+            assert(image->m_offset == 0);
+            assert(image->m_depth == 1);
+            assert(image->m_numLayers == 1);
+            assert(image->m_numMips == 1);
+            assert(!image->m_cubeMap);
 
             if (image->m_format == bimg::TextureFormat::R8 ||
                 image->m_format == bimg::TextureFormat::RG8)
@@ -119,23 +205,28 @@ namespace Babylon
                 bimg::imageFree(oldImage);
             }
 
-            return image;
-        }
-
-        void FlipImage(gsl::span<uint8_t> image, uint32_t height)
-        {
-            const size_t rowPitch{image.size() / height};
-
-            std::vector<uint8_t> buffer(rowPitch);
-            for (size_t row = 0; row < height / 2; row++)
+            // If the image has a non-zero orientation (e.g. via jpeg metadata), take this into account by updating the orientation of the underlying image data.
+            if (image->m_orientation != bimg::Orientation::R0)
             {
-                uint8_t* frontPtr{image.data() + (row * rowPitch)};
-                uint8_t* backPtr{image.data() + ((height - row - 1) * rowPitch)};
+                // Convert from RGB8 to RGBA8.
+                if (image->m_format == bimg::TextureFormat::RGB8)
+                {
+                    bimg::ImageContainer* oldImage{image};
+                    image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA8, *image, false);
+                    image->m_orientation = oldImage->m_orientation;
+                    bimg::imageFree(oldImage);
+                }
 
-                std::memcpy(buffer.data(), frontPtr, rowPitch);
-                std::memcpy(frontPtr, backPtr, rowPitch);
-                std::memcpy(backPtr, buffer.data(), rowPitch);
+                // If the image is RGBA8, update the image data according to the orientation.
+                // Other formats could be handled in the future, but this should at least cover jpeg images.
+                if (image->m_format == bimg::TextureFormat::RGBA8)
+                {
+                    assert(bimg::getBitsPerPixel(image->m_format) == sizeof(uint32_t) * 8);
+                    ReorientImage(gsl::make_span(static_cast<uint32_t*>(image->m_data), image->m_size / sizeof(uint32_t)), image->m_width, image->m_height, image->m_orientation);
+                }
             }
+
+            return image;
         }
 
         bimg::ImageContainer* PrepareImage(bx::AllocatorI& allocator, bimg::ImageContainer* image, bool invertY, bool srgb, bool generateMips)

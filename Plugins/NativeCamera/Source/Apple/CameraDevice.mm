@@ -3,6 +3,7 @@
 #endif
 
 #import <MetalKit/MetalKit.h>
+//#import <Photos/Photos.h>
 #include <napi/napi.h>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -748,6 +749,15 @@ namespace Babylon::Plugins
         TakePhotoTaskCompletionSource taskCompletionSource{};
         m_impl->photoCaptureDelegate = [[PhotoCaptureDelegate alloc]init: taskCompletionSource orientation:m_impl->cameraTextureDelegate->VideoOrientation];
 
+        // Update photo output's videoOrientation so the final photo orientation is correct.
+        // This reflects both the camera sensor's orientation relative to the device's default orientation, and the UI orientation.
+        // If the device has rotation lock enabled, then the UI orientation will be locked, and the final photo will be rotated.
+        // This matches the behavior of the ImageCapture API in Chrome on Android (the only place ImageCapture is implemented in a mobile browser currently).
+        AVCaptureConnection* photoOutputConnection = [m_impl->avCapturePhotoOutput connectionWithMediaType:AVMediaTypeVideo];
+        if (photoOutputConnection)
+        {
+            photoOutputConnection.videoOrientation = m_impl->cameraTextureDelegate->VideoOrientation;
+        }
         [m_impl->avCapturePhotoOutput capturePhotoWithSettings:capturePhotoSettings delegate:m_impl->photoCaptureDelegate];
 
         return taskCompletionSource.as_task();
@@ -986,31 +996,25 @@ namespace Babylon::Plugins
     }
     else
     {
-        // Determine the orientation to apply based on the device orientation
-        CGImagePropertyOrientation orientation{kCGImagePropertyOrientationUp};
-        switch (self->orientation) {
-            case AVCaptureVideoOrientationPortrait:
-                orientation = kCGImagePropertyOrientationRight;
-                break;
-            case AVCaptureVideoOrientationPortraitUpsideDown:
-                orientation = kCGImagePropertyOrientationLeft;
-                break;
-            case AVCaptureVideoOrientationLandscapeLeft:
-                orientation = kCGImagePropertyOrientationDown;
-                break;
-            case AVCaptureVideoOrientationLandscapeRight:
-                orientation = kCGImagePropertyOrientationUp;
-                break;
-        }
+        // Get the image data (as jpeg)
+        NSData* imageData = [photo fileDataRepresentation];
 
-        // Create a CIImage that we can manipulate (e.g. rotate) from the AVCapturePhoto's fileDataRepresentation (jpeg)
-        CIImage* ciImage = [CIImage imageWithData:[photo fileDataRepresentation]];
-
-        // Create a new CIImage with the correct orientation
-        ciImage = [ciImage imageByApplyingOrientation:orientation];
-
-        // Create a UIImage from the CIImage and convert back to jpeg data
-        NSData* imageData = UIImageJPEGRepresentation([UIImage imageWithCIImage:ciImage], 1.0);
+        // Saving the photo to storage can be helpful for testing and diagnosing any photo issues. To do so:
+        // 1. In the Playground target, go to Build Phases, scroll down to Link Binary with Libraries, and add Photos.framework
+        // 2. Uncomment #import <Photos/Photos.h> at the top of this file
+        // 3. Uncomment the block below
+        /*
+        [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
+            PHAssetCreationRequest *creationRequest = [PHAssetCreationRequest creationRequestForAsset];
+            [creationRequest addResourceWithType:PHAssetResourceTypePhoto data:imageData options:nil];
+        } completionHandler:^(BOOL success, NSError *error) {
+            if (!success) {
+                NSLog(@"Error saving image: %@", error);
+            } else {
+                NSLog(@"Image saved successfully");
+            }
+        }];
+        */
 
         self->taskCompletionSource.complete(gsl::make_span(static_cast<const uint8_t*>(imageData.bytes), imageData.length));
     }
