@@ -1,4 +1,5 @@
 #include "IndexBuffer.h"
+#include "Babylon/Graphics/Device.h"
 
 namespace Babylon
 {
@@ -6,6 +7,7 @@ namespace Babylon
         : m_bytes{{bytes.data(), bytes.data() + bytes.size()}}
         , m_flags{flags}
         , m_dynamic{dynamic}
+        , m_graphicsID{Babylon::Graphics::Device::GetID()}
     {
     }
 
@@ -21,7 +23,7 @@ namespace Babylon
             return;
         }
 
-        if (bgfx::isValid(m_handle))
+        if (bgfx::isValid(m_handle) && m_graphicsID == Babylon::Graphics::Device::GetID())
         {
             if (m_dynamic)
             {

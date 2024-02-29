@@ -1,8 +1,14 @@
 #include "VertexArray.h"
 #include <cassert>
+#include "Babylon/Graphics/Device.h"
 
 namespace Babylon
 {
+    VertexArray::VertexArray()
+       : m_graphicsID{ Babylon::Graphics::Device::GetID() }
+    {
+    }
+
     VertexArray::~VertexArray()
     {
         Dispose();
@@ -17,9 +23,12 @@ namespace Babylon
 
         m_indexBufferRecord.Buffer = nullptr;
 
-        for (auto& pair : m_vertexBufferRecords)
+        if(m_graphicsID == Babylon::Graphics::Device::GetID())
         {
-            bgfx::destroy(pair.second.LayoutHandle);
+           for( auto& pair : m_vertexBufferRecords )
+           {
+              bgfx::destroy(pair.second.LayoutHandle);
+           }
         }
 
         m_vertexBufferRecords.clear();

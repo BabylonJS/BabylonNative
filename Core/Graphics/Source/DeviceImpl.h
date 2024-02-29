@@ -38,9 +38,12 @@ namespace Babylon::Graphics
         DeviceImpl(DeviceImpl&&) noexcept = delete;
         DeviceImpl& operator=(DeviceImpl&&) noexcept = delete;
 
+        static uintptr_t GetId();
+
         /* ********** BEGIN DEVICE CONTRACT ********** */
 
         void UpdateWindow(WindowT window);
+        void UpdateDevice(DeviceT device);
         void UpdateSize(size_t width, size_t height);
         void UpdateMSAA(uint8_t value);
         void UpdateAlphaPremultiplied(bool enabled);

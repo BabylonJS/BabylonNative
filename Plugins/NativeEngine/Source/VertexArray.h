@@ -9,7 +9,7 @@ namespace Babylon
     class VertexArray final
     {
     public:
-        VertexArray() = default;
+        VertexArray();
         ~VertexArray();
 
         VertexArray(const VertexArray&) = delete;
@@ -41,5 +41,6 @@ namespace Babylon
         std::map<bgfx::Attrib::Enum, VertexBuffer::InstanceVertexBufferRecord> m_vertexBufferInstanceRecords{};
 
         bool m_disposed{};
+        uintptr_t m_graphicsID;
     };
 }

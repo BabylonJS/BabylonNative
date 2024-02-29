@@ -79,11 +79,14 @@ namespace Babylon::Graphics
         Device(Device&&) noexcept;
         Device& operator=(Device&&) noexcept;
 
+        static uintptr_t GetID();
+
         // Note: This API contract is subject to change in coming versions.
         // Features and functionalities will be added and
         // method and structure might change.
 
         void UpdateWindow(WindowT window);
+        void UpdateDevice(DeviceT device);
         void UpdateSize(size_t width, size_t height);
         void UpdateMSAA(uint8_t value);
         void UpdateAlphaPremultiplied(bool enabled);

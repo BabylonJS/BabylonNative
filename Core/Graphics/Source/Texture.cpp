@@ -1,8 +1,16 @@
 #include "Texture.h"
 #include <cassert>
 
+#include "Babylon/Graphics/Device.h"
+
 namespace Babylon::Graphics
 {
+    Texture::Texture()
+       : m_graphicsID{Babylon::Graphics::Device::GetID()}
+    {
+
+    }
+
     Texture::~Texture()
     {
         Dispose();
@@ -10,7 +18,7 @@ namespace Babylon::Graphics
 
     void Texture::Dispose()
     {
-        if (m_ownsHandle && bgfx::isValid(m_handle))
+        if (m_ownsHandle && bgfx::isValid(m_handle) && m_graphicsID == Babylon::Graphics::Device::GetID())
         {
             bgfx::destroy(m_handle);
             m_handle = BGFX_INVALID_HANDLE;

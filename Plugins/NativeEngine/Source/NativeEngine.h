@@ -11,6 +11,7 @@
 #include <Babylon/Graphics/DeviceContext.h>
 #include <Babylon/Graphics/BgfxCallback.h>
 #include <Babylon/Graphics/FrameBuffer.h>
+#include <Babylon/Graphics/Device.h>
 
 #include <napi/napi.h>
 
@@ -52,6 +53,7 @@ namespace Babylon
             , UniformNameToIndex{std::move(other.UniformNameToIndex)}
             , UniformInfos{std::move(other.UniformInfos)}
             , VertexAttributeLocations{std::move(other.VertexAttributeLocations)}
+            , GraphicsInstanceID{Babylon::Graphics::Device::GetDeviceInstanceID()}
         {
             other.Handle = BGFX_INVALID_HANDLE;
         }
@@ -74,7 +76,7 @@ namespace Babylon
 
         void Dispose()
         {
-            if (bgfx::isValid(Handle))
+            if (bgfx::isValid(Handle) && GraphicsInstanceID == Babylon::Graphics::Device::GetDeviceInstanceID())
             {
                 bgfx::destroy(Handle);
                 Handle = BGFX_INVALID_HANDLE;
@@ -93,6 +95,7 @@ namespace Babylon
         std::unordered_map<std::string, uint16_t> UniformNameToIndex{};
         std::unordered_map<uint16_t, UniformInfo> UniformInfos{};
         std::unordered_map<std::string, uint32_t> VertexAttributeLocations{};
+        uint32_t GraphicsInstanceID;
 
         void SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, size_t elementLength = 1)
         {
