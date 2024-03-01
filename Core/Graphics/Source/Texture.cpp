@@ -8,7 +8,6 @@ namespace Babylon::Graphics
     Texture::Texture()
        : m_graphicsID{Babylon::Graphics::Device::GetID()}
     {
-
     }
 
     Texture::~Texture()
