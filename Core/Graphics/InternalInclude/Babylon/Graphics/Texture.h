@@ -4,10 +4,12 @@
 
 namespace Babylon::Graphics
 {
+    class DeviceContext;
+
     class Texture final
     {
     public:
-        Texture();
+        Texture(DeviceContext& deviceContext);
         ~Texture();
 
         Texture(const Texture&) = delete;
@@ -47,5 +49,6 @@ namespace Babylon::Graphics
         uint64_t m_flags{BGFX_TEXTURE_NONE};
         uint32_t m_samplerFlags{BGFX_SAMPLER_NONE};
         uintptr_t  m_deviceID;
+        DeviceContext& m_deviceContext;
     };
 }

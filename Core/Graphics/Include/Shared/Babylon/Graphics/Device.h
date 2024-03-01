@@ -79,8 +79,6 @@ namespace Babylon::Graphics
         Device(Device&&) noexcept;
         Device& operator=(Device&&) noexcept;
 
-        static uintptr_t GetID();
-
         // Note: This API contract is subject to change in coming versions.
         // Features and functionalities will be added and
         // method and structure might change.

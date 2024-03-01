@@ -38,10 +38,8 @@ namespace Babylon::Graphics
         DeviceImpl(DeviceImpl&&) noexcept = delete;
         DeviceImpl& operator=(DeviceImpl&&) noexcept = delete;
 
-        static uintptr_t GetId();
 
         /* ********** BEGIN DEVICE CONTRACT ********** */
-
         void UpdateWindow(WindowT window);
         void UpdateDevice(DeviceT device);
         void UpdateSize(size_t width, size_t height);
@@ -70,6 +68,8 @@ namespace Babylon::Graphics
         float GetDevicePixelRatio() const;
 
         PlatformInfo GetPlatformInfo() const;
+
+        uintptr_t GetId() const;
 
         /* ********** END DEVICE CONTRACT ********** */
 
@@ -162,5 +162,6 @@ namespace Babylon::Graphics
         std::mutex m_updateSafeTimespansMutex{};
 
         DeviceContext m_context;
+        uintptr_t m_bgfxId = 0;
     };
 }

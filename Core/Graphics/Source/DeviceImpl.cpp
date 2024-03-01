@@ -19,7 +19,6 @@
 namespace
 {
     constexpr auto JS_GRAPHICS_NAME = "_Graphics";
-    uintptr_t g_bgfxId = 0;
 }
 
 namespace Babylon::Graphics
@@ -27,6 +26,7 @@ namespace Babylon::Graphics
     DeviceImpl::DeviceImpl(const Configuration& config)
         : m_bgfxCallback{[this](const auto& data) { CaptureCallback(data); }}
         , m_context{*this}
+        , m_bgfxId{0}
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Initialized = false;
@@ -50,9 +50,9 @@ namespace Babylon::Graphics
         DisableRendering();
     }
 
-    uintptr_t DeviceImpl::GetId()
+    uintptr_t DeviceImpl::GetId() const
     {
-       return g_bgfxId;
+       return m_bgfxId;
     }
 
     void DeviceImpl::UpdateWindow(WindowT window)
@@ -159,7 +159,7 @@ namespace Babylon::Graphics
             auto& init{m_state.Bgfx.InitState};
             bgfx::setPlatformData(init.platformData);
             bgfx::init(init);
-            g_bgfxId++;
+            m_bgfxId++;
 
             m_state.Bgfx.Initialized = true;
             m_state.Bgfx.Dirty = false;

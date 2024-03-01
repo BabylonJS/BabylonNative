@@ -105,6 +105,7 @@ namespace Babylon::Graphics
         size_t GetWidth() const;
         size_t GetHeight() const;
         float GetDevicePixelRatio();
+        uintptr_t GetDeviceId() const;
 
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);

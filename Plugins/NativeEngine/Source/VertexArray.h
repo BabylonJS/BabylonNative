@@ -6,10 +6,15 @@
 
 namespace Babylon
 {
+    namespace Graphics 
+    {
+        class DeviceContext;
+    }
+
     class VertexArray final
     {
     public:
-        VertexArray();
+        VertexArray(Graphics::DeviceContext& deviceContext);
         ~VertexArray();
 
         VertexArray(const VertexArray&) = delete;
@@ -42,5 +47,6 @@ namespace Babylon
 
         bool m_disposed{};
         uintptr_t m_deviceID;
+        Graphics::DeviceContext& m_deviceContext;
     };
 }

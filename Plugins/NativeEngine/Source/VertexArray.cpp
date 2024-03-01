@@ -1,11 +1,12 @@
 #include "VertexArray.h"
 #include <cassert>
-#include "Babylon/Graphics/Device.h"
+#include "Babylon/Graphics/DeviceContext.h"
 
 namespace Babylon
 {
-    VertexArray::VertexArray()
-       : m_deviceID{Graphics::Device::GetID()}
+    VertexArray::VertexArray(Graphics::DeviceContext& deviceContext)
+       : m_deviceID{deviceContext.GetDeviceId()}
+       , m_deviceContext{deviceContext}
     {
     }
 
@@ -23,7 +24,7 @@ namespace Babylon
 
         m_indexBufferRecord.Buffer = nullptr;
 
-        if( m_deviceID == Graphics::Device::GetID())
+        if( m_deviceID == m_deviceContext.GetDeviceId())
         {
            for( auto& pair : m_vertexBufferRecords )
            {
