@@ -135,7 +135,7 @@ namespace Babylon::Graphics
             return;
         }
 
-        if (bgfx::isValid(m_handle) && m_graphicsID == Babylon::Graphics::Device::GetID())
+        if (bgfx::isValid(m_handle) && m_graphicsID == Device::GetID())
         {
             bgfx::destroy(m_handle);
         }
