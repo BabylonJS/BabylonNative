@@ -105,6 +105,8 @@ namespace Babylon::Graphics
         size_t GetWidth() const;
         size_t GetHeight() const;
         float GetDevicePixelRatio();
+
+        //Note: This is an index that changes when bgfx gets reset. It should be used to validate that resource handles created using bgfx remain valid on destruction.
         uintptr_t GetDeviceId() const;
 
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
