@@ -44,8 +44,9 @@ namespace Babylon
     struct ProgramData final
     {
         ProgramData(Graphics::DeviceContext& deviceContext) 
-           : DeviceContext{deviceContext}
-           , DeviceID {deviceContext.GetDeviceId()}
+           : DeviceID {deviceContext.GetDeviceId()}
+           , DeviceContext{deviceContext}
+
         {
 
         }
