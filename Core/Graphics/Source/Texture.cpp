@@ -6,7 +6,7 @@
 namespace Babylon::Graphics
 {
     Texture::Texture()
-       : m_graphicsID{Babylon::Graphics::Device::GetID()}
+       : m_deviceID{Device::GetID()}
     {
     }
 
@@ -17,7 +17,7 @@ namespace Babylon::Graphics
 
     void Texture::Dispose()
     {
-        if (m_ownsHandle && bgfx::isValid(m_handle) && m_graphicsID == Babylon::Graphics::Device::GetID())
+        if (m_ownsHandle && bgfx::isValid(m_handle) && m_deviceID == Device::GetID())
         {
             bgfx::destroy(m_handle);
             m_handle = BGFX_INVALID_HANDLE;

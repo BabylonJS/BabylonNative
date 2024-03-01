@@ -5,7 +5,7 @@
 namespace Babylon
 {
     VertexArray::VertexArray()
-       : m_graphicsID{ Babylon::Graphics::Device::GetID() }
+       : m_deviceID{Graphics::Device::GetID()}
     {
     }
 
@@ -23,7 +23,7 @@ namespace Babylon
 
         m_indexBufferRecord.Buffer = nullptr;
 
-        if(m_graphicsID == Babylon::Graphics::Device::GetID())
+        if( m_deviceID == Graphics::Device::GetID())
         {
            for( auto& pair : m_vertexBufferRecords )
            {

@@ -35,6 +35,6 @@ namespace Babylon
         };
 
         bool m_disposed{};
-        uintptr_t m_graphicsID;
+        uintptr_t  m_deviceID;
     };
 }

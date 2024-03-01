@@ -46,6 +46,6 @@ namespace Babylon::Graphics
         bgfx::TextureFormat::Enum m_format{bgfx::TextureFormat::Enum::Unknown};
         uint64_t m_flags{BGFX_TEXTURE_NONE};
         uint32_t m_samplerFlags{BGFX_SAMPLER_NONE};
-        uintptr_t m_graphicsID;
+        uintptr_t  m_deviceID;
     };
 }
