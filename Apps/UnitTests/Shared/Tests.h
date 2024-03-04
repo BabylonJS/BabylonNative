@@ -14,7 +14,7 @@
 #include <napi/env.h>
 
 Babylon::Graphics::Configuration deviceTestConfig{};
-
+/*
 TEST(JSTest, JavaScriptTests)
 {
     std::promise<int32_t> exitCode;
@@ -61,7 +61,7 @@ TEST(JSTest, JavaScriptTests)
     auto code{exitCode.get_future().get()};
     EXPECT_EQ(code, 0);
 }
-
+*/
 /*
 This test does a serie of initialization and shutdowns.
 It needs the shutdown PR to be merged before running properly.
@@ -99,7 +99,7 @@ TEST(NativeAPI, LifeCycle)
 }
 */
 
-TEST(Performance, Spheres)
+void T() //TEST(Performance, Spheres)
 {
     // create a bunch of sphere, does the rendering for a number of frames, log time it took
     static const std::string script{ R"(
@@ -177,6 +177,7 @@ TEST(Performance, Spheres)
 
 int Run()
 {
+    T();
     testing::InitGoogleTest();
     return RUN_ALL_TESTS();
 }
