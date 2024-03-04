@@ -159,7 +159,6 @@ namespace Babylon::Graphics
             auto& init{m_state.Bgfx.InitState};
             bgfx::setPlatformData(init.platformData);
             bgfx::init(init);
-            m_bgfxId++;
 
             m_state.Bgfx.Initialized = true;
             m_state.Bgfx.Dirty = false;
@@ -192,6 +191,7 @@ namespace Babylon::Graphics
 
             bgfx::shutdown();
             m_state.Bgfx.Initialized = false;
+            m_bgfxId++;
 
             m_renderThreadAffinity = {};
         }
