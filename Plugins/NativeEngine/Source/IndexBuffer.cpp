@@ -1,11 +1,14 @@
 #include "IndexBuffer.h"
+#include "Babylon/Graphics/DeviceContext.h"
 
 namespace Babylon
 {
-    IndexBuffer::IndexBuffer(gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic)
+    IndexBuffer::IndexBuffer(gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic, Graphics::DeviceContext& deviceContext)
         : m_bytes{{bytes.data(), bytes.data() + bytes.size()}}
         , m_flags{flags}
         , m_dynamic{dynamic}
+        , m_deviceID{deviceContext.GetDeviceId()}
+        , m_deviceContext{deviceContext}
     {
     }
 
@@ -21,7 +24,7 @@ namespace Babylon
             return;
         }
 
-        if (bgfx::isValid(m_handle))
+        if (bgfx::isValid(m_handle) && m_deviceID == m_deviceContext.GetDeviceId())
         {
             if (m_dynamic)
             {

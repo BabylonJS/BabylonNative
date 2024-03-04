@@ -6,10 +6,15 @@
 
 namespace Babylon
 {
+    namespace Graphics 
+    {
+        class DeviceContext;
+    }
+
     class VertexArray final
     {
     public:
-        VertexArray() = default;
+        VertexArray(Graphics::DeviceContext& deviceContext);
         ~VertexArray();
 
         VertexArray(const VertexArray&) = delete;
@@ -41,5 +46,7 @@ namespace Babylon
         std::map<bgfx::Attrib::Enum, VertexBuffer::InstanceVertexBufferRecord> m_vertexBufferInstanceRecords{};
 
         bool m_disposed{};
+        uintptr_t m_deviceID;
+        Graphics::DeviceContext& m_deviceContext;
     };
 }

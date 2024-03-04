@@ -8,10 +8,15 @@
 
 namespace Babylon
 {
+    namespace Graphics 
+    {
+        class DeviceContext;
+    }
+
     class IndexBuffer final
     {
     public:
-        IndexBuffer(gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic);
+        IndexBuffer(gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic, Graphics::DeviceContext& deviceContext);
         ~IndexBuffer();
 
         IndexBuffer(const IndexBuffer&) = delete;
@@ -35,5 +40,7 @@ namespace Babylon
         };
 
         bool m_disposed{};
+        uintptr_t  m_deviceID;
+        Graphics::DeviceContext& m_deviceContext;
     };
 }

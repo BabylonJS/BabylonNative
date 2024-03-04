@@ -78,7 +78,7 @@ namespace Babylon::Plugins
                     return;
                 }
 
-                arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&runtime, deferred = std::move(deferred), handle, impl = std::move(impl)]() {
+                arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&runtime, &context, deferred = std::move(deferred), handle, impl = std::move(impl)]() {
                     if (bgfx::overrideInternal(handle, impl->Ptr()) == 0)
                     {
                         runtime.Dispatch([deferred = std::move(deferred), handle](Napi::Env env) {
@@ -89,8 +89,8 @@ namespace Babylon::Plugins
                         return;
                     }
 
-                    runtime.Dispatch([deferred = std::move(deferred), handle, impl = std::move(impl)](Napi::Env env) {
-                        auto* texture = new Graphics::Texture{};
+                    runtime.Dispatch([deferred = std::move(deferred), handle, &context, impl = std::move(impl)](Napi::Env env) {
+                        auto* texture = new Graphics::Texture{context};
                         texture->Attach(handle, true, impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
 
                         impl->AddHandle(texture->Handle());

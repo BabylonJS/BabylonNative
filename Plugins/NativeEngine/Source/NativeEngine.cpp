@@ -741,7 +741,7 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateVertexArray(const Napi::CallbackInfo& info)
     {
-        VertexArray* vertexArray = new VertexArray{};
+        VertexArray* vertexArray = new VertexArray{m_graphicsContext};
         return Napi::Pointer<VertexArray>::Create(info.Env(), vertexArray, Napi::NapiPointerDeleter(vertexArray));
     }
 
@@ -766,7 +766,7 @@ namespace Babylon
         const bool dynamic = info[4].As<Napi::Boolean>().Value();
 
         const uint16_t flags = (is32Bits ? BGFX_BUFFER_INDEX32 : 0);
-        IndexBuffer* indexBuffer = new IndexBuffer{gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength), flags, dynamic};
+        IndexBuffer* indexBuffer = new IndexBuffer{gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength), flags, dynamic, m_graphicsContext};
         return Napi::Pointer<IndexBuffer>::Create(info.Env(), indexBuffer, Napi::NapiPointerDeleter(indexBuffer));
     }
 
@@ -804,7 +804,7 @@ namespace Babylon
         const uint32_t byteLength = info[2].As<Napi::Number>().Uint32Value();
         const bool dynamic = info[3].As<Napi::Boolean>().Value();
 
-        VertexBuffer* vertexBuffer = new VertexBuffer(gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength), dynamic);
+        VertexBuffer* vertexBuffer = new VertexBuffer(gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength), dynamic, m_graphicsContext);
         return Napi::Pointer<VertexBuffer>::Create(info.Env(), vertexBuffer, Napi::NapiPointerDeleter(vertexBuffer));
     }
 
@@ -895,7 +895,7 @@ namespace Babylon
     {
         ShaderCompiler::BgfxShaderInfo shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
 
-        std::unique_ptr<ProgramData> program = std::make_unique<ProgramData>();
+        std::unique_ptr<ProgramData> program = std::make_unique<ProgramData>(m_graphicsContext);
 
         static auto InitUniformInfos{
             [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex) {
@@ -931,7 +931,7 @@ namespace Babylon
     {
         const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
         const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
-        ProgramData* program = new ProgramData{};
+        ProgramData* program = new ProgramData{m_graphicsContext};
         Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
         try
         {
@@ -951,7 +951,7 @@ namespace Babylon
         const Napi::Function onSuccess = info[2].As<Napi::Function>();
         const Napi::Function onError = info[3].As<Napi::Function>();
 
-        ProgramData* program = new ProgramData{};
+        ProgramData* program = new ProgramData{m_graphicsContext};
         Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
@@ -1274,7 +1274,7 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateTexture(const Napi::CallbackInfo& info)
     {
-        Graphics::Texture* texture = new Graphics::Texture();
+        Graphics::Texture* texture = new Graphics::Texture(m_graphicsContext);
         return Napi::Pointer<Graphics::Texture>::Create(info.Env(), texture, Napi::NapiPointerDeleter(texture));
     }
 

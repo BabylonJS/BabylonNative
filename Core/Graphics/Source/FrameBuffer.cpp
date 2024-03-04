@@ -14,6 +14,7 @@ namespace Babylon::Graphics
         , m_hasDepth{hasDepth}
         , m_hasStencil{hasStencil}
         , m_disposed{false}
+        , m_deviceID{context.GetDeviceId()}
     {
     }
 
@@ -134,7 +135,7 @@ namespace Babylon::Graphics
             return;
         }
 
-        if (bgfx::isValid(m_handle))
+        if (bgfx::isValid(m_handle) && m_deviceID == m_context.GetDeviceId())
         {
             bgfx::destroy(m_handle);
         }

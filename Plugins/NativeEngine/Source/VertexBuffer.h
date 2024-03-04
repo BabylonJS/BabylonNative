@@ -8,10 +8,15 @@
 
 namespace Babylon
 {
+    namespace Graphics 
+    {
+        class DeviceContext;
+    }
+
     class VertexBuffer final
     {
     public:
-        VertexBuffer(gsl::span<uint8_t> bytes, bool dynamic);
+        VertexBuffer(gsl::span<uint8_t> bytes, bool dynamic, Graphics::DeviceContext& deviceContext);
         ~VertexBuffer();
 
         VertexBuffer(const VertexBuffer&) = delete;
@@ -45,5 +50,7 @@ namespace Babylon
         };
 
         bool m_disposed{};
+        uintptr_t m_deviceID;
+        Graphics::DeviceContext& m_deviceContext;
     };
 }

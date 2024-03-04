@@ -14,6 +14,11 @@ namespace Babylon::Graphics
     Device::Device(Device&&) noexcept = default;
     Device& Device::operator=(Device&&) noexcept = default;
 
+    void Device::UpdateDevice(DeviceT device) 
+    {
+       m_impl->UpdateDevice(device);
+    }
+
     void Device::UpdateWindow(WindowT window)
     {
         m_impl->UpdateWindow(window);

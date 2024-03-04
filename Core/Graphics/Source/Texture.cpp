@@ -1,8 +1,15 @@
 #include "Texture.h"
+#include "DeviceContext.h"
 #include <cassert>
 
 namespace Babylon::Graphics
 {
+    Texture::Texture(DeviceContext& deviceContext)
+       : m_deviceID{deviceContext.GetDeviceId()}
+       , m_deviceContext{deviceContext}
+    {
+    }
+
     Texture::~Texture()
     {
         Dispose();
@@ -10,7 +17,7 @@ namespace Babylon::Graphics
 
     void Texture::Dispose()
     {
-        if (m_ownsHandle && bgfx::isValid(m_handle))
+        if (m_ownsHandle && bgfx::isValid(m_handle) && m_deviceID == m_deviceContext.GetDeviceId())
         {
             bgfx::destroy(m_handle);
             m_handle = BGFX_INVALID_HANDLE;

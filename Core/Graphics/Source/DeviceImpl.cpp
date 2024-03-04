@@ -26,6 +26,7 @@ namespace Babylon::Graphics
     DeviceImpl::DeviceImpl(const Configuration& config)
         : m_bgfxCallback{[this](const auto& data) { CaptureCallback(data); }}
         , m_context{*this}
+        , m_bgfxId{0}
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.Initialized = false;
@@ -49,6 +50,11 @@ namespace Babylon::Graphics
         DisableRendering();
     }
 
+    uintptr_t DeviceImpl::GetId() const
+    {
+       return m_bgfxId;
+    }
+
     void DeviceImpl::UpdateWindow(WindowT window)
     {
         std::scoped_lock lock{m_state.Mutex};
@@ -56,6 +62,12 @@ namespace Babylon::Graphics
         ConfigureBgfxPlatformData(m_state.Bgfx.InitState.platformData, window);
         ConfigureBgfxRenderType(m_state.Bgfx.InitState.platformData, m_state.Bgfx.InitState.type);
         m_state.Resolution.DevicePixelRatio = GetDevicePixelRatio(window);
+    }
+
+    void DeviceImpl::UpdateDevice(DeviceT device)
+    {
+       std::scoped_lock lock{ m_state.Mutex };
+       m_state.Bgfx.InitState.platformData.context = device;
     }
 
     void DeviceImpl::UpdateSize(size_t width, size_t height)
@@ -179,6 +191,7 @@ namespace Babylon::Graphics
 
             bgfx::shutdown();
             m_state.Bgfx.Initialized = false;
+            m_bgfxId++;
 
             m_renderThreadAffinity = {};
         }

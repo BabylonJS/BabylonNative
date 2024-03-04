@@ -119,4 +119,9 @@ namespace Babylon::Graphics
         std::scoped_lock lock{m_textureHandleToInfoMutex};
         return m_textureHandleToInfo[handle.idx];
     }
+
+    uintptr_t DeviceContext::GetDeviceId() const
+    {
+       return m_graphicsImpl.GetId();
+    }
 }

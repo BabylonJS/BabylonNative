@@ -1,5 +1,6 @@
 #include "VertexBuffer.h"
 #include <cassert>
+#include "Babylon/Graphics/DeviceContext.h"
 
 namespace
 {
@@ -27,9 +28,11 @@ namespace
 
 namespace Babylon
 {
-    VertexBuffer::VertexBuffer(gsl::span<uint8_t> bytes, bool dynamic)
+    VertexBuffer::VertexBuffer(gsl::span<uint8_t> bytes, bool dynamic, Graphics::DeviceContext& deviceContext)
         : m_bytes{{bytes.data(), bytes.data() + bytes.size()}}
         , m_dynamic{dynamic}
+        , m_deviceID{deviceContext.GetDeviceId()}
+        , m_deviceContext{deviceContext}
     {
     }
 
@@ -45,7 +48,7 @@ namespace Babylon
             return;
         }
 
-        if (bgfx::isValid(m_handle))
+        if (bgfx::isValid(m_handle) && m_deviceID == m_deviceContext.GetDeviceId())
         {
             if (m_dynamic)
             {
