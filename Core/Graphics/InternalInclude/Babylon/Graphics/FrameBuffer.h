@@ -26,6 +26,8 @@ namespace Babylon::Graphics
         FrameBuffer(const FrameBuffer&) = delete;
         FrameBuffer& operator=(const FrameBuffer&) = delete;
 
+        void Dispose();
+
         bgfx::FrameBufferHandle Handle() const;
         uint16_t Width() const;
         uint16_t Height() const;
@@ -44,30 +46,28 @@ namespace Babylon::Graphics
         bool HasDepth() const { return m_hasDepth; }
         bool HasStencil() const { return m_hasStencil; }
 
-        void Dispose();
-
     private:
-        DeviceContext& m_context;
-        bgfx::FrameBufferHandle m_handle;
-        const uint16_t m_width;
-        const uint16_t m_height;
-        const bool m_defaultBackBuffer;
-        const bool m_hasDepth;
-        const bool m_hasStencil;
+        Rect GetBgfxScissor(float x, float y, float width, float height) const;
+        void SetBgfxViewPortAndScissor(bgfx::Encoder& encoder, const Rect& viewPort, const Rect& scissor);
 
-        std::optional<bgfx::ViewId> m_viewId;
+        DeviceContext& m_deviceContext;
+        const uintptr_t m_deviceID{};
+
+        bgfx::FrameBufferHandle m_handle{};
+        const uint16_t m_width{};
+        const uint16_t m_height{};
+        const bool m_defaultBackBuffer{};
+        const bool m_hasDepth{};
+        const bool m_hasStencil{};
+
+        std::optional<bgfx::ViewId> m_viewId{};
 
         Rect m_bgfxViewPort{0.0f, 0.0f, 1.0f, 1.0f};
         Rect m_desiredViewPort{0.0f, 0.0f, 1.0f, 1.0f};
 
-        Rect m_bgfxScissor;
-        Rect m_desiredScissor;
+        Rect m_bgfxScissor{};
+        Rect m_desiredScissor{};
 
-
-        bool m_disposed{false};
-        uintptr_t m_deviceID;
-
-        Rect GetBgfxScissor(float x, float y, float width, float height) const;
-        void SetBgfxViewPortAndScissor(bgfx::Encoder& encoder, const Rect& viewPort, const Rect& scissor);
+        bool m_disposed{};
     };
 }
