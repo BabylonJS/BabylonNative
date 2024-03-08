@@ -10,6 +10,7 @@ namespace Babylon
     class VertexArray final
     {
     public:
+        VertexArray() = default;
         ~VertexArray();
 
         VertexArray(const VertexArray&) = delete;

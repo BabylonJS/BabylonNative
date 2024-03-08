@@ -741,7 +741,7 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateVertexArray(const Napi::CallbackInfo& info)
     {
-        VertexArray* vertexArray = new VertexArray{m_deviceContext};
+        VertexArray* vertexArray = new VertexArray{};
         return Napi::Pointer<VertexArray>::Create(info.Env(), vertexArray, Napi::NapiPointerDeleter(vertexArray));
     }
 
