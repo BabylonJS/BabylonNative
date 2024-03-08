@@ -39,9 +39,9 @@ namespace
                 return PromoteToFloats<int16_t>(bytes, numElements, byteOffset, byteStride, numVertices);
             case bgfx::AttribType::Uint16:
                 return PromoteToFloats<uint16_t>(bytes, numElements, byteOffset, byteStride, numVertices);
+            default:
+                throw std::runtime_error{"Unable to promote vertex stream to a float array."};
         }
-
-        throw std::runtime_error{"Unable to promote vertex stream to a float array."};
     }
 }
 

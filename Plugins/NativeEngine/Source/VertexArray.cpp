@@ -4,11 +4,6 @@
 
 namespace Babylon
 {
-    VertexArray::VertexArray(Graphics::DeviceContext& deviceContext)
-       : m_deviceContext{deviceContext}
-    {
-    }
-
     VertexArray::~VertexArray()
     {
         Dispose();

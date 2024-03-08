@@ -7,15 +7,9 @@
 
 namespace Babylon
 {
-    namespace Graphics 
-    {
-        class DeviceContext;
-    }
-
     class VertexArray final
     {
     public:
-        VertexArray(Graphics::DeviceContext& deviceContext);
         ~VertexArray();
 
         VertexArray(const VertexArray&) = delete;
@@ -30,8 +24,6 @@ namespace Babylon
         void SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount = 0);
 
     private:
-        Graphics::DeviceContext& m_deviceContext;
-
         IndexBuffer* m_indexBuffer{};
         std::set<VertexBuffer*> m_vertexBuffers;
         std::map<bgfx::Attrib::Enum, VertexBuffer::InstanceInfo> m_vertexBufferInstances;
