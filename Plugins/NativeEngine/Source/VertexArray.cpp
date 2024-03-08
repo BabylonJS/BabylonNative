@@ -81,10 +81,10 @@ namespace Babylon
             encoder->setInstanceDataBuffer(&instanceDataBuffer);
         }
 
-        uint8_t stream = 0;
+        uint8_t streamCount = 0;
         for (auto* vertexBuffer : m_vertexBuffers)
         {
-            vertexBuffer->Set(encoder, stream, startVertex, numVertices);
+            vertexBuffer->Set(encoder, streamCount, startVertex, numVertices);
         }
     }
 }

@@ -68,10 +68,10 @@ namespace Babylon
 
     void IndexBuffer::Set(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices)
     {
-        if (!m_built)
+        if (!m_buildCalled)
         {
+            m_buildCalled = true;
             Build();
-            m_built = true;
         }
 
         if (m_dynamic)

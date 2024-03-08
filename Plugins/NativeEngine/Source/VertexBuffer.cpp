@@ -83,23 +83,23 @@ namespace Babylon
 
         if (m_handle.has_value())
         {
-            for (auto& streamInfo : m_streams)
+            for (auto& stream : m_streams)
             {
-                const AttributeInfo& attributeInfo = streamInfo.AttributeInfo;
-                const uint32_t startVertex = static_cast<uint32_t>(byteOffset / streamInfo.AttributeInfo.ByteStride);
+                const AttributeInfo& attribute = stream.Attribute;
+                const uint32_t startVertex = static_cast<uint32_t>(byteOffset / stream.Attribute.ByteStride);
 
-                if (streamInfo.PromoteToFloatsHandle.has_value())
+                if (stream.PromoteToFloatsHandle.has_value())
                 {
-                    const uint32_t numVertices = static_cast<uint32_t>(bytes.size() / attributeInfo.ByteStride);
+                    const uint32_t numVertices = static_cast<uint32_t>(bytes.size() / attribute.ByteStride);
                     std::vector<uint8_t> promoteToFloatsBytes = PromoteToFloats(
                         bytes,
-                        attributeInfo.AttribType,
-                        attributeInfo.NumElements,
-                        attributeInfo.ByteOffset,
-                        attributeInfo.ByteStride,
+                        attribute.AttribType,
+                        attribute.NumElements,
+                        attribute.ByteOffset,
+                        attribute.ByteStride,
                         numVertices);
 
-                    streamInfo.PromoteToFloatsHandle->Update(promoteToFloatsBytes, startVertex);
+                    stream.PromoteToFloatsHandle->Update(promoteToFloatsBytes, startVertex);
                 }
                 else
                 {
@@ -123,23 +123,23 @@ namespace Babylon
         m_attributes[attrib] = {attribType, byteOffset, byteStride, numElements, normalized};
     }
 
-    void VertexBuffer::Set(bgfx::Encoder* encoder, uint8_t& stream, uint32_t startVertex, uint32_t numVertices)
+    void VertexBuffer::Set(bgfx::Encoder* encoder, uint8_t& streamCount, uint32_t startVertex, uint32_t numVertices)
     {
-        if (!m_built)
+        if (!m_buildCalled)
         {
+            m_buildCalled = true;
             Build(numVertices);
-            m_built = true;
         }
 
-        for (auto& streamInfo : m_streams)
+        for (auto& stream : m_streams)
         {
-            if (streamInfo.PromoteToFloatsHandle.has_value())
+            if (stream.PromoteToFloatsHandle.has_value())
             {
-                streamInfo.PromoteToFloatsHandle->Set(encoder, stream++, streamInfo.Offset + startVertex, numVertices, streamInfo.LayoutHandle);
+                stream.PromoteToFloatsHandle->Set(encoder, streamCount++, stream.Offset + startVertex, numVertices, stream.LayoutHandle);
             }
             else
             {
-                m_handle->Set(encoder, stream++, streamInfo.Offset + startVertex, numVertices, streamInfo.LayoutHandle);
+                m_handle->Set(encoder, streamCount++, stream.Offset + startVertex, numVertices, stream.LayoutHandle);
             }
         }
     }
@@ -160,7 +160,7 @@ namespace Babylon
             assert(info.ByteStride == byteStride);
 
             // clang-format off
-            bool promoteToFloats = !info.Normalized
+            const bool promoteToFloats = !info.Normalized
                 && (bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D11 ||
                     bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D12 ||
                     bgfx::getCaps()->rendererType == bgfx::RendererType::Vulkan)

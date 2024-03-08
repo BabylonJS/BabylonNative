@@ -38,7 +38,7 @@ namespace Babylon
         std::vector<uint8_t> m_bytes{};
         const uint16_t m_flags{};
         const bool m_dynamic{};
-        bool m_built{};
+        bool m_buildCalled{};
 
         union
         {
