@@ -5,7 +5,7 @@
 namespace
 {
     template<typename T>
-    std::vector<uint8_t> PromoteToFloats(const gsl::span<uint8_t> bytes, uint8_t numElements, uint16_t byteOffset, uint16_t byteStride, uint32_t numVertices)
+    std::vector<uint8_t> PromoteToFloats(const gsl::span<uint8_t> bytes, uint8_t numElements, uint32_t byteOffset, uint16_t byteStride, uint32_t numVertices)
     {
         const uint32_t maxNumVertices = static_cast<uint32_t>((bytes.size() - byteOffset) / byteStride);
         if (numVertices > maxNumVertices)
@@ -27,7 +27,7 @@ namespace
         return destinationBytes;
     }
 
-    std::vector<uint8_t> PromoteToFloats(const gsl::span<uint8_t> bytes, bgfx::AttribType::Enum attribType, uint8_t numElements, uint16_t byteOffset, uint16_t byteStride, uint32_t numVertices)
+    std::vector<uint8_t> PromoteToFloats(const gsl::span<uint8_t> bytes, bgfx::AttribType::Enum attribType, uint8_t numElements, uint32_t byteOffset, uint16_t byteStride, uint32_t numVertices)
     {
         switch (attribType)
         {
@@ -118,7 +118,7 @@ namespace Babylon
         }
     }
 
-    void VertexBuffer::Add(bgfx::Attrib::Enum attrib, bgfx::AttribType::Enum attribType, uint16_t byteOffset, uint16_t byteStride, uint8_t numElements, bool normalized)
+    void VertexBuffer::Add(bgfx::Attrib::Enum attrib, bgfx::AttribType::Enum attribType, uint32_t byteOffset, uint16_t byteStride, uint8_t numElements, bool normalized)
     {
         m_attributes[attrib] = {attribType, byteOffset, byteStride, numElements, normalized};
     }
@@ -194,7 +194,7 @@ namespace Babylon
 
                 m_streams.push_back({info,
                     std::nullopt,
-                    static_cast<uint16_t>(info.ByteOffset / info.ByteStride),
+                    info.ByteOffset / info.ByteStride,
                     bgfx::createVertexLayout(layout)});
             }
         }

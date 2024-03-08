@@ -28,7 +28,7 @@ namespace Babylon
 
         void Update(const gsl::span<uint8_t> bytes, size_t byteOffset);
 
-        void Add(bgfx::Attrib::Enum attrib, bgfx::AttribType::Enum attribType, uint16_t byteOffset, uint16_t byteStride, uint8_t numElements, bool normalized);
+        void Add(bgfx::Attrib::Enum attrib, bgfx::AttribType::Enum attribType, uint32_t byteOffset, uint16_t byteStride, uint8_t numElements, bool normalized);
 
         void Set(bgfx::Encoder* encoder, uint8_t& streamCount, uint32_t startVertex, uint32_t numVertices);
 
@@ -85,7 +85,7 @@ namespace Babylon
         struct AttributeInfo
         {
             bgfx::AttribType::Enum AttribType{};
-            uint16_t ByteOffset{};
+            uint32_t ByteOffset{};
             uint16_t ByteStride{};
             uint8_t NumElements{};
             bool Normalized{};
@@ -99,7 +99,7 @@ namespace Babylon
         {
             const AttributeInfo& Attribute;
             std::optional<Handle> PromoteToFloatsHandle;
-            uint16_t Offset;
+            uint32_t Offset;
             bgfx::VertexLayoutHandle LayoutHandle;
         };
 

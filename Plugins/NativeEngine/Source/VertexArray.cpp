@@ -58,7 +58,7 @@ namespace Babylon
         else
         {
             m_vertexBuffers.insert(vertexBuffer);
-            vertexBuffer->Add(attrib, attribType, static_cast<uint16_t>(byteOffset), static_cast<uint16_t>(byteStride), static_cast<uint8_t>(numElements), normalized);
+            vertexBuffer->Add(attrib, attribType, byteOffset, static_cast<uint16_t>(byteStride), static_cast<uint8_t>(numElements), normalized);
         }
     }
 
