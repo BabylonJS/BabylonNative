@@ -1,13 +1,14 @@
 #include "VertexBuffer.h"
-#include <cassert>
 #include "Babylon/Graphics/DeviceContext.h"
+#include <cassert>
 
 namespace
 {
     template<typename T>
     std::vector<uint8_t> PromoteToFloats(const gsl::span<uint8_t> bytes, uint8_t numElements, uint32_t byteOffset, uint16_t byteStride, uint32_t numVertices)
     {
-        const uint32_t maxNumVertices = static_cast<uint32_t>((bytes.size() - byteOffset) / byteStride);
+        assert(numElements > 0);
+        const uint32_t maxNumVertices = static_cast<uint32_t>((bytes.size() - byteOffset - sizeof(T) * numElements) / byteStride) + 1;
         if (numVertices > maxNumVertices)
         {
             numVertices = maxNumVertices;
@@ -27,7 +28,7 @@ namespace
         return destinationBytes;
     }
 
-    std::vector<uint8_t> PromoteToFloats(const gsl::span<uint8_t> bytes, bgfx::AttribType::Enum attribType, uint8_t numElements, uint32_t byteOffset, uint16_t byteStride, uint32_t numVertices)
+    std::vector<uint8_t> PromoteToFloats(const gsl::span<uint8_t> bytes, bgfx::AttribType::Enum attribType, uint8_t numElements, uint32_t byteOffset, uint16_t byteStride, uint32_t numVertices = std::numeric_limits<uint32_t>::max())
     {
         switch (attribType)
         {
@@ -83,21 +84,26 @@ namespace Babylon
 
         if (m_handle.has_value())
         {
+            const uint32_t startVertex = static_cast<uint32_t>(byteOffset / m_byteStride);
+
+            if (byteOffset % m_byteStride != 0)
+            {
+                // bgfx only supports vertex start index and not arbitrary byte offsets.
+                throw std::runtime_error{"Cannot update dynamic vertex buffer with a byte offset not divisible by its byte stride"};
+            }
+
             for (auto& stream : m_streams)
             {
-                const AttributeInfo& attribute = stream.Attribute;
-                const uint32_t startVertex = static_cast<uint32_t>(byteOffset / stream.Attribute.ByteStride);
-
                 if (stream.PromoteToFloatsHandle.has_value())
                 {
-                    const uint32_t numVertices = static_cast<uint32_t>(bytes.size() / attribute.ByteStride);
+                    const AttributeInfo& attribute = stream.Attribute;
+
                     std::vector<uint8_t> promoteToFloatsBytes = PromoteToFloats(
                         bytes,
                         attribute.AttribType,
                         attribute.NumElements,
                         attribute.ByteOffset,
-                        attribute.ByteStride,
-                        numVertices);
+                        m_byteStride);
 
                     stream.PromoteToFloatsHandle->Update(promoteToFloatsBytes, startVertex);
                 }
@@ -120,7 +126,16 @@ namespace Babylon
 
     void VertexBuffer::Add(bgfx::Attrib::Enum attrib, bgfx::AttribType::Enum attribType, uint32_t byteOffset, uint16_t byteStride, uint8_t numElements, bool normalized)
     {
-        m_attributes[attrib] = {attribType, byteOffset, byteStride, numElements, normalized};
+        if (m_byteStride == 0)
+        {
+            m_byteStride = byteStride;
+        }
+        else if (byteStride != m_byteStride)
+        {
+            throw std::runtime_error{"All attributes added to a vertex buffer must have the same byte stride"};
+        }
+
+        m_attributes[attrib] = {attribType, byteOffset, numElements, normalized};
     }
 
     void VertexBuffer::Set(bgfx::Encoder* encoder, uint8_t& streamCount, uint32_t startVertex, uint32_t numVertices)
@@ -150,14 +165,10 @@ namespace Babylon
         // TODO: add comments for what is happening here and why
         // *****************************************************
 
-        const uint16_t byteStride = m_attributes.begin()->second.ByteStride;
-
         for (const auto& pair : m_attributes)
         {
             const bgfx::Attrib::Enum attrib = pair.first;
             const AttributeInfo& info = pair.second;
-
-            assert(info.ByteStride == byteStride);
 
             // clang-format off
             const bool promoteToFloats = !info.Normalized
@@ -173,7 +184,7 @@ namespace Babylon
 
             if (promoteToFloats)
             {
-                std::vector<uint8_t> bytes = PromoteToFloats(m_bytes, info.AttribType, info.NumElements, info.ByteOffset, info.ByteStride, numVertices);
+                std::vector<uint8_t> bytes = PromoteToFloats(m_bytes, info.AttribType, info.NumElements, info.ByteOffset, m_byteStride, numVertices);
 
                 bgfx::VertexLayout layout;
                 layout.begin().add(attrib, info.NumElements, bgfx::AttribType::Float).end();
@@ -188,18 +199,18 @@ namespace Babylon
                 bgfx::VertexLayout layout;
                 layout.begin();
                 layout.add(attrib, info.NumElements, info.AttribType, info.Normalized);
-                layout.m_offset[attrib] = static_cast<uint16_t>(info.ByteOffset % info.ByteStride);
-                layout.m_stride = info.ByteStride;
+                layout.m_offset[attrib] = static_cast<uint16_t>(info.ByteOffset % m_byteStride);
+                layout.m_stride = m_byteStride;
                 layout.end();
 
                 m_streams.push_back({info,
                     std::nullopt,
-                    info.ByteOffset / info.ByteStride,
+                    info.ByteOffset / m_byteStride,
                     bgfx::createVertexLayout(layout)});
             }
         }
 
-        m_handle.emplace(m_deviceContext, std::move(m_bytes), m_dynamic, byteStride);
+        m_handle.emplace(m_deviceContext, std::move(m_bytes), m_dynamic, m_byteStride);
     }
 
     void VertexBuffer::BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceInfo>& instances, uint32_t instanceCount)

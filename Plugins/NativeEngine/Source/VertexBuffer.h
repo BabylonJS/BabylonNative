@@ -86,11 +86,11 @@ namespace Babylon
         {
             bgfx::AttribType::Enum AttribType{};
             uint32_t ByteOffset{};
-            uint16_t ByteStride{};
             uint8_t NumElements{};
             bool Normalized{};
         };
 
+        uint16_t m_byteStride{};
         std::map<bgfx::Attrib::Enum, AttributeInfo> m_attributes{};
 
         std::optional<Handle> m_handle{};

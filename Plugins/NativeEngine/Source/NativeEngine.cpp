@@ -759,14 +759,14 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateIndexBuffer(const Napi::CallbackInfo& info)
     {
-        const Napi::ArrayBuffer bytes = info[0].As<Napi::ArrayBuffer>();
-        const uint32_t byteOffset = info[1].As<Napi::Number>().Uint32Value();
-        const uint32_t byteLength = info[2].As<Napi::Number>().Uint32Value();
+        const Napi::ArrayBuffer dataBuffer = info[0].As<Napi::ArrayBuffer>();
+        const uint32_t dataByteOffset = info[1].As<Napi::Number>().Uint32Value();
+        const uint32_t dataByteLength = info[2].As<Napi::Number>().Uint32Value();
         const bool is32Bits = info[3].As<Napi::Boolean>().Value();
         const bool dynamic = info[4].As<Napi::Boolean>().Value();
 
         const uint16_t flags = (is32Bits ? BGFX_BUFFER_INDEX32 : 0);
-        IndexBuffer* indexBuffer = new IndexBuffer{m_deviceContext, gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength), flags, dynamic};
+        IndexBuffer* indexBuffer = new IndexBuffer{m_deviceContext, gsl::make_span(static_cast<uint8_t*>(dataBuffer.Data()) + dataByteOffset, dataByteLength), flags, dynamic};
         return Napi::Pointer<IndexBuffer>::Create(info.Env(), indexBuffer, Napi::NapiPointerDeleter(indexBuffer));
     }
 
@@ -797,14 +797,14 @@ namespace Babylon
     void NativeEngine::UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info)
     {
         IndexBuffer* indexBuffer = info[0].As<Napi::Pointer<IndexBuffer>>().Get();
-        const Napi::ArrayBuffer bytes = info[1].As<Napi::ArrayBuffer>();
-        const uint32_t byteOffset = info[2].As<Napi::Number>().Uint32Value();
-        const uint32_t byteLength = info[3].As<Napi::Number>().Uint32Value();
+        const Napi::ArrayBuffer dataBuffer = info[1].As<Napi::ArrayBuffer>();
+        const uint32_t dataByteOffset = info[2].As<Napi::Number>().Uint32Value();
+        const uint32_t dataByteLength = info[3].As<Napi::Number>().Uint32Value();
         const uint32_t startingIndex = info[4].As<Napi::Number>().Uint32Value();
 
         try
         {
-            indexBuffer->Update(gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength), startingIndex);
+            indexBuffer->Update(gsl::make_span(static_cast<uint8_t*>(dataBuffer.Data()) + dataByteOffset, dataByteLength), startingIndex);
         }
         catch (std::exception& ex)
         {
@@ -818,12 +818,12 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateVertexBuffer(const Napi::CallbackInfo& info)
     {
-        const Napi::ArrayBuffer bytes = info[0].As<Napi::ArrayBuffer>();
-        const uint32_t byteOffset = info[1].As<Napi::Number>().Uint32Value();
-        const uint32_t byteLength = info[2].As<Napi::Number>().Uint32Value();
+        const Napi::ArrayBuffer dataBuffer = info[0].As<Napi::ArrayBuffer>();
+        const uint32_t dataByteOffset = info[1].As<Napi::Number>().Uint32Value();
+        const uint32_t dataByteLength = info[2].As<Napi::Number>().Uint32Value();
         const bool dynamic = info[3].As<Napi::Boolean>().Value();
 
-        VertexBuffer* vertexBuffer = new VertexBuffer(m_deviceContext, gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength), dynamic);
+        VertexBuffer* vertexBuffer = new VertexBuffer(m_deviceContext, gsl::make_span(static_cast<uint8_t*>(dataBuffer.Data()) + dataByteOffset, dataByteLength), dynamic);
         return Napi::Pointer<VertexBuffer>::Create(info.Env(), vertexBuffer, Napi::NapiPointerDeleter(vertexBuffer));
     }
 
@@ -861,13 +861,14 @@ namespace Babylon
     void NativeEngine::UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info)
     {
         VertexBuffer* vertexBuffer = info[0].As<Napi::Pointer<VertexBuffer>>().Get();
-        const Napi::ArrayBuffer bytes = info[1].As<Napi::ArrayBuffer>();
-        const uint32_t byteOffset = info[2].As<Napi::Number>().Uint32Value();
-        const uint32_t byteLength = info[3].As<Napi::Number>().Uint32Value();
+        const Napi::ArrayBuffer dataBuffer = info[1].As<Napi::ArrayBuffer>();
+        const uint32_t dataByteOffset = info[2].As<Napi::Number>().Uint32Value();
+        const uint32_t dataByteLength = info[3].As<Napi::Number>().Uint32Value();
+        const uint32_t vertexByteOffset = info[4].IsUndefined() ? 0 : info[4].As<Napi::Number>().Uint32Value();
 
         try
         {
-            vertexBuffer->Update(gsl::make_span(static_cast<uint8_t*>(bytes.Data()), byteLength), byteOffset);
+            vertexBuffer->Update(gsl::make_span(static_cast<uint8_t*>(dataBuffer.Data()) + dataByteOffset, dataByteLength), vertexByteOffset);
         }
         catch (std::exception& ex)
         {
