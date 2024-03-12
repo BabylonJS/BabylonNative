@@ -161,9 +161,11 @@ namespace Babylon
 
     void VertexBuffer::Build(uint32_t numVertices)
     {
-        // *****************************************************
-        // TODO: add comments for what is happening here and why
-        // *****************************************************
+        // WebGL 1 and thus Babylon.js expects non-normalized integer attributes to automatically convert to a float if
+        // the shader expects a float. This does not happen automatically for DirectX and Vulkan. To support this, this
+        // function is promoting the attribute to floats by creating a new vertex buffer with its own handle and vertex
+        // layout, otherwise known as a stream. This class must keep track of these new streams so that they can be set
+        // and updated later.
 
         for (const auto& pair : m_attributes)
         {
