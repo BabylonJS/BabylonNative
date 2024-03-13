@@ -99,11 +99,11 @@ namespace Babylon
         {
             const AttributeInfo& Attribute;
             std::optional<Handle> PromoteToFloatsHandle;
-            uint32_t Offset;
+            uint32_t StartVertexOffset;
             bgfx::VertexLayoutHandle LayoutHandle;
         };
 
-        std::list<StreamInfo> m_streams{};
+        std::vector<StreamInfo> m_streams{};
 
         bool m_disposed{};
     };

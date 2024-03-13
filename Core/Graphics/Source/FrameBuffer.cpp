@@ -5,9 +5,9 @@
 
 namespace Babylon::Graphics
 {
-    FrameBuffer::FrameBuffer(DeviceContext& context, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil)
-        : m_deviceContext{context}
-        , m_deviceID{context.GetDeviceId()}
+    FrameBuffer::FrameBuffer(DeviceContext& deviceContext, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil)
+        : m_deviceContext{deviceContext}
+        , m_deviceID{deviceContext.GetDeviceId()}
         , m_handle{handle}
         , m_width{width}
         , m_height{height}

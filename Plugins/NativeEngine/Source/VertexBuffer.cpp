@@ -150,11 +150,11 @@ namespace Babylon
         {
             if (stream.PromoteToFloatsHandle.has_value())
             {
-                stream.PromoteToFloatsHandle->Set(encoder, streamCount++, stream.Offset + startVertex, numVertices, stream.LayoutHandle);
+                stream.PromoteToFloatsHandle->Set(encoder, streamCount++, stream.StartVertexOffset + startVertex, numVertices, stream.LayoutHandle);
             }
             else
             {
-                m_handle->Set(encoder, streamCount++, stream.Offset + startVertex, numVertices, stream.LayoutHandle);
+                m_handle->Set(encoder, streamCount++, stream.StartVertexOffset + startVertex, numVertices, stream.LayoutHandle);
             }
         }
     }

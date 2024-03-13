@@ -65,28 +65,28 @@ function saveRenderedResult(test, renderData) {
 }
 
 function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction) {
-    /*var canvasImageData =*/ engine._engine.getFrameBufferData(function (screenshot) {
-    var testRes = true;
-    // Visual check
-    if (!test.onlyVisual) {
+    engine._engine.getFrameBufferData(function (screenshot) {
+        var testRes = true;
 
-        var defaultErrorRatio = 2.5
+        if (!test.onlyVisual) {
 
-        if (compareFunction(test, screenshot, referenceImage, test.threshold || 25, test.errorRatio || defaultErrorRatio)) {
-            testRes = false;
-            console.log('failed');
-        } else {
-            testRes = true;
-            console.log('validated');
+            var defaultErrorRatio = 2.5;
+
+            if (compareFunction(test, screenshot, referenceImage, test.threshold || 25, test.errorRatio || defaultErrorRatio)) {
+                testRes = false;
+                console.log('failed');
+            } else {
+                testRes = true;
+                console.log('validated');
+            }
         }
-    }
 
-    currentScene.dispose();
-    currentScene = null;
-    engine.setHardwareScalingLevel(1);
+        currentScene.dispose();
+        currentScene = null;
+        engine.setHardwareScalingLevel(1);
 
-    done(testRes);
-});
+        done(testRes);
+    });
 }
 
 function processCurrentScene(test, resultCanvas, result, renderImage, index, waitRing, done, compareFunction) {
