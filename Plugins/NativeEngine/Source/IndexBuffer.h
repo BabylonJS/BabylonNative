@@ -16,22 +16,29 @@ namespace Babylon
     class IndexBuffer final
     {
     public:
-        IndexBuffer(gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic, Graphics::DeviceContext& deviceContext);
+        IndexBuffer(Graphics::DeviceContext& deviceContext, gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic);
         ~IndexBuffer();
 
+        // No copy or move semantics
         IndexBuffer(const IndexBuffer&) = delete;
-        IndexBuffer& operator=(const IndexBuffer&) = delete;
+        IndexBuffer(IndexBuffer&&) = delete;
 
         void Dispose();
 
-        void Update(Napi::Env env, gsl::span<uint8_t> bytes, uint32_t startIndex);
-        bool CreateHandle();
+        void Update(const gsl::span<uint8_t> bytes, uint32_t startIndex);
+
         void Set(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices);
 
     private:
-        std::optional<std::vector<uint8_t>> m_bytes{};
-        uint16_t m_flags{};
-        bool m_dynamic{};
+        void Build();
+
+        Graphics::DeviceContext& m_deviceContext;
+        const uintptr_t m_deviceID{};
+
+        std::vector<uint8_t> m_bytes{};
+        const uint16_t m_flags{};
+        const bool m_dynamic{};
+        bool m_buildCalled{};
 
         union
         {
@@ -40,7 +47,5 @@ namespace Babylon
         };
 
         bool m_disposed{};
-        uintptr_t  m_deviceID;
-        Graphics::DeviceContext& m_deviceContext;
     };
 }

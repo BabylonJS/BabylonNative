@@ -3,12 +3,12 @@
 
 namespace Babylon
 {
-    IndexBuffer::IndexBuffer(gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic, Graphics::DeviceContext& deviceContext)
-        : m_bytes{{bytes.data(), bytes.data() + bytes.size()}}
+    IndexBuffer::IndexBuffer(Graphics::DeviceContext& deviceContext, const gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic)
+        : m_deviceContext{deviceContext}
+        , m_deviceID{deviceContext.GetDeviceId()}
+        , m_bytes{bytes.data(), bytes.data() + bytes.size()}
         , m_flags{flags}
         , m_dynamic{dynamic}
-        , m_deviceID{deviceContext.GetDeviceId()}
-        , m_deviceContext{deviceContext}
     {
     }
 
@@ -35,42 +35,63 @@ namespace Babylon
                 bgfx::destroy(m_handle);
             }
         }
-        m_bytes.reset();
+
+        m_bytes.clear();
+
         m_disposed = true;
     }
 
-    void IndexBuffer::Update(Napi::Env env, gsl::span<uint8_t> bytes, uint32_t startIndex)
+    void IndexBuffer::Update(const gsl::span<uint8_t> bytes, uint32_t startIndex)
     {
         if (!m_dynamic)
         {
-            throw Napi::Error::New(env, "Cannot update non-dynamic index buffer.");
+            throw std::runtime_error{"Cannot update non-dynamic index buffer"};
         }
 
         if (bgfx::isValid(m_dynamicHandle))
         {
-            // Buffer was already created, do a real update operation.
             bgfx::update(m_dynamicHandle, startIndex, bgfx::copy(bytes.data(), static_cast<uint32_t>(bytes.size())));
         }
         else
         {
-            // Buffer hasn't been finalized yet, all that's necessary is to swap out the bytes.
-            m_bytes = {bytes.data(), bytes.data() + bytes.size()};
+            const size_t byteStride = (m_flags & BGFX_BUFFER_INDEX32) ? 4 : 2;
+            const size_t byteOffset = startIndex * byteStride;
+
+            if (byteOffset + bytes.size() > m_bytes.size())
+            {
+                throw std::runtime_error{"Failed to update index buffer: buffer overflow"};
+            }
+
+            std::memcpy(m_bytes.data() + byteOffset, bytes.data(), bytes.size());
         }
     }
 
-    bool IndexBuffer::CreateHandle()
+    void IndexBuffer::Set(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices)
     {
-        if (bgfx::isValid(m_handle))
+        if (!m_buildCalled)
         {
-            return true;
+            m_buildCalled = true;
+            Build();
         }
 
+        if (m_dynamic)
+        {
+            encoder->setIndexBuffer(m_dynamicHandle, firstIndex, numIndices);
+        }
+        else
+        {
+            encoder->setIndexBuffer(m_handle, firstIndex, numIndices);
+        }
+    }
+
+    void IndexBuffer::Build()
+    {
         auto releaseFn = [](void*, void* userData) {
-            auto* bytes = reinterpret_cast<decltype(m_bytes)*>(userData);
-            bytes->reset();
+            delete reinterpret_cast<decltype(m_bytes)*>(userData);
         };
 
-        const bgfx::Memory* memory = bgfx::makeRef(m_bytes->data(), static_cast<uint32_t>(m_bytes->size()), releaseFn, &m_bytes);
+        auto* bytesPtr = new decltype(m_bytes){std::move(m_bytes)};
+        const bgfx::Memory* memory = bgfx::makeRef(bytesPtr->data(), static_cast<uint32_t>(bytesPtr->size()), releaseFn, bytesPtr);
 
         if (m_dynamic)
         {
@@ -81,21 +102,9 @@ namespace Babylon
             m_handle = bgfx::createIndexBuffer(memory, m_flags);
         }
 
-        return bgfx::isValid(m_handle);
-    }
-
-    void IndexBuffer::Set(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices)
-    {
-        if (bgfx::isValid(m_handle))
+        if (!bgfx::isValid(m_handle))
         {
-            if (m_dynamic)
-            {
-                encoder->setIndexBuffer(m_dynamicHandle, firstIndex, numIndices);
-            }
-            else
-            {
-                encoder->setIndexBuffer(m_handle, firstIndex, numIndices);
-            }
+            throw std::runtime_error{"Failed to create index buffer"};
         }
     }
 }

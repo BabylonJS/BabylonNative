@@ -5,8 +5,9 @@
 
 namespace Babylon::Graphics
 {
-    FrameBuffer::FrameBuffer(DeviceContext& context, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil)
-        : m_context{context}
+    FrameBuffer::FrameBuffer(DeviceContext& deviceContext, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil)
+        : m_deviceContext{deviceContext}
+        , m_deviceID{deviceContext.GetDeviceId()}
         , m_handle{handle}
         , m_width{width}
         , m_height{height}
@@ -14,13 +15,28 @@ namespace Babylon::Graphics
         , m_hasDepth{hasDepth}
         , m_hasStencil{hasStencil}
         , m_disposed{false}
-        , m_deviceID{context.GetDeviceId()}
     {
     }
 
     FrameBuffer::~FrameBuffer()
     {
         Dispose();
+    }
+
+    void FrameBuffer::Dispose()
+    {
+        if (m_disposed)
+        {
+            return;
+        }
+
+        if (bgfx::isValid(m_handle) && m_deviceID == m_deviceContext.GetDeviceId())
+        {
+            bgfx::destroy(m_handle);
+            m_handle = BGFX_INVALID_HANDLE;
+        }
+
+        m_disposed = true;
     }
 
     bgfx::FrameBufferHandle FrameBuffer::Handle() const
@@ -30,12 +46,12 @@ namespace Babylon::Graphics
 
     uint16_t FrameBuffer::Width() const
     {
-        return (m_width == 0 ? static_cast<uint16_t>(m_context.GetWidth() / m_context.GetHardwareScalingLevel()) : m_width);
+        return (m_width == 0 ? static_cast<uint16_t>(m_deviceContext.GetWidth() / m_deviceContext.GetHardwareScalingLevel()) : m_width);
     }
 
     uint16_t FrameBuffer::Height() const
     {
-        return (m_height == 0 ? static_cast<uint16_t>(m_context.GetHeight() / m_context.GetHardwareScalingLevel()) : m_height);
+        return (m_height == 0 ? static_cast<uint16_t>(m_deviceContext.GetHeight() / m_deviceContext.GetHardwareScalingLevel()) : m_height);
     }
 
     bool FrameBuffer::DefaultBackBuffer() const
@@ -55,7 +71,7 @@ namespace Babylon::Graphics
     void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)
     {
         // BGFX requires us to create a new viewID, this will ensure that the view gets cleared.
-        m_viewId = m_context.AcquireNewViewId(encoder);
+        m_viewId = m_deviceContext.AcquireNewViewId(encoder);
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
@@ -118,7 +134,7 @@ namespace Babylon::Graphics
 
     void FrameBuffer::Blit(bgfx::Encoder& encoder, bgfx::TextureHandle dst, uint16_t dstX, uint16_t dstY, bgfx::TextureHandle src, uint16_t srcX, uint16_t srcY, uint16_t width, uint16_t height)
     {
-        //In order for Blit to work properly we need to force the creation of a new ViewID.
+        // In order for Blit to work properly we need to force the creation of a new ViewID.
         SetBgfxViewPortAndScissor(encoder, m_desiredViewPort, m_desiredScissor);
         encoder.blit(m_viewId.value(), dst, dstX, dstY, src, srcX, srcY, width, height);
     }
@@ -128,23 +144,7 @@ namespace Babylon::Graphics
         encoder.setStencil(m_hasStencil ? stencilState : 0);
     }
 
-    void FrameBuffer::Dispose()
-    {
-        if (m_disposed)
-        {
-            return;
-        }
-
-        if (bgfx::isValid(m_handle) && m_deviceID == m_context.GetDeviceId())
-        {
-            bgfx::destroy(m_handle);
-        }
-        m_handle = BGFX_INVALID_HANDLE;
-        m_disposed = true;
-    }
-
-    /// Returns the given scissor rect converted to the rect used by BGFX.
-    ///
+    // Returns the given scissor rect converted to the rect used by BGFX.
     Rect FrameBuffer::GetBgfxScissor(float x, float y, float width, float height) const
     {
         // If the given args are all zero then the scissor is being disabled.
@@ -192,7 +192,7 @@ namespace Babylon::Graphics
             return;
         }
 
-        m_viewId = m_context.AcquireNewViewId(encoder);
+        m_viewId = m_deviceContext.AcquireNewViewId(encoder);
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), BGFX_CLEAR_NONE, 0, 1.0f, 0);

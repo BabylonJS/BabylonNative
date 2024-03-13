@@ -4,12 +4,6 @@
 
 namespace Babylon
 {
-    VertexArray::VertexArray(Graphics::DeviceContext& deviceContext)
-       : m_deviceID{deviceContext.GetDeviceId()}
-       , m_deviceContext{deviceContext}
-    {
-    }
-
     VertexArray::~VertexArray()
     {
         Dispose();
@@ -22,127 +16,75 @@ namespace Babylon
             return;
         }
 
-        m_indexBufferRecord.Buffer = nullptr;
-
-        if( m_deviceID == m_deviceContext.GetDeviceId())
-        {
-           for( auto& pair : m_vertexBufferRecords )
-           {
-              bgfx::destroy(pair.second.LayoutHandle);
-           }
-        }
-
-        m_vertexBufferRecords.clear();
+        m_indexBuffer = nullptr;
+        m_vertexBuffers.clear();
+        m_vertexBufferInstances.clear();
 
         m_disposed = true;
     }
 
-    bool VertexArray::RecordIndexBuffer(IndexBuffer* indexBuffer)
+    void VertexArray::RecordIndexBuffer(IndexBuffer* indexBuffer)
     {
-        if (!indexBuffer->CreateHandle())
-        {
-            return false;
-        }
-
-        assert(m_indexBufferRecord.Buffer == nullptr);
-        m_indexBufferRecord.Buffer = indexBuffer;
-
-        return true;
+        m_indexBuffer = indexBuffer;
     }
 
-    bool VertexArray::RecordVertexBuffer(VertexBuffer* vertexBuffer, uint32_t location, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized, uint32_t divisor)
+    void VertexArray::RecordVertexBuffer(VertexBuffer* vertexBuffer, uint32_t location, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized, uint32_t divisor)
     {
-        auto attrib{static_cast<bgfx::Attrib::Enum>(location)};
+        auto attrib = static_cast<bgfx::Attrib::Enum>(location);
+        auto attribType = static_cast<bgfx::AttribType::Enum>(type);
+
         if (divisor == 1)
         {
-            const bgfx::Caps* caps = bgfx::getCaps();
+            if (attribType != bgfx::AttribType::Float || normalized)
+            {
+                throw std::runtime_error{"Unsupported vertex buffer attribute type or normalized flag"};
+            }
 
             // Check if instancing is supported.
-            const bool instancingSupported = 0 != (BGFX_CAPS_INSTANCING & caps->supported);
+            const bool instancingSupported = 0 != (BGFX_CAPS_INSTANCING & bgfx::getCaps()->supported);
             if (!instancingSupported)
             {
-                return false;
+                throw std::runtime_error{"Instancing is not supported"};
             }
-            // bgfx allows instancing on 5 vec4 attributes
-            if (m_vertexBufferInstanceRecords.size() < 5)
+
+            // bgfx allows instancing on at most 4 vec4 attributes
+            if (m_vertexBufferInstances.size() > 4)
             {
-                m_vertexBufferInstanceRecords[attrib] = {vertexBuffer, byteOffset, byteStride, static_cast<uint16_t>(sizeof(float) * numElements)};
+                throw std::runtime_error{"Number of vertex buffer instances greater than 4 is not supported"};
             }
-            else
-            {
-                return false;
-            }
+
+            m_vertexBufferInstances[attrib] = {vertexBuffer, byteOffset, byteStride, static_cast<uint16_t>(sizeof(float) * numElements)};
         }
         else
         {
-            bgfx::VertexLayout layout{};
-            layout.begin();
-
-            auto attribType{static_cast<bgfx::AttribType::Enum>(type)};
-
-            // clang-format off
-            const bool promoteToFloats = !normalized
-                && (bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D11 ||
-                    bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D12 ||
-                    bgfx::getCaps()->rendererType == bgfx::RendererType::Vulkan)
-                && (attribType == bgfx::AttribType::Int8 ||
-                    attribType == bgfx::AttribType::Uint8 ||
-                    attribType == bgfx::AttribType::Uint10 ||
-                    attribType == bgfx::AttribType::Int16 ||
-                    attribType == bgfx::AttribType::Uint16);
-            // clang-format on
-
-            if (promoteToFloats)
-            {
-                layout.add(attrib, static_cast<uint8_t>(numElements), bgfx::AttribType::Float);
-                layout.m_stride = static_cast<uint16_t>(sizeof(float) * numElements);
-                vertexBuffer->PromoteToFloats(attribType, numElements, byteOffset, byteStride);
-            }
-            else
-            {
-                layout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
-                layout.m_stride = static_cast<uint16_t>(byteStride);
-                layout.m_offset[attrib] = static_cast<uint16_t>(byteOffset % byteStride);
-            }
-
-            layout.end();
-
-            if (!vertexBuffer->CreateHandle(layout))
-            {
-                return false;
-            }
-
-            m_vertexBufferRecords[attrib] = {vertexBuffer, byteOffset / byteStride, bgfx::createVertexLayout(layout)};
+            m_vertexBuffers.insert(vertexBuffer);
+            vertexBuffer->Add(attrib, attribType, byteOffset, static_cast<uint16_t>(byteStride), static_cast<uint8_t>(numElements), normalized);
         }
-        return true;
     }
 
     void VertexArray::SetIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices)
     {
-        if (m_indexBufferRecord.Buffer != nullptr)
+        if (m_indexBuffer != nullptr)
         {
-            m_indexBufferRecord.Buffer->Set(encoder, firstIndex, numIndices);
+            m_indexBuffer->Set(encoder, firstIndex, numIndices);
         }
     }
 
     void VertexArray::SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount)
     {
-        const bgfx::Caps* caps = bgfx::getCaps();
-
         // Check if instancing is supported.
-        const bool instancingSupported = 0 != (BGFX_CAPS_INSTANCING & caps->supported);
-        if (!m_vertexBufferInstanceRecords.empty() && instancingSupported)
+        const bool instancingSupported = 0 != (BGFX_CAPS_INSTANCING & bgfx::getCaps()->supported);
+        if (!m_vertexBufferInstances.empty() && instancingSupported)
         {
             bgfx::InstanceDataBuffer instanceDataBuffer{};
-            VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstanceRecords, instanceCount);
+            VertexBuffer::BuildInstanceDataBuffer(instanceDataBuffer, m_vertexBufferInstances, instanceCount);
             encoder->setInstanceDataBuffer(&instanceDataBuffer);
         }
 
-        for (const auto& pair : m_vertexBufferRecords)
+        uint8_t streamCount = 0;
+        for (auto* vertexBuffer : m_vertexBuffers)
         {
-            auto stream{static_cast<uint8_t>(pair.first)};
-            auto& record{pair.second};
-            record.Buffer->Set(encoder, stream, record.Offset + startVertex, numVertices, record.LayoutHandle);
+            vertexBuffer->Set(encoder, streamCount, startVertex, numVertices);
         }
     }
 }
