@@ -1,57 +1,80 @@
 #include <AndroidExtensions/StdoutLogger.h>
-#include <unistd.h>
 #include <android/log.h>
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 namespace
 {
-    static int pfd[2];
-    static int fd_saved[2];
+    int fd_stdout[2];
+    int fd_stderr[2];
+
+    void thread_func(int fd, int prio)
+    {
+        FILE* stream = fdopen(fd, "r");
+
+        while (true)
+        {
+            char* line = nullptr;
+            size_t n = 0;
+            ssize_t nread = getline(&line, &n, stream);
+            if (nread == -1)
+            {
+                break;
+            }
+
+            line[nread - 1] = '\0';
+            __android_log_write(prio, "StdoutLogger", line);
+            free(line);
+        }
+
+        fclose(stream);
+    }
+
+    void* thread_func_stdout(void*)
+    {
+        thread_func(fd_stdout[0], ANDROID_LOG_INFO);
+        return 0;
+    }
+
+    void* thread_func_stderr(void*)
+    {
+        thread_func(fd_stderr[0], ANDROID_LOG_ERROR);
+        return 0;
+    }
+
+    void redirect(int fd[2], int fd_redirect, void*(*thread_func)(void*))
+    {
+        // create the pipe and redirect
+        pipe(fd);
+        dup2(fd[1], fd_redirect);
+
+        // spawn the thread
+        pthread_t thr;
+        if (pthread_create(&thr, 0, thread_func, 0) == -1)
+        {
+            return;
+        }
+
+        pthread_detach(thr);
+    }
 }
 
 namespace android::StdoutLogger
 {
-    static void* ThreadFunc(void*)
-    {
-        ssize_t rdsz;
-        char buf[128];
-        while ((rdsz = read(pfd[0], buf, sizeof buf - 1)) > 0)
-        {
-            if (buf[rdsz - 1] == '\n') --rdsz;
-            buf[rdsz] = 0;
-            __android_log_write(ANDROID_LOG_DEBUG, "StdoutLogger", buf);
-        }
-        __android_log_write(ANDROID_LOG_DEBUG, "StdoutLogger", "Shutdown");
-        return 0;
-    }
-
     void Start()
     {
-        pthread_t thr;
-
-        // make stdout line-buffered and stderr unbuffered
-        fd_saved[0] = setvbuf(stdout, 0, _IOLBF, 0);
-        fd_saved[1] = setvbuf(stderr, 0, _IONBF, 0);
-
-        // create the pipe and redirect stdout and stderr
-        pipe(pfd);
-        dup2(pfd[1], 1);
-        dup2(pfd[1], 2);
-
-        // spawn the logging thread
-        if (pthread_create(&thr, 0, ThreadFunc, 0) == -1)
-        {
-            return;
-        }
-        pthread_detach(thr);
+        redirect(fd_stdout, fileno(stdout), thread_func_stdout);
+        redirect(fd_stderr, fileno(stderr), thread_func_stderr);
     }
 
     void Stop()
     {
-        close(pfd[1]);
-        close(pfd[0]);
-        setvbuf(stdout, NULL, fd_saved[0], 0);
-        setvbuf(stderr, NULL, fd_saved[1], 0);
-    }
+        close(fd_stdout[1]);
+        close(fd_stdout[0]);
+
+        close(fd_stderr[1]);
+        close(fd_stderr[0]);
+   }
 }
