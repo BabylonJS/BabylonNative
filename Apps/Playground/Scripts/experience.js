@@ -43,10 +43,48 @@ function CreateSpheresAsync(scene) {
 
 var engine = new BABYLON.NativeEngine();
 var scene = new BABYLON.Scene(engine);
+var externalTextureRef = undefined;
+
+
+async function ENV_SetRenderTexture(externalTexturePromise, textureWidth, textureHeight) {
+    externalTextureRef = await externalTexturePromise;
+    const outputTexture = engine.wrapNativeTexture(externalTextureRef);
+    const renderTarget = new BABYLON.RenderTargetTexture(
+        "outputTexture",
+        {
+            width: textureWidth,
+            height: textureHeight,
+        },
+        scene,
+        {
+            colorAttachment: outputTexture,
+            generateDepthBuffer: true,
+            generateStencilBuffer: true,
+        }
+    );
+
+    if (!scene.activeCamera) {
+        scene.createDefaultCamera(true, true, true);
+    }
+
+    scene.activeCamera.alpha += Math.PI;
+    scene.activeCamera.outputRenderTarget = renderTarget;
+}
+
+function ENV_OnRenderDeviceRestored()
+{
+    if (scene.activeCamera.outputRenderTarget) {
+        scene.activeCamera.outputRenderTarget.dispose();
+    }
+
+    engine._contextWasLost = true;
+
+    engine._restoreEngineAfterContextLost(() => { });
+}
 
 CreateBoxAsync(scene).then(function () {
 //CreateSpheresAsync(scene).then(function () {
-//BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
+//BABYLON.SceneLoader.AppendAsync("app:///AnimateAllTheThings.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Suzanne/glTF/Suzanne.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Avocado/glTF/Avocado.gltf").then(function () {
@@ -65,8 +103,8 @@ CreateBoxAsync(scene).then(function () {
     BABYLON.Tools.Log("Loaded");
 
     // This creates and positions a free camera (non-mesh)
-    scene.createDefaultCamera(true, true, true);
-    scene.activeCamera.alpha += Math.PI;
+    //scene.createDefaultCamera(true, true, true);
+    //scene.activeCamera.alpha += Math.PI;
 
     if (ibl) {
         scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
@@ -196,7 +234,9 @@ CreateBoxAsync(scene).then(function () {
     }
 
     engine.runRenderLoop(function () {
-        scene.render();
+        if (scene.activeCamera) {
+            scene.render();
+        }
     });
 
     if (vr || ar || hololens) {

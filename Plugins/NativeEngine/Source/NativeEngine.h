@@ -213,6 +213,7 @@ namespace Babylon
         Napi::Value CreateImageBitmap(const Napi::CallbackInfo& info);
         Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
+        void GetDeviceLostCallback(const Napi::CallbackInfo& info);
         void SetStencil(NativeDataStream::Reader& data);
         void SetViewPort(NativeDataStream::Reader& data);
         void SetScissor(NativeDataStream::Reader& data);
@@ -272,5 +273,8 @@ namespace Babylon
 
         // TODO: This should be changed to a non-owning ref once multi-update is available.
         NativeDataStream* m_commandStream{};
+        uintptr_t m_engine;
+
+        std::shared_ptr<Napi::FunctionReference> m_deviceRestoredCallback;
     };
 }

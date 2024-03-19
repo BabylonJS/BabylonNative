@@ -9,21 +9,20 @@
 #include <filesystem>
 #include <stdio.h>
 #include <optional>
+#include <d3d11.h>
+#include <winrt/base.h>
+#include <dxgi1_2.h>
+#include <future>
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/ScriptLoader.h>
-#include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
-#include <Babylon/Plugins/NativeOptimizations.h>
-#include <Babylon/Plugins/NativeXr.h>
-#include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Plugins/NativeInput.h>
-#include <Babylon/Plugins/TestUtils.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
-#include <Babylon/Polyfills/Canvas.h>
+#include <Babylon/Plugins/ExternalTexture.h>
 
 #define MAX_LOADSTRING 100
 
@@ -34,14 +33,17 @@ WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 std::optional<Babylon::AppRuntime> runtime{};
 std::optional<Babylon::Graphics::Device> device{};
 std::optional<Babylon::Graphics::DeviceUpdate> update{};
+std::optional<Babylon::Plugins::ExternalTexture> externalTexture{};
 Babylon::Plugins::NativeInput* nativeInput{};
-std::optional<Babylon::Polyfills::Canvas> nativeCanvas{};
 bool minimized{false};
 int buttonRefCount{0};
 
+winrt::com_ptr<ID3D11Device>    g_d3dDevice{};
+winrt::com_ptr<IDXGISwapChain1> g_SwapChain{};
+
 // Forward declarations of functions included in this code module:
 ATOM MyRegisterClass(HINSTANCE hInstance);
-BOOL InitInstance(HINSTANCE, int);
+BOOL InitInstance(HINSTANCE, int, HWND&);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 
@@ -89,7 +91,6 @@ namespace
             device->FinishRenderingCurrentFrame();
         }
 
-        nativeCanvas.reset();
         nativeInput = {};
         runtime.reset();
         update.reset();
@@ -110,7 +111,8 @@ namespace
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
         Babylon::Graphics::Configuration graphicsConfig{};
-        graphicsConfig.Window = hWnd;
+        graphicsConfig.Window = nullptr;
+        graphicsConfig.Device = g_d3dDevice.get();
         graphicsConfig.Width = width;
         graphicsConfig.Height = height;
         graphicsConfig.MSAASamples = 4;
@@ -134,24 +136,9 @@ namespace
             });
 
             Babylon::Polyfills::Window::Initialize(env);
-
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-
-            nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
-
             Babylon::Plugins::NativeEngine::Initialize(env);
-
-            Babylon::Plugins::NativeOptimizations::Initialize(env);
-
-            Babylon::Plugins::NativeCapture::Initialize(env);
-
-            Babylon::Plugins::NativeCamera::Initialize(env);
-
-            Babylon::Plugins::NativeXr::Initialize(env);
-
             nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
-
-            Babylon::Plugins::TestUtils::Initialize(env, hWnd);
         });
 
         Babylon::ScriptLoader loader{*runtime};
@@ -178,11 +165,156 @@ namespace
 
             loader.LoadScript("app:///Scripts/playground_runner.js");
         }
+
+        std::promise<void> promise{};
+        loader.Dispatch([&promise](Napi::Env) { promise.set_value(); });
+        promise.get_future().get();      
+        runtime->Dispatch([width, height](Napi::Env env) 
+        {
+            auto texturePromise = externalTexture->AddToContextAsync(env);
+            auto setRenderTexture = env.Global().Get("ENV_SetRenderTexture").As<Napi::Function>();
+            setRenderTexture.Call({
+                texturePromise,
+                Napi::Number::From(env, width),
+                Napi::Number::From(env, height)
+            });
+        });
     }
 
     void UpdateWindowSize(size_t width, size_t height)
     {
         device->UpdateSize(width, height);
+    }
+
+    void InitD3DInfrastructure(HWND hWnd) 
+    {
+        if (externalTexture.has_value())
+        {
+            externalTexture.reset();
+        }
+
+        if (g_SwapChain)
+        {
+            g_SwapChain->Release();
+            g_SwapChain = nullptr;
+        }
+
+        if (g_d3dDevice)
+        {
+            {
+                winrt::com_ptr<ID3D11DeviceContext> context;
+                g_d3dDevice->GetImmediateContext(context.put());
+                context->Flush();
+            }
+        }
+
+        // Create the device and device context.
+        UINT createDeviceFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
+
+#if defined(DEBUG) || defined(_DEBUG)
+        createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+#endif
+        D3D_FEATURE_LEVEL featureLevel;
+
+        //Create the D3D Device (GPU)
+        HRESULT hr = D3D11CreateDevice(0, D3D_DRIVER_TYPE_HARDWARE, 0, createDeviceFlags, 0, 0, D3D11_SDK_VERSION, g_d3dDevice.put(), &featureLevel, nullptr);
+    
+        winrt::check_hresult(hr);
+        winrt::com_ptr<IDXGIDevice1> dxgiDevice = g_d3dDevice.as<IDXGIDevice1>();
+
+        winrt::com_ptr<IDXGIAdapter> dxgiAdapter;
+        winrt::check_hresult(dxgiDevice->GetAdapter(dxgiAdapter.put()));
+
+        // Get the factory object that created the DXGI device.
+        winrt::com_ptr<IDXGIFactory2> dxgiFactory;
+        winrt::check_hresult(dxgiAdapter->GetParent(IID_PPV_ARGS(&dxgiFactory)));
+
+        RECT rect;
+        if (!GetClientRect(hWnd, &rect))
+            return;
+
+        UINT width = static_cast<UINT>(rect.right - rect.left);
+        UINT height = static_cast<UINT>(rect.bottom - rect.top);
+
+        // Allocate a descriptor.
+        DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {0};
+        swapChainDesc.Width = width; // use automatic sizing
+        swapChainDesc.Height = height;
+        swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // this is the most common swapchain format
+        swapChainDesc.Stereo = false;
+
+        // Use 4X MSAA? --must match swap chain MSAA values.
+        swapChainDesc.SampleDesc.Count = 1;
+        swapChainDesc.SampleDesc.Quality = 0;
+
+        swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_SHADER_INPUT;
+        swapChainDesc.BufferCount = 2; // use double buffering to enable flip
+        swapChainDesc.Scaling = DXGI_SCALING_NONE;
+        swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL; // all apps must use this SwapEffect
+        swapChainDesc.Flags = 0;
+
+        // Get the final swap chain for this window from the DXGI factory.
+        winrt::check_hresult(dxgiFactory->CreateSwapChainForHwnd(g_d3dDevice.get(), hWnd, &swapChainDesc, nullptr, nullptr, g_SwapChain.put()));
+
+        // Ensure that DXGI doesn't queue more than one frame at a time.
+        winrt::check_hresult(dxgiDevice->SetMaximumFrameLatency(1));
+
+        ID3D11Resource* dxgiBuffer;
+        winrt::check_hresult(g_SwapChain->GetBuffer(0, __uuidof(ID3D11Resource), (void**)(&dxgiBuffer)));
+        externalTexture.emplace(dxgiBuffer);
+    }
+    
+    void HandleDeviceLost(HWND hWnd) 
+    {
+        update->Finish();
+        device->FinishRenderingCurrentFrame();
+
+        RECT rect;
+
+        if (!GetClientRect(hWnd, &rect))
+            return;
+
+        UINT width = static_cast<UINT>(rect.right - rect.left);
+        UINT height = static_cast<UINT>(rect.bottom - rect.top);
+        device->DisableRendering();
+
+        InitD3DInfrastructure(hWnd);
+
+        device->UpdateDevice(g_d3dDevice.get());
+        device->EnableRendering();
+
+        std::promise<void> restorePromise{};
+
+        runtime->Dispatch([&restorePromise](Napi::Env env) {
+            auto callback = env.Global().Get("ENV_OnRenderDeviceRestored").As<Napi::Function>();
+            callback.Call({});
+            restorePromise.set_value();
+        });
+
+        restorePromise.get_future().get();
+
+        runtime->Dispatch([width, height](Napi::Env env) {
+            auto texturePromise = externalTexture->AddToContextAsync(env);
+            auto setRenderTexture = env.Global().Get("ENV_SetRenderTexture").As<Napi::Function>();
+            setRenderTexture.Call({texturePromise,
+                Napi::Number::From(env, width),
+                Napi::Number::From(env, height)});
+        });
+
+        device->StartRenderingCurrentFrame();
+        update->Start();
+    }
+
+    void PrintDeviceRemovalReason() 
+    {
+        HRESULT reason = g_d3dDevice->GetDeviceRemovedReason();
+
+#if defined(_DEBUG)
+        wchar_t outString[100];
+        size_t size = 100;
+        swprintf_s(outString, size, L"Device removed! DXGI_ERROR code: 0x%X\n", reason);
+        OutputDebugStringW(outString);
+#endif
     }
 }
 
@@ -198,9 +330,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_PLAYGROUNDWIN32, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
+    HWND hwnd;
 
     // Perform application initialization:
-    if (!InitInstance(hInstance, nCmdShow))
+    if (!InitInstance(hInstance, nCmdShow, hwnd))
     {
         return FALSE;
     }
@@ -229,6 +362,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             }
 
             result = PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) && msg.message != WM_QUIT;
+
+            auto hr = g_SwapChain->Present(1, 0);
+            
+            if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET)
+            {
+                PrintDeviceRemovalReason();
+                HandleDeviceLost(hwnd);
+            }
+            else
+            {
+                winrt::check_hresult(hr);
+            }
         }
 
         if (result)
@@ -280,11 +425,11 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 //        In this function, we save the instance handle in a global variable and
 //        create and display the main program window.
 //
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+BOOL InitInstance(HINSTANCE hInstance, int nCmdShow, HWND& hWnd)
 {
     hInst = hInstance; // Store instance handle in our global variable
 
-    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+    hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
 
     if (!hWnd)
@@ -296,6 +441,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
     UpdateWindow(hWnd);
     EnableMouseInPointer(true);
 
+    InitD3DInfrastructure(hWnd);
     RefreshBabylon(hWnd);
 
     return TRUE;
@@ -402,7 +548,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_DESTROY:
         {
             Uninitialize();
-            PostQuitMessage(Babylon::Plugins::TestUtils::errorCode);
+            PostQuitMessage(0);
             break;
         }
         case WM_KEYDOWN:

@@ -402,6 +402,7 @@ namespace Babylon
 
     void NativeEngine::Initialize(Napi::Env env)
     {
+       
         // Initialize the JavaScript side.
         Napi::HandleScope scope{env};
 
@@ -693,6 +694,7 @@ namespace Babylon
 
                 // REVIEW: Should this be here if only used by ValidationTest?
                 InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
+                InstanceMethod("getDeviceLostCallback", &NativeEngine::GetDeviceLostCallback),
             });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
@@ -2043,6 +2045,12 @@ namespace Babylon
                 callbackPtr->Value().Call({typedArray});
             });
         });
+    }
+
+    void NativeEngine::GetDeviceLostCallback(const Napi::CallbackInfo& info)
+    {
+        const auto callback{info[0].As<Napi::Function>()};
+        m_deviceRestoredCallback = std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback));
     }
 
     void NativeEngine::SetStencil(NativeDataStream::Reader& data)
