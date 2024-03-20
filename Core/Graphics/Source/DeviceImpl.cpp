@@ -172,7 +172,10 @@ namespace Babylon::Graphics
 
             if (m_bgfxId != 0)
             {
-                m_renderResetCallback();
+                if (m_renderResetCallback)
+                {
+                    m_renderResetCallback();
+                }
             }
         }
     }
