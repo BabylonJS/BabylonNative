@@ -124,6 +124,11 @@ namespace Babylon::Graphics
         m_state.Resolution.DevicePixelRatio = value;
     }
 
+    void DeviceImpl::SetRenderResetCallback(std::function<void()> callback)
+    {
+        m_renderResetCallback = std::move(callback);
+    }
+
     void DeviceImpl::AddToJavaScript(Napi::Env env)
     {
         JsRuntime::NativeObject::GetFromJavaScript(env)
@@ -164,6 +169,11 @@ namespace Babylon::Graphics
             m_state.Bgfx.Dirty = false;
 
             m_cancellationSource.emplace();
+
+            if (m_bgfxId != 0)
+            {
+                m_renderResetCallback();
+            }
         }
     }
 

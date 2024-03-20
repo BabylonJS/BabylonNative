@@ -269,6 +269,13 @@ namespace
         update->Finish();
         device->FinishRenderingCurrentFrame();
 
+        device->DisableRendering();
+
+        InitD3DInfrastructure(hWnd);
+
+        device->UpdateDevice(g_d3dDevice.get());
+        device->EnableRendering();
+    
         RECT rect;
 
         if (!GetClientRect(hWnd, &rect))
@@ -276,22 +283,6 @@ namespace
 
         UINT width = static_cast<UINT>(rect.right - rect.left);
         UINT height = static_cast<UINT>(rect.bottom - rect.top);
-        device->DisableRendering();
-
-        InitD3DInfrastructure(hWnd);
-
-        device->UpdateDevice(g_d3dDevice.get());
-        device->EnableRendering();
-
-        std::promise<void> restorePromise{};
-
-        runtime->Dispatch([&restorePromise](Napi::Env env) {
-            auto callback = env.Global().Get("ENV_OnRenderDeviceRestored").As<Napi::Function>();
-            callback.Call({});
-            restorePromise.set_value();
-        });
-
-        restorePromise.get_future().get();
 
         runtime->Dispatch([width, height](Napi::Env env) {
             auto texturePromise = externalTexture->AddToContextAsync(env);

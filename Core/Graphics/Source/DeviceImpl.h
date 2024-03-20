@@ -46,6 +46,7 @@ namespace Babylon::Graphics
         void UpdateMSAA(uint8_t value);
         void UpdateAlphaPremultiplied(bool enabled);
         void UpdateDevicePixelRatio(float value);
+        void SetRenderResetCallback(std::function<void()> callback);
 
         void AddToJavaScript(Napi::Env);
         static DeviceImpl& GetFromJavaScript(Napi::Env);
@@ -163,5 +164,6 @@ namespace Babylon::Graphics
 
         DeviceContext m_context;
         uintptr_t m_bgfxId = 0;
+        std::function<void()> m_renderResetCallback;
     };
 }
