@@ -11,17 +11,31 @@
 namespace Babylon
 {
     class WorkQueue;
+
     class AppRuntime final
     {
     public:
+        class Options
+        {
+        public:
+            // Optional handler for unhandled exceptions.
+            std::function<void(const Napi::Error&)> UnhandledExceptionHandler{DefaultUnhandledExceptionHandler};
+
+            // Waits for the debugger to be attached before the execution of any script. Only implemented for V8.
+            bool WaitForDebugger{false};
+        };
+
         AppRuntime();
-        AppRuntime(std::function<void(const std::exception&)> unhandledExceptionHandler);
+        AppRuntime(Options options);
         ~AppRuntime();
 
         void Suspend();
         void Resume();
 
         void Dispatch(Dispatchable<void(Napi::Env)> callback);
+
+        // Default unhandled exception handler that outputs the error message to the program output.
+        static void DefaultUnhandledExceptionHandler(const Napi::Error& error);
 
     private:
         // These three methods are the mechanism by which platform- and JavaScript-specific
@@ -42,10 +56,7 @@ namespace Babylon
         // extra logic around the invocation of a dispatched callback.
         void Execute(Dispatchable<void()> callback);
 
-        static void DefaultUnhandledExceptionHandler(const std::exception& error);
-
-        std::unique_ptr<WorkQueue> m_workQueue{};
-        std::function<void(const std::exception&)> m_unhandledExceptionHandler{};
-        static std::string GetErrorInfos();
+        std::unique_ptr<WorkQueue> m_workQueue;
+        Options m_options;
     };
 }

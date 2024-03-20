@@ -191,12 +191,12 @@ namespace Babylon
     };
 
     InspectorSocketServer::InspectorSocketServer(
-        std::unique_ptr<InspectorAgentDelegate>&& delegate, unsigned short port)
+        std::unique_ptr<InspectorAgentDelegate> delegate, unsigned short port)
         : delegate_(std::move(delegate))
         , port_(port)
         , next_session_id_(0)
+        , state_(ServerState::kNew)
     {
-        state_ = ServerState::kNew;
     }
 
     InspectorSocketServer::~InspectorSocketServer() = default;
@@ -213,13 +213,13 @@ namespace Babylon
     {
         SocketSession* session = Session(session_id);
 
-        //TODODO
+        //TODO
         //if (!TargetExists(id)) {
         //  session->Decline();
         //  return;
         // }
 
-        //TODODO
+        //TODO
         // if (connected_session_) std::abort();
         //connected_session_.reset(session);
         connected_sessions_[session_id].first = id;
@@ -229,7 +229,7 @@ namespace Babylon
 
     void InspectorSocketServer::SessionTerminated(int session_id)
     {
-        if (this->state_ == ServerState::kStopped)
+        if (state_ == ServerState::kStopped)
         {
             return;
         }
@@ -344,35 +344,21 @@ namespace Babylon
         server->Stop();
     }
 
-    bool InspectorSocketServer::Start()
+    void InspectorSocketServer::Start()
     {
         tcp_server_ = std::make_shared<tcp_server>(port_, InspectorSocketServer::SocketConnectedCallback, this);
-        state_ = ServerState::kRunning;
-        tcp_server_->run();
-        return true;
+
+        thread_ = std::thread([this]() {
+            state_ = ServerState::kRunning;
+            tcp_server_->run();
+            state_ = ServerState::kStopped;
+        });
     }
 
     void InspectorSocketServer::Stop()
     {
-        std::lock_guard<std::mutex> guard{m_mutex};
-        if (state_ == ServerState::kStopped)
-            return;
-        CHECK_EQ(state_, ServerState::kRunning);
-
-        state_ = ServerState::kStopped;
-
         tcp_server_->stop();
-
-        if (state_ == ServerState::kStopped)
-        {
-            delegate_.reset();
-        }
-    }
-
-    void InspectorSocketServer::TerminateConnections()
-    {
-        for (const auto& key_value : connected_sessions_)
-            key_value.second.second->Close();
+        thread_.join();
     }
 
     bool InspectorSocketServer::TargetExists(const std::string& id)
@@ -384,7 +370,6 @@ namespace Babylon
 
     int InspectorSocketServer::Port() const
     {
-        // return socket_->port();
         return port_;
     }
 

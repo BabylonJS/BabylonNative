@@ -1,21 +1,16 @@
 #include "AppRuntime.h"
-#include <exception>
-#include <sstream>
 #include <android/log.h>
 
 namespace Babylon
 {
+    void AppRuntime::DefaultUnhandledExceptionHandler(const Napi::Error& error)
+    {
+        __android_log_print(ANDROID_LOG_ERROR, "BabylonNative", "[Uncaught Error] %s", error.Get("stack").As<Napi::String>().Utf8Value().data());
+    }
+
     void AppRuntime::RunPlatformTier()
     {
         RunEnvironmentTier();
-    }
-
-    void AppRuntime::DefaultUnhandledExceptionHandler(const std::exception& error)
-    {
-        std::stringstream ss{};
-        ss << "Uncaught Error: " << error.what() << std::endl;
-        ss << GetErrorInfos() << std::endl;
-        __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", ss.str().data());
     }
 
     void AppRuntime::Execute(Dispatchable<void()> callback)

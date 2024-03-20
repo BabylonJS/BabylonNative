@@ -404,68 +404,13 @@ class TryCatch : public v8::TryCatch {
   explicit TryCatch(napi_env env) : v8::TryCatch(env->isolate), _env(env) {}
 
   ~TryCatch() {
-    // [BABYLON-NATIVE-ADDITION]
     if (HasCaught()) {
-      v8::Local<v8::Value> exception = Exception();
-      EnhanceV8Exception(exception);
-      _env->last_exception.Reset(_env->isolate, exception);
+      _env->last_exception.Reset(_env->isolate, Exception());
     }
-    // [BABYLON-NATIVE-ADDITION]
   }
 
  private:
   napi_env _env;
-
-  // [BABYLON-NATIVE-ADDITION]
-  void EnhanceV8Exception(v8::Local<v8::Value> exception) {
-    v8::Local<v8::Object> exception_obj = exception.As<v8::Object>();
-
-    v8::Isolate* isolate = _env->isolate;
-
-    v8::Local<v8::Message> message = Message();
-    if (!message.IsEmpty()) {
-      v8::Local<v8::Context> context(isolate->GetCurrentContext());
-
-      v8::ScriptOrigin script_origin = message->GetScriptOrigin();
-      v8::Local<v8::Value> filename = script_origin.ResourceName();
-
-      setLocalValueAsProperty(context, exception_obj, filename, "url");
-
-      int column_start = message->GetStartColumn();
-      int column_end = message->GetEndColumn();
-      int length = column_end - column_start;
-      setIntAsProperty(isolate, context, exception_obj, message->GetLineNumber(context).ToChecked(), "line");
-      setIntAsProperty(isolate, context, exception_obj, column_start, "column");
-      setIntAsProperty(isolate, context, exception_obj, length, "length");
-
-      v8::Local<v8::String> sourceLine = message->GetSourceLine(context).ToLocalChecked();
-      setLocalValueAsProperty(context, exception_obj, sourceLine, "source");
-
-      v8::Local<v8::Value> stack_trace_string;
-      if (StackTrace(context).ToLocal(&stack_trace_string) &&
-        stack_trace_string->IsString() &&
-        stack_trace_string.As<v8::String>()->Length() > 0) {
-        setLocalValueAsProperty(context, exception_obj, stack_trace_string, "stack");
-      }
-    }
-  }
-
-  // [BABYLON-NATIVE-ADDITION]
-  void setIntAsProperty(v8::Isolate* isolate, v8::Local<v8::Context> context, v8::Local<v8::Object> obj, int value, const char* value_property) {
-    v8::Local<v8::Number> v8_number = v8::Number::New(isolate, value);
-    setLocalValueAsProperty(context, obj, v8_number, value_property);
-  }
-
-  // [BABYLON-NATIVE-ADDITION]
-  void setLocalValueAsProperty(v8::Local<v8::Context> context, v8::Local<v8::Object> obj, v8::Local<v8::Value> value, const char* value_property) {
-    v8::Local<v8::String> key = createV8String(value_property);
-    obj->Set(context, key, value);
-  }
-
-  // [BABYLON-NATIVE-ADDITION]
-  v8::Local<v8::String> createV8String(const char* text) {
-    return v8::String::NewFromUtf8(_env->isolate, text).ToLocalChecked();
-  }
 };
 
 // Ownership of a reference.

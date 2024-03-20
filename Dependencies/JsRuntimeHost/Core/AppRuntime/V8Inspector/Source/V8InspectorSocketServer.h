@@ -50,15 +50,14 @@ namespace Babylon
     class InspectorSocketServer
     {
     public:
-        InspectorSocketServer(std::unique_ptr<InspectorAgentDelegate>&& delegate, unsigned short port);
+        InspectorSocketServer(std::unique_ptr<InspectorAgentDelegate> delegate, unsigned short port);
         ~InspectorSocketServer();
 
         // Start listening on host/port
-        bool Start();
+        void Start();
 
         void Stop();
         void Send(int session_id, const std::string& message);
-        void TerminateConnections();
         int Port() const;
 
         // Session connection lifecycle
@@ -87,11 +86,12 @@ namespace Babylon
         std::string GetFrontendURL(bool is_compat, const std::string& formatted_address);
         bool TargetExists(const std::string& id);
 
+        std::thread thread_;
+
         enum class ServerState
         {
             kNew,
             kRunning,
-            kStopping,
             kStopped
         };
         std::unique_ptr<InspectorAgentDelegate> delegate_;
@@ -104,7 +104,6 @@ namespace Babylon
         ServerState state_;
 
         std::map<int, std::pair<std::string, std::unique_ptr<SocketSession>>> connected_sessions_;
-        mutable std::mutex m_mutex;
     };
 
 } // namespace inspector

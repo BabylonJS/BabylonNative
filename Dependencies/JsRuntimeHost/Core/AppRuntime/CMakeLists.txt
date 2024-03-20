@@ -35,6 +35,8 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INS
 
     target_link_libraries(AppRuntime
         PRIVATE v8inspector)
+
+    set_property(TARGET v8inspector PROPERTY FOLDER Dependencies)
 endif()
 
 set_property(TARGET AppRuntime PROPERTY FOLDER Core)

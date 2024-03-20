@@ -11,29 +11,25 @@ namespace Babylon
     class V8InspectorAgent
     {
     public:
-        // TODO :: safe access to platform
-        // Note :: Currently we do support one platform/isolate/context per agent..
-        // This is enough for our scenarios.
         explicit V8InspectorAgent(
             v8::Platform& platform,
             v8::Isolate* isolate,
             v8::Local<v8::Context> context,
             const char* context_name);
+
         ~V8InspectorAgent();
 
-        void waitForDebugger();
+        void WaitForDebugger();
 
-        void start(const unsigned short port, const std::string& appName);
-        void stop();
+        void Start(const unsigned short port, const std::string& appName);
+
+        void Stop();
 
         bool IsStarted();
+
         bool IsConnected();
-        void WaitForDisconnect();
-        void FatalException(
-            v8::Local<v8::Value> error,
-            v8::Local<v8::Message> message);
 
     private:
-        std::shared_ptr<AgentImpl> impl;
+        std::unique_ptr<AgentImpl> impl;
     };
 }

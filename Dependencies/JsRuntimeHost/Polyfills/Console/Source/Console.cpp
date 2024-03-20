@@ -101,7 +101,6 @@ namespace
                 ss << currArg.ToString().Utf8Value();
             }
         }
-        ss << std::endl;
 
         callback(ss.str().c_str(), logLevel);
     }

@@ -1,7 +1,4 @@
-﻿// Set this to true to make attaching a debugging easier.
-const waitForDebugger = false;
-
-mocha.setup({ ui: "bdd", reporter: "spec", retries: 5 });
+﻿mocha.setup({ ui: "bdd", reporter: "spec", retries: 5 });
 
 const expect = chai.expect;
 describe("AbortController", function () {
@@ -327,7 +324,7 @@ if (hostPlatform !== "Unix") {
                 catch (e) {
                     done(e);
                 }
-            }
+            };
 
             ws.onmessage = (msg) => {
                 try {
@@ -337,7 +334,7 @@ if (hostPlatform !== "Unix") {
                 catch (e) {
                     done(e);
                 }
-            }
+            };
 
             ws.onclose = () => {
                 try {
@@ -347,7 +344,11 @@ if (hostPlatform !== "Unix") {
                 catch (e) {
                     done(e);
                 }
-            }
+            };
+
+            ws.onerror = (ev) => {
+                done(new Error(ev.message));
+            };
         });
 
         it("should connect correctly with multiple websocket connections", function (done) {
@@ -366,7 +367,7 @@ if (hostPlatform !== "Unix") {
                     catch (e) {
                         done(e);
                     }
-                }
+                };
 
                 ws2.onmessage = (msg) => {
                     try {
@@ -376,7 +377,7 @@ if (hostPlatform !== "Unix") {
                     catch (e) {
                         done(e);
                     }
-                }
+                };
 
                 ws2.onclose = () => {
                     try {
@@ -386,7 +387,11 @@ if (hostPlatform !== "Unix") {
                     catch (e) {
                         done(e);
                     }
-                }
+                };
+
+                ws2.onerror = (ev) => {
+                    done(new Error(ev.message));
+                };
             }
 
             ws1.onmessage = (msg) => {
@@ -408,13 +413,17 @@ if (hostPlatform !== "Unix") {
                     done(e);
                 }
             }
+
+            ws1.onerror = (ev) => {
+                done(new Error(ev.message));
+            };
         });
 
         it("should trigger error callback with invalid server", function (done) {
             const ws = new WebSocket('wss://example.com');
             ws.onerror = () => {
                 done();
-            }
+            };
         });
 
         it("should trigger error callback with invalid domain", function (done) {
@@ -422,7 +431,7 @@ if (hostPlatform !== "Unix") {
             const ws = new WebSocket('wss://example');
             ws.onerror = () => {
                 done();
-            }
+            };
         });
     })
 }
@@ -656,27 +665,12 @@ function runTests() {
         // Test program will wait for code to be set before exiting
         if (failures > 0) {
             // Failure
-            SetExitCode(1);
+            setExitCode(1);
         } else {
             // Success
-            SetExitCode(0);
+            setExitCode(0);
         }
     });
 }
 
-if (waitForDebugger) {
-    function waitLoop() {
-        const start = Date.now();
-        debugger;
-        if (Date.now() - start < 100) {
-            setTimeout(waitLoop, 200);
-        } else {
-            runTests();
-        }
-    }
-
-    console.log("Waiting for debugger...");
-    waitLoop();
-} else {
-    runTests();
-}
+runTests();

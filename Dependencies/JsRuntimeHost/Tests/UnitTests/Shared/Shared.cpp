@@ -8,6 +8,7 @@
 #include <Babylon/Polyfills/WebSocket.h>
 #include <gtest/gtest.h>
 #include <future>
+#include <iostream>
 
 const char* EnumToString(Babylon::Polyfills::Console::LogLevel logLevel)
 {
@@ -24,29 +25,47 @@ const char* EnumToString(Babylon::Polyfills::Console::LogLevel logLevel)
     return "unknown";
 }
 
-TEST(JS, JSTests)
+TEST(JavaScript, All)
 {
-    std::promise<int32_t> exitCode;
+    // Change this to true to wait for the JavaScript debugger to attach (only applies to V8)
+    constexpr const bool waitForDebugger = false;
 
-    Babylon::AppRuntime runtime{};
+    std::promise<int32_t> exitCodePromise;
 
-    runtime.Dispatch([&exitCode](Napi::Env env) mutable {
-        Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-        Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel logLevel)
-        {
-            fprintf(stdout, "[%s] %s", EnumToString(logLevel), message);
-            fflush(stdout);
+    Babylon::AppRuntime::Options options{};
+
+    options.UnhandledExceptionHandler = [&exitCodePromise](const Napi::Error& error) {
+        std::cerr << "[Uncaught Error] " << error.Get("stack").As<Napi::String>().Utf8Value() << std::endl;
+        std::cerr.flush();
+
+        exitCodePromise.set_value(-1);
+    };
+
+    if (waitForDebugger)
+    {
+        std::cout << "Waiting for debugger..." << std::endl;
+        options.WaitForDebugger = true;
+    }
+
+    Babylon::AppRuntime runtime{options};
+
+    runtime.Dispatch([&exitCodePromise](Napi::Env env) mutable {
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel logLevel) {
+            std::cout << "[" << EnumToString(logLevel) << "] " << message << std::endl;
+            std::cout.flush();
         });
+
+        Babylon::Polyfills::AbortController::Initialize(env);
         Babylon::Polyfills::Scheduling::Initialize(env);
         Babylon::Polyfills::URL::Initialize(env);
-        Babylon::Polyfills::AbortController::Initialize(env);
         Babylon::Polyfills::WebSocket::Initialize(env);
+        Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-        env.Global().Set("SetExitCode", Napi::Function::New(env, [&exitCode](const Napi::CallbackInfo& info)
+        env.Global().Set("setExitCode", Napi::Function::New(env, [&exitCodePromise](const Napi::CallbackInfo& info)
         {
             Napi::Env env = info.Env();
-            exitCode.set_value(info[0].As<Napi::Number>().Int32Value());
-        }, "SetExitCode"));
+            exitCodePromise.set_value(info[0].As<Napi::Number>().Int32Value());
+        }, "setExitCode"));
 
         env.Global().Set("hostPlatform", Napi::Value::From(env, JSRUNTIMEHOST_PLATFORM));
     });
@@ -58,52 +77,38 @@ TEST(JS, JSTests)
     loader.LoadScript("app:///Scripts/mocha.js");
     loader.LoadScript("app:///Scripts/tests.js");
 
-    auto exit{exitCode.get_future().get()};
+    auto exitCode{exitCodePromise.get_future().get()};
 
-    EXPECT_EQ(exit, 0);
+    EXPECT_EQ(exitCode, 0);
 }
 
-TEST(Console, ConsoleLog)
+TEST(Console, Log)
 {
-    std::promise<int32_t> exitCode;
-
     Babylon::AppRuntime runtime{};
 
-    runtime.Dispatch([&exitCode](Napi::Env env) mutable {
-        Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+    runtime.Dispatch([](Napi::Env env) mutable {
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel logLevel)
         {
-            const char* test = "foo bar\n";
+            const char* test = "foo bar";
             if (strcmp(message, test) != 0)
             {
-                fprintf(stdout, "Expected: %s, received: %s", test, message);
+                std::cout << "Expected: " << test << std::endl;
+                std::cout << "Received: " << message << std::endl;
+                std::cout.flush();
                 ADD_FAILURE();
             }
-
-            fprintf(stdout, "[%s] %s", EnumToString(logLevel), message);
-            fflush(stdout);
         });
-        Babylon::Polyfills::Scheduling::Initialize(env);
-        Babylon::Polyfills::URL::Initialize(env);
-        Babylon::Polyfills::AbortController::Initialize(env);
-        Babylon::Polyfills::WebSocket::Initialize(env);
-
-        env.Global().Set("SetExitCode", Napi::Function::New(env, [&exitCode](const Napi::CallbackInfo& info)
-        {
-            Napi::Env env = info.Env();
-            exitCode.set_value(info[0].As<Napi::Number>().Int32Value());
-        }, "SetExitCode"));
-
-        env.Global().Set("hostPlatform", Napi::Value::From(env, JSRUNTIMEHOST_PLATFORM));
     });
+
+    std::promise<void> done;
 
     Babylon::ScriptLoader loader{runtime};
     loader.Eval("console.log('foo', 'bar')", "");
-    loader.Eval("SetExitCode(0)", "");
+    loader.Dispatch([&done](auto) {
+        done.set_value();
+    });
 
-    auto exit{exitCode.get_future().get()};
-
-    EXPECT_EQ(exit, 0);
+    done.get_future().get();
 }
 
 int RunTests()

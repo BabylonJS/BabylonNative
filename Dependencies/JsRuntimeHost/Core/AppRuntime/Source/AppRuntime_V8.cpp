@@ -39,11 +39,19 @@ namespace Babylon
                 v8::V8::DisposePlatform();
             }
 
-            static Module& Initialize(const char* executablePath)
+            static void Initialize(const char* executablePath)
             {
                 if (s_module == nullptr)
                 {
                     s_module = std::make_unique<Module>(executablePath);
+                }
+            }
+
+            static Module& Instance()
+            {
+                if (!s_module)
+                {
+                    throw std::runtime_error{"Module not available"};
                 }
 
                 return *s_module;
@@ -66,10 +74,8 @@ namespace Babylon
     void AppRuntime::RunEnvironmentTier(const char* executablePath)
     {
         // Create the isolate.
-#ifdef ENABLE_V8_INSPECTOR
-        Module& module = 
-#endif 
         Module::Initialize(executablePath);
+
         v8::Isolate::CreateParams create_params;
         create_params.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
         v8::Isolate* isolate = v8::Isolate::New(create_params);
@@ -84,14 +90,19 @@ namespace Babylon
             Napi::Env env = Napi::Attach(context);
 
 #ifdef ENABLE_V8_INSPECTOR
-            V8InspectorAgent agent{module.Platform(), isolate, context, "Babylon"};
-            agent.start(5643, "JsRuntimeHost");
+            V8InspectorAgent agent{Module::Instance().Platform(), isolate, context, "JsRuntimeHost"};
+            agent.Start(5643, "JsRuntimeHost");
+
+            if (m_options.WaitForDebugger)
+            {
+                agent.WaitForDebugger();
+            }
 #endif
 
             Run(env);
 
 #ifdef ENABLE_V8_INSPECTOR
-            agent.stop();
+            agent.Stop();
 #endif
 
             Napi::Detach(env);
