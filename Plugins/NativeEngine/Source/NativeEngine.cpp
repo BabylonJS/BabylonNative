@@ -2033,6 +2033,18 @@ namespace Babylon
         return Napi::Value::From(env, outputData);
     }
 
+    void NativeEngine::SetRenderResetCallback(const Napi::CallbackInfo& info)
+    {
+        const auto callback{info[0].As<Napi::Function>()};
+        auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
+
+        m_graphicsContext.SetRenderResetCallback([this, renderResetCallback = std::move(callbackPtr)]() {
+            m_runtime.Dispatch([renderResetCallback = std::move(renderResetCallback)](auto) {
+                renderResetCallback->Call({});
+            });
+        });
+    }
+
     void NativeEngine::GetFrameBufferData(const Napi::CallbackInfo& info)
     {
         const auto callback{info[0].As<Napi::Function>()};
@@ -2043,19 +2055,6 @@ namespace Babylon
                 auto arrayBuffer{Napi::ArrayBuffer::New(env, const_cast<uint8_t*>(array.data()), array.size())};
                 auto typedArray{Napi::Uint8Array::New(env, array.size(), arrayBuffer, 0)};
                 callbackPtr->Value().Call({typedArray});
-            });
-        });
-    }
-
-    void NativeEngine::SetRenderResetCallback(const Napi::CallbackInfo& info)
-    {
-        const auto callback{info[0].As<Napi::Function>()};
-        auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
-
-        m_graphicsContext.SetRenderResetCallback([this, renderResetCallback = std::move(callbackPtr)]() 
-        { 
-            m_runtime.Dispatch([renderResetCallback = std::move(renderResetCallback)](auto) {
-                renderResetCallback->Call({});
             });
         });
     }
