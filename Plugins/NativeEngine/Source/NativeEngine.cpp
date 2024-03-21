@@ -2033,16 +2033,16 @@ namespace Babylon
         return Napi::Value::From(env, outputData);
     }
 
-    void NativeEngine::SetRenderResetCallback(const Napi::CallbackInfo&)
+    void NativeEngine::SetRenderResetCallback(const Napi::CallbackInfo& info)
     {
-        /*const auto callback{info[0].As<Napi::Function>()};
+        const auto callback{info[0].As<Napi::Function>()};
         auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
 
-        m_graphicsContext.SetRenderResetCallback([this, renderResetCallback = std::move(callbackPtr)]() {
+        this->m_graphicsContext.SetRenderResetCallback([this, renderResetCallback = std::move(callbackPtr)]() {
             m_runtime.Dispatch([renderResetCallback = std::move(renderResetCallback)](auto) {
                 renderResetCallback->Call({});
             });
-        });*/
+        });
     }
 
     void NativeEngine::GetFrameBufferData(const Napi::CallbackInfo& info)
