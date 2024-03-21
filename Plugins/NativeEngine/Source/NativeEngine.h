@@ -213,7 +213,7 @@ namespace Babylon
         Napi::Value CreateImageBitmap(const Napi::CallbackInfo& info);
         Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
-        void SetDeviceLostCallback(const Napi::CallbackInfo& info);
+        void SetRenderResetCallback(const Napi::CallbackInfo& info);
         void SetStencil(NativeDataStream::Reader& data);
         void SetViewPort(NativeDataStream::Reader& data);
         void SetScissor(NativeDataStream::Reader& data);

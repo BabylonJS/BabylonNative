@@ -694,7 +694,7 @@ namespace Babylon
 
                 // REVIEW: Should this be here if only used by ValidationTest?
                 InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
-                InstanceMethod("setDeviceLostCallback", &NativeEngine::SetDeviceLostCallback),
+                InstanceMethod("setDeviceLostCallback", &NativeEngine::SetRenderResetCallback),
             });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
@@ -2047,7 +2047,7 @@ namespace Babylon
         });
     }
 
-    void NativeEngine::SetDeviceLostCallback(const Napi::CallbackInfo& info)
+    void NativeEngine::SetRenderResetCallback(const Napi::CallbackInfo& info)
     {
         const auto callback{info[0].As<Napi::Function>()};
         auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
