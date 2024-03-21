@@ -72,7 +72,7 @@ namespace Babylon::Graphics
     class Device
     {
     public:
-        Device(const Configuration& config);
+        explicit Device(const Configuration& config);
         ~Device();
 
         // Move semantics

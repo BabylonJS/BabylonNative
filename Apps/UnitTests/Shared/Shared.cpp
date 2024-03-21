@@ -105,7 +105,7 @@ TEST(NativeAPI, LifeCycle)
 {
     for (int cycle = 0; cycle < 20; cycle++)
     {
-        Babylon::Graphics::Device device = g_deviceTestConfig;
+        Babylon::Graphics::Device device{deviceConfig};
         std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
 
         Babylon::AppRuntime runtime{};
@@ -165,7 +165,7 @@ TEST(Performance, Spheres)
         setReady();
     )"};
 
-    Babylon::Graphics::Device device = deviceConfig;
+    Babylon::Graphics::Device device{deviceConfig};
     std::optional<Babylon::Graphics::DeviceUpdate> update{};
     std::promise<int32_t> ready;
     update.emplace(device.GetUpdate("update"));
