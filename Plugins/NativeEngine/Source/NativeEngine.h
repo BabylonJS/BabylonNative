@@ -273,6 +273,5 @@ namespace Babylon
 
         // TODO: This should be changed to a non-owning ref once multi-update is available.
         NativeDataStream* m_commandStream{};
-        uintptr_t m_engine;
     };
 }
