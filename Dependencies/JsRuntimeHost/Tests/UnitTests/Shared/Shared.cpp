@@ -1,28 +1,32 @@
 #include "Shared.h"
 #include <Babylon/AppRuntime.h>
 #include <Babylon/ScriptLoader.h>
-#include <Babylon/Polyfills/Scheduling.h>
-#include <Babylon/Polyfills/XMLHttpRequest.h>
-#include <Babylon/Polyfills/URL.h>
 #include <Babylon/Polyfills/AbortController.h>
+#include <Babylon/Polyfills/Console.h>
+#include <Babylon/Polyfills/Scheduling.h>
+#include <Babylon/Polyfills/URL.h>
 #include <Babylon/Polyfills/WebSocket.h>
+#include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <gtest/gtest.h>
 #include <future>
 #include <iostream>
 
-const char* EnumToString(Babylon::Polyfills::Console::LogLevel logLevel)
+namespace
 {
-    switch (logLevel)
+    const char* EnumToString(Babylon::Polyfills::Console::LogLevel logLevel)
     {
-        case Babylon::Polyfills::Console::LogLevel::Log:
-            return "log";
-        case Babylon::Polyfills::Console::LogLevel::Warn:
-            return "warn";
-        case Babylon::Polyfills::Console::LogLevel::Error:
-            return "error";
-    }
+        switch (logLevel)
+        {
+            case Babylon::Polyfills::Console::LogLevel::Log:
+                return "log";
+            case Babylon::Polyfills::Console::LogLevel::Warn:
+                return "warn";
+            case Babylon::Polyfills::Console::LogLevel::Error:
+                return "error";
+        }
 
-    return "unknown";
+        return "unknown";
+    }
 }
 
 TEST(JavaScript, All)
@@ -61,11 +65,13 @@ TEST(JavaScript, All)
         Babylon::Polyfills::WebSocket::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-        env.Global().Set("setExitCode", Napi::Function::New(env, [&exitCodePromise](const Napi::CallbackInfo& info)
-        {
-            Napi::Env env = info.Env();
-            exitCodePromise.set_value(info[0].As<Napi::Number>().Int32Value());
-        }, "setExitCode"));
+        auto setExitCodeCallback = Napi::Function::New(
+            env, [&exitCodePromise](const Napi::CallbackInfo& info) {
+                Napi::Env env = info.Env();
+                exitCodePromise.set_value(info[0].As<Napi::Number>().Int32Value());
+            },
+            "setExitCode");
+        env.Global().Set("setExitCode", setExitCodeCallback);
 
         env.Global().Set("hostPlatform", Napi::Value::From(env, JSRUNTIMEHOST_PLATFORM));
     });
@@ -87,8 +93,7 @@ TEST(Console, Log)
     Babylon::AppRuntime runtime{};
 
     runtime.Dispatch([](Napi::Env env) mutable {
-        Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel logLevel)
-        {
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel logLevel) {
             const char* test = "foo bar";
             if (strcmp(message, test) != 0)
             {

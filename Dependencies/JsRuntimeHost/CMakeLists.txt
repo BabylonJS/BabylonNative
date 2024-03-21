@@ -128,6 +128,6 @@ endif()
 add_subdirectory(Core)
 add_subdirectory(Polyfills)
 
-if(JSRUNTIMEHOST_TESTS)
+if(JSRUNTIMEHOST_TESTS AND NOT WINDOWS_STORE)
     add_subdirectory(Tests)
 endif()
