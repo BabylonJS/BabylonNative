@@ -2054,7 +2054,7 @@ namespace Babylon
 
         m_graphicsContext.SetRenderResetCallback([this, renderResetCallback = std::move(renderResetCallback)]() 
         { 
-            m_runtime.Dispatch([this, renderResetCallback = std::move(renderResetCallback)](auto) {
+            m_runtime.Dispatch([renderResetCallback = std::move(renderResetCallback)](auto) {
                 renderResetCallback->Call({});
             });
         });
