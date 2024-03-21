@@ -2050,9 +2050,9 @@ namespace Babylon
     void NativeEngine::SetDeviceLostCallback(const Napi::CallbackInfo& info)
     {
         const auto callback{info[0].As<Napi::Function>()};
-        auto renderResetCallback = std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback));
+        auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
 
-        m_graphicsContext.SetRenderResetCallback([this, renderResetCallback = std::move(renderResetCallback)]() 
+        m_graphicsContext.SetRenderResetCallback([this, renderResetCallback = std::move(callbackPtr)]() 
         { 
             m_runtime.Dispatch([renderResetCallback = std::move(renderResetCallback)](auto) {
                 renderResetCallback->Call({});
