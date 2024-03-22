@@ -2077,7 +2077,7 @@ namespace Babylon
         const auto callback{info[0].As<Napi::Function>()};
         auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
 
-        this->m_graphicsContext.SetRenderResetCallback([this, renderResetCallback = std::move(callbackPtr)]() {
+        m_deviceContext.SetRenderResetCallback([this, renderResetCallback = std::move(callbackPtr)]() {
             m_runtime.Dispatch([renderResetCallback = std::move(renderResetCallback)](auto) {
                 renderResetCallback->Call({});
             });
