@@ -258,7 +258,7 @@
             "renderCount": 10,
             "playgroundId": "#W7E7CF#12",
             "referenceImage": "scissor-test.png",
-            "excludedGraphicsApis": ["D3D12"],
+            "excludedGraphicsApis": [ "D3D12" ],
             "comment": "TODO: reenable D3D12 when automatica mip-maps issue is fixed in bgfx"
         },
         {
@@ -266,7 +266,7 @@
             "renderCount": 10,
             "playgroundId": "#W7E7CF#27",
             "referenceImage": "scissorTestWith0.9HardwareScaling.png",
-            "excludedGraphicsApis": ["D3D12"],
+            "excludedGraphicsApis": [ "D3D12" ],
             "comment": "TODO: reenable D3D12 when automatica mip-maps issue is fixed in bgfx"
         },
         {
@@ -274,7 +274,7 @@
             "renderCount": 10,
             "playgroundId": "#W7E7CF#28",
             "referenceImage": "scissorTestWith1.5HardwareScaling.png",
-            "excludedGraphicsApis": ["D3D12"],
+            "excludedGraphicsApis": [ "D3D12" ],
             "comment": "TODO: reenable D3D12 when automatica mip-maps issue is fixed in bgfx"
         },
         {
@@ -477,6 +477,35 @@
             "title": "GLTF Alien",
             "playgroundId": "#XN37SR#5",
             "referenceImage": "gltfAlien.png"
+        },
+        {
+            "title": "Interleaved buffers test",
+            "playgroundId": "#AVFNTW#5",
+            "referenceImage": "interleaved-buffers-1.png"
+        },
+        {
+            "title": "Interleaved buffers test (integerPositionsAndNormals = true)",
+            "playgroundId": "#AVFNTW#5",
+            "replace": "//options//, integerPositionsAndNormals = true;",
+            "referenceImage": "interleaved-buffers-2.png"
+        },
+        {
+            "title": "Interleaved buffers test (updateUVs = true)",
+            "playgroundId": "#AVFNTW#5",
+            "replace": "//options//, updateUVs = true;",
+            "referenceImage": "interleaved-buffers-3.png"
+        },
+        {
+            "title": "Interleaved buffers test (updateUVs = true, updateAfterRender = true)",
+            "playgroundId": "#AVFNTW#5",
+            "replace": "//options//, updateUVs = true; updateAfterRender = true;",
+            "referenceImage": "interleaved-buffers-4.png",
+            "renderCount": 2
+        },
+        {
+            "title": "CesiumMan from Khronos Sample Assets",
+            "playgroundId": "#4GWX8M",
+            "referenceImage": "CesiumMan.png"
         }
     ]
 }
