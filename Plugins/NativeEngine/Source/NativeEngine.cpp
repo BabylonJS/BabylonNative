@@ -402,7 +402,6 @@ namespace Babylon
 
     void NativeEngine::Initialize(Napi::Env env)
     {
-       
         // Initialize the JavaScript side.
         Napi::HandleScope scope{env};
 
