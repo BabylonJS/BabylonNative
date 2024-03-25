@@ -1,5 +1,5 @@
-#include "../Shared/Tests.h"
+#include "../Shared/Shared.h"
 
 int main() {
-    return Run();
+    return RunTests({});
 }
