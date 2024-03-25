@@ -50,7 +50,9 @@ set(NPM_SCRIPTS
     "${APPS_DIR}/node_modules/chai/chai.js"
     "${APPS_DIR}/node_modules/mocha/mocha.js")
 
-set(SOURCES "${UNITTESTS_DIR}/Shared/Shared.h")
+set(SOURCES
+    "${UNITTESTS_DIR}/Shared/Shared.h"
+    "${UNITTESTS_DIR}/Shared/Shared.cpp")
 
 if(WIN32 AND NOT WINDOWS_STORE)
     set(SOURCES ${SOURCES} "${UNITTESTS_DIR}/Win32/App.cpp")
