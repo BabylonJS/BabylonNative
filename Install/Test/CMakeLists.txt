@@ -50,12 +50,12 @@ set(NPM_SCRIPTS
     "${APPS_DIR}/node_modules/chai/chai.js"
     "${APPS_DIR}/node_modules/mocha/mocha.js")
 
-set(HEADERS "${UNITTESTS_DIR}/Shared/Tests.h")
+set(HEADERS "${UNITTESTS_DIR}/Shared/Shared.h")
 
 if(WIN32)
     set(TEST_INSTALL_APP "${UNITTESTS_DIR}/Win32/App.cpp")
 else()
-	message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
+    message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
 # Nuget/JSI
