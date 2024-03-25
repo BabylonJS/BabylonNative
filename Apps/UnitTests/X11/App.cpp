@@ -48,5 +48,5 @@ int main()
     config.Window = window;
     config.Width = static_cast<size_t>(width);
     config.Height = static_cast<size_t>(height);
-    return Run(config);
+    return RunTests(config);
 }
