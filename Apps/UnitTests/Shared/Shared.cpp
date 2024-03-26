@@ -1,6 +1,4 @@
 #include "gtest/gtest.h"
-#include <optional>
-#include <future>
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -11,41 +9,81 @@
 #include <Babylon/ScriptLoader.h>
 #include <chrono>
 #include <thread>
-#include <napi/env.h>
+#include <optional>
+#include <future>
+#include <iostream>
 
-Babylon::Graphics::Configuration deviceTestConfig{};
-
-TEST(JSTest, JavaScriptTests)
+namespace
 {
-    std::promise<int32_t> exitCode;
-    Babylon::Graphics::Device device{deviceTestConfig};
+    Babylon::Graphics::Configuration deviceConfig{};
+
+    const char* EnumToString(Babylon::Polyfills::Console::LogLevel logLevel)
+    {
+        switch (logLevel)
+        {
+            case Babylon::Polyfills::Console::LogLevel::Log:
+                return "log";
+            case Babylon::Polyfills::Console::LogLevel::Warn:
+                return "warn";
+            case Babylon::Polyfills::Console::LogLevel::Error:
+                return "error";
+        }
+
+        return "unknown";
+    }
+}
+
+TEST(JavaScript, All)
+{
+    // Change this to true to wait for the JavaScript debugger to attach (only applies to V8)
+    constexpr const bool waitForDebugger = false;
+
+    std::promise<int32_t> exitCodePromise;
+
+    Babylon::Graphics::Device device{deviceConfig};
 
     std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
 
-    Babylon::AppRuntime runtime{};
-    runtime.Dispatch([&exitCode, &device, &nativeCanvas](Napi::Env env)
+    Babylon::AppRuntime::Options options{};
+
+    options.UnhandledExceptionHandler = [&exitCodePromise](const Napi::Error& error) {
+        std::cerr << "[Uncaught Error] " << error.Get("stack").As<Napi::String>().Utf8Value() << std::endl;
+        std::cerr.flush();
+
+        exitCodePromise.set_value(-1);
+    };
+
+    if (waitForDebugger)
     {
+        std::cout << "Waiting for debugger..." << std::endl;
+        options.WaitForDebugger = true;
+    }
+
+    Babylon::AppRuntime runtime{options};
+
+    runtime.Dispatch([&exitCodePromise, &device, &nativeCanvas](Napi::Env env) {
         device.AddToJavaScript(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto)
-        {
-            printf("%s", message);
-            fflush(stdout);
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel logLevel) {
+            std::cout << "[" << EnumToString(logLevel) << "] " << message << std::endl;
+            std::cout.flush();
         });
         Babylon::Polyfills::Window::Initialize(env);
         nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
         Babylon::Plugins::NativeEngine::Initialize(env);
-        
-        env.Global().Set("SetExitCode", Napi::Function::New(env, [&exitCode](const Napi::CallbackInfo& info)
-        {
-            Napi::Env env = info.Env();
-            exitCode.set_value(info[0].As<Napi::Number>().Int32Value());
-        }, "SetExitCode"));
+
+        auto setExitCodeCallback = Napi::Function::New(
+            env, [&exitCodePromise](const Napi::CallbackInfo& info) {
+                Napi::Env env = info.Env();
+                exitCodePromise.set_value(info[0].As<Napi::Number>().Int32Value());
+            },
+            "setExitCode");
+        env.Global().Set("setExitCode", setExitCodeCallback);
     });
 
     Babylon::ScriptLoader loader{runtime};
-    loader.Eval("global = {};", ""); // Required for Chai.js as we do not have global in Babylon Native
+    loader.Eval("global = {};", "");             // Required for Chai.js as we do not have global in Babylon Native
     loader.Eval("location = { href: '' };", ""); // Required for Mocha.js as we do not have a location in Babylon Native
     loader.LoadScript("app:///Scripts/babylon.max.js");
     loader.LoadScript("app:///Scripts/babylonjs.materials.js");
@@ -56,10 +94,8 @@ TEST(JSTest, JavaScriptTests)
     device.StartRenderingCurrentFrame();
     device.FinishRenderingCurrentFrame();
 
-    // Add CPP tests here
-
-    auto code{exitCode.get_future().get()};
-    EXPECT_EQ(code, 0);
+    auto exitCode{exitCodePromise.get_future().get()};
+    EXPECT_EQ(exitCode, 0);
 }
 
 /*
@@ -69,7 +105,7 @@ TEST(NativeAPI, LifeCycle)
 {
     for (int cycle = 0; cycle < 20; cycle++)
     {
-        Babylon::Graphics::Device device = deviceTestConfig;
+        Babylon::Graphics::Device device{deviceConfig};
         std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
 
         Babylon::AppRuntime runtime{};
@@ -102,7 +138,7 @@ TEST(NativeAPI, LifeCycle)
 TEST(Performance, Spheres)
 {
     // create a bunch of sphere, does the rendering for a number of frames, log time it took
-    static const std::string script{ R"(
+    std::string script{R"(
         console.log("Setting up Performance test.");
         var engine = new BABYLON.NativeEngine();
         var scene = new BABYLON.Scene(engine);
@@ -127,9 +163,9 @@ TEST(Performance, Spheres)
         });
         console.log("Ready!");
         setReady();
-        )" };
+    )"};
 
-    Babylon::Graphics::Device device = deviceTestConfig;
+    Babylon::Graphics::Device device{deviceConfig};
     std::optional<Babylon::Graphics::DeviceUpdate> update{};
     std::promise<int32_t> ready;
     update.emplace(device.GetUpdate("update"));
@@ -139,22 +175,23 @@ TEST(Performance, Spheres)
         device.AddToJavaScript(env);
 
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-            printf("%s", message);
-            fflush(stdout);
-            });
+            std::cout << message << std::endl;
+            std::cout.flush();
+        });
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
-        env.Global().Set("setReady", Napi::Function::New(env, [&ready](const Napi::CallbackInfo& info)
-        {
-            Napi::Env env = info.Env();
-            ready.set_value(1);
-        }, "setReady"));
+        env.Global().Set("setReady", Napi::Function::New(
+                                         env, [&ready](const Napi::CallbackInfo& info) {
+                                             Napi::Env env = info.Env();
+                                             ready.set_value(1);
+                                         },
+                                         "setReady"));
     });
 
-    Babylon::ScriptLoader loader{ runtime };
+    Babylon::ScriptLoader loader{runtime};
     loader.LoadScript("app:///Scripts/babylon.max.js");
     loader.LoadScript("app:///Scripts/babylonjs.materials.js");
-    loader.Eval(script, "code");
+    loader.Eval(std::move(script), "code");
 
     ready.get_future().get();
 
@@ -171,12 +208,13 @@ TEST(Performance, Spheres)
     const auto stop = std::chrono::high_resolution_clock::now();
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
     const float durationSeconds = float(duration.count()) / 1000.f;
-    printf("Duration is %f seconds.\n", durationSeconds);
-    fflush(stdout);
+    std::cout << "Duration is " << durationSeconds << " seconds. " << std::endl;
+    std::cout.flush();
 }
 
-int Run()
+int RunTests(const Babylon::Graphics::Configuration& config)
 {
+    deviceConfig = config;
     testing::InitGoogleTest();
     return RUN_ALL_TESTS();
 }
