@@ -46,7 +46,7 @@ FetchContent_Declare(OpenXR-SDK
     GIT_TAG 458984d7f59d1ae6dc1b597d94b02e4f7132eaba)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 43e7999af1c9af7d3ed9d4fc3a44cf3e68235cfd)
+    GIT_TAG 014d1ebe42c4177520fbcfd1e9a17238e532f1a6)
 # --------------------------------------------------
 
 FetchContent_MakeAvailable(CMakeExtensions)
