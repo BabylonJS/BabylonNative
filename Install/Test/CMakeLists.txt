@@ -125,7 +125,7 @@ elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     endif()
 endif()
 
-add_executable(TestInstall ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${SOURCES} ${JSI_CPP})
+add_executable(TestInstall ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${SOURCES})
 
 # for napi
 target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
