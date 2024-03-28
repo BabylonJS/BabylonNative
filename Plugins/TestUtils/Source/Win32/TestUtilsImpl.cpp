@@ -37,10 +37,14 @@ namespace Babylon::Plugins::Internal
         SetWindowPos(hwnd, NULL, 0, 0, rc.right - rc.left, rc.bottom - rc.top, SWP_NOMOVE | SWP_NOZORDER);
     }
 
-    void TestUtils::SetTitle(const Napi::CallbackInfo& info)
+    void TestUtils::SetTitle(const Napi::CallbackInfo&)
     {
-        const auto title = info[0].As<Napi::String>().Utf8Value();
-        SetWindowTextA(m_implData->m_window, title.c_str());
+        // SetWindowText sends a window message synchronously and cannot be called from a different thread from the
+        // main thread with the way the code is currently set up. If the main thread is calling
+        // FinishRenderingCurrentFrame, this will hang forever as the main message loop is not pumping.
+        // Once we fix the rendering code to never block the main thread, this can be uncommented again.
+        //const auto title = info[0].As<Napi::String>().Utf8Value();
+        //SetWindowTextA(m_implData->m_window, title.c_str());
     }
 
     Napi::Value TestUtils::GetOutputDirectory(const Napi::CallbackInfo& info)
