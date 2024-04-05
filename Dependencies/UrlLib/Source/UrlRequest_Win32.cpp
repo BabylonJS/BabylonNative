@@ -68,36 +68,41 @@ namespace UrlLib
             case UrlResponseType::String:
             {
                 return arcana::make_task(arcana::threadpool_scheduler, m_cancellationSource, [this, path] {
-                    std::ifstream file(path);
-                    if (!file.good())
+                    try
                     {
-                        std::stringstream msg;
-                        msg << "Failed to read file " << path.c_str();
+                        std::ifstream file{path};
+                        file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+                        std::ostringstream ss;
+                        ss << file.rdbuf();
+                        m_responseString = ss.str();
+                        m_statusCode = UrlStatusCode::Ok;
+                    }
+                    catch (std::ios_base::failure)
+                    {
+                        std::ostringstream msg;
+                        msg << "Failed to load file '" << winrt::to_string(path) << "'";
                         throw std::runtime_error{msg.str()};
                     }
-
-                    std::stringstream ss;
-                    ss << file.rdbuf();
-
-                    m_responseString = ss.str();
-                    m_statusCode = UrlStatusCode::Ok;
                 });
             }
             case UrlResponseType::Buffer:
             {
                 return arcana::make_task(arcana::threadpool_scheduler, m_cancellationSource, [this, path] {
-                    std::ifstream file(path, std::ios::binary);
-                    if (!file.good())
+                    try
                     {
-                        std::stringstream msg;
-                        msg << "Failed to read file " << path.c_str();
+                        std::ifstream file{path, std::ios::binary | std::ios::ate};
+                        file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+                        m_fileResponseBuffer.resize(file.tellg());
+                        file.seekg(0, std::ios::beg);
+                        file.read(reinterpret_cast<char*>(m_fileResponseBuffer.data()), m_fileResponseBuffer.size());
+                        m_statusCode = UrlStatusCode::Ok;
+                    }
+                    catch (std::ios::failure)
+                    {
+                        std::ostringstream msg;
+                        msg << "Failed to load file '" << winrt::to_string(path) << "'";
                         throw std::runtime_error{msg.str()};
                     }
-
-                    const auto fileSize = std::filesystem::file_size(path);
-                    m_fileResponseBuffer.resize(fileSize);
-                    file.read(reinterpret_cast<char*>(m_fileResponseBuffer.data()), fileSize);
-                    m_statusCode = UrlStatusCode::Ok;
                 });
             }
             default:
