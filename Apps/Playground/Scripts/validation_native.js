@@ -1,26 +1,41 @@
-var engine;
-var canvas;
-var currentScene;
-var config;
-var justOnce;
-var saveResult = true;
-var testWidth = 600;
-var testHeight = 400;
-var generateReferences = false;
+let currentScene;
+let config;
+const justOnce = false;
+const saveResult = true;
+const testWidth = 600;
+const testHeight = 400;
+const generateReferences = false;
+
+const engine = new BABYLON.NativeEngine();
+engine.getCaps().parallelShaderCompile = undefined;
+
+engine.getRenderingCanvas = function () {
+    return window;
+}
+
+engine.getInputElement = function () {
+    return 0;
+}
+
+const canvas = window;
 
 // Random replacement
-var seed = 1;
+let seed = 1;
 Math.random = function () {
-    var x = Math.sin(seed++) * 10000;
+    const x = Math.sin(seed++) * 10000;
     return x - Math.floor(x);
 }
 
 function compare(test, renderData, referenceImage, threshold, errorRatio) {
-    var size = renderData.length;
-    var referenceData = TestUtils.getImageData(referenceImage);
-    var differencesCount = 0;
+    const referenceData = TestUtils.getImageData(referenceImage);
+    if (referenceData.length != renderData.length) {
+        throw new Error(`Reference data length (${referenceData.length}) must match render data length (${renderData.length})`);
+    }
 
-    for (var index = 0; index < size; index += 4) {
+    const size = renderData.length;
+    let differencesCount = 0;
+
+    for (let index = 0; index < size; index += 4) {
         if (Math.abs(renderData[index] - referenceData[index]) < threshold &&
             Math.abs(renderData[index + 1] - referenceData[index + 1]) < threshold &&
             Math.abs(renderData[index + 2] - referenceData[index + 2]) < threshold) {
@@ -43,7 +58,7 @@ function compare(test, renderData, referenceImage, threshold, errorRatio) {
         console.log("No pixel difference!");
     }
 
-    let error = (differencesCount * 100) / (size / 4) > errorRatio;
+    const error = (differencesCount * 100) / (size / 4) > errorRatio;
 
     const width = testWidth / engine.getHardwareScalingLevel();
     const height = testHeight / engine.getHardwareScalingLevel();
@@ -64,13 +79,13 @@ function saveRenderedResult(test, renderData) {
     return false; // no error
 }
 
-function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction) {
+function evaluate(test, referenceImage, done, compareFunction) {
     engine._engine.getFrameBufferData(function (screenshot) {
-        var testRes = true;
+        let testRes = true;
 
         if (!test.onlyVisual) {
 
-            var defaultErrorRatio = 2.5;
+            const defaultErrorRatio = 2.5;
 
             if (compareFunction(test, screenshot, referenceImage, test.threshold || 25, test.errorRatio || defaultErrorRatio)) {
                 testRes = false;
@@ -89,9 +104,9 @@ function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, d
     });
 }
 
-function processCurrentScene(test, resultCanvas, result, renderImage, index, waitRing, done, compareFunction) {
+function processCurrentScene(test, renderImage, done, compareFunction) {
     currentScene.useConstantAnimationDeltaTime = true;
-    var renderCount = test.renderCount || 1;
+    let renderCount = test.renderCount || 1;
 
     currentScene.executeWhenReady(function () {
         if (currentScene.activeCamera && currentScene.activeCamera.useAutoRotationBehavior) {
@@ -104,7 +119,7 @@ function processCurrentScene(test, resultCanvas, result, renderImage, index, wai
 
                 if (renderCount === 0) {
                     engine.stopRenderLoop();
-                    evaluate(test, resultCanvas, result, renderImage, index, waitRing, done, compareFunction);
+                    evaluate(test, renderImage, done, compareFunction);
                 }
             }
             catch (e) {
@@ -115,11 +130,11 @@ function processCurrentScene(test, resultCanvas, result, renderImage, index, wai
     });
 }
 
-function loadPlayground(test, done, index, referenceImage, compareFunction) {
+function loadPlayground(test, done, referenceImage, compareFunction) {
     if (test.sceneFolder) {
         BABYLON.SceneLoader.Load(config.root + test.sceneFolder, test.sceneFilename, engine, function (newScene) {
             currentScene = newScene;
-            processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction);
+            processCurrentScene(test, referenceImage, done, compareFunction);
         },
             null,
             function (loadedScene, msg) {
@@ -132,14 +147,14 @@ function loadPlayground(test, done, index, referenceImage, compareFunction) {
             test.playgroundId += "#0";
         }
 
-        var snippetUrl = "https://snippet.babylonjs.com";
-        var pgRoot = "https://playground.babylonjs.com";
+        const snippetUrl = "https://snippet.babylonjs.com";
+        const pgRoot = "https://playground.babylonjs.com";
 
-        var retryTime = 500;
-        var maxRetry = 5;
-        var retry = 0;
+        const retryTime = 500;
+        const maxRetry = 5;
+        let retry = 0;
 
-        var onError = function () {
+        const onError = function () {
             retry++;
             if (retry < maxRetry) {
                 setTimeout(function () {
@@ -153,15 +168,14 @@ function loadPlayground(test, done, index, referenceImage, compareFunction) {
             }
         }
 
-        var loadPG = function () {
-            var xmlHttp = new XMLHttpRequest();
+        const loadPG = function () {
+            const xmlHttp = new XMLHttpRequest();
             xmlHttp.addEventListener("readystatechange", function () {
                 if (xmlHttp.readyState === 4) {
                     try {
                         xmlHttp.onreadystatechange = null;
-                        var snippet = JSON.parse(xmlHttp.responseText);
-                        var code = JSON.parse(snippet.jsonPayload).code.toString();
-                        code = code
+                        const snippet = JSON.parse(xmlHttp.responseText);
+                        let code = JSON.parse(snippet.jsonPayload).code.toString()
                             .replace(/"\/textures\//g, '"' + pgRoot + "/textures/")
                             .replace(/"textures\//g, '"' + pgRoot + "/textures/")
                             .replace(/\/scenes\//g, pgRoot + "/scenes/")
@@ -179,22 +193,19 @@ function loadPlayground(test, done, index, referenceImage, compareFunction) {
                         }
 
                         currentScene = eval(code + "\r\ncreateScene(engine)");
-                        var resultCanvas = 0;
-                        var result;
-                        var waitRing;
 
                         if (currentScene.then) {
                             // Handle if createScene returns a promise
                             currentScene.then(function (scene) {
                                 currentScene = scene;
-                                processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction);
+                                processCurrentScene(test, referenceImage, done, compareFunction);
                             }).catch(function (e) {
                                 console.error(e);
                                 onError();
                             })
                         } else {
                             // Handle if createScene returns a scene
-                            processCurrentScene(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction);
+                            processCurrentScene(test, referenceImage, done, compareFunction);
                         }
 
                     }
@@ -218,7 +229,7 @@ function loadPlayground(test, done, index, referenceImage, compareFunction) {
             BABYLON.Tools.BaseUrl = config.root + test.specificRoot;
         }
 
-        var request = new XMLHttpRequest();
+        const request = new XMLHttpRequest();
         request.open('GET', config.root + test.scriptToRun, true);
 
         request.onreadystatechange = function () {
@@ -226,30 +237,30 @@ function loadPlayground(test, done, index, referenceImage, compareFunction) {
                 try {
                     request.onreadystatechange = null;
 
-                    var scriptToRun = request.responseText.replace(/..\/..\/assets\//g, config.root + "/Assets/");
+                    const scriptToRun = request.responseText.replace(/..\/..\/assets\//g, config.root + "/Assets/");
                     scriptToRun = scriptToRun.replace(/..\/..\/Assets\//g, config.root + "/Assets/");
                     scriptToRun = scriptToRun.replace(/\/assets\//g, config.root + "/Assets/");
 
                     if (test.replace) {
-                        var split = test.replace.split(",");
-                        for (var i = 0; i < split.length; i += 2) {
-                            var source = split[i].trim();
-                            var destination = split[i + 1].trim();
+                        const split = test.replace.split(",");
+                        for (let i = 0; i < split.length; i += 2) {
+                            const source = split[i].trim();
+                            const destination = split[i + 1].trim();
                             scriptToRun = scriptToRun.replace(source, destination);
                         }
                     }
 
                     if (test.replaceUrl) {
-                        var split = test.replaceUrl.split(",");
-                        for (var i = 0; i < split.length; i++) {
-                            var source = split[i].trim();
-                            var regex = new RegExp(source, "g");
+                        const split = test.replaceUrl.split(",");
+                        for (let i = 0; i < split.length; i++) {
+                            const source = split[i].trim();
+                            const regex = new RegExp(source, "g");
                             scriptToRun = scriptToRun.replace(regex, config.root + test.rootPath + source);
                         }
                     }
 
                     currentScene = eval(scriptToRun + test.functionToCall + "(engine)");
-                    processCurrentScene(test, resultCanvas, result, renderImage, index, waitRing, done, compareFunction);
+                    processCurrentScene(test, renderImage, done, compareFunction);
                 }
                 catch (e) {
                     console.error(e);
@@ -270,7 +281,7 @@ function runTest(index, done) {
         done(false);
     }
 
-    var test = config.tests[index];
+    const test = config.tests[index];
     if (test.onlyVisual || test.excludeFromAutomaticTesting) {
         done(true);
         return;
@@ -279,47 +290,34 @@ function runTest(index, done) {
         done(true);
         return;
     }
-    let testInfo = "Running " + test.title;
+    const testInfo = "Running " + test.title;
     console.log(testInfo);
     TestUtils.setTitle(testInfo);
 
     seed = 1;
 
-    let onLoadFileError = function (request, exception) {
-        console.error("Failed to retrieve " + url + ".", exception);
-        done(false);
-    };
-    var onload = function (data, responseURL) {
-        if (typeof (data) === "string") {
-            throw new Error("Decode Image from string data not yet implemented.");
-        }
-
-        var referenceImage = TestUtils.decodeImage(data);
-        loadPlayground(test, done, index, referenceImage, compare);
-
-    };
-
     if (generateReferences) {
-        loadPlayground(test, done, index, undefined, saveRenderedResult);
+        loadPlayground(test, done, undefined, saveRenderedResult);
     } else {
+        const onLoadFileError = function (request, exception) {
+            console.error("Failed to retrieve " + url + ".", exception);
+            done(false);
+        };
+
+        const onload = function (data, responseURL) {
+            if (typeof (data) === "string") {
+                throw new Error("Decode Image from string data not yet implemented.");
+            }
+
+            const referenceImage = TestUtils.decodeImage(data);
+            loadPlayground(test, done, referenceImage, compare);
+        };
+
         // run test and image comparison
         const url = "app:///ReferenceImages/" + test.referenceImage;
         BABYLON.Tools.LoadFile(url, onload, undefined, undefined, /*useArrayBuffer*/true, onLoadFileError);
     }
 }
-
-engine = new BABYLON.NativeEngine();
-engine.getCaps().parallelShaderCompile = undefined;
-
-engine.getRenderingCanvas = function () {
-    return window;
-}
-
-engine.getInputElement = function () {
-    return 0;
-}
-
-canvas = window;
 
 OffscreenCanvas = function (width, height) {
     return {
@@ -345,7 +343,7 @@ document = {
     removeEventListener: function () { }
 }
 
-var xhr = new XMLHttpRequest();
+const xhr = new XMLHttpRequest();
 xhr.open("GET", "app:///Scripts/config.json", true);
 
 xhr.addEventListener("readystatechange", function () {
@@ -353,8 +351,7 @@ xhr.addEventListener("readystatechange", function () {
         config = JSON.parse(xhr.responseText);
 
         // Run tests
-        var index = 0;
-        var recursiveRunTest = function (i) {
+        const recursiveRunTest = function (i) {
             runTest(i, function (status) {
                 if (!status) {
                     TestUtils.exit(-1);
@@ -370,7 +367,7 @@ xhr.addEventListener("readystatechange", function () {
             });
         }
 
-        recursiveRunTest(index);
+        recursiveRunTest(0);
     }
 }, false);
 

@@ -14,7 +14,6 @@ target_link_libraries(NativeXr
     PRIVATE bgfx
     PRIVATE GraphicsDeviceContext
     PRIVATE JsRuntimeInternal
-    PRIVATE napi_extensions
     PRIVATE xr)
 
 set_property(TARGET NativeXr PROPERTY FOLDER Plugins)

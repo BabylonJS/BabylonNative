@@ -199,8 +199,3 @@ endif()
 if(WINDOWS_STORE)
     add_subdirectory(WindowsAppSDK)
 endif()
-
-# --------------------------------------------------
-# NAPI Extensions
-# --------------------------------------------------
-add_subdirectory(napi-extensions)

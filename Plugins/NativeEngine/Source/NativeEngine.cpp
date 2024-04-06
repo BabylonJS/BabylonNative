@@ -10,7 +10,7 @@
 #include <arcana/tracing/trace_region.h>
 
 #include <napi/env.h>
-#include <napi/napi_pointer.h>
+#include <napi/pointer.h>
 
 #include <bgfx/bgfx.h>
 
@@ -724,6 +724,8 @@ namespace Babylon
 
     void NativeEngine::Dispose()
     {
+        m_deviceContext.SetRenderResetCallback(nullptr);
+
         m_cancellationSource->cancel();
     }
 
@@ -1377,17 +1379,8 @@ namespace Babylon
         const auto textureDestination = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         const auto textureSource = info[1].As<Napi::Pointer<Graphics::Texture>>().Get();
 
-        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, textureDestination, textureSource, cancellationSource = m_cancellationSource]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, textureDestination, textureSource, updateToken = m_update.GetUpdateToken(), cancellationSource = m_cancellationSource]() {
-                bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
-                GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
-            }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
-                if (!cancellationSource->cancelled() && result.has_error())
-                {
-                    Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
-                }
-            });
-        });
+        bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
+        GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
     }
 
     void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)

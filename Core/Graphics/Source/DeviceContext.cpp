@@ -2,7 +2,7 @@
 
 #include "DeviceImpl.h"
 
-#include <napi/napi_pointer.h>
+#include <napi/pointer.h>
 
 namespace Babylon::Graphics
 {

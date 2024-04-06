@@ -3,7 +3,7 @@
 #include <Babylon/Graphics/DeviceContext.h>
 #include <Babylon/Graphics/FrameBuffer.h>
 
-#include <napi/napi_pointer.h>
+#include <napi/pointer.h>
 
 #include <arcana/containers/ticketed_collection.h>
 

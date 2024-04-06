@@ -16,7 +16,7 @@ namespace Babylon
     class IndexBuffer final
     {
     public:
-        IndexBuffer(Graphics::DeviceContext& deviceContext, gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic);
+        IndexBuffer(Graphics::DeviceContext& deviceContext, const gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic);
         ~IndexBuffer();
 
         // No copy or move semantics

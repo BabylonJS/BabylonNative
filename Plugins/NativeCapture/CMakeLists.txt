@@ -10,8 +10,7 @@ target_include_directories(NativeCapture PUBLIC
 
 target_link_libraries(NativeCapture
     PUBLIC JsRuntimeInternal
-    PRIVATE GraphicsDeviceContext
-    PRIVATE napi_extensions)
+    PRIVATE GraphicsDeviceContext)
 
 set_property(TARGET NativeCapture PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

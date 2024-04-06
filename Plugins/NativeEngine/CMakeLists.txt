@@ -41,8 +41,7 @@ target_link_libraries(NativeEngine
     PRIVATE glslang
     PRIVATE glslang-default-resource-limits
     PRIVATE SPIRV
-    PRIVATE GraphicsDeviceContext
-    PRIVATE napi_extensions)
+    PRIVATE GraphicsDeviceContext)
 warnings_as_errors(NativeEngine)
 
 if(TARGET spirv-cross-hlsl)

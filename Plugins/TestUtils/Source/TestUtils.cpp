@@ -27,9 +27,9 @@ namespace Babylon::Plugins::Internal
         const auto height = info[2].As<Napi::Number>().Uint32Value();
         const auto filename = info[3].As<Napi::String>().Utf8Value();
 
-        if (buffer.ByteLength() < (width * height * 4))
+        if (buffer.ByteLength() < width * height * 4)
         {
-            return;
+            throw Napi::Error::New(info.Env(), "Buffer byte length is invalid for width and height");
         }
 
         bx::MemoryBlock mb(&Graphics::DeviceContext::GetDefaultAllocator());

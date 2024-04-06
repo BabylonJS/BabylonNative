@@ -41,7 +41,6 @@ elseif(ANDROID)
 endif()
 
 target_link_libraries(Graphics
-    PRIVATE napi_extensions
     PRIVATE JsRuntimeInternal
     PRIVATE bgfx
     PRIVATE bimg

@@ -15,7 +15,7 @@
 #include <set>
 #include <memory>
 #include <napi/napi.h>
-#include <napi/napi_pointer.h>
+#include <napi/pointer.h>
 #include <arcana/threading/task.h>
 #include <arcana/tracing/trace_region.h>
 

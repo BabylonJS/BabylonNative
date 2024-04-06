@@ -43,7 +43,6 @@ target_link_libraries(NativeCamera
     PUBLIC napi
     PRIVATE JsRuntimeInternal
     PRIVATE GraphicsDeviceContext
-    PRIVATE napi_extensions
     ${ADDITIONAL_LIBRARIES})
 
 set_property(TARGET NativeCamera PROPERTY FOLDER Plugins)

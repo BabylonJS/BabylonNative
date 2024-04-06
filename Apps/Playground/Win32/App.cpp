@@ -137,7 +137,23 @@ namespace
         device->StartRenderingCurrentFrame();
         update->Start();
 
-        runtime.emplace();
+        Babylon::AppRuntime::Options options{};
+
+        options.EnableDebugger = true;
+
+        options.UnhandledExceptionHandler = [hWnd](const Napi::Error& error) {
+            std::ostringstream ss{};
+            ss << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
+            OutputDebugStringA(ss.str().data());
+
+            std::cerr << ss.str();
+            std::cerr.flush();
+
+            Babylon::Plugins::TestUtils::errorCode = -1;
+            PostMessage(hWnd, WM_CLOSE, 0, 0);
+        };
+
+        runtime.emplace(options);
 
         runtime->Dispatch([hWnd](Napi::Env env) {
             device->AddToJavaScript(env);

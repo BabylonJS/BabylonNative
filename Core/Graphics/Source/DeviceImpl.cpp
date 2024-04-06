@@ -19,6 +19,11 @@
 namespace
 {
     constexpr auto JS_GRAPHICS_NAME = "_Graphics";
+
+    bool FuzzyEqual(float a, float b, float epsilon = std::numeric_limits<float>::epsilon())
+    {
+        return std::fabs(a - b) < epsilon;
+    }
 }
 
 namespace Babylon::Graphics
@@ -52,22 +57,23 @@ namespace Babylon::Graphics
 
     uintptr_t DeviceImpl::GetId() const
     {
-       return m_bgfxId;
+        return m_bgfxId;
     }
 
     void DeviceImpl::UpdateWindow(WindowT window)
     {
         std::scoped_lock lock{m_state.Mutex};
-        m_state.Bgfx.Dirty = true;
         ConfigureBgfxPlatformData(m_state.Bgfx.InitState.platformData, window);
         ConfigureBgfxRenderType(m_state.Bgfx.InitState.platformData, m_state.Bgfx.InitState.type);
         m_state.Resolution.DevicePixelRatio = GetDevicePixelRatio(window);
+        m_state.Bgfx.Dirty = true;
     }
 
     void DeviceImpl::UpdateDevice(DeviceT device)
     {
-       std::scoped_lock lock{ m_state.Mutex };
-       m_state.Bgfx.InitState.platformData.context = device;
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Bgfx.InitState.platformData.context = device;
+        m_state.Bgfx.Dirty = true;
     }
 
     void DeviceImpl::UpdateSize(size_t width, size_t height)
@@ -81,7 +87,6 @@ namespace Babylon::Graphics
     void DeviceImpl::UpdateMSAA(uint8_t value)
     {
         std::scoped_lock lock{m_state.Mutex};
-        m_state.Bgfx.Dirty = true;
         auto& init = m_state.Bgfx.InitState;
         init.resolution.reset &= ~BGFX_RESET_MSAA_MASK;
         switch (value)
@@ -103,25 +108,26 @@ namespace Babylon::Graphics
                 init.resolution.reset |= BGFX_RESET_MSAA_X16;
                 break;
             default:
-                m_bgfxCallback.trace(__FILE__, __LINE__, "WARNING: Setting an incorrect value for SetMSAA (%d). Correct values are 0, 1 (disable MSAA) or 2, 4, 8, 16.", int(value));
+                m_bgfxCallback.trace(__FILE__, __LINE__, "WARNING: Setting an incorrect value for SetMSAA (%d). Correct values are 0, 1 (disable MSAA) or 2, 4, 8, 16.", static_cast<int>(value));
                 break;
         }
+        m_state.Bgfx.Dirty = true;
     }
 
     void DeviceImpl::UpdateAlphaPremultiplied(bool enabled)
     {
         std::scoped_lock lock{m_state.Mutex};
-        m_state.Bgfx.Dirty = true;
         auto& init = m_state.Bgfx.InitState;
         init.resolution.reset &= ~BGFX_RESET_TRANSPARENT_BACKBUFFER;
         init.resolution.reset |= enabled ? BGFX_RESET_TRANSPARENT_BACKBUFFER : 0;
+        m_state.Bgfx.Dirty = true;
     }
 
     void DeviceImpl::UpdateDevicePixelRatio(float value)
     {
         std::scoped_lock lock{m_state.Mutex};
-        m_state.Bgfx.Dirty = true;
         m_state.Resolution.DevicePixelRatio = value;
+        m_state.Bgfx.Dirty = true;
     }
 
     void DeviceImpl::SetRenderResetCallback(std::function<void()> callback)
@@ -245,9 +251,6 @@ namespace Babylon::Graphics
         // Ensure rendering is enabled.
         EnableRendering();
 
-        // Update bgfx state if necessary.
-        UpdateBgfxState();
-
         // Unlock the update safe timespans.
         {
             std::scoped_lock lock{m_updateSafeTimespansMutex};
@@ -295,17 +298,17 @@ namespace Babylon::Graphics
 
     void DeviceImpl::SetHardwareScalingLevel(float level)
     {
-        if (level <= std::numeric_limits<float>::epsilon())
+        if (FuzzyEqual(level, 0.0f))
         {
             throw std::runtime_error{"HardwareScalingValue cannot be less than or equal to 0."};
         }
 
+        std::scoped_lock lock{m_state.Mutex};
+        if (!FuzzyEqual(m_state.Resolution.HardwareScalingLevel, level))
         {
-            std::scoped_lock lock{m_state.Mutex};
             m_state.Resolution.HardwareScalingLevel = level;
+            UpdateBgfxResolution();
         }
-
-        UpdateBgfxResolution();
     }
 
     float DeviceImpl::GetDevicePixelRatio() const
@@ -343,8 +346,8 @@ namespace Babylon::Graphics
             std::scoped_lock lock{m_state.Mutex};
             if ((m_state.Bgfx.InitState.resolution.reset & BGFX_RESET_CAPTURE) == 0)
             {
-                m_state.Bgfx.Dirty = true;
                 m_state.Bgfx.InitState.resolution.reset |= BGFX_RESET_CAPTURE;
+                m_state.Bgfx.Dirty = true;
             }
         }
 
@@ -369,12 +372,11 @@ namespace Babylon::Graphics
             bgfx::setPlatformData(m_state.Bgfx.InitState.platformData);
 
             // Ensure bgfx rebinds all texture information.
-            bgfx::discard(BGFX_DISCARD_ALL);
+            bgfx::discard();
 
             auto& res = m_state.Bgfx.InitState.resolution;
             bgfx::reset(res.width, res.height, res.reset);
             bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(res.width), static_cast<uint16_t>(res.height));
-            bgfx::frame();
 
             m_state.Bgfx.Dirty = false;
         }
@@ -383,20 +385,11 @@ namespace Babylon::Graphics
     void DeviceImpl::UpdateBgfxResolution()
     {
         std::scoped_lock lock{m_state.Mutex};
-        m_state.Bgfx.Dirty = true;
         auto& res = m_state.Bgfx.InitState.resolution;
         auto level = m_state.Resolution.HardwareScalingLevel;
         res.width = static_cast<uint32_t>(m_state.Resolution.Width / level);
         res.height = static_cast<uint32_t>(m_state.Resolution.Height / level);
-    }
-
-    void DeviceImpl::DiscardIfDirty()
-    {
-        std::scoped_lock lock{m_state.Mutex};
-        if (m_state.Bgfx.Dirty)
-        {
-            bgfx::discard();
-        }
+        m_state.Bgfx.Dirty = true;
     }
 
     void DeviceImpl::RequestScreenShots()
@@ -421,8 +414,8 @@ namespace Babylon::Graphics
         // Automatically end bgfx encoders.
         EndEncoders();
 
-        // Discard everything if the bgfx state is dirty.
-        DiscardIfDirty();
+        // Update bgfx state if necessary.
+        UpdateBgfxState();
 
         // Request screen shots before bgfx::frame.
         RequestScreenShots();
