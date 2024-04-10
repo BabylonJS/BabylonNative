@@ -3517,7 +3517,7 @@ namespace Babylon
         {
         }
 
-        NativeXr NativeXr::Initialize(Napi::Env env)
+        NativeXr BABYLON_API NativeXr::Initialize(Napi::Env env)
         {
             auto impl{std::make_shared<Impl>(env)};
 

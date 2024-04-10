@@ -229,7 +229,7 @@ namespace Babylon::Polyfills
     {
     }
 
-    Canvas Canvas::Initialize(Napi::Env env)
+    Canvas BABYLON_API Canvas::Initialize(Napi::Env env)
     {
         auto impl{std::make_shared<Canvas::Impl>(env)};
 

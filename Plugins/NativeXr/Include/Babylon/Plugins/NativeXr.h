@@ -1,6 +1,7 @@
 #pragma once
 
 #include <napi/env.h>
+#include <Babylon/Api.h>
 
 namespace Babylon::Plugins
 {
@@ -17,7 +18,7 @@ namespace Babylon::Plugins
 
         ~NativeXr();
 
-        static NativeXr Initialize(Napi::Env env);
+        static NativeXr BABYLON_API Initialize(Napi::Env env);
 
         void UpdateWindow(void* windowPtr);
         void SetSessionStateChangedCallback(std::function<void(bool)> callback);
