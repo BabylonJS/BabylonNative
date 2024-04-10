@@ -35,7 +35,7 @@ namespace Babylon
         void Dispatch(Dispatchable<void(Napi::Env)> callback);
 
         // Default unhandled exception handler that outputs the error message to the program output.
-        static void DefaultUnhandledExceptionHandler(const Napi::Error& error);
+        static void BABYLON_API DefaultUnhandledExceptionHandler(const Napi::Error& error);
 
     private:
         // These three methods are the mechanism by which platform- and JavaScript-specific

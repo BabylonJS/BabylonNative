@@ -30,7 +30,7 @@ namespace
 
 namespace Babylon::Polyfills::Scheduling
 {
-    void Initialize(Napi::Env env)
+    void BABYLON_API Initialize(Napi::Env env)
     {
         auto global = env.Global();
         if (global.Get(JS_SET_TIMEOUT_NAME).IsUndefined() && global.Get(JS_CLEAR_TIMEOUT_NAME).IsUndefined())

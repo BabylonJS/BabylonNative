@@ -25,13 +25,13 @@ namespace Babylon
         jsNative.Set(JS_RUNTIME_NAME, jsRuntime);
     }
 
-    JsRuntime& JsRuntime::CreateForJavaScript(Napi::Env env, DispatchFunctionT dispatchFunction)
+    JsRuntime& BABYLON_API JsRuntime::CreateForJavaScript(Napi::Env env, DispatchFunctionT dispatchFunction)
     {
         auto* runtime = new JsRuntime(env, std::move(dispatchFunction));
         return *runtime;
     }
 
-    JsRuntime& JsRuntime::GetFromJavaScript(Napi::Env env)
+    JsRuntime& BABYLON_API JsRuntime::GetFromJavaScript(Napi::Env env)
     {
         return *NativeObject::GetFromJavaScript(env)
                     .As<Napi::Object>()
@@ -40,7 +40,7 @@ namespace Babylon
                     .Data();
     }
 
-    void JsRuntime::Dispatch(std::function<void(Napi::Env)> function)
+    void JsRuntime::Dispatch(std::function<void BABYLON_API (Napi::Env)> function)
     {
         std::scoped_lock lock{m_mutex};
         m_dispatchFunction([function = std::move(function)](Napi::Env env) {

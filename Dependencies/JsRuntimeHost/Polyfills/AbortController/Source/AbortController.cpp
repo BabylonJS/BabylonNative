@@ -42,7 +42,7 @@ namespace Babylon::Polyfills::Internal
 
 namespace Babylon::Polyfills::AbortController
 {
-    void Initialize(Napi::Env env)
+    void BABYLON_API Initialize(Napi::Env env)
     {
         Internal::AbortController::Initialize(env);
         Internal::AbortSignal::Initialize(env);

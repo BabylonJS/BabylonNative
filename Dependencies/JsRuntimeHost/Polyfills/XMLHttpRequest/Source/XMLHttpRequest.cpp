@@ -293,7 +293,7 @@ namespace Babylon::Polyfills::Internal
 
 namespace Babylon::Polyfills::XMLHttpRequest
 {
-    void Initialize(Napi::Env env)
+    void BABYLON_API Initialize(Napi::Env env)
     {
         Internal::XMLHttpRequest::Initialize(env);
     }

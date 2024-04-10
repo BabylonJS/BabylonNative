@@ -1,6 +1,7 @@
 #pragma once
 
 #include <napi/env.h>
+#include <Babylon/Api.h>
 
 namespace Babylon::Polyfills::Console
 {
@@ -14,7 +15,7 @@ namespace Babylon::Polyfills::Console
         Error,
     };
 
-    using CallbackT = std::function<void(const char*, LogLevel)>;
+    using CallbackT = std::function<void BABYLON_API (const char*, LogLevel)>;
 
-    void Initialize(Napi::Env env, CallbackT callback);
+    void BABYLON_API Initialize(Napi::Env env, CallbackT callback);
 }

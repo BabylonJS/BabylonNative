@@ -7,7 +7,9 @@ warnings_as_errors(Console)
 
 target_include_directories(Console PUBLIC "Include")
 
-target_link_libraries(Console PUBLIC napi)
+target_link_libraries(Console
+    PUBLIC Foundation
+    PUBLIC napi)
 
 set_property(TARGET Console PROPERTY FOLDER Polyfills)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

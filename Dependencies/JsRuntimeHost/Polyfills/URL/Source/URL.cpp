@@ -127,7 +127,7 @@ namespace Babylon::Polyfills::Internal
 
 namespace Babylon::Polyfills::URL
 {
-    void Initialize(Napi::Env env)
+    void BABYLON_API Initialize(Napi::Env env)
     {
         Internal::URL::Initialize(env);
         Internal::URLSearchParams::Initialize(env);

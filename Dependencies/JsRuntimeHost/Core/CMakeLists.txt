@@ -4,6 +4,7 @@ else()
     add_subdirectory(Node-API)
 endif()
 
+add_subdirectory(Foundation)
 add_subdirectory(JsRuntime)
 
 if(JSRUNTIMEHOST_CORE_APPRUNTIME)

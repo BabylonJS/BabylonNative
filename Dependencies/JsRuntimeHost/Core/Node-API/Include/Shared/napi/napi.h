@@ -1861,7 +1861,7 @@ class Error : public ObjectReference
 
  protected:
   /// !cond INTERNAL
-  using create_error_fn = napi_status (*)(napi_env envb,
+  using create_error_fn = napi_status (NAPI_CDECL *) (napi_env envb,
                                           napi_value code,
                                           napi_value msg,
                                           napi_value* result);
@@ -2453,7 +2453,7 @@ class ObjectWrap : public InstanceWrap<T>, public Reference<Object> {
                                                 napi_callback_info info);
   static napi_value StaticSetterCallbackWrapper(napi_env env,
                                                 napi_callback_info info);
-  static void FinalizeCallback(napi_env env, void* data, void* hint);
+  static void NAPI_CDECL FinalizeCallback(napi_env env, void* data, void* hint);
   static Function DefineClass(Napi::Env env,
                               const char* utf8name,
                               const size_t props_count,

@@ -280,7 +280,7 @@ namespace Babylon::Polyfills::Internal
 
 namespace Babylon::Polyfills::WebSocket
 {
-    void Initialize(Napi::Env env)
+    void BABYLON_API Initialize(Napi::Env env)
     {
         Internal::WebSocket::Initialize(env);
     }

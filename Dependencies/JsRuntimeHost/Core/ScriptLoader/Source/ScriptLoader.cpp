@@ -82,7 +82,7 @@ namespace Babylon
         m_impl->Eval(std::move(source), std::move(url));
     }
 
-    void ScriptLoader::Dispatch(std::function<void(Napi::Env)> callback)
+    void ScriptLoader::Dispatch(std::function<void BABYLON_API (Napi::Env)> callback)
     {
         m_impl->Dispatch(std::move(callback));
     }

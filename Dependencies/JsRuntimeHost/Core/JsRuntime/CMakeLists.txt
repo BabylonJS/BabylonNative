@@ -10,6 +10,7 @@ target_include_directories(JsRuntime PRIVATE "Include/Babylon")
 target_include_directories(JsRuntime PUBLIC "Include")
 
 target_link_libraries(JsRuntime
+    PUBLIC Foundation
     PUBLIC napi
     PRIVATE arcana)
 

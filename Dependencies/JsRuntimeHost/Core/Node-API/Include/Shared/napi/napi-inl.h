@@ -33,7 +33,7 @@ namespace details {
 constexpr int napi_no_external_buffers_allowed = 22;
 
 template <typename FreeType>
-inline void default_finalizer(napi_env /*env*/, void* data, void* /*hint*/) {
+inline void NAPI_CDECL default_finalizer(napi_env /*env*/, void* data, void* /*hint*/) {
   delete static_cast<FreeType*>(data);
 }
 
@@ -105,7 +105,7 @@ inline void WrapVoidCallback(Callable callback) {
 
 template <typename Callable, typename Return>
 struct CallbackData {
-  static inline napi_value Wrapper(napi_env env, napi_callback_info info) {
+  static inline napi_value NAPI_CDECL Wrapper(napi_env env, napi_callback_info info) {
     return details::WrapCallback([&] {
       CallbackInfo callbackInfo(env, info);
       CallbackData* callbackData =
@@ -121,7 +121,7 @@ struct CallbackData {
 
 template <typename Callable>
 struct CallbackData<Callable, void> {
-  static inline napi_value Wrapper(napi_env env, napi_callback_info info) {
+  static inline napi_value NAPI_CDECL Wrapper(napi_env env, napi_callback_info info) {
     return details::WrapCallback([&] {
       CallbackInfo callbackInfo(env, info);
       CallbackData* callbackData =
@@ -179,7 +179,7 @@ napi_value TemplatedInstanceVoidCallback(napi_env env, napi_callback_info info)
 
 template <typename T, typename Finalizer, typename Hint = void>
 struct FinalizeData {
-  static inline void Wrapper(napi_env env,
+  static inline void NAPI_CDECL Wrapper(napi_env env,
                              void* data,
                              void* finalizeHint) NAPI_NOEXCEPT {
     WrapVoidCallback([&] {
@@ -209,7 +209,7 @@ template <typename ContextType = void,
           typename Finalizer = std::function<void(Env, void*, ContextType*)>,
           typename FinalizerDataType = void>
 struct ThreadSafeFinalize {
-  static inline void Wrapper(napi_env env,
+  static inline void NAPI_CDECL Wrapper(napi_env env,
                              void* rawFinalizeData,
                              void* /* rawContext */) {
     if (rawFinalizeData == nullptr) return;

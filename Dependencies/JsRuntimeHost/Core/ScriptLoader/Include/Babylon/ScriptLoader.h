@@ -1,6 +1,7 @@
 #pragma once
 
 #include <napi/env.h>
+#include <Babylon/Api.h>
 
 #include <functional>
 #include <memory>
@@ -11,7 +12,7 @@ namespace Babylon
     class ScriptLoader
     {
     public:
-        using DispatchFunctionT = std::function<void(std::function<void(Napi::Env)>)>;
+        using DispatchFunctionT = std::function<void BABYLON_API (std::function<void BABYLON_API (Napi::Env)>)>;
 
         ScriptLoader(DispatchFunctionT dispatchFunction);
 
@@ -29,7 +30,7 @@ namespace Babylon
 
         void LoadScript(std::string url);
         void Eval(std::string source, std::string url);
-        void Dispatch(std::function<void(Napi::Env)> callback);
+        void Dispatch(std::function<void BABYLON_API (Napi::Env)> callback);
 
     private:
         class Impl;

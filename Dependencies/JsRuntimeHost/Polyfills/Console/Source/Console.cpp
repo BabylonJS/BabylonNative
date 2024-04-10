@@ -124,7 +124,7 @@ namespace
 
 namespace Babylon::Polyfills::Console
 {
-    void Initialize(Napi::Env env, CallbackT callback)
+    void BABYLON_API Initialize(Napi::Env env, CallbackT callback)
     {
         Napi::HandleScope scope{env};
 

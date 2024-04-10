@@ -8,6 +8,7 @@ warnings_as_errors(ScriptLoader)
 target_include_directories(ScriptLoader PUBLIC "Include")
 
 target_link_libraries(ScriptLoader
+    PUBLIC Foundation
     PUBLIC napi
     PRIVATE arcana
     PRIVATE UrlLib)
