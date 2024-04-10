@@ -31,7 +31,7 @@ namespace
 
 namespace Babylon::Plugins::NativeTracing
 {
-    void Initialize(Napi::Env env)
+    void BABYLON_API Initialize(Napi::Env env)
     {
         auto nativeObject{JsRuntime::NativeObject::GetFromJavaScript(env)};
         nativeObject.Set("startPerformanceCounter", Napi::Function::New(env, StartPerformanceCounter, "startPerformanceCounter"));

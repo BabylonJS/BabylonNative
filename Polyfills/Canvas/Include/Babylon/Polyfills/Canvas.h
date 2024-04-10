@@ -1,6 +1,7 @@
 #pragma once
 
 #include <napi/env.h>
+#include <Babylon/Api.h>
 
 namespace Babylon::Polyfills
 {
@@ -20,7 +21,7 @@ namespace Babylon::Polyfills
         // This instance must live as long as the JS Runtime.
         // If JSRuntime is attached/detached (BabylonReactNative),
         // then this instance must live forever.
-        [[nodiscard]] static Canvas Initialize(Napi::Env env);
+        [[nodiscard]] static Canvas BABYLON_API Initialize(Napi::Env env);
 
         void FlushGraphicResources();
 

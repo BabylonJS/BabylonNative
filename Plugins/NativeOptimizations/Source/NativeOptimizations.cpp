@@ -197,7 +197,7 @@ namespace
 
 namespace Babylon::Plugins::NativeOptimizations
 {
-    void Initialize(Napi::Env env)
+    void BABYLON_API Initialize(Napi::Env env)
     {
         auto nativeObject{JsRuntime::NativeObject::GetFromJavaScript(env)};
         nativeObject.Set("_TransformVector3Coordinates", Napi::Function::New(env, TransformVector3Coordinates, "_TransformVector3Coordinates"));

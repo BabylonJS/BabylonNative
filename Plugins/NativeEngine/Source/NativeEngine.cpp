@@ -400,7 +400,7 @@ namespace Babylon
         using CommandFunctionPointerT = void (NativeEngine::*)(NativeDataStream::Reader&);
     }
 
-    void NativeEngine::Initialize(Napi::Env env)
+    void BABYLON_API NativeEngine::Initialize(Napi::Env env)
     {
         // Initialize the JavaScript side.
         Napi::HandleScope scope{env};
