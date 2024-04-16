@@ -1,6 +1,5 @@
 import UIKit
 import MetalKit
-import UIKit
 
 /**
   * A very simple gesture recognizer.  All that it does is to emulate the functionality found in other platforms
