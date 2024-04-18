@@ -1,7 +1,6 @@
 #include "XMLHttpRequest.h"
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
-#include <sstream>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -255,19 +254,18 @@ namespace Babylon::Polyfills::Internal
             }
         }
 
-        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [env{info.Env()}, this](arcana::expected<void, std::exception_ptr> result) {
-            if (result.has_error())
-            {
-                Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
-                return;
-            }
-
+        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [this]() {
             SetReadyState(ReadyState::Done);
             RaiseEvent(EventType::LoadEnd);
 
             // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
             // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
             m_eventHandlerRefs.clear();
+        }).then(arcana::inline_scheduler, arcana::cancellation::none(), [env = info.Env()](arcana::expected<void, std::exception_ptr> result) {
+            if (result.has_error())
+            {
+                Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
+            }
         });
     }
 

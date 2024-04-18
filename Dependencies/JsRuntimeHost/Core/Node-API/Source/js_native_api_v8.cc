@@ -2944,20 +2944,6 @@ napi_status NAPI_CDECL napi_create_arraybuffer(napi_env env,
   return GET_RETURN_STATUS(env);
 }
 
-struct backingStorDeleterCallbackWrapper
-{
-    napi_env env;
-    napi_finalize finalize_cb;
-    void* finalize_hint;
-};
-
-void backingStorDeleterCallback(void* data, size_t length, void* deleter_data)
-{
-    auto deleterData = (backingStorDeleterCallbackWrapper*)deleter_data;
-    deleterData->finalize_cb(deleterData->env, data, deleterData->finalize_hint);
-    delete deleterData;
-}
-
 napi_status NAPI_CDECL
 napi_create_external_arraybuffer(napi_env env,
     void* external_data,
@@ -2970,32 +2956,47 @@ napi_create_external_arraybuffer(napi_env env,
 
     v8::Isolate* isolate = env->isolate;
 
-    std::unique_ptr<v8::BackingStore> backingStore;
-#if defined(V8_ENABLE_SANDBOX)
-    v8::Local<v8::ArrayBuffer> buffer = v8::ArrayBuffer::New(isolate, byte_length);
-    memcpy(buffer->Data(), external_data, byte_length);
+#ifdef V8_ENABLE_SANDBOX
+    // TODO: We should error out like what happens with node.js. For now, we will copy the buffer instead.
+    auto buffer = v8::ArrayBuffer::New(isolate, byte_length);
+    std::memcpy(buffer->GetBackingStore()->Data(), external_data, byte_length);
+
     if (finalize_cb != nullptr) {
-        // Create a self-deleting weak reference that invokes the finalizer
-        // callback.
-        v8impl::Reference::New(env,
-            buffer,
-            0,
-            v8impl::Ownership::kUserland,
-            finalize_cb,
-            external_data,
-            finalize_hint);
+      // Create a self-deleting weak reference that invokes the finalizer
+      // callback.
+      v8impl::Reference::New(env,
+          buffer,
+          0,
+          v8impl::Ownership::kUserland,
+          finalize_cb,
+          external_data,
+          finalize_hint);
     }
 #else
-    if (finalize_cb != nullptr) {
-        backingStore = v8::ArrayBuffer::NewBackingStore(external_data, byte_length, backingStorDeleterCallback, new backingStorDeleterCallbackWrapper{ env,finalize_cb, finalize_hint });
-    }
-    else {
-        backingStore = v8::ArrayBuffer::NewBackingStore(isolate, byte_length);
-        memcpy(backingStore->Data(), external_data, byte_length);
-    }
-    v8::Local<v8::ArrayBuffer> buffer = v8::ArrayBuffer::New(isolate, std::move(backingStore));
+    // TODO: This code is untested
+    struct FinalizeData
+    {
+      napi_env env;
+      napi_finalize finalize_cb;
+      void* finalize_hint;
+
+      static void Finalize(void* data, size_t length, void* deleter_data) {
+        // TODO: Is this on the right thread?
+        auto finalize_data = reinterpret_cast<FinalizeData*>(deleter_data);
+
+        if (finalize_data->finalize_cb != nullptr) {
+          finalize_data->finalize_cb(finalize_data->env, data, finalize_data->finalize_hint);
+        }
+
+        delete finalize_data;
+      }
+    };
+
+    auto buffer = v8::ArrayBuffer::New(isolate, v8::ArrayBuffer::NewBackingStore(external_data, byte_length, FinalizeData::Finalize, new FinalizeData{env, finalize_cb, finalize_hint}));
 #endif
-    * result = v8impl::JsValueFromV8LocalValue(buffer);
+
+    *result = v8impl::JsValueFromV8LocalValue(buffer);
+
     return GET_RETURN_STATUS(env);
 }
 

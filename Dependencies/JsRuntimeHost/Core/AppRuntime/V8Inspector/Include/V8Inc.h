@@ -1,5 +1,18 @@
 #pragma once
 
+// Enable V8 Pointer Compression
+// https://v8.dev/blog/pointer-compression
+// https://stackoverflow.com/q/62921373
+#ifndef V8_COMPRESS_POINTERS
+#define V8_COMPRESS_POINTERS 1
+#endif
+
+// Enable V8 Sandbox
+// https://v8.dev/blog/sandbox
+#ifndef V8_ENABLE_SANDBOX
+#define V8_ENABLE_SANDBOX 1
+#endif
+
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4100 4267 4127)

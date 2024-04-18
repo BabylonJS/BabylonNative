@@ -13,6 +13,19 @@
 // are bridged to remove references to the `node` namespace. `node_version.h`,
 // included below, defines `NAPI_VERSION`.
 
+// [BABYLON-NATIVE-ADDITION]: Enable V8 Pointer Compression
+// https://v8.dev/blog/pointer-compression
+// https://stackoverflow.com/q/62921373
+#ifndef V8_COMPRESS_POINTERS
+#define V8_COMPRESS_POINTERS 1
+#endif
+
+// [BABYLON-NATIVE-ADDITION]: Enable V8 Sandbox
+// https://v8.dev/blog/sandbox
+#ifndef V8_ENABLE_SANDBOX
+#define V8_ENABLE_SANDBOX 1
+#endif
+
 #include <v8.h>
 #include <cassert>
 

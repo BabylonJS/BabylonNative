@@ -2945,6 +2945,8 @@ inline Error Error::New(napi_env env, const std::exception& exception) {
 inline Error Error::New(napi_env env, const std::exception_ptr& exception_ptr) {
   try {
     std::rethrow_exception(exception_ptr);
+  } catch (const Napi::Error& error) {
+    return error;
   } catch (const std::exception& exception) {
     return Error::New(env, exception);
   }

@@ -10,7 +10,7 @@ namespace Babylon
     void BABYLON_API AppRuntime::DefaultUnhandledExceptionHandler(const Napi::Error& error)
     {
         std::ostringstream ss{};
-        ss << "[Uncaught Error] " << error.Get("stack").As<Napi::String>().Utf8Value() << std::endl;
+        ss << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
         OutputDebugStringA(ss.str().data());
     }
 

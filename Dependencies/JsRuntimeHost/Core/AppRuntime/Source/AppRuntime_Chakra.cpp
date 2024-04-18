@@ -6,6 +6,7 @@
 
 #include <gsl/gsl>
 #include <cassert>
+#include <sstream>
 
 namespace Babylon
 {
@@ -15,7 +16,9 @@ namespace Babylon
         {
             if (errorCode != JsErrorCode::JsNoError)
             {
-                throw std::exception();
+                std::ostringstream ss;
+                ss << "Chakra function failed with error code (" << static_cast<int>(errorCode) << ")";
+                throw std::runtime_error{ss.str()};
             }
         }
     }
@@ -35,21 +38,21 @@ namespace Babylon
         JsContextRef context;
         ThrowIfFailed(JsCreateContext(jsRuntime, &context));
         ThrowIfFailed(JsSetCurrentContext(context));
-        ThrowIfFailed(JsSetPromiseContinuationCallback([](JsValueRef task, void* callbackState) {
-            ThrowIfFailed(JsAddRef(task, nullptr));
-            auto* dispatch = reinterpret_cast<DispatchFunction*>(callbackState);
-            dispatch->operator()([task]() {
-                JsValueRef undefined;
-                ThrowIfFailed(JsGetUndefinedValue(&undefined));
-                ThrowIfFailed(JsCallFunction(task, &undefined, 1, nullptr));
-                ThrowIfFailed(JsRelease(task, nullptr));
-            });
-        },
+        ThrowIfFailed(JsSetPromiseContinuationCallback(
+            [](JsValueRef task, void* callbackState) {
+                ThrowIfFailed(JsAddRef(task, nullptr));
+                auto* dispatch = reinterpret_cast<DispatchFunction*>(callbackState);
+                dispatch->operator()([task]() {
+                    JsValueRef undefined;
+                    ThrowIfFailed(JsGetUndefinedValue(&undefined));
+                    ThrowIfFailed(JsCallFunction(task, &undefined, 1, nullptr));
+                    ThrowIfFailed(JsRelease(task, nullptr));
+                });
+            },
             &dispatchFunction));
         ThrowIfFailed(JsProjectWinRTNamespace(L"Windows"));
 
-#if defined(_DEBUG)
-        // Put Chakra in debug mode.
+        if (m_options.EnableDebugger)
         {
             auto result = JsStartDebugging();
             if (result != JsErrorCode::JsNoError)
@@ -57,7 +60,6 @@ namespace Babylon
                 OutputDebugStringW(L"Failed to initialize JavaScript debugging support.\n");
             }
         }
-#endif
 
         Napi::Env env = Napi::Attach();
 

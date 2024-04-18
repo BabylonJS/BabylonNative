@@ -4,6 +4,8 @@
 
 #include <Babylon/JsRuntime.h>
 
+#include <napi/utilities.h>
+
 #include <memory>
 #include <functional>
 #include <exception>
@@ -20,6 +22,9 @@ namespace Babylon
         public:
             // Optional handler for unhandled exceptions.
             std::function<void(const Napi::Error&)> UnhandledExceptionHandler{DefaultUnhandledExceptionHandler};
+
+            // Defines whether to enable the debugger. Only implemented for V8 and Chakra.
+            bool EnableDebugger{false};
 
             // Waits for the debugger to be attached before the execution of any script. Only implemented for V8.
             bool WaitForDebugger{false};

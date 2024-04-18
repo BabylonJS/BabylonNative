@@ -1,21 +1,13 @@
 #include "AppRuntime.h"
 #include <napi/env.h>
 
-#if defined(_MSC_VER)
-#pragma warning(disable : 4100 4267 4127)
-#endif
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wunused-parameter"
-#endif
-#if defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-#include <v8.h>
 #include <libplatform/libplatform.h>
 
 #ifdef ENABLE_V8_INSPECTOR
 #include <V8InspectorAgent.h>
 #endif
+
+#include <optional>
 
 namespace Babylon
 {
@@ -90,19 +82,26 @@ namespace Babylon
             Napi::Env env = Napi::Attach(context);
 
 #ifdef ENABLE_V8_INSPECTOR
-            V8InspectorAgent agent{Module::Instance().Platform(), isolate, context, "JsRuntimeHost"};
-            agent.Start(5643, "JsRuntimeHost");
-
-            if (m_options.WaitForDebugger)
+            std::optional<V8InspectorAgent> agent;
+            if (m_options.EnableDebugger)
             {
-                agent.WaitForDebugger();
+                agent.emplace(Module::Instance().Platform(), isolate, context, "JsRuntimeHost");
+                agent->Start(5643, "JsRuntimeHost");
+
+                if (m_options.WaitForDebugger)
+                {
+                    agent->WaitForDebugger();
+                }
             }
 #endif
 
             Run(env);
 
 #ifdef ENABLE_V8_INSPECTOR
-            agent.Stop();
+            if (agent.has_value())
+            {
+                agent->Stop();
+            }
 #endif
 
             Napi::Detach(env);

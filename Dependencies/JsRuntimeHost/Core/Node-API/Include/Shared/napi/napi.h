@@ -1,6 +1,20 @@
 #ifndef SRC_NAPI_H_
 #define SRC_NAPI_H_
 
+// [BABYLON-NATIVE-ADDITION]
+#ifndef NODE_ADDON_API_DISABLE_DEPRECATED
+#define NODE_ADDON_API_DISABLE_DEPRECATED
+#endif
+#ifndef NODE_ADDON_API_DISABLE_NODE_SPECIFIC
+#define NODE_ADDON_API_DISABLE_NODE_SPECIFIC
+#endif
+#ifndef NAPI_VERSION
+#define NAPI_VERSION 5
+#endif
+#ifndef NAPI_HAS_THREADS
+#define NAPI_HAS_THREADS 0
+#endif
+
 #ifndef NAPI_HAS_THREADS
 #if !defined(__wasm__) || (defined(__EMSCRIPTEN_PTHREADS__) ||                 \
                            (defined(__wasi__) && defined(_REENTRANT)))
@@ -316,8 +330,7 @@ class Env {
   bool IsExceptionPending() const;
   Error GetAndClearPendingException() const;
 
-  // [BABYLON-NATIVE-ADDITION] 
-  // url added and forwarded to napi_run_script call
+  // [BABYLON-NATIVE-ADDITION]: url added and forwarded to napi_run_script call
   MaybeOrValue<Value> RunScript(const char* utf8script, const char* url = "") const;
   MaybeOrValue<Value> RunScript(const std::string& utf8script, const char* url = "") const;
   MaybeOrValue<Value> RunScript(String script, const char* url = "") const;
@@ -1180,12 +1193,10 @@ class ArrayBuffer : public Object {
   ArrayBuffer(napi_env env,
               napi_value value);  ///< Wraps a Node-API value primitive.
 
-  // [BABYLON-NATIVE-ADDITION] 
-  // these methods are made const for Babylon Native
+  // [BABYLON-NATIVE-ADDITION]: these methods are made const
   void* Data() const;         ///< Gets a pointer to the data buffer.
   size_t ByteLength() const;  ///< Gets the length of the array buffer in bytes.
 
-  // [BABYLON-NATIVE-ADDITION]
  private:
   mutable void* _data;
   mutable size_t _length;
@@ -1515,6 +1526,7 @@ class Promise : public Object {
 
   Promise(napi_env env, napi_value value);
 };
+
 // [BABYLON-NATIVE-ADDITION]
 #ifndef NODE_ADDON_API_DISABLE_NODE_SPECIFIC
 template <typename T>
@@ -1685,7 +1697,8 @@ class FunctionReference : public Reference<Function> {
   MaybeOrValue<Napi::Value> Call(napi_value recv,
                                  size_t argc,
                                  const napi_value* args) const;
-  // [BABYLON-NATIVE-ADDITION]
+
+// [BABYLON-NATIVE-ADDITION]
 #ifndef NODE_ADDON_API_DISABLE_NODE_SPECIFIC
   MaybeOrValue<Napi::Value> MakeCallback(
       napi_value recv,

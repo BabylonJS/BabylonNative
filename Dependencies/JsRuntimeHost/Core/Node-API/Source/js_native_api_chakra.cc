@@ -2407,7 +2407,8 @@ napi_status napi_add_finalizer(napi_env env,
                                napi_finalize finalize_cb,
                                void* finalize_hint,
                                napi_ref* result) {
-  throw std::runtime_error("not impl");
+  // TODO: not implemented
+  return napi_generic_failure;
 }
 
 napi_status napi_adjust_external_memory(napi_env env,
