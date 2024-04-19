@@ -63,6 +63,8 @@ install_targets(UrlLib)
 # ----------------
 # Core
 # ----------------
+install_include_for_targets(Foundation)
+
 install_targets(JsRuntime)
 install_include_for_targets(JsRuntime)
 

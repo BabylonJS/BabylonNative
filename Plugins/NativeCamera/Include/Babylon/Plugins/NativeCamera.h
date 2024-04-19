@@ -1,8 +1,9 @@
 #pragma once
 
 #include <napi/env.h>
+#include <Babylon/Api.h>
 
 namespace Babylon::Plugins::NativeCamera
 {
-    void Initialize(Napi::Env env);
+    void BABYLON_API Initialize(Napi::Env env);
 }

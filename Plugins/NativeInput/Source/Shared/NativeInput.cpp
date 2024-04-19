@@ -42,13 +42,13 @@ namespace Babylon::Plugins
         env.Global().Set(JS_NATIVE_INPUT_NAME, nativeInput);
     }
 
-    NativeInput& NativeInput::CreateForJavaScript(Napi::Env env)
+    NativeInput& BABYLON_API NativeInput::CreateForJavaScript(Napi::Env env)
     {
         auto* nativeInput = new NativeInput(env);
         return *nativeInput;
     }
 
-    NativeInput& NativeInput::GetFromJavaScript(Napi::Env env)
+    NativeInput& BABYLON_API NativeInput::GetFromJavaScript(Napi::Env env)
     {
         return *env.Global().Get(JS_NATIVE_INPUT_NAME).As<Napi::External<NativeInput>>().Data();
     }

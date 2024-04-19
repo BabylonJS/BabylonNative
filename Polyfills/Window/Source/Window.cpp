@@ -125,7 +125,7 @@ namespace Babylon::Polyfills::Internal
 
 namespace Babylon::Polyfills::Window
 {
-    void Initialize(Napi::Env env)
+    void BABYLON_API Initialize(Napi::Env env)
     {
         Internal::Window::Initialize(env);
     }
