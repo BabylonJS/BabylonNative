@@ -2,9 +2,9 @@
 
 #include <Babylon/Graphics/Platform.h>
 #include <Babylon/Graphics/RendererType.h>
-
 #include <Babylon/JsRuntime.h>
 #include <arcana/tracing/trace_region.h>
+#include <cmath>
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -22,7 +22,7 @@ namespace
 
     bool FuzzyEqual(float a, float b, float epsilon = std::numeric_limits<float>::epsilon())
     {
-        return std::fabs(a - b) < epsilon;
+        return std::abs(a - b) < epsilon;
     }
 }
 
