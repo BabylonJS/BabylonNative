@@ -298,7 +298,7 @@ namespace Babylon::Graphics
 
     void DeviceImpl::SetHardwareScalingLevel(float level)
     {
-        if (FuzzyEqual(level, 0.0f))
+        if (level <= std::numeric_limits<float>::epsilon())
         {
             throw std::runtime_error{"HardwareScalingValue cannot be less than or equal to 0."};
         }
