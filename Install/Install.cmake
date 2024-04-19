@@ -101,6 +101,9 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     install(DIRECTORY ${V8JSI_PACKAGE_PATH}/build/native/jsi/jsi TYPE INCLUDE)
 endif()
 
+install_targets(napi-extensions)
+install_include_for_targets(napi-extensions)
+
 # ----------------
 # Plugins
 # ----------------
