@@ -11,6 +11,7 @@
 #include <Babylon/Graphics/DeviceContext.h>
 #include <Babylon/Graphics/BgfxCallback.h>
 #include <Babylon/Graphics/FrameBuffer.h>
+#include <Babylon/Graphics/DeviceContext.h>
 
 #include <napi/napi.h>
 
@@ -42,7 +43,14 @@ namespace Babylon
 
     struct ProgramData final
     {
-        ProgramData() = default;
+        ProgramData(Graphics::DeviceContext& deviceContext) 
+           : DeviceID {deviceContext.GetDeviceId()}
+           , DeviceContext{deviceContext}
+
+        {
+
+        }
+
         ProgramData(const ProgramData&) = delete;
         ProgramData& operator=(const ProgramData&) = delete;
 
@@ -52,6 +60,8 @@ namespace Babylon
             , UniformNameToIndex{std::move(other.UniformNameToIndex)}
             , UniformInfos{std::move(other.UniformInfos)}
             , VertexAttributeLocations{std::move(other.VertexAttributeLocations)}
+            , DeviceID{other.DeviceID}
+            , DeviceContext{other.DeviceContext}
         {
             other.Handle = BGFX_INVALID_HANDLE;
         }
@@ -74,7 +84,7 @@ namespace Babylon
 
         void Dispose()
         {
-            if (bgfx::isValid(Handle))
+            if (bgfx::isValid(Handle) && DeviceID == DeviceContext.GetDeviceId())
             {
                 bgfx::destroy(Handle);
                 Handle = BGFX_INVALID_HANDLE;
@@ -93,6 +103,8 @@ namespace Babylon
         std::unordered_map<std::string, uint16_t> UniformNameToIndex{};
         std::unordered_map<uint16_t, UniformInfo> UniformInfos{};
         std::unordered_map<std::string, uint32_t> VertexAttributeLocations{};
+        uintptr_t DeviceID;
+        Graphics::DeviceContext& DeviceContext;
 
         void SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, size_t elementLength = 1)
         {
@@ -201,6 +213,7 @@ namespace Babylon
         Napi::Value CreateImageBitmap(const Napi::CallbackInfo& info);
         Napi::Value ResizeImageBitmap(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
+        void SetRenderResetCallback(const Napi::CallbackInfo& info);
         void SetStencil(NativeDataStream::Reader& data);
         void SetViewPort(NativeDataStream::Reader& data);
         void SetScissor(NativeDataStream::Reader& data);
@@ -220,7 +233,7 @@ namespace Babylon
         ProgramData* m_currentProgram{nullptr};
 
         JsRuntime& m_runtime;
-        Graphics::DeviceContext& m_graphicsContext;
+        Graphics::DeviceContext& m_deviceContext;
         Graphics::Update m_update;
 
         JsRuntimeScheduler m_runtimeScheduler;

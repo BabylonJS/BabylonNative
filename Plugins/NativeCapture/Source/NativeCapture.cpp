@@ -256,7 +256,7 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::NativeCapture
 {
-    void Initialize(Napi::Env env)
+    void BABYLON_API Initialize(Napi::Env env)
     {
         Babylon::Plugins::Internal::NativeCapture::Initialize(env);
     }

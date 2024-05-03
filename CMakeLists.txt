@@ -11,7 +11,7 @@ include(FetchContent)
 # --------------------------------------------------
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG c84cb305205338b6fd6ff121a0349a810967bbc8)
+    GIT_TAG 7d88a601fda9892791e7b4e994e375e049615688)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG f2757396e80bc4169f2ddb938ce25367a98ffdd0)
@@ -37,7 +37,7 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 4.4.1)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 02055e8ead071ba04a4cd52d34e7f6a2e86527de)
+    GIT_TAG 66c863be8cedf2869a4e59ce99144417c78af73c)
 FetchContent_Declare(OpenXR-MixedReality
     GIT_REPOSITORY https://github.com/microsoft/OpenXR-MixedReality.git
     GIT_TAG 67424511525b96a36847f2a96d689d99e5879503)
@@ -46,7 +46,7 @@ FetchContent_Declare(OpenXR-SDK
     GIT_TAG 458984d7f59d1ae6dc1b597d94b02e4f7132eaba)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 43e7999af1c9af7d3ed9d4fc3a44cf3e68235cfd)
+    GIT_TAG 014d1ebe42c4177520fbcfd1e9a17238e532f1a6)
 # --------------------------------------------------
 
 FetchContent_MakeAvailable(CMakeExtensions)

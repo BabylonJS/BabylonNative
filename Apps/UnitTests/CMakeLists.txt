@@ -3,29 +3,30 @@ if(NOT((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT AND
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-set(LOCAL_SCRIPTS
+set(SCRIPTS
     "Scripts/tests.js")
 
-set(NPM_SCRIPTS
+set(EXTERNAL_SCRIPTS
     "../node_modules/babylonjs/babylon.max.js"
     "../node_modules/babylonjs-materials/babylonjs.materials.js"
     "../node_modules/chai/chai.js"
     "../node_modules/mocha/mocha.js")
 
-set(HEADERS
-    "Shared/Tests.h")
+set(SOURCES
+    "Shared/Shared.h"
+    "Shared/Shared.cpp")
 
 if(APPLE)
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
     set(ADDITIONAL_LIBRARIES PRIVATE ${JAVASCRIPTCORE_LIBRARY})
-    set(TEST_APP "Apple/App.mm")
+    set(SOURCES ${SOURCES} "Apple/App.mm")
 elseif(UNIX AND NOT ANDROID)
-    set(TEST_APP "X11/App.cpp")
+    set(SOURCES ${SOURCES} "X11/App.cpp")
 elseif(WIN32)
-    set(TEST_APP "Win32/App.cpp")
+    set(SOURCES ${SOURCES} "Win32/App.cpp")
 endif()
 
-add_executable(UnitTests ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_APP} ${HEADERS})
+add_executable(UnitTests ${SCRIPTS} ${EXTERNAL_SCRIPTS} ${SOURCES})
 set_property(TARGET UnitTests PROPERTY UNITY_BUILD false)
 
 target_link_libraries(UnitTests
@@ -48,7 +49,7 @@ add_test(NAME UnitTests COMMAND UnitTests)
 add_custom_command(TARGET UnitTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:UnitTests>>,copy,true> $<TARGET_RUNTIME_DLLS:UnitTests> $<TARGET_FILE_DIR:UnitTests> COMMAND_EXPAND_LISTS)
 
-foreach(SCRIPT ${LOCAL_SCRIPTS} ${NPM_SCRIPTS})
+foreach(SCRIPT ${SCRIPTS} ${EXTERNAL_SCRIPTS})
     get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
     add_custom_command(
         OUTPUT "${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
@@ -58,5 +59,5 @@ foreach(SCRIPT ${LOCAL_SCRIPTS} ${NPM_SCRIPTS})
 endforeach()
 
 set_property(TARGET UnitTests PROPERTY FOLDER Apps)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${LOCAL_SCRIPTS})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${NPM_SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} ${SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX node_modules FILES ${EXTERNAL_SCRIPTS})

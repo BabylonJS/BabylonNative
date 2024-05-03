@@ -96,6 +96,7 @@ namespace Babylon::Graphics
         Update GetUpdate(const char* updateName);
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
+        void SetRenderResetCallback(std::function<void()> callback);
 
         arcana::task<void, std::exception_ptr> ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel = 0);
 
@@ -105,6 +106,9 @@ namespace Babylon::Graphics
         size_t GetWidth() const;
         size_t GetHeight() const;
         float GetDevicePixelRatio();
+
+        //Note: This is an index that changes when bgfx gets reset. It should be used to validate that resource handles created using bgfx remain valid on destruction.
+        uintptr_t GetDeviceId() const;
 
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);

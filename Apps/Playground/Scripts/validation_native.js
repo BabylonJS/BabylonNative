@@ -65,12 +65,12 @@ function saveRenderedResult(test, renderData) {
 }
 
 function evaluate(test, resultCanvas, result, referenceImage, index, waitRing, done, compareFunction) {
-    /*var canvasImageData =*/ engine._engine.getFrameBufferData(function (screenshot) {
+    engine._engine.getFrameBufferData(function (screenshot) {
         var testRes = true;
-        // Visual check
+
         if (!test.onlyVisual) {
 
-            var defaultErrorRatio = 2.5
+            var defaultErrorRatio = 2.5;
 
             if (compareFunction(test, screenshot, referenceImage, test.threshold || 25, test.errorRatio || defaultErrorRatio)) {
                 testRes = false;
@@ -93,11 +93,11 @@ function processCurrentScene(test, resultCanvas, result, renderImage, index, wai
     currentScene.useConstantAnimationDeltaTime = true;
     var renderCount = test.renderCount || 1;
 
-    currentScene.executeWhenReady(function() {
+    currentScene.executeWhenReady(function () {
         if (currentScene.activeCamera && currentScene.activeCamera.useAutoRotationBehavior) {
             currentScene.activeCamera.useAutoRotationBehavior = false;
         }
-        engine.runRenderLoop(function() {
+        engine.runRenderLoop(function () {
             try {
                 currentScene.render();
                 renderCount--;
@@ -129,9 +129,7 @@ function loadPlayground(test, done, index, referenceImage, compareFunction) {
     }
     else if (test.playgroundId) {
         if (test.playgroundId[0] !== "#" || test.playgroundId.indexOf("#", 1) === -1) {
-            console.error("Invalid playground id");
-            done(false);
-            return;
+            test.playgroundId += "#0";
         }
 
         var snippetUrl = "https://snippet.babylonjs.com";
@@ -163,18 +161,23 @@ function loadPlayground(test, done, index, referenceImage, compareFunction) {
                         xmlHttp.onreadystatechange = null;
                         var snippet = JSON.parse(xmlHttp.responseText);
                         var code = JSON.parse(snippet.jsonPayload).code.toString();
-                        code = code.replace(/\/textures\//g, pgRoot + "/textures/");
-                        code = code.replace(/"textures\//g, "\"" + pgRoot + "/textures/");
-                        code = code.replace(/\/scenes\//g, pgRoot + "/scenes/");
-                        code = code.replace(/"scenes\//g, "\"" + pgRoot + "/scenes/");
+                        code = code
+                            .replace(/"\/textures\//g, '"' + pgRoot + "/textures/")
+                            .replace(/"textures\//g, '"' + pgRoot + "/textures/")
+                            .replace(/\/scenes\//g, pgRoot + "/scenes/")
+                            .replace(/"scenes\//g, '"' + pgRoot + "/scenes/")
+                            .replace(/"\.\.\/\.\.https/g, '"' + "https")
+                            .replace("http://", "https://");
+
                         if (test.replace) {
-                            var split = test.replace.split(",");
-                            for (var i = 0; i < split.length; i += 2) {
-                                var source = split[i].trim();
-                                var destination = split[i + 1].trim();
+                            const split = test.replace.split(",");
+                            for (let i = 0; i < split.length; i += 2) {
+                                const source = split[i].trim();
+                                const destination = split[i + 1].trim();
                                 code = code.replace(source, destination);
                             }
                         }
+
                         currentScene = eval(code + "\r\ncreateScene(engine)");
                         var resultCanvas = 0;
                         var result;
@@ -282,11 +285,11 @@ function runTest(index, done) {
 
     seed = 1;
 
-    let onLoadFileError = function(request, exception) {
+    let onLoadFileError = function (request, exception) {
         console.error("Failed to retrieve " + url + ".", exception);
         done(false);
     };
-    var onload = function(data, responseURL) {
+    var onload = function (data, responseURL) {
         if (typeof (data) === "string") {
             throw new Error("Decode Image from string data not yet implemented.");
         }
@@ -306,7 +309,7 @@ function runTest(index, done) {
 }
 
 engine = new BABYLON.NativeEngine();
-canvas = window;
+engine.getCaps().parallelShaderCompile = undefined;
 
 engine.getRenderingCanvas = function () {
     return window;
@@ -316,15 +319,17 @@ engine.getInputElement = function () {
     return 0;
 }
 
-OffscreenCanvas = function(width, height) {
+canvas = window;
+
+OffscreenCanvas = function (width, height) {
     return {
         width: width
         , height: height
-        , getContext: function(type) {
+        , getContext: function (type) {
             return {
-                fillRect: function(x, y, w, h) { }
-                , measureText: function(text) { return 8; }
-                , fillText: function(text, x, y) { }
+                fillRect: function (x, y, w, h) { }
+                , measureText: function (text) { return 8; }
+                , fillText: function (text, x, y) { }
             };
         }
     };
@@ -343,14 +348,14 @@ document = {
 var xhr = new XMLHttpRequest();
 xhr.open("GET", "app:///Scripts/config.json", true);
 
-xhr.addEventListener("readystatechange", function() {
+xhr.addEventListener("readystatechange", function () {
     if (xhr.status === 200) {
         config = JSON.parse(xhr.responseText);
 
         // Run tests
         var index = 0;
-        var recursiveRunTest = function(i) {
-            runTest(i, function(status) {
+        var recursiveRunTest = function (i) {
+            runTest(i, function (status) {
                 if (!status) {
                     TestUtils.exit(-1);
                     return;

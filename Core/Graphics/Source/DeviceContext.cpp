@@ -61,6 +61,11 @@ namespace Babylon::Graphics
         return m_graphicsImpl.RequestScreenShot(std::move(callback));
     }
 
+    void DeviceContext::SetRenderResetCallback(std::function<void()> callback)
+    {
+        return m_graphicsImpl.SetRenderResetCallback(std::move(callback));
+    }
+
     arcana::task<void, std::exception_ptr> DeviceContext::ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel)
     {
         return m_graphicsImpl.ReadTextureAsync(handle, data, mipLevel);
@@ -118,5 +123,10 @@ namespace Babylon::Graphics
     {
         std::scoped_lock lock{m_textureHandleToInfoMutex};
         return m_textureHandleToInfo[handle.idx];
+    }
+
+    uintptr_t DeviceContext::GetDeviceId() const
+    {
+       return m_graphicsImpl.GetId();
     }
 }

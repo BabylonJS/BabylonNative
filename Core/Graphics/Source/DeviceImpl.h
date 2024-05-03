@@ -38,13 +38,15 @@ namespace Babylon::Graphics
         DeviceImpl(DeviceImpl&&) noexcept = delete;
         DeviceImpl& operator=(DeviceImpl&&) noexcept = delete;
 
-        /* ********** BEGIN DEVICE CONTRACT ********** */
 
+        /* ********** BEGIN DEVICE CONTRACT ********** */
         void UpdateWindow(WindowT window);
+        void UpdateDevice(DeviceT device);
         void UpdateSize(size_t width, size_t height);
         void UpdateMSAA(uint8_t value);
         void UpdateAlphaPremultiplied(bool enabled);
         void UpdateDevicePixelRatio(float value);
+        void SetRenderResetCallback(std::function<void()> callback);
 
         void AddToJavaScript(Napi::Env);
         static DeviceImpl& GetFromJavaScript(Napi::Env);
@@ -67,6 +69,8 @@ namespace Babylon::Graphics
         float GetDevicePixelRatio() const;
 
         PlatformInfo GetPlatformInfo() const;
+
+        uintptr_t GetId() const;
 
         /* ********** END DEVICE CONTRACT ********** */
 
@@ -159,5 +163,7 @@ namespace Babylon::Graphics
         std::mutex m_updateSafeTimespansMutex{};
 
         DeviceContext m_context;
+        uintptr_t m_bgfxId = 0;
+        std::function<void()> m_renderResetCallback;
     };
 }

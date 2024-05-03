@@ -50,15 +50,16 @@ set(NPM_SCRIPTS
     "${APPS_DIR}/node_modules/chai/chai.js"
     "${APPS_DIR}/node_modules/mocha/mocha.js")
 
-set(HEADERS "${UNITTESTS_DIR}/Shared/Tests.h")
+set(SOURCES
+    "${UNITTESTS_DIR}/Shared/Shared.h"
+    "${UNITTESTS_DIR}/Shared/Shared.cpp")
 
-if(WIN32)
-    set(TEST_INSTALL_APP "${UNITTESTS_DIR}/Win32/App.cpp")
+if(WIN32 AND NOT WINDOWS_STORE)
+    set(SOURCES ${SOURCES} "${UNITTESTS_DIR}/Win32/App.cpp")
 else()
-	message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
+    message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-# Nuget/JSI
 set(NUGET_PATH "${BINARY_DIR}/NuGet")
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
@@ -67,8 +68,8 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     set(PLATFORM_FOLDER "win32")
     set(V8JSI_PACKAGE_PATH "${NUGET_PATH}/packages/ReactNative.V8Jsi.Windows.${V8JSI_VERSION}")
     set(V8JSI_LIB_PATH_RELEASE "${V8JSI_PACKAGE_PATH}/lib/${PLATFORM_FOLDER}/Release/${CPU_ARCH}/")
-    set(JSI_CPP "${V8JSI_PACKAGE_PATH}/build/native/jsi/jsi/jsi.cpp")
-    set(ADDITIONAL_LIBRARIES "v8jsi.dll.lib")
+    set(SOURCES ${SOURCES} "${V8JSI_PACKAGE_PATH}/build/native/jsi/jsi/jsi.cpp")
+    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} "v8jsi.dll.lib")
 elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     set_cpu_platform_arch()
     set(V8_VERSION "11.9.169.4")
@@ -104,7 +105,7 @@ elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
         set_target_properties("v8::${V8FILE_NAME}" PROPERTIES IMPORTED_LOCATION ${V8FILE})
     endforeach()
 
-    set(ADDITIONAL_LIBRARIES
+    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES}
         v8
         v8inspector
         llhttp
@@ -124,7 +125,7 @@ elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     endif()
 endif()
 
-add_executable(TestInstall ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${TEST_INSTALL_APP} ${HEADERS} ${JSI_CPP})
+add_executable(TestInstall ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${SOURCES})
 
 # for napi
 target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)

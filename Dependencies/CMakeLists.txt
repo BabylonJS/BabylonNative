@@ -129,7 +129,9 @@ endif()
 FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
 
 set_property(TARGET JsRuntime PROPERTY UNITY_BUILD false)
-set_property(TARGET AppRuntime PROPERTY UNITY_BUILD false)
+if(TARGET AppRuntime)
+    set_property(TARGET AppRuntime PROPERTY UNITY_BUILD false)
+endif()
 
 if(WIN32)
     # UrlLib does not support unity build on win32

@@ -97,6 +97,86 @@ namespace Babylon
             }
         }
 
+        void FlipImage(gsl::span<uint8_t> image, uint32_t height)
+        {
+            const size_t rowPitch{image.size() / height};
+
+            std::vector<uint8_t> buffer(rowPitch);
+            for (size_t row = 0; row < height / 2; row++)
+            {
+                uint8_t* frontPtr{image.data() + (row * rowPitch)};
+                uint8_t* backPtr{image.data() + ((height - row - 1) * rowPitch)};
+
+                std::memcpy(buffer.data(), frontPtr, rowPitch);
+                std::memcpy(frontPtr, backPtr, rowPitch);
+                std::memcpy(backPtr, buffer.data(), rowPitch);
+            }
+        }
+
+        std::function<std::pair<uint32_t, uint32_t>(uint32_t x, uint32_t y)> GetPixelMapper(bimg::Orientation::Enum orientation, uint32_t width, uint32_t height)
+        {
+            switch (orientation)
+            {
+                case bimg::Orientation::R0: return [](uint32_t x, uint32_t y) { return std::make_pair(x, y); };
+                case bimg::Orientation::R90: return [height](uint32_t x, uint32_t y) { return std::make_pair(height - y - 1, x); };
+                case bimg::Orientation::R180: return [width, height](uint32_t x, uint32_t y) { return std::make_pair(width - x - 1, height - y - 1); };
+                case bimg::Orientation::R270: return [width](uint32_t x, uint32_t y) { return std::make_pair(y, width - x - 1); };
+                case bimg::Orientation::HFlip: return [width](uint32_t x, uint32_t y) { return std::make_pair(width - x - 1, y); };
+                case bimg::Orientation::HFlipR90: return [width, height](uint32_t x, uint32_t y) { return std::make_pair(height - y - 1, width - x - 1); };
+                case bimg::Orientation::HFlipR270: return [](uint32_t x, uint32_t y) { return std::make_pair(y, x); };
+                case bimg::Orientation::VFlip: return [height](uint32_t x, uint32_t y) { return std::make_pair(x, height - y - 1); };
+                default: throw std::runtime_error{"Unexpected image orientation."};
+            }
+        }
+
+        using RGBA8ImageData = gsl::span<uint32_t>;
+        void ReorientImage(RGBA8ImageData image, uint32_t& width, uint32_t& height, bimg::Orientation::Enum orientation)
+        {
+            // If the orientation is the default, nothing needs to be done.
+            if (orientation == bimg::Orientation::R0)
+            {
+                // No-op
+            }
+            // If we only need a vflip, use the more efficient FlipImage function.
+            else if (orientation == bimg::Orientation::VFlip)
+            {
+                FlipImage(gsl::make_span(reinterpret_cast<uint8_t*>(image.data()), image.size_bytes()), height);
+            }
+            // Otherwise we'll do a pixel by pixel transformation, using a temporary image buffer.
+            else if (orientation != bimg::Orientation::R0)
+            {
+                uint32_t newWidth = width;
+                uint32_t newHeight = height;
+
+                // If the orientation is 90 or 270, the final image width and height will be swapped.
+                if (orientation == bimg::Orientation::R90 || orientation == bimg::Orientation::R270 || orientation == bimg::Orientation::HFlipR90 || orientation == bimg::Orientation::HFlipR270)
+                {
+                    std::swap(newWidth, newHeight);
+                }
+
+                // Transform the pixels from the original image data to a temp image buffer.
+                std::vector<uint32_t> buffer(image.size());
+                auto mapPixel = GetPixelMapper(orientation, width, height);
+                for (uint32_t y = 0; y < height; y++)
+                {
+                    for (uint32_t x = 0; x < width; x++)
+                    {
+                        const RGBA8ImageData::size_type index = y * width + x;
+                        const std::pair<uint32_t, uint32_t> mappedPixel{mapPixel(x, y)};
+                        const RGBA8ImageData::size_type newIndex = mappedPixel.second * newWidth + mappedPixel.first;
+                        buffer[newIndex] = image[index];
+                    }
+                }
+
+                // Copy the temp image buffer over the original image data.
+                std::memcpy(image.data(), buffer.data(), image.size_bytes());
+
+                // Update the final width and height.
+                width = newWidth;
+                height = newHeight;
+            }
+        }
+
         bimg::ImageContainer* ParseImage(bx::AllocatorI& allocator, gsl::span<uint8_t> data)
         {
             bimg::ImageContainer* image{bimg::imageParse(&allocator, data.data(), static_cast<uint32_t>(data.size()))};
@@ -104,6 +184,12 @@ namespace Babylon
             {
                 throw std::runtime_error{"Failed to parse image."};
             }
+
+            assert(image->m_offset == 0);
+            assert(image->m_depth == 1);
+            assert(image->m_numLayers == 1);
+            assert(image->m_numMips == 1);
+            assert(!image->m_cubeMap);
 
             if (image->m_format == bimg::TextureFormat::R8 ||
                 image->m_format == bimg::TextureFormat::RG8)
@@ -119,23 +205,28 @@ namespace Babylon
                 bimg::imageFree(oldImage);
             }
 
-            return image;
-        }
-
-        void FlipImage(gsl::span<uint8_t> image, uint32_t height)
-        {
-            const size_t rowPitch{image.size() / height};
-
-            std::vector<uint8_t> buffer(rowPitch);
-            for (size_t row = 0; row < height / 2; row++)
+            // If the image has a non-zero orientation (e.g. via jpeg metadata), take this into account by updating the orientation of the underlying image data.
+            if (image->m_orientation != bimg::Orientation::R0)
             {
-                uint8_t* frontPtr{image.data() + (row * rowPitch)};
-                uint8_t* backPtr{image.data() + ((height - row - 1) * rowPitch)};
+                // Convert from RGB8 to RGBA8.
+                if (image->m_format == bimg::TextureFormat::RGB8)
+                {
+                    bimg::ImageContainer* oldImage{image};
+                    image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA8, *image, false);
+                    image->m_orientation = oldImage->m_orientation;
+                    bimg::imageFree(oldImage);
+                }
 
-                std::memcpy(buffer.data(), frontPtr, rowPitch);
-                std::memcpy(frontPtr, backPtr, rowPitch);
-                std::memcpy(backPtr, buffer.data(), rowPitch);
+                // If the image is RGBA8, update the image data according to the orientation.
+                // Other formats could be handled in the future, but this should at least cover jpeg images.
+                if (image->m_format == bimg::TextureFormat::RGBA8)
+                {
+                    assert(bimg::getBitsPerPixel(image->m_format) == sizeof(uint32_t) * 8);
+                    ReorientImage(gsl::make_span(static_cast<uint32_t*>(image->m_data), image->m_size / sizeof(uint32_t)), image->m_width, image->m_height, image->m_orientation);
+                }
             }
+
+            return image;
         }
 
         bimg::ImageContainer* PrepareImage(bx::AllocatorI& allocator, bimg::ImageContainer* image, bool invertY, bool srgb, bool generateMips)
@@ -309,7 +400,7 @@ namespace Babylon
         using CommandFunctionPointerT = void (NativeEngine::*)(NativeDataStream::Reader&);
     }
 
-    void NativeEngine::Initialize(Napi::Env env)
+    void BABYLON_API NativeEngine::Initialize(Napi::Env env)
     {
         // Initialize the JavaScript side.
         Napi::HandleScope scope{env};
@@ -602,6 +693,7 @@ namespace Babylon
 
                 // REVIEW: Should this be here if only used by ValidationTest?
                 InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
+                InstanceMethod("setDeviceLostCallback", &NativeEngine::SetRenderResetCallback),
             });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
@@ -616,12 +708,12 @@ namespace Babylon
         : Napi::ObjectWrap<NativeEngine>{info}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtime{runtime}
-        , m_graphicsContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
-        , m_update{m_graphicsContext.GetUpdate("update")}
+        , m_deviceContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
+        , m_update{m_deviceContext.GetUpdate("update")}
         , m_runtimeScheduler{runtime}
-        , m_defaultFrameBuffer{m_graphicsContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
+        , m_defaultFrameBuffer{m_deviceContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
         , m_boundFrameBuffer{&m_defaultFrameBuffer}
-        , m_boundFrameBufferNeedsRebinding{m_graphicsContext, *m_cancellationSource, true}
+        , m_boundFrameBufferNeedsRebinding{m_deviceContext, *m_cancellationSource, true}
     {
     }
 
@@ -668,14 +760,14 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateIndexBuffer(const Napi::CallbackInfo& info)
     {
-        const Napi::ArrayBuffer bytes = info[0].As<Napi::ArrayBuffer>();
-        const uint32_t byteOffset = info[1].As<Napi::Number>().Uint32Value();
-        const uint32_t byteLength = info[2].As<Napi::Number>().Uint32Value();
+        const Napi::ArrayBuffer dataBuffer = info[0].As<Napi::ArrayBuffer>();
+        const uint32_t dataByteOffset = info[1].As<Napi::Number>().Uint32Value();
+        const uint32_t dataByteLength = info[2].As<Napi::Number>().Uint32Value();
         const bool is32Bits = info[3].As<Napi::Boolean>().Value();
         const bool dynamic = info[4].As<Napi::Boolean>().Value();
 
         const uint16_t flags = (is32Bits ? BGFX_BUFFER_INDEX32 : 0);
-        IndexBuffer* indexBuffer = new IndexBuffer{gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength), flags, dynamic};
+        IndexBuffer* indexBuffer = new IndexBuffer{m_deviceContext, gsl::make_span(static_cast<uint8_t*>(dataBuffer.Data()) + dataByteOffset, dataByteLength), flags, dynamic};
         return Napi::Pointer<IndexBuffer>::Create(info.Env(), indexBuffer, Napi::NapiPointerDeleter(indexBuffer));
     }
 
@@ -689,31 +781,50 @@ namespace Babylon
         VertexArray* vertexArray = info[0].As<Napi::Pointer<VertexArray>>().Get();
         IndexBuffer* indexBuffer = info[1].As<Napi::Pointer<IndexBuffer>>().Get();
 
-        if (!vertexArray->RecordIndexBuffer(indexBuffer))
+        try
         {
-            JsConsoleLogger::LogWarn(info.Env(), "WARNING: Fail to create index buffer. Number of index buffers higher than max count.");
+            vertexArray->RecordIndexBuffer(indexBuffer);
+        }
+        catch (std::exception& ex)
+        {
+            JsConsoleLogger::LogError(info.Env(), ex.what());
+        }
+        catch (...)
+        {
+            JsConsoleLogger::LogError(info.Env(), "Failed to record index buffer");
         }
     }
 
     void NativeEngine::UpdateDynamicIndexBuffer(const Napi::CallbackInfo& info)
     {
         IndexBuffer* indexBuffer = info[0].As<Napi::Pointer<IndexBuffer>>().Get();
-        const Napi::ArrayBuffer bytes = info[1].As<Napi::ArrayBuffer>();
-        const uint32_t byteOffset = info[2].As<Napi::Number>().Uint32Value();
-        const uint32_t byteLength = info[3].As<Napi::Number>().Uint32Value();
+        const Napi::ArrayBuffer dataBuffer = info[1].As<Napi::ArrayBuffer>();
+        const uint32_t dataByteOffset = info[2].As<Napi::Number>().Uint32Value();
+        const uint32_t dataByteLength = info[3].As<Napi::Number>().Uint32Value();
         const uint32_t startingIndex = info[4].As<Napi::Number>().Uint32Value();
 
-        indexBuffer->Update(info.Env(), gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength), startingIndex);
+        try
+        {
+            indexBuffer->Update(gsl::make_span(static_cast<uint8_t*>(dataBuffer.Data()) + dataByteOffset, dataByteLength), startingIndex);
+        }
+        catch (std::exception& ex)
+        {
+            JsConsoleLogger::LogError(info.Env(), ex.what());
+        }
+        catch (...)
+        {
+            JsConsoleLogger::LogError(info.Env(), "Failed to update index buffer");
+        }
     }
 
     Napi::Value NativeEngine::CreateVertexBuffer(const Napi::CallbackInfo& info)
     {
-        const Napi::ArrayBuffer bytes = info[0].As<Napi::ArrayBuffer>();
-        const uint32_t byteOffset = info[1].As<Napi::Number>().Uint32Value();
-        const uint32_t byteLength = info[2].As<Napi::Number>().Uint32Value();
+        const Napi::ArrayBuffer dataBuffer = info[0].As<Napi::ArrayBuffer>();
+        const uint32_t dataByteOffset = info[1].As<Napi::Number>().Uint32Value();
+        const uint32_t dataByteLength = info[2].As<Napi::Number>().Uint32Value();
         const bool dynamic = info[3].As<Napi::Boolean>().Value();
 
-        VertexBuffer* vertexBuffer = new VertexBuffer(gsl::make_span(static_cast<uint8_t*>(bytes.Data()) + byteOffset, byteLength), dynamic);
+        VertexBuffer* vertexBuffer = new VertexBuffer(m_deviceContext, gsl::make_span(static_cast<uint8_t*>(dataBuffer.Data()) + dataByteOffset, dataByteLength), dynamic);
         return Napi::Pointer<VertexBuffer>::Create(info.Env(), vertexBuffer, Napi::NapiPointerDeleter(vertexBuffer));
     }
 
@@ -734,20 +845,40 @@ namespace Babylon
         const bool normalized = info[7].As<Napi::Boolean>().Value();
         const uint32_t divisor = info[8].As<Napi::Number>().Uint32Value();
 
-        if (!vertexArray->RecordVertexBuffer(vertexBuffer, location, byteOffset, byteStride, numElements, type, normalized, divisor))
+        try
         {
-            JsConsoleLogger::LogWarn(info.Env(), "WARNING: Fail to create vertex buffer. Number of vertex buffers higher than max count or too many instanced streams.");
+            vertexArray->RecordVertexBuffer(vertexBuffer, location, byteOffset, byteStride, numElements, type, normalized, divisor);
+        }
+        catch (std::exception& ex)
+        {
+            JsConsoleLogger::LogError(info.Env(), ex.what());
+        }
+        catch (...)
+        {
+            JsConsoleLogger::LogError(info.Env(), "Failed to record vertex buffer");
         }
     }
 
     void NativeEngine::UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info)
     {
         VertexBuffer* vertexBuffer = info[0].As<Napi::Pointer<VertexBuffer>>().Get();
-        const Napi::ArrayBuffer bytes = info[1].As<Napi::ArrayBuffer>();
-        const uint32_t byteOffset = info[2].As<Napi::Number>().Uint32Value();
-        const uint32_t byteLength = info[3].As<Napi::Number>().Uint32Value();
+        const Napi::ArrayBuffer dataBuffer = info[1].As<Napi::ArrayBuffer>();
+        const uint32_t dataByteOffset = info[2].As<Napi::Number>().Uint32Value();
+        const uint32_t dataByteLength = info[3].As<Napi::Number>().Uint32Value();
+        const uint32_t vertexByteOffset = info[4].IsUndefined() ? 0 : info[4].As<Napi::Number>().Uint32Value();
 
-        vertexBuffer->Update(info.Env(), gsl::make_span(static_cast<uint8_t*>(bytes.Data()), byteLength), byteOffset);
+        try
+        {
+            vertexBuffer->Update(gsl::make_span(static_cast<uint8_t*>(dataBuffer.Data()) + dataByteOffset, dataByteLength), vertexByteOffset);
+        }
+        catch (std::exception& ex)
+        {
+            JsConsoleLogger::LogError(info.Env(), ex.what());
+        }
+        catch (...)
+        {
+            JsConsoleLogger::LogError(info.Env(), "Failed to update vertex buffer");
+        }
     }
 
     // Change VS output coordinate system
@@ -804,7 +935,7 @@ namespace Babylon
     {
         ShaderCompiler::BgfxShaderInfo shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
 
-        std::unique_ptr<ProgramData> program = std::make_unique<ProgramData>();
+        std::unique_ptr<ProgramData> program = std::make_unique<ProgramData>(m_deviceContext);
 
         static auto InitUniformInfos{
             [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex) {
@@ -840,7 +971,7 @@ namespace Babylon
     {
         const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
         const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
-        ProgramData* program = new ProgramData{};
+        ProgramData* program = new ProgramData{m_deviceContext};
         Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
         try
         {
@@ -860,7 +991,7 @@ namespace Babylon
         const Napi::Function onSuccess = info[2].As<Napi::Function>();
         const Napi::Function onError = info[3].As<Napi::Function>();
 
-        ProgramData* program = new ProgramData{};
+        ProgramData* program = new ProgramData{m_deviceContext};
         Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
@@ -1183,7 +1314,7 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateTexture(const Napi::CallbackInfo& info)
     {
-        Graphics::Texture* texture = new Graphics::Texture();
+        Graphics::Texture* texture = new Graphics::Texture(m_deviceContext);
         return Napi::Pointer<Graphics::Texture>::Create(info.Env(), texture, Napi::NapiPointerDeleter(texture));
     }
 
@@ -1489,7 +1620,7 @@ namespace Babylon
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
         Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
-        m_graphicsContext.RemoveTexture(texture->Handle());
+        m_deviceContext.RemoveTexture(texture->Handle());
         texture->Dispose();
     }
 
@@ -1562,7 +1693,7 @@ namespace Babylon
             std::vector<uint8_t> textureBuffer(sourceTextureInfo.storageSize);
 
             // Read the source texture.
-            m_graphicsContext.ReadTextureAsync(sourceTextureHandle, textureBuffer, mipLevel)
+            m_deviceContext.ReadTextureAsync(sourceTextureHandle, textureBuffer, mipLevel)
                 .then(arcana::inline_scheduler, *m_cancellationSource, [textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
                     // If the source texture format does not match the target texture format, convert it.
                     if (targetTextureInfo.format != sourceTextureInfo.format)
@@ -1664,7 +1795,7 @@ namespace Babylon
             throw Napi::Error::New(info.Env(), "Failed to create frame buffer");
         }
 
-        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_graphicsContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
+        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
         return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
     }
 
@@ -1814,23 +1945,23 @@ namespace Babylon
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), std::floor(m_graphicsContext.GetWidth() / m_graphicsContext.GetHardwareScalingLevel()));
+        return Napi::Value::From(info.Env(), std::floor(m_deviceContext.GetWidth() / m_deviceContext.GetHardwareScalingLevel()));
     }
 
     Napi::Value NativeEngine::GetRenderHeight(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), std::floor(m_graphicsContext.GetHeight() / m_graphicsContext.GetHardwareScalingLevel()));
+        return Napi::Value::From(info.Env(), std::floor(m_deviceContext.GetHeight() / m_deviceContext.GetHardwareScalingLevel()));
     }
 
     Napi::Value NativeEngine::GetHardwareScalingLevel(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(info.Env(), m_graphicsContext.GetHardwareScalingLevel());
+        return Napi::Value::From(info.Env(), m_deviceContext.GetHardwareScalingLevel());
     }
 
     void NativeEngine::SetHardwareScalingLevel(const Napi::CallbackInfo& info)
     {
         const auto level = info[0].As<Napi::Number>().FloatValue();
-        m_graphicsContext.SetHardwareScalingLevel(level);
+        m_deviceContext.SetHardwareScalingLevel(level);
     }
 
     Napi::Value NativeEngine::CreateImageBitmap(const Napi::CallbackInfo& info)
@@ -1940,12 +2071,24 @@ namespace Babylon
         return Napi::Value::From(env, outputData);
     }
 
+    void NativeEngine::SetRenderResetCallback(const Napi::CallbackInfo& info)
+    {
+        const auto callback{info[0].As<Napi::Function>()};
+        auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
+
+        m_deviceContext.SetRenderResetCallback([this, renderResetCallback = std::move(callbackPtr)]() {
+            m_runtime.Dispatch([renderResetCallback = std::move(renderResetCallback)](auto) {
+                renderResetCallback->Call({});
+            });
+        });
+    }
+
     void NativeEngine::GetFrameBufferData(const Napi::CallbackInfo& info)
     {
         const auto callback{info[0].As<Napi::Function>()};
 
         auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
-        m_graphicsContext.RequestScreenShot([this, callbackPtr{std::move(callbackPtr)}](std::vector<uint8_t> array) {
+        m_deviceContext.RequestScreenShot([this, callbackPtr{std::move(callbackPtr)}](std::vector<uint8_t> array) {
             m_runtime.Dispatch([callbackPtr{std::move(callbackPtr)}, array{std::move(array)}](Napi::Env env) {
                 auto arrayBuffer{Napi::ArrayBuffer::New(env, const_cast<uint8_t*>(array.data()), array.size())};
                 auto typedArray{Napi::Uint8Array::New(env, array.size(), arrayBuffer, 0)};

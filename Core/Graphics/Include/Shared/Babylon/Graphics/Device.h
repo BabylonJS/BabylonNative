@@ -72,7 +72,7 @@ namespace Babylon::Graphics
     class Device
     {
     public:
-        Device(const Configuration& config);
+        explicit Device(const Configuration& config);
         ~Device();
 
         // Move semantics
@@ -84,6 +84,7 @@ namespace Babylon::Graphics
         // method and structure might change.
 
         void UpdateWindow(WindowT window);
+        void UpdateDevice(DeviceT device);
         void UpdateSize(size_t width, size_t height);
         void UpdateMSAA(uint8_t value);
         void UpdateAlphaPremultiplied(bool enabled);

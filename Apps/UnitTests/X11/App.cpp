@@ -5,7 +5,7 @@
 #include <X11/Xlib.h> // will include X11 which #defines None... Don't mess with order of includes.
 #include <X11/Xutil.h>
 #undef None
-#include "../Shared/Tests.h"
+#include "../Shared/Shared.h"
 
 namespace
 {
@@ -44,8 +44,9 @@ int main()
     XMapWindow(display, window);
     XStoreName(display, window, applicationName);
 
-    deviceTestConfig.Window = window;
-    deviceTestConfig.Width = static_cast<size_t>(width);
-    deviceTestConfig.Height = static_cast<size_t>(height);
-    return Run();
+    Babylon::Graphics::Configuration config{};
+    config.Window = window;
+    config.Width = static_cast<size_t>(width);
+    config.Height = static_cast<size_t>(height);
+    return RunTests(config);
 }

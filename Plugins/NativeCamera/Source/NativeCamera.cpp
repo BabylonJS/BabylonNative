@@ -48,7 +48,7 @@ namespace Babylon::Plugins::Internal
 
 namespace Babylon::Plugins::NativeCamera
 {
-    void Initialize(Napi::Env env)
+    void BABYLON_API Initialize(Napi::Env env)
     {
         Babylon::Plugins::NativeVideo::Initialize(env);
         Babylon::Plugins::MediaDevices::Initialize(env);
