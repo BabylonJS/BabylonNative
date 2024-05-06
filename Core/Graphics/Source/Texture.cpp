@@ -5,8 +5,8 @@
 namespace Babylon::Graphics
 {
     Texture::Texture(DeviceContext& deviceContext)
-       : m_deviceID{deviceContext.GetDeviceId()}
-       , m_deviceContext{deviceContext}
+        : m_deviceID{deviceContext.GetDeviceId()}
+        , m_deviceContext{deviceContext}
     {
     }
 
@@ -36,6 +36,11 @@ namespace Babylon::Graphics
 
         // Always create with BGFX_TEXTURE_BLIT_DST to match web behavior.
         m_handle = bgfx::createTexture2D(width, height, hasMips, numLayers, format, flags | BGFX_TEXTURE_BLIT_DST);
+        if (!bgfx::isValid(m_handle))
+        {
+            throw std::runtime_error{"Failed to create texture"};
+        }
+
         m_ownsHandle = true;
         m_width = width;
         m_height = height;

@@ -26,7 +26,15 @@ namespace Babylon
 
     private:
         IndexBuffer* m_indexBuffer{};
-        std::set<VertexBuffer*> m_vertexBuffers;
+
+        struct VertexBufferInfo
+        {
+            VertexBuffer* Pointer{};
+            uint8_t StreamIndex{};
+        };
+
+        std::vector<VertexBufferInfo> m_vertexBuffers;
+
         std::map<bgfx::Attrib::Enum, VertexBuffer::InstanceInfo> m_vertexBufferInstances;
 
         bool m_disposed{};

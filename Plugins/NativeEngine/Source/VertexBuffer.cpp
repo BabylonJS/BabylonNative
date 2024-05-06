@@ -68,7 +68,6 @@ namespace Babylon
         }
 
         m_streams.clear();
-        m_attributes.clear();
         m_handle.reset();
         m_bytes.clear();
 
@@ -96,13 +95,11 @@ namespace Babylon
             {
                 if (stream.PromoteToFloatsHandle.has_value())
                 {
-                    const AttributeInfo& attribute = stream.Attribute;
-
                     std::vector<uint8_t> promoteToFloatsBytes = PromoteToFloats(
                         bytes,
-                        attribute.AttribType,
-                        attribute.NumElements,
-                        attribute.ByteOffset,
+                        stream.AttribType,
+                        stream.NumElements,
+                        stream.ByteOffset,
                         m_byteStride);
 
                     stream.PromoteToFloatsHandle->Update(promoteToFloatsBytes, startVertex);
@@ -124,7 +121,7 @@ namespace Babylon
         }
     }
 
-    void VertexBuffer::Add(bgfx::Attrib::Enum attrib, bgfx::AttribType::Enum attribType, uint32_t byteOffset, uint16_t byteStride, uint8_t numElements, bool normalized)
+    uint8_t VertexBuffer::Add(bgfx::Attrib::Enum attrib, bgfx::AttribType::Enum attribType, uint32_t byteOffset, uint16_t byteStride, uint8_t numElements, bool normalized)
     {
         if (m_byteStride == 0)
         {
@@ -135,84 +132,76 @@ namespace Babylon
             throw std::runtime_error{"All attributes added to a vertex buffer must have the same byte stride"};
         }
 
-        m_attributes[attrib] = {attribType, byteOffset, numElements, normalized};
+        m_streams.push_back({attrib, attribType, byteOffset, numElements, normalized});
+        return static_cast<uint8_t>(m_streams.size() - 1);
     }
 
-    void VertexBuffer::Set(bgfx::Encoder* encoder, uint8_t& streamCount, uint32_t startVertex, uint32_t numVertices)
+    void VertexBuffer::Set(bgfx::Encoder* encoder, uint8_t streamIndex, uint8_t encoderStreamIndex, uint32_t startVertex, uint32_t numVertices)
     {
-        if (!m_buildCalled)
-        {
-            m_buildCalled = true;
-            Build(numVertices);
-        }
+        auto& stream = m_streams[streamIndex];
 
-        for (auto& stream : m_streams)
+        Build(stream, numVertices);
+
+        if (stream.PromoteToFloatsHandle.has_value())
         {
-            if (stream.PromoteToFloatsHandle.has_value())
-            {
-                stream.PromoteToFloatsHandle->Set(encoder, streamCount++, stream.StartVertexOffset + startVertex, numVertices, stream.LayoutHandle);
-            }
-            else
-            {
-                m_handle->Set(encoder, streamCount++, stream.StartVertexOffset + startVertex, numVertices, stream.LayoutHandle);
-            }
+            stream.PromoteToFloatsHandle->Set(encoder, encoderStreamIndex, stream.StartVertexOffset + startVertex, numVertices, stream.LayoutHandle);
+        }
+        else
+        {
+            m_handle->Set(encoder, encoderStreamIndex, stream.StartVertexOffset + startVertex, numVertices, stream.LayoutHandle);
         }
     }
 
-    void VertexBuffer::Build(uint32_t numVertices)
+    void VertexBuffer::Build(StreamInfo& stream, uint32_t numVertices)
     {
-        // WebGL 1 and thus Babylon.js expects non-normalized integer attributes to automatically convert to a float if
-        // the shader expects a float. This does not happen automatically for DirectX and Vulkan. To support this, this
-        // function is promoting the attribute to floats by creating a new vertex buffer with its own handle and vertex
-        // layout, otherwise known as a stream. This class must keep track of these new streams so that they can be set
-        // and updated later.
-
-        for (const auto& pair : m_attributes)
+        if (!bgfx::isValid(stream.LayoutHandle))
         {
-            const bgfx::Attrib::Enum attrib = pair.first;
-            const AttributeInfo& info = pair.second;
+            // WebGL 1 and thus Babylon.js expects non-normalized integer attributes to automatically convert to a float if
+            // the shader expects a float. This does not happen automatically for DirectX and Vulkan. To support this, this
+            // function is promoting the attribute to floats by creating a new vertex buffer with its own handle and vertex
+            // layout.
 
             // clang-format off
-            const bool promoteToFloats = !info.Normalized
+            const bool promoteToFloats = !stream.Normalized
                 && (bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D11 ||
                     bgfx::getCaps()->rendererType == bgfx::RendererType::Direct3D12 ||
                     bgfx::getCaps()->rendererType == bgfx::RendererType::Vulkan)
-                && (info.AttribType == bgfx::AttribType::Int8 ||
-                    info.AttribType == bgfx::AttribType::Uint8 ||
-                    info.AttribType == bgfx::AttribType::Uint10 ||
-                    info.AttribType == bgfx::AttribType::Int16 ||
-                    info.AttribType == bgfx::AttribType::Uint16);
+                && (stream.AttribType == bgfx::AttribType::Int8 ||
+                    stream.AttribType == bgfx::AttribType::Uint8 ||
+                    stream.AttribType == bgfx::AttribType::Uint10 ||
+                    stream.AttribType == bgfx::AttribType::Int16 ||
+                    stream.AttribType == bgfx::AttribType::Uint16);
             // clang-format on
 
             if (promoteToFloats)
             {
-                std::vector<uint8_t> bytes = PromoteToFloats(m_bytes, info.AttribType, info.NumElements, info.ByteOffset, m_byteStride, numVertices);
+                std::vector<uint8_t> bytes = PromoteToFloats(m_bytes, stream.AttribType, stream.NumElements, stream.ByteOffset, m_byteStride, numVertices);
 
                 bgfx::VertexLayout layout;
-                layout.begin().add(attrib, info.NumElements, bgfx::AttribType::Float).end();
+                layout.begin().add(stream.Attrib, stream.NumElements, bgfx::AttribType::Float).end();
 
-                m_streams.push_back({info,
-                    std::optional<Handle>{std::in_place, m_deviceContext, std::move(bytes), m_dynamic, layout.getStride()},
-                    0,
-                    bgfx::createVertexLayout(layout)});
+                stream.PromoteToFloatsHandle.emplace(m_deviceContext, std::move(bytes), m_dynamic, layout.getStride());
+                stream.LayoutHandle = bgfx::createVertexLayout(layout);
             }
             else
             {
                 bgfx::VertexLayout layout;
                 layout.begin();
-                layout.add(attrib, info.NumElements, info.AttribType, info.Normalized);
-                layout.m_offset[attrib] = static_cast<uint16_t>(info.ByteOffset % m_byteStride);
+                layout.add(stream.Attrib, stream.NumElements, stream.AttribType, stream.Normalized);
+                layout.m_offset[stream.Attrib] = static_cast<uint16_t>(stream.ByteOffset % m_byteStride);
                 layout.m_stride = m_byteStride;
                 layout.end();
 
-                m_streams.push_back({info,
-                    std::nullopt,
-                    info.ByteOffset / m_byteStride,
-                    bgfx::createVertexLayout(layout)});
+                stream.StartVertexOffset = stream.ByteOffset / m_byteStride;
+                stream.LayoutHandle = bgfx::createVertexLayout(layout);
             }
         }
 
-        m_handle.emplace(m_deviceContext, std::move(m_bytes), m_dynamic, m_byteStride);
+        if (!m_handle.has_value())
+        {
+            // This is copying the bytes. We have to keep the original data in case another vertex stream is added and requires promotion.
+            m_handle.emplace(m_deviceContext, m_bytes, m_dynamic, m_byteStride);
+        }
     }
 
     void VertexBuffer::BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceInfo>& instances, uint32_t instanceCount)

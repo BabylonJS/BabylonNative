@@ -28,9 +28,9 @@ namespace Babylon
 
         void Update(const gsl::span<uint8_t> bytes, size_t byteOffset);
 
-        void Add(bgfx::Attrib::Enum attrib, bgfx::AttribType::Enum attribType, uint32_t byteOffset, uint16_t byteStride, uint8_t numElements, bool normalized);
+        uint8_t Add(bgfx::Attrib::Enum attrib, bgfx::AttribType::Enum attribType, uint32_t byteOffset, uint16_t byteStride, uint8_t numElements, bool normalized);
 
-        void Set(bgfx::Encoder* encoder, uint8_t& streamCount, uint32_t startVertex, uint32_t numVertices);
+        void Set(bgfx::Encoder* encoder, uint8_t streamIndex, uint8_t encoderStreamIndex, uint32_t startVertex, uint32_t numVertices);
 
         struct InstanceInfo
         {
@@ -43,8 +43,6 @@ namespace Babylon
         static void BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceInfo>& instances, uint32_t instanceCount);
 
     private:
-        void Build(uint32_t numVertices);
-
         class Handle final
         {
         public:
@@ -75,35 +73,31 @@ namespace Babylon
             };
         };
 
-    private:
-        Graphics::DeviceContext& m_deviceContext;
-
-        std::vector<uint8_t> m_bytes{};
-        const bool m_dynamic{};
-        bool m_buildCalled{};
-
-        struct AttributeInfo
+        struct StreamInfo
         {
+            bgfx::Attrib::Enum Attrib{};
             bgfx::AttribType::Enum AttribType{};
             uint32_t ByteOffset{};
             uint8_t NumElements{};
             bool Normalized{};
+
+            std::optional<Handle> PromoteToFloatsHandle{};
+            uint32_t StartVertexOffset{};
+            bgfx::VertexLayoutHandle LayoutHandle{bgfx::kInvalidHandle};
         };
+
+        void Build(StreamInfo& stream, uint32_t numVertices);
+
+        Graphics::DeviceContext& m_deviceContext;
+
+        std::vector<uint8_t> m_bytes{};
+        const bool m_dynamic{};
 
         uint16_t m_byteStride{};
-        std::map<bgfx::Attrib::Enum, AttributeInfo> m_attributes{};
-
-        std::optional<Handle> m_handle{};
-
-        struct StreamInfo
-        {
-            const AttributeInfo& Attribute;
-            std::optional<Handle> PromoteToFloatsHandle;
-            uint32_t StartVertexOffset;
-            bgfx::VertexLayoutHandle LayoutHandle;
-        };
 
         std::vector<StreamInfo> m_streams{};
+
+        std::optional<Handle> m_handle{};
 
         bool m_disposed{};
     };

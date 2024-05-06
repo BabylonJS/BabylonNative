@@ -57,8 +57,8 @@ namespace Babylon
         }
         else
         {
-            m_vertexBuffers.insert(vertexBuffer);
-            vertexBuffer->Add(attrib, attribType, byteOffset, static_cast<uint16_t>(byteStride), static_cast<uint8_t>(numElements), normalized);
+            uint8_t streamIndex = vertexBuffer->Add(attrib, attribType, byteOffset, static_cast<uint16_t>(byteStride), static_cast<uint8_t>(numElements), normalized);
+            m_vertexBuffers.push_back({vertexBuffer, streamIndex});
         }
     }
 
@@ -81,10 +81,10 @@ namespace Babylon
             encoder->setInstanceDataBuffer(&instanceDataBuffer);
         }
 
-        uint8_t streamCount = 0;
-        for (auto* vertexBuffer : m_vertexBuffers)
+        uint8_t stream = 0;
+        for (auto& vertexBuffer : m_vertexBuffers)
         {
-            vertexBuffer->Set(encoder, streamCount, startVertex, numVertices);
+            vertexBuffer.Pointer->Set(encoder, vertexBuffer.StreamIndex, ++stream, startVertex, numVertices);
         }
     }
 }
