@@ -28,7 +28,7 @@ enum class VideoOrientation
     LandscapeLeft = 4,
 };
 
-#if (TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000) || (TARGET_OS_OSX && __MAX_OS_X_VERSION_MIN_REQUIRED >= 140000)
+#if (TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000) || (TARGET_OS_OSX && __MAC_OS_X_VERSION_MIN_REQUIRED >= 140000)
 CGFloat VideoOrientationToRotationAngle(VideoOrientation orientation)
 {
     switch (orientation)
@@ -793,7 +793,7 @@ namespace Babylon::Plugins
         AVCaptureConnection* photoOutputConnection = [m_impl->avCapturePhotoOutput connectionWithMediaType:AVMediaTypeVideo];
         if (photoOutputConnection)
         {
-#if (TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000) || (TARGET_OS_OSX && __MAX_OS_X_VERSION_MIN_REQUIRED >= 140000)
+#if (TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000) || (TARGET_OS_OSX && __MAC_OS_X_VERSION_MIN_REQUIRED >= 140000)
             photoOutputConnection.videoRotationAngle = VideoOrientationToRotationAngle(m_impl->cameraTextureDelegate->Orientation);
 #else
             photoOutputConnection.videoOrientation = static_cast<AVCaptureVideoOrientation>(m_impl->cameraTextureDelegate->Orientation);
