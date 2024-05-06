@@ -28,7 +28,6 @@ jobs:
 
     - task: Xcode@5
       inputs:
-        actions: 'build'
         xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
         scheme: 'Playground'
         sdk: 'iphoneos'

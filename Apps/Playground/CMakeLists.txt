@@ -171,15 +171,6 @@ if(APPLE)
             XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
             RESOURCE "${RESOURCE_FILES}"
             FOLDER "Playground")
-
-        # The NSDocumentRevisionsDebugMode argument is typically added automatically by Xcode 
-        # when running a macOS application in debug mode.
-        # This argument enables additional debugging features related to document revisions.
-        # If not disabled, Xcode adds command line arguments when running the Playground.
-        # These extra arguments are not supported because App expects files paths arguments with a valid URL scheme.
-        if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-            add_definitions(-DNSDocumentRevisionsDebugMode=0)
-        endif()
     endif()
     set_property(TARGET Playground PROPERTY UNITY_BUILD false)
 endif()
