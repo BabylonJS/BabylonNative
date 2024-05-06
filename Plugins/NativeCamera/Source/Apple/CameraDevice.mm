@@ -33,15 +33,14 @@ CGFloat VideoOrientationToRotationAngle(VideoOrientation orientation)
 {
     switch (orientation)
     {
-        case VideoOrientation::LandscapeLeft:
-            return -90;
-        case VideoOrientation::LandscapeRight:
-            return 90;
+        case VideoOrientation::Portrait: default:
+            return 0;
         case VideoOrientation::PortraitUpsideDown:
             return 180;
-        case VideoOrientation::Portrait:
-        default:
-            return 0;
+        case VideoOrientation::LandscapeRight:
+            return 90;
+        case VideoOrientation::LandscapeLeft:
+            return -90;
     }
 }
 #else
