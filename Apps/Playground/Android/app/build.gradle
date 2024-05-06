@@ -42,7 +42,6 @@ android {
                     "-DGRAPHICS_API=${graphics_api}",
                     "-DARCORE_LIBPATH=${arcore_libpath}/jni",
                     "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
-                    "-DJSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR=ON",
                     "-DBABYLON_NATIVE_BUILD_APPS=ON",
                     "-DCMAKE_UNITY_BUILD=${unity_build}"
             }
@@ -71,6 +70,7 @@ android {
         cmake {
             version '3.19.6+'
             path 'CMakeLists.txt'
+            buildStagingDirectory "../../../../Build/Android"
         }
     }
     packagingOptions {
