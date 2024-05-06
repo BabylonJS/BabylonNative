@@ -270,14 +270,7 @@ namespace
         gl->u_params          = bgfx::createUniform("u_params",          bgfx::UniformType::Vec4);
         gl->s_tex             = bgfx::createUniform("s_tex",             bgfx::UniformType::Sampler);
 
-        if (bgfx::getRendererType() == bgfx::RendererType::Direct3D9)
-        {
-            gl->u_halfTexel   = bgfx::createUniform("u_halfTexel",       bgfx::UniformType::Vec4);
-        }
-        else
-        {
-            gl->u_halfTexel.idx = bgfx::kInvalidHandle;
-        }
+        gl->u_halfTexel.idx = bgfx::kInvalidHandle;
 
         s_nvgLayout
             .begin()
