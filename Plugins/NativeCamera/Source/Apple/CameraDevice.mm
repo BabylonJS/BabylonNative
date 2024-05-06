@@ -22,12 +22,13 @@
 
 enum class VideoOrientation
 {
-    LandscapeRight,
-    LandscapeLeft,
-    Portrait,
-    PortraitUpsideDown
+    Portrait = 1,
+    PortraitUpsideDown = 2,
+    LandscapeRight = 3,
+    LandscapeLeft = 4,
 };
 
+#if (TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000) || (TARGET_OS_OSX && __MAX_OS_X_VERSION_MIN_REQUIRED >= 140000)
 CGFloat VideoOrientationToRotationAngle(VideoOrientation orientation)
 {
     switch (orientation)
@@ -43,6 +44,12 @@ CGFloat VideoOrientationToRotationAngle(VideoOrientation orientation)
             return 0;
     }
 }
+#else
+static_assert(AVCaptureVideoOrientationPortrait == static_cast<AVCaptureVideoOrientation>(VideoOrientation::Portrait));
+static_assert(AVCaptureVideoOrientationPortraitUpsideDown == static_cast<AVCaptureVideoOrientation>(VideoOrientation::PortraitUpsideDown));
+static_assert(AVCaptureVideoOrientationLandscapeRight == static_cast<AVCaptureVideoOrientation>(VideoOrientation::LandscapeRight));
+static_assert(AVCaptureVideoOrientationLandscapeLeft == static_cast<AVCaptureVideoOrientation>(VideoOrientation::LandscapeLeft));
+#endif
 
 @interface CameraTextureDelegate : NSObject <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
@@ -787,7 +794,11 @@ namespace Babylon::Plugins
         AVCaptureConnection* photoOutputConnection = [m_impl->avCapturePhotoOutput connectionWithMediaType:AVMediaTypeVideo];
         if (photoOutputConnection)
         {
+#if (TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED >= 170000) || (TARGET_OS_OSX && __MAX_OS_X_VERSION_MIN_REQUIRED >= 140000)
             photoOutputConnection.videoRotationAngle = VideoOrientationToRotationAngle(m_impl->cameraTextureDelegate->Orientation);
+#else
+            photoOutputConnection.videoOrientation = static_cast<AVCaptureVideoOrientation>(m_impl->cameraTextureDelegate->Orientation);
+#endif
         }
         [m_impl->avCapturePhotoOutput capturePhotoWithSettings:capturePhotoSettings delegate:m_impl->photoCaptureDelegate];
 
@@ -853,7 +864,7 @@ namespace Babylon::Plugins
     [self updateOrientation];
 #else
     // Orientation not supported on non-iOS devices. LandscapeLeft assumes the video is already in the correct orientation.
-    self->VideoOrientation = VideoOrientation::LandscapeLeft;
+    self->Orientation = VideoOrientation::LandscapeLeft;
 #endif
     return self;
 }
