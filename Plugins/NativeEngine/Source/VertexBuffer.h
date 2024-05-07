@@ -75,15 +75,24 @@ namespace Babylon
 
         struct StreamInfo
         {
-            bgfx::Attrib::Enum Attrib{};
-            bgfx::AttribType::Enum AttribType{};
-            uint32_t ByteOffset{};
-            uint8_t NumElements{};
-            bool Normalized{};
+            const bgfx::Attrib::Enum Attrib{};
+            const bgfx::AttribType::Enum AttribType{};
+            const uint32_t ByteOffset{};
+            const uint8_t NumElements{};
+            const bool Normalized{};
 
             std::optional<Handle> PromoteToFloatsHandle{};
             uint32_t StartVertexOffset{};
             bgfx::VertexLayoutHandle LayoutHandle{bgfx::kInvalidHandle};
+
+            explicit StreamInfo(bgfx::Attrib::Enum attrib, bgfx::AttribType::Enum attribType, uint32_t byteOffset, uint8_t numElements, bool normalized)
+                : Attrib{attrib}
+                , AttribType{attribType}
+                , ByteOffset{byteOffset}
+                , NumElements{numElements}
+                , Normalized{normalized}
+            {
+            }
         };
 
         void Build(StreamInfo& stream, uint32_t numVertices);

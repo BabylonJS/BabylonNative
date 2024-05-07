@@ -132,7 +132,7 @@ namespace Babylon
             throw std::runtime_error{"All attributes added to a vertex buffer must have the same byte stride"};
         }
 
-        m_streams.push_back({attrib, attribType, byteOffset, numElements, normalized});
+        m_streams.emplace_back(attrib, attribType, byteOffset, numElements, normalized);
         return static_cast<uint8_t>(m_streams.size() - 1);
     }
 
