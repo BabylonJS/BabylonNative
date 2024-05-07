@@ -1,9 +1,8 @@
 parameters:
   name: ''
   vmImage: ''
-  xCodeVersion: ''
-  macOSCodename: ''
-  
+  xcodeVersion: ''
+
 jobs:
   - job: ${{ parameters.name }}
     timeoutInMinutes: 30
@@ -16,8 +15,8 @@ jobs:
         vmImage: ${{ parameters.vmImage }}
 
     - script: |
-        sudo xcode-select --switch /Applications/Xcode_${{ parameters.xCodeVersion }}.app/Contents/Developer
-      displayName: 'Select XCode ${{ parameters.xCodeVersion }}'
+        sudo xcode-select --switch /Applications/Xcode_${{ parameters.xcodeVersion }}.app/Contents/Developer
+      displayName: 'Select XCode ${{ parameters.xcodeVersion }}'
 
     - script: |
         mkdir buildmacOS
@@ -46,4 +45,4 @@ jobs:
     - script: |
         cd buildmacOS/Apps/UnitTests/RelWithDebInfo
         ./UnitTests
-      displayName: 'Run UnitTests MacOS'
+      displayName: 'Run UnitTests macOS'
