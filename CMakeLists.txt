@@ -51,6 +51,15 @@ FetchContent_Declare(SPIRV-Cross
 
 FetchContent_MakeAvailable(CMakeExtensions)
 
+
+if(VISIONOS)
+    FetchContent_MakeAvailable_With_Message(ios-cmake)
+    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+    set(PLATFORM "VISIONOSCOMBINED" CACHE STRING "")
+    set(DEPLOYMENT_TARGET "1.0" CACHE STRING "")
+    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
+endif()
+
 if(IOS)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
     set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
@@ -58,6 +67,7 @@ if(IOS)
     set(DEPLOYMENT_TARGET "13" CACHE STRING "")
     set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
 endif()
+
 
 project(BabylonNative)
 
@@ -98,6 +108,8 @@ if(ANDROID)
     set(BABYLON_NATIVE_PLATFORM "Android")
 elseif(IOS)
     set(BABYLON_NATIVE_PLATFORM "iOS")
+elseif (VISIONOS)
+    set(BABYLON_NATIVE_PLATFORM "visionOS")
 elseif(APPLE)
     set(BABYLON_NATIVE_PLATFORM "macOS")
 elseif(WINDOWS_STORE)
