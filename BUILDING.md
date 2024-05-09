@@ -192,6 +192,44 @@ demo app, click on the project selector and find `Playground` in the list of pos
 selections. The `Play` button will subsequently allow you to build, run, and debug
 the selected Babylon Native demo app.
 
+## **Building on macOS, Targeting visionOS**
+
+_Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
+
+**Required Tools:** [Xcode 15](https://developer.apple.com/xcode/) or newer,
+[Python 3.0](https://www.python.org/) or newer (required by dependencies)
+
+For macOS development, CMake will generate a Makefile by default. It may be possible
+to build Babylon Native for macOS using this approach, but only the Xcode method is
+supported at present. To generate an Xcode project using CMake, you must specify the
+correct build system generator for CMake to use. Additionally, you must tell CMake
+what toolchain to use, which provides additional information about how to generate an
+visionOS Xcode project correctly. Run the following command from the repository root:
+
+```
+cmake -B build/visionOS -G Xcode -D VISIONOS=ON
+```
+
+To enable bitcode support, add this option to the cmake command line parameters:
+
+```
+-D ENABLE_BITCODE=ON
+```
+
+CMake will generate a new `BabylonNative.xcodeproj` file in the specified build folder.
+Open the project by double-clicking on it in Finder or by entering the following command:
+
+```
+open build/visionOS/BabylonNative.xcodeproj
+```
+
+To select which project to build with Xcode, select the correct project name in the
+menu to the right of the greyed-out `Stop` button adjacent to the `Play` button in
+the top-left corner of the Xcode window. For example, to build and run the Playground
+demo app, click on the project selector and find `Playground` in the list of possible
+selections. The `Play` button will subsequently allow you to build, run, and debug
+the selected Babylon Native demo app.
+
 ## **Building on Windows, Targeting Android**
 
 _Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
