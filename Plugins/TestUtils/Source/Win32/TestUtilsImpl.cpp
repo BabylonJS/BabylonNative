@@ -45,7 +45,7 @@ namespace Babylon::Plugins::Internal
         // is currently set up. If the main thread is calling FinishRenderingCurrentFrame, this will hang forever as
         // the main message loop is not pumping. Once we fix the rendering code to never block the main thread, this
         // threadpool scheduling will no longer be necessary.
-        arcana::make_task(arcana::threadpool_scheduler, arcana::cancellation::none(), [hWnd = m_implData->m_window, title = info[0].As<Napi::String>().Utf8Value()] {
+        arcana::threadpool_scheduler([hWnd = m_implData->m_window, title = info[0].As<Napi::String>().Utf8Value()] {
             SetWindowTextA(hWnd, title.c_str());
         });
     }
