@@ -117,6 +117,7 @@ namespace Babylon
         {
             switch (orientation)
             {
+                // clang-format off
                 case bimg::Orientation::R0: return [](uint32_t x, uint32_t y) { return std::make_pair(x, y); };
                 case bimg::Orientation::R90: return [height](uint32_t x, uint32_t y) { return std::make_pair(height - y - 1, x); };
                 case bimg::Orientation::R180: return [width, height](uint32_t x, uint32_t y) { return std::make_pair(width - x - 1, height - y - 1); };
@@ -126,6 +127,7 @@ namespace Babylon
                 case bimg::Orientation::HFlipR270: return [](uint32_t x, uint32_t y) { return std::make_pair(y, x); };
                 case bimg::Orientation::VFlip: return [height](uint32_t x, uint32_t y) { return std::make_pair(x, height - y - 1); };
                 default: throw std::runtime_error{"Unexpected image orientation."};
+                // clang-format on
             }
         }
 
@@ -1767,10 +1769,10 @@ namespace Babylon
 
         if (texture != nullptr)
         {
-            texture->Disown();
             attachments[numAttachments++].init(texture->Handle());
         }
 
+        bgfx::TextureHandle depthStencilTextureHandle = BGFX_INVALID_HANDLE;
         if (generateStencilBuffer || generateDepth)
         {
             if (generateStencilBuffer && !generateDepth)
@@ -1781,22 +1783,35 @@ namespace Babylon
             auto flags = BGFX_TEXTURE_RT_WRITE_ONLY | RenderTargetSamplesToBgfxMsaaFlag(samples);
             const auto depthStencilFormat{generateStencilBuffer ? bgfx::TextureFormat::D24S8 : bgfx::TextureFormat::D32};
             assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, flags));
+            depthStencilTextureHandle = bgfx::createTexture2D(width, height, false, 1, depthStencilFormat, flags);
 
             // bgfx doesn't add flag D3D11_RESOURCE_MISC_GENERATE_MIPS for depth textures (missing that flag will crash D3D with resolving)
             // And not sure it makes sense to generate mipmaps from a depth buffer with exponential values.
             // only allows mipmaps resolve step when mipmapping is asked and for the color texture, not the depth.
             // https://github.com/bkaradzic/bgfx/blob/2c21f68998595fa388e25cb6527e82254d0e9bff/src/renderer_d3d11.cpp#L4525
-            attachments[numAttachments++].init(bgfx::createTexture2D(width, height, false, 1, depthStencilFormat, flags));
+            attachments[numAttachments++].init(depthStencilTextureHandle);
         }
 
-        bgfx::FrameBufferHandle frameBufferHandle = bgfx::createFrameBuffer(numAttachments, attachments.data(), true);
+        bgfx::FrameBufferHandle frameBufferHandle = bgfx::createFrameBuffer(numAttachments, attachments.data());
         if (!bgfx::isValid(frameBufferHandle))
         {
+            if (bgfx::isValid(depthStencilTextureHandle))
+            {
+                bgfx::destroy(depthStencilTextureHandle);
+            }
+
             throw Napi::Error::New(info.Env(), "Failed to create frame buffer");
         }
 
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
-        return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
+        return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, [frameBuffer, depthStencilTextureHandle]() {
+            if (bgfx::isValid(depthStencilTextureHandle))
+            {
+                bgfx::destroy(depthStencilTextureHandle);
+            }
+
+            delete frameBuffer;
+        });
     }
 
     // TODO: This doesn't get called when an Engine instance is disposed.
@@ -1830,7 +1845,7 @@ namespace Babylon
         m_boundFrameBufferNeedsRebinding.Set(*encoder, false);
     }
 
-    // Note: For legacy reasons JS might call this function for instance drawing. 
+    // Note: For legacy reasons JS might call this function for instance drawing.
     // In that case the instanceCount will be calculated inside the SetVertexBuffers method.
     void NativeEngine::DrawIndexed(NativeDataStream::Reader& data)
     {
@@ -1867,7 +1882,7 @@ namespace Babylon
         DrawInternal(encoder, fillMode);
     }
 
-    // Note: For legacy reasons JS might call this function for instance drawing. 
+    // Note: For legacy reasons JS might call this function for instance drawing.
     // In that case the instanceCount will be calculated inside the SetVertexBuffers method.
     void NativeEngine::Draw(NativeDataStream::Reader& data)
     {
