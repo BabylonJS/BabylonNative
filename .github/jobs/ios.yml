@@ -1,8 +1,7 @@
 parameters:
   name: ''
   vmImage: ''
-  xCodeVersion: ''
-  macOSCodename: ''
+  xcodeVersion: ''
   deploymentTarget: '12'
 
 jobs:
@@ -17,8 +16,8 @@ jobs:
         vmImage: ${{ parameters.vmImage }}
 
     - script: |
-        sudo xcode-select --switch /Applications/Xcode_${{ parameters.xCodeVersion }}.app/Contents/Developer
-      displayName: 'Select XCode ${{ parameters.xCodeVersion }}'
+        sudo xcode-select --switch /Applications/Xcode_${{ parameters.xcodeVersion }}.app/Contents/Developer
+      displayName: 'Select Xcode ${{ parameters.xcodeVersion }}'
 
     - script: |
         mkdir buildiOS

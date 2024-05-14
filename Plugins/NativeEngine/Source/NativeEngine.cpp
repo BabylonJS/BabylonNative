@@ -117,6 +117,7 @@ namespace Babylon
         {
             switch (orientation)
             {
+                // clang-format off
                 case bimg::Orientation::R0: return [](uint32_t x, uint32_t y) { return std::make_pair(x, y); };
                 case bimg::Orientation::R90: return [height](uint32_t x, uint32_t y) { return std::make_pair(height - y - 1, x); };
                 case bimg::Orientation::R180: return [width, height](uint32_t x, uint32_t y) { return std::make_pair(width - x - 1, height - y - 1); };
@@ -126,6 +127,7 @@ namespace Babylon
                 case bimg::Orientation::HFlipR270: return [](uint32_t x, uint32_t y) { return std::make_pair(y, x); };
                 case bimg::Orientation::VFlip: return [height](uint32_t x, uint32_t y) { return std::make_pair(x, height - y - 1); };
                 default: throw std::runtime_error{"Unexpected image orientation."};
+                // clang-format on
             }
         }
 
@@ -1795,12 +1797,18 @@ namespace Babylon
         bgfx::FrameBufferHandle frameBufferHandle = bgfx::createFrameBuffer(numAttachments, attachments.data());
         if (!bgfx::isValid(frameBufferHandle))
         {
+            if (bgfx::isValid(depthStencilTextureHandle))
+            {
+                bgfx::destroy(depthStencilTextureHandle);
+            }
+
             throw Napi::Error::New(info.Env(), "Failed to create frame buffer");
         }
 
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
         return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, [frameBuffer, depthStencilTextureHandle]() {
-            if (bgfx::isValid(depthStencilTextureHandle)) {
+            if (bgfx::isValid(depthStencilTextureHandle))
+            {
                 bgfx::destroy(depthStencilTextureHandle);
             }
 
@@ -1839,7 +1847,7 @@ namespace Babylon
         m_boundFrameBufferNeedsRebinding.Set(*encoder, false);
     }
 
-    // Note: For legacy reasons JS might call this function for instance drawing. 
+    // Note: For legacy reasons JS might call this function for instance drawing.
     // In that case the instanceCount will be calculated inside the SetVertexBuffers method.
     void NativeEngine::DrawIndexed(NativeDataStream::Reader& data)
     {
@@ -1876,7 +1884,7 @@ namespace Babylon
         DrawInternal(encoder, fillMode);
     }
 
-    // Note: For legacy reasons JS might call this function for instance drawing. 
+    // Note: For legacy reasons JS might call this function for instance drawing.
     // In that case the instanceCount will be calculated inside the SetVertexBuffers method.
     void NativeEngine::Draw(NativeDataStream::Reader& data)
     {
