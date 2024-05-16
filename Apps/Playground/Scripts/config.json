@@ -254,24 +254,25 @@
         {
             "title": "Scissor test",
             "playgroundId": "#W7E7CF#34",
-            "excludedEngines": [ "D3D12" ],
+            "renderCount": 20,
             "referenceImage": "scissor-test.png",
+            "excludedGraphicsApis": [ "D3D12" ],
             "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx"
         },
         {
             "title": "Scissor test with 0.9 hardware scaling",
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
-            "excludedEngines": [ "D3D12" ],
             "referenceImage": "scissor-test-2.png",
+            "excludedGraphicsApis": [ "D3D12" ],
             "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx"
         },
         {
             "title": "Scissor test with 1.5 hardware scaling",
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 1.5;",
-            "excludedEngines": [ "D3D12" ],
             "referenceImage": "scissor-test-3.png",
+            "excludedGraphicsApis": [ "D3D12" ],
             "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx"
         },
         {
@@ -408,16 +409,14 @@
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitiveMode, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitiveMode0.png",
-            "errorRatio": 8.0,
-            "excludedEngines": [ "webgpu" ]
+            "errorRatio": 8.0
         },
         {
             "title": "GLTF Mesh Primitive Mode (1)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitiveMode, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitiveMode1.png",
-            "errorRatio": 8.0,
-            "excludedEngines": [ "webgpu" ]
+            "errorRatio": 8.0
         },
         {
             "title": "GLTF Mesh Primitives",
