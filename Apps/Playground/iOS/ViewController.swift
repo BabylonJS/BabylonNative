@@ -126,7 +126,7 @@ class ViewController: UIViewController {
 extension ViewController: MTKViewDelegate {
     func draw(in view: MTKView) {
         guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else { return }
-        xrView.isHidden = appDelegate._bridge?.isXRActive() ?? false
+        xrView.isHidden = !(appDelegate._bridge?.isXRActive() ?? false)
         appDelegate._bridge?.render()
     }
     
