@@ -59,7 +59,7 @@ namespace Babylon
             Handle(Handle&&) noexcept;
             Handle& operator=(Handle&&) noexcept;
 
-            void Update(gsl::span<uint8_t> bytes, uint32_t startVertex);
+            void Update(const gsl::span<uint8_t> bytes, uint32_t startVertex);
 
             void Set(bgfx::Encoder* encoder, uint8_t stream, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layoutHandle);
 

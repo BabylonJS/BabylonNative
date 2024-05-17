@@ -2,7 +2,7 @@
 #include "Image.h"
 #include "Context.h"
 #include <bgfx/bgfx.h>
-#include <napi/napi_pointer.h>
+#include <napi/pointer.h>
 #include <cassert>
 #include "Colors.h"
 

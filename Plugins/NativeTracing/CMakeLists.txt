@@ -15,8 +15,7 @@ target_include_directories(NativeTracing PUBLIC "Include")
 target_link_libraries(NativeTracing
     PUBLIC napi
     PRIVATE JsRuntimeInternal
-    PRIVATE arcana
-    PRIVATE napi_extensions)
+    PRIVATE arcana)
 
 set_property(TARGET NativeTracing PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

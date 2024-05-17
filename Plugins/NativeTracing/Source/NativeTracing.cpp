@@ -1,6 +1,6 @@
 #include <Babylon/Plugins/NativeTracing.h>
 #include <Babylon/JsRuntime.h>
-#include <napi/napi_pointer.h>
+#include <napi/pointer.h>
 #include <arcana/tracing/trace_region.h>
 #include <optional>
 

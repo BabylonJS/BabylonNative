@@ -1,5 +1,5 @@
 if (typeof createScene === "function") {
-    var engine = new BABYLON.NativeEngine({adaptToDeviceRatio: true});
+    var engine = new BABYLON.NativeEngine({ adaptToDeviceRatio: true });
     var scene = createScene();
     if (scene.then) {
         scene.then(function (scene) {

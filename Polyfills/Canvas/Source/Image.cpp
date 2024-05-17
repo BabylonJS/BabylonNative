@@ -10,7 +10,7 @@
 #include <bimg/decode.h>
 #include "nanovg.h"
 #include <cassert>
-#include <napi/napi_pointer.h>
+#include <napi/pointer.h>
 #include <basen.hpp>
 
 namespace Babylon::Polyfills::Internal

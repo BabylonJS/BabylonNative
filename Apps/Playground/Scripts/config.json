@@ -27,10 +27,8 @@
         },
         {
             "title": "GLTF ClearCoat",
-            "playgroundId": "#YG3BBF#4",
-            "referenceImage": "glTFClearCoat.png",
-            "renderCount": 50,
-            "excludeFromAutomaticTesting": false
+            "playgroundId": "#YG3BBF#33",
+            "referenceImage": "glTFClearCoat.png"
         },
         {
             "title": "Iridescence GLTF",
@@ -98,7 +96,7 @@
         },
         {
             "title": "Dynamic Texture context clip",
-            "playgroundId": "#FU0ES5#37",
+            "playgroundId": "#FU0ES5#47",
             "referenceImage": "dynamicTextureClip.png"
         },
         {
@@ -255,27 +253,26 @@
         },
         {
             "title": "Scissor test",
-            "renderCount": 10,
-            "playgroundId": "#W7E7CF#12",
+            "playgroundId": "#W7E7CF#34",
             "referenceImage": "scissor-test.png",
             "excludedGraphicsApis": [ "D3D12" ],
-            "comment": "TODO: reenable D3D12 when automatica mip-maps issue is fixed in bgfx"
+            "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx"
         },
         {
             "title": "Scissor test with 0.9 hardware scaling",
-            "renderCount": 10,
-            "playgroundId": "#W7E7CF#27",
-            "referenceImage": "scissorTestWith0.9HardwareScaling.png",
+            "playgroundId": "#W7E7CF#34",
+            "replace": "//options//, hardwareScalingLevel = 0.9;",
+            "referenceImage": "scissor-test-2.png",
             "excludedGraphicsApis": [ "D3D12" ],
-            "comment": "TODO: reenable D3D12 when automatica mip-maps issue is fixed in bgfx"
+            "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx"
         },
         {
             "title": "Scissor test with 1.5 hardware scaling",
-            "renderCount": 10,
-            "playgroundId": "#W7E7CF#28",
-            "referenceImage": "scissorTestWith1.5HardwareScaling.png",
+            "playgroundId": "#W7E7CF#34",
+            "replace": "//options//, hardwareScalingLevel = 1.5;",
+            "referenceImage": "scissor-test-3.png",
             "excludedGraphicsApis": [ "D3D12" ],
-            "comment": "TODO: reenable D3D12 when automatica mip-maps issue is fixed in bgfx"
+            "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx"
         },
         {
             "title": "Scissor test with negative x and y",
@@ -411,16 +408,14 @@
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitiveMode, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitiveMode0.png",
-            "errorRatio": 8.0,
-            "excludedEngines": [ "webgpu" ]
+            "errorRatio": 8.0
         },
         {
             "title": "GLTF Mesh Primitive Mode (1)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitiveMode, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfMeshPrimitiveMode1.png",
-            "errorRatio": 8.0,
-            "excludedEngines": [ "webgpu" ]
+            "errorRatio": 8.0
         },
         {
             "title": "GLTF Mesh Primitives",

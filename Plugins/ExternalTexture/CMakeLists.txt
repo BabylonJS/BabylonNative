@@ -18,7 +18,6 @@ target_include_directories(ExternalTexture
 target_link_libraries(ExternalTexture
     PUBLIC napi
     PUBLIC GraphicsDevice
-    PRIVATE napi_extensions
     PRIVATE JsRuntimeInternal
     PRIVATE GraphicsDeviceContext)
 

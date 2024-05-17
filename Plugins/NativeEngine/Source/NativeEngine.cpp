@@ -10,7 +10,7 @@
 #include <arcana/tracing/trace_region.h>
 
 #include <napi/env.h>
-#include <napi/napi_pointer.h>
+#include <napi/pointer.h>
 
 #include <bgfx/bgfx.h>
 
@@ -624,6 +624,8 @@ namespace Babylon
                 StaticValue("COMMAND_SETTEXTUREWRAPMODE", Napi::FunctionPointer::Create(env, &NativeEngine::SetTextureWrapMode)),
                 StaticValue("COMMAND_SETTEXTUREANISOTROPICLEVEL", Napi::FunctionPointer::Create(env, &NativeEngine::SetTextureAnisotropicLevel)),
                 StaticValue("COMMAND_SETTEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::SetTexture)),
+                StaticValue("COMMAND_UNSETTEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::UnsetTexture)),
+                StaticValue("COMMAND_DISCARDALLTEXTURES", Napi::FunctionPointer::Create(env, &NativeEngine::DiscardAllTextures)),
                 StaticValue("COMMAND_BINDVERTEXARRAY", Napi::FunctionPointer::Create(env, &NativeEngine::BindVertexArray)),
                 StaticValue("COMMAND_SETSTATE", Napi::FunctionPointer::Create(env, &NativeEngine::SetState)),
                 StaticValue("COMMAND_SETZOFFSET", Napi::FunctionPointer::Create(env, &NativeEngine::SetZOffset)),
@@ -726,6 +728,8 @@ namespace Babylon
 
     void NativeEngine::Dispose()
     {
+        m_deviceContext.SetRenderResetCallback(nullptr);
+
         m_cancellationSource->cancel();
     }
 
@@ -1619,6 +1623,21 @@ namespace Babylon
         encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle(), texture->SamplerFlags());
     }
 
+    void NativeEngine::UnsetTexture(NativeDataStream::Reader& data)
+    {
+        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
+
+        const UniformInfo* uniformInfo = data.ReadPointer<UniformInfo>();
+
+        encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, BGFX_INVALID_HANDLE);
+    }
+
+    void NativeEngine::DiscardAllTextures(NativeDataStream::Reader&)
+    {
+        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
+        encoder->discard(BGFX_DISCARD_BINDINGS);
+    }
+
     void NativeEngine::DeleteTexture(const Napi::CallbackInfo& info)
     {
         Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
@@ -2247,10 +2266,9 @@ namespace Babylon
             encoder->setState((m_engineState & ~BGFX_STATE_WRITE_Z) | fillModeState);
         }
 
-        // stencil
         boundFrameBuffer.SetStencil(*encoder, m_stencilState);
 
-        // Discard everything except bindings since we keep the state of everything else.
+        // Discard everything except textures since we keep the state of everything else.
         boundFrameBuffer.Submit(*encoder, m_currentProgram->Handle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
     }
 

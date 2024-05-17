@@ -195,6 +195,8 @@ namespace Babylon
         void SetTextureWrapMode(NativeDataStream::Reader& data);
         void SetTextureAnisotropicLevel(NativeDataStream::Reader& data);
         void SetTexture(NativeDataStream::Reader& data);
+        void UnsetTexture(NativeDataStream::Reader& data);
+        void DiscardAllTextures(NativeDataStream::Reader& data);
         void DeleteTexture(const Napi::CallbackInfo& info);
         Napi::Value ReadTexture(const Napi::CallbackInfo& info);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
