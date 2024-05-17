@@ -103,8 +103,8 @@ Babylon::Plugins::NativeInput* nativeInput{};
 
     Babylon::Graphics::Configuration graphicsConfig{};
     graphicsConfig.Window = engineView;
-    graphicsConfig.Width = static_cast<size_t>(600);
-    graphicsConfig.Height = static_cast<size_t>(400);
+    graphicsConfig.Width = static_cast<size_t>(engineView.drawableSize.width);
+    graphicsConfig.Height = static_cast<size_t>(engineView.drawableSize.height);
     graphicsConfig.MSAASamples = 4;
 
     device.emplace(graphicsConfig);
