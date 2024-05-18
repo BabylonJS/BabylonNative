@@ -14,10 +14,7 @@ macro(_bgfx_crosscompile_use_host_tool TOOL_NAME)
 		find_program(
 			${TOOL_NAME}_EXECUTABLE
 			NAMES bgfx-${TOOL_NAME} ${TOOL_NAME}
-			PATHS /usr/bin #
-					${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/packages/bgfx_x64-linux/tools/bgfx
-					${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/packages/bgfx_x64-windows/tools/bgfx
-					${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/packages/bgfx_x64-osx/tools/bgfx
+			PATHS /usr/bin @VCPKG_CURRENT_HOST_INSTALLED_DIR@/tools/bgfx
 		)
 		add_executable(bgfx::${TOOL_NAME} IMPORTED)
 		set_target_properties(bgfx::${TOOL_NAME} PROPERTIES IMPORTED_LOCATION "${${TOOL_NAME}_EXECUTABLE}")
