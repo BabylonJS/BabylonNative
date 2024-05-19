@@ -263,17 +263,19 @@ if(BGFX_CUSTOM_TARGETS)
 endif()
 
 # Add common library for examples
-add_example(
-	common
-	COMMON
-	DIRECTORIES
-	${BGFX_DIR}/examples/common/debugdraw
-	${BGFX_DIR}/examples/common/entry
-	${BGFX_DIR}/examples/common/font
-	${BGFX_DIR}/examples/common/imgui
-	${BGFX_DIR}/examples/common/nanovg
-	${BGFX_DIR}/examples/common/ps
-)
+if(BGFX_BUILD_EXAMPLE_COMMON)
+	add_example(
+		common
+		COMMON
+		DIRECTORIES
+		${BGFX_DIR}/examples/common/debugdraw
+		${BGFX_DIR}/examples/common/entry
+		${BGFX_DIR}/examples/common/font
+		${BGFX_DIR}/examples/common/imgui
+		${BGFX_DIR}/examples/common/nanovg
+		${BGFX_DIR}/examples/common/ps
+	)
+endif()
 
 # Only add examples if set, otherwise we still need exmaples common for tools
 if(BGFX_BUILD_EXAMPLES)
