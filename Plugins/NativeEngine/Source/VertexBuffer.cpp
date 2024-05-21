@@ -2,50 +2,6 @@
 #include "Babylon/Graphics/DeviceContext.h"
 #include <cassert>
 
-namespace
-{
-    template<typename T>
-    std::vector<uint8_t> PromoteToFloats(const gsl::span<uint8_t> bytes, uint8_t numElements, uint32_t byteOffset, uint16_t byteStride, uint32_t numVertices)
-    {
-        assert(numElements > 0);
-        const uint32_t maxNumVertices = static_cast<uint32_t>((bytes.size() - byteOffset - sizeof(T) * numElements) / byteStride) + 1;
-        if (numVertices > maxNumVertices)
-        {
-            numVertices = maxNumVertices;
-        }
-
-        std::vector<uint8_t> destinationBytes(numVertices * numElements * sizeof(float));
-        float* destinationFloats = reinterpret_cast<float*>(destinationBytes.data());
-        for (size_t index = 0; index < numVertices; ++index)
-        {
-            const T* source = reinterpret_cast<const T*>(bytes.data() + byteOffset + index * byteStride);
-            for (size_t element = 0; element < numElements; ++element)
-            {
-                *destinationFloats++ = static_cast<float>(*source++);
-            }
-        }
-
-        return destinationBytes;
-    }
-
-    std::vector<uint8_t> PromoteToFloats(const gsl::span<uint8_t> bytes, bgfx::AttribType::Enum attribType, uint8_t numElements, uint32_t byteOffset, uint16_t byteStride, uint32_t numVertices = std::numeric_limits<uint32_t>::max())
-    {
-        switch (attribType)
-        {
-            case bgfx::AttribType::Int8:
-                return PromoteToFloats<int8_t>(bytes, numElements, byteOffset, byteStride, numVertices);
-            case bgfx::AttribType::Uint8:
-                return PromoteToFloats<uint8_t>(bytes, numElements, byteOffset, byteStride, numVertices);
-            case bgfx::AttribType::Int16:
-                return PromoteToFloats<int16_t>(bytes, numElements, byteOffset, byteStride, numVertices);
-            case bgfx::AttribType::Uint16:
-                return PromoteToFloats<uint16_t>(bytes, numElements, byteOffset, byteStride, numVertices);
-            default:
-                throw std::runtime_error{"Unable to promote vertex stream to a float array."};
-        }
-    }
-}
-
 namespace Babylon
 {
     VertexBuffer::VertexBuffer(Graphics::DeviceContext& deviceContext, gsl::span<const uint8_t> bytes, bool dynamic)
