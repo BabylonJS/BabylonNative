@@ -17,7 +17,7 @@ namespace Babylon
     class VertexBuffer final
     {
     public:
-        VertexBuffer(Graphics::DeviceContext& deviceContext, const gsl::span<uint8_t> bytes, bool dynamic);
+        VertexBuffer(Graphics::DeviceContext& deviceContext, gsl::span<const uint8_t> bytes, bool dynamic);
         ~VertexBuffer();
 
         // No copy or move semantics
@@ -26,11 +26,11 @@ namespace Babylon
 
         void Dispose();
 
-        void Update(const gsl::span<uint8_t> bytes, size_t byteOffset);
+        void Update(gsl::span<const uint8_t> bytes, size_t byteOffset);
 
-        void Add(bgfx::Attrib::Enum attrib, bgfx::AttribType::Enum attribType, uint32_t byteOffset, uint16_t byteStride, uint8_t numElements, bool normalized);
+        void Build(uint32_t byteStride);
 
-        void Set(bgfx::Encoder* encoder, uint8_t& streamCount, uint32_t startVertex, uint32_t numVertices);
+        void Set(bgfx::Encoder* encoder, uint8_t stream, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layout);
 
         struct InstanceInfo
         {
@@ -43,67 +43,18 @@ namespace Babylon
         static void BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceInfo>& instances, uint32_t instanceCount);
 
     private:
-        void Build(uint32_t numVertices);
-
-        class Handle final
-        {
-        public:
-            Handle(Graphics::DeviceContext& deviceContext, std::vector<uint8_t> bytes, bool dynamic, uint16_t byteStride);
-            ~Handle();
-
-            // Copy semantics
-            Handle(const Handle&) = delete;
-            Handle& operator=(const Handle&) = delete;
-
-            // Move semantics
-            Handle(Handle&&) noexcept;
-            Handle& operator=(Handle&&) noexcept;
-
-            void Update(const gsl::span<uint8_t> bytes, uint32_t startVertex);
-
-            void Set(bgfx::Encoder* encoder, uint8_t stream, uint32_t startVertex, uint32_t numVertices, bgfx::VertexLayoutHandle layoutHandle);
-
-        private:
-            Graphics::DeviceContext& m_deviceContext;
-            const uintptr_t m_deviceId{};
-            bool m_dynamic{};
-
-            union
-            {
-                bgfx::VertexBufferHandle m_handle{bgfx::kInvalidHandle};
-                bgfx::DynamicVertexBufferHandle m_dynamicHandle;
-            };
-        };
-
-    private:
         Graphics::DeviceContext& m_deviceContext;
+        const uintptr_t m_deviceId{};
 
         std::vector<uint8_t> m_bytes{};
         const bool m_dynamic{};
-        bool m_buildCalled{};
+        uint32_t m_byteStride{};
 
-        struct AttributeInfo
+        union
         {
-            bgfx::AttribType::Enum AttribType{};
-            uint32_t ByteOffset{};
-            uint8_t NumElements{};
-            bool Normalized{};
+            bgfx::VertexBufferHandle m_handle{bgfx::kInvalidHandle};
+            bgfx::DynamicVertexBufferHandle m_dynamicHandle;
         };
-
-        uint16_t m_byteStride{};
-        std::map<bgfx::Attrib::Enum, AttributeInfo> m_attributes{};
-
-        std::optional<Handle> m_handle{};
-
-        struct StreamInfo
-        {
-            const AttributeInfo& Attribute;
-            std::optional<Handle> PromoteToFloatsHandle;
-            uint32_t StartVertexOffset;
-            bgfx::VertexLayoutHandle LayoutHandle;
-        };
-
-        std::vector<StreamInfo> m_streams{};
 
         bool m_disposed{};
     };

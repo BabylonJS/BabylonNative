@@ -16,7 +16,7 @@ namespace Babylon
     class IndexBuffer final
     {
     public:
-        IndexBuffer(Graphics::DeviceContext& deviceContext, const gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic);
+        IndexBuffer(Graphics::DeviceContext& deviceContext, gsl::span<const uint8_t> bytes, uint16_t flags, bool dynamic);
         ~IndexBuffer();
 
         // No copy or move semantics
@@ -25,20 +25,19 @@ namespace Babylon
 
         void Dispose();
 
-        void Update(const gsl::span<uint8_t> bytes, uint32_t startIndex);
+        void Update(gsl::span<const uint8_t> bytes, uint32_t startIndex);
+
+        void Build();
 
         void Set(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices);
 
     private:
-        void Build();
-
         Graphics::DeviceContext& m_deviceContext;
         const uintptr_t m_deviceID{};
 
         std::vector<uint8_t> m_bytes{};
         const uint16_t m_flags{};
         const bool m_dynamic{};
-        bool m_buildCalled{};
 
         union
         {

@@ -17,7 +17,7 @@ namespace Babylon
         }
 
         m_indexBuffer = nullptr;
-        m_vertexBuffers.clear();
+        m_vertexBufferRecords.clear();
         m_vertexBufferInstances.clear();
 
         m_disposed = true;
@@ -26,6 +26,7 @@ namespace Babylon
     void VertexArray::RecordIndexBuffer(IndexBuffer* indexBuffer)
     {
         m_indexBuffer = indexBuffer;
+        m_indexBuffer->Build();
     }
 
     void VertexArray::RecordVertexBuffer(VertexBuffer* vertexBuffer, uint32_t location, uint32_t byteOffset, uint32_t byteStride, uint32_t numElements, uint32_t type, bool normalized, uint32_t divisor)
@@ -57,8 +58,19 @@ namespace Babylon
         }
         else
         {
-            m_vertexBuffers.insert(vertexBuffer);
-            vertexBuffer->Add(attrib, attribType, byteOffset, static_cast<uint16_t>(byteStride), static_cast<uint8_t>(numElements), normalized);
+            vertexBuffer->Build(byteStride);
+
+            bgfx::VertexLayout layout{};
+            layout.begin();
+            layout.add(attrib, static_cast<uint8_t>(numElements), attribType, normalized);
+            layout.m_stride = static_cast<uint16_t>(byteStride);
+            layout.m_offset[attrib] = static_cast<uint16_t>(byteOffset % byteStride);
+            layout.end();
+
+            if (!m_vertexBufferRecords.try_emplace(attrib, vertexBuffer, byteOffset / byteStride, bgfx::createVertexLayout(layout)).second)
+            {
+                throw std::runtime_error{"Multiple vertex buffers with the same attribute cannot be recorded"};
+            }
         }
     }
 
@@ -81,10 +93,11 @@ namespace Babylon
             encoder->setInstanceDataBuffer(&instanceDataBuffer);
         }
 
-        uint8_t streamCount = 0;
-        for (auto* vertexBuffer : m_vertexBuffers)
+        uint8_t stream = 0;
+        for (const auto& pair : m_vertexBufferRecords)
         {
-            vertexBuffer->Set(encoder, streamCount, startVertex, numVertices);
+            auto& record{pair.second};
+            record.Buffer->Set(encoder, stream++, record.Offset + startVertex, numVertices, record.LayoutHandle);
         }
     }
 }

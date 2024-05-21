@@ -26,7 +26,23 @@ namespace Babylon
 
     private:
         IndexBuffer* m_indexBuffer{};
-        std::set<VertexBuffer*> m_vertexBuffers;
+
+        struct VertexBufferRecord
+        {
+            VertexBuffer* Buffer{};
+            const uint32_t Offset{};
+            const bgfx::VertexLayoutHandle LayoutHandle{};
+
+            explicit VertexBufferRecord(VertexBuffer* buffer, const uint32_t offset, bgfx::VertexLayoutHandle layoutHandle)
+                : Buffer{buffer}
+                , Offset{offset}
+                , LayoutHandle{layoutHandle}
+            {
+            }
+        };
+
+        std::map<bgfx::Attrib::Enum, VertexBufferRecord> m_vertexBufferRecords{};
+
         std::map<bgfx::Attrib::Enum, VertexBuffer::InstanceInfo> m_vertexBufferInstances;
 
         bool m_disposed{};
