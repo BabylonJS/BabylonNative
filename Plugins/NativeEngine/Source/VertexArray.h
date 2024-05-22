@@ -33,7 +33,7 @@ namespace Babylon
             const uint32_t Offset{};
             const bgfx::VertexLayoutHandle LayoutHandle{};
 
-            explicit VertexBufferRecord(VertexBuffer* buffer, const uint32_t offset, bgfx::VertexLayoutHandle layoutHandle)
+            VertexBufferRecord(VertexBuffer* buffer, const uint32_t offset, bgfx::VertexLayoutHandle layoutHandle)
                 : Buffer{buffer}
                 , Offset{offset}
                 , LayoutHandle{layoutHandle}
