@@ -3,7 +3,7 @@
 
 namespace Babylon
 {
-    IndexBuffer::IndexBuffer(Graphics::DeviceContext& deviceContext, const gsl::span<uint8_t> bytes, uint16_t flags, bool dynamic)
+    IndexBuffer::IndexBuffer(Graphics::DeviceContext& deviceContext, gsl::span<const uint8_t> bytes, uint16_t flags, bool dynamic)
         : m_deviceContext{deviceContext}
         , m_deviceID{deviceContext.GetDeviceId()}
         , m_bytes{bytes.data(), bytes.data() + bytes.size()}
@@ -41,7 +41,7 @@ namespace Babylon
         m_disposed = true;
     }
 
-    void IndexBuffer::Update(const gsl::span<uint8_t> bytes, uint32_t startIndex)
+    void IndexBuffer::Update(gsl::span<const uint8_t> bytes, uint32_t startIndex)
     {
         if (!m_dynamic)
         {
@@ -66,14 +66,35 @@ namespace Babylon
         }
     }
 
+    void IndexBuffer::Build()
+    {
+        if (!bgfx::isValid(m_handle))
+        {
+            auto releaseFn = [](void*, void* userData) {
+                delete reinterpret_cast<decltype(m_bytes)*>(userData);
+            };
+
+            auto* bytesPtr = new decltype(m_bytes){std::move(m_bytes)};
+            const bgfx::Memory* memory = bgfx::makeRef(bytesPtr->data(), static_cast<uint32_t>(bytesPtr->size()), releaseFn, bytesPtr);
+
+            if (m_dynamic)
+            {
+                m_dynamicHandle = bgfx::createDynamicIndexBuffer(memory, m_flags);
+            }
+            else
+            {
+                m_handle = bgfx::createIndexBuffer(memory, m_flags);
+            }
+
+            if (!bgfx::isValid(m_handle))
+            {
+                throw std::runtime_error{"Failed to create index buffer"};
+            }
+        }
+    }
+
     void IndexBuffer::Set(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices)
     {
-        if (!m_buildCalled)
-        {
-            m_buildCalled = true;
-            Build();
-        }
-
         if (m_dynamic)
         {
             encoder->setIndexBuffer(m_dynamicHandle, firstIndex, numIndices);
@@ -81,30 +102,6 @@ namespace Babylon
         else
         {
             encoder->setIndexBuffer(m_handle, firstIndex, numIndices);
-        }
-    }
-
-    void IndexBuffer::Build()
-    {
-        auto releaseFn = [](void*, void* userData) {
-            delete reinterpret_cast<decltype(m_bytes)*>(userData);
-        };
-
-        auto* bytesPtr = new decltype(m_bytes){std::move(m_bytes)};
-        const bgfx::Memory* memory = bgfx::makeRef(bytesPtr->data(), static_cast<uint32_t>(bytesPtr->size()), releaseFn, bytesPtr);
-
-        if (m_dynamic)
-        {
-            m_dynamicHandle = bgfx::createDynamicIndexBuffer(memory, m_flags);
-        }
-        else
-        {
-            m_handle = bgfx::createIndexBuffer(memory, m_flags);
-        }
-
-        if (!bgfx::isValid(m_handle))
-        {
-            throw std::runtime_error{"Failed to create index buffer"};
         }
     }
 }

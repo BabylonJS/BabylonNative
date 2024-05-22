@@ -115,9 +115,9 @@ namespace Babylon
 
         std::function<std::pair<uint32_t, uint32_t>(uint32_t x, uint32_t y)> GetPixelMapper(bimg::Orientation::Enum orientation, uint32_t width, uint32_t height)
         {
+            // clang-format off
             switch (orientation)
             {
-                // clang-format off
                 case bimg::Orientation::R0: return [](uint32_t x, uint32_t y) { return std::make_pair(x, y); };
                 case bimg::Orientation::R90: return [height](uint32_t x, uint32_t y) { return std::make_pair(height - y - 1, x); };
                 case bimg::Orientation::R180: return [width, height](uint32_t x, uint32_t y) { return std::make_pair(width - x - 1, height - y - 1); };
@@ -127,8 +127,8 @@ namespace Babylon
                 case bimg::Orientation::HFlipR270: return [](uint32_t x, uint32_t y) { return std::make_pair(y, x); };
                 case bimg::Orientation::VFlip: return [height](uint32_t x, uint32_t y) { return std::make_pair(x, height - y - 1); };
                 default: throw std::runtime_error{"Unexpected image orientation."};
-                // clang-format on
             }
+            // clang-format on
         }
 
         using RGBA8ImageData = gsl::span<uint32_t>;
@@ -719,6 +719,12 @@ namespace Babylon
         , m_boundFrameBuffer{&m_defaultFrameBuffer}
         , m_boundFrameBufferNeedsRebinding{m_deviceContext, *m_cancellationSource, true}
     {
+        // Set features supported by the NativeEngine from Babylon.js.
+        if (!info[0].IsUndefined())
+        {
+            auto jsInfo = info[0].As<Napi::Object>();
+            m_jsInfo.NonFloatVertexBuffers = jsInfo.Get("nonFloatVertexBuffers").As<Napi::Boolean>();
+        }
     }
 
     NativeEngine::~NativeEngine()
@@ -850,6 +856,29 @@ namespace Babylon
         const uint32_t type = info[6].As<Napi::Number>().Uint32Value();
         const bool normalized = info[7].As<Napi::Boolean>().Value();
         const uint32_t divisor = info[8].As<Napi::Number>().Uint32Value();
+
+        if (!m_jsInfo.NonFloatVertexBuffers)
+        {
+            auto rendererType = bgfx::getCaps()->rendererType;
+
+            // clang-format off
+            bool nonFloatVertexBuffers = !normalized
+                && (rendererType == bgfx::RendererType::Direct3D11 ||
+                    rendererType == bgfx::RendererType::Direct3D12 ||
+                    rendererType == bgfx::RendererType::Vulkan)
+                && (type == bgfx::AttribType::Int8 ||
+                    type == bgfx::AttribType::Uint8 ||
+                    type == bgfx::AttribType::Uint10 ||
+                    type == bgfx::AttribType::Int16 ||
+                    type == bgfx::AttribType::Uint16);
+            // clang-format on
+
+            if (nonFloatVertexBuffers)
+            {
+                JsConsoleLogger::LogError(info.Env(), "Non-normalized, non-float vertex buffer is not supported for D3D11, D3D12, and Vulkan. Please update to a newer version of Babylon.js.");
+                return;
+            }
+        }
 
         try
         {
