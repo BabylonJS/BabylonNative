@@ -115,9 +115,9 @@ namespace Babylon
 
         std::function<std::pair<uint32_t, uint32_t>(uint32_t x, uint32_t y)> GetPixelMapper(bimg::Orientation::Enum orientation, uint32_t width, uint32_t height)
         {
+            // clang-format off
             switch (orientation)
             {
-                    // clang-format off
                 case bimg::Orientation::R0: return [](uint32_t x, uint32_t y) { return std::make_pair(x, y); };
                 case bimg::Orientation::R90: return [height](uint32_t x, uint32_t y) { return std::make_pair(height - y - 1, x); };
                 case bimg::Orientation::R180: return [width, height](uint32_t x, uint32_t y) { return std::make_pair(width - x - 1, height - y - 1); };
@@ -127,8 +127,8 @@ namespace Babylon
                 case bimg::Orientation::HFlipR270: return [](uint32_t x, uint32_t y) { return std::make_pair(y, x); };
                 case bimg::Orientation::VFlip: return [height](uint32_t x, uint32_t y) { return std::make_pair(x, height - y - 1); };
                 default: throw std::runtime_error{"Unexpected image orientation."};
-                    // clang-format on
             }
+            // clang-format on
         }
 
         using RGBA8ImageData = gsl::span<uint32_t>;
