@@ -13,8 +13,8 @@
     "windows": "react-native run-windows"
   },
   "dependencies": {
-    "@babylonjs/core": "^6.14.0",
-    "@babylonjs/loaders": "6.14.0",
+    "@babylonjs/core": ">=5.53.1",
+    "@babylonjs/loaders": ">=5.53.1",
     "@babylonjs/playground-shared": "file:../playground-shared",
     "@babylonjs/react-native": "file:../../../Modules/@babylonjs/react-native",
     "@babylonjs/react-native-iosandroid": "file:../../../Modules/@babylonjs/react-native-iosandroid",

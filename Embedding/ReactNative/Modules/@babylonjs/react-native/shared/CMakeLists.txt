@@ -2,7 +2,7 @@ include(FetchContent)
 
 FetchContent_Declare(babylonnative
     GIT_REPOSITORY https://github.com/BabylonJS/BabylonNative.git
-    GIT_TAG 595f7f260b67743793fe5d1de89e9131b42de867)
+    GIT_TAG 4cf5677903bac3be7a4b18547cc2caa5c23bac67)
 
 set(SHARED_INCLUDES
     "${CMAKE_CURRENT_LIST_DIR}")

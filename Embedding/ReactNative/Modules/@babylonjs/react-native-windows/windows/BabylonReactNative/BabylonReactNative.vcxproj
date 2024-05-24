@@ -140,12 +140,12 @@
         $(BabylonNativeBuildDir)babylonnative\Polyfills\Canvas\$(Configuration);
         $(BabylonNativeBuildDir)jsi\$(Configuration);
         $(BabylonNativeBuildDir)$(Configuration);
-        $(BabylonNativeBuildDir)_deps\arcana-build\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\arcana.cpp-build\$(Configuration);
         $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Core\JsRuntime\$(Configuration);
         $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Core\Node-API-JSI\$(Configuration);
         $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Polyfills\XMLHttpRequest\$(Configuration);
         $(BabylonNativeBuildDir)_deps\urllib-build\$(Configuration);
-        $(BabylonNativeBuildDir)_deps\bgfx-build\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\bgfx.cmake-build\$(Configuration);
         $(BabylonNativeBuildDir)_deps\glslang-build\glslang\$(Configuration);
         $(BabylonNativeBuildDir)_deps\glslang-build\glslang\OSDependent\Windows\$(Configuration);
         $(BabylonNativeBuildDir)_deps\glslang-build\OGLCompilersDLL\$(Configuration);

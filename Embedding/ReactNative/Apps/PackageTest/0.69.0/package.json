@@ -11,7 +11,7 @@
     "windows": "react-native run-windows"
   },
   "dependencies": {
-    "@babylonjs/core": "6.14.0",
+    "@babylonjs/core": ">=5.53.1",
     "@babylonjs/react-native": "^1.4.1",
     "@babylonjs/react-native-iosandroid-0-69": "^1.4.1",
 	"@babylonjs/react-native-windows-0-69": "^1.4.1",
