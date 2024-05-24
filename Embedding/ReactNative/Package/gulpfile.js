@@ -75,7 +75,12 @@ const buildTypeScript = async () => {
 
 const makeXCodeProj = async () => {
   shelljs.mkdir('-p', 'iOS/Build');
-  exec(`cmake -B Build -G Xcode ${cmakeBasekitBuildDefinition}`, 'iOS');
+  exec(`cmake -B Build -G Xcode ${cmakeBasekitBuildDefinition} -DBUILD_RNAPP_DIR=Playground/Playground`, 'iOS');
+};
+
+const makeXCodeProjRNTA = async () => {
+  shelljs.mkdir('-p', 'iOS/Build');
+  exec(`cmake -B Build -G Xcode ${cmakeBasekitBuildDefinition} -DBUILD_RNAPP_DIR=BRNPlayground`, 'iOS');
 };
 
 const buildIphoneOS = async () => {
@@ -87,10 +92,16 @@ const buildIphoneSimulator = async () => {
 };
 
 const buildIOS = gulp.series(makeXCodeProj, buildIphoneOS, buildIphoneSimulator);
+const buildIOSRNTA = gulp.series(makeXCodeProjRNTA, buildIphoneOS, buildIphoneSimulator);
 
 const buildAndroid = async () => {
   const basekitBuildProp = basekitBuild ? "-PBASEKIT_BUILD=1" : "";
   exec(`./gradlew babylonjs_react-native:assembleRelease --stacktrace --info ${basekitBuildProp}`, '../Apps/Playground/Playground/android');
+};
+
+const buildAndroidRNTA = async () => {
+  const basekitBuildProp = basekitBuild ? "-PBASEKIT_BUILD=1" : "";
+  exec(`./gradlew babylonjs_react-native:assembleRelease --stacktrace --info ${basekitBuildProp}`, '../Apps/BRNPlayground/android');
 };
 
 const makeUWPProjectPlatform = async (name, arch) => {
@@ -620,7 +631,9 @@ exports.validateAssembled = validateAssembled;
 exports.validateAssemblediOSAndroid = validateAssemblediOSAndroid;
 
 exports.buildIOS = buildIOS;
+exports.buildIOSRNTA = buildIOSRNTA;
 exports.buildAndroid = buildAndroid;
+exports.buildAndroidRNTA = buildAndroidRNTA;
 exports.createIOSUniversalLibs = createIOSUniversalLibs;
 exports.copyFiles = copyFiles;
 
@@ -630,7 +643,6 @@ exports.rebuild = rebuild;
 exports.pack = pack;
 
 const packAndroid = gulp.series(clean, buildAndroid, copyFiles, createPackage, createPackageiOSAndroid);
-exports.buildAndroid = buildAndroid;
 exports.packAndroid = packAndroid;
 
 const copyPackageFilesUWP = gulp.series(copyUWPFiles);

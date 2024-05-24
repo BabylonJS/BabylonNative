@@ -20,7 +20,7 @@ project(ReactNativeBabylon)
 # https://stackoverflow.com/questions/73983452/xcode-14-xcode-13-incompatibility
 #add_compile_options("-fno-objc-msgsend-selector-stubs")
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/../../Apps/Playground/Playground/node_modules/@babylonjs/react-native-iosandroid/ios/CMakeLists.txt)
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../Apps/${BUILD_RNAPP_DIR}/node_modules/@babylonjs/react-native-iosandroid/ios/CMakeLists.txt)
 
 set(PACKAGED_LIBS
     astc-encoder
