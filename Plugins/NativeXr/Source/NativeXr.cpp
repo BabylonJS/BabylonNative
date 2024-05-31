@@ -432,7 +432,8 @@ namespace Babylon
                 std::unique_ptr<xr::System::Session::Frame> Frame{};
                 bool isValid{}; // valid when Frame holds a value and is not reset
 
-                xr::System::Session::Frame& operator = (std::unique_ptr<xr::System::Session::Frame>& frame)
+                
+                xr::System::Session::Frame& operator = (std::unique_ptr<xr::System::Session::Frame> frame)
                 {
                     if (Frame)
                     {
