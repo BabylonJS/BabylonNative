@@ -429,56 +429,45 @@ namespace Babylon
 
             struct UniqueFrame
             {
-                xr::System::Session::Frame* Frame{};
-                bool isValid{};
-                
-                xr::System::Session::Frame& operator = (const xr::System::Session::Frame* /*frame*/)
+                std::unique_ptr<xr::System::Session::Frame> Frame{};
+                bool isValid{}; // valid when Frame holds a value and is not reset
+
+                xr::System::Session::Frame& operator = (std::unique_ptr<xr::System::Session::Frame>& frame)
                 {
                     if (Frame)
+                    {
                         Frame->~Frame();
-                    //*Frame = std::move(*frame);
-                    return *Frame;
-                }
-                xr::System::Session::Frame& operator = (std::unique_ptr<xr::System::Session::Frame>& /*unique_frame*/)
-                {
-                    if (Frame)
-                        Frame->~Frame();
-                    //*Frame = std::move(*frame);
-                    return *Frame;
+                        // copy values
+                    } else {
+                        Frame = std::move(frame);
+                    }
+                    isValid = true;
+                    
+                    return *Frame.get();
                 }
                 
                 bool operator != (const xr::System::Session::Frame* frame)
                 {
-                    assert(!frame); // only compare with null
-                    return isValid;
+                    return (isValid ? Frame.get() : nullptr) != frame;
                 }
                 bool operator == (const xr::System::Session::Frame* frame)
                 {
-                    assert(!frame); // only compare with null
-                    return !isValid;
+                    return (isValid ? Frame.get() : nullptr) == frame;
                 }
                 
                 xr::System::Session::Frame* operator ->()
                 {
-                    if (!isValid)
-                        return nullptr;
-                    return Frame;
+                    return (isValid ? Frame.get() : nullptr);
                 }
                 void reset()
                 {
-                    if (Frame) {
+                    if (isValid && Frame) {
                         Frame->~Frame();
-                        isValid = false;
                     }
+                    isValid = false;
                 }
                 xr::System::Session::Frame& operator*(){
-                    return *Frame;
-                }
-                UniqueFrame(){}
-                ~UniqueFrame()
-                {
-                    if (Frame&&isValid)
-                        Frame->~Frame();
+                    return *(isValid ? Frame.get() : nullptr);
                 }
             };
             struct SessionState final
