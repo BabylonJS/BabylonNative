@@ -427,6 +427,60 @@ namespace Babylon
                 bool Initialized{false};
             };
 
+            struct UniqueFrame
+            {
+                xr::System::Session::Frame* Frame{};
+                bool isValid{};
+                
+                xr::System::Session::Frame& operator = (const xr::System::Session::Frame* /*frame*/)
+                {
+                    if (Frame)
+                        Frame->~Frame();
+                    //*Frame = std::move(*frame);
+                    return *Frame;
+                }
+                xr::System::Session::Frame& operator = (std::unique_ptr<xr::System::Session::Frame>& /*unique_frame*/)
+                {
+                    if (Frame)
+                        Frame->~Frame();
+                    //*Frame = std::move(*frame);
+                    return *Frame;
+                }
+                
+                bool operator != (const xr::System::Session::Frame* frame)
+                {
+                    assert(!frame); // only compare with null
+                    return isValid;
+                }
+                bool operator == (const xr::System::Session::Frame* frame)
+                {
+                    assert(!frame); // only compare with null
+                    return !isValid;
+                }
+                
+                xr::System::Session::Frame* operator ->()
+                {
+                    if (!isValid)
+                        return nullptr;
+                    return Frame;
+                }
+                void reset()
+                {
+                    if (Frame) {
+                        Frame->~Frame();
+                        isValid = false;
+                    }
+                }
+                xr::System::Session::Frame& operator*(){
+                    return *Frame;
+                }
+                UniqueFrame(){}
+                ~UniqueFrame()
+                {
+                    if (Frame&&isValid)
+                        Frame->~Frame();
+                }
+            };
             struct SessionState final
             {
                 explicit SessionState(Graphics::DeviceContext& graphicsContext)
@@ -443,7 +497,7 @@ namespace Babylon
                 std::unordered_map<ViewConfiguration*, uint32_t> ViewConfigurationStartViewIdx{};
                 std::unordered_map<void*, ViewConfiguration> TextureToViewConfigurationMap{};
                 std::shared_ptr<xr::System::Session> Session{};
-                std::unique_ptr<xr::System::Session::Frame> Frame{};
+                /*std::unique_ptr<xr::System::Session::Frame>*/UniqueFrame Frame{};
                 arcana::cancellation_source CancellationSource{};
                 bool FrameScheduled{false};
                 std::vector<std::function<void(const xr::System::Session::Frame&)>> ScheduleFrameCallbacks{};
