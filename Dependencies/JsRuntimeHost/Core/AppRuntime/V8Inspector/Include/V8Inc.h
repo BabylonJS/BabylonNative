@@ -1,16 +1,17 @@
 #pragma once
 
-// Enable V8 Pointer Compression
-// https://v8.dev/blog/pointer-compression
-// https://stackoverflow.com/q/62921373
+#include <stdint.h>
+
+#if INTPTR_MAX == INT64_MAX
 #ifndef V8_COMPRESS_POINTERS
 #define V8_COMPRESS_POINTERS 1
 #endif
-
-// Enable V8 Sandbox
-// https://v8.dev/blog/sandbox
+#ifndef V8_31BIT_SMIS_ON_64BIT_ARCH
+#define V8_31BIT_SMIS_ON_64BIT_ARCH 1
+#endif
 #ifndef V8_ENABLE_SANDBOX
 #define V8_ENABLE_SANDBOX 1
+#endif
 #endif
 
 #ifdef _MSC_VER

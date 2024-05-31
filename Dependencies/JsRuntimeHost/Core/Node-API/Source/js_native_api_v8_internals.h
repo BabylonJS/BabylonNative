@@ -13,17 +13,20 @@
 // are bridged to remove references to the `node` namespace. `node_version.h`,
 // included below, defines `NAPI_VERSION`.
 
-// [BABYLON-NATIVE-ADDITION]: Enable V8 Pointer Compression
-// https://v8.dev/blog/pointer-compression
-// https://stackoverflow.com/q/62921373
+// [BABYLON-NATIVE-ADDITION]: For INTPTR_MAX and INT64_MAX
+#include <stdint.h>
+
+// [BABYLON-NATIVE-ADDITION]: Enable V8 Pointer Compression and Sandbox for 64-bit architecture
+#if INTPTR_MAX == INT64_MAX
 #ifndef V8_COMPRESS_POINTERS
 #define V8_COMPRESS_POINTERS 1
 #endif
-
-// [BABYLON-NATIVE-ADDITION]: Enable V8 Sandbox
-// https://v8.dev/blog/sandbox
+#ifndef V8_31BIT_SMIS_ON_64BIT_ARCH
+#define V8_31BIT_SMIS_ON_64BIT_ARCH 1
+#endif
 #ifndef V8_ENABLE_SANDBOX
 #define V8_ENABLE_SANDBOX 1
+#endif
 #endif
 
 #include <v8.h>

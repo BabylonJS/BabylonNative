@@ -19,7 +19,8 @@ target_include_directories(v8inspector
     PRIVATE "${llhttp_SOURCE_DIR}/include")
 
 target_compile_definitions(v8inspector
-    PRIVATE ASIO_STANDALONE)
+    PRIVATE ASIO_STANDALONE
+    PRIVATE NOMINMAX)
 
 target_link_libraries(v8inspector
     PRIVATE asio
