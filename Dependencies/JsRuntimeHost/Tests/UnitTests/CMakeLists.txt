@@ -52,6 +52,7 @@ target_link_libraries(UnitTests
     PRIVATE XMLHttpRequest
     PRIVATE WebSocket
     PRIVATE gtest_main
+    PRIVATE Foundation
     ${ADDITIONAL_LIBRARIES})
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543

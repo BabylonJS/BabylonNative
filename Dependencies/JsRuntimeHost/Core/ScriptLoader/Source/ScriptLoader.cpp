@@ -1,6 +1,7 @@
 #include <Babylon/ScriptLoader.h>
 #include <UrlLib/UrlLib.h>
 #include <arcana/threading/task.h>
+#include "Babylon/DebugTrace.h"
 
 namespace Babylon
 {
@@ -16,11 +17,13 @@ namespace Babylon
         void LoadScript(std::string url)
         {
             UrlLib::UrlRequest request;
+            DEBUG_TRACE("Loading script at url %s", url.c_str());
             request.Open(UrlLib::UrlMethod::Get, url);
             request.ResponseType(UrlLib::UrlResponseType::String);
             m_task = arcana::when_all(m_task, request.SendAsync()).then(arcana::inline_scheduler, arcana::cancellation::none(), [dispatchFunction = m_dispatchFunction, request = std::move(request), url = std::move(url)](auto) mutable {
                 arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
                 dispatchFunction([taskCompletionSource, request = std::move(request), url = std::move(url)](Napi::Env env) mutable {
+                    DEBUG_TRACE("Evaluating script at url %s", url.c_str());
                     Napi::Eval(env, request.ResponseString().data(), url.data());
                     taskCompletionSource.complete();
                 });

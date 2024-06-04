@@ -1,4 +1,5 @@
 #include "JsRuntime.h"
+#include "Babylon/DebugTrace.h"
 
 namespace Babylon
 {
@@ -23,6 +24,8 @@ namespace Babylon
 
         Napi::Value jsRuntime = Napi::External<JsRuntime>::New(env, this, [](Napi::Env, JsRuntime* runtime) { delete runtime; });
         jsNative.Set(JS_RUNTIME_NAME, jsRuntime);
+
+        DEBUG_TRACE("JsRuntime created");
     }
 
     JsRuntime& BABYLON_API JsRuntime::CreateForJavaScript(Napi::Env env, DispatchFunctionT dispatchFunction)
