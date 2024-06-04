@@ -18,6 +18,7 @@
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Canvas.h>
+#include <Babylon/DebugTrace.h>
 
 static const char* s_applicationName  = "BabylonNative Playground";
 static const char* s_applicationClass = "Playground";
@@ -69,6 +70,9 @@ namespace
         std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path());
 
         Uninitialize();
+
+        Babylon::DebugTrace::EnableDebugTrace(true);
+        Babylon::DebugTrace::SetTraceOutput([](const char* trace) { printf("%s\n", trace); fflush(stdout); });
 
         Babylon::Graphics::Configuration graphicsConfig{};
         graphicsConfig.Window = window;

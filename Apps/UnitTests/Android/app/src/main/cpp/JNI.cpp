@@ -6,6 +6,7 @@
 #include <AndroidExtensions/StdoutLogger.h>
 #include <atomic>
 #include <Shared/Tests.h>
+#include "Babylon/DebugTrace.h"
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_babylonnative_unittests_Native_javaScriptTests(JNIEnv* env, jclass clazz, jobject context) {
@@ -16,6 +17,9 @@ Java_com_babylonnative_unittests_Native_javaScriptTests(JNIEnv* env, jclass claz
     }
 
     android::StdoutLogger::Start();
+
+    Babylon::DebugTrace::EnableDebugTrace(true);
+    Babylon::DebugTrace::SetTraceOutput([](const char* trace) { printf("%s\n", trace); fflush(stdout); });
 
     android::global::Initialize(javaVM, context);
     auto testResult = Run();

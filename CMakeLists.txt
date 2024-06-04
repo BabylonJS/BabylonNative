@@ -37,7 +37,7 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 4.4.1)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 9ccb9477a97501525f3f9ca0e00e6971934037ec)
+    GIT_TAG 870ee65a87f142db224b9085b1d0ce37b4a685a6)
 FetchContent_Declare(OpenXR-MixedReality
     GIT_REPOSITORY https://github.com/microsoft/OpenXR-MixedReality.git
     GIT_TAG 67424511525b96a36847f2a96d689d99e5879503)
@@ -73,6 +73,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # General
 option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ${PROJECT_IS_TOP_LEVEL})
 option(BABYLON_NATIVE_INSTALL "Include the install target." ${PROJECT_IS_TOP_LEVEL})
+option(BABYLON_DEBUG_TRACE "Debug Trace callback."  OFF)
 
 # WARNING: This is experimental. Only use it if you can ensure that your application will properly handle thread affinity.
 option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphics device calls. It can be removed if hosting application ensures thread coherence." ON)
@@ -149,6 +150,10 @@ if(APPLE)
     # Without this option on azure pipelines, there is a mismatch with math.h giving a lot of undefined functions on macOS.
     # Only enabled for Apple as there is no issue for Windows.
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED TRUE)
+endif()
+
+if(BABYLON_DEBUG_TRACE)
+    add_definitions(-DBABYLON_DEBUG_TRACE)
 endif()
 
 add_subdirectory(Dependencies)
