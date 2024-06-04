@@ -5,6 +5,7 @@
 #include <set>
 #include <cassert>
 #include <cmath>
+#include "Babylon/DebugTrace.h"
 
 namespace Babylon::Plugins
 {
