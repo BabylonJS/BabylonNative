@@ -55,7 +55,7 @@ float screenScale{1.0f};
     float height = inHeight;
 
     Babylon::DebugTrace::EnableDebugTrace(true);
-    Babylon::DebugTrace::SetTraceOutput([](const char* trace) { NSLog(@"%@", trace); });
+    Babylon::DebugTrace::SetTraceOutput([](const char* trace) { NSLog(@"%s", trace); });
 
     Babylon::Graphics::Configuration graphicsConfig{};
     graphicsConfig.Window = view;
