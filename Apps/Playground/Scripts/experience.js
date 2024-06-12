@@ -9,7 +9,7 @@ var logfps = true;
 var ibl = false;
 var rtt = false;
 var vr = false;
-var ar = false;
+var ar = true;
 var xrHitTest = false;
 var xrFeaturePoints = false;
 var meshDetection = false;
@@ -217,6 +217,8 @@ CreateBoxAsync(scene).then(function () {
                             scene.meshes[0].position.z = results[0].position.z;
                         }
                     });
+                    
+                    
                 }
                 else {
                     setTimeout(function () {
@@ -225,6 +227,56 @@ CreateBoxAsync(scene).then(function () {
                     }, 5000);
                 }
 
+                const fm = xr.baseExperience.featuresManager;
+                console.log(fm);
+                const anchors = fm.enableFeature(BABYLON.WebXRFeatureName.ANCHOR_SYSTEM, 'latest');
+                const xrPlanes = fm.enableFeature(BABYLON.WebXRFeatureName.PLANE_DETECTION, 'latest');
+                const xrTest = fm.enableFeature(BABYLON.WebXRFeatureName.HIT_TEST, 'latest');
+                const xrBackgroundRemover = fm.enableFeature(BABYLON.WebXRFeatureName.BACKGROUND_REMOVER, 'latest');
+
+                var logOnce = true;
+                var hitTest;
+                xrTest.onHitTestResultObservable.add((result) => {
+                    //console.log("xrTest.onHitTestResultObservable ", result.length);
+                    if (result.length && logOnce) {
+                        console.log("got hit test");
+                        logOnce = false;
+                        //marker.isVisible = !isPlaced;
+                        // marker.isVisible = true;
+                        hitTest = result[0];
+                        /*marker.position = hitTest.position;
+                        marker.rotationQuaternion = hitTest.rotationQuaternion;
+
+                        rootNode.position = hitTest.position;
+                        rootNode.rotationQuaternion = hitTest.rotationQuaternion;*/
+                    } else {
+                        //marker.isVisible = false;
+                    }
+                });
+                
+                if (anchors) {
+                    anchors.onAnchorAddedObservable.add((anchor) => {
+                        console.log('Anchor added');
+                        //rootNode.getChildMeshes().forEach((m) => (m.isVisible = true));
+                        // model.isVisible = true;
+                        // model.isEnabled(true);
+                        //anchor.attachedNode = rootNode;
+                        // shadowGenerator.addShadowCaster(model.attached)
+                    });
+                }
+    
+                scene.onPointerDown = (evt, pickInfo) => {
+                    console.log("scene.onPointerDown ", hitTest, anchors, xr.baseExperience.state === BABYLON.WebXRState.IN_XR);
+                    if (hitTest && anchors && xr.baseExperience.state === BABYLON.WebXRState.IN_XR) {
+                        console.log("hittest");
+                        console.log('hittest', hitTest);
+                        //console.log('session.inXRSession', session.inXRSession);
+                        anchors.addAnchorPointUsingHitTestResultAsync(hitTest);
+                        //marker.isVisible = false;
+                        //isPlaced = true;
+                    }
+                };
+                            
                 // Showing visualization for ARKit LiDAR mesh data
                 if (meshDetection) {
                     var mat = new BABYLON.StandardMaterial("mat", scene);
@@ -391,6 +443,9 @@ CreateBoxAsync(scene).then(function () {
                         xrSessionManager.scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
                     }
                 });
+                /*
+                */
+                
             });
         }, 5000);
     }

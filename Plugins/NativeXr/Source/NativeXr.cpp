@@ -335,7 +335,7 @@ namespace Babylon
             arcana::task<void, std::exception_ptr> BeginSessionAsync();
             arcana::task<void, std::exception_ptr> EndSessionAsync();
 
-            void ScheduleFrame(std::function<void(const xr::System::Session::Frame&)>&& callback);
+            void ScheduleFrame(std::function<void(std::shared_ptr<const xr::System::Session::Frame>)>&& callback);
 
             void SetRenderTextureFunctions(const Napi::Function& createFunction, const Napi::Function& destroyFunction)
             {
@@ -427,50 +427,6 @@ namespace Babylon
                 bool Initialized{false};
             };
 
-            struct UniqueFrame
-            {
-                std::unique_ptr<xr::System::Session::Frame> Frame{};
-                bool isValid{}; // valid when Frame holds a value and is not reset
-
-                
-                xr::System::Session::Frame& operator = (std::unique_ptr<xr::System::Session::Frame> frame)
-                {
-                    if (Frame)
-                    {
-                        Frame->~Frame();
-                        // copy values
-                    } else {
-                        Frame = std::move(frame);
-                    }
-                    isValid = true;
-                    
-                    return *Frame.get();
-                }
-                
-                bool operator != (const xr::System::Session::Frame* frame)
-                {
-                    return (isValid ? Frame.get() : nullptr) != frame;
-                }
-                bool operator == (const xr::System::Session::Frame* frame)
-                {
-                    return (isValid ? Frame.get() : nullptr) == frame;
-                }
-                
-                xr::System::Session::Frame* operator ->()
-                {
-                    return (isValid ? Frame.get() : nullptr);
-                }
-                void reset()
-                {
-                    if (isValid && Frame) {
-                        Frame->~Frame();
-                    }
-                    isValid = false;
-                }
-                xr::System::Session::Frame& operator*(){
-                    return *(isValid ? Frame.get() : nullptr);
-                }
-            };
             struct SessionState final
             {
                 explicit SessionState(Graphics::DeviceContext& graphicsContext)
@@ -487,10 +443,10 @@ namespace Babylon
                 std::unordered_map<ViewConfiguration*, uint32_t> ViewConfigurationStartViewIdx{};
                 std::unordered_map<void*, ViewConfiguration> TextureToViewConfigurationMap{};
                 std::shared_ptr<xr::System::Session> Session{};
-                /*std::unique_ptr<xr::System::Session::Frame>*/UniqueFrame Frame{};
+                std::shared_ptr<xr::System::Session::Frame> Frame{};
                 arcana::cancellation_source CancellationSource{};
                 bool FrameScheduled{false};
-                std::vector<std::function<void(const xr::System::Session::Frame&)>> ScheduleFrameCallbacks{};
+                std::vector<std::function<void(std::shared_ptr<const xr::System::Session::Frame>)>> ScheduleFrameCallbacks{};
                 arcana::task<void, std::exception_ptr> FrameTask{arcana::task_from_result<std::exception_ptr>()};
             };
 
@@ -612,7 +568,7 @@ namespace Babylon
             return m_endTask;
         }
 
-        void NativeXr::Impl::ScheduleFrame(std::function<void(const xr::System::Session::Frame&)>&& callback)
+        void NativeXr::Impl::ScheduleFrame(std::function<void(std::shared_ptr<const xr::System::Session::Frame>)>&& callback)
         {
             if (m_sessionState->FrameScheduled)
             {
@@ -638,7 +594,7 @@ namespace Babylon
                         auto callbacks{std::move(m_sessionState->ScheduleFrameCallbacks)};
                         for (auto& callback : callbacks)
                         {
-                            callback(*m_sessionState->Frame);
+                            callback(m_sessionState->Frame);
                         }
                     }
 
@@ -2181,11 +2137,11 @@ namespace Babylon
                 m_jsJointPose.Set("transform", m_jsTransform.Value());
             }
 
-            void Update(const Napi::Env& env, const xr::System::Session::Frame& frame, uint32_t timestamp)
+            void Update(const Napi::Env& env, std::shared_ptr<const xr::System::Session::Frame> frame, uint32_t timestamp)
             {
                 // Store off a pointer to the frame so that the viewer pose can be updated later. We cannot
                 // update the viewer pose here because we don't yet know the desired reference space.
-                m_frame = &frame;
+                m_frame = frame;
 
                 // Update anchor positions.
                 UpdateAnchors();
@@ -2270,7 +2226,7 @@ namespace Babylon
             }
 
         private:
-            const xr::System::Session::Frame* m_frame{};
+            std::shared_ptr<const xr::System::Session::Frame> m_frame{};
             Napi::ObjectReference m_jsXRViewerPose{};
             XRViewerPose& m_xrViewerPose;
             std::vector<Napi::ObjectReference> m_trackedAnchors{};
@@ -2892,12 +2848,12 @@ namespace Babylon
                 return deferred.Promise();
             }
 
-            void ProcessEyeInputSource(const xr::System::Session::Frame& frame, Napi::Env env)
+            void ProcessEyeInputSource(std::shared_ptr<const xr::System::Session::Frame> frame, Napi::Env env)
             {
-                if (frame.EyeTrackerSpace.has_value() && m_jsEyeTrackedSource.IsEmpty())
+                if (frame->EyeTrackerSpace.has_value() && m_jsEyeTrackedSource.IsEmpty())
                 {
                     m_jsEyeTrackedSource = Napi::Persistent(Napi::Object::New(env));
-                    m_jsEyeTrackedSource.Set("gazeSpace", Napi::External<xr::Space>::New(env, &frame.EyeTrackerSpace.value()));
+                    m_jsEyeTrackedSource.Set("gazeSpace", Napi::External<xr::Space>::New(env, &frame->EyeTrackerSpace.value()));
 
                     for (const auto& [name, callback] : m_eventNamesAndCallbacks)
                     {
@@ -2908,7 +2864,7 @@ namespace Babylon
                         }
                     }
                 }
-                else if (!frame.EyeTrackerSpace.has_value() && !m_jsEyeTrackedSource.IsEmpty())
+                else if (!frame->EyeTrackerSpace.has_value() && !m_jsEyeTrackedSource.IsEmpty())
                 {
                     for (const auto& [name, callback] : m_eventNamesAndCallbacks)
                     {
@@ -2922,7 +2878,7 @@ namespace Babylon
                 }
             }
 
-            void ProcessControllerInputSources(const xr::System::Session::Frame& frame, Napi::Env env)
+            void ProcessControllerInputSources(std::shared_ptr<const xr::System::Session::Frame> frame, Napi::Env env)
             {
                 // Figure out the new state.
                 std::set<xr::System::Session::Frame::InputSource::Identifier> added{};
@@ -2935,7 +2891,7 @@ namespace Babylon
                 std::vector<xr::System::Session::Frame::InputSource::Identifier> squeezeEnds{};
 
                 // Process the controller-based input sources
-                for (auto& inputSource : frame.InputSources)
+                for (auto& inputSource : frame->InputSources)
                 {
                     if (!inputSource.TrackedThisFrame)
                     {
@@ -3074,7 +3030,7 @@ namespace Babylon
             {
                 Napi::Function callback{info[0].As<Napi::Function>()};
 
-                m_xr->ScheduleFrame([this, callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))}](const auto& frame) {
+                m_xr->ScheduleFrame([this, callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))}](std::shared_ptr<const xr::System::Session::Frame> frame) {
                     ProcessEyeInputSource(frame, Env());
                     ProcessControllerInputSources(frame, Env());
 
