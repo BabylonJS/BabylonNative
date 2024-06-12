@@ -362,7 +362,7 @@ namespace xr
                 Plane& GetPlaneByID(Plane::Identifier) const;
                 Mesh& GetMeshByID(Mesh::Identifier) const;
                 ImageTrackingResult& GetImageTrackingResultByID(ImageTrackingResult::Identifier) const;
-
+                void Render();
             private:
                 struct Impl;
                 std::unique_ptr<Impl> m_impl{};

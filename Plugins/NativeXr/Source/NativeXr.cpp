@@ -556,6 +556,7 @@ namespace Babylon
                                 {
                                     // Block and burn frames until XR successfully shuts down.
                                     m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession);
+                                    m_sessionState->Frame->Render();
                                     m_sessionState->Frame.reset();
                                 }
                                 while (!shouldEndSession);
@@ -620,6 +621,10 @@ namespace Babylon
 
             bool shouldEndSession{};
             bool shouldRestartSession{};
+            if (m_sessionState->Frame.get())
+            {
+                m_sessionState->Frame->Render();
+            }
             m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession, [this](void* texturePointer) {
                 return arcana::make_task(m_runtimeScheduler, arcana::cancellation::none(), [this, texturePointer]() {
                     const auto itViewConfig{m_sessionState->TextureToViewConfigurationMap.find(texturePointer)};
@@ -766,6 +771,7 @@ namespace Babylon
 
             arcana::trace_region endFrameRegion{"NativeXR::EndFrame"};
 
+            m_sessionState->Frame->Render();
             m_sessionState->Frame.reset();
         }
     }
