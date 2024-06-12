@@ -1073,7 +1073,9 @@ namespace xr
         // Stubbed out for now, should be implemented if we want to support OpenXR based passthrough AR devices.
     }
 
-    System::Session::Frame::~Frame()
+    System::Session::Frame::~Frame() {}
+
+    void System::Session::Frame::Render()
     {
         if (!m_impl->sessionImpl.HmdImpl.Context.IsSessionRunning())
         {
