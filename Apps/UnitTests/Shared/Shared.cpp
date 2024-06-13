@@ -134,6 +134,79 @@ TEST(NativeAPI, LifeCycle)
     }
 }
 */
+TEST(Shutdown, AsyncShaderCompilation)
+{
+    std::promise<int32_t> exitCodePromise;
+
+    //for (int cycle = 0; cycle < 20; cycle++)
+    {
+        Babylon::Graphics::Device device{deviceConfig};
+        auto update{ device.GetUpdate("update") };
+        std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
+
+        Babylon::AppRuntime runtime{};
+        runtime.Dispatch([&device, &nativeCanvas, &exitCodePromise](Napi::Env env) {
+            device.AddToJavaScript(env);
+
+            Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+            Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+                printf("%s", message);
+                fflush(stdout);
+            });
+            Babylon::Polyfills::Window::Initialize(env);
+
+            Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+
+            nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
+
+            Babylon::Plugins::NativeEngine::Initialize(env);
+
+            auto setExitCodeCallback = Napi::Function::New(
+                env, [&exitCodePromise](const Napi::CallbackInfo& info) {
+                    Napi::Env env = info.Env();
+                    exitCodePromise.set_value(info[0].As<Napi::Number>().Int32Value());
+                }, "setExitCode");
+            env.Global().Set("setExitCode", setExitCodeCallback);
+        });
+
+        Babylon::ScriptLoader loader{runtime};
+        loader.LoadScript("app:///Scripts/babylon.max.js");
+        loader.LoadScript("app:///Scripts/babylonjs.materials.js");
+        loader.Eval(R"(
+            function CreateBoxAsync(scene) {
+                BABYLON.Mesh.CreateBox("box1", 0.2, scene);
+                return Promise.resolve();
+            }
+
+            var engine = new BABYLON.NativeEngine();
+            var scene = new BABYLON.Scene(engine);
+
+            CreateBoxAsync(scene).then(function () {
+                var disc = BABYLON.Mesh.CreateDisc("disc", 3, 60, scene);
+
+                scene.createDefaultCamera(true, true, true);
+                scene.activeCamera.alpha += Math.PI;
+                scene.createDefaultLight(true);
+
+                var mainMaterial = new BABYLON.PBRMaterial("main", scene);
+                disc.material = mainMaterial;
+                engine.runRenderLoop(function () {
+                    scene.render();
+                });
+                setExitCode(1);
+            }, function (ex) {
+                console.log(ex.message, ex.stack);
+            });
+            )", "script");
+
+        auto exitCode{ exitCodePromise.get_future().get() };
+        device.StartRenderingCurrentFrame();
+        update.Start();
+
+        update.Finish();
+        device.FinishRenderingCurrentFrame();
+    }
+}
 
 TEST(Performance, Spheres)
 {
