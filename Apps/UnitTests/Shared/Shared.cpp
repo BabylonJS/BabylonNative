@@ -170,7 +170,7 @@ TEST(Shutdown, AsyncShaderCompilation)
 
     // this sleep makes sure shader is finished loading/compiling before exit.
     // Once shutdown is fixed, remove this sleep call.
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    std::this_thread::sleep_for(std::chrono::seconds(60));
 }
 
 TEST(Performance, Spheres)
