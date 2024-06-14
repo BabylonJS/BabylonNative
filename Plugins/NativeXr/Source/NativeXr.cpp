@@ -3030,7 +3030,7 @@ namespace Babylon
             {
                 Napi::Function callback{info[0].As<Napi::Function>()};
 
-                m_xr->ScheduleFrame([this, callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))}](auto& frame) {
+                m_xr->ScheduleFrame([this, callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))}](const auto& frame) {
                     ProcessEyeInputSource(frame, Env());
                     ProcessControllerInputSources(frame, Env());
 
