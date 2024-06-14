@@ -335,7 +335,7 @@ namespace Babylon
             arcana::task<void, std::exception_ptr> BeginSessionAsync();
             arcana::task<void, std::exception_ptr> EndSessionAsync();
 
-            void ScheduleFrame(std::function<void(std::shared_ptr<const xr::System::Session::Frame>)>&& callback);
+            void ScheduleFrame(std::function<void(const xr::System::Session::Frame&)>&& callback);
 
             void SetRenderTextureFunctions(const Napi::Function& createFunction, const Napi::Function& destroyFunction)
             {
@@ -443,10 +443,10 @@ namespace Babylon
                 std::unordered_map<ViewConfiguration*, uint32_t> ViewConfigurationStartViewIdx{};
                 std::unordered_map<void*, ViewConfiguration> TextureToViewConfigurationMap{};
                 std::shared_ptr<xr::System::Session> Session{};
-                std::shared_ptr<xr::System::Session::Frame> Frame{};
+                std::unique_ptr<xr::System::Session::Frame> Frame{};
                 arcana::cancellation_source CancellationSource{};
                 bool FrameScheduled{false};
-                std::vector<std::function<void(std::shared_ptr<const xr::System::Session::Frame>)>> ScheduleFrameCallbacks{};
+                std::vector<std::function<void(const xr::System::Session::Frame&)>> ScheduleFrameCallbacks{};
                 arcana::task<void, std::exception_ptr> FrameTask{arcana::task_from_result<std::exception_ptr>()};
             };
 
@@ -569,7 +569,7 @@ namespace Babylon
             return m_endTask;
         }
 
-        void NativeXr::Impl::ScheduleFrame(std::function<void(std::shared_ptr<const xr::System::Session::Frame>)>&& callback)
+        void NativeXr::Impl::ScheduleFrame(std::function<void(const xr::System::Session::Frame&)>&& callback)
         {
             if (m_sessionState->FrameScheduled)
             {
@@ -595,7 +595,7 @@ namespace Babylon
                         auto callbacks{std::move(m_sessionState->ScheduleFrameCallbacks)};
                         for (auto& callback : callbacks)
                         {
-                            callback(m_sessionState->Frame);
+                            callback(*m_sessionState->Frame);
                         }
                     }
 
@@ -615,7 +615,6 @@ namespace Babylon
         {
             assert(m_sessionState != nullptr);
             assert(m_sessionState->Session != nullptr);
-            assert(m_sessionState->Frame == nullptr);
 
             arcana::trace_region beginFrameRegion{"NativeXR::BeginFrame"};
 
@@ -768,7 +767,6 @@ namespace Babylon
             arcana::trace_region endFrameRegion{"NativeXR::EndFrame"};
 
             m_sessionState->Frame->Render();
-            m_sessionState->Frame.reset();
         }
     }
 
@@ -2139,11 +2137,11 @@ namespace Babylon
                 m_jsJointPose.Set("transform", m_jsTransform.Value());
             }
 
-            void Update(const Napi::Env& env, std::shared_ptr<const xr::System::Session::Frame> frame, uint32_t timestamp)
+            void Update(const Napi::Env& env, const xr::System::Session::Frame& frame, uint32_t timestamp)
             {
                 // Store off a pointer to the frame so that the viewer pose can be updated later. We cannot
                 // update the viewer pose here because we don't yet know the desired reference space.
-                m_frame = frame;
+                m_frame = &frame;
 
                 // Update anchor positions.
                 UpdateAnchors();
@@ -2228,7 +2226,7 @@ namespace Babylon
             }
 
         private:
-            std::shared_ptr<const xr::System::Session::Frame> m_frame{};
+            const xr::System::Session::Frame* m_frame{};
             Napi::ObjectReference m_jsXRViewerPose{};
             XRViewerPose& m_xrViewerPose;
             std::vector<Napi::ObjectReference> m_trackedAnchors{};
@@ -3032,9 +3030,9 @@ namespace Babylon
             {
                 Napi::Function callback{info[0].As<Napi::Function>()};
 
-                m_xr->ScheduleFrame([this, callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))}](std::shared_ptr<const xr::System::Session::Frame> frame) {
-                    ProcessEyeInputSource(*frame.get(), Env());
-                    ProcessControllerInputSources(*frame.get(), Env());
+                m_xr->ScheduleFrame([this, callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))}](auto& frame) {
+                    ProcessEyeInputSource(frame, Env());
+                    ProcessControllerInputSources(frame, Env());
 
                     m_xrFrame.Update(Env(), frame, m_timestamp);
 
