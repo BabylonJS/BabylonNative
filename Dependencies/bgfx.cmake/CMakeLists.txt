@@ -22,10 +22,6 @@ if(APPLE AND NOT XCODE)
 	set(CMAKE_CXX_FLAGS "-ObjC++")
 endif()
 
-if(MSVC AND (MSVC_VERSION GREATER_EQUAL 1914))
-	add_compile_options("/Zc:__cplusplus")
-endif()
-
 include(CMakeDependentOption)
 
 option(BX_AMALGAMATED "Amalgamated bx build for faster compilation" OFF)
