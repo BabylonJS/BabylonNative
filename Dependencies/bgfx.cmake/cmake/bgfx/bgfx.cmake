@@ -85,6 +85,10 @@ if(NOT ${BGFX_CONFIG_DEFAULT_MAX_ENCODERS} STREQUAL "")
 	)
 endif()
 
+if(BGFX_WITH_WAYLAND)
+    target_compile_definitions(bgfx PRIVATE "WL_EGL_PLATFORM=1")
+endif()
+
 set(BGFX_CONFIG_OPTIONS "")
 list(
 	APPEND

@@ -43,6 +43,7 @@ option(BGFX_INSTALL "Create installation target." ON)
 cmake_dependent_option(
 	BGFX_INSTALL_EXAMPLES "Install examples and their runtimes." OFF "BGFX_INSTALL;BGFX_BUILD_EXAMPLES" OFF
 )
+cmake_dependent_option(BGFX_WITH_WAYLAND "Use Wayland backend." ON "CMAKE_SYSTEM_NAME STREQUAL 'Linux'" OFF)
 option(BGFX_CUSTOM_TARGETS "Include convenience custom targets." ON)
 option(BGFX_CONFIG_MULTITHREADED "Build bgfx with multithreaded configuration" ON)
 option(BGFX_CONFIG_RENDERER_WEBGPU "Enable the webgpu renderer" OFF)
