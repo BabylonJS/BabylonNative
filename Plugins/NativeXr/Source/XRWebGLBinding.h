@@ -31,5 +31,5 @@ namespace Babylon
             {
             }
         };
-    } // Plugins
+    }
 } // Babylon

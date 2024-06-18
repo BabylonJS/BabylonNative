@@ -76,5 +76,5 @@ namespace Babylon
 
             Napi::ObjectReference m_jsTransform{};
         };
-    } // Plugins
+    }
 } // Babylon

@@ -59,5 +59,5 @@ namespace Babylon
                 return m_jsTransform.Value();
             }
         };
-    } // Plugins
+    }
 } // Babylon

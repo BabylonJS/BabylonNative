@@ -39,5 +39,5 @@ namespace Babylon
                 return info.This().As<Napi::Object>().Get("viewport");
             }
         };
-    } // Plugins
+    }
 } // Babylon

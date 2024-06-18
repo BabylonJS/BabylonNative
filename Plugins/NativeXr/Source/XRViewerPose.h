@@ -110,5 +110,5 @@ namespace Babylon
                 return Napi::Boolean::New(info.Env(), m_isEmulatedPosition);
             }
         };
-    } // Plugins
+    }
 } // Babylon

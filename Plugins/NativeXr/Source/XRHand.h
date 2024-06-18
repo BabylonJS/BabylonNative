@@ -47,5 +47,5 @@ namespace Babylon
                 return Napi::Value::From(info.Env(), HAND_JOINT_NAMES.size());
             }
         };
-    } // Plugins
+    }
 } // Babylon

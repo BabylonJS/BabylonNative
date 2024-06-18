@@ -110,5 +110,5 @@ namespace Babylon
 
             xr::HitTestTrackableType m_entityTypes{xr::HitTestTrackableType::NONE};
         };
-    } // Plugins
+    }
 } // Babylon

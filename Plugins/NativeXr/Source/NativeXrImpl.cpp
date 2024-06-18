@@ -10,11 +10,36 @@
 #include <napi/pointer.h>
 #include <arcana/threading/task.h>
 #include <arcana/tracing/trace_region.h>
-#include "XRUtils.h"
 #include "NativeXrImpl.h"
 
 namespace Babylon
 {
+    namespace
+    {
+        bgfx::TextureFormat::Enum XrTextureFormatToBgfxFormat(xr::TextureFormat format)
+        {
+            switch (format)
+            {
+                // Color Formats
+                // NOTE: Use linear formats even though XR requests sRGB to match what happens on the web.
+                //       WebGL shaders expect sRGB output while native shaders expect linear output.
+            case xr::TextureFormat::BGRA8_SRGB:
+                return bgfx::TextureFormat::BGRA8;
+            case xr::TextureFormat::RGBA8_SRGB:
+                return bgfx::TextureFormat::RGBA8;
+
+                // Depth Formats
+            case xr::TextureFormat::D24S8:
+                return bgfx::TextureFormat::D24S8;
+            case xr::TextureFormat::D16:
+                return bgfx::TextureFormat::D16;
+
+            default:
+                throw std::runtime_error{ "Unsupported texture format" };
+            }
+        }
+    }
+
     namespace Plugins
     {
         NativeXr::Impl::Impl(Napi::Env env)

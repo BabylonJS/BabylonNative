@@ -84,5 +84,5 @@ namespace Babylon
                 return Napi::Boolean::From(info.Env(), m_isFirstPersonObserver);
             }
         };
-    } // Plugins
+    }
 } // Babylon

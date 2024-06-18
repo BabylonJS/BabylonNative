@@ -134,5 +134,5 @@ namespace Babylon
                 return m_matrix.Value();
             }
         };
-    } // Plugins
+    }
 } // Babylon

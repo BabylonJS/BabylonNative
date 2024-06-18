@@ -58,5 +58,5 @@ namespace Babylon
             xr::Anchor m_nativeAnchor{};
             Napi::External<xr::Space> m_jsAnchorSpace{};
         };
-    } // Plugins
+    }
 } // Babylon

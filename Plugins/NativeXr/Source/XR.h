@@ -1,9 +1,5 @@
 #pragma once
-/*#include "Constants.h"
-#include "XRSession.h"
-#include "NativeWebXRRenderTarget.h"
-#include "NativeRenderTargetProvider.h"
-*/
+
 namespace Babylon
 {
     namespace

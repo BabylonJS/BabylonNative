@@ -48,5 +48,5 @@ namespace Babylon
                 return m_session.GetRenderTargetForEye(eye);
             }
         };
-    } // Plugins
+    }
 } // Babylon

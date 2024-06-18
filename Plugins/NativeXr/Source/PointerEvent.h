@@ -33,5 +33,5 @@ namespace Babylon
                 thisObject.Set("pointerType", params.Get("pointerType"));
             }
         };
-    } // Plugins
+    }
 } // Babylon

@@ -60,5 +60,5 @@ namespace Babylon
                 return info.Env().Undefined();
             }
         };
-    } // Plugins
+    }
 } // Babylon

@@ -80,5 +80,5 @@ namespace Babylon
                 }
             }
         };
-    } // Plugins
+    }
 } // Babylon

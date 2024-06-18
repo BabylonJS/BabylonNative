@@ -150,5 +150,5 @@ namespace Babylon
                 throw Napi::Error::New(info.Env(), "XRRay.matrix is not implemented");
             }
         };
-    } // Plugins
+    }
 } // Babylon
