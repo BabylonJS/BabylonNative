@@ -37,37 +37,6 @@ namespace Babylon
 {
     namespace Plugins
     {
-        // Creates an anchor from a hit result.
-        Napi::Value XRHitTestResult::CreateAnchor(const Napi::CallbackInfo& info)
-        {
-            return m_frame->CreateNativeAnchor(info, m_hitResult.Pose, m_hitResult.NativeTrackable);
-        }
-
-        xr::System::Session::Frame::Plane& XRPlane::GetPlane()
-        {
-            return m_frame->GetPlaneFromID(m_nativePlaneID);
-        }
-
-        Napi::Value XRPlane::GetParentSceneObject(const Napi::CallbackInfo& info)
-        {
-            const auto& plane = GetPlane();
-            return m_frame->GetJSSceneObjectFromID(info, plane.ParentSceneObjectID);
-        }
-
-        xr::System::Session::Frame::Mesh& XRMesh::GetMesh()
-        {
-            return m_frame->GetMeshFromID(m_nativeMeshID);
-        }
-
-        Napi::Value XRMesh::GetParentSceneObject(const Napi::CallbackInfo& info)
-        {
-            const auto& mesh = GetMesh();
-            return m_frame->GetJSSceneObjectFromID(info, mesh.ParentSceneObjectID);
-        }
-    }
-
-    namespace Plugins
-    {
         NativeXr::NativeXr(std::shared_ptr<Impl> impl)
             : m_impl{std::move(impl)}
         {

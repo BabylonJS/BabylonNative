@@ -65,7 +65,10 @@ namespace Babylon
             }
 
         private:
-            xr::System::Session::Frame::Mesh& GetMesh();
+            xr::System::Session::Frame::Mesh& GetMesh()
+            {
+                return m_frame->GetMeshFromID(m_nativeMeshID);
+            }
 
             Napi::Value GetPositions(const Napi::CallbackInfo& info)
             {
@@ -166,7 +169,11 @@ namespace Babylon
                 return Napi::Value::From(info.Env(), m_lastUpdatedTimestamp);
             }
 
-            Napi::Value GetParentSceneObject(const Napi::CallbackInfo& info);
+            Napi::Value GetParentSceneObject(const Napi::CallbackInfo& info)
+            {
+                const auto& mesh = GetMesh();
+                return m_frame->GetJSSceneObjectFromID(info, mesh.ParentSceneObjectID);
+            }
 
             Napi::ObjectReference m_jsThis;
             xr::Space m_meshSpace{};

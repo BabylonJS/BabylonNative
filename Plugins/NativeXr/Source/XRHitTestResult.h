@@ -1,6 +1,7 @@
 #pragma once
 
 #include "XRPose.h"
+#include "XRFrame.h"
 
 namespace Babylon
 {
@@ -63,7 +64,10 @@ namespace Babylon
                 return std::move(napiPose);
             }
 
-            Napi::Value CreateAnchor(const Napi::CallbackInfo& info);
+            Napi::Value CreateAnchor(const Napi::CallbackInfo& info)
+            {
+                return m_frame->CreateNativeAnchor(info, m_hitResult.Pose, m_hitResult.NativeTrackable);
+            }
         };
     } // Plugins
 } // Babylon

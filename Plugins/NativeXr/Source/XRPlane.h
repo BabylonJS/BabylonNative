@@ -56,7 +56,10 @@ namespace Babylon
             }
 
         private:
-            xr::System::Session::Frame::Plane& GetPlane();
+            xr::System::Session::Frame::Plane& GetPlane()
+            {
+                return m_frame->GetPlaneFromID(m_nativePlaneID);
+            }
 
             Napi::Value GetPolygon(const Napi::CallbackInfo& info)
             {
@@ -92,7 +95,11 @@ namespace Babylon
                 return Napi::Value::From(info.Env(), m_lastUpdatedTimestamp);
             }
 
-            Napi::Value GetParentSceneObject(const Napi::CallbackInfo& info);
+            Napi::Value GetParentSceneObject(const Napi::CallbackInfo& info)
+            {
+                const auto& plane = GetPlane();
+                return m_frame->GetJSSceneObjectFromID(info, plane.ParentSceneObjectID);
+            }
 
             Napi::ObjectReference m_jsThis;
             xr::Space m_planeSpace{};
