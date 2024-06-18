@@ -28,6 +28,189 @@
 
 namespace Babylon
 {
+    namespace
+    {
+        void SetXRGamepadObjectData(Napi::Object& jsInputSource, Napi::Object& jsGamepadObject, xr::System::Session::Frame::InputSource& inputSource)
+        {
+            auto env = jsInputSource.Env();
+            //Set Gamepad Object
+            auto gamepadButtons = Napi::Array::New(env, inputSource.GamepadObject.Buttons.size());
+            for (size_t i = 0; i < inputSource.GamepadObject.Buttons.size(); i++)
+            {
+                auto gamepadButton = Napi::Object::New(env);
+                auto napiGamepadPressed = Napi::Boolean::New(env, inputSource.GamepadObject.Buttons[i].Pressed);
+                auto napiGamepadTouched = Napi::Boolean::New(env, inputSource.GamepadObject.Buttons[i].Touched);
+                auto napiGamepadValue = Napi::Number::New(env, inputSource.GamepadObject.Buttons[i].Value);
+                gamepadButton.Set("pressed", napiGamepadPressed);
+                gamepadButton.Set("touched", napiGamepadTouched);
+                gamepadButton.Set("value", napiGamepadValue);
+                gamepadButtons.Set(static_cast<int>(i), gamepadButton);
+            }
+            jsGamepadObject.Set("buttons", gamepadButtons);
+
+            auto gamepadAxes = Napi::Array::New(env, inputSource.GamepadObject.Axes.size());
+            for (size_t i = 0; i < inputSource.GamepadObject.Axes.size(); i++)
+            {
+                auto napiGamepadAxesValue = Napi::Number::New(env, inputSource.GamepadObject.Axes[i]);
+                gamepadAxes.Set(static_cast<int>(i), napiGamepadAxesValue);
+            }
+            jsGamepadObject.Set("axes", gamepadAxes);
+            jsInputSource.Set("gamepad", jsGamepadObject);
+        }
+
+        void CreateXRGamepadObject(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
+        {
+            auto env = jsInputSource.Env();
+            auto jsGamepadObject = Napi::Object::New(env);
+            SetXRGamepadObjectData(jsInputSource, jsGamepadObject, inputSource);
+        }
+
+        void PopulateDetectionBoundary(const Napi::Object& object, xr::DetectionBoundary& detectionBoundary)
+        {
+            if (object.Has("type"))
+            {
+                const std::map<std::string, xr::DetectionBoundaryType> detectionBoundaryTypeMap{
+                    {"box", xr::DetectionBoundaryType::Box},
+                    {"frustum", xr::DetectionBoundaryType::Frustum},
+                    {"sphere", xr::DetectionBoundaryType::Sphere} };
+                detectionBoundary.Type = detectionBoundaryTypeMap.at(object.Get("type").As<Napi::String>());
+            }
+
+            switch (detectionBoundary.Type)
+            {
+            case xr::DetectionBoundaryType::Box:
+                if (object.Has("extent"))
+                {
+                    const auto& vector = object.Get("extent").As<Napi::Object>();
+                    xr::Vector3f boxDimensions{};
+                    boxDimensions.X = vector.Get("x").As<Napi::Number>();
+                    boxDimensions.Y = vector.Get("y").As<Napi::Number>();
+                    boxDimensions.Z = vector.Get("z").As<Napi::Number>();
+                    detectionBoundary.Data = boxDimensions;
+                }
+                break;
+            case xr::DetectionBoundaryType::Frustum:
+                if (object.Has("frustum"))
+                {
+                    const auto& frustum = object.Get("frustum").As<Napi::Object>();
+                    xr::Frustum frustumData{};
+                    frustumData.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
+
+                    const auto& vector = frustum.Get("position").As<Napi::Object>();
+                    frustumData.Pose.Position.X = vector.Get("x").As<Napi::Number>();
+                    frustumData.Pose.Position.Y = vector.Get("y").As<Napi::Number>();
+                    frustumData.Pose.Position.Z = vector.Get("z").As<Napi::Number>();
+
+                    const auto& quaternion = frustum.Get("orientation").As<Napi::Object>();
+                    frustumData.Pose.Orientation.X = quaternion.Get("x").As<Napi::Number>();
+                    frustumData.Pose.Orientation.Y = quaternion.Get("y").As<Napi::Number>();
+                    frustumData.Pose.Orientation.Z = quaternion.Get("z").As<Napi::Number>();
+                    frustumData.Pose.Orientation.W = quaternion.Get("w").As<Napi::Number>();
+
+                    const auto& fov = frustum.Get("fieldOfView").As<Napi::Object>();
+                    frustumData.FOV.AngleLeft = fov.Get("angleLeft").As<Napi::Number>();
+                    frustumData.FOV.AngleRight = fov.Get("angleRight").As<Napi::Number>();
+                    frustumData.FOV.AngleUp = fov.Get("angleUp").As<Napi::Number>();
+                    frustumData.FOV.AngleDown = fov.Get("angleDown").As<Napi::Number>();
+
+                    frustumData.FarDistance = frustum.Get("farDistance").As<Napi::Number>();
+
+                    detectionBoundary.Data = frustumData;
+                }
+                break;
+            case xr::DetectionBoundaryType::Sphere:
+                if (object.Has("radius"))
+                {
+                    detectionBoundary.Data = object.Get("radius").As<Napi::Number>();
+                }
+                break;
+            }
+        }
+
+        xr::GeometryDetectorOptions CreateDetectorOptions(const Napi::Object& object)
+        {
+            xr::GeometryDetectorOptions options{};
+            if (object.Has("updateInterval"))
+            {
+                options.UpdateInterval = object.Get("updateInterval").As<Napi::Number>();
+            }
+
+            if (object.Has("detectionBoundary"))
+            {
+                const auto& detectionBoundary = object.Get("detectionBoundary").As<Napi::Object>();
+                PopulateDetectionBoundary(detectionBoundary, options.DetectionBoundary);
+            }
+
+            return options;
+        }
+
+        void SetXRInputSourceData(Napi::Object& jsInputSource, xr::System::Session::Frame::InputSource& inputSource)
+        {
+            auto env = jsInputSource.Env();
+            jsInputSource.Set("targetRaySpace", Napi::External<xr::Space>::New(env, &inputSource.AimSpace));
+            jsInputSource.Set("gripSpace", Napi::External<xr::Space>::New(env, &inputSource.GripSpace));
+
+            // Don't set hands up unless hand data is supported/available
+            if (inputSource.HandTrackedThisFrame || inputSource.JointsTrackedThisFrame)
+            {
+                auto profiles = Napi::Array::New(env, 2);
+                profiles.Set(uint32_t{ 0 }, Napi::String::New(env, "generic-hand-select-grasp"));
+                profiles.Set(uint32_t{ 1 }, Napi::String::New(env, "generic-hand-select"));
+                jsInputSource.Set("profiles", profiles);
+
+                if (inputSource.JointsTrackedThisFrame)
+                {
+                    const auto shouldInitHand = !jsInputSource.Has("hand");
+                    auto handJointCollection = shouldInitHand ? Napi::Array::New(env, HAND_JOINT_NAMES.size()) : jsInputSource.Get("hand").As<Napi::Array>();
+                    if (shouldInitHand)
+                    {
+                        auto jointGetter = [handJointCollection](const Napi::CallbackInfo& info) -> Napi::Value {
+                            return handJointCollection.Get(info[0].As<Napi::String>());
+                        };
+
+                        handJointCollection.Set("get", Napi::Function::New(env, jointGetter, "get"));
+                        handJointCollection.Set("size", static_cast<int>(HAND_JOINT_NAMES.size()));
+
+                        jsInputSource.Set("hand", handJointCollection);
+                    }
+
+                    for (size_t i = 0; i < HAND_JOINT_NAMES.size(); i++)
+                    {
+                        auto napiJoint = Napi::External<xr::System::Session::Frame::JointSpace>::New(env, &inputSource.HandJoints[i]);
+                        handJointCollection.Set(HAND_JOINT_NAMES[i], napiJoint);
+                    }
+                }
+                else
+                {
+                    // If hand joints aren't available on a hand input, send a null hand object
+                    jsInputSource.Set("hand", env.Null());
+                }
+            }
+        }
+
+        Napi::ObjectReference CreateXRInputSource(xr::System::Session::Frame::InputSource& inputSource, Napi::Env& env)
+        {
+            constexpr std::array<const char*, 2> HANDEDNESS_STRINGS{
+                "left",
+                "right" };
+            constexpr const char* TARGET_RAY_MODE{ "tracked-pointer" };
+
+            auto jsInputSource = Napi::Object::New(env);
+
+            jsInputSource.Set("handedness", Napi::String::New(env, HANDEDNESS_STRINGS[static_cast<size_t>(inputSource.Handedness)]));
+            jsInputSource.Set("targetRayMode", TARGET_RAY_MODE);
+
+            auto profiles = Napi::Array::New(env, 1);
+            Napi::Value string = Napi::String::New(env, "generic-trigger-squeeze-touchpad-thumbstick");
+            profiles.Set(uint32_t{ 0 }, string);
+            jsInputSource.Set("profiles", profiles);
+
+            SetXRInputSourceData(jsInputSource, inputSource);
+
+            return Napi::Persistent(jsInputSource);
+        }
+    }
+
     // Using Plugins namespace warning C5046: 'Babylon::`anonymous-namespace'::XRFrame::xxx': Symbol involving type with internal linkage not defined
     namespace Plugins
     {

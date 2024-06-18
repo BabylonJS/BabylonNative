@@ -1,11 +1,71 @@
 #pragma once
 
-#include "XRUtils.h"
-
 namespace Babylon
 {
     namespace
     {
+        // clang-format off
+        constexpr std::array<float, 16> IDENTITY_MATRIX{
+            1.f, 0.f, 0.f, 0.f,
+            0.f, 1.f, 0.f, 0.f,
+            0.f, 0.f, 1.f, 0.f,
+            0.f, 0.f, 0.f, 1.f
+        };
+        // clang-format on
+
+        std::array<float, 16> CreateTransformMatrix(const xr::Space& space, bool viewSpace = true)
+        {
+            auto& quat = space.Pose.Orientation;
+            auto& pos = space.Pose.Position;
+
+            // Quaternion to matrix from https://github.com/BabylonJS/Babylon.js/blob/v4.0.0/src/Maths/math.ts#L6245-L6283
+            const float xx{ quat.X * quat.X };
+            const float yy{ quat.Y * quat.Y };
+            const float zz{ quat.Z * quat.Z };
+            const float xy{ quat.X * quat.Y };
+            const float zw{ quat.Z * quat.W };
+            const float zx{ quat.Z * quat.X };
+            const float yw{ quat.Y * quat.W };
+            const float yz{ quat.Y * quat.Z };
+            const float xw{ quat.X * quat.W };
+
+            auto worldSpaceTransform{ IDENTITY_MATRIX };
+
+            worldSpaceTransform[0] = 1.f - (2.f * (yy + zz));
+            worldSpaceTransform[1] = 2.f * (xy + zw);
+            worldSpaceTransform[2] = 2.f * (zx - yw);
+            worldSpaceTransform[3] = 0.f;
+
+            worldSpaceTransform[4] = 2.f * (xy - zw);
+            worldSpaceTransform[5] = 1.f - (2.f * (zz + xx));
+            worldSpaceTransform[6] = 2.f * (yz + xw);
+            worldSpaceTransform[7] = 0.f;
+
+            worldSpaceTransform[8] = 2.f * (zx + yw);
+            worldSpaceTransform[9] = 2.f * (yz - xw);
+            worldSpaceTransform[10] = 1.f - (2.f * (yy + xx));
+            worldSpaceTransform[11] = 0.f;
+
+            // Insert position into rotation matrix.
+            worldSpaceTransform[12] = pos.X;
+            worldSpaceTransform[13] = pos.Y;
+            worldSpaceTransform[14] = pos.Z;
+            worldSpaceTransform[15] = 1.f;
+
+            if (viewSpace)
+            {
+                // Invert to get the view space transform.
+                std::array<float, 16> viewSpaceTransform{};
+                bx::mtxInverse(viewSpaceTransform.data(), worldSpaceTransform.data());
+
+                return viewSpaceTransform;
+            }
+            else
+            {
+                return worldSpaceTransform;
+            }
+        }
+
         class XRRigidTransform : public Napi::ObjectWrap<XRRigidTransform>
         {
             static constexpr auto JS_CLASS_NAME = "XRRigidTransform";
