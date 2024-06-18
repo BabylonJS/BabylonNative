@@ -1,5 +1,7 @@
 #pragma once
 
+#include <bx/math.h>
+
 namespace Babylon
 {
     namespace
