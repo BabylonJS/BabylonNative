@@ -137,6 +137,7 @@ namespace Babylon
                                 {
                                     // Block and burn frames until XR successfully shuts down.
                                     m_sessionState->Frame = m_sessionState->Session->GetNextFrame(shouldEndSession, shouldRestartSession);
+                                    m_sessionState->Frame->Render();
                                     m_sessionState->Frame.reset();
                                 }
                                 while (!shouldEndSession);
@@ -195,7 +196,6 @@ namespace Babylon
         {
             assert(m_sessionState != nullptr);
             assert(m_sessionState->Session != nullptr);
-            assert(m_sessionState->Frame == nullptr);
 
             arcana::trace_region beginFrameRegion{"NativeXR::BeginFrame"};
 
@@ -347,7 +347,7 @@ namespace Babylon
 
             arcana::trace_region endFrameRegion{"NativeXR::EndFrame"};
 
-            m_sessionState->Frame.reset();
+            m_sessionState->Frame->Render();
         }
     } // Plugins
 } // Babylon
