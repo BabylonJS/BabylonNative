@@ -169,7 +169,7 @@ DISABLE_UNREACHABLE_CODE_WARNINGS
                 bytes.resize(result.size());
                 std::memcpy(bytes.data(), result.data(), result.size());
                 return bytes;
-            }).then(m_runtimeScheduler, arcana::cancellation::none(), [env, deferred](const arcana::expected<std::vector<uint8_t>, std::exception_ptr>& result) {
+            }).then(m_runtimeScheduler.Get(), arcana::cancellation::none(), [env, deferred](const arcana::expected<std::vector<uint8_t>, std::exception_ptr>& result) {
                 if (result.has_error())
                 {
                     deferred.Reject(Napi::Error::New(env, result.error()).Value());

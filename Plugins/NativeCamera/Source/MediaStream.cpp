@@ -16,7 +16,7 @@ namespace Babylon::Plugins
         auto mediaStreamObject{Napi::Persistent(GetConstructor(env).New({}))};
         auto mediaStream{MediaStream::Unwrap(mediaStreamObject.Value())};
 
-        return mediaStream->ApplyInitialConstraintsAsync(constraints).then(mediaStream->m_runtimeScheduler, arcana::cancellation::none(), [mediaStreamObject{std::move(mediaStreamObject)}]() {
+        return mediaStream->ApplyInitialConstraintsAsync(constraints).then(arcana::inline_scheduler, arcana::cancellation::none(), [mediaStreamObject{ std::move(mediaStreamObject) }]() {
             return mediaStreamObject.Value();
         });
     }
@@ -58,13 +58,18 @@ namespace Babylon::Plugins
 
     MediaStream::~MediaStream()
     {
+        m_cancellationSource.cancel();
+        // HACK: This is a hack to make sure the camera device is destroyed on the JS thread.
+        // The napi-jsi adapter currently calls the destructors of JS objects possibly on the wrong thread.
+        // Once this is fixed, this hack will no longer be needed.
         if (m_cameraDevice != nullptr)
         {
             // The cameraDevice should be destroyed on the JS thread as it may need to access main thread resources
             // move ownership of the cameraDevice to a lambda and dispatch it with the runtimeScheduler so the destructor
             // is called from that thread.
-            m_runtimeScheduler([cameraDevice = std::move(m_cameraDevice)]() {});
+            m_runtimeScheduler.Get()([cameraDevice = std::move(m_cameraDevice)]() {});
         }
+        m_runtimeScheduler.Rundown();
     }
 
     Napi::Value MediaStream::GetVideoTracks(const Napi::CallbackInfo& info)
@@ -120,7 +125,7 @@ namespace Babylon::Plugins
         // Create a persistent ref to the constraints object so it isn't destructed during our async work
         auto constraintsRef{Napi::Persistent(constraints)};
 
-        return m_cameraDevice->OpenAsync(bestCamera.value().second).then(m_runtimeScheduler, arcana::cancellation::none(), [this, constraintsRef{std::move(constraintsRef)}](CameraDevice::CameraDimensions cameraDimensions) {
+        return m_cameraDevice->OpenAsync(bestCamera.value().second).then(m_runtimeScheduler.Get(), arcana::cancellation::none(), [this, constraintsRef{std::move(constraintsRef)}](CameraDevice::CameraDimensions cameraDimensions) {
             this->Width = cameraDimensions.width;
             this->Height = cameraDimensions.height;
 

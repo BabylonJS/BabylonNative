@@ -35,7 +35,7 @@ namespace Babylon::Polyfills::Internal
     };
 
     TimeoutDispatcher::TimeoutDispatcher(Babylon::JsRuntime& runtime)
-        : m_runtime{runtime}
+        : m_runtimeScheduler{runtime}
         , m_thread{std::thread{&TimeoutDispatcher::ThreadFunction, this}}
     {
     }
@@ -43,14 +43,16 @@ namespace Babylon::Polyfills::Internal
     TimeoutDispatcher::~TimeoutDispatcher()
     {
         {
-            std::unique_lock<std::mutex> lk{m_mutex};
+            std::unique_lock<std::mutex> lock{m_mutex};
             m_idMap.clear();
             m_timeMap.clear();
         }
 
-        m_shutdown = true;
+        m_cancellationSource.cancel();
         m_condVariable.notify_one();
         m_thread.join();
+
+        m_runtimeScheduler.Rundown();
     }
 
     TimeoutDispatcher::TimeoutId TimeoutDispatcher::Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay)
@@ -60,7 +62,7 @@ namespace Babylon::Polyfills::Internal
             delay = std::chrono::milliseconds{0};
         }
 
-        std::unique_lock<std::mutex> lk{m_mutex};
+        std::unique_lock<std::mutex> lock{m_mutex};
 
         const auto id = NextTimeoutId();
         const auto earliestTime = m_timeMap.empty() ? TimePoint::max() : m_timeMap.cbegin()->second->time;
@@ -70,7 +72,7 @@ namespace Babylon::Polyfills::Internal
 
         if (time <= earliestTime)
         {
-            m_runtime.Dispatch([this](Napi::Env) {
+            m_runtimeScheduler.Get()([this]() {
                 m_condVariable.notify_one();
             });
         }
@@ -80,7 +82,7 @@ namespace Babylon::Polyfills::Internal
 
     void TimeoutDispatcher::Clear(TimeoutId id)
     {
-        std::unique_lock<std::mutex> lk{m_mutex};
+        std::unique_lock<std::mutex> lock{m_mutex};
         const auto itId = m_idMap.find(id);
         if (itId != m_idMap.end())
         {
@@ -122,9 +124,9 @@ namespace Babylon::Polyfills::Internal
 
     void TimeoutDispatcher::ThreadFunction()
     {
-        while (!m_shutdown)
+        while (!m_cancellationSource.cancelled())
         {
-            std::unique_lock<std::mutex> lk{m_mutex};
+            std::unique_lock<std::mutex> lock{m_mutex};
             TimePoint nextTimePoint{};
 
             while (!m_timeMap.empty())
@@ -135,7 +137,7 @@ namespace Babylon::Polyfills::Internal
                     break;
                 }
 
-                m_condVariable.wait_until(lk, nextTimePoint);
+                m_condVariable.wait_until(lock, nextTimePoint);
             }
 
             while (!m_timeMap.empty() && m_timeMap.begin()->second->time == nextTimePoint)
@@ -147,9 +149,9 @@ namespace Babylon::Polyfills::Internal
                 CallFunction(std::move(function));
             }
 
-            while (!m_shutdown && m_timeMap.empty())
+            while (!m_cancellationSource.cancelled() && m_timeMap.empty())
             {
-                m_condVariable.wait(lk);
+                m_condVariable.wait(lock);
             }
         }
     }
@@ -158,7 +160,9 @@ namespace Babylon::Polyfills::Internal
     {
         if (function)
         {
-            m_runtime.Dispatch([function = std::move(function)](Napi::Env) { function->Call({}); });
+            m_runtimeScheduler.Get()([function = std::move(function)]() {
+                function->Call({});
+            });
         }
     }
 }
