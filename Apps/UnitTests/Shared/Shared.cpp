@@ -32,7 +32,7 @@ namespace
         return "unknown";
     }
 }
-/*
+
 TEST(JavaScript, All)
 {
     // Change this to true to wait for the JavaScript debugger to attach (only applies to V8)
@@ -98,43 +98,6 @@ TEST(JavaScript, All)
     EXPECT_EQ(exitCode, 0);
 }
 
-/*
-This test does a serie of initialization and shutdowns.
-It needs the shutdown PR to be merged before running properly.
-TEST(NativeAPI, LifeCycle)
-{
-    for (int cycle = 0; cycle < 20; cycle++)
-    {
-        Babylon::Graphics::Device device{deviceConfig};
-        std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
-
-        Babylon::AppRuntime runtime{};
-        runtime.Dispatch([&device, &nativeCanvas](Napi::Env env) {
-            device.AddToJavaScript(env);
-
-            Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-            Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-                printf("%s", message);
-                fflush(stdout);
-            });
-            Babylon::Polyfills::Window::Initialize(env);
-            nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
-            Babylon::Plugins::NativeEngine::Initialize(env);
-        });
-
-        Babylon::ScriptLoader loader{runtime};
-        loader.LoadScript("app:///Scripts/babylon.max.js");
-        loader.LoadScript("app:///Scripts/babylonjs.materials.js");
-
-        for (int frame = 0; frame < 10; frame++)
-        {
-            device.StartRenderingCurrentFrame();
-            device.FinishRenderingCurrentFrame();
-        }
-    }
-}
-*/
-/*
 TEST(Performance, Spheres)
 {
     // create a bunch of sphere, does the rendering for a number of frames, log time it took
@@ -211,7 +174,6 @@ TEST(Performance, Spheres)
     std::cout << "Duration is " << durationSeconds << " seconds. " << std::endl;
     std::cout.flush();
 }
-*/
 
 TEST(Shutdown, AsyncShaderCompilation)
 {
@@ -222,7 +184,7 @@ TEST(Shutdown, AsyncShaderCompilation)
     Babylon::AppRuntime runtime{};
     runtime.Dispatch([&device, &nativeCanvas, &exitCodePromise](Napi::Env env) {
         device.AddToJavaScript(env);
-        //Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+        Babylon::Polyfills::XMLHttpRequest::Initialize(env);
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
             std::cout << message << std::endl;
             std::cout.flush();
