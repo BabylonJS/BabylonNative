@@ -37,7 +37,7 @@ namespace Babylon::Plugins::Internal
                     videoConstraints = constraints.Get("video").As<Napi::Object>();
                 }
             }
-
+DISABLE_UNREACHABLE_CODE_WARNINGS
             MediaStream::NewAsync(env, videoConstraints).then(arcana::inline_scheduler, arcana::cancellation::none(), [env, deferred](const arcana::expected<Napi::Object, std::exception_ptr>& result) {
                 if (result.has_error())
                 {
@@ -47,7 +47,7 @@ namespace Babylon::Plugins::Internal
 
                 deferred.Resolve(result.value());
             });
-
+ENABLE_UNREACHABLE_CODE_WARNINGS
             return std::move(promise);
         }
 

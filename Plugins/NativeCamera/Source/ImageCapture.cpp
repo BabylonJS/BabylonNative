@@ -4,16 +4,6 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
 
-#ifdef _MSC_VER
-    #define DISABLE_UNREACHABLE_CODE_WARNINGS \
-        __pragma(warning(push)) \
-        __pragma(warning(disable : 4702))
-    #define ENABLE_UNREACHABLE_CODE_WARNINGS __pragma(warning(pop))
-#else
-    #define DISABLE_UNREACHABLE_CODE_WARNINGS
-    #define ENABLE_UNREACHABLE_CODE_WARNINGS
-#endif
-
 namespace Babylon::Plugins::Internal
 {
     namespace
