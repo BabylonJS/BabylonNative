@@ -234,6 +234,7 @@ namespace Babylon
         bimg::ImageContainer* PrepareImage(bx::AllocatorI& allocator, bimg::ImageContainer* image, bool invertY, bool srgb, bool generateMips)
         {
             assert(
+                image->m_format == bimg::TextureFormat::R16 ||
                 image->m_format == bimg::TextureFormat::RGB8 ||
                 image->m_format == bimg::TextureFormat::RGBA8 ||
                 image->m_format == bimg::TextureFormat::RGBA16 ||
@@ -266,7 +267,7 @@ namespace Babylon
                     image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA8, *image, false);
                     bimg::imageFree(oldImage);
                 }
-                else if (image->m_format == bimg::TextureFormat::RGBA16)
+                else if (image->m_format == bimg::TextureFormat::RGBA16 || image->m_format == bimg::TextureFormat::R16)
                 {
                     bimg::ImageContainer* oldImage{image};
                     image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA32F, *image, false);
