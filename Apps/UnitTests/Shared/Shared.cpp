@@ -182,6 +182,12 @@ TEST(Shutdown, AsyncShaderCompilation)
     auto update{ device.GetUpdate("update") };
     std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
     Babylon::AppRuntime runtime{};
+    
+    device.StartRenderingCurrentFrame();
+    update.Start();
+    update.Finish();
+    device.FinishRenderingCurrentFrame();
+
     runtime.Dispatch([&device, &nativeCanvas, &exitCodePromise](Napi::Env env) {
         device.AddToJavaScript(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
