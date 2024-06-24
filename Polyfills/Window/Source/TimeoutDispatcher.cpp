@@ -14,26 +14,6 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    struct TimeoutDispatcher::Timeout
-    {
-        TimeoutId id;
-
-        // Make this non-shared when JsRuntime::Dispatch supports it.
-        std::shared_ptr<Napi::FunctionReference> function;
-
-        TimePoint time;
-
-        Timeout(TimeoutId id, std::shared_ptr<Napi::FunctionReference> function, TimePoint time)
-            : id{id}
-            , function{std::move(function)}
-            , time{time}
-        {
-        }
-
-        Timeout(const Timeout&) = delete;
-        Timeout(Timeout&&) = delete;
-    };
-
     TimeoutDispatcher::TimeoutDispatcher(Babylon::JsRuntime& runtime)
         : m_runtimeScheduler{runtime}
         , m_thread{std::thread{&TimeoutDispatcher::ThreadFunction, this}}
