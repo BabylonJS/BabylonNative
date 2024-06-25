@@ -183,6 +183,7 @@ TEST(Shutdown, AsyncShaderCompilation)
     std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
     Babylon::AppRuntime runtime{};
     
+    // OpenGL/Linux needs to render 1 frame to set bgfx caps. More infos here : https://github.com/BabylonJS/BabylonNative/issues/1163
     device.StartRenderingCurrentFrame();
     update.Start();
     update.Finish();
