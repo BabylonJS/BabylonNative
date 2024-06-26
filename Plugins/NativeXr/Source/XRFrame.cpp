@@ -75,11 +75,11 @@ namespace Babylon
             m_jsJointPose.Set("transform", m_jsTransform.Value());
         }
 
-        void XRFrame::Update(const Napi::Env& env, const xr::System::Session::Frame& frame, uint32_t timestamp)
+        void XRFrame::Update(const Napi::Env& env, const std::shared_ptr<const xr::System::Session::Frame>& frame, uint32_t timestamp)
         {
             // Store off a pointer to the frame so that the viewer pose can be updated later. We cannot
             // update the viewer pose here because we don't yet know the desired reference space.
-            m_frame = &frame;
+            m_frame = frame;
 
             // Update anchor positions.
             UpdateAnchors();
