@@ -101,6 +101,9 @@
             currentScene = null;
             engine.setHardwareScalingLevel(1);
 
+            // This is necessary because of https://github.com/BabylonJS/Babylon.js/pull/15217 so that each test starts fresh.
+            engine.releaseEffects();
+
             done(testRes);
         });
     }
