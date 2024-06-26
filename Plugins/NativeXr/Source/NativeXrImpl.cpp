@@ -150,7 +150,7 @@ namespace Babylon
             return m_endTask;
         }
 
-        void NativeXr::Impl::ScheduleFrame(std::function<void(const xr::System::Session::Frame&)>&& callback)
+        void NativeXr::Impl::ScheduleFrame(std::function<void(const std::shared_ptr<const xr::System::Session::Frame>&)>&& callback)
         {
             if (m_sessionState->FrameScheduled)
             {
@@ -176,7 +176,7 @@ namespace Babylon
                         auto callbacks{std::move(m_sessionState->ScheduleFrameCallbacks)};
                         for (auto& callback : callbacks)
                         {
-                            callback(*m_sessionState->Frame);
+                            callback(m_sessionState->Frame);
                         }
                     }
 

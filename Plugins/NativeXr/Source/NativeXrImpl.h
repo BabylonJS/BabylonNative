@@ -15,7 +15,7 @@ namespace Babylon
             arcana::task<void, std::exception_ptr> BeginSessionAsync();
             arcana::task<void, std::exception_ptr> EndSessionAsync();
 
-            void ScheduleFrame(std::function<void(const xr::System::Session::Frame&)>&& callback);
+            void ScheduleFrame(std::function<void(const std::shared_ptr<const xr::System::Session::Frame>&)>&& callback);
 
             void SetRenderTextureFunctions(const Napi::Function& createFunction, const Napi::Function& destroyFunction)
             {
@@ -123,10 +123,10 @@ namespace Babylon
                 std::unordered_map<ViewConfiguration*, uint32_t> ViewConfigurationStartViewIdx{};
                 std::unordered_map<void*, ViewConfiguration> TextureToViewConfigurationMap{};
                 std::shared_ptr<xr::System::Session> Session{};
-                std::unique_ptr<xr::System::Session::Frame> Frame{};
+                std::shared_ptr<xr::System::Session::Frame> Frame{};
                 arcana::cancellation_source CancellationSource{};
                 bool FrameScheduled{false};
-                std::vector<std::function<void(const xr::System::Session::Frame&)>> ScheduleFrameCallbacks{};
+                std::vector<std::function<void(const std::shared_ptr<const xr::System::Session::Frame>&)>> ScheduleFrameCallbacks{};
                 arcana::task<void, std::exception_ptr> FrameTask{arcana::task_from_result<std::exception_ptr>()};
             };
 

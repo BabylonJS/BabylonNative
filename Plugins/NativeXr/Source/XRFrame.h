@@ -13,7 +13,7 @@ namespace Babylon
             static Napi::Object New(const Napi::CallbackInfo& info);
 
             XRFrame(const Napi::CallbackInfo& info);
-            void Update(const Napi::Env& env, const xr::System::Session::Frame& frame, uint32_t timestamp);
+            void Update(const Napi::Env& env, const std::shared_ptr<const xr::System::Session::Frame>& frame, uint32_t timestamp);
             Napi::Promise CreateNativeAnchor(const Napi::CallbackInfo& info, xr::Pose pose, xr::NativeTrackablePtr nativeTrackable);
             Napi::Value DeclareNativeAnchor(const Napi::Env& env, xr::NativeAnchorPtr nativeAnchor);
 
@@ -30,7 +30,7 @@ namespace Babylon
             Napi::Value GetJSSceneObjectFromID(const Napi::CallbackInfo& info, const xr::System::Session::Frame::SceneObject::Identifier objectID);
 
         private:
-            const xr::System::Session::Frame* m_frame{};
+            std::shared_ptr<const xr::System::Session::Frame> m_frame{};
             Napi::ObjectReference m_jsXRViewerPose{};
             XRViewerPose& m_xrViewerPose;
             std::vector<Napi::ObjectReference> m_trackedAnchors{};
