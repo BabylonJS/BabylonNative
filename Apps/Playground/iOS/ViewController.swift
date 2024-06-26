@@ -60,8 +60,10 @@ class UIBabylonGestureRecognizer: UIGestureRecognizer {
 
 class ViewController: UIViewController {
 
+#if !os(visionOS)
     var mtkView: MTKView!
     var xrView: MTKView!
+#endif
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -73,7 +75,8 @@ class ViewController: UIViewController {
             let appDelegate = UIApplication.shared.delegate as? AppDelegate,
             let bridge = appDelegate._bridge
         else { return }
-        
+        self.view.backgroundColor = .systemBackground
+        #if !os(visionOS)
         setupViews()
         
         let device = MTLCreateSystemDefaultDevice()
@@ -102,8 +105,10 @@ class ViewController: UIViewController {
             height:Int32(height * scale),
             xrView:Unmanaged.passUnretained(xrView).toOpaque()
         )
+        #endif
     }
   
+    #if !os(visionOS)
     func setupViews() {
         mtkView = MTKView()
         mtkView.delegate = self
@@ -120,8 +125,10 @@ class ViewController: UIViewController {
         view.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "|[xrView]|", options: [], metrics: nil, views: ["xrView" : xrView]))
         view.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "V:|[xrView]|", options: [], metrics: nil, views: ["xrView" : xrView]))
     }
+    #endif
 }
 
+#if !os(visionOS)
 // MARK: MTKViewDelegate
 extension ViewController: MTKViewDelegate {
     func draw(in view: MTKView) {
@@ -135,4 +142,5 @@ extension ViewController: MTKViewDelegate {
         appDelegate._bridge?.resize(Int32(size.width), height: Int32(size.height))
     }
 }
+#endif
 

@@ -5,6 +5,8 @@
 typedef struct IXrContextARKit
 {
     virtual bool IsInitialized() const = 0;
+#if !TARGET_OS_VISION
     virtual ARSession* XrSession() const = 0;
     virtual ARFrame* XrFrame() const = 0;
+#endif
 } IXrContextARKit;

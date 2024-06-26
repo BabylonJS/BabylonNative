@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.29)
 
 if(POLICY CMP0135)
     cmake_policy(SET CMP0135 NEW)
@@ -22,8 +22,8 @@ FetchContent_Declare(base-n
     GIT_REPOSITORY https://github.com/azawadzki/base-n.git
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4)
 FetchContent_Declare(bgfx.cmake
-    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG 345e3e28a9912983fc64d1dcb4da22a445afe3fd)
+    GIT_REPOSITORY https://github.com/okwasniewski/bgfx.cmake 
+    GIT_TAG ff17ee7ceadb7c66556947f927d16747dba2f9ab)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
@@ -34,7 +34,7 @@ FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz")
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
-    GIT_TAG 4.4.1)
+    GIT_TAG a52c591bc9056f3ae20a461d16fdd73ab4325be7)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
     GIT_TAG 9ccb9477a97501525f3f9ca0e00e6971934037ec)
@@ -51,6 +51,18 @@ FetchContent_Declare(SPIRV-Cross
 
 FetchContent_MakeAvailable(CMakeExtensions)
 
+
+if(VISIONOS)
+    # Disable iOS flag when running on visionOS
+    set(IOS OFF)
+    FetchContent_MakeAvailable_With_Message(ios-cmake)
+    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+    # Change this to VISIONOSCOMBINED, once its supported.
+    set(PLATFORM "SIMULATOR_VISIONOS" CACHE STRING "")
+    set(DEPLOYMENT_TARGET "1.0" CACHE STRING "")
+    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
+endif()
+
 if(IOS)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
     set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
@@ -58,6 +70,7 @@ if(IOS)
     set(DEPLOYMENT_TARGET "13" CACHE STRING "")
     set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
 endif()
+
 
 project(BabylonNative)
 
@@ -98,6 +111,8 @@ if(ANDROID)
     set(BABYLON_NATIVE_PLATFORM "Android")
 elseif(IOS)
     set(BABYLON_NATIVE_PLATFORM "iOS")
+elseif (VISIONOS)
+    set(BABYLON_NATIVE_PLATFORM "visionOS")
 elseif(APPLE)
     set(BABYLON_NATIVE_PLATFORM "macOS")
 elseif(WINDOWS_STORE)

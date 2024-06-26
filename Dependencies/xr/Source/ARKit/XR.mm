@@ -7,13 +7,20 @@
 
 #import <UIKit/UIKit.h>
 #import <ARKit/ARKit.h>
+#if !TARGET_OS_VISION
 #import <ARKit/ARConfiguration.h>
+#endif
 #import <MetalKit/MetalKit.h>
 
 #import "Include/IXrContextARKit.h"
 
+#if TARGET_OS_VISION
+@interface SessionDelegate : NSObject
+@end
+#else
 @interface SessionDelegate : NSObject <ARSessionDelegate, MTKViewDelegate>
 @end
+#endif
 
 namespace {
     typedef struct {
@@ -23,6 +30,7 @@ namespace {
     } XRVertex;
 
     struct ARAnchorComparer {
+#if !TARGET_OS_VISION
         bool operator()(const ARPlaneAnchor* lhs, const ARPlaneAnchor* rhs) const {
             return lhs.identifier < rhs.identifier;
         }
@@ -35,6 +43,7 @@ namespace {
             return lhs.identifier < rhs.identifier;
         }
 #endif
+#endif // TARGET_OS_VISION
     };
 
     /**
@@ -42,13 +51,13 @@ namespace {
      NOTE: For Metal UV space, 0,0 is in the top left, not the bottom left, so the V component of the UV is swapped from what you would see for OpenGL. See https://developer.apple.com/documentation/metal/creating_and_sampling_textures.
      NOTE2: Because Metal coordinates origin is different compared to OpenGL (and same as D3D), V has been flipped so rendering is not vertically flipped
      */
-    static XRVertex vertices[] = {
-        // 2D positions, UV,        camera UV
-        { { -1, -1 },   { 0, 1 },   { 0, 0} },
-        { { -1, 1 },    { 0, 0 },   { 0, 0} },
-        { { 1, -1 },    { 1, 1 },   { 0, 0} },
-        { { 1, 1 },     { 1, 0 },   { 0, 0} },
-    };
+//    static XRVertex vertices[] = {
+//        // 2D positions, UV,        camera UV
+//        { { -1, -1 },   { 0, 1 },   { 0, 0} },
+//        { { -1, 1 },    { 0, 0 },   { 0, 0} },
+//        { { 1, -1 },    { 1, 1 },   { 0, 0} },
+//        { { 1, 1 },     { 1, 0 },   { 0, 0} },
+//    };
 
     /**
      Defines the three-index combination that forms a unique triangle, or face. The index refers to that vertex's position in the vertices array.
@@ -61,35 +70,35 @@ namespace {
     /**
      Helper function to convert a transform into an xr::pose.
      */
-    static xr::Pose TransformToPose(simd_float4x4 transform) {
-        // Set orientation.
-        xr::Pose pose{};
-        auto orientation = simd_quaternion(transform);
-        pose.Orientation = { orientation.vector.x
-            , orientation.vector.y
-            , orientation.vector.z
-            , orientation.vector.w };
-
-        // Set the translation.
-        pose.Position = { transform.columns[3][0]
-            , transform.columns[3][1]
-            , transform.columns[3][2] };
-
-        return pose;
-    }
+//    static xr::Pose TransformToPose(simd_float4x4 transform) {
+//        // Set orientation.
+//        xr::Pose pose{};
+//        auto orientation = simd_quaternion(transform);
+//        pose.Orientation = { orientation.vector.x
+//            , orientation.vector.y
+//            , orientation.vector.z
+//            , orientation.vector.w };
+//
+//        // Set the translation.
+//        pose.Position = { transform.columns[3][0]
+//            , transform.columns[3][1]
+//            , transform.columns[3][2] };
+//
+//        return pose;
+//    }
 
     /**
      Helper function to convert an xr pose into a transform.
      */
-    static simd_float4x4 PoseToTransform(xr::Pose pose) {
-        auto poseQuaternion = simd_quaternion(pose.Orientation.X, pose.Orientation.Y, pose.Orientation.Z, pose.Orientation.W);
-        auto poseTransform = simd_matrix4x4(poseQuaternion);
-        poseTransform.columns[3][0] = pose.Position.X;
-        poseTransform.columns[3][1] = pose.Position.Y;
-        poseTransform.columns[3][2] = pose.Position.Z;
-
-        return poseTransform;
-    }
+//    static simd_float4x4 PoseToTransform(xr::Pose pose) {
+//        auto poseQuaternion = simd_quaternion(pose.Orientation.X, pose.Orientation.Y, pose.Orientation.Z, pose.Orientation.W);
+//        auto poseTransform = simd_matrix4x4(poseQuaternion);
+//        poseTransform.columns[3][0] = pose.Position.X;
+//        poseTransform.columns[3][1] = pose.Position.Y;
+//        poseTransform.columns[3][2] = pose.Position.Z;
+//
+//        return poseTransform;
+//    }
 }
 
 /**
@@ -99,6 +108,7 @@ namespace {
     std::vector<xr::System::Session::Frame::View>* activeFrameViews;
 
     NSLock* anchorLock;
+#if !TARGET_OS_VISION
     std::set<ARPlaneAnchor*,ARAnchorComparer> updatedPlanes;
     std::vector<ARPlaneAnchor*> deletedPlanes;
     bool planeDetectionEnabled;
@@ -111,6 +121,7 @@ namespace {
     bool meshDetectionEnabled;
     std::set<ARImageAnchor*,ARAnchorComparer> updatedImages;
     bool imageDetectionEnabled;
+#endif
 
     CVMetalTextureCacheRef textureCache;
     CVMetalTextureRef _cameraTextureY;
@@ -145,6 +156,7 @@ namespace {
     return nil;
 }
 
+#if !TARGET_OS_VISION
 /**
  Returns the set of all updated planes since the last time we consumed plane updates.
  */
@@ -549,6 +561,7 @@ namespace {
     _viewportSize = size;
 }
 
+#endif // TARGET_OS_VISION
 @end
 namespace xr {
     namespace {
@@ -558,95 +571,98 @@ namespace xr {
         // The shader is used in two passes:
         // 1. Render the camera texture to the color render texture (see GetNextFrame).
         // 2. Render the composited texture to the screen (see DrawFrame).
-        constexpr char shaderSource[] = R"(
-            #include <metal_stdlib>
-            #include <simd/simd.h>
+//        constexpr char shaderSource[] = R"(
+//            #include <metal_stdlib>
+//            #include <simd/simd.h>
+//
+//            using namespace metal;
+//
+//            #include <simd/simd.h>
+//
+//            typedef struct
+//            {
+//                vector_float2 position;
+//                vector_float2 uv;
+//                vector_float2 cameraUV;
+//            } XRVertex;
+//
+//            typedef struct
+//            {
+//                float4 position [[position]];
+//                float2 uv;
+//                float2 cameraUV;
+//            } RasterizerData;
+//
+//            vertex RasterizerData
+//            vertexShader(uint vertexID [[vertex_id]],
+//                         constant XRVertex *vertices [[buffer(0)]])
+//            {
+//                RasterizerData out;
+//                out.position = vector_float4(vertices[vertexID].position.xy, 0.0, 1.0);
+//                out.uv = vertices[vertexID].uv;
+//                out.cameraUV = vertices[vertexID].cameraUV;
+//                return out;
+//            }
+//
+//            fragment float4 fragmentShader(RasterizerData in [[stage_in]],
+//                texture2d<float, access::sample> babylonTexture [[ texture(0) ]],
+//                texture2d<float, access::sample> cameraTextureY [[ texture(1) ]],
+//                texture2d<float, access::sample> cameraTextureCbCr [[ texture(2) ]])
+//            {
+//                constexpr sampler linearSampler(mip_filter::linear, mag_filter::linear, min_filter::linear);
+//
+//                if (!is_null_texture(babylonTexture))
+//                {
+//                    return babylonTexture.sample(linearSampler, in.uv);
+//                }
+//                else if (!is_null_texture(cameraTextureY) && !is_null_texture(cameraTextureCbCr))
+//                {
+//                    const float4 cameraSampleY = cameraTextureY.sample(linearSampler, in.cameraUV);
+//                    const float4 cameraSampleCbCr = cameraTextureCbCr.sample(linearSampler, in.cameraUV);
+//
+//                    const float4x4 ycbcrToRGBTransform = float4x4(
+//                        float4(+1.0000f, +1.0000f, +1.0000f, +0.0000f),
+//                        float4(+0.0000f, -0.3441f, +1.7720f, +0.0000f),
+//                        float4(+1.4020f, -0.7141f, +0.0000f, +0.0000f),
+//                        float4(-0.7010f, +0.5291f, -0.8860f, +1.0000f)
+//                    );
+//
+//                    float4 ycbcr = float4(cameraSampleY.r, cameraSampleCbCr.rg, 1.0);
+//                    float4 cameraSample = ycbcrToRGBTransform * ycbcr;
+//                    cameraSample.a = 1.0;
+//
+//                    return cameraSample;
+//                }
+//                else
+//                {
+//                    return 0;
+//                }
+//            }
+//        )";
 
-            using namespace metal;
-
-            #include <simd/simd.h>
-
-            typedef struct
-            {
-                vector_float2 position;
-                vector_float2 uv;
-                vector_float2 cameraUV;
-            } XRVertex;
-
-            typedef struct
-            {
-                float4 position [[position]];
-                float2 uv;
-                float2 cameraUV;
-            } RasterizerData;
-
-            vertex RasterizerData
-            vertexShader(uint vertexID [[vertex_id]],
-                         constant XRVertex *vertices [[buffer(0)]])
-            {
-                RasterizerData out;
-                out.position = vector_float4(vertices[vertexID].position.xy, 0.0, 1.0);
-                out.uv = vertices[vertexID].uv;
-                out.cameraUV = vertices[vertexID].cameraUV;
-                return out;
-            }
-
-            fragment float4 fragmentShader(RasterizerData in [[stage_in]],
-                texture2d<float, access::sample> babylonTexture [[ texture(0) ]],
-                texture2d<float, access::sample> cameraTextureY [[ texture(1) ]],
-                texture2d<float, access::sample> cameraTextureCbCr [[ texture(2) ]])
-            {
-                constexpr sampler linearSampler(mip_filter::linear, mag_filter::linear, min_filter::linear);
-
-                if (!is_null_texture(babylonTexture))
-                {
-                    return babylonTexture.sample(linearSampler, in.uv);
-                }
-                else if (!is_null_texture(cameraTextureY) && !is_null_texture(cameraTextureCbCr))
-                {
-                    const float4 cameraSampleY = cameraTextureY.sample(linearSampler, in.cameraUV);
-                    const float4 cameraSampleCbCr = cameraTextureCbCr.sample(linearSampler, in.cameraUV);
-
-                    const float4x4 ycbcrToRGBTransform = float4x4(
-                        float4(+1.0000f, +1.0000f, +1.0000f, +0.0000f),
-                        float4(+0.0000f, -0.3441f, +1.7720f, +0.0000f),
-                        float4(+1.4020f, -0.7141f, +0.0000f, +0.0000f),
-                        float4(-0.7010f, +0.5291f, -0.8860f, +1.0000f)
-                    );
-
-                    float4 ycbcr = float4(cameraSampleY.r, cameraSampleCbCr.rg, 1.0);
-                    float4 cameraSample = ycbcrToRGBTransform * ycbcr;
-                    cameraSample.a = 1.0;
-
-                    return cameraSample;
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-        )";
-
-        id<MTLLibrary> CompileShader(id<MTLDevice> metalDevice, const char* source) {
-            NSError* error;
-            id<MTLLibrary> lib = [metalDevice newLibraryWithSource:@(source) options:nil error:&error];
-            if(nil != error) {
-                throw std::runtime_error{[error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]};
-            }
-            return lib;
-        }
+//        id<MTLLibrary> CompileShader(id<MTLDevice> metalDevice, const char* source) {
+//            NSError* error;
+//            id<MTLLibrary> lib = [metalDevice newLibraryWithSource:@(source) options:nil error:&error];
+//            if(nil != error) {
+//                throw std::runtime_error{[error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]};
+//            }
+//            return lib;
+//        }
     }
 
     struct XrContextARKit : public IXrContextARKit {
         bool Initialized{true};
+#if !TARGET_OS_VISION
         ARSession* Session{nullptr};
         ARFrame* Frame{nullptr};
+#endif
 
         bool IsInitialized() const override
         {
             return Initialized;
         }
 
+#if !TARGET_OS_VISION
         ARSession* XrSession() const override
         {
             return Session;
@@ -656,7 +672,7 @@ namespace xr {
         {
             return Frame;
         }
-
+#endif
         virtual ~XrContextARKit() = default;
     };
 
@@ -675,6 +691,7 @@ namespace xr {
         }
     };
 
+#if !TARGET_OS_VISION
     struct System::Session::Impl {
     public:
         const System::Impl& SystemImpl;
@@ -691,10 +708,11 @@ namespace xr {
 
         Impl(System::Impl& systemImpl, void* graphicsContext, void* commandQueue, std::function<void*()> windowProvider)
             : SystemImpl{ systemImpl }
-            , getXRView{ [windowProvider{ std::move(windowProvider) }] { return (__bridge MTKView*)windowProvider(); } }
+//            , getXRView{ [windowProvider{ std::move(windowProvider) }] { return (__bridge MTKView*)windowProvider(); } }
             , metalDevice{ (__bridge id<MTLDevice>)graphicsContext }
             , commandQueue{ (__bridge id<MTLCommandQueue>)commandQueue } {
 
+#if !TARGET_OS_VISION
             // Create the ARSession enable plane detection, include scene reconstruction mesh if supported, and disable lighting estimation.
             SystemImpl.XrContext->Session = [ARSession new];
             auto configuration = [ARWorldTrackingConfiguration new];
@@ -751,6 +769,7 @@ namespace xr {
                     NSLog(@"Failed to create screen pipeline state: %@", error);
                 }
             }
+#endif
         }
 
         ~Impl() {
@@ -773,7 +792,10 @@ namespace xr {
             Planes.clear();
             Meshes.clear();
             CleanupAnchor(nil);
+            
+#if !TARGET_OS_VISION
             [SystemImpl.XrContext->Session pause];
+#endif
             UpdateXRView(nil);
         }
 
@@ -781,7 +803,7 @@ namespace xr {
             UpdateXRView(getXRView());
         }
 
-        void UpdateXRView(MTKView* activeXRView) {
+        void UpdateXRView(UIView* activeXRView) {
             // Check whether the xr view has changed, and if so, reconfigure it.
             if (activeXRView != xrView) {
                 if (xrView) {
@@ -790,8 +812,8 @@ namespace xr {
                     metalLayer = nil;
                 }
 
+#if !TARGET_OS_VISION
                 xrView = activeXRView;
-
                 if (xrView) {
                     xrView.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
 // NOTE: There is an incorrect warning about CAMetalLayer specifically when compiling for the simulator.
@@ -808,6 +830,7 @@ namespace xr {
 
                     xrView.delegate = sessionDelegate;
                 }
+#endif
             }
         }
 
@@ -1876,4 +1899,5 @@ namespace xr {
     {
         m_impl->CreateAugmentedImageDatabase(requests);
     }
+#endif
 }

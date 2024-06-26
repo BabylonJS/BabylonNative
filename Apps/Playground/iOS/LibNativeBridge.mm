@@ -48,6 +48,7 @@ float screenScale{1.0f};
     device.reset();
 }
 
+#if !TARGET_OS_VISION
 - (void)init:(MTKView*)view screenScale:(float)inScreenScale width:(int)inWidth height:(int)inHeight xrView:(void*)xrView
 {
     screenScale = inScreenScale;
@@ -103,6 +104,7 @@ float screenScale{1.0f};
     loader.LoadScript("app:///Scripts/babylon.gui.js");
     loader.LoadScript("app:///Scripts/experience.js");
 }
+#endif
 
 - (void)resize:(int)inWidth height:(int)inHeight
 {

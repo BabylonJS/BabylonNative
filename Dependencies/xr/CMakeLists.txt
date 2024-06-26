@@ -43,7 +43,7 @@ if (ANDROID)
     set(SOURCES ${SOURCES}
         "Source/ARCore/Include/IXrContextARCore.h"
         "Source/ARCore/XR.cpp")
-elseif (IOS)
+elseif (IOS OR VISIONOS)
     set(SOURCES ${SOURCES}
         "Source/ARKit/Include/IXrContextARKit.h"
         "Source/ARKit/XR.mm")
