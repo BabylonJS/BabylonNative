@@ -67,7 +67,7 @@ namespace Babylon::Plugins
         void RemoveInputMap(DeviceType deviceType, int32_t deviceSlot);
         void SetInputState(DeviceType deviceType, int32_t deviceSlot, uint32_t inputIndex, int32_t inputState, std::vector<int32_t>& deviceInputs, bool raiseEvents);
 
-        JsRuntimeScheduler m_runtimeScheduler;
+        JsRuntime& m_runtime;
         std::unordered_map<InputMapKey, std::vector<int32_t>, InputMapKeyHash> m_inputs{};
         arcana::weak_table<DeviceStatusChangedCallback> m_deviceConnectedCallbacks{};
         arcana::weak_table<DeviceStatusChangedCallback> m_deviceDisconnectedCallbacks{};

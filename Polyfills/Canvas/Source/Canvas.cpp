@@ -22,14 +22,16 @@ namespace Babylon::Polyfills::Internal
         Napi::Function func = DefineClass(
             env,
             JS_CONSTRUCTOR_NAME,
-            {StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
+            {
+                StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
                 InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
                 InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
                 InstanceMethod("getContext", &NativeCanvas::GetContext),
                 InstanceMethod("getCanvasTexture", &NativeCanvas::GetCanvasTexture),
                 InstanceMethod("dispose", &NativeCanvas::Dispose),
                 InstanceMethod("remove", &NativeCanvas::Remove),
-                StaticMethod("parseColor", &NativeCanvas::ParseColor)});
+                StaticMethod("parseColor", &NativeCanvas::ParseColor)
+            });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
     }
@@ -58,21 +60,25 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value NativeCanvas::LoadTTFAsync(const Napi::CallbackInfo& info)
     {
+        auto fontName = info[0].As<Napi::String>().Utf8Value();
         const auto buffer = info[1].As<Napi::ArrayBuffer>();
         std::vector<uint8_t> fontBuffer(buffer.ByteLength());
         memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
 
-        auto& graphicsContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())};
-        auto update = graphicsContext.GetUpdate("update");
-        std::shared_ptr<JsRuntimeScheduler> runtimeScheduler{std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(info.Env()))};
-        auto deferred{Napi::Promise::Deferred::New(info.Env())};
-        arcana::make_task(update.Scheduler(), arcana::cancellation::none(), [fontName{info[0].As<Napi::String>().Utf8Value()}, fontData{std::move(fontBuffer)}]() {
+        auto& runtime = JsRuntime::GetFromJavaScript(info.Env());
+        auto deferred = Napi::Promise::Deferred::New(info.Env());
+        auto promise = deferred.Promise();
+
+        auto& deviceContext = Graphics::DeviceContext::GetFromJavaScript(info.Env());
+        auto update = deviceContext.GetUpdate("update");
+        arcana::make_task(update.Scheduler(), arcana::cancellation::none(), [fontName = std::move(fontName), fontData = std::move(fontBuffer), &runtime, deferred = std::move(deferred)]() mutable {
             fontsInfos[fontName] = fontData;
-        }).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler /*Keep reference alive*/, env{info.Env()}, deferred]() {
-            deferred.Resolve(env.Undefined());
+            runtime.Dispatch([deferred = std::move(deferred)](Napi::Env env) {
+                deferred.Resolve(env.Undefined());
+            });
         });
 
-        return deferred.Promise();
+        return promise;
     }
 
     Napi::Value NativeCanvas::GetContext(const Napi::CallbackInfo& info)

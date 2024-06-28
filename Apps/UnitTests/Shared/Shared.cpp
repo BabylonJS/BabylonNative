@@ -98,43 +98,6 @@ TEST(JavaScript, All)
     EXPECT_EQ(exitCode, 0);
 }
 
-/*
-This test does a serie of initialization and shutdowns.
-It needs the shutdown PR to be merged before running properly.
-TEST(NativeAPI, LifeCycle)
-{
-    for (int cycle = 0; cycle < 20; cycle++)
-    {
-        Babylon::Graphics::Device device{deviceConfig};
-        std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
-
-        Babylon::AppRuntime runtime{};
-        runtime.Dispatch([&device, &nativeCanvas](Napi::Env env) {
-            device.AddToJavaScript(env);
-
-            Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-            Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-                printf("%s", message);
-                fflush(stdout);
-            });
-            Babylon::Polyfills::Window::Initialize(env);
-            nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
-            Babylon::Plugins::NativeEngine::Initialize(env);
-        });
-
-        Babylon::ScriptLoader loader{runtime};
-        loader.LoadScript("app:///Scripts/babylon.max.js");
-        loader.LoadScript("app:///Scripts/babylonjs.materials.js");
-
-        for (int frame = 0; frame < 10; frame++)
-        {
-            device.StartRenderingCurrentFrame();
-            device.FinishRenderingCurrentFrame();
-        }
-    }
-}
-*/
-
 TEST(Performance, Spheres)
 {
     // create a bunch of sphere, does the rendering for a number of frames, log time it took
@@ -210,6 +173,70 @@ TEST(Performance, Spheres)
     const float durationSeconds = float(duration.count()) / 1000.f;
     std::cout << "Duration is " << durationSeconds << " seconds. " << std::endl;
     std::cout.flush();
+}
+
+TEST(Shutdown, AsyncShaderCompilation)
+{
+    std::promise<int32_t> exitCodePromise;
+    Babylon::Graphics::Device device{ deviceConfig };
+    auto update{ device.GetUpdate("update") };
+    std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
+    Babylon::AppRuntime runtime{};
+    
+    // OpenGL/Linux needs to render 1 frame to set bgfx caps. More infos here : https://github.com/BabylonJS/BabylonNative/issues/1163
+    device.StartRenderingCurrentFrame();
+    update.Start();
+    update.Finish();
+    device.FinishRenderingCurrentFrame();
+
+    runtime.Dispatch([&device, &nativeCanvas, &exitCodePromise](Napi::Env env) {
+        device.AddToJavaScript(env);
+        Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+            std::cout << message << std::endl;
+            std::cout.flush();
+            });
+        Babylon::Polyfills::Window::Initialize(env);
+        nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
+        Babylon::Plugins::NativeEngine::Initialize(env);
+        auto setExitCodeCallback = Napi::Function::New(
+            env, [&exitCodePromise](const Napi::CallbackInfo& info) {
+                Napi::Env env = info.Env();
+                exitCodePromise.set_value(info[0].As<Napi::Number>().Int32Value());
+            }, "setExitCode");
+        env.Global().Set("setExitCode", setExitCodeCallback);
+        });
+    Babylon::ScriptLoader loader{ runtime };
+    loader.LoadScript("app:///Scripts/babylon.max.js");
+    loader.LoadScript("app:///Scripts/babylonjs.materials.js");
+    loader.Eval(R"(
+            function CreateBoxAsync(scene) {
+                BABYLON.Mesh.CreateBox("box1", 0.2, scene);
+                return Promise.resolve();
+            }
+            var engine = new BABYLON.NativeEngine();
+            var scene = new BABYLON.Scene(engine);
+            CreateBoxAsync(scene).then(function () {
+                var disc = BABYLON.Mesh.CreateDisc("disc", 3, 60, scene);
+                scene.createDefaultCamera(true, true, true);
+                scene.activeCamera.alpha += Math.PI;
+                scene.createDefaultLight(true);
+                var mainMaterial = new BABYLON.PBRMaterial("main", scene);
+                disc.material = mainMaterial;
+                engine.runRenderLoop(function () {
+                    scene.render();
+                });
+                console.log("Ready to shutdown.");
+                setExitCode(1);
+            }, function (ex) {
+                console.log(ex.message, ex.stack);
+            });
+            )", "script");
+    auto exitCode{ exitCodePromise.get_future().get() };
+    device.StartRenderingCurrentFrame();
+    update.Start();
+    update.Finish();
+    device.FinishRenderingCurrentFrame();
 }
 
 int RunTests(const Babylon::Graphics::Configuration& config)

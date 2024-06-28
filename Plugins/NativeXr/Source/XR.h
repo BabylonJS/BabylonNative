@@ -81,7 +81,7 @@ namespace Babylon
 
                 // Fire off the IsSessionSupported task.
                 xr::System::IsSessionSupportedAsync(sessionType)
-                    .then(m_runtimeScheduler,
+                    .then(m_runtimeScheduler.Get(),
                         arcana::cancellation::none(),
                         [deferred, env = info.Env()](bool result) {
                     deferred.Resolve(Napi::Boolean::New(env, result));

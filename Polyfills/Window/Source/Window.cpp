@@ -72,8 +72,7 @@ namespace Babylon::Polyfills::Internal
 
     Window::Window(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<Window>{info}
-        , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
-        , m_timeoutDispatcher{m_runtime}
+        , m_timeoutDispatcher{JsRuntime::GetFromJavaScript(info.Env())}
     {
     }
 
@@ -84,7 +83,7 @@ namespace Babylon::Polyfills::Internal
 
         auto delay = std::chrono::milliseconds{info[1].ToNumber().Int32Value()};
 
-        return Napi::Value::From(info.Env(), window.m_timeoutDispatcher->Dispatch(function, delay));
+        return Napi::Value::From(info.Env(), window.m_timeoutDispatcher.Dispatch(function, delay));
     }
 
     void Window::ClearTimeout(const Napi::CallbackInfo& info)
@@ -94,7 +93,7 @@ namespace Babylon::Polyfills::Internal
         {
             auto timeoutId = arg.As<Napi::Number>().Int32Value();
             auto& window = *static_cast<Window*>(info.Data());
-            window.m_timeoutDispatcher->Clear(timeoutId);
+            window.m_timeoutDispatcher.Clear(timeoutId);
         }
     }
 

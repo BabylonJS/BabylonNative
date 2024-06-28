@@ -228,7 +228,7 @@ namespace Babylon
         Graphics::UpdateToken& GetUpdateToken();
         Graphics::FrameBuffer& GetBoundFrameBuffer(bgfx::Encoder& encoder);
 
-        std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
+        arcana::cancellation_source m_cancellationSource{};
 
         ShaderCompiler m_shaderCompiler{};
 

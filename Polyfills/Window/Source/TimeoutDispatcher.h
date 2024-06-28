@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Babylon/JsRuntime.h>
+#include <Babylon/JsRuntimeScheduler.h>
 #include <napi/napi.h>
 
 #include <atomic>
@@ -16,7 +16,6 @@ namespace Babylon::Polyfills::Internal
     class TimeoutDispatcher
     {
         using TimeoutId = int32_t;
-        struct Timeout;
 
     public:
         TimeoutDispatcher(Babylon::JsRuntime& runtime);
@@ -28,17 +27,37 @@ namespace Babylon::Polyfills::Internal
     private:
         using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::microseconds>;
 
+        struct Timeout
+        {
+            TimeoutId id;
+
+            // Make this non-shared when JsRuntime::Dispatch supports it.
+            std::shared_ptr<Napi::FunctionReference> function;
+
+            TimePoint time;
+
+            Timeout(TimeoutId id, std::shared_ptr<Napi::FunctionReference> function, TimePoint time)
+                : id{ id }
+                , function{ std::move(function) }
+                , time{ time }
+            {
+            }
+
+            Timeout(const Timeout&) = delete;
+            Timeout(Timeout&&) = delete;
+        };
+
         TimeoutId NextTimeoutId();
         void ThreadFunction();
         void CallFunction(std::shared_ptr<Napi::FunctionReference> function);
 
-        Babylon::JsRuntime& m_runtime;
+        Babylon::JsRuntimeScheduler m_runtimeScheduler;
         std::mutex m_mutex{};
         std::condition_variable m_condVariable{};
         TimeoutId m_lastTimeoutId{0};
-        std::unordered_map<TimeoutId, std::unique_ptr<Timeout>> m_idMap;
-        std::multimap<TimePoint, Timeout*> m_timeMap;
-        std::atomic<bool> m_shutdown{false};
-        std::thread m_thread;
+        std::unordered_map<TimeoutId, std::unique_ptr<Timeout>> m_idMap{};
+        std::multimap<TimePoint, Timeout*> m_timeMap{};
+        arcana::cancellation_source m_cancellationSource{};
+        std::thread m_thread{};
     };
 }

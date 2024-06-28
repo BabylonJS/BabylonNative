@@ -89,7 +89,7 @@ namespace Babylon::Plugins
     }
 
     NativeInput::Impl::Impl(Napi::Env env)
-        : m_runtimeScheduler{JsRuntime::GetFromJavaScript(env)}
+        : m_runtime{JsRuntime::GetFromJavaScript(env)}
     {
         NativeInput::Impl::DeviceInputSystem::Initialize(env);
 
@@ -152,7 +152,7 @@ namespace Babylon::Plugins
 
     void NativeInput::Impl::PointerDown(uint32_t pointerId, uint32_t buttonIndex, int32_t x, int32_t y, DeviceType deviceType)
     {
-        m_runtimeScheduler([pointerId, buttonIndex, x, y, deviceType, this]() {
+        m_runtime.Dispatch([pointerId, buttonIndex, x, y, deviceType, this](auto) {
             const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
             std::vector<int32_t>& deviceInputs{
                 GetOrCreateInputMap(deviceType, pointerId,
@@ -177,7 +177,7 @@ namespace Babylon::Plugins
 
     void NativeInput::Impl::PointerUp(uint32_t pointerId, uint32_t buttonIndex, int32_t x, int32_t y, DeviceType deviceType)
     {
-        m_runtimeScheduler([pointerId, buttonIndex, x, y, deviceType, this]() {
+        m_runtime.Dispatch([pointerId, buttonIndex, x, y, deviceType, this](auto) {
             const uint32_t inputIndex{GetPointerButtonInputIndex(buttonIndex)};
             std::vector<int32_t>& deviceInputs{
                 GetOrCreateInputMap(deviceType, pointerId,
@@ -211,7 +211,7 @@ namespace Babylon::Plugins
 
     void NativeInput::Impl::PointerMove(uint32_t pointerId, int32_t x, int32_t y, DeviceType deviceType)
     {
-        m_runtimeScheduler([pointerId, x, y, deviceType, this]() {
+        m_runtime.Dispatch([pointerId, x, y, deviceType, this](auto) {
             std::vector<int32_t>& deviceInputs{
                 GetOrCreateInputMap(deviceType, pointerId,
                     {
@@ -251,7 +251,7 @@ namespace Babylon::Plugins
 
     void NativeInput::Impl::PointerScroll(uint32_t pointerId, uint32_t scrollAxis, int32_t scrollValue, DeviceType deviceType)
     {
-        m_runtimeScheduler([pointerId, scrollAxis, scrollValue, deviceType, this]() {
+        m_runtime.Dispatch([pointerId, scrollAxis, scrollValue, deviceType, this](auto) {
             std::vector<int32_t>& deviceInputs{GetOrCreateInputMap(deviceType, pointerId, {scrollAxis})};
             SetInputState(deviceType, pointerId, scrollAxis, scrollValue, deviceInputs, true);
 

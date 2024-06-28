@@ -279,7 +279,7 @@ namespace Babylon
 
             auto deferred{ Napi::Promise::Deferred::New(info.Env()) };
             session.m_xr->BeginSessionAsync()
-                .then(session.m_runtimeScheduler, arcana::cancellation::none(),
+                .then(session.m_runtimeScheduler.Get(), arcana::cancellation::none(),
                     [deferred, jsSession{ std::move(jsSession) }, env{ info.Env() }](const arcana::expected<void, std::exception_ptr>& result) {
                 if (result.has_error())
                 {
@@ -673,7 +673,7 @@ namespace Babylon
         Napi::Value XRSession::End(const Napi::CallbackInfo& info)
         {
             auto deferred{ Napi::Promise::Deferred::New(info.Env()) };
-            m_xr->EndSessionAsync().then(m_runtimeScheduler, arcana::cancellation::none(),
+            m_xr->EndSessionAsync().then(m_runtimeScheduler.Get(), arcana::cancellation::none(),
                 [this, deferred](const arcana::expected<void, std::exception_ptr>& result) {
                     if (result.has_error())
                     {

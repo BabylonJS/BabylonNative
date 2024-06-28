@@ -37,9 +37,8 @@ namespace Babylon::Plugins::Internal
                     videoConstraints = constraints.Get("video").As<Napi::Object>();
                 }
             }
-
-            auto runtimeScheduler{std::make_unique<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env))};
-            MediaStream::NewAsync(env, videoConstraints).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler = std::move(runtimeScheduler), env, deferred](const arcana::expected<Napi::Object, std::exception_ptr>& result) {
+DISABLE_UNREACHABLE_CODE_WARNINGS
+            MediaStream::NewAsync(env, videoConstraints).then(arcana::inline_scheduler, arcana::cancellation::none(), [env, deferred](const arcana::expected<Napi::Object, std::exception_ptr>& result) {
                 if (result.has_error())
                 {
                     deferred.Reject(Napi::Error::New(env, result.error()).Value());
@@ -48,7 +47,7 @@ namespace Babylon::Plugins::Internal
 
                 deferred.Resolve(result.value());
             });
-
+ENABLE_UNREACHABLE_CODE_WARNINGS
             return std::move(promise);
         }
 

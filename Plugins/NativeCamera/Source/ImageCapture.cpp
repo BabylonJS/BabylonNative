@@ -4,16 +4,6 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
 
-#ifdef _MSC_VER
-    #define DISABLE_UNREACHABLE_CODE_WARNINGS \
-        __pragma(warning(push)) \
-        __pragma(warning(disable : 4702))
-    #define ENABLE_UNREACHABLE_CODE_WARNINGS __pragma(warning(pop))
-#else
-    #define DISABLE_UNREACHABLE_CODE_WARNINGS
-    #define ENABLE_UNREACHABLE_CODE_WARNINGS
-#endif
-
 namespace Babylon::Plugins::Internal
 {
     namespace
@@ -169,7 +159,7 @@ DISABLE_UNREACHABLE_CODE_WARNINGS
                 bytes.resize(result.size());
                 std::memcpy(bytes.data(), result.data(), result.size());
                 return bytes;
-            }).then(m_runtimeScheduler, arcana::cancellation::none(), [env, deferred](const arcana::expected<std::vector<uint8_t>, std::exception_ptr>& result) {
+            }).then(m_runtimeScheduler.Get(), arcana::cancellation::none(), [env, deferred](const arcana::expected<std::vector<uint8_t>, std::exception_ptr>& result) {
                 if (result.has_error())
                 {
                     deferred.Reject(Napi::Error::New(env, result.error()).Value());

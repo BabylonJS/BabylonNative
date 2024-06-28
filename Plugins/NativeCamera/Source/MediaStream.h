@@ -53,5 +53,6 @@ namespace Babylon::Plugins
         JsRuntimeScheduler m_runtimeScheduler;
 
         Napi::ObjectReference m_currentConstraints{};
+        arcana::cancellation_source m_cancellationSource;
     };
 }
