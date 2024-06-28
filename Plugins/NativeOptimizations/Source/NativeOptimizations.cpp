@@ -1,13 +1,45 @@
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/JsRuntime.h>
+#include <optional>
 
 namespace
 {
+    void MatrixScaleAdd(const float inputMatrix[16], float scale, float outputMatrix[16])
+    {
+        for (size_t i = 0; i < 16; ++i)
+        {
+            outputMatrix[i] += inputMatrix[i] * scale;
+        }
+    }
+
+    void MatrixTransformNormal(const float matrix[16], float &x, float &y, float &z)
+    {
+        float rx = x * matrix[0] + y * matrix[4] + z * matrix[8];
+        float ry = x * matrix[1] + y * matrix[5] + z * matrix[9];
+        float rz = x * matrix[2] + y * matrix[6] + z * matrix[10];
+
+        x = rx;
+        y = ry;
+        z = rz;
+    }
+
+    void MatrixTransformCoordinates(const float matrix[16], float& x, float& y, float& z)
+    {
+        float rx = x * matrix[0] + y * matrix[4] + z * matrix[8] + matrix[12];
+        float ry = x * matrix[1] + y * matrix[5] + z * matrix[9] + matrix[13];
+        float rz = x * matrix[2] + y * matrix[6] + z * matrix[10] + matrix[14];
+        float rw = 1.0f / (x * matrix[3] + y * matrix[7] + z * matrix[11] + matrix[15]);
+
+        x = rx * rw;
+        y = ry * rw;
+        z = rz * rw;
+    }
+
     void TransformVector3Coordinates(const Napi::CallbackInfo& info)
     {
-        auto coordinates{info[0].As<Napi::TypedArrayOf<float>>()};
+        auto coordinates{info[0].As<Napi::Float32Array>()};
         const auto transform{info[1].As<Napi::Object>()};
-        const auto m{transform.Get("_m").As<Napi::TypedArrayOf<float>>()};
+        const auto m{transform.Get("_m").As<Napi::Float32Array>()};
         const auto offset{info[2].As<Napi::Number>().Uint32Value()};
         const auto length{info[3].As<Napi::Number>().Uint32Value()};
 
@@ -27,9 +59,9 @@ namespace
 
     void TransformVector3Normals(const Napi::CallbackInfo& info)
     {
-        auto normals{info[0].As<Napi::TypedArrayOf<float>>()};
+        auto normals{info[0].As<Napi::Float32Array>()};
         const auto transform{info[1].As<Napi::Object>()};
-        const auto m{transform.Get("_m").As<Napi::TypedArrayOf<float>>()};
+        const auto m{transform.Get("_m").As<Napi::Float32Array>()};
         const auto offset{info[2].As<Napi::Number>().Uint32Value()};
         const auto length{info[3].As<Napi::Number>().Uint32Value()};
 
@@ -45,9 +77,9 @@ namespace
 
     void TransformVector4Normals(const Napi::CallbackInfo& info)
     {
-        auto normals{info[0].As<Napi::TypedArrayOf<float>>()};
+        auto normals{info[0].As<Napi::Float32Array>()};
         const auto transform{info[1].As<Napi::Object>()};
-        const auto m{transform.Get("_m").As<Napi::TypedArrayOf<float>>()};
+        const auto m{transform.Get("_m").As<Napi::Float32Array>()};
         const auto offset{info[2].As<Napi::Number>().Uint32Value()};
         const auto length{info[3].As<Napi::Number>().Uint32Value()};
 
@@ -97,7 +129,7 @@ namespace
     }
 
     template<typename IndexT>
-    void ExtractMinAndMaxIndexedT(const Napi::TypedArrayOf<float> positions, const Napi::TypedArrayOf<IndexT> indices, uint32_t indexStart, uint32_t indexCount, Napi::Object minVector, Napi::Object maxVector)
+    void ExtractMinAndMaxIndexedT(const Napi::Float32Array positions, const Napi::TypedArrayOf<IndexT> indices, uint32_t indexStart, uint32_t indexCount, Napi::Object minVector, Napi::Object maxVector)
     {
         auto minX{minVector.Get("_x").As<Napi::Number>().FloatValue()};
         auto minY{minVector.Get("_y").As<Napi::Number>().FloatValue()};
@@ -131,7 +163,7 @@ namespace
 
     void ExtractMinAndMaxIndexed(const Napi::CallbackInfo& info)
     {
-        const auto positions{info[0].As<Napi::TypedArrayOf<float>>()};
+        const auto positions{info[0].As<Napi::Float32Array>()};
         const auto indices{info[1].As<Napi::TypedArray>()};
         const auto indexStart{info[2].As<Napi::Number>().Uint32Value()};
         const auto indexCount{info[3].As<Napi::Number>().Uint32Value()};
@@ -158,7 +190,7 @@ namespace
 
     void ExtractMinAndMax(const Napi::CallbackInfo& info)
     {
-        const auto positions{info[0].As<Napi::TypedArrayOf<float>>()};
+        const auto positions{info[0].As<Napi::Float32Array>()};
         const auto start{info[1].As<Napi::Number>().Uint32Value()};
         const auto count{info[2].As<Napi::Number>().Uint32Value()};
         const auto stride{info[3].As<Napi::Number>().Uint32Value()};
@@ -193,6 +225,54 @@ namespace
         maxVector.Set("_y", maxY);
         maxVector.Set("_z", maxZ);
     }
+
+    // Ported from `applySkeleton` function in abstractMesh.ts
+    void ApplySkeleton(const Napi::CallbackInfo& info)
+    {
+        auto data = info[0].As<Napi::Float32Array>();
+        const auto kind = info[1].As<Napi::String>().Utf8Value();
+        const auto skeletonMatrices = info[2].As<Napi::Float32Array>();
+        const auto matricesIndicesData = info[3].As<Napi::Float32Array>();
+        const auto matricesWeightsData = info[4].As<Napi::Float32Array>();
+
+        std::optional<Napi::Float32Array> matricesIndicesExtraData;
+        if (!info[5].IsNull())
+        {
+            matricesIndicesExtraData = info[5].As<Napi::Float32Array>();
+        };
+
+        std::optional<Napi::Float32Array> matricesWeightsExtraData;
+        if (!info[6].IsNull())
+        {
+            matricesWeightsExtraData = info[6].As<Napi::Float32Array>();
+        }
+
+        auto matrixTransform = kind == "normal" ? MatrixTransformNormal : MatrixTransformCoordinates;
+
+        for (size_t index = 0, matWeightIdx = 0; index < data.ElementLength(); index += 3, matWeightIdx += 4)
+        {
+            float finalMatrix[16]{};
+
+            for (size_t inf = 0; inf < 4; ++inf) {
+                float weight = matricesWeightsData[matWeightIdx + inf];
+                if (weight > 0.0f) {
+                    MatrixScaleAdd(&skeletonMatrices[static_cast<size_t>(matricesIndicesData[matWeightIdx + inf] * 16.0f)], weight, finalMatrix);
+                }
+            }
+            if (matricesIndicesExtraData.has_value() && matricesWeightsExtraData.has_value()) {
+                const auto& indices = matricesIndicesExtraData.value();
+                const auto& weights = matricesWeightsExtraData.value();
+                for (size_t inf = 0; inf < 4; ++inf) {
+                    float weight = weights[matWeightIdx + inf];
+                    if (weight > 0.0f) {
+                        MatrixScaleAdd(&skeletonMatrices[static_cast<size_t>(indices[matWeightIdx + inf] * 16.0f)], weight, finalMatrix);
+                    }
+                }
+            }
+
+            matrixTransform(finalMatrix, data[index], data[index + 1], data[index + 2]);
+        }
+    }
 }
 
 namespace Babylon::Plugins::NativeOptimizations
@@ -200,6 +280,7 @@ namespace Babylon::Plugins::NativeOptimizations
     void BABYLON_API Initialize(Napi::Env env)
     {
         auto nativeObject{JsRuntime::NativeObject::GetFromJavaScript(env)};
+        nativeObject.Set("_ApplySkeleton", Napi::Function::New(env, ApplySkeleton, "_ApplySkeleton"));
         nativeObject.Set("_TransformVector3Coordinates", Napi::Function::New(env, TransformVector3Coordinates, "_TransformVector3Coordinates"));
         nativeObject.Set("_TransformVector3Normals", Napi::Function::New(env, TransformVector3Normals, "_TransformVector3Normals"));
         nativeObject.Set("_TransformVector4Normals", Napi::Function::New(env, TransformVector4Normals, "_TransformVector4Normals"));
