@@ -184,6 +184,7 @@ target_link_libraries(TestInstall
     Pathcch
     glslang-default-resource-limits
     gtest_main
+    Foundation
     ${ADDITIONAL_LIBRARIES}
     )
 

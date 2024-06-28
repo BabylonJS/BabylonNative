@@ -25,6 +25,7 @@
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Canvas.h>
+#include <Babylon/DebugTrace.h>
 
 #define MAX_LOADSTRING 100
 
@@ -121,6 +122,9 @@ namespace
         {
             return;
         }
+
+        Babylon::DebugTrace::EnableDebugTrace(true);
+        Babylon::DebugTrace::SetTraceOutput([](const char* trace) { OutputDebugStringA(trace); });
 
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);

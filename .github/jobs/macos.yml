@@ -21,7 +21,7 @@ jobs:
     - script: |
         mkdir buildmacOS
         cd buildmacOS
-        cmake .. -G Xcode -D CMAKE_UNITY_BUILD=$(UNITY_BUILD)
+        cmake .. -G Xcode -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON 
       displayName: 'Generate macOS solution'
 
     - task: Xcode@5

@@ -9,6 +9,7 @@
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Canvas.h>
+#include <Babylon/DebugTrace.h>
 
 #include <winrt/windows.ui.core.h>
 
@@ -358,6 +359,9 @@ void App::OnDisplayContentsInvalidated(DisplayInformation^ sender, Object^ args)
 void App::RestartRuntime(Windows::Foundation::Rect bounds)
 {
     Uninitialize();
+
+    Babylon::DebugTrace::EnableDebugTrace(true);
+    Babylon::DebugTrace::SetTraceOutput([](const char* trace) { OutputDebugStringA(trace); });
 
     DisplayInformation^ displayInformation = DisplayInformation::GetForCurrentView();
     m_displayScale = static_cast<float>(displayInformation->RawPixelsPerViewPixel);

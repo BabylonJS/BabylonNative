@@ -60,6 +60,9 @@ endif()
 ## UrlLib
 install_targets(UrlLib)
 
+## Fonudation
+install_targets(Foundation)
+
 # ----------------
 # Core
 # ----------------
