@@ -33,7 +33,7 @@ jobs:
       displayName: 'Build X11'
 
     - script: |
-        cmake --build build --target INSTALL --config RelWithDebInfo
+        cmake --install build --prefix="./install"
       displayName: 'Install'
     
 #    - script: |
