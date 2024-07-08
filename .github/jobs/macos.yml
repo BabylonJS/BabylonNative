@@ -43,6 +43,10 @@ jobs:
       displayName: 'Build UnitTests macOS'
 
     - script: |
+        cmake --build buildmacOS --target INSTALL --config RelWithDebInfo
+      displayName: 'Install'
+
+    - script: |
         cd buildmacOS/Apps/UnitTests/RelWithDebInfo
         ./UnitTests
       displayName: 'Run UnitTests macOS'

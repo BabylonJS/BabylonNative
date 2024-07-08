@@ -34,3 +34,7 @@ jobs:
         configuration: RelWithDebInfo
       displayName: 'Build Playground iOS'
 
+    - script: |
+        cmake --build buildiOS --target INSTALL --config RelWithDebInfo
+      displayName: 'Install'
+
