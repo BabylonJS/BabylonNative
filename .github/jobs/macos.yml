@@ -33,10 +33,6 @@ jobs:
         configuration: Release
       displayName: 'Build Playground macOS'
 
-    - script: |
-        cmake --install buildmacOS --prefix="./install"
-      displayName: 'Install'
-
     - task: Xcode@5
       inputs:
         xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
@@ -45,6 +41,19 @@ jobs:
         useXcpretty: false
         configuration: RelWithDebInfo
       displayName: 'Build UnitTests macOS'
+
+    - task: Xcode@5
+      inputs:
+        xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
+        scheme: 'install'
+        sdk: 'macosx'
+        useXcpretty: false
+        configuration: Release
+      displayName: 'Build Installation content macOS'
+
+    - script: |
+        cmake --install buildmacOS --prefix="./install"
+      displayName: 'Install'
 
     - script: |
         cd buildmacOS/Apps/UnitTests/RelWithDebInfo
