@@ -1,7 +1,7 @@
 include(GNUInstallDirs)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR}/install CACHE PATH "The directory to install to locally by default" FORCE)
+  set(CMAKE_INSTALL_PREFIX "./install/" CACHE PATH "..." FORCE)
 endif()
 
 function(install_targets)
