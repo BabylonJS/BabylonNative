@@ -34,6 +34,15 @@ jobs:
         configuration: RelWithDebInfo
       displayName: 'Build Playground iOS'
 
+    - task: Xcode@5
+      inputs:
+        xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
+        scheme: 'install'
+        sdk: 'iphoneos'
+        useXcpretty: false
+        configuration: Release
+      displayName: 'Build Installation content iOS'
+
     - script: |
         cmake --install buildiOS --prefix="./install"
       displayName: 'Install'
