@@ -44,6 +44,6 @@ jobs:
       displayName: 'Build Installation content iOS'
 
     - script: |
-        cmake --install buildiOS --prefix="$(Build.Repository.LocalPath)/install"
-      displayName: 'Install into $(Build.Repository.LocalPath)/install'
+        cmake --install buildiOS --prefix="./install"
+      displayName: 'Install'
 
