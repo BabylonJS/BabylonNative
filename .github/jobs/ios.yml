@@ -22,7 +22,7 @@ jobs:
     - script: |
         mkdir buildiOS
         cd buildiOS
-        cmake .. -G Xcode -D IOS=ON -D DEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD)
+        cmake .. -G Xcode -D IOS=ON -D DEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_NATIVE_PLUGIN_NATIVETRACING=OFF
       displayName: 'Generate iOS solution'
 
     - task: Xcode@5
@@ -36,5 +36,6 @@ jobs:
 
     - script: |
         cmake --install buildiOS --prefix="$(Build.SourcesDirectory)/install"
+        lipo -info $(Build.SourcesDirectory)/Install/lib/libNativeEngine.a
       displayName: 'Install'
 
