@@ -35,6 +35,6 @@ jobs:
       displayName: 'Build Playground iOS'
 
     - script: |
-        cmake --install buildiOS --prefix="${PROJECT_SOURCE_DIR}/install"
+        cmake --install buildiOS --prefix="$(Build.SourcesDirectory)/install"
       displayName: 'Install'
 
