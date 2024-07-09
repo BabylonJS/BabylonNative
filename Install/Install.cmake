@@ -1,8 +1,7 @@
 include(GNUInstallDirs)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  # need absolute path here for ios. otherwise: "CMakeIOSInstallCombined.cmake:229 (message): `destination` is not absolute"
-  set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/install/" CACHE PATH "..." FORCE)
+  set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR}/install CACHE PATH "The directory to install to locally by default" FORCE)
 endif()
 
 function(install_targets)
