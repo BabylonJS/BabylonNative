@@ -24,8 +24,9 @@ endif()
 
 project(xr)
 
-# Avoid picking up system installed jsoncpp in favor of source distributed with openxr_loader project
+
 if(WIN32)
+    # Avoid picking up system installed jsoncpp in favor of source distributed with openxr_loader project
     set(BUILD_WITH_SYSTEM_JSONCPP OFF BOOL "disable using system installed jsoncpp")
     FetchContent_MakeAvailable_With_Message(OpenXR-SDK OpenXR-MixedReality)
 
