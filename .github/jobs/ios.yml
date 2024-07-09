@@ -25,23 +25,13 @@ jobs:
         cmake .. -G Xcode -D IOS=ON -D DEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD)
       displayName: 'Generate iOS solution'
 
-    # build installation/release before so Derived Data is empty. 
-    - task: Xcode@5
-      inputs:
-        xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
-        scheme: 'install'
-        sdk: 'iphoneos'
-        useXcpretty: false
-        configuration: Release
-      displayName: 'Build Installation content iOS'
-
     - task: Xcode@5
       inputs:
         xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
         scheme: 'Playground'
         sdk: 'iphoneos'
         useXcpretty: false
-        configuration: RelWithDebInfo
+        configuration: Release
       displayName: 'Build Playground iOS'
 
     - script: |
