@@ -36,6 +36,6 @@ jobs:
 
     - script: |
         cmake --install buildiOS --prefix="$(Build.SourcesDirectory)/install"
-        lipo -info $(Build.SourcesDirectory)/Install/lib/libNativeEngine.a
+        lipo -info $(Build.SourcesDirectory)/Install/lib/libxr.a
       displayName: 'Install'
 

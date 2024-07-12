@@ -57,6 +57,10 @@ if(TARGET openxr_loader)
     install_targets(openxr_loader)
 endif()
 
+if(TARGET xr)
+    install_targets(xr)
+endif()
+
 ## UrlLib
 install_targets(UrlLib)
 
