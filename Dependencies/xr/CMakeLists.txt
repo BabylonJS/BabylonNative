@@ -24,10 +24,12 @@ endif()
 
 project(xr)
 
-# Avoid picking up system installed jsoncpp in favor of source distributed with openxr_loader project
-set(BUILD_WITH_SYSTEM_JSONCPP OFF BOOL "disable using system installed jsoncpp")
-FetchContent_MakeAvailable_With_Message(OpenXR-SDK OpenXR-MixedReality)
+
 if(WIN32)
+    # Avoid picking up system installed jsoncpp in favor of source distributed with openxr_loader project
+    set(BUILD_WITH_SYSTEM_JSONCPP OFF BOOL "disable using system installed jsoncpp")
+    FetchContent_MakeAvailable_With_Message(OpenXR-SDK OpenXR-MixedReality)
+
     set_property(TARGET openxr_loader PROPERTY FOLDER Dependencies/xr/OpenXR)
     set_property(TARGET generate_openxr_header PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
     set_property(TARGET xr_global_generated_files PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
