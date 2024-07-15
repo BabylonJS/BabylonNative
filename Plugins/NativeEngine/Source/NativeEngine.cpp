@@ -969,10 +969,13 @@ namespace Babylon
 
     std::unique_ptr<ProgramData> NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource)
     {
-        ShaderCompiler::BgfxShaderInfo shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
-
-        std::unique_ptr<ProgramData> program = std::make_unique<ProgramData>(m_deviceContext);
-
+        auto shaderInfo = m_shaderCache.GetShader(vertexSource, fragmentSource);
+        if (!shaderInfo)
+        {
+            ShaderCompiler::BgfxShaderInfo bgfxShaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
+            shaderInfo = m_shaderCache.AddShader(vertexSource, fragmentSource, bgfxShaderInfo);
+            exit(123);
+        }
         static auto InitUniformInfos{
             [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex) {
                 auto numUniforms = bgfx::getShaderUniforms(shader);
@@ -989,16 +992,17 @@ namespace Babylon
                     uniformInfos.emplace(std::make_pair(handle.idx, UniformInfo{itStage == uniformStages.end() ? uint8_t{} : itStage->second, handle, info.num}));
                     uniformNameToIndex[info.name] = handleIndex;
                 }
-            }};
+            } };
 
-        auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
-        InitUniformInfos(vertexShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformNameToIndex);
+        std::unique_ptr<ProgramData> program = std::make_unique<ProgramData>(m_deviceContext);
+        auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo->VertexBytes.data(), static_cast<uint32_t>(shaderInfo->VertexBytes.size())));
+        InitUniformInfos(vertexShader, shaderInfo->UniformStages, program->UniformInfos, program->UniformNameToIndex);
 
-        auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
-        InitUniformInfos(fragmentShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformNameToIndex);
+        auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo->FragmentBytes.data(), static_cast<uint32_t>(shaderInfo->FragmentBytes.size())));
+        InitUniformInfos(fragmentShader, shaderInfo->UniformStages, program->UniformInfos, program->UniformNameToIndex);
 
         program->Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
-        program->VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
+        program->VertexAttributeLocations = std::move(shaderInfo->VertexAttributeLocations);
 
         return program;
     }

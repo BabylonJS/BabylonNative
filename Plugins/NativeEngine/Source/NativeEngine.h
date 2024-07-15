@@ -24,6 +24,7 @@
 
 #include <arcana/threading/cancellation.h>
 #include <unordered_map>
+#include "ShaderCache.h"
 
 namespace Babylon
 {
@@ -276,6 +277,7 @@ namespace Babylon
         // TODO: This should be changed to a non-owning ref once multi-update is available.
         NativeDataStream* m_commandStream{};
 
+        ShaderCache m_shaderCache;
         // Information from the JS side used for backwards compatibility.
         struct
         {
