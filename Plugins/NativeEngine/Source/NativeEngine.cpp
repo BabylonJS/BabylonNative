@@ -974,7 +974,6 @@ namespace Babylon
         {
             ShaderCompiler::BgfxShaderInfo bgfxShaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
             shaderInfo = m_shaderCache.AddShader(vertexSource, fragmentSource, bgfxShaderInfo);
-            exit(123);
         }
         static auto InitUniformInfos{
             [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex) {
