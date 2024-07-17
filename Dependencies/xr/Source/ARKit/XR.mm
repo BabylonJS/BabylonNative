@@ -947,7 +947,7 @@ namespace xr {
             // Finalize rendering here & push the command buffer to the GPU.
             [currentCommandBuffer commit];
 			
-			[currentCommandBuffer waitUntilCompleted];
+            [currentCommandBuffer waitUntilCompleted];
 
             return std::make_unique<Frame>(*this);
         }
