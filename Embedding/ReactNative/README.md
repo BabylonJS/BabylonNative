@@ -29,6 +29,10 @@ Babylon React Native relies heavily on newer React Native constructs including J
 
 See the [package usage](Modules/@babylonjs/react-native/README.md) for installation instructions and/or the Playground app's [App.tsx](Apps/Playground/App.tsx) for example usage. You can also clone [this sample repo](https://github.com/BabylonJS/BabylonReactNativeSample) to quickly get started.
 
+## Frameworks (Expo, ...)
+
+Note: Official support for React Native frameworks, like Expo, is not provided by BabylonReactNative. While BabylonReactNative may work with these frameworks, we do not conduct testing, bug fixes, or feature development to ensure compatibility.
+
 ## Contributing
 
 This quick overview will help you get started developing in the Babylon React Native repository. We support development on Windows and MacOS, but assume the use of [PowerShell](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell) in the instructions below (unless otherwise noted).
