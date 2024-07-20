@@ -567,7 +567,7 @@ if(TARGET bgfx::shaderc)
 		set(multiValueArgs SHADERS INCLUDE_DIRS)
 		cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" "${ARGN}")
 
-		set(PROFILES 120 300_es spirv) # pssl
+		set(PROFILES 120 300_es spirv)
 		if(UNIX AND NOT APPLE)
 			set(PLATFORM LINUX)
 		elseif(EMSCRIPTEN)
@@ -585,6 +585,8 @@ if(TARGET bgfx::shaderc)
 			list(APPEND PROFILES s_4_0)
 			list(APPEND PROFILES s_5_0)
 		else()
+			# pssl for Agc and Gnm renderers
+			# nvn for Nvn renderer
 			message(error "shaderc: Unsupported platform")
 		endif()
 
