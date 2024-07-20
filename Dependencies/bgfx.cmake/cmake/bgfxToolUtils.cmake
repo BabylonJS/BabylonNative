@@ -598,9 +598,10 @@ if(TARGET bgfx::shaderc)
 			# Build output targets and their commands
 			set(OUTPUTS "")
 			set(COMMANDS "")
+			set(MKDIR_COMMANDS "")
 			foreach(PROFILE ${PROFILES})
 				_bgfx_get_profile_ext(${PROFILE} PROFILE_EXT)
-				set(OUTPUT ${ARGS_OUTPUT_DIR}/${SHADER_FILE_BASENAME}.${PROFILE_EXT}.bin$<ARGS_AS_HEADERS:.h>)
+				set(OUTPUT ${ARGS_OUTPUT_DIR}/${PROFILE_EXT}/${SHADER_FILE_BASENAME}.bin$<$<BOOL:ARGS_AS_HEADERS>:.h>)
 				set(PLATFORM_I ${PLATFORM})
 				if(PROFILE STREQUAL "spirv")
 					set(PLATFORM_I LINUX)
@@ -622,12 +623,21 @@ if(TARGET bgfx::shaderc)
 				)
 				list(APPEND OUTPUTS ${OUTPUT})
 				list(APPEND ALL_OUTPUTS ${OUTPUT})
+				list(
+					APPEND
+					MKDIR_COMMANDS
+					COMMAND
+					${CMAKE_COMMAND}
+					-E
+					make_directory
+					${ARGS_OUTPUT_DIR}/${PROFILE_EXT}
+				)
 				list(APPEND COMMANDS COMMAND bgfx::shaderc ${CLI})
 			endforeach()
 
 			add_custom_command(
 				OUTPUT ${OUTPUTS}
-				COMMAND ${CMAKE_COMMAND} -E make_directory ${ARGS_OUTPUT_DIR} ${COMMANDS}
+				COMMAND ${MKDIR_COMMANDS} ${COMMANDS}
 				MAIN_DEPENDENCY ${SHADER_FILE_ABSOLUTE}
 				DEPENDS ${ARGS_VARYING_DEF}
 			)
