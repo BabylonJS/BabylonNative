@@ -86,35 +86,38 @@ bgfx_compile_texture(
 )
 ```
 
-### `bgfx_compile_shader_to_header`
+### `bgfx_compile_shaders`
 Add a build rule for a `*.sc` shader to the generated build system using shaderc.
 ```cmake
-bgfx_compile_shader_to_header(
+bgfx_compile_shaders(
 	TYPE VERTEX|FRAGMENT|COMPUTE
 	SHADERS filenames
 	VARYING_DEF filename
 	OUTPUT_DIR directory
+	[AS_HEADER]
 )
 ```
-This defines a shaderc command to generate headers for a number of `TYPE` shaders with `SHADERS` files and `VARYING_DEF` file in the `OUTPUT_DIR` directory. There will be one generated shader for each supported rendering API on this current platform according to the `BGFX_EMBEDDED_SHADER` macro in `bgfx/embedded_shader.h`.
+This defines a shaderc command to generate binaries or headers for a number of `TYPE` shaders with `SHADERS` files and `VARYING_DEF` file in the `OUTPUT_DIR` directory. There will be one generated shader for each supported rendering API on this current platform according to the `BGFX_EMBEDDED_SHADER` macro in `bgfx/embedded_shader.h` for headers and in the directory expected by `load_shader` in `bgfx_utils.h`.
 
-The generated headers will have names in the format of `${SHADERS}.${RENDERING_API}.bin.h` where `RENDERING_API` can be `glsl`, `essl`, `spv`, `dx9`, `dx11` and `mtl` depending on the availability of the platform.
+The generated headers will have names in the format of `${RENDERING_API}/${SHADERS}.bin[.h]` where `RENDERING_API` can be `glsl`, `essl`, `spv`, `dx11` and `mtl` depending on the availability of the platform.
 
 Adding these `SHADERS` as source files to a target will run `shaderc` at build time and they will rebuild if either the contents of the `SHADERS` or the `VARYING_DEF` change.
 
 #### Examples: Generating shaders as headers
 ```cmake
-bgfx_compile_shader_to_header(
+bgfx_compile_shaders(
   TYPE VERTEX
   SHADERS vs.sc
   VARYING_DEF varying.def.sc
   OUTPUT_DIR ${CMAKE_BINARY_DIR}/include/generated/shaders
+  AS_HEADER
 )
 bgfx_compile_shader_to_header(
   TYPE FRAGMENT
   SHADERS fs.sc
   VARYING_DEF ${CMAKE_SOURCE_DIR}/varying.def.sc
   OUTPUT_DIR ${CMAKE_BINARY_DIR}/include/generated/shaders
+  AS_HEADER
 )
 
 add_library(myLib main.cpp vs.sc fs.sc)
@@ -123,21 +126,19 @@ target_include_directories(myLib ${CMAKE_BINARY_DIR}/include/generated/shaders)
 
 ```cpp
 // main.cpp
-#include <vs.sc.glsl.bin.h>
-#include <vs.sc.essl.bin.h>
-#include <vs.sc.spv.bin.h>
-#include <fs.sc.glsl.bin.h>
-#include <fs.sc.essl.bin.h>
-#include <fs.sc.spv.bin.h>
+#include <glsl/vs.sc.bin.h>
+#include <essl/vs.sc.bin.h>
+#include <spv/vs.sc.bin.h>
+#include <glsl/fs.sc.bin.h>
+#include <essl/fs.sc.bin.h>
+#include <spv/fs.sc.bin.h>
 #if defined(_WIN32)
-#include <vs.sc.dx9.bin.h>
-#include <vs.sc.dx11.bin.h>
-#include <fs.sc.dx9.bin.h>
-#include <fs.sc.dx11.bin.h>
+#include <dx11/vs.sc.bin.h>
+#include <dx11/fs.sc.bin.h>
 #endif //  defined(_WIN32)
 #if __APPLE__
-#include <vs.sc.mtl.bin.h>
-#include <fs.sc.mtl.bin.h>
+#include <mtl/vs.sc.bin.h>
+#include <mtl/fs.sc.bin.h>
 #endif // __APPLE__
 
 const bgfx::EmbeddedShader k_vs = BGFX_EMBEDDED_SHADER(vs);
