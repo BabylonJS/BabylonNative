@@ -551,17 +551,18 @@ if(TARGET bgfx::shaderc)
 		set(${PROFILE_EXT} ${PROFILE} PARENT_SCOPE)
 	endfunction()
 
-	# bgfx_compile_shader_to_header(
+	# bgfx_compile_shaders(
 	# 	TYPE VERTEX|FRAGMENT|COMPUTE
 	# 	SHADERS filenames
 	# 	VARYING_DEF filename
 	# 	OUTPUT_DIR directory
 	# 	OUT_FILES_VAR variable name
 	# 	INCLUDE_DIRS directories
+	# 	[AS_HEADERS]
 	# )
 	#
-	function(bgfx_compile_shader_to_header)
-		set(options "")
+	function(bgfx_compile_shaders)
+		set(options AS_HEADERS)
 		set(oneValueArgs TYPE VARYING_DEF OUTPUT_DIR OUT_FILES_VAR)
 		set(multiValueArgs SHADERS INCLUDE_DIRS)
 		cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" "${ARGN}")
@@ -599,13 +600,18 @@ if(TARGET bgfx::shaderc)
 			set(COMMANDS "")
 			foreach(PROFILE ${PROFILES})
 				_bgfx_get_profile_ext(${PROFILE} PROFILE_EXT)
-				set(OUTPUT ${ARGS_OUTPUT_DIR}/${SHADER_FILE_BASENAME}.${PROFILE_EXT}.bin.h)
+				set(OUTPUT ${ARGS_OUTPUT_DIR}/${SHADER_FILE_BASENAME}.${PROFILE_EXT}.bin$<ARGS_AS_HEADERS:.h>)
 				set(PLATFORM_I ${PLATFORM})
 				if(PROFILE STREQUAL "spirv")
 					set(PLATFORM_I LINUX)
 				endif()
+				set(BIN2C_PART "")
+				if(ARGS_AS_HEADERS)
+					set(BIN2C_PART BIN2C ${SHADER_FILE_NAME_WE}_${PROFILE_EXT})
+				endif()
 				_bgfx_shaderc_parse(
 					CLI #
+					${BIN2C_PART} #
 					${ARGS_TYPE} ${PLATFORM_I} WERROR "$<$<CONFIG:debug>:DEBUG>$<$<CONFIG:relwithdebinfo>:DEBUG>"
 					FILE ${SHADER_FILE_ABSOLUTE}
 					OUTPUT ${OUTPUT}
@@ -613,7 +619,6 @@ if(TARGET bgfx::shaderc)
 					O "$<$<CONFIG:debug>:0>$<$<CONFIG:release>:3>$<$<CONFIG:relwithdebinfo>:3>$<$<CONFIG:minsizerel>:3>"
 					VARYINGDEF ${ARGS_VARYING_DEF}
 					INCLUDES ${BGFX_SHADER_INCLUDE_PATH} ${ARGS_INCLUDE_DIRS}
-					BIN2C BIN2C ${SHADER_FILE_NAME_WE}_${PROFILE_EXT}
 				)
 				list(APPEND OUTPUTS ${OUTPUT})
 				list(APPEND ALL_OUTPUTS ${OUTPUT})
