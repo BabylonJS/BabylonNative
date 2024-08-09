@@ -7,7 +7,7 @@ include(FetchContent)
 # --------------------------------------------------
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG        f2757396e80bc4169f2ddb938ce25367a98ffdd0)
+    GIT_TAG        f32b40264277391689729c37baa4537d5f6add51)
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/bghgary/AndroidExtensions.git
     GIT_TAG        c84cb305205338b6fd6ff121a0349a810967bbc8)
