@@ -26,6 +26,14 @@ However, this is not the recommended way to deliver a production ready Babylon N
 
 ## Using a bundler to create a single JS file
 
-> [!WARNING] Notes on consuming JavaScript code
+Another option is to create a single JS file to be loaded by the Babylon Native application. This can be done using bundlers such as [Webpack](https://webpack.js.org/) or [RollUpJS](https://rollupjs.org/). After generating the bundle.js file the only thing the C++ application needs to do is to loaded that file using ScriptLoader: 
+
+```C++
+Babylon::ScriptLoader loader{*runtime};
+// Load you bundle file
+loader.LoadScript("app:///Scripts/bundle.js");
+```
+
+> **WARNING:**
 > Starting with version 7.19.0 Babylon.js started using dynamic imports to achieve smaller bundle size. However, this feature is not currently supported in Babylon Native. Therefore, when consuming Babylon.js using ES6 and creating a bundle for it to be loaded in Babylon Native, one must specify that dynamic import should be turned off. This can be done using the [following instructions for Webpack](https://webpack.js.org/plugins/limit-chunk-count-plugin/) and setting the chunks count to 1. For those using rollupjs you should specify ```inlineDynamicImports = true``` following [this documentation](https://rollupjs.org/configuration-options/#output-inlinedynamicimports)
 
