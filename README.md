@@ -34,6 +34,7 @@ Check out the [home page](https://aka.ms/Bnative) for a project overview.
   - [Android Emulator Tips](Documentation/AndroidEmulator.md)
   - [Debugging JavaScript on Mac and iOS](Documentation/DebugJavascriptMacIOS.md)
   - [Debugging iOS and MacOS rendering using Xcode](Documentation/DebugRenderedFrameMetal.md)
+  - [Consuming Javascript code in Babylon Native](Documentation/ComsumingJavascript.md)
   - [FAQ](Documentation/FAQ.md)
 
 ## Project Status
