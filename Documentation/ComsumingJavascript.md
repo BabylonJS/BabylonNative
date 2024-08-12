@@ -26,7 +26,7 @@ However, this is not the recommended way to deliver a production ready Babylon N
 
 ## Using a bundler to create a single JS file
 
-Another option is to create a single JS file to be loaded by the Babylon Native application. This can be done using bundlers such as [Webpack](https://webpack.js.org/) or [RollUpJS](https://rollupjs.org/). After generating the bundle.js file the only thing the C++ application needs to do is to loaded that file using ScriptLoader: 
+Another option is to create a single JS file to be loaded by the Babylon Native application. This can be done using bundlers such as [Webpack](https://webpack.js.org/) or [RollUpJS](https://rollupjs.org/). After generating the bundle.js file the only thing the C++ application needs to do is to load that file using ScriptLoader: 
 
 ```C++
 Babylon::ScriptLoader loader{*runtime};
