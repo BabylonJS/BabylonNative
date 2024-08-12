@@ -6,7 +6,7 @@ Loading the JavaScript files into the engine is completely up to the consuming a
 
 ## Loading Babylon.js using UMD
 
-For simplicity we manually load all the required Babylon.js UMD modules in the example Playground application in this repo. The benefit to this approach is that changes can me made instantaneously in the application script (in this case ```YOUR_SCRIPT.js```) and the application can just be re-launched, and everything will work. No bundling process is required. 
+For simplicity we manually load all the required Babylon.js UMD modules in the example Playground application in this repo. The benefit to this approach is that changes can be made instantaneously in the application script (in this case ```YOUR_SCRIPT.js```) and the application can just be re-launched, and everything will work. No bundling process is required. 
 
 ```C++
 Babylon::ScriptLoader loader{*runtime};
