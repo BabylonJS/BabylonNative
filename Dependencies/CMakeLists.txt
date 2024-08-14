@@ -186,8 +186,8 @@ disable_warnings(MachineIndependent)
 # --------------------------------------------------
 # xr
 # --------------------------------------------------
-# Currently supported on Windows via OpenXR, Android via ARCore, iOS and visionOS via ARKit.
-if(BABYLON_NATIVE_PLUGIN_NATIVEXR AND (WIN32 OR ANDROID OR IOS OR VISIONOS))
+# Currently supported on Windows via OpenXR, Android via ARCore, and iOS via ARKit.
+if(BABYLON_NATIVE_PLUGIN_NATIVEXR AND (WIN32 OR ANDROID OR IOS))
     add_subdirectory(xr)
     set_property(TARGET xr PROPERTY FOLDER Dependencies/xr)
     warnings_as_errors(xr)

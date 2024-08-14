@@ -1,100 +1,112 @@
 import SwiftUI
-import CompositorServices
 
-struct ContentStageConfiguration: CompositorLayerConfiguration {
-  func makeConfiguration(capabilities: LayerRenderer.Capabilities, configuration: inout LayerRenderer.Configuration) {
-    configuration.depthFormat = .depth32Float
-    configuration.colorFormat = .bgra8Unorm_srgb
-
-    let foveationEnabled = capabilities.supportsFoveation
-    configuration.isFoveationEnabled = foveationEnabled
-
-    let options: LayerRenderer.Capabilities.SupportedLayoutsOptions = foveationEnabled ? [.foveationEnabled] : []
-    let supportedLayouts = capabilities.supportedLayouts(options: options)
-
-    configuration.layout = supportedLayouts.contains(.layered) ? .layered : .dedicated
+class Renderer {
+  static var shared = Renderer()
+  
+  var displayLink: CADisplayLink? = nil
+  var libNativeBridge: LibNativeBridge? = nil
+  
+  var metalView: UIView? {
+    didSet {
+      libNativeBridge = LibNativeBridge(metalLayer: metalView?.layer as? CAMetalLayer)
+      let scale = UITraitCollection.current.displayScale
+      libNativeBridge?.initialize(withWidth: Int((metalView?.bounds.width ?? 0) * scale), height: Int((metalView?.bounds.height ?? 0) * scale))
+      self.displayLink = CADisplayLink(target: self, selector: #selector(self.renderMetalLoop))
+      self.displayLink?.add(to: .main, forMode: .common)
+    }
+  }
+  
+  init() {}
+  
+  @objc func renderMetalLoop() {
+    libNativeBridge?.render()
+  }
+  
+  func drawableWillChangeSize(width: Int, height: Int) {
+    libNativeBridge?.drawableWillChangeSize(withWidth: Int(width), height: Int(height))
+  }
+  
+  func setTouchMove(pointerId: Int32, x: Int32, y: Int32) {
+    libNativeBridge?.setTouchMoveWithPointerId(Int(pointerId), x: Int(x), y: Int(y))
+  }
+  
+  func setTouchDown(pointerId: Int32, x: Int32, y: Int32) {
+    libNativeBridge?.setTouchDownWithPointerId(Int(pointerId), x: Int(x), y: Int(y))
+  }
+  
+  func setTouchUp(pointerId: Int32, x: Int32, y: Int32) {
+    libNativeBridge?.setTouchUpWithPointerId(Int(pointerId), x: Int(x), y: Int(y))
   }
 }
 
-class Renderer {
-  let layerRenderer: LayerRenderer
-  var libNativeBridge: LibNativeBridge
-
-  init(_ layerRenderer: LayerRenderer) {
-    self.layerRenderer = layerRenderer
-    self.libNativeBridge = LibNativeBridge(layerRenderer)
+class MetalView: UIView {
+  
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+    self.backgroundColor = .clear
   }
-
-  func startRenderLoop() {
-      let renderThread = Thread {
-        self.renderLoop()
-      }
-      renderThread.name = "Render Thread"
-      renderThread.start()
+  
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
   }
-
-
-  func renderLoop() {
-    while true {
-      if layerRenderer.state == .invalidated {
-        print("Layer is invalidated")
-
-        libNativeBridge.shutdown()
-        return
-      } else if layerRenderer.state == .paused {
-        layerRenderer.waitUntilRunning()
-        continue
-      } else {
-        autoreleasepool {
-          libNativeBridge.initialize()
-          libNativeBridge.render()
-        }
-      }
+  
+  func setupMetalLayer() {
+    if Renderer.shared.metalView != nil {
+      return
     }
+    
+    self.addGestureRecognizer(
+      UIBabylonGestureRecognizer(
+        target: self,
+        onTouchDown: Renderer.shared.setTouchDown,
+        onTouchMove: Renderer.shared.setTouchMove,
+        onTouchUp: Renderer.shared.setTouchUp
+      )
+    )
+    metalLayer.pixelFormat = .bgra8Unorm
+    metalLayer.framebufferOnly = true
+    // Assign metalView to renderer
+    Renderer.shared.metalView = self
   }
+  
+  var metalLayer: CAMetalLayer {
+    return layer as! CAMetalLayer
+  }
+  
+  override class var layerClass: AnyClass {
+    return CAMetalLayer.self
+  }
+  
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    setupMetalLayer()
+    updateDrawableSize()
+  }
+  
+  private func updateDrawableSize() {
+    let scale = UITraitCollection.current.displayScale
+    Renderer.shared.drawableWillChangeSize(width: Int(bounds.width * scale), height: Int(bounds.height * scale))
+    metalLayer.drawableSize = CGSize(width: bounds.width * scale, height: bounds.height * scale)
+  }
+}
+
+struct MetalViewRepresentable: UIViewRepresentable {
+  typealias UIViewType = MetalView
+  
+  func makeUIView(context: Context) -> MetalView {
+    MetalView(frame: .zero)
+  }
+  
+  func updateUIView(_ uiView: MetalView, context: Context) {}
 }
 
 
 @main
 struct ExampleApp: App {
-  @State private var showImmersiveSpace = false
-  @State private var immersiveSpaceIsShown = false
-
-  @Environment(\.openImmersiveSpace) var openImmersiveSpace
-  @Environment(\.dismissImmersiveSpace) var dismissImmersiveSpace
-
   var body: some Scene {
     WindowGroup {
-      VStack {
-        Toggle("Show Immersive Space", isOn: $showImmersiveSpace)
-          .toggleStyle(.button)
-          .padding(.top, 50)
-      }
-      .onChange(of: showImmersiveSpace) { _, newValue in
-        Task {
-          if newValue {
-            switch await openImmersiveSpace(id: "ImmersiveSpace") {
-            case .opened:
-              immersiveSpaceIsShown = true
-            case .error, .userCancelled:
-              fallthrough
-            @unknown default:
-              immersiveSpaceIsShown = false
-              showImmersiveSpace = false
-            }
-          } else if immersiveSpaceIsShown {
-            await dismissImmersiveSpace()
-            immersiveSpaceIsShown = false
-          }
-        }
-      }
-
+      MetalViewRepresentable()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    ImmersiveSpace(id: "ImmersiveSpace") {
-      CompositorLayer(configuration: ContentStageConfiguration()) { layerRenderer in
-        let renderer = Renderer(layerRenderer)
-        renderer.startRenderLoop()
-      }
-    }.immersionStyle(selection: .constant(.mixed), in: .mixed, .full)
   }
 }

@@ -44,7 +44,6 @@ namespace Babylon::Graphics
         init.callback = &m_bgfxCallback;
 
         init.platformData.context = config.Device;
-      
         UpdateWindow(config.Window);
         UpdateSize(config.Width, config.Height);
         UpdateMSAA(config.MSAASamples);

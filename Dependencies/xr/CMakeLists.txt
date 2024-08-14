@@ -10,7 +10,7 @@ FetchContent_Declare(CMakeExtensions
     GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
-    GIT_TAG a52c591bc9056f3ae20a461d16fdd73ab4325be7)
+    GIT_TAG 4.4.1)
 # --------------------------------------------------
 
 FetchContent_MakeAvailable(CMakeExtensions)
@@ -21,15 +21,6 @@ if(IOS)
     set(PLATFORM "OS64COMBINED" CACHE STRING "")
     set(DEPLOYMENT_TARGET "13" CACHE STRING "")
 endif()
-
-if(VISIONOS)
-    FetchContent_MakeAvailable_With_Message(ios-cmake)
-    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
-    set(PLATFORM "VISIONOSCOMBINED" CACHE STRING "")
-    set(DEPLOYMENT_TARGET "1.0" CACHE STRING "")
-    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
-endif()
-
 
 project(xr)
 
@@ -56,10 +47,6 @@ elseif (IOS)
     set(SOURCES ${SOURCES}
         "Source/ARKit/Include/IXrContextARKit.h"
         "Source/ARKit/XR.mm")
-elseif (VISIONOS)
-    set(SOURCES ${SOURCES}
-        "Source/ARKit_visionOS/Include/IXrContextARKit.h"
-        "Source/ARKit_visionOS/XR.mm")
 else()
     set(SOURCES ${SOURCES}
         "Source/OpenXR/XR.cpp")
@@ -104,7 +91,7 @@ if (ANDROID)
     set_target_properties(glm PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${arcore-android-sdk_SOURCE_DIR}/libraries/glm)
 
     target_link_libraries(xr PRIVATE glm arcore AndroidExtensions)
-elseif (IOS OR VISIONOS)
+elseif (IOS)    
     target_link_libraries(xr PRIVATE "-framework ARKit")
 else()
     if(WIN32)

@@ -1,9 +1,8 @@
 #pragma once
 
-#import <CompositorServices/CompositorServices.h>
-
+#import <QuartzCore/CAMetalLayer.h>
 
 namespace Babylon::Graphics
 {
-    using WindowT = cp_layer_renderer_t;
+    using WindowT = CAMetalLayer*;
 }

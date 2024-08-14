@@ -4,10 +4,6 @@
 #include <Babylon/Graphics/Platform.h>
 #include <Babylon/Graphics/RendererType.h>
 
-#if TARGET_OS_VISION
-#include <ARKit/ARKit.h>
-#endif
-
 #include <future>
 #include <memory>
 
@@ -32,10 +28,6 @@ namespace Babylon::Graphics
 
         // When enabled, back buffer will be premultiplied with alpha value.
         bool AlphaPremultiplied{};
-      
-#if TARGET_OS_VISION
-        ar_world_tracking_provider_t WorldTracking;
-#endif
     };
 
     class Device;

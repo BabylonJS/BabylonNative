@@ -14,7 +14,8 @@ namespace Babylon::Graphics
 
     float DeviceImpl::GetDevicePixelRatio(WindowT window)
     {
-        BX_UNUSED(window);
-        return 2.0;
+      BX_UNUSED(window);
+      CGFloat displayScale = [UITraitCollection currentTraitCollection].displayScale;
+      return displayScale;
     }
 }
