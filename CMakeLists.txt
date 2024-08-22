@@ -13,8 +13,8 @@ FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
     GIT_TAG 7d88a601fda9892791e7b4e994e375e049615688)
 FetchContent_Declare(arcana.cpp
-    GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG f2757396e80bc4169f2ddb938ce25367a98ffdd0)
+    GIT_REPOSITORY https://github.com/CedricGuillemet/arcana.cpp.git
+    GIT_TAG bd8b91e935e374f2ef8d46c512a2e814effb8718)
 FetchContent_Declare(arcore-android-sdk
     GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
     GIT_TAG 98cb803de5482fb2b36effe8be3b5a0d3b726976)
