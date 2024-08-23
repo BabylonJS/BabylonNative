@@ -14,7 +14,7 @@ FetchContent_Declare(AndroidExtensions
     GIT_TAG 7d88a601fda9892791e7b4e994e375e049615688)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG f2757396e80bc4169f2ddb938ce25367a98ffdd0)
+    GIT_TAG 1a8a5d6e95413ed14b38a6ac9419048f9a9c8009)
 FetchContent_Declare(arcore-android-sdk
     GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
     GIT_TAG 98cb803de5482fb2b36effe8be3b5a0d3b726976)
@@ -22,8 +22,8 @@ FetchContent_Declare(base-n
     GIT_REPOSITORY https://github.com/azawadzki/base-n.git
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4)
 FetchContent_Declare(bgfx.cmake
-    GIT_REPOSITORY https://github.com/okwasniewski/bgfx.cmake.git
-    GIT_TAG 4fb523d2e36d)
+    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
+    GIT_TAG 17e2f84510dbb69c87a02b08fb11cecb2c4afc9b)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)

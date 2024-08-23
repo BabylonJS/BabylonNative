@@ -53,6 +53,7 @@ if(APPLE)
         PRIVATE ${JAVASCRIPTCORE_LIBRARY}
         PRIVATE NativeCamera)
     set(RESOURCE_FILES ${STORYBOARD})
+
 elseif(UNIX)
     set(SOURCES
         ${SOURCES}
@@ -173,6 +174,8 @@ if(APPLE)
             FOLDER "Playground")
     endif()
     set_property(TARGET Playground PROPERTY UNITY_BUILD false)
+    set_property(TARGET Playground PROPERTY XCODE_GENERATE_SCHEME YES)
+    set_property(TARGET Playground PROPERTY XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED YES)
 endif()
 
 if(WINDOWS_STORE)
@@ -205,3 +208,4 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${REFERENCE_IMAGES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Playground)
+
