@@ -11,29 +11,31 @@
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 
 @implementation LibNativeBridge {
-    std::optional<Babylon::Graphics::Device> _device;
-    std::optional<Babylon::Graphics::DeviceUpdate> _update;
-    std::optional<Babylon::AppRuntime> _runtime;
-    std::optional<Babylon::Polyfills::Canvas> _nativeCanvas;
-    Babylon::Plugins::NativeInput* _nativeInput;
-    BOOL _isXrActive;
+  std::optional<Babylon::Graphics::Device> _device;
+  std::optional<Babylon::Graphics::DeviceUpdate> _update;
+  std::optional<Babylon::AppRuntime> _runtime;
+  std::optional<Babylon::Polyfills::Canvas> _nativeCanvas;
+  Babylon::Plugins::NativeInput* _nativeInput;
+  bool _isXrActive;
+  CADisplayLink *_displayLink;
 }
 
-- (instancetype)initWithMetalLayer:(CAMetalLayer *)metalLayer {
-    self = [super init];
-    if (self) {
-        _metalLayer = metalLayer;
-        _initialized = NO;
-        _nativeInput = nullptr;
-        _isXrActive = NO;
-    }
-    return self;
++ (instancetype)sharedInstance {
+  static LibNativeBridge *sharedInstance = nil;
+  static dispatch_once_t onceToken;
+  dispatch_once(&onceToken, ^{
+    sharedInstance = [[self alloc] init];
+  });
+  return sharedInstance;
 }
 
-- (BOOL)initializeWithWidth:(NSInteger)width height:(NSInteger)height {
+- (bool)initializeWithWidth:(NSInteger)width height:(NSInteger)height {
     if (self.initialized) {
         return YES;
     }
+  
+    _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(render)];
+    [_displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSDefaultRunLoopMode];
     
     Babylon::Graphics::Configuration graphicsConfig{};
     graphicsConfig.Window = self.metalLayer;
@@ -64,8 +66,8 @@
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         Babylon::Plugins::NativeOptimizations::Initialize(env);
-
-        self->_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
+     
+        _nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
     });
 
     Babylon::ScriptLoader loader{ *_runtime };
@@ -78,7 +80,7 @@
     loader.LoadScript("app:///Scripts/experience.js");
     self.initialized = YES;
     
-    return YES;
+    return true;
 }
 
 - (void)drawableWillChangeSizeWithWidth:(NSInteger)width height:(NSInteger)height {
@@ -93,22 +95,22 @@
     }
 }
 
-- (void)setTouchUpWithPointerId:(NSInteger)pointerId x:(NSInteger)x y:(NSInteger)y {
-    if (_nativeInput != nullptr) {
-        _nativeInput->TouchUp(static_cast<int>(pointerId), static_cast<int>(x), static_cast<int>(y));
-    }
+- (void)setTouchDown:(int)pointerId x:(int)inX y:(int)inY {
+  if (_nativeInput) {
+    _nativeInput->TouchDown(static_cast<int>(pointerId), static_cast<int>(inX), static_cast<int>(inY));
+  }
 }
 
-- (void)setTouchMoveWithPointerId:(NSInteger)pointerId x:(NSInteger)x y:(NSInteger)y {
-    if (_nativeInput != nullptr) {
-        _nativeInput->TouchMove(static_cast<int>(pointerId), static_cast<int>(x), static_cast<int>(y));
-    }
+- (void)setTouchMove:(int)pointerId x:(int)inX y:(int)inY {
+  if (_nativeInput) {
+    _nativeInput->TouchMove(static_cast<int>(pointerId), static_cast<int>(inX), static_cast<int>(inY));
+  }
 }
 
-- (void)setTouchDownWithPointerId:(NSInteger)pointerId x:(NSInteger)x y:(NSInteger)y {
-    if (_nativeInput != nullptr) {
-        _nativeInput->TouchDown(static_cast<int>(pointerId), static_cast<int>(x), static_cast<int>(y));
-    }
+- (void)setTouchUp:(int)pointerId x:(int)inX y:(int)inY {
+  if (_nativeInput) {
+    _nativeInput->TouchUp(static_cast<int>(pointerId), static_cast<int>(inX), static_cast<int>(inY));
+  }
 }
 
 - (void)render {
@@ -124,7 +126,6 @@
     if (!self.initialized) {
         return;
     }
-    
     if (_device) {
         _update->Finish();
         _device->FinishRenderingCurrentFrame();
@@ -135,6 +136,8 @@
     _runtime.reset();
     _update.reset();
     _device.reset();
+    [_displayLink invalidate];
+    _displayLink = NULL;
     self.initialized = NO;
 }
 

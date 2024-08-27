@@ -8,14 +8,15 @@
 @property (nonatomic, assign, getter=isInitialized) BOOL initialized;
 @property (nonatomic, strong) CAMetalLayer *metalLayer;
 
-- (instancetype)initWithMetalLayer:(CAMetalLayer *)metalLayer;
++ (instancetype)sharedInstance;
 
-- (void)setTouchMoveWithPointerId:(NSInteger)pointerId x:(NSInteger)x y:(NSInteger)y;
-- (void)setTouchUpWithPointerId:(NSInteger)pointerId x:(NSInteger)x y:(NSInteger)y;
-- (void)setTouchDownWithPointerId:(NSInteger)pointerId x:(NSInteger)x y:(NSInteger)y;
+- (void)setTouchDown:(int)pointerId x:(int)inX y:(int)inY;
+- (void)setTouchMove:(int)pointerId x:(int)inX y:(int)inY;
+- (void)setTouchUp:(int)pointerId x:(int)inX y:(int)inY;
+
 - (void)drawableWillChangeSizeWithWidth:(NSInteger)width height:(NSInteger)height;
 
-- (BOOL)initializeWithWidth:(NSInteger)width height:(NSInteger)height;
+- (bool)initializeWithWidth:(NSInteger)width height:(NSInteger)height;
 - (void)shutdown;
 - (void)render;
 
