@@ -176,10 +176,10 @@ if(APPLE)
             # So we need to make sure we override it with nothing here in order to compile Swift.
             XCODE_ATTRIBUTE_OTHER_SWIFT_FLAGS "")
 
-            # Swift support
-            set(CMAKE_Swift_COMPILER_FORCED TRUE)
-            set(CMAKE_Swift_LANGUAGE_VERSION 4.0)
-            enable_language(Swift)
+        # Swift support
+        set(CMAKE_Swift_COMPILER_FORCED TRUE)
+        set(CMAKE_Swift_LANGUAGE_VERSION 4.0)
+        enable_language(Swift)
     elseif(VISIONOS)
         set_target_properties(Playground PROPERTIES
             MACOSX_BUNDLE true
@@ -201,10 +201,10 @@ if(APPLE)
             # So we need to make sure we override it with nothing here in order to compile Swift.
             XCODE_ATTRIBUTE_OTHER_SWIFT_FLAGS "")
 
-            # Swift support
-            set(CMAKE_Swift_COMPILER_FORCED TRUE)
-            set(CMAKE_Swift_LANGUAGE_VERSION 5.0)
-            enable_language(Swift)
+        # Swift support
+        set(CMAKE_Swift_COMPILER_FORCED TRUE)
+        set(CMAKE_Swift_LANGUAGE_VERSION 5.0)
+        enable_language(Swift)
     else()
         target_link_libraries(Playground PUBLIC "-framework MetalKit")
 
