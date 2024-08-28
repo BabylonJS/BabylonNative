@@ -902,6 +902,18 @@ namespace Babylon::ShaderCompilerTraversers
             TIntermediate* m_intermediate{};
         };
 
+        /// <summary>
+        ///  https://github.com/BabylonJS/BabylonNative/issues/1411
+        ///  When a same sampler is declared in VS and FS, GLSlang assign a different binding location for VS and FS.
+        ///  Max binding location is 16 so if more than 8 samplers are declared then D3Dcompile will not compile the shader.
+        ///  This is the case for NME shaders for example.
+        ///  The following traverser list samplers from the VS (and their binding location) and set the same binding location 
+        ///  in FS if it's present. If a sampler is present in FS but not in VS, then a binding location id will be used and incremented.
+        ///  potential solution replacements:
+        ///  - do not expose samplers in generated nme shaders (this doesn't fix the issue if samplers are declared in VS and FS for genuine reasons)
+        ///    Apart from potential regressions and more complex TS code, the problem resides in D3D world only.
+        ///  - use spirv optimizer tool to remove unused samplers: it will not fix the issue, binary will be bigger and compilation time will be longer.
+        /// </summary>
         class ReassignBindingToSamplersTraverser : public TIntermTraverser
         {
         public:
