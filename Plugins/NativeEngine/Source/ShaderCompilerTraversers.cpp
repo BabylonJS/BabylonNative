@@ -901,6 +901,66 @@ namespace Babylon::ShaderCompilerTraversers
 
             TIntermediate* m_intermediate{};
         };
+
+        class ReassignBindingToSamplersTraverser : public TIntermTraverser
+        {
+        public:
+            static void Traverse(TProgram& program)
+            {
+                ReassignBindingToSamplersTraverser reassignBindingToSamplersTraverser{ };
+                program.getIntermediate(EShLangVertex)->getTreeRoot()->traverse(&reassignBindingToSamplersTraverser);
+                reassignBindingToSamplersTraverser.m_fragmentPass = true;
+                program.getIntermediate(EShLangFragment)->getTreeRoot()->traverse(&reassignBindingToSamplersTraverser);
+            }
+
+        protected:
+            void visitSymbol(TIntermSymbol* symbol) override {
+                // Check if the symbol is a sampler
+                const TType& type = symbol->getType();
+                if (type.getBasicType() == EbtSampler) {
+                    TQualifier& qualifier = symbol->getWritableType().getQualifier();
+                    std::string name{symbol->getName().c_str()};
+                    static const std::string suffix = "Texture";
+                    // appends 'Texture' to the name see SamplerSplitterTraverser for differenciation
+                    bool textureEnds = name.size() >= suffix.size() && name.compare(name.size() - suffix.size(), suffix.size(), suffix) == 0;
+                    if (!textureEnds)
+                    {
+                        name += suffix;
+                    }
+                    if (m_fragmentPass)
+                    {
+                        // fragment pass
+                        auto iter = m_samplerLayoutBinding.find(name);
+                        if (iter == m_samplerLayoutBinding.end())
+                        {
+                            qualifier.layoutBinding = ++m_nextLayoutBinding;
+                            m_samplerLayoutBinding[name] = qualifier.layoutBinding;
+                        }
+                        else
+                        {
+                            qualifier.layoutBinding = iter->second;
+                        }
+                    }
+                    else
+                    {
+                        if (qualifier.hasBinding())
+                        {
+                            // vertex pass
+                            m_samplerLayoutBinding[name] = qualifier.layoutBinding;
+                            m_nextLayoutBinding = std::max(m_nextLayoutBinding, qualifier.layoutBinding);
+                        }
+                    }
+                }
+            }
+
+        private:
+            ReassignBindingToSamplersTraverser() 
+            {
+            }
+            std::map<std::string, int> m_samplerLayoutBinding;
+            bool m_fragmentPass{};
+            unsigned int m_nextLayoutBinding{0};
+        };
     }
 
     ScopeT MoveNonSamplerUniformsIntoStruct(TProgram& program, IdGenerator& ids)
@@ -936,5 +996,10 @@ namespace Babylon::ShaderCompilerTraversers
     void InvertYDerivativeOperands(TProgram& program)
     {
         InvertYDerivativeOperandsTraverser::Traverse(program);
+    }
+
+    void ReassignBindingToSamplers(glslang::TProgram& program)
+    {
+        ReassignBindingToSamplersTraverser::Traverse(program);
     }
 }

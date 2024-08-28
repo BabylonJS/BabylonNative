@@ -2,6 +2,16 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "Iridescence NME",
+            "playgroundId": "#2FDQT5#1507",
+            "referenceImage": "iridescence-nme.png"
+        },
+        {
+            "title": "NME Multi Build",
+            "playgroundId": "#D8AK3Z#104",
+            "referenceImage": "nme-multi-build.png"
+        },
+        {
             "title": "EXR Loader",
             "playgroundId": "#4RN0VF#151",
             "referenceImage": "exr-loader.png"
