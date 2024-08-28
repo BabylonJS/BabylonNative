@@ -9,7 +9,8 @@
         {
             "title": "NME Multi Build",
             "playgroundId": "#D8AK3Z#104",
-            "referenceImage": "nme-multi-build.png"
+            "referenceImage": "nme-multi-build.png",
+            "renderCount": 50
         },
         {
             "title": "EXR Loader",
