@@ -23,7 +23,7 @@ FetchContent_Declare(base-n
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG 17e2f84510dbb69c87a02b08fb11cecb2c4afc9b)
+    GIT_TAG 3f6a554a2f24ddb9303873dc64158a18b111f59b)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
@@ -51,6 +51,15 @@ FetchContent_Declare(SPIRV-Cross
 
 FetchContent_MakeAvailable(CMakeExtensions)
 
+
+if(VISIONOS)
+    FetchContent_MakeAvailable_With_Message(ios-cmake)
+    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+    set(PLATFORM "VISIONOSCOMBINED" CACHE STRING "")
+    set(DEPLOYMENT_TARGET "1.0" CACHE STRING "")
+    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
+endif()
+
 if(IOS)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
     set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
@@ -58,6 +67,7 @@ if(IOS)
     set(DEPLOYMENT_TARGET "13" CACHE STRING "")
     set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
 endif()
+
 
 project(BabylonNative)
 
@@ -98,6 +108,8 @@ if(ANDROID)
     set(BABYLON_NATIVE_PLATFORM "Android")
 elseif(IOS)
     set(BABYLON_NATIVE_PLATFORM "iOS")
+elseif (VISIONOS)
+    set(BABYLON_NATIVE_PLATFORM "visionOS")
 elseif(APPLE)
     set(BABYLON_NATIVE_PLATFORM "macOS")
 elseif(WINDOWS_STORE)

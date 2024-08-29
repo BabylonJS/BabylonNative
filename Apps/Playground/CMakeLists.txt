@@ -32,12 +32,27 @@ if(APPLE)
             "iOS/AppDelegate.swift"
             "iOS/ViewController.swift"
             "iOS/LibNativeBridge.h"
-            "iOS/LibNativeBridge.mm")
+            "iOS/LibNativeBridge.mm"
+            "AppleShared/GestureRecognizer.swift")
+        set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
+        set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "ReferenceImages")
+        set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE NativeCamera)
+    elseif(VISIONOS)
+        set(PLIST_FILE
+            "${CMAKE_CURRENT_LIST_DIR}/visionOS/Info.plist")
+        set(RESOURCE_FILES ${SCRIPTS})
+        set(SOURCES
+            ${SOURCES}
+            "visionOS/App.swift"
+            "visionOS/LibNativeBridge.mm"
+            "visionOS/LibNativeBridge.h"
+            "AppleShared/GestureRecognizer.swift")
         set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
         set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "ReferenceImages")
     else()
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
+        set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE NativeCamera)
         set(RESOURCE_FILES ${STORYBOARD})
         set(SOURCES
             ${SOURCES}
@@ -49,11 +64,12 @@ if(APPLE)
         set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/Scripts")
         set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/ReferenceImages")
     endif()
-    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES}
-        PRIVATE ${JAVASCRIPTCORE_LIBRARY}
-        PRIVATE NativeCamera)
+    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE ${JAVASCRIPTCORE_LIBRARY})
     set(RESOURCE_FILES ${STORYBOARD})
 
+    # Remove -Wall and -Werror from the debug flags to make simulators work.
+    string(REPLACE "-Wall" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+    string(REPLACE "-Werror" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 elseif(UNIX)
     set(SOURCES
         ${SOURCES}
@@ -153,16 +169,42 @@ if(APPLE)
             XCODE_ATTRIBUTE_SWIFT_VERSION "4.0"
             XCODE_ATTRIBUTE_SWIFT_OBJC_BRIDGING_HEADER "${CMAKE_CURRENT_LIST_DIR}/iOS/LibNativeBridge.h"
             XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@executable_path/Frameworks"
+            XCODE_ATTRIBUTE_FRAMEWORK_SEARCH_PATHS "$(inherited) $(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks"
             XCODE_ATTRIBUTE_ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES YES
 
             # CMake seems to add a custom flag "-Wno-unknown-pragmas" to the Swift compiler. That flag is used for Clang,
             # So we need to make sure we override it with nothing here in order to compile Swift.
             XCODE_ATTRIBUTE_OTHER_SWIFT_FLAGS "")
 
-            # Swift support
-            set(CMAKE_Swift_COMPILER_FORCED TRUE)
-            set(CMAKE_Swift_LANGUAGE_VERSION 4.0)
-            enable_language(Swift)
+        # Swift support
+        set(CMAKE_Swift_COMPILER_FORCED TRUE)
+        set(CMAKE_Swift_LANGUAGE_VERSION 4.0)
+        enable_language(Swift)
+    elseif(VISIONOS)
+        set_target_properties(Playground PROPERTIES
+            MACOSX_BUNDLE true
+            MACOSX_BUNDLE_INFO_PLIST "${PLIST_FILE}"
+            XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
+            RESOURCE "${RESOURCE_FILES}"
+
+            XCODE_ATTRIBUTE_XROS_DEPLOYMENT_TARGET ${DEPLOYMENT_TARGET}
+            XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.BabylonNative.Playground.visionOS"
+
+            XCODE_ATTRIBUTE_SWIFT_VERSION "5.0"
+            XCODE_ATTRIBUTE_SWIFT_OBJC_BRIDGING_HEADER "${CMAKE_CURRENT_LIST_DIR}/visionOS/LibNativeBridge.h"
+            XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@executable_path/Frameworks"
+            XCODE_ATTRIBUTE_FRAMEWORK_SEARCH_PATHS "$(inherited) $(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks"
+            XCODE_ATTRIBUTE_ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES YES
+            XCODE_ATTRIBUTE_SWIFT_OBJC_INTEROP_MODE "objcxx"
+
+            # CMake seems to add a custom flag "-Wno-unknown-pragmas" to the Swift compiler. That flag is used for Clang,
+            # So we need to make sure we override it with nothing here in order to compile Swift.
+            XCODE_ATTRIBUTE_OTHER_SWIFT_FLAGS "")
+
+        # Swift support
+        set(CMAKE_Swift_COMPILER_FORCED TRUE)
+        set(CMAKE_Swift_LANGUAGE_VERSION 5.0)
+        enable_language(Swift)
     else()
         target_link_libraries(Playground PUBLIC "-framework MetalKit")
 
@@ -209,3 +251,5 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Playground)
 
+set_property(TARGET Playground PROPERTY XCODE_GENERATE_SCHEME YES)
+set_property(TARGET Playground PROPERTY XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED YES)
