@@ -41,6 +41,12 @@ namespace UrlLib
 
             m_method = method;
 
+            if (m_method == UrlMethod::Post)
+            {
+                // TODO: Implement POST
+                throw std::runtime_error{"Not implemented"};
+            }
+
             m_curl = curl_easy_init();
             if (m_curl)
             {
