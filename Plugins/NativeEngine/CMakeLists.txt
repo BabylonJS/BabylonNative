@@ -12,8 +12,6 @@ set(SOURCES
     "Source/ShaderCompilerCommon.cpp"
     "Source/ShaderCache.h"
     "Source/ShaderCache.cpp"
-    "Source/xxhash.h"
-    "Source/xxhash.c"
     "Source/ShaderCompilerTraversers.cpp"
     "Source/ShaderCompilerTraversers.h"
     "Source/ShaderCompiler${GRAPHICS_API}.cpp"

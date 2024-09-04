@@ -14,8 +14,8 @@ namespace Babylon
     private:
         struct ShaderHash
         {
-            uint64_t vertexHash;
-            uint64_t fragmentHash;
+            size_t vertexHash;
+            size_t fragmentHash;
             bool operator < (const ShaderHash& other) const {
                 if (vertexHash < other.vertexHash || (vertexHash == other.vertexHash && fragmentHash < other.fragmentHash))
                     return true;

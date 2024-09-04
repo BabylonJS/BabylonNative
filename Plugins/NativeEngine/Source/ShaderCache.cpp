@@ -1,29 +1,8 @@
 #include "ShaderCache.h"
-#include "xxhash.h"
 #include <iostream>
 #include <fstream>
 
 namespace {
-    XXH64_hash_t hashStringView(std::string_view stringView)
-    {
-        // Allocate a state struct. Do not just use malloc() or new.
-        XXH3_state_t* state = XXH3_createState();
-        assert(state != NULL && "Out of memory!");
-        // Reset the state to start a new hashing session.
-        XXH3_64bits_reset(state);
-        // Read the file in chunks
-        //while ((count = fread(buffer, 1, sizeof(buffer), f)) != 0) {
-        //for (unsigned int i = 0; i < stringView.size(); i++)
-            // Run update() as many times as necessary to process the data
-        XXH3_64bits_update(state, stringView.data(), stringView.size());
-        //}
-        // Retrieve the finalized hash. This will not change the state.
-        XXH64_hash_t result = XXH3_64bits_digest(state);
-        // Free the state. Do not use free().
-        XXH3_freeState(state);
-        return result;
-    }
-
     void SaveString(std::ofstream& stream, const std::string& string)
     {
         uint32_t stringSize{ static_cast<uint32_t>(string.size()) };
@@ -131,8 +110,8 @@ namespace Babylon
     const ShaderCompiler::BgfxShaderInfo* ShaderCache::GetShader(std::string_view vertexSource, std::string_view fragmentSource)
     {
         const ShaderHash hash{
-            hashStringView(vertexSource),
-            hashStringView(fragmentSource)};
+            std::hash<std::string_view>{}(vertexSource),
+            std::hash<std::string_view>{}(fragmentSource) };
         const auto iter{Cache.find(hash)};
         if (iter == Cache.end())
         {
@@ -144,8 +123,8 @@ namespace Babylon
     ShaderCompiler::BgfxShaderInfo* ShaderCache::AddShader(std::string_view vertexSource, std::string_view fragmentSource, ShaderCompiler::BgfxShaderInfo shaderInfo)
     {
         const ShaderHash hash{
-            hashStringView(vertexSource),
-            hashStringView(fragmentSource) };
+            std::hash<std::string_view>{}(vertexSource),
+            std::hash<std::string_view>{}(fragmentSource) };
         const auto iter{ Cache.find(hash) };
         if (iter == Cache.end())
         {
