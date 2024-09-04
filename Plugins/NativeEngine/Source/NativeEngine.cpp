@@ -973,6 +973,7 @@ namespace Babylon
     std::unique_ptr<ProgramData> NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource)
     {
         const ShaderCompiler::BgfxShaderInfo* shaderInfo{};
+        ShaderCompiler::BgfxShaderInfo bgfxShaderInfo{};
         if (ShaderCache::GetImpl())
         {
             shaderInfo = ShaderCache::GetImpl()->GetShader(vertexSource, fragmentSource);
@@ -980,11 +981,12 @@ namespace Babylon
 
         if (!shaderInfo)
         {
-            ShaderCompiler::BgfxShaderInfo bgfxShaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
+            bgfxShaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
             if (ShaderCache::GetImpl())
             {
-                shaderInfo = ShaderCache::GetImpl()->AddShader(vertexSource, fragmentSource, bgfxShaderInfo);
-            }
+                ShaderCache::GetImpl()->AddShader(vertexSource, fragmentSource, bgfxShaderInfo);
+            } 
+            shaderInfo = &bgfxShaderInfo;
         }
 
         static auto InitUniformInfos{

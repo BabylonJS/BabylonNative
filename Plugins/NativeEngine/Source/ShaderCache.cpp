@@ -137,7 +137,7 @@ namespace Babylon
         return &iter->second;
     }
 
-    ShaderCompiler::BgfxShaderInfo* ShaderCache::Impl::AddShader(std::string_view vertexSource, std::string_view fragmentSource, ShaderCompiler::BgfxShaderInfo shaderInfo)
+    void ShaderCache::Impl::AddShader(std::string_view vertexSource, std::string_view fragmentSource, ShaderCompiler::BgfxShaderInfo shaderInfo)
     {
         const ShaderHash hash{
             std::hash<std::string_view>{}(vertexSource),
@@ -147,7 +147,6 @@ namespace Babylon
         {
             Cache[hash] = shaderInfo;
         }
-        return &Cache[hash];
     }
 
     static std::unique_ptr<ShaderCache::Impl> Instance{};
