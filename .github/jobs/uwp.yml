@@ -28,7 +28,7 @@ jobs:
 
     steps:
     - script: |
-        cmake -S .. -B build${{ variables.solutionName }} -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 ${{ variables.jsEngineDefine }} -A ${{ parameters.platform }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD)
+        cmake -B build${{ variables.solutionName }} -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 ${{ variables.jsEngineDefine }} -A ${{ parameters.platform }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD)
       displayName: 'Generate ${{ variables.solutionName }} solution'
   
     - task: VSBuild@1

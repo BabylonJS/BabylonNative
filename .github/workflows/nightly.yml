@@ -18,7 +18,7 @@ jobs:
       run: Get-ChildItem -Path .\Apps\node_modules -Recurse
     - name: Make Solution
       run: |
-        cmake -A x64 -B buildWin32_x64 -D BX_CONFIG_DEBUG=ON -S ..
+        cmake -A x64 -B buildWin32_x64 -D BX_CONFIG_DEBUG=ON
     - name: NPM download nightly
       run: npm run getNightly
       working-directory: ./Apps

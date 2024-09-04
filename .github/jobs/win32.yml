@@ -36,7 +36,7 @@ jobs:
     steps:
       - script: |
           # BGFX_CONFIG_MAX_FRAME_BUFFERS is set so enough Framebuffers are available before V8 starts disposing unused ones
-          cmake -B build${{ variables.solutionName }} -A ${{ parameters.platform }} ${{ variables.jsEngineDefine }} -D BX_CONFIG_DEBUG=ON -D GRAPHICS_API=${{ parameters.graphics_api }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256 -S ..
+          cmake -B build${{ variables.solutionName }} -A ${{ parameters.platform }} ${{ variables.jsEngineDefine }} -D BX_CONFIG_DEBUG=ON -D GRAPHICS_API=${{ parameters.graphics_api }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256
         displayName: 'Generate ${{ variables.solutionName }} solution'
     
       - task: MSBuild@1
