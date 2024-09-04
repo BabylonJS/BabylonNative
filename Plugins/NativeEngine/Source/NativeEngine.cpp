@@ -22,6 +22,8 @@
 #include <bx/math.h>
 
 #include <cmath>
+#include <Babylon/ShaderCache.h>
+#include "ShaderCache.h"
 
 namespace Babylon
 {
@@ -970,12 +972,21 @@ namespace Babylon
 
     std::unique_ptr<ProgramData> NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource)
     {
-        auto shaderInfo = m_shaderCache.GetShader(vertexSource, fragmentSource);
+        const ShaderCompiler::BgfxShaderInfo* shaderInfo{};
+        if (ShaderCache::GetImpl())
+        {
+            shaderInfo = ShaderCache::GetImpl()->GetShader(vertexSource, fragmentSource);
+        }
+
         if (!shaderInfo)
         {
             ShaderCompiler::BgfxShaderInfo bgfxShaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
-            shaderInfo = m_shaderCache.AddShader(vertexSource, fragmentSource, bgfxShaderInfo);
+            if (ShaderCache::GetImpl())
+            {
+                shaderInfo = ShaderCache::GetImpl()->AddShader(vertexSource, fragmentSource, bgfxShaderInfo);
+            }
         }
+
         static auto InitUniformInfos{
             [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex) {
                 auto numUniforms = bgfx::getShaderUniforms(shader);

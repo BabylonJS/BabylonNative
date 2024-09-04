@@ -1,4 +1,5 @@
 set(SOURCES
+    "Include/Babylon/ShaderCache.h"
     "Include/Babylon/Plugins/NativeEngine.h"
     "Source/IndexBuffer.cpp"
     "Source/IndexBuffer.h"
@@ -10,8 +11,8 @@ set(SOURCES
     "Source/ShaderCompiler.h"
     "Source/ShaderCompilerCommon.h"
     "Source/ShaderCompilerCommon.cpp"
-    "Source/ShaderCache.h"
     "Source/ShaderCache.cpp"
+    "Source/ShaderCache.h"
     "Source/ShaderCompilerTraversers.cpp"
     "Source/ShaderCompilerTraversers.h"
     "Source/ShaderCompiler${GRAPHICS_API}.cpp"
