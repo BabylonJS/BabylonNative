@@ -19,9 +19,7 @@ jobs:
       displayName: 'Select XCode ${{ parameters.xcodeVersion }}'
 
     - script: |
-        mkdir buildmacOS
-        cd buildmacOS
-        cmake .. -G Xcode -D CMAKE_UNITY_BUILD=$(UNITY_BUILD)
+        cmake .. -G Xcode -B buildmacOS -D CMAKE_UNITY_BUILD=$(UNITY_BUILD)
       displayName: 'Generate macOS solution'
 
     - task: Xcode@5
