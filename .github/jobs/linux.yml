@@ -27,7 +27,7 @@ jobs:
 
     - script: |
         cmake -G Ninja -B build -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -D NAPI_JAVASCRIPT_ENGINE=${{ parameters.JSEngine }} -D CMAKE_BUILD_TYPE=RelWithDebInfo -D BX_CONFIG_DEBUG=ON -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D OpenGL_GL_PREFERENCE=GLVND
-        ninja
+        ninja -C build
       displayName: 'Build X11'
 
     - script: |
