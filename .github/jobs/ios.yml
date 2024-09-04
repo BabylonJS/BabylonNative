@@ -20,7 +20,7 @@ jobs:
       displayName: 'Select Xcode ${{ parameters.xcodeVersion }}'
 
     - script: |
-        cmake .. -G Xcode -B buildiOS -D IOS=ON -D DEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_NATIVE_PLUGIN_NATIVETRACING=OFF
+        cmake -S .. -G Xcode -B buildiOS -D IOS=ON -D DEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_NATIVE_PLUGIN_NATIVETRACING=OFF
       displayName: 'Generate iOS solution'
 
     - task: Xcode@5
