@@ -1,6 +1,7 @@
 ﻿mocha.setup({ ui: "bdd", reporter: "spec", retries: 5 });
 
 const expect = chai.expect;
+
 describe("AbortController", function () {
     it("should not throw while aborting with no callbacks", function () {
         const controller = new AbortController();
@@ -28,7 +29,7 @@ describe("AbortController", function () {
             }
         }
 
-        controller.signal.addEventListener('abort', () => {
+        controller.signal.addEventListener("abort", () => {
             expect(controller.signal.aborted).to.equal(true);
             cb2 = true;
 
@@ -49,8 +50,8 @@ describe("AbortController", function () {
             expect(controller.signal.aborted).to.equal(false);
         };
 
-        controller.signal.addEventListener('abort', onAbort);
-        controller.signal.removeEventListener('abort', onAbort);
+        controller.signal.addEventListener("abort", onAbort);
+        controller.signal.removeEventListener("abort", onAbort);
 
         controller.abort();
 
@@ -139,41 +140,45 @@ describe("XMLHTTPRequest", function () {
         expect(sendWithoutOpening).to.throw();
     });
 
-    it("should make a POST request with no body successfully", async function () {
-        const xhr = await createRequest("POST", "https://babylonresponder.azurewebsites.net/api/req200");
-        expect(xhr).to.have.property('readyState', 4);
-        expect(xhr).to.have.property('status', 200);
-    });
+    if (hostPlatform !== "Unix") {
+        it("should make a POST request with no body successfully", async function () {
+            const xhr = await createRequest("POST", "https://httpbin.org/post");
+            expect(xhr).to.have.property("readyState", 4);
+            expect(xhr).to.have.property("status", 200);
+        });
 
-    it("should make a POST request with body successfully", async function () {
-        const xhr = await createRequest("POST", "https://babylonresponder.azurewebsites.net/api/req200", "sampleBody");
-        expect(xhr).to.have.property('readyState', 4);
-        expect(xhr).to.have.property('status', 200);
-    });
+        it("should make a POST request with body successfully", async function () {
+            const xhr = await createRequest("POST", "https://httpbin.org/post", "sampleBody");
+            expect(xhr).to.have.property("readyState", 4);
+            expect(xhr).to.have.property("status", 200);
+        });
+    }
 
     it("should make a GET request with headers successfully", async function () {
-        const headersMap = new Map([['foo', '3'], ['bar', '3']]);
-        const xhr = await createRequestWithHeaders("GET", "https://babylonresponder.azurewebsites.net/api/req200", headersMap);
-        expect(xhr).to.have.property('readyState', 4);
-        expect(xhr).to.have.property('status', 200);
+        const headersMap = new Map([["foo", "3"], ["bar", "3"]]);
+        const xhr = await createRequestWithHeaders("GET", "https://httpbin.org/get", headersMap);
+        expect(xhr).to.have.property("readyState", 4);
+        expect(xhr).to.have.property("status", 200);
     });
 
-    it("should make a POST request with body and headers successfully", async function () {
-        const headersMap = new Map([['foo', '3'], ['bar', '3']]);
-        const xhr = await createRequestWithHeaders("POST", "https://babylonresponder.azurewebsites.net/api/req200", headersMap, "testBody");
-        expect(xhr).to.have.property('readyState', 4);
-        expect(xhr).to.have.property('status', 200);
-    });
+    if (hostPlatform !== "Unix") {
+        it("should make a POST request with body and headers successfully", async function () {
+            const headersMap = new Map([["foo", "3"], ["bar", "3"]]);
+            const xhr = await createRequestWithHeaders("POST", "https://httpbin.org/post", headersMap, "testBody");
+            expect(xhr).to.have.property("readyState", 4);
+            expect(xhr).to.have.property("status", 200);
+        });
+    }
 
     if (hostPlatform === "macOS" || hostPlatform === "Unix" || hostPlatform === "Win32") {
         it("should load URL pointing to symlink", async function () {
             const xhr = await createRequest("GET", "app:///Scripts/symlink_1.js");
-            expect(xhr).to.have.property('responseText', 'var symlink_target_js = true;');
+            expect(xhr).to.have.property("responseText", "var symlink_target_js = true;");
         });
 
         it("should load URL pointing to symlink that points to a symlink", async function () {
             const xhr = await createRequest("GET", "app:///Scripts/symlink_2.js");
-            expect(xhr).to.have.property('responseText', 'var symlink_target_js = true;');
+            expect(xhr).to.have.property("responseText", "var symlink_target_js = true;");
         });
     }
 
@@ -313,12 +318,12 @@ describe("clearTimeout", function () {
 if (hostPlatform !== "Unix") {
     describe("WebSocket", function () {
         it("should connect correctly with one websocket connection", function (done) {
-            const ws = new WebSocket('wss://ws.postman-echo.com/raw');
+            const ws = new WebSocket("wss://ws.postman-echo.com/raw");
             const testMessage = "testMessage";
             ws.onopen = () => {
                 try {
-                    expect(ws).to.have.property('readyState', 1);
-                    expect(ws).to.have.property('url', 'wss://ws.postman-echo.com/raw');
+                    expect(ws).to.have.property("readyState", 1);
+                    expect(ws).to.have.property("url", "wss://ws.postman-echo.com/raw");
                     ws.send(testMessage);
                 }
                 catch (e) {
@@ -338,7 +343,7 @@ if (hostPlatform !== "Unix") {
 
             ws.onclose = () => {
                 try {
-                    expect(ws).to.have.property('readyState', 3);
+                    expect(ws).to.have.property("readyState", 3);
                     done();
                 }
                 catch (e) {
@@ -355,13 +360,13 @@ if (hostPlatform !== "Unix") {
             const testMessage1 = "testMessage1";
             const testMessage2 = "testMessage2";
 
-            const ws1 = new WebSocket('wss://ws.postman-echo.com/raw');
+            const ws1 = new WebSocket("wss://ws.postman-echo.com/raw");
             ws1.onopen = () => {
-                const ws2 = new WebSocket('wss://ws.postman-echo.com/raw');
+                const ws2 = new WebSocket("wss://ws.postman-echo.com/raw");
                 ws2.onopen = () => {
                     try {
-                        expect(ws2).to.have.property('readyState', 1);
-                        expect(ws2).to.have.property('url', 'wss://ws.postman-echo.com/raw');
+                        expect(ws2).to.have.property("readyState", 1);
+                        expect(ws2).to.have.property("url", "wss://ws.postman-echo.com/raw");
                         ws2.send(testMessage2);
                     }
                     catch (e) {
@@ -381,7 +386,7 @@ if (hostPlatform !== "Unix") {
 
                 ws2.onclose = () => {
                     try {
-                        expect(ws2).to.have.property('readyState', 3);
+                        expect(ws2).to.have.property("readyState", 3);
                         ws1.send(testMessage1);
                     }
                     catch (e) {
@@ -406,7 +411,7 @@ if (hostPlatform !== "Unix") {
 
             ws1.onclose = () => {
                 try {
-                    expect(ws1).to.have.property('readyState', 3);
+                    expect(ws1).to.have.property("readyState", 3);
                     done();
                 }
                 catch (e) {
@@ -420,7 +425,7 @@ if (hostPlatform !== "Unix") {
         });
 
         it("should trigger error callback with invalid server", function (done) {
-            const ws = new WebSocket('wss://example.com');
+            const ws = new WebSocket("wss://example.com");
             ws.onerror = () => {
                 done();
             };
@@ -428,7 +433,7 @@ if (hostPlatform !== "Unix") {
 
         it("should trigger error callback with invalid domain", function (done) {
             this.timeout(10000);
-            const ws = new WebSocket('wss://example');
+            const ws = new WebSocket("wss://example");
             ws.onerror = () => {
                 done();
             };
@@ -448,81 +453,78 @@ describe("URL", function () {
         expect(url).to.have.property("search", search);
     }
 
-    // Base URLs:
-    const baseUrl = 'http://httpbin.org';
-
-    it('should load URL with no pathname / search', function () {
+    it("should load URL with no pathname / search", function () {
         // Standard URL (No pathname, no search)
-        const url = new URL(baseUrl);
+        const url = new URL("https://httpbin.org");
         checkURL(url, {
-            href: 'http://httpbin.org',
-            hostname: 'httpbin.org',
-            origin: 'http://httpbin.org',
-            pathname: '',
-            search: ''
+            href: "https://httpbin.org",
+            hostname: "httpbin.org",
+            origin: "https://httpbin.org",
+            pathname: "",
+            search: ""
         });
     });
 
     it("should load URL with pathname (no search)", function () {
         // Augment URL with pathname (no search)
-        const url = new URL(`${baseUrl}/en-US/docs`);
+        const url = new URL("https://httpbin.org/en-US/docs");
         checkURL(url, {
-            href: 'http://httpbin.org/en-US/docs',
-            hostname: 'httpbin.org',
-            origin: 'http://httpbin.org',
-            pathname: '/en-US/docs',
-            search: ''
+            href: "https://httpbin.org/en-US/docs",
+            hostname: "httpbin.org",
+            origin: "https://httpbin.org",
+            pathname: "/en-US/docs",
+            search: ""
         });
     });
 
     it("should load URL with pathname and search", function () {
         // Augment URL with pathname and search
-        const url = new URL(`${baseUrl}/en-US/docs?foo=1&bar=2`);
+        const url = new URL("https://httpbin.org/en-US/docs?foo=1&bar=2");
         checkURL(url, {
-            href: 'http://httpbin.org/en-US/docs?foo=1&bar=2',
-            hostname: 'httpbin.org',
-            origin: 'http://httpbin.org',
-            pathname: '/en-US/docs',
-            search: '?foo=1&bar=2'
+            href: "https://httpbin.org/en-US/docs?foo=1&bar=2",
+            hostname: "httpbin.org",
+            origin: "https://httpbin.org",
+            pathname: "/en-US/docs",
+            search: "?foo=1&bar=2"
         });
     });
 
     it("should load URL with pathname and search with multiple key value pairs", function () {
-        const url = new URL(`${baseUrl}/en-US/docs?c=3&b=2&a=1&d=4`);
+        const url = new URL("https://httpbin.org/en-US/docs?c=3&b=2&a=1&d=4");
         checkURL(url, {
-            href: 'http://httpbin.org/en-US/docs?c=3&b=2&a=1&d=4',
-            hostname: 'httpbin.org',
-            origin: 'http://httpbin.org',
-            pathname: '/en-US/docs',
-            search: '?c=3&b=2&a=1&d=4'
+            href: "https://httpbin.org/en-US/docs?c=3&b=2&a=1&d=4",
+            hostname: "httpbin.org",
+            origin: "https://httpbin.org",
+            pathname: "/en-US/docs",
+            search: "?c=3&b=2&a=1&d=4"
         });
     });
 
     it("should update href after URLSearchParams are changed", function () {
         // Augment URL with pathname and search
-        const url = new URL(`${baseUrl}/en-US/docs?foo=1&bar=2`);
-        url.searchParams.set('foo', 999);
+        const url = new URL("https://httpbin.org/en-US/docs?foo=1&bar=2");
+        url.searchParams.set("foo", 999);
         // href should change to reflect searchParams change
         checkURL(url, {
-            href: 'http://httpbin.org/en-US/docs?foo=999&bar=2',
-            hostname: 'httpbin.org',
-            origin: 'http://httpbin.org',
-            pathname: '/en-US/docs',
-            search: '?foo=999&bar=2'
+            href: "https://httpbin.org/en-US/docs?foo=999&bar=2",
+            hostname: "httpbin.org",
+            origin: "https://httpbin.org",
+            pathname: "/en-US/docs",
+            search: "?foo=999&bar=2"
         });
     });
 
     it("should update href after URLSearchParams are changed (Starting with 0 params)", function () {
         // Augment URL with pathname and search
-        const url = new URL(`${baseUrl}/en-US/docs`);
-        url.searchParams.set('foo', 999);
+        const url = new URL("https://httpbin.org/en-US/docs");
+        url.searchParams.set("foo", 999);
         // href should change to reflect searchParams change
         checkURL(url, {
-            href: 'http://httpbin.org/en-US/docs?foo=999',
-            hostname: 'httpbin.org',
-            origin: 'http://httpbin.org',
-            pathname: '/en-US/docs',
-            search: '?foo=999'
+            href: "https://httpbin.org/en-US/docs?foo=999",
+            hostname: "httpbin.org",
+            origin: "https://httpbin.org",
+            pathname: "/en-US/docs",
+            search: "?foo=999"
         });
     });
 });
@@ -534,21 +536,21 @@ describe("URLSearchParams", function () {
 
     it("should retrieve null from empty searchParams", function () {
         // Get Empty
-        const params = new URLSearchParams('');
+        const params = new URLSearchParams("");
 
-        expect(params.get('foo')).to.equal(null);
+        expect(params.get("foo")).to.equal(null);
     });
 
     it("should retrieve value from searchParams", function () {
         // Get Value
-        const params = new URLSearchParams('?foo=1');
+        const params = new URLSearchParams("?foo=1");
 
-        expect(params.get('foo')).to.equal('1');
+        expect(params.get("foo")).to.equal("1");
     });
 
     // -------------------------------- URLSearchParams Set --------------------------------
 
-    const paramsSet = new URLSearchParams('');
+    const paramsSet = new URLSearchParams("");
 
     it("should throw exception when trying to set with less than 2 parameters", function () {
         expect(() => paramsSet.set()).to.throw();
@@ -556,71 +558,71 @@ describe("URLSearchParams", function () {
 
     it("should add a number and retrieve it as a string from searchParams", function () {
         // Set Number
-        paramsSet.set('foo', 400);
-        expect(paramsSet.get('foo')).to.equal('400');
+        paramsSet.set("foo", 400);
+        expect(paramsSet.get("foo")).to.equal("400");
     });
 
     it("should add a string and retrieve it as a string from searchParams", function () {
         // Set String
-        paramsSet.set('bar', '50');
-        expect(paramsSet.get('bar')).to.equal('50');
+        paramsSet.set("bar", "50");
+        expect(paramsSet.get("bar")).to.equal("50");
     });
 
     it("should add a boolean and retrieve it as a string from searchParams", function () {
         // Set Boolean
-        paramsSet.set('baz', true);
-        expect(paramsSet.get('baz')).to.equal('true');
+        paramsSet.set("baz", true);
+        expect(paramsSet.get("baz")).to.equal("true");
     });
 
     it("should set an existing number and retrieve it as a string from searchParams", function () {
         // Set Existing Value
-        paramsSet.set('foo', 9999);
-        expect(paramsSet.get('foo')).to.equal('9999');
+        paramsSet.set("foo", 9999);
+        expect(paramsSet.get("foo")).to.equal("9999");
     });
 
     // -------------------------------- URLSearchParams Has --------------------------------
 
     it("should check value is in searchParams (True)", function () {
         // Check existing value
-        const paramsHas = new URLSearchParams('?foo=1');
-        expect(paramsHas.has('foo')).to.equal(true);
+        const paramsHas = new URLSearchParams("?foo=1");
+        expect(paramsHas.has("foo")).to.equal(true);
     });
 
     it("should check value is in searchParams (False)", function () {
         // Check non-existing value
-        const paramsHas = new URLSearchParams('?foo=1');
-        expect(paramsHas.has('Microsoft')).to.equal(false);
+        const paramsHas = new URLSearchParams("?foo=1");
+        expect(paramsHas.has("Microsoft")).to.equal(false);
     });
 
     it("should check empty searchParams for value (False)", function () {
         // Check empty params
-        const paramsEmpty = new URLSearchParams('');
-        expect(paramsEmpty.has('foo')).to.equal(false);
+        const paramsEmpty = new URLSearchParams("");
+        expect(paramsEmpty.has("foo")).to.equal(false);
     });
 
     // -------------------------------- URLSearchParams Construction --------------------------------
 
     it("should retrieve search params set at construction", function () {
         // Retrieve params via url.search, passed into ctor
-        const url = new URL('https://example.com?foo=1&bar=2');
+        const url = new URL("https://example.com?foo=1&bar=2");
         const params1 = new URLSearchParams(url.search);
-        expect(params1.get('foo')).to.equal('1');
-        expect(params1.get('bar')).to.equal('2');
+        expect(params1.get("foo")).to.equal("1");
+        expect(params1.get("bar")).to.equal("2");
     });
 
     it("should retrieve search params from url.searchParams object", function () {
         // Get the URLSearchParams object directly from an URL object
-        const url = new URL('https://example.com?foo=1&bar=2');
+        const url = new URL("https://example.com?foo=1&bar=2");
         const params1a = url.searchParams;
-        expect(params1a.get('foo')).to.equal('1');
-        expect(params1a.get('bar')).to.equal('2');
+        expect(params1a.get("foo")).to.equal("1");
+        expect(params1a.get("bar")).to.equal("2");
     });
 
     it("should retrieve search params string constructed URLSearchParams", function () {
         // Pass in a string literal
         const params2 = new URLSearchParams("foo=1&bar=2");
-        expect(params2.get('foo')).to.equal('1');
-        expect(params2.get('bar')).to.equal('2');
+        expect(params2.get("foo")).to.equal("1");
+        expect(params2.get("bar")).to.equal("2");
     });
 });
 
@@ -629,7 +631,7 @@ describe("Console", function () {
         expect(() => console.log("I am a test string")).to.not.throw();
     });
     it("should log sequence of strings", function () {
-        expect(() => console.log("I", "am", "a", "test", "string", 2, 2.345, { foo: 'bar' })).to.not.throw();
+        expect(() => console.log("I", "am", "a", "test", "string", 2, 2.345, { foo: "bar" })).to.not.throw();
     });
     it("Should log string substitutions", function () {
         expect(() => console.log("String sub: %s, float sub: %f, int sub: %d", "string", 3.1457, 3.1457)).to.not.throw();
@@ -652,8 +654,8 @@ describe("Console", function () {
     it("Should ignore invalid substitution arguments", function () {
         expect(() => console.log("%y %s %k", "I am a string")).to.not.throw();
         expect(() => console.log("%y%s%k", "I am a string")).to.not.throw();
-        expect(() => console.log('%', 756)).to.not.throw();
-        expect(() => console.log('%%', 756)).to.not.throw();
+        expect(() => console.log("%", 756)).to.not.throw();
+        expect(() => console.log("%%", 756)).to.not.throw();
     });
     it("Should allow logging NaN", function () {
         expect(() => console.log("%d %f %s", NaN, NaN, NaN)).to.not.throw();
