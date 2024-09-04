@@ -238,6 +238,7 @@ namespace Babylon
                 image->m_format == bimg::TextureFormat::RGB8 ||
                 image->m_format == bimg::TextureFormat::RGBA8 ||
                 image->m_format == bimg::TextureFormat::RGBA16 ||
+                image->m_format == bimg::TextureFormat::RGBA16F ||
                 image->m_format == bimg::TextureFormat::RGBA32F);
 
             assert(image->m_depth == 1);
@@ -267,7 +268,7 @@ namespace Babylon
                     image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA8, *image, false);
                     bimg::imageFree(oldImage);
                 }
-                else if (image->m_format == bimg::TextureFormat::RGBA16 || image->m_format == bimg::TextureFormat::R16)
+                else if (image->m_format == bimg::TextureFormat::RGBA16F || image->m_format == bimg::TextureFormat::RGBA16 || image->m_format == bimg::TextureFormat::R16)
                 {
                     bimg::ImageContainer* oldImage{image};
                     image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA32F, *image, false);
