@@ -86,7 +86,7 @@ install_targets(napi)
 install_include_for_targets(napi)
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
-    install_targets(v8inspector)
+    install_targets(llhttp_static v8inspector)
 endif()
 
 # Manually install the JSI headers
