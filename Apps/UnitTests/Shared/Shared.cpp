@@ -7,11 +7,13 @@
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/ScriptLoader.h>
+#include <Babylon/ShaderCache.h>
 #include <chrono>
 #include <thread>
 #include <optional>
 #include <future>
 #include <iostream>
+#include <fstream>
 
 namespace
 {
@@ -210,6 +212,79 @@ TEST(Performance, Spheres)
     const float durationSeconds = float(duration.count()) / 1000.f;
     std::cout << "Duration is " << durationSeconds << " seconds. " << std::endl;
     std::cout.flush();
+}
+
+TEST(Performance, ShaderCache)
+{
+    std::string script{ R"(
+        console.log("Setting rendering to cache shader.");
+        var engine = new BABYLON.NativeEngine();
+        var scene = new BABYLON.Scene(engine);
+
+        var sphere = BABYLON.Mesh.CreateSphere("sphere", 32, 0.9, scene);
+
+        scene.createDefaultCamera(true, true, true);
+        scene.activeCamera.alpha += Math.PI;
+        scene.createDefaultLight(true);
+        engine.runRenderLoop(function () {
+            scene.render();
+        });
+        console.log("Ready!");
+        setReady();
+    )" };
+
+    Babylon::ShaderCache shaderCache;
+
+    Babylon::Graphics::Device device{ deviceConfig };
+    std::optional<Babylon::Graphics::DeviceUpdate> update{};
+    std::promise<int32_t> ready{};
+    update.emplace(device.GetUpdate("update"));
+
+    Babylon::AppRuntime runtime{};
+    runtime.Dispatch([&ready, &device](Napi::Env env) {
+        device.AddToJavaScript(env);
+
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+            std::cout << message << std::endl;
+            std::cout.flush();
+            });
+        Babylon::Polyfills::Window::Initialize(env);
+        Babylon::Plugins::NativeEngine::Initialize(env);
+        env.Global().Set("setReady", Napi::Function::New(
+            env, [&ready](const Napi::CallbackInfo& info) {
+                Napi::Env env = info.Env();
+                ready.set_value(1);
+            },
+            "setReady"));
+        });
+
+    Babylon::ScriptLoader loader{ runtime };
+    loader.LoadScript("app:///Scripts/babylon.max.js");
+    loader.LoadScript("app:///Scripts/babylonjs.materials.js");
+    loader.Eval(std::move(script), "code");
+
+    ready.get_future().get();
+        
+    for (int frame = 0; frame < 10; frame++)
+    {
+        device.StartRenderingCurrentFrame();
+        update->Start();
+        update->Finish();
+        device.FinishRenderingCurrentFrame();
+    }
+
+    static const char* shaderCacheFileName = "shaderCache.bin";
+    uint32_t shaderCount{};
+    {
+        std::ofstream fileSerialize(shaderCacheFileName, std::ios::binary);
+        shaderCount = shaderCache.Serialize(fileSerialize);
+        EXPECT_EQ(shaderCount, 1);
+    }
+    {
+        std::ifstream file(shaderCacheFileName, std::ios::binary);
+        auto deserializedCount = shaderCache.Deserialize(file);
+        EXPECT_EQ(deserializedCount, shaderCount);
+    }
 }
 
 int RunTests(const Babylon::Graphics::Configuration& config)

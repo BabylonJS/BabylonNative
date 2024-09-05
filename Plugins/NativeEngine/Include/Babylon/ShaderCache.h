@@ -10,10 +10,7 @@ namespace Babylon
         ShaderCache();
         ~ShaderCache();
 
-        void SerializeOutTo(std::ofstream& stream);
-        uint32_t SerializeInFrom(std::ifstream& stream);
-        
-        class Impl;
-        static Impl* GetImpl();
+        uint32_t Serialize(std::ofstream& stream);
+        uint32_t Deserialize(std::ifstream& stream);
     };
 }

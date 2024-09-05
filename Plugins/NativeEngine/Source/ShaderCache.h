@@ -6,16 +6,18 @@
 
 namespace Babylon
 {
-    class ShaderCache::Impl
+    class ShaderCacheImpl
     {
     public:
-        Impl() = default;
-        ~Impl() = default;
+        ShaderCacheImpl() = default;
+        ~ShaderCacheImpl() = default;
         const ShaderCompiler::BgfxShaderInfo* GetShader(std::string_view vertexSource, std::string_view fragmentSource);
-        void AddShader(std::string_view vertexSource, std::string_view fragmentSource, ShaderCompiler::BgfxShaderInfo);
+        void AddShader(std::string_view vertexSource, std::string_view fragmentSource, ShaderCompiler::BgfxShaderInfo shaderInfo);
 
-        void SerializeOutTo(std::ofstream& stream);
-        uint32_t SerializeInFrom(std::ifstream& stream);
+        uint32_t Serialize(std::ofstream& stream);
+        uint32_t Deserialize(std::ifstream& stream);
+
+        static ShaderCacheImpl* GetImpl();
     private:
 
         struct ShaderHash
@@ -29,5 +31,7 @@ namespace Babylon
             }
         };
         std::map<ShaderHash, ShaderCompiler::BgfxShaderInfo> Cache{};
+        static inline std::unique_ptr<ShaderCacheImpl> Instance{};
+        friend ShaderCache;
     };
 }

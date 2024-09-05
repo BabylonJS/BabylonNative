@@ -974,17 +974,17 @@ namespace Babylon
     {
         const ShaderCompiler::BgfxShaderInfo* shaderInfo{};
         ShaderCompiler::BgfxShaderInfo bgfxShaderInfo{};
-        if (ShaderCache::GetImpl())
+        if (ShaderCacheImpl::GetImpl())
         {
-            shaderInfo = ShaderCache::GetImpl()->GetShader(vertexSource, fragmentSource);
+            shaderInfo = ShaderCacheImpl::GetImpl()->GetShader(vertexSource, fragmentSource);
         }
 
         if (!shaderInfo)
         {
             bgfxShaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
-            if (ShaderCache::GetImpl())
+            if (ShaderCacheImpl::GetImpl())
             {
-                ShaderCache::GetImpl()->AddShader(vertexSource, fragmentSource, bgfxShaderInfo);
+                ShaderCacheImpl::GetImpl()->AddShader(vertexSource, fragmentSource, bgfxShaderInfo);
             } 
             shaderInfo = &bgfxShaderInfo;
         }

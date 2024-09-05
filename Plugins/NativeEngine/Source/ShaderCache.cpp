@@ -19,24 +19,13 @@ namespace
         string.resize(stringSize);
         stream.read(string.data(), stringSize);
     }
-
-    struct ShaderHash
-    {
-        size_t vertexHash;
-        size_t fragmentHash;
-        bool operator < (const ShaderHash& other) const {
-            if (vertexHash < other.vertexHash || (vertexHash == other.vertexHash && fragmentHash < other.fragmentHash))
-                return true;
-            return false;
-        }
-    };
 }
 
 namespace Babylon
 {
     static const uint32_t CACHE_VERSION = 1;
 
-    void ShaderCache::Impl::SerializeOutTo(std::ofstream& stream)
+    uint32_t ShaderCacheImpl::Serialize(std::ofstream& stream)
     {
         uint32_t cacheVersion{CACHE_VERSION};
         stream.write(reinterpret_cast<const char*>(&cacheVersion), sizeof(uint32_t));
@@ -70,9 +59,10 @@ namespace Babylon
                 stream.write(reinterpret_cast<const char*>(&uniformStages.second), sizeof(uint8_t));
             }
         }
+        return cacheSize;
     }
 
-    uint32_t ShaderCache::Impl::SerializeInFrom(std::ifstream& stream)
+    uint32_t ShaderCacheImpl::Deserialize(std::ifstream& stream)
     {
         uint32_t cacheVersion;
         stream.read(reinterpret_cast<char*>(&cacheVersion), sizeof(uint32_t));
@@ -124,7 +114,7 @@ namespace Babylon
         return cacheSize;
     }
 
-    const ShaderCompiler::BgfxShaderInfo* ShaderCache::Impl::GetShader(std::string_view vertexSource, std::string_view fragmentSource)
+    const ShaderCompiler::BgfxShaderInfo* ShaderCacheImpl::GetShader(std::string_view vertexSource, std::string_view fragmentSource)
     {
         const ShaderHash hash{
             std::hash<std::string_view>{}(vertexSource),
@@ -137,7 +127,7 @@ namespace Babylon
         return &iter->second;
     }
 
-    void ShaderCache::Impl::AddShader(std::string_view vertexSource, std::string_view fragmentSource, ShaderCompiler::BgfxShaderInfo shaderInfo)
+    void ShaderCacheImpl::AddShader(std::string_view vertexSource, std::string_view fragmentSource, ShaderCompiler::BgfxShaderInfo shaderInfo)
     {
         const ShaderHash hash{
             std::hash<std::string_view>{}(vertexSource),
@@ -149,32 +139,31 @@ namespace Babylon
         }
     }
 
-    static std::unique_ptr<ShaderCache::Impl> Instance{};
     ShaderCache::ShaderCache()
     {
-        if (!Instance)
+        if (!ShaderCacheImpl::GetImpl())
         {
-            Instance = std::make_unique<ShaderCache::Impl>();
+            ShaderCacheImpl::Instance = std::make_unique<ShaderCacheImpl>();
         }
     }
 
     ShaderCache::~ShaderCache()
     {
-        Instance.reset();
+        ShaderCacheImpl::Instance.reset();
     }
 
-    ShaderCache::Impl* ShaderCache::GetImpl()
+    ShaderCacheImpl* ShaderCacheImpl::GetImpl()
     {
         return Instance.get();
     }
 
-    void ShaderCache::SerializeOutTo(std::ofstream& stream)
+    uint32_t ShaderCache::Serialize(std::ofstream& stream)
     {
-        GetImpl()->SerializeOutTo(stream);
+        return ShaderCacheImpl::GetImpl()->Serialize(stream);
     }
 
-    uint32_t ShaderCache::SerializeInFrom(std::ifstream& stream)
+    uint32_t ShaderCache::Deserialize(std::ifstream& stream)
     {
-        return GetImpl()->SerializeInFrom(stream);
+        return ShaderCacheImpl::GetImpl()->Deserialize(stream);
     }
 }
