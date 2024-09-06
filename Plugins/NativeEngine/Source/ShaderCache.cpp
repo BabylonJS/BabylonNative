@@ -139,31 +139,38 @@ namespace Babylon
         }
     }
 
-    ShaderCache::ShaderCache()
-    {
-        if (!ShaderCacheImpl::GetImpl())
-        {
-            ShaderCacheImpl::Instance = std::make_unique<ShaderCacheImpl>();
-        }
-    }
-
-    ShaderCache::~ShaderCache()
-    {
-        ShaderCacheImpl::Instance.reset();
-    }
-
     ShaderCacheImpl* ShaderCacheImpl::GetImpl()
     {
         return Instance.get();
     }
 
-    uint32_t ShaderCache::Serialize(std::ofstream& stream)
+    namespace ShaderCache
     {
-        return ShaderCacheImpl::GetImpl()->Serialize(stream);
-    }
+        void Enable(bool enabled)
+        {
+            if (enabled && !ShaderCacheImpl::GetImpl())
+            {
+                ShaderCacheImpl::Instance = std::make_unique<ShaderCacheImpl>();
+            }
+            else if (!enabled)
+            {
+                ShaderCacheImpl::Instance.reset();
+            }
+        }
 
-    uint32_t ShaderCache::Deserialize(std::ifstream& stream)
-    {
-        return ShaderCacheImpl::GetImpl()->Deserialize(stream);
+        bool IsEnabled()
+        {
+            return ShaderCacheImpl::GetImpl() != nullptr;
+        }
+
+        uint32_t Serialize(std::ofstream& stream)
+        {
+            return ShaderCacheImpl::GetImpl()->Serialize(stream);
+        }
+
+        uint32_t Deserialize(std::ifstream& stream)
+        {
+            return ShaderCacheImpl::GetImpl()->Deserialize(stream);
+        }
     }
 }

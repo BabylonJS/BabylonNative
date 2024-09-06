@@ -18,8 +18,8 @@ namespace Babylon
         uint32_t Deserialize(std::ifstream& stream);
 
         static ShaderCacheImpl* GetImpl();
-    private:
 
+    private:
         struct ShaderHash
         {
             size_t vertexHash;
@@ -32,6 +32,6 @@ namespace Babylon
         };
         std::map<ShaderHash, ShaderCompiler::BgfxShaderInfo> Cache{};
         static inline std::unique_ptr<ShaderCacheImpl> Instance{};
-        friend ShaderCache;
+        friend void ShaderCache::Enable(bool enabled);
     };
 }

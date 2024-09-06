@@ -233,7 +233,7 @@ TEST(Performance, ShaderCache)
         setReady();
     )" };
 
-    Babylon::ShaderCache shaderCache;
+    Babylon::ShaderCache::Enable(true);
 
     Babylon::Graphics::Device device{ deviceConfig };
     std::optional<Babylon::Graphics::DeviceUpdate> update{};
@@ -277,12 +277,12 @@ TEST(Performance, ShaderCache)
     uint32_t shaderCount{};
     {
         std::ofstream fileSerialize(shaderCacheFileName, std::ios::binary);
-        shaderCount = shaderCache.Serialize(fileSerialize);
+        shaderCount = Babylon::ShaderCache::Serialize(fileSerialize);
         EXPECT_EQ(shaderCount, 1);
     }
     {
         std::ifstream file(shaderCacheFileName, std::ios::binary);
-        auto deserializedCount = shaderCache.Deserialize(file);
+        auto deserializedCount = Babylon::ShaderCache::Deserialize(file);
         EXPECT_EQ(deserializedCount, shaderCount);
     }
 }

@@ -4,12 +4,10 @@
 
 namespace Babylon
 {
-    class ShaderCache
+    namespace ShaderCache
     {
-    public:
-        ShaderCache();
-        ~ShaderCache();
-
+        void Enable(bool enabled);
+        bool IsEnabled();
         uint32_t Serialize(std::ofstream& stream);
         uint32_t Deserialize(std::ifstream& stream);
     };

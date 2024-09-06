@@ -36,7 +36,6 @@ WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 std::optional<Babylon::AppRuntime> runtime{};
 std::optional<Babylon::Graphics::Device> device{};
 std::optional<Babylon::Graphics::DeviceUpdate> update{};
-std::optional<Babylon::ShaderCache> shaderCache{};
 Babylon::Plugins::NativeInput* nativeInput{};
 std::optional<Babylon::Polyfills::Canvas> nativeCanvas{};
 bool minimized{false};
@@ -107,7 +106,6 @@ namespace
             device->FinishRenderingCurrentFrame();
         }
 
-        shaderCache.reset();
         nativeCanvas.reset();
         nativeInput = {};
         runtime.reset();
@@ -137,7 +135,7 @@ namespace
         device.emplace(graphicsConfig);
         update.emplace(device->GetUpdate("update"));
 
-        shaderCache.emplace();
+        Babylon::ShaderCache::Enable(true);
 
         device->StartRenderingCurrentFrame();
         update->Start();
