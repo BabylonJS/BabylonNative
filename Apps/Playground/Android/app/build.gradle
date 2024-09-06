@@ -44,7 +44,7 @@ android {
                     "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
                     "-DBABYLON_NATIVE_BUILD_APPS=ON",
                     "-DCMAKE_UNITY_BUILD=${unity_build}",
-                    "-D BABYLON_DEBUG_TRACE=ON"
+                    "-DBABYLON_DEBUG_TRACE=ON"
             }
         }
         ndk {
