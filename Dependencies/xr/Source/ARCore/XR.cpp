@@ -1471,8 +1471,9 @@ namespace xr
     }
 
     
-    System::Session::Frame::~Frame()
-    {
+    System::Session::Frame::~Frame() {}
+
+    void System::Session::Frame::Render() {
         m_impl->sessionImpl.CleanupFrameTrackables();
         m_impl->sessionImpl.DrawFrame();
     }

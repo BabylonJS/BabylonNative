@@ -1,8 +1,7 @@
-set(SOURCES
-    "Include/Babylon/Plugins/NativeXr.h"
-    "Source/NativeXr.cpp")
+set(HEADER "Include/Babylon/Plugins/NativeXr.h")
+FILE(GLOB SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/Source/*")
 
-add_library(NativeXr ${SOURCES})
+add_library(NativeXr ${SOURCES} ${HEADER})
 warnings_as_errors(NativeXr)
 
 target_include_directories(NativeXr

@@ -234,9 +234,11 @@ namespace Babylon
         bimg::ImageContainer* PrepareImage(bx::AllocatorI& allocator, bimg::ImageContainer* image, bool invertY, bool srgb, bool generateMips)
         {
             assert(
+                image->m_format == bimg::TextureFormat::R16 ||
                 image->m_format == bimg::TextureFormat::RGB8 ||
                 image->m_format == bimg::TextureFormat::RGBA8 ||
                 image->m_format == bimg::TextureFormat::RGBA16 ||
+                image->m_format == bimg::TextureFormat::RGBA16F ||
                 image->m_format == bimg::TextureFormat::RGBA32F);
 
             assert(image->m_depth == 1);
@@ -266,7 +268,7 @@ namespace Babylon
                     image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA8, *image, false);
                     bimg::imageFree(oldImage);
                 }
-                else if (image->m_format == bimg::TextureFormat::RGBA16)
+                else if (image->m_format == bimg::TextureFormat::RGBA16F || image->m_format == bimg::TextureFormat::RGBA16 || image->m_format == bimg::TextureFormat::R16)
                 {
                     bimg::ImageContainer* oldImage{image};
                     image = bimg::imageConvert(&allocator, bimg::TextureFormat::RGBA32F, *image, false);
@@ -1829,7 +1831,15 @@ namespace Babylon
             }
 
             auto flags = BGFX_TEXTURE_RT_WRITE_ONLY | RenderTargetSamplesToBgfxMsaaFlag(samples);
+#ifdef ANDROID
+            // On Android with Mali GPU (Oppo Find x5 lite, Google Pixel 8, Samsung Galaxy Tab Active 3, ...)
+            // D32 depth buffer gives glitches. Everything is fine with D24S8.
+            // see https://forum.babylonjs.com/t/post-processing-graphics-glitch/49523
+            // As 24bits should be enough for 99.99% cases, defaulting to that format on Android.
+            const auto depthStencilFormat{bgfx::TextureFormat::D24S8};
+#else
             const auto depthStencilFormat{generateStencilBuffer ? bgfx::TextureFormat::D24S8 : bgfx::TextureFormat::D32};
+#endif
             assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, flags));
             depthStencilTextureHandle = bgfx::createTexture2D(width, height, false, 1, depthStencilFormat, flags);
 

@@ -106,7 +106,7 @@ set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
 # --------------------------------------------------
 # googletest
 # --------------------------------------------------
-if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID)))
+if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT IOS AND NOT VISIONOS) OR (UNIX AND NOT ANDROID)))
     if(WIN32)
         # For Windows: Prevent overriding the parent project's compiler/linker settings
         # Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)

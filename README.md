@@ -22,6 +22,7 @@ Check out the [home page](https://aka.ms/Bnative) for a project overview.
   - [Building on Windows 10, Targeting HoloLens 2](BUILDING.md#building-on-windows-10-targeting-hololens-2)
   - [Building on macOS, Targeting macOS](BUILDING.md#building-on-macos-targeting-macos)
   - [Building on macOS, Targeting iOS](BUILDING.md#building-on-macos-targeting-ios)
+  - [Building on macOS, Targeting visionOS](BUILDING.md#building-on-macos-targeting-visionos)
   - [Building on Windows, Targeting Android](BUILDING.md#building-on-windows-targeting-android)
   - [Building on Ubuntu, Targeting Linux](BUILDING.md#building-on-ubuntu-targeting-linux)
   - [Selecting the Graphics API](BUILDING.md#selecting-the-graphics-api)
@@ -34,6 +35,7 @@ Check out the [home page](https://aka.ms/Bnative) for a project overview.
   - [Android Emulator Tips](Documentation/AndroidEmulator.md)
   - [Debugging JavaScript on Mac and iOS](Documentation/DebugJavascriptMacIOS.md)
   - [Debugging iOS and MacOS rendering using Xcode](Documentation/DebugRenderedFrameMetal.md)
+  - [Consuming JavaScript code in Babylon Native](Documentation/ConsumingJavaScript.md)
   - [FAQ](Documentation/FAQ.md)
 
 ## Project Status

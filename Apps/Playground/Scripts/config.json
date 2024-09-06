@@ -2,6 +2,22 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "EXR Loader",
+            "playgroundId": "#4RN0VF#151",
+            "referenceImage": "exr-loader.png"
+        },
+        {
+            "title": "NME Shadow Map",
+            "playgroundId": "#M3QR7E#83",
+            "referenceImage": "nmeshadowmap.png"
+        },
+        {
+            "title": "Procedural texture with NME",
+            "renderCount": 2,
+            "playgroundId": "#8S19ZC#3",
+            "referenceImage": "procedural-nme.png"
+        },
+        {
             "title": "GLTF Extension EXT_mesh_gpu_instancing",
             "playgroundId": "#QFIGLW#9",
             "renderCount": 10,
