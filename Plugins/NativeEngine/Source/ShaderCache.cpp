@@ -165,12 +165,24 @@ namespace Babylon
 
         uint32_t Serialize(std::ofstream& stream)
         {
-            return ShaderCacheImpl::GetImpl()->Serialize(stream);
+            auto impl = ShaderCacheImpl::GetImpl();
+            if (!impl)
+            {
+                // shall we throw here?
+                return 0;
+            }
+            return impl->Serialize(stream);
         }
 
         uint32_t Deserialize(std::ifstream& stream)
         {
-            return ShaderCacheImpl::GetImpl()->Deserialize(stream);
+            auto impl = ShaderCacheImpl::GetImpl();
+            if (!impl)
+            {
+                // shall we throw here?
+                return 0;
+            }
+            return impl->Deserialize(stream);
         }
     }
 }

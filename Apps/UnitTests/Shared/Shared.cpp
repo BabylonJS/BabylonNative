@@ -226,10 +226,9 @@ TEST(Performance, ShaderCache)
         scene.createDefaultCamera(true, true, true);
         scene.activeCamera.alpha += Math.PI;
         scene.createDefaultLight(true);
-        engine.runRenderLoop(function () {
-            scene.render();
+        scene.whenReadyAsync().then(function () {
+            setSceneReady();
         });
-        console.log("Ready!");
         setReady();
     )" };
 
@@ -238,10 +237,11 @@ TEST(Performance, ShaderCache)
     Babylon::Graphics::Device device{ deviceConfig };
     std::optional<Babylon::Graphics::DeviceUpdate> update{};
     std::promise<int32_t> ready{};
+    std::atomic<bool> sceneIsReady{};
     update.emplace(device.GetUpdate("update"));
 
     Babylon::AppRuntime runtime{};
-    runtime.Dispatch([&ready, &device](Napi::Env env) {
+    runtime.Dispatch([&ready, &device, &sceneIsReady](Napi::Env env) {
         device.AddToJavaScript(env);
 
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
@@ -251,11 +251,16 @@ TEST(Performance, ShaderCache)
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
         env.Global().Set("setReady", Napi::Function::New(
-            env, [&ready](const Napi::CallbackInfo& info) {
-                Napi::Env env = info.Env();
+            env, [&ready](const Napi::CallbackInfo&) {
                 ready.set_value(1);
             },
             "setReady"));
+
+        env.Global().Set("setSceneReady", Napi::Function::New(
+            env, [&sceneIsReady](const Napi::CallbackInfo&) {
+                sceneIsReady = true;
+            },
+            "setSceneReady"));
         });
 
     Babylon::ScriptLoader loader{ runtime };
@@ -264,15 +269,15 @@ TEST(Performance, ShaderCache)
     loader.Eval(std::move(script), "code");
 
     ready.get_future().get();
-        
-    for (int frame = 0; frame < 10; frame++)
+
+    while(!sceneIsReady)
     {
         device.StartRenderingCurrentFrame();
         update->Start();
         update->Finish();
         device.FinishRenderingCurrentFrame();
     }
-
+    
     static const char* shaderCacheFileName = "shaderCache.bin";
     uint32_t shaderCount{};
     {
