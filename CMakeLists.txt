@@ -37,11 +37,7 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 4.5.0)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-<<<<<<< HEAD
-    GIT_TAG 870ee65a87f142db224b9085b1d0ce37b4a685a6)
-=======
     GIT_TAG 4638802193e55bc4b9eb702b94d2f7b12acf3d52)
->>>>>>> 9d586ee99d19af670232e9a83b6fffd4857bec53
 FetchContent_Declare(OpenXR-MixedReality
     GIT_REPOSITORY https://github.com/microsoft/OpenXR-MixedReality.git
     GIT_TAG 67424511525b96a36847f2a96d689d99e5879503)
