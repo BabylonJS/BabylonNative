@@ -124,7 +124,10 @@ namespace
         }
 
         Babylon::DebugTrace::EnableDebugTrace(true);
-        Babylon::DebugTrace::SetTraceOutput([](const char* trace) { OutputDebugStringA(trace); });
+        Babylon::DebugTrace::SetTraceOutput([](const char* trace) {
+            OutputDebugStringA(trace);
+            OutputDebugStringA("\n");
+        });
 
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);

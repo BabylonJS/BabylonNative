@@ -361,7 +361,10 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     Uninitialize();
 
     Babylon::DebugTrace::EnableDebugTrace(true);
-    Babylon::DebugTrace::SetTraceOutput([](const char* trace) { OutputDebugStringA(trace); });
+    Babylon::DebugTrace::SetTraceOutput([](const char* trace) {
+        OutputDebugStringA(trace);
+        OutputDebugStringA("\n");
+    });
 
     DisplayInformation^ displayInformation = DisplayInformation::GetForCurrentView();
     m_displayScale = static_cast<float>(displayInformation->RawPixelsPerViewPixel);

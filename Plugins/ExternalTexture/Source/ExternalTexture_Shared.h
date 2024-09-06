@@ -24,7 +24,7 @@ namespace Babylon::Plugins
             throw std::runtime_error{"Textures must have same width, height, and mip levels"};
         }
 
-        DEBUG_TRACE("ExternalTexture Update %d x %d %d mips", int(info.Width), int(info.Height), int(info.MipLevels));
+        DEBUG_TRACE("ExternalTexture [0x%p] Update %d x %d %d mips", this, int(info.Width), int(info.Height), int(info.MipLevels));
 
         m_info = info;
 
@@ -66,17 +66,17 @@ namespace Babylon::Plugins
         auto deferred{Napi::Promise::Deferred::New(env)};
         auto promise{deferred.Promise()};
 
-        DEBUG_TRACE("ExternalTexture AddToContextAsync");
+        DEBUG_TRACE("ExternalTexture [0x%p] AddToContextAsync", this);
 
         arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(),
             [&context, &runtime, deferred = std::move(deferred), impl = m_impl]() {
                 // REVIEW: The bgfx texture handle probably needs to be an RAII object to make sure it gets clean up during the asynchrony.
                 //         For example, if any of the schedulers/dispatches below don't fire, then the texture handle will leak.
                 bgfx::TextureHandle handle = bgfx::createTexture2D(impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
-                DEBUG_TRACE("ExternalTexture create %d x %d %d mips. Format : %d Flags : %d. (bgfx handle id %d)", int(impl->Width()), int(impl->Height()), int(impl->HasMips()), int(impl->Format()), int(impl->Flags()), int(handle.idx));
+                DEBUG_TRACE("ExternalTexture [0x%p] create %d x %d %d mips. Format : %d Flags : %d. (bgfx handle id %d)", this, int(impl->Width()), int(impl->Height()), int(impl->HasMips()), int(impl->Format()), int(impl->Flags()), int(handle.idx));
                 if (!bgfx::isValid(handle))
                 {
-                    DEBUG_TRACE("ExternalTexture is not valid");
+                    DEBUG_TRACE("ExternalTexture [0x%p] is not valid", this);
                     runtime.Dispatch([deferred{std::move(deferred)}](Napi::Env env) {
                         deferred.Reject(Napi::Error::New(env, "Failed to create native texture").Value());
                     });
@@ -97,7 +97,7 @@ namespace Babylon::Plugins
 
                     runtime.Dispatch([deferred = std::move(deferred), handle, &context, impl = std::move(impl)](Napi::Env env) {
                         auto* texture = new Graphics::Texture{context};
-                        DEBUG_TRACE("ExternalTexture attach %d x %d %d mips. Format : %d Flags : %d. (bgfx handle id %d)", int(impl->Width()), int(impl->Height()), int(impl->HasMips()), int(impl->Format()), int(impl->Flags()), int(handle.idx));
+                        DEBUG_TRACE("ExternalTexture [0x%p] attach %d x %d %d mips. Format : %d Flags : %d. (bgfx handle id %d)", this, int(impl->Width()), int(impl->Height()), int(impl->HasMips()), int(impl->Format()), int(impl->Flags()), int(handle.idx));
                         texture->Attach(handle, true, impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
 
                         impl->AddHandle(texture->Handle());

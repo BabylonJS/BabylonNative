@@ -23,7 +23,10 @@ int main() {
     config.Height = 400;
 
     Babylon::DebugTrace::EnableDebugTrace(true);
-    Babylon::DebugTrace::SetTraceOutput([](const char* trace) { OutputDebugStringA(trace); });
+    Babylon::DebugTrace::SetTraceOutput([](const char* trace) {
+        OutputDebugStringA(trace);
+        OutputDebugStringA("\n");
+    });
 
     return RunTests(config);
 }
