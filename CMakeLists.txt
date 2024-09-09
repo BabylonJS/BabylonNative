@@ -83,6 +83,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # General
 option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ${PROJECT_IS_TOP_LEVEL})
 option(BABYLON_NATIVE_INSTALL "Include the install target." ${PROJECT_IS_TOP_LEVEL})
+option(BABYLON_DEBUG_TRACE "Enable debug trace." OFF)
 
 # WARNING: This is experimental. Only use it if you can ensure that your application will properly handle thread affinity.
 option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphics device calls. It can be removed if hosting application ensures thread coherence." ON)
@@ -164,6 +165,10 @@ if(APPLE)
     # Without this option on azure pipelines, there is a mismatch with math.h giving a lot of undefined functions on macOS.
     # Only enabled for Apple as there is no issue for Windows.
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED TRUE)
+endif()
+
+if(BABYLON_DEBUG_TRACE)
+    add_compile_definitions(BABYLON_DEBUG_TRACE)
 endif()
 
 add_subdirectory(Dependencies)

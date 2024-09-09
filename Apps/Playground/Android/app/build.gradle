@@ -43,7 +43,8 @@ android {
                     "-DARCORE_LIBPATH=${arcore_libpath}/jni",
                     "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
                     "-DBABYLON_NATIVE_BUILD_APPS=ON",
-                    "-DCMAKE_UNITY_BUILD=${unity_build}"
+                    "-DCMAKE_UNITY_BUILD=${unity_build}",
+                    "-DBABYLON_DEBUG_TRACE=ON"
             }
         }
         ndk {

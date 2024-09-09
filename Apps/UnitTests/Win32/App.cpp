@@ -1,4 +1,5 @@
 #include "../Shared/Shared.h"
+#include "Babylon/DebugTrace.h"
 #include <Windows.h>
 
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -20,6 +21,12 @@ int main() {
     config.Window = hWnd;
     config.Width = 600;
     config.Height = 400;
+
+    Babylon::DebugTrace::EnableDebugTrace(true);
+    Babylon::DebugTrace::SetTraceOutput([](const char* trace) {
+        OutputDebugStringA(trace);
+        OutputDebugStringA("\n");
+    });
 
     return RunTests(config);
 }

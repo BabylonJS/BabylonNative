@@ -22,6 +22,7 @@
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Canvas.h>
+#include "Babylon/DebugTrace.h"
 
 namespace
 {
@@ -74,6 +75,9 @@ extern "C"
             }
 
             android::global::Initialize(javaVM, context);
+
+            Babylon::DebugTrace::EnableDebugTrace(true);
+            Babylon::DebugTrace::SetTraceOutput([](const char* trace) { printf("%s\n", trace); fflush(stdout); });
 
             ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
             int32_t width  = ANativeWindow_getWidth(window);
