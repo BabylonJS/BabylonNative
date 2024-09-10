@@ -95,7 +95,7 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 13)
 
 ### **Configuring a Windows Dev Environment**
 
-**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.4.7075529), [CMake](https://cmake.org/), [Ninja](https://ninja-build.org/), [Visual Studio 2019](https://visualstudio.microsoft.com/vs/)
+**Required Tools:** [Android Studio](https://developer.android.com/studio/) (including NDK 21.4.7075529), [CMake](https://cmake.org/), [Ninja](https://ninja-build.org/), [Visual Studio 2022](https://visualstudio.microsoft.com/vs/)
 
 - The `PATH` environment variable must include the path to adb (typically %LOCALAPPDATA%/Android/sdk/platform-tools/).
 - The `PATH` environment variable must include the path to Ninja, or Ninja must be [installed via a package manager](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages).  
