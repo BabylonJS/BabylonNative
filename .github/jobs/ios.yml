@@ -20,7 +20,7 @@ jobs:
       displayName: 'Select Xcode ${{ parameters.xcodeVersion }}'
 
     - script: |
-        cmake -G Xcode -B buildiOS -D IOS=ON -D DEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D CMAKE_INSTALL_PREFIX="$(Build.SourcesDirectory)/Install"
+        cmake -G Xcode -B buildiOS -D IOS=ON -D DEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON
       displayName: 'Generate iOS solution'
 
     - task: Xcode@5
