@@ -26,7 +26,7 @@ jobs:
     - task: Xcode@5
       inputs:
         xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
-        scheme: 'install'
+        scheme: 'Playground'
         sdk: 'iphoneos'
         useXcpretty: false
         configuration: Release
@@ -37,11 +37,3 @@ jobs:
         lipo -info $(Build.SourcesDirectory)/Install/lib/libxr.a
       displayName: 'Install'
 
-    - task: Xcode@5
-      inputs:
-        xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
-        scheme: 'Playground'
-        sdk: 'iphoneos'
-        useXcpretty: false
-        configuration: Release
-      displayName: 'Build Playground iOS'
