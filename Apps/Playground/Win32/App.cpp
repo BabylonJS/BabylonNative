@@ -25,6 +25,7 @@
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Canvas.h>
+#include <Babylon/ShaderCache.h>
 #include <Babylon/DebugTrace.h>
 
 #define MAX_LOADSTRING 100
@@ -140,6 +141,8 @@ namespace
 
         device.emplace(graphicsConfig);
         update.emplace(device->GetUpdate("update"));
+
+        Babylon::ShaderCache::Enabled(true);
 
         device->StartRenderingCurrentFrame();
         update->Start();

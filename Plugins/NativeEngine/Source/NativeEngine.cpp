@@ -22,6 +22,8 @@
 #include <bx/math.h>
 
 #include <cmath>
+#include <Babylon/ShaderCache.h>
+#include "ShaderCache.h"
 
 namespace Babylon
 {
@@ -970,9 +972,22 @@ namespace Babylon
 
     std::unique_ptr<ProgramData> NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource)
     {
-        ShaderCompiler::BgfxShaderInfo shaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
+        const ShaderCompiler::BgfxShaderInfo* shaderInfo{};
+        ShaderCompiler::BgfxShaderInfo bgfxShaderInfo{};
+        if (ShaderCacheImpl::GetImpl())
+        {
+            shaderInfo = ShaderCacheImpl::GetImpl()->GetShader(vertexSource, fragmentSource);
+        }
 
-        std::unique_ptr<ProgramData> program = std::make_unique<ProgramData>(m_deviceContext);
+        if (!shaderInfo)
+        {
+            bgfxShaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
+            if (ShaderCacheImpl::GetImpl())
+            {
+                ShaderCacheImpl::GetImpl()->AddShader(vertexSource, fragmentSource, bgfxShaderInfo);
+            } 
+            shaderInfo = &bgfxShaderInfo;
+        }
 
         static auto InitUniformInfos{
             [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex) {
@@ -990,16 +1005,17 @@ namespace Babylon
                     uniformInfos.emplace(std::make_pair(handle.idx, UniformInfo{itStage == uniformStages.end() ? uint8_t{} : itStage->second, handle, info.num}));
                     uniformNameToIndex[info.name] = handleIndex;
                 }
-            }};
+            } };
 
-        auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo.VertexBytes.data(), static_cast<uint32_t>(shaderInfo.VertexBytes.size())));
-        InitUniformInfos(vertexShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformNameToIndex);
+        std::unique_ptr<ProgramData> program = std::make_unique<ProgramData>(m_deviceContext);
+        auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo->VertexBytes.data(), static_cast<uint32_t>(shaderInfo->VertexBytes.size())));
+        InitUniformInfos(vertexShader, shaderInfo->UniformStages, program->UniformInfos, program->UniformNameToIndex);
 
-        auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo.FragmentBytes.data(), static_cast<uint32_t>(shaderInfo.FragmentBytes.size())));
-        InitUniformInfos(fragmentShader, shaderInfo.UniformStages, program->UniformInfos, program->UniformNameToIndex);
+        auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo->FragmentBytes.data(), static_cast<uint32_t>(shaderInfo->FragmentBytes.size())));
+        InitUniformInfos(fragmentShader, shaderInfo->UniformStages, program->UniformInfos, program->UniformNameToIndex);
 
         program->Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
-        program->VertexAttributeLocations = std::move(shaderInfo.VertexAttributeLocations);
+        program->VertexAttributeLocations = std::move(shaderInfo->VertexAttributeLocations);
 
         return program;
     }
