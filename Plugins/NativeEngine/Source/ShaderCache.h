@@ -32,6 +32,6 @@ namespace Babylon
         };
         std::map<ShaderHash, ShaderCompiler::BgfxShaderInfo> Cache{};
         static inline std::unique_ptr<ShaderCacheImpl> Instance{};
-        friend void ShaderCache::Enable(bool enabled);
+        friend void ShaderCache::Enabled(bool enabled);
     };
 }

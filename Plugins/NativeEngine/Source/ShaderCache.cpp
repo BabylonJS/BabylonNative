@@ -146,7 +146,7 @@ namespace Babylon
 
     namespace ShaderCache
     {
-        void Enable(bool enabled)
+        void Enabled(bool enabled)
         {
             if (enabled && !ShaderCacheImpl::GetImpl())
             {
@@ -158,7 +158,7 @@ namespace Babylon
             }
         }
 
-        bool IsEnabled()
+        bool Enabled()
         {
             return ShaderCacheImpl::GetImpl() != nullptr;
         }

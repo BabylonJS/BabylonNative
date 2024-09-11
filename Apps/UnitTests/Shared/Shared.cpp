@@ -232,7 +232,7 @@ TEST(Performance, ShaderCache)
         setReady();
     )" };
 
-    Babylon::ShaderCache::Enable(true);
+    Babylon::ShaderCache::Enabled(true);
 
     Babylon::Graphics::Device device{ deviceConfig };
     std::optional<Babylon::Graphics::DeviceUpdate> update{};

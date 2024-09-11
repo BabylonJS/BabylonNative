@@ -142,7 +142,7 @@ namespace
         device.emplace(graphicsConfig);
         update.emplace(device->GetUpdate("update"));
 
-        Babylon::ShaderCache::Enable(true);
+        Babylon::ShaderCache::Enabled(true);
 
         device->StartRenderingCurrentFrame();
         update->Start();
