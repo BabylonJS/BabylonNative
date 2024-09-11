@@ -19,21 +19,8 @@ jobs:
       displayName: 'Select XCode ${{ parameters.xcodeVersion }}'
 
     - script: |
-        cmake -G Xcode -B buildmacOS -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D BABYLON_NATIVE_INSTALL=ON
+        cmake -G Xcode -B buildmacOS -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D
       displayName: 'Generate macOS solution'
-
-    - script: |
-        xcodebuild -list -project buildmacOS/BabylonNative.xcodeproj
-      displayName: 'List available project schemes'
-
-    - task: Xcode@5
-      inputs:
-        xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
-        scheme: 'install'
-        sdk: 'macosx'
-        useXcpretty: false
-        configuration: Release
-      displayName: 'Build Installation content macOS'
 
     - task: Xcode@5
       inputs:
@@ -41,8 +28,12 @@ jobs:
         scheme: 'Playground'
         sdk: 'macosx'
         useXcpretty: false
-        configuration: RelWithDebInfo
+        configuration: Release
       displayName: 'Build Playground macOS'
+
+    - script: |
+        cmake --install buildmacOS --prefix="./install"
+      displayName: 'Install'
 
     - task: Xcode@5
       inputs:
@@ -52,10 +43,6 @@ jobs:
         useXcpretty: false
         configuration: RelWithDebInfo
       displayName: 'Build UnitTests macOS'
-
-    - script: |
-        cmake --install buildmacOS --prefix="./install"
-      displayName: 'Install'
 
     - script: |
         cd buildmacOS/Apps/UnitTests/RelWithDebInfo
