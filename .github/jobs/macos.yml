@@ -53,10 +53,6 @@ jobs:
         configuration: RelWithDebInfo
       displayName: 'Build UnitTests macOS'
 
-#    - script: |
-#        cmake --install buildmacOS --prefix="./install"
-#      displayName: 'Install'
-
     - script: |
         cd buildmacOS/Apps/UnitTests/RelWithDebInfo
         ./UnitTests

@@ -29,7 +29,7 @@ jobs:
         scheme: 'Playground'
         sdk: 'iphoneos'
         useXcpretty: false
-        configuration: Release
+        configuration: RelWithDebInfo
       displayName: 'Build Playground iOS'
 
     - script: |
