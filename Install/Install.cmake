@@ -11,7 +11,7 @@ function(install_targets)
     foreach(target IN LISTS ARGN)
         get_target_property(target_type ${target} TYPE)
         if(NOT target_type STREQUAL "INTERFACE_LIBRARY")
-            install(FILES "$<TARGET_FILE_DIR:${target}>/${target}.pdb" DESTINATION lib OPTIONAL)
+            install(FILES "$<TARGET_FILE_DIR:${target}>/$<TARGET_FILE_PREFIX:${target}>$<TARGET_FILE_BASE_NAME:${target}>.pdb" DESTINATION lib OPTIONAL)
         endif()
     endforeach()
 endfunction()
@@ -60,6 +60,9 @@ endif()
 ## UrlLib
 install_targets(UrlLib)
 
+## Fonudation
+install_targets(Foundation)
+
 # ----------------
 # Core
 # ----------------
@@ -86,7 +89,7 @@ install_targets(napi)
 install_include_for_targets(napi)
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
-    install_targets(v8inspector)
+    install_targets(llhttp_static v8inspector)
 endif()
 
 # Manually install the JSI headers
