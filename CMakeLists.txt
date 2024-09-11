@@ -165,6 +165,8 @@ if(APPLE)
     # Without this option on azure pipelines, there is a mismatch with math.h giving a lot of undefined functions on macOS.
     # Only enabled for Apple as there is no issue for Windows.
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED TRUE)
+    # Create scheme for installation and other targets
+    set(CMAKE_XCODE_GENERATE_SCHEME TRUE)
 endif()
 
 if(BABYLON_DEBUG_TRACE)
