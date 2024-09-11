@@ -32,8 +32,16 @@ jobs:
         configuration: RelWithDebInfo
       displayName: 'Build Playground iOS'
 
+    - task: Xcode@5
+      inputs:
+        xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
+        scheme: 'install'
+        sdk: 'iphoneos'
+        useXcpretty: false
+        configuration: Release
+      displayName: 'Build Playground iOS'
+
     - script: |
-        cmake --install buildiOS --prefix="$(Build.SourcesDirectory)/install"
         lipo -info $(Build.SourcesDirectory)/Install/lib/libxr.a
       displayName: 'Install'
 
