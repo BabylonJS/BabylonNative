@@ -11,8 +11,8 @@ module.exports = makeMetroConfig({
     }),
   },
   watchFolders: [
-    path.join(__dirname, "node_modules", "@babylonjs/react-native"),
-    path.join(__dirname, "node_modules", "@babylonjs/react-native-iosandroid"),
-    path.join(__dirname, "node_modules", "@babylonjs/react-native-windows"),
+    path.dirname(require.resolve("@babylonjs/react-native/package.json")),
+    path.dirname(require.resolve("@babylonjs/react-native-iosandroid/package.json")),
+    path.dirname(require.resolve("@babylonjs/react-native-windows/package.json")),
   ],
 });
