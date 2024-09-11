@@ -177,3 +177,7 @@ if(TARGET XMLHttpRequest)
     install_targets(XMLHttpRequest)
     install_include_for_targets(XMLHttpRequest)
 endif()
+
+if(APPLE)
+    set_property(TARGET install PROPERTY XCODE_GENERATE_SCHEME YES)
+endif()
