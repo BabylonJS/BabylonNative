@@ -137,14 +137,15 @@ jobs:
     parameters:
       name: Linux_Installation
       vmImage: 'ubuntu-latest'
+      JSEngine: JavaScriptCore
   - template: .github/jobs/test_install_macos.yml
     parameters:
       name: MacOS_Installation
-      vmImage: 'macOS-latest'
+      vmImage: 'macOS-14'
   - template: .github/jobs/test_install_ios.yml
     parameters:
       name: iOS_Installation
-      vmImage: 'macOS-latest'
+      vmImage: 'macOS-14'
       deploymentTarget: 17.2
 
 # These Android tests are unstable on the CI emulator. Disabled until a more reliable solution is found.
