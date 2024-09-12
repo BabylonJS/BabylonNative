@@ -28,15 +28,6 @@ jobs:
     - task: Xcode@5
       inputs:
         xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
-        scheme: 'install'
-        sdk: 'macosx'
-        useXcpretty: false
-        configuration: Release
-      displayName: 'Build Installation content macOS'
-
-    - task: Xcode@5
-      inputs:
-        xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
         scheme: 'Playground'
         sdk: 'macosx'
         useXcpretty: false

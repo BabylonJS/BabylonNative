@@ -7,6 +7,7 @@ parameters:
 
 jobs:
   - job: ${{ parameters.name }}
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master')
     timeoutInMinutes: 30
     pool:
       vmImage: ${{ parameters.vmImage }}
