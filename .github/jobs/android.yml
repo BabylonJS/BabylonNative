@@ -21,7 +21,7 @@ jobs:
         jdkArchitectureOption: 'x64'
         jdkSourceOption: 'PreInstalled'
 
-    - task: Gradle@2
+    - task: Gradle@3
       inputs:
           workingDirectory: 'Apps/Playground/Android'
           gradleWrapperFile: 'Apps/Playground/Android/gradlew'

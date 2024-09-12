@@ -25,7 +25,9 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-FetchContent_MakeAvailable_With_Message(googletest)
+if(WIN32 OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID AND NOT APPLE))
+    FetchContent_MakeAvailable_With_Message(googletest)
+endif()
 
 # __cplusplus value is not in sync with language version used. MVSC needs this flag to update it accordingly
 # https://gitlab.kitware.com/cmake/cmake/-/issues/18837

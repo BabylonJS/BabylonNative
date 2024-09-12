@@ -4,6 +4,7 @@ parameters:
 
 jobs:
   - job: ${{ parameters.name }}
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
     timeoutInMinutes: 30
     pool:
       vmImage: ${{ parameters.vmImage }}
@@ -28,22 +29,8 @@ jobs:
     - task: Xcode@5
       inputs:
         xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
-        scheme: 'Playground'
+        scheme: 'install'
         sdk: 'macosx'
         useXcpretty: false
-        configuration: RelWithDebInfo
-      displayName: 'Build Playground macOS'
-
-    - task: Xcode@5
-      inputs:
-        xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
-        scheme: 'UnitTests'
-        sdk: 'macosx'
-        useXcpretty: false
-        configuration: RelWithDebInfo
-      displayName: 'Build UnitTests macOS'
-
-    - script: |
-        cd buildmacOS/Apps/UnitTests/RelWithDebInfo
-        ./UnitTests
-      displayName: 'Run UnitTests macOS'
+        configuration: Release
+      displayName: 'Build Installation content macOS'
