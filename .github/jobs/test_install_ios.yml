@@ -5,7 +5,7 @@ parameters:
 
 jobs:
   - job: ${{ parameters.name }}
-    timeoutInMinutes: 30
+    timeoutInMinutes: 40
     pool:
       vmImage: ${{ parameters.vmImage }}
   
@@ -31,4 +31,8 @@ jobs:
         configuration: Release
       displayName: 'Build Playground iOS'
 
+    - script: |
+        cmake --install buildiOS --prefix="$(Build.SourcesDirectory)/Install"
+        lipo -info $(Build.SourcesDirectory)/Install/lib/libxr.a
+      displayName: 'Install'
 

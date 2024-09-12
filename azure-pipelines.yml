@@ -11,6 +11,8 @@ variables:
   value: 25.2.9519653
 - name: UNITY_BUILD
   value: true
+- name: XCODE_VERSION
+  value: 15.4
 
 jobs:
 # Apple
@@ -18,20 +20,17 @@ jobs:
     parameters:
       name: MacOS_Xcode153
       vmImage: 'macOS-14'
-      xCodeVersion: 15.3
 
   - template: .github/jobs/ios.yml
     parameters:
       name: iOS_Xcode153_iOS162
       vmImage: 'macOS-14'
-      xCodeVersion: 15.3
       deploymentTarget: 16.2
 
   - template: .github/jobs/ios.yml
     parameters:
       name: iOS_Xcode153_iOS172
       vmImage: 'macOS-14'
-      xCodeVersion: 15.3
       deploymentTarget: 17.2
 
 # WIN32
@@ -127,6 +126,26 @@ jobs:
       name: Android_MacOS_V8
       vmImage: 'macOS-latest'
       JSEngine: V8
+
+# Installation tests. 
+  - template: .github/jobs/test_install_win32.yml
+    parameters:
+      name: Win32_Installation
+      vmImage: 'windows-latest'
+      platform: x64
+  - template: .github/jobs/test_install_linux.yml
+    parameters:
+      name: Linux_Installation
+      vmImage: 'ubuntu-latest'
+  - template: .github/jobs/test_install_macos.yml
+    parameters:
+      name: MacOS_Installation
+      vmImage: 'macOS-latest'
+  - template: .github/jobs/test_install_ios.yml
+    parameters:
+      name: iOS_Installation
+      vmImage: 'macOS-latest'
+      deploymentTarget: 17.2
 
 # These Android tests are unstable on the CI emulator. Disabled until a more reliable solution is found.
 #  - template: .github/jobs/android_tests.yml
