@@ -74,6 +74,10 @@ elseif(UNIX)
     set(SOURCES
         ${SOURCES}
         "X11/App.cpp")
+elseif(EMSCRIPTEN)
+    set(SOURCES
+        ${SOURCES}
+        "Emscripten/App.cpp")
 elseif(WINDOWS_STORE)
     set(APPX_FILES "UWP/Package.appxmanifest" "UWP/TemporaryKey.pfx")
     set_property(SOURCE ${APPX_FILES} PROPERTY VS_DEPLOYMENT_CONTENT 1)
