@@ -32,6 +32,10 @@ function postInstall() {
   if (os.platform() === "darwin") {
     iosCMake();
 
+    exec("npm install && npx gulp buildIOSRNTA", {
+      cwd: "../../Package",
+    });
+
     console.log(chalk.black.bgCyan("Installing iOS pods..."));
     exec("pod install", { cwd: "ios" });
   }

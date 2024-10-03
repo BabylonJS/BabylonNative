@@ -2,6 +2,8 @@ require "json"
 
 package = JSON.parse(File.read(File.join(__dir__, "package.json")))
 
+# This Podspec is used for local development
+
 Pod::Spec.new do |s|
   s.name         = "react-native-babylon"
   s.version      = package["version"]
@@ -17,47 +19,32 @@ Pod::Spec.new do |s|
   s.requires_arc = true
   s.xcconfig     = { 'USER_HEADER_SEARCH_PATHS' => '$(inherited) ${PODS_TARGET_SRCROOT}/shared ${PODS_TARGET_SRCROOT}/../react-native/shared' }
 
-  s.libraries = 'astc-encoder',
-                'etc1',
-                'etc2',
-                'nvtt',
-                'squish',
-                'pvrtc',
-                'iqa',
-                'edtaa3',
-                'tinyexr',
-                'BabylonNative',
-                'bgfx',
-                'bimg',
-                'bx',
-                'Canvas',
-                'GenericCodeGen',
-                'glslang',
-                'glslang-default-resource-limits',
-                'Graphics',
-                'jsRuntime',
-                'OGLCompiler',
-                'OSDependent',
-                'MachineIndependent',
-                'napi',
-                'NativeCamera',
-                'NativeCapture',
-                'NativeEngine',
-                'NativeInput',
-                'NativeOptimizations',
-                'NativeTracing',
-                'NativeXR',
-                'SPIRV',
-                'spirv-cross-core',
-                'spirv-cross-msl',
-                'tinyexr',
-                'UrlLib',
-                'Window',
-                'XMLHttpRequest',
-                'xr'
+  s.vendored_frameworks = "ios/libs/*.xcframework"
 
   s.frameworks = "MetalKit", "ARKit"
 
-  s.dependency "React"
+  # install_modules_dependencies has been defined in RN 0.70
+  # This check ensure that the library can work on older versions of RN
+  if defined?(install_modules_dependencies)
+    install_modules_dependencies(s)
+  else
+    s.dependency "React-Core"
+
+    # Don't install the dependencies when we run `pod install` in the old architecture.
+    if new_arch_enabled then
+      s.compiler_flags = folly_compiler_flags + " -DRCT_NEW_ARCH_ENABLED=1"
+      s.pod_target_xcconfig    = {
+        "HEADER_SEARCH_PATHS" => "\"$(PODS_ROOT)/boost\"",
+        "OTHER_CPLUSPLUSFLAGS" => "-DFOLLY_NO_CONFIG -DFOLLY_MOBILE=1 -DFOLLY_USE_LIBCPP=1",
+        "CLANG_CXX_LANGUAGE_STANDARD" => "c++17"
+      }
+      s.dependency "React-Codegen"
+      s.dependency "RCT-Folly"
+      s.dependency "RCTRequired"
+      s.dependency "RCTTypeSafety"
+      s.dependency "ReactCommon/turbomodule/core"
+      s.dependency "React-RCTFabric"
+    end
+  end
 end
 

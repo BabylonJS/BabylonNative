@@ -91,8 +91,6 @@ const buildIphoneSimulator = async () => {
   exec('xcodebuild -sdk iphonesimulator -arch x86_64 -configuration Release -project ReactNativeBabylon.xcodeproj -scheme BabylonNative build CODE_SIGNING_ALLOWED=NO', 'iOS/Build');
 };
 
-const buildIOS = gulp.series(makeXCodeProj, buildIphoneOS, buildIphoneSimulator);
-const buildIOSRNTA = gulp.series(makeXCodeProjRNTA, buildIphoneOS, buildIphoneSimulator);
 
 const buildAndroid = async () => {
   const basekitBuildProp = basekitBuild ? "-PBASEKIT_BUILD=1" : "";
@@ -233,6 +231,68 @@ const createIOSUniversalLibs = async () => {
   shelljs.mkdir('-p', `${assemblediOSAndroidDir}/ios/libs`);
   const libs = await readdirAsync('iOS/Build/Release-iphoneos');
   libs.map(lib => exec(`lipo -create iOS/Build/Release-iphoneos/${lib} iOS/Build/Release-iphonesimulator/${lib} -output ${assemblediOSAndroidDir}/ios/libs/${lib}`));
+};
+
+const createXCFrameworks = async () => {
+  if (fs.existsSync('../Modules/@babylonjs/react-native-iosandroid/ios/libs/')) {
+    console.log('XCFrameworks already exist, skipping creation. If you want to recreate them, delete the ios/libs directory in the react-native-iosandroid module.');
+    return;
+  }
+
+  const PLATFORMS_MAP = {
+    'iphoneos': ['arm64'],
+    'iphonesimulator': ['x86_64', 'arm64'],
+  };
+
+  // Build static libraries for each platform
+  Object.keys(PLATFORMS_MAP).forEach(platform => {
+    const archs = PLATFORMS_MAP[platform];
+    archs.forEach(arch => {
+      const outputDir = `iOS/Build/${platform}-${arch}`;
+      shelljs.mkdir('-p', outputDir);
+      const buildCommand = `xcodebuild -sdk ${platform} -arch ${arch} -configuration Release -project ReactNativeBabylon.xcodeproj -scheme BabylonNative build CODE_SIGNING_ALLOWED=NO BUILD_LIBRARY_FOR_DISTRIBUTION=YES`;
+      exec(buildCommand, 'iOS/Build');
+      exec(`mv iOS/Build/Release-${platform}/*.a ${outputDir}`);
+      exec(`rm -rf iOS/Build/Release-${platform}`);
+    });
+  });
+
+  // Get the list of libraries
+  const libs = await readdirAsync(`iOS/Build/iphoneos-arm64`);
+
+  // Merge multi arch libraries into single libraries for platform with multiple archs
+  Object.keys(PLATFORMS_MAP).forEach(platform => {
+    const archs = PLATFORMS_MAP[platform];
+    if (archs.length === 1) {
+      // Copy the single arch library to the output directory
+      const outputDir = `${assemblediOSAndroidDir}/ios/libs/${platform}`;
+      shelljs.mkdir('-p', outputDir);
+      exec(`cp -r iOS/Build/${platform}-${archs[0]}/*.a ${outputDir}`);
+      return
+    }
+
+    const outputDir = `${assemblediOSAndroidDir}/ios/libs/${platform}`; 
+    shelljs.mkdir('-p', outputDir);
+    libs.forEach(lib => {
+      let params = ""
+      archs.forEach(arch => {
+        params += ` iOS/Build/${platform}-${arch}/${lib}`
+      });
+      exec(`lipo -create ${params} -output ${outputDir}/${lib}`);
+    });
+  });
+
+  // Create xcframework for each library
+  libs.forEach(lib => {
+    const params = Object.keys(PLATFORMS_MAP).map(platform => ` -library ${assemblediOSAndroidDir}/ios/libs/${platform}/${lib}`).join('');
+    const outputDir = `${assemblediOSAndroidDir}/ios/libs/`;
+    const libName = lib.split('.')[0];
+    exec(`xcodebuild -create-xcframework ${params} -output ${outputDir}/${libName}.xcframework`);
+  });
+
+  shelljs.mkdir('-p', '../Modules/@babylonjs/react-native-iosandroid/ios/libs');
+  exec(`cp -r ${assemblediOSAndroidDir}/ios/libs/*.xcframework ../Modules/@babylonjs/react-native-iosandroid/ios/libs/`);
+  exec(`rm -rf ${assemblediOSAndroidDir}/ios/libs`);
 };
 
 const copyAndroidFiles = async () => {
@@ -621,6 +681,8 @@ const patchPackageVersion = async () => {
 
 const copyFiles = gulp.parallel(copyIOSAndroidCommonFiles, copyIOSFiles, copyAndroidFiles);
 
+const buildIOS = gulp.series(makeXCodeProj, buildIphoneOS, buildIphoneSimulator);
+const buildIOSRNTA = gulp.series(makeXCodeProjRNTA, createXCFrameworks);
 const buildTS = gulp.series(patchPackageVersion, copyCommonFiles, copySharedFiles, buildTypeScript, validateAssembled);
 const buildIOSAndroid = gulp.series(patchPackageVersion, buildIOS, buildAndroid, createIOSUniversalLibs, copyFiles, validateAssemblediOSAndroid);
 const build = gulp.series(buildIOSAndroid, switchToBaseKit, buildIOSAndroid);
@@ -635,6 +697,7 @@ exports.buildIOSRNTA = buildIOSRNTA;
 exports.buildAndroid = buildAndroid;
 exports.buildAndroidRNTA = buildAndroidRNTA;
 exports.createIOSUniversalLibs = createIOSUniversalLibs;
+exports.createXCFrameworks = createXCFrameworks;
 exports.copyFiles = copyFiles;
 
 exports.clean = clean;
