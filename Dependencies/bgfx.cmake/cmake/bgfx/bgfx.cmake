@@ -87,6 +87,7 @@ endif()
 
 if(BGFX_WITH_WAYLAND)
 	target_compile_definitions(bgfx PRIVATE "WL_EGL_PLATFORM=1")
+	target_link_libraries(bgfx PRIVATE wayland-egl)
 endif()
 
 set(BGFX_CONFIG_OPTIONS "")

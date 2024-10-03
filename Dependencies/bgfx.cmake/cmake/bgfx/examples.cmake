@@ -136,14 +136,19 @@ function(add_example ARG_NAME)
 		target_link_libraries(
 			example-${ARG_NAME} PUBLIC bgfx bx bimg bimg_decode ${DEAR_IMGUI_LIBRARIES} ${MESHOPTIMIZER_LIBRARIES}
 		)
+
+		if(BGFX_WITH_WAYLAND)
+			target_compile_definitions(example-${ARG_NAME} PUBLIC ENTRY_CONFIG_USE_WAYLAND=1)
+		endif()
+
 		if(BGFX_WITH_GLFW)
 			find_package(glfw3 REQUIRED)
 			target_link_libraries(example-${ARG_NAME} PUBLIC glfw)
-			target_compile_definitions(example-${ARG_NAME} PUBLIC ENTRY_CONFIG_USE_GLFW)
+			target_compile_definitions(example-${ARG_NAME} PUBLIC ENTRY_CONFIG_USE_GLFW=1)
 		elseif(BGFX_WITH_SDL)
 			find_package(SDL2 REQUIRED)
 			target_link_libraries(example-${ARG_NAME} PUBLIC ${SDL2_LIBRARIES})
-			target_compile_definitions(example-${ARG_NAME} PUBLIC ENTRY_CONFIG_USE_SDL)
+			target_compile_definitions(example-${ARG_NAME} PUBLIC ENTRY_CONFIG_USE_SDL=1)
 		elseif(UNIX AND NOT APPLE AND NOT ANDROID)
 			target_link_libraries(example-${ARG_NAME} PUBLIC X11)
 		endif()
