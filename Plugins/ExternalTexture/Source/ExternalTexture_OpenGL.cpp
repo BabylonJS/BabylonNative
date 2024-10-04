@@ -14,8 +14,8 @@ namespace
 {
     struct TextureFormatInfo
     {
-        GLenum m_fmt;
-        GLenum m_fmtSrgb;
+        GLint m_fmt;
+        GLint m_fmtSrgb;
     };
 
     static TextureFormatInfo s_textureFormat[] =
@@ -55,7 +55,8 @@ namespace
             {GL_COMPRESSED_RGBA_ASTC_12x10_KHR, GL_COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR},              // ASTC12x10
             {GL_COMPRESSED_RGBA_ASTC_12x12_KHR, GL_COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR},              // ASTC12x12
             {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // Unknown
-            {GL_R8, GL_R8},                                                                              // A8
+            {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // R1
+            {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // A8
             {GL_R8, GL_SRGB8},                                                                           // R8
             {GL_R8I, GL_INVALID_ENUM},                                                                   // R8I
             {GL_R8UI, GL_INVALID_ENUM},                                                                  // R8U
@@ -80,10 +81,10 @@ namespace
             {GL_RG32I, GL_INVALID_ENUM},                                                                 // RG32I
             {GL_RG32UI, GL_INVALID_ENUM},                                                                // RG32U
             {GL_RG32F, GL_INVALID_ENUM},                                                                 // RG32F
-            {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // RGB8
-            {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // RGB8I
-            {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // RGB8U
-            {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // RGB8S
+            {GL_RGB8, GL_INVALID_ENUM},                                                                  // RGB8
+            {GL_RGB8I, GL_INVALID_ENUM},                                                                 // RGB8I
+            {GL_RGB8UI, GL_INVALID_ENUM},                                                                // RGB8U
+            {GL_RGB8_SNORM, GL_INVALID_ENUM},                                                            // RGB8S
             {GL_RGB9_E5, GL_INVALID_ENUM},                                                               // RGB9E5F
             {GL_BGRA8_EXT, GL_SRGB8_ALPHA8_EXT},                                                         // BGRA8
             {GL_RGBA8, GL_SRGB8_ALPHA8},                                                                 // RGBA8
@@ -98,24 +99,25 @@ namespace
             {GL_RGBA32I, GL_INVALID_ENUM},                                                               // RGBA32I
             {GL_RGBA32UI, GL_INVALID_ENUM},                                                              // RGBA32U
             {GL_RGBA32F, GL_INVALID_ENUM},                                                               // RGBA32F
-            {GL_RGB565, GL_INVALID_ENUM},                                                                // B5G6R5
+            {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // B5G6R5
             {GL_RGB565, GL_INVALID_ENUM},                                                                // R5G6B5
-            {GL_RGBA4, GL_INVALID_ENUM},                                                                 // BGRA4
+            {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // BGRA4
             {GL_RGBA4, GL_INVALID_ENUM},                                                                 // RGBA4
-            {GL_RGB5_A1, GL_INVALID_ENUM},                                                               // BGR5A1
+            {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // BGR5A1
             {GL_RGB5_A1, GL_INVALID_ENUM},                                                               // RGB5A1
             {GL_RGB10_A2, GL_INVALID_ENUM},                                                              // RGB10A2
             {GL_R11F_G11F_B10F, GL_INVALID_ENUM},                                                        // RG11B10F
             {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // UnknownDepth
-            {GL_DEPTH_COMPONENT32F, GL_INVALID_ENUM},                                                    // D16
-            {GL_DEPTH_COMPONENT32F, GL_INVALID_ENUM},                                                    // D24
+            {GL_DEPTH_COMPONENT16, GL_INVALID_ENUM},                                                     // D16
+            {GL_DEPTH_COMPONENT24, GL_INVALID_ENUM},                                                     // D24
             {GL_DEPTH24_STENCIL8, GL_INVALID_ENUM},                                                      // D24S8
-            {GL_DEPTH_COMPONENT32F, GL_INVALID_ENUM},                                                    // D32
-            {GL_DEPTH_COMPONENT32F, GL_INVALID_ENUM},                                                    // D16F
-            {GL_DEPTH_COMPONENT32F, GL_INVALID_ENUM},                                                    // D24F
+            {GL_DEPTH_COMPONENT32, GL_INVALID_ENUM},                                                     // D32
+            {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // D16F
+            {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // D24F
             {GL_DEPTH_COMPONENT32F, GL_INVALID_ENUM},                                                    // D32F
             {GL_STENCIL_INDEX8, GL_INVALID_ENUM},                                                        // D0S8
     };
+    BX_STATIC_ASSERT(bgfx::TextureFormat::Count == BX_COUNTOF(s_textureFormat));
 
 }
 
@@ -205,7 +207,7 @@ namespace Babylon::Plugins
             }
 
             // Match the texture format with `s_textureFormat`
-            for (int i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
+            for (long unsigned int i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
             {
                 const auto& format = s_textureFormat[i];
                 if (format.m_fmt == internalFormat || format.m_fmtSrgb == internalFormat)
