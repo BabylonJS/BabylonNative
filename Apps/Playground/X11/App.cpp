@@ -75,7 +75,7 @@ namespace
         Babylon::DebugTrace::SetTraceOutput([](const char* trace) { printf("%s\n", trace); fflush(stdout); });
 
         Babylon::Graphics::Configuration graphicsConfig{};
-	Display* display = XOpenDisplay(nullptr);
+	Display* display = XOpenDisplay(NULL);
         graphicsConfig.Window = std::make_tuple(window, display);
         graphicsConfig.Width = static_cast<size_t>(width);
         graphicsConfig.Height = static_cast<size_t>(height);
