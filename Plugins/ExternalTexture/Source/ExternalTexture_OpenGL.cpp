@@ -86,7 +86,7 @@ namespace
             {GL_RGB8UI, GL_INVALID_ENUM},                                                                // RGB8U
             {GL_RGB8_SNORM, GL_INVALID_ENUM},                                                            // RGB8S
             {GL_RGB9_E5, GL_INVALID_ENUM},                                                               // RGB9E5F
-            {GL_BGRA8_EXT, GL_INVALID_ENUM},                                                             // BGRA8
+            {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // BGRA8
             {GL_RGBA8, GL_SRGB8_ALPHA8},                                                                 // RGBA8
             {GL_RGBA8I, GL_INVALID_ENUM},                                                                // RGBA8I
             {GL_RGBA8UI, GL_INVALID_ENUM},                                                               // RGBA8U
