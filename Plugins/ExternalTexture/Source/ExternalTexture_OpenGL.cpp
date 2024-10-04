@@ -57,7 +57,7 @@ namespace
             {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // Unknown
             {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // R1
             {GL_INVALID_ENUM, GL_INVALID_ENUM},                                                          // A8
-            {GL_R8, GL_SRGB8},                                                                           // R8
+            {GL_R8, GL_INVALID_ENUM},                                                                    // R8
             {GL_R8I, GL_INVALID_ENUM},                                                                   // R8I
             {GL_R8UI, GL_INVALID_ENUM},                                                                  // R8U
             {GL_R8_SNORM, GL_INVALID_ENUM},                                                              // R8S
@@ -69,7 +69,7 @@ namespace
             {GL_R32I, GL_INVALID_ENUM},                                                                  // R32I
             {GL_R32UI, GL_INVALID_ENUM},                                                                 // R32U
             {GL_R32F, GL_INVALID_ENUM},                                                                  // R32F
-            {GL_RG8, GL_SRGB8_ALPHA8},                                                                   // RG8
+            {GL_RG8, GL_INVALID_ENUM},                                                                   // RG8
             {GL_RG8I, GL_INVALID_ENUM},                                                                  // RG8I
             {GL_RG8UI, GL_INVALID_ENUM},                                                                 // RG8U
             {GL_RG8_SNORM, GL_INVALID_ENUM},                                                             // RG8S
@@ -86,7 +86,7 @@ namespace
             {GL_RGB8UI, GL_INVALID_ENUM},                                                                // RGB8U
             {GL_RGB8_SNORM, GL_INVALID_ENUM},                                                            // RGB8S
             {GL_RGB9_E5, GL_INVALID_ENUM},                                                               // RGB9E5F
-            {GL_BGRA8_EXT, GL_SRGB8_ALPHA8_EXT},                                                         // BGRA8
+            {GL_BGRA8_EXT, GL_INVALID_ENUM},                                                             // BGRA8
             {GL_RGBA8, GL_SRGB8_ALPHA8},                                                                 // RGBA8
             {GL_RGBA8I, GL_INVALID_ENUM},                                                                // RGBA8I
             {GL_RGBA8UI, GL_INVALID_ENUM},                                                               // RGBA8U
