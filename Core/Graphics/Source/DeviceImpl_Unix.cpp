@@ -5,19 +5,20 @@ namespace Babylon::Graphics
 {
     void DeviceImpl::ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window)
     {
-        pd.nwh = reinterpret_cast<void*>(window);
+        pd.nwh = reinterpret_cast<void*>(std::get<0>(window));
+        pd.ndt = reinterpret_cast<void*>(std::get<1>(window));
     }
 
     void DeviceImpl::ConfigureBgfxRenderType(bgfx::PlatformData& /*pd*/, bgfx::RendererType::Enum& /*renderType*/)
     {
     }
 
-    float DeviceImpl::GetDevicePixelRatio(WindowT)
+    float DeviceImpl::GetDevicePixelRatio(WindowT window)
     {
         // TODO: We should persist a Display object instead of opening a new display.
         // See https://github.com/BabylonJS/BabylonNative/issues/625
 
-        auto display = XOpenDisplay(nullptr);
+        auto display = std::get<1>(window);
         auto screen = DefaultScreen(display);
 
         auto width = DisplayWidthMM(display, screen);

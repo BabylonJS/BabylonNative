@@ -2,7 +2,9 @@
 
 #include <X11/Xlib.h>
 
+#include <tuple>
+
 namespace Babylon::Graphics
 {
-    using WindowT = Window;
+    using WindowT = std::tuple<Window, Display*>;
 }
