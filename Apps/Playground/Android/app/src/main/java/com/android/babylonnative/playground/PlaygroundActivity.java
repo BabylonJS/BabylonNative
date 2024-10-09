@@ -1,5 +1,5 @@
 package com.android.babylonnative.playground;
-
+import com.library.babylonnative.BabylonView;
 import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
@@ -8,7 +8,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.view.View;
 
-import BabylonNative.BabylonView;
+//import BabylonNative.BabylonView;
 
 public class PlaygroundActivity extends Activity implements BabylonView.ViewDelegate {
     BabylonView mView;

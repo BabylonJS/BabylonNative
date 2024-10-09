@@ -1,0 +1,122 @@
+plugins {
+    id 'com.android.library'
+}
+
+def jsEngine = "V8"
+if (project.hasProperty("jsEngine")) {
+    jsEngine = project.property("jsEngine")
+}
+
+def graphics_api = "OpenGL"
+def platformVersion = 21
+if (project.hasProperty("GRAPHICS_API")) {
+    graphics_api = project.property("GRAPHICS_API")
+    if ("${graphics_api}" == "Vulkan" ) {
+        platformVersion = 24 // minimal version to get Vulkan
+    }
+}
+
+def unity_build = "false"
+if (project.hasProperty("UNITY_BUILD")) {
+    unity_build = project.property("UNITY_BUILD")
+}
+def arcore_libpath = "${buildDir}/arcore-native"
+
+configurations { natives }
+
+android {
+    namespace 'com.android.library.babylonnative'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 25
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+        ndkVersion "23.1.7779620"
+        if (project.hasProperty("NDK_VERSION")) {
+            def NDKVersion = project.property("NDK_VERSION")
+            ndkVersion  "${NDK_VERSION}"
+        }
+        externalNativeBuild {
+            cmake {
+                abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
+                arguments "-DANDROID_STL=c++_shared",
+                    "-DENABLE_PCH=OFF",
+                    "-DGRAPHICS_API=${graphics_api}",
+                    "-DARCORE_LIBPATH=${arcore_libpath}/jni",
+                    "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
+                    "-DBABYLON_NATIVE_BUILD_APPS=ON",
+                    "-DCMAKE_UNITY_BUILD=${unity_build}",
+                    "-DBABYLON_DEBUG_TRACE=ON"
+            }
+        }
+        ndk {
+            if (project.hasProperty("ARM64Only")) {
+                abiFilters "arm64-v8a"
+            } else {
+                abiFilters "arm64-v8a", "armeabi-v7a", "x86"
+            }
+        }
+        packagingOptions {
+            exclude '**/libarcore_sdk_c.so'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            version '3.19.6+'
+            path 'CMakeLists.txt'
+            buildStagingDirectory "../../../../Build/Android"
+        }
+    }
+    packagingOptions {
+        jniLibs {
+            pickFirsts += ['lib/*/libv8android.so', 'lib/*/libjsc.so']
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    // ARCore library
+    implementation 'com.google.ar:core:1.14.0'
+    natives 'com.google.ar:core:1.14.0'
+    implementation 'com.android.support:appcompat-v7:28.0.0'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'com.android.support.test:runner:1.0.2'
+    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+}
+
+
+// Extracts the shared libraries from aars in the natives configuration.
+// This is done so that NDK builds can access these libraries.
+task extractNativeLibraries() {
+    // Always extract, this insures the native libs are updated if the version changes.
+    outputs.upToDateWhen { false }
+    doFirst {
+        configurations.natives.files.each { f ->
+            copy {
+                from zipTree(f)
+                into arcore_libpath
+                include "jni/**/*"
+            }
+        }
+    }
+}
+
+tasks.configureEach { task ->
+    if ((task.name.contains("buildCMake") || task.name.contains("configureCMake")) && !task.name.contains("Clean")) {
+        task.dependsOn(extractNativeLibraries)
+    }
+}

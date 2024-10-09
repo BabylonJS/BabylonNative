@@ -1,4 +1,4 @@
-package BabylonNative;
+package com.library.babylonnative;
 
 import android.app.Activity;
 import android.content.Context;
@@ -47,12 +47,12 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
 
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-                BabylonNative.Wrapper.xrSurfaceChanged(holder.getSurface());
+                Wrapper.xrSurfaceChanged(holder.getSurface());
             }
 
             @Override
             public void surfaceDestroyed(SurfaceHolder holder) {
-                BabylonNative.Wrapper.xrSurfaceChanged(null);
+                Wrapper.xrSurfaceChanged(null);
             }
         });
         this.xrSurfaceView.setVisibility(View.INVISIBLE);
@@ -60,36 +60,36 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
 
         setWillNotDraw(false);
 
-        BabylonNative.Wrapper.initEngine();
+        Wrapper.initEngine();
     }
 
     public void setCurrentActivity(Activity currentActivity)
     {
         if (currentActivity != this.mCurrentActivity) {
             this.mCurrentActivity = currentActivity;
-            BabylonNative.Wrapper.setCurrentActivity(this.mCurrentActivity);
+            Wrapper.setCurrentActivity(this.mCurrentActivity);
         }
     }
 
     public void loadScript(String path) {
-        BabylonNative.Wrapper.loadScript(path);
+        Wrapper.loadScript(path);
     }
 
     public void eval(String source, String sourceURL) {
-        BabylonNative.Wrapper.eval(source, sourceURL);
+        Wrapper.eval(source, sourceURL);
     }
 
     public void onPause() {
         setVisibility(View.GONE);
-        BabylonNative.Wrapper.activityOnPause();
+        Wrapper.activityOnPause();
     }
 
     public void onResume() {
-        BabylonNative.Wrapper.activityOnResume();
+        Wrapper.activityOnResume();
     }
 
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
-        BabylonNative.Wrapper.activityOnRequestPermissionsResult(requestCode, permissions, results);
+        Wrapper.activityOnRequestPermissionsResult(requestCode, permissions, results);
     }
 
     /**
@@ -97,8 +97,8 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceCreated(SurfaceHolder holder) {
-        BabylonNative.Wrapper.surfaceCreated(holder.getSurface(), this.getContext());
-        BabylonNative.Wrapper.setCurrentActivity(this.mCurrentActivity);
+        Wrapper.surfaceCreated(holder.getSurface(), this.getContext());
+        Wrapper.setCurrentActivity(this.mCurrentActivity);
         if (!this.mViewReady) {
             this.mViewDelegate.onViewReady();
             this.mViewReady = true;
@@ -117,7 +117,7 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
-        BabylonNative.Wrapper.surfaceChanged((int)(w / this.pixelDensityScale), (int)(h / this.pixelDensityScale), holder.getSurface());
+        Wrapper.surfaceChanged((int)(w / this.pixelDensityScale), (int)(h / this.pixelDensityScale), holder.getSurface());
     }
 
     public interface ViewDelegate {
@@ -133,14 +133,14 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
-                BabylonNative.Wrapper.setTouchInfo(pointerId, mX, mY, true, 1);
+                Wrapper.setTouchInfo(pointerId, mX, mY, true, 1);
                 break;
             case MotionEvent.ACTION_MOVE:
-                BabylonNative.Wrapper.setTouchInfo(pointerId, mX, mY, false, 0);
+                Wrapper.setTouchInfo(pointerId, mX, mY, false, 0);
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_POINTER_UP:
-                BabylonNative.Wrapper.setTouchInfo(pointerId, mX, mY, true, 0);
+                Wrapper.setTouchInfo(pointerId, mX, mY, true, 0);
                 break;
         }
         return true;
@@ -148,7 +148,7 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
 
     @Override
     protected void finalize() throws Throwable {
-        BabylonNative.Wrapper.finishEngine();
+        Wrapper.finishEngine();
     }
 
     /**
@@ -163,13 +163,13 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
 
     @Override
     protected void onDraw(Canvas canvas) {
-        if (BabylonNative.Wrapper.isXRActive()) {
+        if (Wrapper.isXRActive()) {
             this.xrSurfaceView.setVisibility(View.VISIBLE);
         } else {
             this.xrSurfaceView.setVisibility(View.INVISIBLE);
         }
 
-        BabylonNative.Wrapper.renderFrame();
+        Wrapper.renderFrame();
         invalidate();
     }
 }

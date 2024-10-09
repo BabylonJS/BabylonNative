@@ -39,12 +39,12 @@ namespace
 extern "C"
 {
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_initEngine(JNIEnv* env, jclass clazz)
+    Java_com_library_babylonnative_Wrapper_initEngine(JNIEnv* env, jclass clazz)
     {
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_finishEngine(JNIEnv* env, jclass clazz)
+    Java_com_library_babylonnative_Wrapper_finishEngine(JNIEnv* env, jclass clazz)
     {
         if (device)
         {
@@ -64,7 +64,7 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_surfaceCreated(JNIEnv* env, jclass clazz, jobject surface, jobject context)
+    Java_com_library_babylonnative_Wrapper_surfaceCreated(JNIEnv* env, jclass clazz, jobject surface, jobject context)
     {
         if (!runtime)
         {
@@ -140,7 +140,7 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_surfaceChanged(JNIEnv* env, jclass clazz, jint width, jint height, jobject surface)
+    Java_com_library_babylonnative_Wrapper_surfaceChanged(JNIEnv* env, jclass clazz, jint width, jint height, jobject surface)
     {
         if (runtime)
         {
@@ -153,13 +153,13 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_setCurrentActivity(JNIEnv* env, jclass clazz, jobject currentActivity)
+    Java_com_library_babylonnative_Wrapper_setCurrentActivity(JNIEnv* env, jclass clazz, jobject currentActivity)
     {
         android::global::SetCurrentActivity(currentActivity);
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_activityOnPause(JNIEnv* env, jclass clazz)
+    Java_com_library_babylonnative_Wrapper_activityOnPause(JNIEnv* env, jclass clazz)
     {
         android::global::Pause();
         if (runtime)
@@ -169,7 +169,7 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_activityOnResume(JNIEnv* env, jclass clazz)
+    Java_com_library_babylonnative_Wrapper_activityOnResume(JNIEnv* env, jclass clazz)
     {
         if (runtime)
         {
@@ -179,7 +179,7 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_activityOnRequestPermissionsResult(JNIEnv* env, jclass clazz, jint requestCode, jobjectArray permissions, jintArray grantResults)
+    Java_com_library_babylonnative_Wrapper_activityOnRequestPermissionsResult(JNIEnv* env, jclass clazz, jint requestCode, jobjectArray permissions, jintArray grantResults)
     {
         std::vector<std::string> nativePermissions{};
         for (int i = 0; i < env->GetArrayLength(permissions); i++)
@@ -199,7 +199,7 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_loadScript(JNIEnv* env, jclass clazz, jstring path)
+    Java_com_library_babylonnative_Wrapper_loadScript(JNIEnv* env, jclass clazz, jstring path)
     {
         if (scriptLoader)
         {
@@ -208,7 +208,7 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_eval(JNIEnv* env, jclass clazz, jstring source, jstring sourceURL)
+    Java_com_library_babylonnative_Wrapper_eval(JNIEnv* env, jclass clazz, jstring source, jstring sourceURL)
     {
         if (runtime)
         {
@@ -219,7 +219,7 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_setTouchInfo(JNIEnv* env, jclass clazz, jint pointerId, jfloat x, jfloat y, jboolean buttonAction, jint buttonValue)
+    Java_com_library_babylonnative_Wrapper_setTouchInfo(JNIEnv* env, jclass clazz, jint pointerId, jfloat x, jfloat y, jboolean buttonAction, jint buttonValue)
     {
         if (nativeInput != nullptr)
         {
@@ -237,7 +237,7 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_renderFrame(JNIEnv* env, jclass clazz)
+    Java_com_library_babylonnative_Wrapper_renderFrame(JNIEnv* env, jclass clazz)
     {
         if (device)
         {
@@ -249,7 +249,7 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_BabylonNative_Wrapper_xrSurfaceChanged(JNIEnv* env, jclass clazz, jobject surface)
+    Java_com_library_babylonnative_Wrapper_xrSurfaceChanged(JNIEnv* env, jclass clazz, jobject surface)
     {
         if (nativeXr)
         {
@@ -263,7 +263,7 @@ extern "C"
     }
 
     JNIEXPORT jboolean JNICALL
-    Java_BabylonNative_Wrapper_isXRActive(JNIEnv* env, jclass clazz)
+    Java_com_library_babylonnative_Wrapper_isXRActive(JNIEnv* env, jclass clazz)
     {
         return isXrActive;
     }

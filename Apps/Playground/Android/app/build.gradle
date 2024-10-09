@@ -6,13 +6,8 @@ if (project.hasProperty("jsEngine")) {
 }
 
 def graphics_api = "OpenGL"
-def platformVersion = 21
-if (project.hasProperty("GRAPHICS_API")) {
-    graphics_api = project.property("GRAPHICS_API")
-    if ("${graphics_api}" == "Vulkan" ) {
-        platformVersion = 24 // minimal version to get Vulkan
-    }
-}
+// min 24 for Vulkan
+def platformVersion = 25
 
 def unity_build = "false"
 if (project.hasProperty("UNITY_BUILD")) {
@@ -34,25 +29,11 @@ android {
             def NDKVersion = project.property("NDK_VERSION")
             ndkVersion  "${NDK_VERSION}"
         }
-        externalNativeBuild {
-            cmake {
-                abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
-                arguments "-DANDROID_STL=c++_shared",
-                    "-DENABLE_PCH=OFF",
-                    "-DGRAPHICS_API=${graphics_api}",
-                    "-DARCORE_LIBPATH=${arcore_libpath}/jni",
-                    "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
-                    "-DBABYLON_NATIVE_BUILD_APPS=ON",
-                    "-DCMAKE_UNITY_BUILD=${unity_build}",
-                    "-DBABYLON_DEBUG_TRACE=ON"
-            }
-        }
-        ndk {
-            if (project.hasProperty("ARM64Only")) {
-                abiFilters "arm64-v8a"
-            } else {
-                abiFilters "arm64-v8a", "armeabi-v7a", "x86"
-            }
+    }
+
+    packagingOptions {
+        jniLibs {
+            pickFirsts += ['lib/*/libv8android.so', 'lib/*/libjsc.so', 'lib/*/libBabylonNativeJNI.so', 'lib/*/libc++_shared.so']
         }
     }
 
@@ -67,26 +48,22 @@ android {
         }
     }
 
-    externalNativeBuild {
-        cmake {
-            version '3.19.6+'
-            path 'CMakeLists.txt'
-            buildStagingDirectory "../../../../Build/Android"
-        }
-    }
-    packagingOptions {
-        jniLibs {
-            pickFirsts += ['lib/*/libv8android.so', 'lib/*/libjsc.so']
-        }
-    }
-
     namespace 'com.android.babylonnative.playground'
+}
+
+repositories {
+    // Add flatDir repository
+    flatDir {
+        dirs '../../Android/BabylonNative/build/outputs/aar'
+    }
 }
 
 dependencies {
     // ARCore library
-    implementation 'com.google.ar:core:1.14.0'
+    //implementation 'com.google.ar:core:1.14.0'
+    implementation project(':BabylonNative')
     natives 'com.google.ar:core:1.14.0'
+    implementation(name: 'BabylonNative-debug', ext: 'aar')
 
     implementation 'com.android.support:appcompat-v7:27.1.1'
     implementation 'com.android.support:design:27.1.1'
