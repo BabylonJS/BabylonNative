@@ -63,7 +63,7 @@ dependencies {
     //implementation 'com.google.ar:core:1.14.0'
     implementation project(':BabylonNative')
     natives 'com.google.ar:core:1.14.0'
-    implementation(name: 'BabylonNative-debug', ext: 'aar')
+    implementation(name: 'BabylonNative-release', ext: 'aar')
 
     implementation 'com.android.support:appcompat-v7:27.1.1'
     implementation 'com.android.support:design:27.1.1'
@@ -90,6 +90,8 @@ tasks.configureEach { task ->
         task.dependsOn(extractNativeLibraries)
     }
 }
+
+preBuild.dependsOn ':BabylonNative:assembleRelease'
 
 task copyFiles {
     copy
