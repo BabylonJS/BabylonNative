@@ -1,4 +1,4 @@
-package BabylonNative;
+package com.library.babylonnative;
 
 import android.app.Activity;
 import android.content.Context;

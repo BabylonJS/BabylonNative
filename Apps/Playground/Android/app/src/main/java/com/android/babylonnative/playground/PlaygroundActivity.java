@@ -8,7 +8,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.view.View;
 
-import BabylonNative.BabylonView;
+import com.library.babylonnative.BabylonView;
 
 public class PlaygroundActivity extends Activity implements BabylonView.ViewDelegate {
     BabylonView mView;
