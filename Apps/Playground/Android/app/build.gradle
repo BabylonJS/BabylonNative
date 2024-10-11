@@ -54,7 +54,7 @@ android {
 repositories {
     // Add flatDir repository
     flatDir {
-        dirs '../../Android/BabylonNative/build/outputs/aar'
+        dirs '../BabylonNative/build/outputs/aar'
     }
 }
 
