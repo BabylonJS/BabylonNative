@@ -24,7 +24,7 @@ namespace Babylon::Plugins
         }
 
     private:
-        static void GetInfo(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, Info& info)
+        static void GetInfo(Graphics::TextureT, std::optional<Graphics::TextureFormatT>, Info&)
         {
             throw std::runtime_error{"not implemented"};
         }
