@@ -15,8 +15,8 @@ namespace Babylon::Plugins
     {
     public:
         // Implemented in ExternalTexture_Shared.h
-        Impl(Graphics::TextureT);
-        void Update(Graphics::TextureT);
+        Impl(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
+        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
 
         uintptr_t Ptr() const
         {
@@ -24,7 +24,7 @@ namespace Babylon::Plugins
         }
 
     private:
-        void GetInfo(Graphics::TextureT, Info&)
+        static void GetInfo(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, Info& info)
         {
             throw std::runtime_error{"not implemented"};
         }
