@@ -174,7 +174,7 @@ namespace Babylon::Plugins
                 }
             }
 
-            const auto targetFormat = overrideFormat.has_value() ? overrideFormat.value() : descptr.pixelFormat;
+            const auto targetFormat = overrideFormat.has_value() ? overrideFormat.value() : ptr.pixelFormat;
             for (size_t i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
             {
                 const auto& format = s_textureFormat[i];
