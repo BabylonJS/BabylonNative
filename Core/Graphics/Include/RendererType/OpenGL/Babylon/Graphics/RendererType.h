@@ -6,6 +6,7 @@ namespace Babylon::Graphics
 {
     using DeviceT = EGLContext;
     using TextureT = unsigned int;
+    using TextureFormatT = unsigned int;
 
     struct DeviceConfiguration
     {

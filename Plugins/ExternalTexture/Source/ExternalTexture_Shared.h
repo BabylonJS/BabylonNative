@@ -2,9 +2,9 @@
 
 namespace Babylon::Plugins
 {
-    ExternalTexture::Impl::Impl(Graphics::TextureT ptr)
+    ExternalTexture::Impl::Impl(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
     {
-        GetInfo(ptr, m_info);
+        GetInfo(ptr, overrideFormat, m_info);
 
         if (m_info.MipLevels != 1 && m_info.MipLevels != 0 && !IsFullMipChain(m_info.MipLevels, m_info.Width, m_info.Height))
         {
@@ -14,10 +14,10 @@ namespace Babylon::Plugins
         Assign(ptr);
     }
 
-    void ExternalTexture::Impl::Update(Graphics::TextureT ptr)
+    void ExternalTexture::Impl::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
     {
         Info info;
-        GetInfo(ptr, info);
+        GetInfo(ptr, overrideFormat, info);
 
         if (info.Width != m_info.Width || info.Height != m_info.Height || info.MipLevels != m_info.MipLevels)
         {
@@ -33,8 +33,8 @@ namespace Babylon::Plugins
         UpdateHandles(Ptr());
     }
 
-    ExternalTexture::ExternalTexture(Graphics::TextureT ptr)
-        : m_impl{std::make_unique<Impl>(ptr)}
+    ExternalTexture::ExternalTexture(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
+        : m_impl{std::make_unique<Impl>(ptr, overrideFormat)}
     {
     }
 
@@ -119,8 +119,8 @@ namespace Babylon::Plugins
         return promise;
     }
 
-    void ExternalTexture::Update(Graphics::TextureT ptr)
+    void ExternalTexture::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
     {
-        m_impl->Update(ptr);
+        m_impl->Update(ptr, overrideFormat);
     }
 }

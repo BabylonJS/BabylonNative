@@ -3,6 +3,7 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Graphics/RendererType.h>
 #include <memory>
+#include <optional>
 
 namespace Babylon::Plugins
 {
@@ -10,7 +11,7 @@ namespace Babylon::Plugins
     {
     public:
         // NOTE: Must call from the Graphics thread.
-        ExternalTexture(Graphics::TextureT);
+        ExternalTexture(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {});
         ~ExternalTexture();
 
         // Copy semantics
@@ -34,7 +35,7 @@ namespace Babylon::Plugins
         // Updates to a new texture.
         // Texture attributes (width, height, format, etc.) must match.
         // NOTE: Must call from the Graphics thread.
-        void Update(Graphics::TextureT);
+        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {});
 
     private:
         class Impl;

@@ -144,8 +144,8 @@ namespace Babylon::Plugins
     {
     public:
         // Implemented in ExternalTexture_Shared.h
-        Impl(Graphics::TextureT);
-        void Update(Graphics::TextureT);
+        Impl(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
+        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
 
         uintptr_t Ptr() const
         {
@@ -153,7 +153,7 @@ namespace Babylon::Plugins
         }
 
     private:
-        static void GetInfo(Graphics::TextureT ptr, Info& info)
+        static void GetInfo(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, Info& info)
         {
             if (ptr.textureType != MTLTextureType2D && ptr.textureType != MTLTextureType2DMultisample)
             {
@@ -174,14 +174,14 @@ namespace Babylon::Plugins
                 }
             }
 
-            const auto pixelFormat = ptr.pixelFormat;
+            const auto targetFormat = overrideFormat.has_value() ? overrideFormat.value() : ptr.pixelFormat;
             for (size_t i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
             {
                 const auto& format = s_textureFormat[i];
-                if (format.m_fmt == pixelFormat || format.m_fmtSrgb == pixelFormat)
+                if (format.m_fmt == targetFormat || format.m_fmtSrgb == targetFormat)
                 {
                     info.Format = static_cast<bgfx::TextureFormat::Enum>(i);
-                    if (format.m_fmtSrgb == pixelFormat)
+                    if (format.m_fmtSrgb == targetFormat)
                     {
                         info.Flags |= BGFX_TEXTURE_SRGB;
                     }
