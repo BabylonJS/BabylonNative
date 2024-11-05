@@ -74,6 +74,8 @@ file(
 	${SPIRV_TOOLS}/source/text.h
 	${SPIRV_TOOLS}/source/text_handler.cpp
 	${SPIRV_TOOLS}/source/text_handler.h
+	${SPIRV_TOOLS}/source/to_string.cpp
+	${SPIRV_TOOLS}/source/to_string.h
 	${SPIRV_TOOLS}/source/util/bit_vector.cpp
 	${SPIRV_TOOLS}/source/util/bit_vector.h
 	${SPIRV_TOOLS}/source/util/bitutils.h
