@@ -94,7 +94,7 @@ bgfx_compile_shaders(
 	SHADERS filenames
 	VARYING_DEF filename
 	OUTPUT_DIR directory
-	[AS_HEADER]
+	[AS_HEADERS]
 )
 ```
 This defines a shaderc command to generate binaries or headers for a number of `TYPE` shaders with `SHADERS` files and `VARYING_DEF` file in the `OUTPUT_DIR` directory. There will be one generated shader for each supported rendering API on this current platform according to the `BGFX_EMBEDDED_SHADER` macro in `bgfx/embedded_shader.h` for headers and in the directory expected by `load_shader` in `bgfx_utils.h`.
@@ -110,14 +110,14 @@ bgfx_compile_shaders(
   SHADERS vs.sc
   VARYING_DEF varying.def.sc
   OUTPUT_DIR ${CMAKE_BINARY_DIR}/include/generated/shaders
-  AS_HEADER
+  AS_HEADERS
 )
-bgfx_compile_shader_to_header(
+bgfx_compile_shaders(
   TYPE FRAGMENT
   SHADERS fs.sc
   VARYING_DEF ${CMAKE_SOURCE_DIR}/varying.def.sc
   OUTPUT_DIR ${CMAKE_BINARY_DIR}/include/generated/shaders
-  AS_HEADER
+  AS_HEADERS
 )
 
 add_library(myLib main.cpp vs.sc fs.sc)
