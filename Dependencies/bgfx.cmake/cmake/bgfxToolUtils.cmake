@@ -364,7 +364,7 @@ if(TARGET bgfx::shaderc)
 	#	FILE filename
 	#	OUTPUT filename
 	#	FRAGMENT|VERTEX|COMPUTE
-	#	ANDROID|ASM_JS|IOS|LINUX|NACL|OSX|WINDOWS
+	#	ANDROID|ASM_JS|IOS|LINUX|OSX|WINDOWS|ORBIS
 	#	PROFILE profile
 	#	[O 0|1|2|3]
 	#	[VARYINGDEF filename]
@@ -382,7 +382,7 @@ if(TARGET bgfx::shaderc)
 	function(_bgfx_shaderc_parse ARG_OUT)
 		cmake_parse_arguments(
 			ARG
-			"DEPENDS;ANDROID;ASM_JS;IOS;LINUX;NACL;OSX;WINDOWS;PREPROCESS;RAW;FRAGMENT;VERTEX;COMPUTE;VERBOSE;DEBUG;DISASM;WERROR"
+			"DEPENDS;ANDROID;ASM_JS;IOS;LINUX;OSX;WINDOWS;ORBIS;PREPROCESS;RAW;FRAGMENT;VERTEX;COMPUTE;VERBOSE;DEBUG;DISASM;WERROR"
 			"FILE;OUTPUT;VARYINGDEF;BIN2C;PROFILE;O"
 			"INCLUDES;DEFINES"
 			${ARGN}
@@ -423,7 +423,7 @@ if(TARGET bgfx::shaderc)
 
 		# --platform
 		set(PLATFORM "")
-		set(PLATFORMS "ANDROID;ASM_JS;IOS;LINUX;NACL;OSX;WINDOWS")
+		set(PLATFORMS "ANDROID;ASM_JS;IOS;LINUX;OSX;WINDOWS;ORBIS")
 		foreach(P ${PLATFORMS})
 			if(ARG_${P})
 				if(PLATFORM)
@@ -436,20 +436,20 @@ if(TARGET bgfx::shaderc)
 		if(PLATFORM STREQUAL "")
 			message(SEND_ERROR "Call to _bgfx_shaderc_parse() must have a platform flag: ${PLATFORMS}")
 			return()
-		elseif(PLATFORM STREQUAL ANDROID)
+		elseif(PLATFORM STREQUAL "ANDROID")
 			list(APPEND CLI "--platform" "android")
-		elseif(PLATFORM STREQUAL ASM_JS)
+		elseif(PLATFORM STREQUAL "ASM_JS")
 			list(APPEND CLI "--platform" "asm.js")
-		elseif(PLATFORM STREQUAL IOS)
+		elseif(PLATFORM STREQUAL "IOS")
 			list(APPEND CLI "--platform" "ios")
-		elseif(PLATFORM STREQUAL NACL)
-			list(APPEND CLI "--platform" "nacl")
-		elseif(PLATFORM STREQUAL OSX)
+		elseif(PLATFORM STREQUAL "OSX")
 			list(APPEND CLI "--platform" "osx")
-		elseif(PLATFORM STREQUAL UNIX)
+		elseif(PLATFORM STREQUAL "LINUX")
 			list(APPEND CLI "--platform" "linux")
-		elseif(PLATFORM STREQUAL WINDOWS)
+		elseif(PLATFORM STREQUAL "WINDOWS")
 			list(APPEND CLI "--platform" "windows")
+		elseif(PLATFORM STREQUAL "ORBIS")
+			list(APPEND CLI "--platform" "orbis")
 		endif()
 
 		# --preprocess
@@ -576,7 +576,12 @@ if(TARGET bgfx::shaderc)
 		cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" "${ARGN}")
 
 		set(PROFILES 120 300_es spirv)
-		if(UNIX AND NOT APPLE)
+		if(IOS)
+			set(PLATFORM IOS)
+			list(APPEND PROFILES metal)
+		elseif(ANDROID)
+			set(PLATFORM ANDROID)
+		elseif(UNIX AND NOT APPLE)
 			set(PLATFORM LINUX)
 		elseif(EMSCRIPTEN)
 			set(PLATFORM ASM_JS)
@@ -592,6 +597,9 @@ if(TARGET bgfx::shaderc)
 			set(PLATFORM WINDOWS)
 			list(APPEND PROFILES s_4_0)
 			list(APPEND PROFILES s_5_0)
+		elseif(ORBIS) # ORBIS should be defined by a PS4 CMake toolchain
+			set(PLATFORM ORBIS)
+			list(APPEND PROFILES pssl)
 		else()
 			# pssl for Agc and Gnm renderers
 			# nvn for Nvn renderer
