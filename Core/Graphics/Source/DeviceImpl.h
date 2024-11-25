@@ -42,6 +42,11 @@ namespace Babylon::Graphics
         /* ********** BEGIN DEVICE CONTRACT ********** */
         void UpdateWindow(WindowT window);
         void UpdateDevice(DeviceT device);
+
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        void UpdateBackBuffer(BackBufferColorT backBufferColor, BackBufferDepthStencilT backBufferDepthStencil);
+#endif
+
         void UpdateSize(size_t width, size_t height);
         void UpdateMSAA(uint8_t value);
         void UpdateAlphaPremultiplied(bool enabled);

@@ -17,6 +17,14 @@ namespace Babylon::Graphics
         // The platform specific window.
         WindowT Window{};
 
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        // Color back buffer (only available for D3D11).
+        BackBufferColorT BackBufferColor{};
+
+        // Depth stencil back buffer (only available for D3D11).
+        BackBufferDepthStencilT BackBufferDepthStencil{};
+#endif
+
         // The resolution width.
         size_t Width{};
 

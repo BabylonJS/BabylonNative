@@ -2,17 +2,15 @@
 
 #include <d3d11.h>
 
+#define GRAPHICS_BACK_BUFFER_SUPPORT
+
 namespace Babylon::Graphics
 {
     using DeviceT = ID3D11Device*;
     using TextureT = ID3D11Resource*;
     using TextureFormatT = DXGI_FORMAT;
-
-    struct DeviceConfiguration
-    {
-        DeviceT Device;
-        float DevicePixelRatio{1.f};
-    };
+    using BackBufferColorT = ID3D11RenderTargetView*;
+    using BackBufferDepthStencilT = ID3D11DepthStencilView*;
 
     struct PlatformInfo
     {

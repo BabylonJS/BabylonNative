@@ -40,11 +40,11 @@ namespace Babylon::Graphics
         init.type = s_bgfxRenderType;
         init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY | BGFX_RESET_FLIP_AFTER_RENDER;
         init.resolution.maxFrameLatency = 1;
-
         init.callback = &m_bgfxCallback;
 
-        init.platformData.context = config.Device;
         UpdateWindow(config.Window);
+        UpdateDevice(config.Device);
+        UpdateBackBuffer(config.BackBufferColor, config.BackBufferDepthStencil);
         UpdateSize(config.Width, config.Height);
         UpdateMSAA(config.MSAASamples);
         UpdateAlphaPremultiplied(config.AlphaPremultiplied);
@@ -73,6 +73,14 @@ namespace Babylon::Graphics
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.InitState.platformData.context = device;
+        m_state.Bgfx.Dirty = true;
+    }
+
+    void DeviceImpl::UpdateBackBuffer(BackBufferColorT backBufferColor, BackBufferDepthStencilT backBufferDepthStencil)
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Bgfx.InitState.platformData.backBuffer = backBufferColor;
+        m_state.Bgfx.InitState.platformData.backBufferDS = backBufferDepthStencil;
         m_state.Bgfx.Dirty = true;
     }
 
