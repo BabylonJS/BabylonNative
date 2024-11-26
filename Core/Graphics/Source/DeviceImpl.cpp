@@ -44,10 +44,13 @@ namespace Babylon::Graphics
 
         UpdateWindow(config.Window);
         UpdateDevice(config.Device);
-        UpdateBackBuffer(config.BackBufferColor, config.BackBufferDepthStencil);
         UpdateSize(config.Width, config.Height);
         UpdateMSAA(config.MSAASamples);
         UpdateAlphaPremultiplied(config.AlphaPremultiplied);
+
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        UpdateBackBuffer(config.BackBufferColor, config.BackBufferDepthStencil);
+#endif
     }
 
     DeviceImpl::~DeviceImpl()
@@ -73,14 +76,6 @@ namespace Babylon::Graphics
     {
         std::scoped_lock lock{m_state.Mutex};
         m_state.Bgfx.InitState.platformData.context = device;
-        m_state.Bgfx.Dirty = true;
-    }
-
-    void DeviceImpl::UpdateBackBuffer(BackBufferColorT backBufferColor, BackBufferDepthStencilT backBufferDepthStencil)
-    {
-        std::scoped_lock lock{m_state.Mutex};
-        m_state.Bgfx.InitState.platformData.backBuffer = backBufferColor;
-        m_state.Bgfx.InitState.platformData.backBufferDS = backBufferDepthStencil;
         m_state.Bgfx.Dirty = true;
     }
 
@@ -131,16 +126,12 @@ namespace Babylon::Graphics
         m_state.Bgfx.Dirty = true;
     }
 
-    void DeviceImpl::UpdateDevicePixelRatio(float value)
+    void DeviceImpl::UpdateBackBuffer(BackBufferColorT backBufferColor, BackBufferDepthStencilT backBufferDepthStencil)
     {
         std::scoped_lock lock{m_state.Mutex};
-        m_state.Resolution.DevicePixelRatio = value;
+        m_state.Bgfx.InitState.platformData.backBuffer = backBufferColor;
+        m_state.Bgfx.InitState.platformData.backBufferDS = backBufferDepthStencil;
         m_state.Bgfx.Dirty = true;
-    }
-
-    void DeviceImpl::SetRenderResetCallback(std::function<void()> callback)
-    {
-        m_renderResetCallback = std::move(callback);
     }
 
     void DeviceImpl::AddToJavaScript(Napi::Env env)
@@ -160,6 +151,11 @@ namespace Babylon::Graphics
     Napi::Value DeviceImpl::CreateContext(Napi::Env env)
     {
         return DeviceContext::Create(env, *this);
+    }
+
+    void DeviceImpl::SetRenderResetCallback(std::function<void()> callback)
+    {
+        m_renderResetCallback = std::move(callback);
     }
 
     void DeviceImpl::EnableRendering()

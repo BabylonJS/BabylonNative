@@ -42,21 +42,20 @@ namespace Babylon::Graphics
         /* ********** BEGIN DEVICE CONTRACT ********** */
         void UpdateWindow(WindowT window);
         void UpdateDevice(DeviceT device);
+        void UpdateSize(size_t width, size_t height);
+        void UpdateMSAA(uint8_t value);
+        void UpdateAlphaPremultiplied(bool enabled);
 
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
         void UpdateBackBuffer(BackBufferColorT backBufferColor, BackBufferDepthStencilT backBufferDepthStencil);
 #endif
 
-        void UpdateSize(size_t width, size_t height);
-        void UpdateMSAA(uint8_t value);
-        void UpdateAlphaPremultiplied(bool enabled);
-        void UpdateDevicePixelRatio(float value);
-        void SetRenderResetCallback(std::function<void()> callback);
-
         void AddToJavaScript(Napi::Env);
         static DeviceImpl& GetFromJavaScript(Napi::Env);
 
         Napi::Value CreateContext(Napi::Env);
+
+        void SetRenderResetCallback(std::function<void()> callback);
 
         void EnableRendering();
         void DisableRendering();
