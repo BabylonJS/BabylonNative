@@ -98,7 +98,7 @@ namespace Babylon::Graphics
         void UpdateAlphaPremultiplied(bool enabled);
 
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
-        void UpdateBackBuffer(BackBufferColorT backBufferColor, BackBufferDepthStencilT backBufferDepthStencil);
+        void UpdateBackBuffer(BackBufferColorT backBufferColor, BackBufferDepthStencilT backBufferDepthStencil = {});
 #endif
 
         void AddToJavaScript(Napi::Env);
