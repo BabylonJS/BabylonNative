@@ -33,9 +33,10 @@ namespace Babylon::Plugins
         Napi::Promise AddToContextAsync(Napi::Env) const;
 
         // Updates to a new texture.
-        // Texture attributes (width, height, format, etc.) must match.
+        // Texture attributes (width, height, and mip levels) must match.
+        // Returns true if update succeeds or false otherwise.
         // NOTE: Must call from the Graphics thread.
-        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {});
+        bool Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {});
 
     private:
         class Impl;

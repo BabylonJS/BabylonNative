@@ -14,14 +14,14 @@ namespace Babylon::Plugins
         Assign(ptr);
     }
 
-    void ExternalTexture::Impl::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
+    bool ExternalTexture::Impl::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
     {
         Info info;
         GetInfo(ptr, overrideFormat, info);
 
         if (info.Width != m_info.Width || info.Height != m_info.Height || info.MipLevels != m_info.MipLevels)
         {
-            throw std::runtime_error{"Textures must have same width, height, and mip levels"};
+            return false;
         }
 
         DEBUG_TRACE("ExternalTexture [0x%p] Update %d x %d %d mips", this, int(info.Width), int(info.Height), int(info.MipLevels));
@@ -31,6 +31,8 @@ namespace Babylon::Plugins
         Assign(ptr);
 
         UpdateHandles(Ptr());
+
+        return true;
     }
 
     ExternalTexture::ExternalTexture(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
@@ -119,8 +121,8 @@ namespace Babylon::Plugins
         return promise;
     }
 
-    void ExternalTexture::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
+    bool ExternalTexture::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
     {
-        m_impl->Update(ptr, overrideFormat);
+        return m_impl->Update(ptr, overrideFormat);
     }
 }

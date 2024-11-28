@@ -16,7 +16,7 @@ namespace Babylon::Plugins
     public:
         // Implemented in ExternalTexture_Shared.h
         Impl(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
-        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
+        bool Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
 
         uintptr_t Ptr() const
         {
