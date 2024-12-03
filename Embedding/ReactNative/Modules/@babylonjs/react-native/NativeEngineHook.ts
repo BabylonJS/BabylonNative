@@ -43,7 +43,7 @@ function useAppState(): string {
             if (!!removeListener) {
                 removeListener();
             } else {
-                AppState.removeEventListener("change", onAppStateChanged);
+                appStateListener.remove();
             }
         };
     }, []);
