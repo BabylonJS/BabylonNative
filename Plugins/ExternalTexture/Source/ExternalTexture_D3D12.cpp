@@ -161,9 +161,9 @@ namespace Babylon::Plugins
         Impl(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
         bool Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
 
-        uintptr_t Ptr() const
+        Graphics::TextureT Get() const
         {
-            return reinterpret_cast<uintptr_t>(m_ptr.get());
+            return m_ptr.get();
         }
 
     private:
@@ -207,12 +207,7 @@ namespace Babylon::Plugins
             }
         }
 
-        bool Equals(Graphics::TextureT ptr)
-        {
-            return ptr == m_ptr.get();
-        }
-
-        void Assign(Graphics::TextureT ptr)
+        void Set(Graphics::TextureT ptr)
         {
             m_ptr.copy_from(ptr);
         }

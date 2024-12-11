@@ -18,23 +18,18 @@ namespace Babylon::Plugins
         Impl(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
         bool Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
 
-        uintptr_t Ptr() const
+        Graphics::TextureT Get() const
         {
             throw std::runtime_error{"not implemented"};
         }
 
     private:
-        bool Equals(Graphics::TextureT ptr)
-        {
-            throw std::runtime_error{"not implemented"};
-        }
-
         static void GetInfo(Graphics::TextureT, std::optional<Graphics::TextureFormatT>, Info&)
         {
             throw std::runtime_error{"not implemented"};
         }
 
-        void Assign(Graphics::TextureT)
+        void Set(Graphics::TextureT)
         {
             throw std::runtime_error{"not implemented"};
         }

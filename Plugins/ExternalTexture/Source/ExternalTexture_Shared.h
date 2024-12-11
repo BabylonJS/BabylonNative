@@ -11,31 +11,25 @@ namespace Babylon::Plugins
             throw std::runtime_error{"Unsupported texture mip levels"};
         }
 
-        Assign(ptr);
+        Set(ptr);
     }
 
-    bool ExternalTexture::Impl::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
+    void ExternalTexture::Impl::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
     {
-        if (!Equals(ptr))
-        {
-            Info info;
-            GetInfo(ptr, overrideFormat, info);
+        Info info;
+        GetInfo(ptr, overrideFormat, info);
 
-            if (info.Width != m_info.Width || info.Height != m_info.Height || info.MipLevels != m_info.MipLevels)
-            {
-                return false;
-            }
+        //if (info.Width != m_info.Width || info.Height != m_info.Height || info.MipLevels != m_info.MipLevels)
+        //{
+        //    return false;
+        //}
 
-            DEBUG_TRACE("ExternalTexture [0x%p] Update %d x %d %d mips", this, int(info.Width), int(info.Height), int(info.MipLevels));
+        DEBUG_TRACE("ExternalTexture [0x%p] Update %d x %d %d mips", this, int(info.Width), int(info.Height), int(info.MipLevels));
 
-            m_info = info;
+        m_info = info;
 
-            Assign(ptr);
-
-            UpdateHandles(Ptr());
-        }
-
-        return true;
+        Set(ptr);
+        UpdateHandles(ptr);
     }
 
     ExternalTexture::ExternalTexture(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
@@ -61,6 +55,11 @@ namespace Babylon::Plugins
     uint32_t ExternalTexture::Height() const
     {
         return m_impl->Height();
+    }
+
+    Graphics::TextureT ExternalTexture::Get() const
+    {
+        return m_impl->Get();
     }
 
     Napi::Promise ExternalTexture::AddToContextAsync(Napi::Env env) const
@@ -90,7 +89,7 @@ namespace Babylon::Plugins
                 }
 
                 arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&runtime, &context, deferred = std::move(deferred), handle, impl = std::move(impl)]() {
-                    if (bgfx::overrideInternal(handle, impl->Ptr()) == 0)
+                    if (bgfx::overrideInternal(handle, reinterpret_cast<uintptr_t>(impl->Get())) == 0)
                     {
                         runtime.Dispatch([deferred = std::move(deferred), handle](Napi::Env env) {
                             bgfx::destroy(handle);
@@ -124,8 +123,8 @@ namespace Babylon::Plugins
         return promise;
     }
 
-    bool ExternalTexture::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
+    void ExternalTexture::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
     {
-        return m_impl->Update(ptr, overrideFormat);
+        m_impl->Update(ptr, overrideFormat);
     }
 }

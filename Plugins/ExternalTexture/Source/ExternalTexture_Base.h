@@ -62,13 +62,13 @@ namespace Babylon::Plugins
             return BGFX_TEXTURE_NONE;
         }
 
-        void UpdateHandles(uintptr_t ptr)
+        void UpdateHandles(Graphics::TextureT ptr)
         {
             std::scoped_lock lock{m_mutex};
 
             for (auto handle : m_handles)
             {
-                if (bgfx::overrideInternal(handle, ptr) == 0)
+                if (bgfx::overrideInternal(handle, reinterpret_cast<uintptr_t>(ptr)) == 0)
                 {
                     assert(!"Failed to override texture");
                 }
