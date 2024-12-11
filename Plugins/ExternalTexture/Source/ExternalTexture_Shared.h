@@ -16,27 +16,30 @@ namespace Babylon::Plugins
 
     bool ExternalTexture::Impl::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
     {
-        Info info;
-        GetInfo(ptr, overrideFormat, info);
-
-        if (info.Width != m_info.Width || info.Height != m_info.Height || info.MipLevels != m_info.MipLevels)
+        if (!Equals(ptr))
         {
-            return false;
+            Info info;
+            GetInfo(ptr, overrideFormat, info);
+
+            if (info.Width != m_info.Width || info.Height != m_info.Height || info.MipLevels != m_info.MipLevels)
+            {
+                return false;
+            }
+
+            DEBUG_TRACE("ExternalTexture [0x%p] Update %d x %d %d mips", this, int(info.Width), int(info.Height), int(info.MipLevels));
+
+            m_info = info;
+
+            Assign(ptr);
+
+            UpdateHandles(Ptr());
         }
-
-        DEBUG_TRACE("ExternalTexture [0x%p] Update %d x %d %d mips", this, int(info.Width), int(info.Height), int(info.MipLevels));
-
-        m_info = info;
-
-        Assign(ptr);
-
-        UpdateHandles(Ptr());
 
         return true;
     }
 
     ExternalTexture::ExternalTexture(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
-        : m_impl{std::make_unique<Impl>(ptr, overrideFormat)}
+        : m_impl{std::make_shared<Impl>(ptr, overrideFormat)}
     {
     }
 

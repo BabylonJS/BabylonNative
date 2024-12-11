@@ -190,6 +190,11 @@ namespace Babylon::Plugins
             }
         }
 
+        bool Equals(Graphics::TextureT ptr)
+        {
+            return ptr == m_ptr;
+        }
+
         void Assign(Graphics::TextureT ptr)
         {
             m_ptr = ptr;

@@ -75,6 +75,13 @@ namespace Babylon::Plugins
             }
         }
 
+        struct BaseInfo
+        {
+            uint16_t Width{};
+            uint16_t Height{};
+            uint16_t MipLevels{};
+        };
+
         struct Info
         {
             uint16_t Width{};

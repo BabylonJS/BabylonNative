@@ -213,6 +213,11 @@ namespace Babylon::Plugins
             }
         }
 
+        bool Equals(Graphics::TextureT ptr)
+        {
+            return ptr == m_ptr.get();
+        }
+
         void Assign(Graphics::TextureT ptr)
         {
             m_ptr.copy_from(ptr);

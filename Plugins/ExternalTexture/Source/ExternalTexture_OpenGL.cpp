@@ -24,6 +24,11 @@ namespace Babylon::Plugins
         }
 
     private:
+        bool Equals(Graphics::TextureT ptr)
+        {
+            throw std::runtime_error{"not implemented"};
+        }
+
         static void GetInfo(Graphics::TextureT, std::optional<Graphics::TextureFormatT>, Info&)
         {
             throw std::runtime_error{"not implemented"};
