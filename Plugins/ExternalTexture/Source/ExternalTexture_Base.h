@@ -16,6 +16,7 @@ namespace Babylon::Plugins
         uint16_t Height() const { return m_info.Height; }
         bgfx::TextureFormat::Enum Format() const { return m_info.Format; }
         bool HasMips() const { return m_info.MipLevels != 1; }
+        uint16_t NumLayers() const { return m_info.NumLayers; }
         uint64_t Flags() const { return m_info.Flags; }
 
         void AddHandle(bgfx::TextureHandle handle)
@@ -87,6 +88,7 @@ namespace Babylon::Plugins
             uint16_t Width{};
             uint16_t Height{};
             uint16_t MipLevels{};
+            uint16_t NumLayers{};
             bgfx::TextureFormat::Enum Format{bgfx::TextureFormat::Unknown};
             uint64_t Flags{};
         };

@@ -163,6 +163,7 @@ namespace Babylon::Plugins
             info.Width = static_cast<uint16_t>(ptr.width);
             info.Height = static_cast<uint16_t>(ptr.height);
             info.MipLevels = static_cast<uint16_t>(ptr.mipmapLevelCount);
+            info.NumLayers = static_cast<uint16_t>(ptr.arrayLength);
 
             if ((ptr.usage & MTLTextureUsageRenderTarget) != 0)
             {
