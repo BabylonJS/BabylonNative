@@ -14,7 +14,7 @@ namespace Babylon::Plugins
         Set(ptr);
     }
 
-    void ExternalTexture::Impl::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
+    void ExternalTexture::Impl::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, std::optional<uint32_t> layerIndex)
     {
         Info info;
         GetInfo(ptr, overrideFormat, info);
@@ -24,7 +24,7 @@ namespace Babylon::Plugins
         m_info = info;
 
         Set(ptr);
-        UpdateHandles(ptr);
+        UpdateHandles(ptr, layerIndex);
     }
 
     ExternalTexture::ExternalTexture(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
@@ -57,7 +57,7 @@ namespace Babylon::Plugins
         return m_impl->Get();
     }
 
-    Napi::Promise ExternalTexture::AddToContextAsync(Napi::Env env) const
+    Napi::Promise ExternalTexture::AddToContextAsync(Napi::Env env, std::optional<uint32_t> layerIndex) const
     {
         Graphics::DeviceContext& context = Graphics::DeviceContext::GetFromJavaScript(env);
         JsRuntime& runtime = JsRuntime::GetFromJavaScript(env);
@@ -68,7 +68,7 @@ namespace Babylon::Plugins
         DEBUG_TRACE("ExternalTexture [0x%p] AddToContextAsync", m_impl.get());
 
         arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(),
-            [&context, &runtime, deferred = std::move(deferred), impl = m_impl]() {
+            [&context, &runtime, deferred = std::move(deferred), impl = m_impl, layerIndex = std::move(layerIndex)]() {
                 // REVIEW: The bgfx texture handle probably needs to be an RAII object to make sure it gets clean up during the asynchrony.
                 //         For example, if any of the schedulers/dispatches below don't fire, then the texture handle will leak.
                 bgfx::TextureHandle handle = bgfx::createTexture2D(impl->Width(), impl->Height(), impl->HasMips(), impl->NumLayers(), impl->Format(), impl->Flags());
@@ -83,8 +83,8 @@ namespace Babylon::Plugins
                     return;
                 }
 
-                arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&runtime, &context, deferred = std::move(deferred), handle, impl = std::move(impl)]() {
-                    if (bgfx::overrideInternal(handle, reinterpret_cast<uintptr_t>(impl->Get())) == 0)
+                arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&runtime, &context, deferred = std::move(deferred), handle, impl = std::move(impl), layerIndex = std::move(layerIndex)]() {
+                    if (bgfx::overrideInternal(handle, reinterpret_cast<uintptr_t>(impl->Get()), layerIndex.value_or(-1)) == 0)
                     {
                         runtime.Dispatch([deferred = std::move(deferred), handle](Napi::Env env) {
                             bgfx::destroy(handle);
@@ -118,8 +118,8 @@ namespace Babylon::Plugins
         return promise;
     }
 
-    void ExternalTexture::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
+    void ExternalTexture::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, std::optional<uint32_t> layerIndex)
     {
-        m_impl->Update(ptr, overrideFormat);
+        m_impl->Update(ptr, overrideFormat, layerIndex);
     }
 }

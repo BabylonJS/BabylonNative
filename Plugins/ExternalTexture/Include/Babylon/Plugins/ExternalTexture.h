@@ -33,12 +33,12 @@ namespace Babylon::Plugins
 
         // Adds this texture to the graphics context of the given N-API environment.
         // NOTE: Must call from the JavaScript thread.
-        Napi::Promise AddToContextAsync(Napi::Env) const;
+        Napi::Promise AddToContextAsync(Napi::Env, std::optional<uint32_t> layerIndex = {}) const;
 
         // Updates to a new texture.
         // Texture attributes (width, height, and mip levels) must match.
         // NOTE: Must call from the Graphics thread.
-        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {});
+        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {}, std::optional<uint32_t> layerIndex = {});
 
     private:
         class Impl;

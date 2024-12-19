@@ -159,7 +159,7 @@ namespace Babylon::Plugins
     public:
         // Implemented in ExternalTexture_Shared.h
         Impl(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
-        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
+        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT>, std::optional<uint32_t> layerIndex = {});
 
         Graphics::TextureT Get() const
         {
