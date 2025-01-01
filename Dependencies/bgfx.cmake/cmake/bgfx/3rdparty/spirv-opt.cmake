@@ -129,6 +129,7 @@ file(
 	${SPIRV_TOOLS}/source/val/validate_ray_tracing_reorder.cpp
 	${SPIRV_TOOLS}/source/val/validate_scopes.cpp
 	${SPIRV_TOOLS}/source/val/validate_small_type_uses.cpp
+	${SPIRV_TOOLS}/source/val/validate_tensor_layout.cpp
 	${SPIRV_TOOLS}/source/val/validate_type.cpp
 	${SPIRV_TOOLS}/source/val/validation_state.cpp
 )
