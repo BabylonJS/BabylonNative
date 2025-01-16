@@ -189,7 +189,7 @@ commandList->ResourceBarrier(1, &barrier);
 commandList->Close();
 
 // Execute the command list and wait for the GPU to finish
-commandQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)commandList.put_void());
+commandQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)&commandList);
 HANDLE fenceEvent = CreateEventExA(NULL, NULL, 0, EVENT_ALL_ACCESS);
 hr = fence->SetEventOnCompletion(fenceValue, fenceEvent);
 winrt::check_hresult(hr);
