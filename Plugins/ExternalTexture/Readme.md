@@ -14,7 +14,7 @@ ExternalTexture is a plugin library that provided the functionality required to 
 // Create graphics Device
 Babylon::Graphics::Configuration graphicsConfig {};
 graphicsConfig.Device = d3dDevice;
-Babylon::Graphics::Device babylonDevice = Babylon::Graphics::Device(config);
+Babylon::Graphics::Device babylonDevice{config};
 ```
 
 If the external texture will be used as a render target, there is no need to provide a width, height or Window values for the Configuration object.
