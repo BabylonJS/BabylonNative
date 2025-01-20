@@ -22,8 +22,8 @@ If the external texture will be used as a render target, there is no need to pro
 To set the ExternalTexture to be used as a render target by Babylon.js one must call a JS function that will assign the 
 
 ```
-int width  // Your render target width.
-int height // Your render target height. 
+int width = 1024;  // Your render target width.
+int height = 768; // Your render target height. 
 
 std::promise<void> textureCreationSubmitted {};
 std::promise<void> textureCreationDone {};
