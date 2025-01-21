@@ -10,7 +10,7 @@ if (project.hasProperty("jsEngine")) {
 android {
     namespace 'com.jsruntimehost.unittests'
     compileSdk 33
-    ndkVersion = "21.4.7075529"
+    ndkVersion = "23.1.7779620"
     if (project.hasProperty("ndkVersion")) {
         ndkVersion = project.property("ndkVersion")
     }

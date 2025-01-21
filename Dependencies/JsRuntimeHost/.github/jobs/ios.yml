@@ -20,6 +20,11 @@ jobs:
       cmake -B Build/iOS -G Xcode -D IOS=ON
     displayName: 'Configure CMake'
 
+  - script: |
+      echo Boot "${{parameters.simulator}}"
+      xcrun simctl boot "${{parameters.simulator}}"
+    displayName: 'Boot Simulator'
+
   - task: Xcode@5
     inputs:
       xcWorkspacePath: 'Build/iOS/JsRuntimeHost.xcodeproj'
@@ -30,8 +35,6 @@ jobs:
     displayName: 'Build Xcode Project'
 
   - script: |
-      echo Boot "${{parameters.simulator}}"
-      xcrun simctl boot "${{parameters.simulator}}"
       echo Install UnitTests app
       xcrun simctl install booted "Build/iOS/Tests/UnitTests/RelWithDebInfo-iphonesimulator/UnitTests.app"
       echo Launch UnitTests app

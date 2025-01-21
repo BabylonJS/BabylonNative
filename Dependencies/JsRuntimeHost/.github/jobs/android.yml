@@ -9,11 +9,12 @@ jobs:
   timeoutInMinutes: 30
 
   pool:
-    vmImage: macos-latest
+    vmImage: macos-13
 
   steps:
   - script: |
       echo Install Android image
+      export JAVA_HOME=$JAVA_HOME_8_X64
       echo 'y' | $ANDROID_HOME/tools/bin/sdkmanager --install 'system-images;android-27;default;x86_64'
       echo 'y' | $ANDROID_HOME/tools/bin/sdkmanager --licenses
       echo Create AVD
@@ -22,7 +23,7 @@ jobs:
 
   - script: |
       echo Start emulator
-      nohup $ANDROID_HOME/emulator/emulator -avd Pixel_API_27 -gpu host -no-window 2>&1 &
+      nohup $ANDROID_HOME/emulator/emulator -avd Pixel_API_27 -gpu host -no-window -no-audio -no-boot-anim 2>&1 &
       echo Wait for emulator
       $ANDROID_HOME/platform-tools/adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do echo '.'; sleep 1; done'
       $ANDROID_HOME/platform-tools/adb devices
@@ -34,13 +35,14 @@ jobs:
       workingDirectory: 'Tests/UnitTests/Android'
       options: '-PabiFilters=x86_64 -PjsEngine=${{parameters.jsEngine}} -PndkVersion=$(ndkVersion)'
       tasks: 'connectedAndroidTest'
-      jdkVersionOption: 1.11
+      jdkVersionOption: 1.17
     displayName: 'Run Connected Android Test'
 
   - script: |
-      export results=$(find ./app/build/outputs/androidTest-results -name "*.txt")
-      echo cat "$results"
-      cat "$results"
+      find ./app/build/outputs/androidTest-results -name "*.txt" -print0 | while IFS= read -r -d '' file; do
+        echo "cat \"$file\""
+        cat "$file"
+      done
     workingDirectory: 'Tests/UnitTests/Android'
     condition: succeededOrFailed()
     displayName: 'Dump logcat from Test Results'

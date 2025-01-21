@@ -7,8 +7,8 @@ jobs:
 
   steps:
   - script: |
-      sudo xcode-select --switch /Applications/Xcode_14.0.app/Contents/Developer
-    displayName: 'Select Xcode 14.0'
+      sudo xcode-select --switch /Applications/Xcode_15.1.app/Contents/Developer
+    displayName: 'Select Xcode 15.1'
 
   - script: |
       cmake -B Build/macOS -GXcode
