@@ -139,6 +139,10 @@ namespace {
     return reinterpret_cast<napi_value*>(const_cast<OpaqueJSValue**>(values));
   }
 
+  napi_env ToNapi(const JSGlobalContextRef context) {
+    return napi_env__::get(context);
+  }
+
   napi_status napi_clear_last_error(napi_env env) {
     env->last_error.error_code = napi_ok;
     env->last_error.engine_error_code = 0;
@@ -188,26 +192,51 @@ namespace {
     }
 
     template<typename T>
-    static T* Get(JSObjectRef obj) {
-      return reinterpret_cast<T*>(JSObjectGetPrivate(obj));
+    static napi_status Link(napi_env env, JSObjectRef target, JSObjectRef sentinel) {
+      JSValueRef exception{};
+      JSObjectSetPropertyForKey(
+        env->context,
+        target,
+        T::GetKey(env),
+        sentinel,
+        kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontEnum | kJSPropertyAttributeDontDelete,
+        &exception);
+
+      CHECK_JSC(env, exception);
+      return napi_ok;
     }
 
     template<typename T>
-    static T* FindInPrototypeChain(JSContextRef ctx, JSObjectRef obj) {
-      while (true) {
-        JSValueRef exception{};
-        JSObjectRef prototype = JSValueToObject(ctx, JSObjectGetPrototype(ctx, obj), &exception);
-        if (exception != nullptr) {
-          return nullptr;
-        }
+    static T* Get(JSObjectRef sentinel) {
+      return reinterpret_cast<T*>(JSObjectGetPrivate(sentinel));
+    }
 
-        NativeInfo* info = Get<NativeInfo>(prototype);
-        if (info != nullptr && info->Type() == T::StaticType) {
-          return reinterpret_cast<T*>(info);
-        }
-
-        obj = prototype;
+    template<typename T>
+    static T* Query(napi_env env, JSObjectRef obj, JSValueRef* exception) {
+      const auto hasSentinel{JSObjectHasPropertyForKey(env->context, obj, T::GetKey(env), exception)};
+      if (*exception || !hasSentinel) {
+        return nullptr;
       }
+
+      JSValueRef sentinelValue{JSObjectGetPropertyForKey(env->context, obj, T::GetKey(env), exception)};
+      if (*exception) {
+        return nullptr;
+      }
+
+      JSObjectRef sentinel{JSValueToObject(env->context, sentinelValue, exception)};
+      if (*exception) {
+        return nullptr;
+      }
+
+      return Get<T>(sentinel);
+    }
+
+    template<typename T>
+    static napi_status Query(napi_env env, JSObjectRef obj, T** info) {
+      JSValueRef exception{};
+      *info = Query<T>(env, obj, &exception);
+      CHECK_JSC(env, exception);
+      return napi_ok;
     }
 
    protected:
@@ -223,19 +252,20 @@ namespace {
    public:
     static const NativeType StaticType = NativeType::Constructor;
 
+    static JSValueRef GetKey(napi_env env) {
+      return env->constructor_info_symbol;
+    }
+
     static napi_status Create(napi_env env,
                               const char* utf8name,
                               size_t length,
                               napi_callback cb,
                               void* data,
                               napi_value* result) {
-      ConstructorInfo* info{new ConstructorInfo(env, utf8name, length, cb, data)};
-      if (info == nullptr) {
-        return napi_set_last_error(env, napi_generic_failure);
-      }
-
       JSObjectRef constructor{JSObjectMakeConstructor(env->context, nullptr, CallAsConstructor)};
-      JSObjectRef prototype{JSObjectMake(env->context, info->_class, info)};
+      // BEGIN TODO: This extra prototype should no longer be needed, but for some reason removing it leads to errors
+      //             when setting properties on some prototypes. This should be investigated and removed.
+      JSObjectRef prototype{JSObjectMake(env->context, nullptr, nullptr)};
       JSObjectSetPrototype(env->context, prototype, JSObjectGetPrototype(env->context, constructor));
       JSObjectSetPrototype(env->context, constructor, prototype);
 
@@ -243,6 +273,15 @@ namespace {
       JSObjectSetProperty(env->context, prototype, JSString("constructor"), constructor,
         kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete, &exception);
       CHECK_JSC(env, exception);
+      // END TODO
+
+      ConstructorInfo* info{new ConstructorInfo(env, utf8name, length, cb, data)};
+      if (info == nullptr) {
+        return napi_set_last_error(env, napi_generic_failure);
+      }
+
+      JSObjectRef sentinel{JSObjectMake(env->context, info->_class, info)};
+      CHECK_NAPI(NativeInfo::Link<ConstructorInfo>(env, constructor, sentinel));
 
       *result = ToNapi(constructor);
       return napi_ok;
@@ -271,10 +310,14 @@ namespace {
                                          size_t argumentCount,
                                          const JSValueRef arguments[],
                                          JSValueRef* exception) {
-      ConstructorInfo* info = NativeInfo::FindInPrototypeChain<ConstructorInfo>(ctx, constructor);
+      napi_env env{ToNapi(JSContextGetGlobalContext(ctx))};
+      ConstructorInfo* info = NativeInfo::Query<ConstructorInfo>(env, constructor, exception);
+      if (*exception) {
+        return nullptr;
+      }
 
       // Make sure any errors encountered last time we were in N-API are gone.
-      napi_clear_last_error(info->_env);
+      napi_clear_last_error(env);
 
       JSObjectRef instance{JSObjectMake(ctx, nullptr, nullptr)};
       JSObjectSetPrototype(ctx, instance, JSObjectGetPrototype(ctx, constructor));
@@ -286,14 +329,15 @@ namespace {
       cbinfo.argv = ToNapi(arguments);
       cbinfo.data = info->_data;
 
-      napi_value result = info->_cb(info->_env, &cbinfo);
+      napi_value result = info->_cb(env, &cbinfo);
 
-      if (info->_env->last_exception != nullptr) {
-        *exception = info->_env->last_exception;
-        info->_env->last_exception = nullptr;
+      if (env->last_exception != nullptr) {
+        *exception = env->last_exception;
+        env->last_exception = nullptr;
+        return nullptr;
       }
 
-      return ToJSObject(info->_env, result);
+      return ToJSObject(env, result);
     }
 
     // JSObjectFinalizeCallback
@@ -315,6 +359,10 @@ namespace {
    public:
     static const NativeType StaticType = NativeType::Function;
 
+    static JSValueRef GetKey(napi_env env) {
+      return env->function_info_symbol;
+    }
+
     static napi_status Create(napi_env env,
                               const char* utf8name,
                               size_t length,
@@ -327,9 +375,8 @@ namespace {
       }
 
       JSObjectRef function{JSObjectMakeFunctionWithCallback(env->context, JSString(utf8name), CallAsFunction)};
-      JSObjectRef prototype{JSObjectMake(env->context, info->_class, info)};
-      JSObjectSetPrototype(env->context, prototype, JSObjectGetPrototype(env->context, function));
-      JSObjectSetPrototype(env->context, function, prototype);
+      JSObjectRef sentinel{JSObjectMake(env->context, info->_class, info)};
+      CHECK_NAPI(NativeInfo::Link<FunctionInfo>(env, function, sentinel));
 
       *result = ToNapi(function);
       return napi_ok;
@@ -358,10 +405,14 @@ namespace {
                                      size_t argumentCount,
                                      const JSValueRef arguments[],
                                      JSValueRef* exception) {
-      FunctionInfo* info = NativeInfo::FindInPrototypeChain<FunctionInfo>(ctx, function);
+      napi_env env{ToNapi(JSContextGetGlobalContext(ctx))};
+      FunctionInfo* info = NativeInfo::Query<FunctionInfo>(env, function, exception);
+      if (*exception) {
+        return nullptr;
+      }
 
       // Make sure any errors encountered last time we were in N-API are gone.
-      napi_clear_last_error(info->_env);
+      napi_clear_last_error(env);
 
       napi_callback_info__ cbinfo{};
       cbinfo.thisArg = ToNapi(thisObject);
@@ -370,11 +421,12 @@ namespace {
       cbinfo.argv = ToNapi(arguments);
       cbinfo.data = info->_data;
 
-      napi_value result = info->_cb(info->_env, &cbinfo);
+      napi_value result = info->_cb(env, &cbinfo);
 
-      if (info->_env->last_exception != nullptr) {
-        *exception = info->_env->last_exception;
-        info->_env->last_exception = nullptr;
+      if (env->last_exception != nullptr) {
+        *exception = env->last_exception;
+        env->last_exception = nullptr;
+        return nullptr;
       }
 
       return ToJSValue(result);
@@ -477,18 +529,31 @@ namespace {
 
   class ReferenceInfo : public BaseInfoT<ReferenceInfo, NativeType::Reference> {
    public:
+    static JSValueRef GetKey(napi_env env) {
+      return env->reference_info_symbol;
+    }
+
+    static napi_status GetObjectId(napi_env env, napi_value object, std::uintptr_t* id) {
+      ReferenceInfo* referenceInfo{};
+      CHECK_NAPI(NativeInfo::Query<ReferenceInfo>(env, ToJSObject(env, object), &referenceInfo));
+      *id = referenceInfo == nullptr ? 0 : referenceInfo->GetObjectId();
+      return napi_ok;
+    }
+
     static napi_status Initialize(napi_env env, napi_value object, FinalizerT finalizer) {
       ReferenceInfo* info = new ReferenceInfo(env);
       if (info == nullptr) {
         return napi_set_last_error(env, napi_generic_failure);
       }
 
-      JSObjectRef prototype{JSObjectMake(env->context, info->_class, info)};
-      JSObjectSetPrototype(env->context, prototype, JSObjectGetPrototype(env->context, ToJSObject(env, object)));
-      JSObjectSetPrototype(env->context, ToJSObject(env, object), prototype);
-
+      JSObjectRef sentinel{JSObjectMake(env->context, info->_class, info)};
+      CHECK_NAPI(NativeInfo::Link<ReferenceInfo>(env, ToJSObject(env, object), sentinel));
       info->AddFinalizer(finalizer);
       return napi_ok;
+    }
+
+    std::uintptr_t GetObjectId() {
+      return reinterpret_cast<std::uintptr_t>(this);
     }
 
    private:
@@ -499,6 +564,10 @@ namespace {
 
   class WrapperInfo : public BaseInfoT<WrapperInfo, NativeType::Wrapper> {
    public:
+    static JSValueRef GetKey(napi_env env) {
+      return env->wrapper_info_symbol;
+    }
+
     static napi_status Wrap(napi_env env, napi_value object, WrapperInfo** result) {
       WrapperInfo* info{};
       CHECK_NAPI(Unwrap(env, object, &info));
@@ -508,9 +577,8 @@ namespace {
           return napi_set_last_error(env, napi_generic_failure);
         }
 
-        JSObjectRef prototype{JSObjectMake(env->context, info->_class, info)};
-        JSObjectSetPrototype(env->context, prototype, JSObjectGetPrototype(env->context, ToJSObject(env, object)));
-        JSObjectSetPrototype(env->context, ToJSObject(env, object), prototype);
+        JSObjectRef sentinel{JSObjectMake(env->context, info->_class, info)};
+        CHECK_NAPI(NativeInfo::Link<WrapperInfo>(env, ToJSObject(env, object), sentinel));
       }
 
       *result = info;
@@ -518,7 +586,7 @@ namespace {
     }
 
     static napi_status Unwrap(napi_env env, napi_value object, WrapperInfo** result) {
-      *result = NativeInfo::FindInPrototypeChain<WrapperInfo>(env->context, ToJSObject(env, object));
+      CHECK_NAPI(NativeInfo::Query<WrapperInfo>(env, ToJSObject(env, object), result));
       return napi_ok;
     }
 
@@ -577,18 +645,41 @@ namespace {
 }
 
 struct napi_ref__ {
-  napi_ref__(napi_value value, uint32_t count)
-    : _value{value}
-    , _count{count} {
-  }
+  napi_ref__() = default;
 
-  napi_status init(napi_env env) {
+  // Copy semantics
+  napi_ref__(const napi_ref__&) = delete;
+  napi_ref__& operator=(const napi_ref__&) = delete;
+
+  // Move semantics
+  napi_ref__(napi_ref__&&) noexcept = delete;
+  napi_ref__& operator=(napi_ref__&&) noexcept = delete;
+
+  napi_status init(napi_env env, napi_value value, uint32_t count) {
+    assert(!_value);
+    _value = value;
+    _count = count;
+
     // track the ref values to support weak refs
-    auto pair{env->active_ref_values.insert(_value)};
-    if (pair.second) {
+    CHECK_NAPI(ReferenceInfo::GetObjectId(env, _value, &_objectId));
+    if (_objectId == 0) {
       CHECK_NAPI(ReferenceInfo::Initialize(env, _value, [value = _value](ReferenceInfo* info) {
-        info->Env()->active_ref_values.erase(value);
+        auto entry{info->Env()->active_ref_values.find(value)};
+        // NOTE: The finalizer callback is actually on a "sentinel" JS object that is linked to the
+        // actual JS object we are trying to track. This means it is possible for the tracked object
+        // to be garbage collected and a new object created at the same memory address before we get
+        // the callback for the sentinel object finalizer. Guard against this by checking that the
+        // tracked object still has the same unique object id.
+        if (entry != info->Env()->active_ref_values.end() && entry->second == info->GetObjectId()) {
+          info->Env()->active_ref_values.erase(entry);
+        }
       }));
+
+      CHECK_NAPI(ReferenceInfo::GetObjectId(env, _value, &_objectId));
+      assert(_objectId);
+      env->active_ref_values[_value] = _objectId;
+    } else {
+      assert(env->active_ref_values.find(_value) != env->active_ref_values.end());
     }
 
     if (_count != 0) {
@@ -608,12 +699,15 @@ struct napi_ref__ {
   }
 
   void ref(napi_env env) {
+    assert(_value);
     if (_count++ == 0) {
       protect(env);
     }
   }
 
   void unref(napi_env env) {
+    assert(_value);
+    assert(_count != 0);
     if (--_count == 0) {
       unprotect(env);
     }
@@ -623,12 +717,19 @@ struct napi_ref__ {
     return _count;
   }
 
-  napi_value value(napi_env env) const {
-    if (env->active_ref_values.find(_value) == env->active_ref_values.end()) {
-      return nullptr;
+  napi_status value(napi_env env, napi_value* result) const {
+    assert(_value);
+    if (env->active_ref_values.find(_value) != env->active_ref_values.end()) {
+      std::uintptr_t objectId{};
+      // NOTE: This check is needed for the same reason we need a similar check in the init function.
+      // See the comment in init for more details.
+      CHECK_NAPI(ReferenceInfo::GetObjectId(env, _value, &objectId));
+      if (objectId == _objectId) {
+        *result = _value;
+      }
     }
 
-    return _value;
+    return napi_ok;
   }
 
  private:
@@ -644,6 +745,7 @@ struct napi_ref__ {
 
   napi_value _value{};
   uint32_t _count{};
+  std::uintptr_t _objectId{};
   std::list<napi_ref>::iterator _iter{};
 };
 
@@ -652,6 +754,15 @@ void napi_env__::deinit_refs() {
     napi_ref ref{strong_refs.front()};
     ref->deinit(this);
   }
+}
+
+void napi_env__::init_symbol(JSValueRef &symbol, const char *description) {
+  symbol = JSValueMakeSymbol(context, JSString(description));
+  JSValueProtect(context, symbol);
+}
+
+void napi_env__::deinit_symbol(JSValueRef symbol) {
+  JSValueUnprotect(context, symbol);
 }
 
 // Warning: Keep in-sync with napi_status enum
@@ -1822,12 +1933,12 @@ napi_status napi_create_reference(napi_env env,
   CHECK_ARG(env, value);
   CHECK_ARG(env, result);
 
-  napi_ref__* ref{new napi_ref__{value, initial_refcount}};
+  napi_ref__* ref{new napi_ref__{}};
   if (ref == nullptr) {
     return napi_set_last_error(env, napi_generic_failure);
   }
 
-  ref->init(env);
+  ref->init(env, value, initial_refcount);
   *result = ref;
 
   return napi_ok;
@@ -1887,7 +1998,7 @@ napi_status napi_get_reference_value(napi_env env,
   CHECK_ARG(env, ref);
   CHECK_ARG(env, result);
 
-  *result = ref->value(env);
+  CHECK_NAPI(ref->value(env, result));
   return napi_ok;
 }
 

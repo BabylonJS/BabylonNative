@@ -4513,7 +4513,7 @@ template <typename T>
 inline ObjectWrap<T>::~ObjectWrap() {
   // If the JS object still exists at this point, remove the finalizer added
   // through `napi_wrap()`.
-  if (!IsEmpty()) {
+  if (!IsEmpty() && !_finalized) {
     Object object = Value();
     // It is not valid to call `napi_remove_wrap()` with an empty `object`.
     // This happens e.g. during garbage collection.
@@ -4955,6 +4955,7 @@ inline void ObjectWrap<T>::FinalizeCallback(napi_env env,
                                             void* /*hint*/) {
   HandleScope scope(env);
   T* instance = static_cast<T*>(data);
+  instance->_finalized = true;
   instance->Finalize(Napi::Env(env));
   delete instance;
 }
