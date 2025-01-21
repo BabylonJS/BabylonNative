@@ -19,7 +19,7 @@ Babylon::Graphics::Device babylonDevice{config};
 
 If the external texture will be used as a render target, there is no need to provide a width, height or Window values for the Configuration object.
 
-To set the ExternalTexture to be used as a render target by Babylon.js one must call a JS function that will assign the 
+To set the ExternalTexture to be used as a render target by Babylon.js one must call a JS function that will assign the native object to a JS texture.
 
 ```
 int width = 1024;  // Your render target width.
