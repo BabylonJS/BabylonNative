@@ -29,7 +29,7 @@ std::promise<void> textureCreationSubmitted {};
 std::promise<void> textureCreationDone {};
 
 // Create an ExternalTexture from an ID3D12Resource.
-std::shared_ptr<Babylon::Plugins::ExternalTexture> externalTexture = std::make_shared<Babylon::Plugins::ExternalTexture>(d3d12Resource);
+auto externalTexture = std::make_shared<Babylon::Plugins::ExternalTexture>(d3d12Resource);
 
 jsRuntime.Dispatch([&externalTexture, &textureCreationSubmitted, width, height, &textureCreationDone](Napi::Env env)
 {
