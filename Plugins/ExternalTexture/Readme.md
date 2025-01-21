@@ -28,8 +28,12 @@ int height = 768; // Your render target height.
 std::promise<void> textureCreationSubmitted {};
 std::promise<void> textureCreationDone {};
 
+// Create an ExternalTexture from an ID3D12Resource.
+std::shared_ptr<Babylon::Plugins::ExternalTexture> externalTexture = std::make_shared<Babylon::Plugins::ExternalTexture>(d3d12Resource);
+
 jsRuntime.Dispatch([&externalTexture, &textureCreationSubmitted, width, height, &textureCreationDone](Napi::Env env)
 {
+   // Creates a JS object that can be used by the Babylon Engine to create a render texture.
    auto jsPromisse = externalTexture->AddToContextAsync(env);
    auto result = env.Global().Get("YOUR_JS_FUNCTION").As<Napi::Function>().Call(
       { 
