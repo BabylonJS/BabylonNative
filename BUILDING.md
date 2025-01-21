@@ -192,6 +192,13 @@ demo app, click on the project selector and find `Playground` in the list of pos
 selections. The `Play` button will subsequently allow you to build, run, and debug
 the selected Babylon Native demo app.
 
+### Troubleshooting
+```
+CMake Error at /Applications/CMake 2.app/Contents/share/cmake-3.26/Modules/Platform/iOS-Initialize.cmake:4 (message):
+   is not an iOS SDK
+```
+If you see an error like this, it might be because you have updated Xcode and/or installed a new version of the iOS SDK since last time CMake was run. Try cleaning (e.g. `git clean -dxff`, but back up any changes you want to keep) and re-running the CMake command.
+
 ## **Building on macOS, Targeting visionOS**
 
 _Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
