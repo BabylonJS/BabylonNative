@@ -45,6 +45,7 @@ namespace Babylon::Graphics
         UpdateWindow(config.Window);
         UpdateDevice(config.Device);
         UpdateSize(config.Width, config.Height);
+        UpdateDevicePixelRatio(config.DevicePixelRatio);
         UpdateMSAA(config.MSAASamples);
         UpdateAlphaPremultiplied(config.AlphaPremultiplied);
 
@@ -84,6 +85,13 @@ namespace Babylon::Graphics
         std::scoped_lock lock{m_state.Mutex};
         m_state.Resolution.Width = width;
         m_state.Resolution.Height = height;
+        UpdateBgfxResolution();
+    }
+
+    void DeviceImpl::UpdateDevicePixelRatio(float value)
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Resolution.DevicePixelRatio = value == 0.0f ? 1.0f : value;
         UpdateBgfxResolution();
     }
 

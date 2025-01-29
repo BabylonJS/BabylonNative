@@ -29,6 +29,11 @@ namespace Babylon::Graphics
         m_impl->UpdateSize(width, height);
     }
 
+    void Device::UpdateDevicePixelRatio(float value)
+    {
+        m_impl->UpdateDevicePixelRatio(value);
+    }
+
     void Device::UpdateMSAA(uint8_t value)
     {
         m_impl->UpdateMSAA(value);
@@ -92,19 +97,14 @@ namespace Babylon::Graphics
         m_impl->SetDiagnosticOutput(std::move(outputFunction));
     }
 
-    void Device::SetHardwareScalingLevel(float level)
+    void Device::SetHardwareScalingLevel(float value)
     {
-        m_impl->SetHardwareScalingLevel(level);
+        m_impl->SetHardwareScalingLevel(value);
     }
 
     float Device::GetHardwareScalingLevel()
     {
         return m_impl->GetHardwareScalingLevel();
-    }
-
-    float Device::GetDevicePixelRatio() const
-    {
-        return m_impl->GetDevicePixelRatio();
     }
 
     PlatformInfo Device::GetPlatformInfo() const

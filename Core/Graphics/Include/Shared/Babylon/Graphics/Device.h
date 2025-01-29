@@ -31,6 +31,9 @@ namespace Babylon::Graphics
         // The resolution height.
         size_t Height{};
 
+        // The device pixel ratio.
+        float DevicePixelRatio{};
+
         // MSAA sample values can be 2, 4, 8 or 16. Other values will disable MSAA.
         uint8_t MSAASamples{};
 
@@ -94,6 +97,7 @@ namespace Babylon::Graphics
         void UpdateWindow(WindowT window);
         void UpdateDevice(DeviceT device);
         void UpdateSize(size_t width, size_t height);
+        void UpdateDevicePixelRatio(float value);
         void UpdateMSAA(uint8_t value);
         void UpdateAlphaPremultiplied(bool enabled);
 
@@ -116,9 +120,7 @@ namespace Babylon::Graphics
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
 
         float GetHardwareScalingLevel();
-        void SetHardwareScalingLevel(float level);
-
-        float GetDevicePixelRatio() const;
+        void SetHardwareScalingLevel(float value);
 
         PlatformInfo GetPlatformInfo() const;
 

@@ -43,6 +43,7 @@ namespace Babylon::Graphics
         void UpdateWindow(WindowT window);
         void UpdateDevice(DeviceT device);
         void UpdateSize(size_t width, size_t height);
+        void UpdateDevicePixelRatio(float value);
         void UpdateMSAA(uint8_t value);
         void UpdateAlphaPremultiplied(bool enabled);
 
@@ -113,7 +114,6 @@ namespace Babylon::Graphics
 
         void UpdateBgfxState();
         void UpdateBgfxResolution();
-        void DiscardIfDirty();
         void RequestScreenShots();
         void Frame();
         bgfx::Encoder* GetEncoderForThread();
