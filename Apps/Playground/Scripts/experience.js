@@ -21,7 +21,7 @@ var imageTracking = false;
 const readPixels = false;
 
 function CreateBoxAsync(scene) {
-    BABYLON.Mesh.CreateBox("box1", 0.2, scene);
+    //BABYLON.Mesh.CreateBox("box1", 0.2, scene);
     return Promise.resolve();
 }
 
@@ -63,6 +63,70 @@ CreateBoxAsync(scene).then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF/CesiumMan.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
     BABYLON.Tools.Log("Loaded");
+
+    var textureGround;
+    
+    BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
+        _native.Canvas.loadTTFAsync("droidsans", data).then(function () {
+            var ground = BABYLON.MeshBuilder.CreateGround("ground1", { width: 0.5, height: 0.5, subdivisions: 2 }, scene);
+            ground.rotation.x = -Math.PI * 0.5;
+            ground.rotation.y = Math.PI;
+
+            var texSize = 512;
+            var dynamicTexture = new BABYLON.DynamicTexture("dynamic texture", texSize, scene);
+
+            var materialGround = new BABYLON.StandardMaterial("Mat", scene);
+            materialGround.diffuseTexture = dynamicTexture;
+            ground.material = materialGround;
+            materialGround.backFaceCulling = false;
+            dynamicTexture.clear();
+            var context = dynamicTexture.getContext();
+
+            var t = 0;
+            scene.onBeforeRenderObservable.add(() => {
+                // animated shape
+                context.save();
+                context.fillStyle = "DarkRed";
+                context.fillRect(0, 0, texSize, texSize);
+                const left = 0;
+                const top = texSize - (texSize * 0.25);
+                const width = 0.25 * texSize;
+                const height = 0.25 * texSize;
+                const offsetU = ((Math.sin(t) * 0.5) + 0.5) * (texSize - (texSize * 0.25));
+                const offsetV = ((Math.sin(t) * 0.5) + 0.5) * (-texSize + (texSize * 0.25));
+                const rectangleU = width * 0.5 + left;
+                const rectangleV = height * 0.5 + top;
+                context.translate(rectangleU + offsetU, rectangleV + offsetV);
+                context.rotate(t);
+                context.fillStyle = "DarkOrange";
+                context.fillRect(-width * 0.5, -height * 0.5, width, height);
+                context.restore();
+
+                // curve
+                context.beginPath();
+                context.moveTo(75 * 2, 25 * 2);
+                context.quadraticCurveTo(25 * 2, 25 * 2, 25 * 2, 62.5 * 2);
+                context.quadraticCurveTo(25 * 2, 100 * 2, 50 * 2, 100 * 2);
+                context.quadraticCurveTo(50 * 2, 120 * 2, 30 * 2, 125 * 2);
+                context.quadraticCurveTo(60 * 2, 120 * 2, 65 * 2, 100 * 2);
+                context.quadraticCurveTo(125 * 2, 100 * 2, 125 * 2, 62.5 * 2);
+                context.quadraticCurveTo(125 * 2, 25 * 2, 75 * 2, 25 * 2);
+                context.fillStyle = "blue";
+                context.fill();
+
+                // text
+                var fontSize = 8 + (Math.sin(t) * 0.5 + 0.5) * 200;
+                var font = `bold ${fontSize}px monospace`;
+                dynamicTexture.drawText("BabylonNative", Math.cos(t) * 100, 246, font, "White", null, true, true);
+
+                // tick update
+                dynamicTexture.update();
+                t += 0.01;
+            });
+
+        });
+    }, undefined, undefined, true);
+
 
     // This creates and positions a free camera (non-mesh)
     scene.createDefaultCamera(true, true, true);
