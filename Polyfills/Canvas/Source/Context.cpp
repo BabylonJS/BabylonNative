@@ -257,7 +257,7 @@ namespace Babylon::Polyfills::Internal
     void Context::Rotate(const Napi::CallbackInfo& info)
     {
         const auto angle = info[0].As<Napi::Number>().FloatValue();
-        nvgRotate(m_nvg, nvgDegToRad(angle));
+        nvgRotate(m_nvg, angle);
         SetDirty();
     }
 
@@ -594,10 +594,10 @@ namespace Babylon::Polyfills::Internal
         // Default font id, and font size values.
         // TODO: Determine better way of signaling to user that font specified is invalid.
         m_currentFontId = -1;
-        int fontSize = 16;
+        float fontSize{16.f};
 
         // Regex to parse font styling information. For now we are only capturing font size (capture group 3) and font family name (capture group 4).
-        static const std::regex fontStyleRegex("([[a-zA-Z]+\\s+)*((\\d+)px\\s+)?(\\w+)");
+        static const std::regex fontStyleRegex("([[a-zA-Z]+\\s+)*((\\d+(\\.\\d+)?)px\\s+)?(\\w+)");
         std::smatch fontStyleMatch;
 
         // Perform the actual regex_match.
@@ -606,7 +606,7 @@ namespace Babylon::Polyfills::Internal
             // Check if font size was specified.
             if (fontStyleMatch[3].matched)
             {
-                fontSize = std::stoi(fontStyleMatch[3]);
+                fontSize = std::stof(fontStyleMatch[3]);
             }
 
             // Check if the specified font family name is valid, and if so assign the current font id.
@@ -618,7 +618,7 @@ namespace Babylon::Polyfills::Internal
         }
 
         // Set font size on the current context.
-        nvgFontSize(m_nvg, static_cast<float>(fontSize));
+        nvgFontSize(m_nvg, fontSize);
     }
 
     void Context::SetGlobalAlpha(const Napi::CallbackInfo& info, const Napi::Value& value)
