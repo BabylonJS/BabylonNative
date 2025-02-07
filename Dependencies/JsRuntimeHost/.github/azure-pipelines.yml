@@ -4,6 +4,14 @@ trigger:
 pr:
 - main
 
+schedules:
+- cron: "0 0 * * *"
+  displayName: Nightly Build
+  branches:
+    include:
+    - main
+  always: true
+
 variables:
 - name: ndkVersion
   value: 25.2.9519653
