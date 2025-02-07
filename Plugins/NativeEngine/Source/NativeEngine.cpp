@@ -2269,7 +2269,7 @@ namespace Babylon
         const auto stats{bgfx::getStats()};
         const double toGpuNs = 1000000000.0 / double(stats->gpuTimerFreq);
         const double gpuTimeNs = (stats->gpuTimeEnd - stats->gpuTimeBegin) * toGpuNs;
-        Napi::Object jsStatsObject = info[0].ToObject();
+        Napi::Object jsStatsObject = info[0].As<Napi::Object>();
         jsStatsObject.Set("gpuTimeNs", gpuTimeNs);
     }
 
