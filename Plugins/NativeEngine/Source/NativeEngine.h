@@ -221,6 +221,7 @@ namespace Babylon
         void SetScissor(NativeDataStream::Reader& data);
         void SetCommandDataStream(const Napi::CallbackInfo& info);
         void SubmitCommands(const Napi::CallbackInfo& info);
+        void PopulateFrameStats(const Napi::CallbackInfo& info);
         void DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode);
 
         std::string ProcessShaderCoordinates(const std::string& vertexSource);
