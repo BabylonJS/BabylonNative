@@ -187,8 +187,10 @@ CreateBoxAsync(scene).then(function () {
     }
 
     if (logfps) {
+        engine.captureGPUFrameTime(true);
+
         var logFpsLoop = function () {
-            BABYLON.Tools.Log("FPS: " + Math.round(engine.getFps()));
+            BABYLON.Tools.Log(`FPS: ${Math.round(engine.getFps())} | GPU Frame Time: ${(engine.getGPUFrameTimeCounter().lastSecAverage / 1000000).toFixed(2)}ms`);
             window.setTimeout(logFpsLoop, 1000);
         };
 
