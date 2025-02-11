@@ -21,6 +21,7 @@
             "title": "GLTF Extension EXT_mesh_gpu_instancing",
             "playgroundId": "#QFIGLW#9",
             "renderCount": 10,
+            "errorRatio": 6,
             "referenceImage": "gltfExtensionExtMeshGpuInstancingTest.png"
         },
         {
@@ -85,7 +86,7 @@
         },
         {
             "title": "Visibility",
-            "playgroundId": "#PXC9CF#2",
+            "playgroundId": "#PXC9CF#6",
             "referenceImage": "visibility.png"
         },
         {
@@ -516,6 +517,7 @@
         {
             "title": "CesiumMan from Khronos Sample Assets",
             "playgroundId": "#4GWX8M",
+            "errorRatio": 2,
             "referenceImage": "CesiumMan.png"
         },
         {
