@@ -77,7 +77,7 @@ namespace Babylon::Polyfills::Internal
         }
         const auto earliestTime = m_timeMap.empty() ? TimePoint::max() : m_timeMap.cbegin()->second->time;
         const auto time = Now() + delay;
-        const auto result = m_idMap.insert_or_assign(id, std::make_unique<Timeout>(id, std::move(function), time, interval ? std::optional<std::chrono::milliseconds>{delay} : std::nullopt));
+        const auto result = m_idMap.insert({id, std::make_unique<Timeout>(id, std::move(function), time, interval ? std::optional<std::chrono::milliseconds>{delay} : std::nullopt)});
         m_timeMap.insert({time, result.first->second.get()});
 
         if (time <= earliestTime)
@@ -152,19 +152,14 @@ namespace Babylon::Polyfills::Internal
 
             while (!m_timeMap.empty() && m_timeMap.begin()->second->time == nextTimePoint)
             {
-                const auto* timeout = m_timeMap.begin()->second;
-                auto function = std::move(timeout->function);
+                const auto id = m_timeMap.begin()->second->id;
                 m_timeMap.erase(m_timeMap.begin());
+                const auto timeout = std::move(m_idMap.extract(id).mapped());
                 if (timeout->interval.has_value())
                 {
-                    // Reschedule, but don't erase the entry from the map, otherwise the id could get reused.
-                    Dispatch(function, *timeout->interval, true, timeout->id);
+                    Dispatch(timeout->function, *timeout->interval, true, timeout->id);
                 }
-                else
-                {
-                    m_idMap.erase(timeout->id);
-                }
-                CallFunction(std::move(function));
+                CallFunction(std::move(timeout->function));
             }
 
             while (!m_shutdown && m_timeMap.empty())
