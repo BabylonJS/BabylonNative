@@ -22,19 +22,21 @@ namespace Babylon::Polyfills::Internal
         TimeoutDispatcher(Babylon::JsRuntime& runtime);
         ~TimeoutDispatcher();
 
-        TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay);
+        TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay, bool interval = false);
         void Clear(TimeoutId id);
 
     private:
         using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::microseconds>;
+
+        TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay, bool interval, TimeoutId id);
 
         TimeoutId NextTimeoutId();
         void ThreadFunction();
         void CallFunction(std::shared_ptr<Napi::FunctionReference> function);
 
         Babylon::JsRuntime& m_runtime;
-        std::mutex m_mutex{};
-        std::condition_variable m_condVariable{};
+        std::recursive_mutex m_mutex{};
+        std::condition_variable_any m_condVariable{};
         TimeoutId m_lastTimeoutId{0};
         std::unordered_map<TimeoutId, std::unique_ptr<Timeout>> m_idMap;
         std::multimap<TimePoint, Timeout*> m_timeMap;

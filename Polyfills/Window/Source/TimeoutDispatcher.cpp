@@ -1,6 +1,7 @@
 #include "TimeoutDispatcher.h"
 
 #include <cassert>
+#include <optional>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -23,10 +24,13 @@ namespace Babylon::Polyfills::Internal
 
         TimePoint time;
 
-        Timeout(TimeoutId id, std::shared_ptr<Napi::FunctionReference> function, TimePoint time)
+        std::optional<std::chrono::milliseconds> interval;
+
+        Timeout(TimeoutId id, std::shared_ptr<Napi::FunctionReference> function, TimePoint time, std::optional<std::chrono::milliseconds> interval)
             : id{id}
             , function{std::move(function)}
             , time{time}
+            , interval{interval}
         {
         }
 
@@ -43,7 +47,7 @@ namespace Babylon::Polyfills::Internal
     TimeoutDispatcher::~TimeoutDispatcher()
     {
         {
-            std::unique_lock<std::mutex> lk{m_mutex};
+            std::unique_lock<std::recursive_mutex> lk{m_mutex};
             m_idMap.clear();
             m_timeMap.clear();
         }
@@ -53,19 +57,27 @@ namespace Babylon::Polyfills::Internal
         m_thread.join();
     }
 
-    TimeoutDispatcher::TimeoutId TimeoutDispatcher::Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay)
+    TimeoutDispatcher::TimeoutId TimeoutDispatcher::Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay, bool interval)
+    {
+        return Dispatch(function, delay, interval, 0);
+    }
+
+    TimeoutDispatcher::TimeoutId TimeoutDispatcher::Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay, bool interval, TimeoutId id)
     {
         if (delay.count() < 0)
         {
             delay = std::chrono::milliseconds{0};
         }
 
-        std::unique_lock<std::mutex> lk{m_mutex};
+        std::unique_lock<std::recursive_mutex> lk{m_mutex};
 
-        const auto id = NextTimeoutId();
+        if (id == 0)
+        {
+            id = NextTimeoutId();
+        }
         const auto earliestTime = m_timeMap.empty() ? TimePoint::max() : m_timeMap.cbegin()->second->time;
         const auto time = Now() + delay;
-        const auto result = m_idMap.insert({id, std::make_unique<Timeout>(id, std::move(function), time)});
+        const auto result = m_idMap.insert_or_assign(id, std::make_unique<Timeout>(id, std::move(function), time, interval ? std::optional<std::chrono::milliseconds>{delay} : std::nullopt));
         m_timeMap.insert({time, result.first->second.get()});
 
         if (time <= earliestTime)
@@ -80,7 +92,7 @@ namespace Babylon::Polyfills::Internal
 
     void TimeoutDispatcher::Clear(TimeoutId id)
     {
-        std::unique_lock<std::mutex> lk{m_mutex};
+        std::unique_lock<std::recursive_mutex> lk{m_mutex};
         const auto itId = m_idMap.find(id);
         if (itId != m_idMap.end())
         {
@@ -124,7 +136,7 @@ namespace Babylon::Polyfills::Internal
     {
         while (!m_shutdown)
         {
-            std::unique_lock<std::mutex> lk{m_mutex};
+            std::unique_lock<std::recursive_mutex> lk{m_mutex};
             TimePoint nextTimePoint{};
 
             while (!m_timeMap.empty())
@@ -143,7 +155,15 @@ namespace Babylon::Polyfills::Internal
                 const auto* timeout = m_timeMap.begin()->second;
                 auto function = std::move(timeout->function);
                 m_timeMap.erase(m_timeMap.begin());
-                m_idMap.erase(timeout->id);
+                if (timeout->interval.has_value())
+                {
+                    // Reschedule, but don't erase the entry from the map, otherwise the id could get reused.
+                    Dispatch(function, *timeout->interval, true, timeout->id);
+                }
+                else
+                {
+                    m_idMap.erase(timeout->id);
+                }
                 CallFunction(std::move(function));
             }
 
