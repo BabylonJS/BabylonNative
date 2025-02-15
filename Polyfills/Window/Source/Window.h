@@ -24,6 +24,8 @@ namespace Babylon::Polyfills::Internal
 
         static Napi::Value SetTimeout(const Napi::CallbackInfo& info);
         static void ClearTimeout(const Napi::CallbackInfo& info);
+        static Napi::Value SetInterval(const Napi::CallbackInfo& info);
+        static void ClearInterval(const Napi::CallbackInfo& info);
         static Napi::Value DecodeBase64(const Napi::CallbackInfo& info);
         static void AddEventListener(const Napi::CallbackInfo& info);
         static void RemoveEventListener(const Napi::CallbackInfo& info);
