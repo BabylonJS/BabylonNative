@@ -57,12 +57,12 @@ namespace Babylon::Polyfills::Internal
         m_thread.join();
     }
 
-    TimeoutDispatcher::TimeoutId TimeoutDispatcher::Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay, bool interval)
+    TimeoutDispatcher::TimeoutId TimeoutDispatcher::Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay, bool repeat)
     {
-        return Dispatch(function, delay, interval, 0);
+        return DispatchImpl(function, delay, repeat, 0);
     }
 
-    TimeoutDispatcher::TimeoutId TimeoutDispatcher::Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay, bool interval, TimeoutId id)
+    TimeoutDispatcher::TimeoutId TimeoutDispatcher::DispatchImpl(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay, bool repeat, TimeoutId id)
     {
         if (delay.count() < 0)
         {
@@ -77,7 +77,7 @@ namespace Babylon::Polyfills::Internal
         }
         const auto earliestTime = m_timeMap.empty() ? TimePoint::max() : m_timeMap.cbegin()->second->time;
         const auto time = Now() + delay;
-        const auto result = m_idMap.insert({id, std::make_unique<Timeout>(id, std::move(function), time, interval ? std::optional<std::chrono::milliseconds>{delay} : std::nullopt)});
+        const auto result = m_idMap.insert({id, std::make_unique<Timeout>(id, std::move(function), time, repeat ? std::make_optional<std::chrono::milliseconds>(delay) : std::nullopt)});
         m_timeMap.insert({time, result.first->second.get()});
 
         if (time <= earliestTime)
@@ -157,7 +157,7 @@ namespace Babylon::Polyfills::Internal
                 const auto timeout = std::move(m_idMap.extract(id).mapped());
                 if (timeout->interval.has_value())
                 {
-                    Dispatch(timeout->function, *timeout->interval, true, timeout->id);
+                    DispatchImpl(timeout->function, *timeout->interval, true, timeout->id);
                 }
                 CallFunction(std::move(timeout->function));
             }

@@ -22,13 +22,13 @@ namespace Babylon::Polyfills::Internal
         TimeoutDispatcher(Babylon::JsRuntime& runtime);
         ~TimeoutDispatcher();
 
-        TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay, bool interval = false);
+        TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay, bool repeat = false);
         void Clear(TimeoutId id);
 
     private:
         using TimePoint = std::chrono::time_point<std::chrono::steady_clock, std::chrono::microseconds>;
 
-        TimeoutId Dispatch(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay, bool interval, TimeoutId id);
+        TimeoutId DispatchImpl(std::shared_ptr<Napi::FunctionReference> function, std::chrono::milliseconds delay, bool repeat, TimeoutId id);
 
         TimeoutId NextTimeoutId();
         void ThreadFunction();
