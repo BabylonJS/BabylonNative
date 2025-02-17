@@ -69,6 +69,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("strokeText", &Context::StrokeText),
                 InstanceMethod("createLinearGradient", &Context::CreateLinearGradient),
                 InstanceMethod("setTransform", &Context::SetTransform),
+                InstanceMethod("transform", &Context::Transform),
                 InstanceMethod("dispose", &Context::Dispose),
                 InstanceAccessor("lineJoin", &Context::GetLineJoin, &Context::SetLineJoin),
                 InstanceAccessor("miterLimit", &Context::GetMiterLimit, &Context::SetMiterLimit),
@@ -555,6 +556,18 @@ namespace Babylon::Polyfills::Internal
     void Context::SetTransform(const Napi::CallbackInfo& info)
     {
         throw Napi::Error::New(info.Env(), "not implemented");
+    }
+
+    void Context::Transform(const Napi::CallbackInfo& info)
+    {
+        const auto a = info[0].As<Napi::Number>().FloatValue();
+        const auto b = info[1].As<Napi::Number>().FloatValue();
+        const auto c = info[2].As<Napi::Number>().FloatValue();
+        const auto d = info[3].As<Napi::Number>().FloatValue();
+        const auto e = info[4].As<Napi::Number>().FloatValue();
+        const auto f = info[5].As<Napi::Number>().FloatValue();
+        nvgTransform(m_nvg, a, b, c, d, e, f);
+        SetDirty();
     }
 
     Napi::Value Context::GetLineJoin(const Napi::CallbackInfo& info)

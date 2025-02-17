@@ -99,6 +99,7 @@ CreateBoxAsync(scene).then(function () {
                 context.translate(rectangleU + offsetU, rectangleV + offsetV);
                 context.rotate(t);
                 context.fillStyle = "DarkOrange";
+                context.transform(1, t, 0.8, 1, 0, 0);
                 context.fillRect(-width * 0.5, -height * 0.5, width, height);
                 context.restore();
 

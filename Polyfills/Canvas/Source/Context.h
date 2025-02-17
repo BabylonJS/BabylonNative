@@ -47,6 +47,7 @@ namespace Babylon::Polyfills::Internal
         void StrokeText(const Napi::CallbackInfo&);
         Napi::Value CreateLinearGradient(const Napi::CallbackInfo&);
         void SetTransform(const Napi::CallbackInfo&);
+        void Transform(const Napi::CallbackInfo&);
         void QuadraticCurveTo(const Napi::CallbackInfo&);
         Napi::Value GetFillStyle(const Napi::CallbackInfo&);
         void SetFillStyle(const Napi::CallbackInfo&, const Napi::Value& value);
