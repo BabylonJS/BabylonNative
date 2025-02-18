@@ -637,7 +637,10 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetLetterSpacing(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(Env(), m_letterSpacing);
+        std::string letterSpacingStr = std::to_string(m_letterSpacing);
+        letterSpacingStr.erase(letterSpacingStr.find_last_not_of('0') + 1, std::string::npos);
+        letterSpacingStr.erase(letterSpacingStr.find_last_not_of('.') + 1, std::string::npos);
+        return Napi::Value::From(Env(), letterSpacingStr + "px");
     }
 
     void Context::SetLetterSpacing(const Napi::CallbackInfo& info, const Napi::Value& value)
