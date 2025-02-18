@@ -61,6 +61,8 @@ namespace Babylon::Polyfills::Internal
         void SetMiterLimit(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetFont(const Napi::CallbackInfo&);
         void SetFont(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetLetterSpacing(const Napi::CallbackInfo&);
+        void SetLetterSpacing(const Napi::CallbackInfo&, const Napi::Value& value);
         void SetGlobalAlpha(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetShadowColor(const Napi::CallbackInfo&);
         void SetShadowColor(const Napi::CallbackInfo&, const Napi::Value& value);
@@ -84,6 +86,7 @@ namespace Babylon::Polyfills::Internal
         std::string m_strokeStyle{};
         float m_lineWidth{0.f};
         float m_globalAlpha{1.f};
+        float m_letterSpacing{0.f};
 
         std::map<std::string, int> m_fonts;
         int m_currentFontId{-1};

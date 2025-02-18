@@ -74,6 +74,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("lineJoin", &Context::GetLineJoin, &Context::SetLineJoin),
                 InstanceAccessor("miterLimit", &Context::GetMiterLimit, &Context::SetMiterLimit),
                 InstanceAccessor("font", &Context::GetFont, &Context::SetFont),
+                InstanceAccessor("letterSpacing", &Context::GetLetterSpacing, &Context::SetLetterSpacing),
                 InstanceAccessor("strokeStyle", &Context::GetStrokeStyle, &Context::SetStrokeStyle),
                 InstanceAccessor("fillStyle", &Context::GetFillStyle, &Context::SetFillStyle),
                 InstanceAccessor("globalAlpha", nullptr, &Context::SetGlobalAlpha),
@@ -632,6 +633,28 @@ namespace Babylon::Polyfills::Internal
 
         // Set font size on the current context.
         nvgFontSize(m_nvg, fontSize);
+    }
+
+    Napi::Value Context::GetLetterSpacing(const Napi::CallbackInfo& info)
+    {
+        std::string letterSpacingStr = std::to_string(m_letterSpacing);
+        letterSpacingStr.erase(letterSpacingStr.find_last_not_of('0') + 1, std::string::npos);
+        letterSpacingStr.erase(letterSpacingStr.find_last_not_of('.') + 1, std::string::npos);
+        return Napi::Value::From(Env(), letterSpacingStr + "px");
+    }
+
+    void Context::SetLetterSpacing(const Napi::CallbackInfo& info, const Napi::Value& value)
+    {
+        const std::string letterSpacingOption = value.ToString();
+
+        // regex the letter spacing string
+        static const std::regex letterSpacingRegex("(\\d+(\\.\\d+)?)px");
+        std::smatch letterSpacingMatch;
+        if (std::regex_match(letterSpacingOption, letterSpacingMatch, letterSpacingRegex))
+        {
+            m_letterSpacing = std::stof(letterSpacingMatch[1]);
+        }
+        nvgTextLetterSpacing(m_nvg, m_letterSpacing);
     }
 
     void Context::SetGlobalAlpha(const Napi::CallbackInfo& info, const Napi::Value& value)
