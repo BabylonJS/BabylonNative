@@ -26,6 +26,7 @@
 #include "Image.h"
 #include "ImageData.h"
 #include "Colors.h"
+#include "LineCaps.h"
 
 /*
 Most of these context methods are preliminary work. They are currenbly not tested properly.
@@ -579,7 +580,7 @@ namespace Babylon::Polyfills::Internal
     void Context::SetLineCap(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         m_lineCap = value.As<Napi::String>().Utf8Value();
-        int lineCap = NVG_BUTT;  // TODO: convert m_lineCap NVG_BUTT, NVG_ROUND, NVG_SQUARE
+        const auto lineCap = StringToLineCap(info.Env(), m_lineCap);
         nvgLineCap(m_nvg, lineCap);
         SetDirty();
     }
@@ -592,8 +593,8 @@ namespace Babylon::Polyfills::Internal
     void Context::SetLineJoin(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         m_lineJoin = value.As<Napi::String>().Utf8Value();
-        int join = NVG_MITER; // TODO: convert m_lineJoin into NVG_MITER, NVG_ROUND, NVG_BEZEL
-        nvgLineJoin(m_nvg, join);
+        const auto lineJoin = StringToLineJoin(info.Env(), m_lineJoin);
+        nvgLineJoin(m_nvg, lineJoin);
         SetDirty();
     }
 
