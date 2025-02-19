@@ -3,21 +3,21 @@
 /// <reference path="../../node_modules/babylonjs-materials/babylonjs.materials.module.d.ts" />
 /// <reference path="../../node_modules/babylonjs-gui/babylon.gui.module.d.ts" />
 
-var wireframe = false;
-var turntable = false;
-var logfps = true;
-var ibl = false;
-var rtt = false;
-var vr = false;
-var ar = false;
-var xrHitTest = false;
-var xrFeaturePoints = false;
-var meshDetection = false;
-var text = false;
-var hololens = false;
-var cameraTexture = false;
-var imageCapture = false;
-var imageTracking = false;
+const wireframe = false;
+const turntable = false;
+const logfps = true;
+const ibl = false;
+const rtt = false;
+const vr = false;
+const ar = false;
+const xrHitTest = false;
+const xrFeaturePoints = false;
+const meshDetection = false;
+const text = false;
+const hololens = false;
+const cameraTexture = false;
+const imageCapture = false;
+const imageTracking = false;
 const readPixels = false;
 
 function CreateBoxAsync(scene) {
@@ -26,11 +26,11 @@ function CreateBoxAsync(scene) {
 }
 
 function CreateSpheresAsync(scene) {
-    var size = 12;
-    for (var i = 0; i < size; i++) {
-        for (var j = 0; j < size; j++) {
-            for (var k = 0; k < size; k++) {
-                var sphere = BABYLON.Mesh.CreateSphere("sphere" + i + j + k, 32, 0.9, scene);
+    const size = 12;
+    for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+            for (let k = 0; k < size; k++) {
+                const sphere = BABYLON.Mesh.CreateSphere("sphere" + i + j + k, 32, 0.9, scene);
                 sphere.position.x = i;
                 sphere.position.y = j;
                 sphere.position.z = k;
@@ -41,8 +41,8 @@ function CreateSpheresAsync(scene) {
     return Promise.resolve();
 }
 
-var engine = new BABYLON.NativeEngine();
-var scene = new BABYLON.Scene(engine);
+const engine = new BABYLON.NativeEngine();
+const scene = new BABYLON.Scene(engine);
 
 CreateBoxAsync(scene).then(function () {
 //CreateSpheresAsync(scene).then(function () {
@@ -145,14 +145,14 @@ CreateBoxAsync(scene).then(function () {
         scene.activeCamera.setTarget(new BABYLON.Vector3(0, 1, 0));
 
         scene.meshes[0].setEnabled(false);
-        var plane = BABYLON.MeshBuilder.CreatePlane("plane", {size: 1, sideOrientation: BABYLON.Mesh.DOUBLESIDE});
+        const plane = BABYLON.MeshBuilder.CreatePlane("plane", {size: 1, sideOrientation: BABYLON.Mesh.DOUBLESIDE});
         // Mirror the plane vertically since invertY is not supported for textures in Babylon Native.
         plane.rotation.y = Math.PI;
         plane.rotation.z = Math.PI;
 
         plane.position.y = 1;
-        
-        var mat = new BABYLON.StandardMaterial("mat", scene);
+
+        const mat = new BABYLON.StandardMaterial("mat", scene);
         mat.diffuseColor = BABYLON.Color3.Black();
 
         const constraints = { maxWidth: 1280, maxHeight: 720, facingMode: 'environment'};
@@ -217,16 +217,16 @@ CreateBoxAsync(scene).then(function () {
     }
 
     if (wireframe) {
-        var material = new BABYLON.StandardMaterial("wireframe", scene);
+        const material = new BABYLON.StandardMaterial("wireframe", scene);
         material.wireframe = true;
 
-        for (var index = 0; index < scene.meshes.length; index++) {
+        for (let index = 0; index < scene.meshes.length; index++) {
             scene.meshes[index].material = material;
         }
     }
 
     if (rtt) {
-        var rttTexture = new BABYLON.RenderTargetTexture("rtt", 1024, scene);
+        const rttTexture = new BABYLON.RenderTargetTexture("rtt", 1024, scene);
         scene.meshes.forEach(mesh => {
             rttTexture.renderList.push(mesh);
         });
@@ -235,10 +235,10 @@ CreateBoxAsync(scene).then(function () {
 
         scene.customRenderTargets.push(rttTexture);
 
-        var rttMaterial = new BABYLON.StandardMaterial("rttMaterial", scene);
+        const rttMaterial = new BABYLON.StandardMaterial("rttMaterial", scene);
         rttMaterial.diffuseTexture = rttTexture;
 
-        var plane = BABYLON.MeshBuilder.CreatePlane("rttPlane", { width: 4, height: 4 }, scene);
+        const plane = BABYLON.MeshBuilder.CreatePlane("rttPlane", { width: 4, height: 4 }, scene);
         plane.position.y = 1;
         plane.position.z = -5;
         plane.rotation.y = Math.PI;
@@ -252,8 +252,10 @@ CreateBoxAsync(scene).then(function () {
     }
 
     if (logfps) {
-        var logFpsLoop = function () {
-            BABYLON.Tools.Log("FPS: " + Math.round(engine.getFps()));
+        engine.captureGPUFrameTime(true);
+
+        const logFpsLoop = function () {
+            BABYLON.Tools.Log(`FPS: ${Math.round(engine.getFps())} | GPU Frame Time: ${(engine.getGPUFrameTimeCounter().lastSecAverage / 1000000).toFixed(2)}ms`);
             window.setTimeout(logFpsLoop, 1000);
         };
 
@@ -292,7 +294,7 @@ CreateBoxAsync(scene).then(function () {
 
                 // Showing visualization for ARKit LiDAR mesh data
                 if (meshDetection) {
-                    var mat = new BABYLON.StandardMaterial("mat", scene);
+                    const mat = new BABYLON.StandardMaterial("mat", scene);
                     mat.wireframe = true;
                     mat.diffuseColor = BABYLON.Color3.Blue();
                     const xrMeshes = xr.baseExperience.featuresManager.enableFeature(
@@ -307,8 +309,8 @@ CreateBoxAsync(scene).then(function () {
                         try {
                             console.log("Mesh added.");
                             // create new mesh object
-                            var customMesh = new BABYLON.Mesh("custom", scene);
-                            var vertexData = new BABYLON.VertexData();
+                            const customMesh = new BABYLON.Mesh("custom", scene);
+                            const vertexData = new BABYLON.VertexData();
                             vertexData.positions = mesh.positions;
                             vertexData.indices = mesh.indices;
                             vertexData.normals = mesh.normals;
@@ -326,7 +328,7 @@ CreateBoxAsync(scene).then(function () {
                         try {
                             console.log("Mesh updated.");
                             if (meshMap.has(mesh.id)) {
-                                var vertexData = new BABYLON.VertexData();
+                                const vertexData = new BABYLON.VertexData();
                                 vertexData.positions = mesh.positions;
                                 vertexData.indices = mesh.indices;
                                 vertexData.normals = mesh.normals;
@@ -360,8 +362,8 @@ CreateBoxAsync(scene).then(function () {
                         {});
 
                     // Next We create the point cloud system which we will use to display feature points.
-                    var pcs = new BABYLON.PointsCloudSystem("pcs", 5, scene);
-                    var featurePointInitFunc = function (particle, i, s) {
+                    const pcs = new BABYLON.PointsCloudSystem("pcs", 5, scene);
+                    const featurePointInitFunc = function (particle, i, s) {
                         particle.position = new BABYLON.Vector3(0, -5, 0);
                     }
 
@@ -375,11 +377,11 @@ CreateBoxAsync(scene).then(function () {
                     // which represents a feature point.
                     pcs.updateParticle = function (particle) {
                         // Grab the feature point cloud from the xrFeaturePointsModule.
-                        var featurePointCloud = xrFeaturePointsModule.featurePointCloud;
+                        const featurePointCloud = xrFeaturePointsModule.featurePointCloud;
 
                         // Find the index of this particle in the particle system. If there exists a
                         // mapping to a feature point then display its position, otherwise hide it somewhere far away.
-                        var index = particle.idx;
+                        const index = particle.idx;
                         if (index >= featurePointCloud.length) {
                             // Hide the particle not currently in use.
                             particle.position = new BABYLON.Vector3(-100, -100, -100);
@@ -397,7 +399,7 @@ CreateBoxAsync(scene).then(function () {
 
                     // Listen for changes in feature points both being added and updated, and only update
                     // our display every 60 changes to the feature point cloud to avoid slowdowns.
-                    var featurePointChangeCounter = 0;
+                    let featurePointChangeCounter = 0;
                     xrFeaturePointsModule.onFeaturePointsAddedObservable.add((addedPointIds) => {
                         if (++featurePointChangeCounter % 60 == 0) {
                             pcs.setParticles();
@@ -461,7 +463,7 @@ CreateBoxAsync(scene).then(function () {
     }
 
     if (text) {
-        var Writer = BABYLON.MeshWriter(scene, { scale: 1.0, defaultFont: "Arial" });
+        const Writer = BABYLON.MeshWriter(scene, { scale: 1.0, defaultFont: "Arial" });
         new Writer(
             "Lorem ipsum dolor sit amet...",
             {

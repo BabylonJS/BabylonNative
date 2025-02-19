@@ -699,6 +699,8 @@ namespace Babylon
                 InstanceMethod("setCommandDataStream", &NativeEngine::SetCommandDataStream),
                 InstanceMethod("submitCommands", &NativeEngine::SubmitCommands),
 
+                InstanceMethod("populateFrameStats", &NativeEngine::PopulateFrameStats),
+
                 // REVIEW: Should this be here if only used by ValidationTest?
                 InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
                 InstanceMethod("setDeviceLostCallback", &NativeEngine::SetRenderResetCallback),
@@ -2259,6 +2261,16 @@ namespace Babylon
         {
             throw Napi::Error::New(info.Env(), exception);
         }
+    }
+
+    void NativeEngine::PopulateFrameStats(const Napi::CallbackInfo& info)
+    {
+        const auto updateToken{m_update.GetUpdateToken()};
+        const auto stats{bgfx::getStats()};
+        const double toGpuNs = 1000000000.0 / double(stats->gpuTimerFreq);
+        const double gpuTimeNs = (stats->gpuTimeEnd - stats->gpuTimeBegin) * toGpuNs;
+        Napi::Object jsStatsObject = info[0].As<Napi::Object>();
+        jsStatsObject.Set("gpuTimeNs", gpuTimeNs);
     }
 
     void NativeEngine::DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode)
