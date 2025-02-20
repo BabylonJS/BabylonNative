@@ -299,7 +299,8 @@ describe("setTimeout", function () {
 });
 
 describe("clearTimeout", function () {
-    this.timeout(0);
+    this.timeout(1000);
+
     it("should stop the timeout matching the given timeout id", function (done) {
         const id = setTimeout(() => {
             done(new Error("Timeout was not cleared"));
@@ -307,12 +308,75 @@ describe("clearTimeout", function () {
         clearTimeout(id);
         setTimeout(done, 100);
     });
+
     it("should do nothing if the given timeout id is undefined", function (done) {
         setTimeout(() => { done(); }, 0);
         clearTimeout(undefined);
     });
+
+    it("should be interchangeable with clearInterval", function (done) {
+        const id = setTimeout(() => {
+            done(new Error("Interval was not cleared"));
+        }, 0);
+        clearInterval(id);
+        setTimeout(done, 100);
+    });
 });
 
+describe("setInterval", function () {
+    this.timeout(1000);
+
+    it("should return an id greater than zero", function () {
+        const id = setInterval(() => { }, 0);
+        clearInterval(id);
+        expect(id).to.be.greaterThan(0);
+    });
+
+    it("should call the given function at the given interval", function (done) {
+        let startTime = new Date().getTime();
+        let tickCount = 0;
+        const id = setInterval(() => {
+            try {
+                tickCount++;
+                expect(new Date().getTime() - startTime).to.be.at.least(tickCount * 10);
+                if (tickCount > 2) {
+                    clearInterval(id);
+                    done();
+                }
+            }
+            catch (e) {
+                console.log(`finished with error: ${e}`);
+                clearInterval(id);
+                done(e);
+            }
+        }, 10);
+    });
+});
+
+describe("clearInterval", function () {
+    this.timeout(1000);
+
+    it("should stop the interval matching the given interval id", function (done) {
+        const id = setInterval(() => {
+            done(new Error("Interval was not cleared"));
+        }, 0);
+        clearInterval(id);
+        setTimeout(done, 100);
+    });
+
+    it("should do nothing if the given interval id is undefined", function (done) {
+        setTimeout(() => { done(); }, 0);
+        clearInterval(undefined);
+    });
+
+    it("should be interchangeable with clearTimeout", function (done) {
+        const id = setInterval(() => {
+            done(new Error("Interval was not cleared"));
+        }, 0);
+        clearTimeout(id);
+        setTimeout(done, 100);
+    });
+});
 
 // Websocket
 if (hostPlatform !== "Unix") {
@@ -662,6 +726,7 @@ describe("Console", function () {
         expect(() => console.log("%d %f %s", 0 / 0, 0 / 0, 0 / 0)).to.not.throw();
     });
 });
+
 function runTests() {
     mocha.run(failures => {
         // Test program will wait for code to be set before exiting
