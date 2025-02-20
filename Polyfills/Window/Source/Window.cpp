@@ -1,6 +1,7 @@
 #include "Window.h"
 
 #include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Polyfills/Scheduling.h>
 
 #include <basen.hpp>
 
@@ -34,17 +35,7 @@ namespace Babylon::Polyfills::Internal
 
         jsNative.Set(JS_WINDOW_NAME, jsWindow);
 
-        if (global.Get(JS_SET_TIMEOUT_NAME).IsUndefined() && global.Get(JS_CLEAR_TIMEOUT_NAME).IsUndefined())
-        {
-            global.Set(JS_SET_TIMEOUT_NAME, Napi::Function::New(env, &Window::SetTimeout, JS_SET_TIMEOUT_NAME, Window::Unwrap(jsWindow)));
-            global.Set(JS_CLEAR_TIMEOUT_NAME, Napi::Function::New(env, &Window::ClearTimeout, JS_CLEAR_TIMEOUT_NAME, Window::Unwrap(jsWindow)));
-        }
-
-        if (global.Get(JS_SET_INTERVAL_NAME).IsUndefined() && global.Get(JS_CLEAR_INTERVAL_NAME).IsUndefined())
-        {
-            global.Set(JS_SET_INTERVAL_NAME, Napi::Function::New(env, &Window::SetInterval, JS_SET_INTERVAL_NAME, Window::Unwrap(jsWindow)));
-            global.Set(JS_CLEAR_INTERVAL_NAME, Napi::Function::New(env, &Window::ClearInterval, JS_CLEAR_INTERVAL_NAME, Window::Unwrap(jsWindow)));
-        }
+        Scheduling::Initialize(env);
 
         if (global.Get(JS_A_TO_B_NAME).IsUndefined())
         {
@@ -81,40 +72,7 @@ namespace Babylon::Polyfills::Internal
     Window::Window(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<Window>{info}
         , m_runtime{JsRuntime::GetFromJavaScript(info.Env())}
-        , m_timeoutDispatcher{m_runtime}
     {
-    }
-
-    Napi::Value Window::SetTimeout(const Napi::CallbackInfo& info)
-    {
-        auto& window = *static_cast<Window*>(info.Data());
-        auto function = info[0].IsFunction() ? std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>())) : std::shared_ptr<Napi::FunctionReference>{};
-        auto delay = std::chrono::milliseconds{info[1].ToNumber().Int32Value()};
-        return Napi::Value::From(info.Env(), window.m_timeoutDispatcher->Dispatch(function, delay));
-    }
-
-    void Window::ClearTimeout(const Napi::CallbackInfo& info)
-    {
-        const auto arg = info[0];
-        if (arg.IsNumber())
-        {
-            auto timeoutId = arg.As<Napi::Number>().Int32Value();
-            auto& window = *static_cast<Window*>(info.Data());
-            window.m_timeoutDispatcher->Clear(timeoutId);
-        }
-    }
-
-    Napi::Value Window::SetInterval(const Napi::CallbackInfo& info)
-    {
-        auto& window = *static_cast<Window*>(info.Data());
-        auto function = info[0].IsFunction() ? std::make_shared<Napi::FunctionReference>(Napi::Persistent(info[0].As<Napi::Function>())) : std::shared_ptr<Napi::FunctionReference>{};
-        auto delay = std::chrono::milliseconds{info[1].ToNumber().Int32Value()};
-        return Napi::Value::From(info.Env(), window.m_timeoutDispatcher->Dispatch(function, delay, true));
-    }
-
-    void Window::ClearInterval(const Napi::CallbackInfo& info)
-    {
-        ClearTimeout(info);
     }
 
     Napi::Value Window::DecodeBase64(const Napi::CallbackInfo& info)
