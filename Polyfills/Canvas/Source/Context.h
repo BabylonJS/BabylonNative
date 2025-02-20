@@ -55,6 +55,8 @@ namespace Babylon::Polyfills::Internal
         void SetStrokeStyle(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetLineWidth(const Napi::CallbackInfo&);
         void SetLineWidth(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetLineCap(const Napi::CallbackInfo&);
+        void SetLineCap(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetLineJoin(const Napi::CallbackInfo&);
         void SetLineJoin(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetMiterLimit(const Napi::CallbackInfo&);
@@ -84,6 +86,9 @@ namespace Babylon::Polyfills::Internal
         std::string m_font{};
         std::string m_fillStyle{};
         std::string m_strokeStyle{};
+        std::string m_lineCap{}; // 'butt', 'round', 'square'
+        std::string m_lineJoin{}; // 'round', 'bevel', 'miter'
+        float m_miterLimit{0.f};
         float m_lineWidth{0.f};
         float m_globalAlpha{1.f};
         float m_letterSpacing{0.f};

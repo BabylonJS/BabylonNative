@@ -26,6 +26,7 @@
 #include "Image.h"
 #include "ImageData.h"
 #include "Colors.h"
+#include "LineCaps.h"
 
 /*
 Most of these context methods are preliminary work. They are currenbly not tested properly.
@@ -71,6 +72,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("setTransform", &Context::SetTransform),
                 InstanceMethod("transform", &Context::Transform),
                 InstanceMethod("dispose", &Context::Dispose),
+                InstanceAccessor("lineCap", &Context::GetLineCap, &Context::SetLineCap),
                 InstanceAccessor("lineJoin", &Context::GetLineJoin, &Context::SetLineJoin),
                 InstanceAccessor("miterLimit", &Context::GetMiterLimit, &Context::SetMiterLimit),
                 InstanceAccessor("font", &Context::GetFont, &Context::SetFont),
@@ -571,24 +573,42 @@ namespace Babylon::Polyfills::Internal
         SetDirty();
     }
 
+    Napi::Value Context::GetLineCap(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(Env(), m_lineCap);
+    }
+
+    void Context::SetLineCap(const Napi::CallbackInfo& info, const Napi::Value& value)
+    {
+        m_lineCap = value.As<Napi::String>().Utf8Value();
+        const auto lineCap = StringToLineCap(info.Env(), m_lineCap);
+        nvgLineCap(m_nvg, lineCap);
+        SetDirty();
+    }
+
     Napi::Value Context::GetLineJoin(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        return Napi::Value::From(Env(), m_lineJoin);
     }
 
     void Context::SetLineJoin(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        m_lineJoin = value.As<Napi::String>().Utf8Value();
+        const auto lineJoin = StringToLineJoin(info.Env(), m_lineJoin);
+        nvgLineJoin(m_nvg, lineJoin);
+        SetDirty();
     }
 
     Napi::Value Context::GetMiterLimit(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        return Napi::Value::From(Env(), m_miterLimit);
     }
 
     void Context::SetMiterLimit(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        m_miterLimit = value.As<Napi::Number>().FloatValue();
+        nvgMiterLimit(m_nvg, m_miterLimit);
+        SetDirty();
     }
 
     Napi::Value Context::GetFont(const Napi::CallbackInfo& info)
