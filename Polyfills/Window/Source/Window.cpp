@@ -10,10 +10,6 @@ namespace Babylon::Polyfills::Internal
     namespace
     {
         constexpr auto JS_CLASS_NAME = "Window";
-        constexpr auto JS_SET_TIMEOUT_NAME = "setTimeout";
-        constexpr auto JS_CLEAR_TIMEOUT_NAME = "clearTimeout";
-        constexpr auto JS_SET_INTERVAL_NAME = "setInterval";
-        constexpr auto JS_CLEAR_INTERVAL_NAME = "clearInterval";
         constexpr auto JS_A_TO_B_NAME = "atob";
         constexpr auto JS_ADD_EVENT_LISTENER_NAME = "addEventListener";
         constexpr auto JS_REMOVE_EVENT_LISTENER_NAME = "removeEventListener";
