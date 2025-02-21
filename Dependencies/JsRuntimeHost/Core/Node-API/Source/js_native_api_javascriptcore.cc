@@ -337,7 +337,7 @@ namespace {
         return nullptr;
       }
 
-      return ToJSObject(env, result);
+      return result != nullptr ? ToJSObject(env, result) : instance;
     }
 
     // JSObjectFinalizeCallback
