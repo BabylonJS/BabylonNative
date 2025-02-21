@@ -9,6 +9,8 @@ struct NVGcontext;
 
 namespace Babylon::Polyfills::Internal
 {
+    class CanvasGradient;
+
     class Context final : public Napi::ObjectWrap<Context>, Polyfills::Canvas::Impl::MonitoredResource
     {
     public:
@@ -84,7 +86,7 @@ namespace Babylon::Polyfills::Internal
         NVGcontext* m_nvg;
 
         std::string m_font{};
-        std::string m_fillStyle{};
+        std::variant<std::string, CanvasGradient*> m_fillStyle{};
         std::string m_strokeStyle{};
         std::string m_lineCap{}; // 'butt', 'round', 'square'
         std::string m_lineJoin{}; // 'round', 'bevel', 'miter'

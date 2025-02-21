@@ -27,6 +27,7 @@
 #include "ImageData.h"
 #include "Colors.h"
 #include "LineCaps.h"
+#include "Gradient.h"
 
 /*
 Most of these context methods are preliminary work. They are currenbly not tested properly.
@@ -159,22 +160,51 @@ namespace Babylon::Polyfills::Internal
 
         nvgRect(m_nvg, left, top, width, height);
 
-        const auto color = StringToColor(info.Env(), m_fillStyle);
-        nvgFillColor(m_nvg, color);
+        if (std::holds_alternative<std::string>(m_fillStyle))
+        {
+            const auto color = StringToColor(info.Env(), std::get<std::string>(m_fillStyle));
+            nvgFillColor(m_nvg, color);
+        }
+        else if (std::holds_alternative<CanvasGradient*>(m_fillStyle))
+        {
+            CanvasGradient* gradient = std::get<CanvasGradient*>(m_fillStyle);
+            gradient->UpdateCache();
+            // once cache is good, use the cached image from the gradient
+        }
+        else
+        {
+            throw Napi::Error::New(info.Env(), "Fillstyle is not a color string or a gradient.");
+        }
+        
         nvgFill(m_nvg);
         SetDirty();
     }
 
     Napi::Value Context::GetFillStyle(const Napi::CallbackInfo&)
     {
-        return Napi::Value::From(Env(), m_fillStyle);
+        if (std::holds_alternative<std::string>(m_fillStyle))
+        {
+            return Napi::Value::From(Env(), std::get<std::string>(m_fillStyle));
+        }
+        else {
+            return std::get<CanvasGradient*>(m_fillStyle)->Value();
+        }
     }
 
     void Context::SetFillStyle(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        m_fillStyle = value.As<Napi::String>().Utf8Value();
-        const auto color = StringToColor(info.Env(), m_fillStyle);
-        nvgFillColor(m_nvg, color);
+        if (value.IsString())
+        {
+            auto string = value.As<Napi::String>().Utf8Value();
+            const auto color = StringToColor(info.Env(), string);
+            m_fillStyle = string;
+            nvgFillColor(m_nvg, color);
+        }
+        else
+        {
+            CanvasGradient* canvasGradient = CanvasGradient::Unwrap(info[0].As<Napi::Object>());
+            m_fillStyle = canvasGradient;
+        }
         SetDirty();
     }
 
@@ -553,7 +583,11 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::CreateLinearGradient(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        const auto x0 = info[0].As<Napi::Number>().FloatValue();
+        const auto y0 = info[1].As<Napi::Number>().FloatValue();
+        const auto x1 = info[2].As<Napi::Number>().FloatValue();
+        const auto y1 = info[3].As<Napi::Number>().FloatValue();
+        return CanvasGradient::CreateInstance(info.Env(), x0, y0, x1, y1);
     }
 
     void Context::SetTransform(const Napi::CallbackInfo& info)
