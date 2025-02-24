@@ -18,7 +18,7 @@ jobs:
       sha: ${{ steps.version.outputs.sha }}
       tag: ${{ steps.version.outputs.tag }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
@@ -51,7 +51,7 @@ jobs:
       CMAKE_INSTALL_DIR: ${{ github.workspace }}/install/
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Install Linux dependencies
@@ -80,7 +80,7 @@ jobs:
       - name: Build
         run: |
           cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target install --config Release
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}
           path: ${{ github.workspace }}/install/
@@ -93,7 +93,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
@@ -102,69 +102,69 @@ jobs:
           find src/bgfx.cmake -name ".git*" -exec rm -rf {} +
           find src/bgfx.cmake -name ".editorconfig" -delete
           rm src/bgfx.cmake/.cmake-format.py
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: windows-latest
           path: ${{ github.workspace }}/install/windows/bgfx.cmake
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: ubuntu-latest
           path: ${{ github.workspace }}/install/linux/bgfx.cmake
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: macos-latest
           path: ${{ github.workspace }}/install/macos/bgfx.cmake
       - name: Create Source Zip
-        uses: thedoctor0/zip-release@0.7.1
+        uses: thedoctor0/zip-release@0.7.6
         with:
           type: 'zip'
           filename: 'bgfx.cmake.${{ needs.version.outputs.tag }}.zip'
           directory: 'src'
           path: 'bgfx.cmake'
       - name: Create Source Tar
-        uses: thedoctor0/zip-release@0.7.1
+        uses: thedoctor0/zip-release@0.7.6
         with:
           type: 'tar'
           filename: 'bgfx.cmake.${{ needs.version.outputs.tag }}.tar.gz'
           directory: 'src'
           path: 'bgfx.cmake'
       - name: Create Windows Zip
-        uses: thedoctor0/zip-release@0.7.1
+        uses: thedoctor0/zip-release@0.7.6
         with:
           type: 'zip'
           filename: 'bgfx.cmake.binary.windows.${{ needs.version.outputs.tag }}.zip'
           directory: 'install/windows'
           path: 'bgfx.cmake'
       - name: Create Windows Tar
-        uses: thedoctor0/zip-release@0.7.1
+        uses: thedoctor0/zip-release@0.7.6
         with:
           type: 'tar'
           filename: 'bgfx.cmake.binary.windows.${{ needs.version.outputs.tag }}.tar.gz'
           directory: 'install/windows'
           path: 'bgfx.cmake'
       - name: Create Linux Zip
-        uses: thedoctor0/zip-release@0.7.1
+        uses: thedoctor0/zip-release@0.7.6
         with:
           type: 'zip'
           filename: 'bgfx.cmake.binary.linux.${{ needs.version.outputs.tag }}.zip'
           directory: 'install/linux'
           path: 'bgfx.cmake'
       - name: Create Linux Tar
-        uses: thedoctor0/zip-release@0.7.1
+        uses: thedoctor0/zip-release@0.7.6
         with:
           type: 'tar'
           filename: 'bgfx.cmake.binary.linux.${{ needs.version.outputs.tag }}.tar.gz'
           directory: 'install/linux'
           path: 'bgfx.cmake'
       - name: Create MacOS Zip
-        uses: thedoctor0/zip-release@0.7.1
+        uses: thedoctor0/zip-release@0.7.6
         with:
           type: 'zip'
           filename: 'bgfx.cmake.binary.macos.${{ needs.version.outputs.tag }}.zip'
           directory: 'install/macos'
           path: 'bgfx.cmake'
       - name: Create MacOS Tar
-        uses: thedoctor0/zip-release@0.7.1
+        uses: thedoctor0/zip-release@0.7.6
         with:
           type: 'tar'
           filename: 'bgfx.cmake.binary.macos.${{ needs.version.outputs.tag }}.tar.gz'

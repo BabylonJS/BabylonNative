@@ -12,7 +12,7 @@ jobs:
     name: cmake-format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
@@ -21,7 +21,7 @@ jobs:
         if: startsWith(github.event_name, 'pull_request')
       - name: Format CMake files
         id: cmake-format
-        uses: PuneetMatharu/cmake-format-lint-action@main
+        uses: PuneetMatharu/cmake-format-lint-action@v1.0.6
         with:
           args: --config-files .cmake-format.py --check
   # Run only if a PR and cmake-format has failed
@@ -31,7 +31,7 @@ jobs:
     needs: cmake-format-check
     if: always() && startsWith(github.event_name, 'pull_request') && needs.cmake-format-check.result == 'failure'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
@@ -40,7 +40,7 @@ jobs:
         if: startsWith(github.event_name, 'pull_request')
       - name: Format CMake files
         id: cmake-format
-        uses: PuneetMatharu/cmake-format-lint-action@v1.0.0
+        uses: PuneetMatharu/cmake-format-lint-action@v1.0.6
         with:
           args: --config-files .cmake-format.py --in-place
       - run: |
