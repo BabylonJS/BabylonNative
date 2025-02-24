@@ -2,106 +2,97 @@
 #include <map>
 #include "Canvas.h"
 #include "Path2D.h"
-
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
-#endif
-
-#include "nanovg/nanovg.h"
-
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
+#include "nanovg.h"
+#include <napi/pointer.h>
 
 namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_PATH2D_CONSTRUCTOR_NAME = "Path2D";
 
-    Napi::Value Path2D::CreateInstance(Napi::Env env, Napi::String path)
-    // Napi::Value Path2D::CreateInstance(Napi::Env env, Path2D* path2d) // TODO: Path2D constructor
+    void NativeCanvasPath2D::CreateInstance(Napi::Env env)
     {
         Napi::HandleScope scope{env};
+
         Napi::Function func = DefineClass(
             env,
             JS_PATH2D_CONSTRUCTOR_NAME,
             {
-                InstanceMethod("addPath", &Path2D::AddPath),
-                InstanceMethod("closePath", &Path2D::ClosePath),
-                InstanceMethod("moveTo", &Path2D::MoveTo),
-                InstanceMethod("lineTo", &Path2D::LineTo),
-                InstanceMethod("bezierCurveTo", &Path2D::BezierCurveTo),
-                InstanceMethod("quadraticCurveTo", &Path2D::QuadraticCurveTo),
-                InstanceMethod("arc", &Path2D::Arc),
-                InstanceMethod("arcTo", &Path2D::ArcTo),
-                InstanceMethod("ellipse", &Path2D::Ellipse),
-                InstanceMethod("rect", &Path2D::Rect),
-                InstanceMethod("roundRect", &Path2D::RoundRect),
+                InstanceMethod("addPath", &NativeCanvasPath2D::AddPath),
+                InstanceMethod("closePath", &NativeCanvasPath2D::ClosePath),
+                InstanceMethod("moveTo", &NativeCanvasPath2D::MoveTo),
+                InstanceMethod("lineTo", &NativeCanvasPath2D::LineTo),
+                InstanceMethod("bezierCurveTo", &NativeCanvasPath2D::BezierCurveTo),
+                InstanceMethod("quadraticCurveTo", &NativeCanvasPath2D::QuadraticCurveTo),
+                InstanceMethod("arc", &NativeCanvasPath2D::Arc),
+                InstanceMethod("arcTo", &NativeCanvasPath2D::ArcTo),
+                InstanceMethod("ellipse", &NativeCanvasPath2D::Ellipse),
+                InstanceMethod("rect", &NativeCanvasPath2D::Rect),
+                InstanceMethod("roundRect", &NativeCanvasPath2D::RoundRect),
             });
-        return func.New({Napi::Value::From(env, path)});
-        // return func.New({Napi::External<Path2D>::New(env, path2d)}); // TODO: Path2D constructor
+
+        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_PATH2D_CONSTRUCTOR_NAME, func);
     }
 
-    Path2D::Path2D(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<Path2D>{info}
+    NativeCanvasPath2D::NativeCanvasPath2D(const Napi::CallbackInfo& info)
+        : Napi::ObjectWrap<NativeCanvasPath2D>{info}
     {
         auto path{info[0].As<Napi::String>().ToString()};
-        // auto context{info[0].As<Napi::External<Path2D>>().Data()}; // TODO: Path2D constructor
+        // auto context{info[0].As<Napi::External<NativeCanvasPath2D>>().Data()}; // TODO: Path2D constructor
         // TODO: Convert path to nsvg object
     }
 
-    void Path2D::AddPath(const Napi::CallbackInfo& info)
+    void NativeCanvasPath2D::AddPath(const Napi::CallbackInfo& info)
     {
-        // auto path = info[0].As<Napi::Object?> // TODO: get Path2D object
+        // auto path = info[0].As<Napi::Object?> // TODO: get NativeCanvasPath2D object
         throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-    void Path2D::ClosePath(const Napi::CallbackInfo& info)
-    {
-        throw Napi::Error::New(info.Env(), "not implemented");
-    }
-
-    void Path2D::MoveTo(const Napi::CallbackInfo& info)
+    void NativeCanvasPath2D::ClosePath(const Napi::CallbackInfo& info)
     {
         throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-	void Path2D::LineTo(const Napi::CallbackInfo& info)
+    void NativeCanvasPath2D::MoveTo(const Napi::CallbackInfo& info)
     {
         throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-	void Path2D::BezierCurveTo(const Napi::CallbackInfo& info)
+	void NativeCanvasPath2D::LineTo(const Napi::CallbackInfo& info)
     {
         throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-	void Path2D::QuadraticCurveTo(const Napi::CallbackInfo& info)
+	void NativeCanvasPath2D::BezierCurveTo(const Napi::CallbackInfo& info)
     {
         throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-	void Path2D::Arc(const Napi::CallbackInfo& info)
+	void NativeCanvasPath2D::QuadraticCurveTo(const Napi::CallbackInfo& info)
     {
         throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-	void Path2D::ArcTo(const Napi::CallbackInfo& info)
+	void NativeCanvasPath2D::Arc(const Napi::CallbackInfo& info)
     {
         throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-	void Path2D::Ellipse(const Napi::CallbackInfo& info)
+	void NativeCanvasPath2D::ArcTo(const Napi::CallbackInfo& info)
     {
         throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-	void Path2D::Rect(const Napi::CallbackInfo& info)
+	void NativeCanvasPath2D::Ellipse(const Napi::CallbackInfo& info)
     {
         throw Napi::Error::New(info.Env(), "not implemented");
     }
 
-	void Path2D::RoundRect(const Napi::CallbackInfo& info)
+	void NativeCanvasPath2D::Rect(const Napi::CallbackInfo& info)
+    {
+        throw Napi::Error::New(info.Env(), "not implemented");
+    }
+
+	void NativeCanvasPath2D::RoundRect(const Napi::CallbackInfo& info)
     {
         throw Napi::Error::New(info.Env(), "not implemented");
     }

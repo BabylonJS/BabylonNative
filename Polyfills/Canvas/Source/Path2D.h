@@ -1,16 +1,17 @@
 #pragma once
 
 #include <Babylon/Polyfills/Canvas.h>
+#include <Babylon/JsRuntimeScheduler.h>
 
 namespace Babylon::Polyfills::Internal
 {
-    class Path2D final : public Napi::ObjectWrap<Path2D>
+    class NativeCanvasPath2D final : public Napi::ObjectWrap<NativeCanvasPath2D>
     {
     public:
-        static Napi::Value CreateInstance(Napi::Env env, Napi::String path);
-        // static Napi::Value CreateInstance(Napi::Env env, Napi::String path); // TODO: Path2D arg
+        static void CreateInstance(Napi::Env env);
 
-        explicit Path2D(const Napi::CallbackInfo& info);
+        explicit NativeCanvasPath2D(const Napi::CallbackInfo& info);
+        // virtual ~NativeCanvasPath2D(); // TODO: destructor?
 
     private:
         void AddPath(const Napi::CallbackInfo&);
