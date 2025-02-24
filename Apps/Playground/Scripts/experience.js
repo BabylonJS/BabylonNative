@@ -154,7 +154,7 @@ CreateBoxAsync(scene).then(function () {
                     context.stroke();
                 });
 
-                // gradient
+                // gradient. BEWARE: it will be recreated each frame
                 let gradient = context.createLinearGradient(0, 0, 200, 0);
                 gradient.addColorStop(0, "green");
                 gradient.addColorStop(0.7, "white");

@@ -70,6 +70,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("fillText", &Context::FillText),
                 InstanceMethod("strokeText", &Context::StrokeText),
                 InstanceMethod("createLinearGradient", &Context::CreateLinearGradient),
+                InstanceMethod("createRadialGradient", &Context::CreateRadialGradient),
                 InstanceMethod("setTransform", &Context::SetTransform),
                 InstanceMethod("transform", &Context::Transform),
                 InstanceMethod("dispose", &Context::Dispose),
@@ -169,7 +170,8 @@ namespace Babylon::Polyfills::Internal
         {
             CanvasGradient* gradient = std::get<CanvasGradient*>(m_fillStyle);
             gradient->UpdateCache();
-            // once cache is good, use the cached image from the gradient
+            NVGpaint imagePaint = nvgImagePattern(m_nvg, 0.f, 0.f, width, height, 0.f, gradient->CachedImage(), 1.f);
+            nvgFillPaint(m_nvg, imagePaint);
         }
         else
         {
@@ -587,7 +589,18 @@ namespace Babylon::Polyfills::Internal
         const auto y0 = info[1].As<Napi::Number>().FloatValue();
         const auto x1 = info[2].As<Napi::Number>().FloatValue();
         const auto y1 = info[3].As<Napi::Number>().FloatValue();
-        return CanvasGradient::CreateInstance(info.Env(), x0, y0, x1, y1);
+        return CanvasGradient::CreateLinear(info.Env(), this, x0, y0, x1, y1);
+    }
+
+    Napi::Value Context::CreateRadialGradient(const Napi::CallbackInfo& info)
+    {
+        const auto x0 = info[0].As<Napi::Number>().FloatValue();
+        const auto y0 = info[1].As<Napi::Number>().FloatValue();
+        const auto r0 = info[1].As<Napi::Number>().FloatValue();
+        const auto x1 = info[2].As<Napi::Number>().FloatValue();
+        const auto y1 = info[3].As<Napi::Number>().FloatValue();
+        const auto r1 = info[3].As<Napi::Number>().FloatValue();
+        return CanvasGradient::CreateRadial(info.Env(), this, x0, y0, r0, x1, y1, r1);
     }
 
     void Context::SetTransform(const Napi::CallbackInfo& info)
