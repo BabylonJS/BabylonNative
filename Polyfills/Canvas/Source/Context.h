@@ -20,7 +20,7 @@ namespace Babylon::Polyfills::Internal
         explicit Context(const Napi::CallbackInfo& info);
         virtual ~Context();
 
-        NVGcontext* GetNVGContext() const { return m_nvg; }
+        NVGcontext* GetNVGContext() const { return *m_nvg.get(); }
 
     private:
         void FillRect(const Napi::CallbackInfo&);
@@ -84,7 +84,7 @@ namespace Babylon::Polyfills::Internal
         void DeferredFlushFrame();
 
         NativeCanvas* m_canvas;
-        NVGcontext* m_nvg;
+        std::shared_ptr<NVGcontext*> m_nvg;
 
         std::string m_font{};
         std::variant<std::string, CanvasGradient*> m_fillStyle{};

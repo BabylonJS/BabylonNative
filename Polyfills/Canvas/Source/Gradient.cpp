@@ -83,23 +83,23 @@ namespace Babylon::Polyfills::Internal
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CANVAS_GRADIENT_CONSTRUCTOR_NAME, func);
     }
 
-    Napi::Value CanvasGradient::CreateLinear(Napi::Env env, Context* context, float x0, float y0, float x1, float y1)
+    Napi::Object CanvasGradient::CreateLinear(Napi::Env env, const std::shared_ptr<NVGcontext*>& context, float x0, float y0, float x1, float y1)
     {
         Napi::HandleScope scope{ env };
 
         auto func = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_CANVAS_GRADIENT_CONSTRUCTOR_NAME).As<Napi::Function>();
         auto gradientValue = func.New({ Napi::Value::From(env, x0), Napi::Value::From(env, y0), Napi::Value::From(env, x1), Napi::Value::From(env, y1) });
-        CanvasGradient::Unwrap(gradientValue)->nvgContext = context->GetNVGContext();
+        CanvasGradient::Unwrap(gradientValue)->context = context;
         return gradientValue;
     }
 
-    Napi::Value CanvasGradient::CreateRadial(Napi::Env env, Context* context, float x0, float y0, float r0, float x1, float y1, float r1)
+    Napi::Object CanvasGradient::CreateRadial(Napi::Env env, const std::shared_ptr<NVGcontext*>& context, float x0, float y0, float r0, float x1, float y1, float r1)
     {
         Napi::HandleScope scope{ env };
 
         auto func = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_CANVAS_GRADIENT_CONSTRUCTOR_NAME).As<Napi::Function>();
         auto gradientValue = func.New({ Napi::Value::From(env, x0), Napi::Value::From(env, y0), Napi::Value::From(env, x1), Napi::Value::From(env, y1), Napi::Value::From(env, r0), Napi::Value::From(env, r1) });
-        CanvasGradient::Unwrap(gradientValue)->nvgContext = context->GetNVGContext();
+        CanvasGradient::Unwrap(gradientValue)->context = context;
         return gradientValue;
     }
 
@@ -120,9 +120,18 @@ namespace Babylon::Polyfills::Internal
 
     CanvasGradient::~CanvasGradient()
     {
+        Dispose();
+    }
+
+    void CanvasGradient::Dispose()
+    {
         if (cachedImage >= 0)
         {
-            nvgDeleteImage(nvgContext, cachedImage);
+            if (context.lock())
+            {
+                nvgDeleteImage(*context.lock(), cachedImage);
+            }
+            cachedImage = -1;
         }
     }
 
@@ -167,7 +176,7 @@ namespace Babylon::Polyfills::Internal
             NVGcolor s0 = transformColor(colorStops[nstops - 1].color, x);
             gradientSpan(data, s0, s0, colorStops[nstops - 1].offset, 1.0f);
         }
-        return nvgCreateImageRGBA(nvgContext, GRADIENT_SAMPLES_L, 1, 0, (unsigned char*)data);
+        return nvgCreateImageRGBA(*context.lock(), GRADIENT_SAMPLES_L, 1, 0, (unsigned char*)data);
     }
 
     NVGcolor lerpColor(NVGcolor color0, NVGcolor color1, float offset0, float offset1, float g)
@@ -323,8 +332,7 @@ namespace Babylon::Polyfills::Internal
                 image[(y * width) + x] = color;
             }
         }
-        //int img = render->cache_image(render_obj, width, height, 0, (unsigned char*)image);
-        int img = nvgCreateImageRGBA(nvgContext, width, height, 0, (unsigned char*)image);
+        int img = nvgCreateImageRGBA(*context.lock(), width, height, 0, (unsigned char*)image);
         free(image);
         return img;
     }
@@ -337,7 +345,7 @@ namespace Babylon::Polyfills::Internal
         }
         if (cachedImage >= 0)
         {
-            nvgDeleteImage(nvgContext, cachedImage);
+            nvgDeleteImage(*context.lock(), cachedImage);
         }
         cachedImage = gradientType == GradientType::Linear ? LinearGradientStops(nullptr) : RadialGradientStops(nullptr);
         dirty = false;

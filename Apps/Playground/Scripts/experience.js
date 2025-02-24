@@ -160,7 +160,7 @@ CreateBoxAsync(scene).then(function () {
                 gradient.addColorStop(0.7, "white");
                 gradient.addColorStop(1, "pink");
                 context.fillStyle = gradient;
-                context.fillRect(10, 310, 200, 100);
+                context.fillRect(10, 310, 400, 100);
 
                 // tick update
                 dynamicTexture.update();
