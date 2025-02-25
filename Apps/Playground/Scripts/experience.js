@@ -154,6 +154,14 @@ CreateBoxAsync(scene).then(function () {
                     context.stroke();
                 });
 
+                // gradient. BEWARE: it will be recreated each frame
+                let gradient = context.createLinearGradient(0, 0, 200, 0);
+                gradient.addColorStop(0, "green");
+                gradient.addColorStop(0.7, "white");
+                gradient.addColorStop(1, "pink");
+                context.fillStyle = gradient;
+                context.fillRect(10, 310, 400, 100);
+
                 // tick update
                 dynamicTexture.update();
                 t += 0.01;
