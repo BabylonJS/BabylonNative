@@ -188,8 +188,9 @@ namespace Babylon::Polyfills::Internal
         {
             return Napi::Value::From(Env(), std::get<std::string>(m_fillStyle));
         }
-        else {
-            return std::get<CanvasGradient*>(m_fillStyle)->Value();
+        else
+        {
+            return Napi::External<CanvasGradient>::New(Env(), std::get<CanvasGradient*>(m_fillStyle));
         }
     }
 
