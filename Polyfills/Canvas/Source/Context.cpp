@@ -25,6 +25,7 @@
 #include "MeasureText.h"
 #include "Image.h"
 #include "ImageData.h"
+// #include "Path2D.h"
 #include "Colors.h"
 #include "LineCaps.h"
 
@@ -323,7 +324,8 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Stroke(const Napi::CallbackInfo&)
     {
-        // const std::string path = info[0].As<Napi::String>().Utf8Value(); // TODO: parse path. update Babylon.js
+        // const NativeCanvasPath2D* path = NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>()); 
+        // TODO: iterate over Path2D and call nvg based off typs
         nvgStroke(m_nvg);
         SetDirty();
     }
