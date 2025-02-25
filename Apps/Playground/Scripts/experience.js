@@ -120,6 +120,48 @@ CreateBoxAsync(scene).then(function () {
                 var font = `bold ${fontSize}px monospace`;
                 dynamicTexture.drawText("BabylonNative", Math.cos(t) * 100, 246, font, "White", null, true, true);
 
+                // Draw guides
+                context.strokeStyle = "#09f";
+                context.beginPath();
+                context.moveTo(10, 10);
+                context.lineTo(140, 10);
+                context.moveTo(10, 140);
+                context.lineTo(140, 140);
+                context.stroke();
+
+                // Draw lines
+                context.strokeStyle = "black";
+                ["butt", "round", "square"].forEach((lineCap, i) => {
+                    context.lineWidth = 15;
+                    context.lineCap = lineCap;
+                    context.beginPath();
+                    context.moveTo(25 + i * 50, 10);
+                    context.lineTo(25 + i * 50, 140);
+                    context.stroke();
+                });
+
+                // line join
+                context.lineWidth = 10;
+                var offset = 200;
+                ["round", "bevel", "miter"].forEach((join, i) => {
+                    context.lineJoin = join;
+                    context.beginPath();
+                    context.moveTo(-5 + offset, 15 + i * 40);
+                    context.lineTo(35 + offset, 55 + i * 40);
+                    context.lineTo(75 + offset, 15 + i * 40);
+                    context.lineTo(115 + offset, 55 + i * 40);
+                    context.lineTo(155 + offset, 15 + i * 40);
+                    context.stroke();
+                });
+
+                // gradient. BEWARE: it will be recreated each frame
+                let gradient = context.createLinearGradient(0, 0, 200, 0);
+                gradient.addColorStop(0, "green");
+                gradient.addColorStop(0.7, "white");
+                gradient.addColorStop(1, "pink");
+                context.fillStyle = gradient;
+                context.fillRect(10, 310, 400, 100);
+
                 // tick update
                 dynamicTexture.update();
                 t += 0.01;
