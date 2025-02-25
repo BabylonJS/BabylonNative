@@ -323,6 +323,7 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Stroke(const Napi::CallbackInfo&)
     {
+        // const std::string path = info[0].As<Napi::String>().Utf8Value(); // TODO: parse path. update Babylon.js
         nvgStroke(m_nvg);
         SetDirty();
     }

@@ -35,31 +35,49 @@ namespace Babylon::Polyfills::Internal
 
     NativeCanvasPath2D::NativeCanvasPath2D(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<NativeCanvasPath2D>{info}
+        , m_commands{std::queue<Path2DCommand>()}
     {
         auto path{info[0].As<Napi::String>().ToString()};
         // auto context{info[0].As<Napi::External<NativeCanvasPath2D>>().Data()}; // TODO: Path2D constructor
-        // TODO: Convert path to nsvg object
+        // TODO: Convert path to list of commands to init queue
+    }
+
+    void NativeCanvasPath2D::AppendCommand(Path2DCommandTypes type, Path2DCommandArgs args)
+    {
+        m_commands.push({ type, args });
     }
 
     void NativeCanvasPath2D::AddPath(const Napi::CallbackInfo& info)
     {
-        // auto path = info[0].As<Napi::Object?> // TODO: get NativeCanvasPath2D object
+        // NOTE: stroke works same as addpath, and
+        const NativeCanvasPath2D* path = NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>());
+        // const NativeCanvasDOMMatrix path = NativeCanvasDOMMatrix::Unwrap(info[1].As<Napi::Object>()); // TODO: DOMMatrix
         throw Napi::Error::New(info.Env(), "not implemented");
     }
 
     void NativeCanvasPath2D::ClosePath(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        AppendCommand(P2D_CLOSE, {});
     }
 
     void NativeCanvasPath2D::MoveTo(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        const auto x = static_cast<float>(info[0].As<Napi::Number>().DoubleValue());
+        const auto y = static_cast<float>(info[1].As<Napi::Number>().DoubleValue());
+
+        Path2DCommandArgs args = {};
+        args.moveTo = {x, y};
+        AppendCommand(P2D_MOVETO, args);
     }
 
 	void NativeCanvasPath2D::LineTo(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        const auto x = static_cast<float>(info[0].As<Napi::Number>().DoubleValue());
+        const auto y = static_cast<float>(info[1].As<Napi::Number>().DoubleValue());
+
+        Path2DCommandArgs args = {};
+        args.lineTo = {x, y};
+        AppendCommand(P2D_LINETO, args);
     }
 
 	void NativeCanvasPath2D::BezierCurveTo(const Napi::CallbackInfo& info)

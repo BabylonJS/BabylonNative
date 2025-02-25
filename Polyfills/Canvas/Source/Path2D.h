@@ -1,7 +1,53 @@
 #pragma once
 
+#include <queue>
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/JsRuntimeScheduler.h>
+
+enum Path2DCommandTypes
+{
+	P2D_CLOSE = 0,
+    P2D_MOVETO = 1,
+    P2D_LINETO = 2,
+    P2D_BEZIERTO = 3,
+    P2D_QUADTO = 4,
+    P2D_ARC = 5,
+    P2D_ARCTO = 6,
+    P2D_ELLIPSE = 7,
+    P2D_RECT = 8,
+    P2D_ROUNDRECT = 9,
+};
+
+struct Path2DClose {}; // TODO: don't bother if no args?
+struct Path2DMoveTo { float x; float y; };
+struct Path2DLineTo { float x; float y; }; 
+struct Path2DBezierTo { float cp1x; float cp1y; float cp2x; float cp2y; float x; float y; };
+struct Path2DQuadTo { float cpx; float cpy; float x; float y; };
+struct Path2DArc { float x; float y; float radius; float startAngle; float endAngle; bool counterclockwise; };
+struct Path2DArcTo { float x1; float y1; float x2; float y2; float radius; };
+struct Path2DEllipse { float x; float y; float radiusX; float radiusY; float rotation; float startAngle; float endAngle; bool counterclockwise; };
+struct Path2DRect { float x; float y; float width; float height; };
+struct Path2DRoundRect { float x; float y; float width; float height; float radii; };
+
+union Path2DCommandArgs
+{
+    Path2DClose close;
+    Path2DMoveTo moveTo;
+    Path2DLineTo lineTo;
+    Path2DBezierTo bezierTo;
+    Path2DQuadTo quadTo;
+    Path2DArc arc;
+    Path2DArcTo arcTo;
+    Path2DEllipse ellipse;
+    Path2DRect rect;
+    Path2DRoundRect roundRect;
+};
+
+struct Path2DCommand
+{
+    Path2DCommandTypes type;
+    Path2DCommandArgs args;
+};
 
 namespace Babylon::Polyfills::Internal
 {
@@ -11,7 +57,7 @@ namespace Babylon::Polyfills::Internal
         static void CreateInstance(Napi::Env env);
 
         explicit NativeCanvasPath2D(const Napi::CallbackInfo& info);
-        // virtual ~NativeCanvasPath2D(); // TODO: destructor?
+        // virtual ~NativeCanvasPath2D(); // TODO: destructor? empty queue?
 
     private:
         void AddPath(const Napi::CallbackInfo&);
@@ -25,5 +71,9 @@ namespace Babylon::Polyfills::Internal
         void Ellipse(const Napi::CallbackInfo&);
         void Rect(const Napi::CallbackInfo&);
         void RoundRect(const Napi::CallbackInfo&);
+
+        void AppendCommand(Path2DCommandTypes type, Path2DCommandArgs args);
+
+        std::queue<Path2DCommand> m_commands;
     };
 }
