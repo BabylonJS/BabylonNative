@@ -170,7 +170,7 @@ namespace Babylon::Polyfills::Internal
         {
             CanvasGradient* gradient = std::get<CanvasGradient*>(m_fillStyle);
             gradient->UpdateCache();
-            NVGpaint imagePaint = nvgImagePattern(*m_nvg, 0.f, 0.f, width, height, 0.f, gradient->CachedImage(), 1.f);
+            NVGpaint imagePaint = nvgImagePattern(*m_nvg, 0.f, 0.f, width + left, height, 0.f, gradient->CachedImage(), 1.f);
             nvgFillPaint(*m_nvg, imagePaint);
         }
         else
