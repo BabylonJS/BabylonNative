@@ -27,10 +27,7 @@
 #include "ImageData.h"
 #include "Colors.h"
 #include "LineCaps.h"
-<<<<<<< HEAD
-=======
 #include "Gradient.h"
->>>>>>> aab744e3c5463f1b7b7d607c26373e535ef68d71
 
 /*
 Most of these context methods are preliminary work. They are currenbly not tested properly.
@@ -640,19 +637,6 @@ namespace Babylon::Polyfills::Internal
         SetDirty();
     }
 
-    Napi::Value Context::GetLineCap(const Napi::CallbackInfo& info)
-    {
-        return Napi::Value::From(Env(), m_lineCap);
-    }
-
-    void Context::SetLineCap(const Napi::CallbackInfo& info, const Napi::Value& value)
-    {
-        m_lineCap = value.As<Napi::String>().Utf8Value();
-        const auto lineCap = StringToLineCap(info.Env(), m_lineCap);
-        nvgLineCap(m_nvg, lineCap);
-        SetDirty();
-    }
-
     Napi::Value Context::GetLineJoin(const Napi::CallbackInfo& info)
     {
         return Napi::Value::From(Env(), m_lineJoin);
@@ -662,11 +646,7 @@ namespace Babylon::Polyfills::Internal
     {
         m_lineJoin = value.As<Napi::String>().Utf8Value();
         const auto lineJoin = StringToLineJoin(info.Env(), m_lineJoin);
-<<<<<<< HEAD
-        nvgLineJoin(m_nvg, lineJoin);
-=======
         nvgLineJoin(*m_nvg, lineJoin);
->>>>>>> aab744e3c5463f1b7b7d607c26373e535ef68d71
         SetDirty();
     }
 
@@ -678,11 +658,7 @@ namespace Babylon::Polyfills::Internal
     void Context::SetMiterLimit(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         m_miterLimit = value.As<Napi::Number>().FloatValue();
-<<<<<<< HEAD
-        nvgMiterLimit(m_nvg, m_miterLimit);
-=======
         nvgMiterLimit(*m_nvg, m_miterLimit);
->>>>>>> aab744e3c5463f1b7b7d607c26373e535ef68d71
         SetDirty();
     }
 
