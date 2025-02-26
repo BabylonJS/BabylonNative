@@ -11,7 +11,7 @@
 #endif
 
 #include "nanovg.h"
-#define NANOSVG_IMPLEMENTATION	// Expands implementation
+#define NANOSVG_IMPLEMENTATION // Expands implementation
 #include "nanosvg.h"
 
 #ifdef __GNUC__
@@ -63,22 +63,22 @@ namespace Babylon::Polyfills::Internal
 
             nsvg__parsePath(parser, attr);
 
-			for (NSVGshape *s = parser->image->shapes; s != NULL; s = s->next) {
-				for (NSVGpath *p = s->paths; p != NULL; p = p->next) {
-					assert(p->npts >= 6); // guaranteed to be cubic bezier?
-					auto pts = p->pts;
-					auto x0 = pts[0];
-					auto y0 = pts[1];
-					auto cpx1 = pts[2];
-					auto cpy1 = pts[3];
-					auto cpx2 = pts[4];
-					auto cpy2 = pts[5];
+            for (NSVGshape *s = parser->image->shapes; s != NULL; s = s->next) {
+                for (NSVGpath *p = s->paths; p != NULL; p = p->next) {
+                    assert(p->npts >= 6); // guaranteed to be cubic bezier?
+                    auto pts = p->pts;
+                    auto x0 = pts[0];
+                    auto y0 = pts[1];
+                    auto cpx1 = pts[2];
+                    auto cpy1 = pts[3];
+                    auto cpx2 = pts[4];
+                    auto cpy2 = pts[5];
 
-					Path2DCommandArgs args = {};
-					args.bezierTo = {cpx1, cpy1, cpx2, cpy2, x0, y0};
-					AppendCommand(P2D_BEZIERTO, args);
-				}
-			}
+                    Path2DCommandArgs args = {};
+                    args.bezierTo = {cpx1, cpy1, cpx2, cpy2, x0, y0};
+                    AppendCommand(P2D_BEZIERTO, args);
+                }
+            }
 
             nsvg__deleteParser(parser);
         }
@@ -135,7 +135,7 @@ namespace Babylon::Polyfills::Internal
         AppendCommand(P2D_MOVETO, args);
     }
 
-	void NativeCanvasPath2D::LineTo(const Napi::CallbackInfo& info)
+    void NativeCanvasPath2D::LineTo(const Napi::CallbackInfo& info)
     {
         const auto x = static_cast<float>(info[0].As<Napi::Number>().DoubleValue());
         const auto y = static_cast<float>(info[1].As<Napi::Number>().DoubleValue());
@@ -145,7 +145,7 @@ namespace Babylon::Polyfills::Internal
         AppendCommand(P2D_LINETO, args);
     }
 
-	void NativeCanvasPath2D::BezierCurveTo(const Napi::CallbackInfo& info)
+    void NativeCanvasPath2D::BezierCurveTo(const Napi::CallbackInfo& info)
     {
         const auto cp1x = static_cast<float>(info[0].As<Napi::Number>().DoubleValue());
         const auto cp1y = static_cast<float>(info[1].As<Napi::Number>().DoubleValue());
@@ -159,7 +159,7 @@ namespace Babylon::Polyfills::Internal
         AppendCommand(P2D_BEZIERTO, args);
     }
 
-	void NativeCanvasPath2D::QuadraticCurveTo(const Napi::CallbackInfo& info)
+    void NativeCanvasPath2D::QuadraticCurveTo(const Napi::CallbackInfo& info)
     {
         const auto cpx = static_cast<float>(info[0].As<Napi::Number>().DoubleValue());
         const auto cpy = static_cast<float>(info[1].As<Napi::Number>().DoubleValue());
@@ -171,7 +171,7 @@ namespace Babylon::Polyfills::Internal
         AppendCommand(P2D_QUADTO, args);
     }
 
-	void NativeCanvasPath2D::Arc(const Napi::CallbackInfo& info)
+    void NativeCanvasPath2D::Arc(const Napi::CallbackInfo& info)
     {
         const auto x = static_cast<float>(info[0].As<Napi::Number>().DoubleValue());
         const auto y = static_cast<float>(info[1].As<Napi::Number>().DoubleValue());
@@ -185,7 +185,7 @@ namespace Babylon::Polyfills::Internal
         AppendCommand(P2D_ARC, args);
     }
 
-	void NativeCanvasPath2D::ArcTo(const Napi::CallbackInfo& info)
+    void NativeCanvasPath2D::ArcTo(const Napi::CallbackInfo& info)
     {
         const auto x1 = static_cast<float>(info[0].As<Napi::Number>().DoubleValue());
         const auto y1 = static_cast<float>(info[1].As<Napi::Number>().DoubleValue());
@@ -198,7 +198,7 @@ namespace Babylon::Polyfills::Internal
         AppendCommand(P2D_ARCTO, args);
     }
 
-	void NativeCanvasPath2D::Ellipse(const Napi::CallbackInfo& info)
+    void NativeCanvasPath2D::Ellipse(const Napi::CallbackInfo& info)
     {
         const auto x = static_cast<float>(info[0].As<Napi::Number>().DoubleValue());
         const auto y = static_cast<float>(info[1].As<Napi::Number>().DoubleValue());
@@ -214,7 +214,7 @@ namespace Babylon::Polyfills::Internal
         AppendCommand(P2D_ELLIPSE, args);
     }
 
-	void NativeCanvasPath2D::Rect(const Napi::CallbackInfo& info)
+    void NativeCanvasPath2D::Rect(const Napi::CallbackInfo& info)
     {
         const auto x = static_cast<float>(info[0].As<Napi::Number>().DoubleValue());
         const auto y = static_cast<float>(info[1].As<Napi::Number>().DoubleValue());
@@ -226,7 +226,7 @@ namespace Babylon::Polyfills::Internal
         AppendCommand(P2D_RECT, args);
     }
 
-	void NativeCanvasPath2D::RoundRect(const Napi::CallbackInfo& info)
+    void NativeCanvasPath2D::RoundRect(const Napi::CallbackInfo& info)
     {
         const auto x = static_cast<float>(info[0].As<Napi::Number>().DoubleValue());
         const auto y = static_cast<float>(info[1].As<Napi::Number>().DoubleValue());

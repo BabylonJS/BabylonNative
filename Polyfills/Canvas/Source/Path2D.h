@@ -6,7 +6,7 @@
 
 enum Path2DCommandTypes
 {
-	P2D_CLOSE = 0,
+    P2D_CLOSE = 0,
     P2D_MOVETO = 1,
     P2D_LINETO = 2,
     P2D_BEZIERTO = 3,
@@ -59,10 +59,10 @@ namespace Babylon::Polyfills::Internal
         explicit NativeCanvasPath2D(const Napi::CallbackInfo& info);
         // virtual ~NativeCanvasPath2D(); // TODO: destructor? empty queue?
 
-		typename std::deque<Path2DCommand>::iterator begin();
-		typename std::deque<Path2DCommand>::iterator end();
-		typename std::deque<Path2DCommand>::const_iterator begin() const;
-		typename std::deque<Path2DCommand>::const_iterator end() const;
+        typename std::deque<Path2DCommand>::iterator begin();
+        typename std::deque<Path2DCommand>::iterator end();
+        typename std::deque<Path2DCommand>::const_iterator begin() const;
+        typename std::deque<Path2DCommand>::const_iterator end() const;
 
     private:
         void AddPath(const Napi::CallbackInfo&);
