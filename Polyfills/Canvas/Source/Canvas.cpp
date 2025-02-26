@@ -6,6 +6,7 @@
 #include <napi/pointer.h>
 #include <cassert>
 #include "Colors.h"
+#include "Gradient.h"
 
 namespace
 {
@@ -237,7 +238,7 @@ namespace Babylon::Polyfills
         Internal::NativeCanvas::CreateInstance(env);
         Internal::NativeCanvasImage::CreateInstance(env);
         Internal::NativeCanvasPath2D::CreateInstance(env);
-
+        Internal::CanvasGradient::Initialize(env);
         Internal::Context::Initialize(env);
 
         return {impl};

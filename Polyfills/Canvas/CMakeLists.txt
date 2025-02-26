@@ -14,6 +14,8 @@ set(SOURCES
     "Source/Context.h"
     "Source/MeasureText.cpp"
     "Source/MeasureText.h"
+    "Source/Gradient.cpp"
+    "Source/Gradient.h"
     "Source/nanovg_babylon.cpp"
     "Source/nanovg_babylon.h"
     "Source/nanosvg.h"
