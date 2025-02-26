@@ -1,8 +1,8 @@
 #include <bgfx/bgfx.h>
+#include <cassert>
 #include <map>
 #include "Canvas.h"
 #include "Path2D.h"
-#include "nanovg.h"
 #include <napi/pointer.h>
 
 #ifdef __GNUC__
@@ -10,6 +10,7 @@
 #pragma GCC diagnostic ignored "-Wpedantic"
 #endif
 
+#include "nanovg.h"
 #define NANOSVG_IMPLEMENTATION	// Expands implementation
 #include "nanosvg.h"
 
@@ -49,16 +50,38 @@ namespace Babylon::Polyfills::Internal
         : Napi::ObjectWrap<NativeCanvasPath2D>{info}
         , m_commands{std::deque<Path2DCommand>()}
     {
-        const std::string path = info.Length() == 1 ? info[0].As<Napi::String>().Utf8Value() : "";
+        const std::string d = info.Length() == 1 ? info[0].As<Napi::String>().Utf8Value() : "";
         // auto context{info[0].As<Napi::External<NativeCanvasPath2D>>().Data()}; // TODO: Path2D constructor
-        if (!path.empty())
+        if (!d.empty())
         {
-			NSVGparser* p = nsvg__createParser();
-			const char* d[] = {"d", path. c_str()};
-			const char** attr = {d};
-			nsvg__parsePath(p, attr);
+            NSVGparser* parser = nsvg__createParser();
+            const char* path[] = {"d", d.c_str(), NULL};
+            const char** attr = {path};
+
+            assert(strcmp(attr[0], "d") == 0);
+            assert(!attr[2]); // nsvg__parsePath terminates attr parsing on falsy
+
+            nsvg__parsePath(parser, attr);
+
+			for (NSVGshape *s = parser->image->shapes; s != NULL; s = s->next) {
+				for (NSVGpath *p = s->paths; p != NULL; p = p->next) {
+					assert(p->npts >= 6); // guaranteed to be cubic bezier?
+					auto pts = p->pts;
+					auto x0 = pts[0];
+					auto y0 = pts[1];
+					auto cpx1 = pts[2];
+					auto cpy1 = pts[3];
+					auto cpx2 = pts[4];
+					auto cpy2 = pts[5];
+
+					Path2DCommandArgs args = {};
+					args.bezierTo = {cpx1, cpy1, cpx2, cpy2, x0, y0};
+					AppendCommand(P2D_BEZIERTO, args);
+				}
+			}
+
+            nsvg__deleteParser(parser);
         }
-        // TODO: convert p->shapesTail to Path2DCommand
     }
 
     typename std::deque<Path2DCommand>::iterator NativeCanvasPath2D::begin()
