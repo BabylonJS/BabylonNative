@@ -5,6 +5,18 @@
 #include "nanovg.h"
 #include <napi/pointer.h>
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+
+#define NANOSVG_IMPLEMENTATION	// Expands implementation
+#include "nanosvg.h"
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
 namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_PATH2D_CONSTRUCTOR_NAME = "Path2D";
@@ -37,9 +49,16 @@ namespace Babylon::Polyfills::Internal
         : Napi::ObjectWrap<NativeCanvasPath2D>{info}
         , m_commands{std::deque<Path2DCommand>()}
     {
-        auto path{info[0].As<Napi::String>().ToString()};
+        const std::string path = info.Length() == 1 ? info[0].As<Napi::String>().Utf8Value() : "";
         // auto context{info[0].As<Napi::External<NativeCanvasPath2D>>().Data()}; // TODO: Path2D constructor
-        // TODO: Convert path to list of commands to init queue
+        if (!path.empty())
+        {
+			NSVGparser* p = nsvg__createParser();
+			const char* d[] = {"d", path. c_str()};
+			const char** attr = {d};
+			nsvg__parsePath(p, attr);
+        }
+        // TODO: convert p->shapesTail to Path2DCommand
     }
 
     typename std::deque<Path2DCommand>::iterator NativeCanvasPath2D::begin()

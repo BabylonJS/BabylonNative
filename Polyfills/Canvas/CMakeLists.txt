@@ -16,6 +16,7 @@ set(SOURCES
     "Source/MeasureText.h"
     "Source/nanovg_babylon.cpp"
     "Source/nanovg_babylon.h"
+    "Source/nanosvg.h"
     )
 
 file(GLOB FONT_SOURCES ${BGFX_DIR}/examples/common/font/*.cpp)
