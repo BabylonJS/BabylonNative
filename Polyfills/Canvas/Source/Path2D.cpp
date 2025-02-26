@@ -136,7 +136,7 @@ namespace Babylon::Polyfills::Internal
         const auto radius = static_cast<float>(info[2].As<Napi::Number>().DoubleValue());
         const auto startAngle = static_cast<float>(info[3].As<Napi::Number>().DoubleValue());
         const auto endAngle = static_cast<float>(info[4].As<Napi::Number>().DoubleValue());
-        const auto counterclockwise = info[5].As<Napi::Boolean>();
+        const auto counterclockwise = info.Length() == 6 ? info[5].As<Napi::Boolean>() : false;
 
         Path2DCommandArgs args = {};
         args.arc = {x, y, radius, startAngle, endAngle, counterclockwise};
@@ -165,7 +165,7 @@ namespace Babylon::Polyfills::Internal
         const auto rotation = static_cast<float>(info[4].As<Napi::Number>().DoubleValue());
         const auto startAngle = static_cast<float>(info[5].As<Napi::Number>().DoubleValue());
         const auto endAngle = static_cast<float>(info[6].As<Napi::Number>().DoubleValue());
-        const auto counterclockwise = info[7].As<Napi::Boolean>();
+        const auto counterclockwise = info.Length() == 8 ? info[7].As<Napi::Boolean>() : false;
 
         Path2DCommandArgs args = {};
         args.ellipse = {x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise};
