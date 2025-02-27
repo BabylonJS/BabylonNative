@@ -53,6 +53,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("translate", &Context::Translate),
                 InstanceMethod("strokeRect", &Context::StrokeRect),
                 InstanceMethod("rect", &Context::Rect),
+                InstanceMethod("roundRect", &Context::RoundRect),
                 InstanceMethod("clip", &Context::Clip),
                 InstanceMethod("putImageData", &Context::PutImageData),
                 InstanceMethod("arc", &Context::Arc),
@@ -177,7 +178,7 @@ namespace Babylon::Polyfills::Internal
         {
             throw Napi::Error::New(info.Env(), "Fillstyle is not a color string or a gradient.");
         }
-        
+
         nvgFill(*m_nvg);
         SetDirty();
     }
@@ -327,6 +328,62 @@ namespace Babylon::Polyfills::Internal
 
         nvgRect(*m_nvg, left, top, width, height);
         m_rectangleClipping = {left, top, width, height};
+        SetDirty();
+    }
+
+    void Context::RoundRect(const Napi::CallbackInfo& info)
+    {
+        const auto x = info[0].As<Napi::Number>().FloatValue();
+        const auto y = info[1].As<Napi::Number>().FloatValue();
+        const auto width = info[2].As<Napi::Number>().FloatValue();
+        const auto height = info[3].As<Napi::Number>().FloatValue();
+        const auto radii = info[4];
+
+        if (radii.IsNumber())
+        {
+            const auto radius = radii.As<Napi::Number>().FloatValue();
+            nvgRoundedRect(*m_nvg, x, y, width, height, radius);
+        }
+        else
+        {
+            const auto radiiArray = radii.As<Napi::Array>();
+            const auto radiiArrayLength = radiiArray.Length();
+            if (radiiArrayLength == 1)
+            {
+                const auto radius = radiiArray[0u].As<Napi::Number>().FloatValue();
+                nvgRoundedRect(*m_nvg, x, y, width, height, radius);
+            }
+            else if (radiiArrayLength == 2)
+            {
+                const auto topLeftBottomRight = radiiArray[0u].As<Napi::Number>().FloatValue();
+                const auto topRightBottomLeft = radiiArray[1].As<Napi::Number>().FloatValue();
+
+                nvgRoundedRectVarying(*m_nvg, x, y, width, height, topLeftBottomRight, topRightBottomLeft, topLeftBottomRight, topRightBottomLeft);
+            }
+            else if (radiiArrayLength == 3)
+            {
+                const auto topLeft = radiiArray[0u].As<Napi::Number>().FloatValue();
+                const auto topRightBottomLeft = radiiArray[1].As<Napi::Number>().FloatValue();
+                const auto bottomRight = radiiArray[2].As<Napi::Number>().FloatValue();
+
+                nvgRoundedRectVarying(*m_nvg, x, y, width, height, topLeft, topRightBottomLeft, bottomRight, topRightBottomLeft);
+            }
+            else if (radiiArrayLength == 4)
+            {
+                const auto topLeft = radiiArray[0u].As<Napi::Number>().FloatValue();
+                const auto topRight = radiiArray[1].As<Napi::Number>().FloatValue();
+                const auto bottomRight = radiiArray[2].As<Napi::Number>().FloatValue();
+                const auto bottomLeft = radiiArray[3].As<Napi::Number>().FloatValue();
+
+                nvgRoundedRectVarying(*m_nvg, x, y, width, height, topLeft, topRight, bottomRight, bottomLeft);
+            }
+            else
+            {
+                throw Napi::Error::New(info.Env(), "Invalid number of parameters for radii");
+            }
+        }
+
+        m_rectangleClipping = {left : x, top : y, width, height};
         SetDirty();
     }
 
@@ -590,7 +647,7 @@ namespace Babylon::Polyfills::Internal
         const auto y0 = info[1].As<Napi::Number>().FloatValue();
         const auto x1 = info[2].As<Napi::Number>().FloatValue();
         const auto y1 = info[3].As<Napi::Number>().FloatValue();
-        
+
         auto gradient = CanvasGradient::CreateLinear(info.Env(), m_nvg, x0, y0, x1, y1);
         return gradient;
     }
