@@ -133,7 +133,7 @@ namespace
         { MTLPixelFormatDepth32Float,                   MTLPixelFormatInvalid                       }, // D32F
         { MTLPixelFormatStencil8,                       MTLPixelFormatInvalid                       }, // D0S8
     };
-    //BX_STATIC_ASSERT(bgfx::TextureFormat::Count == BX_COUNTOF(s_textureFormat));
+    static_assert(bgfx::TextureFormat::Count == BX_COUNTOF(s_textureFormat));
 }
 
 // clang-format on
