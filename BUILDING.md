@@ -31,7 +31,7 @@ house the builds for different platforms, with each subfolder treated just like 
 
 _Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
 
-**Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with
+**Required Tools:** [Visual Studio 2022](https://visualstudio.microsoft.com/vs/) with
 C++ development tools, [Python 3.0](https://www.python.org/) or newer (required by
 dependencies)
 
@@ -68,7 +68,7 @@ project.
 
 _Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
 
-**Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with
+**Required Tools:** [Visual Studio 2022](https://visualstudio.microsoft.com/vs/) with
 C++ and UWP development tools, [Python 3.0](https://www.python.org/) or newer (required
 by dependencies)
 
@@ -108,7 +108,7 @@ project.
 
 _Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
 
-**Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with
+**Required Tools:** [Visual Studio 2022](https://visualstudio.microsoft.com/vs/) with
 C++ and UWP development tools, [Python 3.0](https://www.python.org/) or newer (required
 by dependencies)
 
