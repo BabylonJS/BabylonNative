@@ -365,6 +365,7 @@ namespace Babylon::Polyfills::Internal
             for (const auto& command : *path)
             {
                 const auto args = command.args;
+                bool setDirty = true;
                 switch (command.type)
                 {
                     case P2D_CLOSE:
@@ -410,7 +411,12 @@ namespace Babylon::Polyfills::Internal
                             args.roundRect.radii);
                         break;
                     default:
+                        setDirty = false; // noop
                         break;
+                }
+                if (setDirty)
+                {
+                    SetDirty();
                 }
             }
         }

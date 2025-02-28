@@ -63,20 +63,32 @@ namespace Babylon::Polyfills::Internal
 
             nsvg__parsePath(parser, attr);
 
-            for (NSVGshape *s = parser->image->shapes; s != NULL; s = s->next) {
-                for (NSVGpath *p = s->paths; p != NULL; p = p->next) {
-                    assert(p->npts >= 6); // guaranteed to be cubic bezier?
-                    auto pts = p->pts;
-                    auto x0 = pts[0];
-                    auto y0 = pts[1];
-                    auto cpx1 = pts[2];
-                    auto cpy1 = pts[3];
-                    auto cpx2 = pts[4];
-                    auto cpy2 = pts[5];
+            for (NSVGshape *shape = parser->image->shapes; shape != NULL; shape = shape->next) {
+                for (NSVGpath *path = shape->paths; path != NULL; path = path->next) {
+                    for (int i = 0; i < path->npts-1; i += 3) {
+                        float* p = &path->pts[i*2];
 
-                    Path2DCommandArgs args = {};
-                    args.bezierTo = {cpx1, cpy1, cpx2, cpy2, x0, y0};
-                    AppendCommand(P2D_BEZIERTO, args);
+                        auto x0 = p[0]; // start x, same as end x of previous
+                        auto y0 = p[1]; // start y, same as end y of previous
+                        auto cpx1 = p[2];
+                        auto cpy1 = p[3];
+                        auto cpx2 = p[4];
+                        auto cpy2 = p[5];
+                        auto x1 = p[6]; // end x
+                        auto y1 = p[7]; // end y
+
+                        // Only need to move on new shape
+                        if (i == 0)
+                        {
+                            Path2DCommandArgs moveArgs = {};
+                            moveArgs.moveTo = {x0, y0};
+                            AppendCommand(P2D_MOVETO, moveArgs);
+                        }
+
+                        Path2DCommandArgs args = {};
+                        args.bezierTo = {cpx1, cpy1, cpx2, cpy2, x1, y1};
+                        AppendCommand(P2D_BEZIERTO, args);
+                    }
                 }
             }
 
