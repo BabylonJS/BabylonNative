@@ -40,6 +40,8 @@ target_link_libraries(NativeEngine
     PRIVATE arcana
     PRIVATE bgfx
     PRIVATE bimg
+    PRIVATE bimg_encode
+    PRIVATE bimg_decode
     PRIVATE bx
     PRIVATE glslang
     PRIVATE glslang-default-resource-limits

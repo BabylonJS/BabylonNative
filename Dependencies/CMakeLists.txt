@@ -26,62 +26,6 @@ add_library(base-n INTERFACE)
 target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
 
 # --------------------------------------------------
-# bgfx.cmake
-# --------------------------------------------------
-set(BGFX_BUILD_TOOLS OFF CACHE BOOL "")
-set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "")
-set(BGFX_INSTALL OFF CACHE BOOL "")
-set(BGFX_CUSTOM_TARGETS OFF CACHE BOOL "")
-set(BGFX_USE_DEBUG_SUFFIX OFF CACHE BOOL "")
-set(BGFX_OPENGL_USE_EGL ON CACHE BOOL "")
-FetchContent_MakeAvailable_With_Message(bgfx.cmake)
-
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MULTITHREADED=1)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_VERTEX_STREAMS=18)
-target_compile_definitions(bgfx PRIVATE BGFX_GL_CONFIG_BLIT_EMULATION=1)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_ANNOTATION=0)
-if(GRAPHICS_API STREQUAL "D3D11")
-    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_DIRECT3D11=1)
-elseif(GRAPHICS_API STREQUAL "D3D12")
-    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_DIRECT3D12=1)
-elseif(GRAPHICS_API STREQUAL "Metal")
-    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_METAL=1)
-elseif(GRAPHICS_API STREQUAL "OpenGL")
-    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_OPENGLES=30)
-    target_compile_definitions(bgfx PRIVATE BGFX_GL_CONFIG_TEXTURE_READ_BACK_EMULATION=1)
-elseif(GRAPHICS_API STREQUAL "Vulkan")
-    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_VULKAN=1)
-endif()
-set_property(TARGET astc-encoder PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET astc-encoder PROPERTY UNITY_BUILD false)
-set_property(TARGET edtaa3 PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET etc1 PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET etc2 PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET iqa PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET nvtt PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET nvtt PROPERTY UNITY_BUILD false)
-set_property(TARGET pvrtc PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET squish PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET squish PROPERTY UNITY_BUILD false)
-if(TARGET tinyexr)
-    set_property(TARGET tinyexr PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-endif()
-set_property(TARGET bgfx PROPERTY FOLDER Dependencies/bgfx)
-set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx)
-set_property(TARGET bx PROPERTY FOLDER Dependencies/bgfx)
-
-target_compile_definitions(bx PRIVATE _CRT_SECURE_NO_WARNINGS)
-
-if(APPLE)
-    set_property(TARGET bgfx PROPERTY UNITY_BUILD false)
-endif()
-
-if(UNIX AND NOT APPLE AND NOT ANDROID)
-    # Use GLVND libraries for EGL support in bgfx
-    set(OpenGL_GL_PREFERENCE GLVND)
-endif()
-
-# --------------------------------------------------
 # glslang
 # --------------------------------------------------
 set(BUILD_EXTERNAL OFF CACHE BOOL "")
@@ -102,41 +46,6 @@ set_property(TARGET OGLCompiler PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET OSDependent PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET MachineIndependent PROPERTY FOLDER Dependencies/glslang)
 set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
-
-# --------------------------------------------------
-# googletest
-# --------------------------------------------------
-if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT IOS AND NOT VISIONOS) OR (UNIX AND NOT ANDROID AND NOT APPLE)))
-    if(WIN32)
-        # For Windows: Prevent overriding the parent project's compiler/linker settings
-        # Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
-        # see https://github.com/google/googletest/blob/main/googletest/README.md
-        # "Enabling this option will make gtest link the runtimes dynamically too, and match the project in which it is included."
-        set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
-    endif()
-
-    FetchContent_MakeAvailable_With_Message(googletest)
-
-    set_property(TARGET gmock PROPERTY FOLDER Dependencies/GoogleTest)
-    set_property(TARGET gmock_main PROPERTY FOLDER Dependencies/GoogleTest)
-    set_property(TARGET gtest PROPERTY FOLDER Dependencies/GoogleTest)
-    set_property(TARGET gtest_main PROPERTY FOLDER Dependencies/GoogleTest)
-endif()
-
-# --------------------------------------------------
-# JsRuntimeHost
-# --------------------------------------------------
-FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
-
-set_property(TARGET JsRuntime PROPERTY UNITY_BUILD false)
-if(TARGET AppRuntime)
-    set_property(TARGET AppRuntime PROPERTY UNITY_BUILD false)
-endif()
-
-if(WIN32)
-    # UrlLib does not support unity build on win32
-    set_property(TARGET UrlLib PROPERTY UNITY_BUILD false)
-endif()
 
 # --------------------------------------------------
 # SPIRV-Cross
@@ -182,6 +91,92 @@ endforeach()
 # seen with Sergio, disable warnings until unused parameter [-Wunused-parameter] get fixed. 
 disable_warnings(SPIRV)
 disable_warnings(MachineIndependent)
+
+# --------------------------------------------------
+# bgfx.cmake
+# --------------------------------------------------
+set(BGFX_BUILD_TOOLS OFF CACHE BOOL "")
+set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "")
+set(BGFX_INSTALL OFF CACHE BOOL "")
+set(BGFX_CUSTOM_TARGETS OFF CACHE BOOL "")
+set(BGFX_USE_DEBUG_SUFFIX OFF CACHE BOOL "")
+set(BGFX_OPENGL_USE_EGL ON CACHE BOOL "")
+FetchContent_MakeAvailable_With_Message(bgfx.cmake)
+
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MULTITHREADED=1)
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_VERTEX_STREAMS=18)
+target_compile_definitions(bgfx PRIVATE BGFX_GL_CONFIG_BLIT_EMULATION=1)
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_ANNOTATION=0)
+if(GRAPHICS_API STREQUAL "D3D11")
+    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_DIRECT3D11=1)
+elseif(GRAPHICS_API STREQUAL "D3D12")
+    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_DIRECT3D12=1)
+elseif(GRAPHICS_API STREQUAL "Metal")
+    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_METAL=1)
+elseif(GRAPHICS_API STREQUAL "OpenGL")
+    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_OPENGLES=30)
+    target_compile_definitions(bgfx PRIVATE BGFX_GL_CONFIG_TEXTURE_READ_BACK_EMULATION=1)
+elseif(GRAPHICS_API STREQUAL "Vulkan")
+    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_VULKAN=1)
+endif()
+set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx/3rdparty)
+set_property(TARGET bimg PROPERTY UNITY_BUILD false)
+set_property(TARGET bimg_encode PROPERTY FOLDER Dependencies/bgfx/3rdparty)
+set_property(TARGET bimg_encode PROPERTY UNITY_BUILD false)
+set_property(TARGET bimg_decode PROPERTY FOLDER Dependencies/bgfx/3rdparty)
+set_property(TARGET bimg_decode PROPERTY UNITY_BUILD false)
+if(TARGET tinyexr)
+    set_property(TARGET tinyexr PROPERTY FOLDER Dependencies/bgfx/3rdparty)
+endif()
+set_property(TARGET bgfx PROPERTY FOLDER Dependencies/bgfx)
+set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx)
+set_property(TARGET bx PROPERTY FOLDER Dependencies/bgfx)
+
+target_compile_definitions(bx PRIVATE _CRT_SECURE_NO_WARNINGS)
+
+if(APPLE)
+    set_property(TARGET bgfx PROPERTY UNITY_BUILD false)
+endif()
+
+if(UNIX AND NOT APPLE AND NOT ANDROID)
+    # Use GLVND libraries for EGL support in bgfx
+    set(OpenGL_GL_PREFERENCE GLVND)
+endif()
+
+# --------------------------------------------------
+# googletest
+# --------------------------------------------------
+if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT IOS AND NOT VISIONOS) OR (UNIX AND NOT ANDROID AND NOT APPLE)))
+    if(WIN32)
+        # For Windows: Prevent overriding the parent project's compiler/linker settings
+        # Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
+        # see https://github.com/google/googletest/blob/main/googletest/README.md
+        # "Enabling this option will make gtest link the runtimes dynamically too, and match the project in which it is included."
+        set(gtest_force_shared_crt OFF CACHE BOOL "" FORCE)
+    endif()
+
+    FetchContent_MakeAvailable_With_Message(googletest)
+
+    set_property(TARGET gmock PROPERTY FOLDER Dependencies/GoogleTest)
+    set_property(TARGET gmock_main PROPERTY FOLDER Dependencies/GoogleTest)
+    set_property(TARGET gtest PROPERTY FOLDER Dependencies/GoogleTest)
+    set_property(TARGET gtest_main PROPERTY FOLDER Dependencies/GoogleTest)
+endif()
+
+# --------------------------------------------------
+# JsRuntimeHost
+# --------------------------------------------------
+FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
+
+set_property(TARGET JsRuntime PROPERTY UNITY_BUILD false)
+if(TARGET AppRuntime)
+    set_property(TARGET AppRuntime PROPERTY UNITY_BUILD false)
+endif()
+
+if(WIN32)
+    # UrlLib does not support unity build on win32
+    set_property(TARGET UrlLib PROPERTY UNITY_BUILD false)
+endif()
 
 # --------------------------------------------------
 # xr
