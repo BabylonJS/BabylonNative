@@ -25,6 +25,7 @@
 #include "MeasureText.h"
 #include "Image.h"
 #include "ImageData.h"
+#include "Path2D.h"
 #include "Colors.h"
 #include "LineCaps.h"
 #include "Gradient.h"
@@ -354,8 +355,72 @@ namespace Babylon::Polyfills::Internal
         SetDirty();
     }
 
-    void Context::Stroke(const Napi::CallbackInfo&)
+    void Context::Stroke(const Napi::CallbackInfo& info)
     {
+        // draw Path2D if exists
+        const NativeCanvasPath2D* path = info.Length() == 1 ? NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>()) : nullptr;
+        if (path != nullptr)
+        {
+            nvgBeginPath(*m_nvg);
+            for (const auto& command : *path)
+            {
+                const auto args = command.args;
+                bool setDirty = true;
+                switch (command.type)
+                {
+                    case P2D_CLOSE:
+                        nvgClosePath(*m_nvg);
+                        break;
+                    case P2D_MOVETO:
+                        nvgMoveTo(*m_nvg, args.moveTo.x, args.moveTo.y);
+                        break;
+                    case P2D_LINETO:
+                        nvgLineTo(*m_nvg, args.lineTo.x, args.lineTo.y);
+                        break;
+                    case P2D_BEZIERTO:
+                        nvgBezierTo(*m_nvg, args.bezierTo.cp1x, args.bezierTo.cp1y,
+                            args.bezierTo.cp2x, args.bezierTo.cp2y,
+                            args.bezierTo.x, args.bezierTo.y);
+                        break;
+                    case P2D_QUADTO:
+                        nvgQuadTo(*m_nvg, args.quadTo.cpx, args.quadTo.cpy,
+                            args.quadTo.x, args.quadTo.y);
+                        break;
+                    case P2D_ARC:
+                        nvgArc(*m_nvg, args.arc.x, args.arc.y, args.arc.radius,
+                            args.arc.startAngle, args.arc.endAngle,
+                            args.arc.counterclockwise ? NVG_CCW : NVG_CW);
+                        break;
+                    case P2D_ARCTO:
+                        nvgArcTo(*m_nvg, args.arcTo.x1, args.arcTo.y1,
+                            args.arcTo.x2, args.arcTo.y2,
+                            args.arcTo.radius);
+                        break;
+                    case P2D_ELLIPSE:
+                        // TODO: handle clockwise for nvgElipse (args.ellipse.counterclockwise)
+                        nvgEllipse(*m_nvg, args.ellipse.x, args.ellipse.y,
+                            args.ellipse.radiusX, args.ellipse.radiusY);
+                        break;
+                    case P2D_RECT:
+                        nvgRect(*m_nvg, args.rect.x, args.rect.y,
+                            args.rect.width, args.rect.height);
+                        break;
+                    case P2D_ROUNDRECT:
+                        nvgRoundedRect(*m_nvg, args.roundRect.x, args.roundRect.y,
+                            args.roundRect.width, args.roundRect.height,
+                            args.roundRect.radii);
+                        break;
+                    default:
+                        setDirty = false; // noop
+                        break;
+                }
+                if (setDirty)
+                {
+                    SetDirty();
+                }
+            }
+        }
+
         nvgStroke(*m_nvg);
         SetDirty();
     }
