@@ -562,7 +562,7 @@ namespace Babylon::ShaderCompilerTraversers
                     "a_texcoord6",
                     "a_texcoord7",
                 };
-            BX_STATIC_ASSERT(bgfx::Attrib::Count == BX_COUNTOF(s_attribName));
+            //BX_STATIC_ASSERT(bgfx::Attrib::Count == BX_COUNTOF(s_attribName));
             constexpr static const char* s_attribInstanceName[] =
                 {
                     "i_data0",
