@@ -1,7 +1,7 @@
 $input a_position, a_texcoord0
 $output v_position, v_texcoord0
 
-#include "../common.sh"
+#include "./common.sh"
 
 #define NEED_HALF_TEXEL (BGFX_SHADER_LANGUAGE_HLSL < 400)
 

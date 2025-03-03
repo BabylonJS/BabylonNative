@@ -1,6 +1,6 @@
 $input v_position, v_texcoord0
 
-#include "../common.sh"
+#include "./common.sh"
 
 #define EDGE_AA 1
 

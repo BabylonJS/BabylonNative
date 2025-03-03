@@ -15,7 +15,7 @@ set(SOURCES
     "Source/nanovg_babylon.h"
     )
 
-file(GLOB SHADERS Source/*.sc)
+file(GLOB SHADERS "Source/Shaders/*.sc" "Source/Shaders/*.sh")
 
 file(GLOB FONT_SOURCES ${BGFX_DIR}/examples/common/font/*.cpp)
 file(GLOB NANOVG_SOURCES ${BGFX_DIR}/examples/common/nanovg/nanovg.cpp)
@@ -52,4 +52,5 @@ endif()
 set_property(TARGET Canvas PROPERTY FOLDER Polyfills)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 source_group("3rd party Sources" ${CMAKE_CURRENT_SOURCE_DIR} FILES ${FONT_SOURCES} ${NANOVG_SOURCES} ${ATLAS_SOURCES})
+source_group("Shaders" ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SHADERS})
 target_compile_definitions(Canvas PRIVATE _CRT_SECURE_NO_WARNINGS)
