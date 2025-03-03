@@ -40,7 +40,7 @@ target_link_libraries(Canvas
     PRIVATE UrlLib
     PRIVATE base-n)
 
-if(BGFX_BUILD_TOOLS AND BGFX_BUILD_TOOLS_SHADER AND BGFX_BUILD_EXAMPLES)
+if(BGFX_BUILD_TOOLS AND BGFX_BUILD_TOOLS_SHADER)
     if(NOT IOS AND NOT VISIONOS AND NOT ANDROID)
         foreach(SHADER ${SHADERS})
             add_bgfx_shader(${SHADER} "")

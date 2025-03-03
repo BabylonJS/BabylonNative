@@ -26,73 +26,6 @@ add_library(base-n INTERFACE)
 target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
 
 # --------------------------------------------------
-# glslang
-# --------------------------------------------------
-set(BUILD_EXTERNAL OFF CACHE BOOL "")
-set(ENABLE_SPVREMAPPER OFF CACHE BOOL "")
-set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "")
-set(ENABLE_HLSL OFF CACHE BOOL "")
-set(ENABLE_OPT OFF CACHE BOOL "")
-set(ENABLE_CTEST OFF CACHE BOOL "")
-set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "")
-set(ENABLE_GLSLANG_WEBMIN ON CACHE BOOL "")
-set(ENABLE_GLSLANG_WEBMIN_DEVEL OFF CACHE BOOL "")
-FetchContent_MakeAvailable_With_Message(glslang)
-
-set_property(TARGET GenericCodeGen PROPERTY FOLDER Dependencies/glslang)
-set_property(TARGET glslang PROPERTY FOLDER Dependencies/glslang)
-set_property(TARGET glslang-default-resource-limits PROPERTY FOLDER Dependencies/glslang)
-set_property(TARGET OGLCompiler PROPERTY FOLDER Dependencies/glslang)
-set_property(TARGET OSDependent PROPERTY FOLDER Dependencies/glslang)
-set_property(TARGET MachineIndependent PROPERTY FOLDER Dependencies/glslang)
-set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
-
-# --------------------------------------------------
-# SPIRV-Cross
-# --------------------------------------------------
-set(SPIRV_CROSS_CLI OFF CACHE BOOL "")
-set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "")
-set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "")
-set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "")
-set(SPIRV_CROSS_ENABLE_C_API OFF CACHE BOOL "")
-set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "")
-set(SPIRV_CROSS_SKIP_INSTALL ON CACHE BOOL "")
-set(SPIRV_CROSS_ENABLE_WEBMIN ON CACHE BOOL "")
-if(NOT GRAPHICS_API STREQUAL "OpenGL")
-    set(SPIRV_CROSS_ENABLE_GLSL OFF CACHE BOOL "")
-endif()
-if(NOT GRAPHICS_API STREQUAL "Metal")
-    set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "")
-endif()
-if(NOT GRAPHICS_API STREQUAL "D3D11" AND NOT GRAPHICS_API STREQUAL "D3D12")
-    set(SPIRV_CROSS_ENABLE_HLSL OFF CACHE BOOL "")
-endif()
-FetchContent_MakeAvailable_With_Message(SPIRV-Cross)
-set_property(TARGET spirv-cross-core PROPERTY FOLDER Dependencies/SPIRV-Cross)
-if(TARGET spirv-cross-glsl)
-    set_property(TARGET spirv-cross-glsl PROPERTY FOLDER Dependencies/SPIRV-Cross)
-endif()
-if(TARGET spirv-cross-msl)
-    set_property(TARGET spirv-cross-msl PROPERTY FOLDER Dependencies/SPIRV-Cross)
-endif()
-if(TARGET spirv-cross-hlsl)
-    set_property(TARGET spirv-cross-hlsl PROPERTY FOLDER Dependencies/SPIRV-Cross)
-endif()
-
-# HACK: Re-enabled disabled warnings in SPIRV-Cross as they cause alerts in BinSkim
-foreach(target spirv-cross-core spirv-cross-glsl spirv-cross-msl spirv-cross-hlsl)
-    if(TARGET ${target})
-        get_target_property(compileOptions ${target} COMPILE_OPTIONS)
-        list(REMOVE_ITEM compileOptions /wd4267 /wd4996)
-        set_target_properties(${target} PROPERTIES COMPILE_OPTIONS "${compileOptions}")
-    endif()
-endforeach()
-
-# seen with Sergio, disable warnings until unused parameter [-Wunused-parameter] get fixed. 
-disable_warnings(SPIRV)
-disable_warnings(MachineIndependent)
-
-# --------------------------------------------------
 # bgfx.cmake
 # --------------------------------------------------
 set(BGFX_BUILD_TOOLS OFF CACHE BOOL "")
@@ -145,6 +78,31 @@ if(UNIX AND NOT APPLE AND NOT ANDROID)
 endif()
 
 # --------------------------------------------------
+# glslang
+# --------------------------------------------------
+set(BUILD_EXTERNAL OFF CACHE BOOL "")
+set(ENABLE_SPVREMAPPER OFF CACHE BOOL "")
+set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "")
+set(ENABLE_HLSL OFF CACHE BOOL "")
+set(ENABLE_OPT OFF CACHE BOOL "")
+set(ENABLE_CTEST OFF CACHE BOOL "")
+set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "")
+set(ENABLE_GLSLANG_WEBMIN ON CACHE BOOL "")
+set(ENABLE_GLSLANG_WEBMIN_DEVEL OFF CACHE BOOL "")
+
+if(NOT TARGET glslang)
+    FetchContent_MakeAvailable_With_Message(glslang)
+
+    set_property(TARGET GenericCodeGen PROPERTY FOLDER Dependencies/glslang)
+    set_property(TARGET glslang PROPERTY FOLDER Dependencies/glslang)
+    set_property(TARGET glslang-default-resource-limits PROPERTY FOLDER Dependencies/glslang)
+    set_property(TARGET OGLCompiler PROPERTY FOLDER Dependencies/glslang)
+    set_property(TARGET OSDependent PROPERTY FOLDER Dependencies/glslang)
+    set_property(TARGET MachineIndependent PROPERTY FOLDER Dependencies/glslang)
+    set_property(TARGET SPIRV PROPERTY FOLDER Dependencies/glslang)
+endif()
+
+# --------------------------------------------------
 # googletest
 # --------------------------------------------------
 if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT IOS AND NOT VISIONOS) OR (UNIX AND NOT ANDROID AND NOT APPLE)))
@@ -177,6 +135,55 @@ endif()
 if(WIN32)
     # UrlLib does not support unity build on win32
     set_property(TARGET UrlLib PROPERTY UNITY_BUILD false)
+endif()
+
+# --------------------------------------------------
+# SPIRV-Cross
+# --------------------------------------------------
+set(SPIRV_CROSS_CLI OFF CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_CPP OFF CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_C_API OFF CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "")
+set(SPIRV_CROSS_SKIP_INSTALL ON CACHE BOOL "")
+set(SPIRV_CROSS_ENABLE_WEBMIN ON CACHE BOOL "")
+if(NOT GRAPHICS_API STREQUAL "OpenGL")
+    set(SPIRV_CROSS_ENABLE_GLSL OFF CACHE BOOL "")
+endif()
+if(NOT GRAPHICS_API STREQUAL "Metal")
+    set(SPIRV_CROSS_ENABLE_MSL OFF CACHE BOOL "")
+endif()
+if(NOT GRAPHICS_API STREQUAL "D3D11" AND NOT GRAPHICS_API STREQUAL "D3D12")
+    set(SPIRV_CROSS_ENABLE_HLSL OFF CACHE BOOL "")
+endif()
+FetchContent_MakeAvailable_With_Message(SPIRV-Cross)
+set_property(TARGET spirv-cross-core PROPERTY FOLDER Dependencies/SPIRV-Cross)
+if(TARGET spirv-cross-glsl)
+    set_property(TARGET spirv-cross-glsl PROPERTY FOLDER Dependencies/SPIRV-Cross)
+endif()
+if(TARGET spirv-cross-msl)
+    set_property(TARGET spirv-cross-msl PROPERTY FOLDER Dependencies/SPIRV-Cross)
+endif()
+if(TARGET spirv-cross-hlsl)
+    set_property(TARGET spirv-cross-hlsl PROPERTY FOLDER Dependencies/SPIRV-Cross)
+endif()
+
+# HACK: Re-enabled disabled warnings in SPIRV-Cross as they cause alerts in BinSkim
+foreach(target spirv-cross-core spirv-cross-glsl spirv-cross-msl spirv-cross-hlsl)
+    if(TARGET ${target})
+        get_target_property(compileOptions ${target} COMPILE_OPTIONS)
+        list(REMOVE_ITEM compileOptions /wd4267 /wd4996)
+        set_target_properties(${target} PROPERTIES COMPILE_OPTIONS "${compileOptions}")
+    endif()
+endforeach()
+
+# seen with Sergio, disable warnings until unused parameter [-Wunused-parameter] get fixed. 
+if(TARGET SPIRV)
+    disable_warnings(SPIRV)
+endif()
+if(TARGET MachineIndependent)
+    disable_warnings(MachineIndependent)
 endif()
 
 # --------------------------------------------------
