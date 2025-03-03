@@ -132,7 +132,7 @@ set_property(TARGET bgfx PROPERTY FOLDER Dependencies/bgfx)
 set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx)
 set_property(TARGET bx PROPERTY FOLDER Dependencies/bgfx)
 # warning C4703 in nvtt. bimg_encode contains mipmap generation code and is needed by NativeEngine
-disable_warnings(bimg_encode)
+disable_warnings(bimg)
 target_compile_definitions(bx PRIVATE _CRT_SECURE_NO_WARNINGS)
 
 if(APPLE)
