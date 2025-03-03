@@ -5,9 +5,13 @@
 #include "ShaderCompilerTraversers.h"
 #include <arcana/experimental/array.h>
 #include <bgfx/bgfx.h>
+#pragma warning(push)
+// disable intermediate.h: warning C4458: declaration of 'loc' hides class member
+#pragma warning(disable: 4458)
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/Public/ResourceLimits.h>
 #include <glslang/MachineIndependent/localintermediate.h>
+#pragma warning(pop)
 #include <SPIRV/GlslangToSpv.h>
 #include <spirv_parser.hpp>
 #include <spirv_hlsl.hpp>
