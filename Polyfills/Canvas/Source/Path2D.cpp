@@ -10,7 +10,6 @@
 #pragma GCC diagnostic ignored "-Wpedantic"
 #endif
 
-#include "nanovg.h"
 #define NANOSVG_IMPLEMENTATION // Expands implementation
 #include "nanosvg.h"
 
@@ -124,11 +123,40 @@ namespace Babylon::Polyfills::Internal
     void NativeCanvasPath2D::AddPath(const Napi::CallbackInfo& info)
     {
         const NativeCanvasPath2D* path = NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>());
-        // const NativeCanvasDOMMatrix path = NativeCanvasDOMMatrix::Unwrap(info[1].As<Napi::Object>()); // TODO: DOMMatrix
+
+        // optional transform arg
+        float *xformInv = nullptr;
+        if (info.Length() == 2)
+        {
+            Napi::Object transform = info[1].As<Napi::Object>();
+            auto a = transform.Get("a").As<Napi::Number>().FloatValue();
+            auto b = transform.Get("b").As<Napi::Number>().FloatValue();
+            auto c = transform.Get("c").As<Napi::Number>().FloatValue();
+            auto d = transform.Get("d").As<Napi::Number>().FloatValue();
+            auto e = transform.Get("e").As<Napi::Number>().FloatValue();
+            auto f = transform.Get("f").As<Napi::Number>().FloatValue();
+
+            float xform[6] = {a, b, c, d, e, f};
+            xformInv = new float[6];
+            nsvg__xformInverse(xformInv, xform);
+
+            Path2DCommandArgs args = {};
+            args.transform = { xform[0], xform[1], xform[2], xform[3], xform[4], xform[5] };
+            AppendCommand(P2D_TRANSFORM, args);
+        }
 
         for (const auto& command : *path)
         {
             m_commands.push_back(command);
+        }
+
+        // invert transform after all commands played
+        if (info.Length() == 2)
+        {
+            assert(xformInv != nullptr);
+            Path2DCommandArgs argsInv = {};
+            argsInv.transform = { xformInv[0], xformInv[1], xformInv[2], xformInv[3], xformInv[4], xformInv[5] };
+            AppendCommand(P2D_TRANSFORM, argsInv);
         }
     }
 
