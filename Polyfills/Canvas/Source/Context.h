@@ -9,6 +9,8 @@ struct NVGcontext;
 
 namespace Babylon::Polyfills::Internal
 {
+    class CanvasGradient;
+
     class Context final : public Napi::ObjectWrap<Context>, Polyfills::Canvas::Impl::MonitoredResource
     {
     public:
@@ -18,7 +20,7 @@ namespace Babylon::Polyfills::Internal
         explicit Context(const Napi::CallbackInfo& info);
         virtual ~Context();
 
-        NVGcontext* GetNVGContext() const { return m_nvg; }
+        NVGcontext* GetNVGContext() const { return *m_nvg.get(); }
 
     private:
         void FillRect(const Napi::CallbackInfo&);
@@ -46,7 +48,10 @@ namespace Babylon::Polyfills::Internal
         void SetLineDash(const Napi::CallbackInfo&);
         void StrokeText(const Napi::CallbackInfo&);
         Napi::Value CreateLinearGradient(const Napi::CallbackInfo&);
+        Napi::Value CreateRadialGradient(const Napi::CallbackInfo&);
+        Napi::Value GetTransform(const Napi::CallbackInfo&);
         void SetTransform(const Napi::CallbackInfo&);
+        void Transform(const Napi::CallbackInfo&);
         void QuadraticCurveTo(const Napi::CallbackInfo&);
         Napi::Value GetFillStyle(const Napi::CallbackInfo&);
         void SetFillStyle(const Napi::CallbackInfo&, const Napi::Value& value);
@@ -54,12 +59,16 @@ namespace Babylon::Polyfills::Internal
         void SetStrokeStyle(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetLineWidth(const Napi::CallbackInfo&);
         void SetLineWidth(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetLineCap(const Napi::CallbackInfo&);
+        void SetLineCap(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetLineJoin(const Napi::CallbackInfo&);
         void SetLineJoin(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetMiterLimit(const Napi::CallbackInfo&);
         void SetMiterLimit(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetFont(const Napi::CallbackInfo&);
         void SetFont(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetLetterSpacing(const Napi::CallbackInfo&);
+        void SetLetterSpacing(const Napi::CallbackInfo&, const Napi::Value& value);
         void SetGlobalAlpha(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetShadowColor(const Napi::CallbackInfo&);
         void SetShadowColor(const Napi::CallbackInfo&, const Napi::Value& value);
@@ -76,13 +85,17 @@ namespace Babylon::Polyfills::Internal
         void DeferredFlushFrame();
 
         NativeCanvas* m_canvas;
-        NVGcontext* m_nvg;
+        std::shared_ptr<NVGcontext*> m_nvg;
 
         std::string m_font{};
-        std::string m_fillStyle{};
+        std::variant<std::string, CanvasGradient*> m_fillStyle{};
         std::string m_strokeStyle{};
+        std::string m_lineCap{}; // 'butt', 'round', 'square'
+        std::string m_lineJoin{}; // 'round', 'bevel', 'miter'
+        float m_miterLimit{0.f};
         float m_lineWidth{0.f};
         float m_globalAlpha{1.f};
+        float m_letterSpacing{0.f};
 
         std::map<std::string, int> m_fonts;
         int m_currentFontId{-1};

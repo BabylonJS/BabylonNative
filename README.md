@@ -1,6 +1,13 @@
 [![Build Status](https://dev.azure.com/babylonjs/ContinousIntegration/_apis/build/status/BabylonNative%20CI?branchName=master)](https://dev.azure.com/babylonjs/ContinousIntegration/_build/latest?definitionId=6&branchName=master)
 [![Nightly build](https://github.com/BabylonJS/BabylonNative/actions/workflows/nightly.yml/badge.svg?branch=master)](https://github.com/BabylonJS/BabylonNative/actions/workflows/nightly.yml)
 
+# CANVAS TEST BRANCH
+
+Build and run Playground project, default experience will load a font and will display this animation:
+https://playground.babylonjs.com/#UZRZXU
+
+This branch contains fixes from https://github.com/BabylonJS/BabylonNative/pull/1457
+
 # Babylon Native
 
 Welcome! Babylon Native is a collection of technologies intended to bring 
