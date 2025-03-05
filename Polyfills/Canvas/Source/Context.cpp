@@ -149,6 +149,27 @@ namespace Babylon::Polyfills::Internal
         m_isClipped = false;
     }
 
+    void Context::BindFillStyle(const Napi::CallbackInfo& info, float left, float top, float width, float height)
+    {
+        if (std::holds_alternative<std::string>(m_fillStyle))
+        {
+            const auto color = StringToColor(info.Env(), std::get<std::string>(m_fillStyle));
+            nvgFillColor(*m_nvg, color);
+        }
+        else if (std::holds_alternative<CanvasGradient*>(m_fillStyle))
+        {
+            CanvasGradient* gradient = std::get<CanvasGradient*>(m_fillStyle);
+            gradient->UpdateCache();
+            // TODO: replace left/lop/width/height by context bounds
+            NVGpaint imagePaint = nvgImagePattern(*m_nvg, 0.f, 0.f, width + left, height, 0.f, gradient->CachedImage(), 1.f);
+            nvgFillPaint(*m_nvg, imagePaint);
+        }
+        else
+        {
+            throw Napi::Error::New(info.Env(), "Fillstyle is not a color string or a gradient.");
+        }
+    }
+
     void Context::FillRect(const Napi::CallbackInfo& info)
     {
         auto left = info[0].As<Napi::Number>().FloatValue();
@@ -163,22 +184,7 @@ namespace Babylon::Polyfills::Internal
 
         nvgRect(*m_nvg, left, top, width, height);
 
-        if (std::holds_alternative<std::string>(m_fillStyle))
-        {
-            const auto color = StringToColor(info.Env(), std::get<std::string>(m_fillStyle));
-            nvgFillColor(*m_nvg, color);
-        }
-        else if (std::holds_alternative<CanvasGradient*>(m_fillStyle))
-        {
-            CanvasGradient* gradient = std::get<CanvasGradient*>(m_fillStyle);
-            gradient->UpdateCache();
-            NVGpaint imagePaint = nvgImagePattern(*m_nvg, 0.f, 0.f, width + left, height, 0.f, gradient->CachedImage(), 1.f);
-            nvgFillPaint(*m_nvg, imagePaint);
-        }
-        else
-        {
-            throw Napi::Error::New(info.Env(), "Fillstyle is not a color string or a gradient.");
-        }
+        BindFillStyle(info, left, top, width, height);
         
         nvgFill(*m_nvg);
         SetDirty();
@@ -482,6 +488,8 @@ namespace Babylon::Polyfills::Internal
             {
                 nvgFontFaceId(*m_nvg, m_fonts.begin()->second);
             }
+
+            BindFillStyle(info, 0.f, 0.f, x, y);
 
             nvgText(*m_nvg, x, y, text.c_str(), nullptr);
             SetDirty();

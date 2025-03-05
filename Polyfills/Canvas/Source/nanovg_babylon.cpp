@@ -67,7 +67,8 @@ namespace
         NSVG_SHADER_FILLGRAD,
         NSVG_SHADER_FILLIMG,
         NSVG_SHADER_SIMPLE,
-        NSVG_SHADER_IMG
+        NSVG_SHADER_IMG,
+        NSVG_SHADER_IMG_MODULATEGRAD,
     };
 
     // These are additional flags on top of NVGimageFlags.
@@ -157,9 +158,12 @@ namespace
         bgfx::UniformHandle u_halfTexel;
 
         bgfx::UniformHandle s_tex;
+        bgfx::UniformHandle s_tex2;
+        
 
         uint64_t state;
         bgfx::TextureHandle th;
+        bgfx::TextureHandle th2;
         bgfx::TextureHandle texMissing;
 
         bgfx::TransientVertexBuffer tvb;
@@ -277,6 +281,7 @@ namespace
         gl->u_extentRadius    = bgfx::createUniform("u_extentRadius",    bgfx::UniformType::Vec4);
         gl->u_params          = bgfx::createUniform("u_params",          bgfx::UniformType::Vec4);
         gl->s_tex             = bgfx::createUniform("s_tex",             bgfx::UniformType::Sampler);
+        gl->s_tex2            = bgfx::createUniform("s_tex2",            bgfx::UniformType::Sampler);
 
         gl->u_halfTexel.idx = bgfx::kInvalidHandle;
 
@@ -440,6 +445,7 @@ namespace
         )
     {
         struct GLNVGtexture* tex = NULL;
+        struct GLNVGtexture* tex2 = NULL;
         float invxform[6] = {};
 
         bx::memSet(frag, 0, sizeof(*frag) );
@@ -487,6 +493,16 @@ namespace
                 frag->texType = 2.0f;
             }
             gl->th = tex->id;
+
+            // HACK
+            tex2 = glnvg__findTexture(gl, 6/*paint->image*/);
+            if (tex == NULL)
+            {
+                return 0;
+            }
+            gl->th2 = tex2->id;
+            frag->type = NSVG_SHADER_IMG_MODULATEGRAD;
+            // HACK
         }
         else
         {
@@ -710,6 +726,7 @@ namespace
             gl->encoder->setState(gl->state);
             gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
             gl->encoder->setTexture(0, gl->s_tex, gl->th);
+            gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
             gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
         }
     }
@@ -1051,6 +1068,8 @@ namespace
         frag = nvg__fragUniformPtr(gl, call->uniformOffset);
         glnvg__convertPaint(gl, frag, paint, scissor, 1.0f, 1.0f);
         frag->type = NSVG_SHADER_IMG;
+
+        frag->type = NSVG_SHADER_IMG_MODULATEGRAD;
     }
 
     static void nvgRenderDelete(void* _userPtr)
@@ -1078,6 +1097,7 @@ namespace
         bgfx::destroy(gl->u_extentRadius);
         bgfx::destroy(gl->u_params);
         bgfx::destroy(gl->s_tex);
+        bgfx::destroy(gl->s_tex2);
 
         if (bgfx::isValid(gl->u_halfTexel) )
         {

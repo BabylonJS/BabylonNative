@@ -82,8 +82,15 @@ CreateBoxAsync(scene).then(function () {
             dynamicTexture.clear();
             var context = dynamicTexture.getContext();
 
+            // Text with gradient
+            const gradientText = context.createLinearGradient(0, 0, 256, 0);
+            gradientText.addColorStop(0, "magenta");
+            gradientText.addColorStop(0.5, "blue");
+            gradientText.addColorStop(1.0, "red");
+
             var t = 0;
             scene.onBeforeRenderObservable.add(() => {
+                /*
                 // animated shape
                 context.save();
                 context.fillStyle = "DarkRed";
@@ -160,7 +167,14 @@ CreateBoxAsync(scene).then(function () {
                 gradient.addColorStop(0.7, "white");
                 gradient.addColorStop(1, "pink");
                 context.fillStyle = gradient;
-                context.fillRect(10, 310, 400, 100);
+                context.fillRect(10, 310, 400, 60);
+
+                */
+
+                // Fill with gradient
+                context.fillStyle = gradientText;
+                context.font = "bold 60px monospace";
+                context.fillText("Gradient Text!", 10, 420);
 
                 // tick update
                 dynamicTexture.update();

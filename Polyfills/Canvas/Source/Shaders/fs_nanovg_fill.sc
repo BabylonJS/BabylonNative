@@ -13,6 +13,7 @@ uniform vec4 u_extentRadius;
 uniform vec4 u_params;
 
 SAMPLER2D(s_tex, 0);
+SAMPLER2D(s_tex2, 1);
 
 #define u_scissorExt   (u_scissorExtScale.xy)
 #define u_scissorScale (u_scissorExtScale.zw)
@@ -87,6 +88,17 @@ void main()
 		if (u_texType == 1.0) color = vec4(color.xyz * color.w, color.w);
 		if (u_texType == 2.0) color = color.xxxx;
 		color *= scissor;
+		result = color * u_innerCol;
+	}
+	else if (u_type == 4.0) // Textured tris modulated by texture
+	{
+		vec4 color = texture2D(s_tex, v_texcoord0.xy);
+		vec2 pt = mul(u_paintMat, vec3(v_position, 1.0) ).xy / u_extent;
+		vec4 color2 = texture2D(s_tex2, pt);
+		if (u_texType == 1.0) color = vec4(color.xyz * color.w, color.w);
+		if (u_texType == 2.0) color = color.xxxx;
+		color *= scissor;
+		color *= color2;
 		result = color * u_innerCol;
 	}
 
