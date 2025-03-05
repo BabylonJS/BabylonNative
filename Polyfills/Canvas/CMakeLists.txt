@@ -1,91 +1,91 @@
 
 function(add_bgfx_shader FILE FOLDER)
-	get_filename_component(FILENAME "${FILE}" NAME_WE)
-	string(SUBSTRING "${FILENAME}" 0 2 TYPE)
-	if("${TYPE}" STREQUAL "fs")
-		set(TYPE "FRAGMENT")
-	elseif("${TYPE}" STREQUAL "vs")
-		set(TYPE "VERTEX")
-	elseif("${TYPE}" STREQUAL "cs")
-		set(TYPE "COMPUTE")
-	else()
-		set(TYPE "")
-	endif()
+    get_filename_component(FILENAME "${FILE}" NAME_WE)
+    string(SUBSTRING "${FILENAME}" 0 2 TYPE)
+    if("${TYPE}" STREQUAL "fs")
+        set(TYPE "FRAGMENT")
+    elseif("${TYPE}" STREQUAL "vs")
+        set(TYPE "VERTEX")
+    elseif("${TYPE}" STREQUAL "cs")
+        set(TYPE "COMPUTE")
+    else()
+        set(TYPE "")
+    endif()
 
-	if(NOT "${TYPE}" STREQUAL "")
-		set(COMMON FILE ${FILE} ${TYPE} INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders ${BGFX_DIR}/src)
-		set(OUTPUTS "")
-		set(OUTPUTS_PRETTY "")
+    if(NOT "${TYPE}" STREQUAL "")
+        set(COMMON FILE ${FILE} ${TYPE} INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders ${BGFX_DIR}/src)
+        set(OUTPUTS "")
+        set(OUTPUTS_PRETTY "")
 
-		# dx11
-		set(DX11_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/dx11/${FILENAME}.h)
-		if(NOT "${TYPE}" STREQUAL "COMPUTE")
-			_bgfx_shaderc_parse(
-				DX11 ${COMMON} WINDOWS
-				PROFILE s_5_0
-				O 3
-				OUTPUT ${DX11_OUTPUT}
+        # dx11
+        set(DX11_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/dx11/${FILENAME}.h)
+        if(NOT "${TYPE}" STREQUAL "COMPUTE")
+            _bgfx_shaderc_parse(
+                DX11 ${COMMON} WINDOWS
+                PROFILE s_5_0
+                O 3
+                OUTPUT ${DX11_OUTPUT}
                 BIN2C "${FILENAME}_dx11"
-			)
-		else()
-			_bgfx_shaderc_parse(
-				DX11 ${COMMON} WINDOWS
-				PROFILE s_5_0
-				O 1
-				OUTPUT ${DX11_OUTPUT}
+            )
+        else()
+            _bgfx_shaderc_parse(
+                DX11 ${COMMON} WINDOWS
+                PROFILE s_5_0
+                O 1
+                OUTPUT ${DX11_OUTPUT}
                 BIN2C "${FILENAME}_dx11"
-			)
-		endif()
-		list(APPEND OUTPUTS "DX11")
-		set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}DX11, ")
+            )
+        endif()
+        list(APPEND OUTPUTS "DX11")
+        set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}DX11, ")
 
-		# metal
-		set(METAL_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/metal/${FILENAME}.h)
-		_bgfx_shaderc_parse(METAL ${COMMON} OSX PROFILE metal OUTPUT ${METAL_OUTPUT} BIN2C "${FILENAME}_mtl")
-		list(APPEND OUTPUTS "METAL")
-		set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}Metal, ")
+        # metal
+        set(METAL_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/metal/${FILENAME}.h)
+        _bgfx_shaderc_parse(METAL ${COMMON} OSX PROFILE metal OUTPUT ${METAL_OUTPUT} BIN2C "${FILENAME}_mtl")
+        list(APPEND OUTPUTS "METAL")
+        set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}Metal, ")
 
-		# essl
-		if(NOT "${TYPE}" STREQUAL "COMPUTE")
-			set(ESSL_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/essl/${FILENAME}.h)
-			_bgfx_shaderc_parse(ESSL ${COMMON} ANDROID PROFILE 100_es OUTPUT ${ESSL_OUTPUT} BIN2C "${FILENAME}_essl")
-			list(APPEND OUTPUTS "ESSL")
-			set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}ESSL, ")
-		endif()
+        # essl
+        if(NOT "${TYPE}" STREQUAL "COMPUTE")
+            set(ESSL_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/essl/${FILENAME}.h)
+            _bgfx_shaderc_parse(ESSL ${COMMON} ANDROID PROFILE 100_es OUTPUT ${ESSL_OUTPUT} BIN2C "${FILENAME}_essl")
+            list(APPEND OUTPUTS "ESSL")
+            set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}ESSL, ")
+        endif()
 
-		# glsl
-		set(GLSL_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/glsl/${FILENAME}.h)
-		if(NOT "${TYPE}" STREQUAL "COMPUTE")
-			_bgfx_shaderc_parse(GLSL ${COMMON} LINUX PROFILE 140 OUTPUT ${GLSL_OUTPUT} BIN2C "${FILENAME}_glsl")
-		else()
-			_bgfx_shaderc_parse(GLSL ${COMMON} LINUX PROFILE 430 OUTPUT ${GLSL_OUTPUT} BIN2C "${FILENAME}_glsl")
-		endif()
-		list(APPEND OUTPUTS "GLSL")
-		set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}GLSL, ")
+        # glsl
+        set(GLSL_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/glsl/${FILENAME}.h)
+        if(NOT "${TYPE}" STREQUAL "COMPUTE")
+            _bgfx_shaderc_parse(GLSL ${COMMON} LINUX PROFILE 140 OUTPUT ${GLSL_OUTPUT} BIN2C "${FILENAME}_glsl")
+        else()
+            _bgfx_shaderc_parse(GLSL ${COMMON} LINUX PROFILE 430 OUTPUT ${GLSL_OUTPUT} BIN2C "${FILENAME}_glsl")
+        endif()
+        list(APPEND OUTPUTS "GLSL")
+        set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}GLSL, ")
 
-		# spirv
-		if(NOT "${TYPE}" STREQUAL "COMPUTE")
-			set(SPIRV_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/spirv/${FILENAME}.h)
-			_bgfx_shaderc_parse(SPIRV ${COMMON} LINUX PROFILE spirv OUTPUT ${SPIRV_OUTPUT} BIN2C "${FILENAME}_spv")
-			list(APPEND OUTPUTS "SPIRV")
-			set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}SPIRV")
-			set(OUTPUT_FILES "")
-			set(COMMANDS "")
-		endif()
+        # spirv
+        if(NOT "${TYPE}" STREQUAL "COMPUTE")
+            set(SPIRV_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/spirv/${FILENAME}.h)
+            _bgfx_shaderc_parse(SPIRV ${COMMON} LINUX PROFILE spirv OUTPUT ${SPIRV_OUTPUT} BIN2C "${FILENAME}_spv")
+            list(APPEND OUTPUTS "SPIRV")
+            set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}SPIRV")
+            set(OUTPUT_FILES "")
+            set(COMMANDS "")
+        endif()
 
-		foreach(OUT ${OUTPUTS})
-			list(APPEND OUTPUT_FILES ${${OUT}_OUTPUT})
-			list(APPEND COMMANDS COMMAND "bgfx::shaderc" ${${OUT}})
-			get_filename_component(OUT_DIR ${${OUT}_OUTPUT} DIRECTORY)
-			file(MAKE_DIRECTORY ${OUT_DIR})
-		endforeach()
+        foreach(OUT ${OUTPUTS})
+            list(APPEND OUTPUT_FILES ${${OUT}_OUTPUT})
+            list(APPEND COMMANDS COMMAND "bgfx::shaderc" ${${OUT}})
+            get_filename_component(OUT_DIR ${${OUT}_OUTPUT} DIRECTORY)
+            file(MAKE_DIRECTORY ${OUT_DIR})
+        endforeach()
 
-		file(RELATIVE_PATH PRINT_NAME ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders ${FILE})
-		add_custom_command(
-			MAIN_DEPENDENCY ${FILE} OUTPUT ${OUTPUT_FILES} ${COMMANDS}
-			COMMENT "Compiling shader ${PRINT_NAME} for ${OUTPUTS_PRETTY}"
-		)
-	endif()
+        file(RELATIVE_PATH PRINT_NAME ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders ${FILE})
+        add_custom_command(
+            MAIN_DEPENDENCY ${FILE} OUTPUT ${OUTPUT_FILES} ${COMMANDS}
+            COMMENT "Compiling shader ${PRINT_NAME} for ${OUTPUTS_PRETTY}"
+        )
+    endif()
 endfunction()
 
 set(SOURCES
