@@ -1,6 +1,6 @@
 [submodule "bgfx"]
 	path = bgfx
-	url = https://github.com/bkaradzic/bgfx.git
+	url = https://github.com/BabylonJS/bgfx.git
 [submodule "bx"]
 	path = bx
 	url = https://github.com/bkaradzic/bx.git
