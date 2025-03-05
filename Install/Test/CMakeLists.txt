@@ -141,20 +141,17 @@ target_link_directories(TestInstall PRIVATE ${INSTALL_LIBS_DIR} ${V8JSI_LIB_PATH
 target_link_libraries(TestInstall
     AppRuntime
     arcana
-    astc-encoder
+    bimg_encode
+    bimg_decode
     bgfx
     bimg
     bx
     Canvas
     Console
-    edtaa3
-    etc1
-    etc2
     ExternalTexture
     GenericCodeGen
     glslang
     Graphics
-    iqa
     JsRuntime
     MachineIndependent
     napi
@@ -165,17 +162,13 @@ target_link_libraries(TestInstall
     NativeOptimizations
     NativeTracing
     NativeXr
-    nvtt
     OGLCompiler
     openxr_loader
     OSDependent
-    pvrtc
     ScriptLoader
     spirv-cross-core
     spirv-cross-hlsl
     SPIRV
-    squish
-    tinyexr
     UrlLib
     Window
     XMLHttpRequest
