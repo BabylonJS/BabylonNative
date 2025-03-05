@@ -147,7 +147,7 @@ namespace
         { DXGI_FORMAT_R32_TYPELESS,       DXGI_FORMAT_UNKNOWN              }, // D32F
         { DXGI_FORMAT_R24G8_TYPELESS,     DXGI_FORMAT_UNKNOWN              }, // D0S8
     };
-    BX_STATIC_ASSERT(bgfx::TextureFormat::Count == BX_COUNTOF(s_textureFormat));
+    static_assert(bgfx::TextureFormat::Count == BX_COUNTOF(s_textureFormat));
 }
 
 // clang-format on

@@ -23,7 +23,7 @@ FetchContent_Declare(base-n
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG ecaffce0d2f7170c2f060a606908dc6a9163669f)
+    GIT_TAG fdf3ed4a62acabd7025d0a843f6d8a9aff5e3612)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
@@ -182,6 +182,7 @@ if(BABYLON_NATIVE_BUILD_APPS)
     add_subdirectory(Apps)
 endif()
 
-if(BABYLON_NATIVE_INSTALL)
+# no install for glslang compiled for shaderc
+if(BABYLON_NATIVE_INSTALL AND NOT BGFX_BUILD_TOOLS)
     include(Install/Install.cmake)
 endif()
