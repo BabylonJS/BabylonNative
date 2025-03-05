@@ -494,15 +494,13 @@ namespace
             }
             gl->th = tex->id;
 
-            // HACK
-            tex2 = glnvg__findTexture(gl, 6/*paint->image*/);
-            if (tex == NULL)
+            // tex2 is optional
+            tex2 = glnvg__findTexture(gl, 6/*paint->image*/); // TODO get paint image
+            if (tex)
             {
-                return 0;
+                gl->th2 = tex2->id;
+                frag->type = NSVG_SHADER_IMG_MODULATEGRAD;
             }
-            gl->th2 = tex2->id;
-            frag->type = NSVG_SHADER_IMG_MODULATEGRAD;
-            // HACK
         }
         else
         {
