@@ -72,6 +72,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("strokeText", &Context::StrokeText),
                 InstanceMethod("createLinearGradient", &Context::CreateLinearGradient),
                 InstanceMethod("createRadialGradient", &Context::CreateRadialGradient),
+                InstanceMethod("getTransform", &Context::GetTransform),
                 InstanceMethod("setTransform", &Context::SetTransform),
                 InstanceMethod("transform", &Context::Transform),
                 InstanceMethod("dispose", &Context::Dispose),
@@ -410,6 +411,11 @@ namespace Babylon::Polyfills::Internal
                             args.roundRect.width, args.roundRect.height,
                             args.roundRect.radii);
                         break;
+                    case P2D_TRANSFORM:
+                        nvgTransform(*m_nvg,
+                            args.transform.a, args.transform.b, args.transform.c,
+                            args.transform.d, args.transform.e, args.transform.f);
+                        break;
                     default:
                         setDirty = false; // noop
                         break;
@@ -673,9 +679,32 @@ namespace Babylon::Polyfills::Internal
         return gradient;
     }
 
+    Napi::Value Context::GetTransform(const Napi::CallbackInfo&)
+    {
+        float xform[6];
+        nvgCurrentTransform(*m_nvg, xform);
+
+        Napi::Object obj = Napi::Object::New(Env());
+        obj.Set("a", xform[0]);
+        obj.Set("b", xform[1]);
+        obj.Set("c", xform[2]);
+        obj.Set("d", xform[3]);
+        obj.Set("e", xform[4]);
+        obj.Set("f", xform[5]);
+        return obj;
+    }
+
     void Context::SetTransform(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        const auto a = info[0].As<Napi::Number>().FloatValue();
+        const auto b = info[1].As<Napi::Number>().FloatValue();
+        const auto c = info[2].As<Napi::Number>().FloatValue();
+        const auto d = info[3].As<Napi::Number>().FloatValue();
+        const auto e = info[4].As<Napi::Number>().FloatValue();
+        const auto f = info[5].As<Napi::Number>().FloatValue();
+        nvgResetTransform(*m_nvg);
+        nvgTransform(*m_nvg, a, b, c, d, e, f);
+        SetDirty();
     }
 
     void Context::Transform(const Napi::CallbackInfo& info)
