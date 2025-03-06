@@ -1,9 +1,10 @@
-$input v_position, v_texcoord0
+$input v_position, v_texcoord0, v_texcoord1
 
 #include "./common.sh"
 
 #define EDGE_AA 1
 
+uniform vec4 u_viewSize;
 uniform mat3 u_scissorMat;
 uniform mat3 u_paintMat;
 uniform vec4 u_innerCol;
@@ -93,7 +94,7 @@ void main()
 	else if (u_type == 4.0) // Textured tris modulated by texture
 	{
 		vec4 color = texture2D(s_tex, v_texcoord0.xy);
-		vec2 pt = mul(u_paintMat, vec3(v_position, 1.0) ).xy / u_extent;
+		vec2 pt = v_texcoord1.xy;
 		vec4 color2 = texture2D(s_tex2, pt);
 		if (u_texType == 1.0) color = vec4(color.xyz * color.w, color.w);
 		if (u_texType == 2.0) color = color.xxxx;
