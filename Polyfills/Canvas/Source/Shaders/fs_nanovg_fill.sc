@@ -1,9 +1,10 @@
-$input v_position, v_texcoord0
+$input v_position, v_texcoord0, v_texcoord1
 
 #include "./common.sh"
 
 #define EDGE_AA 1
 
+uniform vec4 u_viewSize;
 uniform mat3 u_scissorMat;
 uniform mat3 u_paintMat;
 uniform vec4 u_innerCol;
@@ -13,6 +14,7 @@ uniform vec4 u_extentRadius;
 uniform vec4 u_params;
 
 SAMPLER2D(s_tex, 0);
+SAMPLER2D(s_tex2, 1);
 
 #define u_scissorExt   (u_scissorExtScale.xy)
 #define u_scissorScale (u_scissorExtScale.zw)
@@ -87,6 +89,17 @@ void main()
 		if (u_texType == 1.0) color = vec4(color.xyz * color.w, color.w);
 		if (u_texType == 2.0) color = color.xxxx;
 		color *= scissor;
+		result = color * u_innerCol;
+	}
+	else if (u_type == 4.0) // Textured tris modulated by texture
+	{
+		vec4 color = texture2D(s_tex, v_texcoord0.xy);
+		vec2 pt = v_texcoord1.xy;
+		vec4 color2 = texture2D(s_tex2, pt);
+		if (u_texType == 1.0) color = vec4(color.xyz * color.w, color.w);
+		if (u_texType == 2.0) color = color.xxxx;
+		color *= scissor;
+		color *= color2;
 		result = color * u_innerCol;
 	}
 
