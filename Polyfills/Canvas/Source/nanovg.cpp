@@ -2214,6 +2214,7 @@ void nvgFill(NVGcontext* ctx)
 	// Apply global alpha
 	fillPaint.innerColor.a *= state->alpha;
 	fillPaint.outerColor.a *= state->alpha;
+	fillPaint.image2 = 0;
 
 	ctx->params.renderFill(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
 						   ctx->cache->bounds, ctx->cache->paths, ctx->cache->npaths);
@@ -2249,6 +2250,7 @@ void nvgStroke(NVGcontext* ctx)
 	// Apply global alpha
 	strokePaint.innerColor.a *= state->alpha;
 	strokePaint.outerColor.a *= state->alpha;
+	strokePaint.image2 = 0;
 
 	nvg__flattenPaths(ctx);
 

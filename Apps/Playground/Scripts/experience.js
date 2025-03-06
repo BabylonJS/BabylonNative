@@ -88,9 +88,14 @@ CreateBoxAsync(scene).then(function () {
             gradientText.addColorStop(0.5, "blue");
             gradientText.addColorStop(1.0, "red");
 
+            // gradient
+            let gradient = context.createLinearGradient(0, 0, 200, 0);
+            gradient.addColorStop(0, "green");
+            gradient.addColorStop(0.7, "white");
+            gradient.addColorStop(1, "pink");
+
             var t = 0;
             scene.onBeforeRenderObservable.add(() => {
-                /*
                 // animated shape
                 context.save();
                 context.fillStyle = "DarkRed";
@@ -161,15 +166,9 @@ CreateBoxAsync(scene).then(function () {
                     context.stroke();
                 });
 
-                // gradient. BEWARE: it will be recreated each frame
-                let gradient = context.createLinearGradient(0, 0, 200, 0);
-                gradient.addColorStop(0, "green");
-                gradient.addColorStop(0.7, "white");
-                gradient.addColorStop(1, "pink");
+                // rect with gradient
                 context.fillStyle = gradient;
                 context.fillRect(10, 310, 400, 60);
-
-                */
 
                 // Fill with gradient
                 context.fillStyle = gradientText;
