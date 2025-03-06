@@ -108,16 +108,17 @@ set(SOURCES
     "Source/Gradient.h"
     "Source/nanovg_babylon.cpp"
     "Source/nanovg_babylon.h"
+    "Source/nanovg.cpp"
+    "Source/nanovg.h"
     "Source/nanosvg.h"
     )
 
 file(GLOB SHADERS "Source/Shaders/*.sc" "Source/Shaders/*.sh")
 
 file(GLOB FONT_SOURCES ${BGFX_DIR}/examples/common/font/*.cpp)
-file(GLOB NANOVG_SOURCES ${BGFX_DIR}/examples/common/nanovg/nanovg.cpp)
 set(ATLAS_SOURCES ${BGFX_DIR}/examples/common/cube_atlas.cpp)
 
-add_library(Canvas ${SOURCES} ${FONT_SOURCES} ${ATLAS_SOURCES} ${NANOVG_SOURCES} ${SHADERS})
+add_library(Canvas ${SOURCES} ${FONT_SOURCES} ${ATLAS_SOURCES} ${SHADERS})
 
 target_include_directories(Canvas
     PUBLIC "Include"
@@ -147,6 +148,6 @@ endif()
 
 set_property(TARGET Canvas PROPERTY FOLDER Polyfills)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
-source_group("3rd party Sources" ${CMAKE_CURRENT_SOURCE_DIR} FILES ${FONT_SOURCES} ${NANOVG_SOURCES} ${ATLAS_SOURCES})
+source_group("3rd party Sources" ${CMAKE_CURRENT_SOURCE_DIR} FILES ${FONT_SOURCES} ${ATLAS_SOURCES})
 source_group("Shaders" ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SHADERS})
 target_compile_definitions(Canvas PRIVATE _CRT_SECURE_NO_WARNINGS)
