@@ -46,7 +46,7 @@ namespace Babylon::Graphics
         bool HasDepth() const { return m_hasDepth; }
         bool HasStencil() const { return m_hasStencil; }
 
-    public:
+    private:
         Rect GetBgfxScissor(float x, float y, float width, float height) const;
         void SetBgfxViewPortAndScissor(bgfx::Encoder& encoder, const Rect& viewPort, const Rect& scissor);
 
