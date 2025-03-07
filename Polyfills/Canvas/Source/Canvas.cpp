@@ -11,6 +11,9 @@ namespace
     constexpr auto JS_CANVAS_NAME = "_CanvasImpl";
 }
 
+bgfx::FrameBufferHandle hackTextBuffer{ bgfx::kInvalidHandle };
+Babylon::Graphics::FrameBuffer* hackFrameBuffer;
+
 namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_CONSTRUCTOR_NAME = "Canvas";
@@ -114,25 +117,50 @@ namespace Babylon::Polyfills::Internal
     {
         if (m_dirty)
         {
-            std::array<bgfx::TextureHandle, 2> textures{
-                bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
-                bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT)};
-
-            std::array<bgfx::Attachment, textures.size()> attachments{};
-            for (size_t idx = 0; idx < attachments.size(); ++idx)
             {
-                attachments[idx].init(textures[idx]);
-            }
-            auto handle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
-            assert(handle.idx != bgfx::kInvalidHandle);
-            m_frameBuffer = std::make_unique<Graphics::FrameBuffer>(m_graphicsContext, handle, m_width, m_height, false, false, false);
-            m_dirty = false;
+                std::array<bgfx::TextureHandle, 2> textures{
+                   bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
+                   bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT) };
 
-            if (m_texture)
+                std::array<bgfx::Attachment, textures.size()> attachments{};
+                for (size_t idx = 0; idx < attachments.size(); ++idx)
+                {
+                    attachments[idx].init(textures[idx]);
+                }
+                auto handle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
+                assert(handle.idx != bgfx::kInvalidHandle);
+                m_frameBuffer = std::make_unique<Graphics::FrameBuffer>(m_graphicsContext, handle, m_width, m_height, false, false, false);
+                m_dirty = false;
+
+                if (m_texture)
+                {
+                    m_texture.reset();
+                }
+            }
+
+            // HACK
             {
-                m_texture.reset();
-            }
+                int width(256), height(256);
+                std::array<bgfx::TextureHandle, 2> textures{
+                bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
+                bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT) };
 
+                std::array<bgfx::Attachment, textures.size()> attachments{};
+                for (size_t idx = 0; idx < attachments.size(); ++idx)
+                {
+                    attachments[idx].init(textures[idx]);
+                }
+                hackTextBuffer = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
+
+                //gl->encoder->setfr
+                //hackViewId = gl->frameBuffer->m_deviceContext.AcquireNewViewId(*gl->encoder);
+
+                hackFrameBuffer = new Babylon::Graphics::FrameBuffer(m_graphicsContext, hackTextBuffer, width, height, false, false, false);
+                if (m_texture)
+                {
+                    m_texture.reset();
+                }
+            }
             return true;
         }
         return false;

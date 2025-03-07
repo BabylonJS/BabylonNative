@@ -36,7 +36,7 @@
 #include <bx/allocator.h>
 
 #include <Babylon/Graphics/DeviceContext.h>
-
+#include <Babylon/Graphics/FrameBuffer.h>
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from '' to '', possible loss of data
 
 #include "Shaders/dx11/vs_nanovg_fill.h"
@@ -50,13 +50,108 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from 
 #include "Shaders/spirv/vs_nanovg_fill.h"
 #include "Shaders/spirv/fs_nanovg_fill.h"
 
+#include "Shaders/dx11/vs_fspass.h"
+#include "Shaders/dx11/fs_fspass.h"
+#include "Shaders/metal/vs_fspass.h"
+#include "Shaders/metal/fs_fspass.h"
+#include "Shaders/glsl/vs_fspass.h"
+#include "Shaders/glsl/fs_fspass.h"
+#include "Shaders/essl/vs_fspass.h"
+#include "Shaders/essl/fs_fspass.h"
+#include "Shaders/spirv/vs_fspass.h"
+#include "Shaders/spirv/fs_fspass.h"
+
+
+struct PosTexCoord0Vertex
+{
+    float m_x;
+    float m_y;
+    float m_z;
+    float m_u;
+    float m_v;
+
+    static void init()
+    {
+        ms_layout
+            .begin()
+            .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+            .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
+            .end();
+    }
+
+    static bgfx::VertexLayout ms_layout;
+};
+
+bgfx::VertexLayout PosTexCoord0Vertex::ms_layout;
+
+void screenSpaceQuad(bgfx::Encoder* encoder, bool _originBottomLeft, float _width = 1.0f, float _height = 1.0f)
+{
+    if (3 == bgfx::getAvailTransientVertexBuffer(3, PosTexCoord0Vertex::ms_layout))
+    {
+        bgfx::TransientVertexBuffer vb;
+        bgfx::allocTransientVertexBuffer(&vb, 3, PosTexCoord0Vertex::ms_layout);
+        PosTexCoord0Vertex* vertex = (PosTexCoord0Vertex*)vb.data;
+
+        const float minx = -_width;
+        const float maxx = _width;
+        const float miny = 0.0f;
+        const float maxy = _height * 2.0f;
+
+        const float minu = -1.0f;
+        const float maxu = 1.0f;
+
+        const float zz = 0.0f;
+
+        float minv = 0.0f;
+        float maxv = 2.0f;
+
+        if (_originBottomLeft)
+        {
+            float temp = minv;
+            minv = maxv;
+            maxv = temp;
+
+            minv -= 1.0f;
+            maxv -= 1.0f;
+        }
+
+        vertex[0].m_x = minx;
+        vertex[0].m_y = miny;
+        vertex[0].m_z = zz;
+        vertex[0].m_u = minu;
+        vertex[0].m_v = minv;
+
+        vertex[1].m_x = maxx;
+        vertex[1].m_y = miny;
+        vertex[1].m_z = zz;
+        vertex[1].m_u = maxu;
+        vertex[1].m_v = minv;
+
+        vertex[2].m_x = maxx;
+        vertex[2].m_y = maxy;
+        vertex[2].m_z = zz;
+        vertex[2].m_u = maxu;
+        vertex[2].m_v = maxv;
+
+        //bgfx::setVertexBuffer(0, &vb);
+        encoder->setVertexBuffer(0, &vb);
+    }
+}
+
+
 static const bgfx::EmbeddedShader s_embeddedShadersBabylon[] =
 {
     BGFX_EMBEDDED_SHADER(vs_nanovg_fill),
     BGFX_EMBEDDED_SHADER(fs_nanovg_fill),
 
+    BGFX_EMBEDDED_SHADER(vs_fspass),
+    BGFX_EMBEDDED_SHADER(fs_fspass),
+
     BGFX_EMBEDDED_SHADER_END()
 };
+
+extern bgfx::FrameBufferHandle hackTextBuffer;
+extern Babylon::Graphics::FrameBuffer* hackFrameBuffer;
 
 namespace
 {
@@ -146,6 +241,7 @@ namespace
         bx::AllocatorI* allocator;
 
         bgfx::ProgramHandle prog;
+        bgfx::ProgramHandle fsprog;
         bgfx::UniformHandle u_scissorMat;
         bgfx::UniformHandle u_paintMat;
         bgfx::UniformHandle u_innerCol;
@@ -165,6 +261,7 @@ namespace
         bgfx::TransientVertexBuffer tvb;
         Babylon::Graphics::FrameBuffer* frameBuffer;
         bgfx::Encoder* encoder;
+        bgfx::Encoder* encoder2;
 
         struct GLNVGtexture* textures;
         float view[2];
@@ -705,12 +802,39 @@ namespace
     {
         if (3 <= call->vertexCount)
         {
+
+            
+
+            // draw to target
+            nvgRenderSetUniforms(gl, call->uniformOffset, call->image);
+
+            gl->encoder2->setState(gl->state);
+            gl->encoder2->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
+            gl->encoder2->setTexture(0, gl->s_tex, gl->th);
+            //gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
+            hackFrameBuffer->Submit(*gl->encoder2, gl->prog, BGFX_DISCARD_ALL);
+
+
+            // render to canvas
+            nvgRenderSetUniforms(gl, call->uniformOffset, call->image);
+
+            gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A/*gl->state*/ 
+                | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
+                | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
+            //gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
+
+
+            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(hackFrameBuffer->Handle()));
+            bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
+            screenSpaceQuad(gl->encoder, s_originBottomLeft);
+            gl->frameBuffer->Submit(*gl->encoder, gl->fsprog, BGFX_DISCARD_ALL);;
+            /*
             nvgRenderSetUniforms(gl, call->uniformOffset, call->image);
 
             gl->encoder->setState(gl->state);
             gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
             gl->encoder->setTexture(0, gl->s_tex, gl->th);
-            gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
+            gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);*/
         }
     }
 
@@ -765,6 +889,15 @@ namespace
                 , bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "fs_nanovg_fill")
                 , true
             );
+
+            gl->fsprog = bgfx::createProgram(
+                bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "vs_fspass")
+                , bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "fs_fspass")
+                , true
+            );
+
+            // Vertex layout
+            PosTexCoord0Vertex::init();
         }
 
         if (gl->ncalls > 0)
@@ -1153,10 +1286,11 @@ error:
     return NULL;
 }
 
-void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder)
+void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder, bgfx::Encoder* encoder2)
 {
     struct GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(_ctx)->userPtr;
     gl->encoder = encoder;
+    gl->encoder2 = encoder2;
     gl->frameBuffer = &frameBuffer;
 }
 
