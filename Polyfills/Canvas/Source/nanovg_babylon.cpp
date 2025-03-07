@@ -150,7 +150,6 @@ static const bgfx::EmbeddedShader s_embeddedShadersBabylon[] =
     BGFX_EMBEDDED_SHADER_END()
 };
 
-extern bgfx::FrameBufferHandle hackTextBuffer;
 extern Babylon::Graphics::FrameBuffer* hackFrameBuffer;
 
 namespace
@@ -802,27 +801,20 @@ namespace
     {
         if (3 <= call->vertexCount)
         {
-
-            
-
-            // draw to target
+            // render to target
             nvgRenderSetUniforms(gl, call->uniformOffset, call->image);
 
             gl->encoder2->setState(gl->state);
             gl->encoder2->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
             gl->encoder2->setTexture(0, gl->s_tex, gl->th);
-            //gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
             hackFrameBuffer->Submit(*gl->encoder2, gl->prog, BGFX_DISCARD_ALL);
-
 
             // render to canvas
             nvgRenderSetUniforms(gl, call->uniformOffset, call->image);
 
-            gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A/*gl->state*/ 
+            gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
                 | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
                 | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
-            //gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
-
 
             gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(hackFrameBuffer->Handle()));
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;

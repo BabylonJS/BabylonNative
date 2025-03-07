@@ -152,9 +152,6 @@ namespace Babylon::Polyfills::Internal
                 }
                 hackTextBuffer = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
 
-                //gl->encoder->setfr
-                //hackViewId = gl->frameBuffer->m_deviceContext.AcquireNewViewId(*gl->encoder);
-
                 hackFrameBuffer = new Babylon::Graphics::FrameBuffer(m_graphicsContext, hackTextBuffer, width, height, false, false, false);
                 if (m_texture)
                 {

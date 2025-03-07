@@ -27,7 +27,6 @@
 #include "ImageData.h"
 #include "Colors.h"
 
-extern bgfx::FrameBufferHandle hackTextBuffer;
 extern Babylon::Graphics::FrameBuffer* hackFrameBuffer;
 
 /*
