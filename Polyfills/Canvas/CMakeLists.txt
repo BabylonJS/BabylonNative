@@ -97,12 +97,18 @@ set(SOURCES
     "Source/Image.h"
     "Source/ImageData.cpp"
     "Source/ImageData.h"
+    "Source/Path2D.cpp"
+    "Source/Path2D.h"
+    "Source/LineCaps.h"
     "Source/Context.cpp"
     "Source/Context.h"
     "Source/MeasureText.cpp"
     "Source/MeasureText.h"
+    "Source/Gradient.cpp"
+    "Source/Gradient.h"
     "Source/nanovg_babylon.cpp"
     "Source/nanovg_babylon.h"
+    "Source/nanosvg.h"
     )
 
 file(GLOB SHADERS "Source/Shaders/*.sc" "Source/Shaders/*.sh")
