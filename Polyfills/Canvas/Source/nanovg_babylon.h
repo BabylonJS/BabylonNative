@@ -21,7 +21,7 @@ NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator);
 ///
 NVGcontext* nvgCreate(int32_t _edgeaa);
 
-void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder, bgfx::Encoder* encoder2);
+void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder);
 
 ///
 void nvgDelete(NVGcontext* _ctx);

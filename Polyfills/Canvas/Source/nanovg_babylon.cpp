@@ -260,7 +260,6 @@ namespace
         bgfx::TransientVertexBuffer tvb;
         Babylon::Graphics::FrameBuffer* frameBuffer;
         bgfx::Encoder* encoder;
-        bgfx::Encoder* encoder2;
 
         struct GLNVGtexture* textures;
         float view[2];
@@ -804,10 +803,10 @@ namespace
             // render to target
             nvgRenderSetUniforms(gl, call->uniformOffset, call->image);
 
-            gl->encoder2->setState(gl->state);
-            gl->encoder2->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
-            gl->encoder2->setTexture(0, gl->s_tex, gl->th);
-            hackFrameBuffer->Submit(*gl->encoder2, gl->prog, BGFX_DISCARD_ALL);
+            gl->encoder->setState(gl->state);
+            gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
+            gl->encoder->setTexture(0, gl->s_tex, gl->th);
+            hackFrameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
 
             // render to canvas
             nvgRenderSetUniforms(gl, call->uniformOffset, call->image);
@@ -1278,11 +1277,10 @@ error:
     return NULL;
 }
 
-void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder, bgfx::Encoder* encoder2)
+void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder)
 {
     struct GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(_ctx)->userPtr;
     gl->encoder = encoder;
-    gl->encoder2 = encoder2;
     gl->frameBuffer = &frameBuffer;
 }
 

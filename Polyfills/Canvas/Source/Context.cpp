@@ -412,17 +412,16 @@ namespace Babylon::Polyfills::Internal
                 const auto height = m_canvas->GetHeight();
 
 
-                bgfx::Encoder* encoder2 = m_update.GetUpdateToken().GetEncoder();
-                hackFrameBuffer->Bind(*encoder2);
+                hackFrameBuffer->Bind(*encoder);
 
 
                 hackFrameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
                 nvgBeginFrame(m_nvg, float(width), float(height), 1.0f);
-                nvgSetFrameBufferAndEncoder(m_nvg, frameBuffer, encoder, encoder2);
+                nvgSetFrameBufferAndEncoder(m_nvg, frameBuffer, encoder);
                 nvgEndFrame(m_nvg);
                 frameBuffer.Unbind(*encoder);
 
-                hackFrameBuffer->Unbind(*encoder2);
+                hackFrameBuffer->Unbind(*encoder);
                 m_dirty = false;
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
                 if (!cancellationSource->cancelled() && result.has_error())
