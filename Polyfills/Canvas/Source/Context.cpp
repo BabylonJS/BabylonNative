@@ -385,7 +385,7 @@ namespace Babylon::Polyfills::Internal
             }
         }
 
-        m_rectangleClipping = {left : x, top : y, width, height};
+        m_rectangleClipping = { x, y, width, height };
         SetDirty();
     }
 
