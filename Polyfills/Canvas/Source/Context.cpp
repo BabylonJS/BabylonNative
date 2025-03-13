@@ -10,7 +10,7 @@
 #endif
 
 #include "nanovg/nanovg.h"
-#include "nanovg_babylon.h"
+#include "nanovg/nanovg_babylon.h"
 
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
@@ -385,7 +385,7 @@ namespace Babylon::Polyfills::Internal
             }
         }
 
-        m_rectangleClipping = { x, y, width, height };
+        m_rectangleClipping = {x, y, width, height};
         SetDirty();
     }
 
