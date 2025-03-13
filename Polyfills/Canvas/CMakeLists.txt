@@ -106,25 +106,21 @@ set(SOURCES
     "Source/MeasureText.h"
     "Source/Gradient.cpp"
     "Source/Gradient.h"
-    "Source/nanovg_babylon.cpp"
-    "Source/nanovg_babylon.h"
     "Source/nanosvg.h"
+    "Source/nanovg/nanovg.cpp"
+    "Source/nanovg/nanovg.h"
+    "Source/nanovg/nanovg_babylon.cpp"
+    "Source/nanovg/nanovg_babylon.h"
     )
 
 file(GLOB SHADERS "Source/Shaders/*.sc" "Source/Shaders/*.sh")
 
-file(GLOB FONT_SOURCES ${BGFX_DIR}/examples/common/font/*.cpp)
-file(GLOB NANOVG_SOURCES ${BGFX_DIR}/examples/common/nanovg/nanovg.cpp)
-set(ATLAS_SOURCES ${BGFX_DIR}/examples/common/cube_atlas.cpp)
-
-add_library(Canvas ${SOURCES} ${FONT_SOURCES} ${ATLAS_SOURCES} ${NANOVG_SOURCES} ${SHADERS})
+add_library(Canvas ${SOURCES} ${SHADERS})
 
 target_include_directories(Canvas
     PUBLIC "Include"
     PRIVATE "Source"
-    PRIVATE "${BGFX_DIR}/3rdparty"
-    PRIVATE "${BGFX_DIR}/examples/common"
-    PRIVATE "${BGFX_DIR}/examples/common/nanovg")
+    PRIVATE "${BGFX_DIR}/3rdparty")
 
 target_link_libraries(Canvas
     PUBLIC napi
