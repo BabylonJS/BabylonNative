@@ -33,21 +33,40 @@ target_include_directories(NativeEngine
     PUBLIC "Include"
     PRIVATE "${BIMG_DIR}/3rdparty")
 
-target_link_libraries(NativeEngine
-    PUBLIC napi
-    PRIVATE JsRuntime
-    PRIVATE GraphicsDevice
-    PRIVATE arcana
-    PRIVATE bgfx
-    PRIVATE bimg
-    PRIVATE bimg_encode
-    PRIVATE bimg_decode
-    PRIVATE bx
-    PRIVATE glslang
-    PRIVATE glslang-default-resource-limits
-    PRIVATE SPIRV
-    PRIVATE GraphicsDeviceContext)
-warnings_as_errors(NativeEngine)
+
+if(BGFX_BUILD_TOOLS)
+    target_link_libraries(NativeEngine
+        PUBLIC napi
+        PRIVATE JsRuntime
+        PRIVATE GraphicsDevice
+        PRIVATE arcana
+        PRIVATE bgfx
+        PRIVATE bimg
+        PRIVATE bimg_encode
+        PRIVATE bimg_decode
+        PRIVATE bx
+        PRIVATE glslang
+        PRIVATE spirv-opt
+        PRIVATE GraphicsDeviceContext)
+    target_compile_definitions(NativeEngine PRIVATE BGFX_BUILD_TOOLS)
+else()
+    target_link_libraries(NativeEngine
+        PUBLIC napi
+        PRIVATE JsRuntime
+        PRIVATE GraphicsDevice
+        PRIVATE arcana
+        PRIVATE bgfx
+        PRIVATE bimg
+        PRIVATE bimg_encode
+        PRIVATE bimg_decode
+        PRIVATE bx
+        PRIVATE glslang
+        PRIVATE glslang-default-resource-limits
+        PRIVATE SPIRV
+        PRIVATE GraphicsDeviceContext)
+
+    warnings_as_errors(NativeEngine)
+endif()
 
 if(TARGET spirv-cross-hlsl)
     target_link_libraries(NativeEngine
