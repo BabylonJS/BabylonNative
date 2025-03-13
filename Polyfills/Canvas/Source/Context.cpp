@@ -10,7 +10,7 @@
 #endif
 
 #include "nanovg/nanovg.h"
-#include "nanovg_babylon.h"
+#include "nanovg/nanovg_babylon.h"
 
 #ifdef __GNUC__
 #pragma GCC diagnostic pop

@@ -2,7 +2,7 @@
 
 #include <Babylon/Polyfills/Canvas.h>
 #include <map>
-#include "nanovg.h"
+#include "nanovg/nanovg.h"
 
 struct NVGcontext;
 
