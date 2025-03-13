@@ -37,6 +37,7 @@ namespace Babylon::Polyfills::Internal
         void ClosePath(const Napi::CallbackInfo&);
         void Clip(const Napi::CallbackInfo&);
         void Rect(const Napi::CallbackInfo&);
+        void RoundRect(const Napi::CallbackInfo&);
         void StrokeRect(const Napi::CallbackInfo&);
         void Stroke(const Napi::CallbackInfo&);
         void MoveTo(const Napi::CallbackInfo&);
@@ -90,7 +91,7 @@ namespace Babylon::Polyfills::Internal
         std::string m_font{};
         std::variant<std::string, CanvasGradient*> m_fillStyle{};
         std::string m_strokeStyle{};
-        std::string m_lineCap{}; // 'butt', 'round', 'square'
+        std::string m_lineCap{};  // 'butt', 'round', 'square'
         std::string m_lineJoin{}; // 'round', 'bevel', 'miter'
         float m_miterLimit{0.f};
         float m_lineWidth{0.f};

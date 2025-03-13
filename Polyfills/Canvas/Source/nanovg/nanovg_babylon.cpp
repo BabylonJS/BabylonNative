@@ -23,7 +23,7 @@
 //
 #define NVG_ANTIALIAS 1
 
-#include "nanovg_babylon.h"
+#include "nanovg/nanovg_babylon.h"
 
 #include <stdlib.h>
 #include <math.h>

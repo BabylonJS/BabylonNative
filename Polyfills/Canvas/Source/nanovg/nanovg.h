@@ -19,8 +19,6 @@
 #ifndef NANOVG_H
 #define NANOVG_H
 
-#include "nanovg_bgfx.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif

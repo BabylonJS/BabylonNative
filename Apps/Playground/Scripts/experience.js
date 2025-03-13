@@ -175,6 +175,46 @@ CreateBoxAsync(scene).then(function () {
                 context.font = "bold 60px monospace";
                 context.fillText("Gradient Text!", 10, 420);
 
+                
+                context.lineWidth = 5;
+                // Rounded rectangle with zero radius (specified as a number)
+                context.strokeStyle = "red";
+                context.beginPath();
+                context.roundRect(10, 220, 150, 100, 0);
+                context.stroke();
+
+                // Rounded rectangle with 40px radius (single element list)
+                context.strokeStyle = "blue";
+                context.beginPath();
+                context.roundRect(10, 220, 150, 100, [40]);
+                context.stroke();
+
+                // Rounded rectangle with 2 different radii
+                context.strokeStyle = "orange";
+                context.beginPath();
+                context.roundRect(10, 350, 150, 100, [10, 40]);
+                context.stroke();
+
+                // Rounded rectangle with four different radii
+                context.strokeStyle = "green";
+                context.beginPath();
+                context.roundRect(200, 220, 200, 100, [0, 30, 50, 60]);
+                context.stroke();
+
+                // Same rectangle drawn backwards
+                context.strokeStyle = "magenta";
+                context.beginPath();
+                context.roundRect(400, 350, -200, 100, [0, 30, 50, 60]);
+                context.stroke();
+
+                // Draw clipped round rect
+                // TODO: this is currently broken, clipping area does not have round corners
+                context.beginPath();
+                context.roundRect(40, 450, 100, 50, 10);
+                context.clip();
+                context.fillStyle = "blue";
+                context.fillRect(0, 0, 1000, 1000);
+
                 // tick update
                 dynamicTexture.update();
                 t += 0.01;
