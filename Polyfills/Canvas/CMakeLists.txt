@@ -18,27 +18,29 @@ function(add_bgfx_shader FILE FOLDER)
         set(OUTPUTS_PRETTY "")
 
         # dx11
-        set(DX11_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/dx11/${FILENAME}.h)
-        if(NOT "${TYPE}" STREQUAL "COMPUTE")
-            _bgfx_shaderc_parse(
-                DX11 ${COMMON} WINDOWS
-                PROFILE s_5_0
-                O 3
-                OUTPUT ${DX11_OUTPUT}
-                BIN2C "${FILENAME}_dx11"
-            )
-        else()
-            _bgfx_shaderc_parse(
-                DX11 ${COMMON} WINDOWS
-                PROFILE s_5_0
-                O 1
-                OUTPUT ${DX11_OUTPUT}
-                BIN2C "${FILENAME}_dx11"
-            )
+        if(WIN32)
+            set(DX11_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/dx11/${FILENAME}.h)
+            if(NOT "${TYPE}" STREQUAL "COMPUTE")
+                _bgfx_shaderc_parse(
+                    DX11 ${COMMON} WINDOWS
+                    PROFILE s_5_0
+                    O 3
+                    OUTPUT ${DX11_OUTPUT}
+                    BIN2C "${FILENAME}_dx11"
+                )
+            else()
+                _bgfx_shaderc_parse(
+                    DX11 ${COMMON} WINDOWS
+                    PROFILE s_5_0
+                    O 1
+                    OUTPUT ${DX11_OUTPUT}
+                    BIN2C "${FILENAME}_dx11"
+                )
+            endif()
+            list(APPEND OUTPUTS "DX11")
+            set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}DX11, ")
         endif()
-        list(APPEND OUTPUTS "DX11")
-        set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}DX11, ")
-
+        
         # metal
         set(METAL_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/metal/${FILENAME}.h)
         _bgfx_shaderc_parse(METAL ${COMMON} OSX PROFILE metal OUTPUT ${METAL_OUTPUT} BIN2C "${FILENAME}_mtl")
