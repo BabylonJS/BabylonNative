@@ -104,6 +104,7 @@ namespace
     {
         int type;
         int image;
+        int image2;
         int pathOffset;
         int pathCount;
         int vertexOffset;
@@ -540,7 +541,7 @@ namespace
         return (struct GLNVGfragUniforms*)&gl->uniforms[i];
     }
 
-    static void nvgRenderSetUniforms(struct GLNVGcontext* gl, int uniformOffset, int image)
+    static void nvgRenderSetUniforms(struct GLNVGcontext* gl, int uniformOffset, int image, int image2)
     {
         struct GLNVGfragUniforms* frag = nvg__fragUniformPtr(gl, uniformOffset);
         float tmp[9]; // Maybe there's a way to get rid of this...
@@ -571,8 +572,18 @@ namespace
                 }
             }
         }
-
         gl->th = handle;
+
+        bgfx::TextureHandle handle2 = gl->texMissing;
+        if (image2 != 0)
+        {
+            struct GLNVGtexture* tex = glnvg__findTexture(gl, image2);
+            if (tex != NULL)
+            {
+                handle2 = tex->id;
+            }
+        }
+        gl->th2 = handle2;
     }
 
     static void nvgRenderViewport(void* _userPtr, float width, float height, float /*devicePixelRatio*/)
@@ -604,7 +615,7 @@ namespace
         int i, npaths = call->pathCount;
 
         // set bindpoint for solid loc
-        nvgRenderSetUniforms(gl, call->uniformOffset, 0);
+        nvgRenderSetUniforms(gl, call->uniformOffset, 0, 0);
 
         for (i = 0; i < npaths; i++)
         {
@@ -632,7 +643,7 @@ namespace
         }
 
         // Draw aliased off-pixels
-        nvgRenderSetUniforms(gl, call->uniformOffset + gl->fragSize, call->image);
+        nvgRenderSetUniforms(gl, call->uniformOffset + gl->fragSize, call->image, call->image2);
 
         if (gl->edgeAntiAlias)
         {
@@ -674,7 +685,7 @@ namespace
         struct GLNVGpath* paths = &gl->paths[call->pathOffset];
         int i, npaths = call->pathCount;
 
-        nvgRenderSetUniforms(gl, call->uniformOffset, call->image);
+        nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
 
         for (i = 0; i < npaths; i++)
         {
@@ -706,7 +717,7 @@ namespace
         struct GLNVGpath* paths = &gl->paths[call->pathOffset];
         int npaths = call->pathCount, i;
 
-        nvgRenderSetUniforms(gl, call->uniformOffset, call->image);
+        nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
 
         // Draw Strokes
         for (i = 0; i < npaths; i++)
@@ -724,7 +735,7 @@ namespace
     {
         if (3 <= call->vertexCount)
         {
-            nvgRenderSetUniforms(gl, call->uniformOffset, call->image);
+            nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
 
             gl->encoder->setState(gl->state);
             gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
@@ -944,6 +955,7 @@ namespace
         call->pathOffset = glnvg__allocPaths(gl, npaths);
         call->pathCount = npaths;
         call->image = paint->image;
+        call->image2 = paint->image2;
         call->blendFunc = glnvg__blendCompositeOperation(compositeOperation);
 
         if (npaths == 1 && paths[0].convex)
@@ -1028,6 +1040,7 @@ namespace
         call->pathOffset = glnvg__allocPaths(gl, npaths);
         call->pathCount = npaths;
         call->image = paint->image;
+        call->image2 = paint->image2;
         call->blendFunc = glnvg__blendCompositeOperation(compositeOperation);
 
         // Allocate vertices for all the paths.
@@ -1062,6 +1075,7 @@ namespace
 
         call->type = GLNVG_TRIANGLES;
         call->image = paint->image;
+        call->image2 = paint->image2;
         call->blendFunc = glnvg__blendCompositeOperation(compositeOperation);
 
         // Allocate vertices for all the paths.
