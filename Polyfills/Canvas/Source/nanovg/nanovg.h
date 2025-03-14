@@ -50,6 +50,7 @@ struct NVGpaint {
 	NVGcolor innerColor;
 	NVGcolor outerColor;
 	int image;
+	int image2;
 };
 typedef struct NVGpaint NVGpaint;
 

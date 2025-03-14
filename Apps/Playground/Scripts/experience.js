@@ -82,6 +82,18 @@ CreateBoxAsync(scene).then(function () {
             dynamicTexture.clear();
             var context = dynamicTexture.getContext();
 
+            // Text with gradient
+            const gradientText = context.createLinearGradient(0, 0, 256, 0);
+            gradientText.addColorStop(0, "magenta");
+            gradientText.addColorStop(0.5, "blue");
+            gradientText.addColorStop(1.0, "red");
+
+            // gradient
+            let gradient = context.createLinearGradient(0, 0, 200, 0);
+            gradient.addColorStop(0, "green");
+            gradient.addColorStop(0.7, "white");
+            gradient.addColorStop(1, "pink");
+
             var t = 0;
             scene.onBeforeRenderObservable.add(() => {
                 // animated shape
@@ -154,13 +166,14 @@ CreateBoxAsync(scene).then(function () {
                     context.stroke();
                 });
 
-                // gradient. BEWARE: it will be recreated each frame
-                let gradient = context.createLinearGradient(0, 0, 200, 0);
-                gradient.addColorStop(0, "green");
-                gradient.addColorStop(0.7, "white");
-                gradient.addColorStop(1, "pink");
+                // rect with gradient
                 context.fillStyle = gradient;
-                context.fillRect(10, 310, 400, 100);
+                context.fillRect(10, 310, 400, 60);
+
+                // Fill with gradient
+                context.fillStyle = gradientText;
+                context.font = "bold 60px monospace";
+                context.fillText("Gradient Text!", 10, 420);
 
                 
                 context.lineWidth = 5;

@@ -928,6 +928,7 @@ NVGpaint nvgImagePattern(NVGcontext* ctx,
 	p.extent[1] = h;
 
 	p.image = image;
+	p.image2 = 0;
 
 	p.innerColor = p.outerColor = nvgRGBAf(1,1,1,alpha);
 
@@ -2213,6 +2214,7 @@ void nvgFill(NVGcontext* ctx)
 	// Apply global alpha
 	fillPaint.innerColor.a *= state->alpha;
 	fillPaint.outerColor.a *= state->alpha;
+	fillPaint.image2 = 0;
 
 	ctx->params.renderFill(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
 						   ctx->cache->bounds, ctx->cache->paths, ctx->cache->npaths);
@@ -2248,6 +2250,7 @@ void nvgStroke(NVGcontext* ctx)
 	// Apply global alpha
 	strokePaint.innerColor.a *= state->alpha;
 	strokePaint.outerColor.a *= state->alpha;
+	strokePaint.image2 = 0;
 
 	nvg__flattenPaths(ctx);
 
@@ -2398,6 +2401,11 @@ static void nvg__renderText(NVGcontext* ctx, NVGvertex* verts, int nverts)
 	NVGpaint paint = state->fill;
 
 	// Render triangles.
+	if (paint.image)
+	{
+		// if an image (gradient) has already been bound, then use image for font image and move previous image to image2
+		paint.image2 = paint.image;
+	}
 	paint.image = ctx->fontImages[ctx->fontImageIdx];
 
 	// Apply global alpha
