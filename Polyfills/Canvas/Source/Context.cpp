@@ -529,23 +529,31 @@ namespace Babylon::Polyfills::Internal
         return MeasureText::CreateInstance(info.Env(), this, text);
     }
 
+    bool Context::SetFontFaceId()
+    {
+        if (m_fonts.empty())
+        {
+            return false;
+        }
+        else if (m_currentFontId >= 0)
+        {
+            nvgFontFaceId(*m_nvg, m_currentFontId);
+        }
+        else
+        {
+            nvgFontFaceId(*m_nvg, m_fonts.begin()->second);
+        }
+        return true;
+    }
+
     void Context::FillText(const Napi::CallbackInfo& info)
     {
         const std::string text = info[0].As<Napi::String>().Utf8Value();
         auto x = info[1].As<Napi::Number>().FloatValue();
         auto y = info[2].As<Napi::Number>().FloatValue();
 
-        if (!m_fonts.empty())
+        if (SetFontFaceId())
         {
-            if (m_currentFontId >= 0)
-            {
-                nvgFontFaceId(*m_nvg, m_currentFontId);
-            }
-            else
-            {
-                nvgFontFaceId(*m_nvg, m_fonts.begin()->second);
-            }
-
             BindFillStyle(info, 0.f, 0.f, x, y);
 
             nvgText(*m_nvg, x, y, text.c_str(), nullptr);
@@ -717,7 +725,15 @@ namespace Babylon::Polyfills::Internal
 
     void Context::StrokeText(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        const std::string text = info[0].As<Napi::String>().Utf8Value();
+        auto x = info[1].As<Napi::Number>().FloatValue();
+        auto y = info[2].As<Napi::Number>().FloatValue();
+
+        if (SetFontFaceId())
+        {
+            nvgStrokeText(*m_nvg, x, y, text.c_str(), nullptr);
+            SetDirty();
+        }
     }
 
     Napi::Value Context::CreateLinearGradient(const Napi::CallbackInfo& info)

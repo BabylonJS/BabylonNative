@@ -25,7 +25,9 @@ SAMPLER2D(s_tex2, 1);
 #define u_strokeMult   (u_params.y)
 #define u_texType      (u_params.z)
 #define u_type         (u_params.w)
-#define u_sdfBlur	   (u_sdf.x)
+#define u_sdfMin       (u_sdf.x)
+#define u_sdfMax       (u_sdf.y)
+#define u_sdfBlur      (u_sdf.z)
 
 #define SDF_EDGE (128.0/255.0)
 
@@ -54,9 +56,9 @@ float strokeMask(vec2 _texcoord)
 #endif // EDGE_AA
 }
 
-float sampleSDF(float edge, float blur, vec4 sample)
+float sampleSDF(float edge, vec4 color)
 {
-	float result = (sample.x - edge) / blur + 0.5;
+	float result = (color.x - edge) / u_sdfBlur + 0.5;
 	return clamp(result, 0.0, 1.0);
 }
 
@@ -97,7 +99,10 @@ void main()
 	{
 		vec4 color = texture2D(s_tex, v_texcoord0.xy);
 		if (u_texType == 1.0) color = vec4(color.xyz * color.w, color.w);
-		if (u_texType == 2.0) color = vec4(sampleSDF(SDF_EDGE, u_sdfBlur, color));
+		if (u_texType == 2.0) {
+			float sdf = sampleSDF(u_sdfMin, color) * (1.0 - sampleSDF(u_sdfMax, color));
+			color = vec4(sdf);
+		}
 		color *= scissor;
 		result = color * u_innerCol;
 	}

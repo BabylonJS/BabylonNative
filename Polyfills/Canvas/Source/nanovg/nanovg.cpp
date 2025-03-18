@@ -2396,50 +2396,32 @@ static int nvg__allocTextAtlas(NVGcontext* ctx)
 	return 1;
 }
 
-static void nvg__renderText(NVGcontext* ctx, NVGvertex* verts, int nverts, float sdfScale)
+static void nvg__renderText(NVGcontext* ctx, NVGpaint* paint, NVGvertex* verts, int nverts)
 {
 	NVGstate* state = nvg__getState(ctx);
-	NVGpaint paint = state->fill;
 
 	// Render triangles.
-	if (paint.image)
+	if (paint->image)
 	{
 		// if an image (gradient) has already been bound, then use image for font image and move previous image to image2
-		paint.image2 = paint.image;
+		paint->image2 = paint->image;
 	}
-	paint.image = ctx->fontImages[ctx->fontImageIdx];
+	paint->image = ctx->fontImages[ctx->fontImageIdx];
 
 	// Apply global alpha
-	paint.innerColor.a *= state->alpha;
-	paint.outerColor.a *= state->alpha;
+	paint->innerColor.a *= state->alpha;
+	paint->outerColor.a *= state->alpha;
 
-	float sdfBlur = FONS_SDF_EDGE / (FONS_SDF_PADDING * sdfScale);
-	paint.sdfBlur = sdfBlur / 255.0;
-
-	ctx->params.renderTriangles(ctx->params.userPtr, &paint, state->compositeOperation, &state->scissor, verts, nverts);
+	ctx->params.renderTriangles(ctx->params.userPtr, paint, state->compositeOperation, &state->scissor, verts, nverts);
 
 	ctx->drawCallCount++;
 	ctx->textTriCount += nverts/3;
 }
 
-float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char* end)
+static float nvg__getSdfFontSize(NVGstate* state, float scale)
 {
-	NVGstate* state = nvg__getState(ctx);
-	FONStextIter iter, prevIter;
-	FONSquad q;
-	NVGvertex* verts;
-	float scale = nvg__getFontScale(state) * ctx->devicePxRatio;
-	float invscale = 1.0f / scale;
-	int cverts = 0;
-	int nverts = 0;
 	int fontSize = state->fontSize*scale;
 	int sdfFontSize = 32;
-	float sdfScale;
-
-	if (end == NULL)
-		end = string + strlen(string);
-
-	if (state->fontId == FONS_INVALID) return x;
 
 	// We double the font size so that SDFs are also used for smaller font sizes
 	// For instance an SDF font size of 128 is used for the target font size range of 64-256
@@ -2447,8 +2429,36 @@ float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char*
 	// Reduce the font size to a powers of 4 after 32 (e.g. 32, 32*4, 32*4*4)
 	fontSize /= sdfFontSize;
 	while (fontSize /= 4) sdfFontSize *= 4;
-	sdfScale = state->fontSize*scale / sdfFontSize;
-	invscale *= sdfScale;
+	return sdfFontSize;
+}
+
+// Computes the distance in SDF values of a single pixel
+static float nvg__getSdfPixelDist(NVGstate* state, float scale)
+{
+	// Get the distance for a single pixel when the SDF is rendered without scaling
+	float pixelDist = (float)FONS_SDF_EDGE/FONS_SDF_PADDING;
+	// Scale it by the size of rendered pixels relative to SDF pixels
+	// (e.g. if there are 2 rendered pixels for each SDF pixel, then we want to half the distance)
+	pixelDist *= nvg__getSdfFontSize(state, scale) / (state->fontSize*scale);
+	// Scale it to a 0-1 range (rather than 0-255)
+	return pixelDist / 255;
+}
+
+float nvg__text(NVGcontext* ctx, NVGpaint* paint, float scale, float x, float y, const char* string, const char* end)
+{
+	NVGstate* state = nvg__getState(ctx);
+	FONStextIter iter, prevIter;
+	FONSquad q;
+	NVGvertex* verts;
+	float sdfFontSize = nvg__getSdfFontSize(state, scale);
+	float vtxscale = state->fontSize/sdfFontSize;
+	int cverts = 0;
+	int nverts = 0;
+
+	if (end == NULL)
+		end = string + strlen(string);
+
+	if (state->fontId == FONS_INVALID) return x;
 
 	fonsSetSize(ctx->fs, sdfFontSize);
 	fonsSetSpacing(ctx->fs, state->letterSpacing*scale);
@@ -2466,7 +2476,7 @@ float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char*
 		float c[4*2];
 		if (iter.prevGlyphIndex == -1) { // can not retrieve glyph?
 			if (nverts != 0) {
-				nvg__renderText(ctx, verts, nverts, sdfScale);
+				nvg__renderText(ctx, paint, verts, nverts);
 				nverts = 0;
 			}
 			if (!nvg__allocTextAtlas(ctx))
@@ -2478,10 +2488,10 @@ float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char*
 		}
 		prevIter = iter;
 		// Transform corners.
-		nvgTransformPoint(&c[0],&c[1], state->xform, q.x0*invscale+x, q.y0*invscale+y);
-		nvgTransformPoint(&c[2],&c[3], state->xform, q.x1*invscale+x, q.y0*invscale+y);
-		nvgTransformPoint(&c[4],&c[5], state->xform, q.x1*invscale+x, q.y1*invscale+y);
-		nvgTransformPoint(&c[6],&c[7], state->xform, q.x0*invscale+x, q.y1*invscale+y);
+		nvgTransformPoint(&c[0],&c[1], state->xform, q.x0*vtxscale+x, q.y0*vtxscale+y);
+		nvgTransformPoint(&c[2],&c[3], state->xform, q.x1*vtxscale+x, q.y0*vtxscale+y);
+		nvgTransformPoint(&c[4],&c[5], state->xform, q.x1*vtxscale+x, q.y1*vtxscale+y);
+		nvgTransformPoint(&c[6],&c[7], state->xform, q.x0*vtxscale+x, q.y1*vtxscale+y);
 		// Create triangles
 		if (nverts+6 <= cverts) {
 			nvg__vset(&verts[nverts], c[0], c[1], q.s0, q.t0); nverts++;
@@ -2496,9 +2506,41 @@ float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char*
 	// TODO: add back-end bit to do this just once per frame.
 	nvg__flushTextTexture(ctx);
 
-	nvg__renderText(ctx, verts, nverts, sdfScale);
+	nvg__renderText(ctx, paint, verts, nverts);
 
-	return iter.nextx / scale;
+	return iter.nextx * vtxscale;
+}
+
+float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char* end)
+{
+	NVGstate* state = nvg__getState(ctx);
+	NVGpaint paint = state->fill;
+	float scale = nvg__getFontScale(state) * ctx->devicePxRatio;
+	float pixelDist = nvg__getSdfPixelDist(state, scale);
+
+	paint.sdfMin = 0.5;
+	// Add an extra pixel so it doesn't start fading out in the middle of the text
+	paint.sdfMax = 1.0 + pixelDist;
+	// TODO: handle text blurring
+	paint.sdfBlur = pixelDist;
+	return nvg__text(ctx, &paint, scale, x, y, string, end);
+}
+
+float nvgStrokeText(NVGcontext* ctx, float x, float y, const char* string, const char* end)
+{
+	NVGstate* state = nvg__getState(ctx);
+	NVGpaint paint = state->stroke;
+	float scale = nvg__getFontScale(state) * ctx->devicePxRatio;
+	float pixelDist = nvg__getSdfPixelDist(state, scale);
+	float strokeScale = nvg__getAverageScale(state->xform);
+	// The distance in SDF values to get the required stroke width
+	float strokeDist = state->strokeWidth * strokeScale * pixelDist;
+
+	paint.sdfMin = 0.5 - strokeDist / 2;
+	paint.sdfMax = 0.5 + strokeDist / 2;
+	// TODO: handle text blurring
+	paint.sdfBlur = pixelDist;
+	return nvg__text(ctx, &paint, scale, x, y, string, end);
 }
 
 void nvgTextBox(NVGcontext* ctx, float x, float y, float breakRowWidth, const char* string, const char* end)

@@ -333,11 +333,11 @@ void fons__tt_renderGlyphBitmap(FONSttFontImpl *font, unsigned char *output, int
 								float scaleX, float scaleY, int glyph)
 {
 #ifdef FONS_SDF_PADDING
-	float distScale = (float)FONS_SDF_EDGE/FONS_SDF_PADDING;
+	float pixelDist = (float)FONS_SDF_EDGE/FONS_SDF_PADDING;
 	int y;
 	FONS_NOTUSED(scaleY);
 
-	unsigned char *sdf = stbtt_GetGlyphSDF(&font->font, scaleX, glyph, FONS_SDF_PADDING, FONS_SDF_EDGE, distScale, NULL, NULL, NULL, NULL);
+	unsigned char *sdf = stbtt_GetGlyphSDF(&font->font, scaleX, glyph, FONS_SDF_PADDING, FONS_SDF_EDGE, pixelDist, NULL, NULL, NULL, NULL);
 	if (!sdf) return;
 	for (y = 0; y < outHeight; y++) {
 		memcpy(&output[y * outStride], &sdf[y * outWidth], outWidth);

@@ -143,8 +143,10 @@ namespace
         float type;
 
         // u_sdf
+        float sdfMin;
+        float sdfMax;
         float sdfBlur;
-        float unused[3];
+        float unused;
     };
 
     struct GLNVGcontext
@@ -523,6 +525,8 @@ namespace
         }
 
         glnvg__xformToMat3x4(frag->paintMat, invxform);
+        frag->sdfMin = paint->sdfMin;
+        frag->sdfMax = paint->sdfMax;
         frag->sdfBlur = paint->sdfBlur;
 
         return 1;
@@ -562,7 +566,7 @@ namespace
         gl->encoder->setUniform(gl->u_scissorExtScale, &frag->scissorExt[0]);
         gl->encoder->setUniform(gl->u_extentRadius,    &frag->extent[0]);
         gl->encoder->setUniform(gl->u_params,          &frag->feather);
-        gl->encoder->setUniform(gl->u_sdf,             &frag->sdfBlur);
+        gl->encoder->setUniform(gl->u_sdf,             &frag->sdfMin);
 
         bgfx::TextureHandle handle = gl->texMissing;
 
