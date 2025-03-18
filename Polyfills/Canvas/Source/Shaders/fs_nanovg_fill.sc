@@ -101,7 +101,7 @@ void main()
 		if (u_texType == 1.0) color = vec4(color.xyz * color.w, color.w);
 		if (u_texType == 2.0) {
 			float sdf = sampleSDF(u_sdfMin, color) * (1.0 - sampleSDF(u_sdfMax, color));
-			color = vec4(sdf);
+			color = vec4(sdf, sdf, sdf, sdf);
 		}
 		color *= scissor;
 		result = color * u_innerCol;
@@ -114,7 +114,7 @@ void main()
 		if (u_texType == 1.0) color = vec4(color.xyz * color.w, color.w);
 		if (u_texType == 2.0) {
 			float sdf = sampleSDF(u_sdfMin, color) * (1.0 - sampleSDF(u_sdfMax, color));
-			color = vec4(sdf);
+			color = vec4(sdf, sdf, sdf, sdf);
 		}
 		color *= scissor;
 		color *= color2;
