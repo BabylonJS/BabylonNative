@@ -64,9 +64,8 @@ CreateBoxAsync(scene).then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/ClearCoatTest/glTF/ClearCoatTest.gltf").then(function () {
     BABYLON.Tools.Log("Loaded");
 
-
     var textureGround;
-
+    
     BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
         _native.Canvas.loadTTFAsync("droidsans", data).then(function () {
             var ground = BABYLON.MeshBuilder.CreateGround("ground1", { width: 0.5, height: 0.5, subdivisions: 2 }, scene);
@@ -83,10 +82,22 @@ CreateBoxAsync(scene).then(function () {
             dynamicTexture.clear();
             var context = dynamicTexture.getContext();
 
+            // Text with gradient
+            const gradientText = context.createLinearGradient(0, 0, 256, 0);
+            gradientText.addColorStop(0, "magenta");
+            gradientText.addColorStop(0.5, "blue");
+            gradientText.addColorStop(1.0, "red");
+
+            // gradient
+            let gradient = context.createLinearGradient(0, 0, 200, 0);
+            gradient.addColorStop(0, "green");
+            gradient.addColorStop(0.7, "white");
+            gradient.addColorStop(1, "pink");
+
             var t = 0;
             scene.onBeforeRenderObservable.add(() => {
                 // animated shape
-                /*context.save();
+                context.save();
                 context.fillStyle = "DarkRed";
                 context.fillRect(0, 0, texSize, texSize);
                 const left = 0;
@@ -103,9 +114,6 @@ CreateBoxAsync(scene).then(function () {
                 context.transform(1, t, 0.8, 1, 0, 0);
                 context.fillRect(-width * 0.5, -height * 0.5, width, height);
                 context.restore();
-                */
-                context.fillStyle = "DarkRed";
-                context.fillRect(0, 0, texSize, texSize);
                 // curve
                 context.beginPath();
                 context.moveTo(75 * 2, 25 * 2);
@@ -119,10 +127,17 @@ CreateBoxAsync(scene).then(function () {
                 context.fill();
 
                 // text
-                var fontSize = 8 + (Math.sin(t) * 0.5 + 0.5) * 200;
-                var font = `bold ${fontSize}px monospace`;
-                dynamicTexture.drawText("BabylonNative", Math.cos(t) * 100, 246, font, "White", null, true, true);
-                /*
+                var scale = Math.sin(t) * 0.5 + 0.54;
+                context.save();
+                context.translate(Math.cos(t) * 100, 246);
+                context.font = `bold ${scale * 200}px monospace`;
+                context.strokeStyle = "Green";
+                context.lineWidth = scale * 16;
+                context.strokeText("BabylonNative", 0, 0);
+                context.fillStyle = "White";
+                context.fillText("BabylonNative", 0, 0);
+                context.restore();
+
                 // Draw guides
                 context.strokeStyle = "#09f";
                 context.beginPath();
@@ -157,14 +172,55 @@ CreateBoxAsync(scene).then(function () {
                     context.stroke();
                 });
 
-                // gradient. BEWARE: it will be recreated each frame
-                let gradient = context.createLinearGradient(0, 0, 200, 0);
-                gradient.addColorStop(0, "green");
-                gradient.addColorStop(0.7, "white");
-                gradient.addColorStop(1, "pink");
+                // rect with gradient
                 context.fillStyle = gradient;
-                context.fillRect(10, 310, 400, 100);
-                */
+                context.fillRect(10, 310, 400, 60);
+
+                // Fill with gradient
+                context.fillStyle = gradientText;
+                context.font = "bold 60px monospace";
+                context.fillText("Gradient Text!", 10, 420);
+
+                
+                context.lineWidth = 5;
+                // Rounded rectangle with zero radius (specified as a number)
+                context.strokeStyle = "red";
+                context.beginPath();
+                context.roundRect(10, 220, 150, 100, 0);
+                context.stroke();
+
+                // Rounded rectangle with 40px radius (single element list)
+                context.strokeStyle = "blue";
+                context.beginPath();
+                context.roundRect(10, 220, 150, 100, [40]);
+                context.stroke();
+
+                // Rounded rectangle with 2 different radii
+                context.strokeStyle = "orange";
+                context.beginPath();
+                context.roundRect(10, 350, 150, 100, [10, 40]);
+                context.stroke();
+
+                // Rounded rectangle with four different radii
+                context.strokeStyle = "green";
+                context.beginPath();
+                context.roundRect(200, 220, 200, 100, [0, 30, 50, 60]);
+                context.stroke();
+
+                // Same rectangle drawn backwards
+                context.strokeStyle = "magenta";
+                context.beginPath();
+                context.roundRect(400, 350, -200, 100, [0, 30, 50, 60]);
+                context.stroke();
+
+                // Draw clipped round rect
+                // TODO: this is currently broken, clipping area does not have round corners
+                context.beginPath();
+                context.roundRect(40, 450, 100, 50, 10);
+                context.clip();
+                context.fillStyle = "blue";
+                context.fillRect(0, 0, 1000, 1000);
+
                 // tick update
                 dynamicTexture.update();
                 t += 0.01;
