@@ -84,6 +84,7 @@ namespace Babylon::Polyfills::Internal
         void Dispose();
         void SetDirty();
         void DeferredFlushFrame();
+        bool SetFontFaceId();
 
         NativeCanvas* m_canvas;
         std::shared_ptr<NVGcontext*> m_nvg;

@@ -145,6 +145,10 @@ void fonsDrawDebug(FONScontext* s, float x, float y);
 
 #define FONS_NOTUSED(v) BX_UNUSED(v)
 
+#ifndef FONS_SDF_EDGE
+#	define FONS_SDF_EDGE 128
+#endif
+
 #ifdef FONS_USE_FREETYPE
 
 #include <ft2build.h>
@@ -316,13 +320,32 @@ int fons__tt_buildGlyphBitmap(FONSttFontImpl *font, int glyph, float size, float
 	FONS_NOTUSED(size);
 	stbtt_GetGlyphHMetrics(&font->font, glyph, advance, lsb);
 	stbtt_GetGlyphBitmapBox(&font->font, glyph, scale, scale, x0, y0, x1, y1);
+#ifdef FONS_SDF_PADDING
+	*x0 -= FONS_SDF_PADDING;
+	*y0 -= FONS_SDF_PADDING;
+	*x1 += FONS_SDF_PADDING;
+	*y1 += FONS_SDF_PADDING;
+#endif
 	return 1;
 }
 
 void fons__tt_renderGlyphBitmap(FONSttFontImpl *font, unsigned char *output, int outWidth, int outHeight, int outStride,
 								float scaleX, float scaleY, int glyph)
 {
+#ifdef FONS_SDF_PADDING
+	float pixelDist = (float)FONS_SDF_EDGE/FONS_SDF_PADDING;
+	int y;
+	FONS_NOTUSED(scaleY);
+
+	unsigned char *sdf = stbtt_GetGlyphSDF(&font->font, scaleX, glyph, FONS_SDF_PADDING, FONS_SDF_EDGE, pixelDist, NULL, NULL, NULL, NULL);
+	if (!sdf) return;
+	for (y = 0; y < outHeight; y++) {
+		memcpy(&output[y * outStride], &sdf[y * outWidth], outWidth);
+	}
+	stbtt_FreeSDF(sdf, font->font.userdata);
+#else
 	stbtt_MakeGlyphBitmap(&font->font, output, outWidth, outHeight, outStride, scaleX, scaleY, glyph);
+#endif
 }
 
 int fons__tt_getGlyphKernAdvance(FONSttFontImpl *font, int glyph1, int glyph2)

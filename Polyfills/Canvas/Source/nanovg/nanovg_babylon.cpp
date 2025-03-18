@@ -141,6 +141,12 @@ namespace
         float strokeMult;
         float texType;
         float type;
+
+        // u_sdf
+        float sdfMin;
+        float sdfMax;
+        float sdfBlur;
+        float unused;
     };
 
     struct GLNVGcontext
@@ -157,6 +163,7 @@ namespace
         bgfx::UniformHandle u_extentRadius;
         bgfx::UniformHandle u_params;
         bgfx::UniformHandle u_halfTexel;
+        bgfx::UniformHandle u_sdf;
 
         bgfx::UniformHandle s_tex;
         bgfx::UniformHandle s_tex2;
@@ -281,6 +288,7 @@ namespace
         gl->u_scissorExtScale = bgfx::createUniform("u_scissorExtScale", bgfx::UniformType::Vec4);
         gl->u_extentRadius    = bgfx::createUniform("u_extentRadius",    bgfx::UniformType::Vec4);
         gl->u_params          = bgfx::createUniform("u_params",          bgfx::UniformType::Vec4);
+        gl->u_sdf             = bgfx::createUniform("u_sdf",             bgfx::UniformType::Vec4);
         gl->s_tex             = bgfx::createUniform("s_tex",             bgfx::UniformType::Sampler);
         gl->s_tex2            = bgfx::createUniform("s_tex2",            bgfx::UniformType::Sampler);
 
@@ -517,6 +525,9 @@ namespace
         }
 
         glnvg__xformToMat3x4(frag->paintMat, invxform);
+        frag->sdfMin = paint->sdfMin;
+        frag->sdfMax = paint->sdfMax;
+        frag->sdfBlur = paint->sdfBlur;
 
         return 1;
     }
@@ -555,6 +566,7 @@ namespace
         gl->encoder->setUniform(gl->u_scissorExtScale, &frag->scissorExt[0]);
         gl->encoder->setUniform(gl->u_extentRadius,    &frag->extent[0]);
         gl->encoder->setUniform(gl->u_params,          &frag->feather);
+        gl->encoder->setUniform(gl->u_sdf,             &frag->sdfMin);
 
         bgfx::TextureHandle handle = gl->texMissing;
 
@@ -637,6 +649,7 @@ namespace
                     );
                 gl->encoder->setVertexBuffer(0, &gl->tvb);
                 gl->encoder->setTexture(0, gl->s_tex, gl->th);
+                gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
                 fan(gl->encoder, paths[i].fillOffset, paths[i].fillCount);
                 gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
             }
@@ -662,6 +675,7 @@ namespace
                     );
                 gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
                 gl->encoder->setTexture(0, gl->s_tex, gl->th);
+                gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
                 gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
             }
         }
@@ -670,6 +684,7 @@ namespace
         gl->encoder->setState(gl->state);
         gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
         gl->encoder->setTexture(0, gl->s_tex, gl->th);
+        gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
         gl->encoder->setStencil(0
                 | BGFX_STENCIL_TEST_NOTEQUAL
                 | BGFX_STENCIL_FUNC_RMASK(0xff)
@@ -693,6 +708,7 @@ namespace
             gl->encoder->setState(gl->state);
             gl->encoder->setVertexBuffer(0, &gl->tvb);
             gl->encoder->setTexture(0, gl->s_tex, gl->th);
+            gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
             fan(gl->encoder, paths[i].fillOffset, paths[i].fillCount);
             gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
         }
@@ -707,6 +723,7 @@ namespace
                     );
                 gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
                 gl->encoder->setTexture(0, gl->s_tex, gl->th);
+                gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
                 gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
             }
         }
@@ -727,6 +744,7 @@ namespace
                 );
             gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
             gl->encoder->setTexture(0, gl->s_tex, gl->th);
+            gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
             gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
         }
     }
@@ -740,10 +758,7 @@ namespace
             gl->encoder->setState(gl->state);
             gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
             gl->encoder->setTexture(0, gl->s_tex, gl->th);
-            if (bgfx::isValid(gl->th2))
-            {
-                gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
-            }
+            gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
             gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
         }
     }

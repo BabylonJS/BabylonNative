@@ -51,6 +51,9 @@ struct NVGpaint {
 	NVGcolor outerColor;
 	int image;
 	int image2;
+	float sdfMin;
+	float sdfMax;
+	float sdfBlur;
 };
 typedef struct NVGpaint NVGpaint;
 
@@ -575,6 +578,7 @@ void nvgFontFace(NVGcontext* ctx, const char* font);
 
 // Draws text string at specified location. If end is specified only the sub-string up to the end is drawn.
 float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char* end);
+float nvgStrokeText(NVGcontext* ctx, float x, float y, const char* string, const char* end);
 
 // Draws multi-line text string at specified location wrapped at the specified width. If end is specified only the sub-string up to the end is drawn.
 // White space is stripped at the beginning of the rows, the text is split at word boundaries or when new-line characters are encountered.

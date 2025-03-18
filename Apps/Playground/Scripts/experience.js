@@ -128,9 +128,16 @@ CreateBoxAsync(scene).then(function () {
                 context.fill();
 
                 // text
-                var fontSize = 8 + (Math.sin(t) * 0.5 + 0.5) * 200;
-                var font = `bold ${fontSize}px monospace`;
-                dynamicTexture.drawText("BabylonNative", Math.cos(t) * 100, 246, font, "White", null, true, true);
+                var scale = Math.sin(t) * 0.5 + 0.54;
+                context.save();
+                context.translate(Math.cos(t) * 100, 246);
+                context.font = `bold ${scale * 200}px monospace`;
+                context.strokeStyle = "Green";
+                context.lineWidth = scale * 16;
+                context.strokeText("BabylonNative", 0, 0);
+                context.fillStyle = "White";
+                context.fillText("BabylonNative", 0, 0);
+                context.restore();
 
                 // Draw guides
                 context.strokeStyle = "#09f";
