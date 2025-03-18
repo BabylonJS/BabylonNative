@@ -141,6 +141,10 @@ namespace
         float strokeMult;
         float texType;
         float type;
+
+        // u_sdf
+        float sdfBlur;
+        float unused[3];
     };
 
     struct GLNVGcontext
@@ -157,6 +161,7 @@ namespace
         bgfx::UniformHandle u_extentRadius;
         bgfx::UniformHandle u_params;
         bgfx::UniformHandle u_halfTexel;
+        bgfx::UniformHandle u_sdf;
 
         bgfx::UniformHandle s_tex;
         bgfx::UniformHandle s_tex2;
@@ -281,6 +286,7 @@ namespace
         gl->u_scissorExtScale = bgfx::createUniform("u_scissorExtScale", bgfx::UniformType::Vec4);
         gl->u_extentRadius    = bgfx::createUniform("u_extentRadius",    bgfx::UniformType::Vec4);
         gl->u_params          = bgfx::createUniform("u_params",          bgfx::UniformType::Vec4);
+        gl->u_sdf             = bgfx::createUniform("u_sdf",             bgfx::UniformType::Vec4);
         gl->s_tex             = bgfx::createUniform("s_tex",             bgfx::UniformType::Sampler);
         gl->s_tex2            = bgfx::createUniform("s_tex2",            bgfx::UniformType::Sampler);
 
@@ -517,6 +523,7 @@ namespace
         }
 
         glnvg__xformToMat3x4(frag->paintMat, invxform);
+        frag->sdfBlur = paint->sdfBlur;
 
         return 1;
     }
@@ -555,6 +562,7 @@ namespace
         gl->encoder->setUniform(gl->u_scissorExtScale, &frag->scissorExt[0]);
         gl->encoder->setUniform(gl->u_extentRadius,    &frag->extent[0]);
         gl->encoder->setUniform(gl->u_params,          &frag->feather);
+        gl->encoder->setUniform(gl->u_sdf,             &frag->sdfBlur);
 
         bgfx::TextureHandle handle = gl->texMissing;
 

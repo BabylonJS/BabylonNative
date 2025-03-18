@@ -51,6 +51,7 @@ struct NVGpaint {
 	NVGcolor outerColor;
 	int image;
 	int image2;
+	float sdfBlur;
 };
 typedef struct NVGpaint NVGpaint;
 

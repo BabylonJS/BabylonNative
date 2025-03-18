@@ -12,6 +12,7 @@ uniform vec4 u_outerCol;
 uniform vec4 u_scissorExtScale;
 uniform vec4 u_extentRadius;
 uniform vec4 u_params;
+uniform vec4 u_sdf;
 
 SAMPLER2D(s_tex, 0);
 SAMPLER2D(s_tex2, 1);
@@ -24,6 +25,9 @@ SAMPLER2D(s_tex2, 1);
 #define u_strokeMult   (u_params.y)
 #define u_texType      (u_params.z)
 #define u_type         (u_params.w)
+#define u_sdfBlur	   (u_sdf.x)
+
+#define SDF_EDGE (128.0/255.0)
 
 float sdroundrect(vec2 pt, vec2 ext, float rad)
 {
@@ -48,6 +52,12 @@ float strokeMask(vec2 _texcoord)
 #else
 	return 1.0;
 #endif // EDGE_AA
+}
+
+float sampleSDF(float edge, float blur, vec4 sample)
+{
+	float result = (sample.x - edge) / blur + 0.5;
+	return clamp(result, 0.0, 1.0);
 }
 
 void main()
@@ -87,7 +97,7 @@ void main()
 	{
 		vec4 color = texture2D(s_tex, v_texcoord0.xy);
 		if (u_texType == 1.0) color = vec4(color.xyz * color.w, color.w);
-		if (u_texType == 2.0) color = color.xxxx;
+		if (u_texType == 2.0) color = vec4(sampleSDF(SDF_EDGE, u_sdfBlur, color));
 		color *= scissor;
 		result = color * u_innerCol;
 	}

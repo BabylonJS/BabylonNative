@@ -34,6 +34,7 @@ BX_PRAGMA_DIAGNOSTIC_PUSH();
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-parameter");
 BX_PRAGMA_DIAGNOSTIC_IGNORED_GCC("-Wunused-result");
 #define FONTSTASH_IMPLEMENTATION
+#define FONS_SDF_PADDING 32
 #include "fontstash.h"
 BX_PRAGMA_DIAGNOSTIC_POP();
 
@@ -2395,7 +2396,7 @@ static int nvg__allocTextAtlas(NVGcontext* ctx)
 	return 1;
 }
 
-static void nvg__renderText(NVGcontext* ctx, NVGvertex* verts, int nverts)
+static void nvg__renderText(NVGcontext* ctx, NVGvertex* verts, int nverts, float sdfScale)
 {
 	NVGstate* state = nvg__getState(ctx);
 	NVGpaint paint = state->fill;
@@ -2411,6 +2412,9 @@ static void nvg__renderText(NVGcontext* ctx, NVGvertex* verts, int nverts)
 	// Apply global alpha
 	paint.innerColor.a *= state->alpha;
 	paint.outerColor.a *= state->alpha;
+
+	float sdfBlur = FONS_SDF_EDGE / (FONS_SDF_PADDING * sdfScale);
+	paint.sdfBlur = sdfBlur / 255.0;
 
 	ctx->params.renderTriangles(ctx->params.userPtr, &paint, state->compositeOperation, &state->scissor, verts, nverts);
 
@@ -2428,13 +2432,25 @@ float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char*
 	float invscale = 1.0f / scale;
 	int cverts = 0;
 	int nverts = 0;
+	int fontSize = state->fontSize*scale;
+	int sdfFontSize = 32;
+	float sdfScale;
 
 	if (end == NULL)
 		end = string + strlen(string);
 
 	if (state->fontId == FONS_INVALID) return x;
 
-	fonsSetSize(ctx->fs, state->fontSize*scale);
+	// We double the font size so that SDFs are also used for smaller font sizes
+	// For instance an SDF font size of 128 is used for the target font size range of 64-256
+	fontSize *= 2;
+	// Reduce the font size to a powers of 4 after 32 (e.g. 32, 32*4, 32*4*4)
+	fontSize /= sdfFontSize;
+	while (fontSize /= 4) sdfFontSize *= 4;
+	sdfScale = state->fontSize*scale / sdfFontSize;
+	invscale *= sdfScale;
+
+	fonsSetSize(ctx->fs, sdfFontSize);
 	fonsSetSpacing(ctx->fs, state->letterSpacing*scale);
 	fonsSetBlur(ctx->fs, state->fontBlur*scale);
 	fonsSetAlign(ctx->fs, state->textAlign);
@@ -2444,13 +2460,13 @@ float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char*
 	verts = nvg__allocTempVerts(ctx, cverts);
 	if (verts == NULL) return x;
 
-	fonsTextIterInit(ctx->fs, &iter, x*scale, y*scale, string, end, FONS_GLYPH_BITMAP_REQUIRED);
+	fonsTextIterInit(ctx->fs, &iter, 0, 0, string, end, FONS_GLYPH_BITMAP_REQUIRED);
 	prevIter = iter;
 	while (fonsTextIterNext(ctx->fs, &iter, &q)) {
 		float c[4*2];
 		if (iter.prevGlyphIndex == -1) { // can not retrieve glyph?
 			if (nverts != 0) {
-				nvg__renderText(ctx, verts, nverts);
+				nvg__renderText(ctx, verts, nverts, sdfScale);
 				nverts = 0;
 			}
 			if (!nvg__allocTextAtlas(ctx))
@@ -2462,10 +2478,10 @@ float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char*
 		}
 		prevIter = iter;
 		// Transform corners.
-		nvgTransformPoint(&c[0],&c[1], state->xform, q.x0*invscale, q.y0*invscale);
-		nvgTransformPoint(&c[2],&c[3], state->xform, q.x1*invscale, q.y0*invscale);
-		nvgTransformPoint(&c[4],&c[5], state->xform, q.x1*invscale, q.y1*invscale);
-		nvgTransformPoint(&c[6],&c[7], state->xform, q.x0*invscale, q.y1*invscale);
+		nvgTransformPoint(&c[0],&c[1], state->xform, q.x0*invscale+x, q.y0*invscale+y);
+		nvgTransformPoint(&c[2],&c[3], state->xform, q.x1*invscale+x, q.y0*invscale+y);
+		nvgTransformPoint(&c[4],&c[5], state->xform, q.x1*invscale+x, q.y1*invscale+y);
+		nvgTransformPoint(&c[6],&c[7], state->xform, q.x0*invscale+x, q.y1*invscale+y);
 		// Create triangles
 		if (nverts+6 <= cverts) {
 			nvg__vset(&verts[nverts], c[0], c[1], q.s0, q.t0); nverts++;
@@ -2480,7 +2496,7 @@ float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char*
 	// TODO: add back-end bit to do this just once per frame.
 	nvg__flushTextTexture(ctx);
 
-	nvg__renderText(ctx, verts, nverts);
+	nvg__renderText(ctx, verts, nverts, sdfScale);
 
 	return iter.nextx / scale;
 }
