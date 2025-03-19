@@ -1431,13 +1431,12 @@ namespace Babylon
     {
         const auto textureDestination = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         const auto textureSource = info[1].As<Napi::Pointer<Graphics::Texture>>().Get();
-
+        
+        // Append a task instead of calling blit immediately or blit happens before drawcalls.
         arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, textureDestination, textureSource, cancellationSource = m_cancellationSource]() {
             return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, textureDestination, textureSource, updateToken = m_update.GetUpdateToken(), cancellationSource = m_cancellationSource]() {
                 bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
-                auto& boundFramebuffer = GetBoundFrameBuffer(*encoder);
-                boundFramebuffer.Bind(*encoder);
-                boundFramebuffer.Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
+                m_deviceContext.Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
                 if (!cancellationSource->cancelled() && result.has_error())
                 {

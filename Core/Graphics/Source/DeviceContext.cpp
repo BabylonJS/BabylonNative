@@ -129,4 +129,11 @@ namespace Babylon::Graphics
     {
        return m_graphicsImpl.GetId();
     }
+
+    void DeviceContext::Blit(bgfx::Encoder& encoder, bgfx::TextureHandle dst, uint16_t dstX, uint16_t dstY, bgfx::TextureHandle src, uint16_t srcX, uint16_t srcY, uint16_t width, uint16_t height)
+    {
+        // Increment viewId so blit happens after the last drawcall of the last viewId
+        auto viewId = AcquireNewViewId(encoder);
+        encoder.blit(viewId, dst, dstX, dstY, src, srcX, srcY, width, height);
+    }
 }
