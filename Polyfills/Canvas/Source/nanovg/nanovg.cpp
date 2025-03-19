@@ -24,6 +24,7 @@
 #include "nanovg.h"
 
 #include <bx/bx.h>
+#include "nanovg_filterstack.h"
 
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4701) // error C4701: potentially uninitialized local variable 'cint' used
 // -Wunused-function and 4505 must be file scope, can't be disabled between push/pop.
@@ -94,6 +95,7 @@ struct NVGstate {
 	float fontBlur;
 	int textAlign;
 	int fontId;
+	nanovg_filterstack m_filterStack;
 };
 typedef struct NVGstate NVGstate;
 
@@ -674,6 +676,7 @@ void nvgReset(NVGcontext* ctx)
 	state->fontBlur = 0.0f;
 	state->textAlign = NVG_ALIGN_LEFT | NVG_ALIGN_BASELINE;
 	state->fontId = 0;
+	state->m_filterStack.Clear();
 }
 
 // State setting
@@ -790,6 +793,12 @@ void nvgFillColor(NVGcontext* ctx, NVGcolor color)
 {
 	NVGstate* state = nvg__getState(ctx);
 	nvg__setPaintColor(&state->fill, color);
+}
+
+void nvgFilterStack(NVGcontext* ctx, nanovg_filterstack& filterStack)
+{
+	NVGstate* state = nvg__getState(ctx);
+	state->m_filterStack = filterStack;
 }
 
 void nvgFillPaint(NVGcontext* ctx, NVGpaint paint)
@@ -2218,7 +2227,7 @@ void nvgFill(NVGcontext* ctx)
 	fillPaint.image2 = 0;
 
 	ctx->params.renderFill(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
-						   ctx->cache->bounds, ctx->cache->paths, ctx->cache->npaths);
+						   ctx->cache->bounds, ctx->cache->paths, ctx->cache->npaths, state->m_filterStack);
 
 	// Count triangles
 	for (i = 0; i < ctx->cache->npaths; i++) {

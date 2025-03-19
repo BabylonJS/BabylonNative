@@ -82,6 +82,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("lineCap", &Context::GetLineCap, &Context::SetLineCap),
                 InstanceAccessor("lineJoin", &Context::GetLineJoin, &Context::SetLineJoin),
                 InstanceAccessor("miterLimit", &Context::GetMiterLimit, &Context::SetMiterLimit),
+                InstanceAccessor("filter", &Context::GetFilter, &Context::SetFilter),
                 InstanceAccessor("font", &Context::GetFont, &Context::SetFont),
                 InstanceAccessor("letterSpacing", &Context::GetLetterSpacing, &Context::SetLetterSpacing),
                 InstanceAccessor("strokeStyle", &Context::GetStrokeStyle, &Context::SetStrokeStyle),
@@ -188,7 +189,12 @@ namespace Babylon::Polyfills::Internal
         nvgRect(*m_nvg, left, top, width, height);
 
         BindFillStyle(info, left, top, width, height);
-        
+        if (m_filter.length())
+        {
+            nanovg_filterstack filterStack;
+            filterStack.ParseString(m_filter);
+            nvgFilterStack(*m_nvg, filterStack);
+        }
         nvgFill(*m_nvg);
         SetDirty();
     }
@@ -845,6 +851,16 @@ namespace Babylon::Polyfills::Internal
         m_miterLimit = value.As<Napi::Number>().FloatValue();
         nvgMiterLimit(*m_nvg, m_miterLimit);
         SetDirty();
+    }
+
+    Napi::Value Context::GetFilter(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(Env(), m_filter);
+    }
+
+    void Context::SetFilter(const Napi::CallbackInfo& info, const Napi::Value& value)
+    {
+        m_filter = value.As<Napi::String>().Utf8Value();
     }
 
     Napi::Value Context::GetFont(const Napi::CallbackInfo& info)

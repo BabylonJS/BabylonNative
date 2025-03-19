@@ -60,7 +60,7 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from 
 #include "Shaders/essl/fs_fspass.h"
 #include "Shaders/spirv/vs_fspass.h"
 #include "Shaders/spirv/fs_fspass.h"
-
+#include "nanovg_filterstack.h"
 
 struct PosTexCoord0Vertex
 {
@@ -205,6 +205,7 @@ namespace
         int vertexCount;
         int uniformOffset;
         GLNVGblend blendFunc;
+        nanovg_filterstack filterStack;
     };
 
     struct GLNVGpath
@@ -848,6 +849,7 @@ namespace
     {
         if (3 <= call->vertexCount)
         {
+            /*
             nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
 
             gl->encoder->setState(gl->state);
@@ -866,6 +868,15 @@ namespace
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
             screenSpaceQuad(gl->encoder, s_originBottomLeft);
             gl->frameBuffer->Submit(*gl->encoder, gl->fsprog, BGFX_DISCARD_ALL);;
+            */
+            call->filterStack.Render([gl, call]() {
+                    nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
+
+                    gl->encoder->setState(gl->state);
+                    gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
+                    gl->encoder->setTexture(0, gl->s_tex, gl->th);
+                    gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
+                });
             /*
             nvgRenderSetUniforms(gl, call->uniformOffset, call->image);
 
@@ -1079,6 +1090,7 @@ namespace
         , const float* bounds
         , const NVGpath* paths
         , int npaths
+        , nanovg_filterstack& filterStack
         )
     {
         struct GLNVGcontext* gl = (struct GLNVGcontext*)_userPtr;
@@ -1094,6 +1106,7 @@ namespace
         call->image = paint->image;
         call->image2 = paint->image2;
         call->blendFunc = glnvg__blendCompositeOperation(compositeOperation);
+        call->filterStack = filterStack;
 
         if (npaths == 1 && paths[0].convex)
         {
