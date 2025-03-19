@@ -121,6 +121,8 @@ namespace Babylon::Graphics
         TextureInfo GetTextureInfo(bgfx::TextureHandle handle);
         static bx::AllocatorI& GetDefaultAllocator() { return m_allocator; }
 
+        // call following method when a submit call is associated with the current acquired viewId
+        void SetViewAsUsed();
         void Blit(bgfx::Encoder& encoder, bgfx::TextureHandle dst, uint16_t dstX, uint16_t dstY, bgfx::TextureHandle src, uint16_t srcX = 0, uint16_t srcY = 0, uint16_t width = UINT16_MAX, uint16_t height = UINT16_MAX);
     private:
         friend UpdateToken;
@@ -131,5 +133,8 @@ namespace Babylon::Graphics
         std::mutex m_textureHandleToInfoMutex{};
 
         static inline bx::DefaultAllocator m_allocator{};
+
+        bool m_currentViewIsUsed{false};
+        bgfx::ViewId m_lastAcquiredViewId{bgfx::kInvalidHandle};
     };
 }

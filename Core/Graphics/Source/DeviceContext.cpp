@@ -103,7 +103,9 @@ namespace Babylon::Graphics
 
     bgfx::ViewId DeviceContext::AcquireNewViewId(bgfx::Encoder& encoder)
     {
-        return m_graphicsImpl.AcquireNewViewId(encoder);
+        m_currentViewIsUsed = false;
+        m_lastAcquiredViewId = m_graphicsImpl.AcquireNewViewId(encoder);
+        return m_lastAcquiredViewId;
     }
 
     void DeviceContext::AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)
@@ -132,8 +134,14 @@ namespace Babylon::Graphics
 
     void DeviceContext::Blit(bgfx::Encoder& encoder, bgfx::TextureHandle dst, uint16_t dstX, uint16_t dstY, bgfx::TextureHandle src, uint16_t srcX, uint16_t srcY, uint16_t width, uint16_t height)
     {
-        // Increment viewId so blit happens after the last drawcall of the last viewId
-        auto viewId = AcquireNewViewId(encoder);
+        // Increment viewId so blit happens after the last drawcall of the last viewId if drawcall(s) have been submitted to the view.
+        // Otherwise, reuse last acquired viewId to not waste an Id.
+        auto viewId = m_currentViewIsUsed ? AcquireNewViewId(encoder) : m_lastAcquiredViewId;
         encoder.blit(viewId, dst, dstX, dstY, src, srcX, srcY, width, height);
+    }
+
+    void DeviceContext::SetViewAsUsed()
+    {
+        m_currentViewIsUsed = true;
     }
 }

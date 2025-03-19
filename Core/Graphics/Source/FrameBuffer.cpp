@@ -130,6 +130,7 @@ namespace Babylon::Graphics
     {
         SetBgfxViewPortAndScissor(encoder, m_desiredViewPort, m_desiredScissor);
         encoder.submit(m_viewId.value(), programHandle, 0, flags);
+        m_deviceContext.SetViewAsUsed();
     }
 
     void FrameBuffer::SetStencil(bgfx::Encoder& encoder, uint32_t stencilState)
