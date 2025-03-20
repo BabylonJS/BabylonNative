@@ -140,7 +140,7 @@ namespace Babylon::Graphics
         encoder.blit(viewId, dst, dstX, dstY, src, srcX, srcY, width, height);
     }
 
-    void DeviceContext::SetViewAsUsed()
+    void DeviceContext::InvalidateView()
     {
         m_currentViewIsUsed = true;
     }
