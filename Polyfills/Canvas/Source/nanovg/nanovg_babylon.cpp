@@ -827,6 +827,7 @@ namespace
 
     static void glnvg__stroke(struct GLNVGcontext* gl, struct GLNVGcall* call)
     {
+        /*
         struct GLNVGpath* paths = &gl->paths[call->pathOffset];
         int npaths = call->pathCount, i;
 
@@ -843,6 +844,23 @@ namespace
             gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
             gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
         }
+        */
+
+        call->filterStack.Render([gl, call]() {
+            // Draw Strokes
+            struct GLNVGpath* paths = &gl->paths[call->pathOffset];
+            int npaths = call->pathCount, i;
+            for (i = 0; i < npaths; i++)
+            {
+                nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
+
+                gl->encoder->setState(gl->state | BGFX_STATE_PT_TRISTRIP );
+                gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
+                gl->encoder->setTexture(0, gl->s_tex, gl->th);
+                gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
+                gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
+            }
+        });
     }
 
     static void glnvg__triangles(struct GLNVGcontext* gl, struct GLNVGcall* call)

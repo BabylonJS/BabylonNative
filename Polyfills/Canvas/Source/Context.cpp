@@ -860,7 +860,12 @@ namespace Babylon::Polyfills::Internal
 
     void Context::SetFilter(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        m_filter = value.As<Napi::String>().Utf8Value();
+        std::string filterString = value.As<Napi::String>().Utf8Value();
+        // Keep existing filter if the new one is invalid
+        if (nanovg_filterstack::ValidString(filterString))
+        {
+            m_filter = filterString;
+        }
     }
 
     Napi::Value Context::GetFont(const Napi::CallbackInfo& info)

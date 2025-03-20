@@ -6,10 +6,7 @@
 class nanovg_filterstack
 {
 public:
-    nanovg_filterstack() 
-    {
-        // create shaders used by the different elements
-    }
+    nanovg_filterstack();
 
     void AddSepia(float strength)
     {
@@ -20,10 +17,8 @@ public:
     void AddBlur(int horizontal, int vertical) {  }
 
     void Render(std::function<void()> element);
-    void ParseString(const std::string& string)
-    {
-        // use regex to parse filter string and add filters accordingly
-    }
+    void ParseString(const std::string& string);
+    static bool ValidString(const std::string& string);
 
     void SetSize(int width, int height)
     {
