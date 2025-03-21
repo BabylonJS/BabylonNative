@@ -49,7 +49,7 @@ namespace Babylon::Polyfills::Internal
         : Napi::ObjectWrap<NativeCanvasPath2D>{info}
         , m_commands{std::deque<Path2DCommand>()}
     {
-        const std::string d = info.Length() == 1 ? info[0].As<Napi::String>().Utf8Value() : "";
+        const std::string d = info.Length() == 1 && info[0].IsString() ? info[0].As<Napi::String>().Utf8Value() : "";
         // auto context{info[0].As<Napi::External<NativeCanvasPath2D>>().Data()}; // TODO: Path2D constructor
         if (!d.empty())
         {
