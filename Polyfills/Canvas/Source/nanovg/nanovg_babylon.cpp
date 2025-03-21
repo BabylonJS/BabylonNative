@@ -23,7 +23,7 @@
 //
 #define NVG_ANTIALIAS 1
 
-#include "nanovg_babylon.h"
+#include "nanovg/nanovg_babylon.h"
 
 #include <stdlib.h>
 #include <math.h>
@@ -36,7 +36,7 @@
 #include <bx/allocator.h>
 
 #include <Babylon/Graphics/DeviceContext.h>
-
+#include <Babylon/Graphics/FrameBuffer.h>
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from '' to '', possible loss of data
 
 #include "Shaders/dx11/vs_nanovg_fill.h"
@@ -50,13 +50,107 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from 
 #include "Shaders/spirv/vs_nanovg_fill.h"
 #include "Shaders/spirv/fs_nanovg_fill.h"
 
+#include "Shaders/dx11/vs_fspass.h"
+#include "Shaders/dx11/fs_fspass.h"
+#include "Shaders/metal/vs_fspass.h"
+#include "Shaders/metal/fs_fspass.h"
+#include "Shaders/glsl/vs_fspass.h"
+#include "Shaders/glsl/fs_fspass.h"
+#include "Shaders/essl/vs_fspass.h"
+#include "Shaders/essl/fs_fspass.h"
+#include "Shaders/spirv/vs_fspass.h"
+#include "Shaders/spirv/fs_fspass.h"
+#include "nanovg_filterstack.h"
+
+struct PosTexCoord0Vertex
+{
+    float m_x;
+    float m_y;
+    float m_z;
+    float m_u;
+    float m_v;
+
+    static void init()
+    {
+        ms_layout
+            .begin()
+            .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+            .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
+            .end();
+    }
+
+    static bgfx::VertexLayout ms_layout;
+};
+
+bgfx::VertexLayout PosTexCoord0Vertex::ms_layout;
+
+void screenSpaceQuad(bgfx::Encoder* encoder, bool _originBottomLeft, float _width = 1.0f, float _height = 1.0f)
+{
+    if (3 == bgfx::getAvailTransientVertexBuffer(3, PosTexCoord0Vertex::ms_layout))
+    {
+        bgfx::TransientVertexBuffer vb;
+        bgfx::allocTransientVertexBuffer(&vb, 3, PosTexCoord0Vertex::ms_layout);
+        PosTexCoord0Vertex* vertex = (PosTexCoord0Vertex*)vb.data;
+
+        const float minx = -_width;
+        const float maxx = _width;
+        const float miny = 0.0f;
+        const float maxy = _height * 2.0f;
+
+        const float minu = -1.0f;
+        const float maxu = 1.0f;
+
+        const float zz = 0.0f;
+
+        float minv = 0.0f;
+        float maxv = 2.0f;
+
+        if (_originBottomLeft)
+        {
+            float temp = minv;
+            minv = maxv;
+            maxv = temp;
+
+            minv -= 1.0f;
+            maxv -= 1.0f;
+        }
+
+        vertex[0].m_x = minx;
+        vertex[0].m_y = miny;
+        vertex[0].m_z = zz;
+        vertex[0].m_u = minu;
+        vertex[0].m_v = minv;
+
+        vertex[1].m_x = maxx;
+        vertex[1].m_y = miny;
+        vertex[1].m_z = zz;
+        vertex[1].m_u = maxu;
+        vertex[1].m_v = minv;
+
+        vertex[2].m_x = maxx;
+        vertex[2].m_y = maxy;
+        vertex[2].m_z = zz;
+        vertex[2].m_u = maxu;
+        vertex[2].m_v = maxv;
+
+        //bgfx::setVertexBuffer(0, &vb);
+        encoder->setVertexBuffer(0, &vb);
+    }
+}
+
+
 static const bgfx::EmbeddedShader s_embeddedShadersBabylon[] =
 {
     BGFX_EMBEDDED_SHADER(vs_nanovg_fill),
     BGFX_EMBEDDED_SHADER(fs_nanovg_fill),
 
+    BGFX_EMBEDDED_SHADER(vs_fspass),
+    BGFX_EMBEDDED_SHADER(fs_fspass),
+
     BGFX_EMBEDDED_SHADER_END()
 };
+
+extern Babylon::Graphics::FrameBuffer* hackFrameBuffer;
 
 namespace
 {
@@ -67,7 +161,8 @@ namespace
         NSVG_SHADER_FILLGRAD,
         NSVG_SHADER_FILLIMG,
         NSVG_SHADER_SIMPLE,
-        NSVG_SHADER_IMG
+        NSVG_SHADER_IMG,
+        NSVG_SHADER_IMG_MODULATEGRAD,
     };
 
     // These are additional flags on top of NVGimageFlags.
@@ -103,12 +198,14 @@ namespace
     {
         int type;
         int image;
+        int image2;
         int pathOffset;
         int pathCount;
         int vertexOffset;
         int vertexCount;
         int uniformOffset;
         GLNVGblend blendFunc;
+        nanovg_filterstack filterStack;
     };
 
     struct GLNVGpath
@@ -139,6 +236,12 @@ namespace
         float strokeMult;
         float texType;
         float type;
+
+        // u_sdf
+        float sdfMin;
+        float sdfMax;
+        float sdfBlur;
+        float unused;
     };
 
     struct GLNVGcontext
@@ -146,6 +249,7 @@ namespace
         bx::AllocatorI* allocator;
 
         bgfx::ProgramHandle prog;
+        bgfx::ProgramHandle fsprog;
         bgfx::UniformHandle u_scissorMat;
         bgfx::UniformHandle u_paintMat;
         bgfx::UniformHandle u_innerCol;
@@ -155,11 +259,15 @@ namespace
         bgfx::UniformHandle u_extentRadius;
         bgfx::UniformHandle u_params;
         bgfx::UniformHandle u_halfTexel;
+        bgfx::UniformHandle u_sdf;
 
         bgfx::UniformHandle s_tex;
+        bgfx::UniformHandle s_tex2;
+        
 
         uint64_t state;
         bgfx::TextureHandle th;
+        bgfx::TextureHandle th2;
         bgfx::TextureHandle texMissing;
 
         bgfx::TransientVertexBuffer tvb;
@@ -276,7 +384,9 @@ namespace
         gl->u_scissorExtScale = bgfx::createUniform("u_scissorExtScale", bgfx::UniformType::Vec4);
         gl->u_extentRadius    = bgfx::createUniform("u_extentRadius",    bgfx::UniformType::Vec4);
         gl->u_params          = bgfx::createUniform("u_params",          bgfx::UniformType::Vec4);
+        gl->u_sdf             = bgfx::createUniform("u_sdf",             bgfx::UniformType::Vec4);
         gl->s_tex             = bgfx::createUniform("s_tex",             bgfx::UniformType::Sampler);
+        gl->s_tex2            = bgfx::createUniform("s_tex2",            bgfx::UniformType::Sampler);
 
         gl->u_halfTexel.idx = bgfx::kInvalidHandle;
 
@@ -440,6 +550,7 @@ namespace
         )
     {
         struct GLNVGtexture* tex = NULL;
+        struct GLNVGtexture* tex2 = NULL;
         float invxform[6] = {};
 
         bx::memSet(frag, 0, sizeof(*frag) );
@@ -468,6 +579,8 @@ namespace
         frag->strokeMult = (width*0.5f + fringe*0.5f) / fringe;
 
         gl->th = gl->texMissing;
+        gl->th2 = { bgfx::kInvalidHandle };
+
         if (paint->image != 0)
         {
             tex = glnvg__findTexture(gl, paint->image);
@@ -487,6 +600,17 @@ namespace
                 frag->texType = 2.0f;
             }
             gl->th = tex->id;
+
+            // tex2 is optional
+            if (paint->image2 != 0)
+            {
+                tex2 = glnvg__findTexture(gl, paint->image2); // TODO get paint image
+                if (tex)
+                {
+                    gl->th2 = tex2->id;
+                    frag->type = NSVG_SHADER_IMG_MODULATEGRAD;
+                }
+            }
         }
         else
         {
@@ -497,6 +621,9 @@ namespace
         }
 
         glnvg__xformToMat3x4(frag->paintMat, invxform);
+        frag->sdfMin = paint->sdfMin;
+        frag->sdfMax = paint->sdfMax;
+        frag->sdfBlur = paint->sdfBlur;
 
         return 1;
     }
@@ -521,7 +648,7 @@ namespace
         return (struct GLNVGfragUniforms*)&gl->uniforms[i];
     }
 
-    static void nvgRenderSetUniforms(struct GLNVGcontext* gl, int uniformOffset, int image)
+    static void nvgRenderSetUniforms(struct GLNVGcontext* gl, int uniformOffset, int image, int image2)
     {
         struct GLNVGfragUniforms* frag = nvg__fragUniformPtr(gl, uniformOffset);
         float tmp[9]; // Maybe there's a way to get rid of this...
@@ -535,6 +662,7 @@ namespace
         gl->encoder->setUniform(gl->u_scissorExtScale, &frag->scissorExt[0]);
         gl->encoder->setUniform(gl->u_extentRadius,    &frag->extent[0]);
         gl->encoder->setUniform(gl->u_params,          &frag->feather);
+        gl->encoder->setUniform(gl->u_sdf,             &frag->sdfMin);
 
         bgfx::TextureHandle handle = gl->texMissing;
 
@@ -552,8 +680,18 @@ namespace
                 }
             }
         }
-
         gl->th = handle;
+
+        bgfx::TextureHandle handle2 = gl->texMissing;
+        if (image2 != 0)
+        {
+            struct GLNVGtexture* tex = glnvg__findTexture(gl, image2);
+            if (tex != NULL)
+            {
+                handle2 = tex->id;
+            }
+        }
+        gl->th2 = handle2;
     }
 
     static void nvgRenderViewport(void* _userPtr, float width, float height, float /*devicePixelRatio*/)
@@ -585,7 +723,7 @@ namespace
         int i, npaths = call->pathCount;
 
         // set bindpoint for solid loc
-        nvgRenderSetUniforms(gl, call->uniformOffset, 0);
+        nvgRenderSetUniforms(gl, call->uniformOffset, 0, 0);
 
         for (i = 0; i < npaths; i++)
         {
@@ -607,13 +745,14 @@ namespace
                     );
                 gl->encoder->setVertexBuffer(0, &gl->tvb);
                 gl->encoder->setTexture(0, gl->s_tex, gl->th);
+                gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
                 fan(gl->encoder, paths[i].fillOffset, paths[i].fillCount);
                 gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
             }
         }
 
         // Draw aliased off-pixels
-        nvgRenderSetUniforms(gl, call->uniformOffset + gl->fragSize, call->image);
+        nvgRenderSetUniforms(gl, call->uniformOffset + gl->fragSize, call->image, call->image2);
 
         if (gl->edgeAntiAlias)
         {
@@ -632,6 +771,7 @@ namespace
                     );
                 gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
                 gl->encoder->setTexture(0, gl->s_tex, gl->th);
+                gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
                 gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
             }
         }
@@ -640,6 +780,7 @@ namespace
         gl->encoder->setState(gl->state);
         gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
         gl->encoder->setTexture(0, gl->s_tex, gl->th);
+        gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
         gl->encoder->setStencil(0
                 | BGFX_STENCIL_TEST_NOTEQUAL
                 | BGFX_STENCIL_FUNC_RMASK(0xff)
@@ -655,7 +796,7 @@ namespace
         struct GLNVGpath* paths = &gl->paths[call->pathOffset];
         int i, npaths = call->pathCount;
 
-        nvgRenderSetUniforms(gl, call->uniformOffset, call->image);
+        nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
 
         for (i = 0; i < npaths; i++)
         {
@@ -663,6 +804,7 @@ namespace
             gl->encoder->setState(gl->state);
             gl->encoder->setVertexBuffer(0, &gl->tvb);
             gl->encoder->setTexture(0, gl->s_tex, gl->th);
+            gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
             fan(gl->encoder, paths[i].fillOffset, paths[i].fillCount);
             gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
         }
@@ -677,6 +819,7 @@ namespace
                     );
                 gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
                 gl->encoder->setTexture(0, gl->s_tex, gl->th);
+                gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
                 gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
             }
         }
@@ -687,7 +830,7 @@ namespace
         struct GLNVGpath* paths = &gl->paths[call->pathOffset];
         int npaths = call->pathCount, i;
 
-        nvgRenderSetUniforms(gl, call->uniformOffset, call->image);
+        nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
 
         // Draw Strokes
         for (i = 0; i < npaths; i++)
@@ -697,6 +840,7 @@ namespace
                 );
             gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
             gl->encoder->setTexture(0, gl->s_tex, gl->th);
+            gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
             gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
         }
     }
@@ -705,12 +849,41 @@ namespace
     {
         if (3 <= call->vertexCount)
         {
+            /*
+            nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
+
+            gl->encoder->setState(gl->state);
+            gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
+            gl->encoder->setTexture(0, gl->s_tex, gl->th);
+            hackFrameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
+
+            // render to canvas
+            nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
+
+            gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
+                | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
+                | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
+
+            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(hackFrameBuffer->Handle()));
+            bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
+            screenSpaceQuad(gl->encoder, s_originBottomLeft);
+            gl->frameBuffer->Submit(*gl->encoder, gl->fsprog, BGFX_DISCARD_ALL);;
+            */
+            call->filterStack.Render([gl, call]() {
+                    nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
+
+                    gl->encoder->setState(gl->state);
+                    gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
+                    gl->encoder->setTexture(0, gl->s_tex, gl->th);
+                    gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
+                });
+            /*
             nvgRenderSetUniforms(gl, call->uniformOffset, call->image);
 
             gl->encoder->setState(gl->state);
             gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
             gl->encoder->setTexture(0, gl->s_tex, gl->th);
-            gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
+            gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);*/
         }
     }
 
@@ -765,6 +938,15 @@ namespace
                 , bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "fs_nanovg_fill")
                 , true
             );
+
+            gl->fsprog = bgfx::createProgram(
+                bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "vs_fspass")
+                , bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "fs_fspass")
+                , true
+            );
+
+            // Vertex layout
+            PosTexCoord0Vertex::init();
         }
 
         if (gl->ncalls > 0)
@@ -908,6 +1090,7 @@ namespace
         , const float* bounds
         , const NVGpath* paths
         , int npaths
+        , nanovg_filterstack& filterStack
         )
     {
         struct GLNVGcontext* gl = (struct GLNVGcontext*)_userPtr;
@@ -921,7 +1104,9 @@ namespace
         call->pathOffset = glnvg__allocPaths(gl, npaths);
         call->pathCount = npaths;
         call->image = paint->image;
+        call->image2 = paint->image2;
         call->blendFunc = glnvg__blendCompositeOperation(compositeOperation);
+        call->filterStack = filterStack;
 
         if (npaths == 1 && paths[0].convex)
         {
@@ -1005,6 +1190,7 @@ namespace
         call->pathOffset = glnvg__allocPaths(gl, npaths);
         call->pathCount = npaths;
         call->image = paint->image;
+        call->image2 = paint->image2;
         call->blendFunc = glnvg__blendCompositeOperation(compositeOperation);
 
         // Allocate vertices for all the paths.
@@ -1039,6 +1225,7 @@ namespace
 
         call->type = GLNVG_TRIANGLES;
         call->image = paint->image;
+        call->image2 = paint->image2;
         call->blendFunc = glnvg__blendCompositeOperation(compositeOperation);
 
         // Allocate vertices for all the paths.
@@ -1050,7 +1237,7 @@ namespace
         call->uniformOffset = glnvg__allocFragUniforms(gl, 1);
         frag = nvg__fragUniformPtr(gl, call->uniformOffset);
         glnvg__convertPaint(gl, frag, paint, scissor, 1.0f, 1.0f);
-        frag->type = NSVG_SHADER_IMG;
+        frag->type = bgfx::isValid(gl->th2) ? NSVG_SHADER_IMG_MODULATEGRAD : NSVG_SHADER_IMG;
     }
 
     static void nvgRenderDelete(void* _userPtr)
@@ -1078,6 +1265,7 @@ namespace
         bgfx::destroy(gl->u_extentRadius);
         bgfx::destroy(gl->u_params);
         bgfx::destroy(gl->s_tex);
+        bgfx::destroy(gl->s_tex2);
 
         if (bgfx::isValid(gl->u_halfTexel) )
         {
