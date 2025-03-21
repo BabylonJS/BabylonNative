@@ -182,7 +182,6 @@ CreateBoxAsync(scene).then(function () {
                 context.font = "bold 60px monospace";
                 context.fillText("Gradient Text!", 10, 420);
 
-                
                 context.lineWidth = 5;
                 // Rounded rectangle with zero radius (specified as a number)
                 context.strokeStyle = "red";
@@ -213,6 +212,16 @@ CreateBoxAsync(scene).then(function () {
                 context.beginPath();
                 context.roundRect(400, 350, -200, 100, [0, 30, 50, 60]);
                 context.stroke();
+
+                // Path 2D
+                context.strokeStyle = "black";
+                context.lineWidth = 1;
+                let path = new _native.Path2D("M390,30 A 20, 20 0, 0, 1 430, 30 A 20, 20 0, 0, 1 470, 30 Q 470, 60 430, 90 Q 390, 60 390, 30 z"); // heart
+                //let path2 = new _native.Path2D("M380, 10 h100 v100 h-100 Z"); // square
+                //path.addPath(path2 , { a: 1, b: 0, c: 0, d: 1, e: 0, f: -5 }); // push square 5px up to center
+                //context.stroke(path);
+                context.fillStyle = "blue";
+                context.fill(path);
 
                 // Draw clipped round rect
                 // TODO: this is currently broken, clipping area does not have round corners

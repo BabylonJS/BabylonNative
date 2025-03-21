@@ -4,6 +4,7 @@
 #include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/Graphics/DeviceContext.h>
 #include "Image.h"
+#include "Path2D.h"
 
 struct NVGcontext;
 
@@ -119,6 +120,7 @@ namespace Babylon::Polyfills::Internal
         std::unordered_map<const NativeCanvasImage*, int> m_nvgImageIndices;
         void BindFillStyle(const Napi::CallbackInfo& info, float left, float top, float width, float height);
         void FlushGraphicResources() override;
+        void PlayPath2D(const NativeCanvasPath2D* path);
 
         friend class Canvas;
     };
