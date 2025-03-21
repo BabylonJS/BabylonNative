@@ -1,6 +1,6 @@
 #pragma once
 #include <regex>
-#include "nanovg.h"
+#include "nanovg/nanovg.h"
 
 namespace Babylon::Polyfills::Internal
 {
