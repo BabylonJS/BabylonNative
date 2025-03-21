@@ -213,15 +213,24 @@ CreateBoxAsync(scene).then(function () {
                 context.roundRect(400, 350, -200, 100, [0, 30, 50, 60]);
                 context.stroke();
 
-                // Path 2D
+                // Path 2D stroke
                 context.strokeStyle = "black";
-                context.lineWidth = 1;
-                let path = new _native.Path2D("M390,30 A 20, 20 0, 0, 1 430, 30 A 20, 20 0, 0, 1 470, 30 Q 470, 60 430, 90 Q 390, 60 390, 30 z"); // heart
-                //let path2 = new _native.Path2D("M380, 10 h100 v100 h-100 Z"); // square
-                //path.addPath(path2 , { a: 1, b: 0, c: 0, d: 1, e: 0, f: -5 }); // push square 5px up to center
-                //context.stroke(path);
-                context.fillStyle = "blue";
-                context.fill(path);
+                context.lineWidth = 2;
+                let heartPath = new _native.Path2D("M390,30 A 20, 20 0, 0, 1 430, 30 A 20, 20 0, 0, 1 470, 30 Q 470, 60 430, 90 Q 390, 60 390, 30 z");
+                let squarePath = new _native.Path2D("M380, 10 h100 v100 h-100 Z");
+                heartPath.addPath(squarePath, { a: 1, b: 0, c: 0, d: 1, e: 0, f: -5 }); // push square 5px up to center heart.
+                context.stroke(heartPath);
+
+                // Path 2D fill
+                context.fillStyle = "yellow";
+                let diamondPath = new _native.Path2D();
+                diamondPath.moveTo(350, 200); // Start at the center
+                diamondPath.lineTo(375, 175); // Move to the top point
+                diamondPath.lineTo(400, 200); // Move to the right point
+                diamondPath.lineTo(375, 225); // Move to the bottom point
+                diamondPath.lineTo(350, 200); // Close back to the starting point
+                context.fill(diamondPath);
+
 
                 // Draw clipped round rect
                 // TODO: this is currently broken, clipping area does not have round corners
