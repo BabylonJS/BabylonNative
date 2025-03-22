@@ -62,6 +62,9 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from 
 #include "Shaders/spirv/fs_fspass.h"
 #include "nanovg_filterstack.h"
 
+// TODO: define this somewhere less hacky
+FrameBufferPool mPool;
+
 struct PosTexCoord0Vertex
 {
     float m_x;
@@ -149,8 +152,6 @@ static const bgfx::EmbeddedShader s_embeddedShadersBabylon[] =
 
     BGFX_EMBEDDED_SHADER_END()
 };
-
-extern Babylon::Graphics::FrameBuffer* hackFrameBuffer;
 
 namespace
 {
@@ -272,6 +273,7 @@ namespace
 
         bgfx::TransientVertexBuffer tvb;
         Babylon::Graphics::FrameBuffer* frameBuffer;
+        // TODO: instead of frameBuffer, TargetManager?
         bgfx::Encoder* encoder;
 
         struct GLNVGtexture* textures;
@@ -867,6 +869,13 @@ namespace
     {
         if (3 <= call->vertexCount)
         {
+            // TODO (cedric): nanovg should query a new framebuffer and discard it when not needed anymore. repeat that each frame. I would start with that 
+            // NOTE: we have access to mPool here, so can acquire
+            // NOTE: if i use bgfx transient buffer, i don't need to release it
+
+            // HACK: Sanity check that we can create FrameBuffers in Canvas.cpp, and access them in nanovg_babylon.cpp
+            Babylon::Graphics::FrameBuffer* acquiredFrameBuffer = mPool.acquire();
+
             /*
             nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
 
@@ -1358,7 +1367,13 @@ error:
 
     return NULL;
 }
+void nvgSetTargetManager(FrameBufferPool pool)
+{
+    mPool = pool;
+}
 
+// TODO: I think need to pass down render target manager into this.. (instead of frameBuffer)
+// TODO2: For now, can pass render target manager, then set gl->frameBuffer immediately.. account for cleanup later in Context.cpp
 void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder)
 {
     struct GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(_ctx)->userPtr;

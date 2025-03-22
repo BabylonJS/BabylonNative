@@ -30,8 +30,6 @@
 #include "LineCaps.h"
 #include "Gradient.h"
 
-extern Babylon::Graphics::FrameBuffer* hackFrameBuffer;
-
 /*
 Most of these context methods are preliminary work. They are currenbly not tested properly.
 */
@@ -120,6 +118,19 @@ namespace Babylon::Polyfills::Internal
         {
             m_fonts[font.first] = nvgCreateFontMem(*m_nvg, font.first.c_str(), font.second.data(), static_cast<int>(font.second.size()), 0);
         }
+
+        // TODO: check is capturing 'this' ok? Its be reference right?
+        std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this]() -> Babylon::Graphics::FrameBuffer* {
+            return this->m_canvas->PoolAcquire();
+        };
+        std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
+            this->m_canvas->PoolRelease(frameBuffer);
+        };
+        // TODO: Confirm that pool is initilalized before nanovg_babylon.cpp calls acquire
+        nvgSetTargetManager({
+            acquire,
+            release
+        });
     }
 
     Context::~Context()
@@ -174,6 +185,8 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
+    // TODO: figure out how a params.renderCreateFrameBuffer from nanovg_babylon.cpp would ultimated then call Canvas::RequestRenderTarget
+
     void Context::FillRect(const Napi::CallbackInfo& info)
     {
         auto left = info[0].As<Napi::Number>().FloatValue();
@@ -189,11 +202,12 @@ namespace Babylon::Polyfills::Internal
         nvgRect(*m_nvg, left, top, width, height);
 
         BindFillStyle(info, left, top, width, height);
+        // TODO: also do this for other FillX methods
         if (m_filter.length())
         {
             nanovg_filterstack filterStack;
             filterStack.ParseString(m_filter);
-            nvgFilterStack(*m_nvg, filterStack);
+            nvgFilterStack(*m_nvg, filterStack); // sets filterStack on nanovg
         }
         nvgFill(*m_nvg);
         SetDirty();
@@ -578,11 +592,12 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
+    // TODO: should we still keep primary frame? so alongside FrameBufferPool...
     void Context::DeferredFlushFrame()
     {
         // on some systems (Ubuntu), the framebuffer contains garbage.
         // Unlike other systems where it's cleared.
-        bool needClear = m_canvas->UpdateRenderTarget();
+        bool needClear = m_canvas->UpdateRenderTarget(); // NOTE: this will recreate framebuffers IFF size changes. Otherwise, reuses previous
 
         arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, needClear, cancellationSource{m_cancellationSource}]() {
             return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{m_update.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() {
@@ -599,16 +614,34 @@ namespace Babylon::Polyfills::Internal
                 const auto height = m_canvas->GetHeight();
 
 
-                hackFrameBuffer->Bind(*encoder);
+                // TODO: Consider how filters framebuffer plays into this Context.cpp loop.. Should we be replacing GetFrameBuffer() with like GetFrameBufferManager()?
+                // NOTE: I think encoder might be how stuff from Context.cpp gets passed to nanovg_babylon.cpp, then nanovg.cpp
+                // NOTE2: almost certainly as a result of Bind(), then nvgSetFrameBufferAndEncoder (which we own in nanovg_babylon.cpp)
+                // NOTE3: seems like you can bind multiple framebuffers so same encoder. bind probably needs to happen as part of render target mgmt?
+                // NOTE4: probably fine because its all just for a single frame anyway...
 
+                // SOLUTION: would it make sense to just iterate through pool and bind to encoder?
+                // This would happen every frame. FB won't always be re-created, but not sure if encoder is?!
+                for (auto& buffer : m_canvas->mPoolBuffers)
+                {
+                    // sanity check no buffers should have been acquired yet
+                    assert(buffer.isAvailable == true);
+                    buffer.frameBuffer->Bind(*encoder);
+                    buffer.frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
+                }
 
-                hackFrameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
                 nvgBeginFrame(*m_nvg, float(width), float(height), 1.0f);
                 nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder);
                 nvgEndFrame(*m_nvg);
                 frameBuffer.Unbind(*encoder);
 
-                hackFrameBuffer->Unbind(*encoder);
+                for (auto& buffer : m_canvas->mPoolBuffers)
+                {
+                    // sanity check no unreleased buffers
+                    assert(buffer.isAvailable == true);
+                    buffer.frameBuffer->Unbind(*encoder);
+                }
+
                 m_dirty = false;
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
                 if (!cancellationSource->cancelled() && result.has_error())

@@ -66,7 +66,20 @@ namespace Babylon::Polyfills::Internal
 
         // returns true if frameBuffer size has changed
         bool UpdateRenderTarget();
-        Babylon::Graphics::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
+        Graphics::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
+
+        // render target management
+        // NOTE: In the same manner than main frame buffer methods live in Canvas.cpp, pool management is also Canvas.cpp
+        struct PoolBuffer
+        {
+            Graphics::FrameBuffer* frameBuffer;
+            bool isAvailable;
+        };
+        std::vector<PoolBuffer> mPoolBuffers;
+        void NativeCanvas::PoolInit(int nBuffers);
+        void NativeCanvas::PoolClear();
+        Graphics::FrameBuffer* NativeCanvas::PoolAcquire();
+        void NativeCanvas::PoolRelease(Graphics::FrameBuffer* frameBuffer);
 
         Graphics::DeviceContext& GetGraphicsContext()
         {

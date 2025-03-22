@@ -2,6 +2,7 @@
 #include <regex>
 
 std::regex blurRegex(R"(blur\((\d*\.?\d+)(px|rem)?\)|blur\(\))");
+std::regex noneRegex(R"(^\s*none\s*$)");
 
 nanovg_filterstack::nanovg_filterstack()
 {
@@ -12,7 +13,7 @@ nanovg_filterstack::nanovg_filterstack()
 bool nanovg_filterstack::ValidString(const std::string& string)
 {
     std::smatch match;
-    return std::regex_match(string, match, blurRegex);
+    return std::regex_match(string, match, noneRegex) || std::regex_match(string, match, blurRegex);
 }
 
 void nanovg_filterstack::ParseString(const std::string& string)
@@ -59,6 +60,10 @@ void nanovg_filterstack::Render(std::function<void()> element)
         // TODO: move over Cedric's glnvg__triangles hacks from nanovg_babylon.cpp
         // TODO: Instead of hackyFrameBuffer, implement render target manager
         // TODO: may need to pass down gl + call from glnvg__triangles + glnvg__stroke?
+
+
+        // NOTE: fine to encapsulate hackFrambuffer in a target manager first.
+        // NOTE: basically hackframebuffer manager needs to be accessble from here in nanovg_filterstack.cpp
         for (int i = 0; i < stackElements.size(); i++)
         {
             // get new render target

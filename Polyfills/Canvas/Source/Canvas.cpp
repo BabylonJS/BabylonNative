@@ -8,13 +8,12 @@
 #include "Colors.h"
 #include "Gradient.h"
 
+const int POOL_SIZE = 3;
+
 namespace
 {
     constexpr auto JS_CANVAS_NAME = "_CanvasImpl";
 }
-
-bgfx::FrameBufferHandle hackTextBuffer{ bgfx::kInvalidHandle };
-Babylon::Graphics::FrameBuffer* hackFrameBuffer;
 
 namespace Babylon::Polyfills::Internal
 {
@@ -115,10 +114,85 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
+    void NativeCanvas::PoolInit(int size)
+    {
+        for (int i = 0; i < size; ++i)
+        {
+
+            bgfx::FrameBufferHandle TextBuffer{ bgfx::kInvalidHandle };
+            Graphics::FrameBuffer* FrameBuffer;
+
+            int width(256), height(256);
+            std::array<bgfx::TextureHandle, 2> textures{
+            bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
+            bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT) };
+
+            std::array<bgfx::Attachment, textures.size()> attachments{};
+            for (size_t idx = 0; idx < attachments.size(); ++idx)
+            {
+                attachments[idx].init(textures[idx]);
+            }
+            TextBuffer = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
+
+            FrameBuffer = new Graphics::FrameBuffer(m_graphicsContext, TextBuffer, width, height, false, false, false);
+            // TODO: confirm why m_texture is reset, esp for pool framebuffers
+            if (m_texture)
+            {
+                m_texture.reset();
+            }
+            mPoolBuffers.push_back({FrameBuffer, true});
+        }
+    }
+
+    void NativeCanvas::PoolClear()
+    {
+        for (auto& buffer : mPoolBuffers)
+        {
+            if (buffer.frameBuffer)
+            {
+                // buffer.frameBuffer->Dispose(); // TODO: do we need to Dispose() before delete?
+                delete buffer.frameBuffer;
+                buffer.frameBuffer = nullptr;
+            }
+        }
+        mPoolBuffers.clear();
+    }
+
+    Graphics::FrameBuffer* NativeCanvas::PoolAcquire()
+    {
+        for (auto& buffer : mPoolBuffers)
+        {
+            if (buffer.isAvailable)
+            {
+                buffer.isAvailable = false;
+                return buffer.frameBuffer;
+            }
+        }
+    }
+
+    void NativeCanvas::PoolRelease(Graphics::FrameBuffer* frameBuffer)
+    {
+        for (auto& buffer : mPoolBuffers)
+        {
+            if (buffer.frameBuffer == frameBuffer)
+            {
+                // TODO: clear framebuffer?
+                buffer.isAvailable = true;
+                return;
+            }
+        }
+    }
+
+    // NOTE: I'm keeping UpdateRenderTarget around for the primary framebuffer. Pool is only for multi-pass rendering.
+    // NOTE2: UpdateRenderTarget gets called from Context::DeferredFlushFrame (which in turn gets called on SetDirty ie. per rendered frame)
+    // NOTE: Canvas::m_dirty is only set when the width or height changes. NOT every frame! We'll of course need to do the same for pool buffers.
+    // MAKE COMMENT: to say only defined new framebuffers on size change
     bool NativeCanvas::UpdateRenderTarget()
     {
         if (m_dirty)
         {
+            // TODO: Can delete this whole block if we decide to use pool for primary framebuffer
+            // TODO2: probably want to reuse the clear code for both primary & pool fbs?
             {
                 std::array<bgfx::TextureHandle, 2> textures{
                    bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
@@ -139,27 +213,13 @@ namespace Babylon::Polyfills::Internal
                     m_texture.reset();
                 }
             }
-
-            // HACK
+            // NOTE: This is called width / height has changed. m_dirty is set by width/height change in constructor. So this is also initialization
+            // NOTE2: anyway, whats important is that UpdateRenderTarget is the trigger for defining new framebuffers. on init, and on size change
             {
-                int width(256), height(256);
-                std::array<bgfx::TextureHandle, 2> textures{
-                bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
-                bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT) };
-
-                std::array<bgfx::Attachment, textures.size()> attachments{};
-                for (size_t idx = 0; idx < attachments.size(); ++idx)
-                {
-                    attachments[idx].init(textures[idx]);
-                }
-                hackTextBuffer = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
-
-                hackFrameBuffer = new Babylon::Graphics::FrameBuffer(m_graphicsContext, hackTextBuffer, width, height, false, false, false);
-                if (m_texture)
-                {
-                    m_texture.reset();
-                }
+                PoolClear();
+                PoolInit(POOL_SIZE);
             }
+
             return true;
         }
         return false;
@@ -188,6 +248,7 @@ namespace Babylon::Polyfills::Internal
     {
         m_frameBuffer.reset();
         m_texture.reset();
+        PoolClear(); // TODO: confirm we want to do this?
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
