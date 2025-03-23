@@ -27,8 +27,8 @@ struct FrameBufferPool
     std::function<Babylon::Graphics::FrameBuffer*()> acquire;
     std::function<void(Babylon::Graphics::FrameBuffer*)> release;
 };
-FrameBufferPool mPool;
-inline void nvgSetTargetManager(FrameBufferPool pool) { mPool = pool; };
+
+void nvgSetTargetManager(FrameBufferPool pool);
 void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder);
 
 ///

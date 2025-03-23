@@ -50,16 +50,6 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from 
 #include "Shaders/spirv/vs_nanovg_fill.h"
 #include "Shaders/spirv/fs_nanovg_fill.h"
 
-#include "Shaders/dx11/vs_fspass.h"
-#include "Shaders/dx11/fs_fspass.h"
-#include "Shaders/metal/vs_fspass.h"
-#include "Shaders/metal/fs_fspass.h"
-#include "Shaders/glsl/vs_fspass.h"
-#include "Shaders/glsl/fs_fspass.h"
-#include "Shaders/essl/vs_fspass.h"
-#include "Shaders/essl/fs_fspass.h"
-#include "Shaders/spirv/vs_fspass.h"
-#include "Shaders/spirv/fs_fspass.h"
 #include "nanovg_filterstack.h"
 
 // TODO: define this somewhere less hacky
@@ -146,9 +136,6 @@ static const bgfx::EmbeddedShader s_embeddedShadersBabylon[] =
 {
     BGFX_EMBEDDED_SHADER(vs_nanovg_fill),
     BGFX_EMBEDDED_SHADER(fs_nanovg_fill),
-
-    BGFX_EMBEDDED_SHADER(vs_fspass),
-    BGFX_EMBEDDED_SHADER(fs_fspass),
 
     BGFX_EMBEDDED_SHADER_END()
 };
@@ -250,7 +237,6 @@ namespace
         bx::AllocatorI* allocator;
 
         bgfx::ProgramHandle prog;
-        bgfx::ProgramHandle fsprog;
         bgfx::UniformHandle u_scissorMat;
         bgfx::UniformHandle u_paintMat;
         bgfx::UniformHandle u_innerCol;
@@ -273,7 +259,6 @@ namespace
 
         bgfx::TransientVertexBuffer tvb;
         Babylon::Graphics::FrameBuffer* frameBuffer;
-        // TODO: instead of frameBuffer, TargetManager?
         bgfx::Encoder* encoder;
 
         struct GLNVGtexture* textures;
@@ -848,7 +833,8 @@ namespace
         }
         */
 
-        call->filterStack.Render([gl, call]() {
+        bgfx::ProgramHandle firstProg = gl->prog;
+        std::function firstPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *outBuffer) {
             // Draw Strokes
             struct GLNVGpath* paths = &gl->paths[call->pathOffset];
             int npaths = call->pathCount, i;
@@ -860,22 +846,40 @@ namespace
                 gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
                 gl->encoder->setTexture(0, gl->s_tex, gl->th);
                 gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
-                gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
+                outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
             }
-        });
+        };
+        std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
+            nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
+            // TODO: Do we need to tack on BGFX_STATE_PT_TRISTRIP?
+            gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
+                | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
+                | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
+            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
+            bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
+            screenSpaceQuad(gl->encoder, s_originBottomLeft);
+            outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
+        };
+        Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
+
+        std::function acquire = [&]() -> Babylon::Graphics::FrameBuffer* {
+            Babylon::Graphics::FrameBuffer *frameBuffer = mPool.acquire();
+            frameBuffer->Bind(*gl->encoder);
+            return frameBuffer;
+        };
+
+        std::function release = [&](Babylon::Graphics::FrameBuffer* frameBuffer) {
+            frameBuffer->Unbind(*gl->encoder);
+            mPool.release(frameBuffer);
+        };
+
+        call->filterStack.Render(firstProg, firstPass, filterPass, finalFrameBuffer, acquire, release);
     }
 
     static void glnvg__triangles(struct GLNVGcontext* gl, struct GLNVGcall* call)
     {
         if (3 <= call->vertexCount)
         {
-            // TODO (cedric): nanovg should query a new framebuffer and discard it when not needed anymore. repeat that each frame. I would start with that 
-            // NOTE: we have access to mPool here, so can acquire
-            // NOTE: if i use bgfx transient buffer, i don't need to release it
-
-            // HACK: Sanity check that we can create FrameBuffers in Canvas.cpp, and access them in nanovg_babylon.cpp
-            Babylon::Graphics::FrameBuffer* acquiredFrameBuffer = mPool.acquire();
-
             /*
             nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
 
@@ -896,21 +900,48 @@ namespace
             screenSpaceQuad(gl->encoder, s_originBottomLeft);
             gl->frameBuffer->Submit(*gl->encoder, gl->fsprog, BGFX_DISCARD_ALL);;
             */
-            call->filterStack.Render([gl, call]() {
-                    nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
 
-                    gl->encoder->setState(gl->state);
-                    gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
-                    gl->encoder->setTexture(0, gl->s_tex, gl->th);
-                    gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
-                });
             /*
             nvgRenderSetUniforms(gl, call->uniformOffset, call->image);
 
             gl->encoder->setState(gl->state);
             gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
             gl->encoder->setTexture(0, gl->s_tex, gl->th);
-            gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);*/
+            gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
+            */
+
+            bgfx::ProgramHandle firstProg = gl->prog;
+            std::function firstPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *outBuffer) {
+                nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
+                gl->encoder->setState(gl->state);
+                gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
+                gl->encoder->setTexture(0, gl->s_tex, gl->th);
+                outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
+            };
+            std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
+                nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
+                gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
+                    | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
+                    | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
+                gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
+                bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
+                screenSpaceQuad(gl->encoder, s_originBottomLeft);
+                outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
+			};
+            Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
+
+            std::function acquire = [&]() -> Babylon::Graphics::FrameBuffer* {
+                Babylon::Graphics::FrameBuffer *frameBuffer = mPool.acquire();
+                frameBuffer->Bind(*gl->encoder);
+                return frameBuffer;
+            };
+
+            std::function release = [&](Babylon::Graphics::FrameBuffer* frameBuffer) {
+                frameBuffer->Unbind(*gl->encoder);
+                mPool.release(frameBuffer);
+            };
+
+            call->filterStack.Render(firstProg, firstPass, filterPass, finalFrameBuffer, acquire, release);
         }
     }
 
@@ -957,18 +988,13 @@ namespace
     {
         struct GLNVGcontext* gl = (struct GLNVGcontext*)_userPtr;
         //gl->frameBuffer->SetViewPort(gl->encoder, 0.f, 0.f, gl->view[0], gl->view[1]);
+        // NOTE: I'm not sure why we need to re-define fill in every nvgRenderFlush
         if (!gl->prog.idx)
         {
             bgfx::RendererType::Enum type = bgfx::getRendererType();
             gl->prog = bgfx::createProgram(
                   bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "vs_nanovg_fill")
                 , bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "fs_nanovg_fill")
-                , true
-            );
-
-            gl->fsprog = bgfx::createProgram(
-                bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "vs_fspass")
-                , bgfx::createEmbeddedShader(s_embeddedShadersBabylon, type, "fs_fspass")
                 , true
             );
 
@@ -995,6 +1021,8 @@ namespace
             for (uint32_t ii = 0, num = gl->ncalls; ii < num; ++ii)
             {
                 struct GLNVGcall* call = &gl->calls[ii];
+                nanovg_filterstack fs = call->filterStack;
+
                 const GLNVGblend* blend = &call->blendFunc;
                 gl->state = BGFX_STATE_BLEND_FUNC_SEPARATE(blend->srcRGB, blend->dstRGB, blend->srcAlpha, blend->dstAlpha)
                     | BGFX_STATE_WRITE_RGB
@@ -1206,6 +1234,7 @@ namespace
         , float strokeWidth
         , const struct NVGpath* paths
         , int npaths
+        , nanovg_filterstack& filterStack
         )
     {
         struct GLNVGcontext* gl = (struct GLNVGcontext*)_userPtr;
@@ -1219,6 +1248,7 @@ namespace
         call->image = paint->image;
         call->image2 = paint->image2;
         call->blendFunc = glnvg__blendCompositeOperation(compositeOperation);
+        call->filterStack = filterStack;
 
         // Allocate vertices for all the paths.
         maxverts = glnvg__maxVertCount(paths, npaths);
@@ -1244,7 +1274,7 @@ namespace
     }
 
     static void nvgRenderTriangles(void* _userPtr, struct NVGpaint* paint, NVGcompositeOperationState compositeOperation, struct NVGscissor* scissor,
-                                       const struct NVGvertex* verts, int nverts)
+                                       const struct NVGvertex* verts, int nverts, nanovg_filterstack& filterStack)
     {
         struct GLNVGcontext* gl = (struct GLNVGcontext*)_userPtr;
         struct GLNVGcall* call = glnvg__allocCall(gl);
@@ -1254,6 +1284,7 @@ namespace
         call->image = paint->image;
         call->image2 = paint->image2;
         call->blendFunc = glnvg__blendCompositeOperation(compositeOperation);
+        call->filterStack = filterStack;
 
         // Allocate vertices for all the paths.
         call->vertexOffset = glnvg__allocVerts(gl, nverts);
@@ -1367,13 +1398,13 @@ error:
 
     return NULL;
 }
+// TODO: remove this, move to nvgSetFrameBufferAndEncoder
 void nvgSetTargetManager(FrameBufferPool pool)
 {
     mPool = pool;
 }
 
-// TODO: I think need to pass down render target manager into this.. (instead of frameBuffer)
-// TODO2: For now, can pass render target manager, then set gl->frameBuffer immediately.. account for cleanup later in Context.cpp
+// TODO: Might make sense to pass frame buffer pool here. That way we can Bind/Unbind from encoder in acquire/release.
 void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder)
 {
     struct GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(_ctx)->userPtr;

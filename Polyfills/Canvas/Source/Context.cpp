@@ -202,13 +202,14 @@ namespace Babylon::Polyfills::Internal
         nvgRect(*m_nvg, left, top, width, height);
 
         BindFillStyle(info, left, top, width, height);
-        // TODO: also do this for other FillX methods
+
         if (m_filter.length())
         {
             nanovg_filterstack filterStack;
             filterStack.ParseString(m_filter);
             nvgFilterStack(*m_nvg, filterStack); // sets filterStack on nanovg
         }
+
         nvgFill(*m_nvg);
         SetDirty();
     }
@@ -512,6 +513,13 @@ namespace Babylon::Polyfills::Internal
             }
         }
 
+        if (m_filter.length())
+        {
+            nanovg_filterstack filterStack;
+            filterStack.ParseString(m_filter);
+            nvgFilterStack(*m_nvg, filterStack); // sets filterStack on nanovg
+        }
+
         nvgStroke(*m_nvg);
         SetDirty();
     }
@@ -578,6 +586,13 @@ namespace Babylon::Polyfills::Internal
         {
             BindFillStyle(info, 0.f, 0.f, x, y);
 
+            if (m_filter.length())
+            {
+                nanovg_filterstack filterStack;
+                filterStack.ParseString(m_filter);
+                nvgFilterStack(*m_nvg, filterStack); // sets filterStack on nanovg
+            }
+
             nvgText(*m_nvg, x, y, text.c_str(), nullptr);
             SetDirty();
         }
@@ -592,7 +607,7 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    // TODO: should we still keep primary frame? so alongside FrameBufferPool...
+    // NOTE: Currently, we keep primary frame seperate. Should it come from pool?
     void Context::DeferredFlushFrame()
     {
         // on some systems (Ubuntu), the framebuffer contains garbage.
@@ -613,21 +628,12 @@ namespace Babylon::Polyfills::Internal
                 const auto width = m_canvas->GetWidth();
                 const auto height = m_canvas->GetHeight();
 
-
-                // TODO: Consider how filters framebuffer plays into this Context.cpp loop.. Should we be replacing GetFrameBuffer() with like GetFrameBufferManager()?
-                // NOTE: I think encoder might be how stuff from Context.cpp gets passed to nanovg_babylon.cpp, then nanovg.cpp
-                // NOTE2: almost certainly as a result of Bind(), then nvgSetFrameBufferAndEncoder (which we own in nanovg_babylon.cpp)
-                // NOTE3: seems like you can bind multiple framebuffers so same encoder. bind probably needs to happen as part of render target mgmt?
-                // NOTE4: probably fine because its all just for a single frame anyway...
-
-                // SOLUTION: would it make sense to just iterate through pool and bind to encoder?
-                // This would happen every frame. FB won't always be re-created, but not sure if encoder is?!
                 for (auto& buffer : m_canvas->mPoolBuffers)
                 {
                     // sanity check no buffers should have been acquired yet
                     assert(buffer.isAvailable == true);
-                    buffer.frameBuffer->Bind(*encoder);
-                    buffer.frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
+                    // buffer.frameBuffer->Bind(*encoder); // TODO: remove this, should be done in Acquire
+                    // buffer.frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0); // TODO: confirm that this not necessary because of ScreenSpaceQuad??
                 }
 
                 nvgBeginFrame(*m_nvg, float(width), float(height), 1.0f);
@@ -639,7 +645,7 @@ namespace Babylon::Polyfills::Internal
                 {
                     // sanity check no unreleased buffers
                     assert(buffer.isAvailable == true);
-                    buffer.frameBuffer->Unbind(*encoder);
+                    // buffer.frameBuffer->Unbind(*encoder); // TODO: remove this after I implement Bind / Unbind as part of acquire/release
                 }
 
                 m_dirty = false;

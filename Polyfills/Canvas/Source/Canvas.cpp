@@ -168,6 +168,8 @@ namespace Babylon::Polyfills::Internal
                 return buffer.frameBuffer;
             }
         }
+        // TODO: If no buffers available, pool wasn't large enough. Should it automatically resize?
+        throw std::runtime_error{"No available frame buffer in pool"};
     }
 
     void NativeCanvas::PoolRelease(Graphics::FrameBuffer* frameBuffer)
@@ -176,23 +178,19 @@ namespace Babylon::Polyfills::Internal
         {
             if (buffer.frameBuffer == frameBuffer)
             {
-                // TODO: clear framebuffer?
+                // TODO: clear framebuffer? i think has to be done in nanovg_babylon.cpp / nanovg_filterstack.cpp before releasing back to pool
                 buffer.isAvailable = true;
                 return;
             }
         }
     }
 
-    // NOTE: I'm keeping UpdateRenderTarget around for the primary framebuffer. Pool is only for multi-pass rendering.
-    // NOTE2: UpdateRenderTarget gets called from Context::DeferredFlushFrame (which in turn gets called on SetDirty ie. per rendered frame)
-    // NOTE: Canvas::m_dirty is only set when the width or height changes. NOT every frame! We'll of course need to do the same for pool buffers.
-    // MAKE COMMENT: to say only defined new framebuffers on size change
+    // NOTE: This only runs when canvas size changes (inc. init?). It'll trigger re-creation of framebuffers
     bool NativeCanvas::UpdateRenderTarget()
     {
         if (m_dirty)
         {
             // TODO: Can delete this whole block if we decide to use pool for primary framebuffer
-            // TODO2: probably want to reuse the clear code for both primary & pool fbs?
             {
                 std::array<bgfx::TextureHandle, 2> textures{
                    bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
@@ -213,13 +211,10 @@ namespace Babylon::Polyfills::Internal
                     m_texture.reset();
                 }
             }
-            // NOTE: This is called width / height has changed. m_dirty is set by width/height change in constructor. So this is also initialization
-            // NOTE2: anyway, whats important is that UpdateRenderTarget is the trigger for defining new framebuffers. on init, and on size change
             {
                 PoolClear();
                 PoolInit(POOL_SIZE);
             }
-
             return true;
         }
         return false;

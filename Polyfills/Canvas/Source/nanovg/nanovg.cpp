@@ -676,7 +676,7 @@ void nvgReset(NVGcontext* ctx)
 	state->fontBlur = 0.0f;
 	state->textAlign = NVG_ALIGN_LEFT | NVG_ALIGN_BASELINE;
 	state->fontId = 0;
-	state->m_filterStack.Clear();
+	state->m_filterStack.Clear(); // NOTE: does it make sense to .Clear()? or is it better to set to null
 }
 
 // State setting
@@ -795,6 +795,7 @@ void nvgFillColor(NVGcontext* ctx, NVGcolor color)
 	nvg__setPaintColor(&state->fill, color);
 }
 
+// should be set before a draw (eg. stroke, fill). a copy of filter stack is attached to the draw call for drawing filters
 void nvgFilterStack(NVGcontext* ctx, nanovg_filterstack& filterStack)
 {
 	NVGstate* state = nvg__getState(ctx);
@@ -2270,7 +2271,7 @@ void nvgStroke(NVGcontext* ctx)
 		nvg__expandStroke(ctx, strokeWidth*0.5f, 0.0f, state->lineCap, state->lineJoin, state->miterLimit);
 
 	ctx->params.renderStroke(ctx->params.userPtr, &strokePaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
-							 strokeWidth, ctx->cache->paths, ctx->cache->npaths);
+							 strokeWidth, ctx->cache->paths, ctx->cache->npaths, state->m_filterStack);
 
 	// Count triangles
 	for (i = 0; i < ctx->cache->npaths; i++) {
@@ -2421,7 +2422,7 @@ static void nvg__renderText(NVGcontext* ctx, NVGpaint* paint, NVGvertex* verts, 
 	paint->innerColor.a *= state->alpha;
 	paint->outerColor.a *= state->alpha;
 
-	ctx->params.renderTriangles(ctx->params.userPtr, paint, state->compositeOperation, &state->scissor, verts, nverts);
+	ctx->params.renderTriangles(ctx->params.userPtr, paint, state->compositeOperation, &state->scissor, verts, nverts, state->m_filterStack);
 
 	ctx->drawCallCount++;
 	ctx->textTriCount += nverts/3;

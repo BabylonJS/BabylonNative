@@ -96,6 +96,7 @@ CreateBoxAsync(scene).then(function () {
 
             var t = 0;
             scene.onBeforeRenderObservable.add(() => {
+
                 // animated shape
                 context.save();
                 context.fillStyle = "DarkRed";
@@ -114,6 +115,7 @@ CreateBoxAsync(scene).then(function () {
                 context.transform(1, t, 0.8, 1, 0, 0);
                 context.fillRect(-width * 0.5, -height * 0.5, width, height);
                 context.restore();
+
                 // curve
                 context.beginPath();
                 context.moveTo(75 * 2, 25 * 2);
@@ -147,6 +149,15 @@ CreateBoxAsync(scene).then(function () {
                 context.lineTo(140, 140);
                 context.stroke();
 
+                context.filter = "blur(5px)";
+
+                // filter blur text
+                context.fillStyle = "White";
+                context.font = `bold ${50}px monospace`;
+                context.fillText("BLUR TEST BLUR TEST", 100, 246);
+
+                context.filter = "none";
+
                 // Draw lines
                 context.strokeStyle = "black";
                 ["butt", "round", "square"].forEach((lineCap, i) => {
@@ -157,6 +168,8 @@ CreateBoxAsync(scene).then(function () {
                     context.lineTo(25 + i * 50, 140);
                     context.stroke();
                 });
+
+                context.filter = "blur(5px)";
 
                 // line join
                 context.lineWidth = 10;
@@ -172,6 +185,8 @@ CreateBoxAsync(scene).then(function () {
                     context.stroke();
                 });
 
+                context.filter = "none";
+
                 // rect with gradient
                 context.fillStyle = gradient;
                 context.fillRect(10, 310, 400, 60);
@@ -181,7 +196,6 @@ CreateBoxAsync(scene).then(function () {
                 context.font = "bold 60px monospace";
                 context.fillText("Gradient Text!", 10, 420);
 
-                
                 context.lineWidth = 5;
                 // Rounded rectangle with zero radius (specified as a number)
                 context.strokeStyle = "red";
@@ -189,11 +203,15 @@ CreateBoxAsync(scene).then(function () {
                 context.roundRect(10, 220, 150, 100, 0);
                 context.stroke();
 
+                context.filter = "blur(5px)";
+
                 // Rounded rectangle with 40px radius (single element list)
                 context.strokeStyle = "blue";
                 context.beginPath();
                 context.roundRect(10, 220, 150, 100, [40]);
                 context.stroke();
+
+                context.filter = "none";
 
                 // Rounded rectangle with 2 different radii
                 context.strokeStyle = "orange";

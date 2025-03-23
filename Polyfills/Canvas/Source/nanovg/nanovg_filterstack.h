@@ -8,18 +8,27 @@ class nanovg_filterstack
 public:
     nanovg_filterstack();
 
-    void AddSepia(float strength)
-    {
-        SepiaElement sepia{ strength };
-        stackElements.push_back({ sepia });
-    }
-    void AddContrast(float strength) {  }
-    void AddBlur(int horizontal, int vertical) {  }
+    // TODO: not necessary?
+    void AddSepia(float strength) {}
+    void AddContrast(float strength) {}
+    void AddBlur(int horizontal, int vertical) {}
 
+    void Render(
+        bgfx::ProgramHandle firstProg,
+        std::function<void(bgfx::ProgramHandle firstProg, Babylon::Graphics::FrameBuffer *outBuffer)> firstPass,
+        std::function<void(bgfx::ProgramHandle firstProg, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer)> filterPass,
+        Babylon::Graphics::FrameBuffer* finalFrameBuffer,
+        std::function<Babylon::Graphics::FrameBuffer*()> acquire,
+        std::function<void(Babylon::Graphics::FrameBuffer*)> release
+    );
+
+    // HACK: remove this once I implement for both text + shapes...
     void Render(std::function<void()> element);
+
     void ParseString(const std::string& string);
     static bool ValidString(const std::string& string);
 
+    // NOTE: This currently happens in Context.cpp
     void SetSize(int width, int height)
     {
         // flush pool
@@ -31,6 +40,13 @@ public:
     }
     void Clear() { stackElements.clear(); }
 protected:
+
+    enum StackElementTypes
+    {
+        SE_SEPIA = 0,
+        SE_CONTRAST = 1,
+        SE_BLUR = 2,
+    };
 
     struct SepiaElement
     {
@@ -46,6 +62,7 @@ protected:
     };
     struct StackElement
     {
+        StackElementTypes type;
         union
         {
             SepiaElement sepiaElement;
@@ -53,8 +70,10 @@ protected:
             Blur blurElement;
         };
     };
+
     std::vector<StackElement> stackElements;
 
+    // NOTE: Does it make sense to have this called here? Or find just to pass std::function from nanovg_babylon.cpp
     Babylon::Graphics::FrameBuffer* GetTransientTarget()
     {
         // return a framebuffer that will be reused later as a texture or for another element
