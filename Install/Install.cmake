@@ -84,6 +84,11 @@ if(TARGET AppRuntime)
     install_include_for_targets(AppRuntime)
 endif()
 
+if(TARGET Scheduling)
+    install_targets(Scheduling)
+    install_include_for_targets(Scheduling)
+endif()
+
 if(TARGET ScriptLoader)
     install_targets(ScriptLoader)
     install_include_for_targets(ScriptLoader)

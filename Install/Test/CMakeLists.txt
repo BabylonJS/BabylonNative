@@ -166,6 +166,7 @@ target_link_libraries(TestInstall
     openxr_loader
     OSDependent
     ScriptLoader
+    Scheduling
     spirv-cross-core
     spirv-cross-hlsl
     SPIRV
