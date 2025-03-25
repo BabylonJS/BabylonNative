@@ -849,7 +849,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetFont(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(Env(), (std::string)m_font);
+        return Napi::Value::From(Env(), static_cast<std::string>(m_font));
     }
 
     void Context::SetFont(const Napi::CallbackInfo& info, const Napi::Value& value)
