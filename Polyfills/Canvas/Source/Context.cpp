@@ -864,7 +864,6 @@ namespace Babylon::Polyfills::Internal
         {
             return;
         }
-        m_font = *font;
 
         nvgFontSize(*m_nvg, font->Size);
         if (m_fonts.find(font->Family) == m_fonts.end())
@@ -876,6 +875,8 @@ namespace Babylon::Polyfills::Internal
         {
             m_currentFontId = m_fonts.at(font->Family);
         }
+
+        m_font = std::move(*font);
     }
 
     Napi::Value Context::GetLetterSpacing(const Napi::CallbackInfo& info)
