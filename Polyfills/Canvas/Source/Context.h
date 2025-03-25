@@ -5,6 +5,7 @@
 #include <Babylon/Graphics/DeviceContext.h>
 #include "Image.h"
 #include "Path2D.h"
+#include "Font.h"
 
 struct NVGcontext;
 
@@ -90,7 +91,7 @@ namespace Babylon::Polyfills::Internal
         NativeCanvas* m_canvas;
         std::shared_ptr<NVGcontext*> m_nvg;
 
-        std::string m_font{};
+        Font m_font;
         std::variant<std::string, CanvasGradient*> m_fillStyle{};
         std::string m_strokeStyle{};
         std::string m_lineCap{};  // 'butt', 'round', 'square'

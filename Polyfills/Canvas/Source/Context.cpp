@@ -849,7 +849,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetFont(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(Env(), m_font);
+        return Napi::Value::From(Env(), (std::string)m_font);
     }
 
     void Context::SetFont(const Napi::CallbackInfo& info, const Napi::Value& value)
@@ -859,36 +859,23 @@ namespace Babylon::Polyfills::Internal
             throw Napi::Error::New(info.Env(), "invalid argument");
         }
 
-        const std::string fontOptions = value.ToString();
-
-        // Default font id, and font size values.
-        // TODO: Determine better way of signaling to user that font specified is invalid.
-        m_currentFontId = -1;
-        float fontSize{16.f};
-
-        // Regex to parse font styling information. For now we are only capturing font size (capture group 3) and font family name (capture group 4).
-        static const std::regex fontStyleRegex("([[a-zA-Z]+\\s+)*((\\d+(\\.\\d+)?)px\\s+)?(\\w+)");
-        std::smatch fontStyleMatch;
-
-        // Perform the actual regex_match.
-        if (std::regex_match(fontOptions, fontStyleMatch, fontStyleRegex))
+        auto font = Font::Parse(value.ToString());
+        if (!font)
         {
-            // Check if font size was specified.
-            if (fontStyleMatch[3].matched)
-            {
-                fontSize = std::stof(fontStyleMatch[3]);
-            }
-
-            // Check if the specified font family name is valid, and if so assign the current font id.
-            if (m_fonts.find(fontStyleMatch[4]) != m_fonts.end())
-            {
-                m_currentFontId = m_fonts.at(fontStyleMatch[4]);
-                m_font = fontOptions;
-            }
+            return;
         }
+        m_font = *font;
 
-        // Set font size on the current context.
-        nvgFontSize(*m_nvg, fontSize);
+        nvgFontSize(*m_nvg, font->Size);
+        if (m_fonts.find(font->Family) == m_fonts.end())
+        {
+            // TODO: handle finding font face for a specific weight and style
+            m_currentFontId = -1;
+        }
+        else
+        {
+            m_currentFontId = m_fonts.at(font->Family);
+        }
     }
 
     Napi::Value Context::GetLetterSpacing(const Napi::CallbackInfo& info)
