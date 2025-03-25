@@ -25,7 +25,7 @@ namespace Babylon::Polyfills::Internal
         {
             if (!foundStyle && std::regex_search(begin, end, match, STYLE_REGEX))
             {
-                end = match[0].second;
+                begin = match[0].second;
                 foundStyle = true;
                 if (match[1] == "italic")
                 {
@@ -34,7 +34,7 @@ namespace Babylon::Polyfills::Internal
             }
             else if (!foundWeight && std::regex_search(begin, end, match, WEIGHT_REGEX))
             {
-                end = match[0].second;
+                begin = match[0].second;
                 foundWeight = true;
                 if (match[1] == "bold")
                 {
@@ -55,7 +55,7 @@ namespace Babylon::Polyfills::Internal
         {
             return std::nullopt;
         }
-        end = match[0].second;
+        begin = match[0].second;
         font.Size = std::stof(match[1]);
 
         if (std::regex_search(begin, end, match, FAMILY_IDENT_REGEX))
