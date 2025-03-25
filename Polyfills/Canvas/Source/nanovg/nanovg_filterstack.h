@@ -7,6 +7,7 @@ class nanovg_filterstack
 {
 public:
     nanovg_filterstack();
+    ~nanovg_filterstack();
 
     // TODO: not necessary?
     void AddSepia(float strength) {}
@@ -15,6 +16,7 @@ public:
 
     void Render(
         bgfx::ProgramHandle firstProg,
+        std::function<void(bgfx::UniformHandle, const void *value)> setUniform,
         std::function<void(bgfx::ProgramHandle firstProg, Babylon::Graphics::FrameBuffer *outBuffer)> firstPass,
         std::function<void(bgfx::ProgramHandle firstProg, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer)> filterPass,
         Babylon::Graphics::FrameBuffer* finalFrameBuffer,
@@ -72,6 +74,15 @@ protected:
     };
 
     std::vector<StackElement> stackElements;
+
+    bgfx::ProgramHandle fspassProg;
+    bgfx::ProgramHandle blurProg;
+
+    struct Uniforms
+    {
+        bgfx::UniformHandle u_direction;
+    } uniforms;
+    Uniforms m_uniforms;
 
     // NOTE: Does it make sense to have this called here? Or find just to pass std::function from nanovg_babylon.cpp
     Babylon::Graphics::FrameBuffer* GetTransientTarget()

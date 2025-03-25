@@ -8,6 +8,8 @@
 std::regex blurRegex(R"(blur\((\d*\.?\d+)(px|rem)?\)|blur\(\))");
 std::regex noneRegex(R"(^\s*none\s*$)");
 
+#define BLUR_ITERATIONS 3
+
 // TODO: move fspass code from nanovg_babylon.cpp into nanovg_filterstack.cpp
 #include "Shaders/dx11/vs_fspass.h"
 #include "Shaders/dx11/fs_fspass.h"
@@ -20,25 +22,46 @@ std::regex noneRegex(R"(^\s*none\s*$)");
 #include "Shaders/spirv/vs_fspass.h"
 #include "Shaders/spirv/fs_fspass.h"
 
+#include "Shaders/dx11/fs_gaussblur.h"
+#include "Shaders/metal/fs_gaussblur.h"
+#include "Shaders/glsl/fs_gaussblur.h"
+#include "Shaders/essl/fs_gaussblur.h"
+#include "Shaders/spirv/fs_gaussblur.h"
+
 static const bgfx::EmbeddedShader s_embeddedShadersFilterStack[] =
 {
     BGFX_EMBEDDED_SHADER(vs_fspass),
     BGFX_EMBEDDED_SHADER(fs_fspass),
+    BGFX_EMBEDDED_SHADER(fs_gaussblur),
     BGFX_EMBEDDED_SHADER_END()
 };
 
-bgfx::ProgramHandle blurProg;
-
+// TODO: check if its OK to share uniforms + programs across all instances of nanovg_filterstack
 nanovg_filterstack::nanovg_filterstack()
 {
     // create shaders used by the different elements
-    // TODO: Implement seperable blur
     bgfx::RendererType::Enum type = bgfx::getRendererType();
-	blurProg = bgfx::createProgram(
+	fspassProg = bgfx::createProgram(
 		bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "vs_fspass")
 		, bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "fs_fspass")
 		, true
 	);
+	blurProg = bgfx::createProgram(
+		bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "vs_fspass")
+		, bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "fs_gaussblur")
+		, true
+	);
+
+    m_uniforms = {};
+    m_uniforms.u_direction = bgfx::createUniform("u_direction", bgfx::UniformType::Vec4);
+}
+
+// TODO: Do we need to bgfx::destroy everything?
+// NOTE: Seems like nanovg_babylon.cpp reuses uniforms across entire nanovg Canvas. But re-creates programs for every draw?
+nanovg_filterstack::~nanovg_filterstack()
+{
+    //bgfx::destroy(blurProg);
+    //bgfx::destroy(m_uniforms.u_direction);
 }
 
 bool nanovg_filterstack::ValidString(const std::string& string)
@@ -65,18 +88,17 @@ void nanovg_filterstack::ParseString(const std::string& string)
                 // TODO: convert non-px radius
             }
 
-            StackElement element = {};
-            element.type = SE_BLUR;
-            element.blurElement = {radius, radius};
-            stackElements.push_back(element);
+            for (int i = 0; i < BLUR_ITERATIONS; i++)
+            {
+                StackElement element = {};
+                element.type = SE_BLUR;
+                element.blurElement = {radius, radius};
+                stackElements.push_back(element);
+            }
         }
         else
         {
-            // defaults to blur(0)
-            StackElement element = {};
-            element.type = SE_BLUR;
-            element.blurElement = {0, 0};
-            stackElements.push_back(element);
+            // defaults to blur(0), which is no blur
         }
     }
 }
@@ -88,6 +110,7 @@ void nanovg_filterstack::Render(std::function<void()> element)
 
 void nanovg_filterstack::Render(
     bgfx::ProgramHandle firstProg,
+    std::function<void(bgfx::UniformHandle, const void *value)> setUniform,
     std::function<void(bgfx::ProgramHandle, Babylon::Graphics::FrameBuffer*)> firstPass,
     std::function<void(bgfx::ProgramHandle, Babylon::Graphics::FrameBuffer*, Babylon::Graphics::FrameBuffer*)> filterPass,
     Babylon::Graphics::FrameBuffer* finalFrameBuffer,
@@ -98,13 +121,15 @@ void nanovg_filterstack::Render(
     if (stackElements.empty())
     {
         // no filter, render straight into final framebuffer
-        firstPass(firstProg, finalFrameBuffer); // TODO: filterPass(firstProg, nullptr, finalFrameBuffer);
+        firstPass(firstProg, finalFrameBuffer);
     }
     else
     {
+        assert(stackElements.size() > 0);
+
         Babylon::Graphics::FrameBuffer* prevBuf = nullptr;
         Babylon::Graphics::FrameBuffer* nextBuf = acquire();
-        bgfx::ProgramHandle lastProg = firstProg; // TODO: should be able to just rely on this for single pass cases
+        bgfx::ProgramHandle lastProg = firstProg;
 
         // first pass
         firstPass(firstProg, nextBuf);
@@ -121,28 +146,29 @@ void nanovg_filterstack::Render(
 
             if (element.type == SE_BLUR)
             {
-                if (last)
-                {
-                    lastProg = blurProg;
-                    break;
-                }
+                // Horizontal Pass
+                float horizontal[4] = {1.f, 0.f, 0.f, 0.f};
+                setUniform(m_uniforms.u_direction, horizontal);
 
-                // HACK: temporary single pass (unseparated)
                 nextBuf = acquire();
                 filterPass(blurProg, prevBuf, nextBuf);
                 release(prevBuf);
                 prevBuf = nextBuf;
                 nextBuf = nullptr;
 
-                // TODO: seperable blur filter (1x vertical, 1x horizontal)
-                /*
-                // TODO: vec2 direction uniforms change
+                // Vertical Pass
+                float vertical[4] = {0.f, 1.f, 0.f, 0.f};
+                setUniform(m_uniforms.u_direction, vertical);
+                if (last)
+                {
+                    lastProg = blurProg;
+                    break; // last pass will write to finalFrameBuffer
+                }
                 nextBuf = acquire();
-                filterPass(seperateBlurProg, prevBuf, nextBuf);
+                filterPass(blurProg, prevBuf, nextBuf);
                 release(prevBuf);
                 prevBuf = nextBuf;
                 nextBuf = nullptr;
-                */
             }
             i++;
         }

@@ -834,6 +834,10 @@ namespace
         */
 
         bgfx::ProgramHandle firstProg = gl->prog;
+        std::function setUniform = [gl](bgfx::UniformHandle u, const void *value) {
+            // DEBUG: do we need a guard for setting uniform? bgfx.cpp:3725 is asserting
+            gl->encoder->setUniform(u, value);
+        };
         std::function firstPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *outBuffer) {
             // Draw Strokes
             struct GLNVGpath* paths = &gl->paths[call->pathOffset];
@@ -851,7 +855,6 @@ namespace
         };
         std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
             nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
-            // TODO: Do we need to tack on BGFX_STATE_PT_TRISTRIP?
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
                 | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
                 | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
@@ -862,7 +865,7 @@ namespace
         };
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
 
-        call->filterStack.Render(firstProg, firstPass, filterPass, finalFrameBuffer, mPool.acquire, mPool.release);
+        call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalFrameBuffer, mPool.acquire, mPool.release);
     }
 
     static void glnvg__triangles(struct GLNVGcontext* gl, struct GLNVGcall* call)
@@ -904,6 +907,10 @@ namespace
             // gl->encoder->setUniform(gl->u_direction, direction);
 
             bgfx::ProgramHandle firstProg = gl->prog;
+            std::function setUniform = [gl](bgfx::UniformHandle u, const void *value) {
+                // DEBUG: do we need a guard for setting uniform? bgfx.cpp:3725 is asserting
+                gl->encoder->setUniform(u, value);
+            };
             std::function firstPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *outBuffer) {
                 nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
                 gl->encoder->setState(gl->state);
@@ -923,7 +930,7 @@ namespace
 			};
             Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
 
-            call->filterStack.Render(firstProg, firstPass, filterPass, finalFrameBuffer, mPool.acquire, mPool.release);
+            call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalFrameBuffer, mPool.acquire, mPool.release);
         }
     }
 
