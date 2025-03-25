@@ -3,14 +3,17 @@
 
 #include "Font.h"
 
+namespace
+{
+    auto STYLE_REGEX = std::regex(R"(^\s*(normal|italic)\s)");
+    auto WEIGHT_REGEX = std::regex(R"(^\s*(normal|bold|\d+)\s)");
+    auto SIZE_REGEX = std::regex(R"(^\s*((?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?)px\s)");
+    auto FAMILY_IDENT_REGEX = std::regex(R"(^\s*((?:[\w-]|\\.)+))");
+    auto FAMILY_STRING_REGEX = std::regex(R"(^\s*(["'])((?:[^\\]|\\.)*?)\1)");
+}
+
 namespace Babylon::Polyfills::Internal
 {
-    static auto STYLE_REGEX = std::regex(R"(^\s*(normal|italic)\s)");
-    static auto WEIGHT_REGEX = std::regex(R"(^\s*(normal|bold|\d+)\s)");
-    static auto SIZE_REGEX = std::regex(R"(^\s*((?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?)px\s)");
-    static auto FAMILY_IDENT_REGEX = std::regex(R"(^\s*((?:[\w-]|\\.)+))");
-    static auto FAMILY_STRING_REGEX = std::regex(R"(^\s*(["'])((?:[^\\]|\\.)*?)\1)");
-
     std::optional<Font> Font::Parse(const std::string& fontString)
     {
         Font font;
