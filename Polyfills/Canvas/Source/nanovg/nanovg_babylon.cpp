@@ -862,18 +862,7 @@ namespace
         };
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
 
-        std::function acquire = [&]() -> Babylon::Graphics::FrameBuffer* {
-            Babylon::Graphics::FrameBuffer *frameBuffer = mPool.acquire();
-            frameBuffer->Bind(*gl->encoder);
-            return frameBuffer;
-        };
-
-        std::function release = [&](Babylon::Graphics::FrameBuffer* frameBuffer) {
-            frameBuffer->Unbind(*gl->encoder);
-            mPool.release(frameBuffer);
-        };
-
-        call->filterStack.Render(firstProg, firstPass, filterPass, finalFrameBuffer, acquire, release);
+        call->filterStack.Render(firstProg, firstPass, filterPass, finalFrameBuffer, mPool.acquire, mPool.release);
     }
 
     static void glnvg__triangles(struct GLNVGcontext* gl, struct GLNVGcall* call)
@@ -910,6 +899,10 @@ namespace
             gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
             */
 
+            // TODO: will need to implement some kinda callback function to set uniforms
+            // float direction[4] = { 0.f, 0.f, 0.f, 0.f };
+            // gl->encoder->setUniform(gl->u_direction, direction);
+
             bgfx::ProgramHandle firstProg = gl->prog;
             std::function firstPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *outBuffer) {
                 nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
@@ -930,18 +923,7 @@ namespace
 			};
             Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
 
-            std::function acquire = [&]() -> Babylon::Graphics::FrameBuffer* {
-                Babylon::Graphics::FrameBuffer *frameBuffer = mPool.acquire();
-                frameBuffer->Bind(*gl->encoder);
-                return frameBuffer;
-            };
-
-            std::function release = [&](Babylon::Graphics::FrameBuffer* frameBuffer) {
-                frameBuffer->Unbind(*gl->encoder);
-                mPool.release(frameBuffer);
-            };
-
-            call->filterStack.Render(firstProg, firstPass, filterPass, finalFrameBuffer, acquire, release);
+            call->filterStack.Render(firstProg, firstPass, filterPass, finalFrameBuffer, mPool.acquire, mPool.release);
         }
     }
 
@@ -1349,6 +1331,7 @@ namespace
 
 } // namespace
 
+// NOTE: This is called from Context constructor. Uniforms get defined when Context created
 NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator)
 {
     if (NULL == _allocator)
@@ -1384,6 +1367,7 @@ NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator)
     gl->allocator     = _allocator;
     gl->edgeAntiAlias = _edgeaa;
 
+    // NOTE: this calls back out to nvgRenderCreate to initialize uniforms
     ctx = nvgCreateInternal(&params);
     if (ctx == NULL) goto error;
 

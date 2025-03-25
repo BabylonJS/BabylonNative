@@ -118,19 +118,6 @@ namespace Babylon::Polyfills::Internal
         {
             m_fonts[font.first] = nvgCreateFontMem(*m_nvg, font.first.c_str(), font.second.data(), static_cast<int>(font.second.size()), 0);
         }
-
-        // TODO: check is capturing 'this' ok? Its be reference right?
-        std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this]() -> Babylon::Graphics::FrameBuffer* {
-            return this->m_canvas->PoolAcquire();
-        };
-        std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
-            this->m_canvas->PoolRelease(frameBuffer);
-        };
-        // TODO: Confirm that pool is initilalized before nanovg_babylon.cpp calls acquire
-        nvgSetTargetManager({
-            acquire,
-            release
-        });
     }
 
     Context::~Context()
@@ -185,7 +172,15 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    // TODO: figure out how a params.renderCreateFrameBuffer from nanovg_babylon.cpp would ultimated then call Canvas::RequestRenderTarget
+    void Context::SetFilterStack()
+    {
+        if (m_filter.length())
+        {
+            nanovg_filterstack filterStack;
+            filterStack.ParseString(m_filter);
+            nvgFilterStack(*m_nvg, filterStack); // sets filterStack on nanovg
+        }
+    }
 
     void Context::FillRect(const Napi::CallbackInfo& info)
     {
@@ -203,13 +198,7 @@ namespace Babylon::Polyfills::Internal
 
         BindFillStyle(info, left, top, width, height);
 
-        if (m_filter.length())
-        {
-            nanovg_filterstack filterStack;
-            filterStack.ParseString(m_filter);
-            nvgFilterStack(*m_nvg, filterStack); // sets filterStack on nanovg
-        }
-
+        SetFilterStack();
         nvgFill(*m_nvg);
         SetDirty();
     }
@@ -270,6 +259,7 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Fill(const Napi::CallbackInfo&)
     {
+        SetFilterStack();
         nvgFill(*m_nvg);
         SetDirty();
     }
@@ -438,6 +428,7 @@ namespace Babylon::Polyfills::Internal
         const auto height = info[3].As<Napi::Number>().FloatValue();
 
         nvgRect(*m_nvg, left, top, width, height);
+        SetFilterStack();
         nvgStroke(*m_nvg);
         SetDirty();
     }
@@ -513,13 +504,7 @@ namespace Babylon::Polyfills::Internal
             }
         }
 
-        if (m_filter.length())
-        {
-            nanovg_filterstack filterStack;
-            filterStack.ParseString(m_filter);
-            nvgFilterStack(*m_nvg, filterStack); // sets filterStack on nanovg
-        }
-
+        SetFilterStack();
         nvgStroke(*m_nvg);
         SetDirty();
     }
@@ -635,9 +620,22 @@ namespace Babylon::Polyfills::Internal
                     // buffer.frameBuffer->Bind(*encoder); // TODO: remove this, should be done in Acquire
                     // buffer.frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0); // TODO: confirm that this not necessary because of ScreenSpaceQuad??
                 }
+                std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this, encoder]() -> Babylon::Graphics::FrameBuffer* {
+                    Babylon::Graphics::FrameBuffer *frameBuffer = this->m_canvas->PoolAcquire();
+                    frameBuffer->Bind(*encoder);
+                    return frameBuffer;
+                };
+                std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
+                    frameBuffer->Unbind(*encoder);
+                    this->m_canvas->PoolRelease(frameBuffer);
+                };
 
                 nvgBeginFrame(*m_nvg, float(width), float(height), 1.0f);
                 nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder);
+                nvgSetTargetManager({
+                    acquire,
+                    release
+                });
                 nvgEndFrame(*m_nvg);
                 frameBuffer.Unbind(*encoder);
 
@@ -708,6 +706,7 @@ namespace Babylon::Polyfills::Internal
 
             nvgRect(*m_nvg, dx, dy, width, height);
             nvgFillPaint(*m_nvg, imagePaint);
+            SetFilterStack();
             nvgFill(*m_nvg);
             SetDirty();
         }
@@ -727,6 +726,7 @@ namespace Babylon::Polyfills::Internal
 
             nvgRect(*m_nvg, dx, dy, dWidth, dHeight);
             nvgFillPaint(*m_nvg, imagePaint);
+            SetFilterStack();
             nvgFill(*m_nvg);
             SetDirty();
         }
@@ -752,6 +752,7 @@ namespace Babylon::Polyfills::Internal
 
             nvgRect(*m_nvg, dx, dy, dWidth, dHeight);
             nvgFillPaint(*m_nvg, imagePaint);
+            SetFilterStack();
             nvgFill(*m_nvg);
             SetDirty();
         }

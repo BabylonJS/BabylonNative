@@ -123,6 +123,7 @@ namespace Babylon::Polyfills::Internal
         std::unordered_map<const NativeCanvasImage*, int> m_nvgImageIndices;
         void BindFillStyle(const Napi::CallbackInfo& info, float left, float top, float width, float height);
         void FlushGraphicResources() override;
+        void SetFilterStack();
 
         friend class Canvas;
     };
