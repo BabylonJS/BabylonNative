@@ -1884,7 +1884,7 @@ namespace Babylon
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
         // Clear framebuffer : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
         auto encoder = GetUpdateToken().GetEncoder();
-        frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
+        frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 0.0f, 0);
         return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, [frameBuffer, depthStencilTextureHandle]() {
             if (bgfx::isValid(depthStencilTextureHandle))
             {
