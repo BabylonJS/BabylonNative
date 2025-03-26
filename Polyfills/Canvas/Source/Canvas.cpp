@@ -150,7 +150,10 @@ namespace Babylon::Polyfills::Internal
         {
             if (buffer.frameBuffer)
             {
-                // buffer.frameBuffer->Dispose(); // TODO: do we need to Dispose() before delete?
+                // TODO: Dispose?
+                //buffer.frameBuffer->Dispose();
+                //free(buffer.frameBuffer);
+
                 delete buffer.frameBuffer;
                 buffer.frameBuffer = nullptr;
             }
@@ -178,7 +181,7 @@ namespace Babylon::Polyfills::Internal
         {
             if (buffer.frameBuffer == frameBuffer)
             {
-                // TODO: clear framebuffer? i think has to be done in nanovg_babylon.cpp / nanovg_filterstack.cpp before releasing back to pool
+                // TODO: clear framebuffer?
                 buffer.isAvailable = true;
                 return;
             }

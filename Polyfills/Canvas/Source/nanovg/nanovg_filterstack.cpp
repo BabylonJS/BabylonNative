@@ -36,32 +36,33 @@ static const bgfx::EmbeddedShader s_embeddedShadersFilterStack[] =
     BGFX_EMBEDDED_SHADER_END()
 };
 
-// TODO: check if its OK to share uniforms + programs across all instances of nanovg_filterstack
 nanovg_filterstack::nanovg_filterstack()
 {
-    // create shaders used by the different elements
-    bgfx::RendererType::Enum type = bgfx::getRendererType();
-	fspassProg = bgfx::createProgram(
-		bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "vs_fspass")
-		, bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "fs_fspass")
-		, true
-	);
-	blurProg = bgfx::createProgram(
-		bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "vs_fspass")
-		, bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "fs_gaussblur")
-		, true
-	);
-
-    m_uniforms = {};
-    m_uniforms.u_direction = bgfx::createUniform("u_direction", bgfx::UniformType::Vec4);
 }
 
-// TODO: Do we need to bgfx::destroy everything?
-// NOTE: Seems like nanovg_babylon.cpp reuses uniforms across entire nanovg Canvas. But re-creates programs for every draw?
-nanovg_filterstack::~nanovg_filterstack()
+void nanovg_filterstack::InitBgfx()
 {
-    //bgfx::destroy(blurProg);
-    //bgfx::destroy(m_uniforms.u_direction);
+    m_uniforms.u_direction = bgfx::createUniform("u_direction", bgfx::UniformType::Vec4);
+
+    // create shaders used by the different elements
+    bgfx::RendererType::Enum type = bgfx::getRendererType();
+    fspassProg = bgfx::createProgram(
+        bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "vs_fspass")
+        , bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "fs_fspass")
+        , true
+    );
+    blurProg = bgfx::createProgram(
+        bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "vs_fspass")
+        , bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "fs_gaussblur")
+        , true
+    );
+}
+
+void nanovg_filterstack::DisposeBgfx()
+{
+    bgfx::destroy(fspassProg);
+    bgfx::destroy(blurProg);
+    bgfx::destroy(m_uniforms.u_direction);
 }
 
 bool nanovg_filterstack::ValidString(const std::string& string)

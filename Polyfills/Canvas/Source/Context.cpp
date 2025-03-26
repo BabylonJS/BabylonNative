@@ -613,6 +613,7 @@ namespace Babylon::Polyfills::Internal
                 const auto width = m_canvas->GetWidth();
                 const auto height = m_canvas->GetHeight();
 
+                nanovg_filterstack::InitBgfx(); // HACK: should this even be a static on nanovg_filterstack?
                 for (auto& buffer : m_canvas->mPoolBuffers)
                 {
                     // sanity check no buffers should have been acquired yet
@@ -645,6 +646,8 @@ namespace Babylon::Polyfills::Internal
                     assert(buffer.isAvailable == true);
                     // buffer.frameBuffer->Unbind(*encoder); // TODO: remove this after I implement Bind / Unbind as part of acquire/release
                 }
+                // Currently, we're reusing filterstack same progs + uniforms across all calls between frames
+                nanovg_filterstack::DisposeBgfx(); // HACK: should this even be a static on nanovg_filterstack?
 
                 m_dirty = false;
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
