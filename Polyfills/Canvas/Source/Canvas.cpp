@@ -1,10 +1,14 @@
 #include "Canvas.h"
 #include "Image.h"
+#include "Path2D.h"
 #include "Context.h"
 #include <bgfx/bgfx.h>
 #include <napi/pointer.h>
 #include <cassert>
 #include "Colors.h"
+#include "Gradient.h"
+
+const int POOL_SIZE = 3;
 
 namespace
 {
@@ -110,29 +114,108 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    bool NativeCanvas::UpdateRenderTarget()
+    void NativeCanvas::PoolInit(int size)
     {
-        if (m_dirty)
+        for (int i = 0; i < size; ++i)
         {
+
+            bgfx::FrameBufferHandle TextBuffer{ bgfx::kInvalidHandle };
+            Graphics::FrameBuffer* FrameBuffer;
+
+            int width(256), height(256);
             std::array<bgfx::TextureHandle, 2> textures{
-                bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
-                bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT)};
+            bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
+            bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT) };
 
             std::array<bgfx::Attachment, textures.size()> attachments{};
             for (size_t idx = 0; idx < attachments.size(); ++idx)
             {
                 attachments[idx].init(textures[idx]);
             }
-            auto handle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
-            assert(handle.idx != bgfx::kInvalidHandle);
-            m_frameBuffer = std::make_unique<Graphics::FrameBuffer>(m_graphicsContext, handle, m_width, m_height, false, false, false);
-            m_dirty = false;
+            TextBuffer = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
 
+            FrameBuffer = new Graphics::FrameBuffer(m_graphicsContext, TextBuffer, width, height, false, false, false);
+            // TODO: confirm why m_texture is reset, esp for pool framebuffers
             if (m_texture)
             {
                 m_texture.reset();
             }
+            mPoolBuffers.push_back({FrameBuffer, true});
+        }
+    }
 
+    void NativeCanvas::PoolClear()
+    {
+        for (auto& buffer : mPoolBuffers)
+        {
+            if (buffer.frameBuffer)
+            {
+                // TODO: cleanup framebuffers
+                //buffer.frameBuffer->Dispose();
+                //free(buffer.frameBuffer);
+                delete buffer.frameBuffer;
+                buffer.frameBuffer = nullptr;
+            }
+        }
+        mPoolBuffers.clear();
+    }
+
+    Graphics::FrameBuffer* NativeCanvas::PoolAcquire()
+    {
+        for (auto& buffer : mPoolBuffers)
+        {
+            if (buffer.isAvailable)
+            {
+                buffer.isAvailable = false;
+                return buffer.frameBuffer;
+            }
+        }
+        // TODO: If no buffers available, pool wasn't large enough. Should it automatically resize?
+        throw std::runtime_error{"No available frame buffer in pool"};
+    }
+
+    void NativeCanvas::PoolRelease(Graphics::FrameBuffer* frameBuffer)
+    {
+        for (auto& buffer : mPoolBuffers)
+        {
+            if (buffer.frameBuffer == frameBuffer)
+            {
+                // TODO: clear framebuffer?
+                buffer.isAvailable = true;
+                return;
+            }
+        }
+    }
+
+    bool NativeCanvas::UpdateRenderTarget()
+    {
+        // updates when canvas size changes
+        if (m_dirty)
+        {
+            {
+                std::array<bgfx::TextureHandle, 2> textures{
+                   bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
+                   bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT) };
+
+                std::array<bgfx::Attachment, textures.size()> attachments{};
+                for (size_t idx = 0; idx < attachments.size(); ++idx)
+                {
+                    attachments[idx].init(textures[idx]);
+                }
+                auto handle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
+                assert(handle.idx != bgfx::kInvalidHandle);
+                m_frameBuffer = std::make_unique<Graphics::FrameBuffer>(m_graphicsContext, handle, m_width, m_height, false, false, false);
+                m_dirty = false;
+
+                if (m_texture)
+                {
+                    m_texture.reset();
+                }
+            }
+            {
+                PoolClear();
+                PoolInit(POOL_SIZE);
+            }
             return true;
         }
         return false;
@@ -161,6 +244,7 @@ namespace Babylon::Polyfills::Internal
     {
         m_frameBuffer.reset();
         m_texture.reset();
+        PoolClear();
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
@@ -235,7 +319,8 @@ namespace Babylon::Polyfills
 
         Internal::NativeCanvas::CreateInstance(env);
         Internal::NativeCanvasImage::CreateInstance(env);
-
+        Internal::NativeCanvasPath2D::CreateInstance(env);
+        Internal::CanvasGradient::Initialize(env);
         Internal::Context::Initialize(env);
 
         return {impl};

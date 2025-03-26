@@ -68,6 +68,17 @@ namespace Babylon::Polyfills::Internal
         bool UpdateRenderTarget();
         Babylon::Graphics::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
 
+        struct PoolBuffer
+        {
+            Graphics::FrameBuffer* frameBuffer;
+            bool isAvailable;
+        };
+        std::vector<PoolBuffer> mPoolBuffers;
+        void NativeCanvas::PoolInit(int nBuffers);
+        void NativeCanvas::PoolClear();
+        Babylon::Graphics::FrameBuffer* NativeCanvas::PoolAcquire();
+        void NativeCanvas::PoolRelease(Graphics::FrameBuffer* frameBuffer);
+
         Graphics::DeviceContext& GetGraphicsContext()
         {
             return m_graphicsContext;
