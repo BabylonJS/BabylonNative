@@ -961,6 +961,6 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetCanvas(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        return m_canvas->Value();
     }
 }
