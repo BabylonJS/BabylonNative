@@ -14,6 +14,7 @@ public:
     inline static bgfx::ProgramHandle blurProg;
     inline struct Uniforms
     {
+        bgfx::UniformHandle u_strength;
         bgfx::UniformHandle u_direction;
     } static m_uniforms;
 
@@ -68,7 +69,7 @@ protected:
     };
     struct Blur
     {
-        int horizontal, vertical;
+        int horizontal, vertical; // blur strength (in px)
     };
     struct StackElement
     {

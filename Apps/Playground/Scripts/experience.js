@@ -149,13 +149,11 @@ CreateBoxAsync(scene).then(function () {
                 context.lineTo(140, 140);
                 context.stroke();
 
-                context.filter = "blur(5px)";
-
                 // filter blur text
+                context.filter = "blur(1.5px)";
                 context.fillStyle = "White";
                 context.font = `bold ${50}px monospace`;
                 context.fillText("BLUR TEST BLUR TEST", 100, 246);
-
                 context.filter = "none";
 
                 // Draw lines
@@ -168,8 +166,6 @@ CreateBoxAsync(scene).then(function () {
                     context.lineTo(25 + i * 50, 140);
                     context.stroke();
                 });
-
-                context.filter = "blur(5px)";
 
                 // line join
                 context.lineWidth = 10;
@@ -184,8 +180,6 @@ CreateBoxAsync(scene).then(function () {
                     context.lineTo(155 + offset, 15 + i * 40);
                     context.stroke();
                 });
-
-                context.filter = "none";
 
                 // rect with gradient
                 context.fillStyle = gradient;
@@ -203,15 +197,11 @@ CreateBoxAsync(scene).then(function () {
                 context.roundRect(10, 220, 150, 100, 0);
                 context.stroke();
 
-                context.filter = "blur(5px)";
-
                 // Rounded rectangle with 40px radius (single element list)
                 context.strokeStyle = "blue";
                 context.beginPath();
                 context.roundRect(10, 220, 150, 100, [40]);
                 context.stroke();
-
-                context.filter = "none";
 
                 // Rounded rectangle with 2 different radii
                 context.strokeStyle = "orange";

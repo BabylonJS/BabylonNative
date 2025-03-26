@@ -42,6 +42,7 @@ nanovg_filterstack::nanovg_filterstack()
 
 void nanovg_filterstack::InitBgfx()
 {
+    m_uniforms.u_strength = bgfx::createUniform("u_strength", bgfx::UniformType::Vec4);
     m_uniforms.u_direction = bgfx::createUniform("u_direction", bgfx::UniformType::Vec4);
 
     // create shaders used by the different elements
@@ -60,9 +61,10 @@ void nanovg_filterstack::InitBgfx()
 
 void nanovg_filterstack::DisposeBgfx()
 {
+    bgfx::destroy(m_uniforms.u_strength);
+    bgfx::destroy(m_uniforms.u_direction);
     bgfx::destroy(fspassProg);
     bgfx::destroy(blurProg);
-    bgfx::destroy(m_uniforms.u_direction);
 }
 
 bool nanovg_filterstack::ValidString(const std::string& string)
@@ -148,7 +150,7 @@ void nanovg_filterstack::Render(
             if (element.type == SE_BLUR)
             {
                 // Horizontal Pass
-                float horizontal[4] = {1.f, 0.f, 0.f, 0.f};
+                float horizontal[4] = {element.blurElement.horizontal * 1.f, 0.f, 0.f, 0.f}; // scale by element.blurElement.horizontal
                 setUniform(m_uniforms.u_direction, horizontal);
 
                 nextBuf = acquire();
@@ -158,7 +160,7 @@ void nanovg_filterstack::Render(
                 nextBuf = nullptr;
 
                 // Vertical Pass
-                float vertical[4] = {0.f, 1.f, 0.f, 0.f};
+                float vertical[4] = {0.f, element.blurElement.vertical * 1.f, 0.f, 0.f}; // scale by element.blurElement.vertical
                 setUniform(m_uniforms.u_direction, vertical);
                 if (last)
                 {
