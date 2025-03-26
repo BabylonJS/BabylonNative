@@ -676,7 +676,7 @@ void nvgReset(NVGcontext* ctx)
 	state->fontBlur = 0.0f;
 	state->textAlign = NVG_ALIGN_LEFT | NVG_ALIGN_BASELINE;
 	state->fontId = 0;
-	state->m_filterStack.Clear(); // NOTE: does it make sense to .Clear()? or is it better to set to null
+	state->m_filterStack.Clear();
 }
 
 // State setting

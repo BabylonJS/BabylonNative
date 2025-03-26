@@ -96,7 +96,6 @@ CreateBoxAsync(scene).then(function () {
 
             var t = 0;
             scene.onBeforeRenderObservable.add(() => {
-
                 // animated shape
                 context.save();
                 context.fillStyle = "DarkRed";

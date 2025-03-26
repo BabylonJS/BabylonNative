@@ -18,7 +18,6 @@ public:
         bgfx::UniformHandle u_direction;
     } static m_uniforms;
 
-    // TODO: not necessary?
     void AddSepia(float strength) {}
     void AddContrast(float strength) {}
     void AddBlur(int horizontal, int vertical) {}
@@ -32,8 +31,6 @@ public:
         std::function<Babylon::Graphics::FrameBuffer*()> acquire,
         std::function<void(Babylon::Graphics::FrameBuffer*)> release
     );
-
-    // HACK: remove this once I implement for both text + shapes...
     void Render(std::function<void()> element);
 
     void ParseString(const std::string& string);
@@ -81,10 +78,9 @@ protected:
             Blur blurElement;
         };
     };
-
     std::vector<StackElement> stackElements;
 
-    // NOTE: Does it make sense to have this called here? Or find just to pass std::function from nanovg_babylon.cpp
+    // DISCUSS: Should we get transient target here? Or fine to have the std::function passed down from nanovg_babylon.cpp
     Babylon::Graphics::FrameBuffer* GetTransientTarget()
     {
         // return a framebuffer that will be reused later as a texture or for another element

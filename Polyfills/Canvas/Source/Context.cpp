@@ -592,12 +592,11 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    // NOTE: Currently, we keep primary frame seperate. Should it come from pool?
     void Context::DeferredFlushFrame()
     {
         // on some systems (Ubuntu), the framebuffer contains garbage.
         // Unlike other systems where it's cleared.
-        bool needClear = m_canvas->UpdateRenderTarget(); // NOTE: this will recreate framebuffers IFF size changes. Otherwise, reuses previous
+        bool needClear = m_canvas->UpdateRenderTarget();
 
         arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, needClear, cancellationSource{m_cancellationSource}]() {
             return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{m_update.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() {
@@ -613,13 +612,13 @@ namespace Babylon::Polyfills::Internal
                 const auto width = m_canvas->GetWidth();
                 const auto height = m_canvas->GetHeight();
 
-                nanovg_filterstack::InitBgfx(); // HACK: should this even be a static on nanovg_filterstack?
+                // we reuse progs + uniforms across calls between frames
+                nanovg_filterstack::InitBgfx();
                 for (auto& buffer : m_canvas->mPoolBuffers)
                 {
                     // sanity check no buffers should have been acquired yet
                     assert(buffer.isAvailable == true);
-                    // buffer.frameBuffer->Bind(*encoder); // TODO: remove this, should be done in Acquire
-                    // buffer.frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0); // TODO: confirm that this not necessary because of ScreenSpaceQuad??
+                    // buffer.frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0); // TODO: confirm that this not necessary because of ScreenSpaceQuad
                 }
                 std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this, encoder]() -> Babylon::Graphics::FrameBuffer* {
                     Babylon::Graphics::FrameBuffer *frameBuffer = this->m_canvas->PoolAcquire();
@@ -644,10 +643,8 @@ namespace Babylon::Polyfills::Internal
                 {
                     // sanity check no unreleased buffers
                     assert(buffer.isAvailable == true);
-                    // buffer.frameBuffer->Unbind(*encoder); // TODO: remove this after I implement Bind / Unbind as part of acquire/release
                 }
-                // Currently, we're reusing filterstack same progs + uniforms across all calls between frames
-                nanovg_filterstack::DisposeBgfx(); // HACK: should this even be a static on nanovg_filterstack?
+                nanovg_filterstack::DisposeBgfx();
 
                 m_dirty = false;
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {

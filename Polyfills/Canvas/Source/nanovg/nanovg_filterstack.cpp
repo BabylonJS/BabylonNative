@@ -10,7 +10,6 @@ std::regex noneRegex(R"(^\s*none\s*$)");
 
 #define BLUR_ITERATIONS 3
 
-// TODO: move fspass code from nanovg_babylon.cpp into nanovg_filterstack.cpp
 #include "Shaders/dx11/vs_fspass.h"
 #include "Shaders/dx11/fs_fspass.h"
 #include "Shaders/metal/vs_fspass.h"

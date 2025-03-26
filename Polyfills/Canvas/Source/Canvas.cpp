@@ -150,10 +150,9 @@ namespace Babylon::Polyfills::Internal
         {
             if (buffer.frameBuffer)
             {
-                // TODO: Dispose?
+                // TODO: cleanup framebuffers
                 //buffer.frameBuffer->Dispose();
                 //free(buffer.frameBuffer);
-
                 delete buffer.frameBuffer;
                 buffer.frameBuffer = nullptr;
             }
@@ -188,12 +187,11 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    // NOTE: This only runs when canvas size changes (inc. init?). It'll trigger re-creation of framebuffers
     bool NativeCanvas::UpdateRenderTarget()
     {
+        // updates when canvas size changes
         if (m_dirty)
         {
-            // TODO: Can delete this whole block if we decide to use pool for primary framebuffer
             {
                 std::array<bgfx::TextureHandle, 2> textures{
                    bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
@@ -246,7 +244,7 @@ namespace Babylon::Polyfills::Internal
     {
         m_frameBuffer.reset();
         m_texture.reset();
-        PoolClear(); // TODO: confirm we want to do this?
+        PoolClear();
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)

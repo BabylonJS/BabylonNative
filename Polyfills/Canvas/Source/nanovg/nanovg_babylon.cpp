@@ -52,8 +52,8 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from 
 
 #include "nanovg_filterstack.h"
 
-// TODO: define this somewhere less hacky
-FrameBufferPool mPool;
+// TODO: figure out why nanovg_babylon.h included more than once
+FrameBufferPool mPool; // TODO: move this into nanovg_babylon.h
 
 struct PosTexCoord0Vertex
 {
@@ -1389,13 +1389,12 @@ error:
 
     return NULL;
 }
-// TODO: remove this, move to nvgSetFrameBufferAndEncoder
+
 void nvgSetTargetManager(FrameBufferPool pool)
 {
     mPool = pool;
 }
 
-// TODO: Might make sense to pass frame buffer pool here. That way we can Bind/Unbind from encoder in acquire/release.
 void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder)
 {
     struct GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(_ctx)->userPtr;
