@@ -270,14 +270,14 @@
         },
         {
             "title": "Scissor test",
-            "playgroundId": "#W7E7CF#36",
+            "playgroundId": "#W7E7CF#34",
             "referenceImage": "scissor-test.png",
             "excludedGraphicsApis": [ "D3D12" ],
             "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx"
         },
         {
             "title": "Scissor test with 0.9 hardware scaling",
-            "playgroundId": "#W7E7CF#36",
+            "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
             "excludedGraphicsApis": [ "D3D12" ],
@@ -285,7 +285,7 @@
         },
         {
             "title": "Scissor test with 1.5 hardware scaling",
-            "playgroundId": "#W7E7CF#36",
+            "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 1.5;",
             "referenceImage": "scissor-test-3.png",
             "excludedGraphicsApis": [ "D3D12" ],
