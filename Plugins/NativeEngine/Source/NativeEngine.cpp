@@ -1859,6 +1859,8 @@ namespace Babylon
             const auto depthStencilFormat{generateStencilBuffer ? bgfx::TextureFormat::D24S8 : bgfx::TextureFormat::D32};
 #endif
             assert(bgfx::isTextureValid(0, false, 1, depthStencilFormat, flags));
+            // _mem is NULL so content of the texture is uninitialized.
+            // framebuffer is cleared to be consistent with browsers.
             depthStencilTextureHandle = bgfx::createTexture2D(width, height, false, 1, depthStencilFormat, flags);
 
             // bgfx doesn't add flag D3D11_RESOURCE_MISC_GENERATE_MIPS for depth textures (missing that flag will crash D3D with resolving)
@@ -1880,6 +1882,9 @@ namespace Babylon
         }
 
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
+        // Clear framebuffer : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
+        auto encoder = GetUpdateToken().GetEncoder();
+        frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.0f, 0);
         return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, [frameBuffer, depthStencilTextureHandle]() {
             if (bgfx::isValid(depthStencilTextureHandle))
             {
