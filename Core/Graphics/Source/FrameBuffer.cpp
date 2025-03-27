@@ -112,6 +112,7 @@ namespace Babylon::Graphics
         m_bgfxScissor = {};
 
         encoder.touch(m_viewId.value());
+        m_deviceContext.InvalidateView();
     }
 
     void FrameBuffer::SetViewPort(bgfx::Encoder& encoder, float x, float y, float width, float height)
@@ -130,13 +131,7 @@ namespace Babylon::Graphics
     {
         SetBgfxViewPortAndScissor(encoder, m_desiredViewPort, m_desiredScissor);
         encoder.submit(m_viewId.value(), programHandle, 0, flags);
-    }
-
-    void FrameBuffer::Blit(bgfx::Encoder& encoder, bgfx::TextureHandle dst, uint16_t dstX, uint16_t dstY, bgfx::TextureHandle src, uint16_t srcX, uint16_t srcY, uint16_t width, uint16_t height)
-    {
-        // In order for Blit to work properly we need to force the creation of a new ViewID.
-        SetBgfxViewPortAndScissor(encoder, m_desiredViewPort, m_desiredScissor);
-        encoder.blit(m_viewId.value(), dst, dstX, dstY, src, srcX, srcY, width, height);
+        m_deviceContext.InvalidateView();
     }
 
     void FrameBuffer::SetStencil(bgfx::Encoder& encoder, uint32_t stencilState)
