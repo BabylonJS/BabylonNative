@@ -131,7 +131,7 @@
                     done(false);
                 }
             });
-        });
+        }, true);
     }
 
     function loadPlayground(test, done, referenceImage, compareFunction) {
