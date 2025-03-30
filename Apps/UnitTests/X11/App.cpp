@@ -46,7 +46,7 @@ int main()
     XStoreName(display, window, applicationName);
 
     Babylon::Graphics::Configuration config{};
-    config.Window = window;
+    config.Window = std::make_tuple(window, display);
     config.Width = static_cast<size_t>(width);
     config.Height = static_cast<size_t>(height);
 
