@@ -614,32 +614,29 @@ namespace Babylon::Polyfills::Internal
 
                 // we reuse progs + uniforms across calls between frames
                 nanovg_filterstack::InitBgfx();
-                for (auto& buffer : m_canvas->mPoolBuffers)
+                for (auto& buffer : m_canvas->m_frameBufferPool.getPoolBuffers())
                 {
                     // sanity check no buffers should have been acquired yet
                     assert(buffer.isAvailable == true);
                     // buffer.frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0); // TODO: confirm that this not necessary because of ScreenSpaceQuad
                 }
                 std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this, encoder]() -> Babylon::Graphics::FrameBuffer* {
-                    Babylon::Graphics::FrameBuffer *frameBuffer = this->m_canvas->PoolAcquire();
+                    Babylon::Graphics::FrameBuffer *frameBuffer = this->m_canvas->m_frameBufferPool.acquire();
                     frameBuffer->Bind(*encoder);
                     return frameBuffer;
                 };
                 std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
                     frameBuffer->Unbind(*encoder);
-                    this->m_canvas->PoolRelease(frameBuffer);
+                    this->m_canvas->m_frameBufferPool.release(frameBuffer);
                 };
 
                 nvgBeginFrame(*m_nvg, float(width), float(height), 1.0f);
                 nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder);
-                nvgSetTargetManager({
-                    acquire,
-                    release
-                });
+                nvgSetFrameBufferPool(*m_nvg, { acquire, release });
                 nvgEndFrame(*m_nvg);
                 frameBuffer.Unbind(*encoder);
 
-                for (auto& buffer : m_canvas->mPoolBuffers)
+                for (auto& buffer : m_canvas->m_frameBufferPool.getPoolBuffers())
                 {
                     // sanity check no unreleased buffers
                     assert(buffer.isAvailable == true);

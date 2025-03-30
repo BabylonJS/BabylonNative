@@ -22,13 +22,13 @@ NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator);
 ///
 NVGcontext* nvgCreate(int32_t _edgeaa);
 
-struct FrameBufferPool
+struct PoolInterface
 {
     std::function<Babylon::Graphics::FrameBuffer*()> acquire;
     std::function<void(Babylon::Graphics::FrameBuffer*)> release;
 };
 
-void nvgSetTargetManager(FrameBufferPool pool);
+void nvgSetFrameBufferPool(NVGcontext* _ctx, PoolInterface pool);
 void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder);
 
 ///

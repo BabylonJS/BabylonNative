@@ -95,6 +95,8 @@ set(SOURCES
     "Source/Canvas.cpp"
     "Source/Canvas.h"
     "Source/Colors.h"
+    "Source/FrameBufferPool.cpp"
+    "Source/FrameBufferPool.h"
     "Source/Image.cpp"
     "Source/Image.h"
     "Source/ImageData.cpp"

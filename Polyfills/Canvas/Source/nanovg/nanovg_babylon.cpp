@@ -52,9 +52,6 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from 
 
 #include "nanovg_filterstack.h"
 
-// TODO: figure out why nanovg_babylon.h included more than once
-FrameBufferPool mPool; // TODO: move this into nanovg_babylon.h
-
 struct PosTexCoord0Vertex
 {
     float m_x;
@@ -259,6 +256,7 @@ namespace
 
         bgfx::TransientVertexBuffer tvb;
         Babylon::Graphics::FrameBuffer* frameBuffer;
+        PoolInterface frameBufferPool;
         bgfx::Encoder* encoder;
 
         struct GLNVGtexture* textures;
@@ -865,7 +863,7 @@ namespace
         };
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
 
-        call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalFrameBuffer, mPool.acquire, mPool.release);
+        call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
     }
 
     static void glnvg__triangles(struct GLNVGcontext* gl, struct GLNVGcall* call)
@@ -930,7 +928,7 @@ namespace
 			};
             Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
 
-            call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalFrameBuffer, mPool.acquire, mPool.release);
+            call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
         }
     }
 
@@ -1390,9 +1388,10 @@ error:
     return NULL;
 }
 
-void nvgSetTargetManager(FrameBufferPool pool)
+void nvgSetFrameBufferPool(NVGcontext* _ctx, PoolInterface pool)
 {
-    mPool = pool;
+    struct GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(_ctx)->userPtr;
+    gl->frameBufferPool = pool;
 }
 
 void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder)

@@ -21,6 +21,7 @@ void main()
 	vec4 color = texture2D(s_tex, v_texcoord0) * weights[0]; // center pixel weighted
 	float alpha = color.a;
 
+	// PR cedric: texture coordinate is normalized. Range for sampling is [0..1]. A pixel size in normalized coordinate system is vec2(1./texture width, 1./texture height). Also, take care of half texel : https://asawicki.info/news_1516_half-pixel_offset_in_directx_11
 	for (int i = 1; i <= 6; i++)
 	{
 		vec2 offset = u_direction.xy * float(i);
