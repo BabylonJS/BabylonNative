@@ -372,6 +372,7 @@ namespace
         gl->u_sdf             = bgfx::createUniform("u_sdf",             bgfx::UniformType::Vec4);
         gl->s_tex             = bgfx::createUniform("s_tex",             bgfx::UniformType::Sampler);
         gl->s_tex2            = bgfx::createUniform("s_tex2",            bgfx::UniformType::Sampler);
+        nanovg_filterstack::InitBgfx(); // initialize filter stack uniforms + programs
 
         gl->u_halfTexel.idx = bgfx::kInvalidHandle;
 
@@ -1311,6 +1312,7 @@ namespace
         bgfx::destroy(gl->u_params);
         bgfx::destroy(gl->s_tex);
         bgfx::destroy(gl->s_tex2);
+        nanovg_filterstack::DisposeBgfx();
 
         if (bgfx::isValid(gl->u_halfTexel) )
         {

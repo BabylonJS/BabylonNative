@@ -60,10 +60,15 @@ void nanovg_filterstack::InitBgfx()
 
 void nanovg_filterstack::DisposeBgfx()
 {
-    bgfx::destroy(m_uniforms.u_strength);
-    bgfx::destroy(m_uniforms.u_direction);
-    bgfx::destroy(fspassProg);
-    bgfx::destroy(blurProg);
+    // check if uniforms + programs are valid before destroying
+    if (m_uniforms.u_strength.idx != bgfx::kInvalidHandle)
+        bgfx::destroy(m_uniforms.u_strength);
+    if (m_uniforms.u_direction.idx != bgfx::kInvalidHandle)
+        bgfx::destroy(m_uniforms.u_direction);
+    if (fspassProg.idx != bgfx::kInvalidHandle)
+        bgfx::destroy(fspassProg);
+    if (blurProg.idx != bgfx::kInvalidHandle)
+        bgfx::destroy(blurProg);
 }
 
 bool nanovg_filterstack::ValidString(const std::string& string)

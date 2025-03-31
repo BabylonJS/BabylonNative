@@ -2,12 +2,21 @@ $input v_position, v_texcoord0
 
 #include "./common.sh"
 
-uniform vec4 u_direction; // vec4 (x, y, unused, unused)
+uniform vec4 u_viewSize;	// vec4 (width, height, unused, unused)
+uniform vec4 u_direction;	// vec4 (x, y, unused, unused)
 
 SAMPLER2D(s_tex, 0);
 
+#if NEED_HALF_TEXEL
+uniform vec4 u_halfTexel;
+#endif // NEED_HALF_TEXEL
+
 void main()
 {
+#if !NEED_HALF_TEXEL
+	vec4 u_halfTexel = vec4_splat(0.0);
+#endif // !NEED_HALF_TEXEL
+
 	// 13-tap weights
 	float weights[7];
 	weights[0] = 0.227027; // center
@@ -21,17 +30,16 @@ void main()
 	vec4 color = texture2D(s_tex, v_texcoord0) * weights[0]; // center pixel weighted
 	float alpha = color.a;
 
-	// PR cedric: texture coordinate is normalized. Range for sampling is [0..1]. A pixel size in normalized coordinate system is vec2(1./texture width, 1./texture height). Also, take care of half texel : https://asawicki.info/news_1516_half-pixel_offset_in_directx_11
+	vec2 texcoord0 = v_texcoord0 + u_halfTexel.xy; // handle half texel offset
+	// vec2 normTex = vec2_splat(1.0) / u_viewSize.xy; // normalized texel size?
+
 	for (int i = 1; i <= 6; i++)
 	{
-		vec2 offset = u_direction.xy * float(i);
-
-		vec4 sample1 = texture2D(s_tex, v_texcoord0 + offset) * weights[i];
-		vec4 sample2 = texture2D(s_tex, v_texcoord0 - offset) * weights[i];
-
-		color.rgb += sample1.rgb + sample2.rgb; // Sum RGB values
-		alpha += sample1.a * weights[i] + sample2.a * weights[i]; // Sum alpha values
+		vec2 offset = u_direction.xy * float(i); // TODO: normalize against u_viewSize.xy
+		vec4 sample1 = texture2D(s_tex, texcoord0 + offset) * weights[i];
+		vec4 sample2 = texture2D(s_tex, texcoord0 - offset) * weights[i];
+		color += sample1 + sample2;
 	}
 
-	gl_FragColor = vec4(color.rgb, alpha); // Combine blurred color and alpha
+	gl_FragColor = color;
 }

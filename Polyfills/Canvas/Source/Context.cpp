@@ -612,8 +612,6 @@ namespace Babylon::Polyfills::Internal
                 const auto width = m_canvas->GetWidth();
                 const auto height = m_canvas->GetHeight();
 
-                // we reuse progs + uniforms across calls between frames
-                nanovg_filterstack::InitBgfx();
                 for (auto& buffer : m_canvas->m_frameBufferPool.getPoolBuffers())
                 {
                     // sanity check no buffers should have been acquired yet
@@ -641,7 +639,6 @@ namespace Babylon::Polyfills::Internal
                     // sanity check no unreleased buffers
                     assert(buffer.isAvailable == true);
                 }
-                nanovg_filterstack::DisposeBgfx();
 
                 m_dirty = false;
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
