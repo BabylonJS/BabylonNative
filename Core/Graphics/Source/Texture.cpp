@@ -13,7 +13,7 @@ namespace
 
         bimg::ImageContainer* image = bimg::imageAlloc(&Babylon::Graphics::DeviceContext::GetDefaultAllocator(), static_cast<bimg::TextureFormat::Enum>(format), width, height, 1/*depth*/, numLayers, false/*cubeMap*/, hasMips);
         const bgfx::Memory* mem{bgfx::makeRef(image->m_data, image->m_size, releaseFn, image)};
-        memset(image->m_data, 0, image->m_size);
+        bx::memSet(image->m_data, 0, image->m_size);
         return mem;
     }
 }
