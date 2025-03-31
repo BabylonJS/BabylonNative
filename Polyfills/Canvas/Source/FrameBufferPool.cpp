@@ -7,12 +7,12 @@
 
 namespace Babylon::Polyfills
 {
-    std::vector<FrameBufferPool::PoolBuffer> FrameBufferPool::getPoolBuffers()
+    std::vector<FrameBufferPool::PoolBuffer> FrameBufferPool::GetPoolBuffers()
     {
         return mPoolBuffers;
     }
 
-    void FrameBufferPool::init(int size, Graphics::DeviceContext& graphicsContext)
+    void FrameBufferPool::Init(int size, Graphics::DeviceContext& graphicsContext)
     {
         for (int i = 0; i < size; ++i)
         {
@@ -36,7 +36,7 @@ namespace Babylon::Polyfills
         }
     }
 
-    void FrameBufferPool::clear()
+    void FrameBufferPool::Clear()
     {
         for (auto& buffer : mPoolBuffers)
         {
@@ -52,7 +52,7 @@ namespace Babylon::Polyfills
         mPoolBuffers.clear();
     }
 
-    Graphics::FrameBuffer* FrameBufferPool::acquire()
+    Graphics::FrameBuffer* FrameBufferPool::Acquire()
     {
         for (auto& buffer : mPoolBuffers)
         {
@@ -66,7 +66,7 @@ namespace Babylon::Polyfills
         throw std::runtime_error{"No available frame buffer in pool"};
     }
 
-    void FrameBufferPool::release(Graphics::FrameBuffer* frameBuffer)
+    void FrameBufferPool::Release(Graphics::FrameBuffer* frameBuffer)
     {
         for (auto& buffer : mPoolBuffers)
         {

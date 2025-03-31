@@ -612,20 +612,20 @@ namespace Babylon::Polyfills::Internal
                 const auto width = m_canvas->GetWidth();
                 const auto height = m_canvas->GetHeight();
 
-                for (auto& buffer : m_canvas->m_frameBufferPool.getPoolBuffers())
+                for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
                 {
                     // sanity check no buffers should have been acquired yet
                     assert(buffer.isAvailable == true);
                     // buffer.frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0); // TODO: confirm that this not necessary because of ScreenSpaceQuad
                 }
                 std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this, encoder]() -> Babylon::Graphics::FrameBuffer* {
-                    Babylon::Graphics::FrameBuffer *frameBuffer = this->m_canvas->m_frameBufferPool.acquire();
+                    Babylon::Graphics::FrameBuffer *frameBuffer = this->m_canvas->m_frameBufferPool.Acquire();
                     frameBuffer->Bind(*encoder);
                     return frameBuffer;
                 };
                 std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
                     frameBuffer->Unbind(*encoder);
-                    this->m_canvas->m_frameBufferPool.release(frameBuffer);
+                    this->m_canvas->m_frameBufferPool.Release(frameBuffer);
                 };
 
                 nvgBeginFrame(*m_nvg, float(width), float(height), 1.0f);
@@ -634,7 +634,7 @@ namespace Babylon::Polyfills::Internal
                 nvgEndFrame(*m_nvg);
                 frameBuffer.Unbind(*encoder);
 
-                for (auto& buffer : m_canvas->m_frameBufferPool.getPoolBuffers())
+                for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
                 {
                     // sanity check no unreleased buffers
                     assert(buffer.isAvailable == true);

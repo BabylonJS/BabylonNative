@@ -140,9 +140,9 @@ namespace Babylon::Polyfills::Internal
                 }
             }
             {
-                m_frameBufferPool.clear();
+                m_frameBufferPool.Clear();
                 // PR cedric: Init pool only if filter is needed.
-                m_frameBufferPool.init(POOL_SIZE, m_graphicsContext);
+                m_frameBufferPool.Init(POOL_SIZE, m_graphicsContext);
             }
             return true;
         }
@@ -172,7 +172,7 @@ namespace Babylon::Polyfills::Internal
     {
         m_frameBuffer.reset();
         m_texture.reset();
-        m_frameBufferPool.clear();
+        m_frameBufferPool.Clear();
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)

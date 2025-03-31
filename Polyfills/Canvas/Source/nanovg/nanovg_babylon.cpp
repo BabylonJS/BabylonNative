@@ -834,7 +834,6 @@ namespace
 
         bgfx::ProgramHandle firstProg = gl->prog;
         std::function setUniform = [gl](bgfx::UniformHandle u, const void *value) {
-            // DEBUG: do we need a guard for setting uniform? bgfx.cpp:3725 is asserting
             gl->encoder->setUniform(u, value);
         };
         std::function firstPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *outBuffer) {
@@ -872,27 +871,6 @@ namespace
         if (3 <= call->vertexCount)
         {
             /*
-            nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
-
-            gl->encoder->setState(gl->state);
-            gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
-            gl->encoder->setTexture(0, gl->s_tex, gl->th);
-            hackFrameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
-
-            // render to canvas
-            nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
-
-            gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
-                | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
-                | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
-
-            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(hackFrameBuffer->Handle()));
-            bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
-            screenSpaceQuad(gl->encoder, s_originBottomLeft);
-            gl->frameBuffer->Submit(*gl->encoder, gl->fsprog, BGFX_DISCARD_ALL);;
-            */
-
-            /*
             nvgRenderSetUniforms(gl, call->uniformOffset, call->image);
 
             gl->encoder->setState(gl->state);
@@ -901,13 +879,8 @@ namespace
             gl->frameBuffer->Submit(*gl->encoder, gl->prog, BGFX_DISCARD_ALL);
             */
 
-            // TODO: will need to implement some kinda callback function to set uniforms
-            // float direction[4] = { 0.f, 0.f, 0.f, 0.f };
-            // gl->encoder->setUniform(gl->u_direction, direction);
-
             bgfx::ProgramHandle firstProg = gl->prog;
             std::function setUniform = [gl](bgfx::UniformHandle u, const void *value) {
-                // DEBUG: do we need a guard for setting uniform? bgfx.cpp:3725 is asserting
                 gl->encoder->setUniform(u, value);
             };
             std::function firstPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *outBuffer) {
@@ -976,7 +949,6 @@ namespace
     {
         struct GLNVGcontext* gl = (struct GLNVGcontext*)_userPtr;
         //gl->frameBuffer->SetViewPort(gl->encoder, 0.f, 0.f, gl->view[0], gl->view[1]);
-        // NOTE: I'm not sure why we need to re-define fill in every nvgRenderFlush
         if (!gl->prog.idx)
         {
             bgfx::RendererType::Enum type = bgfx::getRendererType();
@@ -1338,7 +1310,6 @@ namespace
 
 } // namespace
 
-// NOTE: This is called from Context constructor. Uniforms get defined when Context created
 NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator)
 {
     if (NULL == _allocator)
@@ -1374,7 +1345,6 @@ NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator)
     gl->allocator     = _allocator;
     gl->edgeAntiAlias = _edgeaa;
 
-    // NOTE: this calls back out to nvgRenderCreate to initialize uniforms
     ctx = nvgCreateInternal(&params);
     if (ctx == NULL) goto error;
 

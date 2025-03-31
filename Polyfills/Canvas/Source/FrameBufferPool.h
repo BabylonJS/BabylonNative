@@ -13,16 +13,11 @@ namespace Babylon::Polyfills
             Graphics::FrameBuffer* frameBuffer;
             bool isAvailable;
         };
-        void init(int nBuffers, Graphics::DeviceContext& graphicsContext);
-        void clear();
-        Graphics::FrameBuffer* acquire();
-        void release(Graphics::FrameBuffer* frameBuffer);
-        std::vector<PoolBuffer> getPoolBuffers();
-
-        typename std::vector<Graphics::FrameBuffer*>::iterator begin();
-        typename std::vector<Graphics::FrameBuffer*>::iterator end();
-        typename std::vector<Graphics::FrameBuffer*>::const_iterator begin() const;
-        typename std::vector<Graphics::FrameBuffer*>::const_iterator end() const;
+        Graphics::FrameBuffer* Acquire();
+        void Clear();
+        void Init(int nBuffers, Graphics::DeviceContext& graphicsContext);
+        void Release(Graphics::FrameBuffer* frameBuffer);
+        std::vector<PoolBuffer> GetPoolBuffers();
 
     private:
         std::vector<PoolBuffer> mPoolBuffers{};

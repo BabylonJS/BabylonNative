@@ -36,12 +36,6 @@ public:
     void ParseString(const std::string& string);
     static bool ValidString(const std::string& string);
 
-    // NOTE: This currently happens in Context.cpp
-    void SetSize(int width, int height)
-    {
-        // flush pool
-        // keep size for new pool item creation
-    }
     void AddDropShadow()
     {
         // break down shadow as blur + color
@@ -79,11 +73,4 @@ protected:
         };
     };
     std::vector<StackElement> stackElements;
-
-    // DISCUSS: Should we get transient target here? Or fine to have the std::function passed down from nanovg_babylon.cpp
-    Babylon::Graphics::FrameBuffer* GetTransientTarget()
-    {
-        // return a framebuffer that will be reused later as a texture or for another element
-        return {};
-    }
 };
