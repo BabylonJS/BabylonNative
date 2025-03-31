@@ -29,6 +29,7 @@
 #include "Colors.h"
 #include "LineCaps.h"
 #include "Gradient.h"
+#include <napi/pointer.h>
 
 /*
 Most of these context methods are preliminary work. They are currenbly not tested properly.
@@ -105,6 +106,7 @@ namespace Babylon::Polyfills::Internal
 
     Context::Context(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<Context>{info}
+        , m_canvasObject{Napi::Persistent(info[0].As<Napi::External<NativeCanvas>>().ToObject())}
         , m_canvas{info[0].As<Napi::External<NativeCanvas>>().Data()}
         , m_nvg{std::make_shared<NVGcontext*>(nvgCreate(1))}
         , m_graphicsContext{m_canvas->GetGraphicsContext()}
@@ -961,6 +963,6 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetCanvas(const Napi::CallbackInfo& info)
     {
-        return m_canvas->Value();
+        return m_canvasObject.Value();
     }
 }
