@@ -140,8 +140,7 @@ namespace Babylon::Polyfills::Internal
             }
             {
                 m_frameBufferPool.Clear();
-                // PR cedric: Init pool only if filter is needed.
-                m_frameBufferPool.Init(POOL_SIZE, m_graphicsContext);
+                m_frameBufferPool.SetGraphicsContext(&m_graphicsContext);
             }
             return true;
         }
