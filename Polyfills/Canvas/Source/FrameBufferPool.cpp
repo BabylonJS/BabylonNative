@@ -7,7 +7,7 @@
 
 namespace Babylon::Polyfills
 {
-    std::vector<FrameBufferPool::PoolBuffer> FrameBufferPool::GetPoolBuffers()
+    const std::vector<FrameBufferPool::PoolBuffer>& FrameBufferPool::GetPoolBuffers()
     {
         return mPoolBuffers;
     }
@@ -20,9 +20,8 @@ namespace Babylon::Polyfills
             Graphics::FrameBuffer* FrameBuffer;
 
             int width(256), height(256);
-            std::array<bgfx::TextureHandle, 2> textures{
-                bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
-                bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT)};
+            std::array<bgfx::TextureHandle, 1> textures{
+                bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT)};
 
             std::array<bgfx::Attachment, textures.size()> attachments{};
             for (size_t idx = 0; idx < attachments.size(); ++idx)
@@ -72,7 +71,7 @@ namespace Babylon::Polyfills
         {
             if (buffer.frameBuffer == frameBuffer)
             {
-                // TODO: clear framebuffer?
+                // no need to clear framebuffer, as all filter passes are (currently) full screen
                 buffer.isAvailable = true;
                 return;
             }

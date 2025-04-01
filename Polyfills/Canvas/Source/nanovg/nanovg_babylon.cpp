@@ -852,7 +852,7 @@ namespace
             }
         };
         std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
-            nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
+            gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
                 | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
                 | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
@@ -882,6 +882,7 @@ namespace
             bgfx::ProgramHandle firstProg = gl->prog;
             std::function setUniform = [gl](bgfx::UniformHandle u, const void *value) {
                 gl->encoder->setUniform(u, value);
+                gl->encoder->setUniform(gl->u_viewSize, gl->view);
             };
             std::function firstPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *outBuffer) {
                 nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
@@ -891,7 +892,7 @@ namespace
                 outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
             };
             std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
-                nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
+                gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
                 gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
                     | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
                     | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));

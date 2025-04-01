@@ -120,9 +120,8 @@ namespace Babylon::Polyfills::Internal
         if (m_dirty)
         {
             {
-                std::array<bgfx::TextureHandle, 2> textures{
-                   bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
-                   bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT) };
+                std::array<bgfx::TextureHandle, 1> textures{
+                   bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT) };
 
                 std::array<bgfx::Attachment, textures.size()> attachments{};
                 for (size_t idx = 0; idx < attachments.size(); ++idx)

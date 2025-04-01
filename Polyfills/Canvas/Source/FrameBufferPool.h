@@ -17,7 +17,7 @@ namespace Babylon::Polyfills
         void Clear();
         void Init(int nBuffers, Graphics::DeviceContext& graphicsContext);
         void Release(Graphics::FrameBuffer* frameBuffer);
-        std::vector<PoolBuffer> GetPoolBuffers();
+        const std::vector<PoolBuffer>& GetPoolBuffers();
 
     private:
         std::vector<PoolBuffer> mPoolBuffers{};

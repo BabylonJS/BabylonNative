@@ -11,15 +11,10 @@ std::regex noneRegex(R"(^\s*none\s*$)");
 #define BLUR_ITERATIONS 3
 
 #include "Shaders/dx11/vs_fspass.h"
-#include "Shaders/dx11/fs_fspass.h"
 #include "Shaders/metal/vs_fspass.h"
-#include "Shaders/metal/fs_fspass.h"
 #include "Shaders/glsl/vs_fspass.h"
-#include "Shaders/glsl/fs_fspass.h"
 #include "Shaders/essl/vs_fspass.h"
-#include "Shaders/essl/fs_fspass.h"
 #include "Shaders/spirv/vs_fspass.h"
-#include "Shaders/spirv/fs_fspass.h"
 
 #include "Shaders/dx11/fs_gaussblur.h"
 #include "Shaders/metal/fs_gaussblur.h"
@@ -30,7 +25,6 @@ std::regex noneRegex(R"(^\s*none\s*$)");
 static const bgfx::EmbeddedShader s_embeddedShadersFilterStack[] =
 {
     BGFX_EMBEDDED_SHADER(vs_fspass),
-    BGFX_EMBEDDED_SHADER(fs_fspass),
     BGFX_EMBEDDED_SHADER(fs_gaussblur),
     BGFX_EMBEDDED_SHADER_END()
 };
@@ -46,11 +40,6 @@ void nanovg_filterstack::InitBgfx()
 
     // create shaders used by the different elements
     bgfx::RendererType::Enum type = bgfx::getRendererType();
-    fspassProg = bgfx::createProgram(
-        bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "vs_fspass")
-        , bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "fs_fspass")
-        , true
-    );
     blurProg = bgfx::createProgram(
         bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "vs_fspass")
         , bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "fs_gaussblur")
@@ -65,8 +54,6 @@ void nanovg_filterstack::DisposeBgfx()
         bgfx::destroy(m_uniforms.u_strength);
     if (m_uniforms.u_direction.idx != bgfx::kInvalidHandle)
         bgfx::destroy(m_uniforms.u_direction);
-    if (fspassProg.idx != bgfx::kInvalidHandle)
-        bgfx::destroy(fspassProg);
     if (blurProg.idx != bgfx::kInvalidHandle)
         bgfx::destroy(blurProg);
 }
