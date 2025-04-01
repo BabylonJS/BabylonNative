@@ -120,7 +120,7 @@ namespace Babylon::Polyfills::Internal
             }};
 
             bimg::ImageContainer* image = bimg::imageAlloc(&Babylon::Graphics::DeviceContext::GetDefaultAllocator(), bimg::TextureFormat::RGBA8, m_width, m_height, 1/*depth*/, 1, false/*cubeMap*/, false/*hasMips*/);
-            const bgfx::Memory* mem{bgfx::makeRef(image->m_data, image->m_size, releaseFn, image)};
+            const bgfx::Memory* mem = bgfx::makeRef(image->m_data, image->m_size, releaseFn, image);
             bx::memSet(image->m_data, 0, image->m_size);
 
             std::array<bgfx::TextureHandle, 2> textures{
