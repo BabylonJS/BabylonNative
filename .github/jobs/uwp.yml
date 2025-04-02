@@ -27,6 +27,10 @@ jobs:
       solutionName: 'UWP_${{ parameters.platform }}${{variables.napiSuffix}}'
 
     steps:
+    - template: cmake.yml
+      parameters:
+        vmImage: ${{ parameters.vmImage }}
+
     - script: |
         cmake -B build${{ variables.solutionName }} -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 ${{ variables.jsEngineDefine }} -A ${{ parameters.platform }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD)  -D BABYLON_DEBUG_TRACE=ON
       displayName: 'Generate ${{ variables.solutionName }} solution'
