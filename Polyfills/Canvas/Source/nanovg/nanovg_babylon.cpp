@@ -882,7 +882,6 @@ namespace
             bgfx::ProgramHandle firstProg = gl->prog;
             std::function setUniform = [gl](bgfx::UniformHandle u, const void *value) {
                 gl->encoder->setUniform(u, value);
-                gl->encoder->setUniform(gl->u_viewSize, gl->view);
             };
             std::function firstPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *outBuffer) {
                 nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);

@@ -53,10 +53,7 @@ namespace Babylon::Polyfills
         {
             if (buffer.frameBuffer)
             {
-                if (buffer.frameBuffer->Handle().idx != bgfx::kInvalidHandle)
-                {
-                    bgfx::destroy(buffer.frameBuffer->Handle());
-                }
+                buffer.frameBuffer->Dispose();
             }
         }
         m_available = 0;
@@ -80,6 +77,8 @@ namespace Babylon::Polyfills
                 return buffer.frameBuffer;
             }
         }
+
+        throw std::runtime_error("No available frame buffer in pool.");
     }
 
     void FrameBufferPool::Release(Graphics::FrameBuffer* frameBuffer)
@@ -88,7 +87,6 @@ namespace Babylon::Polyfills
         {
             if (buffer.frameBuffer == frameBuffer)
             {
-                // no need to clear framebuffer, as all filter passes are (currently) full screen
                 buffer.isAvailable = true;
                 return;
             }

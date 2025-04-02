@@ -625,7 +625,6 @@ namespace Babylon::Polyfills::Internal
                 {
                     // sanity check no buffers should have been acquired yet
                     assert(buffer.isAvailable == true);
-                    // buffer.frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0); // TODO: confirm that this not necessary because of ScreenSpaceQuad
                 }
                 std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this, encoder]() -> Babylon::Graphics::FrameBuffer* {
                     Babylon::Graphics::FrameBuffer *frameBuffer = this->m_canvas->m_frameBufferPool.Acquire();
@@ -633,8 +632,10 @@ namespace Babylon::Polyfills::Internal
                     return frameBuffer;
                 };
                 std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
-                    frameBuffer->Unbind(*encoder);
+                    // no need to clear framebuffer (yet), as all filter passes are (currently) full screen
+                    //frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR, 0, 0, 0);
                     this->m_canvas->m_frameBufferPool.Release(frameBuffer);
+                    frameBuffer->Unbind(*encoder);
                 };
 
                 nvgBeginFrame(*m_nvg, float(width), float(height), 1.0f);

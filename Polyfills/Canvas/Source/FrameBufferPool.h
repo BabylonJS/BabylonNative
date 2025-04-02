@@ -24,7 +24,7 @@ namespace Babylon::Polyfills
 
     private:
         std::vector<PoolBuffer> mPoolBuffers{};
-        Graphics::DeviceContext *m_graphicsContext;
+        Graphics::DeviceContext* m_graphicsContext;
         int m_available{0};
     };
 }
