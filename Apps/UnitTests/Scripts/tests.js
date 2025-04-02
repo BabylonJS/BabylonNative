@@ -19,10 +19,10 @@ describe("CanvasAndContext", function () {
     const engine = new BABYLON.NativeEngine();
     const scene = new BABYLON.Scene(engine);
 
-    var texSize = 512;
-    var dynamicTexture = new BABYLON.DynamicTexture("dynamic texture", texSize, scene);
-    var context = dynamicTexture.getContext();
-    var otherContext = dynamicTexture.getContext();
+    const texSize = 512;
+    const dynamicTexture = new BABYLON.DynamicTexture("dynamic texture", texSize, scene);
+    const context = dynamicTexture.getContext();
+    const otherContext = dynamicTexture.getContext();
 
     expect(context).to.equal(context.canvas.getContext());
     expect(context).to.equal(otherContext);
