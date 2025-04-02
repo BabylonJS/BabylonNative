@@ -15,14 +15,15 @@ namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_CONSTRUCTOR_NAME = "Canvas";
 
-    void NativeCanvas::CreateInstance(Napi::Env env)
+    void NativeCanvas::Initialize(Napi::Env env)
     {
         Napi::HandleScope scope{env};
 
         Napi::Function func = DefineClass(
             env,
             JS_CONSTRUCTOR_NAME,
-            {StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
+            {
+                StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
                 InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
                 InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
                 InstanceMethod("getContext", &NativeCanvas::GetContext),
@@ -77,7 +78,11 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value NativeCanvas::GetContext(const Napi::CallbackInfo& info)
     {
-        return Context::CreateInstance(info.Env(), this);
+        if (m_contextObject.IsEmpty())
+        {
+            m_contextObject = Napi::Persistent(Context::CreateInstance(info.Env(), info.This()).As<Napi::Object>());
+        }
+        return m_contextObject.Value();
     }
 
     Napi::Value NativeCanvas::GetWidth(const Napi::CallbackInfo&)
@@ -242,9 +247,8 @@ namespace Babylon::Polyfills
     {
         auto impl{std::make_shared<Canvas::Impl>(env)};
 
-        Internal::NativeCanvas::CreateInstance(env);
-        Internal::NativeCanvasImage::CreateInstance(env);
-
+        Internal::NativeCanvas::Initialize(env);
+        Internal::NativeCanvasImage::Initialize(env);
         Internal::Context::Initialize(env);
 
         return {impl};
