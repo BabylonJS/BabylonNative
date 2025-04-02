@@ -632,8 +632,8 @@ namespace Babylon::Polyfills::Internal
                     return frameBuffer;
                 };
                 std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
-                    // no need to clear framebuffer (yet), as all filter passes are (currently) full screen
-                    //frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR, 0, 0, 0);
+                    // clear framebuffer when released
+                    frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR, 0, 0, 0);
                     this->m_canvas->m_frameBufferPool.Release(frameBuffer);
                     frameBuffer->Unbind(*encoder);
                 };

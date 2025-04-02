@@ -19,21 +19,19 @@ void main()
 
 	// 9-tap weights
 	float weights[5];
-	weights[0] = 0.227027; // center
-	weights[1] = 0.1945946;
-	weights[2] = 0.1216216;
-	weights[3] = 0.054054;
-	weights[4] = 0.016216;
+	weights[0] = 0.340; // center
+	weights[1] = 0.250;
+	weights[2] = 0.130;
+	weights[3] = 0.060;
+	weights[4] = 0.020;
 
-	vec4 color = texture2D(s_tex, v_texcoord0) * weights[0]; // center pixel weighted
-
-	// convert NDC (-1 to 1) to 0 UV (0 to 1)
-	vec2 texcoord0 = v_texcoord0 * 0.5 + 0.5;
-	// TODO: + u_halfTexel.xy; // handle half texel offset
+	vec2 texcoord0 = v_texcoord0 + u_halfTexel.xy;
+	vec4 color = texture2D(s_tex, texcoord0) * weights[0]; // center pixel
+	vec2 texelSize = vec2_splat(1.0) / u_viewSize.xy;
 
 	for (int i = 1; i <= 4; i++)
 	{
-		vec2 offset = u_direction.xy * float(i); // TODO: normalize against u_viewSize.xy
+		vec2 offset = u_direction.xy * texelSize * float(i);
 		color += texture2D(s_tex, texcoord0 + offset) * weights[i];
 		color += texture2D(s_tex, texcoord0 - offset) * weights[i];
 	}

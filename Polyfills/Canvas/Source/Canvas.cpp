@@ -8,8 +8,6 @@
 #include "Colors.h"
 #include "Gradient.h"
 
-const int POOL_SIZE = 3;
-
 namespace
 {
     constexpr auto JS_CANVAS_NAME = "_CanvasImpl";

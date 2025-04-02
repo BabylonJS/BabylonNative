@@ -149,7 +149,7 @@ CreateBoxAsync(scene).then(function () {
                 context.stroke();
 
                 // filter blur text
-                context.filter = "blur(1.5px)";
+                context.filter = "blur(1.25px)";
                 context.fillStyle = "White";
                 context.font = `bold ${50}px monospace`;
                 context.fillText("BLUR TEST BLUR TEST", 100, 246);
