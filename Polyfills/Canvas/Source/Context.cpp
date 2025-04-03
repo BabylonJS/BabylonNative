@@ -247,8 +247,12 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Fill(const Napi::CallbackInfo& info)
     {
+        const NativeCanvasPath2D* path = info.Length() >= 1 && info[0].IsObject()
+            ? NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>())
+            : nullptr;
+        // TODO: handle fillRule: nonzero, evenodd
+
         // draw Path2D if exists
-        const NativeCanvasPath2D* path = info.Length() == 1 ? NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>()) : nullptr;
         if (path != nullptr)
         {
             PlayPath2D(path);
