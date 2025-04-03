@@ -902,6 +902,7 @@ namespace
                 gl->encoder->setState(gl->state);
                 gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
                 gl->encoder->setTexture(0, gl->s_tex, gl->th);
+                gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
                 outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
             };
             std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
