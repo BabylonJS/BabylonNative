@@ -94,6 +94,7 @@ namespace Babylon::Polyfills::Internal
         std::unique_ptr<Graphics::FrameBuffer> m_frameBuffer;
         std::unique_ptr<Graphics::Texture> m_texture{};
         bool m_dirty{};
+        bool m_clear{};
 
         void FlushGraphicResources() override;
     };

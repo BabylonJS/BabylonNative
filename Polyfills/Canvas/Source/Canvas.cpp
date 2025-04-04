@@ -90,7 +90,16 @@ namespace Babylon::Polyfills::Internal
     void NativeCanvas::SetWidth(const Napi::CallbackInfo&, const Napi::Value& value)
     {
         auto width = static_cast<uint16_t>(value.As<Napi::Number>().Uint32Value());
-        if (width != m_width && width)
+        if (!width)
+        {
+            return;
+        }
+
+        if (width == m_width)
+        {
+            m_clear = true;
+        }
+        else
         {
             m_width = width;
             m_dirty = true;
@@ -105,7 +114,16 @@ namespace Babylon::Polyfills::Internal
     void NativeCanvas::SetHeight(const Napi::CallbackInfo&, const Napi::Value& value)
     {
         auto height = value.As<Napi::Number>().Uint32Value();
-        if (height != m_height && height)
+        if (!height)
+        {
+            return;
+        }
+
+        if (height == m_height)
+        {
+            m_clear = true;
+        }
+        else
         {
             m_height = height;
             m_dirty = true;
@@ -114,6 +132,10 @@ namespace Babylon::Polyfills::Internal
 
     bool NativeCanvas::UpdateRenderTarget()
     {
+        // in some scenarios (eg. no size change on SetSize/SetHeight) we can re-use framebuffer
+        bool needClear = m_clear;
+        m_clear = false;
+
         if (m_dirty)
         {
             std::array<bgfx::TextureHandle, 2> textures{
@@ -137,7 +159,8 @@ namespace Babylon::Polyfills::Internal
 
             return true;
         }
-        return false;
+
+        return needClear || false;
     }
 
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
