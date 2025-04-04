@@ -113,7 +113,7 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::SetHeight(const Napi::CallbackInfo&, const Napi::Value& value)
     {
-        auto height = value.As<Napi::Number>().Uint32Value();
+        auto height = static_cast<uint16_t>(value.As<Napi::Number>().Uint32Value());
         if (!height)
         {
             return;
@@ -160,7 +160,7 @@ namespace Babylon::Polyfills::Internal
             return true;
         }
 
-        return needClear || false;
+        return needClear;
     }
 
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
