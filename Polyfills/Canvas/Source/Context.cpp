@@ -96,7 +96,7 @@ namespace Babylon::Polyfills::Internal
 
     Context::Context(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<Context>{info}
-        , m_canvasObject{Napi::Weak(info[0].As<Napi::Object>())}
+        , m_canvasObject{Napi::Persistent(info[0].As<Napi::Object>())}
         , m_canvas{NativeCanvas::Unwrap(info[0].As<Napi::Object>())}
         , m_nvg{nvgCreate(1)}
         , m_graphicsContext{m_canvas->GetGraphicsContext()}
