@@ -15,7 +15,7 @@ namespace Babylon::Polyfills::Internal
     class NativeCanvasImage final : public Napi::ObjectWrap<NativeCanvasImage>
     {
     public:
-        static void CreateInstance(Napi::Env env);
+        static void Initialize(Napi::Env env);
 
         explicit NativeCanvasImage(const Napi::CallbackInfo& info);
         virtual ~NativeCanvasImage();

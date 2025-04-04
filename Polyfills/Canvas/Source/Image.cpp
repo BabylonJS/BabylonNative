@@ -8,7 +8,7 @@
 #include <assert.h>
 #include <bimg/bimg.h>
 #include <bimg/decode.h>
-#include "nanovg.h"
+#include "nanovg/nanovg.h"
 #include <cassert>
 #include <napi/pointer.h>
 #include <basen.hpp>
@@ -17,7 +17,7 @@ namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_IMAGE_CONSTRUCTOR_NAME = "Image";
 
-    void NativeCanvasImage::CreateInstance(Napi::Env env)
+    void NativeCanvasImage::Initialize(Napi::Env env)
     {
         Napi::HandleScope scope{env};
 
