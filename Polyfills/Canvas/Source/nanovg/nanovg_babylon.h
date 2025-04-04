@@ -6,6 +6,7 @@
 #ifndef NANOVG_BABYLON_H_HEADER_GUARD
 #define NANOVG_BABYLON_H_HEADER_GUARD
 
+#include <functional>
 #include <bgfx/bgfx.h>
 #include <Babylon/Graphics/FrameBuffer.h>
 namespace bx
@@ -21,6 +22,13 @@ NVGcontext* nvgCreate(int32_t _edgeaa, bx::AllocatorI* _allocator);
 ///
 NVGcontext* nvgCreate(int32_t _edgeaa);
 
+struct PoolInterface
+{
+    std::function<Babylon::Graphics::FrameBuffer*()> acquire;
+    std::function<void(Babylon::Graphics::FrameBuffer*)> release;
+};
+
+void nvgSetFrameBufferPool(NVGcontext* _ctx, PoolInterface pool);
 void nvgSetFrameBufferAndEncoder(NVGcontext* _ctx, Babylon::Graphics::FrameBuffer& frameBuffer, bgfx::Encoder* encoder);
 
 ///

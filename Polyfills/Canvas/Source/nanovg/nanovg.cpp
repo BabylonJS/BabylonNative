@@ -24,6 +24,7 @@
 #include "nanovg.h"
 
 #include <bx/bx.h>
+#include "nanovg_filterstack.h"
 
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4701) // error C4701: potentially uninitialized local variable 'cint' used
 // -Wunused-function and 4505 must be file scope, can't be disabled between push/pop.
@@ -94,6 +95,7 @@ struct NVGstate {
 	float fontBlur;
 	int textAlign;
 	int fontId;
+	nanovg_filterstack m_filterStack;
 };
 typedef struct NVGstate NVGstate;
 
@@ -674,6 +676,7 @@ void nvgReset(NVGcontext* ctx)
 	state->fontBlur = 0.0f;
 	state->textAlign = NVG_ALIGN_LEFT | NVG_ALIGN_BASELINE;
 	state->fontId = 0;
+	state->m_filterStack.Clear();
 }
 
 // State setting
@@ -790,6 +793,13 @@ void nvgFillColor(NVGcontext* ctx, NVGcolor color)
 {
 	NVGstate* state = nvg__getState(ctx);
 	nvg__setPaintColor(&state->fill, color);
+}
+
+// should be set before a draw (eg. stroke, fill). a copy of filter stack is attached to the draw call for drawing filters
+void nvgFilterStack(NVGcontext* ctx, nanovg_filterstack& filterStack)
+{
+	NVGstate* state = nvg__getState(ctx);
+	state->m_filterStack = filterStack;
 }
 
 void nvgFillPaint(NVGcontext* ctx, NVGpaint paint)
@@ -2218,7 +2228,7 @@ void nvgFill(NVGcontext* ctx)
 	fillPaint.image2 = 0;
 
 	ctx->params.renderFill(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
-						   ctx->cache->bounds, ctx->cache->paths, ctx->cache->npaths);
+						   ctx->cache->bounds, ctx->cache->paths, ctx->cache->npaths, state->m_filterStack);
 
 	// Count triangles
 	for (i = 0; i < ctx->cache->npaths; i++) {
@@ -2261,7 +2271,7 @@ void nvgStroke(NVGcontext* ctx)
 		nvg__expandStroke(ctx, strokeWidth*0.5f, 0.0f, state->lineCap, state->lineJoin, state->miterLimit);
 
 	ctx->params.renderStroke(ctx->params.userPtr, &strokePaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
-							 strokeWidth, ctx->cache->paths, ctx->cache->npaths);
+							 strokeWidth, ctx->cache->paths, ctx->cache->npaths, state->m_filterStack);
 
 	// Count triangles
 	for (i = 0; i < ctx->cache->npaths; i++) {
@@ -2412,7 +2422,7 @@ static void nvg__renderText(NVGcontext* ctx, NVGpaint* paint, NVGvertex* verts, 
 	paint->innerColor.a *= state->alpha;
 	paint->outerColor.a *= state->alpha;
 
-	ctx->params.renderTriangles(ctx->params.userPtr, paint, state->compositeOperation, &state->scissor, verts, nverts);
+	ctx->params.renderTriangles(ctx->params.userPtr, paint, state->compositeOperation, &state->scissor, verts, nverts, state->m_filterStack);
 
 	ctx->drawCallCount++;
 	ctx->textTriCount += nverts/3;

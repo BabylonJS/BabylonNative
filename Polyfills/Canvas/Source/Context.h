@@ -5,6 +5,7 @@
 #include <Babylon/Graphics/DeviceContext.h>
 #include "Image.h"
 #include "Path2D.h"
+#include "nanovg/nanovg_filterstack.h"
 
 struct NVGcontext;
 
@@ -67,6 +68,8 @@ namespace Babylon::Polyfills::Internal
         void SetLineJoin(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetMiterLimit(const Napi::CallbackInfo&);
         void SetMiterLimit(const Napi::CallbackInfo&, const Napi::Value& value);
+        Napi::Value GetFilter(const Napi::CallbackInfo& info);
+        void SetFilter(const Napi::CallbackInfo& info, const Napi::Value& value);
         Napi::Value GetFont(const Napi::CallbackInfo&);
         void SetFont(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetLetterSpacing(const Napi::CallbackInfo&);
@@ -95,6 +98,7 @@ namespace Babylon::Polyfills::Internal
         std::string m_strokeStyle{};
         std::string m_lineCap{};  // 'butt', 'round', 'square'
         std::string m_lineJoin{}; // 'round', 'bevel', 'miter'
+        std::string m_filter{};
         float m_miterLimit{0.f};
         float m_lineWidth{0.f};
         float m_globalAlpha{1.f};
@@ -121,6 +125,7 @@ namespace Babylon::Polyfills::Internal
         void BindFillStyle(const Napi::CallbackInfo& info, float left, float top, float width, float height);
         void FlushGraphicResources() override;
         void PlayPath2D(const NativeCanvasPath2D* path);
+        void SetFilterStack();
 
         friend class Canvas;
     };

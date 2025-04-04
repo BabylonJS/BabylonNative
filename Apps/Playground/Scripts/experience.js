@@ -148,6 +148,13 @@ CreateBoxAsync(scene).then(function () {
                 context.lineTo(140, 140);
                 context.stroke();
 
+                // filter blur text
+                context.filter = "blur(1.25px)";
+                context.fillStyle = "White";
+                context.font = `bold ${50}px monospace`;
+                context.fillText("BLUR TEST BLUR TEST", 100, 246);
+                context.filter = "none";
+
                 // Draw lines
                 context.strokeStyle = "black";
                 ["butt", "round", "square"].forEach((lineCap, i) => {
@@ -247,7 +254,6 @@ CreateBoxAsync(scene).then(function () {
 
         });
     }, undefined, undefined, true);
-
 
     // This creates and positions a free camera (non-mesh)
     scene.createDefaultCamera(true, true, true);
