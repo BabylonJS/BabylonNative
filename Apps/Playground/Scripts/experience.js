@@ -82,6 +82,18 @@ CreateBoxAsync(scene).then(function () {
             dynamicTexture.clear();
             var context = dynamicTexture.getContext();
 
+            // Text with gradient
+            const gradientText = context.createLinearGradient(0, 0, 256, 0);
+            gradientText.addColorStop(0, "magenta");
+            gradientText.addColorStop(0.5, "blue");
+            gradientText.addColorStop(1.0, "red");
+
+            // gradient
+            let gradient = context.createLinearGradient(0, 0, 200, 0);
+            gradient.addColorStop(0, "green");
+            gradient.addColorStop(0.7, "white");
+            gradient.addColorStop(1, "pink");
+
             var t = 0;
             scene.onBeforeRenderObservable.add(() => {
                 // animated shape
@@ -99,6 +111,7 @@ CreateBoxAsync(scene).then(function () {
                 context.translate(rectangleU + offsetU, rectangleV + offsetV);
                 context.rotate(t);
                 context.fillStyle = "DarkOrange";
+                context.transform(1, t, 0.8, 1, 0, 0);
                 context.fillRect(-width * 0.5, -height * 0.5, width, height);
                 context.restore();
 
@@ -115,9 +128,117 @@ CreateBoxAsync(scene).then(function () {
                 context.fill();
 
                 // text
-                var fontSize = 8 + (Math.sin(t) * 0.5 + 0.5) * 200;
-                var font = `bold ${fontSize}px monospace`;
-                dynamicTexture.drawText("BabylonNative", Math.cos(t) * 100, 246, font, "White", null, true, true);
+                var scale = Math.sin(t) * 0.5 + 0.54;
+                context.save();
+                context.translate(Math.cos(t) * 100, 246);
+                context.font = `bold ${scale * 200}px monospace`;
+                context.strokeStyle = "Green";
+                context.lineWidth = scale * 16;
+                context.strokeText("BabylonNative", 0, 0);
+                context.fillStyle = "White";
+                context.fillText("BabylonNative", 0, 0);
+                context.restore();
+
+                // Draw guides
+                context.strokeStyle = "#09f";
+                context.beginPath();
+                context.moveTo(10, 10);
+                context.lineTo(140, 10);
+                context.moveTo(10, 140);
+                context.lineTo(140, 140);
+                context.stroke();
+
+                // Draw lines
+                context.strokeStyle = "black";
+                ["butt", "round", "square"].forEach((lineCap, i) => {
+                    context.lineWidth = 15;
+                    context.lineCap = lineCap;
+                    context.beginPath();
+                    context.moveTo(25 + i * 50, 10);
+                    context.lineTo(25 + i * 50, 140);
+                    context.stroke();
+                });
+
+                // line join
+                context.lineWidth = 10;
+                var offset = 200;
+                ["round", "bevel", "miter"].forEach((join, i) => {
+                    context.lineJoin = join;
+                    context.beginPath();
+                    context.moveTo(-5 + offset, 15 + i * 40);
+                    context.lineTo(35 + offset, 55 + i * 40);
+                    context.lineTo(75 + offset, 15 + i * 40);
+                    context.lineTo(115 + offset, 55 + i * 40);
+                    context.lineTo(155 + offset, 15 + i * 40);
+                    context.stroke();
+                });
+
+                // rect with gradient
+                context.fillStyle = gradient;
+                context.fillRect(10, 310, 400, 60);
+
+                // Fill with gradient
+                context.fillStyle = gradientText;
+                context.font = "bold 60px monospace";
+                context.fillText("Gradient Text!", 10, 420);
+
+                context.lineWidth = 5;
+                // Rounded rectangle with zero radius (specified as a number)
+                context.strokeStyle = "red";
+                context.beginPath();
+                context.roundRect(10, 220, 150, 100, 0);
+                context.stroke();
+
+                // Rounded rectangle with 40px radius (single element list)
+                context.strokeStyle = "blue";
+                context.beginPath();
+                context.roundRect(10, 220, 150, 100, [40]);
+                context.stroke();
+
+                // Rounded rectangle with 2 different radii
+                context.strokeStyle = "orange";
+                context.beginPath();
+                context.roundRect(10, 350, 150, 100, [10, 40]);
+                context.stroke();
+
+                // Rounded rectangle with four different radii
+                context.strokeStyle = "green";
+                context.beginPath();
+                context.roundRect(200, 220, 200, 100, [0, 30, 50, 60]);
+                context.stroke();
+
+                // Same rectangle drawn backwards
+                context.strokeStyle = "magenta";
+                context.beginPath();
+                context.roundRect(400, 350, -200, 100, [0, 30, 50, 60]);
+                context.stroke();
+
+                // Path 2D stroke
+                context.strokeStyle = "black";
+                context.lineWidth = 2;
+                let heartPath = new engine.createCanvasPath2D("M390,30 A 20, 20 0, 0, 1 430, 30 A 20, 20 0, 0, 1 470, 30 Q 470, 60 430, 90 Q 390, 60 390, 30 z");
+                let squarePath = new engine.createCanvasPath2D("M380, 10 h100 v100 h-100 Z");
+                heartPath.addPath(squarePath, { a: 1, b: 0, c: 0, d: 1, e: 0, f: -5 }); // push square 5px up to center heart.
+                context.stroke(heartPath);
+
+                // Path 2D fill
+                context.fillStyle = "yellow";
+                let diamondPath = new engine.createCanvasPath2D();
+                diamondPath.moveTo(350, 200); // Start at the center
+                diamondPath.lineTo(375, 175); // Move to the top point
+                diamondPath.lineTo(400, 200); // Move to the right point
+                diamondPath.lineTo(375, 225); // Move to the bottom point
+                diamondPath.lineTo(350, 200); // Close back to the starting point
+                context.fill(diamondPath);
+
+
+                // Draw clipped round rect
+                // TODO: this is currently broken, clipping area does not have round corners
+                context.beginPath();
+                context.roundRect(40, 450, 100, 50, 10);
+                context.clip();
+                context.fillStyle = "blue";
+                context.fillRect(0, 0, 1000, 1000);
 
                 // tick update
                 dynamicTexture.update();

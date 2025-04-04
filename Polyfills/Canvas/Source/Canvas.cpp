@@ -1,10 +1,12 @@
 #include "Canvas.h"
 #include "Image.h"
+#include "Path2D.h"
 #include "Context.h"
 #include <bgfx/bgfx.h>
 #include <napi/pointer.h>
 #include <cassert>
 #include "Colors.h"
+#include "Gradient.h"
 
 namespace
 {
@@ -249,6 +251,8 @@ namespace Babylon::Polyfills
 
         Internal::NativeCanvas::Initialize(env);
         Internal::NativeCanvasImage::Initialize(env);
+        Internal::NativeCanvasPath2D::Initialize(env);
+        Internal::CanvasGradient::Initialize(env);
         Internal::Context::Initialize(env);
 
         return {impl};
