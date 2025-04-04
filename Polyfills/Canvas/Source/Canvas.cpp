@@ -17,14 +17,15 @@ namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_CONSTRUCTOR_NAME = "Canvas";
 
-    void NativeCanvas::CreateInstance(Napi::Env env)
+    void NativeCanvas::Initialize(Napi::Env env)
     {
         Napi::HandleScope scope{env};
 
         Napi::Function func = DefineClass(
             env,
             JS_CONSTRUCTOR_NAME,
-            {StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
+            {
+                StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
                 InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
                 InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
                 InstanceMethod("getContext", &NativeCanvas::GetContext),
@@ -79,7 +80,11 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value NativeCanvas::GetContext(const Napi::CallbackInfo& info)
     {
-        return Context::CreateInstance(info.Env(), this);
+        if (m_contextObject.IsEmpty())
+        {
+            m_contextObject = Napi::Persistent(Context::CreateInstance(info.Env(), info.This()).As<Napi::Object>());
+        }
+        return m_contextObject.Value();
     }
 
     Napi::Value NativeCanvas::GetWidth(const Napi::CallbackInfo&)
@@ -116,8 +121,17 @@ namespace Babylon::Polyfills::Internal
     {
         if (m_dirty)
         {
+            // make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
+            bgfx::ReleaseFn releaseFn{ [](void*, void* userData) {
+                bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
+            }};
+
+            bimg::ImageContainer* image = bimg::imageAlloc(&Babylon::Graphics::DeviceContext::GetDefaultAllocator(), bimg::TextureFormat::RGBA8, m_width, m_height, 1/*depth*/, 1, false/*cubeMap*/, false/*hasMips*/);
+            const bgfx::Memory* mem = bgfx::makeRef(image->m_data, image->m_size, releaseFn, image);
+            bx::memSet(image->m_data, 0, image->m_size);
+
             std::array<bgfx::TextureHandle, 2> textures{
-                bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT),
+                bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT, mem),
                 bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT)};
 
             std::array<bgfx::Attachment, textures.size()> attachments{};
@@ -235,9 +249,9 @@ namespace Babylon::Polyfills
     {
         auto impl{std::make_shared<Canvas::Impl>(env)};
 
-        Internal::NativeCanvas::CreateInstance(env);
-        Internal::NativeCanvasImage::CreateInstance(env);
-        Internal::NativeCanvasPath2D::CreateInstance(env);
+        Internal::NativeCanvas::Initialize(env);
+        Internal::NativeCanvasImage::Initialize(env);
+        Internal::NativeCanvasPath2D::Initialize(env);
         Internal::CanvasGradient::Initialize(env);
         Internal::Context::Initialize(env);
 

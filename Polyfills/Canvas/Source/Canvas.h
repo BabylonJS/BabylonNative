@@ -54,7 +54,7 @@ namespace Babylon::Polyfills::Internal
     class NativeCanvas final : public Napi::ObjectWrap<NativeCanvas>, Polyfills::Canvas::Impl::MonitoredResource
     {
     public:
-        static void CreateInstance(Napi::Env env);
+        static void Initialize(Napi::Env env);
 
         explicit NativeCanvas(const Napi::CallbackInfo& info);
         virtual ~NativeCanvas();
@@ -85,6 +85,8 @@ namespace Babylon::Polyfills::Internal
         void Remove(const Napi::CallbackInfo& info);
         void Dispose(const Napi::CallbackInfo& info);
         void Dispose();
+
+        Napi::ObjectReference m_contextObject{};
 
         uint16_t m_width{1};
         uint16_t m_height{1};

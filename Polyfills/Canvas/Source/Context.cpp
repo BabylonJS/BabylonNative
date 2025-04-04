@@ -95,17 +95,19 @@ namespace Babylon::Polyfills::Internal
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONTEXT_CONSTRUCTOR_NAME, func);
     }
 
-    Napi::Value Context::CreateInstance(Napi::Env env, NativeCanvas* canvas)
+    Napi::Value Context::CreateInstance(Napi::Env env, Napi::Value canvas)
     {
         Napi::HandleScope scope{env};
 
         auto func = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_CONTEXT_CONSTRUCTOR_NAME).As<Napi::Function>();
-        return func.New({Napi::External<NativeCanvas>::New(env, canvas)});
+        return func.New({canvas});
     }
 
     Context::Context(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<Context>{info}
-        , m_canvas{info[0].As<Napi::External<NativeCanvas>>().Data()}
+        , m_canvasObject{Napi::Persistent(info[0].As<Napi::Object>())}
+        , m_canvas{NativeCanvas::Unwrap(info[0].As<Napi::Object>())}
+
         , m_nvg{std::make_shared<NVGcontext*>(nvgCreate(1))}
         , m_graphicsContext{m_canvas->GetGraphicsContext()}
         , m_update{m_graphicsContext.GetUpdate("update")}
@@ -961,6 +963,6 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetCanvas(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        return m_canvasObject.Value();
     }
 }

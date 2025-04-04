@@ -16,7 +16,7 @@ namespace Babylon::Polyfills::Internal
     {
     public:
         static void Initialize(Napi::Env);
-        static Napi::Value CreateInstance(Napi::Env env, NativeCanvas* canvas);
+        static Napi::Value CreateInstance(Napi::Env env, Napi::Value canvas);
 
         explicit Context(const Napi::CallbackInfo& info);
         virtual ~Context();
@@ -87,6 +87,7 @@ namespace Babylon::Polyfills::Internal
         void DeferredFlushFrame();
         bool SetFontFaceId();
 
+        Napi::ObjectReference m_canvasObject{};
         NativeCanvas* m_canvas;
         std::shared_ptr<NVGcontext*> m_nvg;
 

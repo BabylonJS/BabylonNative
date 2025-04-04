@@ -21,7 +21,7 @@ namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_PATH2D_CONSTRUCTOR_NAME = "Path2D";
 
-    void NativeCanvasPath2D::CreateInstance(Napi::Env env)
+    void NativeCanvasPath2D::Initialize(Napi::Env env)
     {
         Napi::HandleScope scope{env};
 
