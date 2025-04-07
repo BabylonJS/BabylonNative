@@ -90,7 +90,6 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("shadowOffsetX", &Context::GetShadowOffsetX, &Context::SetShadowOffsetX),
                 InstanceAccessor("shadowOffsetY", &Context::GetShadowOffsetY, &Context::SetShadowOffsetY),
                 InstanceAccessor("lineWidth", &Context::GetLineWidth, &Context::SetLineWidth),
-                InstanceAccessor("canvas", &Context::GetCanvas, nullptr),
             });
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONTEXT_CONSTRUCTOR_NAME, func);
     }
@@ -105,7 +104,6 @@ namespace Babylon::Polyfills::Internal
 
     Context::Context(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<Context>{info}
-        , m_canvasObject{Napi::Weak(info[0].As<Napi::Object>())}
         , m_canvas{NativeCanvas::Unwrap(info[0].As<Napi::Object>())}
         , m_nvg{std::make_shared<NVGcontext*>(nvgCreate(1))}
         , m_graphicsContext{m_canvas->GetGraphicsContext()}
@@ -114,7 +112,7 @@ namespace Babylon::Polyfills::Internal
         , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
-        info.This().ToObject().Set("__canvas", Napi::Persistent(info[0].As<Napi::Object>()).Value());
+        info.This().ToObject().DefineProperty(Napi::PropertyDescriptor::Value("canvas", info[0], napi_enumerable));
 
         for (auto& font : NativeCanvas::fontsInfos)
         {
@@ -952,10 +950,5 @@ namespace Babylon::Polyfills::Internal
     void Context::SetShadowOffsetY(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
         throw Napi::Error::New(info.Env(), "not implemented");
-    }
-
-    Napi::Value Context::GetCanvas(const Napi::CallbackInfo& info)
-    {
-        return m_canvasObject.Value();
     }
 }
