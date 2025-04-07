@@ -159,17 +159,27 @@ namespace Babylon::Polyfills::Internal
             std::array<bgfx::Attachment, textures.size()> attachments{};
             for (size_t idx = 0; idx < attachments.size(); ++idx)
             {
-                attachments[idx].init(textures[idx]);
-            }
-            auto handle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
-            assert(handle.idx != bgfx::kInvalidHandle);
-            m_frameBuffer = std::make_unique<Graphics::FrameBuffer>(m_graphicsContext, handle, m_width, m_height, false, false, false);
-            m_dirty = false;
+                std::array<bgfx::TextureHandle, 1> textures{
+                   bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT) };
 
-            if (m_texture)
-            {
-                m_texture.reset();
+                std::array<bgfx::Attachment, textures.size()> attachments{};
+                for (size_t idx = 0; idx < attachments.size(); ++idx)
+                {
+                    attachments[idx].init(textures[idx]);
+                }
+                auto handle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
+                assert(handle.idx != bgfx::kInvalidHandle);
+                m_frameBuffer = std::make_unique<Graphics::FrameBuffer>(m_graphicsContext, handle, m_width, m_height, false, false, false);
+                m_dirty = false;
+
+                if (m_texture)
+                {
+                    m_texture.reset();
+                }
             }
+
+            m_frameBufferPool.Clear();
+            m_frameBufferPool.SetGraphicsContext(&m_graphicsContext);
 
             return true;
         }
@@ -200,6 +210,7 @@ namespace Babylon::Polyfills::Internal
     {
         m_frameBuffer.reset();
         m_texture.reset();
+        m_frameBufferPool.Clear();
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)

@@ -80,6 +80,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("lineCap", &Context::GetLineCap, &Context::SetLineCap),
                 InstanceAccessor("lineJoin", &Context::GetLineJoin, &Context::SetLineJoin),
                 InstanceAccessor("miterLimit", &Context::GetMiterLimit, &Context::SetMiterLimit),
+                InstanceAccessor("filter", &Context::GetFilter, &Context::SetFilter),
                 InstanceAccessor("font", &Context::GetFont, &Context::SetFont),
                 InstanceAccessor("letterSpacing", &Context::GetLetterSpacing, &Context::SetLetterSpacing),
                 InstanceAccessor("strokeStyle", &Context::GetStrokeStyle, &Context::SetStrokeStyle),
@@ -173,6 +174,16 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
+    void Context::SetFilterStack()
+    {
+        if (m_filter.length())
+        {
+            nanovg_filterstack filterStack;
+            filterStack.ParseString(m_filter);
+            nvgFilterStack(*m_nvg, filterStack); // sets filterStack on nanovg
+        }
+    }
+
     void Context::FillRect(const Napi::CallbackInfo& info)
     {
         auto left = info[0].As<Napi::Number>().FloatValue();
@@ -188,7 +199,8 @@ namespace Babylon::Polyfills::Internal
         nvgRect(*m_nvg, left, top, width, height);
 
         BindFillStyle(info, left, top, width, height);
-        
+
+        SetFilterStack();
         nvgFill(*m_nvg);
         SetDirty();
     }
@@ -249,6 +261,8 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Fill(const Napi::CallbackInfo& info)
     {
+        SetFilterStack();
+
         const NativeCanvasPath2D* path = info.Length() >= 1 && info[0].IsObject()
             ? NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>())
             : nullptr;
@@ -429,6 +443,7 @@ namespace Babylon::Polyfills::Internal
         const auto height = info[3].As<Napi::Number>().FloatValue();
 
         nvgRect(*m_nvg, left, top, width, height);
+        SetFilterStack();
         nvgStroke(*m_nvg);
         SetDirty();
     }
@@ -505,6 +520,7 @@ namespace Babylon::Polyfills::Internal
             SetDirty();
         }
 
+        SetFilterStack();
         nvgStroke(*m_nvg);
         SetDirty();
     }
@@ -571,6 +587,13 @@ namespace Babylon::Polyfills::Internal
         {
             BindFillStyle(info, 0.f, 0.f, x, y);
 
+            if (m_filter.length())
+            {
+                nanovg_filterstack filterStack;
+                filterStack.ParseString(m_filter);
+                nvgFilterStack(*m_nvg, filterStack); // sets filterStack on nanovg
+            }
+
             nvgText(*m_nvg, x, y, text.c_str(), nullptr);
             SetDirty();
         }
@@ -605,10 +628,35 @@ namespace Babylon::Polyfills::Internal
                 const auto width = m_canvas->GetWidth();
                 const auto height = m_canvas->GetHeight();
 
+                for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
+                {
+                    // sanity check no buffers should have been acquired yet
+                    assert(buffer.isAvailable == true);
+                }
+                std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this, encoder]() -> Babylon::Graphics::FrameBuffer* {
+                    Babylon::Graphics::FrameBuffer *frameBuffer = this->m_canvas->m_frameBufferPool.Acquire();
+                    frameBuffer->Bind(*encoder);
+                    return frameBuffer;
+                };
+                std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
+                    // clear framebuffer when released
+                    frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR, 0, 0, 0);
+                    this->m_canvas->m_frameBufferPool.Release(frameBuffer);
+                    frameBuffer->Unbind(*encoder);
+                };
+
                 nvgBeginFrame(*m_nvg, float(width), float(height), 1.0f);
                 nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder);
+                nvgSetFrameBufferPool(*m_nvg, { acquire, release });
                 nvgEndFrame(*m_nvg);
                 frameBuffer.Unbind(*encoder);
+
+                for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
+                {
+                    // sanity check no unreleased buffers
+                    assert(buffer.isAvailable == true);
+                }
+
                 m_dirty = false;
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
                 if (!cancellationSource->cancelled() && result.has_error())
@@ -669,6 +717,7 @@ namespace Babylon::Polyfills::Internal
 
             nvgRect(*m_nvg, dx, dy, width, height);
             nvgFillPaint(*m_nvg, imagePaint);
+            SetFilterStack();
             nvgFill(*m_nvg);
             SetDirty();
         }
@@ -688,6 +737,7 @@ namespace Babylon::Polyfills::Internal
 
             nvgRect(*m_nvg, dx, dy, dWidth, dHeight);
             nvgFillPaint(*m_nvg, imagePaint);
+            SetFilterStack();
             nvgFill(*m_nvg);
             SetDirty();
         }
@@ -713,6 +763,7 @@ namespace Babylon::Polyfills::Internal
 
             nvgRect(*m_nvg, dx, dy, dWidth, dHeight);
             nvgFillPaint(*m_nvg, imagePaint);
+            SetFilterStack();
             nvgFill(*m_nvg);
             SetDirty();
         }
@@ -851,6 +902,21 @@ namespace Babylon::Polyfills::Internal
         m_miterLimit = value.As<Napi::Number>().FloatValue();
         nvgMiterLimit(*m_nvg, m_miterLimit);
         SetDirty();
+    }
+
+    Napi::Value Context::GetFilter(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(Env(), m_filter);
+    }
+
+    void Context::SetFilter(const Napi::CallbackInfo& info, const Napi::Value& value)
+    {
+        std::string filterString = value.As<Napi::String>().Utf8Value();
+        // Keep existing filter if the new one is invalid
+        if (nanovg_filterstack::ValidString(filterString))
+        {
+            m_filter = filterString;
+        }
     }
 
     Napi::Value Context::GetFont(const Napi::CallbackInfo& info)

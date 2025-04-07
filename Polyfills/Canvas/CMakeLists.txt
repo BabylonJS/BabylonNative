@@ -95,6 +95,8 @@ set(SOURCES
     "Source/Canvas.cpp"
     "Source/Canvas.h"
     "Source/Colors.h"
+    "Source/FrameBufferPool.cpp"
+    "Source/FrameBufferPool.h"
     "Source/Image.cpp"
     "Source/Image.h"
     "Source/ImageData.cpp"
@@ -115,6 +117,8 @@ set(SOURCES
     "Source/nanovg/nanovg.h"
     "Source/nanovg/nanovg_babylon.cpp"
     "Source/nanovg/nanovg_babylon.h"
+    "Source/nanovg/nanovg_filterstack.cpp"
+    "Source/nanovg/nanovg_filterstack.h"
     )
 
 file(GLOB SHADERS "Source/Shaders/*.sc" "Source/Shaders/*.sh")
