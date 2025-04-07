@@ -2,6 +2,7 @@
 #include <vector>
 #include <stdexcept>
 
+#include <bimg/bimg.h>
 #include <bgfx/bgfx.h>
 #include "FrameBufferPool.h"
 
@@ -29,10 +30,19 @@ namespace Babylon::Polyfills
         {
             bgfx::FrameBufferHandle TextBuffer{bgfx::kInvalidHandle};
             Graphics::FrameBuffer* FrameBuffer;
-
             int width(256), height(256);
+
+            // make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
+            bgfx::ReleaseFn releaseFn{[](void*, void* userData) {
+                bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
+            }};
+
+            bimg::ImageContainer* image = bimg::imageAlloc(&Babylon::Graphics::DeviceContext::GetDefaultAllocator(), bimg::TextureFormat::RGBA8, width, height, 1 /*depth*/, 1, false /*cubeMap*/, false /*hasMips*/);
+            const bgfx::Memory* mem = bgfx::makeRef(image->m_data, image->m_size, releaseFn, image);
+            bx::memSet(image->m_data, 0, image->m_size);
+
             std::array<bgfx::TextureHandle, 1> textures{
-                bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT)};
+                bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT, mem)};
 
             std::array<bgfx::Attachment, textures.size()> attachments{};
             for (size_t idx = 0; idx < attachments.size(); ++idx)
