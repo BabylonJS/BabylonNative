@@ -84,14 +84,12 @@ namespace Babylon::Polyfills::Internal
         void SetShadowOffsetX(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetShadowOffsetY(const Napi::CallbackInfo&);
         void SetShadowOffsetY(const Napi::CallbackInfo&, const Napi::Value& value);
-        Napi::Value GetCanvas(const Napi::CallbackInfo&);
         void Dispose(const Napi::CallbackInfo&);
         void Dispose();
         void SetDirty();
         void DeferredFlushFrame();
         bool SetFontFaceId();
 
-        Napi::ObjectReference m_canvasObject{};
         NativeCanvas* m_canvas;
         std::shared_ptr<NVGcontext*> m_nvg;
 

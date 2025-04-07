@@ -1,4 +1,5 @@
-﻿mocha.setup({ ui: "bdd", reporter: "spec", retries: 5 });
+﻿"use strict";
+mocha.setup({ ui: "bdd", reporter: "spec", retries: 5 });
 
 const expect = chai.expect;
 
