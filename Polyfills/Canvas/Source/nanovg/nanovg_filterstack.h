@@ -1,6 +1,7 @@
 #pragma once
 #include <functional>
 #include <string>
+#include <vector>
 #include "Babylon/Graphics/FrameBuffer.h"
 
 class nanovg_filterstack
