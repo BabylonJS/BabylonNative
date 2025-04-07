@@ -21,7 +21,7 @@ namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_PATH2D_CONSTRUCTOR_NAME = "Path2D";
 
-    void NativeCanvasPath2D::CreateInstance(Napi::Env env)
+    void NativeCanvasPath2D::Initialize(Napi::Env env)
     {
         Napi::HandleScope scope{env};
 
@@ -49,8 +49,19 @@ namespace Babylon::Polyfills::Internal
         : Napi::ObjectWrap<NativeCanvasPath2D>{info}
         , m_commands{std::deque<Path2DCommand>()}
     {
+        const NativeCanvasPath2D* path = info.Length() == 1 && info[0].IsObject()
+            ? NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>())
+            : nullptr;
         const std::string d = info.Length() == 1 && info[0].IsString() ? info[0].As<Napi::String>().Utf8Value() : "";
-        // auto context{info[0].As<Napi::External<NativeCanvasPath2D>>().Data()}; // TODO: Path2D constructor
+
+        if (path != nullptr)
+        {
+            for (const auto& command : *path)
+            {
+                m_commands.push_back(command);
+            }
+        }
+
         if (!d.empty())
         {
             NSVGparser* parser = nsvg__createParser();

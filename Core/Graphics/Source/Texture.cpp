@@ -1,6 +1,22 @@
 #include "Texture.h"
 #include "DeviceContext.h"
 #include <cassert>
+#include <bimg/bimg.h>
+
+namespace
+{
+    const bgfx::Memory* GetZeroImageMemory(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)
+    {
+        bgfx::ReleaseFn releaseFn{[](void*, void* userData) {
+            bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
+        }};
+
+        bimg::ImageContainer* image = bimg::imageAlloc(&Babylon::Graphics::DeviceContext::GetDefaultAllocator(), static_cast<bimg::TextureFormat::Enum>(format), width, height, 1/*depth*/, numLayers, false/*cubeMap*/, hasMips);
+        const bgfx::Memory* mem = bgfx::makeRef(image->m_data, image->m_size, releaseFn, image);
+        bx::memSet(image->m_data, 0, image->m_size);
+        return mem;
+    }
+}
 
 namespace Babylon::Graphics
 {
@@ -34,8 +50,11 @@ namespace Babylon::Graphics
     {
         Dispose();
 
+        // make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
+        const auto* mem = (flags & BGFX_TEXTURE_RT) ? GetZeroImageMemory(width, height, hasMips, numLayers, format) : nullptr;
+
         // Always create with BGFX_TEXTURE_BLIT_DST to match web behavior.
-        m_handle = bgfx::createTexture2D(width, height, hasMips, numLayers, format, flags | BGFX_TEXTURE_BLIT_DST);
+        m_handle = bgfx::createTexture2D(width, height, hasMips, numLayers, format, flags | BGFX_TEXTURE_BLIT_DST, mem);
         if (!bgfx::isValid(m_handle))
         {
             throw std::runtime_error{"Failed to create texture"};

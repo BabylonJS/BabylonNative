@@ -96,17 +96,19 @@ namespace Babylon::Polyfills::Internal
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONTEXT_CONSTRUCTOR_NAME, func);
     }
 
-    Napi::Value Context::CreateInstance(Napi::Env env, NativeCanvas* canvas)
+    Napi::Value Context::CreateInstance(Napi::Env env, Napi::Value canvas)
     {
         Napi::HandleScope scope{env};
 
         auto func = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_CONTEXT_CONSTRUCTOR_NAME).As<Napi::Function>();
-        return func.New({Napi::External<NativeCanvas>::New(env, canvas)});
+        return func.New({canvas});
     }
 
     Context::Context(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<Context>{info}
-        , m_canvas{info[0].As<Napi::External<NativeCanvas>>().Data()}
+        , m_canvasObject{Napi::Persistent(info[0].As<Napi::Object>())}
+        , m_canvas{NativeCanvas::Unwrap(info[0].As<Napi::Object>())}
+
         , m_nvg{std::make_shared<NVGcontext*>(nvgCreate(1))}
         , m_graphicsContext{m_canvas->GetGraphicsContext()}
         , m_update{m_graphicsContext.GetUpdate("update")}
@@ -260,8 +262,13 @@ namespace Babylon::Polyfills::Internal
     void Context::Fill(const Napi::CallbackInfo& info)
     {
         SetFilterStack();
+
+        const NativeCanvasPath2D* path = info.Length() >= 1 && info[0].IsObject()
+            ? NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>())
+            : nullptr;
+        // TODO: handle fillRule: nonzero, evenodd
+
         // draw Path2D if exists
-        const NativeCanvasPath2D* path = info.Length() == 1 ? NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>()) : nullptr;
         if (path != nullptr)
         {
             PlayPath2D(path);
@@ -914,7 +921,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetFont(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(Env(), m_font);
+        return Napi::Value::From(Env(), static_cast<std::string>(m_font));
     }
 
     void Context::SetFont(const Napi::CallbackInfo& info, const Napi::Value& value)
@@ -924,36 +931,24 @@ namespace Babylon::Polyfills::Internal
             throw Napi::Error::New(info.Env(), "invalid argument");
         }
 
-        const std::string fontOptions = value.ToString();
-
-        // Default font id, and font size values.
-        // TODO: Determine better way of signaling to user that font specified is invalid.
-        m_currentFontId = -1;
-        float fontSize{16.f};
-
-        // Regex to parse font styling information. For now we are only capturing font size (capture group 3) and font family name (capture group 4).
-        static const std::regex fontStyleRegex("([[a-zA-Z]+\\s+)*((\\d+(\\.\\d+)?)px\\s+)?(\\w+)");
-        std::smatch fontStyleMatch;
-
-        // Perform the actual regex_match.
-        if (std::regex_match(fontOptions, fontStyleMatch, fontStyleRegex))
+        auto font = Font::Parse(value.ToString());
+        if (!font)
         {
-            // Check if font size was specified.
-            if (fontStyleMatch[3].matched)
-            {
-                fontSize = std::stof(fontStyleMatch[3]);
-            }
-
-            // Check if the specified font family name is valid, and if so assign the current font id.
-            if (m_fonts.find(fontStyleMatch[4]) != m_fonts.end())
-            {
-                m_currentFontId = m_fonts.at(fontStyleMatch[4]);
-                m_font = fontOptions;
-            }
+            return;
         }
 
-        // Set font size on the current context.
-        nvgFontSize(*m_nvg, fontSize);
+        nvgFontSize(*m_nvg, font->Size);
+        if (m_fonts.find(font->Family) == m_fonts.end())
+        {
+            // TODO: handle finding font face for a specific weight and style
+            m_currentFontId = -1;
+        }
+        else
+        {
+            m_currentFontId = m_fonts.at(font->Family);
+        }
+
+        m_font = std::move(*font);
     }
 
     Napi::Value Context::GetLetterSpacing(const Napi::CallbackInfo& info)
@@ -1026,6 +1021,6 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetCanvas(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        return m_canvasObject.Value();
     }
 }

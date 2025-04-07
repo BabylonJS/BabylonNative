@@ -110,6 +110,8 @@ set(SOURCES
     "Source/MeasureText.h"
     "Source/Gradient.cpp"
     "Source/Gradient.h"
+    "Source/Font.cpp"
+    "Source/Font.h"
     "Source/nanosvg.h"
     "Source/nanovg/nanovg.cpp"
     "Source/nanovg/nanovg.h"

@@ -5,6 +5,7 @@
 #include <Babylon/Graphics/DeviceContext.h>
 #include "Image.h"
 #include "Path2D.h"
+#include "Font.h"
 #include "nanovg/nanovg_filterstack.h"
 
 struct NVGcontext;
@@ -17,7 +18,7 @@ namespace Babylon::Polyfills::Internal
     {
     public:
         static void Initialize(Napi::Env);
-        static Napi::Value CreateInstance(Napi::Env env, NativeCanvas* canvas);
+        static Napi::Value CreateInstance(Napi::Env env, Napi::Value canvas);
 
         explicit Context(const Napi::CallbackInfo& info);
         virtual ~Context();
@@ -90,10 +91,11 @@ namespace Babylon::Polyfills::Internal
         void DeferredFlushFrame();
         bool SetFontFaceId();
 
+        Napi::ObjectReference m_canvasObject{};
         NativeCanvas* m_canvas;
         std::shared_ptr<NVGcontext*> m_nvg;
 
-        std::string m_font{};
+        Font m_font;
         std::variant<std::string, CanvasGradient*> m_fillStyle{};
         std::string m_strokeStyle{};
         std::string m_lineCap{};  // 'butt', 'round', 'square'

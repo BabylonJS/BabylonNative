@@ -57,7 +57,7 @@ namespace Babylon::Polyfills::Internal
     class NativeCanvasPath2D final : public Napi::ObjectWrap<NativeCanvasPath2D>
     {
     public:
-        static void CreateInstance(Napi::Env env);
+        static void Initialize(Napi::Env env);
 
         explicit NativeCanvasPath2D(const Napi::CallbackInfo& info);
         // virtual ~NativeCanvasPath2D(); // TODO: destructor? empty queue?
