@@ -105,9 +105,8 @@ namespace Babylon::Polyfills::Internal
 
     Context::Context(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<Context>{info}
-        , m_canvasObject{Napi::Persistent(info[0].As<Napi::Object>())}
+        , m_canvasObject{Napi::Weak(info[0].As<Napi::Object>())}
         , m_canvas{NativeCanvas::Unwrap(info[0].As<Napi::Object>())}
-
         , m_nvg{std::make_shared<NVGcontext*>(nvgCreate(1))}
         , m_graphicsContext{m_canvas->GetGraphicsContext()}
         , m_update{m_graphicsContext.GetUpdate("update")}
@@ -115,6 +114,8 @@ namespace Babylon::Polyfills::Internal
         , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
+        info.This().ToObject().Set("__canvas", Napi::Persistent(info[0].As<Napi::Object>()).Value());
+
         for (auto& font : NativeCanvas::fontsInfos)
         {
             m_fonts[font.first] = nvgCreateFontMem(*m_nvg, font.first.c_str(), font.second.data(), static_cast<int>(font.second.size()), 0);
