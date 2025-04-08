@@ -65,6 +65,7 @@ namespace Babylon::Polyfills
             if (buffer.frameBuffer)
             {
                 buffer.frameBuffer->Dispose();
+                delete buffer.frameBuffer;
             }
         }
         m_available = 0;
@@ -99,6 +100,7 @@ namespace Babylon::Polyfills
             if (buffer.frameBuffer == frameBuffer)
             {
                 buffer.isAvailable = true;
+                m_available++;
                 return;
             }
         }
