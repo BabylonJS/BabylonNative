@@ -722,7 +722,19 @@ namespace
                 if (2 < paths[i].fillCount)
                 {
                     gl->encoder->setState(0);
-                    gl->encoder->setStencil(0);
+                    gl->encoder->setStencil(0
+                        | BGFX_STENCIL_TEST_ALWAYS
+                        | BGFX_STENCIL_FUNC_RMASK(0xff)
+                        | BGFX_STENCIL_OP_FAIL_S_KEEP
+                        | BGFX_STENCIL_OP_FAIL_Z_KEEP
+                        | BGFX_STENCIL_OP_PASS_Z_INCR
+                        , 0
+                        | BGFX_STENCIL_TEST_ALWAYS
+                        | BGFX_STENCIL_FUNC_RMASK(0xff)
+                        | BGFX_STENCIL_OP_FAIL_S_KEEP
+                        | BGFX_STENCIL_OP_FAIL_Z_KEEP
+                        | BGFX_STENCIL_OP_PASS_Z_DECR
+                        );
                     gl->encoder->setVertexBuffer(0, &gl->tvb);
                     gl->encoder->setTexture(0, gl->s_tex, gl->th);
                     gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
@@ -742,7 +754,13 @@ namespace
                     gl->encoder->setState(gl->state
                         | BGFX_STATE_PT_TRISTRIP
                         );
-                    gl->encoder->setStencil(0);
+                    gl->encoder->setStencil(0
+                        | BGFX_STENCIL_TEST_EQUAL
+                        | BGFX_STENCIL_FUNC_RMASK(0xff)
+                        | BGFX_STENCIL_OP_FAIL_S_KEEP
+                        | BGFX_STENCIL_OP_FAIL_Z_KEEP
+                        | BGFX_STENCIL_OP_PASS_Z_KEEP
+                        );
                     gl->encoder->setVertexBuffer(0, &gl->tvb, paths[i].strokeOffset, paths[i].strokeCount);
                     gl->encoder->setTexture(0, gl->s_tex, gl->th);
                     gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
@@ -755,7 +773,13 @@ namespace
             gl->encoder->setVertexBuffer(0, &gl->tvb, call->vertexOffset, call->vertexCount);
             gl->encoder->setTexture(0, gl->s_tex, gl->th);
             gl->encoder->setTexture(1, gl->s_tex2, gl->th2);
-            gl->encoder->setStencil(0);
+            gl->encoder->setStencil(0
+                    | BGFX_STENCIL_TEST_NOTEQUAL
+                    | BGFX_STENCIL_FUNC_RMASK(0xff)
+                    | BGFX_STENCIL_OP_FAIL_S_ZERO
+                    | BGFX_STENCIL_OP_FAIL_Z_ZERO
+                    | BGFX_STENCIL_OP_PASS_Z_ZERO
+                    );
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
