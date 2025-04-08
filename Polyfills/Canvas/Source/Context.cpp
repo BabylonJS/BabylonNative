@@ -113,7 +113,9 @@ namespace Babylon::Polyfills::Internal
         , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
     {
-        info.This().ToObject().DefineProperty(Napi::PropertyDescriptor::Value("canvas", info[0], napi_enumerable));
+        // TODO: commented code doesn't compile with napi-jsi. Using non read-only property for now
+        //info.This().ToObject().DefineProperty(Napi::PropertyDescriptor::Value("canvas", info[0], napi_enumerable));
+        info.This().ToObject().Set("canvas", info[0]);
 
         for (auto& font : NativeCanvas::fontsInfos)
         {
