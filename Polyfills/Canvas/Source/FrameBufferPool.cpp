@@ -41,8 +41,9 @@ namespace Babylon::Polyfills
             const bgfx::Memory* mem = bgfx::makeRef(image->m_data, image->m_size, releaseFn, image);
             bx::memSet(image->m_data, 0, image->m_size);
 
-            std::array<bgfx::TextureHandle, 1> textures{
-                bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT, mem)};
+            std::array<bgfx::TextureHandle, 2> textures{
+                bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT, mem),
+                bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT)};
 
             std::array<bgfx::Attachment, textures.size()> attachments{};
             for (size_t idx = 0; idx < attachments.size(); ++idx)
@@ -64,6 +65,7 @@ namespace Babylon::Polyfills
             if (buffer.frameBuffer)
             {
                 buffer.frameBuffer->Dispose();
+                delete buffer.frameBuffer;
             }
         }
         m_available = 0;
@@ -98,6 +100,7 @@ namespace Babylon::Polyfills
             if (buffer.frameBuffer == frameBuffer)
             {
                 buffer.isAvailable = true;
+                m_available++;
                 return;
             }
         }
