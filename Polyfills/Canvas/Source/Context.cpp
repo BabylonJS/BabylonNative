@@ -639,7 +639,7 @@ namespace Babylon::Polyfills::Internal
                 };
                 std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
                     // clear framebuffer when released
-                    frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR, 0, 0, 0);
+                    frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
                     this->m_canvas->m_frameBufferPool.Release(frameBuffer);
                     frameBuffer->Unbind(*encoder);
                 };
