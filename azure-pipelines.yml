@@ -18,18 +18,18 @@ jobs:
 # Apple
   - template: .github/jobs/macos.yml
     parameters:
-      name: MacOS_Xcode153
+      name: MacOS
       vmImage: 'macOS-latest'
 
   - template: .github/jobs/ios.yml
     parameters:
-      name: iOS_Xcode153_iOS162
+      name: iOS_iOS180
       vmImage: 'macOS-latest'
       deploymentTarget: 18.0
 
   - template: .github/jobs/ios.yml
     parameters:
-      name: iOS_Xcode153_iOS172
+      name: iOS_iOS175
       vmImage: 'macOS-latest'
       deploymentTarget: 17.5
 
