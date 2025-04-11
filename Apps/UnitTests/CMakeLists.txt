@@ -11,8 +11,8 @@ set(BABYLON_SCRIPTS
     "../node_modules/babylonjs-materials/babylonjs.materials.js")
 
 set(EXTERNAL_SCRIPTS
-    "../scripts/chai.js"
-    "../scripts/mocha.js")
+    "../node_modules/chai/chai.js"
+    "../node_modules/mocha/mocha.js")
 
 set(SOURCES
     "Shared/Shared.h"
