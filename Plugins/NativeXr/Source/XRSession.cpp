@@ -759,7 +759,7 @@ namespace Babylon
                 results.Set(index++, Napi::Value::From(info.Env(), scoreString));
             }
 
-            return std::move(results);
+            return results;
         }
      } // Plugins
 } // Babylon
