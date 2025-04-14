@@ -11,7 +11,7 @@ set(BABYLON_SCRIPTS
     "../node_modules/babylonjs-materials/babylonjs.materials.js")
 
 set(EXTERNAL_SCRIPTS
-    "../node_modules/chai/chai.js"
+    "../chai.js"
     "../node_modules/mocha/mocha.js")
 
 set(SOURCES
