@@ -500,6 +500,12 @@ namespace Babylon::Polyfills::Internal
                         args.roundRect.width, args.roundRect.height,
                         args.roundRect.radii);
                     break;
+                case P2D_ROUNDRECTVARYING:
+                    nvgRoundedRectVarying(*m_nvg, args.roundRectVarying.x, args.roundRectVarying.y,
+                        args.roundRectVarying.width, args.roundRectVarying.height,
+                        args.roundRectVarying.topLeft, args.roundRectVarying.topRight,
+                        args.roundRectVarying.bottomRight, args.roundRectVarying.bottomLeft);
+                    break;
                 case P2D_TRANSFORM:
                     nvgTransform(*m_nvg,
                         args.transform.a, args.transform.b, args.transform.c,
