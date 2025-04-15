@@ -843,6 +843,7 @@ namespace Babylon::Polyfills::Internal
         float xform[6];
         nvgCurrentTransform(*m_nvg, xform);
 
+        // set DOMMatrix properties
         Napi::Object obj = Napi::Object::New(Env());
         obj.Set("a", xform[0]);
         obj.Set("b", xform[1]);
@@ -850,6 +851,24 @@ namespace Babylon::Polyfills::Internal
         obj.Set("d", xform[3]);
         obj.Set("e", xform[4]);
         obj.Set("f", xform[5]);
+        obj.Set("m11", xform[0]);
+        obj.Set("m12", xform[1]);
+        obj.Set("m13", 0);
+        obj.Set("m14", 0);
+        obj.Set("m21", xform[2]);
+        obj.Set("m22", xform[3]);
+        obj.Set("m23", 0);
+        obj.Set("m24", 0);
+        obj.Set("m31", 0);
+        obj.Set("m32", 0);
+        obj.Set("m33", 1);
+        obj.Set("m34", 0);
+        obj.Set("m41", xform[4]);
+        obj.Set("m42", xform[5]);
+        obj.Set("m43", 0);
+        obj.Set("m44", 1);
+        obj.Set("is2D", true);
+        obj.Set("isIdentity", false);
         return obj;
     }
 
