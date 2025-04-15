@@ -8,7 +8,7 @@ jobs:
   steps:
   - script: |
       sudo apt-get update
-      sudo apt-get install libjavascriptcoregtk-4.0-dev libcurl4-openssl-dev ninja-build
+      sudo apt-get install libjavascriptcoregtk-4.1-dev libcurl4-openssl-dev ninja-build
     displayName: 'Install packages'
 
   - script: cmake -B Build/ubuntu -GNinja -D CMAKE_BUILD_TYPE=RelWithDebInfo

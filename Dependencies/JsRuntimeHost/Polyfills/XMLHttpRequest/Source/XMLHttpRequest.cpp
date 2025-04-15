@@ -117,7 +117,7 @@ namespace Babylon::Polyfills::Internal
             gsl::span<const std::byte> responseBuffer{m_request.ResponseBuffer()};
             auto arrayBuffer{Napi::ArrayBuffer::New(Env(), responseBuffer.size())};
             std::memcpy(arrayBuffer.Data(), responseBuffer.data(), arrayBuffer.ByteLength());
-            return std::move(arrayBuffer);
+            return arrayBuffer;
         }
     }
 
@@ -165,7 +165,7 @@ namespace Babylon::Polyfills::Internal
             responseHeadersObject.Set(key, value);
         }
 
-        return std::move(responseHeadersObject);
+        return responseHeadersObject;
     }
 
     void XMLHttpRequest::SetRequestHeader(const Napi::CallbackInfo& info)
