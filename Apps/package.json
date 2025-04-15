@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "getNightly": "node scripts/getNightly.js",
-	"build": "babel node_modules/mocha node_modules/chai --out-dir scripts",
+	"build" : "npx babel node_modules/mocha/mocha.js --out-file mocha.esm.js --presets @babel/preset-env && npx babel node_modules/chai/chai.js --out-file chai.esm.js --presets @babel/preset-env && npx rollup mocha.esm.js --file mocha.umd.js --format umd --name mocha && npx rollup chai.esm.js --file chai.umd.js --format umd --name chai",
 	"postinstall": "npm run build"
   },
   "dependencies": {
