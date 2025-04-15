@@ -56,7 +56,7 @@ namespace UrlLib
                     throw std::runtime_error{"Out of memory"};
                 }
 
-                CURLUcode rc = curl_url_set(m_curlu, CURLUPART_URL, url.data(), CURLU_URLENCODE | CURLU_NON_SUPPORT_SCHEME);
+                CURLUcode rc = curl_url_set(m_curlu, CURLUPART_URL, url.data(), CURLU_URLENCODE | CURLU_NON_SUPPORT_SCHEME | CURLU_ALLOW_SPACE);
                 if (rc != CURLUE_OK)
                 {
                     throw std::runtime_error{"Unable to build URL"};
