@@ -1103,7 +1103,7 @@ namespace Babylon
             uniforms[index] = info.Env().Null();
         }
 
-        return std::move(uniforms);
+        return uniforms;
     }
 
     Napi::Value NativeEngine::GetAttributes(const Napi::CallbackInfo& info)
@@ -1123,7 +1123,7 @@ namespace Babylon
             attributes[index] = Napi::Value::From(info.Env(), location);
         }
 
-        return std::move(attributes);
+        return attributes;
     }
 
     void NativeEngine::SetProgram(NativeDataStream::Reader& data)
@@ -2111,7 +2111,7 @@ namespace Babylon
             bimg::imageFree(image);
         }
 
-        return std::move(imageBitmap);
+        return imageBitmap;
     }
 
     Napi::Value NativeEngine::ResizeImageBitmap(const Napi::CallbackInfo& info)
