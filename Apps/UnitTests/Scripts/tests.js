@@ -1,5 +1,7 @@
 ﻿mocha.setup({ ui: "bdd", reporter: "spec", retries: 5 });
 
+const expect = chai.expect;
+
 describe("RequestFile", function () {
     this.timeout(0);
     it("should throw when requesting a URL with no protocol", function () {

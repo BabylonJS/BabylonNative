@@ -88,9 +88,9 @@ TEST(JavaScript, All)
     loader.Eval("global = {};", "");             // Required for Chai.js as we do not have global in Babylon Native
     loader.Eval("location = { href: '' };", ""); // Required for Mocha.js as we do not have a location in Babylon Native
     loader.LoadScript("app:///Scripts/babylon.max.js");
-    loader.LoadScript("app:///Scripts/babylonjs.materials.js");
-    loader.LoadScript("app:///Scripts/chai.js");
-    loader.LoadScript("app:///Scripts/mocha.js");
+    //loader.LoadScript("app:///Scripts/babylonjs.materials.js");
+    loader.LoadScript("app:///Scripts/chai.umd.js");
+    loader.LoadScript("app:///Scripts/mocha.umd.js");
     loader.LoadScript("app:///Scripts/tests.js");
 
     device.StartRenderingCurrentFrame();
