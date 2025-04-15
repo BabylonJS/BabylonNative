@@ -81,6 +81,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("lineJoin", &Context::GetLineJoin, &Context::SetLineJoin),
                 InstanceAccessor("miterLimit", &Context::GetMiterLimit, &Context::SetMiterLimit),
                 InstanceAccessor("filter", &Context::GetFilter, &Context::SetFilter),
+                InstanceAccessor("direction", &Context::GetDirection, &Context::SetDirection),
                 InstanceAccessor("font", &Context::GetFont, &Context::SetFont),
                 InstanceAccessor("letterSpacing", &Context::GetLetterSpacing, &Context::SetLetterSpacing),
                 InstanceAccessor("strokeStyle", &Context::GetStrokeStyle, &Context::SetStrokeStyle),
@@ -580,9 +581,14 @@ namespace Babylon::Polyfills::Internal
 
     void Context::FillText(const Napi::CallbackInfo& info)
     {
-        const std::string text = info[0].As<Napi::String>().Utf8Value();
+        std::string text = info[0].As<Napi::String>().Utf8Value();
         auto x = info[1].As<Napi::Number>().FloatValue();
         auto y = info[2].As<Napi::Number>().FloatValue();
+
+        // TODO: support ligatures, etc.
+        if (m_direction.compare("rtl") == 0) {
+            std::reverse(text.begin(), text.end());
+        }
 
         if (SetFontFaceId())
         {
@@ -792,9 +798,14 @@ namespace Babylon::Polyfills::Internal
 
     void Context::StrokeText(const Napi::CallbackInfo& info)
     {
-        const std::string text = info[0].As<Napi::String>().Utf8Value();
+        std::string text = info[0].As<Napi::String>().Utf8Value();
         auto x = info[1].As<Napi::Number>().FloatValue();
         auto y = info[2].As<Napi::Number>().FloatValue();
+
+        // TODO: support ligatures, etc.
+        if (m_direction.compare("rtl") == 0) {
+            std::reverse(text.begin(), text.end());
+        }
 
         if (SetFontFaceId())
         {
@@ -917,6 +928,21 @@ namespace Babylon::Polyfills::Internal
         if (nanovg_filterstack::ValidString(filterString))
         {
             m_filter = filterString;
+        }
+    }
+
+    Napi::Value Context::GetDirection(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(Env(), m_direction);
+    }
+
+    void Context::SetDirection(const Napi::CallbackInfo& info, const Napi::Value& value)
+    {
+        std::string direction = value.As<Napi::String>().Utf8Value();
+        const bool valid = !(direction.compare("ltr") && direction.compare("rtl"));
+        if (valid)
+        {
+            m_direction = direction;
         }
     }
 
