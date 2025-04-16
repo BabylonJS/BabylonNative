@@ -78,7 +78,11 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value NativeCanvas::GetContext(const Napi::CallbackInfo& info)
     {
-        return Context::CreateInstance(info.Env(), this);
+        if (m_contextObject.IsEmpty())
+        {
+            m_contextObject = Napi::Persistent(Context::CreateInstance(info.Env(), info.This()).As<Napi::Object>());
+        }
+        return m_contextObject.Value();
     }
 
     Napi::Value NativeCanvas::GetWidth(const Napi::CallbackInfo&)
@@ -111,7 +115,7 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    bool NativeCanvas::UpdateRenderTarget()
+    void NativeCanvas::UpdateRenderTarget()
     {
         if (m_dirty)
         {
@@ -142,10 +146,7 @@ namespace Babylon::Polyfills::Internal
             {
                 m_texture.reset();
             }
-
-            return true;
         }
-        return false;
     }
 
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)

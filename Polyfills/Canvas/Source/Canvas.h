@@ -64,8 +64,7 @@ namespace Babylon::Polyfills::Internal
 
         static inline std::map<std::string, std::vector<uint8_t>> fontsInfos;
 
-        // returns true if frameBuffer size has changed
-        bool UpdateRenderTarget();
+        void UpdateRenderTarget();
         Babylon::Graphics::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
 
         Graphics::DeviceContext& GetGraphicsContext()
@@ -85,6 +84,8 @@ namespace Babylon::Polyfills::Internal
         void Remove(const Napi::CallbackInfo& info);
         void Dispose(const Napi::CallbackInfo& info);
         void Dispose();
+
+        Napi::ObjectReference m_contextObject{};
 
         uint16_t m_width{1};
         uint16_t m_height{1};
