@@ -69,7 +69,6 @@ namespace Babylon::Polyfills::Internal
         void SetShadowOffsetX(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetShadowOffsetY(const Napi::CallbackInfo&);
         void SetShadowOffsetY(const Napi::CallbackInfo&, const Napi::Value& value);
-        Napi::Value GetCanvas(const Napi::CallbackInfo&);
         void Dispose(const Napi::CallbackInfo&);
         void Dispose();
         void Flush(const Napi::CallbackInfo&);
