@@ -49,7 +49,7 @@ TEST(JavaScript, All)
     Babylon::AppRuntime::Options options{};
 
     options.UnhandledExceptionHandler = [&exitCodePromise](const Napi::Error& error) {
-        std::cerr << "[Uncaught Error] " << error.Message() << std::endl;
+        std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
         Napi::Value jsError = error.Value();
 
         if (jsError.IsObject()) {
