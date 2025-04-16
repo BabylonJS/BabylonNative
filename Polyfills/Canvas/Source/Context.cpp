@@ -369,7 +369,9 @@ namespace Babylon::Polyfills::Internal
         m_canvas->UpdateRenderTarget();
 
         Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
-        bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
+
+        auto updateToken{m_update.GetUpdateToken()};
+        bgfx::Encoder* encoder = updateToken.GetEncoder();
         frameBuffer.Bind(*encoder);
         frameBuffer.SetViewPort(*encoder, 0.f, 0.f, 1.f, 1.f);
         const auto width = m_canvas->GetWidth();
