@@ -6,6 +6,8 @@
 #include <Babylon/Graphics/FrameBuffer.h>
 #include <Babylon/Graphics/Texture.h>
 
+#include "FrameBufferPool.h"
+
 namespace Babylon::Polyfills
 {
     class Canvas::Impl final : public std::enable_shared_from_this<Canvas::Impl>
@@ -67,6 +69,7 @@ namespace Babylon::Polyfills::Internal
         // returns true if frameBuffer size has changed
         bool UpdateRenderTarget();
         Babylon::Graphics::FrameBuffer& GetFrameBuffer() { return *m_frameBuffer; }
+        FrameBufferPool m_frameBufferPool;
 
         Graphics::DeviceContext& GetGraphicsContext()
         {
@@ -86,6 +89,8 @@ namespace Babylon::Polyfills::Internal
         void Dispose(const Napi::CallbackInfo& info);
         void Dispose();
 
+        Napi::ObjectReference m_contextObject{};
+
         uint16_t m_width{1};
         uint16_t m_height{1};
 
@@ -94,6 +99,7 @@ namespace Babylon::Polyfills::Internal
         std::unique_ptr<Graphics::FrameBuffer> m_frameBuffer;
         std::unique_ptr<Graphics::Texture> m_texture{};
         bool m_dirty{};
+        bool m_clear{};
 
         void FlushGraphicResources() override;
     };

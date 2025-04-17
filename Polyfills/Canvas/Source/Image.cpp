@@ -8,7 +8,7 @@
 #include <assert.h>
 #include <bimg/bimg.h>
 #include <bimg/decode.h>
-#include "nanovg.h"
+#include "nanovg/nanovg.h"
 #include <cassert>
 #include <napi/pointer.h>
 #include <basen.hpp>

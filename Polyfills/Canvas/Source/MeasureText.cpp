@@ -21,12 +21,15 @@ namespace Babylon::Polyfills::Internal
     {
         float bounds[4];
         nvgTextBounds(context->GetNVGContext(), 0, 0, text.c_str(), nullptr, bounds);
-
+        float textMetrics[3];
+        nvgTextMetrics(context->GetNVGContext(), &textMetrics[0], &textMetrics[1], &textMetrics[2]);
         auto obj{Napi::Object::New(env)};
         obj.Set("width", Napi::Value::From(env, bounds[2] - bounds[0]));
         obj.Set("height", Napi::Value::From(env, bounds[3] - bounds[1]));
         obj.Set("actualBoundingBoxLeft", Napi::Value::From(env, bounds[0]));
         obj.Set("actualBoundingBoxRight", Napi::Value::From(env, bounds[2]));
+        obj.Set("fontBoundingBoxAscent", Napi::Value::From(env, textMetrics[0]));
+        obj.Set("fontBoundingBoxDescent", Napi::Value::From(env, -textMetrics[1]));
 
         return obj.As<Napi::Value>();
     }
