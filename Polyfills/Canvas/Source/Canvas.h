@@ -85,8 +85,6 @@ namespace Babylon::Polyfills::Internal
         void Dispose(const Napi::CallbackInfo& info);
         void Dispose();
 
-        Napi::ObjectReference m_contextObject{};
-
         uint16_t m_width{1};
         uint16_t m_height{1};
 
