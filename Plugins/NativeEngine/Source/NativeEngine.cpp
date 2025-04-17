@@ -1429,7 +1429,7 @@ namespace Babylon
 
     void NativeEngine::CopyTexture(NativeDataStream::Reader& data)
     {
-        auto encoder = GetUpdateToken().GetEncoder();
+        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
 
         const auto textureSource = data.ReadPointer<Graphics::Texture>();
         const auto textureDestination = data.ReadPointer<Graphics::Texture>();
