@@ -283,10 +283,57 @@ namespace Babylon::Polyfills::Internal
         const auto y = static_cast<float>(info[1].As<Napi::Number>().DoubleValue());
         const auto width = static_cast<float>(info[2].As<Napi::Number>().DoubleValue());
         const auto height = static_cast<float>(info[3].As<Napi::Number>().DoubleValue());
-        const auto radii = static_cast<float>(info[4].As<Napi::Number>().DoubleValue()); // TODO: support list of numbers
+        const auto radii = info[4];
 
-        Path2DCommandArgs args = {};
-        args.roundRect = {x, y, width, height, radii};
-        AppendCommand(P2D_ROUNDRECT, args);
+        if (radii.IsNumber())
+        {
+            const auto radius = radii.As<Napi::Number>().FloatValue();
+            Path2DCommandArgs args = {};
+            args.roundRect = {x, y, width, height, radius};
+            AppendCommand(P2D_ROUNDRECT, args);
+        }
+        else
+        {
+            const auto radiiArray = radii.As<Napi::Array>();
+            const auto radiiArrayLength = radiiArray.Length();
+            if (radiiArrayLength == 1)
+            {
+                const auto radius = radiiArray[0u].As<Napi::Number>().FloatValue();
+                Path2DCommandArgs args = {};
+                args.roundRect = {x, y, width, height, radius};
+                AppendCommand(P2D_ROUNDRECT, args);
+            }
+            else if (radiiArrayLength == 2)
+            {
+                const auto topLeftBottomRight = radiiArray[0u].As<Napi::Number>().FloatValue();
+                const auto topRightBottomLeft = radiiArray[1].As<Napi::Number>().FloatValue();
+                Path2DCommandArgs args = {};
+                args.roundRectVarying = {x, y, width, height, topLeftBottomRight, topRightBottomLeft, topLeftBottomRight, topRightBottomLeft};
+                AppendCommand(P2D_ROUNDRECTVARYING, args);
+            }
+            else if (radiiArrayLength == 3)
+            {
+                const auto topLeft = radiiArray[0u].As<Napi::Number>().FloatValue();
+                const auto topRightBottomLeft = radiiArray[1].As<Napi::Number>().FloatValue();
+                const auto bottomRight = radiiArray[2].As<Napi::Number>().FloatValue();
+                Path2DCommandArgs args = {};
+                args.roundRectVarying = {x, y, width, height, topLeft, topRightBottomLeft, bottomRight, topRightBottomLeft};
+                AppendCommand(P2D_ROUNDRECTVARYING, args);
+            }
+            else if (radiiArrayLength == 4)
+            {
+                const auto topLeft = radiiArray[0u].As<Napi::Number>().FloatValue();
+                const auto topRight = radiiArray[1].As<Napi::Number>().FloatValue();
+                const auto bottomRight = radiiArray[2].As<Napi::Number>().FloatValue();
+                const auto bottomLeft = radiiArray[3].As<Napi::Number>().FloatValue();
+                Path2DCommandArgs args = {};
+                args.roundRectVarying = {x, y, width, height, topLeft, topRight, bottomRight, bottomLeft};
+                AppendCommand(P2D_ROUNDRECTVARYING, args);
+            }
+            else
+            {
+                throw Napi::Error::New(info.Env(), "Invalid number of parameters for radii");
+            }
+        }
     }
 }

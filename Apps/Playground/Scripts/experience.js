@@ -238,6 +238,11 @@ CreateBoxAsync(scene).then(function () {
                 diamondPath.lineTo(350, 200); // Close back to the starting point
                 context.fill(diamondPath);
 
+                // Path 2D round rect
+                context.strokeStyle = "red";
+                let roundRectPath = new engine.createCanvasPath2D();
+                roundRectPath.roundRect(300, 150, 45, 70, [10, 35]);
+                context.stroke(roundRectPath);
 
                 // Draw clipped round rect
                 // TODO: this is currently broken, clipping area does not have round corners
