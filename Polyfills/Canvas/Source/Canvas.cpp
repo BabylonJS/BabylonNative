@@ -78,7 +78,7 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value NativeCanvas::GetContext(const Napi::CallbackInfo& info)
     {
-        const auto thisObj = info.This().ToObject();
+        auto thisObj = info.This().ToObject();
         const auto contextPropertyName = Napi::Value::From(Env(), "_context");
 
         auto context = thisObj.Get(contextPropertyName);
