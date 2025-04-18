@@ -88,8 +88,6 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::CreateInstance(Napi::Env env, Napi::Value canvas)
     {
-        Napi::HandleScope scope{env};
-
         auto func = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_CONTEXT_CONSTRUCTOR_NAME).As<Napi::Function>();
         return func.New({canvas});
     }
