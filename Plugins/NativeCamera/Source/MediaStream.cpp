@@ -73,7 +73,7 @@ namespace Babylon::Plugins
         // ObjectWrap fullfills the MediaStream and MediaStreamTrack interfaces
         auto tracks = Napi::Array::New(info.Env(), 1);
         tracks.Set(uint32_t{0}, info.This());
-        return std::move(tracks);
+        return tracks;
     }
 
     Napi::Value MediaStream::GetAudioTracks(const Napi::CallbackInfo& info)
@@ -149,7 +149,7 @@ namespace Babylon::Plugins
             capability->AddAsCapability(capabilities);
         }
 
-        return std::move(capabilities);
+        return capabilities;
     }
 
     Napi::Value MediaStream::GetSettings(const Napi::CallbackInfo& info)
@@ -169,7 +169,7 @@ namespace Babylon::Plugins
             capability->AddAsSetting(settings);
         }
 
-        return std::move(settings);
+        return settings;
     }
 
     Napi::Value MediaStream::GetConstraints(const Napi::CallbackInfo& info)

@@ -61,7 +61,7 @@ namespace Babylon
                 XRPose* pose = XRPose::Unwrap(napiPose);
                 pose->Update(info, m_hitResult.Pose);
 
-                return std::move(napiPose);
+                return napiPose;
             }
 
             Napi::Value CreateAnchor(const Napi::CallbackInfo& info)

@@ -6,32 +6,32 @@ pr:
 
 variables:
 - name: CMAKE_VERSION
-  value: 3.26.3
+  value: 3.31.6
 - name: NDK_VERSION
   value: 25.2.9519653
 - name: UNITY_BUILD
   value: true
 - name: XCODE_VERSION
-  value: 15.4
+  value: 16.2
 
 jobs:
 # Apple
   - template: .github/jobs/macos.yml
     parameters:
-      name: MacOS_Xcode153
-      vmImage: 'macOS-14'
+      name: MacOS
+      vmImage: 'macOS-latest'
 
   - template: .github/jobs/ios.yml
     parameters:
-      name: iOS_Xcode153_iOS162
-      vmImage: 'macOS-14'
-      deploymentTarget: 16.2
+      name: iOS_iOS180
+      vmImage: 'macOS-latest'
+      deploymentTarget: 18.0
 
   - template: .github/jobs/ios.yml
     parameters:
-      name: iOS_Xcode153_iOS172
-      vmImage: 'macOS-14'
-      deploymentTarget: 17.2
+      name: iOS_iOS175
+      vmImage: 'macOS-latest'
+      deploymentTarget: 17.5
 
 # WIN32
   - template: .github/jobs/win32.yml

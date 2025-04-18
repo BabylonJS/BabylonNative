@@ -275,7 +275,7 @@ namespace Babylon
                 results[i++] = currentResult;
             }
 
-            return std::move(results);
+            return results;
         }
 
         Napi::Value XRFrame::CreateAnchor(const Napi::CallbackInfo& info)
@@ -295,7 +295,7 @@ namespace Babylon
                 anchorSet.Get("add").As<Napi::Function>().Call(anchorSet, { napiAnchorRef.Value() });
             }
 
-            return std::move(anchorSet);
+            return anchorSet;
         }
 
         void XRFrame::UpdateAnchors()
@@ -349,7 +349,7 @@ namespace Babylon
                 worldInformationObj.Set("detectedMeshes", m_meshSet.Value());
             }
 
-            return std::move(worldInformationObj);
+            return worldInformationObj;
         }
 
         Napi::Value XRFrame::GetFeaturePointCloud(const Napi::CallbackInfo& info)
@@ -368,7 +368,7 @@ namespace Babylon
                 featurePointArray.Set(pointIndex + 4, Napi::Value::From(info.Env(), featurePoint.ID));
             }
 
-            return std::move(featurePointArray);
+            return featurePointArray;
         }
 
         void XRFrame::UpdateSceneObjects(const Napi::Env& env)

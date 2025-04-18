@@ -49,7 +49,7 @@ namespace Babylon::Plugins::Internal
                 deferred.Resolve(result.value());
             });
 
-            return std::move(promise);
+            return promise;
         }
 
         static Napi::Value EnumerateDevices(const Napi::CallbackInfo& info)
@@ -76,7 +76,7 @@ namespace Babylon::Plugins::Internal
 
             deferred.Resolve(devices);
 
-            return std::move(promise);
+            return promise;
         }
     };
 }

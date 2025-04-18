@@ -88,9 +88,8 @@ namespace Babylon::Polyfills::Internal
         void SetShadowOffsetY(const Napi::CallbackInfo&, const Napi::Value& value);
         void Dispose(const Napi::CallbackInfo&);
         void Dispose();
-        void SetDirty();
-        void DeferredFlushFrame();
         bool SetFontFaceId();
+        void Flush(const Napi::CallbackInfo&);
 
         NativeCanvas* m_canvas;
         std::shared_ptr<NVGcontext*> m_nvg;
@@ -113,7 +112,6 @@ namespace Babylon::Polyfills::Internal
         Graphics::DeviceContext& m_graphicsContext;
         Graphics::Update m_update;
 
-        bool m_dirty{};
         bool m_isClipped{false};
 
         struct RectangleClipping
