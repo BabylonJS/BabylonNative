@@ -77,6 +77,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("setTransform", &Context::SetTransform),
                 InstanceMethod("transform", &Context::Transform),
                 InstanceMethod("dispose", &Context::Dispose),
+                InstanceMethod("flush", &Context::Flush),
                 InstanceAccessor("lineCap", &Context::GetLineCap, &Context::SetLineCap),
                 InstanceAccessor("lineJoin", &Context::GetLineJoin, &Context::SetLineJoin),
                 InstanceAccessor("miterLimit", &Context::GetMiterLimit, &Context::SetMiterLimit),
@@ -98,8 +99,6 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::CreateInstance(Napi::Env env, Napi::Value canvas)
     {
-        Napi::HandleScope scope{env};
-
         auto func = JsRuntime::NativeObject::GetFromJavaScript(env).Get(JS_CONTEXT_CONSTRUCTOR_NAME).As<Napi::Function>();
         return func.New({canvas});
     }
@@ -204,7 +203,6 @@ namespace Babylon::Polyfills::Internal
 
         SetFilterStack();
         nvgFill(*m_nvg);
-        SetDirty();
     }
 
     Napi::Value Context::GetFillStyle(const Napi::CallbackInfo&)
@@ -233,7 +231,6 @@ namespace Babylon::Polyfills::Internal
             CanvasGradient* canvasGradient = CanvasGradient::Unwrap(info[0].As<Napi::Object>());
             m_fillStyle = canvasGradient;
         }
-        SetDirty();
     }
 
     Napi::Value Context::GetStrokeStyle(const Napi::CallbackInfo&)
@@ -246,7 +243,6 @@ namespace Babylon::Polyfills::Internal
         m_strokeStyle = value.As<Napi::String>().Utf8Value();
         auto color = StringToColor(info.Env(), m_strokeStyle);
         nvgStrokeColor(*m_nvg, color);
-        SetDirty();
     }
 
     Napi::Value Context::GetLineWidth(const Napi::CallbackInfo&)
@@ -258,7 +254,6 @@ namespace Babylon::Polyfills::Internal
     {
         m_lineWidth = value.As<Napi::Number>().FloatValue();
         nvgStrokeWidth(*m_nvg, m_lineWidth);
-        SetDirty();
     }
 
     void Context::Fill(const Napi::CallbackInfo& info)
@@ -274,23 +269,19 @@ namespace Babylon::Polyfills::Internal
         if (path != nullptr)
         {
             PlayPath2D(path);
-            SetDirty();
         }
 
         nvgFill(*m_nvg);
-        SetDirty();
     }
 
     void Context::Save(const Napi::CallbackInfo&)
     {
         nvgSave(*m_nvg);
-        SetDirty();
     }
 
     void Context::Restore(const Napi::CallbackInfo&)
     {
         nvgRestore(*m_nvg);
-        SetDirty();
         m_isClipped = false;
     }
 
@@ -319,7 +310,6 @@ namespace Babylon::Polyfills::Internal
         nvgFillColor(*m_nvg, TRANSPARENT_BLACK);
         nvgFill(*m_nvg);
         nvgRestore(*m_nvg);
-        SetDirty();
     }
 
     void Context::Translate(const Napi::CallbackInfo& info)
@@ -327,14 +317,12 @@ namespace Babylon::Polyfills::Internal
         const auto x = info[0].As<Napi::Number>().FloatValue();
         const auto y = info[1].As<Napi::Number>().FloatValue();
         nvgTranslate(*m_nvg, x, y);
-        SetDirty();
     }
 
     void Context::Rotate(const Napi::CallbackInfo& info)
     {
         const auto angle = info[0].As<Napi::Number>().FloatValue();
         nvgRotate(*m_nvg, angle);
-        SetDirty();
     }
 
     void Context::Scale(const Napi::CallbackInfo& info)
@@ -342,19 +330,16 @@ namespace Babylon::Polyfills::Internal
         const auto x = info[0].As<Napi::Number>().FloatValue();
         const auto y = info[1].As<Napi::Number>().FloatValue();
         nvgScale(*m_nvg, x, y);
-        SetDirty();
     }
 
     void Context::BeginPath(const Napi::CallbackInfo&)
     {
         nvgBeginPath(*m_nvg);
-        SetDirty();
     }
 
     void Context::ClosePath(const Napi::CallbackInfo&)
     {
         nvgClosePath(*m_nvg);
-        SetDirty();
     }
 
     void Context::Rect(const Napi::CallbackInfo& info)
@@ -366,7 +351,6 @@ namespace Babylon::Polyfills::Internal
 
         nvgRect(*m_nvg, left, top, width, height);
         m_rectangleClipping = {left, top, width, height};
-        SetDirty();
     }
 
     void Context::RoundRect(const Napi::CallbackInfo& info)
@@ -422,16 +406,15 @@ namespace Babylon::Polyfills::Internal
         }
 
         m_rectangleClipping = {x, y, width, height};
-        SetDirty();
     }
 
     void Context::Clip(const Napi::CallbackInfo& /*info*/)
     {
         m_isClipped = true;
 
-        //By default m_rectangleClipping is not set, in this case we use the default render target width and height.
-        auto w = m_rectangleClipping.width != 0 ? m_rectangleClipping.width : m_canvas->GetFrameBuffer().Width();
-        auto h = m_rectangleClipping.height != 0 ? m_rectangleClipping.height : m_canvas->GetFrameBuffer().Height();
+        //By default m_rectangleClipping is not set, in this case we use the canvas width and height.
+        auto w = m_rectangleClipping.width != 0 ? m_rectangleClipping.width : m_canvas->GetWidth();
+        auto h = m_rectangleClipping.height != 0 ? m_rectangleClipping.height : m_canvas->GetHeight();
 
         // expand clipping 1pix in each direction because nanovg AA gets cut a bit short.
         nvgScissor(*m_nvg, m_rectangleClipping.left - 1, m_rectangleClipping.top - 1, w + 1, h + 1);
@@ -447,7 +430,6 @@ namespace Babylon::Polyfills::Internal
         nvgRect(*m_nvg, left, top, width, height);
         SetFilterStack();
         nvgStroke(*m_nvg);
-        SetDirty();
     }
 
     void Context::PlayPath2D(const NativeCanvasPath2D* path)
@@ -456,7 +438,6 @@ namespace Babylon::Polyfills::Internal
         for (const auto& command : *path)
         {
             const auto args = command.args;
-            bool setDirty = true;
             switch (command.type)
             {
                 case P2D_CLOSE:
@@ -525,12 +506,10 @@ namespace Babylon::Polyfills::Internal
         if (path != nullptr)
         {
             PlayPath2D(path);
-            SetDirty();
         }
 
         SetFilterStack();
         nvgStroke(*m_nvg);
-        SetDirty();
     }
 
     void Context::MoveTo(const Napi::CallbackInfo& info)
@@ -539,7 +518,6 @@ namespace Babylon::Polyfills::Internal
         const auto y = info[1].As<Napi::Number>().FloatValue();
 
         nvgMoveTo(*m_nvg, x, y);
-        SetDirty();
     }
 
     void Context::LineTo(const Napi::CallbackInfo& info)
@@ -548,7 +526,6 @@ namespace Babylon::Polyfills::Internal
         const auto y = info[1].As<Napi::Number>().FloatValue();
 
         nvgLineTo(*m_nvg, x, y);
-        SetDirty();
     }
 
     void Context::QuadraticCurveTo(const Napi::CallbackInfo& info)
@@ -559,7 +536,6 @@ namespace Babylon::Polyfills::Internal
         const auto y = info[3].As<Napi::Number>().FloatValue();
 
         nvgBezierTo(*m_nvg, cx, cy, cx, cy, x, y);
-        SetDirty();
     }
 
     Napi::Value Context::MeasureText(const Napi::CallbackInfo& info)
@@ -575,11 +551,11 @@ namespace Babylon::Polyfills::Internal
             return false;
         }
         else if (m_currentFontId >= 0)
-        {
+            {
             nvgFontFaceId(*m_nvg, m_currentFontId);
-        }
-        else
-        {
+            }
+            else
+            {
             nvgFontFaceId(*m_nvg, m_fonts.begin()->second);
         }
         return true;
@@ -608,76 +584,50 @@ namespace Babylon::Polyfills::Internal
             }
 
             nvgText(*m_nvg, x, y, text.c_str(), nullptr);
-            SetDirty();
         }
     }
 
-    void Context::SetDirty()
+    void Context::Flush(const Napi::CallbackInfo&)
     {
-        if (!m_dirty)
+        m_canvas->UpdateRenderTarget();
+
+        Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
+
+        auto updateToken{m_update.GetUpdateToken()};
+        bgfx::Encoder* encoder = updateToken.GetEncoder();
+        frameBuffer.Bind(*encoder);
+        frameBuffer.SetViewPort(*encoder, 0.f, 0.f, 1.f, 1.f);
+        const auto width = m_canvas->GetWidth();
+        const auto height = m_canvas->GetHeight();
+
+        for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
         {
-            m_dirty = true;
-            DeferredFlushFrame();
+            // sanity check no buffers should have been acquired yet
+            assert(buffer.isAvailable == true);
         }
-    }
+        std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this, encoder]() -> Babylon::Graphics::FrameBuffer* {
+            Babylon::Graphics::FrameBuffer *frameBuffer = this->m_canvas->m_frameBufferPool.Acquire();
+            frameBuffer->Bind(*encoder);
+            return frameBuffer;
+        };
+        std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
+            // clear framebuffer when released
+            frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
+            this->m_canvas->m_frameBufferPool.Release(frameBuffer);
+            frameBuffer->Unbind(*encoder);
+        };
 
-    void Context::DeferredFlushFrame()
-    {
-        // on some systems (Ubuntu), the framebuffer contains garbage.
-        // Unlike other systems where it's cleared.
-        bool needClear = m_canvas->UpdateRenderTarget();
+        nvgBeginFrame(*m_nvg, float(width), float(height), 1.0f);
+        nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder);
+        nvgSetFrameBufferPool(*m_nvg, { acquire, release });
+        nvgEndFrame(*m_nvg);
+        frameBuffer.Unbind(*encoder);
 
-        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, needClear, cancellationSource{m_cancellationSource}]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, needClear, updateToken{m_update.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() {
-                // JS Thread
-                Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
-                bgfx::Encoder* encoder = m_update.GetUpdateToken().GetEncoder();
-                frameBuffer.Bind(*encoder);
-                if (needClear)
-                {
-                    frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
-                }
-                frameBuffer.SetViewPort(*encoder, 0.f, 0.f, 1.f, 1.f);
-                const auto width = m_canvas->GetWidth();
-                const auto height = m_canvas->GetHeight();
-
-                for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
-                {
-                    // sanity check no buffers should have been acquired yet
-                    assert(buffer.isAvailable == true);
-                }
-                std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this, encoder]() -> Babylon::Graphics::FrameBuffer* {
-                    Babylon::Graphics::FrameBuffer *frameBuffer = this->m_canvas->m_frameBufferPool.Acquire();
-                    frameBuffer->Bind(*encoder);
-                    return frameBuffer;
-                };
-                std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
-                    // clear framebuffer when released
-                    frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
-                    this->m_canvas->m_frameBufferPool.Release(frameBuffer);
-                    frameBuffer->Unbind(*encoder);
-                };
-
-                nvgBeginFrame(*m_nvg, float(width), float(height), 1.0f);
-                nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder);
-                nvgSetFrameBufferPool(*m_nvg, { acquire, release });
-                nvgEndFrame(*m_nvg);
-                frameBuffer.Unbind(*encoder);
-
-                for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
-                {
-                    // sanity check no unreleased buffers
-                    assert(buffer.isAvailable == true);
-                }
-
-                m_dirty = false;
-            }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
-                if (!cancellationSource->cancelled() && result.has_error())
-                {
-                    Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
-                }
-            });
-        });
+        for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
+        {
+            // sanity check no unreleased buffers
+            assert(buffer.isAvailable == true);
+        }
     }
 
     void Context::PutImageData(const Napi::CallbackInfo&)
@@ -694,7 +644,6 @@ namespace Babylon::Polyfills::Internal
         const auto endAngle = static_cast<float>(info[4].As<Napi::Number>().DoubleValue());
         const NVGwinding winding = (info.Length() == 6 && info[5].As<Napi::Boolean>()) ? NVGwinding::NVG_CCW : NVGwinding::NVG_CW;
         nvgArc(*m_nvg, x, y, radius, startAngle, endAngle, winding);
-        SetDirty();
     }
 
     void Context::DrawImage(const Napi::CallbackInfo& info)
@@ -732,7 +681,6 @@ namespace Babylon::Polyfills::Internal
             nvgFillPaint(*m_nvg, imagePaint);
             SetFilterStack();
             nvgFill(*m_nvg);
-            SetDirty();
         }
         else if (info.Length() == 5)
         {
@@ -752,7 +700,6 @@ namespace Babylon::Polyfills::Internal
             nvgFillPaint(*m_nvg, imagePaint);
             SetFilterStack();
             nvgFill(*m_nvg);
-            SetDirty();
         }
         else if (info.Length() == 9)
         {
@@ -778,7 +725,6 @@ namespace Babylon::Polyfills::Internal
             nvgFillPaint(*m_nvg, imagePaint);
             SetFilterStack();
             nvgFill(*m_nvg);
-            SetDirty();
         }
         else
         {
@@ -816,7 +762,6 @@ namespace Babylon::Polyfills::Internal
         if (SetFontFaceId())
         {
             nvgStrokeText(*m_nvg, x, y, text.c_str(), nullptr);
-            SetDirty();
         }
     }
 
@@ -888,7 +833,6 @@ namespace Babylon::Polyfills::Internal
         const auto f = info[5].As<Napi::Number>().FloatValue();
         nvgResetTransform(*m_nvg);
         nvgTransform(*m_nvg, a, b, c, d, e, f);
-        SetDirty();
     }
 
     void Context::Transform(const Napi::CallbackInfo& info)
@@ -900,7 +844,6 @@ namespace Babylon::Polyfills::Internal
         const auto e = info[4].As<Napi::Number>().FloatValue();
         const auto f = info[5].As<Napi::Number>().FloatValue();
         nvgTransform(*m_nvg, a, b, c, d, e, f);
-        SetDirty();
     }
 
     Napi::Value Context::GetLineCap(const Napi::CallbackInfo& info)
@@ -913,7 +856,6 @@ namespace Babylon::Polyfills::Internal
         m_lineCap = value.As<Napi::String>().Utf8Value();
         const auto lineCap = StringToLineCap(info.Env(), m_lineCap);
         nvgLineCap(*m_nvg, lineCap);
-        SetDirty();
     }
 
     Napi::Value Context::GetLineJoin(const Napi::CallbackInfo& info)
@@ -926,7 +868,6 @@ namespace Babylon::Polyfills::Internal
         m_lineJoin = value.As<Napi::String>().Utf8Value();
         const auto lineJoin = StringToLineJoin(info.Env(), m_lineJoin);
         nvgLineJoin(*m_nvg, lineJoin);
-        SetDirty();
     }
 
     Napi::Value Context::GetMiterLimit(const Napi::CallbackInfo& info)
@@ -938,7 +879,6 @@ namespace Babylon::Polyfills::Internal
     {
         m_miterLimit = value.As<Napi::Number>().FloatValue();
         nvgMiterLimit(*m_nvg, m_miterLimit);
-        SetDirty();
     }
 
     Napi::Value Context::GetFilter(const Napi::CallbackInfo& info)
