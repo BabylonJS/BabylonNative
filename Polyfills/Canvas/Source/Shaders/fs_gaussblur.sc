@@ -2,13 +2,13 @@ $input v_position, v_texcoord0
 
 #include "./common.sh"
 
-#define W_MID 4
-#define W_USIZE 3
+#define W_MID 6
+#define W_USIZE 5
 
 uniform vec4 u_viewSize;			// vec4 (width, height, unused, unused)
 uniform vec4 u_direction;			// vec4 (x, y, unused, unused)
 uniform vec4 u_sigma;				// vec4 (sigma, unused, unused, unused)
-uniform vec4 u_weights[W_USIZE];	// vec4 (weight0, weight1, ..., weight8, unused, unused, unused)
+uniform vec4 u_weights[W_USIZE];	// vec4 (weight0, weight1, ..., weight12, unused, unused, unused)
 
 SAMPLER2D(s_tex, 0);
 

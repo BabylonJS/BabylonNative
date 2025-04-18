@@ -26,8 +26,8 @@ std::regex noneRegex(R"(^\s*none\s*$)");
 #include "Shaders/essl/fs_boxblur.h"
 #include "Shaders/spirv/fs_boxblur.h"
 
-#define BLUR_TAPS 9
-#define BLUR_UNIFORM_SIZE 3 // fit into vec4: ceil(BLUR_TAPS / 4)
+#define BLUR_TAPS 13        // covers s<2 (ie. radius<6)
+#define BLUR_UNIFORM_SIZE 5 // fit into vec4: ceil(BLUR_TAPS / 4)
 
 static const bgfx::EmbeddedShader s_embeddedShadersFilterStack[] =
 {
