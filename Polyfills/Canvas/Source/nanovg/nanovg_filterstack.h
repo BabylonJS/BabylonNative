@@ -12,11 +12,13 @@ public:
     static void InitBgfx();
     static void DisposeBgfx();
     inline static bgfx::ProgramHandle fspassProg;
-    inline static bgfx::ProgramHandle blurProg;
+    inline static bgfx::ProgramHandle gaussBlurProg;
+    inline static bgfx::ProgramHandle boxBlurProg;
     inline struct Uniforms
     {
         bgfx::UniformHandle u_strength;
         bgfx::UniformHandle u_direction;
+        bgfx::UniformHandle u_weights;
     } static m_uniforms;
 
     void AddSepia(float strength) {}
@@ -25,7 +27,7 @@ public:
 
     void Render(
         bgfx::ProgramHandle firstProg,
-        std::function<void(bgfx::UniformHandle, const void *value)> setUniform,
+        std::function<void(bgfx::UniformHandle, const void *value, const uint16_t num)> setUniform,
         std::function<void(bgfx::ProgramHandle firstProg, Babylon::Graphics::FrameBuffer *outBuffer)> firstPass,
         std::function<void(bgfx::ProgramHandle firstProg, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer)> filterPass,
         Babylon::Graphics::FrameBuffer* finalFrameBuffer,
@@ -61,7 +63,7 @@ protected:
     };
     struct Blur
     {
-        int horizontal, vertical; // blur strength (in px)
+        float horizontal, vertical; // blur strength (standard deviation px)
     };
     struct StackElement
     {
@@ -74,4 +76,9 @@ protected:
         };
     };
     std::vector<StackElement> stackElements;
+
+private:
+    // calculate Gaussian kernel
+    std::vector<float> CalculateGaussianKernel(float sigma, int kernelSize);
+    std::vector<float> CalculateBoxKernel(float sigma);
 };

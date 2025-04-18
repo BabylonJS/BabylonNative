@@ -706,8 +706,8 @@ namespace
     static void glnvg__fill(struct GLNVGcontext* gl, struct GLNVGcall* call)
     {
         bgfx::ProgramHandle firstProg = gl->prog;
-        std::function setUniform = [gl](bgfx::UniformHandle u, const void *value) {
-            gl->encoder->setUniform(u, value);
+        std::function setUniform = [gl](bgfx::UniformHandle u, const void *value, const uint16_t num) {
+            gl->encoder->setUniform(u, value, num);
         };
         std::function firstPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *outBuffer) {
 
@@ -801,8 +801,8 @@ namespace
     static void glnvg__convexFill(struct GLNVGcontext* gl, struct GLNVGcall* call)
     {
         bgfx::ProgramHandle firstProg = gl->prog;
-        std::function setUniform = [gl](bgfx::UniformHandle u, const void *value) {
-            gl->encoder->setUniform(u, value);
+        std::function setUniform = [gl](bgfx::UniformHandle u, const void *value, const uint16_t num) {
+            gl->encoder->setUniform(u, value, num);
         };
         std::function firstPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *outBuffer) {
             struct GLNVGpath* paths = &gl->paths[call->pathOffset];
@@ -855,8 +855,8 @@ namespace
     static void glnvg__stroke(struct GLNVGcontext* gl, struct GLNVGcall* call)
     {
         bgfx::ProgramHandle firstProg = gl->prog;
-        std::function setUniform = [gl](bgfx::UniformHandle u, const void *value) {
-            gl->encoder->setUniform(u, value);
+        std::function setUniform = [gl](bgfx::UniformHandle u, const void *value, const uint16_t num) {
+            gl->encoder->setUniform(u, value, num);
         };
         std::function firstPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *outBuffer) {
             // Draw Strokes
@@ -894,8 +894,8 @@ namespace
         if (3 <= call->vertexCount)
         {
             bgfx::ProgramHandle firstProg = gl->prog;
-            std::function setUniform = [gl](bgfx::UniformHandle u, const void *value) {
-                gl->encoder->setUniform(u, value);
+            std::function setUniform = [gl](bgfx::UniformHandle u, const void *value, const uint16_t num) {
+                gl->encoder->setUniform(u, value, num);
             };
             std::function firstPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *outBuffer) {
                 nvgRenderSetUniforms(gl, call->uniformOffset, call->image, call->image2);
