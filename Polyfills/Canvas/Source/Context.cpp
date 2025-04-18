@@ -551,11 +551,11 @@ namespace Babylon::Polyfills::Internal
             return false;
         }
         else if (m_currentFontId >= 0)
-            {
+        {
             nvgFontFaceId(*m_nvg, m_currentFontId);
-            }
-            else
-            {
+        }
+        else
+        {
             nvgFontFaceId(*m_nvg, m_fonts.begin()->second);
         }
         return true;
