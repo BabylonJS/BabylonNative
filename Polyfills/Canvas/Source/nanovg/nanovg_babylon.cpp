@@ -784,6 +784,14 @@ namespace
         };
         std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
             gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
+            gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
+            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
+            bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
+            screenSpaceQuad(gl->encoder, s_originBottomLeft);
+            outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
+        };
+        std::function finalPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
+            gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
                 | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
                 | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
@@ -795,7 +803,7 @@ namespace
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
         finalFrameBuffer->Bind(*gl->encoder); // Should this be bound elsewhere?
 
-        call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
+        call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
     }
 
     static void glnvg__convexFill(struct GLNVGcontext* gl, struct GLNVGcall* call)
@@ -838,6 +846,14 @@ namespace
         };
         std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
             gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
+            gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
+            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
+            bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
+            screenSpaceQuad(gl->encoder, s_originBottomLeft);
+            outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
+        };
+        std::function finalPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
+            gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
                 | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
                 | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
@@ -849,7 +865,7 @@ namespace
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
         finalFrameBuffer->Bind(*gl->encoder); // Should this be bound elsewhere?
 
-        call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
+        call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
     }
 
     static void glnvg__stroke(struct GLNVGcontext* gl, struct GLNVGcall* call)
@@ -875,6 +891,14 @@ namespace
         };
         std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
             gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
+            gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
+            gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
+            bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
+            screenSpaceQuad(gl->encoder, s_originBottomLeft);
+            outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
+        };
+        std::function finalPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
+            gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
                 | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
                 | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
@@ -886,7 +910,7 @@ namespace
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
         finalFrameBuffer->Bind(*gl->encoder); // Should this be bound elsewhere?
 
-        call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
+        call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
     }
 
     static void glnvg__triangles(struct GLNVGcontext* gl, struct GLNVGcall* call)
@@ -907,6 +931,14 @@ namespace
             };
             std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
                 gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
+                gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
+                gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
+                bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
+                screenSpaceQuad(gl->encoder, s_originBottomLeft);
+                outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
+			};
+            std::function finalPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
+                gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
                 gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
                     | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
                     | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
@@ -918,7 +950,7 @@ namespace
             Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
             finalFrameBuffer->Bind(*gl->encoder); // Should this be bound elsewhere?
 
-            call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
+            call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
         }
     }
 

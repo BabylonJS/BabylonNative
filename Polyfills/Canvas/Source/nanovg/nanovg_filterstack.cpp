@@ -26,8 +26,10 @@ std::regex noneRegex(R"(^\s*none\s*$)");
 #include "Shaders/essl/fs_boxblur.h"
 #include "Shaders/spirv/fs_boxblur.h"
 
+#define BLUR_MAX_PX 1000
 #define BLUR_TAPS 13        // covers s<2 (ie. radius<6)
 #define BLUR_UNIFORM_SIZE 5 // fit into vec4: ceil(BLUR_TAPS / 4)
+#define BOX_PASSES 3
 
 static const bgfx::EmbeddedShader s_embeddedShadersFilterStack[] =
 {
@@ -138,12 +140,13 @@ std::vector<float> nanovg_filterstack::CalculateGaussianKernel(float sigma, int 
     return kernel;
 }
 
-std::vector<float> nanovg_filterstack::CalculateBoxKernel(float sigma)
+std::array<float, 2> nanovg_filterstack::CalculateBoxKernel(float sigma)
 {
+    if (sigma > BLUR_MAX_PX)
+        sigma = BLUR_MAX_PX;
     // box blur uses equally weighted kernel
     int d = static_cast<int>(float(1.879971f * sigma + 0.5f)); // d = floor(s * (3 * sqrt(2 * pi) / 4) + 0.5)
-    std::vector<float> kernel(d, 1.0f / d);
-
+    std::array<float, 2> kernel = {(float)d, int((float)d / 2.0f)}; // kernel size, kernel mid
     return kernel;
 }
 
@@ -157,6 +160,7 @@ void nanovg_filterstack::Render(
     std::function<void(bgfx::UniformHandle, const void *value, const uint16_t num)> setUniform,
     std::function<void(bgfx::ProgramHandle, Babylon::Graphics::FrameBuffer*)> firstPass,
     std::function<void(bgfx::ProgramHandle, Babylon::Graphics::FrameBuffer*, Babylon::Graphics::FrameBuffer*)> filterPass,
+    std::function<void(bgfx::ProgramHandle, Babylon::Graphics::FrameBuffer*, Babylon::Graphics::FrameBuffer*)> finalPass,
     Babylon::Graphics::FrameBuffer* finalFrameBuffer,
     std::function<Babylon::Graphics::FrameBuffer*()> acquire,
     std::function<void(Babylon::Graphics::FrameBuffer*)> release
@@ -204,11 +208,24 @@ void nanovg_filterstack::Render(
                     prevBuf = nextBuf;
                     nextBuf = nullptr;
                 }
-                // 3 pass box blur for s >= 2
                 else
                 {
-                    std::vector<float> kernel = CalculateBoxKernel(element.blurElement.horizontal);
-                    // TODO: 3 pass box blur
+                    std::array<float, 2> kernel = CalculateBoxKernel(element.blurElement.horizontal);
+                    float horizontal[4] = {1.f, 0.f, 0.f, 0.f};
+
+                    // TODO: implement even kernel size
+                    // 3 pass box blur for s >= 2
+                    for (int i = 0; i < BOX_PASSES; i++)
+                    {
+                        setUniform(m_uniforms.u_direction, horizontal, 1);
+                        setUniform(m_uniforms.u_weights, kernel.data(), 1);
+
+                        nextBuf = acquire();
+                        filterPass(boxBlurProg, prevBuf, nextBuf);
+                        release(prevBuf);
+                        prevBuf = nextBuf;
+                        nextBuf = nullptr;
+                    }
                 }
 
                 // Vertical Pass
@@ -217,7 +234,8 @@ void nanovg_filterstack::Render(
                     std::vector<float> kernel = CalculateGaussianKernel(element.blurElement.vertical, BLUR_TAPS);
                     float vertical[4] = {0.f, 1.f, 0.f, 0.f};
                     setUniform(m_uniforms.u_direction, vertical, 1);
-                    setUniform(m_uniforms.u_weights, kernel.data(), 1);
+                    setUniform(m_uniforms.u_weights, kernel.data(), BLUR_UNIFORM_SIZE);
+
                     if (last)
                     {
                         lastProg = gaussBlurProg;
@@ -229,12 +247,29 @@ void nanovg_filterstack::Render(
                     prevBuf = nextBuf;
                     nextBuf = nullptr;
                 }
-                // 3 pass box blur if s >= 2
                 else
                 {
-                    std::vector<float> kernel = CalculateBoxKernel(element.blurElement.vertical);
-                    // TODO: 3 pass box blur
-                    // TODO: last pass will write to finalFrameBuffer
+                    std::array<float, 2> kernel = CalculateBoxKernel(element.blurElement.vertical);
+                    float vertical[4] = {0.f, 1.f, 0.f, 0.f};
+
+                    // TODO: implement even kernel size
+                    // 3 pass box blur if s >= 2
+                    for (int i = 0; i < BOX_PASSES; i++)
+                    {
+                        setUniform(m_uniforms.u_direction, vertical, 1);
+                        setUniform(m_uniforms.u_weights, kernel.data(), 1);
+
+                        if (last && i == BOX_PASSES - 1)
+                        {
+                            lastProg = boxBlurProg;
+                            break; // last pass will write to finalFrameBuffer
+                        }
+                        nextBuf = acquire();
+                        filterPass(boxBlurProg, prevBuf, nextBuf);
+                        release(prevBuf);
+                        prevBuf = nextBuf;
+                        nextBuf = nullptr;
+                    }
                 }
             }
             i++;
@@ -243,7 +278,7 @@ void nanovg_filterstack::Render(
         assert(prevBuf != nullptr);
         assert(nextBuf == nullptr);
 
-        filterPass(lastProg, prevBuf, finalFrameBuffer);
+        finalPass(lastProg, prevBuf, finalFrameBuffer);
         release(prevBuf);
     }
 }

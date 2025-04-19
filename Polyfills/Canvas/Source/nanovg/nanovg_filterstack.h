@@ -2,6 +2,7 @@
 #include <functional>
 #include <string>
 #include <vector>
+#include <array>
 #include "Babylon/Graphics/FrameBuffer.h"
 
 class nanovg_filterstack
@@ -30,6 +31,7 @@ public:
         std::function<void(bgfx::UniformHandle, const void *value, const uint16_t num)> setUniform,
         std::function<void(bgfx::ProgramHandle firstProg, Babylon::Graphics::FrameBuffer *outBuffer)> firstPass,
         std::function<void(bgfx::ProgramHandle firstProg, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer)> filterPass,
+        std::function<void(bgfx::ProgramHandle firstProg, Babylon::Graphics::FrameBuffer* inBuffer, Babylon::Graphics::FrameBuffer* outBuffer)> finalPass,
         Babylon::Graphics::FrameBuffer* finalFrameBuffer,
         std::function<Babylon::Graphics::FrameBuffer*()> acquire,
         std::function<void(Babylon::Graphics::FrameBuffer*)> release
@@ -78,7 +80,6 @@ protected:
     std::vector<StackElement> stackElements;
 
 private:
-    // calculate Gaussian kernel
     std::vector<float> CalculateGaussianKernel(float sigma, int kernelSize);
-    std::vector<float> CalculateBoxKernel(float sigma);
+    std::array<float, 2> CalculateBoxKernel(float sigma);
 };

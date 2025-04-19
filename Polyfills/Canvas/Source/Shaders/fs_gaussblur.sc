@@ -2,6 +2,7 @@ $input v_position, v_texcoord0
 
 #include "./common.sh"
 
+// 13-taps
 #define W_MID 6
 #define W_USIZE 5
 
