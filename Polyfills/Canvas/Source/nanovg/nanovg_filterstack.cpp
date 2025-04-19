@@ -144,9 +144,8 @@ std::array<float, 2> nanovg_filterstack::CalculateBoxKernel(float sigma)
 {
     if (sigma > BLUR_MAX_PX)
         sigma = BLUR_MAX_PX;
-    // box blur uses equally weighted kernel
-    int d = static_cast<int>(float(1.879971f * sigma + 0.5f)); // d = floor(s * (3 * sqrt(2 * pi) / 4) + 0.5)
-    std::array<float, 2> kernel = {(float)d, int((float)d / 2.0f)}; // kernel size, kernel mid
+    float d = 1.879971f * sigma + 0.5f; // d = floor(s * (3 * sqrt(2 * pi) / 4) + 0.5)
+    std::array<float, 2> kernel = {d, std::floor(d / 2.0f)}; // kernel size, kernel mid
     return kernel;
 }
 
