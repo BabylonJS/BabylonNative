@@ -40,9 +40,9 @@ namespace Babylon::Polyfills
             bimg::ImageContainer* image = bimg::imageAlloc(&Babylon::Graphics::DeviceContext::GetDefaultAllocator(), bimg::TextureFormat::RGBA8, width, height, 1 /*depth*/, 1, false /*cubeMap*/, false /*hasMips*/);
             const bgfx::Memory* mem = bgfx::makeRef(image->m_data, image->m_size, releaseFn, image);
             bx::memSet(image->m_data, 0, image->m_size);
-            // TODO: move sampler flags to nanovg_babylon.cpp
+            // TODO: make sampler flags configurable
             std::array<bgfx::TextureHandle, 2> textures{
-                bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT | BGFX_SAMPLER_UVW_MIRROR , mem),
+                bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT | BGFX_SAMPLER_UVW_MIRROR , mem), // mirror avoids edge artifacts for blur
                 bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT | BGFX_SAMPLER_UVW_MIRROR)};
 
             std::array<bgfx::Attachment, textures.size()> attachments{};

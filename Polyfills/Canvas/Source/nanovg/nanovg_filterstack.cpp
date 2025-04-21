@@ -144,8 +144,8 @@ std::array<float, 2> nanovg_filterstack::CalculateBoxKernel(float sigma)
 {
     if (sigma > BLUR_MAX_PX)
         sigma = BLUR_MAX_PX;
-    float d = 1.879971f * sigma + 0.5f; // d = floor(s * (3 * sqrt(2 * pi) / 4) + 0.5)
-    std::array<float, 2> kernel = {d, std::floor(d / 2.0f)}; // kernel size, kernel mid
+    float d = std::floor(1.879971f * sigma + 0.5f); // d = floor(s * (3 * sqrt(2 * pi) / 4) + 0.5)
+    std::array<float, 2> kernel = {d, std::floor(d / 2.0f)}; // kernel size, kernel radius
     return kernel;
 }
 
@@ -210,14 +210,24 @@ void nanovg_filterstack::Render(
                 else
                 {
                     std::array<float, 2> kernel = CalculateBoxKernel(element.blurElement.horizontal);
+                    bool isOdd = static_cast<int>(kernel[0]) % 2 == 1;
+                    std::array<std::array<float, 4>, 3> kernelsOdd = {
+                        std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
+                        std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
+                        std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
+                    };
+                    std::array<std::array<float, 4>, 3> kernelsEven = {
+                        std::array<float, 4>{kernel[0], kernel[1], -0.5f, 0.f},
+                        std::array<float, 4>{kernel[0], kernel[1], 0.5f, 0.f},
+                        std::array<float, 4>{kernel[0] + 1, kernel[1], 0.f, 0.f},
+                    };
                     float horizontal[4] = {1.f, 0.f, 0.f, 0.f};
 
-                    // TODO: implement even kernel size
                     // 3 pass box blur for s >= 2
                     for (int i = 0; i < BOX_PASSES; i++)
                     {
                         setUniform(m_uniforms.u_direction, horizontal, 1);
-                        setUniform(m_uniforms.u_weights, kernel.data(), 1);
+                        setUniform(m_uniforms.u_weights, isOdd ? kernelsOdd[i].data() : kernelsEven[i].data(), 1);
 
                         nextBuf = acquire();
                         filterPass(boxBlurProg, prevBuf, nextBuf);
@@ -249,14 +259,24 @@ void nanovg_filterstack::Render(
                 else
                 {
                     std::array<float, 2> kernel = CalculateBoxKernel(element.blurElement.vertical);
+                    bool isOdd = static_cast<int>(kernel[0]) % 2 == 1;
+                    std::array<std::array<float, 4>, 3> kernelsOdd = {
+                        std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
+                        std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
+                        std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
+                    };
+                    std::array<std::array<float, 4>, 3> kernelsEven = {
+                        std::array<float, 4>{kernel[0], kernel[1], 0.f, -0.5f},
+                        std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.5f},
+                        std::array<float, 4>{kernel[0] + 1, kernel[1], 0.f, 0.f},
+                    };
                     float vertical[4] = {0.f, 1.f, 0.f, 0.f};
 
-                    // TODO: implement even kernel size
                     // 3 pass box blur if s >= 2
                     for (int i = 0; i < BOX_PASSES; i++)
                     {
                         setUniform(m_uniforms.u_direction, vertical, 1);
-                        setUniform(m_uniforms.u_weights, kernel.data(), 1);
+                        setUniform(m_uniforms.u_weights, isOdd ? kernelsOdd[i].data() : kernelsEven[i].data(), 1);
 
                         if (last && i == BOX_PASSES - 1)
                         {
