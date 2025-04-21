@@ -27,9 +27,8 @@ std::regex noneRegex(R"(^\s*none\s*$)");
 #include "Shaders/spirv/fs_boxblur.h"
 
 #define BLUR_MAX_PX 1000
-#define BLUR_TAPS 13        // covers s<2 (ie. radius<6)
+#define BLUR_TAPS 13
 #define BLUR_UNIFORM_SIZE 5 // fit into vec4: ceil(BLUR_TAPS / 4)
-#define BOX_PASSES 3
 
 static const bgfx::EmbeddedShader s_embeddedShadersFilterStack[] =
 {
@@ -224,7 +223,7 @@ void nanovg_filterstack::Render(
                     float horizontal[4] = {1.f, 0.f, 0.f, 0.f};
 
                     // 3 pass box blur for s >= 2
-                    for (int i = 0; i < BOX_PASSES; i++)
+                    for (int i = 0; i < 3; i++)
                     {
                         setUniform(m_uniforms.u_direction, horizontal, 1);
                         setUniform(m_uniforms.u_weights, isOdd ? kernelsOdd[i].data() : kernelsEven[i].data(), 1);
@@ -273,12 +272,12 @@ void nanovg_filterstack::Render(
                     float vertical[4] = {0.f, 1.f, 0.f, 0.f};
 
                     // 3 pass box blur if s >= 2
-                    for (int i = 0; i < BOX_PASSES; i++)
+                    for (int i = 0; i < 3; i++)
                     {
                         setUniform(m_uniforms.u_direction, vertical, 1);
                         setUniform(m_uniforms.u_weights, isOdd ? kernelsOdd[i].data() : kernelsEven[i].data(), 1);
 
-                        if (last && i == BOX_PASSES - 1)
+                        if (last && i == 2)
                         {
                             lastProg = boxBlurProg;
                             break; // last pass will write to finalFrameBuffer
