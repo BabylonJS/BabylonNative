@@ -136,7 +136,12 @@ namespace Babylon::Graphics
     {
         // Increment viewId so blit happens after the last drawcall of the last viewId if drawcall(s) have been submitted to the view.
         // Otherwise, reuse last acquired viewId to not waste an Id.
-        auto viewId = m_currentViewIsUsed ? AcquireNewViewId(encoder) : m_lastAcquiredViewId;
+        auto viewId = m_lastAcquiredViewId;
+        if (!m_currentViewIsUsed)
+        {
+            viewId = AcquireNewViewId(encoder);
+            bgfx::touch(viewId);
+        }
         encoder.blit(viewId, dst, dstX, dstY, src, srcX, srcY, width, height);
     }
 

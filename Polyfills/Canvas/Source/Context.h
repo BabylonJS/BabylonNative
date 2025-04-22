@@ -13,7 +13,7 @@ namespace Babylon::Polyfills::Internal
     {
     public:
         static void Initialize(Napi::Env);
-        static Napi::Value CreateInstance(Napi::Env env, NativeCanvas* canvas);
+        static Napi::Value CreateInstance(Napi::Env env, Napi::Value canvas);
 
         explicit Context(const Napi::CallbackInfo& info);
         virtual ~Context();
@@ -69,11 +69,9 @@ namespace Babylon::Polyfills::Internal
         void SetShadowOffsetX(const Napi::CallbackInfo&, const Napi::Value& value);
         Napi::Value GetShadowOffsetY(const Napi::CallbackInfo&);
         void SetShadowOffsetY(const Napi::CallbackInfo&, const Napi::Value& value);
-        Napi::Value GetCanvas(const Napi::CallbackInfo&);
         void Dispose(const Napi::CallbackInfo&);
         void Dispose();
-        void SetDirty();
-        void DeferredFlushFrame();
+        void Flush(const Napi::CallbackInfo&);
 
         NativeCanvas* m_canvas;
         NVGcontext* m_nvg;
@@ -90,7 +88,6 @@ namespace Babylon::Polyfills::Internal
         Graphics::DeviceContext& m_graphicsContext;
         Graphics::Update m_update;
 
-        bool m_dirty{};
         bool m_isClipped{false};
 
         struct RectangleClipping

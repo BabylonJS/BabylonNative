@@ -18,6 +18,7 @@ jobs:
       run: Get-ChildItem -Path .\Apps\node_modules -Recurse
     - name: Make Solution
       run: |
+        choco install cmake --version=3.26.3 -y --allow-downgrade
         cmake -A x64 -B buildWin32_x64 -D BX_CONFIG_DEBUG=ON
     - name: NPM download nightly
       run: npm run getNightly

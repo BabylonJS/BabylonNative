@@ -87,7 +87,7 @@ namespace Babylon
                     polygonArray.Set((int)i, polygonPoint);
                 }
 
-                return std::move(polygonArray);
+                return polygonArray;
             }
 
             Napi::Value GetLastChangedTime(const Napi::CallbackInfo& info)
