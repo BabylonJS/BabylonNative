@@ -382,7 +382,7 @@ namespace Babylon::Polyfills::Internal
             const auto radius = radii.As<Napi::Number>().FloatValue();
             nvgRoundedRect(*m_nvg, x, y, width, height, radius);
         }
-        else
+        else if (radii.IsArray())
         {
             const auto radiiArray = radii.As<Napi::Array>();
             const auto radiiArrayLength = radiiArray.Length();
@@ -419,6 +419,18 @@ namespace Babylon::Polyfills::Internal
             {
                 throw Napi::Error::New(info.Env(), "Invalid number of parameters for radii");
             }
+        }
+        // DOMPoint
+        else if (radii.IsObject())
+        {
+            const auto dompoint = radii.As<Napi::Object>();
+            const auto dpx = dompoint.Get("x").As<Napi::Number>().FloatValue();
+            const auto dpy = dompoint.Get("y").As<Napi::Number>().FloatValue();
+            nvgRoundedRectElliptic(*m_nvg, x, y, width, height, dpx, dpy, dpx, dpy, dpx, dpy, dpx, dpy);
+        }
+        else
+        {
+            throw Napi::Error::New(info.Env(), "Invalid radii parameter");
         }
 
         m_rectangleClipping = {x, y, width, height};
@@ -506,6 +518,14 @@ namespace Babylon::Polyfills::Internal
                         args.roundRectVarying.width, args.roundRectVarying.height,
                         args.roundRectVarying.topLeft, args.roundRectVarying.topRight,
                         args.roundRectVarying.bottomRight, args.roundRectVarying.bottomLeft);
+                    break;
+                case P2D_ROUNDRECTELLIPTIC:
+                    nvgRoundedRectElliptic(*m_nvg, args.roundRectElliptic.x, args.roundRectElliptic.y,
+                        args.roundRectElliptic.width, args.roundRectElliptic.height,
+                        args.roundRectElliptic.topLeftX, args.roundRectElliptic.topLeftY,
+                        args.roundRectElliptic.topRightX, args.roundRectElliptic.topRightY,
+                        args.roundRectElliptic.bottomRightX, args.roundRectElliptic.bottomRightY,
+                        args.roundRectElliptic.bottomLeftX, args.roundRectElliptic.bottomLeftY);
                     break;
                 case P2D_TRANSFORM:
                     nvgTransform(*m_nvg,
