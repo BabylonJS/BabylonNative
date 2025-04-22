@@ -141,7 +141,7 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void NativeCanvas::UpdateRenderTarget()
+    bool NativeCanvas::UpdateRenderTarget()
     {
         // in some scenarios (eg. no size change on SetSize/SetHeight) we can re-use framebuffer
         bool needClear = m_clear;
@@ -179,7 +179,11 @@ namespace Babylon::Polyfills::Internal
 
             m_frameBufferPool.Clear();
             m_frameBufferPool.SetGraphicsContext(&m_graphicsContext);
+
+            return true;
         }
+
+        return needClear;
     }
 
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)

@@ -589,13 +589,17 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Flush(const Napi::CallbackInfo&)
     {
-        m_canvas->UpdateRenderTarget();
+        bool needClear = m_canvas->UpdateRenderTarget();
 
         Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
 
         auto updateToken{m_update.GetUpdateToken()};
         bgfx::Encoder* encoder = updateToken.GetEncoder();
         frameBuffer.Bind(*encoder);
+        if (needClear)
+        {
+            frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
+        }
         frameBuffer.SetViewPort(*encoder, 0.f, 0.f, 1.f, 1.f);
         const auto width = m_canvas->GetWidth();
         const auto height = m_canvas->GetHeight();
