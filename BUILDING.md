@@ -290,13 +290,13 @@ Depending on the JavaScript engine you want to use, you will have to install the
 Install the following package:
 
 ```
-sudo apt-get install libjavascriptcoregtk-4.0-dev
+sudo apt-get install libjavascriptcoregtk-4.1-dev
 ```
 
 Then, run cmake targetting a Ninja make file:
 
 ```
-cmake -G Ninja -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -D NAPI_JAVASCRIPT_ENGINE=JavaScriptCore
+cmake -G Ninja -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so -D NAPI_JAVASCRIPT_ENGINE=JavaScriptCore
 ```
 
 ### V8
