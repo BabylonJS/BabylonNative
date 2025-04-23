@@ -62,5 +62,5 @@ endforeach()
 
 set_property(TARGET UnitTests PROPERTY FOLDER Apps)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} ${SCRIPTS})
-#source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX node_modules FILES ${EXTERNAL_SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../ PREFIX umd FILES ${EXTERNAL_SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX node_modules FILES ${BABYLON_SCRIPTS})
