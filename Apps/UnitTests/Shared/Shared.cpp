@@ -76,7 +76,6 @@ TEST(JavaScript, All)
             }
         }
 
-        OutputDebugStringA(ss.str().data());
         std::cerr << ss.str();
         std::cerr.flush();
 
@@ -139,6 +138,7 @@ TEST(JavaScript, All)
             }
         )", "");
     loader.LoadScript("app:///Scripts/chai.umd.js");
+    loader.Eval("globalThis.chai = exports;", "");
     loader.LoadScript("app:///Scripts/mocha.umd.js");
     loader.LoadScript("app:///Scripts/tests.js");
 
