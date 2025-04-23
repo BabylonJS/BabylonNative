@@ -18,6 +18,7 @@ namespace Babylon::Polyfills
         void Add(int nBuffers);
         void Clear();
         void Release(Graphics::FrameBuffer* frameBuffer);
+        void SetDimensions(int width, int height);
         // sets graphics context to be used for creating framebuffers
         void SetGraphicsContext(Graphics::DeviceContext *graphicsContext);
         const std::vector<PoolBuffer>& GetPoolBuffers();
@@ -26,5 +27,7 @@ namespace Babylon::Polyfills
         std::vector<PoolBuffer> mPoolBuffers{};
         Graphics::DeviceContext* m_graphicsContext;
         int m_available{0};
+        int m_width{256};
+        int m_height{256};
     };
 }

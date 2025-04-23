@@ -13,6 +13,20 @@ namespace Babylon::Polyfills
         return mPoolBuffers;
     }
 
+    // sets dimension of framebuffers, can only be set if no buffers in pool
+    void FrameBufferPool::SetDimensions(int width, int height)
+    {
+        assert(width > 0 && height > 0);
+        // TODO: support multiple framebuffer dimensions
+        if (mPoolBuffers.size() > 0)
+        {
+            throw std::runtime_error("Cannot set dimensions. FrameBufferPool already has buffers.");
+        }
+
+        this->m_width = width;
+        this->m_height = height;
+    }
+
     // sets graphics context to be used for creating framebuffers
     void FrameBufferPool::SetGraphicsContext(Graphics::DeviceContext* graphicsContext)
     {
@@ -30,20 +44,20 @@ namespace Babylon::Polyfills
         {
             bgfx::FrameBufferHandle TextBuffer{bgfx::kInvalidHandle};
             Graphics::FrameBuffer* FrameBuffer;
-            int width(512), height(512);
 
             // make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
             bgfx::ReleaseFn releaseFn{[](void*, void* userData) {
                 bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
             }};
 
-            bimg::ImageContainer* image = bimg::imageAlloc(&Babylon::Graphics::DeviceContext::GetDefaultAllocator(), bimg::TextureFormat::RGBA8, width, height, 1 /*depth*/, 1, false /*cubeMap*/, false /*hasMips*/);
+            bimg::ImageContainer* image = bimg::imageAlloc(&Babylon::Graphics::DeviceContext::GetDefaultAllocator(), bimg::TextureFormat::RGBA8, m_width, m_height, 1 /*depth*/, 1, false /*cubeMap*/, false /*hasMips*/);
             const bgfx::Memory* mem = bgfx::makeRef(image->m_data, image->m_size, releaseFn, image);
             bx::memSet(image->m_data, 0, image->m_size);
             // TODO: make sampler flags configurable
+            // border sampling will result in transparent edge artifacts for blur, but this behaviour is consistent with browser implementation
             std::array<bgfx::TextureHandle, 2> textures{
-                bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT | BGFX_SAMPLER_UVW_MIRROR , mem), // mirror avoids edge artifacts for blur
-                bgfx::createTexture2D(width, height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT | BGFX_SAMPLER_UVW_MIRROR)};
+                bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT | BGFX_SAMPLER_U_BORDER | BGFX_SAMPLER_V_BORDER | BGFX_SAMPLER_BORDER_COLOR(0), mem),
+                bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT | BGFX_SAMPLER_U_BORDER | BGFX_SAMPLER_V_BORDER | BGFX_SAMPLER_BORDER_COLOR(0))};
 
             std::array<bgfx::Attachment, textures.size()> attachments{};
             for (size_t idx = 0; idx < attachments.size(); ++idx)
@@ -52,7 +66,7 @@ namespace Babylon::Polyfills
             }
             TextBuffer = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
 
-            FrameBuffer = new Graphics::FrameBuffer(*m_graphicsContext, TextBuffer, width, height, false, false, false);
+            FrameBuffer = new Graphics::FrameBuffer(*m_graphicsContext, TextBuffer, m_width, m_height, false, false, false);
             m_available++;
             mPoolBuffers.push_back({FrameBuffer, true});
         }
