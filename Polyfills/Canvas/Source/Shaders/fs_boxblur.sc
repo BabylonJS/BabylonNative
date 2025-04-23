@@ -12,6 +12,7 @@ SAMPLER2D(s_tex, 0);
 uniform vec4 u_halfTexel;
 #endif // NEED_HALF_TEXEL
 
+#define EPSILON 1.23e-6
 #define kernel u_weights.x
 #define radius u_weights.y
 #define offsetX u_weights.z
@@ -26,7 +27,7 @@ void main()
 	vec4 color = vec4_splat(0.0);
 
 	// sample center if no offset (ie. odd kernel)
-	if (offsetX == 0.0f && offsetY == 0.0f)
+	if (abs(offsetX) < EPSILON && abs(offsetY) < EPSILON)
 	{
 		color += texture2D(s_tex, texcoord0);
 	}

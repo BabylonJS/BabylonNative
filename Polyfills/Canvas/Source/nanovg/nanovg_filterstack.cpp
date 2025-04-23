@@ -188,105 +188,76 @@ void nanovg_filterstack::Render(
             assert(prevBuf != nullptr);
             assert(nextBuf == nullptr);
 
-            const bool last = (i == stackElements.size() - 1);
+            const bool lastElement = (i == stackElements.size() - 1);
 
             if (element.type == SE_BLUR)
             {
-                // Horizontal Pass
-                if (element.blurElement.horizontal < 2)
-                {
-                    std::vector<float> kernel = CalculateGaussianKernel(element.blurElement.horizontal, BLUR_TAPS);
-                    float horizontal[4] = {1.f, 0.f, 0.f, 0.f};
-                    setUniform(m_uniforms.u_direction, horizontal, 1);
-                    setUniform(m_uniforms.u_weights, kernel.data(), BLUR_UNIFORM_SIZE);
+                static const std::array<std::array<float, 4>, 2> directions = {
+                    std::array<float, 4>{1.f, 0.f, 0.f, 0.f}, // horizontal
+                    std::array<float, 4>{0.f, 1.f, 0.f, 0.f}  // vertical
+                };
 
-                    nextBuf = acquire();
-                    filterPass(gaussBlurProg, prevBuf, nextBuf);
-                    release(prevBuf);
-                    prevBuf = nextBuf;
-                    nextBuf = nullptr;
-                }
-                else
+                for (int i = 0; i < 2; i++)
                 {
-                    std::array<float, 2> kernel = CalculateBoxKernel(element.blurElement.horizontal);
-                    bool isOdd = static_cast<int>(kernel[0]) % 2 == 1;
-                    std::array<std::array<float, 4>, 3> kernelsOdd = {
-                        std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
-                        std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
-                        std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
-                    };
-                    std::array<std::array<float, 4>, 3> kernelsEven = {
-                        std::array<float, 4>{kernel[0], kernel[1], -0.5f, 0.f},
-                        std::array<float, 4>{kernel[0], kernel[1], 0.5f, 0.f},
-                        std::array<float, 4>{kernel[0] + 1, kernel[1], 0.f, 0.f},
-                    };
-                    float horizontal[4] = {1.f, 0.f, 0.f, 0.f};
+                    const std::array<float, 4>& direction = directions[i];
+                    bool last = lastElement && i == 1;
+                    float sigma = i == 0 ? element.blurElement.horizontal : element.blurElement.vertical;
 
-                    // 3 pass box blur for s >= 2
-                    for (int i = 0; i < 3; i++)
+                    // use gaussian blur for sigma < 2, box blur for sigma >= 2
+                    if (sigma < 2)
                     {
-                        setUniform(m_uniforms.u_direction, horizontal, 1);
-                        setUniform(m_uniforms.u_weights, isOdd ? kernelsOdd[i].data() : kernelsEven[i].data(), 1);
+                        std::vector<float> kernel = CalculateGaussianKernel(sigma, BLUR_TAPS);
+                        setUniform(m_uniforms.u_direction, &direction, 1);
+                        setUniform(m_uniforms.u_weights, kernel.data(), BLUR_UNIFORM_SIZE);
 
-                        nextBuf = acquire();
-                        filterPass(boxBlurProg, prevBuf, nextBuf);
-                        release(prevBuf);
-                        prevBuf = nextBuf;
-                        nextBuf = nullptr;
-                    }
-                }
-
-                // Vertical Pass
-                if (element.blurElement.vertical < 2)
-                {
-                    std::vector<float> kernel = CalculateGaussianKernel(element.blurElement.vertical, BLUR_TAPS);
-                    float vertical[4] = {0.f, 1.f, 0.f, 0.f};
-                    setUniform(m_uniforms.u_direction, vertical, 1);
-                    setUniform(m_uniforms.u_weights, kernel.data(), BLUR_UNIFORM_SIZE);
-
-                    if (last)
-                    {
-                        lastProg = gaussBlurProg;
-                        break; // last pass will write to finalFrameBuffer
-                    }
-                    nextBuf = acquire();
-                    filterPass(gaussBlurProg, prevBuf, nextBuf);
-                    release(prevBuf);
-                    prevBuf = nextBuf;
-                    nextBuf = nullptr;
-                }
-                else
-                {
-                    std::array<float, 2> kernel = CalculateBoxKernel(element.blurElement.vertical);
-                    bool isOdd = static_cast<int>(kernel[0]) % 2 == 1;
-                    std::array<std::array<float, 4>, 3> kernelsOdd = {
-                        std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
-                        std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
-                        std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
-                    };
-                    std::array<std::array<float, 4>, 3> kernelsEven = {
-                        std::array<float, 4>{kernel[0], kernel[1], 0.f, -0.5f},
-                        std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.5f},
-                        std::array<float, 4>{kernel[0] + 1, kernel[1], 0.f, 0.f},
-                    };
-                    float vertical[4] = {0.f, 1.f, 0.f, 0.f};
-
-                    // 3 pass box blur if s >= 2
-                    for (int i = 0; i < 3; i++)
-                    {
-                        setUniform(m_uniforms.u_direction, vertical, 1);
-                        setUniform(m_uniforms.u_weights, isOdd ? kernelsOdd[i].data() : kernelsEven[i].data(), 1);
-
-                        if (last && i == 2)
+                        if (last)
                         {
-                            lastProg = boxBlurProg;
+                            lastProg = gaussBlurProg;
                             break; // last pass will write to finalFrameBuffer
                         }
                         nextBuf = acquire();
-                        filterPass(boxBlurProg, prevBuf, nextBuf);
+                        filterPass(gaussBlurProg, prevBuf, nextBuf);
                         release(prevBuf);
                         prevBuf = nextBuf;
                         nextBuf = nullptr;
+                    }
+                    else
+                    {
+                        std::array<float, 2> kernel = CalculateBoxKernel(sigma);
+                        bool isOdd = static_cast<int>(kernel[0]) % 2 == 1;
+
+                        std::array<std::array<float, 4>, 3> kernelsOdd = {
+                            std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
+                            std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
+                            std::array<float, 4>{kernel[0], kernel[1], 0.f, 0.f},
+                        };
+                        float xOffsetL = direction[0] > 0 ? -0.5f : 0.f;
+                        float xOffsetR = direction[0] > 0 ? 0.5f : 0.f;
+                        float yOffsetL = direction[1] > 0 ? -0.5f : 0.f;
+                        float yOffsetR = direction[1] > 0 ? 0.5f : 0.f;
+                        std::array<std::array<float, 4>, 3> kernelsEven = {
+                            std::array<float, 4>{kernel[0], kernel[1], xOffsetL, yOffsetL},
+                            std::array<float, 4>{kernel[0], kernel[1], xOffsetR, yOffsetR},
+                            std::array<float, 4>{kernel[0] + 1, kernel[1], 0.f, 0.f},
+                        };
+
+                        // 3 pass box blur for s >= 2
+                        for (int i = 0; i < 3; i++)
+                        {
+                            setUniform(m_uniforms.u_direction, &direction, 1);
+                            setUniform(m_uniforms.u_weights, isOdd ? kernelsOdd[i].data() : kernelsEven[i].data(), 1);
+
+                            if (last && i == 2)
+                            {
+                                lastProg = boxBlurProg;
+                                break; // last pass will write to finalFrameBuffer
+                            }
+                            nextBuf = acquire();
+                            filterPass(boxBlurProg, prevBuf, nextBuf);
+                            release(prevBuf);
+                            prevBuf = nextBuf;
+                            nextBuf = nullptr;
+                        }
                     }
                 }
             }
