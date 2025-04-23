@@ -80,11 +80,17 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value NativeCanvas::GetContext(const Napi::CallbackInfo& info)
     {
-        if (m_contextObject.IsEmpty())
+        auto thisObj = info.This().ToObject();
+        const auto contextPropertyName = Napi::Value::From(Env(), "_context");
+
+        auto context = thisObj.Get(contextPropertyName);
+        if (context.IsUndefined())
         {
-            m_contextObject = Napi::Persistent(Context::CreateInstance(info.Env(), info.This()).As<Napi::Object>());
+            context = Context::CreateInstance(info.Env(), info.This());
+            thisObj.Set(contextPropertyName, context);
         }
-        return m_contextObject.Value();
+
+        return context;
     }
 
     Napi::Value NativeCanvas::GetWidth(const Napi::CallbackInfo&)
