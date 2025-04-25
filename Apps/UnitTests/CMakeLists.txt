@@ -9,8 +9,8 @@ set(SCRIPTS
 set(EXTERNAL_SCRIPTS
     "../node_modules/babylonjs/babylon.max.js"
     "../node_modules/babylonjs-materials/babylonjs.materials.js"
-    "../node_modules/chai/chai.js"
-    "../node_modules/mocha/mocha.js")
+    "../node_modules/chai/chai.umd.js"
+    "../node_modules/mocha/mocha.umd.js")
 
 set(SOURCES
     "Shared/Shared.h"
