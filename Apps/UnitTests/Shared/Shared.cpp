@@ -91,6 +91,7 @@ TEST(JavaScript, All)
     loader.LoadScript("app:///Scripts/babylonjs.materials.js");
     loader.Eval("exports = {};", "");             // Required for Chai.js as we do not have exports in Babylon Native
     // Required for Mocha.js as self and globalThis don't exist
+    // This should be removed once using Webpack and making a bundle with test.ts instead of a .js
     loader.Eval(R"(
             (function() {
                 if (typeof globalThis === 'object') return;
