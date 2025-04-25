@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "getNightly": "node scripts/getNightly.js",
-	"build" : "npx babel node_modules/mocha/mocha.js --out-file mocha.esm.js && npx babel node_modules/chai/chai.js --out-file chai.esm.js && npx rollup mocha.esm.js --file mocha.umd.js --format umd --name mocha && npx rollup chai.esm.js --file chai.umd.js --format umd --name chai",
-	"postinstall": "npm run build"
+    "buildTest" : "npx babel node_modules/mocha/mocha.js --out-file node_modules/mocha/mocha.esm.js && npx babel node_modules/chai/chai.js --out-file node_modules/chai/chai.esm.js && npx rollup node_modules/mocha/mocha.esm.js --file node_modules/mocha/mocha.umd.js --format umd --name mocha && npx rollup node_modules/chai/chai.esm.js --file node_modules/chai/chai.umd.js --format umd --name chai",
+    "postinstall": "npm run buildTest"
   },
   "dependencies": {
     "babylonjs": "^8.3.1",

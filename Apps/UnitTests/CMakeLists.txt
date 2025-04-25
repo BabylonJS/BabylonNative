@@ -6,13 +6,11 @@ endif()
 set(SCRIPTS
     "Scripts/tests.js")
 
-set(BABYLON_SCRIPTS
-    "../node_modules/babylonjs/babylon.max.js"
-    "../node_modules/babylonjs-materials/babylonjs.materials.js")
-
 set(EXTERNAL_SCRIPTS
-    "../chai.umd.js"
-    "../mocha.umd.js")
+    "../node_modules/babylonjs/babylon.max.js"
+    "../node_modules/babylonjs-materials/babylonjs.materials.js"
+    "../node_modules/chai/chai.umd.js"
+    "../node_modules/mocha/mocha.umd.js")
 
 set(SOURCES
     "Shared/Shared.h"
@@ -28,7 +26,7 @@ elseif(WIN32)
     set(SOURCES ${SOURCES} "Win32/App.cpp")
 endif()
 
-add_executable(UnitTests ${SCRIPTS} ${EXTERNAL_SCRIPTS} ${BABYLON_SCRIPTS} ${SOURCES})
+add_executable(UnitTests ${SCRIPTS} ${EXTERNAL_SCRIPTS} ${SOURCES})
 set_property(TARGET UnitTests PROPERTY UNITY_BUILD false)
 
 target_link_libraries(UnitTests
@@ -51,7 +49,7 @@ add_test(NAME UnitTests COMMAND UnitTests)
 add_custom_command(TARGET UnitTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:UnitTests>>,copy,true> $<TARGET_RUNTIME_DLLS:UnitTests> $<TARGET_FILE_DIR:UnitTests> COMMAND_EXPAND_LISTS)
 
-foreach(SCRIPT ${SCRIPTS} ${EXTERNAL_SCRIPTS} ${BABYLON_SCRIPTS})
+foreach(SCRIPT ${SCRIPTS} ${EXTERNAL_SCRIPTS})
     get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
     add_custom_command(
         OUTPUT "${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
@@ -62,5 +60,4 @@ endforeach()
 
 set_property(TARGET UnitTests PROPERTY FOLDER Apps)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} ${SCRIPTS})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../ PREFIX umd FILES ${EXTERNAL_SCRIPTS})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX node_modules FILES ${BABYLON_SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX node_modules FILES ${EXTERNAL_SCRIPTS})

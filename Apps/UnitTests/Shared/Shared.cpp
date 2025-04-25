@@ -49,34 +49,7 @@ TEST(JavaScript, All)
     Babylon::AppRuntime::Options options{};
 
     options.UnhandledExceptionHandler = [&exitCodePromise](const Napi::Error& error) {
-        std::ostringstream ss{};
-        ss << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
-
-        Napi::Value errorValue = error.Value();
-        if (errorValue.IsObject()) {
-            Napi::Object errorObj = errorValue.As<Napi::Object>();
-            // Get all property names
-            Napi::Array props = errorObj.GetPropertyNames();
-            uint32_t length = props.Length();
-
-            for (uint32_t i = 0; i < length; ++i) {
-                Napi::Value key = props[i];
-                Napi::Value val = errorObj.Get(key);
-
-                std::string keyStr = key.ToString().Utf8Value();
-                std::string valStr;
-
-                if (val.IsString() || val.IsNumber() || val.IsBoolean()) {
-                    valStr = val.ToString().Utf8Value();
-                }
-                else {
-                    valStr = "[non-primitive]";
-                }
-                ss << keyStr << ": " << valStr << std::endl;
-            }
-        }
-
-        std::cerr << ss.str();
+        std::cerr << "[Uncaught Error] " << error.Get("stack").As<Napi::String>().Utf8Value() << std::endl;
         std::cerr.flush();
 
         exitCodePromise.set_value(-1);
