@@ -212,6 +212,7 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP)
     set(WEBP_BUILD_EXTRAS OFF)
     FetchContent_MakeAvailable_With_Message(libwebp)
 
+    set_property(TARGET sharpyuv PROPERTY UNITY_BUILD false)
     set_property(TARGET sharpyuv PROPERTY FOLDER Dependencies/libwebp)
     set_property(TARGET webp PROPERTY FOLDER Dependencies/libwebp)
     set_property(TARGET webpdecode PROPERTY FOLDER Dependencies/libwebp)
