@@ -1,10 +1,12 @@
 #include "Canvas.h"
 #include "Image.h"
+#include "Path2D.h"
 #include "Context.h"
 #include <bgfx/bgfx.h>
 #include <napi/pointer.h>
 #include <cassert>
 #include "Colors.h"
+#include "Gradient.h"
 
 namespace
 {
@@ -99,7 +101,16 @@ namespace Babylon::Polyfills::Internal
     void NativeCanvas::SetWidth(const Napi::CallbackInfo&, const Napi::Value& value)
     {
         auto width = static_cast<uint16_t>(value.As<Napi::Number>().Uint32Value());
-        if (width != m_width && width)
+        if (!width)
+        {
+            return;
+        }
+
+        if (width == m_width)
+        {
+            m_clear = true;
+        }
+        else
         {
             m_width = width;
             m_dirty = true;
@@ -113,16 +124,29 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::SetHeight(const Napi::CallbackInfo&, const Napi::Value& value)
     {
-        auto height = value.As<Napi::Number>().Uint32Value();
-        if (height != m_height && height)
+        auto height = static_cast<uint16_t>(value.As<Napi::Number>().Uint32Value());
+        if (!height)
+        {
+            return;
+        }
+
+        if (height == m_height)
+        {
+            m_clear = true;
+        }
+        else
         {
             m_height = height;
             m_dirty = true;
         }
     }
 
-    void NativeCanvas::UpdateRenderTarget()
+    bool NativeCanvas::UpdateRenderTarget()
     {
+        // in some scenarios (eg. no size change on SetSize/SetHeight) we can re-use framebuffer
+        bool needClear = m_clear;
+        m_clear = false;
+
         if (m_dirty)
         {
             // make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
@@ -152,7 +176,15 @@ namespace Babylon::Polyfills::Internal
             {
                 m_texture.reset();
             }
+
+            m_frameBufferPool.Clear();
+            m_frameBufferPool.SetDimensions(m_width, m_height);
+            m_frameBufferPool.SetGraphicsContext(&m_graphicsContext);
+
+            return true;
         }
+
+        return needClear;
     }
 
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
@@ -178,6 +210,7 @@ namespace Babylon::Polyfills::Internal
     {
         m_frameBuffer.reset();
         m_texture.reset();
+        m_frameBufferPool.Clear();
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
@@ -252,7 +285,8 @@ namespace Babylon::Polyfills
 
         Internal::NativeCanvas::Initialize(env);
         Internal::NativeCanvasImage::Initialize(env);
-
+        Internal::NativeCanvasPath2D::Initialize(env);
+        Internal::CanvasGradient::Initialize(env);
         Internal::Context::Initialize(env);
 
         return {impl};
