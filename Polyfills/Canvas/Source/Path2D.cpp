@@ -336,6 +336,7 @@ namespace Babylon::Polyfills::Internal
             }
         }
         // DOMPoint
+        // TODO: move duplicate Path2D & Context args parsing into a utils.cpp
         else if (radii.IsObject())
         {
             const auto dompoint = radii.As<Napi::Object>();
