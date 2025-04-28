@@ -292,7 +292,7 @@ namespace Babylon::Polyfills::Internal
             args.roundRect = {x, y, width, height, radius};
             AppendCommand(P2D_ROUNDRECT, args);
         }
-        else
+        else if (radii.IsArray())
         {
             const auto radiiArray = radii.As<Napi::Array>();
             const auto radiiArrayLength = radiiArray.Length();
@@ -334,6 +334,21 @@ namespace Babylon::Polyfills::Internal
             {
                 throw Napi::Error::New(info.Env(), "Invalid number of parameters for radii");
             }
+        }
+        // DOMPoint
+        // TODO: move duplicate Path2D & Context args parsing into a utils.cpp
+        else if (radii.IsObject())
+        {
+            const auto dompoint = radii.As<Napi::Object>();
+            const auto radiusX = dompoint.Get("x").As<Napi::Number>().FloatValue();
+            const auto radiusY = dompoint.Get("y").As<Napi::Number>().FloatValue();
+            Path2DCommandArgs args = {};
+            args.roundRectElliptic = {x, y, width, height, radiusX, radiusY, radiusX, radiusY, radiusX, radiusY, radiusX, radiusY};
+            AppendCommand(P2D_ROUNDRECTELLIPTIC, args);
+        }
+        else
+        {
+            throw Napi::Error::New(info.Env(), "Invalid radii parameter");
         }
     }
 }

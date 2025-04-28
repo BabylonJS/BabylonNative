@@ -241,7 +241,7 @@ CreateBoxAsync(scene).then(function () {
                 // Path 2D round rect
                 context.strokeStyle = "red";
                 let roundRectPath = new engine.createCanvasPath2D();
-                roundRectPath.roundRect(300, 150, 45, 70, [10, 35]);
+                roundRectPath.roundRect(300, 150, 45, 70, { x: 30, y: 15 });
                 context.stroke(roundRectPath);
 
                 // Draw clipped round rect

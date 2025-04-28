@@ -2138,21 +2138,29 @@ void nvgRect(NVGcontext* ctx, float x, float y, float w, float h)
 
 void nvgRoundedRect(NVGcontext* ctx, float x, float y, float w, float h, float r)
 {
-	nvgRoundedRectVarying(ctx, x, y, w, h, r, r, r, r);
+	nvgRoundedRectElliptic(ctx, x, y, w, h, r, r, r, r, r, r, r, r);
 }
 
 void nvgRoundedRectVarying(NVGcontext* ctx, float x, float y, float w, float h, float radTopLeft, float radTopRight, float radBottomRight, float radBottomLeft)
 {
-	if(radTopLeft < 0.1f && radTopRight < 0.1f && radBottomRight < 0.1f && radBottomLeft < 0.1f) {
+	nvgRoundedRectElliptic(ctx, x, y, w, h, radTopLeft, radTopLeft, radTopRight, radTopRight, radBottomRight, radBottomRight, radBottomLeft, radBottomLeft);
+}
+
+void nvgRoundedRectElliptic(NVGcontext* ctx, float x, float y, float w, float h, float rxTopLeft, float ryTopLeft, float rxTopRight, float ryTopRight, float rxBottomRight, float ryBottomRight, float rxBottomLeft, float ryBottomLeft)
+{
+	if (rxTopLeft < 0.1f && ryTopLeft < 0.1f && rxTopRight < 0.1f && ryTopRight < 0.1f && rxBottomRight < 0.1f && ryBottomRight < 0.1f && rxBottomLeft < 0.1f && ryBottomLeft < 0.1f)
+	{
 		nvgRect(ctx, x, y, w, h);
 		return;
-	} else {
+	}
+	else
+	{
 		float halfw = nvg__absf(w)*0.5f;
 		float halfh = nvg__absf(h)*0.5f;
-		float rxBL = nvg__minf(radBottomLeft, halfw) * nvg__signf(w), ryBL = nvg__minf(radBottomLeft, halfh) * nvg__signf(h);
-		float rxBR = nvg__minf(radBottomRight, halfw) * nvg__signf(w), ryBR = nvg__minf(radBottomRight, halfh) * nvg__signf(h);
-		float rxTR = nvg__minf(radTopRight, halfw) * nvg__signf(w), ryTR = nvg__minf(radTopRight, halfh) * nvg__signf(h);
-		float rxTL = nvg__minf(radTopLeft, halfw) * nvg__signf(w), ryTL = nvg__minf(radTopLeft, halfh) * nvg__signf(h);
+		float rxBL = nvg__minf(rxBottomLeft, halfw) * nvg__signf(w), ryBL = nvg__minf(ryBottomLeft, halfh) * nvg__signf(h);
+		float rxBR = nvg__minf(rxBottomRight, halfw) * nvg__signf(w), ryBR = nvg__minf(ryBottomRight, halfh) * nvg__signf(h);
+		float rxTR = nvg__minf(rxTopRight, halfw) * nvg__signf(w), ryTR = nvg__minf(ryTopRight, halfh) * nvg__signf(h);
+		float rxTL = nvg__minf(rxTopLeft, halfw) * nvg__signf(w), ryTL = nvg__minf(ryTopRight, halfh) * nvg__signf(h);
 		float vals[] = {
 			NVG_MOVETO, x, y + ryTL,
 			NVG_LINETO, x, y + h - ryBL,

@@ -493,6 +493,9 @@ void nvgRoundedRect(NVGcontext* ctx, float x, float y, float w, float h, float r
 // Creates new rounded rectangle shaped sub-path with varying radii for each corner.
 void nvgRoundedRectVarying(NVGcontext* ctx, float x, float y, float w, float h, float radTopLeft, float radTopRight, float radBottomRight, float radBottomLeft);
 
+// Creates new rounded rectangle shaped sub-path with varying elliptic radii for each corner.
+void nvgRoundedRectElliptic(NVGcontext* ctx, float x, float y, float w, float h, float rxTopLeft, float ryTopLeft, float rxTopRight, float ryTopRight, float rxBottomRight, float ryBottomRight, float rxBottomLeft, float ryBottomLeft);
+
 // Creates new ellipse shaped sub-path.
 void nvgEllipse(NVGcontext* ctx, float cx, float cy, float rx, float ry);
 
