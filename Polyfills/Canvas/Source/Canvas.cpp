@@ -178,6 +178,7 @@ namespace Babylon::Polyfills::Internal
             }
 
             m_frameBufferPool.Clear();
+            m_frameBufferPool.SetDimensions(m_width, m_height);
             m_frameBufferPool.SetGraphicsContext(&m_graphicsContext);
 
             return true;
