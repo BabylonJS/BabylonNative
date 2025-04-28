@@ -25,6 +25,10 @@
 #include <Babylon/ShaderCache.h>
 #include "ShaderCache.h"
 
+#ifdef WEBP
+#include <webp/decode.h>
+#endif
+
 namespace Babylon
 {
     namespace
@@ -186,6 +190,19 @@ namespace Babylon
             bimg::ImageContainer* image{bimg::imageParse(&allocator, data.data(), static_cast<uint32_t>(data.size()))};
             if (image == nullptr)
             {
+#ifdef WEBP
+                int width;
+                int height;
+                if (WebPGetInfo(data.data(), data.size(), &width, &height))
+                {
+                    image = bimg::imageAlloc(&allocator, bimg::TextureFormat::RGBA8, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false);
+                    if (WebPDecodeRGBAInto(data.data(), data.size(), static_cast<uint8_t*>(image->m_data), static_cast<size_t>(image->m_size), width * 4))
+                    {
+                        return image;
+                    }
+                }
+#endif
+
                 throw std::runtime_error{"Failed to parse image."};
             }
 
