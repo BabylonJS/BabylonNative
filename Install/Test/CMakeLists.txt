@@ -151,6 +151,10 @@ target_link_libraries(TestInstall
     Graphics
     gtest_main
     JsRuntime
+    libsharpyuv.lib
+    libwebp.lib
+    libwebpdecoder.lib
+    libwebpdemux.lib
     MachineIndependent
     napi
     NativeCamera
@@ -176,7 +180,6 @@ target_link_libraries(TestInstall
     d3d12
     d3dcompiler
     Pathcch
-    webp
     ${ADDITIONAL_LIBRARIES}
 )
 
