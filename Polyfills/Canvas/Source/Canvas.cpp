@@ -59,22 +59,23 @@ namespace Babylon::Polyfills::Internal
         // called when removed from document which has no meaning for Native
     }
 
+    // this is currently synchronous to work around font corruption issues
     Napi::Value NativeCanvas::LoadTTFAsync(const Napi::CallbackInfo& info)
     {
         const auto buffer = info[1].As<Napi::ArrayBuffer>();
         std::vector<uint8_t> fontBuffer(buffer.ByteLength());
         memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
 
-        auto& graphicsContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())};
-        auto update = graphicsContext.GetUpdate("update");
-        std::shared_ptr<JsRuntimeScheduler> runtimeScheduler{std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(info.Env()))};
-        auto deferred{Napi::Promise::Deferred::New(info.Env())};
-        arcana::make_task(update.Scheduler(), arcana::cancellation::none(), [fontName{info[0].As<Napi::String>().Utf8Value()}, fontData{std::move(fontBuffer)}]() {
-            fontsInfos[fontName] = fontData;
-        }).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler /*Keep reference alive*/, env{info.Env()}, deferred]() {
-            deferred.Resolve(env.Undefined());
-        });
+        // don't allow same font to be loaded more than once
+        // why? because Context doesn't update nvgCreateFontMem when old fontBuffer released
+        auto fontName = info[0].As<Napi::String>().Utf8Value();
+        if (fontsInfos.find(fontName) == fontsInfos.end())
+        {
+            fontsInfos[fontName] = std::move(fontBuffer);
+        }
 
+        auto deferred{Napi::Promise::Deferred::New(info.Env())};
+        deferred.Resolve(info.Env().Undefined());
         return deferred.Promise();
     }
 
