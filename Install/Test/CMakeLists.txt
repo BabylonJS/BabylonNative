@@ -129,11 +129,6 @@ endif()
 
 add_executable(TestInstall ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${SOURCES})
 
-# for napi
-target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
-target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_NODE_SPECIFIC)
-target_compile_definitions(TestInstall PUBLIC NAPI_VERSION=3)
-
 set(INSTALL_LIBS_DIR "${BINARY_DIR}/install/lib")
 target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")
 target_link_directories(TestInstall PRIVATE ${INSTALL_LIBS_DIR} ${V8JSI_LIB_PATH_RELEASE})
@@ -149,9 +144,12 @@ target_link_libraries(TestInstall
     Canvas
     Console
     ExternalTexture
+    Foundation
     GenericCodeGen
     glslang
+    glslang-default-resource-limits
     Graphics
+    gtest_main
     JsRuntime
     MachineIndependent
     napi
@@ -178,11 +176,9 @@ target_link_libraries(TestInstall
     d3d12
     d3dcompiler
     Pathcch
-    glslang-default-resource-limits
-    gtest_main
-    Foundation
+    webp
     ${ADDITIONAL_LIBRARIES}
-    )
+)
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
 # If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.
