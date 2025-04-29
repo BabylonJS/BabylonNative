@@ -16,9 +16,11 @@
 #pragma GCC diagnostic pop
 #endif
 
+#ifndef FONS_USE_FREETYPE
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb/stb_truetype.h"
 #undef STB_TRUETYPE_IMPLEMENTATION
+#endif
 
 #include "Canvas.h"
 #include "Context.h"
