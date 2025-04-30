@@ -59,20 +59,24 @@ namespace Babylon::Polyfills::Internal
         // called when removed from document which has no meaning for Native
     }
 
-    // this is currently synchronous to work around font corruption issues
-    Napi::Value NativeCanvas::LoadTTFAsync(const Napi::CallbackInfo& info)
+    void NativeCanvas::LoadTTF(const Napi::CallbackInfo& info)
     {
-        const auto buffer = info[1].As<Napi::ArrayBuffer>();
-        std::vector<uint8_t> fontBuffer(buffer.ByteLength());
-        memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
-
         // don't allow same font to be loaded more than once
         // why? because Context doesn't update nvgCreateFontMem when old fontBuffer released
         auto fontName = info[0].As<Napi::String>().Utf8Value();
         if (fontsInfos.find(fontName) == fontsInfos.end())
         {
+            const auto buffer = info[1].As<Napi::ArrayBuffer>();
+            std::vector<uint8_t> fontBuffer(buffer.ByteLength());
+            memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
             fontsInfos[fontName] = std::move(fontBuffer);
         }
+    }
+
+    // @deprecated: LoadTTFAsync is always synchronous, use LoadTTF instead
+    Napi::Value NativeCanvas::LoadTTFAsync(const Napi::CallbackInfo& info)
+    {
+        LoadTTF(info);
 
         auto deferred{Napi::Promise::Deferred::New(info.Env())};
         deferred.Resolve(info.Env().Undefined());
