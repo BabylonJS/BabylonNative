@@ -119,6 +119,7 @@ namespace Babylon::Polyfills::Internal
 
         for (auto& font : NativeCanvas::fontsInfos)
         {
+            // TODO: update nvgCreateFontMem safely when old font buffer invalidated
             m_fonts[font.first] = nvgCreateFontMem(*m_nvg, font.first.c_str(), font.second.data(), static_cast<int>(font.second.size()), 0);
         }
     }
