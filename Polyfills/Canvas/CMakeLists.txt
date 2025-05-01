@@ -123,12 +123,20 @@ set(SOURCES
 
 file(GLOB SHADERS "Source/Shaders/*.sc" "Source/Shaders/*.sh")
 
+option(BABYLON_NATIVE_CANVAS_FREETYPE "Use Freetype2 instead of stb_ttf" OFF)
+
 add_library(Canvas ${SOURCES} ${SHADERS})
 
 target_include_directories(Canvas
     PUBLIC "Include"
     PRIVATE "Source"
     PRIVATE "${BGFX_DIR}/3rdparty")
+
+if(BABYLON_NATIVE_CANVAS_FREETYPE)
+    target_compile_definitions(Canvas PRIVATE FONS_USE_FREETYPE)
+    set(EXTERNAL_FONT_LIBRARY freetype)
+    FetchContent_MakeAvailable_With_Message(FreeType)
+endif()
 
 target_link_libraries(Canvas
     PUBLIC napi
@@ -138,7 +146,8 @@ target_link_libraries(Canvas
     PRIVATE JsRuntimeInternal
     PRIVATE GraphicsDeviceContext
     PRIVATE UrlLib
-    PRIVATE base-n)
+    PRIVATE base-n
+    PRIVATE ${EXTERNAL_FONT_LIBRARY})
 
 if(BGFX_BUILD_TOOLS AND BGFX_BUILD_TOOLS_SHADER)
     if(NOT IOS AND NOT VISIONOS AND NOT ANDROID)
