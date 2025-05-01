@@ -25,6 +25,7 @@ namespace Babylon::Polyfills::Internal
             env,
             JS_CONSTRUCTOR_NAME,
             {
+                StaticMethod("loadTTF", &NativeCanvas::LoadTTF),
                 StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
                 InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
                 InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
