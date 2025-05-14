@@ -46,7 +46,7 @@ FetchContent_Declare(OpenXR-SDK
     GIT_TAG 458984d7f59d1ae6dc1b597d94b02e4f7132eaba)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 578a291759db6fe7c3f4735d3512c0526ad18efc)
+    GIT_TAG 6abfcf066d171e9ade7604d91381ebebe4209edc)
 FetchContent_Declare(libwebp
     GIT_REPOSITORY https://github.com/webmproject/libwebp.git
     GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c)
