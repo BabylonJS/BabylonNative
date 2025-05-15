@@ -133,6 +133,10 @@ set(INSTALL_LIBS_DIR "${BINARY_DIR}/install/lib")
 target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")
 target_link_directories(TestInstall PRIVATE ${INSTALL_LIBS_DIR} ${V8JSI_LIB_PATH_RELEASE})
 
+if(ANDROID OR IOS)
+    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} NativeXr)
+endif()
+
 target_link_libraries(TestInstall
     AppRuntime
     arcana
@@ -163,9 +167,7 @@ target_link_libraries(TestInstall
     NativeInput
     NativeOptimizations
     NativeTracing
-    NativeXr
     OGLCompiler
-    openxr_loader
     OSDependent
     ScriptLoader
     Scheduling

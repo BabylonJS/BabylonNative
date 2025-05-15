@@ -30,6 +30,6 @@ if(BABYLON_NATIVE_PLUGIN_TESTUTILS)
     add_subdirectory(TestUtils)
 endif()
 
-if(BABYLON_NATIVE_PLUGIN_NATIVEXR AND (WIN32 OR ANDROID OR IOS))
+if(BABYLON_NATIVE_PLUGIN_NATIVEXR AND (ANDROID OR IOS))
     add_subdirectory(NativeXr)
 endif()

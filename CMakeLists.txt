@@ -38,12 +38,6 @@ FetchContent_Declare(ios-cmake
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
     GIT_TAG c64c8a8cfc95b187e9547b165f02633909568c22)
-FetchContent_Declare(OpenXR-MixedReality
-    GIT_REPOSITORY https://github.com/microsoft/OpenXR-MixedReality.git
-    GIT_TAG 67424511525b96a36847f2a96d689d99e5879503)
-FetchContent_Declare(OpenXR-SDK
-    GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK.git
-    GIT_TAG 458984d7f59d1ae6dc1b597d94b02e4f7132eaba)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
     GIT_TAG 6abfcf066d171e9ade7604d91381ebebe4209edc)
