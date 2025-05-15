@@ -137,6 +137,8 @@ if(ANDROID OR IOS)
     set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} NativeXr)
 endif()
 
+message("ADDITIONAL_LIBRARIES = ${ADDITIONAL_LIBRARIES}")
+
 target_link_libraries(TestInstall
     AppRuntime
     arcana
