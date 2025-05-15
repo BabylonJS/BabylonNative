@@ -170,7 +170,6 @@ target_link_libraries(TestInstall
     NativeOptimizations
     NativeTracing
     OGLCompiler
-    openxr_loader
     OSDependent
     ScriptLoader
     Scheduling
