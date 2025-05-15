@@ -24,18 +24,6 @@ endif()
 
 project(xr)
 
-
-if(WIN32)
-    # Avoid picking up system installed jsoncpp in favor of source distributed with openxr_loader project
-    set(BUILD_WITH_SYSTEM_JSONCPP OFF BOOL "disable using system installed jsoncpp")
-    FetchContent_MakeAvailable_With_Message(OpenXR-SDK OpenXR-MixedReality)
-
-    set_property(TARGET openxr_loader PROPERTY FOLDER Dependencies/xr/OpenXR)
-    set_property(TARGET generate_openxr_header PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
-    set_property(TARGET xr_global_generated_files PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
-    set_property(TARGET uninstall PROPERTY FOLDER Dependencies/xr/OpenXR/Generated)
-endif()
-
 set(DYNAMIC_LOADER OFF CACHE BOOL "Build the loader as a .dll library")
 
 set(SOURCES "Include/XR.h"
@@ -49,26 +37,6 @@ elseif (IOS)
     set(SOURCES ${SOURCES}
         "Source/ARKit/Include/IXrContextARKit.h"
         "Source/ARKit/XR.mm")
-else()
-    set(SOURCES ${SOURCES}
-        "Source/OpenXR/XR.cpp")
-
-    if(WIN32)
-        set(SOURCES ${SOURCES} "Source/OpenXR/Windows/XrPlatform.h")
-    else()
-        message(FATAL_ERROR "OpenXR support not available for platform ${CMAKE_SYSTEM_NAME}")
-    endif()
-
-    set(SOURCES ${SOURCES}
-        "Source/OpenXR/Include/IXrContextOpenXR.h"
-        "Source/OpenXR/XrPlatformCommon.h"
-        "Source/OpenXR/XrRegistry.h"
-        "Source/OpenXR/XrSupportedExtensions.h"
-        "Source/OpenXR/SceneUnderstanding.h"
-        "Source/OpenXR/SceneUnderstanding.cpp"
-        "Source/OpenXR/XrInput.h"
-        "Source/OpenXR/XrInput.cpp")
-    set_property(TARGET openxr_loader PROPERTY UNITY_BUILD false)
 endif()
 
 add_library(xr ${SOURCES})
@@ -95,20 +63,6 @@ if (ANDROID)
     target_link_libraries(xr PRIVATE glm arcore AndroidExtensions)
 elseif (IOS)    
     target_link_libraries(xr PRIVATE "-framework ARKit")
-else()
-    if(WIN32)
-        target_include_directories(xr PRIVATE "Source/OpenXR/Windows")
-    endif()
-
-    target_include_directories(xr PRIVATE "${openxr-mixedreality_SOURCE_DIR}/openxr_preview/include")
-    target_include_directories(xr PRIVATE "${openxr-mixedreality_SOURCE_DIR}/shared")
-    target_include_directories(xr PRIVATE "Source/OpenXR")
-
-    target_include_directories(xrInternal INTERFACE "${openxr-mixedreality_SOURCE_DIR}/openxr_preview/include")
-    target_include_directories(xrInternal INTERFACE "${openxr-mixedreality_SOURCE_DIR}/shared")
-    target_include_directories(xrInternal INTERFACE "Source/OpenXR")
-
-    target_link_libraries(xr PRIVATE openxr_loader)
 endif()
 
 target_link_libraries(xr
