@@ -400,8 +400,6 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
 
         Babylon::Plugins::NativeOptimizations::Initialize(env);
 
-        Babylon::Plugins::NativeXr::Initialize(env);
-
         m_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
     });
 
