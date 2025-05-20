@@ -1,5 +1,6 @@
 if (WIN32 AND NOT WINDOWS_STORE)
     add_subdirectory(HeadlessScreenshotApp)
+    add_subdirectory(StyleTransferApp)
 endif()
 
 if(NOT ANDROID)
