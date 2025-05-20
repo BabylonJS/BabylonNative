@@ -1,3 +1,7 @@
+if (WIN32 AND NOT WINDOWS_STORE)
+    add_subdirectory(HeadlessScreenshotApp)
+endif()
+
 if(NOT ANDROID)
     add_subdirectory(Playground)
 endif()
