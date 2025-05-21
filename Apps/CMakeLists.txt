@@ -6,7 +6,7 @@ if(NOT ANDROID)
     add_subdirectory(Playground)
 endif()
 
-if(WIN32 AND NOT WINDOWS_STORE)
+if((WIN32 AND NOT WINDOWS_STORE) AND GRAPHICS_API STREQUAL D3D11)
     add_subdirectory(StyleTransferApp)
 endif()
 
