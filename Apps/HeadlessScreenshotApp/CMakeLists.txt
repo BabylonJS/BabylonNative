@@ -1,6 +1,12 @@
-FetchContent_Declare(DirectXTK
-    GIT_REPOSITORY https://github.com/microsoft/DirectXTK.git
-    GIT_TAG e7d9b64ca6bb8977d4e3006727deaf57a7c1de84)
+if(GRAPHICS_API STREQUAL D3D11)
+    FetchContent_Declare(DirectXTK
+        GIT_REPOSITORY https://github.com/microsoft/DirectXTK.git
+        GIT_TAG e7d9b64ca6bb8977d4e3006727deaf57a7c1de84)
+elseif(GRAPHICS_API STREQUAL D3D12)
+    FetchContent_Declare(DirectXTK
+        GIT_REPOSITORY https://github.com/microsoft/DirectXTK12.git
+        GIT_TAG 873681e6110f1760c67a879bf15d44fe77edd4e5)
+endif()
 
 FetchContent_MakeAvailable(CMakeExtensions)
 
