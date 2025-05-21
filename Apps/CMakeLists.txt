@@ -1,4 +1,4 @@
-if (WIN32 AND NOT WINDOWS_STORE)
+if ((WIN32 AND NOT WINDOWS_STORE) AND GRAPHICS_API STREQUAL D3D11)
     add_subdirectory(HeadlessScreenshotApp)
     add_subdirectory(StyleTransferApp)
 endif()
