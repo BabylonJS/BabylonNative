@@ -6,7 +6,7 @@ if(NOT ANDROID)
     add_subdirectory(Playground)
 endif()
 
-if(WIN32)
+if(WIN32 AND NOT WINDOWS_STORE)
     add_subdirectory(StyleTransferApp)
 endif()
 
