@@ -6,8 +6,8 @@ FetchContent_MakeAvailable(CMakeExtensions)
 FetchContent_MakeAvailable_With_Message(DirectXTK)
 
 set_property(TARGET DirectXTK PROPERTY UNITY_BUILD false)
-set_property(TARGET DirectXTK PROPERTY FOLDER Dependencies/DirectXTK)
-set_property(TARGET xwbtool PROPERTY FOLDER Dependencies/DirectXTK)
+set_property(TARGET DirectXTK PROPERTY FOLDER Apps/Dependencies/DirectXTK)
+set_property(TARGET xwbtool PROPERTY FOLDER Apps/Dependencies/DirectXTK)
 
 set(BABYLON_SCRIPTS
     "../node_modules/babylonjs/babylon.max.js"
