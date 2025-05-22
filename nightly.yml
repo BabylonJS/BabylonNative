@@ -46,4 +46,4 @@ jobs:
     displayName: Upload Playground
     inputs:
       PathtoPublish: build/Apps/Playground
-      ArtifactName: Playground
+      ArtifactName: BabylonNativeNightlyPlayground
