@@ -1,4 +1,4 @@
-# ConsoleApp
+# HeadlessScreenshotApp
 
 This app is an example of a headless Windows console application that takes screenshots of 3D assets.
 
