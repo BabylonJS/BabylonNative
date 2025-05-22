@@ -5,10 +5,9 @@ FetchContent_Declare(DirectXTK
 FetchContent_MakeAvailable(CMakeExtensions)
 
 # DirectXTK does not compile with unity build turned on.
-set(PREV_CMAKE_UNITY_BUILD ${CMAKE_UNITY_BUILD})
-set(CMAKE_UNITY_BUILD OFF)
 FetchContent_MakeAvailable_With_Message(DirectXTK)
-set(CMAKE_UNITY_BUILD ${PREV_CMAKE_UNITY_BUILD})
+
+set_property(TARGET DirectXTK UNITY_BUILD false)
 
 set(BABYLON_SCRIPTS
     "../node_modules/babylonjs/babylon.max.js"
