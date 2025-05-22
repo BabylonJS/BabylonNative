@@ -3,11 +3,11 @@ FetchContent_Declare(DirectXTK
     GIT_TAG e7d9b64ca6bb8977d4e3006727deaf57a7c1de84)
 
 FetchContent_MakeAvailable(CMakeExtensions)
-
-# DirectXTK does not compile with unity build turned on.
 FetchContent_MakeAvailable_With_Message(DirectXTK)
 
-set_property(TARGET DirectXTK UNITY_BUILD false)
+set_property(TARGET DirectXTK PROPERTY UNITY_BUILD false)
+set_property(TARGET DirectXTK PROPERTY FOLDER Dependencies/DirectXTK)
+set_property(TARGET xwbtool PROPERTY FOLDER Dependencies/DirectXTK)
 
 set(BABYLON_SCRIPTS
     "../node_modules/babylonjs/babylon.max.js"
