@@ -1,5 +1,5 @@
 [![Build Status](https://dev.azure.com/babylonjs/ContinousIntegration/_apis/build/status/BabylonNative%20CI?branchName=master)](https://dev.azure.com/babylonjs/ContinousIntegration/_build/latest?definitionId=6&branchName=master)
-[![Nightly build](https://dev.azure.com/babylonjs/ContinousIntegration/_apis/build/status%2FBabylonNative%20Nightly%20CI?branchName=master)](https://dev.azure.com/babylonjs/ContinousIntegration/_build/latest?definitionId=36&branchName=master)
+[![Nightly Build](https://dev.azure.com/babylonjs/ContinousIntegration/_apis/build/status%2FBabylonNative%20Nightly%20CI?branchName=master)](https://dev.azure.com/babylonjs/ContinousIntegration/_build/latest?definitionId=36&branchName=master)
 
 # Babylon Native
 
