@@ -3,11 +3,16 @@ FetchContent_Declare(DirectXTK
     GIT_TAG e7d9b64ca6bb8977d4e3006727deaf57a7c1de84)
 
 FetchContent_MakeAvailable(CMakeExtensions)
+
+set(BUILD_TESTING OFF)
+set(BUILD_TOOLS OFF)
+set(BUILD_XAUDIO_WIN8 OFF)
+set(DIRECTX_ARCH ${CMAKE_VS_PLATFORM_NAME})
+
 FetchContent_MakeAvailable_With_Message(DirectXTK)
 
 set_property(TARGET DirectXTK PROPERTY UNITY_BUILD false)
-set_property(TARGET DirectXTK PROPERTY FOLDER Apps/Dependencies/DirectXTK)
-set_property(TARGET xwbtool PROPERTY FOLDER Apps/Dependencies/DirectXTK)
+set_property(TARGET DirectXTK PROPERTY FOLDER Apps/Dependencies)
 
 set(BABYLON_SCRIPTS
     "../node_modules/babylonjs/babylon.max.js"
