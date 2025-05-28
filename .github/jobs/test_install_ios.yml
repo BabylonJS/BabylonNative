@@ -5,7 +5,7 @@ parameters:
 
 jobs:
   - job: ${{ parameters.name }}
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    #condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
     timeoutInMinutes: 40
     pool:
       vmImage: ${{ parameters.vmImage }}
@@ -33,6 +33,7 @@ jobs:
       displayName: 'Build Playground iOS'
 
     - script: |
+        export EFFECTIVE_PLATFORM_NAME=-iphonesimulator
         cmake --install buildiOS --prefix="$(Build.SourcesDirectory)/Install"
         lipo -info $(Build.SourcesDirectory)/Install/lib/libxr.a
       displayName: 'Install'
