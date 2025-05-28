@@ -24,6 +24,11 @@ jobs:
       cmake -B build -A x64 -D BX_CONFIG_DEBUG=ON -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256 -D BABYLON_DEBUG_TRACE=ON
     displayName: 'Generate solution'
 
+  - script: |
+      cd Apps
+      npm run getNightly
+    displayName: 'Download nightly'
+
   - task: MSBuild@1
     inputs:
       solution: 'build/BabylonNative.sln'
