@@ -30,7 +30,7 @@ jobs:
         sdk: 'iphoneos'
         useXcpretty: false
         configuration: Release
-        args: '-derivedDataPath $(Build.SourcesDirectory)/buildiOS/build-iphoneos'
+        args: '-parallelizeTargets NO'
       displayName: 'Build install iOS'
 
     - script: |
