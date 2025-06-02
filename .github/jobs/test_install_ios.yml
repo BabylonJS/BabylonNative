@@ -26,13 +26,14 @@ jobs:
     - task: Xcode@5
       inputs:
         xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
-        scheme: 'install'
+        scheme: 'Playground'
         sdk: 'iphoneos'
         useXcpretty: false
         configuration: Release
-      displayName: 'Build install iOS'
+      displayName: 'Build Playground iOS'
 
     - script: |
+        export EFFECTIVE_PLATFORM_NAME=-iphone
         cmake --install buildiOS --prefix="$(Build.SourcesDirectory)/Install"
         lipo -info $(Build.SourcesDirectory)/Install/lib/libxr.a
       displayName: 'Install'
