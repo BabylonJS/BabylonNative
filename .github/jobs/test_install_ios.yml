@@ -30,7 +30,7 @@ jobs:
         sdk: 'iphoneos'
         useXcpretty: false
         configuration: Release
-        args: '-parallelizeTargets NO'
+        args: '-parallelizeTargets=NO'
       displayName: 'Build install iOS'
 
     - script: |
