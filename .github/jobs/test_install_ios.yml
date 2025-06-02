@@ -32,7 +32,9 @@ jobs:
         configuration: Release
       displayName: 'Build install iOS'
 
+    # set EFFECTIVE_PLATFORM_NAME explicitly for webp
     - script: |
+        export EFFECTIVE_PLATFORM_NAME=-iphoneos
         cmake --install buildiOS --prefix="$(Build.SourcesDirectory)/Install"
         lipo -info $(Build.SourcesDirectory)/Install/lib/libxr.a
       displayName: 'Install'
