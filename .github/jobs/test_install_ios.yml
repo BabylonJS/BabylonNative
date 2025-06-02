@@ -5,7 +5,7 @@ parameters:
 
 jobs:
   - job: ${{ parameters.name }}
-    #condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
     timeoutInMinutes: 40
     pool:
       vmImage: ${{ parameters.vmImage }}
@@ -32,6 +32,7 @@ jobs:
         configuration: Release
       displayName: 'Build install iOS'
 
+    # set EFFECTIVE_PLATFORM_NAME explicitly for webp
     - script: |
         export EFFECTIVE_PLATFORM_NAME=-iphoneos
         cmake --install buildiOS --prefix="$(Build.SourcesDirectory)/Install"
