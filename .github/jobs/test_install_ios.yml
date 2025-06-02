@@ -26,11 +26,11 @@ jobs:
     - task: Xcode@5
       inputs:
         xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
-        scheme: 'Playground'
+        scheme: 'install'
         sdk: 'iphoneos'
         useXcpretty: false
         configuration: Release
-      displayName: 'Build Playground iOS'
+      displayName: 'Build install iOS'
 
     - script: |
         export EFFECTIVE_PLATFORM_NAME=-iphoneos
