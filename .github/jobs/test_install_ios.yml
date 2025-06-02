@@ -33,7 +33,7 @@ jobs:
       displayName: 'Build Playground iOS'
 
     - script: |
-        export EFFECTIVE_PLATFORM_NAME=-iphone
+        export EFFECTIVE_PLATFORM_NAME=-iphoneos
         cmake --install buildiOS --prefix="$(Build.SourcesDirectory)/Install"
         lipo -info $(Build.SourcesDirectory)/Install/lib/libxr.a
       displayName: 'Install'
