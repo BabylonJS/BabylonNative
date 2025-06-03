@@ -23,17 +23,17 @@ jobs:
         cmake -G Xcode -B buildiOS -D IOS=ON -D DEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D CMAKE_IOS_INSTALL_COMBINED=NO
       displayName: 'Generate iOS solution'
 
-    - task: Xcode@5
-      inputs:
-        xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
-        scheme: 'install'
-        sdk: 'iphoneos'
-        useXcpretty: false
-        configuration: Release
-        args: '-parallelizeTargets=NO'
-      displayName: 'Build install iOS'
+#    - task: Xcode@5
+#      inputs:
+#        xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
+#        scheme: 'install'
+#        sdk: 'iphoneos'
+#        useXcpretty: false
+#        configuration: Release
+#      displayName: 'Build install iOS'
 
     - script: |
+        export EFFECTIVE_PLATFORM_NAME=-iphoneos
         cmake --install buildiOS --prefix="$(Build.SourcesDirectory)/Install"
         lipo -info $(Build.SourcesDirectory)/Install/lib/libxr.a
       displayName: 'Install'
