@@ -39,6 +39,12 @@ jobs:
   - script: |
       Playground.exe app:///Scripts/validation_native.js
     workingDirectory: build/Apps/Playground/RelWithDebInfo
+    displayName: 'Run VisualizationTests'
+
+  - script: |
+      UnitTests.exe
+    workingDirectory: build/Apps/UnitTests/RelWithDebInfo
+    displayName: 'Run UnitTests'
 
   - task: PublishBuildArtifacts@1
     displayName: Upload Errors images artifact
@@ -52,3 +58,9 @@ jobs:
     inputs:
       PathtoPublish: build/Apps/Playground
       ArtifactName: BabylonNativeNightlyPlayground
+
+  - task: PublishBuildArtifacts@1
+    displayName: Upload UnitTests
+    inputs:
+      PathtoPublish: build/Apps/UnitTests
+      ArtifactName: BabylonNativeNightlyUnitTests
