@@ -40,6 +40,10 @@ jobs:
       Playground.exe app:///Scripts/validation_native.js
     workingDirectory: build/Apps/Playground/RelWithDebInfo
 
+  - script: |
+      UnitTests.exe
+    workingDirectory: build/Apps/UnitTests/RelWithDebInfo
+
   - task: PublishBuildArtifacts@1
     displayName: Upload Errors images artifact
     condition: failed()
