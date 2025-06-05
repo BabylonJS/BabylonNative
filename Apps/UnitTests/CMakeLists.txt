@@ -14,7 +14,8 @@ set(EXTERNAL_SCRIPTS
 
 set(SOURCES
     "Shared/Shared.h"
-    "Shared/Shared.cpp")
+    "Shared/Shared.cpp"
+    "Shared/ClipchampUsageTests.cpp")
 
 if(APPLE)
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
