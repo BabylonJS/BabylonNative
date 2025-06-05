@@ -3,17 +3,24 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "getNightly": "node scripts/getNightly.js"
+    "getNightly": "node scripts/getNightly.js",
+    "buildTest" : "npx babel node_modules/mocha/mocha.js --out-file node_modules/mocha/mocha.esm.js && npx babel node_modules/chai/chai.js --out-file node_modules/chai/chai.esm.js && npx rollup node_modules/mocha/mocha.esm.js --file node_modules/mocha/mocha.umd.js --format umd --name mocha && npx rollup node_modules/chai/chai.esm.js --file node_modules/chai/chai.umd.js --format umd --name chai",
+    "postinstall": "npm run buildTest"
   },
   "dependencies": {
-    "babylonjs": "^7.23.0",
-    "babylonjs-gltf2interface": "^7.23.0",
-    "babylonjs-gui": "^7.23.0",
-    "babylonjs-loaders": "^7.23.0",
-    "babylonjs-materials": "^7.23.0",
-    "chai": "^4.3.4",
+    "babylonjs": "^8.3.1",
+    "babylonjs-gltf2interface": "^8.3.1",
+    "babylonjs-gui": "^8.3.1",
+    "babylonjs-loaders": "^8.3.1",
+    "babylonjs-materials": "^8.3.1",
+    "chai": "^5.2.0",
     "jsc-android": "^241213.1.0",
-    "mocha": "^9.2.2",
+    "mocha": "^11.1.0",
     "v8-android": "^7.8.2"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.27.0",
+    "@babel/core": "^7.26.10",
+    "@babel/preset-env": "^7.26.9"
   }
 }

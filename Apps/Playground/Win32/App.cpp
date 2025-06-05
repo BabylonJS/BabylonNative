@@ -17,7 +17,6 @@
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
-#include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/TestUtils.h>
@@ -25,6 +24,8 @@
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Canvas.h>
+#include <Babylon/ShaderCache.h>
+#include <Babylon/DebugTrace.h>
 
 #define MAX_LOADSTRING 100
 
@@ -122,6 +123,12 @@ namespace
             return;
         }
 
+        Babylon::DebugTrace::EnableDebugTrace(true);
+        Babylon::DebugTrace::SetTraceOutput([](const char* trace) {
+            OutputDebugStringA(trace);
+            OutputDebugStringA("\n");
+        });
+
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
@@ -133,6 +140,8 @@ namespace
 
         device.emplace(graphicsConfig);
         update.emplace(device->GetUpdate("update"));
+
+        Babylon::ShaderCache::Enabled(true);
 
         device->StartRenderingCurrentFrame();
         update->Start();
@@ -180,8 +189,6 @@ namespace
             Babylon::Plugins::NativeCapture::Initialize(env);
 
             Babylon::Plugins::NativeCamera::Initialize(env);
-
-            Babylon::Plugins::NativeXr::Initialize(env);
 
             nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 

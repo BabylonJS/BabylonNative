@@ -1,7 +1,7 @@
 include(GNUInstallDirs)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(CMAKE_INSTALL_PREFIX "./install/" CACHE PATH "..." FORCE)
+  set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "..." FORCE)
 endif()
 
 function(install_targets)
@@ -11,7 +11,7 @@ function(install_targets)
     foreach(target IN LISTS ARGN)
         get_target_property(target_type ${target} TYPE)
         if(NOT target_type STREQUAL "INTERFACE_LIBRARY")
-            install(FILES "$<TARGET_FILE_DIR:${target}>/${target}.pdb" DESTINATION lib OPTIONAL)
+            install(FILES "$<TARGET_FILE_DIR:${target}>/$<TARGET_FILE_PREFIX:${target}>$<TARGET_FILE_BASE_NAME:${target}>.pdb" DESTINATION lib OPTIONAL)
         endif()
     endforeach()
 endfunction()
@@ -35,7 +35,7 @@ endfunction()
 install_targets(arcana)
 
 ## bgfx
-install_targets(astc-encoder edtaa3 etc1 etc2 iqa nvtt pvrtc squish tinyexr bgfx bimg bx)
+install_targets(bimg_encode bimg_decode bgfx bimg bx)
 
 ## glslang
 install_targets(GenericCodeGen glslang MachineIndependent OGLCompiler OSDependent SPIRV glslang-default-resource-limits)
@@ -57,8 +57,15 @@ if(TARGET openxr_loader)
     install_targets(openxr_loader)
 endif()
 
+if(TARGET xr)
+    install_targets(xr)
+endif()
+
 ## UrlLib
 install_targets(UrlLib)
+
+## Fonudation
+install_targets(Foundation)
 
 # ----------------
 # Core
@@ -77,6 +84,11 @@ if(TARGET AppRuntime)
     install_include_for_targets(AppRuntime)
 endif()
 
+if(TARGET Scheduling)
+    install_targets(Scheduling)
+    install_include_for_targets(Scheduling)
+endif()
+
 if(TARGET ScriptLoader)
     install_targets(ScriptLoader)
     install_include_for_targets(ScriptLoader)
@@ -86,7 +98,7 @@ install_targets(napi)
 install_include_for_targets(napi)
 
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8" AND JSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR)
-    install_targets(v8inspector)
+    install_targets(llhttp_static v8inspector)
 endif()
 
 # Manually install the JSI headers

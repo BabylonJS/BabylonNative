@@ -1,7 +1,5 @@
 set(SOURCES
     "Include/Babylon/Polyfills/Window.h"
-    "Source/TimeoutDispatcher.h"
-    "Source/TimeoutDispatcher.cpp"
     "Source/Window.h"
     "Source/Window.cpp")
 
@@ -14,6 +12,7 @@ target_include_directories(Window
 target_link_libraries(Window
     PUBLIC napi
     PRIVATE base-n
+    PRIVATE Scheduling
     PRIVATE JsRuntimeInternal
     PRIVATE GraphicsDeviceContext)
 

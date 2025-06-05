@@ -24,5 +24,8 @@
 ## Debugging iOS and MacOS rendering using Xcode
 [Inspect and debug your rendering thanks to Xcode frame capture.](DebugRenderedFrameMetal.md)
 
+## Debug trace and native code instrumentation
+[Trace and log C++ code on any platform](DebugTrace.md)
+
 ## Frequently Asked Questions
 [Any other assorted information not answered in the above sections can be found here](FAQ.md)

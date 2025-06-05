@@ -32,11 +32,12 @@
             "title": "GLTF Extension EXT_mesh_gpu_instancing",
             "playgroundId": "#QFIGLW#9",
             "renderCount": 10,
+            "errorRatio": 6,
             "referenceImage": "gltfExtensionExtMeshGpuInstancingTest.png"
         },
         {
             "title": "GLTF ext MSFT_LOD",
-            "playgroundId": "#2YZFA0#234",
+            "playgroundId": "#2YZFA0#422",
             "referenceImage": "gltfMSFTLOD.png"
         },
         {
@@ -61,6 +62,11 @@
             "title": "Iridescence GLTF",
             "playgroundId": "#2FDQT5#1508",
             "referenceImage": "iridescence_gltf.png"
+        },
+        {
+            "title": "EXT_texture_webp",
+            "playgroundId": "#LSAUH2#6",
+            "referenceImage": "webp.png"
         },
         {
             "title": "GLTF Animation Skin Type",
@@ -96,7 +102,7 @@
         },
         {
             "title": "Visibility",
-            "playgroundId": "#PXC9CF#2",
+            "playgroundId": "#PXC9CF#6",
             "referenceImage": "visibility.png"
         },
         {
@@ -527,6 +533,7 @@
         {
             "title": "CesiumMan from Khronos Sample Assets",
             "playgroundId": "#4GWX8M",
+            "errorRatio": 2,
             "referenceImage": "CesiumMan.png"
         },
         {

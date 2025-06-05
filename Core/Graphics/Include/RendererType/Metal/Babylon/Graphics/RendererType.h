@@ -6,6 +6,7 @@ namespace Babylon::Graphics
 {
     using DeviceT = id<MTLDevice>;
     using TextureT = id<MTLTexture>;
+    using TextureFormatT = MTLPixelFormat;
 
     struct DeviceConfiguration
     {

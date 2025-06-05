@@ -25,7 +25,9 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-FetchContent_MakeAvailable_With_Message(googletest)
+if(WIN32 OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID AND NOT APPLE))
+    FetchContent_MakeAvailable_With_Message(googletest)
+endif()
 
 # __cplusplus value is not in sync with language version used. MVSC needs this flag to update it accordingly
 # https://gitlab.kitware.com/cmake/cmake/-/issues/18837
@@ -127,33 +129,36 @@ endif()
 
 add_executable(TestInstall ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${SOURCES})
 
-# for napi
-target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
-target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_NODE_SPECIFIC)
-target_compile_definitions(TestInstall PUBLIC NAPI_VERSION=3)
-
 set(INSTALL_LIBS_DIR "${BINARY_DIR}/install/lib")
 target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")
 target_link_directories(TestInstall PRIVATE ${INSTALL_LIBS_DIR} ${V8JSI_LIB_PATH_RELEASE})
 
+if(ANDROID OR IOS)
+    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} NativeXr)
+endif()
+
 target_link_libraries(TestInstall
     AppRuntime
     arcana
-    astc-encoder
+    bimg_encode
+    bimg_decode
     bgfx
     bimg
     bx
     Canvas
     Console
-    edtaa3
-    etc1
-    etc2
     ExternalTexture
+    Foundation
     GenericCodeGen
     glslang
+    glslang-default-resource-limits
     Graphics
-    iqa
+    gtest_main
     JsRuntime
+    libsharpyuv.lib
+    libwebp.lib
+    libwebpdecoder.lib
+    libwebpdemux.lib
     MachineIndependent
     napi
     NativeCamera
@@ -162,18 +167,13 @@ target_link_libraries(TestInstall
     NativeInput
     NativeOptimizations
     NativeTracing
-    NativeXr
-    nvtt
     OGLCompiler
-    openxr_loader
     OSDependent
-    pvrtc
     ScriptLoader
+    Scheduling
     spirv-cross-core
     spirv-cross-hlsl
     SPIRV
-    squish
-    tinyexr
     UrlLib
     Window
     XMLHttpRequest
@@ -182,10 +182,8 @@ target_link_libraries(TestInstall
     d3d12
     d3dcompiler
     Pathcch
-    glslang-default-resource-limits
-    gtest_main
     ${ADDITIONAL_LIBRARIES}
-    )
+)
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
 # If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.

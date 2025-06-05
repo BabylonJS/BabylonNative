@@ -6,6 +6,7 @@
 #include <X11/Xutil.h>
 #undef None
 #include "../Shared/Shared.h"
+#include "Babylon/DebugTrace.h"
 
 namespace
 {
@@ -48,5 +49,9 @@ int main()
     config.Window = window;
     config.Width = static_cast<size_t>(width);
     config.Height = static_cast<size_t>(height);
+
+    Babylon::DebugTrace::EnableDebugTrace(true);
+    Babylon::DebugTrace::SetTraceOutput([](const char* trace) { printf("%s\n", trace); fflush(stdout); });
+
     return RunTests(config);
 }

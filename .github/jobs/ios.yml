@@ -1,8 +1,7 @@
 parameters:
   name: ''
   vmImage: ''
-  xcodeVersion: ''
-  deploymentTarget: '12'
+  deploymentTarget: '15'
 
 jobs:
   - job: ${{ parameters.name }}
@@ -16,13 +15,11 @@ jobs:
         vmImage: ${{ parameters.vmImage }}
 
     - script: |
-        sudo xcode-select --switch /Applications/Xcode_${{ parameters.xcodeVersion }}.app/Contents/Developer
-      displayName: 'Select Xcode ${{ parameters.xcodeVersion }}'
+        sudo xcode-select --switch /Applications/Xcode_$(XCODE_VERSION).app/Contents/Developer
+      displayName: 'Select Xcode $(XCODE_VERSION)'
 
     - script: |
-        mkdir buildiOS
-        cd buildiOS
-        cmake .. -G Xcode -D IOS=ON -D DEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD)
+        cmake -G Xcode -B buildiOS -D IOS=ON -D DEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D CMAKE_IOS_INSTALL_COMBINED=NO
       displayName: 'Generate iOS solution'
 
     - task: Xcode@5
@@ -31,6 +28,7 @@ jobs:
         scheme: 'Playground'
         sdk: 'iphoneos'
         useXcpretty: false
-        configuration: RelWithDebInfo
+        configuration: Release
       displayName: 'Build Playground iOS'
+
 

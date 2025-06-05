@@ -39,8 +39,16 @@
 
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from '' to '', possible loss of data
 
-#include "vs_nanovg_fill.bin.h"
-#include "fs_nanovg_fill.bin.h"
+#include "Shaders/dx11/vs_nanovg_fill.h"
+#include "Shaders/dx11/fs_nanovg_fill.h"
+#include "Shaders/metal/vs_nanovg_fill.h"
+#include "Shaders/metal/fs_nanovg_fill.h"
+#include "Shaders/glsl/vs_nanovg_fill.h"
+#include "Shaders/glsl/fs_nanovg_fill.h"
+#include "Shaders/essl/vs_nanovg_fill.h"
+#include "Shaders/essl/fs_nanovg_fill.h"
+#include "Shaders/spirv/vs_nanovg_fill.h"
+#include "Shaders/spirv/fs_nanovg_fill.h"
 
 static const bgfx::EmbeddedShader s_embeddedShadersBabylon[] =
 {

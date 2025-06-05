@@ -1,5 +1,5 @@
-[![Build Status](https://dev.azure.com/babylonjs/ContinousIntegration/_apis/build/status/BabylonNative%20CI?branchName=master)](https://dev.azure.com/babylonjs/ContinousIntegration/_build/latest?definitionId=6&branchName=master)
-[![Nightly build](https://github.com/BabylonJS/BabylonNative/actions/workflows/nightly.yml/badge.svg?branch=master)](https://github.com/BabylonJS/BabylonNative/actions/workflows/nightly.yml)
+[![Build Status](https://dev.azure.com/babylonjs/ContinousIntegration/_apis/build/status/BabylonNative%20CI?branchName=master&label=Main%20branch)](https://dev.azure.com/babylonjs/ContinousIntegration/_build/latest?definitionId=6&branchName=master)
+[![Nightly Build](https://dev.azure.com/babylonjs/ContinousIntegration/_apis/build/status%2FBabylonNative%20Nightly%20CI?branchName=master&label=Nightly)](https://dev.azure.com/babylonjs/ContinousIntegration/_build/latest?definitionId=36&branchName=master)
 
 # Babylon Native
 
@@ -22,6 +22,7 @@ Check out the [home page](https://aka.ms/Bnative) for a project overview.
   - [Building on Windows 10, Targeting HoloLens 2](BUILDING.md#building-on-windows-10-targeting-hololens-2)
   - [Building on macOS, Targeting macOS](BUILDING.md#building-on-macos-targeting-macos)
   - [Building on macOS, Targeting iOS](BUILDING.md#building-on-macos-targeting-ios)
+  - [Building on macOS, Targeting visionOS](BUILDING.md#building-on-macos-targeting-visionos)
   - [Building on Windows, Targeting Android](BUILDING.md#building-on-windows-targeting-android)
   - [Building on Ubuntu, Targeting Linux](BUILDING.md#building-on-ubuntu-targeting-linux)
   - [Selecting the Graphics API](BUILDING.md#selecting-the-graphics-api)
@@ -34,7 +35,7 @@ Check out the [home page](https://aka.ms/Bnative) for a project overview.
   - [Android Emulator Tips](Documentation/AndroidEmulator.md)
   - [Debugging JavaScript on Mac and iOS](Documentation/DebugJavascriptMacIOS.md)
   - [Debugging iOS and MacOS rendering using Xcode](Documentation/DebugRenderedFrameMetal.md)
-  - [Consuming Javascript code in Babylon Native](Documentation/ComsumingJavascript.md)
+  - [Consuming JavaScript code in Babylon Native](Documentation/ConsumingJavaScript.md)
   - [FAQ](Documentation/FAQ.md)
 
 ## Project Status

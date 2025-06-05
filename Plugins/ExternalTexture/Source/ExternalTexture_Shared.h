@@ -2,9 +2,9 @@
 
 namespace Babylon::Plugins
 {
-    ExternalTexture::Impl::Impl(Graphics::TextureT ptr)
+    ExternalTexture::Impl::Impl(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
     {
-        GetInfo(ptr, m_info);
+        GetInfo(ptr, overrideFormat, m_info);
 
         if (m_info.MipLevels != 1 && m_info.MipLevels != 0 && !IsFullMipChain(m_info.MipLevels, m_info.Width, m_info.Height))
         {
@@ -14,15 +14,17 @@ namespace Babylon::Plugins
         Assign(ptr);
     }
 
-    void ExternalTexture::Impl::Update(Graphics::TextureT ptr)
+    void ExternalTexture::Impl::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
     {
         Info info;
-        GetInfo(ptr, info);
+        GetInfo(ptr, overrideFormat, info);
 
         if (info.Width != m_info.Width || info.Height != m_info.Height || info.MipLevels != m_info.MipLevels)
         {
             throw std::runtime_error{"Textures must have same width, height, and mip levels"};
         }
+
+        DEBUG_TRACE("ExternalTexture [0x%p] Update %d x %d %d mips", this, int(info.Width), int(info.Height), int(info.MipLevels));
 
         m_info = info;
 
@@ -31,8 +33,8 @@ namespace Babylon::Plugins
         UpdateHandles(Ptr());
     }
 
-    ExternalTexture::ExternalTexture(Graphics::TextureT ptr)
-        : m_impl{std::make_unique<Impl>(ptr)}
+    ExternalTexture::ExternalTexture(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
+        : m_impl{std::make_unique<Impl>(ptr, overrideFormat)}
     {
     }
 
@@ -64,13 +66,17 @@ namespace Babylon::Plugins
         auto deferred{Napi::Promise::Deferred::New(env)};
         auto promise{deferred.Promise()};
 
+        DEBUG_TRACE("ExternalTexture [0x%p] AddToContextAsync", m_impl.get());
+
         arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(),
             [&context, &runtime, deferred = std::move(deferred), impl = m_impl]() {
                 // REVIEW: The bgfx texture handle probably needs to be an RAII object to make sure it gets clean up during the asynchrony.
                 //         For example, if any of the schedulers/dispatches below don't fire, then the texture handle will leak.
                 bgfx::TextureHandle handle = bgfx::createTexture2D(impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
+                DEBUG_TRACE("ExternalTexture [0x%p] create %d x %d %d mips. Format : %d Flags : %d. (bgfx handle id %d)", impl.get(), int(impl->Width()), int(impl->Height()), int(impl->HasMips()), int(impl->Format()), int(impl->Flags()), int(handle.idx));
                 if (!bgfx::isValid(handle))
                 {
+                    DEBUG_TRACE("ExternalTexture [0x%p] is not valid", impl.get());
                     runtime.Dispatch([deferred{std::move(deferred)}](Napi::Env env) {
                         deferred.Reject(Napi::Error::New(env, "Failed to create native texture").Value());
                     });
@@ -91,6 +97,7 @@ namespace Babylon::Plugins
 
                     runtime.Dispatch([deferred = std::move(deferred), handle, &context, impl = std::move(impl)](Napi::Env env) {
                         auto* texture = new Graphics::Texture{context};
+                        DEBUG_TRACE("ExternalTexture [0x%p] attach %d x %d %d mips. Format : %d Flags : %d. (bgfx handle id %d)", impl.get(), int(impl->Width()), int(impl->Height()), int(impl->HasMips()), int(impl->Format()), int(impl->Flags()), int(handle.idx));
                         texture->Attach(handle, true, impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
 
                         impl->AddHandle(texture->Handle());
@@ -112,8 +119,8 @@ namespace Babylon::Plugins
         return promise;
     }
 
-    void ExternalTexture::Update(Graphics::TextureT ptr)
+    void ExternalTexture::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
     {
-        m_impl->Update(ptr);
+        m_impl->Update(ptr, overrideFormat);
     }
 }

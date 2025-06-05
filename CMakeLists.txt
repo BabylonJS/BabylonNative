@@ -14,7 +14,7 @@ FetchContent_Declare(AndroidExtensions
     GIT_TAG 7d88a601fda9892791e7b4e994e375e049615688)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG f2757396e80bc4169f2ddb938ce25367a98ffdd0)
+    GIT_TAG 1a8a5d6e95413ed14b38a6ac9419048f9a9c8009)
 FetchContent_Declare(arcore-android-sdk
     GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
     GIT_TAG 98cb803de5482fb2b36effe8be3b5a0d3b726976)
@@ -23,7 +23,7 @@ FetchContent_Declare(base-n
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG 345e3e28a9912983fc64d1dcb4da22a445afe3fd)
+    GIT_TAG fdf3ed4a62acabd7025d0a843f6d8a9aff5e3612)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
@@ -34,24 +34,27 @@ FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz")
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
-    GIT_TAG 4.4.1)
+    GIT_TAG 4.5.0)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 9ccb9477a97501525f3f9ca0e00e6971934037ec)
-FetchContent_Declare(OpenXR-MixedReality
-    GIT_REPOSITORY https://github.com/microsoft/OpenXR-MixedReality.git
-    GIT_TAG 67424511525b96a36847f2a96d689d99e5879503)
-FetchContent_Declare(OpenXR-SDK
-    GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK.git
-    GIT_TAG 458984d7f59d1ae6dc1b597d94b02e4f7132eaba)
+    GIT_TAG c64c8a8cfc95b187e9547b165f02633909568c22)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 578a291759db6fe7c3f4735d3512c0526ad18efc)
+    GIT_TAG 6abfcf066d171e9ade7604d91381ebebe4209edc)
+FetchContent_Declare(libwebp
+    GIT_REPOSITORY https://github.com/webmproject/libwebp.git
+    GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c)
 # --------------------------------------------------
 
 FetchContent_MakeAvailable(CMakeExtensions)
 
-if(IOS)
+if(VISIONOS)
+    FetchContent_MakeAvailable_With_Message(ios-cmake)
+    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+    set(PLATFORM "VISIONOSCOMBINED" CACHE STRING "")
+    set(DEPLOYMENT_TARGET "1.0" CACHE STRING "")
+    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
+elseif(IOS)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
     set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
     set(PLATFORM "OS64COMBINED" CACHE STRING "")
@@ -73,6 +76,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # General
 option(BABYLON_NATIVE_BUILD_APPS "Build Babylon Native apps." ${PROJECT_IS_TOP_LEVEL})
 option(BABYLON_NATIVE_INSTALL "Include the install target." ${PROJECT_IS_TOP_LEVEL})
+option(BABYLON_DEBUG_TRACE "Enable debug trace." OFF)
 
 # WARNING: This is experimental. Only use it if you can ensure that your application will properly handle thread affinity.
 option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphics device calls. It can be removed if hosting application ensures thread coherence." ON)
@@ -82,6 +86,7 @@ option(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE "Include Babylon Native Plugin Exte
 option(BABYLON_NATIVE_PLUGIN_NATIVECAMERA "Include Babylon Native Plugin NativeCamera." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE "Include Babylon Native Plugin NativeCapture." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE "Include Babylon Native Plugin NativeEngine." ON)
+option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP "Include Babylon Native Plugin NativeEngine - WebP." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEINPUT "Include Babylon Native Plugin NativeInput." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS "Include Babylon Native Plugin NativeOptimizations." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVETRACING "Include Babylon Native Plugin NativeTracing." ON)
@@ -98,6 +103,8 @@ if(ANDROID)
     set(BABYLON_NATIVE_PLATFORM "Android")
 elseif(IOS)
     set(BABYLON_NATIVE_PLATFORM "iOS")
+elseif (VISIONOS)
+    set(BABYLON_NATIVE_PLATFORM "visionOS")
 elseif(APPLE)
     set(BABYLON_NATIVE_PLATFORM "macOS")
 elseif(WINDOWS_STORE)
@@ -141,6 +148,9 @@ if(MSVC)
     # https://gitlab.kitware.com/cmake/cmake/-/issues/18837
     add_compile_options(/Zc:__cplusplus)
 
+    # https://devblogs.microsoft.com/cppblog/announcing-full-support-for-a-c-c-conformant-preprocessor-in-msvc/
+    add_compile_options(/Zc:preprocessor)
+
     # default to /W3
     add_compile_options(/W3)
 endif()
@@ -149,6 +159,12 @@ if(APPLE)
     # Without this option on azure pipelines, there is a mismatch with math.h giving a lot of undefined functions on macOS.
     # Only enabled for Apple as there is no issue for Windows.
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED TRUE)
+    # Create scheme for installation and other targets
+    set(CMAKE_XCODE_GENERATE_SCHEME TRUE)
+endif()
+
+if(BABYLON_DEBUG_TRACE)
+    add_compile_definitions(BABYLON_DEBUG_TRACE)
 endif()
 
 add_subdirectory(Dependencies)
@@ -160,6 +176,7 @@ if(BABYLON_NATIVE_BUILD_APPS)
     add_subdirectory(Apps)
 endif()
 
-if(BABYLON_NATIVE_INSTALL)
+# no install for glslang compiled for shaderc
+if(BABYLON_NATIVE_INSTALL AND NOT BGFX_BUILD_TOOLS)
     include(Install/Install.cmake)
 endif()

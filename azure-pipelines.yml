@@ -6,33 +6,32 @@ pr:
 
 variables:
 - name: CMAKE_VERSION
-  value: 3.26.3
+  value: 3.31.6
 - name: NDK_VERSION
   value: 25.2.9519653
 - name: UNITY_BUILD
   value: true
+- name: XCODE_VERSION
+  value: 16.2
 
 jobs:
 # Apple
   - template: .github/jobs/macos.yml
     parameters:
-      name: MacOS_Xcode153
-      vmImage: 'macOS-14'
-      xCodeVersion: 15.3
+      name: MacOS
+      vmImage: 'macOS-latest'
 
   - template: .github/jobs/ios.yml
     parameters:
-      name: iOS_Xcode153_iOS162
-      vmImage: 'macOS-14'
-      xCodeVersion: 15.3
-      deploymentTarget: 16.2
+      name: iOS_iOS180
+      vmImage: 'macOS-latest'
+      deploymentTarget: 18.0
 
   - template: .github/jobs/ios.yml
     parameters:
-      name: iOS_Xcode153_iOS172
-      vmImage: 'macOS-14'
-      xCodeVersion: 15.3
-      deploymentTarget: 17.2
+      name: iOS_iOS175
+      vmImage: 'macOS-latest'
+      deploymentTarget: 17.5
 
 # WIN32
   - template: .github/jobs/win32.yml
@@ -127,6 +126,27 @@ jobs:
       name: Android_MacOS_V8
       vmImage: 'macOS-latest'
       JSEngine: V8
+
+# Installation tests. 
+  - template: .github/jobs/test_install_win32.yml
+    parameters:
+      name: Win32_Installation
+      vmImage: 'windows-latest'
+      platform: x64
+  - template: .github/jobs/test_install_linux.yml
+    parameters:
+      name: Linux_Installation
+      vmImage: 'ubuntu-latest'
+      JSEngine: JavaScriptCore
+  - template: .github/jobs/test_install_macos.yml
+    parameters:
+      name: MacOS_Installation
+      vmImage: 'macOS-14'
+  - template: .github/jobs/test_install_ios.yml
+    parameters:
+      name: iOS_Installation
+      vmImage: 'macOS-14'
+      deploymentTarget: 17.2
 
 # These Android tests are unstable on the CI emulator. Disabled until a more reliable solution is found.
 #  - template: .github/jobs/android_tests.yml

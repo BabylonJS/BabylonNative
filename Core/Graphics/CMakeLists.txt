@@ -44,6 +44,8 @@ target_link_libraries(Graphics
     PRIVATE JsRuntimeInternal
     PRIVATE bgfx
     PRIVATE bimg
+    PRIVATE bimg_encode
+    PRIVATE bimg_decode
     PRIVATE bx)
 
 target_compile_definitions(Graphics

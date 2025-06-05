@@ -184,7 +184,7 @@ namespace Babylon
         Napi::Value CreateTexture(const Napi::CallbackInfo& info);
         void InitializeTexture(const Napi::CallbackInfo& info);
         void LoadTexture(const Napi::CallbackInfo& info);
-        void CopyTexture(const Napi::CallbackInfo& info);
+        void CopyTexture(NativeDataStream::Reader& data);
         void LoadRawTexture(const Napi::CallbackInfo& info);
         void LoadRawTexture2DArray(const Napi::CallbackInfo& info);
         void LoadCubeTexture(const Napi::CallbackInfo& info);
@@ -221,6 +221,7 @@ namespace Babylon
         void SetScissor(NativeDataStream::Reader& data);
         void SetCommandDataStream(const Napi::CallbackInfo& info);
         void SubmitCommands(const Napi::CallbackInfo& info);
+        void PopulateFrameStats(const Napi::CallbackInfo& info);
         void DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode);
 
         std::string ProcessShaderCoordinates(const std::string& vertexSource);

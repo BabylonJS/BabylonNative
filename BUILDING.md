@@ -31,7 +31,7 @@ house the builds for different platforms, with each subfolder treated just like 
 
 _Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
 
-**Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with
+**Required Tools:** [Visual Studio 2022](https://visualstudio.microsoft.com/vs/) with
 C++ development tools, [Python 3.0](https://www.python.org/) or newer (required by
 dependencies)
 
@@ -68,7 +68,7 @@ project.
 
 _Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
 
-**Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with
+**Required Tools:** [Visual Studio 2022](https://visualstudio.microsoft.com/vs/) with
 C++ and UWP development tools, [Python 3.0](https://www.python.org/) or newer (required
 by dependencies)
 
@@ -108,7 +108,7 @@ project.
 
 _Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
 
-**Required Tools:** [Visual Studio 2019](https://visualstudio.microsoft.com/vs/) with
+**Required Tools:** [Visual Studio 2022](https://visualstudio.microsoft.com/vs/) with
 C++ and UWP development tools, [Python 3.0](https://www.python.org/) or newer (required
 by dependencies)
 
@@ -192,6 +192,51 @@ demo app, click on the project selector and find `Playground` in the list of pos
 selections. The `Play` button will subsequently allow you to build, run, and debug
 the selected Babylon Native demo app.
 
+### Troubleshooting
+```
+CMake Error at /Applications/CMake 2.app/Contents/share/cmake-3.26/Modules/Platform/iOS-Initialize.cmake:4 (message):
+   is not an iOS SDK
+```
+If you see an error like this, it might be because you have updated Xcode and/or installed a new version of the iOS SDK since last time CMake was run. Try cleaning (e.g. `git clean -dxff`, but back up any changes you want to keep) and re-running the CMake command.
+
+## **Building on macOS, Targeting visionOS**
+
+_Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
+
+**Required Tools:** [Xcode 15](https://developer.apple.com/xcode/) or newer,
+[Python 3.0](https://www.python.org/) or newer (required by dependencies)
+
+For macOS development, CMake will generate a Makefile by default. It may be possible
+to build Babylon Native for macOS using this approach, but only the Xcode method is
+supported at present. To generate an Xcode project using CMake, you must specify the
+correct build system generator for CMake to use. Additionally, you must tell CMake
+what toolchain to use, which provides additional information about how to generate an
+visionOS Xcode project correctly. Run the following command from the repository root:
+
+```
+cmake -B build/visionOS -G Xcode -D VISIONOS=ON
+```
+
+To enable bitcode support, add this option to the cmake command line parameters:
+
+```
+-D ENABLE_BITCODE=ON
+```
+
+CMake will generate a new `BabylonNative.xcodeproj` file in the specified build folder.
+Open the project by double-clicking on it in Finder or by entering the following command:
+
+```
+open build/visionOS/BabylonNative.xcodeproj
+```
+
+To select which project to build with Xcode, select the correct project name in the
+menu to the right of the greyed-out `Stop` button adjacent to the `Play` button in
+the top-left corner of the Xcode window. For example, to build and run the Playground
+demo app, click on the project selector and find `Playground` in the list of possible
+selections. The `Play` button will subsequently allow you to build, run, and debug
+the selected Babylon Native demo app.
+
 ## **Building on Windows, Targeting Android**
 
 _Follow the steps from [All Development Platforms](#all-development-platforms) before proceeding._
@@ -215,11 +260,10 @@ the file `Apps\Playground\Android\gradle.properties` and add the following line:
 jsEngine=JavaScriptCore
 ```
 
-Once the npm packages are installed, open the project located at
-`Apps\Playground\Android` with Android Studio. Then in the menu, select `Run` -> `Run 'app'`.
-If you don't have an Android device plugged in or no Android image in the Android emulator,
-that option will be greyed and inaccessible. Instructions and tips on how to install the
-emulator are [available here](Documentation/AndroidEmulator.md).
+Open the project located at `Apps\Playground\Android` with Android Studio. Then in the menu,
+select `Run` -> `Run 'app'`. If you don't have an Android device plugged in or no Android image
+in the Android emulator, that option will be greyed and inaccessible. Instructions and tips
+on how to install the emulator are [available here](Documentation/AndroidEmulator.md).
 
 ## **Building on Ubuntu, Targeting Linux**
 
@@ -245,13 +289,13 @@ Depending on the JavaScript engine you want to use, you will have to install the
 Install the following package:
 
 ```
-sudo apt-get install libjavascriptcoregtk-4.0-dev
+sudo apt-get install libjavascriptcoregtk-4.1-dev
 ```
 
 Then, run cmake targetting a Ninja make file:
 
 ```
-cmake -G Ninja -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.0.so -D NAPI_JAVASCRIPT_ENGINE=JavaScriptCore
+cmake -G Ninja -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so -D NAPI_JAVASCRIPT_ENGINE=JavaScriptCore
 ```
 
 ### V8

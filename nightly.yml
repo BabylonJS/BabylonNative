@@ -1,0 +1,66 @@
+trigger: none
+
+schedules:
+- cron: "0 23 * * 1-5"
+  displayName: Nightly Build
+  branches:
+    include:
+    - master
+  always: true
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  CMAKE_VERSION: 3.30.3
+
+jobs:
+- job: Nightly
+  displayName: Nightly
+  steps:
+  - checkout: self
+
+  - script: |
+      cmake -B build -A x64 -D BX_CONFIG_DEBUG=ON -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256 -D BABYLON_DEBUG_TRACE=ON
+    displayName: 'Generate solution'
+
+  - script: |
+      cd Apps
+      npm run getNightly
+    displayName: 'Download nightly'
+
+  - task: MSBuild@1
+    inputs:
+      solution: 'build/BabylonNative.sln'
+      maximumCpuCount: true
+      configuration: 'RelWithDebInfo'
+    displayName: 'Build'
+
+  - script: |
+      Playground.exe app:///Scripts/validation_native.js
+    workingDirectory: build/Apps/Playground/RelWithDebInfo
+    displayName: 'Run VisualizationTests'
+
+  - script: |
+      UnitTests.exe
+    workingDirectory: build/Apps/UnitTests/RelWithDebInfo
+    displayName: 'Run UnitTests'
+
+  - task: PublishBuildArtifacts@1
+    displayName: Upload Errors images artifact
+    condition: failed()
+    inputs:
+      PathtoPublish: build/Apps/Playground/Errors
+      ArtifactName: ErrorImages
+
+  - task: PublishBuildArtifacts@1
+    displayName: Upload Playground
+    inputs:
+      PathtoPublish: build/Apps/Playground
+      ArtifactName: BabylonNativeNightlyPlayground
+
+  - task: PublishBuildArtifacts@1
+    displayName: Upload UnitTests
+    inputs:
+      PathtoPublish: build/Apps/UnitTests
+      ArtifactName: BabylonNativeNightlyUnitTests

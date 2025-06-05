@@ -30,3 +30,8 @@ steps:
       cmake --version
     condition: contains('${{ parameters.vmImage }}', 'ubuntu')
     displayName: 'CMake version'
+
+  - powershell: |
+      choco install cmake --version=$(CMAKE_VERSION) -y --allow-downgrade
+    condition: contains('${{ parameters.vmImage }}', 'windows')
+    displayName: 'CMake version'

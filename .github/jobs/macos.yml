@@ -1,7 +1,6 @@
 parameters:
   name: ''
   vmImage: ''
-  xcodeVersion: ''
 
 jobs:
   - job: ${{ parameters.name }}
@@ -15,14 +14,16 @@ jobs:
         vmImage: ${{ parameters.vmImage }}
 
     - script: |
-        sudo xcode-select --switch /Applications/Xcode_${{ parameters.xcodeVersion }}.app/Contents/Developer
-      displayName: 'Select XCode ${{ parameters.xcodeVersion }}'
+        sudo xcode-select --switch /Applications/Xcode_$(XCODE_VERSION).app/Contents/Developer
+      displayName: 'Select XCode $(XCODE_VERSION)'
 
     - script: |
-        mkdir buildmacOS
-        cd buildmacOS
-        cmake .. -G Xcode -D CMAKE_UNITY_BUILD=$(UNITY_BUILD)
+        cmake -G Xcode -B buildmacOS -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON
       displayName: 'Generate macOS solution'
+
+    - script: |
+        xcodebuild -list -project buildmacOS/BabylonNative.xcodeproj
+      displayName: 'List available project schemes'
 
     - task: Xcode@5
       inputs:

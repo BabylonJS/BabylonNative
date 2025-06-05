@@ -6,6 +6,7 @@ namespace Babylon::Graphics
 {
     using DeviceT = ID3D12Device*;
     using TextureT = ID3D12Resource*;
+    using TextureFormatT = DXGI_FORMAT;
 
     struct DeviceConfiguration
     {

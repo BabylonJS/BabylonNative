@@ -147,7 +147,7 @@ namespace
         { DXGI_FORMAT_R32_TYPELESS,       DXGI_FORMAT_UNKNOWN              }, // D32F
         { DXGI_FORMAT_R24G8_TYPELESS,     DXGI_FORMAT_UNKNOWN              }, // D0S8
     };
-    BX_STATIC_ASSERT(bgfx::TextureFormat::Count == BX_COUNTOF(s_textureFormat));
+    static_assert(bgfx::TextureFormat::Count == BX_COUNTOF(s_textureFormat));
 }
 
 // clang-format on
@@ -158,8 +158,8 @@ namespace Babylon::Plugins
     {
     public:
         // Implemented in ExternalTexture_Shared.h
-        Impl(Graphics::TextureT);
-        void Update(Graphics::TextureT);
+        Impl(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
+        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
 
         uintptr_t Ptr() const
         {
@@ -167,7 +167,7 @@ namespace Babylon::Plugins
         }
 
     private:
-        static void GetInfo(Graphics::TextureT ptr, Info& info)
+        static void GetInfo(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, Info& info)
         {
             D3D12_RESOURCE_DESC desc = ptr->GetDesc();
 
@@ -190,13 +190,14 @@ namespace Babylon::Plugins
                 }
             }
 
+            DXGI_FORMAT targetFormat = overrideFormat.has_value() ? overrideFormat.value() : desc.Format;
             for (int i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
             {
                 const auto& format = s_textureFormat[i];
-                if (format.m_fmt == desc.Format || format.m_fmtSrgb == desc.Format)
+                if (format.m_fmt == targetFormat || format.m_fmtSrgb == targetFormat)
                 {
                     info.Format = static_cast<bgfx::TextureFormat::Enum>(i);
-                    if (format.m_fmtSrgb == desc.Format)
+                    if (format.m_fmtSrgb == targetFormat)
                     {
                         info.Flags |= BGFX_TEXTURE_SRGB;
                     }
