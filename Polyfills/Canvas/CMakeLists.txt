@@ -151,6 +151,7 @@ if(BGFX_BUILD_TOOLS AND BGFX_BUILD_TOOLS_SHADER)
 endif()
 
 set_property(TARGET Canvas PROPERTY FOLDER Polyfills)
+set_property(TARGET Canvas PROPERTY UNITY_BUILD false)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 source_group("3rd party Sources" ${CMAKE_CURRENT_SOURCE_DIR} FILES ${FONT_SOURCES} ${ATLAS_SOURCES})
 source_group("Shaders" ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SHADERS})
