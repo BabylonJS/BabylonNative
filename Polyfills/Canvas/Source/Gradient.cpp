@@ -1,5 +1,6 @@
 #include <bgfx/bgfx.h>
 #include <map>
+#include <cmath>
 #include "Canvas.h"
 #include "Context.h"
 #include "Gradient.h"
@@ -63,7 +64,7 @@ namespace Babylon::Polyfills::Internal
             return color;
         color = nvgRGBAf(color.r * x->mul[0], color.g * x->mul[1], color.b * x->mul[2], color.a * x->mul[3]);
         color = nvgRGBAf(color.r + x->add[0], color.g + x->add[1], color.b + x->add[2], color.a + x->add[3]);
-        color = nvgRGBAf(fmax(0.0f, fmin(color.r, 1.0f)), fmax(0.0f, fmin(color.g, 1.0f)), fmax(0.0f, fmin(color.b, 1.0f)), fmax(0.0f, fmin(color.a, 1.0f)));
+        color = nvgRGBAf(std::fmax(0.0f, std::fmin(color.r, 1.0f)), std::fmax(0.0f, std::fmin(color.g, 1.0f)), std::fmax(0.0f, std::fmin(color.b, 1.0f)), std::fmax(0.0f, std::fmin(color.a, 1.0f)));
         return color;
     }
 
@@ -182,10 +183,10 @@ namespace Babylon::Polyfills::Internal
     NVGcolor lerpColor(NVGcolor color0, NVGcolor color1, float offset0, float offset1, float g)
     {
         NVGcolor dst;
-        float den = fmax(0.00001f, offset1 - offset0);
+        float den = std::fmax(0.00001f, offset1 - offset0);
         for (int i = 0; i < 4; i++)
             dst.rgba[i] = color0.rgba[i] + (color1.rgba[i] - color0.rgba[i]) * (g - offset0) / den;
-        dst = nvgRGBAf(fmax(0.0f, fmin(dst.r, 1.0f)), fmax(0.0f, fmin(dst.g, 1.0f)), fmax(0.0f, fmin(dst.b, 1.0f)), fmax(0.0f, fmin(dst.a, 1.0f)));
+        dst = nvgRGBAf(std::fmax(0.0f, std::fmin(dst.r, 1.0f)), std::fmax(0.0f, std::fmin(dst.g, 1.0f)), std::fmax(0.0f, std::fmin(dst.b, 1.0f)), std::fmax(0.0f, std::fmin(dst.a, 1.0f)));
         return dst;
     }
 
@@ -254,7 +255,7 @@ namespace Babylon::Polyfills::Internal
 
                 float numerator = (dx * fxp + dy * fyp);
                 float df = dx * fyp - dy * fxp;
-                numerator += sqrtf((rn * rn) * (dx * dx + dy * dy) - (df * df));
+                numerator += std::sqrtf((rn * rn) * (dx * dx + dy * dy) - (df * df));
                 float g = numerator / denominator;
 
                 // color = c0 + (c1 - c0)(g - x0)/(x1 - x0)
@@ -282,12 +283,12 @@ namespace Babylon::Polyfills::Internal
                 }
                 else
                 {
-                    int w = (int)fabsf(g);
+                    int w = (int)std::fabsf(g);
                     if (spreadMode == SPREAD_REPEAT)
                     {
                         if (g < 0)
                         {
-                            g = 1 - (fabs(g) - w);
+                            g = 1 - (std::fabs(g) - w);
                         }
                         else
                         {
@@ -300,11 +301,11 @@ namespace Babylon::Polyfills::Internal
                         {
                             if (w % 2 == 0)
                             {   // even
-                                g = (fabsf(g) - w);
+                                g = (std::fabsf(g) - w);
                             }
                             else
                             {   // odd
-                                g = (1 - (fabsf(g) - w));
+                                g = (1 - (std::fabsf(g) - w));
                             }
                         }
                         else
