@@ -17,7 +17,6 @@
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
-#include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/TestUtils.h>
@@ -190,8 +189,6 @@ namespace
             Babylon::Plugins::NativeCapture::Initialize(env);
 
             Babylon::Plugins::NativeCamera::Initialize(env);
-
-            Babylon::Plugins::NativeXr::Initialize(env);
 
             nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 

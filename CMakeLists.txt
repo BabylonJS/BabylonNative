@@ -38,19 +38,15 @@ FetchContent_Declare(ios-cmake
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
     GIT_TAG c64c8a8cfc95b187e9547b165f02633909568c22)
-FetchContent_Declare(OpenXR-MixedReality
-    GIT_REPOSITORY https://github.com/microsoft/OpenXR-MixedReality.git
-    GIT_TAG 67424511525b96a36847f2a96d689d99e5879503)
-FetchContent_Declare(OpenXR-SDK
-    GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK.git
-    GIT_TAG 458984d7f59d1ae6dc1b597d94b02e4f7132eaba)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 578a291759db6fe7c3f4735d3512c0526ad18efc)
+    GIT_TAG 6abfcf066d171e9ade7604d91381ebebe4209edc)
+FetchContent_Declare(libwebp
+    GIT_REPOSITORY https://github.com/webmproject/libwebp.git
+    GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c)
 # --------------------------------------------------
 
 FetchContent_MakeAvailable(CMakeExtensions)
-
 
 if(VISIONOS)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
@@ -58,16 +54,13 @@ if(VISIONOS)
     set(PLATFORM "VISIONOSCOMBINED" CACHE STRING "")
     set(DEPLOYMENT_TARGET "1.0" CACHE STRING "")
     set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
-endif()
-
-if(IOS)
+elseif(IOS)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
     set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
     set(PLATFORM "OS64COMBINED" CACHE STRING "")
     set(DEPLOYMENT_TARGET "13" CACHE STRING "")
     set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
 endif()
-
 
 project(BabylonNative)
 
@@ -93,6 +86,7 @@ option(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE "Include Babylon Native Plugin Exte
 option(BABYLON_NATIVE_PLUGIN_NATIVECAMERA "Include Babylon Native Plugin NativeCamera." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE "Include Babylon Native Plugin NativeCapture." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE "Include Babylon Native Plugin NativeEngine." ON)
+option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP "Include Babylon Native Plugin NativeEngine - WebP." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEINPUT "Include Babylon Native Plugin NativeInput." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS "Include Babylon Native Plugin NativeOptimizations." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVETRACING "Include Babylon Native Plugin NativeTracing." ON)

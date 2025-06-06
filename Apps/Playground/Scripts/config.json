@@ -53,6 +53,11 @@
             "referenceImage": "iridescence_gltf.png"
         },
         {
+            "title": "EXT_texture_webp",
+            "playgroundId": "#LSAUH2#6",
+            "referenceImage": "webp.png"
+        },
+        {
             "title": "GLTF Animation Skin Type",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Animation_SkinType, __page__, 0, __disableSRGBBuffers__, 0",

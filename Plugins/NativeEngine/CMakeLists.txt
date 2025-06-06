@@ -29,16 +29,15 @@ endif()
 
 add_library(NativeEngine ${SOURCES})
 
+warnings_as_errors(NativeEngine)
+
 target_include_directories(NativeEngine
     PUBLIC "Include"
     PRIVATE "${BIMG_DIR}/3rdparty")
 
-
 if(BGFX_BUILD_TOOLS)
     target_link_libraries(NativeEngine
         PUBLIC napi
-        PRIVATE JsRuntime
-        PRIVATE GraphicsDevice
         PRIVATE arcana
         PRIVATE bgfx
         PRIVATE bimg
@@ -46,14 +45,15 @@ if(BGFX_BUILD_TOOLS)
         PRIVATE bimg_decode
         PRIVATE bx
         PRIVATE glslang
-        PRIVATE spirv-opt
-        PRIVATE GraphicsDeviceContext)
+        PRIVATE GraphicsDevice
+        PRIVATE GraphicsDeviceContext
+        PRIVATE JsRuntime
+        PRIVATE spirv-opt)
+
     target_compile_definitions(NativeEngine PRIVATE BGFX_BUILD_TOOLS)
 else()
     target_link_libraries(NativeEngine
         PUBLIC napi
-        PRIVATE JsRuntime
-        PRIVATE GraphicsDevice
         PRIVATE arcana
         PRIVATE bgfx
         PRIVATE bimg
@@ -62,10 +62,19 @@ else()
         PRIVATE bx
         PRIVATE glslang
         PRIVATE glslang-default-resource-limits
-        PRIVATE SPIRV
-        PRIVATE GraphicsDeviceContext)
+        PRIVATE GraphicsDevice
+        PRIVATE GraphicsDeviceContext
+        PRIVATE JsRuntime
+        PRIVATE SPIRV)
 
     warnings_as_errors(NativeEngine)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP)
+    target_compile_definitions(NativeEngine
+        PRIVATE WEBP)
+    target_link_libraries(NativeEngine
+        PRIVATE webp)
 endif()
 
 if(TARGET spirv-cross-hlsl)
