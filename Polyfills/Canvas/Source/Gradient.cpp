@@ -255,7 +255,7 @@ namespace Babylon::Polyfills::Internal
 
                 float numerator = (dx * fxp + dy * fyp);
                 float df = dx * fyp - dy * fxp;
-                numerator += std::sqrtf((rn * rn) * (dx * dx + dy * dy) - (df * df));
+                numerator += std::sqrt((rn * rn) * (dx * dx + dy * dy) - (df * df));
                 float g = numerator / denominator;
 
                 // color = c0 + (c1 - c0)(g - x0)/(x1 - x0)
@@ -283,7 +283,7 @@ namespace Babylon::Polyfills::Internal
                 }
                 else
                 {
-                    int w = (int)std::fabsf(g);
+                    int w = (int)std::fabs(g);
                     if (spreadMode == SPREAD_REPEAT)
                     {
                         if (g < 0)
@@ -301,11 +301,11 @@ namespace Babylon::Polyfills::Internal
                         {
                             if (w % 2 == 0)
                             {   // even
-                                g = (std::fabsf(g) - w);
+                                g = (std::fabs(g) - w);
                             }
                             else
                             {   // odd
-                                g = (1 - (std::fabsf(g) - w));
+                                g = (1 - (std::fabs(g) - w));
                             }
                         }
                         else
