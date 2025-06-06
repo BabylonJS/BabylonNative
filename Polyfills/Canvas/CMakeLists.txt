@@ -113,6 +113,7 @@ set(SOURCES
     "Source/Font.cpp"
     "Source/Font.h"
     "Source/nanosvg.h"
+    "Source/nanosvgrast.h"
     "Source/nanovg/nanovg.cpp"
     "Source/nanovg/nanovg.h"
     "Source/nanovg/nanovg_babylon.cpp"

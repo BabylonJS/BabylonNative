@@ -95,168 +95,188 @@ CreateBoxAsync(scene).then(function () {
             gradient.addColorStop(1, "pink");
 
             var t = 0;
-            scene.onBeforeRenderObservable.add(() => {
-                // animated shape
-                context.save();
-                context.fillStyle = "DarkRed";
-                context.fillRect(0, 0, texSize, texSize);
-                const left = 0;
-                const top = texSize - (texSize * 0.25);
-                const width = 0.25 * texSize;
-                const height = 0.25 * texSize;
-                const offsetU = ((Math.sin(t) * 0.5) + 0.5) * (texSize - (texSize * 0.25));
-                const offsetV = ((Math.sin(t) * 0.5) + 0.5) * (-texSize + (texSize * 0.25));
-                const rectangleU = width * 0.5 + left;
-                const rectangleV = height * 0.5 + top;
-                context.translate(rectangleU + offsetU, rectangleV + offsetV);
-                context.rotate(t);
-                context.fillStyle = "DarkOrange";
-                context.transform(1, t, 0.8, 1, 0, 0);
-                context.fillRect(-width * 0.5, -height * 0.5, width, height);
-                context.restore();
+            // svg image
+            /*
+            <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
+              <circle cx="50" cy="50" r="40" fill="red" />
+            </svg>
+            */
+            const base64SVG = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgZmlsbD0icmVkIiAvPgo8L3N2Zz4=`;
 
-                // curve
-                context.beginPath();
-                context.moveTo(75 * 2, 25 * 2);
-                context.quadraticCurveTo(25 * 2, 25 * 2, 25 * 2, 62.5 * 2);
-                context.quadraticCurveTo(25 * 2, 100 * 2, 50 * 2, 100 * 2);
-                context.quadraticCurveTo(50 * 2, 120 * 2, 30 * 2, 125 * 2);
-                context.quadraticCurveTo(60 * 2, 120 * 2, 65 * 2, 100 * 2);
-                context.quadraticCurveTo(125 * 2, 100 * 2, 125 * 2, 62.5 * 2);
-                context.quadraticCurveTo(125 * 2, 25 * 2, 75 * 2, 25 * 2);
-                context.fillStyle = "blue";
-                context.fill();
+            const svgImg = engine.createCanvasImage();
+            svgImg.onerror = function (e) {
+                console.error('Image load error:', e);
+            };
+            svgImg.src = base64SVG;
+            svgImg.onload = function () {
+                
+                scene.onBeforeRenderObservable.add(() => {
+                    // animated shape
+                    context.save();
+                    context.fillStyle = "DarkRed";
+                    context.fillRect(0, 0, texSize, texSize);
+/*
+                    const left = 0;
+                    const top = texSize - (texSize * 0.25);
+                    const width = 0.25 * texSize;
+                    const height = 0.25 * texSize;
+                    const offsetU = ((Math.sin(t) * 0.5) + 0.5) * (texSize - (texSize * 0.25));
+                    const offsetV = ((Math.sin(t) * 0.5) + 0.5) * (-texSize + (texSize * 0.25));
+                    const rectangleU = width * 0.5 + left;
+                    const rectangleV = height * 0.5 + top;
+                    context.translate(rectangleU + offsetU, rectangleV + offsetV);
+                    context.rotate(t);
+                    context.fillStyle = "DarkOrange";
+                    context.transform(1, t, 0.8, 1, 0, 0);
+                    context.fillRect(-width * 0.5, -height * 0.5, width, height);
+                    context.restore();
 
-                // text
-                var scale = Math.sin(t) * 0.5 + 0.54;
-                context.save();
-                context.translate(Math.cos(t) * 100, 246);
-                context.font = `bold ${scale * 200}px monospace`;
-                context.strokeStyle = "Green";
-                context.lineWidth = scale * 16;
-                context.strokeText("BabylonNative", 0, 0);
-                context.fillStyle = "White";
-                context.fillText("BabylonNative", 0, 0);
-                context.restore();
-
-                // Draw guides
-                context.strokeStyle = "#09f";
-                context.beginPath();
-                context.moveTo(10, 10);
-                context.lineTo(140, 10);
-                context.moveTo(10, 140);
-                context.lineTo(140, 140);
-                context.stroke();
-
-                // filter blur text
-                context.filter = "blur(2.5px)";
-                context.fillStyle = "White";
-                context.font = `bold ${50}px monospace`;
-                context.fillText("BLUR TEST BLUR TEST", 100, 246);
-                context.filter = "none";
-
-                // Draw lines
-                context.strokeStyle = "black";
-                ["butt", "round", "square"].forEach((lineCap, i) => {
-                    context.lineWidth = 15;
-                    context.lineCap = lineCap;
+                    // curve
                     context.beginPath();
-                    context.moveTo(25 + i * 50, 10);
-                    context.lineTo(25 + i * 50, 140);
-                    context.stroke();
-                });
+                    context.moveTo(75 * 2, 25 * 2);
+                    context.quadraticCurveTo(25 * 2, 25 * 2, 25 * 2, 62.5 * 2);
+                    context.quadraticCurveTo(25 * 2, 100 * 2, 50 * 2, 100 * 2);
+                    context.quadraticCurveTo(50 * 2, 120 * 2, 30 * 2, 125 * 2);
+                    context.quadraticCurveTo(60 * 2, 120 * 2, 65 * 2, 100 * 2);
+                    context.quadraticCurveTo(125 * 2, 100 * 2, 125 * 2, 62.5 * 2);
+                    context.quadraticCurveTo(125 * 2, 25 * 2, 75 * 2, 25 * 2);
+                    context.fillStyle = "blue";
+                    context.fill();
 
-                // line join
-                context.lineWidth = 10;
-                var offset = 200;
-                ["round", "bevel", "miter"].forEach((join, i) => {
-                    context.lineJoin = join;
+                    // text
+                    var scale = Math.sin(t) * 0.5 + 0.54;
+                    context.save();
+                    context.translate(Math.cos(t) * 100, 246);
+                    context.font = `bold ${scale * 200}px monospace`;
+                    context.strokeStyle = "Green";
+                    context.lineWidth = scale * 16;
+                    context.strokeText("BabylonNative", 0, 0);
+                    context.fillStyle = "White";
+                    context.fillText("BabylonNative", 0, 0);
+                    context.restore();
+
+                    // Draw guides
+                    context.strokeStyle = "#09f";
                     context.beginPath();
-                    context.moveTo(-5 + offset, 15 + i * 40);
-                    context.lineTo(35 + offset, 55 + i * 40);
-                    context.lineTo(75 + offset, 15 + i * 40);
-                    context.lineTo(115 + offset, 55 + i * 40);
-                    context.lineTo(155 + offset, 15 + i * 40);
+                    context.moveTo(10, 10);
+                    context.lineTo(140, 10);
+                    context.moveTo(10, 140);
+                    context.lineTo(140, 140);
                     context.stroke();
+
+                    // filter blur text
+                    context.filter = "blur(2.5px)";
+                    context.fillStyle = "White";
+                    context.font = `bold ${50}px monospace`;
+                    context.fillText("BLUR TEST BLUR TEST", 100, 246);
+                    context.filter = "none";
+
+                    // Draw lines
+                    context.strokeStyle = "black";
+                    ["butt", "round", "square"].forEach((lineCap, i) => {
+                        context.lineWidth = 15;
+                        context.lineCap = lineCap;
+                        context.beginPath();
+                        context.moveTo(25 + i * 50, 10);
+                        context.lineTo(25 + i * 50, 140);
+                        context.stroke();
+                    });
+
+                    // line join
+                    context.lineWidth = 10;
+                    var offset = 200;
+                    ["round", "bevel", "miter"].forEach((join, i) => {
+                        context.lineJoin = join;
+                        context.beginPath();
+                        context.moveTo(-5 + offset, 15 + i * 40);
+                        context.lineTo(35 + offset, 55 + i * 40);
+                        context.lineTo(75 + offset, 15 + i * 40);
+                        context.lineTo(115 + offset, 55 + i * 40);
+                        context.lineTo(155 + offset, 15 + i * 40);
+                        context.stroke();
+                    });
+
+                    // rect with gradient
+                    context.fillStyle = gradient;
+                    context.fillRect(10, 310, 400, 60);
+
+                    // Fill with gradient
+                    context.fillStyle = gradientText;
+                    context.font = "bold 60px monospace";
+                    context.fillText("Gradient Text!", 10, 420);
+
+                    context.lineWidth = 5;
+                    // Rounded rectangle with zero radius (specified as a number)
+                    context.strokeStyle = "red";
+                    context.beginPath();
+                    context.roundRect(10, 220, 150, 100, 0);
+                    context.stroke();
+
+                    // Rounded rectangle with 40px radius (single element list)
+                    context.strokeStyle = "blue";
+                    context.beginPath();
+                    context.roundRect(10, 220, 150, 100, [40]);
+                    context.stroke();
+
+                    // Rounded rectangle with 2 different radii
+                    context.strokeStyle = "orange";
+                    context.beginPath();
+                    context.roundRect(10, 350, 150, 100, [10, 40]);
+                    context.stroke();
+
+                    // Rounded rectangle with four different radii
+                    context.strokeStyle = "green";
+                    context.beginPath();
+                    context.roundRect(200, 220, 200, 100, [0, 30, 50, 60]);
+                    context.stroke();
+
+                    // Same rectangle drawn backwards
+                    context.strokeStyle = "magenta";
+                    context.beginPath();
+                    context.roundRect(400, 350, -200, 100, [0, 30, 50, 60]);
+                    context.stroke();
+
+                    // Path 2D stroke
+                    context.strokeStyle = "black";
+                    context.lineWidth = 2;
+                    let heartPath = new engine.createCanvasPath2D("M390,30 A 20, 20 0, 0, 1 430, 30 A 20, 20 0, 0, 1 470, 30 Q 470, 60 430, 90 Q 390, 60 390, 30 z");
+                    let squarePath = new engine.createCanvasPath2D("M380, 10 h100 v100 h-100 Z");
+                    heartPath.addPath(squarePath, { a: 1, b: 0, c: 0, d: 1, e: 0, f: -5 }); // push square 5px up to center heart.
+                    context.stroke(heartPath);
+
+                    // Path 2D fill
+                    context.fillStyle = "yellow";
+                    let diamondPath = new engine.createCanvasPath2D();
+                    diamondPath.moveTo(350, 200); // Start at the center
+                    diamondPath.lineTo(375, 175); // Move to the top point
+                    diamondPath.lineTo(400, 200); // Move to the right point
+                    diamondPath.lineTo(375, 225); // Move to the bottom point
+                    diamondPath.lineTo(350, 200); // Close back to the starting point
+                    context.fill(diamondPath);
+
+                    // Path 2D round rect
+                    context.strokeStyle = "red";
+                    let roundRectPath = new engine.createCanvasPath2D();
+                    roundRectPath.roundRect(300, 150, 45, 70, { x: 30, y: 15 });
+                    context.stroke(roundRectPath);
+
+                    // Draw clipped round rect
+                    // TODO: this is currently broken, clipping area does not have round corners
+                    context.beginPath();
+                    context.roundRect(40, 450, 100, 50, 10);
+                    context.clip();
+                    context.fillStyle = "blue";
+                    context.fillRect(0, 0, 1000, 1000);
+                    */
+               
+                    // Draw the SVG on the canvas
+                    context.drawImage(svgImg, 0, 0);
+
+                    // tick update
+                    dynamicTexture.update();
+                    t += 0.01;
                 });
-
-                // rect with gradient
-                context.fillStyle = gradient;
-                context.fillRect(10, 310, 400, 60);
-
-                // Fill with gradient
-                context.fillStyle = gradientText;
-                context.font = "bold 60px monospace";
-                context.fillText("Gradient Text!", 10, 420);
-
-                context.lineWidth = 5;
-                // Rounded rectangle with zero radius (specified as a number)
-                context.strokeStyle = "red";
-                context.beginPath();
-                context.roundRect(10, 220, 150, 100, 0);
-                context.stroke();
-
-                // Rounded rectangle with 40px radius (single element list)
-                context.strokeStyle = "blue";
-                context.beginPath();
-                context.roundRect(10, 220, 150, 100, [40]);
-                context.stroke();
-
-                // Rounded rectangle with 2 different radii
-                context.strokeStyle = "orange";
-                context.beginPath();
-                context.roundRect(10, 350, 150, 100, [10, 40]);
-                context.stroke();
-
-                // Rounded rectangle with four different radii
-                context.strokeStyle = "green";
-                context.beginPath();
-                context.roundRect(200, 220, 200, 100, [0, 30, 50, 60]);
-                context.stroke();
-
-                // Same rectangle drawn backwards
-                context.strokeStyle = "magenta";
-                context.beginPath();
-                context.roundRect(400, 350, -200, 100, [0, 30, 50, 60]);
-                context.stroke();
-
-                // Path 2D stroke
-                context.strokeStyle = "black";
-                context.lineWidth = 2;
-                let heartPath = new engine.createCanvasPath2D("M390,30 A 20, 20 0, 0, 1 430, 30 A 20, 20 0, 0, 1 470, 30 Q 470, 60 430, 90 Q 390, 60 390, 30 z");
-                let squarePath = new engine.createCanvasPath2D("M380, 10 h100 v100 h-100 Z");
-                heartPath.addPath(squarePath, { a: 1, b: 0, c: 0, d: 1, e: 0, f: -5 }); // push square 5px up to center heart.
-                context.stroke(heartPath);
-
-                // Path 2D fill
-                context.fillStyle = "yellow";
-                let diamondPath = new engine.createCanvasPath2D();
-                diamondPath.moveTo(350, 200); // Start at the center
-                diamondPath.lineTo(375, 175); // Move to the top point
-                diamondPath.lineTo(400, 200); // Move to the right point
-                diamondPath.lineTo(375, 225); // Move to the bottom point
-                diamondPath.lineTo(350, 200); // Close back to the starting point
-                context.fill(diamondPath);
-
-                // Path 2D round rect
-                context.strokeStyle = "red";
-                let roundRectPath = new engine.createCanvasPath2D();
-                roundRectPath.roundRect(300, 150, 45, 70, { x: 30, y: 15 });
-                context.stroke(roundRectPath);
-
-                // Draw clipped round rect
-                // TODO: this is currently broken, clipping area does not have round corners
-                context.beginPath();
-                context.roundRect(40, 450, 100, 50, 10);
-                context.clip();
-                context.fillStyle = "blue";
-                context.fillRect(0, 0, 1000, 1000);
-
-                // tick update
-                dynamicTexture.update();
-                t += 0.01;
-            });
-
+            };
         });
     }, undefined, undefined, true);
 

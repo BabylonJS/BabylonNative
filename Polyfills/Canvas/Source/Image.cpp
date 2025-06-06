@@ -12,6 +12,9 @@
 #include <cassert>
 #include <napi/pointer.h>
 #include <basen.hpp>
+#include <nanosvg.h>
+#define NANOSVGRAST_IMPLEMENTATION
+#include "nanosvgrast.h"
 
 namespace Babylon::Polyfills::Internal
 {
@@ -100,13 +103,34 @@ namespace Babylon::Polyfills::Internal
 
     bool NativeCanvasImage::SetBuffer(gsl::span<const std::byte> buffer)
     {
-        m_imageContainer = bimg::imageParse(&Graphics::DeviceContext::GetDefaultAllocator(), buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
-
-        if (m_imageContainer == nullptr)
+        // try with svg first
+        // xml buffer is modified by nanosvg. make a copy.
+        std::vector<char> xmlBuffer(buffer.size_bytes());
+        memcpy(xmlBuffer.data(), buffer.data(), buffer.size_bytes());
+        NSVGimage* image = nsvgParse(xmlBuffer.data(), "px", 96);
+        if (image)
         {
-            return false;
-        }
+            NSVGrasterizer* rasterizer = nsvgCreateRasterizer();
+            if (!rasterizer)
+            {
+                return false;
+            }
 
+            m_imageContainer = bimg::imageAlloc(&Babylon::Graphics::DeviceContext::GetDefaultAllocator(), bimg::TextureFormat::RGBA8, static_cast<uint16_t>(image->width), static_cast<uint16_t>(image->height), 1 /*depth*/, 1, false /*cubeMap*/, false /*hasMips*/);
+            nsvgRasterize(rasterizer, image, 0, 0, 1, reinterpret_cast<unsigned char*>(m_imageContainer->m_data), static_cast<int>(image->width), static_cast<int>(image->height), static_cast<int>(image->width) * 4);
+            nsvgDeleteRasterizer(rasterizer);
+            nsvgDelete(image);
+        }
+        else
+        {
+            m_imageContainer = bimg::imageParse(&Graphics::DeviceContext::GetDefaultAllocator(), buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
+
+            if (m_imageContainer == nullptr)
+            {
+                return false;
+            }
+        }
+        
         m_width = m_imageContainer->m_width;
         m_height = m_imageContainer->m_height;
 
