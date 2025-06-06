@@ -1,4 +1,5 @@
-﻿mocha.setup({ ui: "bdd", reporter: "spec", retries: 5 });
+﻿"use strict";
+mocha.setup({ ui: "bdd", reporter: "spec", retries: 5 });
 
 const expect = chai.expect;
 
@@ -13,6 +14,20 @@ describe("RequestFile", function () {
         }
         expect(RequestFile).to.throw();
     });
+});
+
+describe("CanvasAndContext", function () {
+    const engine = new BABYLON.NativeEngine();
+    const scene = new BABYLON.Scene(engine);
+
+    const texSize = 512;
+    const dynamicTexture = new BABYLON.DynamicTexture("dynamic texture", texSize, scene);
+    const context = dynamicTexture.getContext();
+    const otherContext = dynamicTexture.getContext();
+
+    expect(context).to.equal(context.canvas.getContext());
+    expect(context).to.equal(otherContext);
+    expect(context).to.equal(otherContext.canvas.getContext());
 });
 
 describe("ColorParsing", function () {
