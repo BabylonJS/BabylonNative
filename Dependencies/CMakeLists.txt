@@ -3,7 +3,7 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 # --------------------------------------------------
 # AndroidExtensions
 # --------------------------------------------------
-if(ANDROID)
+if(ANDROID OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(AndroidExtensions)
 endif()
 
