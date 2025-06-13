@@ -48,18 +48,18 @@ FetchContent_Declare(libwebp
 
 FetchContent_MakeAvailable(CMakeExtensions)
 
-if(VISIONOS)
+if (VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
     set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
+endif()
+
+if(VISIONOS)
     set(PLATFORM "VISIONOSCOMBINED" CACHE STRING "")
     set(DEPLOYMENT_TARGET "1.0" CACHE STRING "")
-    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
 elseif(IOS)
-    FetchContent_MakeAvailable_With_Message(ios-cmake)
-    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
     set(PLATFORM "OS64COMBINED" CACHE STRING "")
     set(DEPLOYMENT_TARGET "13" CACHE STRING "")
-    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
 endif()
 
 project(BabylonNative)
