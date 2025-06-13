@@ -11,7 +11,7 @@ include(FetchContent)
 # --------------------------------------------------
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG 7d88a601fda9892791e7b4e994e375e049615688)
+    GIT_TAG ab708dcbd0ef827a1efa6332f08b385041ed274b)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG 1a8a5d6e95413ed14b38a6ac9419048f9a9c8009)
@@ -48,18 +48,18 @@ FetchContent_Declare(libwebp
 
 FetchContent_MakeAvailable(CMakeExtensions)
 
-if(VISIONOS)
+if (VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
     set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
+endif()
+
+if(VISIONOS)
     set(PLATFORM "VISIONOSCOMBINED" CACHE STRING "")
     set(DEPLOYMENT_TARGET "1.0" CACHE STRING "")
-    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
 elseif(IOS)
-    FetchContent_MakeAvailable_With_Message(ios-cmake)
-    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
     set(PLATFORM "OS64COMBINED" CACHE STRING "")
     set(DEPLOYMENT_TARGET "13" CACHE STRING "")
-    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
 endif()
 
 project(BabylonNative)
