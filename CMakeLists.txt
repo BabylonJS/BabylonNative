@@ -50,7 +50,7 @@ FetchContent_MakeAvailable(CMakeExtensions)
 
 if (VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
     if (BABYLON_NATIVE_BUILD_SOURCETREE)
-        FetchContent_Populate(ios-cmake)
+        #FetchContent_Populate(ios-cmake)
     else()
         FetchContent_MakeAvailable_With_Message(ios-cmake)
     endif()
