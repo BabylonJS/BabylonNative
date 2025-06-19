@@ -11,7 +11,7 @@ include(FetchContent)
 # --------------------------------------------------
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG ab708dcbd0ef827a1efa6332f08b385041ed274b)
+    GIT_TAG 24370fff52a03ef43dcf5e5fcb8b84338b779a05)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG 1a8a5d6e95413ed14b38a6ac9419048f9a9c8009)
