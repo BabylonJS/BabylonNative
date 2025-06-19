@@ -7,6 +7,7 @@
 #include <android/asset_manager.h>
 #include <android/native_window.h>
 #include <utility>
+#include <functional>
 
 // --------------------
 // Forward Declarations
