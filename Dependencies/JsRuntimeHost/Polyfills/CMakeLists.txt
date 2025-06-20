@@ -21,3 +21,7 @@ endif()
 if(JSRUNTIMEHOST_POLYFILL_WEBSOCKET)
     add_subdirectory(WebSocket)
 endif()
+
+if(JSRUNTIMEHOST_POLYFILL_BLOB)
+    add_subdirectory(Blob)
+endif()

@@ -7,6 +7,7 @@
 #include <Babylon/Polyfills/URL.h>
 #include <Babylon/Polyfills/WebSocket.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
+#include <Babylon/Polyfills/Blob.h>
 #include <gtest/gtest.h>
 #include <future>
 #include <iostream>
@@ -64,6 +65,7 @@ TEST(JavaScript, All)
         Babylon::Polyfills::URL::Initialize(env);
         Babylon::Polyfills::WebSocket::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+        Babylon::Polyfills::Blob::Initialize(env);
 
         auto setExitCodeCallback = Napi::Function::New(
             env, [&exitCodePromise](const Napi::CallbackInfo& info) {

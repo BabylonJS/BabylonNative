@@ -241,7 +241,25 @@ inline bool Value::IsArrayBuffer() const {
 }
 
 inline bool Value::IsTypedArray() const {
-  throw std::runtime_error{"TODO"};
+    if (!_value.isObject()) {
+        return false;
+    }
+
+    auto object{_value.getObject(_env->rt)};
+    try {
+        const auto name{object.getPropertyAsObject(_env->rt, "constructor").getProperty(_env->rt, "name").getString(_env->rt).utf8(_env->rt)};
+        return name == "Int8Array" ||
+               name == "Uint8Array" ||
+               name == "Uint8ClampedArray" ||
+               name == "Int16Array" ||
+               name == "Uint16Array" ||
+               name == "Int32Array" ||
+               name == "Uint32Array" ||
+               name == "Float32Array" ||
+               name == "Float64Array";
+    } catch (const jsi::JSIException&) {
+        return false;
+    }
 }
 
 inline bool Value::IsObject() const {
@@ -257,7 +275,17 @@ inline bool Value::IsPromise() const {
 }
 
 inline bool Value::IsDataView() const {
-  throw std::runtime_error{"TODO"};
+    if (!_value.isObject()) {
+        return false;
+    }
+
+    auto object{_value.getObject(_env->rt)};
+    try {
+        const auto name{object.getPropertyAsObject(_env->rt, "constructor").getProperty(_env->rt, "name").getString(_env->rt).utf8(_env->rt)};
+        return name == "DataView";
+    } catch (const jsi::JSIException&) {
+        return false;
+    }
 }
 
 inline bool Value::IsExternal() const {
