@@ -190,7 +190,7 @@ endif()
 # xr
 # --------------------------------------------------
 # Currently supported on Android via ARCore, and iOS via ARKit.
-if(BABYLON_NATIVE_PLUGIN_NATIVEXR AND (ANDROID OR IOS))
+if((BABYLON_NATIVE_PLUGIN_NATIVEXR AND (ANDROID OR IOS)) OR BABYLON_NATIVE_BUILD_SOURCETREE)
     add_subdirectory(xr)
     set_property(TARGET xr PROPERTY FOLDER Dependencies/xr)
     warnings_as_errors(xr)
