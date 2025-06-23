@@ -36,6 +36,9 @@
 #endif  // NAPI_HAS_THREADS
 #include <string>
 #include <vector>
+#ifdef NAPI_CPP_EXCEPTIONS
+#include <exception>
+#endif  // NAPI_CPP_EXCEPTIONS
 
 // VS2015 RTM has bugs with constexpr, so require min of VS2015 Update 3 (known
 // good version)
@@ -1847,10 +1850,12 @@ class Error : public ObjectReference
   static Error New(napi_env env, const char* message);
   static Error New(napi_env env, const std::string& message);
 
+#ifdef NAPI_CPP_EXCEPTIONS
   // [BABYLON-NATIVE-ADDITION]
   static Error New(napi_env env, const std::exception& exception);
   // [BABYLON-NATIVE-ADDITION]
   static Error New(napi_env env, const std::exception_ptr& exception_ptr);
+#endif  // NAPI_CPP_EXCEPTIONS
 
   static NAPI_NO_RETURN void Fatal(const char* location, const char* message);
 
