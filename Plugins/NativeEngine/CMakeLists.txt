@@ -35,20 +35,40 @@ target_include_directories(NativeEngine
     PUBLIC "Include"
     PRIVATE "${BIMG_DIR}/3rdparty")
 
-target_link_libraries(NativeEngine
-    PUBLIC napi
-    PRIVATE arcana
-    PRIVATE bgfx
-    PRIVATE bimg
-    PRIVATE bimg_encode
-    PRIVATE bimg_decode
-    PRIVATE bx
-    PRIVATE glslang
-    PRIVATE glslang-default-resource-limits
-    PRIVATE GraphicsDevice
-    PRIVATE GraphicsDeviceContext
-    PRIVATE JsRuntime
-    PRIVATE SPIRV)
+if(BGFX_BUILD_TOOLS)
+    target_link_libraries(NativeEngine
+        PUBLIC napi
+        PRIVATE arcana
+        PRIVATE bgfx
+        PRIVATE bimg
+        PRIVATE bimg_encode
+        PRIVATE bimg_decode
+        PRIVATE bx
+        PRIVATE glslang
+        PRIVATE GraphicsDevice
+        PRIVATE GraphicsDeviceContext
+        PRIVATE JsRuntime
+        PRIVATE spirv-opt)
+
+    target_compile_definitions(NativeEngine PRIVATE BGFX_BUILD_TOOLS)
+else()
+    target_link_libraries(NativeEngine
+        PUBLIC napi
+        PRIVATE arcana
+        PRIVATE bgfx
+        PRIVATE bimg
+        PRIVATE bimg_encode
+        PRIVATE bimg_decode
+        PRIVATE bx
+        PRIVATE glslang
+        PRIVATE glslang-default-resource-limits
+        PRIVATE GraphicsDevice
+        PRIVATE GraphicsDeviceContext
+        PRIVATE JsRuntime
+        PRIVATE SPIRV)
+
+    warnings_as_errors(NativeEngine)
+endif()
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP)
     target_compile_definitions(NativeEngine
