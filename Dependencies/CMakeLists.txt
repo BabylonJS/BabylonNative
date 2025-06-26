@@ -15,7 +15,7 @@ FetchContent_MakeAvailable_With_Message(arcana.cpp)
 # --------------------------------------------------
 # arcore-android-sdk
 # --------------------------------------------------
-if(ANDROID)
+if(ANDROID OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(arcore-android-sdk)
 endif()
 
