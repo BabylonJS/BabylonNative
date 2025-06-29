@@ -2,3 +2,5 @@
 .DS_Store
 .vscode
 
+/build_visionos
+/build_visionos_sim

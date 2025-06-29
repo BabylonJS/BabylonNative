@@ -67,22 +67,48 @@ struct MetalViewRepresentable: UIViewRepresentable {
 }
 
 struct ImmersiveView: View {
+  @Binding var immersiveSpaceIsShown: Bool
+  @Environment(\.dismissImmersiveSpace) var dismissImmersiveSpace
+  @Environment(\.openWindow) private var openWindow
+  
   var body: some View {
-    RealityView { content in
-      // Create a simple entity as a placeholder
-      let entity = Entity()
-      content.add(entity)
-    }
-    .onAppear {
-      // Initialize immersive mode when the view appears
-      if let bridge = LibNativeBridge.sharedInstance() {
-        bridge.initializeImmersiveMode()
+    ZStack {
+      RealityView { content in
+        // Create a simple entity as a placeholder
+        let entity = Entity()
+        content.add(entity)
       }
-    }
-    .onDisappear {
-      // Exit immersive mode when view disappears
-      if let bridge = LibNativeBridge.sharedInstance() {
-        bridge.exitImmersiveMode()
+      .onAppear {
+        // Initialize immersive mode when the view appears
+        if let bridge = LibNativeBridge.sharedInstance() {
+          bridge.initializeImmersiveMode()
+        }
+      }
+      .onDisappear {
+        // Exit immersive mode when view disappears
+        if let bridge = LibNativeBridge.sharedInstance() {
+          bridge.exitImmersiveMode()
+        }
+      }
+      
+      VStack {
+        Spacer()
+        HStack {
+          Spacer()
+          Button("Exit Immersive Space") {
+            Task { @MainActor in
+              await dismissImmersiveSpace()
+              immersiveSpaceIsShown = false
+              openWindow(id: "MainWindow")
+              LibNativeBridge.sharedInstance()?.exitImmersiveMode()
+              print("📱 Exited immersive space")
+            }
+          }
+          .padding()
+          .background(.regularMaterial)
+          .cornerRadius(10)
+        }
+        .padding()
       }
     }
   }
@@ -90,9 +116,11 @@ struct ImmersiveView: View {
 
 
 struct ContentView: View {
+  @Binding var immersiveSpaceIsShown: Bool
   @State private var immersiveSpaceState = ImmersiveSpaceState.closed
   @Environment(\.openImmersiveSpace) var openImmersiveSpace
   @Environment(\.dismissImmersiveSpace) var dismissImmersiveSpace
+  @Environment(\.dismissWindow) private var dismissWindow
   
   var body: some View {
     VStack {
@@ -108,6 +136,8 @@ struct ContentView: View {
             case .opened:
               print("✅ Immersive space opened successfully")
               immersiveSpaceState = .open
+              immersiveSpaceIsShown = true
+              dismissWindow(id: "MainWindow")
             case .error:
               print("❌ Error opening immersive space")
             case .userCancelled:
@@ -125,6 +155,7 @@ struct ContentView: View {
             Task { @MainActor in
               await dismissImmersiveSpace()
               immersiveSpaceState = .closed
+              immersiveSpaceIsShown = false
               LibNativeBridge.sharedInstance()?.exitImmersiveMode()
               print("📱 Exited immersive space")
             }
@@ -133,6 +164,27 @@ struct ContentView: View {
         }
       }
       .padding()
+    }
+    .onAppear {
+      // Auto-enter immersive space for demo
+      Task { @MainActor in
+        try? await Task.sleep(nanoseconds: 2_000_000_000) // Wait 2 seconds
+        print("🚀 Auto-entering immersive space...")
+        let result = await openImmersiveSpace(id: "BabylonImmersiveSpace")
+        switch result {
+        case .opened:
+          print("✅ Immersive space opened automatically")
+          immersiveSpaceState = .open
+          immersiveSpaceIsShown = true
+          dismissWindow(id: "MainWindow")
+        case .error:
+          print("❌ Error opening immersive space automatically")
+        case .userCancelled:
+          print("🚫 User cancelled immersive space automatically")
+        @unknown default:
+          print("❓ Unknown result opening immersive space automatically")
+        }
+      }
     }
   }
 }
@@ -144,13 +196,18 @@ enum ImmersiveSpaceState {
 
 @main
 struct ExampleApp: App {
+  @State private var immersiveSpaceIsShown = false
+  @Environment(\.dismissWindow) private var dismissWindow
+  
   var body: some SwiftUI.Scene {
-    WindowGroup {
-      ContentView()
+    WindowGroup(id: "MainWindow") {
+      ContentView(immersiveSpaceIsShown: $immersiveSpaceIsShown)
     }
+    .windowStyle(.plain)
+    .windowResizability(.contentSize)
     
     ImmersiveSpace(id: "BabylonImmersiveSpace") {
-      ImmersiveView()
+      ImmersiveView(immersiveSpaceIsShown: $immersiveSpaceIsShown)
     }
     .immersionStyle(selection: .constant(.full), in: .full)
   }
