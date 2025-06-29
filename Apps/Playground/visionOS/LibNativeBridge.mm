@@ -135,12 +135,26 @@
 }
 
 - (void)render {
+    static int frameCount = 0;
+    frameCount++;
+    
     if (_device && self.initialized) {
         // Unified rendering approach for both modes
         _update->Finish();
         _device->FinishRenderingCurrentFrame();
         _device->StartRenderingCurrentFrame();
         _update->Start();
+        
+        // Log every 60 frames to track rendering
+        if (frameCount % 60 == 0) {
+            NSLog(@"🎨 Frame %d - Rendering to layer: %@ (immersive: %d)", 
+                  frameCount, self.metalLayer, _isImmersiveMode);
+        }
+    } else {
+        if (frameCount % 60 == 0) {
+            NSLog(@"⚠️ Frame %d - Skipping render (device: %@, initialized: %d)", 
+                  frameCount, _device ? @"YES" : @"NO", self.initialized);
+        }
     }
 }
 
@@ -190,10 +204,25 @@
             self->_update.emplace(self->_device->GetUpdate("update"));
             NSLog(@"✅ Recreated graphics device with immersive layer");
             
-            // Add device to JavaScript runtime
+            // Add device to JavaScript runtime and update scene
             self->_runtime->Dispatch([self](Napi::Env env) {
                 self->_device->AddToJavaScript(env);
                 NSLog(@"✅ Added graphics device to JavaScript runtime");
+                
+                // Force scene to update its render target
+                env.RunScript(R"(
+                    if (window.scene && window.engine) {
+                        console.log('🔧 JavaScript: Updating scene render target after device switch');
+                        
+                        // Stop and restart render loop to ensure new device is used
+                        window.engine.stopRenderLoop();
+                        window.engine.runRenderLoop(function() {
+                            window.scene.render();
+                        });
+                        
+                        console.log('✅ JavaScript: Render loop restarted with new device');
+                    }
+                )");
             });
             
             // Start rendering to immersive layer on main thread

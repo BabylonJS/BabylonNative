@@ -96,6 +96,8 @@ struct MetalViewRepresentable: UIViewRepresentable {
 }
 
 class ImmersiveMetalView: UIView {
+  private var displayLink: CADisplayLink?
+  
   override init(frame: CGRect) {
     super.init(frame: frame)
     setupImmersiveView()
@@ -104,6 +106,10 @@ class ImmersiveMetalView: UIView {
   required init?(coder: NSCoder) {
     super.init(coder: coder)
     setupImmersiveView()
+  }
+  
+  deinit {
+    displayLink?.invalidate()
   }
   
   private func setupImmersiveView() {
@@ -176,6 +182,20 @@ class ImmersiveMetalView: UIView {
         print("❌ Failed to switch to immersive metal layer")
       }
     }
+    
+    // Set up display link for continuous rendering
+    setupDisplayLink()
+  }
+  
+  private func setupDisplayLink() {
+    displayLink = CADisplayLink(target: self, selector: #selector(renderLoop))
+    displayLink?.add(to: .current, forMode: .default)
+    print("🎮 Immersive display link started")
+  }
+  
+  @objc private func renderLoop() {
+    // Call render on the bridge to update the immersive content
+    LibNativeBridge.sharedInstance()?.render()
   }
   
   var metalLayer: CAMetalLayer {
