@@ -1,0 +1,86 @@
+🌌 BabylonNative visionOS Immersive Spatial Scene Layout 🌌
+
+                    TOP VIEW (Y = 1.5m, looking down)
+    ════════════════════════════════════════════════════════════════
+
+                                    🔴 Orb 2
+                                      │
+                          🟡 Orb 1 ───┼─── 🔵 Orb 3
+                              │      │      │
+                              │   💎 │ CRYSTAL  │
+                        🟢 Orb 8 ─────┼───── 🟣 Orb 4
+                              │      │      │
+                          🟠 Orb 7 ───┼─── ⚪ Orb 5
+                                      │
+                                    🔶 Orb 6
+
+                            👤 USER POSITION
+                         (at origin 0,0,0)
+
+    ═══════════════════════════════════════════════════════════════
+
+                    SIDE VIEW (X-Z plane, looking from side)
+    ═══════════════════════════════════════════════════════════════
+
+     Y                                      
+     ↑     🔴 🟡        💎 (rotating)        🔵 🟣
+     │      \  |         |                 |  /
+   2.0m       \ |       |                 | /     
+     │         \|       |                 |/      
+   1.5m -------- \------|-------USER------|/-------
+     │            \     |                 /        
+   1.0m             \   |               /          
+     │               \  |             /            
+   0.5m                \|           /              
+     │                  \         /                
+   0.0m ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ Ground
+     └─────────────────────────────────────────→ Z
+        0m     1m     2m     3m     4m     5m
+
+    ═══════════════════════════════════════════════════════════════
+
+                        OBJECT SPECIFICATIONS
+    ═══════════════════════════════════════════════════════════════
+
+    💎 CRYSTAL:
+       Position: (0, 1.5, -2) meters
+       Size: 0.3m polyhedron
+       Animation: Dual-axis rotation
+       Material: Glowing blue with emission
+       
+    🔴🟡🔵🟣⚪🔶🟠🟢 ORBS (8 total):
+       Radius: 3m circle around user
+       Height: 1.0m - 2.0m (varied)
+       Size: 0.1m diameter spheres
+       Animation: Vertical floating + color pulsing
+       Colors: Dynamic rainbow using sine waves
+       
+    ▒▒▒ GROUND PLANE:
+       Size: 10m x 10m
+       Position: Y = 0 (floor level)
+       Material: Semi-transparent blue (30% alpha)
+       Purpose: Spatial reference for room scale
+
+    ═══════════════════════════════════════════════════════════════
+
+                        RENDERING SPECIFICATIONS
+    ═══════════════════════════════════════════════════════════════
+
+    🎯 Frame Rate: 90Hz native visionOS
+    🖥️ Backend: Metal via Babylon.js NativeEngine
+    📐 Coordinates: Right-handed Y-up world space
+    🎭 Lighting: Standard material with emission and specular
+    🔄 Animation: Real-time registerBeforeRender callbacks
+    👁️ Tracking: Head movement updates camera automatically
+
+    ═══════════════════════════════════════════════════════════════
+
+This spatial scene creates a magical immersive experience where:
+- The crystal serves as a focal point 2 meters ahead
+- 8 colorful orbs create an engaging orbital light show
+- Ground plane provides spatial orientation and room scale
+- All objects maintain perfect spatial relationships as user moves
+- Smooth 90Hz rendering ensures comfortable immersion
+
+The result is a stunning demonstration of BabylonNative's new 
+fully immersive visionOS volume capabilities! 🌟

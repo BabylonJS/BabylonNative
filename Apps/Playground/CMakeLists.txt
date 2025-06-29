@@ -205,6 +205,12 @@ if(APPLE)
         set(CMAKE_Swift_COMPILER_FORCED TRUE)
         set(CMAKE_Swift_LANGUAGE_VERSION 5.0)
         enable_language(Swift)
+        
+        # Link CompositorServices for immersive space support
+        target_link_libraries(Playground PUBLIC "-framework CompositorServices")
+        
+        # Remove code signing configuration to use Xcode defaults
+        # Code signing will be handled by Xcode directly
     else()
         target_link_libraries(Playground PUBLIC "-framework MetalKit")
 

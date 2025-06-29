@@ -8,7 +8,7 @@ const turntable = false;
 const logfps = true;
 const ibl = false;
 const rtt = false;
-const vr = false;
+const vr = true;  // Enable VR for visionOS immersive mode
 const ar = false;
 const xrHitTest = false;
 const xrFeaturePoints = false;
@@ -22,6 +22,61 @@ const readPixels = false;
 
 function CreateBoxAsync(scene) {
     BABYLON.Mesh.CreateBox("box1", 0.2, scene);
+    return Promise.resolve();
+}
+
+function CreateImmersiveSpatialScene(scene) {
+    // Create a more impressive spatial scene for visionOS immersive mode
+    
+    // Central rotating crystal
+    const crystal = BABYLON.Mesh.CreatePolyhedron("crystal", {size: 0.3}, scene);
+    crystal.position = new BABYLON.Vector3(0, 1.5, -2);
+    crystal.material = new BABYLON.StandardMaterial("crystalMat", scene);
+    crystal.material.diffuseColor = new BABYLON.Color3(0.2, 0.6, 1.0);
+    crystal.material.emissiveColor = new BABYLON.Color3(0.1, 0.3, 0.5);
+    crystal.material.specularColor = new BABYLON.Color3(1, 1, 1);
+    
+    // Rotate the crystal
+    scene.registerBeforeRender(function() {
+        crystal.rotation.y += 0.01;
+        crystal.rotation.x += 0.005;
+    });
+    
+    // Floating orbs around the user
+    for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        const radius = 3;
+        const height = Math.sin(i) * 0.5 + 1.5;
+        
+        const orb = BABYLON.Mesh.CreateSphere("orb" + i, 16, 0.1, scene);
+        orb.position = new BABYLON.Vector3(
+            Math.cos(angle) * radius,
+            height,
+            Math.sin(angle) * radius
+        );
+        
+        const orbMaterial = new BABYLON.StandardMaterial("orbMat" + i, scene);
+        orbMaterial.emissiveColor = new BABYLON.Color3(
+            Math.sin(i * 0.5 + 1) * 0.5 + 0.5,
+            Math.sin(i * 0.7 + 2) * 0.5 + 0.5,
+            Math.sin(i * 0.9 + 3) * 0.5 + 0.5
+        );
+        orb.material = orbMaterial;
+        
+        // Animate orbs
+        scene.registerBeforeRender(function() {
+            orb.position.y = height + Math.sin(Date.now() * 0.001 + i) * 0.3;
+        });
+    }
+    
+    // Ground plane for spatial reference
+    const ground = BABYLON.Mesh.CreateGround("ground", 10, 10, 1, scene);
+    ground.position.y = 0;
+    const groundMaterial = new BABYLON.StandardMaterial("groundMat", scene);
+    groundMaterial.diffuseColor = new BABYLON.Color3(0.1, 0.1, 0.2);
+    groundMaterial.alpha = 0.3;
+    ground.material = groundMaterial;
+    
     return Promise.resolve();
 }
 
@@ -44,7 +99,7 @@ function CreateSpheresAsync(scene) {
 const engine = new BABYLON.NativeEngine();
 const scene = new BABYLON.Scene(engine);
 
-CreateBoxAsync(scene).then(function () {
+CreateImmersiveSpatialScene(scene).then(function () {
 //CreateSpheresAsync(scene).then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {

@@ -17,6 +17,8 @@
 - (void)drawableWillChangeSizeWithWidth:(NSInteger)width height:(NSInteger)height;
 
 - (bool)initializeWithWidth:(NSInteger)width height:(NSInteger)height;
+- (bool)initializeImmersiveMode;
+- (void)exitImmersiveMode;
 - (void)shutdown;
 - (void)render;
 
