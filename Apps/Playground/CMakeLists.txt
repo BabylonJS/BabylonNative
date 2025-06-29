@@ -41,6 +41,7 @@ if(APPLE)
         set(PLIST_FILE
             "${CMAKE_CURRENT_LIST_DIR}/visionOS/Info.plist")
         set(RESOURCE_FILES ${SCRIPTS})
+        # NativeXr not supported on VisionOS yet - using regular rendering
         set(SOURCES
             ${SOURCES}
             "visionOS/App.swift"
@@ -141,6 +142,11 @@ target_link_libraries(Playground
     PRIVATE TestUtils
     ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
+
+# Add NativeXr for all platforms except VisionOS
+if(NOT VISIONOS AND NOT BABYLON_NATIVE_PLATFORM STREQUAL "visionOS")
+    target_link_libraries(Playground PRIVATE NativeXr)
+endif()
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
 # If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.

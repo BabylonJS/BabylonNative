@@ -403,6 +403,9 @@ CreateImmersiveSpatialScene(scene).then(function () {
                     });
                 }
 
+                // Store XR experience globally for immersive mode access
+                window.xrExperience = xr;
+
                 let sessionMode = vr ? "immersive-vr" : "immersive-ar"
                 if (hololens) {
                     // Because HoloLens 2 is a head mounted display, its Babylon.js immersive experience more closely aligns to vr
@@ -441,13 +444,24 @@ CreateImmersiveSpatialScene(scene).then(function () {
                     });
                 }
 
-                xr.baseExperience.enterXRAsync(sessionMode, "unbounded", xr.renderTarget).then((xrSessionManager) => {
-                    if (hololens) {
-                        // Pass through, head mounted displays (HoloLens 2) require autoClear and a black clear color
-                        xrSessionManager.scene.autoClear = true;
-                        xrSessionManager.scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
-                    }
-                });
+                // Check if immersive mode was requested from native bridge
+                if (window.shouldEnterImmersiveMode) {
+                    console.log('🎯 Immersive mode requested, entering XR automatically');
+                    window.shouldEnterImmersiveMode = false; // Reset flag
+                    xr.baseExperience.enterXRAsync(sessionMode, "unbounded", xr.renderTarget).then((xrSessionManager) => {
+                        console.log('🌌 Successfully entered immersive XR mode - scene should now be visible');
+                        if (hololens) {
+                            // Pass through, head mounted displays (HoloLens 2) require autoClear and a black clear color
+                            xrSessionManager.scene.autoClear = true;
+                            xrSessionManager.scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+                        }
+                    }).catch((error) => {
+                        console.error('❌ Error entering XR mode from flag:', error);
+                    });
+                } else {
+                    // Normal XR initialization - don't auto-enter
+                    console.log('🔧 XR experience ready, waiting for manual activation');
+                }
             });
         }, 5000);
     }

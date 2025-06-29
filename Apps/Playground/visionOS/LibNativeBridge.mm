@@ -5,6 +5,7 @@
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeInput.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
+// NativeXr not supported on VisionOS yet
 #import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/Polyfills/Console.h>
 #import <Babylon/Polyfills/Window.h>
@@ -72,6 +73,9 @@
         Babylon::Plugins::NativeEngine::Initialize(env);
 
         Babylon::Plugins::NativeOptimizations::Initialize(env);
+
+        // NativeXr not supported on VisionOS yet
+        // Babylon::Plugins::NativeXr::Initialize(env);
      
         _nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
     });
@@ -145,15 +149,28 @@
     
     _isImmersiveMode = true;
     
-    // Simplified immersive mode initialization
-    // TODO: Implement proper CompositorServices layer renderer creation
-    NSLog(@"Entering immersive mode");
+    NSLog(@"🚀 Entering immersive mode - triggering XR session");
     
-    // Update Babylon's render target to use immersive mode
+    // Signal to Babylon that we're in immersive/XR mode
     if (_runtime) {
-        _runtime->Dispatch([](Napi::Env) {
-            // Signal to Babylon that we're in immersive/XR mode
-            // This will trigger XR session setup in the engine
+        _runtime->Dispatch([](Napi::Env env) {
+            // Set a flag to trigger XR when the scene is ready
+            // This works with the existing experience.js timing
+            env.RunScript(R"(
+                // Set global flag for immersive mode
+                window.shouldEnterImmersiveMode = true;
+                console.log('🚀 Immersive mode flag set - waiting for scene initialization');
+                
+                // If scene is already ready and XR experience exists, enter immediately
+                if (typeof window.xrExperience !== 'undefined' && window.xrExperience) {
+                    console.log('🎯 XR already initialized, entering immersive mode now');
+                    window.xrExperience.baseExperience.enterXRAsync('immersive-vr', 'unbounded', window.xrExperience.renderTarget).then(() => {
+                        console.log('🌌 Successfully entered VR mode - scene should now be visible');
+                    }).catch((error) => {
+                        console.error('❌ Error entering XR mode:', error);
+                    });
+                }
+            )");
         });
     }
     
@@ -167,12 +184,20 @@
     
     _isImmersiveMode = false;
     
-    NSLog(@"Exiting immersive mode");
+    NSLog(@"📱 Exiting immersive mode");
     
     // Signal to Babylon that we're exiting immersive mode
     if (_runtime) {
-        _runtime->Dispatch([](Napi::Env) {
+        _runtime->Dispatch([](Napi::Env env) {
             // Exit XR session
+            env.RunScript(R"(
+                if (typeof scene !== 'undefined' && scene.onXRSessionEnded) {
+                    console.log('🚪 Exiting XR session...');
+                    // The XR session will be automatically cleaned up
+                } else {
+                    console.log('🚪 No active XR session to exit');
+                }
+            )");
         });
     }
 }

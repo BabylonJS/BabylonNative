@@ -20,6 +20,8 @@ if(IOS)
     set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
     set(PLATFORM "OS64COMBINED" CACHE STRING "")
     set(DEPLOYMENT_TARGET "13" CACHE STRING "")
+elseif(VISIONOS)
+    # VisionOS uses its own toolchain, no special setup needed here
 endif()
 
 project(xr)
@@ -49,6 +51,10 @@ elseif (IOS)
     set(SOURCES ${SOURCES}
         "Source/ARKit/Include/IXrContextARKit.h"
         "Source/ARKit/XR.mm")
+elseif (VISIONOS OR BABYLON_NATIVE_PLATFORM STREQUAL "visionOS")
+    # VisionOS uses OpenXR stub for now until CompositorServices implementation is ready
+    set(SOURCES ${SOURCES}
+        "Source/OpenXR/XR.cpp")
 else()
     set(SOURCES ${SOURCES}
         "Source/OpenXR/XR.cpp")
@@ -95,6 +101,9 @@ if (ANDROID)
     target_link_libraries(xr PRIVATE glm arcore AndroidExtensions)
 elseif (IOS)    
     target_link_libraries(xr PRIVATE "-framework ARKit")
+elseif (VISIONOS OR BABYLON_NATIVE_PLATFORM STREQUAL "visionOS")
+    # VisionOS uses OpenXR stub - no special frameworks needed
+    target_link_libraries(xr PRIVATE)
 else()
     if(WIN32)
         target_include_directories(xr PRIVATE "Source/OpenXR/Windows")

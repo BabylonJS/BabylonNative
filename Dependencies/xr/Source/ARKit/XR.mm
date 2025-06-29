@@ -6,14 +6,28 @@
 #import <XRHelpers.h>
 
 #import <UIKit/UIKit.h>
+#if TARGET_OS_VISION
+// VisionOS uses a different ARKit API structure
+#import <ARKit/ARKit.h>
+#import <MetalKit/MetalKit.h>
+#else
+// iOS ARKit
 #import <ARKit/ARKit.h>
 #import <ARKit/ARConfiguration.h>
 #import <MetalKit/MetalKit.h>
+#endif
 
 #import "Include/IXrContextARKit.h"
 
+#if TARGET_OS_VISION
+// VisionOS minimal session delegate - simplified for initial WebXR support
+@interface SessionDelegate : NSObject
+@end
+#else
+// iOS full ARSession delegate
 @interface SessionDelegate : NSObject <ARSessionDelegate, MTKViewDelegate>
 @end
+#endif
 
 namespace {
     typedef struct {
