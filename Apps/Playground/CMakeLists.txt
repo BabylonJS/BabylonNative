@@ -41,7 +41,16 @@ if(APPLE)
         set(PLIST_FILE
             "${CMAKE_CURRENT_LIST_DIR}/visionOS/Info.plist")
         set(RESOURCE_FILES ${SCRIPTS})
-        # NativeXr not supported on VisionOS yet - using regular rendering
+        # NativeXr now supported on VisionOS with CompositorServices
+        set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE NativeXr)
+        
+        # Set default values for VisionOS code signing if not provided
+        if(NOT CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM)
+            set(CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "Andrew Fillebrown" CACHE STRING "Apple Development Team ID for code signing")
+        endif()
+        if(NOT CMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER)
+            set(CMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.BabylonNative.Playground.visionOS" CACHE STRING "Bundle identifier for VisionOS app")
+        endif()
         set(SOURCES
             ${SOURCES}
             "visionOS/App.swift"
@@ -143,10 +152,8 @@ target_link_libraries(Playground
     ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 
-# Add NativeXr for all platforms except VisionOS
-if(NOT VISIONOS AND NOT BABYLON_NATIVE_PLATFORM STREQUAL "visionOS")
-    target_link_libraries(Playground PRIVATE NativeXr)
-endif()
+# NativeXr is now supported on all platforms including VisionOS
+# Note: VisionOS already includes NativeXr in ADDITIONAL_LIBRARIES above
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
 # If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.
@@ -194,7 +201,7 @@ if(APPLE)
             RESOURCE "${RESOURCE_FILES}"
 
             XCODE_ATTRIBUTE_XROS_DEPLOYMENT_TARGET ${DEPLOYMENT_TARGET}
-            XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.BabylonNative.Playground.visionOS"
+            XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "${CMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER}"
 
             XCODE_ATTRIBUTE_SWIFT_VERSION "5.0"
             XCODE_ATTRIBUTE_SWIFT_OBJC_BRIDGING_HEADER "${CMAKE_CURRENT_LIST_DIR}/visionOS/LibNativeBridge.h"
@@ -202,6 +209,11 @@ if(APPLE)
             XCODE_ATTRIBUTE_FRAMEWORK_SEARCH_PATHS "$(inherited) $(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks"
             XCODE_ATTRIBUTE_ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES YES
             XCODE_ATTRIBUTE_SWIFT_OBJC_INTEROP_MODE "objcxx"
+            
+            # Code signing configuration for VisionOS device builds
+            XCODE_ATTRIBUTE_CODE_SIGN_STYLE "Automatic"
+            XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "${CMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM}"
+            XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "Apple Development"
 
             # CMake seems to add a custom flag "-Wno-unknown-pragmas" to the Swift compiler. That flag is used for Clang,
             # So we need to make sure we override it with nothing here in order to compile Swift.

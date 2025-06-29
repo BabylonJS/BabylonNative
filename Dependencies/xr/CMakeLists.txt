@@ -52,9 +52,9 @@ elseif (IOS)
         "Source/ARKit/Include/IXrContextARKit.h"
         "Source/ARKit/XR.mm")
 elseif (VISIONOS OR BABYLON_NATIVE_PLATFORM STREQUAL "visionOS")
-    # VisionOS uses OpenXR stub for now until CompositorServices implementation is ready
+    # VisionOS uses CompositorServices implementation
     set(SOURCES ${SOURCES}
-        "Source/OpenXR/XR.cpp")
+        "Source/VisionOS/XR.mm")
 else()
     set(SOURCES ${SOURCES}
         "Source/OpenXR/XR.cpp")
@@ -102,8 +102,8 @@ if (ANDROID)
 elseif (IOS)    
     target_link_libraries(xr PRIVATE "-framework ARKit")
 elseif (VISIONOS OR BABYLON_NATIVE_PLATFORM STREQUAL "visionOS")
-    # VisionOS uses OpenXR stub - no special frameworks needed
-    target_link_libraries(xr PRIVATE)
+    # VisionOS uses CompositorServices framework
+    target_link_libraries(xr PRIVATE "-framework CompositorServices" "-framework ARKit" "-framework Metal" "-framework MetalKit")
 else()
     if(WIN32)
         target_include_directories(xr PRIVATE "Source/OpenXR/Windows")

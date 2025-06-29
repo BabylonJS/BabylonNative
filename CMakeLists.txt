@@ -6,6 +6,11 @@ endif()
 
 include(FetchContent)
 
+# Platform detection
+if(CMAKE_SYSTEM_NAME STREQUAL "visionOS")
+    set(VISIONOS TRUE)
+endif()
+
 # --------------------------------------------------
 # Declarations
 # --------------------------------------------------
@@ -98,6 +103,11 @@ option(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS "Include Babylon Native Plugin 
 option(BABYLON_NATIVE_PLUGIN_NATIVETRACING "Include Babylon Native Plugin NativeTracing." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEXR "Include Babylon Native Plugin XR." ON)
 option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils." ON)
+
+# Disable NativeCamera for VisionOS (camera APIs not available)
+if(VISIONOS OR BABYLON_NATIVE_PLATFORM STREQUAL "visionOS")
+    set(BABYLON_NATIVE_PLUGIN_NATIVECAMERA OFF CACHE BOOL "NativeCamera not supported on VisionOS" FORCE)
+endif()
 
 # Polyfills
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
