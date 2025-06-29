@@ -18,6 +18,7 @@
 
 - (bool)initializeWithWidth:(NSInteger)width height:(NSInteger)height;
 - (bool)initializeImmersiveMode;
+- (bool)switchToImmersiveLayer:(CAMetalLayer*)newLayer withWidth:(NSInteger)width height:(NSInteger)height;
 - (void)exitImmersiveMode;
 - (void)shutdown;
 - (void)render;

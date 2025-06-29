@@ -12,11 +12,18 @@ class MetalView: UIView {
   }
   
   func setupMetalLayer() {
-    guard let bridge = LibNativeBridge.sharedInstance() else { return }
+    print("🔧 MetalView.setupMetalLayer() called")
+    guard let bridge = LibNativeBridge.sharedInstance() else { 
+      print("❌ Failed to get LibNativeBridge instance")
+      return 
+    }
+    print("✅ Got LibNativeBridge instance")
     
     if bridge.metalLayer != nil {
+      print("⚠️ Bridge already has metalLayer, skipping setup")
       return
     }
+    print("🎯 Setting up new metal layer...")
     
     self.addGestureRecognizer(
       UIBabylonGestureRecognizer(
@@ -32,7 +39,11 @@ class MetalView: UIView {
     bridge.metalLayer = self.metalLayer
     
     let scale = UITraitCollection.current.displayScale
-    bridge.initialize(withWidth: Int(self.bounds.width * scale), height: Int(self.bounds.height * scale))
+    let width = Int(self.bounds.width * scale)
+    let height = Int(self.bounds.height * scale)
+    print("🎬 Calling bridge.initialize with size: \(width)x\(height)")
+    let success = bridge.initialize(withWidth: width, height: height)
+    print("🎭 Bridge initialization result: \(success)")
   }
   
   var metalLayer: CAMetalLayer {
@@ -98,16 +109,30 @@ class ImmersiveMetalView: UIView {
     bridge?.drawableWillChangeSize(withWidth: Int(width), height: Int(height))
     metalLayer.drawableSize = CGSize(width: width, height: height)
     
-    // Set up the immersive metal layer for proper rendering
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-      let bridge = LibNativeBridge.sharedInstance()
+    // Set up the immersive metal layer with proper error handling
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+      guard let bridge = LibNativeBridge.sharedInstance() else {
+        print("❌ LibNativeBridge instance is nil")
+        return
+      }
       
-      // Update the bridge to use this immersive metal layer
-      bridge?.metalLayer = self.metalLayer
+      print("🌌 FIXED APPROACH: Setting up immersive mode properly 🌌")
       
-      // Trigger immersive mode setup
-      bridge?.initializeImmersiveMode()
-      print("🎯 ImmersiveMetalView configured for immersive space")
+      // Get the current scale and calculate proper dimensions
+      let scale = UITraitCollection.current.displayScale
+      let width = Int(1920 * scale)
+      let height = Int(1080 * scale)
+      
+      print("🔧 Setting up immersive layer: size \(width)x\(height)")
+      
+      // Use the safer initializeImmersiveMode instead of switchToImmersiveLayer
+      let success = bridge.initializeImmersiveMode()
+      
+      if success {
+        print("✅ Successfully initialized immersive mode")
+      } else {
+        print("❌ Failed to initialize immersive mode")
+      }
     }
   }
   
