@@ -5,7 +5,7 @@
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeInput.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
-// NativeXr not supported on VisionOS yet
+// NativeXr temporarily disabled to fix crashes
 #import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/Polyfills/Console.h>
 #import <Babylon/Polyfills/Window.h>
@@ -74,7 +74,7 @@
 
         Babylon::Plugins::NativeOptimizations::Initialize(env);
 
-        // NativeXr not supported on VisionOS yet
+        // NativeXr temporarily disabled to fix crashes
         // Babylon::Plugins::NativeXr::Initialize(env);
      
         _nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);

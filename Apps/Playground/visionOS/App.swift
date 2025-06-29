@@ -66,6 +66,27 @@ struct MetalViewRepresentable: UIViewRepresentable {
   func updateUIView(_ uiView: MetalView, context: Context) {}
 }
 
+struct ImmersiveMetalViewRepresentable: UIViewRepresentable {
+  typealias UIViewType = MetalView
+  
+  func makeUIView(context: Context) -> MetalView {
+    let metalView = MetalView(frame: .zero)
+    // Ensure the bridge is initialized for immersive rendering
+    if let bridge = LibNativeBridge.sharedInstance() {
+      // Set a larger viewport for immersive space
+      bridge.drawableWillChangeSize(withWidth: 1920, height: 1080)
+    }
+    return metalView
+  }
+  
+  func updateUIView(_ uiView: MetalView, context: Context) {
+    // Trigger a render in immersive mode
+    if let bridge = LibNativeBridge.sharedInstance() {
+      bridge.render()
+    }
+  }
+}
+
 struct ImmersiveView: View {
   @Binding var immersiveSpaceIsShown: Bool
   @Environment(\.dismissImmersiveSpace) var dismissImmersiveSpace
@@ -73,23 +94,20 @@ struct ImmersiveView: View {
   
   var body: some View {
     ZStack {
-      RealityView { content in
-        // Create a simple entity as a placeholder
-        let entity = Entity()
-        content.add(entity)
-      }
-      .onAppear {
-        // Initialize immersive mode when the view appears
-        if let bridge = LibNativeBridge.sharedInstance() {
-          bridge.initializeImmersiveMode()
+      // Use MetalView for 3D rendering in immersive space
+      ImmersiveMetalViewRepresentable()
+        .onAppear {
+          // Initialize immersive mode when the view appears
+          if let bridge = LibNativeBridge.sharedInstance() {
+            bridge.initializeImmersiveMode()
+          }
         }
-      }
-      .onDisappear {
-        // Exit immersive mode when view disappears
-        if let bridge = LibNativeBridge.sharedInstance() {
-          bridge.exitImmersiveMode()
+        .onDisappear {
+          // Exit immersive mode when view disappears
+          if let bridge = LibNativeBridge.sharedInstance() {
+            bridge.exitImmersiveMode()
+          }
         }
-      }
       
       VStack {
         Spacer()
