@@ -116,9 +116,20 @@ class ImmersiveMetalView: UIView {
     // Set background to blue for debugging - should be visible if MetalView is working
     backgroundColor = .systemBlue
     
-    // Setup metal layer properties  
+    // CRITICAL: Ensure the metal layer is properly configured for drawable presentation
+    metalLayer.device = MTLCreateSystemDefaultDevice()
     metalLayer.pixelFormat = .bgra8Unorm
     metalLayer.framebufferOnly = true
+    metalLayer.isOpaque = true
+    metalLayer.contentsScale = UITraitCollection.current.displayScale
+    metalLayer.presentsWithTransaction = false
+    metalLayer.needsDisplayOnBoundsChange = true
+    
+    print("🎨 ImmersiveMetalView configured:")
+    print("  - Device: \(metalLayer.device != nil ? "YES" : "NO")")
+    print("  - Scale: \(metalLayer.contentsScale)")
+    print("  - Pixel Format: bgra8Unorm")
+    print("  - Opaque: \(metalLayer.isOpaque)")
     
     // Add a debug label to immersive view
     let label = UILabel()
@@ -146,8 +157,13 @@ class ImmersiveMetalView: UIView {
     let scale = UITraitCollection.current.displayScale
     let width = 1920 * scale
     let height = 1080 * scale
-    bridge?.drawableWillChangeSize(withWidth: Int(width), height: Int(height))
+    
+    // CRITICAL: Set the drawable size BEFORE setting the layer
     metalLayer.drawableSize = CGSize(width: width, height: height)
+    metalLayer.contentsScale = scale
+    
+    // Notify bridge about size change
+    bridge?.drawableWillChangeSize(withWidth: Int(width), height: Int(height))
     
     // Set up the immersive metal layer with proper error handling
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -183,19 +199,32 @@ class ImmersiveMetalView: UIView {
       }
     }
     
-    // Set up display link for continuous rendering
-    setupDisplayLink()
+    // DISABLED: Don't set up a separate display link - rely on the main render loop
+    // setupDisplayLink()
+    print("🎮 Immersive view configured - using main render loop")
   }
   
   private func setupDisplayLink() {
-    displayLink = CADisplayLink(target: self, selector: #selector(renderLoop))
-    displayLink?.add(to: .current, forMode: .default)
-    print("🎮 Immersive display link started")
+    // DISABLED: Avoiding display link conflicts
+    // displayLink = CADisplayLink(target: self, selector: #selector(renderLoop))
+    // displayLink?.add(to: .current, forMode: .default)
+    // print("🎮 Immersive display link started")
   }
   
   @objc private func renderLoop() {
-    // Call render on the bridge to update the immersive content
-    LibNativeBridge.sharedInstance()?.render()
+    // DISABLED: Using main render loop instead
+    // LibNativeBridge.sharedInstance()?.render()
+  }
+  
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    
+    // CRITICAL: Update drawable size when bounds change
+    if bounds.size.width > 0 && bounds.size.height > 0 {
+      let scale = UITraitCollection.current.displayScale
+      metalLayer.drawableSize = CGSize(width: bounds.width * scale, height: bounds.height * scale)
+      print("🎨 ImmersiveMetalView layoutSubviews - drawable size: \(metalLayer.drawableSize)")
+    }
   }
   
   var metalLayer: CAMetalLayer {
@@ -206,14 +235,6 @@ class ImmersiveMetalView: UIView {
     return CAMetalLayer.self
   }
   
-  override func layoutSubviews() {
-    super.layoutSubviews()
-    // Update drawable size if bounds change
-    let bridge = LibNativeBridge.sharedInstance()
-    let scale = UITraitCollection.current.displayScale
-    bridge?.drawableWillChangeSize(withWidth: Int(bounds.width * scale), height: Int(bounds.height * scale))
-    metalLayer.drawableSize = CGSize(width: bounds.width * scale, height: bounds.height * scale)
-  }
 }
 
 struct ImmersiveMetalViewRepresentable: UIViewRepresentable {
@@ -234,6 +255,8 @@ struct ImmersiveView: View {
     ZStack {
       // Use MetalView for 3D rendering in immersive space
       ImmersiveMetalViewRepresentable()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea()
         .onDisappear {
           // Exit immersive mode when view disappears
           if let bridge = LibNativeBridge.sharedInstance() {
@@ -323,6 +346,24 @@ struct ContentView: View {
     .onAppear {
       print("🎯 ContentView onAppear called - main window is visible!")
       print("📱 Main window appeared - setting up immersive space trigger")
+      
+      // AUTO-TEST: Automatically enter immersive mode immediately
+      Task { @MainActor in
+        print("🚀 AUTO-TEST: Main window appeared, triggering immersive space immediately")
+        let result = await openImmersiveSpace(id: "BabylonImmersiveSpace")
+        switch result {
+        case .opened:
+          print("✅ AUTO-TEST: Successfully entered immersive space")
+          immersiveSpaceState = .open
+          immersiveSpaceIsShown = true
+        case .error:
+          print("❌ AUTO-TEST: Error opening immersive space")
+        case .userCancelled:
+          print("🚫 AUTO-TEST: User cancelled immersive space")
+        @unknown default:
+          print("❓ AUTO-TEST: Unknown result opening immersive space")
+        }
+      }
       
       // Listen for immersive space trigger
       NotificationCenter.default.addObserver(

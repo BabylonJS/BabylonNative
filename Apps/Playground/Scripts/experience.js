@@ -8,7 +8,7 @@ const turntable = false;
 const logfps = true;
 const ibl = false;
 const rtt = false;
-const vr = false;  // Temporarily disable VR to fix crashes
+const vr = true;  // Enable VR for visionOS immersive mode
 const ar = false;
 const xrHitTest = false;
 const xrFeaturePoints = false;
@@ -125,7 +125,7 @@ window.engine = engine;
 window.scene = scene;
 console.log('✅ JavaScript: Engine and scene exposed globally');
 
-CreateImmersiveSpatialScene(scene).then(function () {
+CreateBoxAsync(scene).then(function () {
 //CreateSpheresAsync(scene).then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
@@ -470,20 +470,38 @@ CreateImmersiveSpatialScene(scene).then(function () {
                     });
                 }
 
-                // Check if immersive mode was requested from native bridge
-                if (window.shouldEnterImmersiveMode) {
-                    console.log('🎯 Immersive mode requested, entering XR automatically');
-                    window.shouldEnterImmersiveMode = false; // Reset flag
-                    xr.baseExperience.enterXRAsync(sessionMode, "unbounded", xr.renderTarget).then((xrSessionManager) => {
-                        console.log('🌌 Successfully entered immersive XR mode - scene should now be visible');
+                // Function to enter immersive mode with scene setup
+                window.enterImmersiveMode = function() {
+                    console.log('🎯 JavaScript: Entering immersive mode');
+                    
+                    // Clear existing scene content
+                    while (scene.meshes.length > 0) {
+                        scene.meshes[0].dispose();
+                    }
+                    
+                    // Create immersive scene content
+                    CreateImmersiveSpatialScene(scene).then(() => {
+                        console.log('✅ JavaScript: Immersive scene created');
+                        
+                        // Enter XR mode
+                        return xr.baseExperience.enterXRAsync(sessionMode, "unbounded", xr.renderTarget);
+                    }).then((xrSessionManager) => {
+                        console.log('🌌 JavaScript: Successfully entered immersive XR mode');
                         if (hololens) {
                             // Pass through, head mounted displays (HoloLens 2) require autoClear and a black clear color
                             xrSessionManager.scene.autoClear = true;
                             xrSessionManager.scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
                         }
                     }).catch((error) => {
-                        console.error('❌ Error entering XR mode from flag:', error);
+                        console.error('❌ JavaScript: Error entering XR mode:', error);
                     });
+                };
+                
+                // Check if immersive mode was requested from native bridge
+                if (window.shouldEnterImmersiveMode) {
+                    console.log('🎯 Immersive mode requested from native, entering automatically');
+                    window.shouldEnterImmersiveMode = false; // Reset flag
+                    window.enterImmersiveMode();
                 } else {
                     // Normal XR initialization - don't auto-enter
                     console.log('🔧 XR experience ready, waiting for manual activation');

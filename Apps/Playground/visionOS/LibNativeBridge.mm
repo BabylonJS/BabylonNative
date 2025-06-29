@@ -230,6 +230,13 @@
             self->_update->Start();
             NSLog(@"✅ Started rendering to immersive layer");
             
+            // CRITICAL: Force a frame to ensure bgfx picks up the new layer
+            self->_update->Finish();
+            self->_device->FinishRenderingCurrentFrame();
+            self->_device->StartRenderingCurrentFrame();
+            self->_update->Start();
+            NSLog(@"✅ Forced frame update after layer switch");
+            
             *successPtr = true;
         } catch (const std::exception& e) {
             NSLog(@"❌ Error recreating graphics device: %s", e.what());
@@ -262,93 +269,25 @@
     _isImmersiveMode = true;
     NSLog(@"🌌 Setting immersive mode flag to true");
     
-    // Simple immersive mode flag - let JavaScript handle scene updates
+    // Use JavaScript XR API to properly enter immersive mode
     if (_runtime) {
-        NSLog(@"📡 Dispatching immersive mode script to JavaScript runtime");
+        NSLog(@"📡 Calling JavaScript enterImmersiveMode function");
         _runtime->Dispatch([](Napi::Env env) {
             env.RunScript(R"(
                 // Set global flag for immersive mode
                 window.isInImmersiveMode = true;
-                console.log('🚀 JavaScript: Immersive mode activated');
+                console.log('🚀 JavaScript: Native bridge requesting immersive mode');
                 
-                // Set visible background color for debugging
-                if (window.scene) {
-                    window.scene.clearColor = new BABYLON.Color3(0.2, 0.2, 0.8); // Blue background
-                    console.log('🎨 JavaScript: Set blue scene background');
-                }
-                
-                // Check if scene is available (should be exposed from experience.js)
-                if (typeof window.scene !== 'undefined' && window.scene) {
-                    console.log('🎯 JavaScript: Scene available for immersive mode');
-                    console.log('JavaScript: Current meshes count:', window.scene.meshes.length);
-                    
-                    // Clear existing meshes and create immersive content
-                    while (window.scene.meshes.length > 0) {
-                        window.scene.meshes[0].dispose();
-                    }
-                    
-                    // Create immersive spatial scene
-                    if (typeof CreateImmersiveSpatialScene === 'function') {
-                        CreateImmersiveSpatialScene(window.scene);
-                        console.log('✅ JavaScript: Created immersive spatial scene');
-                    } else {
-                        // Fallback: create multiple bright test objects
-                        console.log('🎨 JavaScript: Creating bright fallback immersive content');
-                        
-                        // Create bright red sphere
-                        var sphere = BABYLON.Mesh.CreateSphere("immersiveSphere", 16, 2.0, window.scene);
-                        sphere.position = new BABYLON.Vector3(0, 1, -4);
-                        var sphereMaterial = new BABYLON.StandardMaterial("sphereMat", window.scene);
-                        sphereMaterial.emissiveColor = new BABYLON.Color3(1, 0, 0); // Bright red
-                        sphereMaterial.diffuseColor = new BABYLON.Color3(1, 0, 0);
-                        sphere.material = sphereMaterial;
-                        
-                        // Create bright green box
-                        var box = BABYLON.Mesh.CreateBox("immersiveBox", 2.0, window.scene);
-                        box.position = new BABYLON.Vector3(-3, 0, -4);
-                        var boxMaterial = new BABYLON.StandardMaterial("boxMat", window.scene);
-                        boxMaterial.emissiveColor = new BABYLON.Color3(0, 1, 0); // Bright green
-                        boxMaterial.diffuseColor = new BABYLON.Color3(0, 1, 0);
-                        box.material = boxMaterial;
-                        
-                        // Create bright blue cylinder
-                        var cylinder = BABYLON.Mesh.CreateCylinder("immersiveCylinder", 2, 1, 1, 8, 1, window.scene);
-                        cylinder.position = new BABYLON.Vector3(3, 0, -4);
-                        var cylinderMaterial = new BABYLON.StandardMaterial("cylinderMat", window.scene);
-                        cylinderMaterial.emissiveColor = new BABYLON.Color3(0, 0, 1); // Bright blue
-                        cylinderMaterial.diffuseColor = new BABYLON.Color3(0, 0, 1);
-                        cylinder.material = cylinderMaterial;
-                        
-                        // Add bright lighting
-                        var light = new BABYLON.HemisphericLight("immersiveLight", new BABYLON.Vector3(0, 1, 0), window.scene);
-                        light.intensity = 2.0; // Very bright
-                        light.diffuse = new BABYLON.Color3(1, 1, 1);
-                        light.specular = new BABYLON.Color3(1, 1, 1);
-                        
-                        console.log('✅ JavaScript: Created 3 bright fallback objects (sphere, box, cylinder) with lighting');
-                    }
-                    
-                    // Configure camera for immersive viewing
-                    if (window.scene.activeCamera) {
-                        window.scene.activeCamera.position = new BABYLON.Vector3(0, 1.6, 0);
-                        window.scene.activeCamera.setTarget(new BABYLON.Vector3(0, 0, -4));
-                        console.log('✅ JavaScript: Camera configured for immersive space');
-                    }
-                    
-                    // Force multiple renders to ensure visibility
-                    for (var i = 0; i < 5; i++) {
-                        if (window.scene.render) {
-                            window.scene.render();
-                        }
-                    }
-                    console.log('🎬 JavaScript: Forced multiple scene renders');
-                    
+                // Call the JavaScript function to enter immersive mode properly
+                if (typeof window.enterImmersiveMode === 'function') {
+                    console.log('✅ JavaScript: Calling enterImmersiveMode function');
+                    window.enterImmersiveMode();
                 } else {
-                    console.error('❌ JavaScript: Scene not available for immersive mode');
+                    console.error('❌ JavaScript: enterImmersiveMode function not available');
                 }
             )");
         });
-        NSLog(@"✅ JavaScript script dispatched successfully");
+        NSLog(@"✅ JavaScript enterImmersiveMode call dispatched");
     } else {
         NSLog(@"❌ Runtime is null, cannot dispatch JavaScript");
     }
