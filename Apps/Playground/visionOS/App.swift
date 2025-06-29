@@ -4,7 +4,24 @@ import RealityKit
 class MetalView: UIView {
   override init(frame: CGRect) {
     super.init(frame: frame)
-    self.backgroundColor = .clear
+    self.backgroundColor = .systemGreen // Bright green to be super visible
+    print("🎯 MetalView initialized with frame: \(frame)")
+    
+    // Add a visible label for debugging
+    let label = UILabel()
+    label.text = "🟢 METAL VIEW IS HERE!"
+    label.textColor = .white
+    label.backgroundColor = .black
+    label.textAlignment = .center
+    label.translatesAutoresizingMaskIntoConstraints = false
+    self.addSubview(label)
+    
+    NSLayoutConstraint.activate([
+      label.centerXAnchor.constraint(equalTo: self.centerXAnchor),
+      label.centerYAnchor.constraint(equalTo: self.centerYAnchor),
+      label.widthAnchor.constraint(equalToConstant: 200),
+      label.heightAnchor.constraint(equalToConstant: 50)
+    ])
   }
   
   required init?(coder: NSCoder) {
@@ -56,6 +73,7 @@ class MetalView: UIView {
   
   override func layoutSubviews() {
     super.layoutSubviews()
+    print("🔧 MetalView.layoutSubviews called, bounds: \(bounds)")
     setupMetalLayer()
     updateDrawableSize()
   }
@@ -167,7 +185,6 @@ struct ImmersiveMetalViewRepresentable: UIViewRepresentable {
 struct ImmersiveView: View {
   @Binding var immersiveSpaceIsShown: Bool
   @Environment(\.dismissImmersiveSpace) var dismissImmersiveSpace
-  @Environment(\.openWindow) private var openWindow
   
   var body: some View {
     ZStack {
@@ -188,7 +205,6 @@ struct ImmersiveView: View {
             Task { @MainActor in
               await dismissImmersiveSpace()
               immersiveSpaceIsShown = false
-              openWindow(id: "MainWindow")
               LibNativeBridge.sharedInstance()?.exitImmersiveMode()
               print("📱 Exited immersive space")
             }
@@ -209,12 +225,19 @@ struct ContentView: View {
   @State private var immersiveSpaceState = ImmersiveSpaceState.closed
   @Environment(\.openImmersiveSpace) var openImmersiveSpace
   @Environment(\.dismissImmersiveSpace) var dismissImmersiveSpace
-  @Environment(\.dismissWindow) private var dismissWindow
   
   var body: some View {
     VStack {
+      Text("🎯 BABYLON NATIVE PLAYGROUND")
+        .font(.title)
+        .foregroundColor(.white)
+        .padding()
+        .background(Color.black)
+        .cornerRadius(10)
+      
       MetalViewRepresentable()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.red) // Temporary: red background to make it super visible
       
       HStack {
         Button("Enter Immersive Space") {
@@ -226,7 +249,6 @@ struct ContentView: View {
               print("✅ Immersive space opened successfully")
               immersiveSpaceState = .open
               immersiveSpaceIsShown = true
-              dismissWindow(id: "MainWindow")
             case .error:
               print("❌ Error opening immersive space")
             case .userCancelled:
@@ -255,6 +277,7 @@ struct ContentView: View {
       .padding()
     }
     .onAppear {
+      print("🎯 ContentView onAppear called - main window is visible!")
       print("📱 Main window appeared - setting up immersive space trigger")
       
       // Listen for immersive space trigger
@@ -271,7 +294,6 @@ struct ContentView: View {
             print("✅ Successfully entered immersive space")
             immersiveSpaceState = .open
             immersiveSpaceIsShown = true
-            dismissWindow(id: "MainWindow")
           case .error:
             print("❌ Error opening immersive space")
           case .userCancelled:
@@ -293,14 +315,14 @@ enum ImmersiveSpaceState {
 @main
 struct ExampleApp: App {
   @State private var immersiveSpaceIsShown = false
-  @Environment(\.dismissWindow) private var dismissWindow
   
   var body: some SwiftUI.Scene {
-    WindowGroup(id: "MainWindow") {
+    WindowGroup {
       ContentView(immersiveSpaceIsShown: $immersiveSpaceIsShown)
+        .frame(minWidth: 800, idealWidth: 800, maxWidth: 1200,
+               minHeight: 600, idealHeight: 600, maxHeight: 900)
     }
-    .windowStyle(.plain)
-    .windowResizability(.contentSize)
+    .defaultSize(width: 800, height: 600)
     
     ImmersiveSpace(id: "BabylonImmersiveSpace") {
       ImmersiveView(immersiveSpaceIsShown: $immersiveSpaceIsShown)

@@ -37,9 +37,12 @@
 }
 
 - (bool)initializeWithWidth:(NSInteger)width height:(NSInteger)height {
+    NSLog(@"🎬 LibNativeBridge.initializeWithWidth called: %ldx%ld", width, height);
     if (self.initialized) {
+        NSLog(@"⚠️ Already initialized, returning YES");
         return YES;
     }
+    NSLog(@"🚀 Starting LibNativeBridge initialization...");
   
     _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(render)];
     [_displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSDefaultRunLoopMode];
@@ -90,11 +93,13 @@
     loader.LoadScript("app:///Scripts/experience.js");
     self.initialized = YES;
     
-    // Auto-trigger immersive space after longer initialization
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        NSLog(@"🚀 Auto-triggering immersive space transition");
-        [[NSNotificationCenter defaultCenter] postNotificationName:@"TriggerImmersiveSpace" object:nil];
-    });
+    NSLog(@"✅ LibNativeBridge initialization completed successfully!");
+    
+    // DISABLED: Auto-trigger immersive space to prevent BGFX shutdown
+    // dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    //     NSLog(@"🚀 Auto-triggering immersive space transition");
+    //     [[NSNotificationCenter defaultCenter] postNotificationName:@"TriggerImmersiveSpace" object:nil];
+    // });
     
     return true;
 }
@@ -140,68 +145,10 @@
 }
 
 - (bool)switchToImmersiveLayer:(CAMetalLayer*)newLayer withWidth:(NSInteger)width height:(NSInteger)height {
-    NSLog(@"🔄 Switching to immersive Metal layer: %@, size: %ldx%ld", newLayer, width, height);
+    NSLog(@"🔄 REMOVED: switchToImmersiveLayer method called - redirecting to safe initializeImmersiveMode");
     
-    if (!newLayer) {
-        NSLog(@"❌ Cannot switch - newLayer is nil");
-        return NO;
-    }
-    
-    if (!_device) {
-        NSLog(@"❌ Cannot switch - _device is nil");
-        return NO;
-    }
-    
-    if (!_runtime) {
-        NSLog(@"❌ Cannot switch - _runtime is nil");
-        return NO;
-    }
-    
-    NSLog(@"✅ All components valid, proceeding with switch");
-    
-    // Step 1: Update the metal layer property FIRST
-    NSLog(@"🔧 Setting new metal layer");
-    self.metalLayer = newLayer;
-    
-    // Step 2: Pause rendering temporarily
-    NSLog(@"⏸️ Pausing current rendering");
-    if (_displayLink) {
-        [_displayLink setPaused:YES];
-    }
-    
-    if (_update) {
-        _update->Finish();
-    }
-    if (_device) {
-        _device->FinishRenderingCurrentFrame();
-    }
-    
-    // Step 3: Try simpler approach - just restart rendering with new layer
-    NSLog(@"🎬 Restarting rendering with new Metal layer");
-    
-    try {
-        // Simply restart rendering - don't try to update size which might cause issues
-        _device->StartRenderingCurrentFrame();
-        _update->Start();
-        
-        NSLog(@"✅ Rendering restarted successfully");
-        
-        // Resume display link
-        if (_displayLink) {
-            [_displayLink setPaused:NO];
-        }
-        
-        NSLog(@"🎯 Successfully switched to immersive Metal layer");
-        return YES;
-        
-    } catch (const std::exception& e) {
-        NSLog(@"❌ Failed to restart rendering: %s", e.what());
-        // Resume display link even on failure
-        if (_displayLink) {
-            [_displayLink setPaused:NO];
-        }
-        return NO;
-    }
+    // Instead of the problematic device switching, just initialize immersive mode
+    return [self initializeImmersiveMode];
 }
 
 - (bool)initializeImmersiveMode {
@@ -210,6 +157,11 @@
     if (_isImmersiveMode) {
         NSLog(@"⚠️ Already in immersive mode, returning YES");
         return YES;
+    }
+    
+    if (!_device || !_runtime) {
+        NSLog(@"❌ Cannot initialize immersive mode - device or runtime not ready");
+        return NO;
     }
     
     _isImmersiveMode = true;
@@ -224,23 +176,45 @@
                 window.isInImmersiveMode = true;
                 console.log('🚀 JavaScript: Immersive mode activated');
                 
-                // Ensure scene exists and is visible
+                // Create or ensure immersive scene exists
                 if (typeof window.scene !== 'undefined' && window.scene) {
                     console.log('🎯 JavaScript: Scene available for immersive mode');
                     console.log('JavaScript: Current meshes count:', window.scene.meshes.length);
                     
-                    // Make sure camera is positioned properly for immersive viewing
+                    // Clear existing meshes and create immersive content
+                    while (window.scene.meshes.length > 0) {
+                        window.scene.meshes[0].dispose();
+                    }
+                    
+                    // Create immersive spatial scene
+                    if (typeof CreateImmersiveSpatialScene === 'function') {
+                        CreateImmersiveSpatialScene(window.scene);
+                        console.log('✅ JavaScript: Created immersive spatial scene');
+                    } else {
+                        // Fallback: create simple bright test objects
+                        var sphere = BABYLON.Mesh.CreateSphere("immersiveSphere", 16, 2.0, window.scene);
+                        sphere.position = new BABYLON.Vector3(0, 0, -4);
+                        var material = new BABYLON.StandardMaterial("immersiveMat", window.scene);
+                        material.emissiveColor = new BABYLON.Color3(1, 0, 0); // Bright red
+                        sphere.material = material;
+                        console.log('✅ JavaScript: Created fallback immersive content');
+                    }
+                    
+                    // Configure camera for immersive viewing
                     if (window.scene.activeCamera) {
                         window.scene.activeCamera.position = new BABYLON.Vector3(0, 1.6, 0);
-                        window.scene.activeCamera.setTarget(new BABYLON.Vector3(0, 0, -3));
+                        window.scene.activeCamera.setTarget(new BABYLON.Vector3(0, 0, -4));
                         console.log('✅ JavaScript: Camera configured for immersive space');
                     }
                     
-                    // Force a render to ensure visibility
-                    if (window.scene.render) {
-                        window.scene.render();
-                        console.log('🎬 JavaScript: Forced scene render');
+                    // Force multiple renders to ensure visibility
+                    for (var i = 0; i < 5; i++) {
+                        if (window.scene.render) {
+                            window.scene.render();
+                        }
                     }
+                    console.log('🎬 JavaScript: Forced multiple scene renders');
+                    
                 } else {
                     console.error('❌ JavaScript: Scene not available for immersive mode');
                 }
