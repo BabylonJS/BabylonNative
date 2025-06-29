@@ -120,6 +120,11 @@ function CreateSpheresAsync(scene) {
 const engine = new BABYLON.NativeEngine();
 const scene = new BABYLON.Scene(engine);
 
+// Expose engine and scene globally for immersive mode access
+window.engine = engine;
+window.scene = scene;
+console.log('✅ JavaScript: Engine and scene exposed globally');
+
 CreateImmersiveSpatialScene(scene).then(function () {
 //CreateSpheresAsync(scene).then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {

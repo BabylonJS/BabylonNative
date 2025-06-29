@@ -107,12 +107,28 @@ class ImmersiveMetalView: UIView {
   }
   
   private func setupImmersiveView() {
-    // Set background to clear for immersive space
-    backgroundColor = .clear
+    // Set background to blue for debugging - should be visible if MetalView is working
+    backgroundColor = .systemBlue
     
     // Setup metal layer properties  
     metalLayer.pixelFormat = .bgra8Unorm
     metalLayer.framebufferOnly = true
+    
+    // Add a debug label to immersive view
+    let label = UILabel()
+    label.text = "🌌 IMMERSIVE METAL VIEW"
+    label.textColor = .white
+    label.backgroundColor = .red
+    label.textAlignment = .center
+    label.translatesAutoresizingMaskIntoConstraints = false
+    self.addSubview(label)
+    
+    NSLayoutConstraint.activate([
+      label.centerXAnchor.constraint(equalTo: self.centerXAnchor),
+      label.topAnchor.constraint(equalTo: self.topAnchor, constant: 100),
+      label.widthAnchor.constraint(equalToConstant: 300),
+      label.heightAnchor.constraint(equalToConstant: 50)
+    ])
     
     // Get the shared bridge instance - don't reinitialize
     let bridge = LibNativeBridge.sharedInstance()
@@ -143,13 +159,21 @@ class ImmersiveMetalView: UIView {
       
       print("🔧 Setting up immersive layer: size \(width)x\(height)")
       
-      // Use the safer initializeImmersiveMode instead of switchToImmersiveLayer
-      let success = bridge.initializeImmersiveMode()
+      // CRITICAL: Switch the graphics device to render to THIS metal layer
+      let success = bridge.switch(toImmersiveLayer: self.metalLayer, withWidth: width, height: height)
       
       if success {
-        print("✅ Successfully initialized immersive mode")
+        print("✅ Successfully switched to immersive metal layer")
+        
+        // Now initialize immersive mode
+        let immersiveSuccess = bridge.initializeImmersiveMode()
+        if immersiveSuccess {
+          print("✅ Successfully initialized immersive mode")
+        } else {
+          print("❌ Failed to initialize immersive mode")
+        }
       } else {
-        print("❌ Failed to initialize immersive mode")
+        print("❌ Failed to switch to immersive metal layer")
       }
     }
   }
