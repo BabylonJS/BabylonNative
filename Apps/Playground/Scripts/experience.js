@@ -28,18 +28,39 @@ function CreateBoxAsync(scene) {
 function CreateImmersiveSpatialScene(scene) {
     // Create a more impressive spatial scene for visionOS immersive mode
     
-    // Central rotating crystal
-    const crystal = BABYLON.Mesh.CreatePolyhedron("crystal", {size: 0.3}, scene);
-    crystal.position = new BABYLON.Vector3(0, 1.5, -2);
+    // Central rotating crystal - make it bigger and more visible
+    const crystal = BABYLON.Mesh.CreatePolyhedron("crystal", {size: 1.0}, scene);
+    crystal.position = new BABYLON.Vector3(0, 0, -3);
     crystal.material = new BABYLON.StandardMaterial("crystalMat", scene);
-    crystal.material.diffuseColor = new BABYLON.Color3(0.2, 0.6, 1.0);
-    crystal.material.emissiveColor = new BABYLON.Color3(0.1, 0.3, 0.5);
+    crystal.material.diffuseColor = new BABYLON.Color3(1.0, 0.8, 0.2);
+    crystal.material.emissiveColor = new BABYLON.Color3(0.5, 0.4, 0.1);
     crystal.material.specularColor = new BABYLON.Color3(1, 1, 1);
+    
+    // Add multiple bright test spheres for immersive space visibility
+    const testSphere = BABYLON.Mesh.CreateSphere("testSphere", 16, 1.0, scene);
+    testSphere.position = new BABYLON.Vector3(2, 0, -3);
+    testSphere.material = new BABYLON.StandardMaterial("testMat", scene);
+    testSphere.material.emissiveColor = new BABYLON.Color3(1, 0, 0); // Bright red
+    
+    // Add a bright green sphere on the left
+    const leftSphere = BABYLON.Mesh.CreateSphere("leftSphere", 16, 0.8, scene);
+    leftSphere.position = new BABYLON.Vector3(-2, 0, -3);
+    leftSphere.material = new BABYLON.StandardMaterial("leftMat", scene);
+    leftSphere.material.emissiveColor = new BABYLON.Color3(0, 1, 0); // Bright green
+    
+    // Add a bright blue sphere above
+    const topSphere = BABYLON.Mesh.CreateSphere("topSphere", 16, 0.6, scene);
+    topSphere.position = new BABYLON.Vector3(0, 2, -3);
+    topSphere.material = new BABYLON.StandardMaterial("topMat", scene);
+    topSphere.material.emissiveColor = new BABYLON.Color3(0, 0, 1); // Bright blue
     
     // Rotate the crystal
     scene.registerBeforeRender(function() {
         crystal.rotation.y += 0.01;
         crystal.rotation.x += 0.005;
+        testSphere.rotation.y += 0.02; // Spin the test sphere too
+        leftSphere.rotation.x += 0.015;
+        topSphere.rotation.z += 0.025;
     });
     
     // Floating orbs around the user

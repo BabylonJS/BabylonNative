@@ -66,25 +66,77 @@ struct MetalViewRepresentable: UIViewRepresentable {
   func updateUIView(_ uiView: MetalView, context: Context) {}
 }
 
+class ImmersiveMetalView: UIView {
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+    setupImmersiveView()
+  }
+  
+  required init?(coder: NSCoder) {
+    super.init(coder: coder)
+    setupImmersiveView()
+  }
+  
+  private func setupImmersiveView() {
+    // Set background to clear for immersive space
+    backgroundColor = .clear
+    
+    // Setup metal layer properties  
+    metalLayer.pixelFormat = .bgra8Unorm
+    metalLayer.framebufferOnly = true
+    
+    // Get the shared bridge instance - don't reinitialize
+    let bridge = LibNativeBridge.sharedInstance()
+    
+    // IMPORTANT: Set the metal layer FIRST
+    bridge?.metalLayer = self.metalLayer
+    
+    // Update the viewport for immersive space
+    let scale = UITraitCollection.current.displayScale
+    let width = 1920 * scale
+    let height = 1080 * scale
+    bridge?.drawableWillChangeSize(withWidth: Int(width), height: Int(height))
+    metalLayer.drawableSize = CGSize(width: width, height: height)
+    
+    // Set up the immersive metal layer for proper rendering
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+      let bridge = LibNativeBridge.sharedInstance()
+      
+      // Update the bridge to use this immersive metal layer
+      bridge?.metalLayer = self.metalLayer
+      
+      // Trigger immersive mode setup
+      bridge?.initializeImmersiveMode()
+      print("🎯 ImmersiveMetalView configured for immersive space")
+    }
+  }
+  
+  var metalLayer: CAMetalLayer {
+    return layer as! CAMetalLayer
+  }
+  
+  override class var layerClass: AnyClass {
+    return CAMetalLayer.self
+  }
+  
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    // Update drawable size if bounds change
+    let bridge = LibNativeBridge.sharedInstance()
+    let scale = UITraitCollection.current.displayScale
+    bridge?.drawableWillChangeSize(withWidth: Int(bounds.width * scale), height: Int(bounds.height * scale))
+    metalLayer.drawableSize = CGSize(width: bounds.width * scale, height: bounds.height * scale)
+  }
+}
+
 struct ImmersiveMetalViewRepresentable: UIViewRepresentable {
-  typealias UIViewType = MetalView
+  typealias UIViewType = ImmersiveMetalView
   
-  func makeUIView(context: Context) -> MetalView {
-    let metalView = MetalView(frame: .zero)
-    // Ensure the bridge is initialized for immersive rendering
-    if let bridge = LibNativeBridge.sharedInstance() {
-      // Set a larger viewport for immersive space
-      bridge.drawableWillChangeSize(withWidth: 1920, height: 1080)
-    }
-    return metalView
+  func makeUIView(context: Context) -> ImmersiveMetalView {
+    ImmersiveMetalView(frame: .zero)
   }
   
-  func updateUIView(_ uiView: MetalView, context: Context) {
-    // Trigger a render in immersive mode
-    if let bridge = LibNativeBridge.sharedInstance() {
-      bridge.render()
-    }
-  }
+  func updateUIView(_ uiView: ImmersiveMetalView, context: Context) {}
 }
 
 struct ImmersiveView: View {
@@ -96,12 +148,6 @@ struct ImmersiveView: View {
     ZStack {
       // Use MetalView for 3D rendering in immersive space
       ImmersiveMetalViewRepresentable()
-        .onAppear {
-          // Initialize immersive mode when the view appears
-          if let bridge = LibNativeBridge.sharedInstance() {
-            bridge.initializeImmersiveMode()
-          }
-        }
         .onDisappear {
           // Exit immersive mode when view disappears
           if let bridge = LibNativeBridge.sharedInstance() {
@@ -184,23 +230,30 @@ struct ContentView: View {
       .padding()
     }
     .onAppear {
-      // Auto-enter immersive space for demo
-      Task { @MainActor in
-        try? await Task.sleep(nanoseconds: 2_000_000_000) // Wait 2 seconds
-        print("🚀 Auto-entering immersive space...")
-        let result = await openImmersiveSpace(id: "BabylonImmersiveSpace")
-        switch result {
-        case .opened:
-          print("✅ Immersive space opened automatically")
-          immersiveSpaceState = .open
-          immersiveSpaceIsShown = true
-          dismissWindow(id: "MainWindow")
-        case .error:
-          print("❌ Error opening immersive space automatically")
-        case .userCancelled:
-          print("🚫 User cancelled immersive space automatically")
-        @unknown default:
-          print("❓ Unknown result opening immersive space automatically")
+      print("📱 Main window appeared - setting up immersive space trigger")
+      
+      // Listen for immersive space trigger
+      NotificationCenter.default.addObserver(
+        forName: NSNotification.Name("TriggerImmersiveSpace"),
+        object: nil,
+        queue: .main
+      ) { _ in
+        Task { @MainActor in
+          print("🚀 Received immersive space trigger - transitioning now")
+          let result = await openImmersiveSpace(id: "BabylonImmersiveSpace")
+          switch result {
+          case .opened:
+            print("✅ Successfully entered immersive space")
+            immersiveSpaceState = .open
+            immersiveSpaceIsShown = true
+            dismissWindow(id: "MainWindow")
+          case .error:
+            print("❌ Error opening immersive space")
+          case .userCancelled:
+            print("🚫 User cancelled immersive space")
+          @unknown default:
+            print("❓ Unknown result opening immersive space")
+          }
         }
       }
     }

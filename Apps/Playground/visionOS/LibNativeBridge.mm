@@ -90,6 +90,12 @@
     loader.LoadScript("app:///Scripts/experience.js");
     self.initialized = YES;
     
+    // Auto-trigger immersive space after initialization
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        NSLog(@"🚀 Auto-triggering immersive space transition");
+        [[NSNotificationCenter defaultCenter] postNotificationName:@"TriggerImmersiveSpace" object:nil];
+    });
+    
     return true;
 }
 
@@ -149,26 +155,75 @@
     
     _isImmersiveMode = true;
     
-    NSLog(@"🚀 Entering immersive mode - triggering XR session");
+    NSLog(@"🚀 Entering immersive mode - setting up 3D scene");
     
-    // Signal to Babylon that we're in immersive/XR mode
+    // Update rendering for immersive space
+    if (_device && self.metalLayer) {
+        NSLog(@"📱 Configuring rendering for immersive space");
+        
+        // Update viewport for immersive space
+        CGSize drawableSize = self.metalLayer.drawableSize;
+        [self drawableWillChangeSizeWithWidth:drawableSize.width height:drawableSize.height];
+        
+        NSLog(@"✅ Immersive rendering configured with size: %fx%f", drawableSize.width, drawableSize.height);
+    }
+    
+    // Signal to Babylon that we're in immersive mode (non-XR)
     if (_runtime) {
         _runtime->Dispatch([](Napi::Env env) {
-            // Set a flag to trigger XR when the scene is ready
-            // This works with the existing experience.js timing
             env.RunScript(R"(
                 // Set global flag for immersive mode
-                window.shouldEnterImmersiveMode = true;
-                console.log('🚀 Immersive mode flag set - waiting for scene initialization');
+                window.isInImmersiveMode = true;
+                console.log('🚀 Immersive mode flag set');
                 
-                // If scene is already ready and XR experience exists, enter immediately
-                if (typeof window.xrExperience !== 'undefined' && window.xrExperience) {
-                    console.log('🎯 XR already initialized, entering immersive mode now');
-                    window.xrExperience.baseExperience.enterXRAsync('immersive-vr', 'unbounded', window.xrExperience.renderTarget).then(() => {
-                        console.log('🌌 Successfully entered VR mode - scene should now be visible');
-                    }).catch((error) => {
-                        console.error('❌ Error entering XR mode:', error);
-                    });
+                // Check if scene is ready
+                console.log('Scene exists:', typeof window.scene !== 'undefined');
+                console.log('CreateImmersiveSpatialScene exists:', typeof CreateImmersiveSpatialScene !== 'undefined');
+                
+                // If scene exists, switch to immersive scene
+                if (typeof window.scene !== 'undefined' && window.scene) {
+                    console.log('🎯 Scene exists, switching to immersive view');
+                    console.log('Current meshes count:', window.scene.meshes.length);
+                    
+                    // Clear existing scene
+                    while (window.scene.meshes.length > 0) {
+                        window.scene.meshes[0].dispose();
+                    }
+                    
+                    // Create the immersive scene content
+                    if (typeof CreateImmersiveSpatialScene === 'function') {
+                        CreateImmersiveSpatialScene(window.scene);
+                        console.log('🌌 Immersive spatial scene created');
+                        console.log('New meshes count:', window.scene.meshes.length);
+                        
+                        // Force a render
+                        window.scene.render();
+                    } else {
+                        console.error('❌ CreateImmersiveSpatialScene function not found!');
+                    }
+                    
+                    // Adjust camera for immersive viewing
+                    if (window.scene.activeCamera) {
+                        window.scene.activeCamera.position = new BABYLON.Vector3(0, 1.6, 0);
+                        console.log('Camera position set:', window.scene.activeCamera.position);
+                    }
+                } else {
+                    console.error('❌ Scene not yet initialized!');
+                    // Try again after a delay
+                    setTimeout(() => {
+                        if (window.scene && typeof CreateImmersiveSpatialScene === 'function') {
+                            console.log('🔄 Retrying immersive scene setup...');
+                            // Clear and recreate
+                            while (window.scene.meshes.length > 0) {
+                                window.scene.meshes[0].dispose();
+                            }
+                            CreateImmersiveSpatialScene(window.scene);
+                            if (window.scene.activeCamera) {
+                                window.scene.activeCamera.position = new BABYLON.Vector3(0, 1.6, 0);
+                            }
+                            window.scene.render();
+                        }
+                    }, 1000);
                 }
             )");
         });
@@ -189,13 +244,22 @@
     // Signal to Babylon that we're exiting immersive mode
     if (_runtime) {
         _runtime->Dispatch([](Napi::Env env) {
-            // Exit XR session
             env.RunScript(R"(
-                if (typeof scene !== 'undefined' && scene.onXRSessionEnded) {
-                    console.log('🚪 Exiting XR session...');
-                    // The XR session will be automatically cleaned up
-                } else {
-                    console.log('🚪 No active XR session to exit');
+                window.isInImmersiveMode = false;
+                console.log('🚪 Exiting immersive mode');
+                
+                // Restore the regular scene
+                if (typeof window.scene !== 'undefined' && window.scene) {
+                    // Clear immersive scene
+                    while (window.scene.meshes.length > 0) {
+                        window.scene.meshes[0].dispose();
+                    }
+                    
+                    // Recreate the normal scene
+                    if (typeof CreateBoxScene === 'function') {
+                        CreateBoxScene(window.scene);
+                        console.log('📦 Regular scene restored');
+                    }
                 }
             )");
         });
