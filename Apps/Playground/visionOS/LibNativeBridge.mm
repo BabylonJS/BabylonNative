@@ -158,23 +158,25 @@
     self.metalLayer = newLayer;
     NSLog(@"✅ Updated metalLayer reference to immersive layer");
     
-    // Do all graphics device operations on the JavaScript thread to avoid threading issues
+    NSLog(@"🔧 Switching graphics device to immersive layer on main thread");
+    
+    // Do graphics device operations on main thread to respect thread affinity
     dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
     auto successPtr = std::make_shared<bool>(false);
     
-    _runtime->Dispatch([self, newLayer, width, height, semaphore, successPtr](Napi::Env env) {
+    dispatch_async(dispatch_get_main_queue(), ^{
         try {
-            NSLog(@"🔧 Recreating graphics device on JavaScript thread");
+            NSLog(@"🔧 Recreating graphics device on main thread");
             
-            // Stop current rendering
+            // Stop current rendering on main thread
             self->_update->Finish();
             self->_device->FinishRenderingCurrentFrame();
-            NSLog(@"✅ Stopped current rendering");
+            NSLog(@"✅ Stopped current rendering on main thread");
             
-            // Reset on JavaScript thread to avoid threading issues
+            // Reset device and update
             self->_update.reset();
             self->_device.reset();
-            NSLog(@"✅ Reset graphics device and update on JS thread");
+            NSLog(@"✅ Reset graphics device and update");
             
             // Create new graphics configuration with immersive layer
             Babylon::Graphics::Configuration graphicsConfig{};
@@ -183,16 +185,18 @@
             graphicsConfig.Height = static_cast<size_t>(height);
             NSLog(@"🔧 Created graphics config for immersive layer: %ldx%ld", width, height);
             
-            // Recreate device with new layer
+            // Recreate device with new layer on main thread
             self->_device.emplace(graphicsConfig);
             self->_update.emplace(self->_device->GetUpdate("update"));
             NSLog(@"✅ Recreated graphics device with immersive layer");
             
-            // Add the graphics device to JavaScript runtime
-            self->_device->AddToJavaScript(env);
-            NSLog(@"✅ Added graphics device to JavaScript runtime");
+            // Add device to JavaScript runtime
+            self->_runtime->Dispatch([self](Napi::Env env) {
+                self->_device->AddToJavaScript(env);
+                NSLog(@"✅ Added graphics device to JavaScript runtime");
+            });
             
-            // Start rendering to immersive layer
+            // Start rendering to immersive layer on main thread
             self->_device->StartRenderingCurrentFrame();
             self->_update->Start();
             NSLog(@"✅ Started rendering to immersive layer");
