@@ -6,6 +6,8 @@
 
 #include "ExternalTexture_Base.h"
 
+#include <MetalKit/MetalKit.h>
+
 // clang-format off
 
 // Copied fom renderer_mtl.cpp
@@ -153,8 +155,10 @@ namespace Babylon::Plugins
         }
 
     private:
-        static void GetInfo(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, Info& info)
+        static void GetInfo(Graphics::TextureT voidPtr, std::optional<Graphics::TextureFormatT> overrideFormat, Info& info)
         {
+            auto ptr = (__bridge id<MTLTexture>)(voidPtr);
+
             if (ptr.textureType != MTLTextureType2D && ptr.textureType != MTLTextureType2DMultisample)
             {
                 throw std::runtime_error{"Unsupported texture type"};
@@ -192,7 +196,7 @@ namespace Babylon::Plugins
 
         void Assign(Graphics::TextureT ptr)
         {
-            m_ptr = ptr;
+            m_ptr = (__bridge id<MTLTexture>)ptr;
         }
 
         id<MTLTexture> m_ptr;

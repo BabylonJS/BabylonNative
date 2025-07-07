@@ -55,7 +55,7 @@ namespace Babylon
                 std::string imageName = resource.name;
                 if (imageName.find("Texture") != std::string::npos)
                 {
-                    imageName.replace(imageName.find("Texture"), std::string::npos, "");
+                    imageName.replace(imageName.rfind("Texture"), std::string::npos, "");
                     compiler->set_name(resource.id, imageName);
                 }
             }

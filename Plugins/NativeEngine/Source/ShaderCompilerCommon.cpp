@@ -2,6 +2,7 @@
 #include "ShaderCompiler.h"
 #include <bx/bx.h>
 #include <bgfx/bgfx.h>
+#include <iostream>
 
 #define BGFX_UNIFORM_FRAGMENTBIT UINT8_C(0x10) // Copy-pasta from bgfx_p.h
 #define BGFX_UNIFORM_SAMPLERBIT UINT8_C(0x20)  // Copy-pasta from bgfx_p.h
@@ -259,6 +260,7 @@ namespace Babylon::ShaderCompilerCommon
             AppendBytes(fragmentBytes, static_cast<uint8_t>(0));
 
             AppendBytes(fragmentBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
+        
         }
 
         return bgfxShaderInfo;

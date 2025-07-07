@@ -9,8 +9,8 @@ namespace Babylon::Graphics
     {
         return
         {
-            static_cast<struct MTLDevice*>(bgfx::getInternalData()->context),
-            static_cast<struct MTLCommandQueue*>(bgfx::getInternalData()->commandQueue)
+            bgfx::getInternalData()->context,
+            bgfx::getInternalData()->commandQueue
         };
     }
 }

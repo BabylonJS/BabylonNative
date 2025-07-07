@@ -1,12 +1,10 @@
 #pragma once
 
-#include <MetalKit/MetalKit.h>
-
 namespace Babylon::Graphics
 {
-    using DeviceT = id<MTLDevice>;
-    using TextureT = id<MTLTexture>;
-    using TextureFormatT = MTLPixelFormat;
+    using DeviceT = void*;
+    using TextureT = void*;
+    using TextureFormatT = unsigned int;
 
     struct DeviceConfiguration
     {
@@ -16,7 +14,7 @@ namespace Babylon::Graphics
 
     struct PlatformInfo
     {
-        struct MTLDevice* Device;
-        struct MTLCommandQueue* CommandQueue;
+        void* Device;
+        void* CommandQueue;
     };
 }
