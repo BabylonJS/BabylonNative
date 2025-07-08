@@ -5,6 +5,7 @@
 #include <bgfx/bgfx.h>
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/Public/ResourceLimits.h>
+#include <glslang/MachineIndependent/localintermediate.h>
 #include <SPIRV/GlslangToSpv.h>
 #include <spirv_parser.hpp>
 #include <spirv_msl.hpp>
