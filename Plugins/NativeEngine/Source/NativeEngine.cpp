@@ -1889,8 +1889,8 @@ namespace Babylon
         }
 
         Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
-        return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, [frameBuffer, depthStencilTextureHandle]() {
-            if (bgfx::isValid(depthStencilTextureHandle))
+        return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, [frameBuffer, depthStencilTextureHandle, cancellationSource{ m_cancellationSource }]() {
+            if (!cancellationSource->cancelled() && bgfx::isValid(depthStencilTextureHandle))
             {
                 bgfx::destroy(depthStencilTextureHandle);
             }
