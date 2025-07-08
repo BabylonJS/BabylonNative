@@ -49,13 +49,15 @@ namespace Babylon
                 compiler->set_name(resource.id, "_mtl_u");
             }
 
-            // rename textures without the 'texture' suffix so it's bindable from .js
+            // WebGL shaders use a single sampler uniform, Metal separates it into a sampler and a texture, appending "Texture" and "Sampler" to the original WebGL names.
+            // Remove 'Texture' from the uniform name to match JS expected names.
             for (auto& resource : resources.separate_images)
             {
                 std::string imageName = resource.name;
                 if (imageName.find("Texture") != std::string::npos)
                 {
-                    imageName.replace(imageName.find("Texture"), std::string::npos, "");
+                    // Using rfind ensures the correct "Texture" is removed from WebGL uniforms with "texture" in their original name. (e.g., "shadowTexture1")
+                    imageName.replace(imageName.rfind("Texture"), std::string::npos, "");
                     compiler->set_name(resource.id, imageName);
                 }
             }
