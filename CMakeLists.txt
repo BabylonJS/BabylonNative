@@ -48,9 +48,9 @@ FetchContent_Declare(libwebp
 
 FetchContent_MakeAvailable(CMakeExtensions)
 
-if (VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
+if(VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
-    if (NOT BABYLON_NATIVE_BUILD_SOURCETREE)
+    if(NOT BABYLON_NATIVE_BUILD_SOURCETREE)
         set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
     endif()
     set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
