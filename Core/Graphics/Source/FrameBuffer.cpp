@@ -31,14 +31,17 @@ namespace Babylon::Graphics
             return;
         }
 
-        if (m_depthStencilAttachmentIndex >= 0)
+        if (m_deviceID == m_deviceContext.GetDeviceId())
         {
-            bgfx::destroy(bgfx::getTexture(m_handle, m_depthStencilAttachmentIndex));
-        }
-        if (bgfx::isValid(m_handle) && m_deviceID == m_deviceContext.GetDeviceId())
-        {
-            bgfx::destroy(m_handle);
-            m_handle = BGFX_INVALID_HANDLE;
+            if (m_depthStencilAttachmentIndex >= 0)
+            {
+                bgfx::destroy(bgfx::getTexture(m_handle, m_depthStencilAttachmentIndex));
+            }
+            if (bgfx::isValid(m_handle))
+            {
+                bgfx::destroy(m_handle);
+                m_handle = BGFX_INVALID_HANDLE;
+            }
         }
 
         m_disposed = true;
