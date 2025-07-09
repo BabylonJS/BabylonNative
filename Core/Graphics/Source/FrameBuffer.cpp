@@ -37,10 +37,10 @@ namespace Babylon::Graphics
             {
                 bgfx::destroy(bgfx::getTexture(m_handle, m_depthStencilAttachmentIndex));
             }
+
             if (bgfx::isValid(m_handle))
             {
                 bgfx::destroy(m_handle);
-                m_handle = BGFX_INVALID_HANDLE;
             }
         }
 
