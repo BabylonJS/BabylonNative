@@ -36,9 +36,6 @@
 #endif  // NAPI_HAS_THREADS
 #include <string>
 #include <vector>
-#ifdef NAPI_CPP_EXCEPTIONS
-#include <exception>
-#endif  // NAPI_CPP_EXCEPTIONS
 
 // VS2015 RTM has bugs with constexpr, so require min of VS2015 Update 3 (known
 // good version)
@@ -82,7 +79,7 @@ static_assert(sizeof(char16_t) == sizeof(wchar_t),
 #endif
 
 #ifdef NAPI_CPP_EXCEPTIONS
-
+#include <exception>
 // When C++ exceptions are enabled, Errors are thrown directly. There is no need
 // to return anything after the throw statements. The variadic parameter is an
 // optional return value that is ignored.
