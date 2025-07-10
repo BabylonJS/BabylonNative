@@ -32,7 +32,7 @@ jobs:
         vmImage: ${{ parameters.vmImage }}
 
     - script: |
-        cmake -B build${{ variables.solutionName }} -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 ${{ variables.jsEngineDefine }} -A ${{ parameters.platform }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD)  -D BABYLON_DEBUG_TRACE=ON
+        cmake -G "Visual Studio 17 2022" -B build${{ variables.solutionName }} -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0 ${{ variables.jsEngineDefine }} -A ${{ parameters.platform }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD)  -D BABYLON_DEBUG_TRACE=ON
       displayName: 'Generate ${{ variables.solutionName }} solution'
   
     - task: VSBuild@1

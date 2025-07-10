@@ -20,7 +20,7 @@ namespace Babylon::Graphics
     class FrameBuffer final
     {
     public:
-        FrameBuffer(DeviceContext& context, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil);
+        FrameBuffer(DeviceContext& context, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil, int8_t depthStencilAttachmentIndex = -1);
         ~FrameBuffer();
 
         FrameBuffer(const FrameBuffer&) = delete;
@@ -69,5 +69,6 @@ namespace Babylon::Graphics
         Rect m_desiredScissor{};
 
         bool m_disposed{};
+        int8_t m_depthStencilAttachmentIndex{-1};
     };
 }

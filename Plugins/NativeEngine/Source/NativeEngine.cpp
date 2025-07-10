@@ -1850,6 +1850,7 @@ namespace Babylon
         }
 
         bgfx::TextureHandle depthStencilTextureHandle = BGFX_INVALID_HANDLE;
+        int8_t depthStencilAttachmentIndex = -1;
         if (generateStencilBuffer || generateDepth)
         {
             if (generateStencilBuffer && !generateDepth)
@@ -1874,6 +1875,7 @@ namespace Babylon
             // And not sure it makes sense to generate mipmaps from a depth buffer with exponential values.
             // only allows mipmaps resolve step when mipmapping is asked and for the color texture, not the depth.
             // https://github.com/bkaradzic/bgfx/blob/2c21f68998595fa388e25cb6527e82254d0e9bff/src/renderer_d3d11.cpp#L4525
+            depthStencilAttachmentIndex = numAttachments;
             attachments[numAttachments++].init(depthStencilTextureHandle);
         }
 
@@ -1888,15 +1890,8 @@ namespace Babylon
             throw Napi::Error::New(info.Env(), "Failed to create frame buffer");
         }
 
-        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
-        return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, [frameBuffer, depthStencilTextureHandle]() {
-            if (bgfx::isValid(depthStencilTextureHandle))
-            {
-                bgfx::destroy(depthStencilTextureHandle);
-            }
-
-            delete frameBuffer;
-        });
+        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer, depthStencilAttachmentIndex);
+        return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
     }
 
     // TODO: This doesn't get called when an Engine instance is disposed.
