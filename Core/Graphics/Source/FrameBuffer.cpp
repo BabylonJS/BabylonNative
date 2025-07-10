@@ -36,6 +36,7 @@ namespace Babylon::Graphics
             if (m_depthStencilAttachmentIndex >= 0)
             {
                 bgfx::destroy(bgfx::getTexture(m_handle, m_depthStencilAttachmentIndex));
+                m_depthStencilAttachmentIndex = -1;
             }
 
             if (bgfx::isValid(m_handle))
