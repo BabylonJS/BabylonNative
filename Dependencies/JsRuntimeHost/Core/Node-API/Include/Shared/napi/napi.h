@@ -79,7 +79,10 @@ static_assert(sizeof(char16_t) == sizeof(wchar_t),
 #endif
 
 #ifdef NAPI_CPP_EXCEPTIONS
+
+// [BABYLON-NATIVE-ADDITION]
 #include <exception>
+
 // When C++ exceptions are enabled, Errors are thrown directly. There is no need
 // to return anything after the throw statements. The variadic parameter is an
 // optional return value that is ignored.
