@@ -21,7 +21,6 @@ file(
 	${BIMG_DIR}/src/image_decode.* #
 	#
 	${LOADPNG_SOURCES} #
-	${MINIZ_SOURCES} #
 )
 
 add_library(bimg_decode STATIC ${BIMG_DECODE_SOURCES})
