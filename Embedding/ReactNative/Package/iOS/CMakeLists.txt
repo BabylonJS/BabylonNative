@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.13.2)
 
 include(FetchContent)
 
+# Disable the WebP plugin option
+set(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP OFF CACHE BOOL "Disable Babylon Native WebP Support")
+
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
     GIT_TAG 4.4.1)
@@ -22,16 +25,11 @@ project(ReactNativeBabylon)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../Apps/${BUILD_RNAPP_DIR}/node_modules/@babylonjs/react-native-iosandroid/ios/CMakeLists.txt)
 
+set_property(TARGET BabylonNative PROPERTY XCODE_GENERATE_SCHEME YES)
+
 set(PACKAGED_LIBS
-    astc-encoder
-    etc1
-    etc2
-    nvtt
-    squish
-    pvrtc
-    iqa
-    edtaa3
-    tinyexr
+    bimg_encode
+    bimg_decode
     bgfx
     bimg
     bx
@@ -55,10 +53,10 @@ set(PACKAGED_LIBS
     SPIRV
     spirv-cross-core
     spirv-cross-msl
-    tinyexr
     UrlLib
     Window
     XMLHttpRequest
+    Scheduling
     xr
 )
 

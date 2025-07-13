@@ -16,7 +16,7 @@
     <ApplicationType>Windows Store</ApplicationType>
     <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
     <WindowsTargetPlatformVersion Condition=" '$(WindowsTargetPlatformVersion)' == '' ">10.0</WindowsTargetPlatformVersion>
-    <WindowsTargetPlatformMinVersion>10.0.18362.0</WindowsTargetPlatformMinVersion>
+    <WindowsTargetPlatformMinVersion>10.0.22000.0</WindowsTargetPlatformMinVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="ReactNativeWindowsProps">
@@ -136,17 +136,19 @@
         $(BabylonNativeBuildDir)babylonnative\Plugins\NativeInput\$(Configuration);
         $(BabylonNativeBuildDir)babylonnative\Plugins\NativeOptimizations\$(Configuration);
         $(BabylonNativeBuildDir)babylonnative\Plugins\NativeTracing\$(Configuration);
-        $(BabylonNativeBuildDir)babylonnative\Plugins\NativeXr\$(Configuration);
         $(BabylonNativeBuildDir)babylonnative\Polyfills\Window\$(Configuration);
         $(BabylonNativeBuildDir)babylonnative\Polyfills\Canvas\$(Configuration);
         $(BabylonNativeBuildDir)jsi\$(Configuration);
         $(BabylonNativeBuildDir)$(Configuration);
         $(BabylonNativeBuildDir)_deps\arcana.cpp-build\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Polyfills\Scheduling\$(Configuration);
         $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Core\JsRuntime\$(Configuration);
         $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Core\Node-API-JSI\$(Configuration);
         $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Polyfills\XMLHttpRequest\$(Configuration);
         $(BabylonNativeBuildDir)_deps\urllib-build\$(Configuration);
-        $(BabylonNativeBuildDir)_deps\bgfx.cmake-build\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\bgfx.cmake-build\cmake\bgfx\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\bgfx.cmake-build\cmake\bx\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\bgfx.cmake-build\cmake\bimg\$(Configuration);
         $(BabylonNativeBuildDir)_deps\glslang-build\glslang\$(Configuration);
         $(BabylonNativeBuildDir)_deps\glslang-build\glslang\OSDependent\Windows\$(Configuration);
         $(BabylonNativeBuildDir)_deps\glslang-build\OGLCompilersDLL\$(Configuration);
@@ -174,21 +176,17 @@
       <!-- Debug Libraries -->
       <AdditionalDependencies>
         arcana.lib;
-        astc-encoder.lib;
         BabylonNative.lib;
         bgfx.lib;
         bimg.lib;
-        tinyexr.lib;
+        bimg_encode.lib;
+        bimg_decode.lib;
         bx.lib;
         Canvas.lib;
-        edtaa3.lib;
-        etc1.lib;
-        etc2.lib;
         GenericCodeGend.lib;
         glslangd.lib;
         glslang-default-resource-limitsd.lib;
         Graphics.lib;
-        iqa.lib;
         jsi.lib;
         JsRuntime.lib;
         MachineIndependentd.lib;
@@ -199,20 +197,15 @@
         NativeInput.lib;
         NativeOptimizations.lib;
         NativeTracing.lib;
-        NativeXr.lib;
-        nvtt.lib;
         OGLCompilerd.lib;
-        openxr_loaderd.lib;
         OSDependentd.lib;
-        pvrtc.lib;
         spirv-cross-cored.lib;
         spirv-cross-hlsld.lib;
         SPIRVd.lib;
-        squish.lib;
         UrlLib.lib;
         Window.lib;
+        Scheduling.lib;
         XMLHttpRequest.lib;
-        xr.lib;
         WindowsApp.lib;
         %(AdditionalDependencies);
       </AdditionalDependencies>
@@ -235,21 +228,17 @@
       <!-- Release Libraries -->
       <AdditionalDependencies>
         arcana.lib;
-        astc-encoder.lib;
         BabylonNative.lib;
         bgfx.lib;
         bimg.lib;
-        tinyexr.lib;
+        bimg_encode.lib;
+        bimg_decode.lib;
         bx.lib;
         Canvas.lib;
-        edtaa3.lib;
-        etc1.lib;
-        etc2.lib;
         GenericCodeGen.lib;
         glslang.lib;
         glslang-default-resource-limits.lib;
         Graphics.lib;
-        iqa.lib;
         jsi.lib;
         JsRuntime.lib;
         MachineIndependent.lib;
@@ -260,20 +249,15 @@
         NativeInput.lib;
         NativeOptimizations.lib;
         NativeTracing.lib;
-        NativeXr.lib;
-        nvtt.lib;
         OGLCompiler.lib;
-        openxr_loader.lib;
         OSDependent.lib;
-        pvrtc.lib;
         spirv-cross-core.lib;
         spirv-cross-hlsl.lib;
         SPIRV.lib;
-        squish.lib;
         UrlLib.lib;
         Window.lib;
+        Scheduling.lib;
         XMLHttpRequest.lib;
-        xr.lib;
         WindowsApp.lib;
         %(AdditionalDependencies);
       </AdditionalDependencies>
