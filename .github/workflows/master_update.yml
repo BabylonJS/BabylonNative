@@ -9,13 +9,13 @@ on:
 jobs:
   dispatch:
     name: Dispatch ${{ github.sha }}
-    runs-on: windows-2019
+    runs-on: windows-latest
     strategy:
       matrix:
         repo: ['BabylonJS/BabylonReactNative']
     steps:
       - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v1
+        uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.REPO_ACCESS_TOKEN }}
           repository: ${{ matrix.repo }}
