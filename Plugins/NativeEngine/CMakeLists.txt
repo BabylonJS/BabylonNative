@@ -43,6 +43,7 @@ target_link_libraries(NativeEngine
     PRIVATE bimg_encode
     PRIVATE bimg_decode
     PRIVATE bx
+    PRIVATE minz
     PRIVATE glslang
     PRIVATE glslang-default-resource-limits
     PRIVATE GraphicsDevice

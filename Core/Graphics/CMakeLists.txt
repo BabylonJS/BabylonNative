@@ -46,6 +46,7 @@ target_link_libraries(Graphics
     PRIVATE bimg
     PRIVATE bimg_encode
     PRIVATE bimg_decode
+    PRIVATE minz
     PRIVATE bx)
 
 target_compile_definitions(Graphics
