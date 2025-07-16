@@ -35,7 +35,7 @@ endfunction()
 install_targets(arcana)
 
 ## bgfx
-install_targets(bimg_encode bimg_decode bgfx bimg bx)
+install_targets(bimg_encode bimg_decode bgfx bimg bx minz)
 
 ## glslang
 install_targets(GenericCodeGen glslang MachineIndependent OGLCompiler OSDependent SPIRV glslang-default-resource-limits)
