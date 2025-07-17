@@ -21,7 +21,7 @@ jobs:
   - checkout: self
 
   - script: |
-      cmake -B build -A x64 -D BX_CONFIG_DEBUG=ON -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256 -D BABYLON_DEBUG_TRACE=ON
+      cmake -G "Visual Studio 17 2022" -B build -A x64 -D BX_CONFIG_DEBUG=ON -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256 -D BABYLON_DEBUG_TRACE=ON
     displayName: 'Generate solution'
 
   - script: |

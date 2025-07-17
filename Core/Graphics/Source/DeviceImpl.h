@@ -109,7 +109,6 @@ namespace Babylon::Graphics
 
         void UpdateBgfxState();
         void UpdateBgfxResolution();
-        void DiscardIfDirty();
         void RequestScreenShots();
         void Frame();
         bgfx::Encoder* GetEncoderForThread();

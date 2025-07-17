@@ -5,7 +5,7 @@
 
 namespace Babylon::Graphics
 {
-    FrameBuffer::FrameBuffer(DeviceContext& deviceContext, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil)
+    FrameBuffer::FrameBuffer(DeviceContext& deviceContext, bgfx::FrameBufferHandle handle, uint16_t width, uint16_t height, bool defaultBackBuffer, bool hasDepth, bool hasStencil, int8_t depthStencilAttachmentIndex)
         : m_deviceContext{deviceContext}
         , m_deviceID{deviceContext.GetDeviceId()}
         , m_handle{handle}
@@ -15,6 +15,7 @@ namespace Babylon::Graphics
         , m_hasDepth{hasDepth}
         , m_hasStencil{hasStencil}
         , m_disposed{false}
+        , m_depthStencilAttachmentIndex{depthStencilAttachmentIndex}
     {
     }
 
@@ -30,10 +31,19 @@ namespace Babylon::Graphics
             return;
         }
 
-        if (bgfx::isValid(m_handle) && m_deviceID == m_deviceContext.GetDeviceId())
+        if (m_deviceID == m_deviceContext.GetDeviceId())
         {
-            bgfx::destroy(m_handle);
-            m_handle = BGFX_INVALID_HANDLE;
+            if (m_depthStencilAttachmentIndex >= 0)
+            {
+                bgfx::destroy(bgfx::getTexture(m_handle, m_depthStencilAttachmentIndex));
+                m_depthStencilAttachmentIndex = -1;
+            }
+
+            if (bgfx::isValid(m_handle))
+            {
+                bgfx::destroy(m_handle);
+                m_handle = BGFX_INVALID_HANDLE;
+            }
         }
 
         m_disposed = true;
