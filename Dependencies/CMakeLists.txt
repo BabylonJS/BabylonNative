@@ -3,7 +3,7 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 # --------------------------------------------------
 # AndroidExtensions
 # --------------------------------------------------
-if(ANDROID)
+if(ANDROID OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(AndroidExtensions)
 endif()
 
@@ -15,7 +15,7 @@ FetchContent_MakeAvailable_With_Message(arcana.cpp)
 # --------------------------------------------------
 # arcore-android-sdk
 # --------------------------------------------------
-if(ANDROID)
+if(ANDROID OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(arcore-android-sdk)
 endif()
 
@@ -192,7 +192,7 @@ endif()
 # xr
 # --------------------------------------------------
 # Currently supported on Android via ARCore, and iOS via ARKit.
-if(BABYLON_NATIVE_PLUGIN_NATIVEXR AND (ANDROID OR IOS))
+if((BABYLON_NATIVE_PLUGIN_NATIVEXR AND (ANDROID OR IOS)) OR BABYLON_NATIVE_BUILD_SOURCETREE)
     add_subdirectory(xr)
     set_property(TARGET xr PROPERTY FOLDER Dependencies/xr)
     warnings_as_errors(xr)
