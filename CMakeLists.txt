@@ -48,6 +48,13 @@ FetchContent_Declare(libwebp
 
 FetchContent_MakeAvailable(CMakeExtensions)
 
+# BABYLON_NATIVE_BUILD_SOURCETREE flag is used by BabylonReactNative NPM build process.
+# CMake script is run twice. At package creation, BABYLON_NATIVE_BUILD_SOURCETREE is ON
+# which makes all dependencies to be fetched and packaged.
+# At build time, cmake is run again on BabylonNative root but FETCHCONTENT_FULLY_DISCONNECTED is ON
+# and FetchContent_MakeAvailable_With_Message will use provided local folder provided to cmake command line
+# like '-DFETCHCONTENT_SOURCE_DIR_BGFX.CMAKE=../shared/Babylon/....'
+
 if(VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
     if(NOT BABYLON_NATIVE_BUILD_SOURCETREE)
