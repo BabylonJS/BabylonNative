@@ -36,8 +36,6 @@ jobs:
         sleep 3
         cd build/Apps/Playground
         ./Playground app:///Scripts/validation_native.js
-      # Only test with V8 for now as ValidationTests with JSC are pretty unstable
-      condition: contains('${{ parameters.JSEngine }}', 'V8')
       displayName: 'Validation Tests'
 
     - task: PublishBuildArtifacts@1
