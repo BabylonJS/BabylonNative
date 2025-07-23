@@ -903,54 +903,64 @@ namespace Babylon::ShaderCompilerTraversers
         };
     }
 
-    class ComparisonTypeCastTraverser : public glslang::TIntermTraverser {
+    class ComparisonTypeCastTraverser : public glslang::TIntermTraverser
+    {
     public:
-        static void Traverse(TProgram& program) {
+        static void Traverse(TProgram& program)
+        {
             ComparisonTypeCastTraverser traverser;
             program.getIntermediate(EShLangFragment)->getTreeRoot()->traverse(&traverser);
             program.getIntermediate(EShLangVertex)->getTreeRoot()->traverse(&traverser);
         }
 
     protected:
-        bool visitBinary(glslang::TVisit, glslang::TIntermBinary* node) override {
+        bool visitBinary(glslang::TVisit, glslang::TIntermBinary* node) override
+        {
             using namespace glslang;
 
             // Only target comparison operations
-            switch (node->getOp()) {
-            case EOpEqual:
-            case EOpNotEqual:
-            case EOpLessThan:
-            case EOpGreaterThan:
-            case EOpLessThanEqual:
-            case EOpGreaterThanEqual:
-                break;
-            default:
-                return true;  // Skip non-comparison binary ops
+            switch (node->getOp())
+            {
+                case EOpEqual:
+                case EOpNotEqual:
+                case EOpLessThan:
+                case EOpGreaterThan:
+                case EOpLessThanEqual:
+                case EOpGreaterThanEqual:
+                    break;
+                default:
+                    return true;  // Skip non-comparison binary ops
             }
 
             TIntermTyped* left = node->getLeft();
             TIntermTyped* right = node->getRight();
 
             if (!left || !right)
+            {
                 return true;
+            }
 
             const TType& leftType = left->getType();
             const TType& rightType = right->getType();
 
             if (leftType == rightType)
+            {
                 return true;  // Types already match
+            }
 
             // Promote to the higher precision scalar type
             TBasicType promoteType = PromoteType(leftType.getBasicType(), rightType.getBasicType());
 
             // Wrap expressions in a cast if needed
-            if (leftType.getBasicType() != promoteType) {
+            if (leftType.getBasicType() != promoteType)
+            {
                 TType newType(promoteType, EvqTemporary);
                 TIntermTyped* cast = AddConversion(promoteType, left);
                 node->setLeft(cast);
             }
 
-            if (rightType.getBasicType() != promoteType) {
+            if (rightType.getBasicType() != promoteType)
+            {
                 TType newType(promoteType, EvqTemporary);
                 TIntermTyped* cast = AddConversion(promoteType, right);
                 node->setRight(cast);
@@ -961,7 +971,8 @@ namespace Babylon::ShaderCompilerTraversers
 
     private:
         // Promote scalar types like float > int ? float
-        TBasicType PromoteType(TBasicType a, TBasicType b) {
+        TBasicType PromoteType(TBasicType a, TBasicType b)
+        {
             // You can define your promotion rules here.
             if (a == EbtFloat || b == EbtFloat)
                 return EbtFloat;
@@ -972,7 +983,8 @@ namespace Babylon::ShaderCompilerTraversers
             return a;  // default fallback
         }
 
-        glslang::TIntermTyped* AddConversion(glslang::TBasicType targetType, glslang::TIntermTyped* expr) {
+        glslang::TIntermTyped* AddConversion(glslang::TBasicType targetType, glslang::TIntermTyped* expr)
+        {
             using namespace glslang;
 
             TType type(targetType, EvqTemporary);
