@@ -84,6 +84,7 @@ namespace Babylon
         auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
         std::unordered_map<std::string, std::string> vertexAttributeRenaming = {};
         ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryingsOpenGL(program, ids, vertexAttributeRenaming);
+        ShaderCompilerTraversers::ComparisonTypeCast(program);
 
         std::string vertexGLSL(vertexSource.data(), vertexSource.size());
         auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, vertexGLSL);
