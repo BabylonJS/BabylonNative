@@ -317,7 +317,7 @@ namespace Babylon::ShaderCompilerTraversers
                     TPublicType publicType{};
                     publicType.qualifier = type.getQualifier();
 
-                    publicType.basicType = EbtFloat;
+                    publicType.basicType = type.getBasicType();
                     publicType.setVector(4);
 
                     if (type.getArraySizes())
@@ -902,7 +902,7 @@ namespace Babylon::ShaderCompilerTraversers
             TIntermediate* m_intermediate{};
         };
     }
-
+    /*
     class ComparisonTypeCastTraverser : public glslang::TIntermTraverser
     {
     public:
@@ -997,7 +997,7 @@ namespace Babylon::ShaderCompilerTraversers
             return constructor;
         }
     };
-
+    */
     ScopeT MoveNonSamplerUniformsIntoStruct(TProgram& program, IdGenerator& ids)
     {
         return NonSamplerUniformToStructTraverser::Traverse(program, ids);
@@ -1012,12 +1012,12 @@ namespace Babylon::ShaderCompilerTraversers
     {
         VertexVaryingInTraverserOpenGL::Traverse(program, ids, replacementToOriginalName);
     }
-
+    /*
     void ComparisonTypeCast(TProgram& program)
     {
         ComparisonTypeCastTraverser::Traverse(program);
     }
-
+    */
     void AssignLocationsAndNamesToVertexVaryingsMetal(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
     {
         VertexVaryingInTraverserMetal::Traverse(program, ids, replacementToOriginalName);
