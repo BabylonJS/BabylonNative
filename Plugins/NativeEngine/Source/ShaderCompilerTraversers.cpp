@@ -317,7 +317,14 @@ namespace Babylon::ShaderCompilerTraversers
                     TPublicType publicType{};
                     publicType.qualifier = type.getQualifier();
 
-                    publicType.basicType = type.getBasicType();
+                    if (type.getBasicType() == EbtInt)
+                    {
+                        publicType.basicType = type.getBasicType();
+                    }
+                    else {
+                        publicType.basicType = EbtFloat;
+                    }
+
                     publicType.setVector(4);
 
                     if (type.getArraySizes())
