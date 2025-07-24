@@ -317,13 +317,7 @@ namespace Babylon::ShaderCompilerTraversers
                     TPublicType publicType{};
                     publicType.qualifier = type.getQualifier();
 
-                    if (type.getBasicType() == EbtInt)
-                    {
-                        publicType.basicType = type.getBasicType();
-                    }
-                    else {
-                        publicType.basicType = EbtFloat;
-                    }
+                    publicType.basicType = EbtFloat;
 
                     publicType.setVector(4);
 
@@ -402,6 +396,10 @@ namespace Babylon::ShaderCompilerTraversers
                         // create a shape conversion operation -- unless the uniform is an array, in which case
                         // it's slightly more complicated.
                         auto* parent = this->getParentNode();
+
+                        // Check for casting requirement
+                        bool needsCastToInt = oldType->getBasicType() == EbtInt;
+
                         if (symbol->isArray())
                         {
                             // Converting the shape of an element retrieved from an array is similar to converting
@@ -423,11 +421,29 @@ namespace Babylon::ShaderCompilerTraversers
                                 auto* binType = newType.clone();
                                 binType->clearArraySizes();
                                 binary->setType(*binType);
-                                auto shapeConversion = m_intermediate->addShapeConversion(*oldType, binary);
+
+                                TIntermTyped* target = binary;
+
+                                // Inject cast to int before shape conversion
+                                if (needsCastToInt)
+                                {
+                                    TPublicType publicTypeCast{};
+                                    publicTypeCast.basicType = EbtInt;
+                                    publicTypeCast.vectorSize = oldType->getVectorSize();
+                                    publicTypeCast.qualifier = oldType->getQualifier();
+
+                                    TType castType(publicTypeCast);
+                                    auto* castNode = new TIntermAggregate(EOpConstructInt);
+                                    castNode->setType(castType);
+                                    castNode->getSequence().push_back(binary);
+                                    target = castNode;
+                                }
+
+                                auto shapeConversion = m_intermediate->addShapeConversion(*oldType, target);
 
                                 assert(this->path.size() > 1);
                                 auto* grandparent = this->path[this->path.size() - 2];
-                                injectShapeConversion(binary, grandparent, shapeConversion);
+                                injectShapeConversion(target, grandparent, shapeConversion);
                             }
                             else
                             {
@@ -436,8 +452,24 @@ namespace Babylon::ShaderCompilerTraversers
                         }
                         else
                         {
-                            auto shapeConversion = m_intermediate->addShapeConversion(*oldType, symbol);
-                            injectShapeConversion(symbol, parent, shapeConversion);
+                            TIntermTyped* target = symbol;
+
+                            if (needsCastToInt)
+                            {
+                                TPublicType publicTypeCast{};
+                                publicTypeCast.basicType = EbtInt;
+                                publicTypeCast.vectorSize = oldType->getVectorSize();
+                                publicTypeCast.qualifier = oldType->getQualifier();
+
+                                TType castType(publicTypeCast);
+                                auto* castNode = new TIntermAggregate(EOpConstructInt);
+                                castNode->setType(castType);
+                                castNode->getSequence().push_back(symbol);
+                                target = castNode;
+                            }
+
+                            auto shapeConversion = m_intermediate->addShapeConversion(*oldType, target);
+                            injectShapeConversion(target, parent, shapeConversion);
                         }
                     }
 
@@ -909,102 +941,7 @@ namespace Babylon::ShaderCompilerTraversers
             TIntermediate* m_intermediate{};
         };
     }
-    /*
-    class ComparisonTypeCastTraverser : public glslang::TIntermTraverser
-    {
-    public:
-        static void Traverse(TProgram& program)
-        {
-            ComparisonTypeCastTraverser traverser;
-            program.getIntermediate(EShLangFragment)->getTreeRoot()->traverse(&traverser);
-            program.getIntermediate(EShLangVertex)->getTreeRoot()->traverse(&traverser);
-        }
 
-    protected:
-        bool visitBinary(glslang::TVisit, glslang::TIntermBinary* node) override
-        {
-            using namespace glslang;
-
-            // Only target comparison operations
-            switch (node->getOp())
-            {
-                case EOpEqual:
-                case EOpNotEqual:
-                case EOpLessThan:
-                case EOpGreaterThan:
-                case EOpLessThanEqual:
-                case EOpGreaterThanEqual:
-                    break;
-                default:
-                    return true;  // Skip non-comparison binary ops
-            }
-
-            TIntermTyped* left = node->getLeft();
-            TIntermTyped* right = node->getRight();
-
-            if (!left || !right)
-            {
-                return true;
-            }
-
-            const TType& leftType = left->getType();
-            const TType& rightType = right->getType();
-
-            if (leftType == rightType)
-            {
-                return true;  // Types already match
-            }
-
-            // Promote to the higher precision scalar type
-            TBasicType promoteType = PromoteType(leftType.getBasicType(), rightType.getBasicType());
-
-            // Wrap expressions in a cast if needed
-            if (leftType.getBasicType() != promoteType)
-            {
-                TType newType(promoteType, EvqTemporary);
-                TIntermTyped* cast = AddConversion(promoteType, left);
-                node->setLeft(cast);
-            }
-
-            if (rightType.getBasicType() != promoteType)
-            {
-                TType newType(promoteType, EvqTemporary);
-                TIntermTyped* cast = AddConversion(promoteType, right);
-                node->setRight(cast);
-            }
-
-            return true;
-        }
-
-    private:
-        // Promote scalar types like float > int ? float
-        TBasicType PromoteType(TBasicType a, TBasicType b)
-        {
-            // You can define your promotion rules here.
-            if (a == EbtFloat || b == EbtFloat)
-                return EbtFloat;
-            if (a == EbtInt64 || b == EbtInt64)
-                return EbtInt64;
-            if (a == EbtInt || b == EbtInt)
-                return EbtInt;
-            return a;  // default fallback
-        }
-
-        glslang::TIntermTyped* AddConversion(glslang::TBasicType targetType, glslang::TIntermTyped* expr)
-        {
-            using namespace glslang;
-
-            TType type(targetType, EvqTemporary);
-            auto* constructor = new TIntermAggregate();
-
-            constructor->setType(type);
-            constructor->getSequence().push_back(expr);
-            constructor->setLoc(expr->getLoc());
-
-            return constructor;
-        }
-    };
-    */
     ScopeT MoveNonSamplerUniformsIntoStruct(TProgram& program, IdGenerator& ids)
     {
         return NonSamplerUniformToStructTraverser::Traverse(program, ids);
@@ -1019,12 +956,7 @@ namespace Babylon::ShaderCompilerTraversers
     {
         VertexVaryingInTraverserOpenGL::Traverse(program, ids, replacementToOriginalName);
     }
-    /*
-    void ComparisonTypeCast(TProgram& program)
-    {
-        ComparisonTypeCastTraverser::Traverse(program);
-    }
-    */
+
     void AssignLocationsAndNamesToVertexVaryingsMetal(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
     {
         VertexVaryingInTraverserMetal::Traverse(program, ids, replacementToOriginalName);
