@@ -31,24 +31,6 @@ Babylon::Plugins::NativeInput* nativeInput{};
 
 namespace
 {
-    std::filesystem::path GetModulePath()
-    {
-        char exe[1024];
-
-        int ret = readlink("/proc/self/exe", exe, sizeof(exe)-1);
-        if(ret == -1)
-        {
-            exit(1);
-        }
-        exe[ret] = 0;
-        return std::filesystem::path{exe};
-    }
-
-    std::string GetUrlFromPath(const std::filesystem::path path)
-    {
-        return std::string("file://") + path.generic_string();
-    }
-
     void Uninitialize()
     {
         if (device)
@@ -67,7 +49,6 @@ namespace
     void InitBabylon(Window window, int width, int height, int argc, const char* const* argv)
     {
         std::vector<std::string> scripts(argv + 1, argv + argc);
-        std::string moduleRootUrl = GetUrlFromPath(GetModulePath().parent_path());
 
         Uninitialize();
 
@@ -108,25 +89,25 @@ namespace
 
 
         Babylon::ScriptLoader loader{*runtime};
-        loader.LoadScript(moduleRootUrl + "/Scripts/ammo.js");
-        loader.LoadScript(moduleRootUrl + "/Scripts/recast.js");
-        loader.LoadScript(moduleRootUrl + "/Scripts/babylon.max.js");
-        loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.loaders.js");
-        loader.LoadScript(moduleRootUrl + "/Scripts/babylonjs.materials.js");
-        loader.LoadScript(moduleRootUrl + "/Scripts/babylon.gui.js");
+        loader.LoadScript("app:///Scripts/ammo.js");
+        loader.LoadScript("app:///Scripts/recast.js");
+        loader.LoadScript("app:///Scripts/babylon.max.js");
+        loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
+        loader.LoadScript("app:///Scripts/babylonjs.materials.js");
+        loader.LoadScript("app:///Scripts/babylon.gui.js");
 
         if (scripts.empty())
         {
-            loader.LoadScript(moduleRootUrl + "/Scripts/experience.js");
+            loader.LoadScript("app:///Scripts/experience.js");
         }
         else
         {
             for (const auto& script : scripts)
             {
-                loader.LoadScript(GetUrlFromPath(script));
+                loader.LoadScript(script);
             }
 
-            loader.LoadScript(moduleRootUrl + "/Scripts/playground_runner.js");
+            //loader.LoadScript("app:///Scripts/playground_runner.js");
         }
     }
 
