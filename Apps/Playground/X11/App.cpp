@@ -14,6 +14,7 @@
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeInput.h>
+#include <Babylon/Plugins/TestUtils.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -68,9 +69,9 @@ namespace
 
         runtime.emplace();
 
-        runtime->Dispatch([](Napi::Env env) {
+        runtime->Dispatch([window](Napi::Env env) {
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-                printf("%s", message);
+                printf("%s\n", message);
                 fflush(stdout);
             });
 
@@ -85,6 +86,8 @@ namespace
             Babylon::Plugins::NativeOptimizations::Initialize(env);
 
             nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
+            
+            Babylon::Plugins::TestUtils::Initialize(env, window);
         });
 
 
@@ -107,7 +110,7 @@ namespace
                 loader.LoadScript(script);
             }
 
-            //loader.LoadScript("app:///Scripts/playground_runner.js");
+            loader.LoadScript("app:///Scripts/playground_runner.js");
         }
     }
 
@@ -129,8 +132,8 @@ int main(int _argc, const char* const* _argv)
     int32_t depth  = DefaultDepth(display, screen);
     Visual* visual = DefaultVisual(display, screen);
     Window root   = RootWindow(display, screen);
-    const int width = 640;
-    const int height = 480;
+    const int width = 600;
+    const int height = 400;
 
     XSetWindowAttributes windowAttrs;
     windowAttrs.background_pixel = 0;
