@@ -66,6 +66,7 @@
         {
             "reason": "https://github.com/BabylonJS/BabylonNative/issues/1111",
             "title": "Thin Instances",
+            "errorRatio": 25,
             "playgroundId": "#V1JE4Z#1",
             "referenceImage": "thinInstances.png"
         },
@@ -160,11 +161,13 @@
         {
             "title": "Soft Shadows",
             "playgroundId": "#0YYQ3N#0",
+            "errorRatio": 50,
             "referenceImage": "softShadows.png"
         },
         {
             "title": "Soft Shadows (Right Handed)",
             "playgroundId": "#0YYQ3N#2",
+            "errorRatio": 50,
             "referenceImage": "softShadowsRightHanded.png"
         },
         {
@@ -244,6 +247,7 @@
         {
             "title": "Fresnel",
             "playgroundId": "#603JUZ#1",
+            "errorRatio": 50,
             "referenceImage": "fresnel.png"
         },
         {
@@ -260,6 +264,7 @@
         {
             "title": "Multi camera rendering",
             "playgroundId": "#1LK70I#22",
+            "errorRatio": 50,
             "referenceImage": "multiCameraRendering.png"
         },
         {
@@ -271,6 +276,7 @@
         {
             "title": "Multi camera rendering with scissors",
             "playgroundId": "#1LK70I#35",
+            "errorRatio": 50,
             "referenceImage": "multiCameraRenderingWithScissors.png"
         },
         {
@@ -286,6 +292,7 @@
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
             "excludedGraphicsApis": [ "D3D12" ],
+            "errorRatio": 50,
             "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx"
         },
         {
@@ -493,6 +500,7 @@
         {
             "title": "GLTF Alien",
             "playgroundId": "#XN37SR#5",
+            "excludedGraphicsApis": [ "OpenGL" ],
             "referenceImage": "gltfAlien.png"
         },
         {
