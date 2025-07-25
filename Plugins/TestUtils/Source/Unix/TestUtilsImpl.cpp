@@ -26,6 +26,7 @@ namespace Babylon::Plugins::Internal
         dummyEvent.type = ClientMessage;
         dummyEvent.window = window;
         dummyEvent.format = 32;
+        dummyEvent.data.l[0] = XInternAtom(display, "WM_DELETE_WINDOW", False);;
         XSendEvent(display, window, 0, 0, (XEvent*)&dummyEvent);
         XFlush(display);
     }
