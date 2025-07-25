@@ -126,8 +126,6 @@ else()
     message(FATAL_ERROR "Unrecognized platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-message("Graphics API B ${GRAPHICS_API} - ${BABYLON_NATIVE_PLATFORM}")
-
 if(APPLE)
     set(GRAPHICS_API Metal)
 elseif(UNIX)
@@ -147,8 +145,6 @@ elseif(WIN32)
         endif()
     endif()
 endif()
-
-message("Graphics API A ${GRAPHICS_API}")
 
 if(APPLE)
     set(BABYLON_NATIVE_PLATFORM_IMPL_EXT "mm")
