@@ -425,19 +425,10 @@ namespace Babylon::ShaderCompilerTraversers
                                 TIntermTyped* target = binary;
 
                                 // Inject cast to int before shape conversion
-                                if (needsCastToInt)
+                                /*if (needsCastToInt)
                                 {
-                                    TPublicType publicTypeCast{};
-                                    publicTypeCast.basicType = EbtInt;
-                                    publicTypeCast.vectorSize = oldType->getVectorSize();
-                                    publicTypeCast.qualifier = oldType->getQualifier();
-
-                                    TType castType(publicTypeCast);
-                                    auto* castNode = new TIntermAggregate(EOpConstructInt);
-                                    castNode->setType(castType);
-                                    castNode->getSequence().push_back(binary);
-                                    target = castNode;
-                                }
+                                    target = InjectCast(oldType, binary);
+                                }*/
 
                                 auto shapeConversion = m_intermediate->addShapeConversion(*oldType, target);
 
@@ -456,16 +447,7 @@ namespace Babylon::ShaderCompilerTraversers
 
                             if (needsCastToInt)
                             {
-                                TPublicType publicTypeCast{};
-                                publicTypeCast.basicType = EbtInt;
-                                publicTypeCast.vectorSize = oldType->getVectorSize();
-                                publicTypeCast.qualifier = oldType->getQualifier();
-
-                                TType castType(publicTypeCast);
-                                auto* castNode = new TIntermAggregate(EOpConstructInt);
-                                castNode->setType(castType);
-                                castNode->getSequence().push_back(symbol);
-                                target = castNode;
+                                target = InjectCast(oldType, symbol);
                             }
 
                             auto shapeConversion = m_intermediate->addShapeConversion(*oldType, target);
@@ -477,6 +459,25 @@ namespace Babylon::ShaderCompilerTraversers
                 }
             }
 
+            TIntermTyped* InjectCast(TType* oldType, TIntermNode* node)
+            {
+                TPublicType publicTypeCast{};
+                publicTypeCast.basicType = EbtInt;
+                publicTypeCast.vectorSize = oldType->getVectorSize();
+                publicTypeCast.qualifier = oldType->getQualifier();
+
+                TType castType(publicTypeCast);
+                casts.emplace_back(std::make_unique<TIntermAggregate>(EOpConstructInt));
+                TIntermAggregate* castNode = casts.back().get();
+                castNode->setType(castType);
+                castNode->getSequence().push_back(node);
+
+                if (node->getLoc().line != 0) {
+                    castNode->setLoc(node->getLoc());
+                }
+                return castNode;
+            }
+
             static void Traverse(TIntermediate* intermediate, IdGenerator&, AllocationsScope& scope)
             {
                 UniformTypeChangeTraverser traverser{intermediate, scope};
@@ -485,6 +486,7 @@ namespace Babylon::ShaderCompilerTraversers
 
             TIntermediate* m_intermediate{};
             AllocationsScope& m_scope;
+            std::vector<std::unique_ptr<TIntermAggregate>> casts{};
         };
 
         /// This traverser modifies all vertex attributes (position, UV, etc.) to conform to
