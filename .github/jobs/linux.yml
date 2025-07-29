@@ -35,6 +35,7 @@ jobs:
         Xvfb :99 -screen 0 1600x900x24 &
         sleep 3
         cd build/Apps/Playground
+        export MESA_EXTENSION_OVERRIDE="-EGL_KHR_create_context"
         ./Playground app:///Scripts/validation_native.js
       displayName: 'Validation Tests'
 
