@@ -10,7 +10,8 @@
             "title": "NME Shadow Map",
             "playgroundId": "#M3QR7E#83",
             "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "nmeshadowmap.png"
+            "referenceImage": "nmeshadowmap.png",
+            "comment": "xvfb : invalid enum with glRenderbufferStorage"
         },
         {
             "title": "Procedural texture with NME",
@@ -44,7 +45,8 @@
             "referenceImage": "gltfExtensionKhrMaterialsVolumeAttenuation.png",
             "excludedGraphicsApis": [ "OpenGL" ],
             "errorRatio": 1.2,
-            "renderCount": 10
+            "renderCount": 10,
+            "comment": "xvfb : invalid enum with glRenderbufferStorage"
         },
         {
             "title": "GLTF ClearCoat",
@@ -114,7 +116,8 @@
             "playgroundId": "#UNS6ZV#2",
             "renderCount": 50,
             "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "glowlayerandlods.png"
+            "referenceImage": "glowlayerandlods.png",
+            "comment": "xvfb : invalid enum with glRenderbufferStorage"
         },
         {
             "title": "Nested BBG",
@@ -168,14 +171,16 @@
             "playgroundId": "#0YYQ3N#0",
             "errorRatio": 50,
             "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "softShadows.png"
+            "referenceImage": "softShadows.png",
+            "comment": "OpenGL: invalid light and wrong specular with SSAOcat.babylon"
         },
         {
             "title": "Soft Shadows (Right Handed)",
             "playgroundId": "#0YYQ3N#2",
             "errorRatio": 50,
             "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "softShadowsRightHanded.png"
+            "referenceImage": "softShadowsRightHanded.png",
+            "comment": "OpenGL: invalid light and wrong specular with SSAOcat.babylon"
         },
         {
             "title": "RenderingGroupId",
@@ -187,13 +192,15 @@
             "playgroundId": "#CQNGRK#0",
             "renderCount": 2,
             "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "LightProjectionTexture.png"
+            "referenceImage": "LightProjectionTexture.png",
+            "comment": "xvfb : no rendering"
         },
         {
             "title": "Point light shadows",
             "playgroundId": "#U2F7P9#4",
             "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "point-light-shadows.png"
+            "referenceImage": "point-light-shadows.png",
+            "comment": "xvfb : invalid enum with glRenderbufferStorage"
         },
         {
             "title": "Texture cache",
@@ -281,7 +288,8 @@
             "renderCount": 2,
             "playgroundId": "#BCYE7J#31",
             "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "multiCamerasOutputRenderTarget.png"
+            "referenceImage": "multiCamerasOutputRenderTarget.png",
+            "comment": "Incorrect rendering with OpenGL"
         },
         {
             "title": "Multi camera rendering with scissors",
@@ -294,7 +302,7 @@
             "playgroundId": "#W7E7CF#34",
             "referenceImage": "scissor-test.png",
             "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
-            "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx"
+            "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx. Incorrect rendering with OpenGL."
         },
         {
             "title": "Scissor test with 0.9 hardware scaling",
@@ -303,7 +311,7 @@
             "referenceImage": "scissor-test-2.png",
             "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
             "errorRatio": 50,
-            "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx"
+            "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx. Incorrect rendering with OpenGL"
         },
         {
             "title": "Scissor test with 1.5 hardware scaling",
@@ -311,7 +319,7 @@
             "replace": "//options//, hardwareScalingLevel = 1.5;",
             "referenceImage": "scissor-test-3.png",
             "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
-            "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx"
+            "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx. Incorrect rendering with OpenGL"
         },
         {
             "title": "Scissor test with negative x and y",
@@ -511,7 +519,8 @@
             "title": "GLTF Alien",
             "playgroundId": "#XN37SR#5",
             "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "gltfAlien.png"
+            "referenceImage": "gltfAlien.png",
+            "comment": " int/float casting see https://github.com/BabylonJS/BabylonNative/pull/1544"
         },
         {
             "title": "Interleaved buffers test",
