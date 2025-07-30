@@ -368,14 +368,15 @@ namespace Babylon
                     {
                         bimg::ImageContainer* image{images[(side * numMips) + mip]};
 
+                        if (bgfx::getCaps()->originBottomLeft)
+                        {
+                            FlipImage({ static_cast<uint8_t*>(image->m_data), image->m_size }, image->m_height);
+                        }
+
                         bgfx::ReleaseFn releaseFn{[](void*, void* userData) {
                             bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
                         }};
 
-                        if (bgfx::getCaps()->originBottomLeft)
-                        {
-                            FlipImage({static_cast<uint8_t*>(image->m_data), image->m_size}, image->m_height);
-                        }
                         const bgfx::Memory* mem{bgfx::makeRef(image->m_data, image->m_size, releaseFn, image)};
                         texture->UpdateCube(0, side, mip, 0, 0, static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), mem);
                     }
@@ -391,6 +392,11 @@ namespace Babylon
                         bimg::ImageMip imageMip{};
                         if (bimg::imageGetRawData(*image, 0, mip, image->m_data, image->m_size, imageMip))
                         {
+                            if (bgfx::getCaps()->originBottomLeft)
+                            {
+                                FlipImage({ const_cast<uint8_t*>(imageMip.m_data), imageMip.m_size }, image->m_height);
+                            }
+
                             bgfx::ReleaseFn releaseFn{};
                             if (mip == image->m_numMips - 1)
                             {
@@ -399,10 +405,6 @@ namespace Babylon
                                 };
                             }
 
-                            if (bgfx::getCaps()->originBottomLeft)
-                            {
-                                FlipImage({const_cast<uint8_t*>(imageMip.m_data), imageMip.m_size}, image->m_height);
-                            }
                             const bgfx::Memory* mem{bgfx::makeRef(imageMip.m_data, imageMip.m_size, releaseFn, image)};
                             texture->UpdateCube(0, side, mip, 0, 0, static_cast<uint16_t>(imageMip.m_width), static_cast<uint16_t>(imageMip.m_height), mem);
                         }
