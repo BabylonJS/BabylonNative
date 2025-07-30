@@ -23,7 +23,9 @@
             "playgroundId": "#QFIGLW#9",
             "renderCount": 10,
             "errorRatio": 6,
-            "referenceImage": "gltfExtensionExtMeshGpuInstancingTest.png"
+            "excludedGraphicsApis": [ "OpenGL" ],
+            "referenceImage": "gltfExtensionExtMeshGpuInstancingTest.png",
+            "comment": "Test works with OpenGL but it so slow that CI times out"
         },
         {
             "title": "GLTF ext MSFT_LOD",
