@@ -50,5 +50,5 @@ jobs:
 
     - script: |
         cd build/Apps/UnitTests
-        ./UnitTests
+        xvfb-run ./UnitTests
       displayName: 'Unit Tests'
