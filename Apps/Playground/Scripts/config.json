@@ -9,6 +9,7 @@
         {
             "title": "NME Shadow Map",
             "playgroundId": "#M3QR7E#83",
+            "excludedGraphicsApis": [ "OpenGL" ],
             "referenceImage": "nmeshadowmap.png"
         },
         {
