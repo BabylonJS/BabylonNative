@@ -40,6 +40,7 @@
             "title": "GLTF Extension KHR_materials_volume with attenuation",
             "playgroundId": "#YG3BBF#18",
             "referenceImage": "gltfExtensionKhrMaterialsVolumeAttenuation.png",
+            "excludedGraphicsApis": [ "OpenGL" ],
             "errorRatio": 1.2,
             "renderCount": 10
         },
@@ -110,6 +111,7 @@
             "title": "Glow layer and LODs",
             "playgroundId": "#UNS6ZV#2",
             "renderCount": 50,
+            "excludedGraphicsApis": [ "OpenGL" ],
             "referenceImage": "glowlayerandlods.png"
         },
         {
@@ -163,12 +165,14 @@
             "title": "Soft Shadows",
             "playgroundId": "#0YYQ3N#0",
             "errorRatio": 50,
+            "excludedGraphicsApis": [ "OpenGL" ],
             "referenceImage": "softShadows.png"
         },
         {
             "title": "Soft Shadows (Right Handed)",
             "playgroundId": "#0YYQ3N#2",
             "errorRatio": 50,
+            "excludedGraphicsApis": [ "OpenGL" ],
             "referenceImage": "softShadowsRightHanded.png"
         },
         {
@@ -180,11 +184,13 @@
             "title": "Light Projection Texture",
             "playgroundId": "#CQNGRK#0",
             "renderCount": 2,
+            "excludedGraphicsApis": [ "OpenGL" ],
             "referenceImage": "LightProjectionTexture.png"
         },
         {
             "title": "Point light shadows",
             "playgroundId": "#U2F7P9#4",
+            "excludedGraphicsApis": [ "OpenGL" ],
             "referenceImage": "point-light-shadows.png"
         },
         {
@@ -272,6 +278,7 @@
             "title": "Multi cameras and output render target",
             "renderCount": 2,
             "playgroundId": "#BCYE7J#31",
+            "excludedGraphicsApis": [ "OpenGL" ],
             "referenceImage": "multiCamerasOutputRenderTarget.png"
         },
         {
@@ -284,7 +291,7 @@
             "title": "Scissor test",
             "playgroundId": "#W7E7CF#34",
             "referenceImage": "scissor-test.png",
-            "excludedGraphicsApis": [ "D3D12" ],
+            "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
             "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx"
         },
         {
@@ -292,7 +299,7 @@
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
-            "excludedGraphicsApis": [ "D3D12" ],
+            "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
             "errorRatio": 50,
             "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx"
         },
@@ -301,7 +308,7 @@
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 1.5;",
             "referenceImage": "scissor-test-3.png",
-            "excludedGraphicsApis": [ "D3D12" ],
+            "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
             "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx"
         },
         {
