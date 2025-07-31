@@ -357,6 +357,40 @@ namespace Babylon::ShaderCompilerTraversers
                             }
                             else
                             {
+                                if (binary->getLeft()->getBasicType() == EbtInt &&
+                                    binary->getRight()->getBasicType() == EbtFloat)
+                                {
+                                    TConstUnion indexValue;
+                                    indexValue.setIConst(0);
+
+                                    TConstUnionArray indexArray(1);
+                                    indexArray[0] = indexValue;
+
+                                    TType indexType(EbtInt, EvqConst); // scalar int
+                                    TIntermConstantUnion* indexNode = new TIntermConstantUnion(indexArray, indexType);
+
+                                    TIntermBinary* accessX = new TIntermBinary(EOpIndexDirect);
+                                    accessX->setLeft(node);
+                                    accessX->setRight(indexNode);
+                                    accessX->setType(TType(EbtFloat, EvqTemporary, 1));
+
+                                    TPublicType publicTypeCast{};
+                                    publicTypeCast.basicType = EbtInt;
+                                    publicTypeCast.vectorSize = 1;
+                                    publicTypeCast.qualifier = node->getQualifier();
+
+                                    TType castType(publicTypeCast);
+                                    TIntermAggregate* castNode = new TIntermAggregate(EOpConvFloatToInt);
+                                    castNode->setType(castType);
+                                    castNode->getSequence().push_back(accessX);
+
+                                    if (node->getLoc().line != 0) {
+                                        castNode->setLoc(node->getLoc());
+                                    }
+
+                                    shapeConversion = castNode;
+                                }
+
                                 binary->setRight(shapeConversion);
                             }
                         }
@@ -397,9 +431,6 @@ namespace Babylon::ShaderCompilerTraversers
                         // it's slightly more complicated.
                         auto* parent = this->getParentNode();
 
-                        // Check for casting requirement
-                        bool needsCastToInt = oldType->getBasicType() == EbtInt;
-
                         if (symbol->isArray())
                         {
                             // Converting the shape of an element retrieved from an array is similar to converting
@@ -424,12 +455,6 @@ namespace Babylon::ShaderCompilerTraversers
 
                                 TIntermTyped* target = binary;
 
-                                // Inject cast to int before shape conversion
-                                /*if (needsCastToInt)
-                                {
-                                    target = InjectCast(oldType, binary);
-                                }*/
-
                                 auto shapeConversion = m_intermediate->addShapeConversion(*oldType, target);
 
                                 assert(this->path.size() > 1);
@@ -445,11 +470,6 @@ namespace Babylon::ShaderCompilerTraversers
                         {
                             TIntermTyped* target = symbol;
 
-                            if (needsCastToInt)
-                            {
-                                target = InjectCast(oldType, symbol);
-                            }
-
                             auto shapeConversion = m_intermediate->addShapeConversion(*oldType, target);
                             injectShapeConversion(target, parent, shapeConversion);
                         }
@@ -457,25 +477,6 @@ namespace Babylon::ShaderCompilerTraversers
 
                     delete oldType;
                 }
-            }
-
-            TIntermTyped* InjectCast(TType* oldType, TIntermNode* node)
-            {
-                TPublicType publicTypeCast{};
-                publicTypeCast.basicType = EbtInt;
-                publicTypeCast.vectorSize = oldType->getVectorSize();
-                publicTypeCast.qualifier = oldType->getQualifier();
-
-                TType castType(publicTypeCast);
-                casts.emplace_back(std::make_unique<TIntermAggregate>(EOpConstructInt));
-                TIntermAggregate* castNode = casts.back().get();
-                castNode->setType(castType);
-                castNode->getSequence().push_back(node);
-
-                if (node->getLoc().line != 0) {
-                    castNode->setLoc(node->getLoc());
-                }
-                return castNode;
             }
 
             static void Traverse(TIntermediate* intermediate, IdGenerator&, AllocationsScope& scope)
