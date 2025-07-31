@@ -368,6 +368,11 @@ namespace Babylon
                     {
                         bimg::ImageContainer* image{images[(side * numMips) + mip]};
 
+                        if (bgfx::getCaps()->originBottomLeft)
+                        {
+                            FlipImage({ static_cast<uint8_t*>(image->m_data), image->m_size }, image->m_height);
+                        }
+
                         bgfx::ReleaseFn releaseFn{[](void*, void* userData) {
                             bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
                         }};
@@ -387,6 +392,11 @@ namespace Babylon
                         bimg::ImageMip imageMip{};
                         if (bimg::imageGetRawData(*image, 0, mip, image->m_data, image->m_size, imageMip))
                         {
+                            if (bgfx::getCaps()->originBottomLeft)
+                            {
+                                FlipImage({ const_cast<uint8_t*>(imageMip.m_data), imageMip.m_size }, image->m_height);
+                            }
+
                             bgfx::ReleaseFn releaseFn{};
                             if (mip == image->m_numMips - 1)
                             {
