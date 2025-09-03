@@ -4,10 +4,14 @@ if(NOT((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT AND
 endif()
 
 set(SCRIPTS
-    "Scripts/tests.ts")
+    "Scripts/tests.ts"
+    "Scripts/unittests_performance_shadercache.ts"
+    "Scripts/unittests_performance_spheres.ts")
 
 set(BUILD_SCRIPTS
-    "dist/tests.js")
+    "dist/tests.js"
+    "dist/unittests_performance_shadercache.js"
+    "dist/unittests_performance_spheres.js")
 
 set(SOURCES
     "Shared/Shared.h"

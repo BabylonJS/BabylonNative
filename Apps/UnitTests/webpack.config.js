@@ -7,6 +7,8 @@ module.exports = {
   devtool: false,
   entry: {
     tests: './Scripts/tests.ts',
+    unittests_performance_shadercache: './Scripts/unittests_performance_shadercache.ts',
+    unittests_performance_spheres: './Scripts/unittests_performance_spheres.ts',
   },
   output: {
     filename: '[name].js',
