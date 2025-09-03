@@ -12,7 +12,7 @@ variables:
 - name: UNITY_BUILD
   value: true
 - name: XCODE_VERSION
-  value: 16.2
+  value: 16.4
 
 jobs:
 # Apple
