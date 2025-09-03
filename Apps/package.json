@@ -2,10 +2,11 @@
   "name": "BabylonNative",
   "version": "0.0.1",
   "private": true,
+  "workspaces": [
+    "UnitTests"
+  ],
   "scripts": {
-    "getNightly": "node scripts/getNightly.js",
-    "buildTest" : "npx babel node_modules/mocha/mocha.js --out-file node_modules/mocha/mocha.esm.js && npx babel node_modules/chai/chai.js --out-file node_modules/chai/chai.esm.js && npx rollup node_modules/mocha/mocha.esm.js --file node_modules/mocha/mocha.umd.js --format umd --name mocha && npx rollup node_modules/chai/chai.esm.js --file node_modules/chai/chai.umd.js --format umd --name chai",
-    "postinstall": "npm run buildTest"
+    "getNightly": "node scripts/getNightly.js"
   },
   "dependencies": {
     "babylonjs": "^8.17.0",
@@ -13,14 +14,7 @@
     "babylonjs-gui": "^8.17.0",
     "babylonjs-loaders": "^8.17.0",
     "babylonjs-materials": "^8.17.0",
-    "chai": "^5.2.0",
     "jsc-android": "^241213.1.0",
-    "mocha": "^11.1.0",
     "v8-android": "^7.8.2"
-  },
-  "devDependencies": {
-    "@babel/cli": "^7.27.0",
-    "@babel/core": "^7.26.10",
-    "@babel/preset-env": "^7.26.9"
   }
 }
