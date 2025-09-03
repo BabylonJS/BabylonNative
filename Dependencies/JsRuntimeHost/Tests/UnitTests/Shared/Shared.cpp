@@ -79,10 +79,7 @@ TEST(JavaScript, All)
     });
 
     Babylon::ScriptLoader loader{runtime};
-    loader.Eval("var global = {};", "");             // Required for chai.js
-    loader.Eval("var location = { href: '' };", ""); // Required for mocha.js
-    loader.LoadScript("app:///Scripts/chai.js");
-    loader.LoadScript("app:///Scripts/mocha.js");
+    loader.Eval("location = { href: '' };", ""); // Required for Mocha.js as we do not have a location
     loader.LoadScript("app:///Scripts/tests.js");
 
     auto exitCode{exitCodePromise.get_future().get()};

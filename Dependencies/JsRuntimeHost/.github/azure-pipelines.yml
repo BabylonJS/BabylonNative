@@ -80,13 +80,17 @@ jobs:
 
   # macOS
   - template: jobs/macos.yml
+    parameters:
+      name: 'macOS_Xcode164'
+      vmImage: 'macOS-latest'
+      xCodeVersion: 16.4
 
   # iOS
   - template: jobs/ios.yml
     parameters:
-      name: 'iOS_Xcode162'
+      name: 'iOS_Xcode164'
       vmImage: 'macOS-latest'
-      xCodeVersion: 16.2
+      xCodeVersion: 16.4
       simulator: 'iPhone 16'
 
   - template: jobs/ios.yml

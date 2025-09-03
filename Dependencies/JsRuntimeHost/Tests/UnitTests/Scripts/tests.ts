@@ -1,6 +1,13 @@
-﻿mocha.setup({ ui: "bdd", reporter: "spec", retries: 5 });
+﻿import * as Mocha from "mocha";
+import { expect } from "chai";
 
-const expect = chai.expect;
+Mocha.setup('bdd');
+// @ts-ignore
+Mocha.reporter('spec');
+
+declare const hostPlatform: string;
+declare const setExitCode: (code: number) => void;
+
 
 describe("AbortController", function () {
     it("should not throw while aborting with no callbacks", function () {
@@ -60,7 +67,7 @@ describe("AbortController", function () {
 });
 
 describe("XMLHTTPRequest", function () {
-    function createRequest(method, url, body, responseType) {
+    function createRequest(method: string, url: string, body: any = undefined, responseType: any = undefined): Promise<XMLHttpRequest> {
         return new Promise((resolve) => {
             const xhr = new XMLHttpRequest();
             xhr.open(method, url);
@@ -72,11 +79,11 @@ describe("XMLHTTPRequest", function () {
         });
     }
 
-    function createRequestWithHeaders(method, url, headers, body) {
+    function createRequestWithHeaders(method: string, url: string, headers: any, body?: string): Promise<XMLHttpRequest> {
         return new Promise((resolve) => {
             const xhr = new XMLHttpRequest();
             xhr.open(method, url);
-            headers.forEach((value, key) => xhr.setRequestHeader(key, value));
+            headers.forEach((value: string, key: string) => xhr.setRequestHeader(key, value));
             xhr.addEventListener("loadend", () => resolve(xhr));
             xhr.send(body);
         });
@@ -199,7 +206,7 @@ describe("setTimeout", function () {
     });
 
     it("should return an id greater than zero when given an undefined function", function () {
-        const id = setTimeout(undefined, 0);
+        const id = setTimeout(undefined as any, 0);
         expect(id).to.be.greaterThan(0);
     });
 
@@ -241,13 +248,13 @@ describe("setTimeout", function () {
             catch (e) {
                 done(e);
             }
-        }, "10");
+        }, "10" as any);
     });
 
     it("should call the given function after zero milliseconds when the delay is a string representing an invalid number", function (done) {
         setTimeout(() => {
             done();
-        }, "a");
+        }, "a" as any);
     });
 
     it("should call the given function after other tasks execute when the given delay is zero", function (done) {
@@ -416,7 +423,7 @@ if (hostPlatform !== "Unix") {
             };
 
             ws.onerror = (ev) => {
-                done(new Error(ev.message));
+                done(new Error("WebSocket failed"));
             };
         });
 
@@ -459,7 +466,7 @@ if (hostPlatform !== "Unix") {
                 };
 
                 ws2.onerror = (ev) => {
-                    done(new Error(ev.message));
+                    done(new Error(String(ev)));
                 };
             }
 
@@ -484,7 +491,7 @@ if (hostPlatform !== "Unix") {
             }
 
             ws1.onerror = (ev) => {
-                done(new Error(ev.message));
+                done(new Error(String(ev)));
             };
         });
 
@@ -509,7 +516,15 @@ if (hostPlatform !== "Unix") {
 describe("URL", function () {
 
     // Currently all of the properties that the polyfill has implemented
-    function checkURL(url, { href, hostname, origin, pathname, search }) {
+    interface URLCheckOptions {
+        href: string;
+        hostname: string;
+        origin: string;
+        pathname: string;
+        search: string;
+    }
+
+    function checkURL(url: URL, { href, hostname, origin, pathname, search }: URLCheckOptions): void {
         expect(url).to.have.property("hostname", hostname);
         expect(url).to.have.property("href", href);
         expect(url).to.have.property("origin", origin);
@@ -567,7 +582,7 @@ describe("URL", function () {
     it("should update href after URLSearchParams are changed", function () {
         // Augment URL with pathname and search
         const url = new URL("https://httpbin.org/en-US/docs?foo=1&bar=2");
-        url.searchParams.set("foo", 999);
+        url.searchParams.set("foo", 999 as any);
         // href should change to reflect searchParams change
         checkURL(url, {
             href: "https://httpbin.org/en-US/docs?foo=999&bar=2",
@@ -581,7 +596,7 @@ describe("URL", function () {
     it("should update href after URLSearchParams are changed (Starting with 0 params)", function () {
         // Augment URL with pathname and search
         const url = new URL("https://httpbin.org/en-US/docs");
-        url.searchParams.set("foo", 999);
+        url.searchParams.set("foo", "999");
         // href should change to reflect searchParams change
         checkURL(url, {
             href: "https://httpbin.org/en-US/docs?foo=999",
@@ -617,12 +632,14 @@ describe("URLSearchParams", function () {
     const paramsSet = new URLSearchParams("");
 
     it("should throw exception when trying to set with less than 2 parameters", function () {
+        // `set` expects parameters, none given.
+        // @ts-expect-error
         expect(() => paramsSet.set()).to.throw();
     });
 
     it("should add a number and retrieve it as a string from searchParams", function () {
         // Set Number
-        paramsSet.set("foo", 400);
+        paramsSet.set("foo", 400 as any);
         expect(paramsSet.get("foo")).to.equal("400");
     });
 
@@ -634,13 +651,13 @@ describe("URLSearchParams", function () {
 
     it("should add a boolean and retrieve it as a string from searchParams", function () {
         // Set Boolean
-        paramsSet.set("baz", true);
+        paramsSet.set("baz", true as any);
         expect(paramsSet.get("baz")).to.equal("true");
     });
 
     it("should set an existing number and retrieve it as a string from searchParams", function () {
         // Set Existing Value
-        paramsSet.set("foo", 9999);
+        paramsSet.set("foo", 9999 as any);
         expect(paramsSet.get("foo")).to.equal("9999");
     });
 
@@ -728,10 +745,10 @@ describe("Console", function () {
 });
 
 describe("Blob", function () {
-    let emptyBlobs, helloBlobs, stringBlob, typedArrayBlob, arrayBufferBlob, blobBlob;
+    let emptyBlobs: Blob[], helloBlobs: Blob[], stringBlob: Blob, typedArrayBlob: Blob, arrayBufferBlob: Blob, blobBlob: Blob;
 
     before(function () {
-        emptyBlobs = [new Blob(), new Blob([])];
+        emptyBlobs = [new Blob([]), new Blob([])];
         stringBlob = new Blob(["Hello"]);
         typedArrayBlob = new Blob([new Uint8Array([72, 101, 108, 108, 111])]),
         arrayBufferBlob = new Blob([new Uint8Array([72, 101, 108, 108, 111]).buffer]),
@@ -842,7 +859,7 @@ describe("Blob", function () {
 });
 
 function runTests() {
-    mocha.run(failures => {
+    mocha.run((failures: number) => {
         // Test program will wait for code to be set before exiting
         if (failures > 0) {
             // Failure

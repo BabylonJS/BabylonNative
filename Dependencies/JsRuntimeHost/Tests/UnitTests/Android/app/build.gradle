@@ -78,14 +78,8 @@ task copyScripts {
         // run copy at execution phase because npm command is not done at configuration phase
         copy
         {
-            from "../../../node_modules/chai"
-            include "chai.js"
-            into 'src/main/assets/Scripts'
-        }
-        copy
-        {
-            from "../../../node_modules/mocha"
-            include "mocha.js"
+            from '../../dist'
+            include "*.js"
             into 'src/main/assets/Scripts'
         }
         copy

@@ -1,10 +1,9 @@
 set(SCRIPTS
     "Scripts/symlink_target.js"
-    "Scripts/tests.js")
+    "dist/tests.js")
 
-set(EXTERNAL_SCRIPTS
-    "../node_modules/chai/chai.js"
-    "../node_modules/mocha/mocha.js")
+set(TYPE_SCRIPTS
+    "Scripts/tests.ts")
 
 set(SOURCES
     "Shared/Shared.cpp"
@@ -24,7 +23,7 @@ if(APPLE)
 
         set_source_files_properties(
             ${SCRIPTS}
-            ${EXTERNAL_SCRIPTS}
+            ${TYPE_SCRIPTS}
             PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
     else()
         set(SOURCES ${SOURCES}
@@ -38,7 +37,7 @@ elseif(UNIX AND NOT ANDROID)
         Linux/App.cpp)
 endif()
 
-add_executable(UnitTests ${SOURCES} ${SCRIPTS} ${EXTERNAL_SCRIPTS})
+add_executable(UnitTests ${SOURCES} ${SCRIPTS} ${TYPE_SCRIPTS})
 target_compile_definitions(UnitTests PRIVATE JSRUNTIMEHOST_PLATFORM="${JSRUNTIMEHOST_PLATFORM}")
 
 target_link_libraries(UnitTests
@@ -70,7 +69,7 @@ if(IOS)
         XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET ${DEPLOYMENT_TARGET}
         XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.jsruntimehost.unittests")
 else()
-    foreach(SCRIPT ${SCRIPTS} ${EXTERNAL_SCRIPTS})
+    foreach(SCRIPT ${SCRIPTS})
         get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
         add_custom_command(
             OUTPUT "${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
@@ -88,4 +87,4 @@ endif()
 set_property(TARGET UnitTests PROPERTY FOLDER Tests)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} ${SCRIPTS})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX node_modules FILES ${EXTERNAL_SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Scripts PREFIX scripts FILES ${TYPE_SCRIPTS})
