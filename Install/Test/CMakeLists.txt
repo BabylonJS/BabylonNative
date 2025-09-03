@@ -183,6 +183,7 @@ target_link_libraries(TestInstall
     d3d12
     d3dcompiler
     Pathcch
+    runtimeobject.lib # for WINRT_IMPL_RoXXX functions
     ${ADDITIONAL_LIBRARIES}
 )
 

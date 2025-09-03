@@ -1,3 +1,5 @@
+// Replace literal BigInt with Number as it's not supported woth Chakra
+// Literals (like 123n) are represented as BigIntLiteral nodes are transformed to NumericLiteral (123)
 module.exports = function() {
   return {
     visitor: {
