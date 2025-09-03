@@ -466,7 +466,7 @@ if (hostPlatform !== "Unix") {
                 };
 
                 ws2.onerror = (ev) => {
-                    done(new Error(String(ev)));
+                    done(new Error("Websocket failed"));
                 };
             }
 
@@ -491,7 +491,7 @@ if (hostPlatform !== "Unix") {
             }
 
             ws1.onerror = (ev) => {
-                done(new Error(String(ev)));
+                done(new Error("Websocket failed"));
             };
         });
 
