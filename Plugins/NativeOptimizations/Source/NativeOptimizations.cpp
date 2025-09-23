@@ -287,5 +287,12 @@ namespace Babylon::Plugins::NativeOptimizations
         nativeObject.Set("_FlipFaces", Napi::Function::New(env, FlipFaces, "_FlipFaces"));
         nativeObject.Set("extractMinAndMaxIndexed", Napi::Function::New(env, ExtractMinAndMaxIndexed, "extractMinAndMaxIndexed"));
         nativeObject.Set("extractMinAndMax", Napi::Function::New(env, ExtractMinAndMax, "extractMinAndMax"));
+
+        env.Global().Set("sortGS", Napi::Function::New(
+            env, [](const Napi::CallbackInfo& info) {
+                Napi::Env env = info.Env();
+                
+            },
+            "sortGS"));
     }
 }

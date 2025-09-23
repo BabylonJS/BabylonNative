@@ -21,7 +21,69 @@ const imageTracking = false;
 const readPixels = false;
 
 function CreateBoxAsync(scene) {
-    BABYLON.Mesh.CreateBox("box1", 0.2, scene);
+    //BABYLON.Mesh.CreateBox("box1", 0.2, scene);
+    // Our built-in 'sphere' shape.
+    var sphere = BABYLON.MeshBuilder.CreateSphere("sphere", { diameter: 1, segments: 32 }, scene);
+
+    // Move the sphere upward 1/2 its height
+    sphere.position.y = 0.5;
+    sphere.position.z = -1;
+
+    // Our built-in 'ground' shape.
+    var ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 6, height: 6 }, scene);
+
+    // Gaussian Splatting
+    /*BABYLON.SceneLoader.ImportMeshAsync(null, "https://raw.githubusercontent.com/CedricGuillemet/dump/master/", "Halo_Believe.splat", scene).then((result) => {
+        console.log("loaded");
+        result.meshes[0].position.y = 1.7;
+    });
+    */
+
+    var gs = new BABYLON.GaussianSplattingMesh("GS", undefined, scene, true);
+
+    var generateGS = function (time) {
+        // size of a single splat, int bytes
+        const rowLength = 3 * 4 + 3 * 4 + 4 + 4;
+
+        // chunck size of splats
+        const splatCount = 10000;
+
+        const uBuffer = new Uint8Array(splatCount * rowLength);
+        const fBuffer = new Float32Array(uBuffer.buffer);
+
+        for (let j = 0; j < 100; j++) {
+            for (let ji = 0; ji < 100; ji++) {
+                const i = ji + j * 100;
+                // position
+                x = j * 0.1 - 5;
+                y = -Math.sin(time + ji * 0.04 + j * 0.02) * 1 - 1;
+
+                fBuffer[8 * i + 0] = Math.cos(time) * x + Math.sin(time) * y;
+                fBuffer[8 * i + 1] = Math.sin(time) * x - Math.cos(time) * y;
+                fBuffer[8 * i + 2] = ji * 0.1 - 5;
+
+                // size
+                fBuffer[8 * i + 3 + 0] = 0.1;
+                fBuffer[8 * i + 3 + 1] = 0.1;
+                fBuffer[8 * i + 3 + 2] = 0.1;
+
+                // orientation
+                uBuffer[32 * i + 28 + 1] = 128;
+                uBuffer[32 * i + 28 + 2] = 128;
+                uBuffer[32 * i + 28 + 3] = 128;
+                uBuffer[32 * i + 28 + 0] = 255;
+
+                // color
+                uBuffer[32 * i + 24 + 0] = Math.cos((ji + time * 3) * 0.2) * 127 + 128;
+                uBuffer[32 * i + 24 + 1] = Math.cos((j + time * 4) * 0.3) * 127 + 128;
+                uBuffer[32 * i + 24 + 2] = Math.sin((j + ji + time * 2) * 0.3) * 127 + 128;
+                uBuffer[32 * i + 24 + 3] = 255;
+            }
+        }
+        gs.updateData(uBuffer);
+    };
+    generateGS(0); 
+
     return Promise.resolve();
 }
 
