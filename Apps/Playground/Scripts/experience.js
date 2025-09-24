@@ -30,7 +30,7 @@ function CreateBoxAsync(scene) {
     sphere.position.z = -1;
 
     // Our built-in 'ground' shape.
-    var ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 6, height: 6 }, scene);
+    //var ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 6, height: 6 }, scene);
 
     // Gaussian Splatting
     /*BABYLON.SceneLoader.ImportMeshAsync(null, "https://raw.githubusercontent.com/CedricGuillemet/dump/master/", "Halo_Believe.splat", scene).then((result) => {
@@ -82,7 +82,8 @@ function CreateBoxAsync(scene) {
         }
         gs.updateData(uBuffer);
     };
-    generateGS(0); 
+    generateGS(0);
+
 
     return Promise.resolve();
 }

@@ -273,6 +273,24 @@ namespace
             matrixTransform(finalMatrix, data[index], data[index + 1], data[index + 2]);
         }
     }
+
+
+    void SortGS(const Napi::CallbackInfo& info)
+    {
+        const auto modelView{ info[0].As<Napi::Object>() };
+        const auto m{ modelView.Get("_m").As<Napi::Float32Array>() };
+
+        auto positions{ info[1].As<Napi::Float32Array>() };
+
+        auto indices{ info[2].As<Napi::Float32Array>() };
+
+        auto rightHand{ info[3].As<Napi::Boolean>() };
+
+        for (int i = 0; i < indices.ElementLength()/4; i++)
+        {
+            indices[i * 4] = float(i);
+        }
+    }
 }
 
 namespace Babylon::Plugins::NativeOptimizations
@@ -287,12 +305,7 @@ namespace Babylon::Plugins::NativeOptimizations
         nativeObject.Set("_FlipFaces", Napi::Function::New(env, FlipFaces, "_FlipFaces"));
         nativeObject.Set("extractMinAndMaxIndexed", Napi::Function::New(env, ExtractMinAndMaxIndexed, "extractMinAndMaxIndexed"));
         nativeObject.Set("extractMinAndMax", Napi::Function::New(env, ExtractMinAndMax, "extractMinAndMax"));
-
-        env.Global().Set("sortGS", Napi::Function::New(
-            env, [](const Napi::CallbackInfo& info) {
-                Napi::Env env = info.Env();
-                
-            },
-            "sortGS"));
+        //nativeObject.Set("sortGS", Napi::Function::New(env, SortGS, "sortGS"));
+        env.Global().Set("sortGS", Napi::Function::New(env, SortGS, "sortGS"));
     }
 }
