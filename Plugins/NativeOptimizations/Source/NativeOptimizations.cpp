@@ -274,6 +274,12 @@ namespace
         }
     }
 
+    static int sortSplatQSort(const void* p1, const void* p2) {
+        const float* a = (float*)p1;
+        const float* b = (float*)p2;
+        return (a[1] < b[1]) ? -1 : 1;
+    }
+
 
     void SortGS(const Napi::CallbackInfo& info)
     {
@@ -286,10 +292,22 @@ namespace
 
         auto rightHand{ info[3].As<Napi::Boolean>() };
 
-        for (int i = 0; i < indices.ElementLength()/4; i++)
-        {
-            indices[i * 4] = float(i);
+
+        float depthFactor = -1.f;
+        if (rightHand) {
+            depthFactor = 1.f;
         }
+
+        const auto vertexCount = indices.ElementLength() / 4;
+        float vp[3] = { m[2], m[6], m[10] };
+
+        for (int i = 0; i < vertexCount; i++)
+        {
+            indices[i * 4 + 0] = float(i);
+            indices[i * 4 + 1] = 10000.f + (vp[0] * positions[4 * i + 0] + vp[1] * positions[4 * i + 1] + vp[2] * positions[4 * i + 2]) * depthFactor;
+        }
+
+        qsort(indices.Data(), vertexCount, 4 * sizeof(float), sortSplatQSort);
     }
 }
 
