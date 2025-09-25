@@ -43,7 +43,7 @@ namespace Babylon::Plugins::Internal
             env.Global().Set(JS_INSTANCE_NAME, func.New({}));
         }
 
-        TestUtils::TestUtils(const Napi::CallbackInfo& info)
+        TestUtils(const Napi::CallbackInfo& info)
             : TestUtils(info, JsRuntime::GetFromJavaScript(info.Env()))
         {
         }
