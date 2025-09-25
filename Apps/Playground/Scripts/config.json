@@ -40,14 +40,6 @@
             "renderCount": 10
         },
         {
-            "title": "Glow layer and LODs",
-            "playgroundId": "#UNS6ZV#2",
-            "renderCount": 50,
-            "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "glowlayerandlods.png",
-            "comment": "xvfb : invalid enum with glRenderbufferStorage"
-        },
-        {
             "title": "GLTF Extension KHR_materials_volume with attenuation",
             "playgroundId": "#YG3BBF#18",
             "referenceImage": "gltfExtensionKhrMaterialsVolumeAttenuation.png",
