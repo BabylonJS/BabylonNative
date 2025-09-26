@@ -15,19 +15,38 @@ if (project.hasProperty("UNITY_BUILD")) {
 }
 def arcore_libpath = "${buildDir}/arcore-native"
 
+def deviceAbis = project.hasProperty("ARM64Only") ? ["arm64-v8a"] : ["arm64-v8a", "armeabi-v7a", "x86"]
+def xrSimulatorAbis = ["arm64-v8a"]
+
 configurations { natives }
 
 android {
-    compileSdkVersion 29
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.android.babylonnative.playground"
-        minSdkVersion "${platformVersion}"
-        targetSdkVersion 29
-        ndkVersion "23.1.7779620"
+        minSdk platformVersion
+        targetSdk 34
+        ndkVersion "28.2.13676358"
         if (project.hasProperty("NDK_VERSION")) {
             def NDKVersion = project.property("NDK_VERSION")
             ndkVersion  "${NDK_VERSION}"
+        }
+    }
+
+    flavorDimensions "runtime"
+    productFlavors {
+        device {
+            dimension "runtime"
+            ndk {
+                abiFilters.addAll(deviceAbis)
+            }
+        }
+        androidXrSimulator {
+            dimension "runtime"
+            ndk {
+                abiFilters.addAll(xrSimulatorAbis)
+            }
         }
     }
 
@@ -62,8 +81,8 @@ dependencies {
     implementation project(':BabylonNative')
     natives 'com.google.ar:core:1.14.0'
 
-    implementation 'com.android.support:appcompat-v7:27.1.1'
-    implementation 'com.android.support:design:27.1.1'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.10.0'
 }
 
 // Extracts the shared libraries from aars in the natives configuration.

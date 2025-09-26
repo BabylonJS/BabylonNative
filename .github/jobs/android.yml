@@ -15,6 +15,30 @@ jobs:
       parameters:
         vmImage: ${{ parameters.vmImage }}
 
+    - script: |
+        set -euo pipefail
+        ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+        if [ -z "$ANDROID_SDK_ROOT" ]; then
+          echo "ANDROID_SDK_ROOT or ANDROID_HOME must be set" >&2
+          exit 1
+        fi
+
+        if [ -x "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+        elif [ -x "$ANDROID_SDK_ROOT/cmdline-tools/bin/sdkmanager" ]; then
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/bin/sdkmanager"
+        elif [ -x "$ANDROID_SDK_ROOT/tools/bin/sdkmanager" ]; then
+          SDKMANAGER="$ANDROID_SDK_ROOT/tools/bin/sdkmanager"
+        else
+          echo "Unable to locate sdkmanager under $ANDROID_SDK_ROOT" >&2
+          exit 1
+        fi
+
+        echo "Installing Android NDK version $(NDK_VERSION) using $SDKMANAGER"
+        yes | "$SDKMANAGER" --licenses
+        yes | "$SDKMANAGER" --install "ndk;$(NDK_VERSION)"
+      displayName: 'Install Android NDK $(NDK_VERSION)'
+
     - task: JavaToolInstaller@0
       inputs:
         versionSpec: '17'

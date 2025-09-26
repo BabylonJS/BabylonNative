@@ -35,9 +35,53 @@ if(MSVC)
     add_compile_options(/Zc:__cplusplus)
 endif()
 
+set(USE_SYSTEM_V8 FALSE)
+if(ANDROID)
+    set(_V8_INCLUDE_HINTS)
+    if(DEFINED ENV{V8_INCLUDE_DIR})
+        list(APPEND _V8_INCLUDE_HINTS $ENV{V8_INCLUDE_DIR})
+    endif()
+    if(DEFINED V8_INCLUDE_DIR)
+        list(APPEND _V8_INCLUDE_HINTS ${V8_INCLUDE_DIR})
+    endif()
+
+    find_path(SYSTEM_V8_INCLUDE_DIR
+        NAMES v8.h
+        HINTS ${_V8_INCLUDE_HINTS})
+
+    if(SYSTEM_V8_INCLUDE_DIR)
+        set(_V8_LIB_HINTS)
+        if(DEFINED ENV{V8_LIB_DIR})
+            list(APPEND _V8_LIB_HINTS $ENV{V8_LIB_DIR})
+        endif()
+        if(DEFINED V8_LIB_DIR)
+            list(APPEND _V8_LIB_HINTS ${V8_LIB_DIR})
+        endif()
+
+        find_library(SYSTEM_V8_MONOLITH_LIB NAMES v8_monolith v8 HINTS ${_V8_LIB_HINTS})
+        find_library(SYSTEM_V8_LIBBASE_LIB NAMES v8_libbase HINTS ${_V8_LIB_HINTS})
+        find_library(SYSTEM_V8_LIBPLATFORM_LIB NAMES v8_libplatform HINTS ${_V8_LIB_HINTS})
+        find_library(SYSTEM_V8_ICUUC_LIB NAMES icuuc HINTS ${_V8_LIB_HINTS})
+        find_library(SYSTEM_V8_ICUI18N_LIB NAMES icui18n HINTS ${_V8_LIB_HINTS})
+        find_library(SYSTEM_V8_ZLIB_LIB NAMES z zlib HINTS ${_V8_LIB_HINTS})
+
+        if(SYSTEM_V8_MONOLITH_LIB)
+            set(USE_SYSTEM_V8 TRUE)
+        endif()
+    endif()
+endif()
+
 if(NAPI_JAVASCRIPT_ENGINE STREQUAL "")
-    message("No JS Engine provided. Defaulting to Chakra.")
-    set(NAPI_JAVASCRIPT_ENGINE "Chakra")
+    if(APPLE)
+        message(STATUS "No JS Engine provided. Defaulting to JavaScriptCore on Apple platforms.")
+        set(NAPI_JAVASCRIPT_ENGINE "JavaScriptCore")
+    elseif(ANDROID AND USE_SYSTEM_V8)
+        message(STATUS "No JS Engine provided. Defaulting to system-installed V8 for Android builds.")
+        set(NAPI_JAVASCRIPT_ENGINE "V8")
+    else()
+        message("No JS Engine provided. Defaulting to Chakra.")
+        set(NAPI_JAVASCRIPT_ENGINE "Chakra")
+    endif()
 endif()
 
 # executable stub
@@ -73,57 +117,89 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
     set(SOURCES ${SOURCES} "${V8JSI_PACKAGE_PATH}/build/native/jsi/jsi/jsi.cpp")
     set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} "v8jsi.dll.lib")
 elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
-    set_cpu_platform_arch()
-    set(V8_VERSION "11.9.169.4")
-    download_nuget()
-    set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v143-${CPU_ARCH}.${V8_VERSION}")
-    set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v143-${CPU_ARCH}.${V8_VERSION}")
-    set(V8_REDIST_PACKAGE_PATH "${NUGET_PATH}/packages/v8.redist-v143-${CPU_ARCH}.${V8_VERSION}")
+    if(USE_SYSTEM_V8 AND NOT WIN32)
+        message(STATUS "Linking against system-installed V8 libraries from ${SYSTEM_V8_MONOLITH_LIB}")
+        set(V8_INCLUDE_DIR ${SYSTEM_V8_INCLUDE_DIR})
 
-    add_library(v8_libbase SHARED IMPORTED)
-    set_target_properties(v8_libbase PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libbase.dll.lib")
-    add_library(v8_libplatform SHARED IMPORTED)
-    set_target_properties(v8_libplatform PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libplatform.dll.lib")
-    add_library(v8 SHARED IMPORTED)
-    set_target_properties(v8 PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8.dll.lib")
-    target_link_libraries(v8 INTERFACE v8_libbase INTERFACE v8_libplatform)
-    target_include_directories(v8 INTERFACE "${V8_PACKAGE_PATH}/include")
+        set(_SYSTEM_V8_LIBS ${SYSTEM_V8_MONOLITH_LIB})
+        if(SYSTEM_V8_LIBBASE_LIB)
+            list(APPEND _SYSTEM_V8_LIBS ${SYSTEM_V8_LIBBASE_LIB})
+        endif()
+        if(SYSTEM_V8_LIBPLATFORM_LIB)
+            list(APPEND _SYSTEM_V8_LIBS ${SYSTEM_V8_LIBPLATFORM_LIB})
+        endif()
+        if(SYSTEM_V8_ICUUC_LIB)
+            list(APPEND _SYSTEM_V8_LIBS ${SYSTEM_V8_ICUUC_LIB})
+        endif()
+        if(SYSTEM_V8_ICUI18N_LIB)
+            list(APPEND _SYSTEM_V8_LIBS ${SYSTEM_V8_ICUI18N_LIB})
+        endif()
+        if(SYSTEM_V8_ZLIB_LIB)
+            list(APPEND _SYSTEM_V8_LIBS ${SYSTEM_V8_ZLIB_LIB})
+        endif()
 
-    set(V8_DIST
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/icudtl.dat"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_icu_icui18n.dll"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_abseil-cpp_absl.dll"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/icuuc.dll"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8.dll"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8_libbase.dll"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8_libplatform.dll"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_zlib.dll")
+        find_package(Threads REQUIRED)
+        if(CMAKE_THREAD_LIBS_INIT)
+            list(APPEND _SYSTEM_V8_LIBS ${CMAKE_THREAD_LIBS_INIT})
+        endif()
+        if(UNIX AND NOT APPLE)
+            list(APPEND _SYSTEM_V8_LIBS dl)
+        endif()
 
-    # only 1 imported location per library -> Adding 1 library per file
-    foreach(V8FILE ${V8_DIST})
-        get_filename_component(V8FILE_NAME "${V8FILE}" NAME_WE)
-        add_library("v8::${V8FILE_NAME}" SHARED IMPORTED)
-        set_target_properties("v8::${V8FILE_NAME}" PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libbase.dll.lib")
-        set_target_properties("v8::${V8FILE_NAME}" PROPERTIES IMPORTED_LOCATION ${V8FILE})
-    endforeach()
+        set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} ${_SYSTEM_V8_LIBS})
+    else()
+        set_cpu_platform_arch()
+        set(V8_VERSION "11.9.169.4")
+        download_nuget()
+        set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v143-${CPU_ARCH}.${V8_VERSION}")
+        set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v143-${CPU_ARCH}.${V8_VERSION}")
+        set(V8_REDIST_PACKAGE_PATH "${NUGET_PATH}/packages/v8.redist-v143-${CPU_ARCH}.${V8_VERSION}")
 
-    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES}
-        v8
-        v8inspector
-        llhttp
-        v8::icudtl
-        v8::third_party_icu_icui18n
-        v8::icuuc
-        v8::v8
-        v8::v8_libbase
-        v8::v8_libplatform
-        v8::third_party_zlib)
+        add_library(v8_libbase SHARED IMPORTED)
+        set_target_properties(v8_libbase PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libbase.dll.lib")
+        add_library(v8_libplatform SHARED IMPORTED)
+        set_target_properties(v8_libplatform PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libplatform.dll.lib")
+        add_library(v8 SHARED IMPORTED)
+        set_target_properties(v8 PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8.dll.lib")
+        target_link_libraries(v8 INTERFACE v8_libbase INTERFACE v8_libplatform)
+        target_include_directories(v8 INTERFACE "${V8_PACKAGE_PATH}/include")
 
-    if(CPU_ARCH STREQUAL "x64")
-        # Enable V8 Pointer Compression
-        # https://v8.dev/blog/pointer-compression
-        # https://stackoverflow.com/q/62921373
-        set(NAPI_DEFINITIONS PUBLIC V8_COMPRESS_POINTERS)
+        set(V8_DIST
+            "${V8_REDIST_PACKAGE_PATH}/lib/Release/icudtl.dat"
+            "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_icu_icui18n.dll"
+            "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_abseil-cpp_absl.dll"
+            "${V8_REDIST_PACKAGE_PATH}/lib/Release/icuuc.dll"
+            "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8.dll"
+            "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8_libbase.dll"
+            "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8_libplatform.dll"
+            "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_zlib.dll")
+
+        # only 1 imported location per library -> Adding 1 library per file
+        foreach(V8FILE ${V8_DIST})
+            get_filename_component(V8FILE_NAME "${V8FILE}" NAME_WE)
+            add_library("v8::${V8FILE_NAME}" SHARED IMPORTED)
+            set_target_properties("v8::${V8FILE_NAME}" PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libbase.dll.lib")
+            set_target_properties("v8::${V8FILE_NAME}" PROPERTIES IMPORTED_LOCATION ${V8FILE})
+        endforeach()
+
+        set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES}
+            v8
+            v8inspector
+            llhttp
+            v8::icudtl
+            v8::third_party_icu_icui18n
+            v8::icuuc
+            v8::v8
+            v8::v8_libbase
+            v8::v8_libplatform
+            v8::third_party_zlib)
+
+        if(CPU_ARCH STREQUAL "x64")
+            # Enable V8 Pointer Compression
+            # https://v8.dev/blog/pointer-compression
+            # https://stackoverflow.com/q/62921373
+            set(NAPI_DEFINITIONS PUBLIC V8_COMPRESS_POINTERS)
+        endif()
     endif()
 endif()
 
@@ -131,6 +207,9 @@ add_executable(TestInstall ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${SOURCES})
 
 set(INSTALL_LIBS_DIR "${BINARY_DIR}/install/lib")
 target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")
+if(V8_INCLUDE_DIR)
+    target_include_directories(TestInstall PRIVATE "${V8_INCLUDE_DIR}")
+endif()
 target_link_directories(TestInstall PRIVATE ${INSTALL_LIBS_DIR} ${V8JSI_LIB_PATH_RELEASE})
 
 if(ANDROID OR IOS)
