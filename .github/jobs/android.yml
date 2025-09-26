@@ -35,8 +35,12 @@ jobs:
         fi
 
         echo "Installing Android NDK version $(NDK_VERSION) using $SDKMANAGER"
-        yes | "$SDKMANAGER" --licenses
-        yes | "$SDKMANAGER" --install "ndk;$(NDK_VERSION)"
+        SDK_ARGS=("--sdk_root=$ANDROID_SDK_ROOT")
+
+        set +o pipefail
+        yes | "$SDKMANAGER" "${SDK_ARGS[@]}" --licenses >/dev/null
+        yes | "$SDKMANAGER" "${SDK_ARGS[@]}" --install "ndk;$(NDK_VERSION)"
+        set -o pipefail
       displayName: 'Install Android NDK $(NDK_VERSION)'
 
     - task: JavaToolInstaller@0
