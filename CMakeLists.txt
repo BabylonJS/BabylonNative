@@ -37,7 +37,10 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 4.5.0)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG ef57990dc5533990b2bb194978a12f8c8d83565c)
+    GIT_TAG c726f284ab906f2f535ac17c3c49cc18c0ea5267
+    PATCH_COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/Patches/JsRuntimeHost/Core/AppRuntime/V8Inspector/Source/V8InspectorAgent.cpp
+        <SOURCE_DIR>/Core/AppRuntime/V8Inspector/Source/V8InspectorAgent.cpp)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
     GIT_TAG 6abfcf066d171e9ade7604d91381ebebe4209edc)
