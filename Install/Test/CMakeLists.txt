@@ -28,11 +28,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "Android")
     add_compile_definitions(_LIBCPP_ENABLE_CXX20_REMOVED_CHAR_TRAITS_SPECIALIZATIONS)
     string(APPEND CMAKE_CXX_FLAGS " -D_LIBCPP_ENABLE_CXX20_REMOVED_CHAR_TRAITS_SPECIALIZATIONS")
-
-    set(_babylon_android_char_traits_header "${CMAKE_SOURCE_DIR}/Dependencies/Android/std_char_traits_uint16_t.h")
-    if(EXISTS "${_babylon_android_char_traits_header}")
-        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-include${_babylon_android_char_traits_header}>)
-    endif()
 endif()
 
 if(WIN32 OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID AND NOT APPLE))

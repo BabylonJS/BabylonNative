@@ -79,16 +79,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "Android")
-    # Restore legacy std::char_traits specializations removed in newer libc++ versions
-    # so third-party dependencies that still rely on std::basic_string<unsigned short>
-    # continue to compile when using the Android NDK r28 toolchain.
+    # Restore the legacy std::char_traits specializations removed in newer libc++ versions
+    # so Chromium-derived dependencies that still rely on std::basic_string<unsigned short>
+    # continue to build with the Android NDK r28 toolchain without requiring header overrides.
     add_compile_definitions(_LIBCPP_ENABLE_CXX20_REMOVED_CHAR_TRAITS_SPECIALIZATIONS)
     string(APPEND CMAKE_CXX_FLAGS " -D_LIBCPP_ENABLE_CXX20_REMOVED_CHAR_TRAITS_SPECIALIZATIONS")
-
-    set(_babylon_android_char_traits_header "${CMAKE_SOURCE_DIR}/Dependencies/Android/std_char_traits_uint16_t.h")
-    if(EXISTS "${_babylon_android_char_traits_header}")
-        add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-include${_babylon_android_char_traits_header}>)
-    endif()
 endif()
 
 # --------------------------------------------------
