@@ -78,11 +78,12 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(ANDROID)
+if(ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "Android")
     # Restore legacy std::char_traits specializations removed in newer libc++ versions
     # so third-party dependencies that still rely on std::basic_string<unsigned short>
     # continue to compile when using the Android NDK r28 toolchain.
     add_compile_definitions(_LIBCPP_ENABLE_CXX20_REMOVED_CHAR_TRAITS_SPECIALIZATIONS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_LIBCPP_ENABLE_CXX20_REMOVED_CHAR_TRAITS_SPECIALIZATIONS")
 endif()
 
 # --------------------------------------------------
