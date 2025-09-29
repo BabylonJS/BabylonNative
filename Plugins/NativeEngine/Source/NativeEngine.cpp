@@ -728,8 +728,6 @@ namespace Babylon
 
                 InstanceMethod("populateFrameStats", &NativeEngine::PopulateFrameStats),
 
-                // REVIEW: Should this be here if only used by ValidationTest?
-                InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
                 InstanceMethod("setDeviceLostCallback", &NativeEngine::SetRenderResetCallback),
             });
 
@@ -2184,20 +2182,6 @@ namespace Babylon
         m_deviceContext.SetRenderResetCallback([this, renderResetCallback = std::move(callbackPtr)]() {
             m_runtime.Dispatch([renderResetCallback = std::move(renderResetCallback)](auto) {
                 renderResetCallback->Call({});
-            });
-        });
-    }
-
-    void NativeEngine::GetFrameBufferData(const Napi::CallbackInfo& info)
-    {
-        const auto callback{info[0].As<Napi::Function>()};
-
-        auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
-        m_deviceContext.RequestScreenShot([this, callbackPtr{std::move(callbackPtr)}](std::vector<uint8_t> array) {
-            m_runtime.Dispatch([callbackPtr{std::move(callbackPtr)}, array{std::move(array)}](Napi::Env env) {
-                auto arrayBuffer{Napi::ArrayBuffer::New(env, const_cast<uint8_t*>(array.data()), array.size())};
-                auto typedArray{Napi::Uint8Array::New(env, array.size(), arrayBuffer, 0)};
-                callbackPtr->Value().Call({typedArray});
             });
         });
     }

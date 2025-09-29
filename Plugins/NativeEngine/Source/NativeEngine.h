@@ -11,7 +11,6 @@
 #include <Babylon/Graphics/DeviceContext.h>
 #include <Babylon/Graphics/BgfxCallback.h>
 #include <Babylon/Graphics/FrameBuffer.h>
-#include <Babylon/Graphics/DeviceContext.h>
 
 #include <napi/napi.h>
 
