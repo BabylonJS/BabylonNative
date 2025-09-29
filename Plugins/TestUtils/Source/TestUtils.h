@@ -7,6 +7,8 @@
 
 #include <bx/allocator.h>
 #include <bimg/bimg.h>
+#include <Babylon/JsRuntime.h>
+#include <Babylon/Graphics/DeviceContext.h>
 
 namespace Babylon::Plugins::Internal
 {
@@ -36,12 +38,20 @@ namespace Babylon::Plugins::Internal
                     ParentT::InstanceMethod("decodeImage", &TestUtils::DecodeImage),
                     ParentT::InstanceMethod("getImageData", &TestUtils::GetImageData),
                     ParentT::InstanceMethod("getOutputDirectory", &TestUtils::GetOutputDirectory),
+                    ParentT::InstanceMethod("getFrameBufferData", &TestUtils::GetFrameBufferData),
                 });
             env.Global().Set(JS_INSTANCE_NAME, func.New({}));
         }
 
-        explicit TestUtils(const Napi::CallbackInfo& info)
+        TestUtils(const Napi::CallbackInfo& info)
+            : TestUtils(info, JsRuntime::GetFromJavaScript(info.Env()))
+        {
+        }
+
+        explicit TestUtils(const Napi::CallbackInfo& info, JsRuntime& runtime)
             : ParentT{info}
+            , m_runtime{runtime}
+            , m_deviceContext{ Graphics::DeviceContext::GetFromJavaScript(info.Env()) }
         {
         }
 
@@ -59,6 +69,10 @@ namespace Babylon::Plugins::Internal
         void WritePNG(const Napi::CallbackInfo& info);
         Napi::Value DecodeImage(const Napi::CallbackInfo& info);
         Napi::Value GetImageData(const Napi::CallbackInfo& info);
+        void GetFrameBufferData(const Napi::CallbackInfo& info);
+
+        JsRuntime& m_runtime;
+        Graphics::DeviceContext& m_deviceContext;
 
         struct Image
         {

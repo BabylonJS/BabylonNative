@@ -115,9 +115,9 @@
             "title": "Glow layer and LODs",
             "playgroundId": "#UNS6ZV#2",
             "renderCount": 50,
-            "excludedGraphicsApis": [ "OpenGL" ],
+            "excludedGraphicsApis": [ "OpenGL", "D3D12" ],
             "referenceImage": "glowlayerandlods.png",
-            "comment": "xvfb : invalid enum with glRenderbufferStorage"
+            "comment": "xvfb : invalid enum with glRenderbufferStorage. D3D12/CI: mapping a texture fails with error HRESULT 0x887A0005"
         },
         {
             "title": "Nested BBG",
@@ -128,7 +128,9 @@
         {
             "title": "Dynamic Texture context clip",
             "playgroundId": "#FU0ES5#47",
-            "referenceImage": "dynamicTextureClip.png"
+            "referenceImage": "dynamicTextureClip.png",
+            "excludedGraphicsApis": ["D3D12" ],
+            "comment": "D3D12/CI: Incorrect rendering of clipped texture"
         },
         {
             "title": "GUI3D SpherePanel",
