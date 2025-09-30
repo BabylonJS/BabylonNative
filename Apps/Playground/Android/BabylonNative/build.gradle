@@ -22,6 +22,9 @@ if (project.hasProperty("UNITY_BUILD")) {
 }
 def arcore_libpath = "${buildDir}/arcore-native"
 
+def deviceAbis = project.hasProperty("ARM64Only") ? ["arm64-v8a"] : ["arm64-v8a", "armeabi-v7a", "x86"]
+def xrSimulatorAbis = ["arm64-v8a"]
+
 configurations { natives }
 
 android {
@@ -31,16 +34,15 @@ android {
     defaultConfig {
         minSdk 25
 
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
-        ndkVersion "23.1.7779620"
+        ndkVersion "28.2.13676358"
         if (project.hasProperty("NDK_VERSION")) {
             def NDKVersion = project.property("NDK_VERSION")
             ndkVersion  "${NDK_VERSION}"
         }
         externalNativeBuild {
             cmake {
-                abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
                 arguments "-DANDROID_STL=c++_shared",
                     "-DENABLE_PCH=OFF",
                     "-DGRAPHICS_API=${graphics_api}",
@@ -51,15 +53,36 @@ android {
                     "-DBABYLON_DEBUG_TRACE=ON"
             }
         }
-        ndk {
-            if (project.hasProperty("ARM64Only")) {
-                abiFilters "arm64-v8a"
-            } else {
-                abiFilters "arm64-v8a", "armeabi-v7a", "x86"
-            }
-        }
         packagingOptions {
             exclude '**/libarcore_sdk_c.so'
+        }
+    }
+
+    flavorDimensions "runtime"
+    productFlavors {
+        device {
+            dimension "runtime"
+            ndk {
+                abiFilters.addAll(deviceAbis)
+            }
+            externalNativeBuild {
+                cmake {
+                    abiFilters.clear()
+                    abiFilters.addAll(deviceAbis)
+                }
+            }
+        }
+        androidXrSimulator {
+            dimension "runtime"
+            ndk {
+                abiFilters.addAll(xrSimulatorAbis)
+            }
+            externalNativeBuild {
+                cmake {
+                    abiFilters.clear()
+                    abiFilters.addAll(xrSimulatorAbis)
+                }
+            }
         }
     }
 
@@ -92,10 +115,11 @@ dependencies {
     // ARCore library
     implementation 'com.google.ar:core:1.14.0'
     natives 'com.google.ar:core:1.14.0'
-    implementation 'com.android.support:appcompat-v7:28.0.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'com.android.support.test:runner:1.0.2'
-    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+    androidTestImplementation 'androidx.test:runner:1.5.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
 
 
