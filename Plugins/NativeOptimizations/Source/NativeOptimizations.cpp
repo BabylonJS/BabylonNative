@@ -273,6 +273,42 @@ namespace
             matrixTransform(finalMatrix, data[index], data[index + 1], data[index + 2]);
         }
     }
+
+    static int sortSplatQSort(const void* p1, const void* p2) {
+        const float* a = (float*)p1;
+        const float* b = (float*)p2;
+        return (a[1] < b[1]) ? -1 : 1;
+    }
+
+
+    void SortGS(const Napi::CallbackInfo& info)
+    {
+        const auto modelView{ info[0].As<Napi::Object>() };
+        const auto m{ modelView.Get("_m").As<Napi::Float32Array>() };
+
+        auto positions{ info[1].As<Napi::Float32Array>() };
+
+        auto indices{ info[2].As<Napi::Float32Array>() };
+
+        auto rightHand{ info[3].As<Napi::Boolean>() };
+
+
+        float depthFactor = -1.f;
+        if (rightHand) {
+            depthFactor = 1.f;
+        }
+
+        const auto vertexCount = indices.ElementLength() / 4;
+        float vp[3] = { m[2], m[6], m[10] };
+
+        for (int i = 0; i < vertexCount; i++)
+        {
+            indices[i * 4 + 0] = float(i);
+            indices[i * 4 + 1] = 10000.f + (vp[0] * positions[4 * i + 0] + vp[1] * positions[4 * i + 1] + vp[2] * positions[4 * i + 2]) * depthFactor;
+        }
+
+        qsort(indices.Data(), vertexCount, 4 * sizeof(float), sortSplatQSort);
+    }
 }
 
 namespace Babylon::Plugins::NativeOptimizations
@@ -287,5 +323,7 @@ namespace Babylon::Plugins::NativeOptimizations
         nativeObject.Set("_FlipFaces", Napi::Function::New(env, FlipFaces, "_FlipFaces"));
         nativeObject.Set("extractMinAndMaxIndexed", Napi::Function::New(env, ExtractMinAndMaxIndexed, "extractMinAndMaxIndexed"));
         nativeObject.Set("extractMinAndMax", Napi::Function::New(env, ExtractMinAndMax, "extractMinAndMax"));
+        //nativeObject.Set("sortGS", Napi::Function::New(env, SortGS, "sortGS"));
+        env.Global().Set("sortGS", Napi::Function::New(env, SortGS, "sortGS"));
     }
 }
