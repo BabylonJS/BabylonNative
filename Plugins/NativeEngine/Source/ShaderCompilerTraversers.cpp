@@ -318,6 +318,7 @@ namespace Babylon::ShaderCompilerTraversers
                     publicType.qualifier = type.getQualifier();
 
                     publicType.basicType = EbtFloat;
+
                     publicType.setVector(4);
 
                     if (type.getArraySizes())
@@ -356,6 +357,40 @@ namespace Babylon::ShaderCompilerTraversers
                             }
                             else
                             {
+                                if (binary->getLeft()->getBasicType() == EbtInt &&
+                                    binary->getRight()->getBasicType() == EbtFloat)
+                                {
+                                    TConstUnion indexValue;
+                                    indexValue.setIConst(0);
+
+                                    TConstUnionArray indexArray(1);
+                                    indexArray[0] = indexValue;
+
+                                    TType indexType(EbtInt, EvqConst); // scalar int
+                                    TIntermConstantUnion* indexNode = new TIntermConstantUnion(indexArray, indexType);
+
+                                    TIntermBinary* accessX = new TIntermBinary(EOpIndexDirect);
+                                    accessX->setLeft(node);
+                                    accessX->setRight(indexNode);
+                                    accessX->setType(TType(EbtFloat, EvqTemporary, 1));
+
+                                    TPublicType publicTypeCast{};
+                                    publicTypeCast.basicType = EbtInt;
+                                    publicTypeCast.vectorSize = 1;
+                                    publicTypeCast.qualifier = node->getQualifier();
+
+                                    TType castType(publicTypeCast);
+                                    TIntermAggregate* castNode = new TIntermAggregate(EOpConvFloatToInt);
+                                    castNode->setType(castType);
+                                    castNode->getSequence().push_back(accessX);
+
+                                    if (node->getLoc().line != 0) {
+                                        castNode->setLoc(node->getLoc());
+                                    }
+
+                                    shapeConversion = castNode;
+                                }
+
                                 binary->setRight(shapeConversion);
                             }
                         }
@@ -395,6 +430,7 @@ namespace Babylon::ShaderCompilerTraversers
                         // create a shape conversion operation -- unless the uniform is an array, in which case
                         // it's slightly more complicated.
                         auto* parent = this->getParentNode();
+
                         if (symbol->isArray())
                         {
                             // Converting the shape of an element retrieved from an array is similar to converting
@@ -416,11 +452,14 @@ namespace Babylon::ShaderCompilerTraversers
                                 auto* binType = newType.clone();
                                 binType->clearArraySizes();
                                 binary->setType(*binType);
-                                auto shapeConversion = m_intermediate->addShapeConversion(*oldType, binary);
+
+                                TIntermTyped* target = binary;
+
+                                auto shapeConversion = m_intermediate->addShapeConversion(*oldType, target);
 
                                 assert(this->path.size() > 1);
                                 auto* grandparent = this->path[this->path.size() - 2];
-                                injectShapeConversion(binary, grandparent, shapeConversion);
+                                injectShapeConversion(target, grandparent, shapeConversion);
                             }
                             else
                             {
@@ -429,8 +468,10 @@ namespace Babylon::ShaderCompilerTraversers
                         }
                         else
                         {
-                            auto shapeConversion = m_intermediate->addShapeConversion(*oldType, symbol);
-                            injectShapeConversion(symbol, parent, shapeConversion);
+                            TIntermTyped* target = symbol;
+
+                            auto shapeConversion = m_intermediate->addShapeConversion(*oldType, target);
+                            injectShapeConversion(target, parent, shapeConversion);
                         }
                     }
 
@@ -446,6 +487,7 @@ namespace Babylon::ShaderCompilerTraversers
 
             TIntermediate* m_intermediate{};
             AllocationsScope& m_scope;
+            std::vector<std::unique_ptr<TIntermAggregate>> casts{};
         };
 
         /// This traverser modifies all vertex attributes (position, UV, etc.) to conform to
