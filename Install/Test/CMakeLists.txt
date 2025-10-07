@@ -44,13 +44,7 @@ endif()
 
 set(APPS_DIR "../../Apps")
 set(UNITTESTS_DIR "${APPS_DIR}/UnitTests")
-set(LOCAL_SCRIPTS "${UNITTESTS_DIR}/Scripts/tests.js")
-
-set(NPM_SCRIPTS
-    "${APPS_DIR}/node_modules/babylonjs/babylon.max.js"
-    "${APPS_DIR}/node_modules/babylonjs-materials/babylonjs.materials.js"
-    "${APPS_DIR}/node_modules/chai/chai.js"
-    "${APPS_DIR}/node_modules/mocha/mocha.js")
+set(LOCAL_SCRIPTS "${UNITTESTS_DIR}/dist/tests.js")
 
 set(SOURCES
     "${UNITTESTS_DIR}/Shared/Shared.h"
@@ -127,7 +121,7 @@ elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     endif()
 endif()
 
-add_executable(TestInstall ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${SOURCES})
+add_executable(TestInstall ${LOCAL_SCRIPTS} ${SOURCES})
 
 set(INSTALL_LIBS_DIR "${BINARY_DIR}/install/lib")
 target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")
