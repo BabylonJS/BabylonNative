@@ -16,6 +16,7 @@ set(SCRIPTS
     "Scripts/experience.ts"
     "Scripts/playground_runner.js"
     "Scripts/validation_native.ts"
+    "Scripts/TestUtils.d.ts"
     "Scripts/config.json")
 
 if(APPLE)
@@ -224,6 +225,16 @@ if(WINDOWS_STORE)
     set_property(SOURCE ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${PACKAGE_JSON} PROPERTY VS_DEPLOYMENT_LOCATION "Scripts")
         set_property(SOURCE ${REFERENCE_IMAGES} PROPERTY VS_DEPLOYMENT_LOCATION "ReferenceImages")
 else()
+    # Copy package.json next to the executable to allow npm install and npm build in post-build step.
+    # This destination folder is saved with nightly build and used by Babylon.js CI to test the PRs.
+    foreach(SCRIPT ${SCRIPTS} ${PACKAGE_JSON})
+        get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
+        add_custom_command(
+            OUTPUT "${CMAKE_CFG_INTDIR}/${SCRIPT_NAME}"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${SCRIPT_NAME}"
+            COMMENT "Copying ${SCRIPT_NAME}"
+            MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}")
+    endforeach()
     foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${PACKAGE_JSON})
         get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
         add_custom_command(
