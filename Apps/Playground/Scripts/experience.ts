@@ -4,7 +4,7 @@ import {
     NativeEngine,
     Scene,
 } from "@babylonjs/core";
-dddd
+
 function CreateBoxAsync(scene: Scene) {
     MeshBuilder.CreateBox("box1", {size: 0.2}, scene);
     return Promise.resolve();
