@@ -1,20 +1,19 @@
 FILE(GLOB REFERENCE_IMAGES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "ReferenceImages/*")
 
 set(BABYLON_SCRIPTS
-    "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
-    "../node_modules/babylonjs/babylon.max.js"
-    "../node_modules/babylonjs-materials/babylonjs.materials.js"
-    "../node_modules/babylonjs-gui/babylon.gui.js")
+    "../dist/experience.js"
+    "../dist/validation_native.js")
 
 set(DEPENDENCIES
     "../Dependencies/ammo.js"
     "../Dependencies/meshwriter.min.js"
-    "../Dependencies/recast.js")
+    "../Dependencies/recast.js"
+    "package.json") # Included for npm install and npm build in post-build step.
 
 set(SCRIPTS
-    "Scripts/experience.js"
+    "Scripts/experience.ts"
     "Scripts/playground_runner.js"
-    "Scripts/validation_native.js"
+    "dist/validation_native.ts"
     "Scripts/config.json")
 
 if(APPLE)

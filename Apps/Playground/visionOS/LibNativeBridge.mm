@@ -71,12 +71,6 @@
     });
 
     Babylon::ScriptLoader loader{ *_runtime };
-    loader.LoadScript("app:///Scripts/ammo.js");
-    loader.LoadScript("app:///Scripts/recast.js");
-    loader.LoadScript("app:///Scripts/babylon.max.js");
-    loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
-    loader.LoadScript("app:///Scripts/babylonjs.materials.js");
-    loader.LoadScript("app:///Scripts/babylon.gui.js");
     loader.LoadScript("app:///Scripts/experience.js");
     self.initialized = YES;
     

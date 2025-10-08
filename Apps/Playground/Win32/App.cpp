@@ -10,6 +10,7 @@
 #include <iostream>
 #include <optional>
 #include <sstream>
+#include <set>
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
@@ -46,6 +47,37 @@ ATOM MyRegisterClass(HINSTANCE hInstance);
 BOOL InitInstance(HINSTANCE, int);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
+
+class DebugStreamBuf : public std::streambuf {
+private:
+    std::string buffer;
+
+protected:
+    virtual int overflow(int c) override {
+        if (c != EOF) {
+            buffer += static_cast<char>(c);
+            if (c == '\n') {
+                OutputDebugStringA(buffer.c_str());
+                buffer.clear();
+            }
+        }
+        return c;
+    }
+
+    virtual int sync() override {
+        if (!buffer.empty()) {
+            OutputDebugStringA(buffer.c_str());
+            buffer.clear();
+        }
+        return 0;
+    }
+};
+
+// Method 2: Simple function to redirect stderr
+void RedirectStderrToOutputDebugString() {
+    static DebugStreamBuf debugBuf;
+    std::cerr.rdbuf(&debugBuf);
+}
 
 namespace
 {
@@ -196,15 +228,6 @@ namespace
         });
 
         Babylon::ScriptLoader loader{*runtime};
-        loader.LoadScript("app:///Scripts/ammo.js");
-        // Commenting out recast.js for now because v8jsi is incompatible with asm.js.
-        // loader.LoadScript("app:///Scripts/recast.js");
-        loader.LoadScript("app:///Scripts/babylon.max.js");
-        loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
-        loader.LoadScript("app:///Scripts/babylonjs.materials.js");
-        loader.LoadScript("app:///Scripts/babylon.gui.js");
-        loader.LoadScript("app:///Scripts/meshwriter.min.js");
-
         std::vector<std::string> scripts = GetCommandLineArguments();
         if (scripts.empty())
         {
@@ -232,6 +255,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_ LPWSTR lpCmdLine,
     _In_ int nCmdShow)
 {
+    RedirectStderrToOutputDebugString();
+
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
