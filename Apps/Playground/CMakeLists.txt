@@ -1,8 +1,8 @@
 FILE(GLOB REFERENCE_IMAGES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "ReferenceImages/*")
 
 set(BABYLON_SCRIPTS
-    "../dist/experience.js"
-    "../dist/validation_native.js")
+    "dist/experience.js"
+    "dist/validation_native.js")
 
 set(DEPENDENCIES
     "../Dependencies/ammo.js"
@@ -15,7 +15,7 @@ set(PACKAGE_JSON
 set(SCRIPTS
     "Scripts/experience.ts"
     "Scripts/playground_runner.js"
-    "dist/validation_native.ts"
+    "Scripts/validation_native.ts"
     "Scripts/config.json")
 
 if(APPLE)
@@ -243,7 +243,7 @@ else()
 endif()
 
 set_property(TARGET Playground PROPERTY FOLDER Apps)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FILES ${BABYLON_SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/dist PREFIX Scripts FILES ${BABYLON_SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies PREFIX Scripts FILES ${DEPENDENCIES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/. PREFIX Scripts FILES ${PACKAGE_JSON})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${REFERENCE_IMAGES})

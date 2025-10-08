@@ -3,9 +3,11 @@ const glob = require('glob');
 const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 
 const entries = {};
-glob.sync('./Scripts/**/*.ts').forEach(file => {
-  const name = path.basename(file, '.ts');
-  entries[name] = file;
+glob.sync('./Scripts/**/*.ts')
+  .filter(file => !file.endsWith('.d.ts'))
+  .forEach(file => {
+    const name = path.basename(file, '.ts');
+    entries[name] = file;
 });
 
 module.exports = {
