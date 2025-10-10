@@ -1,13 +1,10 @@
 {
-  "name": "BabylonNative",
+  "name": "Playground",
   "version": "0.0.1",
   "private": true,
-  "workspaces": [
-    "UnitTests",
-    "Playground"
-  ],
   "scripts": {
-    "getNightly": "node scripts/getNightly.js"
+    "build": "npx tsc",
+    "postinstall": "npm run build"
   },
   "dependencies": {
     "babylonjs": "^8.28.2",

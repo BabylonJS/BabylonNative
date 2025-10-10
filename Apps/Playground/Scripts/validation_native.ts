@@ -1,21 +1,55 @@
+/// <reference path="./testutils.d.ts" />
+/// <reference path="../../node_modules/babylonjs/babylon.module.d.ts" />
+
+import { NativeEngine, ArcRotateCamera, Scene, SceneLoader, Tools, WebRequest } from "babylonjs";
+
+declare const _native: any;
+
+interface TestConfig {
+    title: string;
+    playgroundId: string;
+    sceneFolder?: string;
+    sceneFilename?: string;
+    referenceImage: string;
+    excludedGraphicsApis?: string[];
+    renderCount?: number;
+    errorRatio?: number;
+    onlyVisual?: boolean;
+    excludeFromAutomaticTesting?: boolean;
+    comment?: string;
+    replace?: string;
+    replaceUrl?: string;
+    specificRoot?: string;
+    scriptToRun?: string;
+    functionToCall?: string;
+    rootPath?: string;
+    threshold?: number;
+}
+
+interface ConfigFile {
+    root: string;
+    tests: TestConfig[];
+}
+type compareFunctionType = (test: TestConfig, renderData: Uint8Array, threshold: number, errorRatio: number, referenceImage?: Uint8Array) => boolean;
+
 (function () {
-    let currentScene;
-    let config;
+    let currentScene: any;
+    let config: ConfigFile;
     const justOnce = false;
     const saveResult = true;
     const testWidth = 600;
     const testHeight = 400;
     const generateReferences = false;
 
-    const engine = new BABYLON.NativeEngine();
+    const engine = new NativeEngine();
     engine.getCaps().parallelShaderCompile = undefined;
 
     engine.getRenderingCanvas = function () {
-        return window;
+        return null;
     }
 
     engine.getInputElement = function () {
-        return 0;
+        return null;
     }
 
     const canvas = window;
@@ -27,7 +61,7 @@
         return x - Math.floor(x);
     }
 
-    function compare(test, renderData, referenceImage, threshold, errorRatio) {
+    function compare(test: TestConfig, renderData: Uint8Array, threshold: number, errorRatio: number, referenceImage?: Uint8Array): boolean {
         const referenceData = TestUtils.getImageData(referenceImage);
         if (referenceData.length != renderData.length) {
             throw new Error(`Reference data length (${referenceData.length}) must match render data length (${renderData.length})`);
@@ -73,22 +107,22 @@
         return error;
     }
 
-    function saveRenderedResult(test, renderData) {
+    function saveRenderedResult(test: TestConfig, renderData: Uint8Array) {
         const width = testWidth / engine.getHardwareScalingLevel();
         const height = testHeight / engine.getHardwareScalingLevel();
         TestUtils.writePNG(renderData, width, height, TestUtils.getOutputDirectory() + "/Results/" + test.referenceImage);
         return false; // no error
     }
 
-    function evaluate(test, referenceImage, done, compareFunction) {
-        TestUtils.getFrameBufferData(function (screenshot) {
+    function evaluate(test: TestConfig, done: (done: boolean) => void, compareFunction: compareFunctionType, referenceImage?: Uint8Array) {
+        TestUtils.getFrameBufferData(function (screenshot: Uint8Array) {
             let testRes = true;
 
             if (!test.onlyVisual) {
 
                 const defaultErrorRatio = 2.5;
 
-                if (compareFunction(test, screenshot, referenceImage, test.threshold || 25, test.errorRatio || defaultErrorRatio)) {
+                if (compareFunction(test, screenshot, test.threshold || 25, test.errorRatio || defaultErrorRatio, referenceImage)) {
                     testRes = false;
                     console.log('failed');
                 } else {
@@ -108,13 +142,14 @@
         });
     }
 
-    function processCurrentScene(test, renderImage, done, compareFunction) {
+    function processCurrentScene(test: TestConfig, done: (done: boolean) => void, compareFunction: compareFunctionType, renderImage?: Uint8Array) {
         currentScene.useConstantAnimationDeltaTime = true;
         let renderCount = test.renderCount || 1;
 
         currentScene.executeWhenReady(function () {
-            if (currentScene.activeCamera && currentScene.activeCamera.useAutoRotationBehavior) {
-                currentScene.activeCamera.useAutoRotationBehavior = false;
+            const activeCamera = currentScene.activeCamera;
+            if (activeCamera && activeCamera instanceof ArcRotateCamera && (activeCamera as ArcRotateCamera).useAutoRotationBehavior) {
+                (activeCamera as ArcRotateCamera).useAutoRotationBehavior = false;
             }
             engine.runRenderLoop(function () {
                 try {
@@ -123,7 +158,7 @@
 
                     if (renderCount === 0) {
                         engine.stopRenderLoop();
-                        evaluate(test, renderImage, done, compareFunction);
+                        evaluate(test, done, compareFunction, renderImage);
                     }
                 }
                 catch (e) {
@@ -134,14 +169,14 @@
         }, true);
     }
 
-    function loadPlayground(test, done, referenceImage, compareFunction) {
+    function loadPlayground(test: TestConfig, done: (done: boolean) => void, compareFunction: compareFunctionType, referenceImage?: Uint8Array) {
         if (test.sceneFolder) {
-            BABYLON.SceneLoader.Load(config.root + test.sceneFolder, test.sceneFilename, engine, function (newScene) {
+            SceneLoader.Load(config.root + test.sceneFolder, test.sceneFilename, engine, function (newScene: Scene) {
                 currentScene = newScene;
-                processCurrentScene(test, referenceImage, done, compareFunction);
+                processCurrentScene(test, done, compareFunction, referenceImage);
             },
                 null,
-                function (loadedScene, msg) {
+                function (loadedScene: Scene, msg: string) {
                     console.error(msg);
                     done(false);
                 });
@@ -200,16 +235,16 @@
 
                             if (currentScene.then) {
                                 // Handle if createScene returns a promise
-                                currentScene.then(function (scene) {
+                                currentScene.then(function (scene: Scene) {
                                     currentScene = scene;
-                                    processCurrentScene(test, referenceImage, done, compareFunction);
-                                }).catch(function (e) {
+                                    processCurrentScene(test, done, compareFunction, referenceImage);
+                                }).catch(function (e: any) {
                                     console.error(e);
                                     onError();
                                 })
                             } else {
                                 // Handle if createScene returns a scene
-                                processCurrentScene(test, referenceImage, done, compareFunction);
+                                processCurrentScene(test, done, compareFunction, referenceImage);
                             }
 
                         }
@@ -230,7 +265,7 @@
         } else {
             // Fix references
             if (test.specificRoot) {
-                BABYLON.Tools.BaseUrl = config.root + test.specificRoot;
+                Tools.BaseUrl = config.root + test.specificRoot;
             }
 
             const request = new XMLHttpRequest();
@@ -241,7 +276,7 @@
                     try {
                         request.onreadystatechange = null;
 
-                        const scriptToRun = request.responseText.replace(/..\/..\/assets\//g, config.root + "/Assets/");
+                        let scriptToRun = request.responseText.replace(/..\/..\/assets\//g, config.root + "/Assets/");
                         scriptToRun = scriptToRun.replace(/..\/..\/Assets\//g, config.root + "/Assets/");
                         scriptToRun = scriptToRun.replace(/\/assets\//g, config.root + "/Assets/");
 
@@ -264,7 +299,7 @@
                         }
 
                         currentScene = eval(scriptToRun + test.functionToCall + "(engine)");
-                        processCurrentScene(test, renderImage, done, compareFunction);
+                        processCurrentScene(test, done, compareFunction);//, renderImage);
                     }
                     catch (e) {
                         console.error(e);
@@ -280,7 +315,7 @@
             request.send(null);
         }
     }
-    function runTest(index, done) {
+    function runTest(index: number, done: (result: boolean) => void) {
         if (index >= config.tests.length) {
             done(false);
         }
@@ -301,48 +336,50 @@
         seed = 1;
 
         if (generateReferences) {
-            loadPlayground(test, done, undefined, saveRenderedResult);
+            loadPlayground(test, done, saveRenderedResult);
         } else {
-            const onLoadFileError = function (request, exception) {
+            const onLoadFileError = function(request?: WebRequest, exception?: any) {
                 console.error("Failed to retrieve " + url + ".", exception);
                 done(false);
             };
 
-            const onload = function (data, responseURL) {
+            const onload = function(data: string | ArrayBuffer, responseURL?: string) {
                 if (typeof (data) === "string") {
                     throw new Error("Decode Image from string data not yet implemented.");
                 }
 
                 const referenceImage = TestUtils.decodeImage(data);
-                loadPlayground(test, done, referenceImage, compare);
+                loadPlayground(test, done, compare, referenceImage);
             };
 
             // run test and image comparison
             const url = "app:///ReferenceImages/" + test.referenceImage;
-            BABYLON.Tools.LoadFile(url, onload, undefined, undefined, /*useArrayBuffer*/true, onLoadFileError);
+            Tools.LoadFile(url, onload, undefined, undefined, /*useArrayBuffer*/true, onLoadFileError);
         }
     }
 
-    OffscreenCanvas = function (width, height) {
-        return {
-            width: width
-            , height: height
-            , getContext: function (type) {
-                return {
-                    fillRect: function (x, y, w, h) { }
-                    , measureText: function (text) { return 8; }
-                    , fillText: function (text, x, y) { }
-                };
-            }
-        };
+    class OffscreenCanvas {
+        width: number;
+        height: number;
+        constructor(width: number, height: number) {
+            this.width = width;
+            this.height = height;
+        }
+        getContext(type: string) {
+            return {
+                fillRect: function (x: number, y: number, w: number, h: number) { },
+                measureText: function (text: string) { return 8; },
+                fillText: function (text: string, x: number, y: number) { }
+            };
+        }
     }
 
-    document = {
-        createElement: function (type) {
+    const document: any = {
+        createElement: function (type: string): any {
             if (type === "canvas") {
                 return new OffscreenCanvas(64, 64);
             }
-            return {};
+            return {} as any;
         },
         removeEventListener: function () { }
     }
@@ -355,8 +392,8 @@
             config = JSON.parse(xhr.responseText);
 
             // Run tests
-            const recursiveRunTest = function (i) {
-                runTest(i, function (status) {
+            const recursiveRunTest = function (i: number) {
+                runTest(i, function (status: boolean) {
                     if (!status) {
                         TestUtils.exit(-1);
                         return;
@@ -376,7 +413,7 @@
     }, false);
 
 
-    BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
+    Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data: string | ArrayBuffer) => {
         _native.Canvas.loadTTFAsync("droidsans", data).then(function () {
             _native.RootUrl = "https://playground.babylonjs.com";
             console.log("Starting");
