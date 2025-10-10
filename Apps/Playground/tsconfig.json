@@ -1,12 +1,22 @@
 {
   "compilerOptions": {
     "target": "es5",
-    "module": "esnext",
+    "module": "umd",
+    "lib": ["es5", "dom"],
+    "outDir": "./dist",
+    "rootDir": "./Scripts",
     "strict": true,
-    "moduleResolution": "node",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "sourceMap": false
+    "forceConsistentCasingInFileNames": true,
+    "declaration": false,
+    "sourceMap": false,
   },
-  "include": ["Scripts/**/*"]
+  "include": [
+    "Scripts/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.d.ts"
+  ]
 }

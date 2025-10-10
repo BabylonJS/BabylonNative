@@ -3,26 +3,16 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "build": "webpack",
-    "watch": "webpack -watch",
+    "build": "npx tsc",
     "postinstall": "npm run build"
   },
   "dependencies": {
-    "@babylonjs/core": "^8.25.1",
-    "@babylonjs/gui": "^8.25.1",
-    "@babylonjs/loaders": "^8.25.1",
-    "@babylonjs/materials": "^8.25.1"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.28.4",
-    "@babel/preset-env": "^7.28.3",
-    "@babel/preset-typescript": "^7.27.1",
-    "babel-loader": "^10.0.0",
-    "fork-ts-checker-webpack-plugin": "^9.1.0",
-    "ts-loader": "^9.5.4",
-    "typescript": "^5.9.3",
-    "util": "^0.12.5",
-    "webpack": "^5.101.3",
-    "webpack-cli": "^6.0.1"
+    "babylonjs": "^8.28.2",
+    "babylonjs-gltf2interface": "^8.28.2",
+    "babylonjs-gui": "^8.28.2",
+    "babylonjs-loaders": "^8.28.2",
+    "babylonjs-materials": "^8.28.2",
+    "jsc-android": "^241213.1.0",
+    "v8-android": "^7.8.2"
   }
 }
