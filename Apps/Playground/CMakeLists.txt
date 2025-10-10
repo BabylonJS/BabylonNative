@@ -19,7 +19,7 @@ set(SCRIPTS
     "Scripts/experience.ts"
     "Scripts/playground_runner.js"
     "Scripts/validation_native.ts"
-    "Scripts/TestUtils.d.ts"
+    "Scripts/testutils.d.ts"
     "Scripts/config.json")
 
 if(APPLE)
