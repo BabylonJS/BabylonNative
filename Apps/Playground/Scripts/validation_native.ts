@@ -1,8 +1,7 @@
-/// <reference path="./TestUtils.d.ts" />
+/// <reference path="./testutils.d.ts" />
 /// <reference path="../../node_modules/babylonjs/babylon.module.d.ts" />
-/// <reference path="../../node_modules/babylonjs-loaders/babylonjs.loaders.module.d.ts" />
-/// <reference path="../../node_modules/babylonjs-materials/babylonjs.materials.module.d.ts" />
-/// <reference path="../../node_modules/babylonjs-gui/babylon.gui.module.d.ts" />
+
+import { NativeEngine, ArcRotateCamera, Scene, SceneLoader, Tools, WebRequest } from "babylonjs";
 
 declare const _native: any;
 
