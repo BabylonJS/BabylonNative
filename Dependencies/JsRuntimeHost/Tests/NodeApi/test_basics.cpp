@@ -14,11 +14,23 @@ namespace node_api_tests {
 
 class BasicsTest : public TestFixtureBase {
  protected:
-  void SetUp() override { basics_js_dir_ = js_root_dir_ / "basics"; }
+  void SetUp() override {
+    const auto& config = Config();
+    ASSERT_FALSE(config.js_root.empty())
+        << "Node-API test root directory is not configured.";
+    basics_js_dir_ = config.js_root / "basics";
+  }
 
   ProcessResult RunScript(std::string_view script_filename) noexcept {
-    return SpawnSync(node_lite_path_.string(),
-                     {(basics_js_dir_ / script_filename).string()});
+    const auto& config = Config();
+    if (config.run_script) {
+      return config.run_script(basics_js_dir_ / fs::path{script_filename});
+    }
+
+    ProcessResult fallback{};
+    fallback.status = 1;
+    fallback.std_error = "Node-API test runner is not configured.";
+    return fallback;
   }
 
   bool StringContains(std::string_view str, std::string_view substr) {

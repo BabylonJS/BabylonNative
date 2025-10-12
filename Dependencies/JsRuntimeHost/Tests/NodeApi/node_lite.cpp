@@ -6,12 +6,15 @@
 #include <algorithm>
 #include <array>
 #include <cstdarg>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <mutex>
 #include <regex>
 #include <sstream>
+#include <utility>
 #include "child_process.h"
 
 namespace fs = std::filesystem;
@@ -19,6 +22,24 @@ namespace fs = std::filesystem;
 namespace node_api_tests {
 
 namespace {
+
+std::mutex& ErrorHandlerMutex() {
+  static std::mutex mutex;
+  return mutex;
+}
+
+void DefaultFatalErrorHandler(const NodeLiteFatalErrorInfo& info) {
+  if (!info.message.empty()) {
+    std::cerr << info.message;
+    if (!info.details.empty()) {
+      std::cerr << '\n' << info.details;
+    }
+    std::cerr << std::endl;
+  } else if (!info.details.empty()) {
+    std::cerr << info.details << std::endl;
+  }
+  std::exit(info.exit_code);
+}
 
 NodeApiRef MakeNodeApiRef(napi_env env, napi_value value) {
   napi_ref ref{};
@@ -271,31 +292,38 @@ std::string NodeLiteModule::ReadModuleFileText(napi_env env) {
 
   std::string jsFilePath = args[1];
   std::unique_ptr<NodeLiteRuntime> runtime = NodeLiteRuntime::Create(
-      std::move(taskRunner), js_root.string(), std::move(args));
+      std::move(taskRunner),
+      js_root.string(),
+      std::move(args),
+      NodeLiteRuntime::Callbacks{});
   runtime->RunTestScript(jsFilePath);
 }
 
 /*static*/ std::unique_ptr<NodeLiteRuntime> NodeLiteRuntime::Create(
     std::shared_ptr<NodeLiteTaskRunner> task_runner,
     std::string js_root,
-    std::vector<std::string> args) {
+    std::vector<std::string> args,
+    Callbacks callbacks) {
   std::unique_ptr<NodeLiteRuntime> runtime =
       std::make_unique<NodeLiteRuntime>(PrivateTag{},
                                         std::move(task_runner),
                                         std::move(js_root),
-                                        std::move(args));
+                                        std::move(args),
+                                        std::move(callbacks));
   runtime->Initialize();
-  return runtime;
+  return std::unique_ptr<NodeLiteRuntime>(runtime.release());
 }
 
 NodeLiteRuntime::NodeLiteRuntime(
     PrivateTag,
     std::shared_ptr<NodeLiteTaskRunner> task_runner,
     std::string js_root,
-    std::vector<std::string> args)
+    std::vector<std::string> args,
+    Callbacks callbacks)
     : task_runner_(std::move(task_runner)),
       js_root_(std::move(js_root)),
-      args_(std::move(args)) {}
+      args_(std::move(args)),
+      callbacks_(std::move(callbacks)) {}
 
 void NodeLiteRuntime::Initialize() {
   env_holder_ =
@@ -681,10 +709,13 @@ void NodeLiteRuntime::DefineGlobalFunctions() {
 
     // console.log()
     NodeApi::SetMethod(
-        env_, console_obj, "log", [](napi_env env, span<napi_value> args) {
+        env_,
+        console_obj,
+        "log",
+        [this](napi_env env, span<napi_value> args) {
           NODE_LITE_ASSERT(args.size() >= 1, "Expected at least 1 argument");
           std::string message = NodeApi::ToStdString(env, args[0]);
-          std::cout << message << std::endl;
+          EmitConsoleOutput(message, false);
           return nullptr;
         });
 
@@ -693,12 +724,28 @@ void NodeLiteRuntime::DefineGlobalFunctions() {
         env_,
         console_obj,
         "error",
-        [](napi_env env, span<napi_value> args) -> napi_value {
+        [this](napi_env env, span<napi_value> args) -> napi_value {
           NODE_LITE_ASSERT(args.size() >= 1, "Expected at least 1 argument");
           std::string message = NodeApi::ToStdString(env, args[0]);
-          std::cerr << message << std::endl;
+          EmitConsoleOutput(message, true);
           return nullptr;
         });
+  }
+}
+
+void NodeLiteRuntime::EmitConsoleOutput(const std::string& message,
+                                        bool is_error) {
+  const auto& callback = is_error ? callbacks_.stderr_callback
+                                  : callbacks_.stdout_callback;
+  if (callback) {
+    callback(message);
+    return;
+  }
+
+  if (is_error) {
+    std::cerr << message << std::endl;
+  } else {
+    std::cout << message << std::endl;
   }
 }
 
@@ -867,6 +914,35 @@ NodeApiEnvScope& NodeApiEnvScope::operator=(NodeApiEnvScope&& other) noexcept {
 // NodeLiteErrorHandler implementation
 //=============================================================================
 
+/*static*/ NodeLiteErrorHandler::Handler NodeLiteErrorHandler::SetHandler(
+    Handler handler) noexcept {
+  std::lock_guard lock{ErrorHandlerMutex()};
+  Handler previous = GetHandler();
+  if (handler) {
+    GetHandler() = std::move(handler);
+  } else {
+    GetHandler() = DefaultFatalErrorHandler;
+  }
+  return previous;
+}
+
+/*static*/ NodeLiteErrorHandler::Handler& NodeLiteErrorHandler::GetHandler()
+    noexcept {
+  static Handler handler = DefaultFatalErrorHandler;
+  return handler;
+}
+
+/*static*/ [[noreturn]] void NodeLiteErrorHandler::HandleFatalError(
+    NodeLiteFatalErrorInfo info) {
+  Handler handler_copy;
+  {
+    std::lock_guard lock{ErrorHandlerMutex()};
+    handler_copy = GetHandler();
+  }
+  handler_copy(info);
+  std::terminate();
+}
+
 /*static*/ [[noreturn]] void NodeLiteErrorHandler::OnNodeApiFailed(
     napi_env env, napi_status error_code) {
   const char* errorMessage = "An exception is pending";
@@ -876,9 +952,8 @@ NodeApiEnvScope& NodeApiEnvScope::operator=(NodeApiEnvScope&& other) noexcept {
     const napi_extended_error_info* error_info{};
     napi_status status = napi_get_last_error_info(env, &error_info);
     if (status != napi_ok) {
-      NodeLiteErrorHandler::ExitWithMessage("", [&](std::ostream& os) {
-        os << "Failed to get last error info: " << status;
-      });
+      NodeLiteErrorHandler::ExitWithMessage(
+          "", [&](std::ostream& os) { os << "Failed to get last error info: " << status; });
     }
     errorMessage = error_info->error_message;
   }
@@ -947,7 +1022,8 @@ NodeApiEnvScope& NodeApiEnvScope::operator=(NodeApiEnvScope&& other) noexcept {
   }
 
   ExitWithMessage("JavaScript assertion error", [&](std::ostream& os) {
-    os << "Exception: " << "AssertionError" << '\n'
+    os << "Exception: "
+       << "AssertionError" << '\n'
        << "   Method: " << method_name << '\n'
        << "  Message: " << message << '\n'
        << error_details.str(/*a filler for formatting*/)
@@ -958,21 +1034,19 @@ NodeApiEnvScope& NodeApiEnvScope::operator=(NodeApiEnvScope&& other) noexcept {
 
 /*static*/ [[noreturn]] void NodeLiteErrorHandler::ExitWithMessage(
     const std::string& message,
-    std::function<void(std::ostream&)> get_error_details) noexcept {
+    std::function<void(std::ostream&)> get_error_details,
+    int exit_code) noexcept {
   std::ostringstream details_stream;
-  get_error_details(details_stream);
+  if (get_error_details) {
+    get_error_details(details_stream);
+  }
   std::string details = details_stream.str();
-  if (!message.empty()) {
-    std::cerr << message;
-  }
-  if (!details.empty()) {
-    if (!message.empty()) {
-      std::cerr << "\n";
-    }
-    std::cerr << details;
-  }
-  std::cerr << std::endl;
-  exit(1);
+
+  HandleFatalError(NodeLiteFatalErrorInfo{
+      .message = message,
+      .details = details,
+      .exit_code = exit_code,
+  });
 }
 
 //=============================================================================
@@ -1257,6 +1331,92 @@ NodeApiEnvScope& NodeApiEnvScope::operator=(NodeApiEnvScope&& other) noexcept {
       // TODO: (vmoroz) Find a way to delete it on close.
       new NodeApiCallback(std::move(cb)),
       &result));
+  return result;
+}
+
+ProcessResult RunNodeLiteScript(const std::filesystem::path& js_root,
+                                const std::filesystem::path& script_path,
+                                NodeLiteRuntime::Callbacks callbacks) {
+  ProcessResult result{};
+  std::ostringstream stdout_stream;
+  std::ostringstream stderr_stream;
+
+  NodeLiteRuntime::Callbacks effective_callbacks;
+  auto stdout_cb = callbacks.stdout_callback;
+  auto stderr_cb = callbacks.stderr_callback;
+  effective_callbacks.stdout_callback =
+      [stdout_cb, &stdout_stream](const std::string& message) {
+        if (stdout_cb) {
+          stdout_cb(message);
+        }
+        stdout_stream << message << '\n';
+      };
+  effective_callbacks.stderr_callback =
+      [stderr_cb, &stderr_stream](const std::string& message) {
+        if (stderr_cb) {
+          stderr_cb(message);
+        }
+        stderr_stream << message << '\n';
+      };
+
+  auto fatal_handler = [&result](const NodeLiteFatalErrorInfo& info) {
+    result.status = info.exit_code;
+    if (!info.message.empty()) {
+      result.std_error = info.message;
+    }
+    if (!info.details.empty()) {
+      if (!result.std_error.empty()) {
+        result.std_error += '\n';
+      }
+      result.std_error += info.details;
+    }
+    throw NodeLiteFatalError(info);
+  };
+
+  NodeLiteErrorHandler::Handler previous_handler =
+      NodeLiteErrorHandler::SetHandler(fatal_handler);
+
+  try {
+    auto task_runner = std::make_shared<NodeLiteTaskRunner>();
+    std::vector<std::string> args{"node_lite", script_path.string()};
+    auto runtime = NodeLiteRuntime::Create(std::move(task_runner),
+                                           js_root.string(),
+                                           std::move(args),
+                                           std::move(effective_callbacks));
+    runtime->RunTestScript(script_path.string());
+    result.status = 0;
+  } catch (const NodeLiteFatalError&) {
+    // Fatal error captured in result
+  } catch (const std::exception& e) {
+    NodeLiteErrorHandler::SetHandler(previous_handler);
+    result.status = -1;
+    result.std_error = e.what();
+    return result;
+  } catch (...) {
+    NodeLiteErrorHandler::SetHandler(previous_handler);
+    result.status = -1;
+    result.std_error = "Unknown error";
+    return result;
+  }
+
+  NodeLiteErrorHandler::SetHandler(previous_handler);
+
+  result.std_output = stdout_stream.str();
+  if (!result.std_output.empty() && result.std_output.back() == '\n') {
+    result.std_output.pop_back();
+  }
+
+  std::string stderr_logs = stderr_stream.str();
+  if (!stderr_logs.empty() && stderr_logs.back() == '\n') {
+    stderr_logs.pop_back();
+  }
+  if (!stderr_logs.empty()) {
+    if (!result.std_error.empty()) {
+      result.std_error += '\n';
+    }
+    result.std_error += stderr_logs;
+  }
+
   return result;
 }
 

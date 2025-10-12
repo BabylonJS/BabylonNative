@@ -20,7 +20,10 @@ function(node_api_copy_test_sources TARGET_NAME)
     )
 endfunction()
 
-if(APPLE)
+if(ANDROID)
+    set(NODE_LITE_PLATFORM_SRC node_lite_android.cpp)
+    set(NODE_LITE_CHILD_PROCESS_SRC child_process_android.cpp)
+elseif(APPLE)
     set(NODE_LITE_PLATFORM_SRC node_lite_mac.cpp)
     set(NODE_LITE_CHILD_PROCESS_SRC child_process_mac.cpp)
 elseif(WIN32)
@@ -68,13 +71,14 @@ target_link_libraries(node_lite
 node_api_copy_test_sources(node_lite)
 
 add_executable(NodeApiTests
-    ${NODE_LITE_CHILD_PROCESS_SRC}
-    child_process.h
-    string_utils.cpp
-    string_utils.h
-    test_basics.cpp
-    test_main.cpp
-    test_main.h
+  ${NODE_LITE_CHILD_PROCESS_SRC}
+  child_process.h
+  string_utils.cpp
+  string_utils.h
+  test_basics.cpp
+  test_main.cpp
+  main.cpp
+  test_main.h
 )
 
 target_include_directories(NodeApiTests

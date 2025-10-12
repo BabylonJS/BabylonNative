@@ -16,6 +16,7 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+#include "child_process.h"
 #include "compat.h"
 #include "string_utils.h"
 
@@ -87,8 +88,29 @@ class NodeLiteException : public std::runtime_error {
   napi_status error_status_;
 };
 
+struct NodeLiteFatalErrorInfo {
+  std::string message;
+  std::string details;
+  int exit_code{1};
+};
+
+class NodeLiteFatalError : public std::runtime_error {
+ public:
+  explicit NodeLiteFatalError(NodeLiteFatalErrorInfo info)
+      : std::runtime_error{info.message.c_str()}, info_{std::move(info)} {}
+
+  const NodeLiteFatalErrorInfo& info() const noexcept { return info_; }
+
+ private:
+  NodeLiteFatalErrorInfo info_;
+};
+
 class NodeLiteErrorHandler {
  public:
+  using Handler = std::function<void(const NodeLiteFatalErrorInfo&)>;
+
+  static Handler SetHandler(Handler handler) noexcept;
+
   [[noreturn]] static void OnNodeApiFailed(napi_env env,
                                            napi_status error_status);
 
@@ -104,7 +126,12 @@ class NodeLiteErrorHandler {
 
   [[noreturn]] static void ExitWithMessage(
       const std::string& message,
-      std::function<void(std::ostream&)> get_error_details = nullptr) noexcept;
+      std::function<void(std::ostream&)> get_error_details = nullptr,
+      int exit_code = 1) noexcept;
+
+ private:
+  static Handler& GetHandler() noexcept;
+  [[noreturn]] static void HandleFatalError(NodeLiteFatalErrorInfo info);
 };
 
 // Define NodeApiRef "smart pointer" for napi_ref as unique_ptr with a custom
@@ -187,15 +214,22 @@ class NodeLiteRuntime {
   struct PrivateTag {};
 
  public:
+  struct Callbacks {
+    std::function<void(const std::string&)> stdout_callback{};
+    std::function<void(const std::string&)> stderr_callback{};
+  };
+
   static std::unique_ptr<NodeLiteRuntime> Create(
       std::shared_ptr<NodeLiteTaskRunner> task_runner,
       std::string js_root,
-      std::vector<std::string> args);
+      std::vector<std::string> args,
+      Callbacks callbacks);
 
   explicit NodeLiteRuntime(PrivateTag tag,
                            std::shared_ptr<NodeLiteTaskRunner> task_runner,
-                           std::string js_root,
-                           std::vector<std::string> args);
+                            std::string js_root,
+                           std::vector<std::string> args,
+                           Callbacks callbacks);
 
   static void Run(std::vector<std::string> args);
 
@@ -224,11 +258,13 @@ class NodeLiteRuntime {
   void Initialize();
   void DefineGlobalFunctions();
   void DefineBuiltInModules();
+  void EmitConsoleOutput(const std::string& message, bool is_error);
 
  private:
   std::shared_ptr<NodeLiteTaskRunner> task_runner_;
   std::string js_root_;
   std::vector<std::string> args_;
+  Callbacks callbacks_{};
   std::unique_ptr<IEnvHolder> env_holder_;
   napi_env env_{};
   std::unordered_map<std::string, std::unique_ptr<NodeLiteModule>>
@@ -359,6 +395,11 @@ class NodeApi {
                                    std::string_view name,
                                    NodeApiCallback cb);
 };
+
+ProcessResult RunNodeLiteScript(
+    const std::filesystem::path& js_root,
+    const std::filesystem::path& script_path,
+    NodeLiteRuntime::Callbacks callbacks = NodeLiteRuntime::Callbacks{});
 
 }  // namespace node_api_tests
 

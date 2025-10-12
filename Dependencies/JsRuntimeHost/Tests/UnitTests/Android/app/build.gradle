@@ -22,6 +22,8 @@ if (project.hasProperty("importHostCompilers")) {
     cmakeArguments.add("-DIMPORT_HOST_COMPILERS=${project.property('importHostCompilers')}")
 }
 
+def nodeApiAssetsDir = "${project.buildDir}/generated/nodeapiassets"
+
 android {
     namespace 'com.jsruntimehost.unittests'
     compileSdk 33
@@ -72,6 +74,12 @@ android {
     buildFeatures {
         viewBinding true
     }
+
+    sourceSets {
+        main {
+            assets.srcDirs += [nodeApiAssetsDir]
+        }
+    }
 }
 
 dependencies {
@@ -108,6 +116,11 @@ task copyScripts {
     }
 }
 
+task copyNodeApiTests(type: Copy) {
+    from '../../../NodeApi/test'
+    into "${nodeApiAssetsDir}/NodeApi/test"
+}
+
 // Run copyScripts task after CMake external build
 // And make sure merging assets into output is performed after the scripts copy
 tasks.configureEach { task ->
@@ -116,5 +129,12 @@ tasks.configureEach { task ->
     }
     if (task.name == 'mergeDebugAssets') {
         task.dependsOn(copyScripts)
+        task.dependsOn(copyNodeApiTests)
+    }
+    if (task.name == 'mergeReleaseAssets') {
+        task.dependsOn(copyScripts)
+        task.dependsOn(copyNodeApiTests)
     }
 }
+
+preBuild.dependsOn(copyNodeApiTests)

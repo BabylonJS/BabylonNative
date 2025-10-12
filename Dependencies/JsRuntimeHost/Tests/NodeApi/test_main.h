@@ -6,16 +6,26 @@
 
 #include <gtest/gtest.h>
 #include <filesystem>
+#include <functional>
+#include <unordered_set>
+
+#include "child_process.h"
 
 namespace node_api_tests {
 
-class TestFixtureBase : public ::testing::Test {
- public:
-  static void InitializeGlobals(const char* test_exe_path) noexcept;
+struct NodeApiTestConfig {
+  std::filesystem::path js_root;
+  std::function<ProcessResult(const std::filesystem::path&)> run_script;
+  std::unordered_set<std::string> enabled_native_suites;
+};
 
+void InitializeNodeApiTests(const NodeApiTestConfig& config) noexcept;
+const NodeApiTestConfig& GetNodeApiTestConfig() noexcept;
+void RegisterNodeApiTests();
+
+class TestFixtureBase : public ::testing::Test {
  protected:
-  static std::filesystem::path node_lite_path_;
-  static std::filesystem::path js_root_dir_;
+  static const NodeApiTestConfig& Config() noexcept;
 };
 
 }  // namespace node_api_tests
