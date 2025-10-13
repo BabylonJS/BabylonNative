@@ -23,6 +23,7 @@ if (project.hasProperty("importHostCompilers")) {
 }
 
 def nodeApiAssetsDir = "${project.buildDir}/generated/nodeapiassets"
+def enableAsan = project.hasProperty("enableAsan")
 
 android {
     namespace 'com.jsruntimehost.unittests'
@@ -43,7 +44,11 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments(*cmakeArguments)
+                def cmakeArgs = cmakeArguments.clone()
+                if (enableAsan) {
+                    cmakeArgs += "-DJSR_ENABLE_ASAN=ON"
+                }
+                arguments(*cmakeArgs)
             }
         }
 
@@ -73,6 +78,12 @@ android {
     }
     buildFeatures {
         viewBinding true
+    }
+
+    packagingOptions {
+        if (enableAsan) {
+            doNotStrip "**/*.so"
+        }
     }
 
     sourceSets {

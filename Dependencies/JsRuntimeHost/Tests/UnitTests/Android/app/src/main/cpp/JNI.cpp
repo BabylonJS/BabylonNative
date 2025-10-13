@@ -2,8 +2,6 @@
 #include <android/log.h>
 #include <AndroidExtensions/Globals.h>
 #include <AndroidExtensions/JavaWrappers.h>
-#include <AndroidExtensions/StdoutLogger.h>
-#include <filesystem>
 #include <android/asset_manager_jni.h>
 #include "Babylon/DebugTrace.h"
 #include "Babylon/StandardStreamLogger.h"
@@ -32,7 +30,17 @@ Java_com_jsruntimehost_unittests_Native_javaScriptTests(JNIEnv* env, jclass claz
     jobject applicationContext = env->CallObjectMethod(context, getApplicationContext);
     env->DeleteLocalRef(contextClass);
 
-    android::global::Initialize(javaVM, applicationContext);
+    jclass appContextClass = env->GetObjectClass(applicationContext);
+    jmethodID getAssets = env->GetMethodID(appContextClass, "getAssets", "()Landroid/content/res/AssetManager;");
+    jobject assetManagerObj = env->CallObjectMethod(applicationContext, getAssets);
+    env->DeleteLocalRef(appContextClass);
+
+    android::global::Initialize(javaVM, applicationContext, assetManagerObj);
+
+    if (assetManagerObj != nullptr)
+    {
+        env->DeleteLocalRef(assetManagerObj);
+    }
 
     env->DeleteLocalRef(applicationContext);
 
@@ -50,32 +58,4 @@ Java_com_jsruntimehost_unittests_Native_javaScriptTests(JNIEnv* env, jclass claz
 
     java::websocket::WebSocketClient::DestructJavaWebSocketClass(env);
     return loggerStopped ? testResult : -1;
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_jsruntimehost_unittests_Native_prepareNodeApiTests(JNIEnv* env, jclass, jobject context, jstring baseDirPath)
-{
-    AAssetManager* assetManager = nullptr;
-    if (context != nullptr)
-    {
-        jclass contextClass = env->GetObjectClass(context);
-        jmethodID getAssets = env->GetMethodID(contextClass, "getAssets", "()Landroid/content/res/AssetManager;");
-        jobject assets = env->CallObjectMethod(context, getAssets);
-        env->DeleteLocalRef(contextClass);
-        if (assets != nullptr)
-        {
-            assetManager = AAssetManager_fromJava(env, assets);
-            env->DeleteLocalRef(assets);
-        }
-    }
-
-    std::filesystem::path baseDir;
-    if (baseDirPath != nullptr)
-    {
-        const char* chars = env->GetStringUTFChars(baseDirPath, nullptr);
-        baseDir = chars;
-        env->ReleaseStringUTFChars(baseDirPath, chars);
-    }
-
-    SetNodeApiTestEnvironment(assetManager, baseDir);
 }

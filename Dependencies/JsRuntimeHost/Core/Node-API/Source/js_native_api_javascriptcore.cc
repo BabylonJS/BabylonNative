@@ -740,6 +740,9 @@ struct napi_ref__ {
     CHECK_NAPI(ReferenceInfo::GetObjectId(env, _value, &_objectId));
     if (_objectId == 0) {
       CHECK_NAPI(ReferenceInfo::Initialize(env, _value, [value = _value](ReferenceInfo* info) {
+        if (info->Env()->shutting_down) {
+          return;
+        }
         auto entry{info->Env()->active_ref_values.find(value)};
         // NOTE: The finalizer callback is actually on a "sentinel" JS object that is linked to the
         // actual JS object we are trying to track. This means it is possible for the tracked object

@@ -68,11 +68,14 @@ class JsRuntimeHostEnvHolder : public IEnvHolder {
         }
       }
 
+      if (context_ != nullptr) {
+        JSGlobalContextRelease(context_);
+        context_ = nullptr;
+      }
+
       Napi::Detach(napiEnv);
       env_ = nullptr;
-    }
-
-    if (context_ != nullptr) {
+    } else if (context_ != nullptr) {
       JSGlobalContextRelease(context_);
       context_ = nullptr;
     }

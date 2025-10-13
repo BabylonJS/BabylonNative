@@ -16,15 +16,15 @@ FetchContent_MakeAvailable_With_Message(googletest)
 
 npm(install --silent WORKING_DIRECTORY ${TESTS_DIR})
 
-set(NODE_LITE_PLATFORM_SRC ${TESTS_DIR}/NodeApi/node_lite_mac.cpp)
-set(NODE_LITE_CHILD_PROCESS_SRC ${TESTS_DIR}/NodeApi/child_process_mac.cpp)
+set(NODE_LITE_PLATFORM_SRC ${TESTS_DIR}/NodeApi/node_lite_posix.cpp)
+set(NODE_LITE_CHILD_PROCESS_SRC ${TESTS_DIR}/NodeApi/child_process_posix.cpp)
 
-if(ANDROID)
-    set(NODE_LITE_PLATFORM_SRC ${TESTS_DIR}/NodeApi/node_lite_android.cpp)
-    set(NODE_LITE_CHILD_PROCESS_SRC ${TESTS_DIR}/NodeApi/child_process_android.cpp)
-elseif(WIN32)
+if(WIN32)
     set(NODE_LITE_PLATFORM_SRC ${TESTS_DIR}/NodeApi/node_lite_windows.cpp)
     set(NODE_LITE_CHILD_PROCESS_SRC ${TESTS_DIR}/NodeApi/child_process.cpp)
+elseif(APPLE)
+    set(NODE_LITE_PLATFORM_SRC ${TESTS_DIR}/NodeApi/node_lite_mac.cpp)
+    set(NODE_LITE_CHILD_PROCESS_SRC ${TESTS_DIR}/NodeApi/child_process_mac.cpp)
 endif()
 
 add_library(UnitTestsJNI SHARED

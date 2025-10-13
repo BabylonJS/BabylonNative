@@ -2,8 +2,6 @@ package com.jsruntimehost.unittests;
 
 import android.content.Context;
 
-import java.io.File;
-
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
@@ -26,9 +24,6 @@ public class Main {
         assertEquals("com.jsruntimehost.unittests", appContext.getPackageName());
 
         Context applicationContext = appContext.getApplicationContext();
-        File baseDir = new File(applicationContext.getFilesDir(), "node_api_tests");
-        Native.prepareNodeApiTests(applicationContext, baseDir.getAbsolutePath());
-
         assertEquals(0, Native.javaScriptTests(applicationContext));
     }
 }
