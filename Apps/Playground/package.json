@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "build": "npx tsc",
+    "build": "npx babel Scripts --out-dir dist --extensions .ts",
+    "typecheck": "npx tsc --noEmit",
     "postinstall": "npm run build"
   },
   "dependencies": {
@@ -14,5 +15,11 @@
     "babylonjs-materials": "^8.28.2",
     "jsc-android": "^241213.1.0",
     "v8-android": "^7.8.2"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.28.3",
+    "@babel/core": "^7.28.4",
+    "@babel/preset-env": "^7.28.3",
+    "@babel/preset-typescript": "^7.27.1"
   }
 }
