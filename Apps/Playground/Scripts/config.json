@@ -288,7 +288,7 @@
         {
             "title": "Multi cameras and output render target",
             "renderCount": 2,
-            "playgroundId": "#BCYE7J#31",
+            "playgroundId": "#BCYE7J#46",
             "excludedGraphicsApis": [ "OpenGL" ],
             "referenceImage": "multiCamerasOutputRenderTarget.png",
             "comment": "Incorrect rendering with OpenGL"
