@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "build": "npx babel Scripts --out-dir dist --extensions .ts",
+    "build": "npx tsc --noEmit && npx babel Scripts --out-dir dist --extensions .ts",
     "typecheck": "npx tsc --noEmit",
     "postinstall": "npm run build"
   },
