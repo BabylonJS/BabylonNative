@@ -53,6 +53,6 @@ namespace Babylon::Plugins::NativeEncoding
     void BABYLON_API Initialize(Napi::Env env)
     {
         auto native = JsRuntime::NativeObject::GetFromJavaScript(env);
-        native.Set("encodeImage", Napi::Function::New(env, EncodeImage, "encodeImage"));
+        native.Set("EncodeImage", Napi::Function::New(env, EncodeImage, "EncodeImage"));
     }
 }

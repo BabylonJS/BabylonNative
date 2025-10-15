@@ -13,7 +13,15 @@ Unlike a traditional polyfill which would implement Canvas's `toBlob()` or `toDa
 4. **Modularity** - Image encoding is a separate concern from 2D canvas rendering
 5. **Extensibility** - New codecs can be added in the future without bloating other components
 
-The encoding functions are exposed on the `_native` global object, similar to NativeOptimizations. They're designed to be wrapped by higher-level Babylon.js APIs (e.g., DumpTools) for common workflows like asset exports and screenshots.
+An encoding function is exposed on the `_native` global object, similar to NativeOptimizations. 
+
+```typescript
+interface INative {
+    EncodeImage: (pixelData: Uint8Array, width: number, height: number, mimeType: string, invertY: boolean) => ArrayBuffer;
+}
+```
+
+It should be wrapped by higher-level Babylon.js APIs (e.g., DumpTools) for common workflows like asset exports and screenshots.
 
 ## Limitations
 
