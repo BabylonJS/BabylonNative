@@ -19,6 +19,7 @@
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Plugins/NativeInput.h>
+#include <Babylon/Plugins/NativeEncoding.h>
 #include <Babylon/Plugins/TestUtils.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
@@ -191,6 +192,8 @@ namespace
             Babylon::Plugins::NativeCamera::Initialize(env);
 
             nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
+
+            Babylon::Plugins::NativeEncoding::Initialize(env);
 
             Babylon::Plugins::TestUtils::Initialize(env, hWnd);
         });
