@@ -76,6 +76,7 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP)
         PRIVATE WEBP)
     target_link_libraries(NativeEngine
         PRIVATE webp)
+endif()
 
 if(TARGET spirv-cross-hlsl)
     target_link_libraries(NativeEngine
