@@ -4,7 +4,9 @@
         {
             "title": "Native Canvas",
             "playgroundId": "#TKVFSA#2",
-            "referenceImage": "native-canvas.png"
+            "referenceImage": "native-canvas.png",
+            "excludedGraphicsApis": [ "D3D12" ],
+            "comment": "2D Path not rendered with D3D12"
         },
         {
             "title": "EXR Loader",
