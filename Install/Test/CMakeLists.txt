@@ -44,13 +44,7 @@ endif()
 
 set(APPS_DIR "../../Apps")
 set(UNITTESTS_DIR "${APPS_DIR}/UnitTests")
-set(LOCAL_SCRIPTS "${UNITTESTS_DIR}/Scripts/tests.js")
-
-set(NPM_SCRIPTS
-    "${APPS_DIR}/node_modules/babylonjs/babylon.max.js"
-    "${APPS_DIR}/node_modules/babylonjs-materials/babylonjs.materials.js"
-    "${APPS_DIR}/node_modules/chai/chai.js"
-    "${APPS_DIR}/node_modules/mocha/mocha.js")
+set(LOCAL_SCRIPTS "${UNITTESTS_DIR}/dist/tests.js")
 
 set(SOURCES
     "${UNITTESTS_DIR}/Shared/Shared.h"
@@ -127,32 +121,39 @@ elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     endif()
 endif()
 
-add_executable(TestInstall ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${SOURCES})
-
-# for napi
-target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_DEPRECATED)
-target_compile_definitions(TestInstall PUBLIC NODE_ADDON_API_DISABLE_NODE_SPECIFIC)
-target_compile_definitions(TestInstall PUBLIC NAPI_VERSION=3)
+add_executable(TestInstall ${LOCAL_SCRIPTS} ${SOURCES})
 
 set(INSTALL_LIBS_DIR "${BINARY_DIR}/install/lib")
 target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")
 target_link_directories(TestInstall PRIVATE ${INSTALL_LIBS_DIR} ${V8JSI_LIB_PATH_RELEASE})
+
+if(ANDROID OR IOS)
+    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} NativeXr)
+endif()
 
 target_link_libraries(TestInstall
     AppRuntime
     arcana
     bimg_encode
     bimg_decode
+    minz
     bgfx
     bimg
     bx
     Canvas
     Console
     ExternalTexture
+    Foundation
     GenericCodeGen
     glslang
+    glslang-default-resource-limits
     Graphics
+    gtest_main
     JsRuntime
+    libsharpyuv.lib
+    libwebp.lib
+    libwebpdecoder.lib
+    libwebpdemux.lib
     MachineIndependent
     napi
     NativeCamera
@@ -161,9 +162,7 @@ target_link_libraries(TestInstall
     NativeInput
     NativeOptimizations
     NativeTracing
-    NativeXr
     OGLCompiler
-    openxr_loader
     OSDependent
     ScriptLoader
     Scheduling
@@ -178,11 +177,9 @@ target_link_libraries(TestInstall
     d3d12
     d3dcompiler
     Pathcch
-    glslang-default-resource-limits
-    gtest_main
-    Foundation
+    runtimeobject.lib # for WINRT_IMPL_RoXXX functions
     ${ADDITIONAL_LIBRARIES}
-    )
+)
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
 # If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.

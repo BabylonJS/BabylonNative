@@ -85,12 +85,7 @@ TEST(JavaScript, All)
     });
 
     Babylon::ScriptLoader loader{runtime};
-    loader.Eval("global = {};", "");             // Required for Chai.js as we do not have global in Babylon Native
     loader.Eval("location = { href: '' };", ""); // Required for Mocha.js as we do not have a location in Babylon Native
-    loader.LoadScript("app:///Scripts/babylon.max.js");
-    loader.LoadScript("app:///Scripts/babylonjs.materials.js");
-    loader.LoadScript("app:///Scripts/chai.js");
-    loader.LoadScript("app:///Scripts/mocha.js");
     loader.LoadScript("app:///Scripts/tests.js");
 
     device.StartRenderingCurrentFrame();
@@ -140,33 +135,6 @@ TEST(NativeAPI, LifeCycle)
 TEST(Performance, Spheres)
 {
     // create a bunch of sphere, does the rendering for a number of frames, log time it took
-    std::string script{R"(
-        console.log("Setting up Performance test.");
-        var engine = new BABYLON.NativeEngine();
-        var scene = new BABYLON.Scene(engine);
-
-        var size = 12;
-        for (var i = 0; i < size; i++) {
-            for (var j = 0; j < size; j++) {
-                for (var k = 0; k < size; k++) {
-                    var sphere = BABYLON.Mesh.CreateSphere("sphere" + i + j + k, 32, 0.9, scene);
-                    sphere.position.x = i;
-                    sphere.position.y = j;
-                    sphere.position.z = k;
-                }
-            }
-        }
-
-        scene.createDefaultCamera(true, true, true);
-        scene.activeCamera.alpha += Math.PI;
-        scene.createDefaultLight(true);
-        engine.runRenderLoop(function () {
-            scene.render();
-        });
-        console.log("Ready!");
-        setReady();
-    )"};
-
     Babylon::Graphics::Device device{deviceConfig};
     std::optional<Babylon::Graphics::DeviceUpdate> update{};
     std::promise<int32_t> ready;
@@ -191,9 +159,7 @@ TEST(Performance, Spheres)
     });
 
     Babylon::ScriptLoader loader{runtime};
-    loader.LoadScript("app:///Scripts/babylon.max.js");
-    loader.LoadScript("app:///Scripts/babylonjs.materials.js");
-    loader.Eval(std::move(script), "code");
+    loader.LoadScript("app:///Scripts/unittests_performance_spheres.js");
 
     ready.get_future().get();
 
@@ -216,22 +182,6 @@ TEST(Performance, Spheres)
 
 TEST(Performance, ShaderCache)
 {
-    std::string script{ R"(
-        console.log("Setting rendering to cache shader.");
-        var engine = new BABYLON.NativeEngine();
-        var scene = new BABYLON.Scene(engine);
-
-        var sphere = BABYLON.Mesh.CreateSphere("sphere", 32, 0.9, scene);
-
-        scene.createDefaultCamera(true, true, true);
-        scene.activeCamera.alpha += Math.PI;
-        scene.createDefaultLight(true);
-        scene.whenReadyAsync().then(function () {
-            setSceneReady();
-        });
-        setReady();
-    )" };
-
     Babylon::ShaderCache::Enabled(true);
 
     Babylon::Graphics::Device device{ deviceConfig };
@@ -264,9 +214,7 @@ TEST(Performance, ShaderCache)
         });
 
     Babylon::ScriptLoader loader{ runtime };
-    loader.LoadScript("app:///Scripts/babylon.max.js");
-    loader.LoadScript("app:///Scripts/babylonjs.materials.js");
-    loader.Eval(std::move(script), "code");
+    loader.LoadScript("app:///Scripts/unittests_performance_shadercache.js");
 
     ready.get_future().get();
 

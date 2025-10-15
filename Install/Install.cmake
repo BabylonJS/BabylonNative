@@ -1,7 +1,7 @@
 include(GNUInstallDirs)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(CMAKE_INSTALL_PREFIX "./install/" CACHE PATH "..." FORCE)
+  set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "..." FORCE)
 endif()
 
 function(install_targets)
@@ -35,7 +35,7 @@ endfunction()
 install_targets(arcana)
 
 ## bgfx
-install_targets(bimg_encode bimg_decode bgfx bimg bx)
+install_targets(bimg_encode bimg_decode bgfx bimg bx minz)
 
 ## glslang
 install_targets(GenericCodeGen glslang MachineIndependent OGLCompiler OSDependent SPIRV glslang-default-resource-limits)

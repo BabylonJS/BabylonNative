@@ -4,13 +4,14 @@ if(NOT((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT AND
 endif()
 
 set(SCRIPTS
-    "Scripts/tests.js")
+    "Scripts/tests.ts"
+    "Scripts/unittests_performance_shadercache.ts"
+    "Scripts/unittests_performance_spheres.ts")
 
-set(EXTERNAL_SCRIPTS
-    "../node_modules/babylonjs/babylon.max.js"
-    "../node_modules/babylonjs-materials/babylonjs.materials.js"
-    "../node_modules/chai/chai.js"
-    "../node_modules/mocha/mocha.js")
+set(BUILD_SCRIPTS
+    "dist/tests.js"
+    "dist/unittests_performance_shadercache.js"
+    "dist/unittests_performance_spheres.js")
 
 set(SOURCES
     "Shared/Shared.h"
@@ -26,7 +27,7 @@ elseif(WIN32)
     set(SOURCES ${SOURCES} "Win32/App.cpp")
 endif()
 
-add_executable(UnitTests ${SCRIPTS} ${EXTERNAL_SCRIPTS} ${SOURCES})
+add_executable(UnitTests ${SCRIPTS} ${BUILD_SCRIPTS} ${SOURCES})
 set_property(TARGET UnitTests PROPERTY UNITY_BUILD false)
 
 target_link_libraries(UnitTests
@@ -49,7 +50,7 @@ add_test(NAME UnitTests COMMAND UnitTests)
 add_custom_command(TARGET UnitTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:UnitTests>>,copy,true> $<TARGET_RUNTIME_DLLS:UnitTests> $<TARGET_FILE_DIR:UnitTests> COMMAND_EXPAND_LISTS)
 
-foreach(SCRIPT ${SCRIPTS} ${EXTERNAL_SCRIPTS})
+foreach(SCRIPT ${BUILD_SCRIPTS})
     get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
     add_custom_command(
         OUTPUT "${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
@@ -59,5 +60,6 @@ foreach(SCRIPT ${SCRIPTS} ${EXTERNAL_SCRIPTS})
 endforeach()
 
 set_property(TARGET UnitTests PROPERTY FOLDER Apps)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} ${SCRIPTS})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX node_modules FILES ${EXTERNAL_SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/dist PREFIX dist FILES ${BUILD_SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Scripts PREFIX Scripts FILES ${SCRIPTS})

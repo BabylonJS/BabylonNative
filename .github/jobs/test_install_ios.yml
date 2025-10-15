@@ -6,7 +6,7 @@ parameters:
 jobs:
   - job: ${{ parameters.name }}
     condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
-    timeoutInMinutes: 40
+    timeoutInMinutes: 60
     pool:
       vmImage: ${{ parameters.vmImage }}
   
@@ -23,14 +23,11 @@ jobs:
         cmake -G Xcode -B buildiOS -D IOS=ON -D DEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D CMAKE_IOS_INSTALL_COMBINED=NO
       displayName: 'Generate iOS solution'
 
-    - task: Xcode@5
-      inputs:
-        xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
-        scheme: 'Playground'
-        sdk: 'iphoneos'
-        useXcpretty: false
-        configuration: Release
-      displayName: 'Build Playground iOS'
+    # Replaced Xcode task with cmake command instead because of 'unable to attach DB: error: accessing build database'
+    # Some context and (non working) workarounds here : https://stackoverflow.com/questions/73301738/xcode-13-4-1-error-unable-to-attach-db-error-accessing-build-database-react/73301739
+    - script: |
+        cmake --build buildiOS --config Release -- -sdk iphoneos CODE_SIGNING_ALLOWED=NO
+      displayName: 'Build iOS solution'
 
     - script: |
         cmake --install buildiOS --prefix="$(Build.SourcesDirectory)/Install"

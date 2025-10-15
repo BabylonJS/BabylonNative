@@ -260,11 +260,10 @@ the file `Apps\Playground\Android\gradle.properties` and add the following line:
 jsEngine=JavaScriptCore
 ```
 
-Once the npm packages are installed, open the project located at
-`Apps\Playground\Android` with Android Studio. Then in the menu, select `Run` -> `Run 'app'`.
-If you don't have an Android device plugged in or no Android image in the Android emulator,
-that option will be greyed and inaccessible. Instructions and tips on how to install the
-emulator are [available here](Documentation/AndroidEmulator.md).
+Open the project located at `Apps\Playground\Android` with Android Studio. Then in the menu,
+select `Run` -> `Run 'app'`. If you don't have an Android device plugged in or no Android image
+in the Android emulator, that option will be greyed and inaccessible. Instructions and tips
+on how to install the emulator are [available here](Documentation/AndroidEmulator.md).
 
 ## **Building on Ubuntu, Targeting Linux**
 

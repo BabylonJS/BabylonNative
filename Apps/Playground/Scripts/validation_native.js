@@ -81,7 +81,7 @@
     }
 
     function evaluate(test, referenceImage, done, compareFunction) {
-        engine._engine.getFrameBufferData(function (screenshot) {
+        TestUtils.getFrameBufferData(function (screenshot) {
             let testRes = true;
 
             if (!test.onlyVisual) {

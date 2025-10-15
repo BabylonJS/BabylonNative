@@ -12,7 +12,7 @@ variables:
 - name: UNITY_BUILD
   value: true
 - name: XCODE_VERSION
-  value: 16.2
+  value: 16.4
 
 jobs:
 # Apple
@@ -141,11 +141,11 @@ jobs:
   - template: .github/jobs/test_install_macos.yml
     parameters:
       name: MacOS_Installation
-      vmImage: 'macOS-14'
+      vmImage: 'macOS-latest'
   - template: .github/jobs/test_install_ios.yml
     parameters:
       name: iOS_Installation
-      vmImage: 'macOS-14'
+      vmImage: 'macOS-latest'
       deploymentTarget: 17.2
 
 # These Android tests are unstable on the CI emulator. Disabled until a more reliable solution is found.

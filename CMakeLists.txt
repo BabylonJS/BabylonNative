@@ -11,7 +11,7 @@ include(FetchContent)
 # --------------------------------------------------
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG 7d88a601fda9892791e7b4e994e375e049615688)
+    GIT_TAG 66520bff9b57030b67894a4934d18ad7e161ba6f)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG 1a8a5d6e95413ed14b38a6ac9419048f9a9c8009)
@@ -23,7 +23,7 @@ FetchContent_Declare(base-n
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG fdf3ed4a62acabd7025d0a843f6d8a9aff5e3612)
+    GIT_TAG ed8e11f781024120980cdbbc5871cb2ce2f63423)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
@@ -37,37 +37,39 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 4.5.0)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG c64c8a8cfc95b187e9547b165f02633909568c22)
-FetchContent_Declare(OpenXR-MixedReality
-    GIT_REPOSITORY https://github.com/microsoft/OpenXR-MixedReality.git
-    GIT_TAG 67424511525b96a36847f2a96d689d99e5879503)
-FetchContent_Declare(OpenXR-SDK
-    GIT_REPOSITORY https://github.com/KhronosGroup/OpenXR-SDK.git
-    GIT_TAG 458984d7f59d1ae6dc1b597d94b02e4f7132eaba)
+    GIT_TAG ef57990dc5533990b2bb194978a12f8c8d83565c)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 578a291759db6fe7c3f4735d3512c0526ad18efc)
+    GIT_TAG 6abfcf066d171e9ade7604d91381ebebe4209edc)
+FetchContent_Declare(libwebp
+    GIT_REPOSITORY https://github.com/webmproject/libwebp.git
+    GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c)
 # --------------------------------------------------
 
 FetchContent_MakeAvailable(CMakeExtensions)
 
+# BABYLON_NATIVE_BUILD_SOURCETREE flag is used by BabylonReactNative NPM build process.
+# CMake script is run twice. At package creation, BABYLON_NATIVE_BUILD_SOURCETREE is ON
+# which makes all dependencies to be fetched and packaged.
+# At build time, cmake is run again on BabylonNative root but FETCHCONTENT_FULLY_DISCONNECTED is ON
+# and FetchContent_MakeAvailable_With_Message will use provided local folder provided to cmake command line
+# like '-DFETCHCONTENT_SOURCE_DIR_BGFX.CMAKE=../shared/Babylon/....'
+
+if(VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
+    FetchContent_MakeAvailable_With_Message(ios-cmake)
+    if(NOT BABYLON_NATIVE_BUILD_SOURCETREE)
+        set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+    endif()
+    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
+endif()
 
 if(VISIONOS)
-    FetchContent_MakeAvailable_With_Message(ios-cmake)
-    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
     set(PLATFORM "VISIONOSCOMBINED" CACHE STRING "")
     set(DEPLOYMENT_TARGET "1.0" CACHE STRING "")
-    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
-endif()
-
-if(IOS)
-    FetchContent_MakeAvailable_With_Message(ios-cmake)
-    set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
+elseif(IOS)
     set(PLATFORM "OS64COMBINED" CACHE STRING "")
     set(DEPLOYMENT_TARGET "13" CACHE STRING "")
-    set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
 endif()
-
 
 project(BabylonNative)
 
@@ -93,6 +95,7 @@ option(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE "Include Babylon Native Plugin Exte
 option(BABYLON_NATIVE_PLUGIN_NATIVECAMERA "Include Babylon Native Plugin NativeCamera." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE "Include Babylon Native Plugin NativeCapture." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE "Include Babylon Native Plugin NativeEngine." ON)
+option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP "Include Babylon Native Plugin NativeEngine - WebP." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEINPUT "Include Babylon Native Plugin NativeInput." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS "Include Babylon Native Plugin NativeOptimizations." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVETRACING "Include Babylon Native Plugin NativeTracing." ON)

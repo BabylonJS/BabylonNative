@@ -25,6 +25,10 @@
 #include <Babylon/ShaderCache.h>
 #include "ShaderCache.h"
 
+#ifdef WEBP
+#include <webp/decode.h>
+#endif
+
 namespace Babylon
 {
     namespace
@@ -186,6 +190,19 @@ namespace Babylon
             bimg::ImageContainer* image{bimg::imageParse(&allocator, data.data(), static_cast<uint32_t>(data.size()))};
             if (image == nullptr)
             {
+#ifdef WEBP
+                int width;
+                int height;
+                if (WebPGetInfo(data.data(), data.size(), &width, &height))
+                {
+                    image = bimg::imageAlloc(&allocator, bimg::TextureFormat::RGBA8, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false);
+                    if (WebPDecodeRGBAInto(data.data(), data.size(), static_cast<uint8_t*>(image->m_data), static_cast<size_t>(image->m_size), width * 4))
+                    {
+                        return image;
+                    }
+                }
+#endif
+
                 throw std::runtime_error{"Failed to parse image."};
             }
 
@@ -351,6 +368,11 @@ namespace Babylon
                     {
                         bimg::ImageContainer* image{images[(side * numMips) + mip]};
 
+                        if (bgfx::getCaps()->originBottomLeft)
+                        {
+                            FlipImage({ static_cast<uint8_t*>(image->m_data), image->m_size }, image->m_height);
+                        }
+
                         bgfx::ReleaseFn releaseFn{[](void*, void* userData) {
                             bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
                         }};
@@ -370,6 +392,11 @@ namespace Babylon
                         bimg::ImageMip imageMip{};
                         if (bimg::imageGetRawData(*image, 0, mip, image->m_data, image->m_size, imageMip))
                         {
+                            if (bgfx::getCaps()->originBottomLeft)
+                            {
+                                FlipImage({ const_cast<uint8_t*>(imageMip.m_data), imageMip.m_size }, image->m_height);
+                            }
+
                             bgfx::ReleaseFn releaseFn{};
                             if (mip == image->m_numMips - 1)
                             {
@@ -701,8 +728,6 @@ namespace Babylon
 
                 InstanceMethod("populateFrameStats", &NativeEngine::PopulateFrameStats),
 
-                // REVIEW: Should this be here if only used by ValidationTest?
-                InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
                 InstanceMethod("setDeviceLostCallback", &NativeEngine::SetRenderResetCallback),
             });
 
@@ -1833,6 +1858,7 @@ namespace Babylon
         }
 
         bgfx::TextureHandle depthStencilTextureHandle = BGFX_INVALID_HANDLE;
+        int8_t depthStencilAttachmentIndex = -1;
         if (generateStencilBuffer || generateDepth)
         {
             if (generateStencilBuffer && !generateDepth)
@@ -1857,6 +1883,7 @@ namespace Babylon
             // And not sure it makes sense to generate mipmaps from a depth buffer with exponential values.
             // only allows mipmaps resolve step when mipmapping is asked and for the color texture, not the depth.
             // https://github.com/bkaradzic/bgfx/blob/2c21f68998595fa388e25cb6527e82254d0e9bff/src/renderer_d3d11.cpp#L4525
+            depthStencilAttachmentIndex = numAttachments;
             attachments[numAttachments++].init(depthStencilTextureHandle);
         }
 
@@ -1871,15 +1898,8 @@ namespace Babylon
             throw Napi::Error::New(info.Env(), "Failed to create frame buffer");
         }
 
-        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer);
-        return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, [frameBuffer, depthStencilTextureHandle]() {
-            if (bgfx::isValid(depthStencilTextureHandle))
-            {
-                bgfx::destroy(depthStencilTextureHandle);
-            }
-
-            delete frameBuffer;
-        });
+        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer, depthStencilAttachmentIndex);
+        return Napi::Pointer<Graphics::FrameBuffer>::Create(info.Env(), frameBuffer, Napi::NapiPointerDeleter(frameBuffer));
     }
 
     // TODO: This doesn't get called when an Engine instance is disposed.
@@ -2162,20 +2182,6 @@ namespace Babylon
         m_deviceContext.SetRenderResetCallback([this, renderResetCallback = std::move(callbackPtr)]() {
             m_runtime.Dispatch([renderResetCallback = std::move(renderResetCallback)](auto) {
                 renderResetCallback->Call({});
-            });
-        });
-    }
-
-    void NativeEngine::GetFrameBufferData(const Napi::CallbackInfo& info)
-    {
-        const auto callback{info[0].As<Napi::Function>()};
-
-        auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
-        m_deviceContext.RequestScreenShot([this, callbackPtr{std::move(callbackPtr)}](std::vector<uint8_t> array) {
-            m_runtime.Dispatch([callbackPtr{std::move(callbackPtr)}, array{std::move(array)}](Napi::Env env) {
-                auto arrayBuffer{Napi::ArrayBuffer::New(env, const_cast<uint8_t*>(array.data()), array.size())};
-                auto typedArray{Napi::Uint8Array::New(env, array.size(), arrayBuffer, 0)};
-                callbackPtr->Value().Call({typedArray});
             });
         });
     }
