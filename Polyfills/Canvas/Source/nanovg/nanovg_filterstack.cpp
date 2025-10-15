@@ -1,6 +1,7 @@
 #include "nanovg_filterstack.h"
 #include <regex>
 #include <cassert>
+#include <cmath>
 
 #include <bgfx/bgfx.h>
 #include <bgfx/embedded_shader.h>
