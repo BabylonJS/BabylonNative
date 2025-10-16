@@ -30,7 +30,7 @@ interface ConfigFile {
     root: string;
     tests: TestConfig[];
 }
-type compareFunctionType = (test: TestConfig, renderData: Uint8Array, threshold: number, errorRatio: number, referenceImage?: Uint8Array) => boolean;
+type CompareFunctionType = (test: TestConfig, renderData: Uint8Array, threshold: number, errorRatio: number, referenceImage?: Uint8Array) => boolean;
 
 (function () {
     let currentScene: any;
@@ -114,7 +114,7 @@ type compareFunctionType = (test: TestConfig, renderData: Uint8Array, threshold:
         return false; // no error
     }
 
-    function evaluate(test: TestConfig, done: (done: boolean) => void, compareFunction: compareFunctionType, referenceImage?: Uint8Array) {
+    function evaluate(test: TestConfig, done: (done: boolean) => void, compareFunction: CompareFunctionType, referenceImage?: Uint8Array) {
         TestUtils.getFrameBufferData(function (screenshot: Uint8Array) {
             let testRes = true;
 
@@ -142,7 +142,7 @@ type compareFunctionType = (test: TestConfig, renderData: Uint8Array, threshold:
         });
     }
 
-    function processCurrentScene(test: TestConfig, done: (done: boolean) => void, compareFunction: compareFunctionType, renderImage?: Uint8Array) {
+    function processCurrentScene(test: TestConfig, done: (done: boolean) => void, compareFunction: CompareFunctionType, renderImage?: Uint8Array) {
         currentScene.useConstantAnimationDeltaTime = true;
         let renderCount = test.renderCount || 1;
 
@@ -169,7 +169,7 @@ type compareFunctionType = (test: TestConfig, renderData: Uint8Array, threshold:
         }, true);
     }
 
-    function loadPlayground(test: TestConfig, done: (done: boolean) => void, compareFunction: compareFunctionType, referenceImage?: Uint8Array) {
+    function loadPlayground(test: TestConfig, done: (done: boolean) => void, compareFunction: CompareFunctionType, referenceImage?: Uint8Array) {
         if (test.sceneFolder) {
             SceneLoader.Load(config.root + test.sceneFolder, test.sceneFilename, engine, function (newScene: Scene) {
                 currentScene = newScene;

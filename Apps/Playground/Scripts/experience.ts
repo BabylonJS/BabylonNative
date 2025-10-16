@@ -369,7 +369,7 @@ CreateBoxAsync(scene).then(function () {
 
                 let sessionMode: XRSessionMode = vr ? "immersive-vr" : "immersive-ar";
                 if (hololens) {
-                    // Because HoloLens 2 is a head mounted display, its js immersive experience more closely aligns to vr
+                    // Because HoloLens 2 is a head mounted display, its Babylon.js immersive experience more closely aligns to vr
                     sessionMode = "immersive-vr";
 
                     // Below is an example for enabling hand tracking. The code is not unique to HoloLens 2, and may be reused for other WebXR hand tracking enabled devices.
