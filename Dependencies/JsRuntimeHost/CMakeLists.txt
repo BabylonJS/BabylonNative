@@ -154,6 +154,21 @@ endif()
 FetchContent_MakeAvailable_With_Message(arcana.cpp)
 set_property(TARGET arcana PROPERTY FOLDER Dependencies)
 
+if(ANDROID)
+    FetchContent_GetProperties(AndroidExtensions)
+    if(NOT AndroidExtensions_POPULATED)
+        FetchContent_Populate(AndroidExtensions)
+        FetchContent_GetProperties(AndroidExtensions)
+        message(STATUS "Patching AndroidExtensions Globals.cpp in ${androidextensions_SOURCE_DIR}")
+        file(COPY
+            ${CMAKE_CURRENT_SOURCE_DIR}/patches/AndroidExtensions/Globals.cpp
+            DESTINATION ${androidextensions_SOURCE_DIR}/Source)
+        add_subdirectory(${androidextensions_SOURCE_DIR} ${androidextensions_BINARY_DIR})
+    else()
+        add_subdirectory(${androidextensions_SOURCE_DIR} ${androidextensions_BINARY_DIR})
+    endif()
+endif()
+
 if(JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST OR JSRUNTIMEHOST_POLYFILL_FETCH)
     FetchContent_MakeAvailable_With_Message(UrlLib)
     set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)

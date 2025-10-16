@@ -1,15 +1,13 @@
 set(NODE_API_TEST_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
-option(JSR_NODE_API_BUILD_NATIVE_TESTS "Build Node-API native addon test modules" OFF)
+option(JSR_NODE_API_BUILD_NATIVE_TESTS "Build Node-API native addon test modules" ON)
 
-if(JSR_NODE_API_BUILD_NATIVE_TESTS)
-    set(JSR_NODE_API_NATIVE_TEST_DIRS
-        2_function_arguments
-        3_callbacks
-        4_object_factory
-        5_function_factory
-    )
-endif()
+set(JSR_NODE_API_NATIVE_TEST_DIRS
+    2_function_arguments
+    3_callbacks
+    4_object_factory
+    5_function_factory
+)
 
 function(node_api_copy_test_sources TARGET_NAME)
     add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
@@ -98,17 +96,26 @@ add_dependencies(NodeApiTests node_lite)
 
 add_custom_target(NodeApiModules)
 
+# Always define which tests are available, regardless of whether we build the native modules
+list(JOIN JSR_NODE_API_NATIVE_TEST_DIRS "," NODE_API_NATIVE_TESTS_STRING)
+target_compile_definitions(node_lite
+    PRIVATE
+        NODE_API_AVAILABLE_NATIVE_TESTS=\"${NODE_API_NATIVE_TESTS_STRING}\"
+)
+target_compile_definitions(NodeApiTests
+    PRIVATE
+        NODE_API_AVAILABLE_NATIVE_TESTS=\"${NODE_API_NATIVE_TESTS_STRING}\"
+)
+
+# Only define NODE_API_TESTS_HAVE_NATIVE_MODULES when actually building native modules
 if(JSR_NODE_API_BUILD_NATIVE_TESTS)
-    list(JOIN JSR_NODE_API_NATIVE_TEST_DIRS "," NODE_API_NATIVE_TESTS_STRING)
     target_compile_definitions(node_lite
         PRIVATE
             NODE_API_TESTS_HAVE_NATIVE_MODULES=1
-            NODE_API_AVAILABLE_NATIVE_TESTS=\"${NODE_API_NATIVE_TESTS_STRING}\"
     )
     target_compile_definitions(NodeApiTests
         PRIVATE
             NODE_API_TESTS_HAVE_NATIVE_MODULES=1
-            NODE_API_AVAILABLE_NATIVE_TESTS=\"${NODE_API_NATIVE_TESTS_STRING}\"
     )
 endif()
 

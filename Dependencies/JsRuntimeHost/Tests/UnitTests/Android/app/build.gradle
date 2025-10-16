@@ -83,12 +83,16 @@ android {
     packagingOptions {
         if (enableAsan) {
             doNotStrip "**/*.so"
+            jniLibs.useLegacyPackaging true
         }
     }
 
     sourceSets {
         main {
             assets.srcDirs += [nodeApiAssetsDir]
+            if (enableAsan) {
+                jniLibs.srcDir "${buildDir}/generated/asanRuntime/jniLibs"
+            }
         }
     }
 }
@@ -149,3 +153,68 @@ tasks.configureEach { task ->
 }
 
 preBuild.dependsOn(copyNodeApiTests)
+
+if (enableAsan) {
+    def hostTag = {
+        def osName = System.getProperty("os.name").toLowerCase()
+        if (osName.contains("mac") || osName.contains("darwin")) {
+            return "darwin-x86_64"
+        } else if (osName.contains("windows")) {
+            return "windows-x86_64"
+        } else {
+            return "linux-x86_64"
+        }
+    }.call()
+
+    def asanRuntimeProvider = providers.provider {
+        def prebuiltRoot = new File(android.ndkDirectory, "toolchains/llvm/prebuilt/${hostTag}/lib64/clang")
+        if (!prebuiltRoot.exists()) {
+            throw new GradleException("Unable to locate clang libraries under ${prebuiltRoot}")
+        }
+        def versionDir = prebuiltRoot.listFiles().find { it.isDirectory() }
+        if (versionDir == null) {
+            throw new GradleException("Unable to determine clang version directory within ${prebuiltRoot}")
+        }
+        def runtimeFile = new File(versionDir, "lib/linux/libclang_rt.asan-aarch64-android.so")
+        if (!runtimeFile.exists()) {
+            throw new GradleException("Unable to locate ASan runtime library at ${runtimeFile}")
+        }
+        return runtimeFile
+    }
+
+    def generatedAsanDir = layout.buildDirectory.dir("generated/asanRuntime/jniLibs/arm64-v8a")
+
+    def prepareAsanRuntime = tasks.register("prepareAsanRuntime", Copy) {
+        from(asanRuntimeProvider)
+        into(generatedAsanDir)
+    }
+
+    tasks.matching { it.name in ["mergeDebugNativeLibs", "mergeReleaseNativeLibs"] }.configureEach {
+        dependsOn(prepareAsanRuntime)
+    }
+
+    def wrapScript = file("${projectDir}/../tools/wrap.sh")
+
+    def pushAsanRuntime = tasks.register("pushAsanRuntime", Exec) {
+        dependsOn(prepareAsanRuntime)
+        commandLine("adb", "push",
+                generatedAsanDir.get().file("libclang_rt.asan-aarch64-android.so").asFile.absolutePath,
+                "/data/local/tmp/libclang_rt.asan-aarch64-android.so")
+    }
+
+    def pushAsanWrapScript = tasks.register("pushAsanWrapScript", Exec) {
+        commandLine("adb", "push", wrapScript.absolutePath, "/data/local/tmp/wrap.sh")
+    }
+
+    tasks.register("pushAsanArtifacts") {
+        dependsOn(pushAsanRuntime, pushAsanWrapScript)
+        doLast {
+            exec {
+                commandLine("adb", "shell", "chcon", "u:object_r:zygote_exec:s0", "/data/local/tmp/wrap.sh")
+            }
+            exec {
+                commandLine("adb", "shell", "chmod", "+x", "/data/local/tmp/wrap.sh")
+            }
+        }
+    }
+}

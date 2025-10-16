@@ -650,12 +650,8 @@ void NodeLiteRuntime::DefineGlobalFunctions() {
     // process.execPath
     NodeApi::SetPropertyString(env_, process_obj, "execPath", args_[0]);
 
-// process.target_config
-#ifdef NDEBUG
+    // process.target_config - always use "Release" to match CMAKE module output directory
     NodeApi::SetPropertyString(env_, process_obj, "target_config", "Release");
-#else
-    NodeApi::SetPropertyString(env_, process_obj, "target_config", "Debug");
-#endif
 
 // process.platform
 #ifdef WIN32
