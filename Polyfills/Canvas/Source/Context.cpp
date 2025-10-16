@@ -30,9 +30,6 @@
 #include "LineCaps.h"
 #include "Gradient.h"
 
-/*
-Most of these context methods are preliminary work. They are currenbly not tested properly.
-*/
 namespace Babylon::Polyfills::Internal
 {
     static constexpr auto JS_CONTEXT_CONSTRUCTOR_NAME = "Context";
@@ -955,15 +952,15 @@ namespace Babylon::Polyfills::Internal
             return;
         }
 
-        nvgFontSize(*m_nvg, font->Size);
-        if (m_fonts.find(font->Family) == m_fonts.end())
+        nvgFontSize(*m_nvg, font->GetSize());
+        if (m_fonts.find(font->GetFamiliy()) == m_fonts.end())
         {
             // TODO: handle finding font face for a specific weight and style
             m_currentFontId = -1;
         }
         else
         {
-            m_currentFontId = m_fonts.at(font->Family);
+            m_currentFontId = m_fonts.at(font->GetFamiliy());
         }
 
         m_font = std::move(*font);

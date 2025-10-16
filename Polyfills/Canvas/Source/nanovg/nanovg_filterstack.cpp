@@ -51,12 +51,12 @@ void nanovg_filterstack::InitBgfx()
 
     // create shaders used by the different elements
     bgfx::RendererType::Enum type = bgfx::getRendererType();
-    gaussBlurProg = bgfx::createProgram(
+    s_gaussBlurProg = bgfx::createProgram(
         bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "vs_fspass")
         , bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "fs_gaussblur")
         , true
     );
-    boxBlurProg = bgfx::createProgram(
+    s_boxBlurProg = bgfx::createProgram(
         bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "vs_fspass"),
         bgfx::createEmbeddedShader(s_embeddedShadersFilterStack, type, "fs_boxblur"),
         true);
@@ -71,10 +71,10 @@ void nanovg_filterstack::DisposeBgfx()
         bgfx::destroy(m_uniforms.u_direction);
     if (m_uniforms.u_weights.idx != bgfx::kInvalidHandle)
         bgfx::destroy(m_uniforms.u_weights);
-    if (gaussBlurProg.idx != bgfx::kInvalidHandle)
-        bgfx::destroy(gaussBlurProg);
-    if (boxBlurProg.idx != bgfx::kInvalidHandle)
-        bgfx::destroy(boxBlurProg);
+    if (s_gaussBlurProg.idx != bgfx::kInvalidHandle)
+        bgfx::destroy(s_gaussBlurProg);
+    if (s_boxBlurProg.idx != bgfx::kInvalidHandle)
+        bgfx::destroy(s_boxBlurProg);
 }
 
 bool nanovg_filterstack::ValidString(const std::string& string)
@@ -213,11 +213,11 @@ void nanovg_filterstack::Render(
 
                         if (last)
                         {
-                            lastProg = gaussBlurProg;
+                            lastProg = s_gaussBlurProg;
                             break; // last pass will write to finalFrameBuffer
                         }
                         nextBuf = acquire();
-                        filterPass(gaussBlurProg, prevBuf, nextBuf);
+                        filterPass(s_gaussBlurProg, prevBuf, nextBuf);
                         release(prevBuf);
                         prevBuf = nextBuf;
                         nextBuf = nullptr;
@@ -250,11 +250,11 @@ void nanovg_filterstack::Render(
 
                             if (last && i == 2)
                             {
-                                lastProg = boxBlurProg;
+                                lastProg = s_boxBlurProg;
                                 break; // last pass will write to finalFrameBuffer
                             }
                             nextBuf = acquire();
-                            filterPass(boxBlurProg, prevBuf, nextBuf);
+                            filterPass(s_boxBlurProg, prevBuf, nextBuf);
                             release(prevBuf);
                             prevBuf = nextBuf;
                             nextBuf = nullptr;

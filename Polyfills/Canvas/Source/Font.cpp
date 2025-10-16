@@ -32,7 +32,7 @@ namespace Babylon::Polyfills::Internal
                 foundStyle = true;
                 if (match[1] == "italic")
                 {
-                    font.Style = FontStyle::Italic;
+                    font.style = FontStyle::Italic;
                 }
             }
             else if (!foundWeight && std::regex_search(begin, end, match, WEIGHT_REGEX))
@@ -41,11 +41,11 @@ namespace Babylon::Polyfills::Internal
                 foundWeight = true;
                 if (match[1] == "bold")
                 {
-                    font.Weight = BOLD_WEIGHT;
+                    font.weight = BOLD_WEIGHT;
                 }
                 else
                 {
-                    font.Weight = std::stoi(match[1]);
+                    font.weight = std::stoi(match[1]);
                 }
             }
             else
@@ -59,16 +59,16 @@ namespace Babylon::Polyfills::Internal
             return std::nullopt;
         }
         begin = match[0].second;
-        font.Size = std::stof(match[1]);
+        font.size = std::stof(match[1]);
 
         if (std::regex_search(begin, end, match, FAMILY_IDENT_REGEX))
         {
-            font.Family = match[1];
+            font.family = match[1];
         }
         else if (std::regex_search(begin, end, match, FAMILY_STRING_REGEX))
         {
             // The first capture group is used for the quotation mark (" or ')
-            font.Family = match[2];
+            font.family = match[2];
         }
         else
         {
@@ -81,17 +81,17 @@ namespace Babylon::Polyfills::Internal
     Font::operator std::string() const
     {
         std::ostringstream stream;
-        if (Style == FontStyle::Italic)
+        if (style == FontStyle::Italic)
         {
             stream << "italic ";
         }
 
-        if (Weight != NORMAL_WEIGHT)
+        if (weight != NORMAL_WEIGHT)
         {
-            stream << Weight << " ";
+            stream << weight << " ";
         }
 
-        stream << Size << "px \"" << Family << "\"";
+        stream << size << "px \"" << family << "\"";
         return stream.str();
     }
 }

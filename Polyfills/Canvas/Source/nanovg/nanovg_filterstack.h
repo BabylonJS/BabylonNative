@@ -12,9 +12,8 @@ public:
 
     static void InitBgfx();
     static void DisposeBgfx();
-    inline static bgfx::ProgramHandle fspassProg;
-    inline static bgfx::ProgramHandle gaussBlurProg;
-    inline static bgfx::ProgramHandle boxBlurProg;
+    inline static bgfx::ProgramHandle s_gaussBlurProg;
+    inline static bgfx::ProgramHandle s_boxBlurProg;
     inline struct Uniforms
     {
         bgfx::UniformHandle u_strength;

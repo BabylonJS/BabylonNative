@@ -62,24 +62,22 @@ struct PosTexCoord0Vertex
 
     static void init()
     {
-        ms_layout
+        s_layout
             .begin()
             .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
             .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
             .end();
     }
 
-    static bgfx::VertexLayout ms_layout;
+    static inline bgfx::VertexLayout s_layout;
 };
-
-bgfx::VertexLayout PosTexCoord0Vertex::ms_layout;
 
 void screenSpaceQuad(bgfx::Encoder* encoder, bool _originBottomLeft, float _width = 1.0f, float _height = 1.0f)
 {
-    if (3 == bgfx::getAvailTransientVertexBuffer(3, PosTexCoord0Vertex::ms_layout))
+    if (3 == bgfx::getAvailTransientVertexBuffer(3, PosTexCoord0Vertex::s_layout))
     {
         bgfx::TransientVertexBuffer vb;
-        bgfx::allocTransientVertexBuffer(&vb, 3, PosTexCoord0Vertex::ms_layout);
+        bgfx::allocTransientVertexBuffer(&vb, 3, PosTexCoord0Vertex::s_layout);
         PosTexCoord0Vertex* vertex = (PosTexCoord0Vertex*)vb.data;
 
         const float minx = -_width;
