@@ -292,6 +292,74 @@ describe("PostProcesses", function () {
     });*/
 });
 
+describe("NativeEncoding", function () {
+  this.timeout(30000); // 30 sec timeout for encoding tests
+
+  // Helper function to verify valid PNG
+  function expectValidPNG(arrayBuffer: ArrayBuffer) {
+    expect(arrayBuffer).to.be.instanceOf(ArrayBuffer);
+    expect(arrayBuffer.byteLength).to.be.greaterThan(0);
+
+    const pngSignature = new Uint8Array(arrayBuffer.slice(0, 4));
+    expect(pngSignature[0]).to.equal(137); // PNG signature bytes
+    expect(pngSignature[1]).to.equal(80);  // 'P'
+    expect(pngSignature[2]).to.equal(78);  // 'N'
+    expect(pngSignature[3]).to.equal(71);  // 'G'
+  }
+
+  it("should encode a simple image", async function () {
+    const pixelData = new Uint8Array(4).fill(255);
+    console.log("hi")
+    const result = await _native.EncodeImageAsync(pixelData, 1, 1, "image/png", false);
+    expectValidPNG(result);
+  });
+
+  it("should handle multiple concurrent encoding tasks", async function () {
+    // TODO - This is nearly timing out. Figure out why.
+    const pixelDatas = [];
+    for (let i = 0; i < 10; i++) {
+      pixelDatas.push(new Uint8Array(4).fill(255));
+    }
+    const results = await Promise.all(pixelDatas.map((pixelData) =>
+      _native.EncodeImageAsync(pixelData, 1, 1, "image/png", false)
+    ));
+    results.forEach(expectValidPNG);
+  });
+
+  it("should handle multiple concurrent encoding tasks, 4k textures", async function () {
+    // TODO - Time out. But no surprise given above test is nearly timing out.
+    const dim = 4000;
+    const pixelDatas = [];
+    for (let i = 0; i < 10; i++) {
+      pixelDatas.push(new Uint8Array(dim * dim * 4).fill(i * 60));
+    }
+    const results = await Promise.all(pixelDatas.map((pixelData) =>
+      _native.EncodeImageAsync(pixelData, dim, dim, "image/png", false)
+    ));
+    results.forEach(expectValidPNG);
+  });
+  
+  it("should reject with unsupported mime type", async function () {
+    const pixelData = new Uint8Array([255, 0, 0, 255]);
+    try {
+      await _native.EncodeImageAsync(pixelData, 1, 1, "bad-mimetype", false);
+      expect.fail("Expected promise to reject with unsupported mime type");
+    } catch (error) {
+      expect(error).to.exist;
+    }
+  });
+
+  it("should reject when buffer size doesn't match dimensions", async function () {
+    const pixelData = new Uint8Array([255, 0, 0]);
+    try {
+      await _native.EncodeImageAsync(pixelData, 1, 1, "image/png", false);
+      expect.fail("Expected promise to reject with mismatched dimensions");
+    } catch (error) {
+      expect(error).to.exist;
+    }
+  });
+});
+
 mocha.run((failures) => {
   // Test program will wait for code to be set before exiting
   if (failures > 0) {
