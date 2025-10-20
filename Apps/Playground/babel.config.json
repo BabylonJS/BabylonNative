@@ -1,0 +1,28 @@
+{
+  "presets": [
+    [
+      "@babel/preset-env",
+      {
+        "targets": { "ie": "11" },
+        "modules": "umd"
+      }
+    ],
+    "@babel/preset-typescript"
+  ],
+  "plugins": [
+    [
+      "@babel/plugin-transform-modules-umd",
+      {
+        "globals": {
+          "babylonjs": "BABYLON"
+        },
+        "exactGlobals": true
+      }
+    ]
+  ],
+  "ignore": [
+    "node_modules",
+    "**/*.d.ts"
+  ],
+  "sourceMaps": false
+}

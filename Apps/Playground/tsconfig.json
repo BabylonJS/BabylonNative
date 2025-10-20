@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "module": "umd",
+    "lib": ["es5", "dom"],
+    "outDir": "./dist",
+    "rootDir": "./Scripts",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": false,
+    "sourceMap": false,
+  },
+  "include": [
+    "Scripts/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.d.ts"
+  ]
+}
