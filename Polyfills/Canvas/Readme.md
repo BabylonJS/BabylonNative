@@ -1,6 +1,10 @@
 # Canvas
 Implements parts of the 2D Canvas API using bgfx. Still a very early WIP; many methods are not yet implemented.
 
+# Nanovg
+This project contains a fork of Nanovg code and shaders found in bgfx repo. This fork features new filters stack to allow shadow, blur to be enabled in nanovg rendering (nanovg_filterstack.*).
+Also, the rendering backend of Nanovg is defined in nanovg_babylon.*. It implements nanovg rendering using bgfx with an extension to allow blending of 2 textures (used for gradient mixing) whereas default implementation only allow 1 texture. Shaders are modified accordingly.
+
 # Nanovg Shader Integration in Babylon.js
 Nanovg utilizes shaders that are independent of Babylon.js. These shaders are written in the bgfx shading language, which is derived from GLSL, and are compiled into various target languages (SPIR-V, GLSL, Metal, DX, ESSL) during the build process.
 

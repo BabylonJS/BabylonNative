@@ -952,15 +952,15 @@ namespace Babylon::Polyfills::Internal
             return;
         }
 
-        nvgFontSize(*m_nvg, font->GetSize());
-        if (m_fonts.find(font->GetFamiliy()) == m_fonts.end())
+        nvgFontSize(*m_nvg, font->Size());
+        if (m_fonts.find(font->Familiy()) == m_fonts.end())
         {
             // TODO: handle finding font face for a specific weight and style
             m_currentFontId = -1;
         }
         else
         {
-            m_currentFontId = m_fonts.at(font->GetFamiliy());
+            m_currentFontId = m_fonts.at(font->Familiy());
         }
 
         m_font = std::move(*font);

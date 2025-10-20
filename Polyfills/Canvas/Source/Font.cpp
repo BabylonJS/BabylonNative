@@ -32,7 +32,7 @@ namespace Babylon::Polyfills::Internal
                 foundStyle = true;
                 if (match[1] == "italic")
                 {
-                    font.style = FontStyle::Italic;
+                    font.m_style = FontStyle::Italic;
                 }
             }
             else if (!foundWeight && std::regex_search(begin, end, match, WEIGHT_REGEX))
@@ -41,11 +41,11 @@ namespace Babylon::Polyfills::Internal
                 foundWeight = true;
                 if (match[1] == "bold")
                 {
-                    font.weight = BOLD_WEIGHT;
+                    font.m_weight = BOLD_WEIGHT;
                 }
                 else
                 {
-                    font.weight = std::stoi(match[1]);
+                    font.m_weight = std::stoi(match[1]);
                 }
             }
             else
@@ -59,16 +59,16 @@ namespace Babylon::Polyfills::Internal
             return std::nullopt;
         }
         begin = match[0].second;
-        font.size = std::stof(match[1]);
+        font.m_size = std::stof(match[1]);
 
         if (std::regex_search(begin, end, match, FAMILY_IDENT_REGEX))
         {
-            font.family = match[1];
+            font.m_family = match[1];
         }
         else if (std::regex_search(begin, end, match, FAMILY_STRING_REGEX))
         {
             // The first capture group is used for the quotation mark (" or ')
-            font.family = match[2];
+            font.m_family = match[2];
         }
         else
         {
@@ -81,17 +81,17 @@ namespace Babylon::Polyfills::Internal
     Font::operator std::string() const
     {
         std::ostringstream stream;
-        if (style == FontStyle::Italic)
+        if (m_style == FontStyle::Italic)
         {
             stream << "italic ";
         }
 
-        if (weight != NORMAL_WEIGHT)
+        if (m_weight != NORMAL_WEIGHT)
         {
-            stream << weight << " ";
+            stream << m_weight << " ";
         }
 
-        stream << size << "px \"" << family << "\"";
+        stream << m_size << "px \"" << m_family << "\"";
         return stream.str();
     }
 }

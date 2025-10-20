@@ -17,16 +17,16 @@ namespace Babylon::Polyfills::Internal
         operator std::string() const;
         static std::optional<Font> Parse(const std::string& fontString);
 
-        float GetSize() const { return size; }
-        const std::string& GetFamiliy() const { return family; }
+        float Size() const { return m_size; }
+        const std::string& Familiy() const { return m_family; }
 
     private:
-        static constexpr int NORMAL_WEIGHT = 400;
-        static constexpr int BOLD_WEIGHT = 700;
+        static constexpr const int NORMAL_WEIGHT = 400;
+        static constexpr const int BOLD_WEIGHT = 700;
 
-        FontStyle style{FontStyle::Normal};
-        int weight{NORMAL_WEIGHT};
-        float size{10};
-        std::string family{"sans-serif"};
+        FontStyle m_style{FontStyle::Normal};
+        int m_weight{NORMAL_WEIGHT};
+        float m_size{10};
+        std::string m_family{"sans-serif"};
     };
 }
