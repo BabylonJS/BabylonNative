@@ -162,6 +162,7 @@ target_link_libraries(TestInstall
     NativeInput
     NativeOptimizations
     NativeTracing
+    NativeEncoding
     OGLCompiler
     OSDependent
     ScriptLoader
