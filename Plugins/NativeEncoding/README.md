@@ -17,7 +17,7 @@ An encoding function is exposed on the `_native` global object, similar to Nativ
 
 ```typescript
 interface INative {
-    EncodeImage: (pixelData: Uint8Array, width: number, height: number, mimeType: string, invertY: boolean) => ArrayBuffer;
+    EncodeImageAsync: (pixelData: Uint8Array, width: number, height: number, mimeType: string, invertY: boolean) => Promise<ArrayBuffer>;
 }
 ```
 
