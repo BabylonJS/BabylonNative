@@ -418,7 +418,7 @@ CreateBoxAsync(scene).then(function () {
     }
 
     if (text) {
-        // @ts-ignore
+        // @ts-ignore No definition for MeshWriter.
         const Writer = MeshWriter(scene, { scale: 1.0, defaultFont: "Arial" });
         new Writer(
             "Lorem ipsum dolor sit amet...",

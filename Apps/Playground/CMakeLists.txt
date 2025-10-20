@@ -16,11 +16,13 @@ set(DEPENDENCIES
     "../Dependencies/recast.js")
 
 set(SCRIPTS
-    "Scripts/experience.ts"
     "Scripts/playground_runner.js"
-    "Scripts/validation_native.ts"
-    "Scripts/testutils.d.ts"
     "Scripts/config.json")
+
+set(TYPESCRIPT_SCRIPTS
+    "Scripts/experience.ts"
+    "Scripts/validation_native.ts"
+    "Scripts/testutils.d.ts")
 
 if(APPLE)
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
@@ -113,9 +115,9 @@ endif()
 
 if(WIN32)
     set(WIN32_EXECUTABLE TRUE)
-    add_executable(Playground WIN32 ${REFERENCE_IMAGES} ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${JS_SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+    add_executable(Playground WIN32 ${REFERENCE_IMAGES} ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${JS_SCRIPTS} ${SOURCES} ${RESOURCE_FILES} ${TYPESCRIPT_SCRIPTS})
 else()
-    add_executable(Playground ${REFERENCE_IMAGES} ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${JS_SCRIPTS} ${SOURCES} ${RESOURCE_FILES})
+    add_executable(Playground ${REFERENCE_IMAGES} ${BABYLON_SCRIPTS} ${DEPENDENCIES} ${SCRIPTS} ${JS_SCRIPTS} ${SOURCES} ${RESOURCE_FILES} ${TYPESCRIPT_SCRIPTS})
 endif()
 
 warnings_as_errors(Playground)
@@ -253,6 +255,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules PREFIX Scripts FIL
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../Dependencies PREFIX Scripts FILES ${DEPENDENCIES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${REFERENCE_IMAGES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${TYPESCRIPT_SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${JS_SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Playground)
