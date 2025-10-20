@@ -15,8 +15,14 @@ namespace Babylon::Plugins
         {
             bx::MemoryBlock memoryBlock(&Graphics::DeviceContext::GetDefaultAllocator());
             bx::MemoryWriter writer(&memoryBlock);
+            bx::Error err;
 
-            bimg::imageWritePng(&writer, width, height, width * 4, pixelData, bimg::TextureFormat::RGBA8, invertY);
+            bimg::imageWritePng(&writer, width, height, width * 4, pixelData, bimg::TextureFormat::RGBA8, !invertY, &err);
+
+            if (!err.isOk())
+            {
+                throw Napi::Error::New(env, "Failed to encode PNG image: " + std::string(err.getMessage().getCPtr()));
+            }
 
             auto byteLength = memoryBlock.getSize();
             auto result = Napi::ArrayBuffer::New(env, byteLength);
