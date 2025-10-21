@@ -18,6 +18,47 @@ namespace Babylon::Plugins
 {
     namespace
     {
+        // Manager to own cancellation source with proper lifetime
+        // TODO - Move to shared location if needed elsewhere, like for global async ops
+        class EncodingManager final
+        {
+        public:
+            const std::shared_ptr<arcana::cancellation_source> GetCancellationSource() const
+            { 
+                return m_cancellationSource; 
+            }
+
+            static EncodingManager& GetFromJavaScript(Napi::Env env)
+            {
+                auto nativeObject = JsRuntime::NativeObject::GetFromJavaScript(env);
+                auto managerValue = nativeObject.Get("_encodingManager");
+
+                if (managerValue.IsUndefined())
+                {
+                    auto manager = new EncodingManager();
+                    auto external = Napi::External<EncodingManager>::New(
+                        env,
+                        manager,
+                        [](Napi::Env, EncodingManager* mgr) {
+                            mgr->m_cancellationSource->cancel(); // Cancel all pending operations on teardown
+                            delete mgr;
+                        });
+                    nativeObject.Set("_encodingManager", external);
+                    return *manager;
+                }
+
+                return *managerValue.As<Napi::External<EncodingManager>>().Data();
+            }
+
+        private:
+            EncodingManager()
+                : m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
+            {
+            }
+
+            const std::shared_ptr<arcana::cancellation_source> m_cancellationSource;
+        };
+
         std::vector<uint8_t> EncodePNG(const gsl::span<const uint8_t> pixelData, uint32_t width, uint32_t height, bool invertY)
         {
             bx::MemoryBlock memoryBlock{&Graphics::DeviceContext::GetDefaultAllocator()};
@@ -69,25 +110,24 @@ namespace Babylon::Plugins
                 return promise;
             }
 
+            auto& manager{EncodingManager::GetFromJavaScript(env)};
+            auto& cancellationSource = manager.GetCancellationSource();
             auto runtimeScheduler{std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env))};
-            const auto bufferSpan{gsl::make_span(buffer.Data(), buffer.ByteLength())};
+            std::vector<uint8_t> bufferCopy(buffer.Data(), buffer.Data() + buffer.ByteLength()); // Avoid JS lifetime issues in async work
 
-            arcana::make_task(arcana::threadpool_scheduler, arcana::cancellation_source::none(),
-                [bufferSpan, width, height, invertY]() -> std::vector<uint8_t> {
-                    // TODO - There are problems accessing it on a background thread.
-                    // There are two types of scenarios to consider:
-                    // 1. Garbage collection: The JS buffer falls out of scope during normal execution. It gets GC'd.
-                    // 2. Runtime shutdown: The entire JS environment, including the buffer, is torn down.
-                    // The key difference: `Napi::Persistent` protects against scenario #1 but not #2. If async operations can outlive the runtime lifecycle, I guess some options are:
-                    // - Copy the data to avoid any N-API object lifetime dependencies, or
-                    // - Give this guy some state and a dtor that cancels pending operations (assuming dtor would run before runtime shutdown and that cancellation would even help), or
-                    // - Secret third option?
-                    // I haven't given the Napi::Promise any thought yet either, if that needs similar protection.
-                    return EncodePNG(bufferSpan, width, height, invertY);
+            arcana::make_task(arcana::threadpool_scheduler, *cancellationSource,
+                [pixelData{std::move(bufferCopy)}, width, height, invertY]() -> std::vector<uint8_t> {
+                    return EncodePNG(gsl::make_span(pixelData), width, height, invertY);
                 })
-                .then(*runtimeScheduler, arcana::cancellation_source::none(),
-                    // NOTE - Keep references to runtimeScheduler and buffer alive until this lambda is invoked
-                    [runtimeScheduler, dataRef{Napi::Persistent(buffer)}, deferred, env](const arcana::expected<std::vector<uint8_t>, std::exception_ptr>& result) {
+                .then(*runtimeScheduler, *cancellationSource,
+                    // NOTE - Keep references to runtimeScheduler and cancellationSource alive until this lambda is invoked
+                    [runtimeScheduler, cancellationSource, deferred, env](const arcana::expected<std::vector<uint8_t>, std::exception_ptr>& result) {
+                        if (cancellationSource->cancelled()) 
+                        {
+                            // JS runtime is being torn down, do not attempt to resolve/reject the promise
+                            return;
+                        }
+                        
                         if (result.has_error())
                         {
                             deferred.Reject(Napi::Error::New(env, result.error()).Value());
