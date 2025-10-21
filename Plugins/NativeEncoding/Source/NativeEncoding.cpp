@@ -13,6 +13,7 @@
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
 
+// TODO - Cleanup pass
 namespace Babylon::Plugins
 {
     namespace
@@ -25,7 +26,7 @@ namespace Babylon::Plugins
 
             bimg::imageWritePng(&writer, width, height, width * 4, pixelData.data(), bimg::TextureFormat::RGBA8, !invertY, &err);
 
-            const auto byteLength = memoryBlock.getSize();
+            const auto byteLength{memoryBlock.getSize()};
 
             if (!err.isOk())
             {
@@ -46,15 +47,15 @@ namespace Babylon::Plugins
 
         Napi::Promise EncodeImageAsync(const Napi::CallbackInfo& info)
         {
-            const auto buffer = info[0].As<Napi::Uint8Array>();
-            const auto width = info[1].As<Napi::Number>().Uint32Value();
-            const auto height = info[2].As<Napi::Number>().Uint32Value();
-            const auto mimeType = info[3].As<Napi::String>().Utf8Value();
-            const auto invertY = info[4].As<Napi::Boolean>().Value();
+            const auto buffer{info[0].As<Napi::Uint8Array>()};
+            const auto width{info[1].As<Napi::Number>().Uint32Value()};
+            const auto height{info[2].As<Napi::Number>().Uint32Value()};
+            const auto mimeType{info[3].As<Napi::String>().Utf8Value()};
+            const auto invertY{info[4].As<Napi::Boolean>().Value()};
             
-            auto env{info.Env()};
-            auto deferred{Napi::Promise::Deferred::New(env)};
-            auto promise{deferred.Promise()};
+            const auto env{info.Env()};
+            const auto deferred{Napi::Promise::Deferred::New(env)};
+            const auto promise{deferred.Promise()};
 
             if (buffer.ByteLength() != width * height * 4)
             {
@@ -71,9 +72,17 @@ namespace Babylon::Plugins
             auto runtimeScheduler{std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env))};
             const auto bufferSpan{gsl::make_span(buffer.Data(), buffer.ByteLength())};
 
-            // NOTE - Use arcana::cancellation_source::none() because the times we might want to cancel this operation (e.g., shutdown) are rare.
             arcana::make_task(arcana::threadpool_scheduler, arcana::cancellation_source::none(),
                 [bufferSpan, width, height, invertY]() -> std::vector<uint8_t> {
+                    // TODO - There are problems accessing it on a background thread.
+                    // There are two types of scenarios to consider:
+                    // 1. Garbage collection: The JS buffer falls out of scope during normal execution. It gets GC'd.
+                    // 2. Runtime shutdown: The entire JS environment, including the buffer, is torn down.
+                    // The key difference: `Napi::Persistent` protects against scenario #1 but not #2. If async operations can outlive the runtime lifecycle, I guess some options are:
+                    // - Copy the data to avoid any N-API object lifetime dependencies, or
+                    // - Give this guy some state and a dtor that cancels pending operations (assuming dtor would run before runtime shutdown and that cancellation would even help), or
+                    // - Secret third option?
+                    // I haven't given the Napi::Promise any thought yet either, if that needs similar protection.
                     return EncodePNG(bufferSpan, width, height, invertY);
                 })
                 .then(*runtimeScheduler, arcana::cancellation_source::none(),
@@ -85,8 +94,8 @@ namespace Babylon::Plugins
                             return;
                         }
 
-                        const auto& encodedData = result.value();
-                        auto arrayBuffer = Napi::ArrayBuffer::New(env, encodedData.size());
+                        const auto& encodedData{result.value()};
+                        const auto arrayBuffer{Napi::ArrayBuffer::New(env, encodedData.size())};
                         std::memcpy(arrayBuffer.Data(), encodedData.data(), encodedData.size());
 
                         deferred.Resolve(arrayBuffer);
@@ -101,7 +110,7 @@ namespace Babylon::Plugins::NativeEncoding
 {
     void BABYLON_API Initialize(Napi::Env env)
     {
-        auto native = JsRuntime::NativeObject::GetFromJavaScript(env);
+        const auto native{JsRuntime::NativeObject::GetFromJavaScript(env)};
         native.Set("EncodeImageAsync", Napi::Function::New(env, EncodeImageAsync, "EncodeImageAsync"));
     }
 }
