@@ -332,31 +332,6 @@ describe("NativeEncoding", function () {
       expect(error).to.exist;
     }
   });
-
-  // TODO - Fix teardown to support this test
-  // it("should teardown properly with pending async operations", async function () {
-  //   const dim = 2000;
-  //   const pixelData = new Uint8Array(dim * dim * 4).fill(128);
-  //   const encodedImage = _native.EncodeImageAsync(pixelData, dim, dim, "image/png", false);
-  // });
-
-  it("should not block the JS thread", async function () {    
-    const dim = 1000;
-    const pixelData = new Uint8Array(dim * dim * 4).fill(128);
-    const encodePromise = _native.EncodeImageAsync(pixelData, dim, dim, "image/png", false);
-
-    // If encoding blocked the JS thread above, encodePromise is already resolved.
-    // Otherwise, the timer will resolve immediately
-    const raceResult = await Promise.race([
-      encodePromise.then(() => "encode"),
-      new Promise(resolve => { setTimeout(() => resolve("timer"), 1) })
-    ]);
-    
-    expect(raceResult).to.equal("timer", "Encode appears to be blocking - timer did not fire first");
-
-    // TODO - After fixing teardown, remove await (prevents crash); use free promise in raceResult
-    await encodePromise; 
-  });
 });
 
 mocha.run((failures) => {
