@@ -2,6 +2,13 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "Native Canvas",
+            "playgroundId": "#TKVFSA#2",
+            "referenceImage": "native-canvas.png",
+            "excludedGraphicsApis": [ "D3D12" ],
+            "comment": "2D Path not rendered with D3D12"
+        },
+        {
             "title": "EXR Loader",
             "playgroundId": "#4RN0VF#151",
             "referenceImage": "exr-loader.png"
@@ -129,7 +136,7 @@
             "title": "Dynamic Texture context clip",
             "playgroundId": "#FU0ES5#47",
             "referenceImage": "dynamicTextureClip.png",
-            "excludedGraphicsApis": ["D3D12" ],
+            "excludedGraphicsApis": [ "D3D12" ],
             "comment": "D3D12/CI: Incorrect rendering of clipped texture"
         },
         {

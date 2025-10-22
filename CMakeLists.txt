@@ -186,6 +186,6 @@ if(BABYLON_NATIVE_BUILD_APPS)
 endif()
 
 # no install for glslang compiled for shaderc
-if(BABYLON_NATIVE_INSTALL AND NOT BGFX_BUILD_TOOLS)
+if(BABYLON_NATIVE_INSTALL)
     include(Install/Install.cmake)
 endif()
