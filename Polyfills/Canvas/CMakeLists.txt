@@ -268,7 +268,9 @@ function(add_bgfx_shader FILE FOLDER)
     endif()
 endfunction()
 
-set(SHADERC_PATH "" CACHE FILEPATH "Optional full path to shaderc built from bgfx.")
+if(NOT IOS AND NOT VISIONOS AND NOT ANDROID)
+    set(SHADERC_PATH "" CACHE FILEPATH "Optional full path to shaderc built from bgfx.")
+endif()
 
 set(SOURCES
     "Include/Babylon/Polyfills/Canvas.h"
@@ -320,21 +322,16 @@ target_link_libraries(Canvas
     PRIVATE UrlLib
     PRIVATE base-n)
 
-
-if(SHADERC_PATH)
+if(SHADERC_PATH AND NOT IOS AND NOT VISIONOS AND NOT ANDROID)
     if(EXISTS "${SHADERC_PATH}")
         message(STATUS "Using shaderc from: ${SHADERC_PATH}")
     else()
         message(FATAL_ERROR " '${SHADERC_PATH}' does not exist.")
     endif()
 
-    if(NOT IOS AND NOT VISIONOS AND NOT ANDROID)
-        foreach(SHADER ${SHADERS})
-            add_bgfx_shader(${SHADER} "")
-        endforeach()
-    endif()
-else()
-    message(STATUS "No SHADERC_PATH provided — Shaderc will not be used.")
+    foreach(SHADER ${SHADERS})
+        add_bgfx_shader(${SHADER} "")
+    endforeach()
 endif()
 
 set_property(TARGET Canvas PROPERTY FOLDER Polyfills)
