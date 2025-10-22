@@ -35,7 +35,6 @@ namespace Babylon::Plugins
                 throw std::runtime_error("Failed to encode PNG image: output is empty");
             }
 
-            // Copy for consistent return type & clear ownership
             auto result{std::vector<uint8_t>(byteLength)};
             std::memcpy(result.data(), memoryBlock.more(0), byteLength);
 
@@ -65,9 +64,7 @@ namespace Babylon::Plugins
                 return deferred.Promise();
             }
 
-            // shared_ptr lets us extend scheduler lifetime via lambda capture below (.then() takes it by reference)
             auto runtimeScheduler{std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env))};
-            // Copy buffer data to own it for async work
             auto pixelData{std::make_shared<std::vector<uint8_t>>(buffer.Data(), buffer.Data() + buffer.ByteLength())};
 
             arcana::make_task(arcana::threadpool_scheduler, arcana::cancellation_source::none(),
@@ -77,14 +74,13 @@ namespace Babylon::Plugins
                 .then(*runtimeScheduler, arcana::cancellation_source::none(),
                     [runtimeScheduler, deferred, env](const arcana::expected<std::vector<uint8_t>, std::exception_ptr>& result) {
                         // TODO: Crash risk on JS teardown - this async work isn't tied to any JS object lifetime,
-                        // unlike other plugins that clean up pending work in their destructors.
+                        // unlike other plugins that cancel / clean up pending work in their destructors.
                         if (result.has_error())
                         {
                             deferred.Reject(Napi::Error::New(env, result.error()).Value());
                             return;
                         }
 
-                        // Transfer ownership of the image data to the ArrayBuffer (use shared_ptr for easy cleanup)
                         auto imageData{std::make_shared<std::vector<uint8_t>>(std::move(result.value()))};
                         auto arrayBuffer{Napi::ArrayBuffer::New(env, imageData->data(), imageData->size(), [imageData](Napi::Env, void*){})};
 
