@@ -220,11 +220,8 @@ namespace Babylon::ShaderCompilerTraversers
                 // Create the symbol for the actual struct. The name of this symbol, "anon@0",
                 // mirrors the kinds of strings glslang generates automatically for these sorts
                 // of objects.
-#ifdef BGFX_BUILD_TOOLS
-                TIntermSymbol* structSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), "anon@0", intermediate->getStage(), structType});
-#else
                 TIntermSymbol* structSymbol = intermediate->addSymbol(TIntermSymbol{ ids.Next(), "anon@0", structType });
-#endif
+
                 // Every affected symbol in the AST (except linker objects) must be replaced
                 // with a new operation to retrieve its value from the struct. This operation
                 // consists of a binary operation indexing into the struct at a specified
@@ -524,11 +521,8 @@ namespace Babylon::ShaderCompilerTraversers
 
                 TType newType{publicType};
                 newType.setBasicType(symbol->getType().getBasicType());
-#ifdef BGFX_BUILD_TOOLS
-                auto* newSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), newName, intermediate->getStage(), newType});
-#else
                 auto* newSymbol = intermediate->addSymbol(TIntermSymbol{ ids.Next(), newName, newType });
-#endif
+
                 originalNameToReplacement[name] = newSymbol;
                 replacementToOriginalName[newName] = name;
             }
@@ -801,11 +795,7 @@ namespace Babylon::ShaderCompilerTraversers
 
                         TType newType{publicType};
                         std::string newName = name + "Texture";
-#ifdef BGFX_BUILD_TOOLS
-                        newTexture = intermediate->addSymbol(TIntermSymbol{ids.Next(), newName.c_str(), intermediate->getStage(), newType});
-#else
                         newTexture = intermediate->addSymbol(TIntermSymbol{ ids.Next(), newName.c_str(), newType });
-#endif
                     }
 
                     // Create the new sampler symbol.
@@ -820,11 +810,7 @@ namespace Babylon::ShaderCompilerTraversers
                         publicType.sampler.sampler = true;
 
                         TType newType{publicType};
-#ifdef BGFX_BUILD_TOOLS
-                        newSampler = intermediate->addSymbol(TIntermSymbol{ids.Next(), name.c_str(), intermediate->getStage(), newType});
-#else
                         newSampler = intermediate->addSymbol(TIntermSymbol{ ids.Next(), name.c_str(), newType });
-#endif
                     }
 
                     nameToNewTextureAndSampler[name] = std::pair<TIntermSymbol*, TIntermSymbol*>{newTexture, newSampler};
