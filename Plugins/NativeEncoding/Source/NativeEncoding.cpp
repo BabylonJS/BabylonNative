@@ -65,11 +65,11 @@ namespace Babylon::Plugins
             }
 
             auto runtimeScheduler{std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env))};
-            auto pixelData{std::make_shared<std::vector<uint8_t>>(buffer.Data(), buffer.Data() + buffer.ByteLength())};
+            auto pixelData{std::vector<uint8_t>(buffer.Data(), buffer.Data() + buffer.ByteLength())};
 
             arcana::make_task(arcana::threadpool_scheduler, arcana::cancellation_source::none(),
-                [pixelData, width, height, invertY]() {
-                    return EncodePNG(*pixelData, width, height, invertY);
+                [pixelData{std::move(pixelData)}, width, height, invertY]() {
+                    return EncodePNG(pixelData, width, height, invertY);
                 })
                 .then(*runtimeScheduler, arcana::cancellation_source::none(),
                     [runtimeScheduler, deferred, env](const arcana::expected<std::vector<uint8_t>, std::exception_ptr>& result) {
