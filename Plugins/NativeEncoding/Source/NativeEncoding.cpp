@@ -5,28 +5,25 @@
 
 #include <napi/napi.h>
 
-#include <gsl/gsl>
-
 #include <bimg/encode.h>
 #include <bx/readerwriter.h>
 
 #include <arcana/threading/task.h>
 #include <arcana/threading/task_schedulers.h>
 
-// TODO - Cleanup pass
 namespace Babylon::Plugins
 {
     namespace
     {
-        std::vector<uint8_t> EncodePNG(const gsl::span<const uint8_t> pixelData, uint32_t width, uint32_t height, bool invertY)
+        std::vector<uint8_t> EncodePNG(const std::vector<uint8_t>& pixelData, uint32_t width, uint32_t height, bool invertY)
         {
-            bx::MemoryBlock memoryBlock{&Graphics::DeviceContext::GetDefaultAllocator()};
-            bx::MemoryWriter writer{&memoryBlock};
-            bx::Error err;
+            auto memoryBlock{bx::MemoryBlock(&Graphics::DeviceContext::GetDefaultAllocator())};
+            auto writer{bx::MemoryWriter(&memoryBlock)};
+            auto err{bx::Error()};
 
             bimg::imageWritePng(&writer, width, height, width * 4, pixelData.data(), bimg::TextureFormat::RGBA8, !invertY, &err);
 
-            const auto byteLength{memoryBlock.getSize()};
+            auto byteLength{memoryBlock.getSize()};
 
             if (!err.isOk())
             {
@@ -38,8 +35,8 @@ namespace Babylon::Plugins
                 throw std::runtime_error("Failed to encode PNG image: output is empty");
             }
 
-            // TODO - Return MemoryBlock directly?
-            std::vector<uint8_t> result(byteLength);
+            // Copy for consistent return type & clear ownership
+            auto result{std::vector<uint8_t>(byteLength)};
             std::memcpy(result.data(), memoryBlock.more(0), byteLength);
 
             return result;
@@ -47,54 +44,54 @@ namespace Babylon::Plugins
 
         Napi::Promise EncodeImageAsync(const Napi::CallbackInfo& info)
         {
-            const auto buffer{info[0].As<Napi::Uint8Array>()};
-            const auto width{info[1].As<Napi::Number>().Uint32Value()};
-            const auto height{info[2].As<Napi::Number>().Uint32Value()};
-            const auto mimeType{info[3].As<Napi::String>().Utf8Value()};
-            const auto invertY{info[4].As<Napi::Boolean>().Value()};
+            auto buffer{info[0].As<Napi::Uint8Array>()};
+            auto width{info[1].As<Napi::Number>().Uint32Value()};
+            auto height{info[2].As<Napi::Number>().Uint32Value()};
+            auto mimeType{info[3].As<Napi::String>().Utf8Value()};
+            auto invertY{info[4].As<Napi::Boolean>().Value()};
             
-            const auto env{info.Env()};
-            const auto deferred{Napi::Promise::Deferred::New(env)};
-            const auto promise{deferred.Promise()};
-
-            if (buffer.ByteLength() != width * height * 4)
-            {
-                deferred.Reject(Napi::RangeError::New(env, "Buffer byte length does not match RGBA8 image of provided dimensions.").Value());
-                return promise;
-            }
-
+            auto env{info.Env()};
+            auto deferred{Napi::Promise::Deferred::New(env)};
+            
             if (mimeType != "image/png")
             {
                 deferred.Reject(Napi::Error::New(env, "Unsupported mime type: " + mimeType + ". Only image/png is currently supported.").Value());
-                return promise;
+                return deferred.Promise();
             }
 
-            auto runtimeScheduler{std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env))};
-            std::vector<uint8_t> bufferCopy(buffer.Data(), buffer.Data() + buffer.ByteLength()); // Avoid JS lifetime issues in async work
+            if (buffer.ByteLength() != width * height * 4)
+            {
+                deferred.Reject(Napi::Error::New(env, "Buffer byte length does not match RGBA8 format (4 bytes per pixel) of provided dimensions.").Value());
+                return deferred.Promise();
+            }
 
-            // TODO - Need to figure out cancellation strategy and/or how to gracefully handle runtime shutdown during async work.
-            // One idea is to create a a JS object and attach a cancellation source to its lifetime (so when the runtime goes down, the object is destroyed, and the cancellation source is cancelled).
+            // shared_ptr lets us extend scheduler lifetime via lambda capture below (.then() takes it by reference)
+            auto runtimeScheduler{std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env))};
+            // Copy buffer data to own it for async work
+            auto pixelData{std::make_shared<std::vector<uint8_t>>(buffer.Data(), buffer.Data() + buffer.ByteLength())};
+
             arcana::make_task(arcana::threadpool_scheduler, arcana::cancellation_source::none(),
-                [pixelData{std::move(bufferCopy)}, width, height, invertY]() -> std::vector<uint8_t> {
-                    return EncodePNG(gsl::make_span(pixelData), width, height, invertY);
+                [pixelData, width, height, invertY]() {
+                    return EncodePNG(*pixelData, width, height, invertY);
                 })
                 .then(*runtimeScheduler, arcana::cancellation_source::none(),
-                    // NOTE - Keep references to runtimeScheduler alive until this lambda is invoked
                     [runtimeScheduler, deferred, env](const arcana::expected<std::vector<uint8_t>, std::exception_ptr>& result) {
+                        // TODO: Crash risk on JS teardown - this async work isn't tied to any JS object lifetime,
+                        // unlike other plugins that clean up pending work in their destructors.
                         if (result.has_error())
                         {
                             deferred.Reject(Napi::Error::New(env, result.error()).Value());
                             return;
                         }
 
-                        const auto& encodedData{result.value()};
-                        const auto arrayBuffer{Napi::ArrayBuffer::New(env, encodedData.size())};
-                        std::memcpy(arrayBuffer.Data(), encodedData.data(), encodedData.size());
+                        // Transfer ownership of the image data to the ArrayBuffer (use shared_ptr for easy cleanup)
+                        auto imageData{std::make_shared<std::vector<uint8_t>>(std::move(result.value()))};
+                        auto arrayBuffer{Napi::ArrayBuffer::New(env, imageData->data(), imageData->size(), [imageData](Napi::Env, void*){})};
 
                         deferred.Resolve(arrayBuffer);
                     });
 
-            return promise;
+            return deferred.Promise();
         }
     }
 }
@@ -103,7 +100,7 @@ namespace Babylon::Plugins::NativeEncoding
 {
     void BABYLON_API Initialize(Napi::Env env)
     {
-        const auto native{JsRuntime::NativeObject::GetFromJavaScript(env)};
+        auto native{JsRuntime::NativeObject::GetFromJavaScript(env)};
         native.Set("EncodeImageAsync", Napi::Function::New(env, EncodeImageAsync, "EncodeImageAsync"));
     }
 }
