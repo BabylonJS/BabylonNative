@@ -220,7 +220,7 @@ namespace Babylon::ShaderCompilerTraversers
                 // Create the symbol for the actual struct. The name of this symbol, "anon@0",
                 // mirrors the kinds of strings glslang generates automatically for these sorts
                 // of objects.
-                TIntermSymbol* structSymbol = intermediate->addSymbol(TIntermSymbol{ ids.Next(), "anon@0", structType });
+                TIntermSymbol* structSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), "anon@0", structType});
 
                 // Every affected symbol in the AST (except linker objects) must be replaced
                 // with a new operation to retrieve its value from the struct. This operation
@@ -521,8 +521,7 @@ namespace Babylon::ShaderCompilerTraversers
 
                 TType newType{publicType};
                 newType.setBasicType(symbol->getType().getBasicType());
-                auto* newSymbol = intermediate->addSymbol(TIntermSymbol{ ids.Next(), newName, newType });
-
+                auto* newSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), newName, newType});
                 originalNameToReplacement[name] = newSymbol;
                 replacementToOriginalName[newName] = name;
             }
@@ -795,7 +794,7 @@ namespace Babylon::ShaderCompilerTraversers
 
                         TType newType{publicType};
                         std::string newName = name + "Texture";
-                        newTexture = intermediate->addSymbol(TIntermSymbol{ ids.Next(), newName.c_str(), newType });
+                        newTexture = intermediate->addSymbol(TIntermSymbol{ids.Next(), newName.c_str(), newType});
                     }
 
                     // Create the new sampler symbol.
@@ -810,7 +809,7 @@ namespace Babylon::ShaderCompilerTraversers
                         publicType.sampler.sampler = true;
 
                         TType newType{publicType};
-                        newSampler = intermediate->addSymbol(TIntermSymbol{ ids.Next(), name.c_str(), newType });
+                        newSampler = intermediate->addSymbol(TIntermSymbol{ids.Next(), name.c_str(), newType});
                     }
 
                     nameToNewTextureAndSampler[name] = std::pair<TIntermSymbol*, TIntermSymbol*>{newTexture, newSampler};
