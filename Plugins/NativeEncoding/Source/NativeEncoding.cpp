@@ -15,7 +15,8 @@ namespace Babylon::Plugins
 {
     namespace
     {
-        std::vector<uint8_t> EncodePNG(const std::vector<uint8_t>& pixelData, uint32_t width, uint32_t height, bool invertY)
+
+        std::shared_ptr<std::vector<uint8_t>> EncodePNG(const std::vector<uint8_t>& pixelData, uint32_t width, uint32_t height, bool invertY)
         {
             auto memoryBlock{bx::MemoryBlock(&Graphics::DeviceContext::GetDefaultAllocator())};
             auto writer{bx::MemoryWriter(&memoryBlock)};
@@ -35,11 +36,12 @@ namespace Babylon::Plugins
                 throw std::runtime_error("Failed to encode PNG image: output is empty");
             }
 
-            auto result{std::vector<uint8_t>(byteLength)};
-            std::memcpy(result.data(), memoryBlock.more(0), byteLength);
+            std::shared_ptr<std::vector<uint8_t>> result(new std::vector<uint8_t>(byteLength),
+                [](std::vector<uint8_t>* ptr) { printf("\nDestroying vector address: %p\n", ptr); delete ptr; });
+            std::memcpy(result->data(), memoryBlock.more(0), byteLength);
 
             printf("\nEncodePNG, result.data() address: %p, size: %zu, capacity: %zu\n",
-                result.data(), result.size(), result.capacity());
+                result->data(), result->size(), result->capacity());
 
             return result;
         }
@@ -82,7 +84,7 @@ namespace Babylon::Plugins
                         3.	Const lvalue reference (const expected<...>& result) -> References, no copy but can't move (bad)
                         4.  Lvalue reference (expected<...>& result)             -> Doesn't compile (bad)
                     */
-                    [runtimeScheduler, deferred, env](const arcana::expected<std::vector<uint8_t>, std::exception_ptr>& result) {
+                    [runtimeScheduler, deferred, env](const arcana::expected<std::shared_ptr<std::vector<uint8_t>>, std::exception_ptr>& result) {
                         // TODO: Crash risk on JS teardown - this async work isn't tied to any JS object lifetime,
                         // unlike other plugins that cancel / clean up pending work in their destructors.
                         if (result.has_error())
@@ -92,11 +94,9 @@ namespace Babylon::Plugins
                         }
 
                         printf("\nContinuation, result.value().data() address: %p, size: %zu, capacity: %zu\n",
-                            result.value().data(), result.value().size(), result.value().capacity());
+                            result.value()->data(), result.value()->size(), result.value()->capacity());
 
-                        // Remove the constness to allow moving out-- should be OK since original was not const. (TODO: Playing with fire?)
-                        auto& vector = const_cast<std::vector<uint8_t>&>(result.value());
-                        auto imageData{std::make_shared<std::vector<uint8_t>>(std::move(vector))};
+                        auto& imageData = result.value();
 
                         printf("\nContinuation, imageData->data() address: %p\n", imageData->data());
 
