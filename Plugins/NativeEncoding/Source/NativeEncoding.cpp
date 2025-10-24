@@ -38,6 +38,9 @@ namespace Babylon::Plugins
             auto result{std::vector<uint8_t>(byteLength)};
             std::memcpy(result.data(), memoryBlock.more(0), byteLength);
 
+            printf("\nEncodePNG, result.data() address: %p, size: %zu, capacity: %zu\n",
+                result.data(), result.size(), result.capacity());
+
             return result;
         }
 
@@ -72,6 +75,13 @@ namespace Babylon::Plugins
                     return EncodePNG(pixelData, width, height, invertY);
                 })
                 .then(*runtimeScheduler, arcana::cancellation_source::none(),
+                    /**
+                        The task framework passes the stored expected as an lvalue, so:
+                        1.	By-value parameter (expected<...> result)            -> COPIES the expected (bad)
+                        2.	Rvalue reference (expected<...>&& result)            -> Doesn't compile (bad)
+                        3.	Const lvalue reference (const expected<...>& result) -> References, no copy but can't move (bad)
+                        4.  Lvalue reference (expected<...>& result)             -> Doesn't compile (bad)
+                    */
                     [runtimeScheduler, deferred, env](const arcana::expected<std::vector<uint8_t>, std::exception_ptr>& result) {
                         // TODO: Crash risk on JS teardown - this async work isn't tied to any JS object lifetime,
                         // unlike other plugins that cancel / clean up pending work in their destructors.
@@ -81,8 +91,15 @@ namespace Babylon::Plugins
                             return;
                         }
 
+                        printf("\nContinuation, result.value().data() address: %p, size: %zu, capacity: %zu\n",
+                            result.value().data(), result.value().size(), result.value().capacity());
                         auto imageData{std::make_shared<std::vector<uint8_t>>(std::move(result.value()))};
+
+                        printf("\nContinuation, imageData->data() address: %p\n", imageData->data());
+
                         auto arrayBuffer{Napi::ArrayBuffer::New(env, imageData->data(), imageData->size(), [imageData](Napi::Env, void*){})};
+                        
+                        printf("\nContinuation, arrayBuffer.Data() address: %p\n\n", arrayBuffer.Data());
 
                         deferred.Resolve(arrayBuffer);
                     });
