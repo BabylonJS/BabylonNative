@@ -93,7 +93,10 @@ namespace Babylon::Plugins
 
                         printf("\nContinuation, result.value().data() address: %p, size: %zu, capacity: %zu\n",
                             result.value().data(), result.value().size(), result.value().capacity());
-                        auto imageData{std::make_shared<std::vector<uint8_t>>(std::move(result.value()))};
+
+                        // Remove the constness to allow moving out-- should be OK since original was not const. (TODO: Playing with fire?)
+                        auto& vector = const_cast<std::vector<uint8_t>&>(result.value());
+                        auto imageData{std::make_shared<std::vector<uint8_t>>(std::move(vector))};
 
                         printf("\nContinuation, imageData->data() address: %p\n", imageData->data());
 
