@@ -15,8 +15,9 @@ namespace Babylon::Plugins
 {
     namespace
     {
+        using EncodedImagePtr = std::unique_ptr<std::vector<uint8_t>, std::function<void(std::vector<uint8_t>*)>>;
 
-        std::shared_ptr<std::vector<uint8_t>> EncodePNG(const std::vector<uint8_t>& pixelData, uint32_t width, uint32_t height, bool invertY)
+        EncodedImagePtr EncodePNG(const std::vector<uint8_t>& pixelData, uint32_t width, uint32_t height, bool invertY)
         {
             auto memoryBlock{bx::MemoryBlock(&Graphics::DeviceContext::GetDefaultAllocator())};
             auto writer{bx::MemoryWriter(&memoryBlock)};
@@ -36,8 +37,11 @@ namespace Babylon::Plugins
                 throw std::runtime_error("Failed to encode PNG image: output is empty");
             }
 
-            std::shared_ptr<std::vector<uint8_t>> result(new std::vector<uint8_t>(byteLength),
-                [](std::vector<uint8_t>* ptr) { printf("\nDestroying vector address: %p\n", ptr); delete ptr; });
+            EncodedImagePtr result(
+                new std::vector<uint8_t>(byteLength), 
+                [](std::vector<uint8_t>* ptr) { printf("\nDestroying vector address: %p\n", ptr); delete ptr; }
+            );
+
             std::memcpy(result->data(), memoryBlock.more(0), byteLength);
 
             printf("\nEncodePNG, result.data() address: %p, size: %zu, capacity: %zu\n",
@@ -46,7 +50,8 @@ namespace Babylon::Plugins
             return result;
         }
 
-        Napi::Promise EncodeImageAsync(const Napi::CallbackInfo& info)
+        // TODO: Update this to Napi::Value for JSI.
+        Napi::Value EncodeImageAsync(const Napi::CallbackInfo& info)
         {
             auto buffer{info[0].As<Napi::Uint8Array>()};
             auto width{info[1].As<Napi::Number>().Uint32Value()};
@@ -84,7 +89,7 @@ namespace Babylon::Plugins
                         3.	Const lvalue reference (const expected<...>& result) -> References, no copy but can't move (bad)
                         4.  Lvalue reference (expected<...>& result)             -> Doesn't compile (bad)
                     */
-                    [runtimeScheduler, deferred, env](const arcana::expected<std::shared_ptr<std::vector<uint8_t>>, std::exception_ptr>& result) {
+                    [runtimeScheduler, deferred, env](const arcana::expected<EncodedImagePtr, std::exception_ptr>& result) {
                         // TODO: Crash risk on JS teardown - this async work isn't tied to any JS object lifetime,
                         // unlike other plugins that cancel / clean up pending work in their destructors.
                         if (result.has_error())
@@ -100,7 +105,11 @@ namespace Babylon::Plugins
 
                         printf("\nContinuation, imageData->data() address: %p\n", imageData->data());
 
-                        auto arrayBuffer{Napi::ArrayBuffer::New(env, imageData->data(), imageData->size(), [imageData](Napi::Env, void*){})};
+                        // Make copy of the raw pointer & size to use in argument list (because std::move() in lambda capture may be evaluated before these arguments)
+                        // TODO: might still need a shared_ptr here but lets see
+                        auto dataPtr = imageData->data();
+                        auto dataSize = imageData->size();
+                        auto arrayBuffer{Napi::ArrayBuffer::New(env, dataPtr, dataSize, [imageData{std::move(const_cast<EncodedImagePtr&>(imageData))}](Napi::Env, void*) {})};
                         
                         printf("\nContinuation, arrayBuffer.Data() address: %p\n\n", arrayBuffer.Data());
 
