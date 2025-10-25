@@ -83,11 +83,21 @@ namespace Babylon::Plugins
                 })
                 .then(*runtimeScheduler, arcana::cancellation_source::none(),
                     /**
-                        The task framework passes the stored expected as an lvalue, so:
-                        1.	By-value parameter (expected<...> result)            -> COPIES the expected (bad)
-                        2.	Rvalue reference (expected<...>&& result)            -> Doesn't compile (bad)
-                        3.	Const lvalue reference (const expected<...>& result) -> References, no copy but can't move (bad)
-                        4.  Lvalue reference (expected<...>& result)             -> Doesn't compile (bad)
+                        The task framework passes the stored expected as an lvalue. Don't know how it relates to below,
+                        but here's what happens with different parameter types:
+                        1.	By-value parameter (expected<v, e> result)            -> Copies the expected and the value v
+                        2.	Rvalue reference (expected<v, e> &&result)            -> Build error
+                        3.	Const lvalue reference (const expected<v, e> &result) -> Doesn't copy (both expected and value v are const refs)
+                        4.  Lvalue reference (expected<v, e> &result)             -> Build error
+                        5.  Anything like this (...expected<v&, e>.. result)      -> Build error
+
+                        Options 2, 4, and 5 give build errors, so they are out.
+                        And option 1 copies both the expected and the value inside, which is not ideal for performance.
+                        Thus, we are left with option 3.
+
+                        Then, there is the issue of the smart pointer inside the expected:
+                        1. unique_ptr: non-copyable, movable -> Explicit ownership, but requires const_cast to move.
+                        2. shared_ptr: copyable, movable -> Ambiguous ownership, but easier to use.
                     */
                     [runtimeScheduler, deferred, env](const arcana::expected<EncodedImagePtr, std::exception_ptr>& result) {
                         // TODO: Crash risk on JS teardown - this async work isn't tied to any JS object lifetime,
@@ -105,7 +115,7 @@ namespace Babylon::Plugins
 
                         printf("\nContinuation, imageData->data() address: %p\n", imageData->data());
 
-                        // Make copy of the raw pointer & size to use in argument list (because std::move() in lambda capture may be evaluated before these arguments)
+                        // Copy the raw pointer & size ahead of time for use in argument list (otherwise, not guaranteed to evaluate before the std::move() in lambda capture -> errors)
                         // TODO: might still need a shared_ptr here but lets see
                         auto dataPtr = imageData->data();
                         auto dataSize = imageData->size();
