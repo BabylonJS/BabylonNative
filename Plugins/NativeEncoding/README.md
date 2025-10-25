@@ -4,6 +4,10 @@
 
 The NativeEncoding plugin provides native image encoding capabilities to Babylon, allowing raw pixel data to be encoded into standard image formats (PNG, JPEG, WebP, etc.).
 
+## Limitations
+
+Currently, **only PNG encoding** is supported.
+
 ## Design 
 
 Unlike a traditional polyfill which would implement Canvas's `toBlob()` or `toDataURL()` methods, NativeEncoding exists as a plugin because:
@@ -23,6 +27,3 @@ interface INative {
 
 It should be wrapped by higher-level Babylon.js APIs (e.g., DumpTools) for common workflows like asset exports and screenshots.
 
-## Limitations
-
-Currently, **only PNG encoding** is supported.
