@@ -37,6 +37,7 @@ target_link_libraries(UnitTestsJNI
     PRIVATE NativeEngine
     PRIVATE NativeInput
     PRIVATE NativeOptimizations
+    PRIVATE NativeEncoding
     PRIVATE ScriptLoader
     PRIVATE XMLHttpRequest
     PRIVATE gtest_main

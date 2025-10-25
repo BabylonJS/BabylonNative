@@ -292,6 +292,48 @@ describe("PostProcesses", function () {
     });*/
 });
 
+describe("NativeEncoding", function () {
+  this.timeout(0);
+
+  function expectValidPNG(arrayBuffer: ArrayBuffer) {
+    expect(arrayBuffer).to.be.instanceOf(ArrayBuffer);
+    expect(arrayBuffer.byteLength).to.be.greaterThan(0);
+
+    const pngSignature = new Uint8Array(arrayBuffer.slice(0, 4));
+    expect(pngSignature[0]).to.equal(137); // PNG signature bytes
+    expect(pngSignature[1]).to.equal(80);  // 'P'
+    expect(pngSignature[2]).to.equal(78);  // 'N'
+    expect(pngSignature[3]).to.equal(71);  // 'G'
+  }
+
+  it("should encode a PNG", async function () {
+    const pixelData = new Uint8Array(4).fill(255);
+    const result = await _native.EncodeImageAsync(pixelData, 1, 1, "image/png", false);
+    expectValidPNG(result);
+  });
+
+  it("should handle multiple concurrent encoding tasks", async function () {
+    const pixelDatas = [];
+    for (let i = 0; i < 10; i++) {
+      pixelDatas.push(new Uint8Array(4).fill(255));
+    }
+    const results = await Promise.all(pixelDatas.map((pixelData) =>
+      _native.EncodeImageAsync(pixelData, 1, 1, "image/png", false)
+    ));
+    results.forEach(expectValidPNG);
+  });
+  
+  it("should reject if MIME type not supported", async function () {
+    const pixelData = new Uint8Array([255, 0, 0, 255]);
+    try {
+      await _native.EncodeImageAsync(pixelData, 1, 1, "bad-mimetype", false);
+      expect.fail("Expected promise to reject with unsupported mime type");
+    } catch (error) {
+      expect(error).to.exist;
+    }
+  });
+});
+
 mocha.run((failures) => {
   // Test program will wait for code to be set before exiting
   if (failures > 0) {

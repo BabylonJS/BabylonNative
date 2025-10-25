@@ -159,6 +159,11 @@ if(TARGET NativeXr)
     install_include_for_targets(NativeXr)
 endif()
 
+if(TARGET NativeEncoding)
+    install_targets(NativeEncoding)
+    install_include_for_targets(NativeEncoding)
+endif()
+
 # ----------------
 # Polyfills
 # ----------------
