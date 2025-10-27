@@ -106,6 +106,19 @@ option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils.
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
 
+# Sanitizers
+option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
+
+if(ENABLE_SANITIZERS)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        set(SANITIZERS "address,undefined")
+        add_compile_options(-fsanitize=${SANITIZERS} -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=${SANITIZERS})
+    else()
+        message(WARNING "Sanitizers not supported on this compiler.")
+    endif()
+endif()
+
 # --------------------------------------------------
 
 if(ANDROID)

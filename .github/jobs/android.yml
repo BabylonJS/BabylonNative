@@ -9,7 +9,10 @@ jobs:
     timeoutInMinutes: 45
     pool:
       vmImage: ${{ parameters.vmImage }}
-      
+
+    variables:
+      SANITIZER_FLAG: ${{ parameters.Sanitizers && 'ON' || 'OFF' }}
+
     steps:
     - template: cmake.yml
       parameters:
@@ -26,7 +29,7 @@ jobs:
           workingDirectory: 'Apps/Playground/Android'
           gradleWrapperFile: 'Apps/Playground/Android/gradlew'
           gradleOptions: '-Xmx1536m'
-          options: '-PJSEngine=${{ parameters.JSEngine }} -PARM64Only -PNDK_VERSION=$(NDK_VERSION)'
+          options: '-PJSEngine=${{ parameters.JSEngine }} -PARM64Only -PNDK_VERSION=$(NDK_VERSION) -PSANITIZERS=$(SANITIZER_FLAG)'
           publishJUnitResults: false
           tasks: 'assembleRelease'
       displayName: 'Build Playground ${{ parameters.JSEngine }}'

@@ -21,6 +21,12 @@ jobs:
       name: MacOS
       vmImage: 'macOS-latest'
 
+  - template: .github/jobs/macos.yml
+    parameters:
+      name: MacOS
+      vmImage: 'macOS-latest'
+      Sanitizers: true
+
   - template: .github/jobs/ios.yml
     parameters:
       name: iOS_iOS180
@@ -102,6 +108,15 @@ jobs:
       CXX: g++
       JSEngine: JavaScriptCore
 
+  - template: .github/jobs/linux.yml
+    parameters:
+      name: Ubuntu_Clang_JavaScriptCore
+      vmImage: 'ubuntu-latest'
+      CC: clang
+      CXX: clang++
+      JSEngine: JavaScriptCore
+      Sanitizers: true
+
 # Android
   - template: .github/jobs/android.yml
     parameters:
@@ -126,6 +141,13 @@ jobs:
       name: Android_MacOS_V8
       vmImage: 'macOS-latest'
       JSEngine: V8
+
+  - template: .github/jobs/android.yml
+    parameters:
+      name: Android_MacOS_V8
+      vmImage: 'macOS-latest'
+      JSEngine: V8
+      Sanitizers: true
 
 # Installation tests. 
   - template: .github/jobs/test_install_win32.yml
