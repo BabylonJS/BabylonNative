@@ -1,10 +1,12 @@
 #include "Canvas.h"
 #include "Image.h"
+#include "Path2D.h"
 #include "Context.h"
 #include <bgfx/bgfx.h>
 #include <napi/pointer.h>
 #include <cassert>
 #include "Colors.h"
+#include "Gradient.h"
 
 namespace
 {
@@ -23,6 +25,7 @@ namespace Babylon::Polyfills::Internal
             env,
             JS_CONSTRUCTOR_NAME,
             {
+                StaticMethod("loadTTF", &NativeCanvas::LoadTTF),
                 StaticMethod("loadTTFAsync", &NativeCanvas::LoadTTFAsync),
                 InstanceAccessor("width", &NativeCanvas::GetWidth, &NativeCanvas::SetWidth),
                 InstanceAccessor("height", &NativeCanvas::GetHeight, &NativeCanvas::SetHeight),
@@ -57,22 +60,27 @@ namespace Babylon::Polyfills::Internal
         // called when removed from document which has no meaning for Native
     }
 
+    void NativeCanvas::LoadTTF(const Napi::CallbackInfo& info)
+    {
+        // don't allow same font to be loaded more than once
+        // why? because Context doesn't update nvgCreateFontMem when old fontBuffer released
+        auto fontName = info[0].As<Napi::String>().Utf8Value();
+        if (fontsInfos.find(fontName) == fontsInfos.end())
+        {
+            const auto buffer = info[1].As<Napi::ArrayBuffer>();
+            std::vector<uint8_t> fontBuffer(buffer.ByteLength());
+            memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
+            fontsInfos[fontName] = std::move(fontBuffer);
+        }
+    }
+
+    // @deprecated: LoadTTFAsync is always synchronous, use LoadTTF instead
     Napi::Value NativeCanvas::LoadTTFAsync(const Napi::CallbackInfo& info)
     {
-        const auto buffer = info[1].As<Napi::ArrayBuffer>();
-        std::vector<uint8_t> fontBuffer(buffer.ByteLength());
-        memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
+        LoadTTF(info);
 
-        auto& graphicsContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())};
-        auto update = graphicsContext.GetUpdate("update");
-        std::shared_ptr<JsRuntimeScheduler> runtimeScheduler{std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(info.Env()))};
         auto deferred{Napi::Promise::Deferred::New(info.Env())};
-        arcana::make_task(update.Scheduler(), arcana::cancellation::none(), [fontName{info[0].As<Napi::String>().Utf8Value()}, fontData{std::move(fontBuffer)}]() {
-            fontsInfos[fontName] = fontData;
-        }).then(*runtimeScheduler, arcana::cancellation::none(), [runtimeScheduler /*Keep reference alive*/, env{info.Env()}, deferred]() {
-            deferred.Resolve(env.Undefined());
-        });
-
+        deferred.Resolve(info.Env().Undefined());
         return deferred.Promise();
     }
 
@@ -99,7 +107,16 @@ namespace Babylon::Polyfills::Internal
     void NativeCanvas::SetWidth(const Napi::CallbackInfo&, const Napi::Value& value)
     {
         auto width = static_cast<uint16_t>(value.As<Napi::Number>().Uint32Value());
-        if (width != m_width && width)
+        if (!width)
+        {
+            return;
+        }
+
+        if (width == m_width)
+        {
+            m_clear = true;
+        }
+        else
         {
             m_width = width;
             m_dirty = true;
@@ -113,16 +130,29 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvas::SetHeight(const Napi::CallbackInfo&, const Napi::Value& value)
     {
-        auto height = value.As<Napi::Number>().Uint32Value();
-        if (height != m_height && height)
+        auto height = static_cast<uint16_t>(value.As<Napi::Number>().Uint32Value());
+        if (!height)
+        {
+            return;
+        }
+
+        if (height == m_height)
+        {
+            m_clear = true;
+        }
+        else
         {
             m_height = height;
             m_dirty = true;
         }
     }
 
-    void NativeCanvas::UpdateRenderTarget()
+    bool NativeCanvas::UpdateRenderTarget()
     {
+        // in some scenarios (eg. no size change on SetSize/SetHeight) we can re-use framebuffer
+        bool needClear = m_clear;
+        m_clear = false;
+
         if (m_dirty)
         {
             // make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
@@ -152,7 +182,15 @@ namespace Babylon::Polyfills::Internal
             {
                 m_texture.reset();
             }
+
+            m_frameBufferPool.Clear();
+            m_frameBufferPool.SetDimensions(m_width, m_height);
+            m_frameBufferPool.SetGraphicsContext(&m_graphicsContext);
+
+            return true;
         }
+
+        return needClear;
     }
 
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
@@ -178,6 +216,7 @@ namespace Babylon::Polyfills::Internal
     {
         m_frameBuffer.reset();
         m_texture.reset();
+        m_frameBufferPool.Clear();
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
@@ -252,7 +291,8 @@ namespace Babylon::Polyfills
 
         Internal::NativeCanvas::Initialize(env);
         Internal::NativeCanvasImage::Initialize(env);
-
+        Internal::NativeCanvasPath2D::Initialize(env);
+        Internal::CanvasGradient::Initialize(env);
         Internal::Context::Initialize(env);
 
         return {impl};
