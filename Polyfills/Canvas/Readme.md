@@ -18,8 +18,7 @@ If you modify any shader, you’ll need shaderc — the bgfx shader compiler —
 
 To obtain shaderc:
 - Clone bgfx.cmake and generate and build the project 
-- Or folow these instructions : https://bkaradzic.github.io/bgfx/build.html
-Then
+  Or follow these instructions: https://bkaradzic.github.io/bgfx/build.html
 - Once built, locate the `shaderc` executable in the output directory.
 - Set the full path to this executable in CMake using the variable `SHADERC_PATH`.
 
