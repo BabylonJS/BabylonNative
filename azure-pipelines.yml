@@ -23,7 +23,7 @@ jobs:
 
   - template: .github/jobs/macos.yml
     parameters:
-      name: MacOS
+      name: MacOS_Sanitizers
       vmImage: 'macOS-latest'
       Sanitizers: true
 
@@ -110,7 +110,7 @@ jobs:
 
   - template: .github/jobs/linux.yml
     parameters:
-      name: Ubuntu_Clang_JavaScriptCore
+      name: Ubuntu_Clang_JavaScriptCore_Sanitizers
       vmImage: 'ubuntu-latest'
       CC: clang
       CXX: clang++
@@ -144,7 +144,7 @@ jobs:
 
   - template: .github/jobs/android.yml
     parameters:
-      name: Android_MacOS_V8
+      name: Android_MacOS_V8_Sanitizers
       vmImage: 'macOS-latest'
       JSEngine: V8
       Sanitizers: true
