@@ -12,7 +12,7 @@ Nanovg utilizes shaders that are independent of Babylon.js. These shaders are wr
 
 A set of precompiled shaders is included, so you don’t need to build shaderc or recompile individual shaders every time you build the application. This significantly reduces build time, since compiling shaders with shaderc can be quite slow.
 
-## Shader Modification and compilation
+## Shader Modification and Compilation
 
 If you modify any shader, you’ll need shaderc — the bgfx shader compiler — to rebuild them. Shaderc can generate shaders targeting MSL, GLSL, HLSL, or SPIR-V.
 
