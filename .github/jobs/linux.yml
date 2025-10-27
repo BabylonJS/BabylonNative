@@ -13,7 +13,7 @@ jobs:
       vmImage: ${{ parameters.vmImage }}
 
     variables:
-      SANITIZER_FLAG: $[coalesce(replace(format('{0}', parameters.Sanitizers), 'True', 'ON'), 'OFF')]
+      SANITIZER_FLAG: ${{ coalesce(replace(format('{0}', parameters.Sanitizers), 'True', 'ON'), 'OFF') }}
       CC: ${{ parameters.CC }}
       CXX: ${{ parameters.CXX }}
   
