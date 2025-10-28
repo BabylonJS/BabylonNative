@@ -110,6 +110,7 @@ option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." 
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
 
 if(ENABLE_SANITIZERS)
+    set(ENABLE_RTTI ON CACHE BOOL "" FORCE)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         set(SANITIZERS "address,undefined")
         add_compile_options(-fsanitize=${SANITIZERS} -fno-omit-frame-pointer)
