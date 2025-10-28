@@ -70,6 +70,8 @@ file(
 	${SPIRV_TOOLS}/source/spirv_validator_options.h
 	${SPIRV_TOOLS}/source/table.cpp
 	${SPIRV_TOOLS}/source/table.h
+	${SPIRV_TOOLS}/source/table2.cpp
+	${SPIRV_TOOLS}/source/table2.h
 	${SPIRV_TOOLS}/source/text.cpp
 	${SPIRV_TOOLS}/source/text.h
 	${SPIRV_TOOLS}/source/text_handler.cpp
@@ -110,10 +112,12 @@ file(
 	${SPIRV_TOOLS}/source/val/validate_execution_limitations.cpp
 	${SPIRV_TOOLS}/source/val/validate_extensions.cpp
 	${SPIRV_TOOLS}/source/val/validate_function.cpp
+	${SPIRV_TOOLS}/source/val/validate_graph.cpp
 	${SPIRV_TOOLS}/source/val/validate_id.cpp
 	${SPIRV_TOOLS}/source/val/validate_image.cpp
 	${SPIRV_TOOLS}/source/val/validate_instruction.cpp
 	${SPIRV_TOOLS}/source/val/validate_interfaces.cpp
+	${SPIRV_TOOLS}/source/val/validate_invalid_type.cpp
 	${SPIRV_TOOLS}/source/val/validate_layout.cpp
 	${SPIRV_TOOLS}/source/val/validate_literals.cpp
 	${SPIRV_TOOLS}/source/val/validate_logicals.cpp
@@ -129,6 +133,7 @@ file(
 	${SPIRV_TOOLS}/source/val/validate_ray_tracing_reorder.cpp
 	${SPIRV_TOOLS}/source/val/validate_scopes.cpp
 	${SPIRV_TOOLS}/source/val/validate_small_type_uses.cpp
+	${SPIRV_TOOLS}/source/val/validate_tensor.cpp
 	${SPIRV_TOOLS}/source/val/validate_tensor_layout.cpp
 	${SPIRV_TOOLS}/source/val/validate_type.cpp
 	${SPIRV_TOOLS}/source/val/validation_state.cpp
