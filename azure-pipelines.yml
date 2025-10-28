@@ -10,7 +10,7 @@ variables:
 - name: NDK_VERSION
   value: 25.2.9519653
 - name: UNITY_BUILD
-  value: true
+  value: false
 - name: XCODE_VERSION
   value: 16.4
 
