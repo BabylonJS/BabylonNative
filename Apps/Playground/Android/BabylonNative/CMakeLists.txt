@@ -5,6 +5,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(BabylonNative)
 
+if(ENABLE_SANITIZERS)
+    set(ENABLE_RTTI ON CACHE BOOL "" FORCE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        set(SANITIZERS "address,undefined")
+        add_compile_options(-fsanitize=${SANITIZERS} -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=${SANITIZERS})
+    endif()
+endif()
+
 get_filename_component(PLAYGROUND_DIR "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 get_filename_component(REPO_ROOT_DIR "${PLAYGROUND_DIR}/../.." ABSOLUTE)
 
