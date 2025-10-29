@@ -182,7 +182,7 @@
                             let code = JSON.parse(snippet.jsonPayload).code.toString();
 
                             // Check if this is a v2 manifest and extract the entry file's code
-                            // TODO: This is a temporary solution, not proper support for v2 playground
+                            // TODO: Handle multi-file playgrounds
                             try {
                                 const manifestPayload = JSON.parse(code);
                                 if (manifestPayload.v === 2) {
@@ -212,8 +212,6 @@
                             }
 
                             currentScene = eval(code + "\r\ncreateScene(engine)");
-
-                            debugger;
 
                             if (currentScene.then) {
                                 // Handle if createScene returns a promise
