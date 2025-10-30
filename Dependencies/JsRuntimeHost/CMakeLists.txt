@@ -11,7 +11,7 @@ include(FetchContent)
 # --------------------------------------------------
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG 1a8a5d6e95413ed14b38a6ac9419048f9a9c8009)
+    GIT_TAG c726dbe58713eda65bfb139c257093c43479b894)
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/bghgary/AndroidExtensions.git
     GIT_TAG        7d88a601fda9892791e7b4e994e375e049615688)
@@ -30,7 +30,7 @@ FetchContent_Declare(llhttp
     URL "https://github.com/nodejs/llhttp/archive/refs/tags/release/v8.1.0.tar.gz")
 FetchContent_Declare(UrlLib
     GIT_REPOSITORY https://github.com/BabylonJS/UrlLib.git
-    GIT_TAG e0eb7d4c36c2cca5bbe82b94fd141734420ba84e)
+    GIT_TAG 1f9d2c05f792d994b09fdfc1129b25294efbe182)
 # --------------------------------------------------
 
 FetchContent_MakeAvailable(CMakeExtensions)
