@@ -233,3 +233,10 @@ endif()
 if(WINDOWS_STORE)
     add_subdirectory(WindowsAppSDK)
 endif()
+
+# --------------------------------------------------
+# miniz
+# --------------------------------------------------
+if(BABYLON_NATIVE_PLUGIN_DATASTREAM)
+    FetchContent_MakeAvailable_With_Message(miniz)
+endif()

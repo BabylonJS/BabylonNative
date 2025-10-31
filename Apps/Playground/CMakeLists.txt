@@ -132,6 +132,7 @@ target_link_libraries(Playground
     PRIVATE GraphicsDevice
     PRIVATE NativeCapture
     PRIVATE NativeEngine
+    PRIVATE DataStream
     PRIVATE NativeInput
     PRIVATE NativeOptimizations
     PRIVATE ScriptLoader

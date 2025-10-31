@@ -4,6 +4,7 @@
 #import <Babylon/Graphics/Device.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeInput.h>
+#import <Babylon/Plugins/DataStream.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/Polyfills/Canvas.h>
@@ -123,7 +124,7 @@ Babylon::Plugins::NativeInput* nativeInput{};
         });
 
         Babylon::Polyfills::Window::Initialize(env);
-
+        Babylon::Plugins::DataStream::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
         nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
