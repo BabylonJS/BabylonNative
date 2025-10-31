@@ -7,7 +7,6 @@
 
 BX_PRAGMA_DIAGNOSTIC_PUSH();
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-function");
-BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-private-field"); // JsRuntime& m_runtime;
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505) // error C4505: '' : unreferenced local function has been removed
 
 #include "miniz.h"

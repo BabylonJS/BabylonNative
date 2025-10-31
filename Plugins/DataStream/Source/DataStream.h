@@ -25,18 +25,19 @@ namespace Babylon::Plugins::Internal
         }
 
         DataStream(const Napi::CallbackInfo& info)
-            : DataStream(info, JsRuntime::GetFromJavaScript(info.Env()))
+            //: DataStream(info, JsRuntime::GetFromJavaScript(info.Env()))
+            : ParentT{ info }
         {
         }
-
+        /*
         explicit DataStream(const Napi::CallbackInfo& info, JsRuntime& runtime)
             : ParentT{info}
             , m_runtime{runtime}
         {
         }
-
+        */
     private:
-        JsRuntime& m_runtime;
+        //JsRuntime& m_runtime;
 
         static Napi::Value UnzipSync(const Napi::CallbackInfo& info);
 
