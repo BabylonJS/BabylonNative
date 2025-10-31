@@ -159,6 +159,7 @@ target_link_libraries(TestInstall
     NativeCamera
     NativeCapture
     NativeEngine
+    DataStream
     NativeInput
     NativeOptimizations
     NativeTracing
