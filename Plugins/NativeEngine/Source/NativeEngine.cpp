@@ -1011,7 +1011,7 @@ namespace Babylon
 
         if (!shaderInfo)
         {
-            bgfxShaderInfo = m_shaderCompiler.Compile(ProcessShaderCoordinates(vertexSource), ProcessSamplerFlip(fragmentSource));
+            bgfxShaderInfo = m_shaderCompiler.Compile(ProcessSamplerFlip(ProcessShaderCoordinates(vertexSource)), ProcessSamplerFlip(fragmentSource));
             if (ShaderCacheImpl::GetImpl())
             {
                 ShaderCacheImpl::GetImpl()->AddShader(vertexSource, fragmentSource, bgfxShaderInfo);
