@@ -12,6 +12,7 @@ target_include_directories(DataStream PUBLIC
 target_link_libraries(DataStream
     PUBLIC napi
     PRIVATE miniz
+    PRIVATE bx
     PRIVATE JsRuntimeInternal)
 
 set_property(TARGET DataStream PROPERTY FOLDER Plugins)

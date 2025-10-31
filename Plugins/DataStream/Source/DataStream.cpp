@@ -3,17 +3,15 @@
 #include <functional>
 #include <sstream>
 #include <Babylon/JsRuntime.h>
+#include <bx/bx.h>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4505) // unreferenced function with internal linkage has been removed
-#endif // _MSC_VER
+BX_PRAGMA_DIAGNOSTIC_PUSH();
+BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-function");
+BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505) // error C4505: '' : unreferenced local function has been removed
 
 #include "miniz.h"
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif // _MSC_VER
+BX_PRAGMA_DIAGNOSTIC_POP();
 
 namespace Babylon::Plugins::Internal
 {
