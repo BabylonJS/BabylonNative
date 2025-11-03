@@ -4,6 +4,9 @@
 #include <sstream>
 #include <Babylon/JsRuntime.h>
 #include <bx/bx.h>
+#include "TextDecoder.h"
+#include "ReadableStream.h"
+#include "DecompressionStream.h"
 
 BX_PRAGMA_DIAGNOSTIC_PUSH();
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-function");
@@ -81,5 +84,8 @@ namespace Babylon::Plugins::DataStream
     void BABYLON_API Initialize(Napi::Env env)
     {
         Internal::DataStream::CreateInstance(env);
+        Internal::TextDecoder::Initialize(env);
+        Internal::DecompressionStream::Initialize(env);
+        Internal::ReadableStream::Initialize(env);
     }
 }

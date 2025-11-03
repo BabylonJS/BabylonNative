@@ -30,6 +30,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("naturalWidth", &NativeCanvasImage::GetNaturalWidth, nullptr),
                 InstanceAccessor("naturalHeight", &NativeCanvasImage::GetNaturalHeight, nullptr),
                 InstanceAccessor("src", &NativeCanvasImage::GetSrc, &NativeCanvasImage::SetSrc),
+                InstanceAccessor("crossOrigin", &NativeCanvasImage::GetCrossOrigin, &NativeCanvasImage::SetCrossOrigin),
                 InstanceAccessor("onload", nullptr, &NativeCanvasImage::SetOnload),
                 InstanceAccessor("onerror", nullptr, &NativeCanvasImage::SetOnerror),
                 // TODO: This should be set directly on the JS Object rather than via an instanceAccessor see: https://github.com/BabylonJS/BabylonNative/issues/1030
@@ -115,6 +116,16 @@ namespace Babylon::Polyfills::Internal
             m_onloadHandlerRef.Call({});
         }
         return true;
+    }
+
+    void NativeCanvasImage::SetCrossOrigin(const Napi::CallbackInfo& info, const Napi::Value& value)
+    {
+        m_crossOrigin = value.As<Napi::String>().Utf8Value();
+    }
+
+    Napi::Value NativeCanvasImage::GetCrossOrigin(const Napi::CallbackInfo& info)
+    {
+        return Napi::Value::From(info.Env(), m_crossOrigin);
     }
 
     void NativeCanvasImage::SetSrc(const Napi::CallbackInfo& info, const Napi::Value& value)

@@ -1,7 +1,10 @@
 set(SOURCES
     "Include/Babylon/Plugins/DataStream.h"
     "Source/DataStream.h"
-    "Source/DataStream.cpp")
+    "Source/DataStream.cpp"
+    "Source/TextDecoder.h"
+    "Source/ReadableStream.h"
+    "Source/DecompressionStream.h")
 
 add_library(DataStream ${SOURCES})
 warnings_as_errors(DataStream)
