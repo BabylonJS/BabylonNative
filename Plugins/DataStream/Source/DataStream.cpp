@@ -20,9 +20,9 @@ namespace Babylon::Plugins::Internal
 {
     Napi::Value DataStream::UnzipSync(const Napi::CallbackInfo& info)
     {
-        const Napi::Env env{ info.Env() };
+        const Napi::Env env{info.Env()};
         if (info.Length() < 1 || !info[0].IsTypedArray()) {
-            throw Napi::Error::New(info.Env(), "Expected Uint8Array argument");
+            throw Napi::Error::New(env, "Expected Uint8Array argument");
         }
 
         // zip content
@@ -30,40 +30,40 @@ namespace Babylon::Plugins::Internal
         const uint8_t* zipData = input.Data();
         const size_t zipSize = input.ByteLength();
 
-        // initialize miniz ZIP archive
         mz_zip_archive zip_archive;
         memset(&zip_archive, 0, sizeof(zip_archive));
 
         if (!mz_zip_reader_init_mem(&zip_archive, zipData, zipSize, 0)) {
-            throw Napi::Error::New(info.Env(), "Failed to initialize zip archive");
+            throw Napi::Error::New(env, "Failed to initialize zip archive");
         }
 
-        // result object
         Napi::Object result = Napi::Object::New(env);
         const auto fileCount = mz_zip_reader_get_num_files(&zip_archive);
 
-        for (mz_uint i = 0; i < fileCount; i++) {
+        for (mz_uint i = 0; i < fileCount; i++)
+        {
             mz_zip_archive_file_stat file_stat;
-            if (!mz_zip_reader_file_stat(&zip_archive, i, &file_stat)) {
+            if (!mz_zip_reader_file_stat(&zip_archive, i, &file_stat))
+            {
                 continue;
             }
 
-            if (mz_zip_reader_is_file_a_directory(&zip_archive, i)) {
+            if (mz_zip_reader_is_file_a_directory(&zip_archive, i))
+            {
                 continue; // skip directories
             }
 
             std::string filename(file_stat.m_filename);
 
-            // extract file to memory
             size_t uncompressed_size = (size_t)file_stat.m_uncomp_size;
             std::vector<uint8_t> buffer(uncompressed_size);
 
-            if (!mz_zip_reader_extract_to_mem(&zip_archive, i, buffer.data(), uncompressed_size, 0)) {
-                throw Napi::Error::New(info.Env(), "Failed to extract file");
+            if (!mz_zip_reader_extract_to_mem(&zip_archive, i, buffer.data(), uncompressed_size, 0))
+            {
+                throw Napi::Error::New(env, "Failed to extract file");
                 continue;
             }
 
-            // file content
             Napi::ArrayBuffer jsBuffer = Napi::ArrayBuffer::New(env, uncompressed_size);
             memcpy(jsBuffer.Data(), buffer.data(), uncompressed_size);
             Napi::Uint8Array jsArray = Napi::Uint8Array::New(env, uncompressed_size, jsBuffer, 0);
@@ -71,10 +71,7 @@ namespace Babylon::Plugins::Internal
             // result[filename] = Uint8Array
             result.Set(Napi::String::New(env, filename), jsArray);
         }
-
-        // done
         mz_zip_reader_end(&zip_archive);
-
         return result;
     }
 }

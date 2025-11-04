@@ -239,6 +239,7 @@ endif()
 # --------------------------------------------------
 if(BABYLON_NATIVE_PLUGIN_DATASTREAM)
     FetchContent_MakeAvailable_With_Message(miniz)
+    set_property(TARGET miniz PROPERTY UNITY_BUILD false)
 endif()
 
 # --------------------------------------------------
@@ -248,4 +249,5 @@ if(BABYLON_NATIVE_PLUGIN_DATASTREAM)
     set(LIBDEFLATE_BUILD_SHARED_LIB OFF)
     set(LIBDEFLATE_COMPRESSION_SUPPORT OFF)
     FetchContent_MakeAvailable_With_Message(libdeflate)
+    set_property(TARGET libdeflate PROPERTY UNITY_BUILD false)
 endif()
