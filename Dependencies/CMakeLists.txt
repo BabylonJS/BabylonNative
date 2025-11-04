@@ -240,3 +240,12 @@ endif()
 if(BABYLON_NATIVE_PLUGIN_DATASTREAM)
     FetchContent_MakeAvailable_With_Message(miniz)
 endif()
+
+# --------------------------------------------------
+# libdeflate
+# --------------------------------------------------
+if(BABYLON_NATIVE_PLUGIN_DATASTREAM)
+    set(LIBDEFLATE_BUILD_SHARED_LIB OFF)
+    set(LIBDEFLATE_COMPRESSION_SUPPORT OFF)
+    FetchContent_MakeAvailable_With_Message(libdeflate)
+endif()

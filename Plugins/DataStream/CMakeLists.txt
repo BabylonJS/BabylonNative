@@ -15,6 +15,7 @@ target_include_directories(DataStream PUBLIC
 target_link_libraries(DataStream
     PUBLIC napi
     PRIVATE miniz
+    PRIVATE libdeflate_static
     PRIVATE bx
     PRIVATE JsRuntimeInternal)
 

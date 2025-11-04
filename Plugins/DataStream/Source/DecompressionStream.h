@@ -2,14 +2,7 @@
 #include <gsl/span>
 #include <vector>
 
-BX_PRAGMA_DIAGNOSTIC_PUSH();
-BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-function");
-BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505) // error C4505: '' : unreferenced local function has been removed
-
-#include "miniz.h"
-
-BX_PRAGMA_DIAGNOSTIC_POP();
-
+#include "libdeflate.h"
 
 namespace Babylon::Plugins::Internal
 {
@@ -23,7 +16,7 @@ namespace Babylon::Plugins::Internal
         void Enqueue(const Napi::CallbackInfo& info);
         void Close(const Napi::CallbackInfo& info);
 
-        std::vector<uint8_t> DecompressGzip(gsl::span<const std::byte> compressedBuffer);
+        std::vector<uint8_t> DecompressGzip(gsl::span<uint8_t> compressedBuffer);
     };
 
     static constexpr auto JS_DECOMPRESSIONSTREAM_CONSTRUCTOR_NAME = "DecompressionStream";
@@ -56,45 +49,67 @@ namespace Babylon::Plugins::Internal
         }
     }
 
-    std::vector<uint8_t> DecompressionStream::DecompressGzip(gsl::span<const std::byte> compressedBuffer)
+    std::vector<uint8_t> DecompressionStream::DecompressGzip(gsl::span<uint8_t> compressedBuffer)
     {
-        mz_stream stream{};
-        stream.next_in = reinterpret_cast<const unsigned char*>(compressedBuffer.data());
-        stream.avail_in = static_cast<unsigned long>(compressedBuffer.size());
+        std::vector<uint8_t> result;
 
-        // 16 + MAX_WBITS tells zlib to expect gzip headers
-        int ret = mz_inflateInit2(&stream, 16 + MZ_DEFAULT_WINDOW_BITS);
-        if (ret != MZ_OK)
-        {
-            throw std::runtime_error("mz_inflateInit2() failed");
+        if (compressedBuffer.size() < 18) {
+            throw std::runtime_error("Invalid gzip data: too small");
         }
 
-        std::vector<uint8_t> decompressed;
-        decompressed.resize(compressedBuffer.size() * 2); // start with a guess
+        // Verify gzip header magic bytes (0x1f, 0x8b)
+        if (compressedBuffer[0] != 0x1f || compressedBuffer[1] != 0x8b) {
+            throw std::runtime_error("Invalid gzip header");
+        }
 
-        do
-        {
-            if (stream.total_out >= decompressed.size())
-            {
-                decompressed.resize(decompressed.size() * 2);
+        // Get uncompressed size from gzip footer (last 4 bytes, little-endian)
+        size_t uncompressed_size =
+            static_cast<size_t>(compressedBuffer[compressedBuffer.size() - 4]) |
+            (static_cast<size_t>(compressedBuffer[compressedBuffer.size() - 3]) << 8) |
+            (static_cast<size_t>(compressedBuffer[compressedBuffer.size() - 2]) << 16) |
+            (static_cast<size_t>(compressedBuffer[compressedBuffer.size() - 1]) << 24);
+
+        // Allocate output buffer
+        result.resize(uncompressed_size);
+
+        // Create decompressor
+        struct libdeflate_decompressor* decompressor = libdeflate_alloc_decompressor();
+        if (!decompressor) {
+            throw std::runtime_error("Failed to allocate decompressor");
+        }
+
+        // Decompress gzip data
+        size_t actual_size;
+        enum libdeflate_result decompress_result = libdeflate_gzip_decompress(
+            decompressor,
+            compressedBuffer.data(),
+            compressedBuffer.size(),
+            result.data(),
+            result.size(),
+            &actual_size
+        );
+
+        // Free decompressor
+        libdeflate_free_decompressor(decompressor);
+
+        // Check result
+        if (decompress_result != LIBDEFLATE_SUCCESS) {
+            switch (decompress_result) {
+            case LIBDEFLATE_BAD_DATA:
+                throw std::runtime_error("Gzip decompression failed: bad or corrupted data");
+            case LIBDEFLATE_SHORT_OUTPUT:
+                throw std::runtime_error("Gzip decompression failed: output buffer too small");
+            case LIBDEFLATE_INSUFFICIENT_SPACE:
+                throw std::runtime_error("Gzip decompression failed: insufficient space");
+            default:
+                throw std::runtime_error("Gzip decompression failed: unknown error");
             }
+        }
 
-            stream.next_out = decompressed.data() + stream.total_out;
-            stream.avail_out = static_cast<unsigned long>(decompressed.size() - stream.total_out);
+        // Resize to actual decompressed size (in case it differs from footer)
+        result.resize(actual_size);
 
-            ret = mz_inflate(&stream, MZ_NO_FLUSH);
-
-            if (ret != MZ_OK && ret != MZ_STREAM_END)
-            {
-                mz_inflateEnd(&stream);
-                throw std::runtime_error("mz_inflate() failed");
-            }
-        } while (ret != MZ_STREAM_END);
-
-        decompressed.resize(stream.total_out);
-        mz_inflateEnd(&stream);
-
-        return decompressed;
+        return result;
     }
 
     void DecompressionStream::Enqueue(const Napi::CallbackInfo& info)
@@ -107,7 +122,7 @@ namespace Babylon::Plugins::Internal
         {
             Napi::Uint8Array array = typed.As<Napi::Uint8Array>();
             
-            gsl::span<const std::byte> buffer = { reinterpret_cast<std::byte*>(array.Data()), array.ByteLength() };
+            gsl::span<uint8_t> buffer = { array.Data(), array.ByteLength() };
             if (buffer.empty())
             {
                 throw Napi::Error::New(env, "GZip data buffer is empty.");

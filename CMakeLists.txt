@@ -47,6 +47,9 @@ FetchContent_Declare(libwebp
 FetchContent_Declare(miniz
     GIT_REPOSITORY https://github.com/richgel999/miniz.git
     GIT_TAG 174573d60290f447c13a2b1b3405de2b96e27d6c)
+FetchContent_Declare(libdeflate
+    GIT_REPOSITORY https://github.com/ebiggers/libdeflate.git
+    GIT_TAG c8c56a20f8f621e6a966b716b31f1dedab6a41e3)
 
 # --------------------------------------------------
 
