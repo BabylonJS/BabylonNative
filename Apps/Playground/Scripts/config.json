@@ -2,6 +2,11 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "GLTF Serializer multimaterial with raw texture",
+            "playgroundId": "#KU72PX",
+            "referenceImage": "glTFSerializerMultimaterial.png"
+        },
+        {
             "title": "Native Canvas",
             "playgroundId": "#TKVFSA#2",
             "referenceImage": "native-canvas.png",
