@@ -36,8 +36,9 @@ FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
     GIT_TAG 4.5.0)
 FetchContent_Declare(JsRuntimeHost
-    GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG ef57990dc5533990b2bb194978a12f8c8d83565c)
+    # TODO: Update with latest upstream once https://github.com/BabylonJS/JsRuntimeHost/pull/120 is in
+    GIT_REPOSITORY https://github.com/alexchuber/JsRuntimeHost.git
+    GIT_TAG 2bf8034be4348bb573cb005671184bf9fdaf9ae3)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
     GIT_TAG 6abfcf066d171e9ade7604d91381ebebe4209edc)
