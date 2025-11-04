@@ -4,7 +4,9 @@ set(BABYLON_SCRIPTS
     "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
     "../node_modules/babylonjs/babylon.max.js"
     "../node_modules/babylonjs-materials/babylonjs.materials.js"
-    "../node_modules/babylonjs-gui/babylon.gui.js")
+    "../node_modules/babylonjs-gui/babylon.gui.js"
+    "../node_modules/babylonjs-serializers/babylonjs.serializers.js")
+    # TODO: Update babylonjs-serializers package version after https://github.com/BabylonJS/Babylon.js/pull/17365 is in
 
 set(DEPENDENCIES
     "../Dependencies/ammo.js"
@@ -138,6 +140,8 @@ target_link_libraries(Playground
     PRIVATE Window
     PRIVATE XMLHttpRequest
     PRIVATE TestUtils
+    PRIVATE NativeEncoding
+    PRIVATE Blob
     ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 

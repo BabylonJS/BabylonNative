@@ -19,11 +19,13 @@
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Plugins/NativeInput.h>
+#include <Babylon/Plugins/NativeEncoding.h>
 #include <Babylon/Plugins/TestUtils.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Canvas.h>
+#include <Babylon/Polyfills/Blob.h>
 #include <Babylon/ShaderCache.h>
 #include <Babylon/DebugTrace.h>
 
@@ -182,6 +184,8 @@ namespace
 
             nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
 
+            Babylon::Polyfills::Blob::Initialize(env);
+
             Babylon::Plugins::NativeEngine::Initialize(env);
 
             Babylon::Plugins::NativeOptimizations::Initialize(env);
@@ -191,6 +195,8 @@ namespace
             Babylon::Plugins::NativeCamera::Initialize(env);
 
             nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
+
+            Babylon::Plugins::NativeEncoding::Initialize(env);
 
             Babylon::Plugins::TestUtils::Initialize(env, hWnd);
         });
@@ -204,6 +210,7 @@ namespace
         loader.LoadScript("app:///Scripts/babylonjs.materials.js");
         loader.LoadScript("app:///Scripts/babylon.gui.js");
         loader.LoadScript("app:///Scripts/meshwriter.min.js");
+        loader.LoadScript("app:///Scripts/babylonjs.serializers.js"); 
 
         std::vector<std::string> scripts = GetCommandLineArguments();
         if (scripts.empty())
