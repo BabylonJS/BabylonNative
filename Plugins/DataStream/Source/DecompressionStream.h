@@ -23,7 +23,7 @@ namespace Babylon::Plugins::Internal
         void Enqueue(const Napi::CallbackInfo& info);
         void Close(const Napi::CallbackInfo& info);
 
-        std::vector<uint8_t> DecompressionStream::DecompressGzip(gsl::span<const std::byte> compressedBuffer);
+        std::vector<uint8_t> DecompressGzip(gsl::span<const std::byte> compressedBuffer);
     };
 
     static constexpr auto JS_DECOMPRESSIONSTREAM_CONSTRUCTOR_NAME = "DecompressionStream";
