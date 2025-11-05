@@ -16,7 +16,7 @@ namespace Babylon::Plugins
 {
     namespace
     {
-        std::unique_ptr<std::vector<std::byte>> EncodePNG(const std::vector<uint8_t>& pixelData, uint32_t width, uint32_t height, bool invertY)
+        std::unique_ptr<std::vector<std::byte>> EncodePNG(const std::vector<std::byte>& pixelData, uint32_t width, uint32_t height, bool invertY)
         {
             auto memoryBlock{bx::MemoryBlock(&Graphics::DeviceContext::GetDefaultAllocator())};
             auto writer{bx::MemoryWriter(&memoryBlock)};
@@ -60,8 +60,8 @@ namespace Babylon::Plugins
             }
 
             auto runtimeScheduler{std::make_shared<JsRuntimeScheduler>(JsRuntime::GetFromJavaScript(env))};
-            auto start = static_cast<uint8_t*>(buffer.ArrayBuffer().Data()) + buffer.ByteOffset();
-            auto pixelData{std::vector<uint8_t>(start, start + buffer.ByteLength())};
+            auto start = static_cast<std::byte*>(buffer.ArrayBuffer().Data()) + buffer.ByteOffset();
+            auto pixelData{std::vector<std::byte>(start, start + buffer.ByteLength())};
 
             arcana::make_task(arcana::threadpool_scheduler, arcana::cancellation_source::none(),
                 [pixelData{std::move(pixelData)}, width, height, invertY]() {
