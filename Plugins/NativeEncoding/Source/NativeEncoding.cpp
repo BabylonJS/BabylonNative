@@ -47,9 +47,9 @@ namespace Babylon::Plugins
             auto buffer{info[0].As<Napi::TypedArray>()}; // ArrayBufferView
             auto width{info[1].As<Napi::Number>().Uint32Value()};
             auto height{info[2].As<Napi::Number>().Uint32Value()};
-            //auto mimeType{info[3].As<Napi::String>().Utf8Value()}; // Discard for now, only PNG is supported
-            auto invertY{info.Length() > 4 && info[4].ToBoolean().Value()};
-            
+            auto mimeType{info.Length() > 3 && !info[3].IsUndefined() ? info[3].As<Napi::String>().Utf8Value() : "image/png"};
+            auto invertY{info.Length() > 4 && !info[4].IsUndefined() ? info[4].As<Napi::Boolean>().Value() : false};
+
             auto env{info.Env()};
             auto deferred{Napi::Promise::Deferred::New(env)};
 
