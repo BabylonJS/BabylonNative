@@ -7,6 +7,7 @@
 #include "TextDecoder.h"
 #include "ReadableStream.h"
 #include "DecompressionStream.h"
+#include "Response.h"
 
 BX_PRAGMA_DIAGNOSTIC_PUSH();
 BX_PRAGMA_DIAGNOSTIC_IGNORED_CLANG_GCC("-Wunused-function");
@@ -16,9 +17,21 @@ BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4505) // error C4505: '' : unreferenced local 
 
 BX_PRAGMA_DIAGNOSTIC_POP();
 
-namespace Babylon::Plugins::Internal
+namespace Babylon::Plugins::Internal::DataStream
 {
-    Napi::Value DataStream::UnzipSync(const Napi::CallbackInfo& info)
+    void Initialize(Napi::Env env)
+    {
+        Napi::HandleScope scope{env};
+
+        Napi::Object fflate = Napi::Object::New(env);
+
+        fflate.Set("unzipSync", Napi::Function::New(env, DataStream::UnzipSync, "unzipSync"));
+
+        // Attach to global scope
+        env.Global().Set("fflate", fflate);
+    }
+
+    Napi::Value UnzipSync(const Napi::CallbackInfo& info)
     {
         const Napi::Env env{info.Env()};
         if (info.Length() < 1 || !info[0].IsTypedArray()) {
@@ -80,9 +93,10 @@ namespace Babylon::Plugins::DataStream
 {
     void BABYLON_API Initialize(Napi::Env env)
     {
-        Internal::DataStream::CreateInstance(env);
+        Internal::DataStream::Initialize(env);
         Internal::TextDecoder::Initialize(env);
         Internal::DecompressionStream::Initialize(env);
         Internal::ReadableStream::Initialize(env);
+        Internal::Response::Initialize(env);
     }
 }

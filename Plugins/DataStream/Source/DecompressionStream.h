@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Babylon/JsRuntimeScheduler.h>
 #include <gsl/span>
 #include <vector>
@@ -12,18 +14,21 @@ namespace Babylon::Plugins::Internal
         static void Initialize(Napi::Env env);
 
         explicit DecompressionStream(const Napi::CallbackInfo& info);
+        const std::vector<std::byte>& GetDecompressedData() const { return m_data; }
     private:
         void Enqueue(const Napi::CallbackInfo& info);
         void Close(const Napi::CallbackInfo& info);
 
-        std::vector<uint8_t> DecompressGzip(gsl::span<uint8_t> compressedBuffer);
+        std::vector<std::byte> DecompressGzip(gsl::span<uint8_t> compressedBuffer);
+
+        std::vector<std::byte> m_data;
     };
 
     static constexpr auto JS_DECOMPRESSIONSTREAM_CONSTRUCTOR_NAME = "DecompressionStream";
 
     void DecompressionStream::Initialize(Napi::Env env)
     {
-        Napi::HandleScope scope{ env };
+        Napi::HandleScope scope{env};
 
         Napi::Function func = DefineClass(
             env,
@@ -37,21 +42,20 @@ namespace Babylon::Plugins::Internal
     }
 
     DecompressionStream::DecompressionStream(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<DecompressionStream>{ info }
+        : Napi::ObjectWrap<DecompressionStream>{info}
     {
-        const Napi::Env env{ info.Env() };
-        if (info.Length() < 1 || !info[0].IsString()) {
-            throw Napi::Error::New(env, "Expected String argument for DecompressionStream constructor.");
-        }
-        std::string compressionType = info[0].As<Napi::String>().Utf8Value();
-        if (compressionType != "gzip") {
-            throw Napi::Error::New(env, "Unexpected compression type.");
+        const Napi::Env env{info.Env()};
+        if (info.Length() == 1 && info[0].IsString()) {
+            std::string compressionType = info[0].As<Napi::String>().Utf8Value();
+            if (compressionType != "gzip") {
+                throw Napi::Error::New(env, "Unexpected compression type.");
+            }
         }
     }
 
-    std::vector<uint8_t> DecompressionStream::DecompressGzip(gsl::span<uint8_t> compressedBuffer)
+    std::vector<std::byte> DecompressionStream::DecompressGzip(gsl::span<uint8_t> compressedBuffer)
     {
-        std::vector<uint8_t> result;
+        std::vector<std::byte> result;
 
         if (compressedBuffer.size() < 18) {
             throw std::runtime_error("Invalid gzip data: too small");
@@ -114,7 +118,7 @@ namespace Babylon::Plugins::Internal
 
     void DecompressionStream::Enqueue(const Napi::CallbackInfo& info)
     {
-        const Napi::Env env{ info.Env() };
+        const Napi::Env env{info.Env()};
         auto value = info[0];
         Napi::TypedArray typed = value.As<Napi::TypedArray>();
 
@@ -122,13 +126,13 @@ namespace Babylon::Plugins::Internal
         {
             Napi::Uint8Array array = typed.As<Napi::Uint8Array>();
             
-            gsl::span<uint8_t> buffer = { array.Data(), array.ByteLength() };
+            gsl::span<uint8_t> buffer = {array.Data(), array.ByteLength()};
             if (buffer.empty())
             {
                 throw Napi::Error::New(env, "GZip data buffer is empty.");
             }
 
-            std::vector<uint8_t> decompressedStream = DecompressGzip(buffer);
+            m_data = DecompressGzip(buffer);
         }
     }
 

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include <Babylon/JsRuntimeScheduler.h>
 
@@ -17,7 +19,7 @@ namespace Babylon::Plugins::Internal
 
     void TextDecoder::Initialize(Napi::Env env)
     {
-        Napi::HandleScope scope{ env };
+        Napi::HandleScope scope{env};
 
         Napi::Function func = DefineClass(
             env,
@@ -30,13 +32,13 @@ namespace Babylon::Plugins::Internal
     }
 
     TextDecoder::TextDecoder(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<TextDecoder>{ info }
+        : Napi::ObjectWrap<TextDecoder>{info}
     {
     }
 
     Napi::Value TextDecoder::Decode(const Napi::CallbackInfo& info)
     {
-        const Napi::Env env{ info.Env() };
+        const Napi::Env env{info.Env()};
         if (info.Length() < 1 || !info[0].IsTypedArray()) {
             throw Napi::Error::New(info.Env(), "Expected Uint8Array argument");
         }

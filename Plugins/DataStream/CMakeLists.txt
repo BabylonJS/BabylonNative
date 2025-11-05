@@ -4,7 +4,8 @@ set(SOURCES
     "Source/DataStream.cpp"
     "Source/TextDecoder.h"
     "Source/ReadableStream.h"
-    "Source/DecompressionStream.h")
+    "Source/DecompressionStream.h"
+    "Source/Response.h")
 
 add_library(DataStream ${SOURCES})
 warnings_as_errors(DataStream)

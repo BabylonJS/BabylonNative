@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Babylon/JsRuntimeScheduler.h>
 
 namespace Babylon::Plugins::Internal
@@ -5,6 +7,7 @@ namespace Babylon::Plugins::Internal
     class ReadableStream final : public Napi::ObjectWrap<ReadableStream>
     {
     public:
+        virtual ~ReadableStream();
         static void Initialize(Napi::Env env);
 
         explicit ReadableStream(const Napi::CallbackInfo& info);
@@ -12,13 +15,14 @@ namespace Babylon::Plugins::Internal
         Napi::Value PipeThrough(const Napi::CallbackInfo& info);
 
         Napi::FunctionReference m_startHandlerRef;
+        Napi::ObjectReference m_pipeThroughRef;
     };
 
     static constexpr auto JS_READABLESTREAM_CONSTRUCTOR_NAME = "ReadableStream";
 
     void ReadableStream::Initialize(Napi::Env env)
     {
-        Napi::HandleScope scope{ env };
+        Napi::HandleScope scope{env};
 
         Napi::Function func = DefineClass(
             env,
@@ -31,7 +35,7 @@ namespace Babylon::Plugins::Internal
     }
 
     ReadableStream::ReadableStream(const Napi::CallbackInfo& info)
-        : Napi::ObjectWrap<ReadableStream>{ info }
+        : Napi::ObjectWrap<ReadableStream>{info}
     {
         if (!info[0].IsObject())
         {
@@ -43,14 +47,23 @@ namespace Babylon::Plugins::Internal
             Napi::Value startFunction = object.Get("start");
             if (startFunction.IsFunction())
             {
-                Napi::Function handler{ startFunction.As<Napi::Function>() };
+                Napi::Function handler{startFunction.As<Napi::Function>()};
                 m_startHandlerRef = Napi::Persistent(handler);
             }
         }
     }
 
+    ReadableStream::~ReadableStream()
+    {
+        m_pipeThroughRef.Reset();
+        m_startHandlerRef.Reset();
+    }
+
     Napi::Value ReadableStream::PipeThrough(const Napi::CallbackInfo& info)
     {
-        return m_startHandlerRef.Call({info[0]});
+        Napi::Object stream = info[0].As<Napi::Object>();
+        m_pipeThroughRef = Napi::Persistent(stream);
+        m_startHandlerRef.Call({stream});
+        return stream;
     }
 }
