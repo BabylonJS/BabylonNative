@@ -2,11 +2,6 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
-            "title": "GLTF Serializer multimaterial with raw texture",
-            "playgroundId": "#KU72PX",
-            "referenceImage": "glTFSerializerMultimaterial.png"
-        },
-        {
             "title": "Native Canvas",
             "playgroundId": "#TKVFSA#2",
             "referenceImage": "native-canvas.png",
@@ -92,6 +87,11 @@
             "title": "GLTF Sheen",
             "playgroundId": "#YG3BBF#2",
             "referenceImage": "glTFSheen.png"
+        },
+        {
+            "title": "GLTF Serializer multimaterial with raw texture",
+            "playgroundId": "#KU72PX",
+            "referenceImage": "glTFSerializerMultimaterial.png"
         },
         {
             "title": "GLTF Extension KHR_materials_specular",
