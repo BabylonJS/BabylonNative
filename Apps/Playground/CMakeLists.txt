@@ -6,7 +6,6 @@ set(BABYLON_SCRIPTS
     "../node_modules/babylonjs-materials/babylonjs.materials.js"
     "../node_modules/babylonjs-gui/babylon.gui.js"
     "../node_modules/babylonjs-serializers/babylonjs.serializers.js")
-    # TODO: Update babylonjs-serializers package version after https://github.com/BabylonJS/Babylon.js/pull/17365 is in
 
 set(DEPENDENCIES
     "../Dependencies/ammo.js"
