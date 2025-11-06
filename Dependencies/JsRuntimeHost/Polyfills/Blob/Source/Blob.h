@@ -12,11 +12,6 @@ namespace Babylon::Polyfills::Internal
     public:
         static void Initialize(Napi::Env env);
 
-        static Napi::Value CreateInstance(
-            Napi::Env env,
-            std::vector<std::byte> data,
-            std::string type);
-
         explicit Blob(const Napi::CallbackInfo& info);
 
     private:
