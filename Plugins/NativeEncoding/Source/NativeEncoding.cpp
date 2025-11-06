@@ -2,7 +2,6 @@
 #include <Babylon/JsRuntime.h>
 #include <Babylon/JsRuntimeScheduler.h>
 #include <Babylon/Graphics/DeviceContext.h>
-#include <Babylon/Polyfills/Blob.h>
 
 #include <napi/napi.h>
 
@@ -16,7 +15,7 @@ namespace Babylon::Plugins
 {
     namespace
     {
-        std::unique_ptr<std::vector<std::byte>> EncodePNG(const std::vector<std::byte>& pixelData, uint32_t width, uint32_t height, bool invertY)
+        std::shared_ptr<std::vector<std::byte>> EncodePNG(const std::vector<std::byte>& pixelData, uint32_t width, uint32_t height, bool invertY)
         {
             auto memoryBlock{bx::MemoryBlock(&Graphics::DeviceContext::GetDefaultAllocator())};
             auto writer{bx::MemoryWriter(&memoryBlock)};
@@ -36,7 +35,7 @@ namespace Babylon::Plugins
                 throw std::runtime_error("Failed to encode PNG image: output is empty");
             }
 
-            auto result{std::make_unique<std::vector<std::byte>>(byteLength)};
+            auto result{std::make_shared<std::vector<std::byte>>(byteLength)};
             std::memcpy(result->data(), memoryBlock.more(0), byteLength);
 
             return result;
@@ -68,7 +67,7 @@ namespace Babylon::Plugins
                     return EncodePNG(pixelData, width, height, invertY);
                 })
                 .then(*runtimeScheduler, arcana::cancellation_source::none(),
-                    [runtimeScheduler, deferred, env](const arcana::expected<std::unique_ptr<std::vector<std::byte>>, std::exception_ptr>& result) {
+                    [runtimeScheduler, deferred, env](const arcana::expected<std::shared_ptr<std::vector<std::byte>>, std::exception_ptr>& result) {
                         // TODO: Crash risk on JS teardown - this async work isn't tied to any JS object lifetime,
                         // unlike other plugins that cancel / clean up pending work in their destructors.
                         if (result.has_error())
@@ -77,7 +76,17 @@ namespace Babylon::Plugins
                             return;
                         }
 
-                        auto blob{Babylon::Polyfills::Blob::CreateInstance(env, std::move(*result.value()), "image/png")};
+                        auto& imageData = result.value();
+                        auto arrayBuffer{Napi::ArrayBuffer::New(env, imageData->data(), imageData->size(), [imageData](Napi::Env, void*) {})};
+
+                        auto blobCtor = env.Global().Get("Blob").As<Napi::Function>();
+                        auto blobParts = Napi::Array::New(env, 1);
+                        blobParts.Set(uint32_t{0}, arrayBuffer);
+
+                        auto options = Napi::Object::New(env);
+                        options.Set("type", Napi::String::New(env, "image/png"));
+
+                        auto blob = blobCtor.New({blobParts, options});
 
                         deferred.Resolve(blob);
                     });

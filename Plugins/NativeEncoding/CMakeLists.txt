@@ -12,8 +12,7 @@ target_link_libraries(NativeEncoding
     PUBLIC napi
     PRIVATE GraphicsDevice
     PRIVATE GraphicsDeviceContext
-    PRIVATE JsRuntimeInternal
-    PRIVATE Blob)
+    PRIVATE JsRuntimeInternal)
 
 set_property(TARGET NativeEncoding PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
