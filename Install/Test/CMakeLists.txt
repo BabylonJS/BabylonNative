@@ -136,6 +136,7 @@ target_link_libraries(TestInstall
     arcana
     bimg_encode
     bimg_decode
+    Blob
     minz
     bgfx
     bimg
