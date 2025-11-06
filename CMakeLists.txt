@@ -14,7 +14,7 @@ FetchContent_Declare(AndroidExtensions
     GIT_TAG 66520bff9b57030b67894a4934d18ad7e161ba6f)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG 1a8a5d6e95413ed14b38a6ac9419048f9a9c8009)
+    GIT_TAG c726dbe58713eda65bfb139c257093c43479b894)
 FetchContent_Declare(arcore-android-sdk
     GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
     GIT_TAG 98cb803de5482fb2b36effe8be3b5a0d3b726976)
@@ -23,7 +23,7 @@ FetchContent_Declare(base-n
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG ed8e11f781024120980cdbbc5871cb2ce2f63423)
+    GIT_TAG 0af3c9865a66aff1748a51bb466b24f05a123043)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
@@ -37,7 +37,7 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 4.5.0)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG ef57990dc5533990b2bb194978a12f8c8d83565c)
+    GIT_TAG 7964539e733a5cd2cbae7e0155f5391d64a9d45d)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
     GIT_TAG 6abfcf066d171e9ade7604d91381ebebe4209edc)
