@@ -1,16 +1,23 @@
 #pragma once
 
 #include <jni.h>
+#include <android/asset_manager_jni.h>
 #include <arcana/containers/ticketed_collection.h>
 #include "JavaWrappers.h"
 
 namespace android::global
 {
     void Initialize(JavaVM* javaVM, jobject appContext);
+    // Overload supporting headless scenarios without a Context.
+    // Safe to call multiple times (e.g., hot reloads).
+    void Initialize(JavaVM* javaVM, jobject appContext, jobject assetManager);
 
     JNIEnv* GetEnvForCurrentThread();
 
     android::content::Context GetAppContext();
+
+    void SetAssetManager(jobject assetManager);
+    AAssetManager* GetAssetManager();
 
     android::app::Activity GetCurrentActivity();
     void SetCurrentActivity(jobject currentActivity);

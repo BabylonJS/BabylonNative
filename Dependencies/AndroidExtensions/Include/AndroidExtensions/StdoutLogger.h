@@ -5,4 +5,5 @@ namespace android::StdoutLogger
 {
     void Start();
     void Stop();
+    bool IsStarted();
 }

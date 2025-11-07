@@ -1,4 +1,6 @@
 #include <AndroidExtensions/Globals.h>
+#include <android/asset_manager_jni.h>
+#include <jni.h>
 #include <stdexcept>
 
 namespace android::global
@@ -8,6 +10,8 @@ namespace android::global
         JavaVM* g_javaVM{};
         jobject g_appContext{};
         jobject g_currentActivity{};
+        jobject g_assetManagerObject{};
+        AAssetManager* g_assetManager{};
 
         thread_local struct Env final
         {
@@ -58,8 +62,38 @@ namespace android::global
 
     void Initialize(JavaVM* javaVM, jobject context)
     {
+        Initialize(javaVM, context, nullptr);
+    }
+
+    void Initialize(JavaVM* javaVM, jobject context, jobject assetManager)
+    {
         g_javaVM = javaVM;
-        g_appContext = GetEnvForCurrentThread()->NewGlobalRef(android::content::Context{context}.getApplicationContext());
+        JNIEnv* env = GetEnvForCurrentThread();
+
+        if (g_appContext != nullptr)
+        {
+            env->DeleteGlobalRef(g_appContext);
+            g_appContext = nullptr;
+        }
+
+        if (context != nullptr)
+        {
+            g_appContext = env->NewGlobalRef(
+                android::content::Context{context}.getApplicationContext());
+        }
+
+        if (assetManager != nullptr)
+        {
+            SetAssetManager(assetManager);
+        }
+        else if (context != nullptr)
+        {
+            SetAssetManager(android::content::Context{context}.getAssets());
+        }
+        else
+        {
+            SetAssetManager(nullptr);
+        }
     }
 
     JNIEnv* GetEnvForCurrentThread()
@@ -126,5 +160,30 @@ namespace android::global
     RequestPermissionsResultEvent::Ticket AddRequestPermissionsResultCallback(RequestPermissionsResultEvent::Handler&& onAddRequestPermissionsResult)
     {
         return g_requestPermissionsResultEvent.AddHandler(std::move(onAddRequestPermissionsResult));
+    }
+
+    void SetAssetManager(jobject assetManager)
+    {
+        JNIEnv* env = GetEnvForCurrentThread();
+
+        if (g_assetManagerObject != nullptr)
+        {
+            env->DeleteGlobalRef(g_assetManagerObject);
+            g_assetManagerObject = nullptr;
+        }
+
+        if (assetManager == nullptr)
+        {
+            g_assetManager = nullptr;
+            return;
+        }
+
+        g_assetManagerObject = env->NewGlobalRef(assetManager);
+        g_assetManager = AAssetManager_fromJava(env, g_assetManagerObject);
+    }
+
+    AAssetManager* GetAssetManager()
+    {
+        return g_assetManager;
     }
 }
