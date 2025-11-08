@@ -2,9 +2,11 @@
 #import <Babylon/AppRuntime.h>
 #import <Babylon/Graphics/Device.h>
 #import <Babylon/ScriptLoader.h>
+#import <Babylon/Plugins/NativeEncoding.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeInput.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
+#import <Babylon/Polyfills/Blob.h>
 #import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/Polyfills/Console.h>
 #import <Babylon/Polyfills/Window.h>
@@ -53,6 +55,8 @@
     _runtime->Dispatch([self](Napi::Env env) {
         self->_device->AddToJavaScript(env);
 
+        Babylon::Polyfills::Blob::Initialize(env);
+
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
             NSLog(@"%s", message);
         });
@@ -62,6 +66,8 @@
         Babylon::Polyfills::Window::Initialize(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+
+        Babylon::Plugins::NativeEncoding::Initialize(env);
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 
@@ -77,6 +83,7 @@
     loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
     loader.LoadScript("app:///Scripts/babylonjs.materials.js");
     loader.LoadScript("app:///Scripts/babylon.gui.js");
+    loader.LoadScript("app:///Scripts/babylonjs.serializers.js"); 
     loader.LoadScript("app:///Scripts/experience.js");
     self.initialized = YES;
     

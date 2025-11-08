@@ -15,11 +15,13 @@
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Plugins/NativeCapture.h>
+#include <Babylon/Plugins/NativeEncoding.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/TestUtils.h>
+#include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -167,6 +169,8 @@ namespace
         runtime->Dispatch([hWnd](Napi::Env env) {
             device->AddToJavaScript(env);
 
+            Babylon::Polyfills::Blob::Initialize(env);
+
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel logLevel) {
                 std::ostringstream ss{};
                 ss << "[" << GetLogLevelString(logLevel) << "] " << message << std::endl;
@@ -181,6 +185,8 @@ namespace
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
             nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
+
+            Babylon::Plugins::NativeEncoding::Initialize(env);
 
             Babylon::Plugins::NativeEngine::Initialize(env);
 
@@ -204,6 +210,7 @@ namespace
         loader.LoadScript("app:///Scripts/babylonjs.materials.js");
         loader.LoadScript("app:///Scripts/babylon.gui.js");
         loader.LoadScript("app:///Scripts/meshwriter.min.js");
+        loader.LoadScript("app:///Scripts/babylonjs.serializers.js");
 
         std::vector<std::string> scripts = GetCommandLineArguments();
         if (scripts.empty())
