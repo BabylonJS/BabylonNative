@@ -397,7 +397,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
         m_nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
 
         Babylon::Polyfills::Window::Initialize(env);
-        
+
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
         Babylon::Plugins::NativeEncoding::Initialize(env);

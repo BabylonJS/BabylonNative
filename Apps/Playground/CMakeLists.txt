@@ -127,11 +127,13 @@ target_include_directories(Playground PRIVATE "Source" ".")
 
 target_link_libraries(Playground
     PRIVATE AppRuntime
+    PRIVATE Blob
     PRIVATE Canvas
     PRIVATE Console
     PRIVATE ExternalTexture
     PRIVATE GraphicsDevice
     PRIVATE NativeCapture
+    PRIVATE NativeEncoding
     PRIVATE NativeEngine
     PRIVATE NativeInput
     PRIVATE NativeOptimizations
@@ -139,8 +141,6 @@ target_link_libraries(Playground
     PRIVATE Window
     PRIVATE XMLHttpRequest
     PRIVATE TestUtils
-    PRIVATE NativeEncoding
-    PRIVATE Blob
     ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 
