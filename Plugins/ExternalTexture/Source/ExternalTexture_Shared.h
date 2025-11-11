@@ -87,7 +87,7 @@ namespace Babylon::Plugins
                 }
 
                 arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&runtime, &context, deferred = std::move(deferred), handle, impl = std::move(impl), layerIndex = std::move(layerIndex)]() {
-                    if (bgfx::overrideInternal(handle, reinterpret_cast<uintptr_t>(impl->Get()), layerIndex.value_or(-1)) == 0)
+                    if (bgfx::overrideInternal(handle, reinterpret_cast<uintptr_t>(impl->Get()), layerIndex.value_or(0)) == 0)
                     {
                         runtime.Dispatch([deferred = std::move(deferred), handle](Napi::Env env) {
                             bgfx::destroy(handle);
