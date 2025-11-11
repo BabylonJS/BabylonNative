@@ -37,6 +37,7 @@ namespace Babylon::Graphics
         m_state.Bgfx.Initialized = false;
 
         auto& init = m_state.Bgfx.InitState;
+        init.callback = &m_bgfxCallback;
 
         // Use the noop renderer if the configuration has no window and no size.
         if (config.Window == WindowT{} && config.Width == 0 && config.Height == 0)
@@ -48,16 +49,42 @@ namespace Babylon::Graphics
             init.type = s_bgfxRenderType;
         }
 
+        //
+        // init.resolution
+        //
+
         init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY | BGFX_RESET_FLIP_AFTER_RENDER;
         init.resolution.maxFrameLatency = 1;
 
-        init.callback = &m_bgfxCallback;
-
-        init.platformData.context = config.Device;
-        UpdateWindow(config.Window);
         UpdateSize(config.Width, config.Height);
         UpdateMSAA(config.MSAASamples);
         UpdateAlphaPremultiplied(config.AlphaPremultiplied);
+
+        switch (config.BackBufferDepthStencilFormat)
+        {
+            case DepthStencilFormat::None:
+                init.resolution.formatDepthStencil = bgfx::TextureFormat::UnknownDepth;
+                break;
+            case DepthStencilFormat::Depth32:
+                init.resolution.formatDepthStencil = bgfx::TextureFormat::D32;
+                break;
+            case DepthStencilFormat::Depth24Stencil8:
+            default:
+                init.resolution.formatDepthStencil = bgfx::TextureFormat::D24S8;
+                break;
+        }
+
+        //
+        // init.platformData
+        //
+
+        UpdateWindow(config.Window);
+        UpdateDevice(config.Device);
+
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        init.platformData.backBuffer = config.BackBufferColor;
+        init.platformData.backBufferDS = config.BackBufferDepthStencil;
+#endif
     }
 
     DeviceImpl::~DeviceImpl()
@@ -133,18 +160,6 @@ namespace Babylon::Graphics
         m_state.Bgfx.Dirty = true;
     }
 
-    void DeviceImpl::UpdateDevicePixelRatio(float value)
-    {
-        std::scoped_lock lock{m_state.Mutex};
-        m_state.Resolution.DevicePixelRatio = value;
-        m_state.Bgfx.Dirty = true;
-    }
-
-    void DeviceImpl::SetRenderResetCallback(std::function<void()> callback)
-    {
-        m_renderResetCallback = std::move(callback);
-    }
-
     void DeviceImpl::AddToJavaScript(Napi::Env env)
     {
         JsRuntime::NativeObject::GetFromJavaScript(env)
@@ -162,6 +177,11 @@ namespace Babylon::Graphics
     Napi::Value DeviceImpl::CreateContext(Napi::Env env)
     {
         return DeviceContext::Create(env, *this);
+    }
+
+    void DeviceImpl::SetRenderResetCallback(std::function<void()> callback)
+    {
+        m_renderResetCallback = std::move(callback);
     }
 
     void DeviceImpl::EnableRendering()
