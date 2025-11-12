@@ -179,7 +179,7 @@ namespace Babylon::Plugins
             info.Width = static_cast<uint16_t>(desc.Width);
             info.Height = static_cast<uint16_t>(desc.Height);
             info.MipLevels = static_cast<uint16_t>(desc.MipLevels);
-            info.NumLayers = static_cast<uint16_t>(desc.ArraySize);
+            info.NumLayers = static_cast<uint16_t>(desc.DepthOrArraySize);
 
             if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0)
             {
