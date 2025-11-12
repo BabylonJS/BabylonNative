@@ -139,6 +139,7 @@ namespace
         graphicsConfig.Width = width;
         graphicsConfig.Height = height;
         graphicsConfig.MSAASamples = 4;
+        graphicsConfig.BackBufferDepthStencilFormat = Babylon::Graphics::DepthStencilFormat::None;
 
         device.emplace(graphicsConfig);
         update.emplace(device->GetUpdate("update"));

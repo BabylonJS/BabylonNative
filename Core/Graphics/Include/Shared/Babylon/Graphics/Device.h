@@ -34,7 +34,7 @@ namespace Babylon::Graphics
         // @remarks Only available for D3D11.
         BackBufferColorT BackBufferColor{};
 
-        // Depth stencil back buffer to use instead of creating one internall.
+        // Depth stencil back buffer to use instead of creating one internally.
         // @remarks Only available for D3D11. DepthStencilFormat is ignored when specified.
         BackBufferDepthStencilT BackBufferDepthStencil{};
 #endif

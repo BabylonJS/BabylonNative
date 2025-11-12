@@ -70,12 +70,11 @@ namespace Babylon::Plugins
 
         arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(),
             [&context, &runtime, deferred = std::move(deferred), impl = m_impl, layerIndex = std::move(layerIndex)]() {
-                DEBUG_TRACE("ExternalTexture [0x%p] create %d x %d %d mips %d layers. Format : %d Flags : %d. (bgfx handle id %d)",
-                    impl.get(), int(impl->Width()), int(impl->Height()), int(impl->HasMips()), int(impl->NumLayers()), int(impl->Format()), int(impl->Flags()), int(handle.idx));
-
                 // REVIEW: The bgfx texture handle probably needs to be an RAII object to make sure it gets clean up during the asynchrony.
                 //         For example, if any of the schedulers/dispatches below don't fire, then the texture handle will leak.
                 bgfx::TextureHandle handle = bgfx::createTexture2D(impl->Width(), impl->Height(), impl->HasMips(), impl->NumLayers(), impl->Format(), impl->Flags());
+                DEBUG_TRACE("ExternalTexture [0x%p] create %d x %d %d mips %d layers. Format : %d Flags : %d. (bgfx handle id %d)",
+                    impl.get(), int(impl->Width()), int(impl->Height()), int(impl->HasMips()), int(impl->NumLayers()), int(impl->Format()), int(impl->Flags()), int(handle.idx));
                 if (!bgfx::isValid(handle))
                 {
                     DEBUG_TRACE("ExternalTexture [0x%p] is not valid", impl.get());
