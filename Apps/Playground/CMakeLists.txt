@@ -4,7 +4,8 @@ set(BABYLON_SCRIPTS
     "../node_modules/babylonjs-loaders/babylonjs.loaders.js"
     "../node_modules/babylonjs/babylon.max.js"
     "../node_modules/babylonjs-materials/babylonjs.materials.js"
-    "../node_modules/babylonjs-gui/babylon.gui.js")
+    "../node_modules/babylonjs-gui/babylon.gui.js"
+    "../node_modules/babylonjs-serializers/babylonjs.serializers.js")
 
 set(DEPENDENCIES
     "../Dependencies/ammo.js"
@@ -126,11 +127,13 @@ target_include_directories(Playground PRIVATE "Source" ".")
 
 target_link_libraries(Playground
     PRIVATE AppRuntime
+    PRIVATE Blob
     PRIVATE Canvas
     PRIVATE Console
     PRIVATE ExternalTexture
     PRIVATE GraphicsDevice
     PRIVATE NativeCapture
+    PRIVATE NativeEncoding
     PRIVATE NativeEngine
     PRIVATE DataStream
     PRIVATE NativeInput

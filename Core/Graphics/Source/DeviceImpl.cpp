@@ -37,7 +37,17 @@ namespace Babylon::Graphics
         m_state.Bgfx.Initialized = false;
 
         auto& init = m_state.Bgfx.InitState;
-        init.type = s_bgfxRenderType;
+
+        // Use the noop renderer if the configuration has no window and no size.
+        if (config.Window == WindowT{} && config.Width == 0 && config.Height == 0)
+        {
+            init.type = bgfx::RendererType::Noop;
+        }
+        else
+        {
+            init.type = s_bgfxRenderType;
+        }
+
         init.resolution.reset = BGFX_RESET_VSYNC | BGFX_RESET_MAXANISOTROPY | BGFX_RESET_FLIP_AFTER_RENDER;
         init.resolution.maxFrameLatency = 1;
 

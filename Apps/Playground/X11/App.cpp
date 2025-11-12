@@ -11,11 +11,13 @@
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/ScriptLoader.h>
+#include <Babylon/Plugins/NativeEncoding.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/TestUtils.h>
 #include <Babylon/Plugins/DataStream.h>
+#include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -71,6 +73,8 @@ namespace
         runtime.emplace();
 
         runtime->Dispatch([window](Napi::Env env) {
+            Babylon::Polyfills::Blob::Initialize(env);
+
             Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
                 printf("%s\n", message);
                 fflush(stdout);
@@ -81,8 +85,11 @@ namespace
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
             nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
 
-            // Initialize NativeEngine plugin.
             device->AddToJavaScript(env);
+            
+            Babylon::Plugins::NativeEncoding::Initialize(env);
+            
+            // Initialize NativeEngine plugin.
             Babylon::Plugins::NativeEngine::Initialize(env);
 
             Babylon::Plugins::NativeOptimizations::Initialize(env);
@@ -100,6 +107,7 @@ namespace
         loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
         loader.LoadScript("app:///Scripts/babylonjs.materials.js");
         loader.LoadScript("app:///Scripts/babylon.gui.js");
+        loader.LoadScript("app:///Scripts/babylonjs.serializers.js"); 
 
         if (scripts.empty())
         {

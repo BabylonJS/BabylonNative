@@ -2,9 +2,11 @@
 
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/ScriptLoader.h>
+#include <Babylon/Plugins/NativeEncoding.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/DataStream.h>
+#include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -387,6 +389,8 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     m_runtime->Dispatch([this](Napi::Env env) {
         m_device->AddToJavaScript(env);
 
+        Babylon::Polyfills::Blob::Initialize(env);
+
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
             OutputDebugStringA(message);
         });
@@ -396,6 +400,8 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Plugins::DataStream::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+
+        Babylon::Plugins::NativeEncoding::Initialize(env);
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 
@@ -412,6 +418,7 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
     loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
     loader.LoadScript("app:///Scripts/babylonjs.materials.js");
     loader.LoadScript("app:///Scripts/babylon.gui.js");
+    loader.LoadScript("app:///Scripts/babylonjs.serializers.js"); 
 
     if (m_files == nullptr)
     {

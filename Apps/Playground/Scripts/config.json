@@ -89,6 +89,11 @@
             "referenceImage": "glTFSheen.png"
         },
         {
+            "title": "GLTF Serializer multimaterial with raw texture",
+            "playgroundId": "#KU72PX",
+            "referenceImage": "glTFSerializerMultimaterial.png"
+        },
+        {
             "title": "GLTF Extension KHR_materials_specular",
             "playgroundId": "#RNT7K4#9",
             "referenceImage": "gltfExtensionKhrMaterialsSpecular.png"

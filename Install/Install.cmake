@@ -187,3 +187,8 @@ if(TARGET XMLHttpRequest)
     install_targets(XMLHttpRequest)
     install_include_for_targets(XMLHttpRequest)
 endif()
+
+if(TARGET Blob)
+    install_targets(Blob)
+    install_include_for_targets(Blob)
+endif()

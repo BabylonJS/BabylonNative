@@ -134,14 +134,18 @@ endif()
 target_link_libraries(TestInstall
     AppRuntime
     arcana
-    bimg_encode
-    bimg_decode
-    minz
     bgfx
     bimg
+    bimg_decode
+    bimg_encode
+    Blob
     bx
     Canvas
+    chakrart
     Console
+    d3d11
+    d3d12
+    d3dcompiler
     ExternalTexture
     Foundation
     GenericCodeGen
@@ -155,31 +159,28 @@ target_link_libraries(TestInstall
     libwebpdecoder.lib
     libwebpdemux.lib
     MachineIndependent
+    minz
     napi
     NativeCamera
     NativeCapture
+    NativeEncoding
     NativeEngine
     DataStream
     NativeInput
     NativeOptimizations
     NativeTracing
-    NativeEncoding
     OGLCompiler
     OSDependent
-    ScriptLoader
+    Pathcch
+    runtimeobject.lib # for WINRT_IMPL_RoXXX functions
     Scheduling
+    ScriptLoader
+    SPIRV
     spirv-cross-core
     spirv-cross-hlsl
-    SPIRV
     UrlLib
     Window
     XMLHttpRequest
-    chakrart
-    d3d11
-    d3d12
-    d3dcompiler
-    Pathcch
-    runtimeobject.lib # for WINRT_IMPL_RoXXX functions
     ${ADDITIONAL_LIBRARIES}
 )
 
