@@ -4494,8 +4494,11 @@ inline napi_value InstanceWrap<T>::WrappedMethod(
 ////////////////////////////////////////////////////////////////////////////////
 // ObjectWrap<T> class
 ////////////////////////////////////////////////////////////////////////////////
-
 template <typename T>
+// [BABYLON-NATIVE-ADDITION]
+#ifndef _MSC_VER
+__attribute__((no_sanitize("vptr")))
+#endif
 inline ObjectWrap<T>::ObjectWrap(const Napi::CallbackInfo& callbackInfo) {
   napi_env env = callbackInfo.Env();
   napi_value wrapper = callbackInfo.This();

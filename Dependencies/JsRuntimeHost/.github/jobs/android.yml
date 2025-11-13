@@ -1,15 +1,17 @@
 parameters:
 - name: name
   type: string
+  default: ''
 - name: jsEngine
   type: string
+  default: ''
 
 jobs:
 - job: ${{parameters.name}}
   timeoutInMinutes: 30
 
   pool:
-    vmImage: macos-13
+    vmImage: macos-14
 
   steps:
   - script: |

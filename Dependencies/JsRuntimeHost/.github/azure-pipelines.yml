@@ -14,7 +14,7 @@ schedules:
 
 variables:
 - name: ndkVersion
-  value: 25.2.9519653
+  value: 28.2.13676358
 
 jobs:
   # WIN32
@@ -85,6 +85,13 @@ jobs:
       vmImage: 'macOS-latest'
       xCodeVersion: 16.4
 
+  - template: jobs/macos.yml
+    parameters:
+      name: 'macOS_Xcode164_Sanitizers'
+      vmImage: 'macOS-latest'
+      xCodeVersion: 16.4
+      enableSanitizers: true
+
   # iOS
   - template: jobs/ios.yml
     parameters:
@@ -96,9 +103,24 @@ jobs:
   - template: jobs/ios.yml
     parameters:
       name: 'iOS_Xcode152'
-      vmImage: 'macOS-13'
+      vmImage: 'macOS-14'
       xCodeVersion: 15.2
-      simulator: 'iPhone 14'
+      simulator: 'iPhone 15'
 
   # Linux
   - template: jobs/linux.yml
+    parameters:
+      name: Ubuntu_gcc
+
+  - template: jobs/linux.yml
+    parameters:
+      name: Ubuntu_clang
+      CC: clang
+      CXX: clang++
+
+  - template: jobs/linux.yml
+    parameters:
+      name: Ubuntu_Sanitizers_clang
+      enableSanitizers: true
+      CC: clang
+      CXX: clang++

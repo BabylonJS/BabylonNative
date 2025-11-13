@@ -2,6 +2,7 @@ parameters:
   name: ''
   vmImage: ''
   xCodeVersion: ''
+  enableSanitizers: false
 
 jobs:
 - job: ${{parameters.name}}
@@ -10,13 +11,16 @@ jobs:
   pool:
     vmImage: ${{parameters.vmImage}}
 
+  variables:
+    SANITIZER_FLAG: ${{ coalesce(replace(format('{0}', parameters.enableSanitizers), 'True', 'ON'), 'OFF') }}
+
   steps:
   - script: |
       sudo xcode-select --switch /Applications/Xcode_${{parameters.xCodeVersion}}.app/Contents/Developer
     displayName: 'Select Xcode ${{parameters.xCodeVersion}}'
 
   - script: |
-      cmake -B Build/macOS -GXcode
+      cmake -B Build/macOS -G Xcode -D ENABLE_SANITIZERS=$(SANITIZER_FLAG)
     displayName: 'Configure CMake'
 
   - task: Xcode@5

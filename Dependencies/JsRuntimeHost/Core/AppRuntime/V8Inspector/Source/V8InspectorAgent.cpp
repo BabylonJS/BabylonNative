@@ -426,10 +426,9 @@ namespace Babylon
         }
         v8::Local<v8::String> string_value = v8::Local<v8::String>::Cast(value);
         int len = string_value->Length();
-        std::basic_string<uint16_t> buffer(len, '\0');
-        string_value->Write(v8::Isolate::GetCurrent(), &buffer[0], 0, len);
-        return v8_inspector::StringBuffer::create(
-            v8_inspector::StringView(buffer.data(), len));
+        std::basic_string<char16_t> buffer(len, '\0');
+        string_value->Write(v8::Isolate::GetCurrent(), reinterpret_cast<uint16_t*>(&buffer[0]), 0, len); // Write expects uint16_t* but the template parameter is char16_t
+        return v8_inspector::StringBuffer::create(v8_inspector::StringView(reinterpret_cast<uint16_t*>(buffer.data()), len));
     }
 
     bool AgentImpl::AppendMessage(
