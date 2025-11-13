@@ -32,10 +32,12 @@ set_property(TARGET UnitTests PROPERTY UNITY_BUILD false)
 
 target_link_libraries(UnitTests
     PRIVATE AppRuntime
+    PRIVATE Blob
     PRIVATE Canvas
     PRIVATE Console
     PRIVATE GraphicsDevice
     PRIVATE NativeEngine
+    PRIVATE NativeEncoding
     PRIVATE ScriptLoader
     PRIVATE UrlLib
     PRIVATE Window

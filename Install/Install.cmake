@@ -159,6 +159,11 @@ if(TARGET NativeXr)
     install_include_for_targets(NativeXr)
 endif()
 
+if(TARGET NativeEncoding)
+    install_targets(NativeEncoding)
+    install_include_for_targets(NativeEncoding)
+endif()
+
 # ----------------
 # Polyfills
 # ----------------
@@ -181,4 +186,9 @@ endif()
 if(TARGET XMLHttpRequest)
     install_targets(XMLHttpRequest)
     install_include_for_targets(XMLHttpRequest)
+endif()
+
+if(TARGET Blob)
+    install_targets(Blob)
+    install_include_for_targets(Blob)
 endif()

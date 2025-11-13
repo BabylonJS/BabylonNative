@@ -32,10 +32,12 @@ target_link_libraries(BabylonNativeJNI
     -lz
     AndroidExtensions
     AppRuntime
+    Blob
     Canvas
     Console
     GraphicsDevice
     NativeCamera
+    NativeEncoding
     NativeEngine
     NativeInput
     NativeOptimizations

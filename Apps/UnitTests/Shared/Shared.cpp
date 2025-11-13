@@ -5,7 +5,9 @@
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/Canvas.h>
+#include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/NativeEncoding.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/ShaderCache.h>
 #include <chrono>
@@ -72,8 +74,10 @@ TEST(JavaScript, All)
             std::cout.flush();
         });
         Babylon::Polyfills::Window::Initialize(env);
+        Babylon::Polyfills::Blob::Initialize(env);
         nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
         Babylon::Plugins::NativeEngine::Initialize(env);
+        Babylon::Plugins::NativeEncoding::Initialize(env);
 
         auto setExitCodeCallback = Napi::Function::New(
             env, [&exitCodePromise](const Napi::CallbackInfo& info) {
