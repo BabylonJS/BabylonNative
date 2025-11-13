@@ -4,6 +4,7 @@
 #include "Gradient.h"
 #include "Colors.h"
 
+#include <algorithm>
 #include <cmath>
 #include <map>
 
