@@ -3,7 +3,7 @@
     "tests": [
         {
             "title": "Native Canvas",
-            "playgroundId": "#TKVFSA#2",
+            "playgroundId": "#TKVFSA#7",
             "referenceImage": "native-canvas.png",
             "excludedGraphicsApis": [ "D3D12" ],
             "comment": "2D Path not rendered with D3D12"
