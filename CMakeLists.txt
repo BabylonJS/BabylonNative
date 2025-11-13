@@ -11,7 +11,7 @@ include(FetchContent)
 # --------------------------------------------------
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG 66520bff9b57030b67894a4934d18ad7e161ba6f)
+    GIT_TAG f7ed149b5360cc8a4908fece66607c5ce1e6095b)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG c726dbe58713eda65bfb139c257093c43479b894)
@@ -114,13 +114,23 @@ if(ENABLE_SANITIZERS)
     set(ENABLE_RTTI ON CACHE BOOL "" FORCE)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
         set(SANITIZERS "address,undefined")
-        add_compile_options(-fsanitize=${SANITIZERS} -fno-omit-frame-pointer)
-        add_link_options(-fsanitize=${SANITIZERS})
+        # Check for Clang since vptr and fdsan are Clang-specific
+        if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            list(APPEND SANITIZERS "vptr")
+            # FDSan only works on Android builds with Clang
+            if (ANDROID)
+                list(APPEND SANITIZERS "fdsan")
+            endif()
+        endif()
+
+        string(JOIN "," SANITIZER_FLAGS ${SANITIZERS})
+
+        add_compile_options(-fsanitize=${SANITIZER_FLAGS} -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=${SANITIZER_FLAGS})
     else()
         message(WARNING "Sanitizers not supported on this compiler.")
     endif()
 endif()
-
 # --------------------------------------------------
 
 if(ANDROID)

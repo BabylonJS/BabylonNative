@@ -20,10 +20,7 @@ def unity_build = "false"
 if (project.hasProperty("UNITY_BUILD")) {
     unity_build = project.property("UNITY_BUILD")
 }
-def sanitizers = "OFF"
-if (project.hasProperty("SANITIZERS")) {
-    sanitizers = project.property("SANITIZERS")
-}
+
 def arcore_libpath = "${buildDir}/arcore-native"
 
 configurations { natives }
@@ -52,8 +49,7 @@ android {
                     "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
                     "-DBABYLON_NATIVE_BUILD_APPS=ON",
                     "-DCMAKE_UNITY_BUILD=${unity_build}",
-                    "-DBABYLON_DEBUG_TRACE=ON",
-                    "-DENABLE_SANITIZERS=${sanitizers}"
+                    "-DBABYLON_DEBUG_TRACE=ON"
             }
         }
         ndk {

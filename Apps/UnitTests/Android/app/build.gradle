@@ -6,10 +6,6 @@ def jsEngine = "V8"
 if (project.hasProperty("jsEngine")) {
     jsEngine = project.property("jsEngine")
 }
-def sanitizers = "OFF"
-if (project.hasProperty("SANITIZERS")) {
-    sanitizers = project.property("SANITIZERS")
-}
 
 configurations { natives }
 
@@ -33,8 +29,7 @@ android {
                     "-DANDROID_STL=c++_shared",
                     "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
                     "-DJSRUNTIMEHOST_CORE_APPRUNTIME_V8_INSPECTOR=ON",
-                    "-DBABYLON_NATIVE_BUILD_APPS=ON",
-                    "-DENABLE_SANITIZERS=${sanitizers}"
+                    "-DBABYLON_NATIVE_BUILD_APPS=ON"
                 )
             }
         }
