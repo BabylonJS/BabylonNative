@@ -1328,6 +1328,7 @@ namespace
         bgfx::destroy(gl->u_scissorExtScale);
         bgfx::destroy(gl->u_extentRadius);
         bgfx::destroy(gl->u_params);
+        bgfx::destroy(gl->u_sdf);
         bgfx::destroy(gl->s_tex);
         bgfx::destroy(gl->s_tex2);
         nanovg_filterstack::DisposeBgfx();

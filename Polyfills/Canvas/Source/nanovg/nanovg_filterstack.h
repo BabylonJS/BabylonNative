@@ -44,7 +44,10 @@ public:
     {
         // break down shadow as blur + color
     }
-    void Clear() { stackElements.clear(); }
+    void Clear()
+    { 
+        stackElements = std::vector<StackElement>(); // deallocate memory
+    }
 protected:
 
     enum StackElementTypes
@@ -69,12 +72,9 @@ protected:
     struct StackElement
     {
         StackElementTypes type;
-        union
-        {
-            SepiaElement sepiaElement;
-            Contrast contrastElement;
-            Blur blurElement;
-        };
+        SepiaElement sepiaElement;
+        Contrast contrastElement;
+        Blur blurElement;
     };
     std::vector<StackElement> stackElements;
 

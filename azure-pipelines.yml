@@ -8,7 +8,7 @@ variables:
 - name: CMAKE_VERSION
   value: 3.31.6
 - name: NDK_VERSION
-  value: 25.2.9519653
+  value: 28.2.13676358
 - name: UNITY_BUILD
   value: true
 - name: XCODE_VERSION
@@ -20,6 +20,12 @@ jobs:
     parameters:
       name: MacOS
       vmImage: 'macOS-latest'
+
+  - template: .github/jobs/macos.yml
+    parameters:
+      name: MacOS_Sanitizers
+      vmImage: 'macOS-latest'
+      enableSanitizers: true
 
   - template: .github/jobs/ios.yml
     parameters:
@@ -101,6 +107,15 @@ jobs:
       CC: gcc
       CXX: g++
       JSEngine: JavaScriptCore
+
+  - template: .github/jobs/linux.yml
+    parameters:
+      name: Ubuntu_Clang_JavaScriptCore_Sanitizers
+      vmImage: 'ubuntu-latest'
+      CC: clang
+      CXX: clang++
+      JSEngine: JavaScriptCore
+      enableSanitizers: true
 
 # Android
   - template: .github/jobs/android.yml

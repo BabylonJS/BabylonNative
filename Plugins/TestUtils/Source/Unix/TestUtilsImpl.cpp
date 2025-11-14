@@ -20,7 +20,7 @@ namespace Babylon::Plugins::Internal
         auto window = (Window)m_implData->m_window;
         const int32_t exitCode = info[0].As<Napi::Number>().Int32Value();
         Plugins::TestUtils::errorCode = exitCode;
-        Display* display = XOpenDisplay(NULL);
+        auto display = XOpenDisplay(NULL);
         XClientMessageEvent dummyEvent;
         memset(&dummyEvent, 0, sizeof(XClientMessageEvent));
         dummyEvent.type = ClientMessage;
@@ -29,6 +29,7 @@ namespace Babylon::Plugins::Internal
         dummyEvent.data.l[0] = XInternAtom(display, "WM_DELETE_WINDOW", False);;
         XSendEvent(display, window, 0, 0, (XEvent*)&dummyEvent);
         XFlush(display);
+        XCloseDisplay(display);
     }
 
     void TestUtils::UpdateSize(const Napi::CallbackInfo& /*info*/)
@@ -38,9 +39,10 @@ namespace Babylon::Plugins::Internal
     void TestUtils::SetTitle(const Napi::CallbackInfo& info)
     {
         const auto title = info[0].As<Napi::String>().Utf8Value();
-        Display* display = XOpenDisplay(NULL);
+        auto display = XOpenDisplay(NULL);
         auto window = (Window)m_implData->m_window;
         XStoreName(display, window, title.c_str());
+        XCloseDisplay(display);
     }
 
     Napi::Value TestUtils::GetOutputDirectory(const Napi::CallbackInfo& info)

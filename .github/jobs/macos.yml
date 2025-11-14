@@ -1,13 +1,17 @@
 parameters:
   name: ''
   vmImage: ''
+  enableSanitizers: false
 
 jobs:
   - job: ${{ parameters.name }}
     timeoutInMinutes: 30
     pool:
       vmImage: ${{ parameters.vmImage }}
-  
+
+    variables:
+      SANITIZER_FLAG: ${{ coalesce(replace(format('{0}', parameters.enableSanitizers), 'True', 'ON'), 'OFF') }}
+
     steps:
     - template: cmake.yml
       parameters:
@@ -18,7 +22,7 @@ jobs:
       displayName: 'Select XCode $(XCODE_VERSION)'
 
     - script: |
-        cmake -G Xcode -B buildmacOS -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON
+        cmake -G Xcode -B buildmacOS -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D ENABLE_SANITIZERS=$(SANITIZER_FLAG)
       displayName: 'Generate macOS solution'
 
     - script: |
