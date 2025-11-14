@@ -17,7 +17,15 @@ namespace
 
     void EnablePerformanceTracing(const Napi::CallbackInfo& info)
     {
-        const auto level = (info.Length() > 0 && info[0].As<Napi::Number>().Int32Value()) ? Babylon::PerfTrace::Level::Log : Babylon::PerfTrace::Level::Mark;
+        auto level = Babylon::PerfTrace::Level::Mark;
+        if (info.Length() > 0)
+        {
+            level = static_cast<Babylon::PerfTrace::Level>(info[0].As<Napi::Number>().Uint32Value());
+            if (level != Babylon::PerfTrace::Level::Mark && level != Babylon::PerfTrace::Level::Log)
+            {
+                throw Napi::Error::New(info.Env(), "Invalid trace level");
+            }
+        }
         Babylon::PerfTrace::SetLevel(level);
     }
 
