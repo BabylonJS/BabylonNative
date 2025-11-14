@@ -41,8 +41,6 @@ set(BGFX_USE_DEBUG_SUFFIX OFF)
 FetchContent_MakeAvailable_With_Message(bgfx.cmake)
 
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEFAULT_MAX_ENCODERS=2)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_TRANSIENT_INDEX_BUFFER_SIZE=16)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_TRANSIENT_VERTEX_BUFFER_SIZE=16)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_VERTEX_STREAMS=18)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MIN_RESOURCE_COMMAND_BUFFER_SIZE=16)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MIN_UNIFORM_BUFFER_SIZE=4096)
