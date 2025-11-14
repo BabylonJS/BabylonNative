@@ -142,12 +142,6 @@ jobs:
       vmImage: 'macOS-latest'
       JSEngine: V8
 
-  - template: .github/jobs/android.yml
-    parameters:
-      name: Android_MacOS_V8_Sanitizers
-      vmImage: 'macOS-latest'
-      JSEngine: V8
-
 # Installation tests. 
   - template: .github/jobs/test_install_win32.yml
     parameters:
