@@ -14,7 +14,7 @@ FetchContent_Declare(AndroidExtensions
     GIT_TAG 66520bff9b57030b67894a4934d18ad7e161ba6f)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/ryantrem/arcana.cpp.git
-    GIT_TAG 88158cf2b7153ea3f0d1dd5ed2a3afc984c0773b)
+    GIT_TAG c117bfda6fc855e8e63f6bfb8cf1b66d51026dcb)
 FetchContent_Declare(arcore-android-sdk
     GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
     GIT_TAG 98cb803de5482fb2b36effe8be3b5a0d3b726976)
