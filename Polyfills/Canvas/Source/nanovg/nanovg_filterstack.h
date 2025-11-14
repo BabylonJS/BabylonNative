@@ -72,12 +72,9 @@ protected:
     struct StackElement
     {
         StackElementTypes type;
-        union
-        {
-            SepiaElement sepiaElement;
-            Contrast contrastElement;
-            Blur blurElement;
-        };
+        SepiaElement sepiaElement;
+        Contrast contrastElement;
+        Blur blurElement;
     };
     std::vector<StackElement> stackElements;
 
