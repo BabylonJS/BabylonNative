@@ -11,7 +11,6 @@
 namespace Babylon::Plugins::TestUtils
 {
     int errorCode{};
-    Display* display{nullptr};
 }
 
 namespace Babylon::Plugins::Internal
@@ -21,20 +20,16 @@ namespace Babylon::Plugins::Internal
         auto window = (Window)m_implData->m_window;
         const int32_t exitCode = info[0].As<Napi::Number>().Int32Value();
         Plugins::TestUtils::errorCode = exitCode;
-        if (!Plugins::TestUtils::display)
-        {
-            Plugins::TestUtils::display = XOpenDisplay(NULL);
-        }
+        auto display = XOpenDisplay(NULL);
         XClientMessageEvent dummyEvent;
         memset(&dummyEvent, 0, sizeof(XClientMessageEvent));
         dummyEvent.type = ClientMessage;
         dummyEvent.window = window;
         dummyEvent.format = 32;
-        dummyEvent.data.l[0] = XInternAtom(Plugins::TestUtils::display, "WM_DELETE_WINDOW", False);;
-        XSendEvent(Plugins::TestUtils::display, window, 0, 0, (XEvent*)&dummyEvent);
-        XFlush(Plugins::TestUtils::display);
-        XCloseDisplay(Plugins::TestUtils::display);
-        Plugins::TestUtils::display = nullptr;
+        dummyEvent.data.l[0] = XInternAtom(display, "WM_DELETE_WINDOW", False);;
+        XSendEvent(display, window, 0, 0, (XEvent*)&dummyEvent);
+        XFlush(display);
+        XCloseDisplay(display);
     }
 
     void TestUtils::UpdateSize(const Napi::CallbackInfo& /*info*/)
@@ -44,12 +39,10 @@ namespace Babylon::Plugins::Internal
     void TestUtils::SetTitle(const Napi::CallbackInfo& info)
     {
         const auto title = info[0].As<Napi::String>().Utf8Value();
-        if (!Plugins::TestUtils::display)
-        {
-            Plugins::TestUtils::display = XOpenDisplay(NULL);
-        }
+        auto display = XOpenDisplay(NULL);
         auto window = (Window)m_implData->m_window;
-        XStoreName(Plugins::TestUtils::display, window, title.c_str());
+        XStoreName(display, window, title.c_str());
+        XCloseDisplay(display);
     }
 
     Napi::Value TestUtils::GetOutputDirectory(const Napi::CallbackInfo& info)

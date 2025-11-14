@@ -33,6 +33,7 @@ namespace Babylon::Graphics
             // See: https://scanline.ca/dpi/
             return dpi / 96.0f;
         }
+        XCloseDisplay(display);
 
         return 1;
     }

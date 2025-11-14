@@ -1248,7 +1248,7 @@ static unsigned int nsvg__parseColorRGB(const char* str)
 			while (*str && (nsvg__isspace(*str))) str++; 	// skip leading spaces
 			if (*str == '+') str++;				// skip '+' (don't allow '-')
 			if (!*str) break;
-			rgbf[i] = nsvg__atof(str);
+			rgbf[i] = static_cast<float>(nsvg__atof(str));
 
 			// Note 1: it would be great if nsvg__atof() returned how many
 			// bytes it consumed but it doesn't. We need to skip the number,
@@ -1270,9 +1270,9 @@ static unsigned int nsvg__parseColorRGB(const char* str)
 			else break;
 		}
 		if (i == 3) {
-			rgbi[0] = roundf(rgbf[0] * 2.55f);
-			rgbi[1] = roundf(rgbf[1] * 2.55f);
-			rgbi[2] = roundf(rgbf[2] * 2.55f);
+			rgbi[0] = static_cast<unsigned int>(roundf(rgbf[0] * 2.55f));
+			rgbi[1] = static_cast<unsigned int>(roundf(rgbf[1] * 2.55f));
+			rgbi[2] = static_cast<unsigned int>(roundf(rgbf[2] * 2.55f));
 		} else {
 			rgbi[0] = rgbi[1] = rgbi[2] = 128;
 		}
@@ -1478,7 +1478,7 @@ static float nsvg__parseOpacity(const char* str)
 
 static float nsvg__parseMiterLimit(const char* str)
 {
-	float val = nsvg__atof(str);
+	float val = static_cast<float>(nsvg__atof(str));
 	if (val < 0.0f) val = 0.0f;
 	return val;
 }
@@ -1520,7 +1520,7 @@ static NSVGcoordinate nsvg__parseCoordinateRaw(const char* str)
 	NSVGcoordinate coord = {0, NSVG_UNITS_USER};
 	char buf[64];
 	coord.units = nsvg__parseUnits(nsvg__parseNumber(str, buf, 64));
-	coord.value = nsvg__atof(buf);
+	coord.value = static_cast<float>(nsvg__atof(buf));
 	return coord;
 }
 
@@ -2594,7 +2594,7 @@ static void nsvg__parseSVG(NSVGparser* p, const char** attr)
 				const char *s = attr[i + 1];
 				char buf[64];
 				s = nsvg__parseNumber(s, buf, 64);
-				p->viewMinx = nsvg__atof(buf);
+				p->viewMinx = static_cast<float>(nsvg__atof(buf));
 				while (*s && (nsvg__isspace(*s) || *s == '%' || *s == ',')) s++;
 				if (!*s) return;
 				s = nsvg__parseNumber(s, buf, 64);
