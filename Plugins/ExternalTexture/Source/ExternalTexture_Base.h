@@ -69,7 +69,7 @@ namespace Babylon::Plugins
 
             for (auto handle : m_handles)
             {
-                if (bgfx::overrideInternal(handle, reinterpret_cast<uintptr_t>(ptr), layerIndex.value_or(0)) == 0)
+                if (bgfx::overrideInternal(handle, uintptr_t(ptr), layerIndex.value_or(0)) == 0)
                 {
                     assert(!"Failed to override texture");
                 }
