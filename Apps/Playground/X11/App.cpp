@@ -296,5 +296,6 @@ int main(int _argc, const char* const* _argv)
 
     XUnmapWindow(display, window);
     XDestroyWindow(display, window);
+    XCloseDisplay(display);
     return 0;
 }
