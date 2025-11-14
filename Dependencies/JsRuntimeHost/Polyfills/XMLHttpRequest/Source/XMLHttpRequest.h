@@ -44,6 +44,7 @@ namespace Babylon::Polyfills::Internal
         void SetReadyState(ReadyState readyState);
         void RaiseEvent(const char* eventType);
 
+        std::string m_url{};
         UrlLib::UrlRequest m_request{};
         JsRuntimeScheduler m_runtimeScheduler;
         ReadyState m_readyState{ReadyState::Unsent};

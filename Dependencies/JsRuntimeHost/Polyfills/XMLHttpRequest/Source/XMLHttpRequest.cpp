@@ -1,6 +1,8 @@
 #include "XMLHttpRequest.h"
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
+#include <arcana/tracing/trace_region.h>
+#include <sstream>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -216,11 +218,11 @@ namespace Babylon::Polyfills::Internal
 
     void XMLHttpRequest::Open(const Napi::CallbackInfo& info)
     {
-        const auto inputURL = info[1].As<Napi::String>();
+        m_url = info[1].As<Napi::String>();
 
         try
         {
-            m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), inputURL);
+            m_request.Open(MethodType::StringToEnum(info[0].As<Napi::String>().Utf8Value()), m_url);
         }
         catch (const std::exception& e)
         {
@@ -254,19 +256,26 @@ namespace Babylon::Polyfills::Internal
             }
         }
 
-        m_request.SendAsync().then(m_runtimeScheduler, arcana::cancellation::none(), [this]() {
-            SetReadyState(ReadyState::Done);
-            RaiseEvent(EventType::LoadEnd);
+        std::string traceName = (std::ostringstream{} << "XMLHttpRequest::Send [" << m_url << "]").str();
+        auto sendRegion = std::make_optional<arcana::trace_region>(traceName.c_str());
+        m_request.SendAsync()
+            .then(arcana::inline_scheduler, arcana::cancellation::none(), [sendRegion{std::move(sendRegion)}]() mutable {
+                sendRegion.reset();
+            })
+            .then(m_runtimeScheduler, arcana::cancellation::none(), [this]() {
+                SetReadyState(ReadyState::Done);
+                RaiseEvent(EventType::LoadEnd);
 
-            // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
-            // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
-            m_eventHandlerRefs.clear();
-        }).then(arcana::inline_scheduler, arcana::cancellation::none(), [env = info.Env()](arcana::expected<void, std::exception_ptr> result) {
-            if (result.has_error())
-            {
-                Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
-            }
-        });
+                // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
+                // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
+                m_eventHandlerRefs.clear();
+            })
+            .then(arcana::inline_scheduler, arcana::cancellation::none(), [env = info.Env()](arcana::expected<void, std::exception_ptr> result) {
+                if (result.has_error())
+                {
+                    Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
+                }
+            });
     }
 
     void XMLHttpRequest::SetReadyState(ReadyState readyState)
@@ -277,6 +286,8 @@ namespace Babylon::Polyfills::Internal
 
     void XMLHttpRequest::RaiseEvent(const char* eventType)
     {
+        std::string traceName = (std::ostringstream{} << "XMLHttpRequest::RaiseEvent [" << eventType << "] [" << m_url << "]").str();
+        arcana::trace_region raiseEventRegion{traceName.c_str()};
         const auto it = m_eventHandlerRefs.find(eventType);
         if (it != m_eventHandlerRefs.end())
         {
