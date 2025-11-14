@@ -1,10 +1,12 @@
 #include <bgfx/bgfx.h>
-#include <map>
-#include <cmath>
 #include "Canvas.h"
 #include "Context.h"
 #include "Gradient.h"
 #include "Colors.h"
+
+#include <algorithm>
+#include <cmath>
+#include <map>
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
@@ -64,7 +66,7 @@ namespace Babylon::Polyfills::Internal
             return color;
         color = nvgRGBAf(color.r * x->mul[0], color.g * x->mul[1], color.b * x->mul[2], color.a * x->mul[3]);
         color = nvgRGBAf(color.r + x->add[0], color.g + x->add[1], color.b + x->add[2], color.a + x->add[3]);
-        color = nvgRGBAf(std::fmax(0.0f, std::fmin(color.r, 1.0f)), std::fmax(0.0f, std::fmin(color.g, 1.0f)), std::fmax(0.0f, std::fmin(color.b, 1.0f)), std::fmax(0.0f, std::fmin(color.a, 1.0f)));
+        color = nvgRGBAf(std::max(0.0f, std::min(color.r, 1.0f)), std::max(0.0f, std::min(color.g, 1.0f)), std::max(0.0f, std::min(color.b, 1.0f)), std::max(0.0f, std::min(color.a, 1.0f)));
         return color;
     }
 
@@ -183,10 +185,10 @@ namespace Babylon::Polyfills::Internal
     NVGcolor lerpColor(NVGcolor color0, NVGcolor color1, float offset0, float offset1, float g)
     {
         NVGcolor dst;
-        float den = std::fmax(0.00001f, offset1 - offset0);
+        float den = std::max(0.00001f, offset1 - offset0);
         for (int i = 0; i < 4; i++)
             dst.rgba[i] = color0.rgba[i] + (color1.rgba[i] - color0.rgba[i]) * (g - offset0) / den;
-        dst = nvgRGBAf(std::fmax(0.0f, std::fmin(dst.r, 1.0f)), std::fmax(0.0f, std::fmin(dst.g, 1.0f)), std::fmax(0.0f, std::fmin(dst.b, 1.0f)), std::fmax(0.0f, std::fmin(dst.a, 1.0f)));
+        dst = nvgRGBAf(std::max(0.0f, std::min(dst.r, 1.0f)), std::max(0.0f, std::min(dst.g, 1.0f)), std::max(0.0f, std::min(dst.b, 1.0f)), std::max(0.0f, std::min(dst.a, 1.0f)));
         return dst;
     }
 
