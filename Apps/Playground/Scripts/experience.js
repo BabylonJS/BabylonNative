@@ -20,6 +20,8 @@ const imageCapture = false;
 const imageTracking = false;
 const readPixels = false;
 
+// BABYLON.Tools.PerformanceLogLevel = BABYLON.Tools.PerformanceConsoleLogLevel;
+
 function CreateBoxAsync(scene) {
     BABYLON.Mesh.CreateBox("box1", 0.2, scene);
     return Promise.resolve();
