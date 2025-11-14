@@ -33,7 +33,7 @@ namespace Babylon::Plugins::Internal
         dummyEvent.data.l[0] = XInternAtom(Plugins::TestUtils::display, "WM_DELETE_WINDOW", False);;
         XSendEvent(Plugins::TestUtils::display, window, 0, 0, (XEvent*)&dummyEvent);
         XFlush(Plugins::TestUtils::display);
-        XCloseDisplay(Plugins::TestUtils::display)
+        XCloseDisplay(Plugins::TestUtils::display);
         Plugins::TestUtils::display = nullptr;
     }
 
