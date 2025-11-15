@@ -9,6 +9,18 @@
 
 namespace Babylon::Graphics
 {
+    enum class DepthStencilFormat
+    {
+        // Do not create a depth/stencil texture.
+        None,
+
+        // Create a 32-bit depth texture with no stencil.
+        Depth32,
+
+        // Create a combined 24-bit depth and 8-bit stencil texture.
+        Depth24Stencil8,
+    };
+
     struct Configuration
     {
         // Custom device to use instead of creating one internally.
@@ -16,6 +28,16 @@ namespace Babylon::Graphics
 
         // The platform specific window.
         WindowT Window{};
+
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        // Color back buffer to use instead of creating one internally.
+        // @remarks Only available for D3D11.
+        BackBufferColorT BackBufferColor{};
+
+        // Depth stencil back buffer to use instead of creating one internally.
+        // @remarks Only available for D3D11. DepthStencilFormat is ignored when specified.
+        BackBufferDepthStencilT BackBufferDepthStencil{};
+#endif
 
         // The resolution width.
         size_t Width{};
@@ -28,6 +50,10 @@ namespace Babylon::Graphics
 
         // When enabled, back buffer will be premultiplied with alpha value.
         bool AlphaPremultiplied{};
+
+        // Format to use when creating the depth/stencil texture for the back buffer.
+        // Specify DepthStencilFormat::None to not create a depth/stencil texture.
+        DepthStencilFormat BackBufferDepthStencilFormat{DepthStencilFormat::Depth24Stencil8};
     };
 
     class Device;
