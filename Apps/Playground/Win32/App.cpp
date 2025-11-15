@@ -21,6 +21,7 @@
 #include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/TestUtils.h>
+#include <Babylon/Plugins/DataStream.h>
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
@@ -181,7 +182,7 @@ namespace
             });
 
             Babylon::Polyfills::Window::Initialize(env);
-
+            Babylon::Plugins::DataStream::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
             nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
