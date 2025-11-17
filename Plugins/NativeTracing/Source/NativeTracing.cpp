@@ -1,31 +1,37 @@
 #include <Babylon/Plugins/NativeTracing.h>
 #include <Babylon/JsRuntime.h>
-#include <napi/pointer.h>
-#include <arcana/tracing/trace_region.h>
-#include <optional>
+#include <Babylon/PerfTrace.h>
 
 namespace
 {
     Napi::Value StartPerformanceCounter(const Napi::CallbackInfo& info)
     {
         const std::string name{info[0].As<Napi::String>().Utf8Value()};
-        auto* traceRegion = new std::optional<arcana::trace_region>(name.c_str());
-        return Napi::Pointer<std::optional<arcana::trace_region>>::Create(info.Env(), traceRegion, Napi::NapiPointerDeleter(traceRegion));
+        return Babylon::PerfTrace::Handle::ToNapi(info.Env(), Babylon::PerfTrace::Trace(name.c_str()));
     }
 
     void EndPerformanceCounter(const Napi::CallbackInfo& info)
     {
-        info[0].As<Napi::Pointer<std::optional<arcana::trace_region>>>().Get()->reset();
+        Babylon::PerfTrace::Handle::FromNapi(info[0]);
     }
 
-    void EnablePerformanceTracing(const Napi::CallbackInfo&)
+    void EnablePerformanceTracing(const Napi::CallbackInfo& info)
     {
-        arcana::trace_region::enable();
+        auto level = Babylon::PerfTrace::Level::Mark;
+        if (info.Length() > 0)
+        {
+            level = static_cast<Babylon::PerfTrace::Level>(info[0].As<Napi::Number>().Uint32Value());
+            if (level != Babylon::PerfTrace::Level::Mark && level != Babylon::PerfTrace::Level::Log)
+            {
+                throw Napi::Error::New(info.Env(), "Invalid trace level");
+            }
+        }
+        Babylon::PerfTrace::SetLevel(level);
     }
 
     void DisablePerformanceTracing(const Napi::CallbackInfo&)
     {
-        arcana::trace_region::disable();
+        Babylon::PerfTrace::SetLevel(Babylon::PerfTrace::Level::None);
     }
 }
 

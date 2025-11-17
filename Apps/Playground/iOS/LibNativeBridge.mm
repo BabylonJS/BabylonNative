@@ -8,6 +8,7 @@
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeInput.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
+#import <Babylon/Plugins/NativeTracing.h>
 #import <Babylon/Plugins/NativeXr.h>
 #import <Babylon/Plugins/DataStream.h>
 #import <Babylon/Polyfills/Blob.h>
@@ -88,6 +89,8 @@ float screenScale{1.0f};
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Plugins::DataStream::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+
+        Babylon::Plugins::NativeTracing::Initialize(env);
 
         Babylon::Plugins::NativeCamera::Initialize(env);
 

@@ -19,6 +19,13 @@ const cameraTexture = false;
 const imageCapture = false;
 const imageTracking = false;
 const readPixels = false;
+const logPerf = true;
+
+if (logPerf) {
+    BABYLON.Tools.PerformanceLogLevel = BABYLON.Tools.PerformanceConsoleLogLevel;
+    BABYLON.Tools.StartPerformanceCounter("test counter");
+    setTimeout(() => BABYLON.Tools.EndPerformanceCounter("test counter"), 500);
+}
 
 function CreateBoxAsync(scene) {
     BABYLON.Mesh.CreateBox("box1", 0.2, scene);

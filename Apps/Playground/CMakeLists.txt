@@ -132,6 +132,7 @@ target_link_libraries(Playground
     PRIVATE Console
     PRIVATE ExternalTexture
     PRIVATE GraphicsDevice
+    PRIVATE NativeTracing
     PRIVATE NativeCapture
     PRIVATE NativeEncoding
     PRIVATE NativeEngine
