@@ -179,6 +179,7 @@ target_link_libraries(TestInstall
     spirv-cross-core
     spirv-cross-hlsl
     UrlLib
+    DataStream
     Window
     XMLHttpRequest
     ${ADDITIONAL_LIBRARIES}

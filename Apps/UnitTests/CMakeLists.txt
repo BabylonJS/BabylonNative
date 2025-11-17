@@ -5,13 +5,11 @@ endif()
 
 set(SCRIPTS
     "Scripts/tests.ts"
-    "Scripts/unittests_performance_shadercache.ts"
-    "Scripts/unittests_performance_spheres.ts")
+    "Scripts/unittests_performance_shadercache.ts")
 
 set(BUILD_SCRIPTS
     "dist/tests.js"
-    "dist/unittests_performance_shadercache.js"
-    "dist/unittests_performance_spheres.js")
+    "dist/unittests_performance_shadercache.js")
 
 set(SOURCES
     "Shared/Shared.h"
