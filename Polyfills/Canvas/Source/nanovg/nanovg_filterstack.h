@@ -40,9 +40,12 @@ public:
     void ParseString(const std::string& string);
     static bool ValidString(const std::string& string);
 
-    operator =(const nanovg_filterstack& other)
+    nanovg_filterstack& operator=(const nanovg_filterstack& other)
     {
-        this->stackElements = other.stackElements;
+        if (this != &other)
+        {
+            this->stackElements = other.stackElements;
+        }
         return *this;
     }
     void AddDropShadow()
