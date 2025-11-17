@@ -40,13 +40,18 @@ public:
     void ParseString(const std::string& string);
     static bool ValidString(const std::string& string);
 
+    operator =(const nanovg_filterstack& other)
+    {
+        this->stackElements = other.stackElements;
+        return *this;
+    }
     void AddDropShadow()
     {
         // break down shadow as blur + color
     }
     void Clear()
     { 
-        stackElements = std::vector<StackElement>(); // deallocate memory
+        stackElements.clear(); // deallocate memory
     }
 protected:
 
