@@ -9,12 +9,12 @@
     "getNightly": "node scripts/getNightly.js"
   },
   "dependencies": {
-    "babylonjs": "^8.36.1",
-    "babylonjs-gltf2interface": "^8.36.1",
-    "babylonjs-gui": "^8.36.1",
-    "babylonjs-loaders": "^8.36.1",
-    "babylonjs-materials": "^8.36.1",
-    "babylonjs-serializers": "^8.36.1",
+    "babylonjs": "^8.37.0",
+    "babylonjs-gltf2interface": "^8.37.0",
+    "babylonjs-gui": "^8.37.0",
+    "babylonjs-loaders": "^8.37.0",
+    "babylonjs-materials": "^8.37.0",
+    "babylonjs-serializers": "^8.37.0",
     "jsc-android": "^241213.1.0",
     "v8-android": "^7.8.2"
   }
