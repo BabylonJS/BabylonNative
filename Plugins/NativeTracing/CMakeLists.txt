@@ -15,6 +15,7 @@ target_include_directories(NativeTracing PUBLIC "Include")
 target_link_libraries(NativeTracing
     PUBLIC napi
     PRIVATE JsRuntimeInternal
+    PRIVATE Foundation
     PRIVATE arcana)
 
 set_property(TARGET NativeTracing PROPERTY FOLDER Plugins)
