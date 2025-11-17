@@ -8,10 +8,10 @@
     "postinstall": "npm run build"
   },
   "dependencies": {
-    "@babylonjs/core": "^8.37.0",
-    "@babylonjs/gui": "^8.37.0",
-    "@babylonjs/loaders": "^8.37.0",
-    "@babylonjs/materials": "^8.37.0",
+    "@babylonjs/core": "^8.25.1",
+    "@babylonjs/gui": "^8.25.1",
+    "@babylonjs/loaders": "^8.25.1",
+    "@babylonjs/materials": "^8.25.1",
     "chai": "^5.2.0",
     "jsc-android": "^241213.1.0",
     "mocha": "^11.1.0",
