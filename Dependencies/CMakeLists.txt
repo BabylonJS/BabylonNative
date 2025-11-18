@@ -240,6 +240,7 @@ endif()
 if(BABYLON_NATIVE_PLUGIN_DATASTREAM)
     FetchContent_MakeAvailable_With_Message(miniz)
     set_property(TARGET miniz PROPERTY UNITY_BUILD false)
+    target_compile_definitions(miniz PRIVATE MINIZ_DISABLE_ZIP_READER_CRC32_CHECKS)
 endif()
 
 # --------------------------------------------------

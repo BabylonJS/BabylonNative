@@ -34,6 +34,7 @@ namespace Babylon::Plugins::Internal::DataStream
     Napi::Value UnzipSync(const Napi::CallbackInfo& info)
     {
         const Napi::Env env{info.Env()};
+
         if (info.Length() < 1 || !info[0].IsTypedArray()) {
             throw Napi::Error::New(env, "Expected Uint8Array argument");
         }
@@ -43,16 +44,14 @@ namespace Babylon::Plugins::Internal::DataStream
         const uint8_t* zipData = input.Data();
         const size_t zipSize = input.ByteLength();
 
-        mz_zip_archive zip_archive;
-        memset(&zip_archive, 0, sizeof(zip_archive));
+        mz_zip_archive zip_archive{};
 
         if (!mz_zip_reader_init_mem(&zip_archive, zipData, zipSize, 0)) {
             throw Napi::Error::New(env, "Failed to initialize zip archive");
         }
 
-        Napi::Object result = Napi::Object::New(env);
         const auto fileCount = mz_zip_reader_get_num_files(&zip_archive);
-
+        Napi::Object result = Napi::Object::New(env);
         for (mz_uint i = 0; i < fileCount; i++)
         {
             mz_zip_archive_file_stat file_stat;
@@ -69,22 +68,21 @@ namespace Babylon::Plugins::Internal::DataStream
             std::string filename(file_stat.m_filename);
 
             size_t uncompressed_size = (size_t)file_stat.m_uncomp_size;
-            std::vector<uint8_t> buffer(uncompressed_size);
+            Napi::ArrayBuffer jsBuffer = Napi::ArrayBuffer::New(env, uncompressed_size);
 
-            if (!mz_zip_reader_extract_to_mem(&zip_archive, i, buffer.data(), uncompressed_size, 0))
+            if (!mz_zip_reader_extract_to_mem(&zip_archive, i, jsBuffer.Data(), uncompressed_size, 0))
             {
                 throw Napi::Error::New(env, "Failed to extract file");
                 continue;
             }
 
-            Napi::ArrayBuffer jsBuffer = Napi::ArrayBuffer::New(env, uncompressed_size);
-            memcpy(jsBuffer.Data(), buffer.data(), uncompressed_size);
             Napi::Uint8Array jsArray = Napi::Uint8Array::New(env, uncompressed_size, jsBuffer, 0);
 
             // result[filename] = Uint8Array
             result.Set(Napi::String::New(env, filename), jsArray);
         }
         mz_zip_reader_end(&zip_archive);
+        
         return result;
     }
 }
