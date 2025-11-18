@@ -1,5 +1,5 @@
-#include <Babylon/Graphics/Device.h>
 #include <gtest/gtest.h>
+#include <Babylon/Graphics/Device.h>
 
 Babylon::Graphics::Configuration g_deviceConfig{};
 
