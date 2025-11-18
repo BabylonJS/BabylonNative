@@ -3,17 +3,21 @@ if(NOT((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT AND
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-set(SCRIPTS
-    "Scripts/tests.ts"
-    "Scripts/unittests_performance_shadercache.ts")
+set(BABYLONJS_ASSETS
+    "JavaScript/node_modules/babylonjs/babylon.max.js")
 
-set(BUILD_SCRIPTS
-    "dist/tests.js"
-    "dist/unittests_performance_shadercache.js")
+set(BABYLONJS_MATERIALS_ASSETS
+    "JavaScript/node_modules/babylonjs-materials/babylonjs.materials.js")
+
+set(TEST_ASSETS
+    "JavaScript/dist/tests.javaScript.all.js"
+    "JavaScript/dist/tests.nativeEngine.shaderCache.js")
 
 set(SOURCES
-    "Shared/Shared.h"
-    "Shared/Shared.cpp")
+    "Shared/Tests.h"
+    "Shared/Tests.cpp"
+    "Shared/Tests.JavaScript.cpp"
+    "Shared/Tests.NativeEngine.cpp")
 
 if(APPLE)
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
@@ -25,7 +29,7 @@ elseif(WIN32)
     set(SOURCES ${SOURCES} "Win32/App.cpp")
 endif()
 
-add_executable(UnitTests ${SCRIPTS} ${BUILD_SCRIPTS} ${SOURCES})
+add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${SOURCES})
 set_property(TARGET UnitTests PROPERTY UNITY_BUILD false)
 
 target_link_libraries(UnitTests
@@ -50,16 +54,17 @@ add_test(NAME UnitTests COMMAND UnitTests)
 add_custom_command(TARGET UnitTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:UnitTests>>,copy,true> $<TARGET_RUNTIME_DLLS:UnitTests> $<TARGET_FILE_DIR:UnitTests> COMMAND_EXPAND_LISTS)
 
-foreach(SCRIPT ${BUILD_SCRIPTS})
-    get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
+foreach(ASSET ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS})
+    get_filename_component(ASSET_NAME "${ASSET}" NAME)
     add_custom_command(
-        OUTPUT "${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
-        COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
-        COMMENT "Copying ${SCRIPT_NAME}"
-        MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}")
+        OUTPUT "${CMAKE_CFG_INTDIR}/Assets/${ASSET_NAME}"
+        COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${ASSET}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Assets/${ASSET_NAME}"
+        COMMENT "Copying ${ASSET_NAME}"
+        MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${ASSET}")
 endforeach()
 
 set_property(TARGET UnitTests PROPERTY FOLDER Apps)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/dist PREFIX dist FILES ${BUILD_SCRIPTS})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Scripts PREFIX Scripts FILES ${SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/node_modules/babylonjs PREFIX Assets FILES ${BABYLONJS_ASSETS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/node_modules/babylonjs-materials PREFIX Assets FILES ${BABYLONJS_MATERIALS_ASSETS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/dist PREFIX Assets FILES ${TEST_ASSETS})
