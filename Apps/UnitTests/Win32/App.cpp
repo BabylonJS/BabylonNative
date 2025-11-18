@@ -1,5 +1,5 @@
 #include "../Shared/Tests.h"
-#include "Babylon/DebugTrace.h"
+#include <Babylon/DebugTrace.h>
 #include <Windows.h>
 
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)

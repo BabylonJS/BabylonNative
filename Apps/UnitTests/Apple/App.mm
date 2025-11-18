@@ -1,5 +1,5 @@
 #include "../Shared/Tests.h"
-#include "Babylon/DebugTrace.h"
+#include <Babylon/DebugTrace.h>
 
 int main()
 {
