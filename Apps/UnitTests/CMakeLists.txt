@@ -4,10 +4,10 @@ if(NOT((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT AND
 endif()
 
 set(BABYLONJS_ASSETS
-    "JavaScript/node_modules/babylonjs/babylon.max.js")
+    "../node_modules/babylonjs/babylon.max.js")
 
 set(BABYLONJS_MATERIALS_ASSETS
-    "JavaScript/node_modules/babylonjs-materials/babylonjs.materials.js")
+    "../node_modules/babylonjs-materials/babylonjs.materials.js")
 
 set(TEST_ASSETS
     "JavaScript/dist/tests.javaScript.all.js"
@@ -65,6 +65,6 @@ endforeach()
 
 set_property(TARGET UnitTests PROPERTY FOLDER Apps)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/node_modules/babylonjs PREFIX Assets FILES ${BABYLONJS_ASSETS})
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/node_modules/babylonjs-materials PREFIX Assets FILES ${BABYLONJS_MATERIALS_ASSETS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs PREFIX Assets FILES ${BABYLONJS_ASSETS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs-materials PREFIX Assets FILES ${BABYLONJS_MATERIALS_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/dist PREFIX Assets FILES ${TEST_ASSETS})
