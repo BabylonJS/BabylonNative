@@ -159,11 +159,11 @@ namespace Babylon::Plugins
     public:
         // Implemented in ExternalTexture_Shared.h
         Impl(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
-        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT>);
+        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT>, std::optional<uint16_t>);
 
-        uintptr_t Ptr() const
+        Graphics::TextureT Get() const
         {
-            return reinterpret_cast<uintptr_t>(m_ptr.get());
+            return m_ptr.get();
         }
 
     private:
@@ -179,6 +179,7 @@ namespace Babylon::Plugins
             info.Width = static_cast<uint16_t>(desc.Width);
             info.Height = static_cast<uint16_t>(desc.Height);
             info.MipLevels = static_cast<uint16_t>(desc.MipLevels);
+            info.NumLayers = static_cast<uint16_t>(desc.DepthOrArraySize);
 
             if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0)
             {
@@ -207,7 +208,7 @@ namespace Babylon::Plugins
             }
         }
 
-        void Assign(Graphics::TextureT ptr)
+        void Set(Graphics::TextureT ptr)
         {
             m_ptr.copy_from(ptr);
         }
