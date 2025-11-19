@@ -127,6 +127,10 @@ if(ENABLE_SANITIZERS)
 
         add_compile_options(-fsanitize=${SANITIZER_FLAGS} -fno-omit-frame-pointer)
         add_link_options(-fsanitize=${SANITIZER_FLAGS})
+    elseif(MSVC)
+        # MSVC only supports AddressSanitizer
+        add_compile_options(/fsanitize=address /Zi /Od)
+        add_link_options(/fsanitize=address)
     else()
         message(WARNING "Sanitizers not supported on this compiler.")
     endif()
