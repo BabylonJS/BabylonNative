@@ -6,17 +6,12 @@ module.exports = {
   mode: 'development', // or 'production'
   devtool: false,
   entry: {
-<<<<<<< HEAD:Apps/UnitTests/webpack.config.js
-    tests: './Scripts/tests.ts',
-    unittests_performance_shadercache: './Scripts/unittests_performance_shadercache.ts'
-=======
     "tests.javaScript.all": './src/tests.javaScript.all.ts',
     "tests.nativeEngine.shaderCache": './src/tests.nativeEngine.shaderCache.ts',
   },
   externals: {
     "@babylonjs/core": "BABYLON",
     "@babylonjs/materials": "BABYLON"
->>>>>>> 4c76fc4efb820f6f793f3165dd5f12f3f59af702:Apps/UnitTests/JavaScript/webpack.config.js
   },
   output: {
     filename: '[name].js',
