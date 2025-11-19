@@ -85,7 +85,7 @@ TEST(JavaScript, All)
     loader.Eval("location = { href: '' };", ""); // Required for Mocha.js as we do not have a location in Babylon Native
     loader.LoadScript("app:///Assets/babylon.max.js");
     loader.LoadScript("app:///Assets/babylonjs.materials.js");
-    loader.LoadScript("app:///Assets/tests.javascript.all.js");
+    loader.LoadScript("app:///Assets/tests.javaScript.all.js");
 
     device.StartRenderingCurrentFrame();
     device.FinishRenderingCurrentFrame();
