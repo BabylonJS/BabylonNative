@@ -20,7 +20,7 @@ namespace Babylon
         {
             UrlLib::UrlRequest request;
             std::string traceName = (std::ostringstream{} << "Loading script at url " << url).str();
-            DEBUG_TRACE(traceName);
+            DEBUG_TRACE("%s", traceName.c_str());
             arcana::trace_region requestRegion{traceName.c_str()};
             request.Open(UrlLib::UrlMethod::Get, url);
             request.ResponseType(UrlLib::UrlResponseType::String);
@@ -29,7 +29,7 @@ namespace Babylon
                 arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
                 dispatchFunction([taskCompletionSource, request = std::move(request), url = std::move(url)](Napi::Env env) mutable {
                     std::string traceName = (std::ostringstream{} << "Evaluating script at url " << url << " (LoadScript)").str();
-                    DEBUG_TRACE(traceName.c_str());
+                    DEBUG_TRACE("%s", traceName.c_str());
                     arcana::trace_region evalRegion{traceName.c_str()};
                     Napi::Eval(env, request.ResponseString().data(), url.data());
                     taskCompletionSource.complete();
