@@ -1,6 +1,8 @@
 #include <Babylon/ScriptLoader.h>
 #include <UrlLib/UrlLib.h>
 #include <arcana/threading/task.h>
+#include <arcana/tracing/trace_region.h>
+#include <sstream>
 #include "Babylon/DebugTrace.h"
 
 namespace Babylon
@@ -17,13 +19,18 @@ namespace Babylon
         void LoadScript(std::string url)
         {
             UrlLib::UrlRequest request;
-            DEBUG_TRACE("Loading script at url %s", url.c_str());
+            std::string traceName = (std::ostringstream{} << "Loading script at url " << url).str();
+            DEBUG_TRACE(traceName);
+            arcana::trace_region requestRegion{traceName.c_str()};
             request.Open(UrlLib::UrlMethod::Get, url);
             request.ResponseType(UrlLib::UrlResponseType::String);
-            m_task = arcana::when_all(m_task, request.SendAsync()).then(arcana::inline_scheduler, arcana::cancellation::none(), [dispatchFunction = m_dispatchFunction, request = std::move(request), url = std::move(url)](auto) mutable {
+            const auto requestTask = request.SendAsync().then(arcana::inline_scheduler, arcana::cancellation::none(), [requestRegion{std::move(requestRegion)}]() { });
+            m_task = arcana::when_all(m_task, requestTask).then(arcana::inline_scheduler, arcana::cancellation::none(), [dispatchFunction = m_dispatchFunction, request = std::move(request), url = std::move(url)](auto) mutable {
                 arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
                 dispatchFunction([taskCompletionSource, request = std::move(request), url = std::move(url)](Napi::Env env) mutable {
-                    DEBUG_TRACE("Evaluating script at url %s", url.c_str());
+                    std::string traceName = (std::ostringstream{} << "Evaluating script at url " << url << " (LoadScript)").str();
+                    DEBUG_TRACE(traceName.c_str());
+                    arcana::trace_region evalRegion{traceName.c_str()};
                     Napi::Eval(env, request.ResponseString().data(), url.data());
                     taskCompletionSource.complete();
                 });
@@ -37,6 +44,8 @@ namespace Babylon
                 [dispatchFunction = m_dispatchFunction, source = std::move(source), url = std::move(url)](auto) mutable {
                     arcana::task_completion_source<void, std::exception_ptr> taskCompletionSource{};
                     dispatchFunction([taskCompletionSource, source = std::move(source), url = std::move(url)](Napi::Env env) mutable {
+                        std::string traceName = (std::ostringstream{} << "Evaluating script at url " << url << " (Eval)").str();
+                        arcana::trace_region evalRegion{traceName.c_str()};
                         Napi::Eval(env, source.data(), url.data());
                         taskCompletionSource.complete();
                     });
