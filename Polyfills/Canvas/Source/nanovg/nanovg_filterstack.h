@@ -40,22 +40,11 @@ public:
     void ParseString(const std::string& string);
     static bool ValidString(const std::string& string);
 
-    nanovg_filterstack& operator=(const nanovg_filterstack& other)
-    {
-        if (this != &other)
-        {
-            this->stackElements = other.stackElements;
-        }
-        return *this;
-    }
     void AddDropShadow()
     {
         // break down shadow as blur + color
     }
-    void Clear()
-    { 
-        stackElements.clear(); // deallocate memory
-    }
+
 protected:
 
     enum StackElementTypes
@@ -79,12 +68,17 @@ protected:
     };
     struct StackElement
     {
-        StackElementTypes type;
-        SepiaElement sepiaElement;
-        Contrast contrastElement;
-        Blur blurElement;
+        union
+        {
+            StackElementTypes type;
+            SepiaElement sepiaElement;
+            Contrast contrastElement;
+            Blur blurElement;
+        };
     };
-    std::vector<StackElement> stackElements;
+    int stackElementCount;
+    static const int MAX_STACK_SIZE = 32;
+    StackElement stackElements[MAX_STACK_SIZE];
 
 private:
     std::vector<float> CalculateGaussianKernel(float sigma, int kernelSize);

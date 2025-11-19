@@ -222,7 +222,7 @@ namespace Babylon
                 // Unpack to RGB and RGBA such that RGB is the grayscale and the A is the alpha.
                 bimg::ImageContainer* oldImage{image};
                 image = bimg::imageAlloc(&allocator, bimg::TextureFormat::RGBA8, static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), 1, 1, false, false);
-                TransformImage(oldImage, image, image->m_format == bimg::TextureFormat::R8 ? UnpackR8 : UnpackRG8);
+                TransformImage(oldImage, image, oldImage->m_format == bimg::TextureFormat::R8 ? UnpackR8 : UnpackRG8);
                 bimg::imageFree(oldImage);
             }
 
