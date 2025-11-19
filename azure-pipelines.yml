@@ -67,6 +67,21 @@ jobs:
       platform: x64
       graphics_api: D3D12
 
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x64_D3D12_Sanitizers
+      vmImage: 'windows-latest'
+      platform: x64
+      enableSanitizers: true
+
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x64_V8_D3D11_Sanitizers
+      vmImage: 'windows-latest'
+      platform: x64
+      napiType: V8
+      enableSanitizers: true
+
 # UWP
   - template: .github/jobs/uwp.yml
     parameters:
