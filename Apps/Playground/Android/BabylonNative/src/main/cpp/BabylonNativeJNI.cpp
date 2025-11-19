@@ -24,7 +24,7 @@
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Canvas.h>
-#include "Babylon/DebugTrace.h"
+#include <Babylon/DebugTrace.h>
 
 namespace
 {

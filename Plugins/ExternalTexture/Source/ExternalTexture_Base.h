@@ -1,11 +1,11 @@
 #pragma once
 
+#include <Babylon/DebugTrace.h>
 #include <Babylon/Graphics/RendererType.h>
 #include <bgfx/bgfx.h>
 #include <set>
 #include <cassert>
 #include <cmath>
-#include "Babylon/DebugTrace.h"
 
 namespace Babylon::Plugins
 {

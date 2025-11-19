@@ -4,15 +4,11 @@
   "private": true,
   "scripts": {
     "build": "webpack",
-    "watch": "webpack -watch",
-    "postinstall": "npm run build"
+    "watch": "webpack -watch"
   },
   "dependencies": {
-    "@babylonjs/core": "^8.37.1",
-    "@babylonjs/gui": "^8.37.1",
-    "@babylonjs/loaders": "^8.37.1",
-    "@babylonjs/materials": "^8.37.1",
-    "@babylonjs/serializers": "^8.37.1",
+    "babylonjs": "^8.37.1",
+    "babylonjs-materials": "^8.37.1",
     "chai": "^5.2.0",
     "jsc-android": "^241213.1.0",
     "mocha": "^11.1.0",
@@ -31,6 +27,8 @@
     "@babel/preset-react": "^7.27.1",
     "@babel/preset-typescript": "^7.27.1",
     "@babel/runtime": "^7.28.2",
+    "@babylonjs/core": "^8.37.0",
+    "@babylonjs/materials": "^8.37.0",
     "babel-loader": "^10.0.0",
     "buffer": "^6.0.3",
     "core-js": "^3.45.0",

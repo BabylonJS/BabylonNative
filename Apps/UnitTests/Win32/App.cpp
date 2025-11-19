@@ -1,5 +1,5 @@
-#include "../Shared/Shared.h"
-#include "Babylon/DebugTrace.h"
+#include "../Shared/Tests.h"
+#include <Babylon/DebugTrace.h>
 #include <Windows.h>
 
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -7,7 +7,8 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return ::DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-int main() {
+int main()
+{
     SetConsoleOutputCP(CP_UTF8);
 
     // bgfx D3D12 implementation device refcount is not 0 when shutting down. This only happens when no HWND is provided.

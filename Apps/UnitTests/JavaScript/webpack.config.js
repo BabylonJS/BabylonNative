@@ -6,9 +6,13 @@ module.exports = {
   mode: 'development', // or 'production'
   devtool: false,
   entry: {
-    tests: './Scripts/tests.ts',
-  unittests_performance_shadercache: './Scripts/unittests_performance_shadercache.ts'
-},
+    "tests.javaScript.all": './src/tests.javaScript.all.ts',
+    "tests.nativeEngine.shaderCache": './src/tests.nativeEngine.shaderCache.ts',
+  },
+  externals: {
+    "@babylonjs/core": "BABYLON",
+    "@babylonjs/materials": "BABYLON"
+  },
   output: {
     filename: '[name].js',
     path: path.resolve(__dirname, 'dist'),
