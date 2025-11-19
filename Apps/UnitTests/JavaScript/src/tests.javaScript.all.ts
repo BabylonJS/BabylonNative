@@ -1,7 +1,7 @@
 ﻿import * as Mocha from "mocha";
 import { expect } from "chai";
 import {
-  FileTools,
+  RequestFile,
   NativeEngine,
   MeshBuilder,
   DefaultRenderingPipeline,
@@ -21,6 +21,9 @@ import {
 } from "@babylonjs/core";
 import { GradientMaterial } from "@babylonjs/materials";
 
+declare var describe: typeof Mocha.describe;
+declare var it: typeof Mocha.it;
+
 Mocha.setup("bdd");
 // @ts-ignore
 Mocha.reporter("spec");
@@ -32,10 +35,10 @@ declare const _native: any;
 describe("RequestFile", function () {
   this.timeout(0);
   it("should throw when requesting a URL with no protocol", function () {
-    function RequestFile() {
-      FileTools.RequestFile("noprotocol.gltf", () => {});
+    function requestFile() {
+      RequestFile("noprotocol.gltf", () => {});
     }
-    expect(RequestFile).to.throw();
+    expect(requestFile).to.throw();
   });
 });
 
@@ -126,7 +129,7 @@ describe("ColorParsing", function () {
   });
 });
 
-function createSceneAndWait(callback, done) {
+function createSceneAndWait(callback: (engine: NativeEngine, scene: Scene) => void, done: () => void) {
   const engine = new NativeEngine();
   const scene = new Scene(engine);
   scene.createDefaultCamera();
@@ -240,7 +243,7 @@ describe("PostProcesses", function () {
   });
   it("DefaultPipeline", function (done) {
     createSceneAndWait((engine, scene) => {
-      const camera = scene._activeCamera;
+      const camera = scene._activeCamera!;
       new DefaultRenderingPipeline(
         "defaultPipeline", // The name of the pipeline
         true, // Do you want the pipeline to use HDR texture?
