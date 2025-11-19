@@ -19,7 +19,7 @@ const cameraTexture = false;
 const imageCapture = false;
 const imageTracking = false;
 const readPixels = false;
-const logPerf = true;
+const logPerf = false;
 
 if (logPerf) {
     BABYLON.Tools.PerformanceLogLevel = BABYLON.Tools.PerformanceConsoleLogLevel;
