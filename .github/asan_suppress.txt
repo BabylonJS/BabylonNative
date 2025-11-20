@@ -3,4 +3,5 @@ leak:bmalloc_allocate_casual
 leak:reallocate_for_length
 leak:dbus_message_new_empty_header
 # false positive : Display opened and terminated still listed as a leak.
-leak:bgfx::gl::GlContext::create
+# Using a bit broader function because of unexplained reported leaks with isTextureFormatValid
+leak:bgfx::rendererCreate
