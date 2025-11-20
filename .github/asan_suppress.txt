@@ -5,4 +5,4 @@ leak:dbus_message_new_empty_header
 # false positive : Display opened and terminated still listed as a leak.
 # Using a bit broader function because of unexplained reported leaks with isTextureFormatValid
 leak:bgfx::rendererCreate
-leak:libjavascriptcoregtk-4.1.so
+leak:libdbus-1.so.3
