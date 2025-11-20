@@ -115,6 +115,7 @@ jobs:
       CC: clang
       CXX: clang++
       JSEngine: JavaScriptCore
+      enableSanitizers: false
 
   - template: .github/jobs/linux.yml
     parameters:
@@ -123,6 +124,7 @@ jobs:
       CC: gcc
       CXX: g++
       JSEngine: JavaScriptCore
+      enableSanitizers: false
 
   - template: .github/jobs/linux.yml
     parameters:
