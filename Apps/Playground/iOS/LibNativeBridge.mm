@@ -16,6 +16,7 @@
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/DebugTrace.h>
+#import <Babylon/PerfTrace.h>
 #import <optional>
 
 std::optional<Babylon::Graphics::Device> device{};
@@ -59,6 +60,7 @@ float screenScale{1.0f};
 
     Babylon::DebugTrace::EnableDebugTrace(true);
     Babylon::DebugTrace::SetTraceOutput([](const char* trace) { NSLog(@"%s", trace); });
+    Babylon::PerfTrace::SetLevel(Babylon::PerfTrace::Level::Mark);
 
     Babylon::Graphics::Configuration graphicsConfig{};
     graphicsConfig.Window = view;

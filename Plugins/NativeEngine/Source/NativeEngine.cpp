@@ -999,6 +999,7 @@ namespace Babylon
 
     std::unique_ptr<ProgramData> NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource)
     {
+        arcana::trace_region region{"NativeEngine::CreateProgramInternal"};
         const ShaderCompiler::BgfxShaderInfo* shaderInfo{};
         ShaderCompiler::BgfxShaderInfo bgfxShaderInfo{};
         if (ShaderCacheImpl::GetImpl())
@@ -1436,6 +1437,7 @@ namespace Babylon
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
             [dataSpan, generateMips, invertY, srgb, texture, cancellationSource{m_cancellationSource}]() {
+                arcana::trace_region loadRegion{"NativeEngine::LoadTexture"};
                 bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan)};
                 image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, srgb, generateMips);
                 LoadTextureFromImage(texture, image, srgb);
