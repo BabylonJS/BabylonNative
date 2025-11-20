@@ -68,9 +68,9 @@ protected:
     };
     struct StackElement
     {
+        StackElementTypes type;
         union
         {
-            StackElementTypes type;
             SepiaElement sepiaElement;
             Contrast contrastElement;
             Blur blurElement;

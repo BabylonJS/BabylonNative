@@ -20,7 +20,6 @@ def unity_build = "false"
 if (project.hasProperty("UNITY_BUILD")) {
     unity_build = project.property("UNITY_BUILD")
 }
-
 def arcore_libpath = "${buildDir}/arcore-native"
 
 configurations { natives }
