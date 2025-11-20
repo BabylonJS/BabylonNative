@@ -81,7 +81,7 @@ jobs:
                   Copy-Item -Destination $dest
           }
         displayName: "Copy ASAN runtime DLLs"
-        condition: eq(variables.SANITIZER_FLAG, 'ON')
+        condition: ${{ parameters.enableSanitizers }}
 
       - script: |
           cd build${{ variables.solutionName }}\Apps\Playground
