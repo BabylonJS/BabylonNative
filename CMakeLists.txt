@@ -37,7 +37,7 @@ FetchContent_Declare(ios-cmake
     GIT_TAG 4.5.0)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 76f2c8f224855b53196f4fde691a9f4c08c8b8aa)
+    GIT_TAG b3dbf370caf560fb5b93936efd4cdf4e990d4d0a)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
     GIT_TAG 6abfcf066d171e9ade7604d91381ebebe4209edc)
