@@ -34,15 +34,8 @@ jobs:
     
     - script: |
         cd build/Apps/Playground
-        xvfb-run ./Playground app:///Scripts/validation_native.js
-      displayName: 'Validation Tests'
-      condition: ${{ parameters.enableSanitizers == false }}
-
-    - script: |
-        cd build/Apps/Playground
         ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=suppressions=../../../.github/asan_suppress.txt xvfb-run ./Playground app:///Scripts/validation_native.js
-      displayName: 'Validation Tests with ASAN'
-      condition: ${{ parameters.enableSanitizers }}
+      displayName: 'Validation Tests'
 
     - task: PublishBuildArtifacts@1
       inputs:
@@ -59,12 +52,5 @@ jobs:
 
     - script: |
         cd build/Apps/UnitTests
-        xvfb-run ./UnitTests
-      displayName: 'Unit Tests'
-      condition: ${{ parameters.enableSanitizers == false}}
-
-    - script: |
-        cd build/Apps/UnitTests
         ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=suppressions=../../../.github/asan_suppress.txt xvfb-run ./UnitTests
-      displayName: 'Unit Tests with ASAN'
-      condition: ${{ parameters.enableSanitizers }}
+      displayName: 'Unit Tests'
