@@ -33,6 +33,11 @@ jobs:
       displayName: 'Build X11'
     
     - script: |
+        cd build/Apps/UnitTests
+        ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=suppressions=../../../.github/asan_suppress.txt xvfb-run ./UnitTests
+      displayName: 'Unit Tests'
+
+    - script: |
         cd build/Apps/Playground
         ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=suppressions=../../../.github/asan_suppress.txt xvfb-run ./Playground app:///Scripts/validation_native.js
       displayName: 'Validation Tests'
@@ -49,8 +54,3 @@ jobs:
         pathtoPublish: 'build/Apps/Playground/Errors'
       displayName: 'Publish Tests ${{ parameters.name }} Errors'
       condition: failed()
-
-    - script: |
-        cd build/Apps/UnitTests
-        ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=suppressions=../../../.github/asan_suppress.txt xvfb-run ./UnitTests
-      displayName: 'Unit Tests'

@@ -1,6 +1,6 @@
-# Suppress leaks from dbus
+# Suppress leaks from dbus. No direct leak visible with BN.
 leak:bmalloc_allocate_casual
 leak:reallocate_for_length
 leak:dbus_message_new_empty_header
-# Display opened and terminated still listed as a leak
+# false positive : Display opened and terminated still listed as a leak.
 leak:bgfx::gl::GlContext::create
