@@ -13,7 +13,7 @@ jobs:
       vmImage: ${{ parameters.vmImage }}
 
     variables:
-      SANITIZER_FLAG: ${{ if eq(parameters.enableSanitizers, true) }}ON${{ else }}OFF
+      SANITIZER_FLAG: ${{ coalesce(replace(format('{0}', parameters.enableSanitizers), 'True', 'ON'), 'OFF') }}
       CC: ${{ parameters.CC }}
       CXX: ${{ parameters.CXX }}
   
@@ -36,7 +36,7 @@ jobs:
         cd build/Apps/Playground
         xvfb-run ./Playground app:///Scripts/validation_native.js
       displayName: 'Validation Tests'
-      condition: eq(variables.SANITIZER_FLAG, 'OFF')
+      condition: not(eq(variables.SANITIZER_FLAG, 'ON'))
 
     - script: |
         cd build/Apps/Playground
@@ -61,7 +61,7 @@ jobs:
         cd build/Apps/UnitTests
         xvfb-run ./UnitTests
       displayName: 'Unit Tests'
-      condition: eq(variables.SANITIZER_FLAG, 'OFF')
+      condition: not(eq(variables.SANITIZER_FLAG, 'ON'))
 
     - script: |
         cd build/Apps/UnitTests

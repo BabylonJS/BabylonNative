@@ -10,7 +10,7 @@ jobs:
       vmImage: ${{ parameters.vmImage }}
 
     variables:
-      SANITIZER_FLAG: ${{ if eq(parameters.enableSanitizers, true) }}ON${{ else }}OFF
+      SANITIZER_FLAG: ${{ coalesce(replace(format('{0}', parameters.enableSanitizers), 'True', 'ON'), 'OFF') }}
 
     steps:
     - template: cmake.yml
