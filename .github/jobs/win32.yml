@@ -72,8 +72,8 @@ jobs:
           $asan = "$($msvc.FullName)\bin\Hostx64\x64"
 
           $destinations = @(
-              "build${{ variables.solutionName }}\Apps\Playground",
-              "build${{ variables.solutionName }}\Apps\UnitTests"
+              "build${{ variables.solutionName }}\Apps\Playground\RelWithDebInfo",
+              "build${{ variables.solutionName }}\Apps\UnitTests\RelWithDebInfo"
           )
 
           foreach ($dest in $destinations) {
