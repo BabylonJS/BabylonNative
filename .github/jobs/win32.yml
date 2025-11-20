@@ -25,7 +25,7 @@ jobs:
     pool:
       vmImage: ${{ parameters.vmImage }}
     variables:
-      SANITIZER_FLAG: ${{ coalesce(replace(format('{0}', parameters.enableSanitizers), 'True', 'ON'), 'OFF') }}
+      SANITIZER_FLAG: ${{ if eq(parameters.enableSanitizers, true) }}ON${{ else }}OFF
       ${{ if eq(parameters.napiType, 'jsi') }}:
         napiSuffix: '_JSI'
         jsEngineDefine: '-DNAPI_JAVASCRIPT_ENGINE=JSI'

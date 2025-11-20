@@ -11,7 +11,7 @@ jobs:
       vmImage: ${{ parameters.vmImage }}
 
     variables:
-      SANITIZER_FLAG: ${{ coalesce(replace(format('{0}', parameters.Sanitizers), 'True', 'ON'), 'OFF') }}
+      SANITIZER_FLAG: ${{ if eq(parameters.enableSanitizers, true) }}ON${{ else }}OFF
 
     steps:
     - template: cmake.yml
