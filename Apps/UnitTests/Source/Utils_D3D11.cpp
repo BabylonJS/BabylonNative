@@ -24,8 +24,5 @@ Babylon::Graphics::TextureT CreateTestTexture(Babylon::Graphics::DeviceT device,
 
 void DestroyTestTexture(Babylon::Graphics::TextureT texture)
 {
-    if (texture != nullptr)
-    {
-        texture->Release();
-    }
+    texture->Release();
 }

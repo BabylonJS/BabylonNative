@@ -101,7 +101,7 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
     // Update the external texture to a new texture.
     auto nativeTexture2 = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256);
     externalTexture.Update(nativeTexture2);
-    DestroyTestTexture(nativeTexture);
+    DestroyTestTexture(nativeTexture2);
 
     update.Finish();
     device.FinishRenderingCurrentFrame();
