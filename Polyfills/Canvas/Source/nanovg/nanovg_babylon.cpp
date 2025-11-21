@@ -1027,7 +1027,6 @@ namespace
             for (uint32_t ii = 0, num = gl->ncalls; ii < num; ++ii)
             {
                 struct GLNVGcall* call = &gl->calls[ii];
-                nanovg_filterstack fs = call->filterStack; // CHECK: did we want to do something with this?
 
                 const GLNVGblend* blend = &call->blendFunc;
                 gl->state = BGFX_STATE_BLEND_FUNC_SEPARATE(blend->srcRGB, blend->dstRGB, blend->srcAlpha, blend->dstAlpha)
@@ -1328,6 +1327,7 @@ namespace
         bgfx::destroy(gl->u_scissorExtScale);
         bgfx::destroy(gl->u_extentRadius);
         bgfx::destroy(gl->u_params);
+        bgfx::destroy(gl->u_sdf);
         bgfx::destroy(gl->s_tex);
         bgfx::destroy(gl->s_tex2);
         nanovg_filterstack::DisposeBgfx();

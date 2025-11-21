@@ -89,6 +89,12 @@ namespace Babylon
             }
 
             template<typename T>
+#ifndef _MSC_VER
+            // Clang reports UndefinedBehaviorSanitizer : undefined - behavior
+            // load of misaligned address  which requires 8 byte alignment
+            // pointed data are fine so it looks like a false positive
+            __attribute__((no_sanitize("undefined")))
+#endif
             T ReadNativeData()
             {
                 Validate<ValidationType::NativeData>(*this);

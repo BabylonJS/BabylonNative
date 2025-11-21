@@ -1,0 +1,7 @@
+# Suppress leaks from dbus. No direct leak visible with BN.
+# command to dump leaks and suppress annecessary :
+# ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=suppressions=../../../.github/asan_suppress.txt ./UnitTests
+# ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=suppressions=../../../.github/asan_suppress.txt xvfb-run ./Playground app:///Scripts/validation_native.js
+leak:bmalloc_allocate_casual
+leak:reallocate_for_length
+leak:dbus_message_new_empty_header

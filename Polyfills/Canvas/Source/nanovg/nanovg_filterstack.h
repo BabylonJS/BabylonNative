@@ -44,7 +44,7 @@ public:
     {
         // break down shadow as blur + color
     }
-    void Clear() { stackElements.clear(); }
+
 protected:
 
     enum StackElementTypes
@@ -76,7 +76,9 @@ protected:
             Blur blurElement;
         };
     };
-    std::vector<StackElement> stackElements;
+    int stackElementCount;
+    static const int MAX_STACK_SIZE = 32;
+    StackElement stackElements[MAX_STACK_SIZE];
 
 private:
     std::vector<float> CalculateGaussianKernel(float sigma, int kernelSize);
