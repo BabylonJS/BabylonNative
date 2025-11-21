@@ -19,8 +19,8 @@ extern Babylon::Graphics::Configuration g_deviceConfig;
 
 TEST(ExternalTexture, Construction)
 {
-#ifdef BABYLON_NATIVE_TESTS_DISABLE_EXTERNAL_TEXTURE
-    GTEST_SKIP() << "Test is disabled.";
+#ifdef SKIP_EXTERNAL_TEXTURE_TESTS
+    GTEST_SKIP();
 #else
     Babylon::Graphics::Device device{g_deviceConfig};
     Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
@@ -42,8 +42,8 @@ TEST(ExternalTexture, Construction)
 
 TEST(ExternalTexture, AddToContextAsyncAndUpdate)
 {
-#ifdef BABYLON_NATIVE_TESTS_DISABLE_EXTERNAL_TEXTURE
-    GTEST_SKIP() << "Test is disabled.";
+#ifdef SKIP_EXTERNAL_TEXTURE_TESTS
+    GTEST_SKIP();
 #else
     Babylon::Graphics::Device device{g_deviceConfig};
     Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};

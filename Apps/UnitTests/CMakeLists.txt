@@ -26,14 +26,15 @@ set(SOURCES
 if(APPLE)
     set(SOURCES ${SOURCES} "Source/App_Apple.mm")
     if(BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE)
-        target_compile_definitions(Graphics PRIVATE BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE)
-        target_compile_definitions(Graphics PRIVATE BABYLON_NATIVE_TESTS_DISABLE_EXTERNAL_TEXTURE)
+        set(ADDITIONAL_COMPILE_DEFINITIONS
+            PRIVATE USE_NOOP_METAL_DEVICE
+            PRIVATE SKIP_EXTERNAL_TEXTURE_TESTS)
     endif()
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
     set(ADDITIONAL_LIBRARIES PRIVATE ${JAVASCRIPTCORE_LIBRARY})
 elseif(UNIX AND NOT ANDROID)
     set(SOURCES ${SOURCES} "Source/App_X11.cpp")
-    target_compile_definitions(Graphics PRIVATE BABYLON_NATIVE_TESTS_DISABLE_EXTERNAL_TEXTURE)
+    set(ADDITIONAL_COMPILE_DEFINITIONS PRIVATE SKIP_EXTERNAL_TEXTURE_TESTS)
 elseif(WIN32)
     set(SOURCES ${SOURCES} "Source/App_Win32.cpp")
 endif()
@@ -56,6 +57,8 @@ target_link_libraries(UnitTests
     PRIVATE XMLHttpRequest
     PRIVATE gtest_main
     ${ADDITIONAL_LIBRARIES})
+
+target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
 
 add_test(NAME UnitTests COMMAND UnitTests)
 

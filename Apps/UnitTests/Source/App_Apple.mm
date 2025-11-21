@@ -9,7 +9,7 @@ int main()
 
     Babylon::Graphics::Configuration config{};
 
-#ifndef BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE
+#ifndef USE_NOOP_METAL_DEVICE
     config.Device = MTLCreateSystemDefaultDevice();
     config.Width = 600;
     config.Height = 400;
