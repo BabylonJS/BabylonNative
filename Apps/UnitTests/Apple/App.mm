@@ -1,7 +1,8 @@
-#include "../Shared/Shared.h"
-#include "Babylon/DebugTrace.h"
+#include "../Shared/Tests.h"
+#include <Babylon/DebugTrace.h>
 
-int main() {
+int main()
+{
     Babylon::DebugTrace::EnableDebugTrace(true);
     Babylon::DebugTrace::SetTraceOutput([](const char* trace) { NSLog(@"%s", trace); });
 
