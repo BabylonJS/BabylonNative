@@ -124,14 +124,16 @@ jobs:
       CXX: g++
       JSEngine: JavaScriptCore
 
-  - template: .github/jobs/linux.yml
-    parameters:
-      name: Ubuntu_Clang_JavaScriptCore_Sanitizers
-      vmImage: 'ubuntu-latest'
-      CC: clang
-      CXX: clang++
-      JSEngine: JavaScriptCore
-      enableSanitizers: true
+# Memory leaks on CI is disabled due to memory leaks reported with xvfb and impossible to add to ignore list.
+# See https://github.com/BabylonJS/BabylonNative/issues/1575
+#  - template: .github/jobs/linux.yml
+#    parameters:
+#      name: Ubuntu_Clang_JavaScriptCore_Sanitizers
+#      vmImage: 'ubuntu-latest'
+#      CC: clang
+#      CXX: clang++
+#      JSEngine: JavaScriptCore
+#      enableSanitizers: true
 
 # Android
   - template: .github/jobs/android.yml
