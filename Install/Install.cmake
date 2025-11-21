@@ -64,6 +64,9 @@ endif()
 ## UrlLib
 install_targets(UrlLib)
 
+## DataStream
+install_targets(DataStream)
+
 ## Fonudation
 install_targets(Foundation)
 
