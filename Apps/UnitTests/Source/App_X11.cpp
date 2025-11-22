@@ -16,7 +16,7 @@ namespace
     constexpr const char* wmDeleteWindowName = "WM_DELETE_WINDOW";
 }
 
-int main(int argc, char* argv[]))
+int main(int argc, char* argv[])
 {
     XInitThreads();
     Display* display = XOpenDisplay(NULL);
