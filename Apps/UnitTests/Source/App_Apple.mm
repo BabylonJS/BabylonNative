@@ -2,7 +2,7 @@
 #include <Babylon/DebugTrace.h>
 #include <Metal/Metal.h>
 
-int main(int argc, char* argv[]))
+int main(int argc, char* argv[])
 {
     Babylon::DebugTrace::EnableDebugTrace(true);
     Babylon::DebugTrace::SetTraceOutput([](const char* trace) { NSLog(@"%s", trace); });
