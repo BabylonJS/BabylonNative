@@ -16,7 +16,7 @@ namespace
     constexpr const char* wmDeleteWindowName = "WM_DELETE_WINDOW";
 }
 
-int main()
+int main(int argc, char* argv[]))
 {
     XInitThreads();
     Display* display = XOpenDisplay(NULL);
@@ -53,5 +53,5 @@ int main()
     Babylon::DebugTrace::EnableDebugTrace(true);
     Babylon::DebugTrace::SetTraceOutput([](const char* trace) { printf("%s\n", trace); fflush(stdout); });
 
-    return RunTests(config);
+    return RunTests(config, argc, argv);
 }

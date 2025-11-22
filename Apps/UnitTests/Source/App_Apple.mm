@@ -2,7 +2,7 @@
 #include <Babylon/DebugTrace.h>
 #include <Metal/Metal.h>
 
-int main()
+int main(int argc, char* argv[]))
 {
     Babylon::DebugTrace::EnableDebugTrace(true);
     Babylon::DebugTrace::SetTraceOutput([](const char* trace) { NSLog(@"%s", trace); });
@@ -15,5 +15,5 @@ int main()
     config.Height = 400;
 #endif
 
-    return RunTests(config);
+    return RunTests(config, argc, argv);
 }

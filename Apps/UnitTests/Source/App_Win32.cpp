@@ -7,7 +7,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return ::DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-int main()
+int main(int argc, char* argv[])
 {
     SetConsoleOutputCP(CP_UTF8);
 
@@ -29,5 +29,5 @@ int main()
         OutputDebugStringA("\n");
     });
 
-    return RunTests(config);
+    return RunTests(config, argc, argv);
 }

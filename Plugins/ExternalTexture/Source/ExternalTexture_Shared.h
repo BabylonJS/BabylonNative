@@ -69,7 +69,7 @@ namespace Babylon::Plugins
         DEBUG_TRACE("ExternalTexture [0x%p] AddToContextAsync", m_impl.get());
 
         arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(),
-            [&context, &runtime, deferred = std::move(deferred), impl = m_impl]() {
+            [&context, &runtime, deferred = std::move(deferred), impl = m_impl]() mutable {
                 // REVIEW: The bgfx texture handle probably needs to be an RAII object to make sure it gets clean up during the asynchrony.
                 //         For example, if any of the schedulers/dispatches below don't fire, then the texture handle will leak.
                 bgfx::TextureHandle handle = bgfx::createTexture2D(impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
@@ -84,7 +84,7 @@ namespace Babylon::Plugins
                     return;
                 }
 
-                arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&runtime, &context, deferred = std::move(deferred), handle, impl = std::move(impl)]() {
+                arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&runtime, &context, deferred = std::move(deferred), handle, impl = std::move(impl)]() mutable {
                     if (bgfx::overrideInternal(handle, impl->Ptr()) == 0)
                     {
                         runtime.Dispatch([deferred = std::move(deferred), handle](Napi::Env env) {
@@ -95,7 +95,7 @@ namespace Babylon::Plugins
                         return;
                     }
 
-                    runtime.Dispatch([deferred = std::move(deferred), handle, &context, impl = std::move(impl)](Napi::Env env) {
+                    runtime.Dispatch([deferred = std::move(deferred), handle, &context, impl = std::move(impl)](Napi::Env env) mutable {
                         auto* texture = new Graphics::Texture{context};
                         DEBUG_TRACE("ExternalTexture [0x%p] attach %d x %d %d mips. Format : %d Flags : %d. (bgfx handle id %d)", impl.get(), int(impl->Width()), int(impl->Height()), int(impl->HasMips()), int(impl->Format()), int(impl->Flags()), int(handle.idx));
                         texture->Attach(handle, true, impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
