@@ -16,7 +16,7 @@ namespace Babylon::Graphics
 
     struct PlatformInfo
     {
-        struct MTLDevice* Device;
-        struct MTLCommandQueue* CommandQueue;
+        id<MTLDevice> Device;
+        id<MTLCommandQueue> CommandQueue;
     };
 }

@@ -109,7 +109,7 @@ int main()
 
         // Initialize the console polyfill.
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-            std::cout << message;
+            std::cout << message << std::endl;
         });
 
         // Initialize the window, XMLHttpRequest, and NativeEngine polyfills.

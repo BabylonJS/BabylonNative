@@ -7,10 +7,9 @@ namespace Babylon::Graphics
 
     PlatformInfo DeviceImpl::GetPlatformInfo() const
     {
-        return
-        {
-            static_cast<struct MTLDevice*>(bgfx::getInternalData()->context),
-            static_cast<struct MTLCommandQueue*>(bgfx::getInternalData()->commandQueue)
-        };
+        auto internalData = bgfx::getInternalData();
+        id<MTLDevice> device = (id<MTLDevice>)internalData->context;
+        id<MTLCommandQueue> commandQueue = (id<MTLCommandQueue>)internalData->commandQueue;
+        return {device, commandQueue};
     }
 }
