@@ -1139,6 +1139,7 @@ namespace Napi {
 
     Error();
     Error(napi_env env, jsi::Object object);
+    Error(napi_env env, jsi::Value value);
 
     // An error can be moved or copied.
     Error(Error&& other);
@@ -1168,6 +1169,7 @@ namespace Napi {
 
     TypeError();
     TypeError(napi_env env, jsi::Object object);
+    TypeError(napi_env env, jsi::Value value);
   };
 
   class RangeError : public Error {
@@ -1177,6 +1179,7 @@ namespace Napi {
 
     RangeError();
     RangeError(napi_env env, jsi::Object object);
+    RangeError(napi_env env, jsi::Value value);
   };
 
   class CallbackInfo {

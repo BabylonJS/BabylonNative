@@ -1344,7 +1344,7 @@ inline Function Function::New(napi_env env,
                               Callable cb,
                               const char* utf8name,
                               void* data) {
-  auto function{jsi::Function::createFromHostFunction(env->rt, jsi::PropNameID::forUtf8(env->rt, utf8name), 0,
+  auto function{jsi::Function::createFromHostFunction(env->rt, jsi::PropNameID::forUtf8(env->rt, utf8name == nullptr ? "" : utf8name), 0,
     [env, cb{std::move(cb)}, data](jsi::Runtime&, const jsi::Value& thisVal, const jsi::Value* args, size_t count) -> jsi::Value {
       typedef decltype(cb(CallbackInfo({}, {}, {}, {}, {}, {}))) ReturnType;
       return details::Function<Callable, ReturnType>::Callback(env, thisVal, args, count, data, cb);
@@ -1569,7 +1569,12 @@ inline Error::Error(napi_env env, jsi::Object object)
   : ObjectReference{env, std::move(object)} {
 }
 
-inline Error::Error(Error&& other) : ObjectReference(other) {
+inline Error::Error(napi_env env, jsi::Value value)
+  : ObjectReference{env, value.asObject(env->rt)} {
+}
+
+inline Error::Error(Error&& other)
+  : ObjectReference(other) {
 }
 
 inline Error& Error::operator =(Error&& other) {
@@ -1623,6 +1628,10 @@ inline TypeError::TypeError(napi_env env, jsi::Object object)
   : Error{env, std::move(object)} {
 }
 
+inline TypeError::TypeError(napi_env env, jsi::Value value)
+  : Error{env, std::move(value)} {
+}
+
 inline RangeError RangeError::New(napi_env env, const char* message) {
   return Error::New<RangeError, const char*>(env, message, "RangeError");
 }
@@ -1633,6 +1642,10 @@ inline RangeError RangeError::New(napi_env env, const std::string& message) {
 
 inline RangeError::RangeError(napi_env env, jsi::Object object)
   : Error{env, std::move(object)} {
+}
+
+inline RangeError::RangeError(napi_env env, jsi::Value value)
+  : Error{env, std::move(value)} {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
