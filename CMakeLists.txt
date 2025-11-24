@@ -131,7 +131,7 @@ if(ENABLE_SANITIZERS)
         # MSVC only supports AddressSanitizer
         add_compile_options(/fsanitize=address /Zi /Od)
     else()
-        message(WARNING "Sanitizers not supported on this compiler.")
+        message(FATAL_ERROR "Sanitizers not supported on this compiler.")
     endif()
 endif()
 # --------------------------------------------------

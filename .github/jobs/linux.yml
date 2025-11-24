@@ -36,16 +36,16 @@ jobs:
 # See https://github.com/BabylonJS/BabylonNative/issues/1575
 
     - script: |
-        cd build/Apps/UnitTests
-        xvfb-run ./UnitTests
-      displayName: 'Unit Tests'
-
-    - script: |
         cd build/Apps/Playground
         # Command line to suppress false positive memory leaks :
         # ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=suppressions=../../../.github/asan_suppress.txt xvfb-run ./Playground app:///Scripts/validation_native.js
         xvfb-run ./Playground app:///Scripts/validation_native.js
       displayName: 'Validation Tests'
+
+    - script: |
+        cd build/Apps/UnitTests
+        xvfb-run ./UnitTests
+      displayName: 'Unit Tests'
 
     - task: PublishBuildArtifacts@1
       inputs:

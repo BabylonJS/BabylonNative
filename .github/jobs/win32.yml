@@ -63,24 +63,16 @@ jobs:
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpType /t REG_DWORD /d 2
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpCount /t REG_DWORD /d 1
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
-
         displayName: 'Enable Crash Dumps'
 
       - powershell: |
           $vs = vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
           $msvc = Get-ChildItem "$vs\VC\Tools\MSVC" | Sort-Object Name -Descending | Select-Object -First 1
-          $asan = "$($msvc.FullName)\bin\Hostx64\x64"
+          $asanPath = "$($msvc.FullName)\bin\Hostx64\x64"
 
-          $destinations = @(
-              "build${{ variables.solutionName }}\Apps\Playground\RelWithDebInfo",
-              "build${{ variables.solutionName }}\Apps\UnitTests\RelWithDebInfo"
-          )
-
-          foreach ($dest in $destinations) {
-              Get-ChildItem "$asan\clang_rt.asan_*.dll" |
-                  Copy-Item -Destination $dest
-          }
-        displayName: "Copy ASAN runtime DLLs"
+          Write-Host "Adding ASAN runtime folder to PATH: $asanPath"
+          Write-Host "##vso[task.prependpath]$asanPath"
+        displayName: "Add ASAN runtime DLLs to PATH"
         condition: ${{ parameters.enableSanitizers }}
 
       - script: |
