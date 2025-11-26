@@ -2,8 +2,10 @@
 
 #import <Babylon/AppRuntime.h>
 #import <Babylon/Graphics/Device.h>
+#import <Babylon/Plugins/NativeEncoding.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeInput.h>
+#import <Babylon/Polyfills/Blob.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/Polyfills/Canvas.h>
@@ -118,6 +120,8 @@ Babylon::Plugins::NativeInput* nativeInput{};
     {
         device->AddToJavaScript(env);
 
+        Babylon::Polyfills::Blob::Initialize(env);
+
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
             NSLog(@"%s", message);
         });
@@ -129,6 +133,8 @@ Babylon::Plugins::NativeInput* nativeInput{};
         nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
 
         Babylon::Plugins::NativeCamera::Initialize(env);
+
+        Babylon::Plugins::NativeEncoding::Initialize(env);
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 
@@ -145,6 +151,7 @@ Babylon::Plugins::NativeInput* nativeInput{};
     loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
     loader.LoadScript("app:///Scripts/babylonjs.materials.js");
     loader.LoadScript("app:///Scripts/babylon.gui.js");
+    loader.LoadScript("app:///Scripts/babylonjs.serializers.js"); 
 
     if (scripts.empty())
     {

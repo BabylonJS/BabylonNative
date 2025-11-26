@@ -729,8 +729,6 @@ namespace Babylon
 
                 InstanceMethod("populateFrameStats", &NativeEngine::PopulateFrameStats),
 
-                // REVIEW: Should this be here if only used by ValidationTest?
-                InstanceMethod("getFrameBufferData", &NativeEngine::GetFrameBufferData),
                 InstanceMethod("setDeviceLostCallback", &NativeEngine::SetRenderResetCallback),
             });
 
@@ -1002,6 +1000,7 @@ namespace Babylon
 
     std::unique_ptr<ProgramData> NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource)
     {
+        arcana::trace_region region{"NativeEngine::CreateProgramInternal"};
         const ShaderCompiler::BgfxShaderInfo* shaderInfo{};
         ShaderCompiler::BgfxShaderInfo bgfxShaderInfo{};
         if (ShaderCacheImpl::GetImpl())
@@ -1439,6 +1438,7 @@ namespace Babylon
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
             [dataSpan, generateMips, invertY, srgb, texture, cancellationSource{m_cancellationSource}]() {
+                arcana::trace_region loadRegion{"NativeEngine::LoadTexture"};
                 bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan)};
                 image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, srgb, generateMips);
                 LoadTextureFromImage(texture, image, srgb);
@@ -1762,7 +1762,7 @@ namespace Babylon
         else
         {
             bgfx::TextureHandle sourceTextureHandle{texture->Handle()};
-            auto tempTexture{false};
+            auto tempTexture = std::make_shared<bool>(false);
 
             // If the image needs to be cropped (not starting at 0, or less than full width/height (accounting for requested mip level)),
             // or if the texture was not created with the BGFX_TEXTURE_READ_BACK flag, then blit it to a temp texture.
@@ -1773,7 +1773,7 @@ namespace Babylon
                 encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0, sourceTextureHandle, mipLevel, x, y, /*srcZ*/ 0, width, height, /*depth*/ 0);
 
                 sourceTextureHandle = blitTextureHandle;
-                tempTexture = true;
+                *tempTexture = true;
 
                 // The requested mip level was blitted, so the source texture now has just one mip, so reset the mip level to 0.
                 mipLevel = 0;
@@ -1817,10 +1817,10 @@ namespace Babylon
 
                     // Dispose of the texture handle before resolving the promise.
                     // TODO: Handle properly handle stale handles after BGFX shutdown
-                    if (tempTexture && !m_cancellationSource->cancelled())
+                    if (*tempTexture && !m_cancellationSource->cancelled())
                     {
                         bgfx::destroy(sourceTextureHandle);
-                        tempTexture = false;
+                        *tempTexture = false;
                     }
 
                     deferred.Resolve(bufferRef.Value());
@@ -1828,7 +1828,7 @@ namespace Babylon
                 .then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
                     // Dispose of the texture handle if not yet disposed.
                     // TODO: Handle properly handle stale handles after BGFX shutdown
-                    if (tempTexture && !m_cancellationSource->cancelled())
+                    if (*tempTexture && !m_cancellationSource->cancelled())
                     {
                         bgfx::destroy(sourceTextureHandle);
                     }
@@ -2185,20 +2185,6 @@ namespace Babylon
         m_deviceContext.SetRenderResetCallback([this, renderResetCallback = std::move(callbackPtr)]() {
             m_runtime.Dispatch([renderResetCallback = std::move(renderResetCallback)](auto) {
                 renderResetCallback->Call({});
-            });
-        });
-    }
-
-    void NativeEngine::GetFrameBufferData(const Napi::CallbackInfo& info)
-    {
-        const auto callback{info[0].As<Napi::Function>()};
-
-        auto callbackPtr{std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback))};
-        m_deviceContext.RequestScreenShot([this, callbackPtr{std::move(callbackPtr)}](std::vector<uint8_t> array) {
-            m_runtime.Dispatch([callbackPtr{std::move(callbackPtr)}, array{std::move(array)}](Napi::Env env) {
-                auto arrayBuffer{Napi::ArrayBuffer::New(env, const_cast<uint8_t*>(array.data()), array.size())};
-                auto typedArray{Napi::Uint8Array::New(env, array.size(), arrayBuffer, 0)};
-                callbackPtr->Value().Call({typedArray});
             });
         });
     }

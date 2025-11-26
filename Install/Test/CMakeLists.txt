@@ -44,17 +44,12 @@ endif()
 
 set(APPS_DIR "../../Apps")
 set(UNITTESTS_DIR "${APPS_DIR}/UnitTests")
-set(LOCAL_SCRIPTS "${UNITTESTS_DIR}/Scripts/tests.js")
-
-set(NPM_SCRIPTS
-    "${APPS_DIR}/node_modules/babylonjs/babylon.max.js"
-    "${APPS_DIR}/node_modules/babylonjs-materials/babylonjs.materials.js"
-    "${APPS_DIR}/node_modules/chai/chai.js"
-    "${APPS_DIR}/node_modules/mocha/mocha.js")
 
 set(SOURCES
-    "${UNITTESTS_DIR}/Shared/Shared.h"
-    "${UNITTESTS_DIR}/Shared/Shared.cpp")
+    "${UNITTESTS_DIR}/Shared/Tests.h"
+    "${UNITTESTS_DIR}/Shared/Tests.cpp"
+    "${UNITTESTS_DIR}/Shared/Tests.JavaScript.cpp"
+    "${UNITTESTS_DIR}/Shared/Tests.NativeEngine.cpp")
 
 if(WIN32 AND NOT WINDOWS_STORE)
     set(SOURCES ${SOURCES} "${UNITTESTS_DIR}/Win32/App.cpp")
@@ -127,7 +122,7 @@ elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
     endif()
 endif()
 
-add_executable(TestInstall ${LOCAL_SCRIPTS} ${NPM_SCRIPTS} ${SOURCES})
+add_executable(TestInstall ${SOURCES})
 
 set(INSTALL_LIBS_DIR "${BINARY_DIR}/install/lib")
 target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")
@@ -140,14 +135,18 @@ endif()
 target_link_libraries(TestInstall
     AppRuntime
     arcana
-    bimg_encode
-    bimg_decode
-    minz
     bgfx
     bimg
+    bimg_decode
+    bimg_encode
+    Blob
     bx
     Canvas
+    chakrart
     Console
+    d3d11
+    d3d12
+    d3dcompiler
     ExternalTexture
     Foundation
     GenericCodeGen
@@ -161,29 +160,27 @@ target_link_libraries(TestInstall
     libwebpdecoder.lib
     libwebpdemux.lib
     MachineIndependent
+    minz
     napi
     NativeCamera
     NativeCapture
+    NativeEncoding
     NativeEngine
     NativeInput
     NativeOptimizations
     NativeTracing
     OGLCompiler
     OSDependent
-    ScriptLoader
+    Pathcch
+    runtimeobject.lib # for WINRT_IMPL_RoXXX functions
     Scheduling
+    ScriptLoader
+    SPIRV
     spirv-cross-core
     spirv-cross-hlsl
-    SPIRV
     UrlLib
     Window
     XMLHttpRequest
-    chakrart
-    d3d11
-    d3d12
-    d3dcompiler
-    Pathcch
-    runtimeobject.lib # for WINRT_IMPL_RoXXX functions
     ${ADDITIONAL_LIBRARIES}
 )
 

@@ -81,7 +81,7 @@
     }
 
     function evaluate(test, referenceImage, done, compareFunction) {
-        engine._engine.getFrameBufferData(function (screenshot) {
+        TestUtils.getFrameBufferData(function (screenshot) {
             let testRes = true;
 
             if (!test.onlyVisual) {
@@ -179,7 +179,22 @@
                         try {
                             xmlHttp.onreadystatechange = null;
                             const snippet = JSON.parse(xmlHttp.responseText);
-                            let code = JSON.parse(snippet.jsonPayload).code.toString()
+                            let code = JSON.parse(snippet.jsonPayload).code.toString();
+
+                            // Check if this is a v2 manifest and extract the entry file's code
+                            // TODO: Handle multi-file playgrounds
+                            try {
+                                const manifestPayload = JSON.parse(code);
+                                if (manifestPayload.v === 2) {
+                                    code = manifestPayload.files[manifestPayload.entry]
+                                        .replace(/export +default +/g, "")
+                                        .replace(/export +/g, "");
+                                }
+                            } catch (e) {
+                                // Not a manifest, proceed as usual
+                            }
+
+                            code = code
                                 .replace(/"\/textures\//g, '"' + pgRoot + "/textures/")
                                 .replace(/"textures\//g, '"' + pgRoot + "/textures/")
                                 .replace(/\/scenes\//g, pgRoot + "/scenes/")

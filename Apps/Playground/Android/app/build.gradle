@@ -117,6 +117,12 @@ task copyFiles {
     }
     copy
     {
+        from '../../../node_modules/babylonjs-serializers'
+        include "babylonjs.serializers.js"
+        into 'src/main/assets/Scripts'
+    }
+    copy
+    {
         from '../../../Dependencies'
         include "*.js"
         into 'src/main/assets/Scripts'

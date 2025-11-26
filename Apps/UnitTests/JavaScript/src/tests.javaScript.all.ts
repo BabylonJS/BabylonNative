@@ -1,7 +1,7 @@
 ﻿import * as Mocha from "mocha";
 import { expect } from "chai";
 import {
-  FileTools,
+  RequestFile,
   NativeEngine,
   MeshBuilder,
   DefaultRenderingPipeline,
@@ -21,6 +21,9 @@ import {
 } from "@babylonjs/core";
 import { GradientMaterial } from "@babylonjs/materials";
 
+declare var describe: typeof Mocha.describe;
+declare var it: typeof Mocha.it;
+
 Mocha.setup("bdd");
 // @ts-ignore
 Mocha.reporter("spec");
@@ -32,10 +35,10 @@ declare const _native: any;
 describe("RequestFile", function () {
   this.timeout(0);
   it("should throw when requesting a URL with no protocol", function () {
-    function RequestFile() {
-      FileTools.RequestFile("noprotocol.gltf", () => {});
+    function requestFile() {
+      RequestFile("noprotocol.gltf", () => {});
     }
-    expect(RequestFile).to.throw();
+    expect(requestFile).to.throw();
   });
 });
 
@@ -126,7 +129,7 @@ describe("ColorParsing", function () {
   });
 });
 
-function createSceneAndWait(callback, done) {
+function createSceneAndWait(callback: (engine: NativeEngine, scene: Scene) => void, done: () => void) {
   const engine = new NativeEngine();
   const scene = new Scene(engine);
   scene.createDefaultCamera();
@@ -240,7 +243,7 @@ describe("PostProcesses", function () {
   });
   it("DefaultPipeline", function (done) {
     createSceneAndWait((engine, scene) => {
-      const camera = scene._activeCamera;
+      const camera = scene._activeCamera!;
       new DefaultRenderingPipeline(
         "defaultPipeline", // The name of the pipeline
         true, // Do you want the pipeline to use HDR texture?
@@ -290,6 +293,39 @@ describe("PostProcesses", function () {
             new ScreenSpaceReflectionPostProcess("ssr", scene, 1.0, camera);
         }, done);
     });*/
+});
+
+describe("NativeEncoding", function () {
+  this.timeout(0);
+
+  async function expectValidPNG(blob: Blob) {
+    expect(blob).to.be.instanceOf(Blob);
+    const arrayBuffer = await blob.arrayBuffer();
+    expect(arrayBuffer.byteLength).to.be.greaterThan(0);
+
+    const pngSignature = new Uint8Array(arrayBuffer.slice(0, 4));
+    expect(pngSignature[0]).to.equal(137); // PNG signature bytes
+    expect(pngSignature[1]).to.equal(80);  // 'P'
+    expect(pngSignature[2]).to.equal(78);  // 'N'
+    expect(pngSignature[3]).to.equal(71);  // 'G'
+  }
+
+  it("should encode a PNG", async function () {
+    const pixelData = new Uint8Array(4).fill(255);
+    const result = await _native.EncodeImageAsync(pixelData, 1, 1, "image/png", false);
+    await expectValidPNG(result);
+  });
+
+  it("should handle multiple concurrent encoding tasks", async function () {
+    const pixelDatas = [];
+    for (let i = 0; i < 10; i++) {
+      pixelDatas.push(new Uint8Array(4).fill(255));
+    }
+    const results = await Promise.all(pixelDatas.map((pixelData) =>
+      _native.EncodeImageAsync(pixelData, 1, 1, "image/png", false)
+    ));
+    await Promise.all(results.map(b => expectValidPNG(b)));
+  });
 });
 
 mocha.run((failures) => {

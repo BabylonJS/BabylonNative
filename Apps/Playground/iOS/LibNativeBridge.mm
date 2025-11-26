@@ -4,15 +4,19 @@
 #import <Babylon/Graphics/Device.h>
 #import <Babylon/ScriptLoader.h>
 #import <Babylon/Plugins/NativeCamera.h>
+#import <Babylon/Plugins/NativeEncoding.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeInput.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
+#import <Babylon/Plugins/NativeTracing.h>
 #import <Babylon/Plugins/NativeXr.h>
+#import <Babylon/Polyfills/Blob.h>
 #import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/Polyfills/Console.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/DebugTrace.h>
+#import <Babylon/PerfTrace.h>
 #import <optional>
 
 std::optional<Babylon::Graphics::Device> device{};
@@ -56,6 +60,7 @@ float screenScale{1.0f};
 
     Babylon::DebugTrace::EnableDebugTrace(true);
     Babylon::DebugTrace::SetTraceOutput([](const char* trace) { NSLog(@"%s", trace); });
+    Babylon::PerfTrace::SetLevel(Babylon::PerfTrace::Level::Mark);
 
     Babylon::Graphics::Configuration graphicsConfig{};
     graphicsConfig.Window = view;
@@ -74,6 +79,8 @@ float screenScale{1.0f};
     {
         device->AddToJavaScript(env);
 
+        Babylon::Polyfills::Blob::Initialize(env);
+
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
             NSLog(@"%s", message);
         });
@@ -84,7 +91,11 @@ float screenScale{1.0f};
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
+        Babylon::Plugins::NativeTracing::Initialize(env);
+
         Babylon::Plugins::NativeCamera::Initialize(env);
+
+        Babylon::Plugins::NativeEncoding::Initialize(env);
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 
@@ -104,6 +115,7 @@ float screenScale{1.0f};
     loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
     loader.LoadScript("app:///Scripts/babylonjs.materials.js");
     loader.LoadScript("app:///Scripts/babylon.gui.js");
+    loader.LoadScript("app:///Scripts/babylonjs.serializers.js"); 
     loader.LoadScript("app:///Scripts/experience.js");
 }
 

@@ -33,3 +33,7 @@ endif()
 if(BABYLON_NATIVE_PLUGIN_NATIVEXR AND (ANDROID OR IOS))
     add_subdirectory(NativeXr)
 endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVEENCODING)
+    add_subdirectory(NativeEncoding)
+endif()

@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include <gtest/gtest.h>
 #include <jni.h>
 #include <Android/log.h>
 #include <AndroidExtensions/Globals.h>
@@ -6,7 +6,7 @@
 #include <AndroidExtensions/StdoutLogger.h>
 #include <atomic>
 #include <Shared/Tests.h>
-#include "Babylon/DebugTrace.h"
+#include <Babylon/DebugTrace.h>
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_babylonnative_unittests_Native_javaScriptTests(JNIEnv* env, jclass clazz, jobject context) {
