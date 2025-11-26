@@ -305,7 +305,7 @@ namespace
 
         depthMix.resize(splatCount * 2);
 
-        for (int i = 0; i < splatCount; i++)
+        for (size_t i = 0; i < splatCount; i++)
         {
             depthMix[i * 2 + 0] = float(i);
             depthMix[i * 2 + 1] = 10000.f + (vp[0] * positions[4 * i + 0] + vp[1] * positions[4 * i + 1] + vp[2] * positions[4 * i + 2]) * depthFactor;
@@ -313,7 +313,7 @@ namespace
 
         qsort(depthMix.data(), splatCount, 2 * sizeof(float), sortSplatQSort);
 
-        for (int i = 0; i < splatCount; i++)
+        for (size_t i = 0; i < splatCount; i++)
         {
             indices[i] = depthMix[i * 2 + 0];
         }
