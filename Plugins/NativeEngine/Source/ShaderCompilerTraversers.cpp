@@ -719,7 +719,10 @@ namespace Babylon::ShaderCompilerTraversers
                 IF_NAME_RETURN_ATTRIB("world1", bgfx::Attrib::TexCoord5, "i_data1")
                 IF_NAME_RETURN_ATTRIB("world2", bgfx::Attrib::TexCoord6, "i_data2")
                 IF_NAME_RETURN_ATTRIB("world3", bgfx::Attrib::TexCoord7, "i_data3")
-                IF_NAME_RETURN_ATTRIB("splatIndex", bgfx::Attrib::TexCoord7, "i_data3")
+                IF_NAME_RETURN_ATTRIB("splatIndex0", bgfx::Attrib::TexCoord4, "i_data0")
+                IF_NAME_RETURN_ATTRIB("splatIndex1", bgfx::Attrib::TexCoord5, "i_data1")
+                IF_NAME_RETURN_ATTRIB("splatIndex2", bgfx::Attrib::TexCoord6, "i_data2")
+                IF_NAME_RETURN_ATTRIB("splatIndex3", bgfx::Attrib::TexCoord7, "i_data3")
 #undef IF_NAME_RETURN_ATTRIB
                 const unsigned int attributeLocation = FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++;
                 if (attributeLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
