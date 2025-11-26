@@ -20,25 +20,7 @@ const imageCapture = false;
 const imageTracking = false;
 const readPixels = false;
 
-function CreateBoxAsync(scene) {
-    //BABYLON.Mesh.CreateBox("box1", 0.2, scene);
-    // Our built-in 'sphere' shape.
-    var sphere = BABYLON.MeshBuilder.CreateSphere("sphere", { diameter: 1, segments: 32 }, scene);
-
-    // Move the sphere upward 1/2 its height
-    sphere.position.y = 0.5;
-    sphere.position.z = -1;
-
-    // Our built-in 'ground' shape.
-    //var ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 6, height: 6 }, scene);
-
-    // Gaussian Splatting
-    /*BABYLON.SceneLoader.ImportMeshAsync(null, "https://raw.githubusercontent.com/CedricGuillemet/dump/master/", "Halo_Believe.splat", scene).then((result) => {
-        console.log("loaded");
-        result.meshes[0].position.y = 1.7;
-    });
-    */
-
+function CreateGSAsync(scene) {
     var gs = new BABYLON.GaussianSplattingMesh("GS", undefined, scene, true);
 
     var generateGS = function (time) {
@@ -46,14 +28,15 @@ function CreateBoxAsync(scene) {
         const rowLength = 3 * 4 + 3 * 4 + 4 + 4;
 
         // chunck size of splats
-        const splatCount = 10000;
+        const b = 100;
+        const splatCount = b * b;
 
         const uBuffer = new Uint8Array(splatCount * rowLength);
         const fBuffer = new Float32Array(uBuffer.buffer);
 
-        for (let j = 0; j < 100; j++) {
-            for (let ji = 0; ji < 100; ji++) {
-                const i = ji + j * 100;
+        for (let j = 0; j < b; j++) {
+            for (let ji = 0; ji < b; ji++) {
+                const i = ji + j * b;
                 // position
                 x = j * 0.1 - 5;
                 y = -Math.sin(time + ji * 0.04 + j * 0.02) * 1 - 1;
@@ -84,7 +67,6 @@ function CreateBoxAsync(scene) {
     };
     generateGS(0);
 
-
     return Promise.resolve();
 }
 
@@ -107,7 +89,7 @@ function CreateSpheresAsync(scene) {
 const engine = new BABYLON.NativeEngine();
 const scene = new BABYLON.Scene(engine);
 
-CreateBoxAsync(scene).then(function () {
+CreateGSAsync(scene).then(function () {
 //CreateSpheresAsync(scene).then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
 //BABYLON.SceneLoader.AppendAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
