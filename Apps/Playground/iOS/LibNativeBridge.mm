@@ -11,6 +11,7 @@
 #import <Babylon/Plugins/NativeTracing.h>
 #import <Babylon/Plugins/NativeXr.h>
 #import <Babylon/Plugins/Zip.h>
+#import <Babylon/Plugins/DecompressionStream.h>
 #import <Babylon/Polyfills/Blob.h>
 #import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/Polyfills/Console.h>
