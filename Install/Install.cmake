@@ -70,7 +70,7 @@ install_targets(Zip)
 ## DecompressionStream
 install_targets(DecompressionStream)
 
-## Fonudation
+## Foundation
 install_targets(Foundation)
 
 # ----------------
