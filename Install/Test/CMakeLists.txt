@@ -166,6 +166,8 @@ target_link_libraries(TestInstall
     NativeCapture
     NativeEncoding
     NativeEngine
+    Zip
+    DecompressionStream
     NativeInput
     NativeOptimizations
     NativeTracing

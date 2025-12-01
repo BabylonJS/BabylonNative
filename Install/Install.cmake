@@ -64,7 +64,13 @@ endif()
 ## UrlLib
 install_targets(UrlLib)
 
-## Fonudation
+## Zip
+install_targets(Zip)
+
+## DecompressionStream
+install_targets(DecompressionStream)
+
+## Foundation
 install_targets(Foundation)
 
 # ----------------

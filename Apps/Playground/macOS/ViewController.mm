@@ -5,11 +5,13 @@
 #import <Babylon/Plugins/NativeEncoding.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeInput.h>
+#import <Babylon/Plugins/Zip.h>
 #import <Babylon/Polyfills/Blob.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
 #import <Babylon/Polyfills/Canvas.h>
 #import <Babylon/Polyfills/Console.h>
+#import <Babylon/Polyfills/DecompressionStream.h>
 #import <Babylon/Plugins/NativeCamera.h>
 #import <Babylon/Plugins/NativeOptimizations.h>
 #import <Babylon/ScriptLoader.h>
@@ -127,7 +129,8 @@ Babylon::Plugins::NativeInput* nativeInput{};
         });
 
         Babylon::Polyfills::Window::Initialize(env);
-
+        Babylon::Plugins::Zip::Initialize(env);
+        Babylon::Polyfills::DecompressionStream::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
         nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));

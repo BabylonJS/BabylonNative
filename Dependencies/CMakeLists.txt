@@ -233,3 +233,24 @@ endif()
 if(WINDOWS_STORE)
     add_subdirectory(WindowsAppSDK)
 endif()
+
+# --------------------------------------------------
+# miniz
+# --------------------------------------------------
+if(BABYLON_NATIVE_PLUGIN_ZIP)
+    FetchContent_MakeAvailable_With_Message(miniz)
+    target_compile_definitions(miniz PRIVATE MINIZ_DISABLE_ZIP_READER_CRC32_CHECKS)
+    set_property(TARGET miniz PROPERTY UNITY_BUILD false)
+    set_property(TARGET miniz PROPERTY FOLDER Dependencies)
+endif()
+
+# --------------------------------------------------
+# libdeflate
+# --------------------------------------------------
+if(BABYLON_NATIVE_POLYFILL_DECOMPRESSIONSTREAM)
+    set(LIBDEFLATE_BUILD_SHARED_LIB OFF)
+    set(LIBDEFLATE_COMPRESSION_SUPPORT OFF)
+    FetchContent_MakeAvailable_With_Message(libdeflate)
+    set_property(TARGET libdeflate_static PROPERTY UNITY_BUILD false)
+    set_property(TARGET libdeflate_static PROPERTY FOLDER Dependencies)
+endif()
