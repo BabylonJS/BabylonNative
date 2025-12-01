@@ -35,7 +35,8 @@ target_link_libraries(UnitTestsJNI
     PRIVATE GraphicsDevice
     PRIVATE NativeCamera
     PRIVATE NativeEngine
-    PRIVATE DataStream
+    PRIVATE Zip
+    PRIVATE DecompressionStream
     PRIVATE NativeInput
     PRIVATE NativeOptimizations
     PRIVATE NativeEncoding

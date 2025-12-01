@@ -2,7 +2,7 @@
 
 #include <Babylon/JsRuntimeScheduler.h>
 
-namespace Babylon::Plugins::Internal
+namespace Babylon::Polyfills::Internal
 {
     class ReadableStream final : public Napi::ObjectWrap<ReadableStream>
     {

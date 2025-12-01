@@ -6,7 +6,7 @@
 
 #include "libdeflate.h"
 
-namespace Babylon::Plugins::Internal
+namespace Babylon::Polyfills::Internal
 {
     class DecompressionStream final : public Napi::ObjectWrap<DecompressionStream>
     {

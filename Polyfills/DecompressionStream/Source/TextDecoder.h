@@ -3,7 +3,7 @@
 #include <string>
 #include <Babylon/JsRuntimeScheduler.h>
 
-namespace Babylon::Plugins::Internal
+namespace Babylon::Polyfills::Internal
 {
     class TextDecoder final : public Napi::ObjectWrap<TextDecoder>
     {

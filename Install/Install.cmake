@@ -64,8 +64,11 @@ endif()
 ## UrlLib
 install_targets(UrlLib)
 
-## DataStream
-install_targets(DataStream)
+## Zip
+install_targets(Zip)
+
+## DecompressionStream
+install_targets(DecompressionStream)
 
 ## Fonudation
 install_targets(Foundation)

@@ -38,6 +38,6 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENCODING)
     add_subdirectory(NativeEncoding)
 endif()
 
-if(BABYLON_NATIVE_PLUGIN_DATASTREAM)
-    add_subdirectory(DataStream)
+if(BABYLON_NATIVE_PLUGIN_ZIP)
+    add_subdirectory(Zip)
 endif()

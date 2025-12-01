@@ -3,7 +3,7 @@
 #include <Babylon/JsRuntimeScheduler.h>
 #include "DecompressionStream.h"
 
-namespace Babylon::Plugins::Internal
+namespace Babylon::Polyfills::Internal
 {
     class Response final : public Napi::ObjectWrap<Response>
     {

@@ -5,12 +5,13 @@
 #include <Babylon/Plugins/NativeEncoding.h>
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
-#include <Babylon/Plugins/DataStream.h>
+#include <Babylon/Plugins/Zip.h>
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Canvas.h>
+#include <Babylon/Polyfills/DecompressionStream.h>
 #include <Babylon/DebugTrace.h>
 
 #include <winrt/windows.ui.core.h>
@@ -398,7 +399,8 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
         m_nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
 
         Babylon::Polyfills::Window::Initialize(env);
-        Babylon::Plugins::DataStream::Initialize(env);
+        Babylon::Plugins::Zip::Initialize(env);
+        Babylon::Polyfills::DecompressionStream::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
         Babylon::Plugins::NativeEncoding::Initialize(env);

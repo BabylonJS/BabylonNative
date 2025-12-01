@@ -2,7 +2,7 @@
 
 #include <napi/env.h>
 
-namespace Babylon::Plugins::DataStream
+namespace Babylon::Polyfills::DecompressionStream
 {
     void BABYLON_API Initialize(Napi::Env env);
 }

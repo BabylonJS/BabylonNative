@@ -39,7 +39,8 @@ target_link_libraries(UnitTests
     PRIVATE Console
     PRIVATE GraphicsDevice
     PRIVATE NativeEngine
-    PRIVATE DataStream
+    PRIVATE Zip
+    PRIVATE DecompressionStream
     PRIVATE NativeEncoding
     PRIVATE ScriptLoader
     PRIVATE UrlLib

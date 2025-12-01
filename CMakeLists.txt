@@ -109,11 +109,13 @@ option(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS "Include Babylon Native Plugin 
 option(BABYLON_NATIVE_PLUGIN_NATIVETRACING "Include Babylon Native Plugin NativeTracing." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEXR "Include Babylon Native Plugin XR." ON)
 option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils." ON)
-option(BABYLON_NATIVE_PLUGIN_DATASTREAM "Include Babylon Native Plugin DataStream." ON)
+option(BABYLON_NATIVE_PLUGIN_ZIP "Include Babylon Native Plugin Zip." ON)
+option(BABYLON_NATIVE_PLUGIN_ZIP "Include Babylon Native Plugin Zip." ON)
 
 # Polyfills
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
+option(BABYLON_NATIVE_POLYFILL_DECOMPRESSIONSTREAM "Include Babylon Native Polyfill Decompression Stream." ON)
 
 # --------------------------------------------------
 
