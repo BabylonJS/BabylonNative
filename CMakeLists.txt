@@ -110,7 +110,6 @@ option(BABYLON_NATIVE_PLUGIN_NATIVETRACING "Include Babylon Native Plugin Native
 option(BABYLON_NATIVE_PLUGIN_NATIVEXR "Include Babylon Native Plugin XR." ON)
 option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils." ON)
 option(BABYLON_NATIVE_PLUGIN_ZIP "Include Babylon Native Plugin Zip." ON)
-option(BABYLON_NATIVE_PLUGIN_ZIP "Include Babylon Native Plugin Zip." ON)
 
 # Polyfills
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
