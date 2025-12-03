@@ -22,7 +22,7 @@ jobs:
       displayName: 'Select XCode $(XCODE_VERSION)'
 
     - script: |
-        cmake -G Xcode -B buildmacOS -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D ENABLE_SANITIZERS=$(SANITIZER_FLAG)
+        cmake -G Xcode -B buildmacOS -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D ENABLE_SANITIZERS=$(SANITIZER_FLAG) -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
       displayName: 'Generate macOS solution'
 
     - script: |

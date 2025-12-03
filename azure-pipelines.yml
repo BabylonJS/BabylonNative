@@ -102,7 +102,7 @@ jobs:
 
   - template: .github/jobs/linux.yml
     parameters:
-      name: Ubuntu_Clang_JavaScriptCore
+      name: Ubuntu_Clang_JSC
       vmImage: 'ubuntu-latest'
       CC: clang
       CXX: clang++
@@ -110,7 +110,7 @@ jobs:
 
   - template: .github/jobs/linux.yml
     parameters:
-      name: Ubuntu_GCC_JavaScriptCore
+      name: Ubuntu_GCC_JSC
       vmImage: 'ubuntu-latest'
       CC: gcc
       CXX: g++

@@ -3,9 +3,9 @@
 
 Babylon::Graphics::Configuration g_deviceConfig{};
 
-int RunTests(const Babylon::Graphics::Configuration& config)
+int RunTests(const Babylon::Graphics::Configuration& config, int argc, char* argv[])
 {
     g_deviceConfig = config;
-    testing::InitGoogleTest();
+    testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

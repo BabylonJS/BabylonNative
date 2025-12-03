@@ -1,11 +1,11 @@
-// gtest.h included here and in Shared/Tests.h because of a preprocessor conflict
+// gtest.h included here and in App.h because of a preprocessor conflict
 #include <gtest/gtest.h>
 #define XK_MISCELLANY
 #define XK_LATIN1
 #include <X11/Xlib.h> // will include X11 which #defines None... Don't mess with order of includes.
 #include <X11/Xutil.h>
 #undef None
-#include "../Shared/Tests.h"
+#include "App.h"
 #include <Babylon/DebugTrace.h>
 
 namespace
@@ -16,7 +16,7 @@ namespace
     constexpr const char* wmDeleteWindowName = "WM_DELETE_WINDOW";
 }
 
-int main()
+int main(int argc, char* argv[])
 {
     XInitThreads();
     Display* display = XOpenDisplay(NULL);
@@ -53,7 +53,7 @@ int main()
     Babylon::DebugTrace::EnableDebugTrace(true);
     Babylon::DebugTrace::SetTraceOutput([](const char* trace) { printf("%s\n", trace); fflush(stdout); });
 
-    int ret = RunTests(config);
+    int ret = RunTests(config, argc, argv);
     XCloseDisplay(display);
     return ret;
 }

@@ -32,13 +32,17 @@ target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
 # --------------------------------------------------
 set(BGFX_BUILD_EXAMPLES OFF)
 set(BGFX_BUILD_TOOLS OFF)
-set(BGFX_CONFIG_DEBUG_ANNOTATION OFF)
 set(BGFX_CONFIG_MULTITHREADED ON)
 set(BGFX_CUSTOM_TARGETS OFF)
 set(BGFX_INSTALL OFF)
 set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
 FetchContent_MakeAvailable_With_Message(bgfx.cmake)
+
+# Turn off debug annotations as it causes an access violation in D3D12.
+# This flag is set using compile definitions because the bgfx.cmake option is ignored in debug configuration.
+# See https://github.com/BabylonJS/bgfx.cmake/blob/0af3c9865a66aff1748a51bb466b24f05a123043/cmake/bgfx/bgfx.cmake#L126.
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_ANNOTATION=0)
 
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_VERTEX_STREAMS=18)
 if(GRAPHICS_API STREQUAL "D3D11")
