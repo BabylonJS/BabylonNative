@@ -8,7 +8,7 @@ variables:
 - name: CMAKE_VERSION
   value: 3.31.6
 - name: NDK_VERSION
-  value: 25.2.9519653
+  value: 28.2.13676358
 - name: UNITY_BUILD
   value: true
 - name: XCODE_VERSION
@@ -20,6 +20,12 @@ jobs:
     parameters:
       name: MacOS
       vmImage: 'macOS-latest'
+
+  - template: .github/jobs/macos.yml
+    parameters:
+      name: MacOS_Sanitizers
+      vmImage: 'macOS-latest'
+      enableSanitizers: true
 
   - template: .github/jobs/ios.yml
     parameters:
@@ -61,6 +67,14 @@ jobs:
       platform: x64
       graphics_api: D3D12
 
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x64_D3D12_Sanitizers
+      vmImage: 'windows-latest'
+      platform: x64
+      graphics_api: D3D12
+      enableSanitizers: true
+
 # UWP
   - template: .github/jobs/uwp.yml
     parameters:
@@ -101,6 +115,17 @@ jobs:
       CC: gcc
       CXX: g++
       JSEngine: JavaScriptCore
+
+# Memory leaks on CI is disabled due to memory leaks reported with xvfb and impossible to add to ignore list.
+# See https://github.com/BabylonJS/BabylonNative/issues/1575
+#  - template: .github/jobs/linux.yml
+#    parameters:
+#      name: Ubuntu_Clang_JavaScriptCore_Sanitizers
+#      vmImage: 'ubuntu-latest'
+#      CC: clang
+#      CXX: clang++
+#      JSEngine: JavaScriptCore
+#      enableSanitizers: true
 
 # Android
   - template: .github/jobs/android.yml
