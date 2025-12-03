@@ -53,5 +53,7 @@ int main()
     Babylon::DebugTrace::EnableDebugTrace(true);
     Babylon::DebugTrace::SetTraceOutput([](const char* trace) { printf("%s\n", trace); fflush(stdout); });
 
-    return RunTests(config);
+    int ret = RunTests(config);
+    XCloseDisplay(display);
+    return ret;
 }

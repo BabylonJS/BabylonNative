@@ -23,6 +23,8 @@ namespace Babylon::Graphics
         auto width = DisplayWidthMM(display, screen);
         auto pixelWidth = DisplayWidth(display, screen);
 
+        XCloseDisplay(display);
+
         if (width > 0)
         {
             constexpr float MILLIMETERS_TO_INCHES = 0.03937f;

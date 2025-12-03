@@ -11,7 +11,7 @@ include(FetchContent)
 # --------------------------------------------------
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG 66520bff9b57030b67894a4934d18ad7e161ba6f)
+    GIT_TAG f7ed149b5360cc8a4908fece66607c5ce1e6095b)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
     GIT_TAG c02527c32d51b6b3ffeda36f8cf140d2e1c60bb9)
@@ -107,6 +107,33 @@ option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils.
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
 
+# Sanitizers
+option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
+
+if(ENABLE_SANITIZERS)
+    set(ENABLE_RTTI ON CACHE BOOL "" FORCE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        set(SANITIZERS "address,undefined")
+        # Check for Clang since vptr and fdsan are Clang-specific
+        if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            list(APPEND SANITIZERS "vptr")
+            # FDSan only works on Android builds with Clang
+            if (ANDROID)
+                list(APPEND SANITIZERS "fdsan")
+            endif()
+        endif()
+
+        string(JOIN "," SANITIZER_FLAGS ${SANITIZERS})
+
+        add_compile_options(-fsanitize=${SANITIZER_FLAGS} -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=${SANITIZER_FLAGS})
+    elseif(MSVC)
+        # MSVC only supports AddressSanitizer
+        add_compile_options(/fsanitize=address /Zi /Od)
+    else()
+        message(FATAL_ERROR "Sanitizers not supported on this compiler.")
+    endif()
+endif()
 # --------------------------------------------------
 
 if(ANDROID)

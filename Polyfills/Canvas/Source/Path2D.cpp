@@ -136,7 +136,8 @@ namespace Babylon::Polyfills::Internal
         const NativeCanvasPath2D* path = NativeCanvasPath2D::Unwrap(info[0].As<Napi::Object>());
 
         // optional transform arg
-        float *xformInv = nullptr;
+        bool xformInvReady{false};
+        float xformInv[6];
         if (info.Length() == 2)
         {
             Napi::Object transform = info[1].As<Napi::Object>();
@@ -148,8 +149,8 @@ namespace Babylon::Polyfills::Internal
             auto f = transform.Get("f").As<Napi::Number>().FloatValue();
 
             float xform[6] = {a, b, c, d, e, f};
-            xformInv = new float[6];
             nsvg__xformInverse(xformInv, xform);
+            xformInvReady = true;
 
             Path2DCommandArgs args = {};
             args.transform = { xform[0], xform[1], xform[2], xform[3], xform[4], xform[5] };
@@ -164,9 +165,9 @@ namespace Babylon::Polyfills::Internal
         // invert transform after all commands played
         if (info.Length() == 2)
         {
-            assert(xformInv != nullptr);
+            assert(xformInvReady);
             Path2DCommandArgs argsInv = {};
-            argsInv.transform = { xformInv[0], xformInv[1], xformInv[2], xformInv[3], xformInv[4], xformInv[5] };
+            argsInv.transform = {xformInv[0], xformInv[1], xformInv[2], xformInv[3], xformInv[4], xformInv[5]};
             AppendCommand(P2D_TRANSFORM, argsInv);
         }
     }
