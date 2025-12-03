@@ -42,20 +42,17 @@ endif()
 
 # executable stub
 
-set(APPS_DIR "../../Apps")
-set(SOURCE_DIR "${APPS_DIR}/UnitTests/Source")
-
-set(SOURCES
-    "${SOURCE_DIR}/App.h"
-    "${SOURCE_DIR}/App.cpp"
-    "${SOURCE_DIR}/Tests.JavaScript.cpp"
-    "${SOURCE_DIR}/Tests.NativeEngine.cpp"
-    "${SOURCE_DIR}/Tests.ExternalTexture.cpp"
-    "${SOURCE_DIR}/Utils.h"
-    "${SOURCE_DIR}/Utils_${GRAPHICS_API}.cpp")
-
 if(WIN32 AND NOT WINDOWS_STORE)
-    set(SOURCES ${SOURCES} "${SOURCE_DIR}/App_Win32.cpp")
+    set(SOURCE_DIR "../../Apps/UnitTests/Source")
+    set(SOURCES
+        "${SOURCE_DIR}/App.h"
+        "${SOURCE_DIR}/App.cpp"
+        "${SOURCE_DIR}/App_Win32.cpp"
+        "${SOURCE_DIR}/Tests.JavaScript.cpp"
+        "${SOURCE_DIR}/Tests.NativeEngine.cpp"
+        "${SOURCE_DIR}/Tests.ExternalTexture.cpp"
+        "${SOURCE_DIR}/Utils.h"
+        "${SOURCE_DIR}/Utils_D3D11.cpp")
 else()
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
