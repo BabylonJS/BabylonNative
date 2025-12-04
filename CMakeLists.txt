@@ -11,30 +11,39 @@ include(FetchContent)
 # --------------------------------------------------
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG f7ed149b5360cc8a4908fece66607c5ce1e6095b)
+    GIT_TAG f7ed149b5360cc8a4908fece66607c5ce1e6095b
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG c02527c32d51b6b3ffeda36f8cf140d2e1c60bb9)
+    GIT_TAG c02527c32d51b6b3ffeda36f8cf140d2e1c60bb9
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcore-android-sdk
     GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
-    GIT_TAG 98cb803de5482fb2b36effe8be3b5a0d3b726976)
+    GIT_TAG 98cb803de5482fb2b36effe8be3b5a0d3b726976
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(base-n
     GIT_REPOSITORY https://github.com/azawadzki/base-n.git
-    GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4)
+    GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG 0af3c9865a66aff1748a51bb466b24f05a123043)
+    GIT_TAG 0af3c9865a66aff1748a51bb466b24f05a123043
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
+    GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
-    GIT_TAG 6388a301b23edf0ae6a9342d46efa9cb21f05d9b)
+    GIT_TAG 6388a301b23edf0ae6a9342d46efa9cb21f05d9b
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(googletest
-    URL "https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz")
+    URL "https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz"
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
-    GIT_TAG 4.5.0)
+    GIT_TAG 4.5.0
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
     GIT_TAG 756bf24a179240efcd5e63590133943203546205)
@@ -43,7 +52,8 @@ FetchContent_Declare(SPIRV-Cross
     GIT_TAG 6abfcf066d171e9ade7604d91381ebebe4209edc)
 FetchContent_Declare(libwebp
     GIT_REPOSITORY https://github.com/webmproject/libwebp.git
-    GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c)
+    GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c
+    EXCLUDE_FROM_ALL)
 # --------------------------------------------------
 
 FetchContent_MakeAvailable(CMakeExtensions)
