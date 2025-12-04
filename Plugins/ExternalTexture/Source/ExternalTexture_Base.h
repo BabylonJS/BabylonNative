@@ -16,6 +16,7 @@ namespace Babylon::Plugins
         uint16_t Height() const { return m_info.Height; }
         bgfx::TextureFormat::Enum Format() const { return m_info.Format; }
         bool HasMips() const { return m_info.MipLevels != 1; }
+        uint16_t NumLayers() const { return m_info.NumLayers; }
         uint64_t Flags() const { return m_info.Flags; }
 
         void AddHandle(bgfx::TextureHandle handle)
@@ -62,13 +63,13 @@ namespace Babylon::Plugins
             return BGFX_TEXTURE_NONE;
         }
 
-        void UpdateHandles(uintptr_t ptr)
+        void UpdateHandles(Graphics::TextureT ptr, std::optional<uint16_t> layerIndex)
         {
             std::scoped_lock lock{m_mutex};
 
             for (auto handle : m_handles)
             {
-                if (bgfx::overrideInternal(handle, ptr) == 0)
+                if (bgfx::overrideInternal(handle, uintptr_t(ptr), layerIndex.value_or(0)) == 0)
                 {
                     assert(!"Failed to override texture");
                 }
@@ -80,6 +81,7 @@ namespace Babylon::Plugins
             uint16_t Width{};
             uint16_t Height{};
             uint16_t MipLevels{};
+            uint16_t NumLayers{};
             bgfx::TextureFormat::Enum Format{bgfx::TextureFormat::Unknown};
             uint64_t Flags{};
         };
