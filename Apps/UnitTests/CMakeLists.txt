@@ -21,10 +21,14 @@ set(SOURCES
     "Source/Tests.NativeEngine.cpp"
     "Source/Tests.ExternalTexture.cpp"
     "Source/Utils.h"
-    "Source/Utils_${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
+    "Source/Utils.${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
+
+if(GRAPHICS_API STREQUAL "D3D11")
+    set(SOURCES ${SOURCES} "Source/Tests.ExternalTexture.D3D11.cpp")
+endif()
 
 if(APPLE)
-    set(SOURCES ${SOURCES} "Source/App_Apple.mm")
+    set(SOURCES ${SOURCES} "Source/App.Apple.mm")
     if(BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE)
         set(ADDITIONAL_COMPILE_DEFINITIONS
             PRIVATE USE_NOOP_METAL_DEVICE
@@ -33,10 +37,10 @@ if(APPLE)
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
     set(ADDITIONAL_LIBRARIES PRIVATE ${JAVASCRIPTCORE_LIBRARY})
 elseif(UNIX AND NOT ANDROID)
-    set(SOURCES ${SOURCES} "Source/App_X11.cpp")
+    set(SOURCES ${SOURCES} "Source/App.X11.cpp")
     set(ADDITIONAL_COMPILE_DEFINITIONS PRIVATE SKIP_EXTERNAL_TEXTURE_TESTS)
 elseif(WIN32)
-    set(SOURCES ${SOURCES} "Source/App_Win32.cpp")
+    set(SOURCES ${SOURCES} "Source/App.Win32.cpp")
 endif()
 
 add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${SOURCES})
