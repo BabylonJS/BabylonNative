@@ -38,7 +38,7 @@ FetchContent_Declare(glslang
     GIT_TAG 6388a301b23edf0ae6a9342d46efa9cb21f05d9b
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(googletest
-    URL "https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz"
+    URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz"
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git

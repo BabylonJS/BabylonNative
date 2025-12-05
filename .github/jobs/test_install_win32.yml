@@ -53,7 +53,6 @@ jobs:
 
       - script: |
           cmake --build build${{ variables.solutionName }} --target INSTALL --config RelWithDebInfo
-          cd Install/Test
-          cmake . -DBINARY_DIR=../../build${{ variables.solutionName }} ${{ variables.jsEngineDefine }}
-          cmake --build . --config RelWithDebInfo
+          cmake -B Install/Test -DBINARY_DIR=build${{ variables.solutionName }} ${{ variables.jsEngineDefine }}
+          cmake --build Install/Test --config RelWithDebInfo
         displayName: 'Install'

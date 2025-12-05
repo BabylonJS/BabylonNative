@@ -13,7 +13,7 @@ FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
 FetchContent_Declare(googletest
-    URL "https://github.com/google/googletest/archive/refs/tags/v1.13.0.tar.gz")
+    URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz")
 # --------------------------------------------------
 
 FetchContent_MakeAvailable(CMakeExtensions)
@@ -155,10 +155,7 @@ target_link_libraries(TestInstall
     Graphics
     gtest_main
     JsRuntime
-    libsharpyuv.lib
-    libwebp.lib
-    libwebpdecoder.lib
-    libwebpdemux.lib
+    libwebp
     MachineIndependent
     minz
     napi
@@ -172,7 +169,7 @@ target_link_libraries(TestInstall
     OGLCompiler
     OSDependent
     Pathcch
-    runtimeobject.lib # for WINRT_IMPL_RoXXX functions
+    runtimeobject # for WINRT_IMPL_RoXXX functions
     Scheduling
     ScriptLoader
     SPIRV
