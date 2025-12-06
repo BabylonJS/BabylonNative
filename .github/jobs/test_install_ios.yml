@@ -5,8 +5,7 @@ parameters:
 
 jobs:
   - job: ${{parameters.name}}
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
-    timeoutInMinutes: 60
+    timeoutInMinutes: 20
     pool:
       vmImage: ${{parameters.vmImage}}
 
@@ -20,16 +19,13 @@ jobs:
         displayName: "Select Xcode $(XCODE_VERSION)"
 
       - script: |
-          cmake -G Xcode -B buildiOS -D IOS=ON -D DEPLOYMENT_TARGET=${{parameters.deploymentTarget}} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D CMAKE_IOS_INSTALL_COMBINED=NO
-        displayName: "Generate iOS solution"
-
-      # Replaced Xcode task with cmake command instead because of 'unable to attach DB: error: accessing build database'
-      # Some context and (non working) workarounds here : https://stackoverflow.com/questions/73301738/xcode-13-4-1-error-unable-to-attach-db-error-accessing-build-database-react/73301739
-      - script: |
-          cmake --build buildiOS --config Release -- -sdk iphoneos CODE_SIGNING_ALLOWED=NO
-        displayName: "Build iOS solution"
+          cmake -B build/iOS -G Xcode -D IOS=ON -D DEPLOYMENT_TARGET=${{parameters.deploymentTarget}} -D CMAKE_IOS_INSTALL_COMBINED=NO -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_NATIVE_BUILD_APPS=OFF -D BABYLON_DEBUG_TRACE=ON 
+        displayName: "Configure"
 
       - script: |
-          cmake --install buildiOS --prefix="$(Build.SourcesDirectory)/Install"
-          lipo -info $(Build.SourcesDirectory)/Install/lib/libxr.a
+          cmake --build build/iOS --config RelWithDebInfo -- -sdk iphoneos CODE_SIGNING_ALLOWED=NO
+        displayName: "Build"
+
+      - script: |
+          cmake --install build/iOS --prefix=build/iOS/Install --config RelWithDebInfo
         displayName: "Install"

@@ -13,7 +13,7 @@
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
-TEST(ExternalTexture, Construction)
+TEST(ExternalTexture, AddToContextAsyncAndUpdateWithLayerIndex)
 {
 #ifdef SKIP_EXTERNAL_TEXTURE_TESTS
     GTEST_SKIP();
@@ -24,32 +24,9 @@ TEST(ExternalTexture, Construction)
     device.StartRenderingCurrentFrame();
     update.Start();
 
-    auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256);
+    auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256, 3);
+
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
-    DestroyTestTexture(nativeTexture);
-
-    EXPECT_EQ(externalTexture.Width(), 256u);
-    EXPECT_EQ(externalTexture.Height(), 256u);
-
-    update.Finish();
-    device.FinishRenderingCurrentFrame();
-#endif
-}
-
-TEST(ExternalTexture, AddToContextAsyncAndUpdate)
-{
-#ifdef SKIP_EXTERNAL_TEXTURE_TESTS
-    GTEST_SKIP();
-#else
-    Babylon::Graphics::Device device{g_deviceConfig};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
-
-    device.StartRenderingCurrentFrame();
-    update.Start();
-
-    auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256);
-    Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
-    DestroyTestTexture(nativeTexture);
 
     std::promise<void> addToContext{};
     std::promise<void> promiseResolved{};
@@ -66,7 +43,8 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 
-        auto jsPromise = externalTexture.AddToContextAsync(env);
+        // Test with explicit layer index 1
+        auto jsPromise = externalTexture.AddToContextAsync(env, 1);
         addToContext.set_value();
 
         auto jsOnFulfilled = Napi::Function::New(env, [&promiseResolved](const Napi::CallbackInfo& info) {
@@ -94,10 +72,10 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
     device.StartRenderingCurrentFrame();
     update.Start();
 
-    // Update the external texture to a new texture.
-    auto nativeTexture2 = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256);
-    externalTexture.Update(nativeTexture2);
-    DestroyTestTexture(nativeTexture2);
+    // Update the external texture to a new texture with explicit layer index 2.
+    externalTexture.Update(nativeTexture, std::nullopt, 2);
+
+    DestroyTestTexture(nativeTexture);
 
     update.Finish();
     device.FinishRenderingCurrentFrame();

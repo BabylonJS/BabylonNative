@@ -39,7 +39,7 @@ jobs:
       vmImage: "macOS-latest"
       deploymentTarget: 17.5
 
-  # WIN32
+  # Win32
   - template: .github/jobs/win32.yml
     parameters:
       name: Win32_x64_D3D11
@@ -152,26 +152,25 @@ jobs:
       vmImage: "macOS-latest"
       JSEngine: V8
 
-  # Installation tests.
-  - template: .github/jobs/test_install_win32.yml
-    parameters:
-      name: Win32_Installation
-      vmImage: "windows-latest"
-      platform: x64
-  - template: .github/jobs/test_install_linux.yml
-    parameters:
-      name: Linux_Installation
-      vmImage: "ubuntu-latest"
-      JSEngine: JavaScriptCore
-  - template: .github/jobs/test_install_macos.yml
-    parameters:
-      name: MacOS_Installation
-      vmImage: "macOS-latest"
+  # Installation tests
   - template: .github/jobs/test_install_ios.yml
     parameters:
       name: iOS_Installation
       vmImage: "macOS-latest"
       deploymentTarget: 17.2
+  - template: .github/jobs/test_install_linux.yml
+    parameters:
+      name: Linux_Installation
+      vmImage: "ubuntu-latest"
+  - template: .github/jobs/test_install_macos.yml
+    parameters:
+      name: MacOS_Installation
+      vmImage: "macOS-latest"
+  - template: .github/jobs/test_install_win32.yml
+    parameters:
+      name: Win32_Installation
+      vmImage: "windows-latest"
+
 # These Android tests are unstable on the CI emulator. Disabled until a more reliable solution is found.
 #  - template: .github/jobs/android_tests.yml
 #    parameters:
