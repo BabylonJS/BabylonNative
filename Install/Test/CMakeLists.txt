@@ -35,151 +35,49 @@ if(MSVC)
     add_compile_options(/Zc:__cplusplus)
 endif()
 
-if(NAPI_JAVASCRIPT_ENGINE STREQUAL "")
-    message("No JS Engine provided. Defaulting to Chakra.")
-    set(NAPI_JAVASCRIPT_ENGINE "Chakra")
-endif()
-
-# executable stub
+set(NAPI_JAVASCRIPT_ENGINE "Chakra")
 
 if(WIN32 AND NOT WINDOWS_STORE)
     set(SOURCE_DIR "../../Apps/UnitTests/Source")
     set(SOURCES
         "${SOURCE_DIR}/App.h"
         "${SOURCE_DIR}/App.cpp"
-        "${SOURCE_DIR}/App_Win32.cpp"
+        "${SOURCE_DIR}/App.Win32.cpp"
         "${SOURCE_DIR}/Tests.JavaScript.cpp"
         "${SOURCE_DIR}/Tests.NativeEngine.cpp"
         "${SOURCE_DIR}/Tests.ExternalTexture.cpp"
+        "${SOURCE_DIR}/Tests.ExternalTexture.D3D11.cpp"
         "${SOURCE_DIR}/Utils.h"
-        "${SOURCE_DIR}/Utils_D3D11.cpp")
+        "${SOURCE_DIR}/Utils.D3D11.cpp")
 else()
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
 
-set(NUGET_PATH "${BINARY_DIR}/NuGet")
-
-if(NAPI_JAVASCRIPT_ENGINE STREQUAL "JSI")
-    set(V8JSI_VERSION "0.64.33")
-    set(CPU_ARCH "x64")
-    set(PLATFORM_FOLDER "win32")
-    set(V8JSI_PACKAGE_PATH "${NUGET_PATH}/packages/ReactNative.V8Jsi.Windows.${V8JSI_VERSION}")
-    set(V8JSI_LIB_PATH_RELEASE "${V8JSI_PACKAGE_PATH}/lib/${PLATFORM_FOLDER}/Release/${CPU_ARCH}/")
-    set(SOURCES ${SOURCES} "${V8JSI_PACKAGE_PATH}/build/native/jsi/jsi/jsi.cpp")
-    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} "v8jsi.dll.lib")
-elseif(NAPI_JAVASCRIPT_ENGINE STREQUAL "V8")
-    set_cpu_platform_arch()
-    set(V8_VERSION "11.9.169.4")
-    download_nuget()
-    set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v143-${CPU_ARCH}.${V8_VERSION}")
-    set(V8_PACKAGE_PATH "${NUGET_PATH}/packages/v8-v143-${CPU_ARCH}.${V8_VERSION}")
-    set(V8_REDIST_PACKAGE_PATH "${NUGET_PATH}/packages/v8.redist-v143-${CPU_ARCH}.${V8_VERSION}")
-
-    add_library(v8_libbase SHARED IMPORTED)
-    set_target_properties(v8_libbase PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libbase.dll.lib")
-    add_library(v8_libplatform SHARED IMPORTED)
-    set_target_properties(v8_libplatform PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libplatform.dll.lib")
-    add_library(v8 SHARED IMPORTED)
-    set_target_properties(v8 PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8.dll.lib")
-    target_link_libraries(v8 INTERFACE v8_libbase INTERFACE v8_libplatform)
-    target_include_directories(v8 INTERFACE "${V8_PACKAGE_PATH}/include")
-
-    set(V8_DIST
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/icudtl.dat"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_icu_icui18n.dll"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_abseil-cpp_absl.dll"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/icuuc.dll"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8.dll"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8_libbase.dll"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/v8_libplatform.dll"
-        "${V8_REDIST_PACKAGE_PATH}/lib/Release/third_party_zlib.dll")
-
-    # only 1 imported location per library -> Adding 1 library per file
-    foreach(V8FILE ${V8_DIST})
-        get_filename_component(V8FILE_NAME "${V8FILE}" NAME_WE)
-        add_library("v8::${V8FILE_NAME}" SHARED IMPORTED)
-        set_target_properties("v8::${V8FILE_NAME}" PROPERTIES IMPORTED_IMPLIB "${V8_PACKAGE_PATH}/lib/Release/v8_libbase.dll.lib")
-        set_target_properties("v8::${V8FILE_NAME}" PROPERTIES IMPORTED_LOCATION ${V8FILE})
-    endforeach()
-
-    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES}
-        v8
-        v8inspector
-        llhttp
-        v8::icudtl
-        v8::third_party_icu_icui18n
-        v8::icuuc
-        v8::v8
-        v8::v8_libbase
-        v8::v8_libplatform
-        v8::third_party_zlib)
-
-    if(CPU_ARCH STREQUAL "x64")
-        # Enable V8 Pointer Compression
-        # https://v8.dev/blog/pointer-compression
-        # https://stackoverflow.com/q/62921373
-        set(NAPI_DEFINITIONS PUBLIC V8_COMPRESS_POINTERS)
-    endif()
-endif()
-
 add_executable(TestInstall ${SOURCES})
 
-set(INSTALL_LIBS_DIR "${BINARY_DIR}/install/lib")
-target_include_directories(TestInstall PRIVATE "${BINARY_DIR}/install/include")
-target_link_directories(TestInstall PRIVATE ${INSTALL_LIBS_DIR} ${V8JSI_LIB_PATH_RELEASE})
+message(STATUS "Install include directory: ${INSTALL_DIR}/include")
+target_include_directories(TestInstall PRIVATE "${INSTALL_DIR}/include")
 
-if(ANDROID OR IOS)
-    set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} NativeXr)
-endif()
+message(STATUS "Install lib directory: ${INSTALL_DIR}/lib")
+set(INSTALL_LIBS_DIR "${INSTALL_DIR}/lib")
+target_link_directories(TestInstall PRIVATE ${INSTALL_LIBS_DIR})
+file(GLOB INSTALL_LIBS "${INSTALL_LIBS_DIR}/*.lib")
+set(INSTALL_LIB_NAMES)
+foreach(LIB_PATH ${INSTALL_LIBS})
+    get_filename_component(LIB_NAME ${LIB_PATH} NAME_WLE)
+    list(APPEND INSTALL_LIB_NAMES ${LIB_NAME})
+endforeach()
+message(STATUS "Found libs:")
+foreach(LIB_NAME ${INSTALL_LIB_NAMES})
+    message(STATUS "  ${LIB_NAME}")
+endforeach()
 
 target_link_libraries(TestInstall
-    AppRuntime
-    arcana
-    bgfx
-    bimg
-    bimg_decode
-    bimg_encode
-    Blob
-    bx
-    Canvas
-    chakrart
-    Console
-    d3d11
-    d3d12
-    d3dcompiler
-    ExternalTexture
-    Foundation
-    GenericCodeGen
-    glslang
-    glslang-default-resource-limits
-    Graphics
+    ${INSTALL_LIB_NAMES}
     gtest_main
-    JsRuntime
-    libwebp
-    MachineIndependent
-    minz
-    napi
-    NativeCamera
-    NativeCapture
-    NativeEncoding
-    NativeEngine
-    NativeInput
-    NativeOptimizations
-    NativeTracing
-    OGLCompiler
-    OSDependent
-    Pathcch
-    runtimeobject # for WINRT_IMPL_RoXXX functions
-    Scheduling
-    ScriptLoader
-    SPIRV
-    spirv-cross-core
-    spirv-cross-hlsl
-    UrlLib
-    Window
-    XMLHttpRequest
-    ${ADDITIONAL_LIBRARIES}
-)
+    chakrart
+    d3dcompiler
+    onecore)
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
 # If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.

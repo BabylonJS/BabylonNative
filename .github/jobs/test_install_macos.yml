@@ -4,7 +4,7 @@ parameters:
 
 jobs:
   - job: ${{parameters.name}}
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    #condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
     timeoutInMinutes: 30
     pool:
       vmImage: ${{parameters.vmImage}}
@@ -19,18 +19,13 @@ jobs:
         displayName: "Select XCode $(XCODE_VERSION)"
 
       - script: |
-          cmake -G Xcode -B buildmacOS -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON
-        displayName: "Generate macOS solution"
+          cmake -B build -G Xcode -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_NATIVE_BUILD_APPS=OFF -D BABYLON_DEBUG_TRACE=ON
+        displayName: "Configure"
 
       - script: |
-          xcodebuild -list -project buildmacOS/BabylonNative.xcodeproj
-        displayName: "List available project schemes"
+          cmake --build build --config RelWithDebInfo -- -sdk iphoneos CODE_SIGNING_ALLOWED=NO
+        displayName: "Build"
 
-      - task: Xcode@5
-        inputs:
-          xcWorkspacePath: "buildmacOS/BabylonNative.xcodeproj"
-          scheme: "install"
-          sdk: "macosx"
-          useXcpretty: false
-          configuration: Release
-        displayName: "Build Installation content macOS"
+      - script: |
+          cmake --install build --prefix=build/Install --config RelWithDebInfo
+        displayName: "Install"

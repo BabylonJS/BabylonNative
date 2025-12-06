@@ -3,11 +3,10 @@ parameters:
   vmImage: ""
   CC: ""
   CXX: ""
-  JSEngine: ""
 
 jobs:
   - job: ${{parameters.name}}
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+    #condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
     timeoutInMinutes: 30
     pool:
       vmImage: ${{parameters.vmImage}}
@@ -27,10 +26,13 @@ jobs:
         displayName: "Install packages"
 
       - script: |
-          cmake -G Ninja -B build -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so -D NAPI_JAVASCRIPT_ENGINE=${{parameters.JSEngine}} -D CMAKE_BUILD_TYPE=RelWithDebInfo -D BX_CONFIG_DEBUG=ON -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D OpenGL_GL_PREFERENCE=GLVND  -D BABYLON_DEBUG_TRACE=ON
-          ninja -C build
-        displayName: "Build X11"
+          cmake -B build -G Ninja -D CMAKE_BUILD_TYPE=RelWithDebInfo -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_NATIVE_BUILD_APPS=OFF -D BABYLON_DEBUG_TRACE=ON
+        displayName: "Configure"
 
       - script: |
-          cmake --install build --prefix="./install"
+          cmake --build build --config RelWithDebInfo
+        displayName: "Build"
+
+      - script: |
+          cmake --install build --prefix=build/Install --config=RelWithDebInfo
         displayName: "Install"
