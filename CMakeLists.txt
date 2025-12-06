@@ -14,7 +14,7 @@ include(FetchContent)
 # targets to the ALL_BUILD target.  We do this for all dependencies except
 # JsRuntimeHost because JsRuntimeHost has top-level targets (e.g., AppRuntime)
 # that are part of the Babylon Native contract. When adding dependencies using
-# FetchConent, add the EXCLUDE_FROM_ALL option except where there are top-level
+# FetchContent, add the EXCLUDE_FROM_ALL option except where there are top-level
 # targets that are part of the Babylon Native contract.
 
 FetchContent_Declare(AndroidExtensions
