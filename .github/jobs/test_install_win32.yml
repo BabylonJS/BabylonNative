@@ -24,7 +24,7 @@ jobs:
         displayName: "Configure"
 
       - script: |
-          cmake --build build --config RelWithDebInfo -- -sdk iphoneos CODE_SIGNING_ALLOWED=NO
+          cmake --build build --config RelWithDebInfo
         displayName: "Build"
 
       - script: |
