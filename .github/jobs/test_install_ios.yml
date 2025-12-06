@@ -20,7 +20,7 @@ jobs:
         displayName: "Select Xcode $(XCODE_VERSION)"
 
       - script: |
-          cmake -G Xcode -B build -D IOS=ON -D DEPLOYMENT_TARGET=${{parameters.deploymentTarget}} -D CMAKE_IOS_INSTALL_COMBINED=NO -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_NATIVE_BUILD_APPS=OFF -D BABYLON_DEBUG_TRACE=ON 
+          cmake -B build -G Xcode -D IOS=ON -D DEPLOYMENT_TARGET=${{parameters.deploymentTarget}} -D CMAKE_IOS_INSTALL_COMBINED=NO -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_NATIVE_BUILD_APPS=OFF -D BABYLON_DEBUG_TRACE=ON 
         displayName: "Configure"
 
       - script: |
