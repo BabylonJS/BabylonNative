@@ -9,6 +9,8 @@
 
 #include "Utils.h"
 
+#include <iostream>
+
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
 TEST(ExternalTexture, AddToContextAsyncAndUpdateWithLayerIndex)

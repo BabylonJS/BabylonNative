@@ -9,6 +9,14 @@ include(FetchContent)
 # --------------------------------------------------
 # Declarations
 # --------------------------------------------------
+
+# EXCLUDE_FROM_ALL is used to prevent FetchContent from automatically adding
+# targets to the ALL_BUILD target.  We do this for all dependencies except
+# JsRuntimeHost because JsRuntimeHost has top-level targets (e.g., AppRuntime)
+# that are part of the Babylon Native contract. When adding dependencies using
+# FetchConent, add the EXCLUDE_FROM_ALL option except where there are top-level
+# targets that are part of the Babylon Native contract.
+
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
     GIT_TAG f7ed149b5360cc8a4908fece66607c5ce1e6095b
@@ -49,11 +57,13 @@ FetchContent_Declare(JsRuntimeHost
     GIT_TAG 756bf24a179240efcd5e63590133943203546205)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 6abfcf066d171e9ade7604d91381ebebe4209edc)
+    GIT_TAG 6abfcf066d171e9ade7604d91381ebebe4209edc
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(libwebp
     GIT_REPOSITORY https://github.com/webmproject/libwebp.git
     GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c
     EXCLUDE_FROM_ALL)
+
 # --------------------------------------------------
 
 FetchContent_MakeAvailable(CMakeExtensions)
@@ -144,6 +154,7 @@ if(ENABLE_SANITIZERS)
         message(FATAL_ERROR "Sanitizers not supported on this compiler.")
     endif()
 endif()
+
 # --------------------------------------------------
 
 if(ANDROID)
