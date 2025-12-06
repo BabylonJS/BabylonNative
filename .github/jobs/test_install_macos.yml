@@ -19,13 +19,13 @@ jobs:
         displayName: "Select XCode $(XCODE_VERSION)"
 
       - script: |
-          cmake -B build -G Xcode -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_NATIVE_BUILD_APPS=OFF -D BABYLON_DEBUG_TRACE=ON
+          cmake -B build/macOS -G Xcode -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_NATIVE_BUILD_APPS=OFF -D BABYLON_DEBUG_TRACE=ON
         displayName: "Configure"
 
       - script: |
-          cmake --build build --config RelWithDebInfo
+          cmake --build build/macOS --config RelWithDebInfo
         displayName: "Build"
 
       - script: |
-          cmake --install build --prefix=build/Install --config RelWithDebInfo
+          cmake --install build/macOS --prefix=build/macOS/Install --config RelWithDebInfo
         displayName: "Install"

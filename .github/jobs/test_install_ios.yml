@@ -20,13 +20,13 @@ jobs:
         displayName: "Select Xcode $(XCODE_VERSION)"
 
       - script: |
-          cmake -B build -G Xcode -D IOS=ON -D DEPLOYMENT_TARGET=${{parameters.deploymentTarget}} -D CMAKE_IOS_INSTALL_COMBINED=NO -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_NATIVE_BUILD_APPS=OFF -D BABYLON_DEBUG_TRACE=ON 
+          cmake -B build/iOS -G Xcode -D IOS=ON -D DEPLOYMENT_TARGET=${{parameters.deploymentTarget}} -D CMAKE_IOS_INSTALL_COMBINED=NO -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_NATIVE_BUILD_APPS=OFF -D BABYLON_DEBUG_TRACE=ON 
         displayName: "Configure"
 
       - script: |
-          cmake --build build --config RelWithDebInfo -- -sdk iphoneos CODE_SIGNING_ALLOWED=NO
+          cmake --build build/iOS --config RelWithDebInfo -- -sdk iphoneos CODE_SIGNING_ALLOWED=NO
         displayName: "Build"
 
       - script: |
-          cmake --install build --prefix=build/Install --config RelWithDebInfo
+          cmake --install build/iOS --prefix=build/iOS/Install --config RelWithDebInfo
         displayName: "Install"
