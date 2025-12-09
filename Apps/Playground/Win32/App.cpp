@@ -21,7 +21,7 @@
 #include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/TestUtils.h>
-#include <Babylon/Plugins/Zip.h>
+#include <Babylon/Plugins/NativeZip.h>
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
@@ -183,7 +183,7 @@ namespace
             });
 
             Babylon::Polyfills::Window::Initialize(env);
-            Babylon::Plugins::Zip::Initialize(env);
+            Babylon::Plugins::NativeZip::Initialize(env);
             Babylon::Polyfills::DecompressionStream::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 

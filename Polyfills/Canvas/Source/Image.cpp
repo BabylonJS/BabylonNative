@@ -103,8 +103,12 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    bool NativeCanvasImage::SetBuffer(gsl::span<const std::byte> buffer)
+    bool NativeCanvasImage::SetBuffer(gsl::span<const uint8_t> buffer)
     {
+        if (m_imageContainer)
+        {
+            bimg::imageFree(m_imageContainer);
+        }
         m_imageContainer = bimg::imageParse(&Graphics::DeviceContext::GetDefaultAllocator(), buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
 
         if (m_imageContainer == nullptr)
@@ -112,7 +116,7 @@ namespace Babylon::Polyfills::Internal
 #ifdef WEBP
             int width;
             int height;
-            if (WebPGetInfo(reinterpret_cast<const uint8_t*>(buffer.data()), buffer.size(), &width, &height))
+            if (WebPGetInfo(buffer.data(), buffer.size(), &width, &height))
             {
                 m_imageContainer = bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), bimg::TextureFormat::RGBA8, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false);
                 if (!WebPDecodeRGBAInto(reinterpret_cast<const uint8_t*>(buffer.data()), buffer.size(), static_cast<uint8_t*>(m_imageContainer->m_data), static_cast<size_t>(m_imageContainer->m_size), width * 4))
@@ -150,23 +154,23 @@ namespace Babylon::Polyfills::Internal
         if (value.IsString())
         {
             // url string
-            auto text{ value.As<Napi::String>().Utf8Value() };
+            auto text{value.As<Napi::String>().Utf8Value()};
 
             // try with base64
-            static const std::string base64{ "base64," };
+            static const std::string base64{"base64,"};
             const auto pos = text.find(base64);
             if (pos != std::string::npos)
             {
-                arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [env{ info.Env() }, this, text{ std::move(text) }, pos]() {
+                arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, text{std::move(text)}, pos]() {
                     std::vector<uint8_t> base64Buffer;
                     bn::decode_b64(text.begin() + pos + base64.length(), text.end(), std::back_inserter(base64Buffer));
-                    gsl::span<const std::byte> buffer = { reinterpret_cast<std::byte*>(base64Buffer.data()), base64Buffer.size() };
+                    gsl::span<const uint8_t> buffer = gsl::make_span(base64Buffer.data(), base64Buffer.size());
 
                     if (!SetBuffer(buffer))
                     {
                         HandleLoadImageError(Napi::Error::New(env, "Unable to decode image with provided base64 source."));
                     }
-                    });
+                });
                 return;
             }
 
@@ -174,41 +178,36 @@ namespace Babylon::Polyfills::Internal
             UrlLib::UrlRequest request{};
             request.Open(UrlLib::UrlMethod::Get, text);
             request.ResponseType(UrlLib::UrlResponseType::Buffer);
-            request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [env{ info.Env() }, this, cancellationSource{ m_cancellationSource }, request{ std::move(request) }, text](arcana::expected<void, std::exception_ptr> result) {
+            request.SendAsync().then(m_runtimeScheduler, *m_cancellationSource, [env{info.Env()}, this, cancellationSource{m_cancellationSource}, request{std::move(request)}, text](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
                     HandleLoadImageError(Napi::Error::New(env, result.error()));
                     return;
                 }
 
-                Dispose();
-
-                auto buffer{ request.ResponseBuffer() };
+                auto buffer{request.ResponseBuffer()};
                 if (buffer.data() == nullptr || buffer.size_bytes() == 0)
                 {
                     HandleLoadImageError(Napi::Error::New(env, "Image with provided source returned empty response or invalid base64."));
                     return;
                 }
-
-                if (!SetBuffer(buffer))
+                gsl::span<const uint8_t> bufferSpan = gsl::make_span(reinterpret_cast<const uint8_t*>(buffer.data()), buffer.size());
+                if (!SetBuffer(bufferSpan))
                 {
                     HandleLoadImageError(Napi::Error::New(env, "Unable to decode image with provided source URL."));
                 }
             });
         }
-        else if (value.IsObject()) {
+        else if (value.IsObject())
+        {
             Napi::Object blob = value.As<Napi::Object>();
-            /*
-             * optional mimetype not used here.
-            if (blob.Has("type")) {
-                auto mimeType = blob.Get("type").As<Napi::String>().Utf8Value();
-            }
-            */
-            if (blob.Has((uint32_t)0)) {
-                Napi::Value v = blob.Get((uint32_t)0);
-                if (v.IsTypedArray()) {
+            if (blob.Has(0u))
+            {
+                Napi::Value v = blob.Get(0u);
+                if (v.IsTypedArray())
+                {
                     Napi::Uint8Array array = v.As<Napi::Uint8Array>();
-                    gsl::span<const std::byte> buffer = { reinterpret_cast<std::byte*>(array.Data()), array.ByteLength() };
+                    gsl::span<const uint8_t> buffer = gsl::make_span(array.Data(), array.ByteLength());
                     if (!SetBuffer(buffer))
                     {
                         HandleLoadImageError(Napi::Error::New(info.Env(), "Unable to decode image with provided blob."));
@@ -216,19 +215,20 @@ namespace Babylon::Polyfills::Internal
                 }
             }
         }
-        else if (value.IsTypedArray()) {
+        else if (value.IsTypedArray())
+        {
             Napi::TypedArray typed = value.As<Napi::TypedArray>();
 
-            if (typed.TypedArrayType() == napi_uint8_array) {
+            if (typed.TypedArrayType() == napi_uint8_array)
+            {
                 Napi::Uint8Array array = typed.As<Napi::Uint8Array>();
-                gsl::span<const std::byte> buffer = { reinterpret_cast<std::byte*>(array.Data()), array.ByteLength() };
+                gsl::span<const uint8_t> buffer = gsl::make_span(array.Data(), array.ByteLength());
                 if (!SetBuffer(buffer))
                 {
                     HandleLoadImageError(Napi::Error::New(info.Env(), "Unable to decode image with provided source typed buffer."));
                 }
             }
         }
-
     }
 
     void NativeCanvasImage::SetOnload(const Napi::CallbackInfo&, const Napi::Value& value)

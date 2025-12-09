@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Babylon/JsRuntimeScheduler.h>
+#include "ReadableStreamDefaultController.h"
 
 namespace Babylon::Polyfills::Internal
 {
@@ -37,6 +38,8 @@ namespace Babylon::Polyfills::Internal
     ReadableStream::ReadableStream(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<ReadableStream>{info}
     {
+        //mReadableStreamDefaultController = ReadableStreamDefaultController::CreateInstance(info.Env(), info.This());
+
         if (!info[0].IsObject())
         {
             return;

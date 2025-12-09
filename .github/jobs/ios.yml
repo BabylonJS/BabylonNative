@@ -1,34 +1,32 @@
 parameters:
-  name: ''
-  vmImage: ''
-  deploymentTarget: '15'
+  name: ""
+  vmImage: ""
+  deploymentTarget: "15"
 
 jobs:
-  - job: ${{ parameters.name }}
+  - job: ${{parameters.name}}
     timeoutInMinutes: 30
     pool:
-      vmImage: ${{ parameters.vmImage }}
-  
+      vmImage: ${{parameters.vmImage}}
+
     steps:
-    - template: cmake.yml
-      parameters:
-        vmImage: ${{ parameters.vmImage }}
+      - template: cmake.yml
+        parameters:
+          vmImage: ${{parameters.vmImage}}
 
-    - script: |
-        sudo xcode-select --switch /Applications/Xcode_$(XCODE_VERSION).app/Contents/Developer
-      displayName: 'Select Xcode $(XCODE_VERSION)'
+      - script: |
+          sudo xcode-select --switch /Applications/Xcode_$(XCODE_VERSION).app/Contents/Developer
+        displayName: "Select Xcode $(XCODE_VERSION)"
 
-    - script: |
-        cmake -G Xcode -B buildiOS -D IOS=ON -D DEPLOYMENT_TARGET=${{ parameters.deploymentTarget }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D CMAKE_IOS_INSTALL_COMBINED=NO
-      displayName: 'Generate iOS solution'
+      - script: |
+          cmake -G Xcode -B buildiOS -D IOS=ON -D DEPLOYMENT_TARGET=${{parameters.deploymentTarget}} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D CMAKE_IOS_INSTALL_COMBINED=NO
+        displayName: "Generate iOS solution"
 
-    - task: Xcode@5
-      inputs:
-        xcWorkspacePath: 'buildiOS/BabylonNative.xcodeproj'
-        scheme: 'Playground'
-        sdk: 'iphoneos'
-        useXcpretty: false
-        configuration: Release
-      displayName: 'Build Playground iOS'
-
-
+      - task: Xcode@5
+        inputs:
+          xcWorkspacePath: "buildiOS/BabylonNative.xcodeproj"
+          scheme: "Playground"
+          sdk: "iphoneos"
+          useXcpretty: false
+          configuration: Release
+        displayName: "Build Playground iOS"

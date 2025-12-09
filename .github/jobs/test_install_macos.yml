@@ -1,36 +1,30 @@
 parameters:
-  name: ''
-  vmImage: ''
+  name: ""
+  vmImage: ""
 
 jobs:
-  - job: ${{ parameters.name }}
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
-    timeoutInMinutes: 30
+  - job: ${{parameters.name}}
+    timeoutInMinutes: 20
     pool:
-      vmImage: ${{ parameters.vmImage }}
-  
+      vmImage: ${{parameters.vmImage}}
+
     steps:
-    - template: cmake.yml
-      parameters:
-        vmImage: ${{ parameters.vmImage }}
+      - template: cmake.yml
+        parameters:
+          vmImage: ${{parameters.vmImage}}
 
-    - script: |
-        sudo xcode-select --switch /Applications/Xcode_$(XCODE_VERSION).app/Contents/Developer
-      displayName: 'Select XCode $(XCODE_VERSION)'
+      - script: |
+          sudo xcode-select --switch /Applications/Xcode_$(XCODE_VERSION).app/Contents/Developer
+        displayName: "Select XCode $(XCODE_VERSION)"
 
-    - script: |
-        cmake -G Xcode -B buildmacOS -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON
-      displayName: 'Generate macOS solution'
+      - script: |
+          cmake -B build/macOS -G Xcode -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_NATIVE_BUILD_APPS=OFF -D BABYLON_DEBUG_TRACE=ON
+        displayName: "Configure"
 
-    - script: |
-        xcodebuild -list -project buildmacOS/BabylonNative.xcodeproj
-      displayName: 'List available project schemes'
+      - script: |
+          cmake --build build/macOS --config RelWithDebInfo
+        displayName: "Build"
 
-    - task: Xcode@5
-      inputs:
-        xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
-        scheme: 'install'
-        sdk: 'macosx'
-        useXcpretty: false
-        configuration: Release
-      displayName: 'Build Installation content macOS'
+      - script: |
+          cmake --install build/macOS --prefix=build/macOS/Install --config RelWithDebInfo
+        displayName: "Install"

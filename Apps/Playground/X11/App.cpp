@@ -16,7 +16,7 @@
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/TestUtils.h>
-#include <Babylon/Plugins/Zip.h>
+#include <Babylon/Plugins/NativeZip.h>
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
@@ -82,7 +82,7 @@ namespace
             });
 
             Babylon::Polyfills::Window::Initialize(env);
-            Babylon::Plugins::Zip::Initialize(env);
+            Babylon::Plugins::NativeZip::Initialize(env);
             Babylon::Polyfills::DecompressionStream::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
             nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
@@ -300,5 +300,6 @@ int main(int _argc, const char* const* _argv)
 
     XUnmapWindow(display, window);
     XDestroyWindow(display, window);
+    XCloseDisplay(display);
     return 0;
 }

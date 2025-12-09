@@ -1,7 +1,8 @@
-# Build only on Win32, not on UWP
 if(NOT((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT ANDROID)))
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
+
+option(BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE "Use a noop Metal device for Apple platforms." OFF)
 
 set(BABYLONJS_ASSETS
     "../node_modules/babylonjs/babylon.max.js")
@@ -14,19 +15,32 @@ set(TEST_ASSETS
     "JavaScript/dist/tests.nativeEngine.shaderCache.js")
 
 set(SOURCES
-    "Shared/Tests.h"
-    "Shared/Tests.cpp"
-    "Shared/Tests.JavaScript.cpp"
-    "Shared/Tests.NativeEngine.cpp")
+    "Source/App.h"
+    "Source/App.cpp"
+    "Source/Tests.JavaScript.cpp"
+    "Source/Tests.NativeEngine.cpp"
+    "Source/Tests.ExternalTexture.cpp"
+    "Source/Utils.h"
+    "Source/Utils.${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
+
+if(GRAPHICS_API STREQUAL "D3D11")
+    set(SOURCES ${SOURCES} "Source/Tests.ExternalTexture.D3D11.cpp")
+endif()
 
 if(APPLE)
+    set(SOURCES ${SOURCES} "Source/App.Apple.mm")
+    if(BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE)
+        set(ADDITIONAL_COMPILE_DEFINITIONS
+            PRIVATE USE_NOOP_METAL_DEVICE
+            PRIVATE SKIP_EXTERNAL_TEXTURE_TESTS)
+    endif()
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
     set(ADDITIONAL_LIBRARIES PRIVATE ${JAVASCRIPTCORE_LIBRARY})
-    set(SOURCES ${SOURCES} "Apple/App.mm")
 elseif(UNIX AND NOT ANDROID)
-    set(SOURCES ${SOURCES} "X11/App.cpp")
+    set(SOURCES ${SOURCES} "Source/App.X11.cpp")
+    set(ADDITIONAL_COMPILE_DEFINITIONS PRIVATE SKIP_EXTERNAL_TEXTURE_TESTS)
 elseif(WIN32)
-    set(SOURCES ${SOURCES} "Win32/App.cpp")
+    set(SOURCES ${SOURCES} "Source/App.Win32.cpp")
 endif()
 
 add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${SOURCES})
@@ -38,8 +52,9 @@ target_link_libraries(UnitTests
     PRIVATE Canvas
     PRIVATE Console
     PRIVATE GraphicsDevice
+    PRIVATE ExternalTexture
     PRIVATE NativeEngine
-    PRIVATE Zip
+    PRIVATE NativeZip
     PRIVATE DecompressionStream
     PRIVATE NativeEncoding
     PRIVATE ScriptLoader
@@ -48,6 +63,8 @@ target_link_libraries(UnitTests
     PRIVATE XMLHttpRequest
     PRIVATE gtest_main
     ${ADDITIONAL_LIBRARIES})
+
+target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
 
 add_test(NAME UnitTests COMMAND UnitTests)
 

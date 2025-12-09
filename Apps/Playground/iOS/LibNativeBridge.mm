@@ -10,7 +10,7 @@
 #import <Babylon/Plugins/NativeOptimizations.h>
 #import <Babylon/Plugins/NativeTracing.h>
 #import <Babylon/Plugins/NativeXr.h>
-#import <Babylon/Plugins/Zip.h>
+#import <Babylon/Plugins/NativeZip.h>
 #import <Babylon/Polyfills/DecompressionStream.h>
 #import <Babylon/Polyfills/Blob.h>
 #import <Babylon/Polyfills/Canvas.h>
@@ -90,7 +90,7 @@ float screenScale{1.0f};
         nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
 
         Babylon::Polyfills::Window::Initialize(env);
-        Babylon::Plugins::Zip::Initialize(env);
+        Babylon::Plugins::NativeZip::Initialize(env);
         Babylon::Polyfills::DecompressionStream::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 

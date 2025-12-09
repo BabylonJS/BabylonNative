@@ -28,14 +28,16 @@ namespace Babylon::Plugins
         // Returns the height of the texture.
         uint32_t Height() const;
 
+        // Returns the underlying texture.
+        Graphics::TextureT Get() const;
+
         // Adds this texture to the graphics context of the given N-API environment.
         // NOTE: Must call from the JavaScript thread.
-        Napi::Promise AddToContextAsync(Napi::Env) const;
+        Napi::Promise AddToContextAsync(Napi::Env, std::optional<uint16_t> layerIndex = {}) const;
 
         // Updates to a new texture.
-        // Texture attributes (width, height, format, etc.) must match.
         // NOTE: Must call from the Graphics thread.
-        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {});
+        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {}, std::optional<uint16_t> layerIndex = {});
 
     private:
         class Impl;

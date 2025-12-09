@@ -5,7 +5,7 @@
 #import <Babylon/Plugins/NativeEncoding.h>
 #import <Babylon/Plugins/NativeEngine.h>
 #import <Babylon/Plugins/NativeInput.h>
-#import <Babylon/Plugins/Zip.h>
+#import <Babylon/Plugins/NativeZip.h>
 #import <Babylon/Polyfills/Blob.h>
 #import <Babylon/Polyfills/Window.h>
 #import <Babylon/Polyfills/XMLHttpRequest.h>
@@ -129,7 +129,7 @@ Babylon::Plugins::NativeInput* nativeInput{};
         });
 
         Babylon::Polyfills::Window::Initialize(env);
-        Babylon::Plugins::Zip::Initialize(env);
+        Babylon::Plugins::NativeZip::Initialize(env);
         Babylon::Polyfills::DecompressionStream::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 

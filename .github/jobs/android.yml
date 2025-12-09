@@ -1,32 +1,35 @@
 parameters:
-  name: ''
-  vmImage: ''
-  JSEngine: ''
-  macOSCodename: ''
+  name: ""
+  vmImage: ""
+  JSEngine: ""
+  macOSCodename: ""
 
 jobs:
-  - job: ${{ parameters.name }}
+  - job: ${{parameters.name}}
     timeoutInMinutes: 45
     pool:
-      vmImage: ${{ parameters.vmImage }}
-      
+      vmImage: ${{parameters.vmImage}}
+
+    variables:
+      SANITIZER_FLAG: ${{coalesce(replace(format('{0}', parameters.Sanitizers), 'True', 'ON'), 'OFF')}}
+
     steps:
-    - template: cmake.yml
-      parameters:
-        vmImage: ${{ parameters.vmImage }}
+      - template: cmake.yml
+        parameters:
+          vmImage: ${{parameters.vmImage}}
 
-    - task: JavaToolInstaller@0
-      inputs:
-        versionSpec: '17'
-        jdkArchitectureOption: 'x64'
-        jdkSourceOption: 'PreInstalled'
+      - task: JavaToolInstaller@0
+        inputs:
+          versionSpec: "17"
+          jdkArchitectureOption: "x64"
+          jdkSourceOption: "PreInstalled"
 
-    - task: Gradle@3
-      inputs:
-          workingDirectory: 'Apps/Playground/Android'
-          gradleWrapperFile: 'Apps/Playground/Android/gradlew'
-          gradleOptions: '-Xmx1536m'
-          options: '-PJSEngine=${{ parameters.JSEngine }} -PARM64Only -PNDK_VERSION=$(NDK_VERSION)'
+      - task: Gradle@3
+        inputs:
+          workingDirectory: "Apps/Playground/Android"
+          gradleWrapperFile: "Apps/Playground/Android/gradlew"
+          gradleOptions: "-Xmx1536m"
+          options: "-PJSEngine=${{parameters.JSEngine}} -PARM64Only -PNDK_VERSION=$(NDK_VERSION) -PSANITIZERS=$(SANITIZER_FLAG)"
           publishJUnitResults: false
-          tasks: 'assembleRelease'
-      displayName: 'Build Playground ${{ parameters.JSEngine }}'
+          tasks: "assembleRelease"
+        displayName: "Build Playground ${{parameters.JSEngine}}"

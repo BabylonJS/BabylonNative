@@ -19,7 +19,7 @@ namespace Babylon::Polyfills::Internal
         void Enqueue(const Napi::CallbackInfo& info);
         void Close(const Napi::CallbackInfo& info);
 
-        std::vector<std::byte> DecompressGzip(gsl::span<uint8_t> compressedBuffer);
+        std::vector<std::byte> DecompressGzip(const Napi::Env env, gsl::span<uint8_t> compressedBuffer);
 
         std::vector<std::byte> m_data;
     };
@@ -34,8 +34,6 @@ namespace Babylon::Polyfills::Internal
             env,
             JS_DECOMPRESSIONSTREAM_CONSTRUCTOR_NAME,
             {
-                InstanceMethod("enqueue", &DecompressionStream::Enqueue),
-                InstanceMethod("close", &DecompressionStream::Close),
             });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_DECOMPRESSIONSTREAM_CONSTRUCTOR_NAME, func);
@@ -48,22 +46,22 @@ namespace Babylon::Polyfills::Internal
         if (info.Length() == 1 && info[0].IsString()) {
             std::string compressionType = info[0].As<Napi::String>().Utf8Value();
             if (compressionType != "gzip") {
-                throw Napi::Error::New(env, "Unexpected compression type.");
+                throw Napi::Error::New(env, "Unsupported compression type.");
             }
         }
     }
 
-    std::vector<std::byte> DecompressionStream::DecompressGzip(gsl::span<uint8_t> compressedBuffer)
+    std::vector<std::byte> DecompressionStream::DecompressGzip(const Napi::Env env, gsl::span<uint8_t> compressedBuffer)
     {
         std::vector<std::byte> result;
 
         if (compressedBuffer.size() < 18) {
-            throw std::runtime_error("Invalid gzip data: too small");
+            throw Napi::Error::New(env, "Invalid gzip data: too small");
         }
 
         // Verify gzip header magic bytes (0x1f, 0x8b)
         if (compressedBuffer[0] != 0x1f || compressedBuffer[1] != 0x8b) {
-            throw std::runtime_error("Invalid gzip header");
+            throw Napi::Error::New(env, "Invalid gzip header");
         }
 
         // Get uncompressed size from gzip footer (last 4 bytes, little-endian)
@@ -79,7 +77,7 @@ namespace Babylon::Polyfills::Internal
         // Create decompressor
         struct libdeflate_decompressor* decompressor = libdeflate_alloc_decompressor();
         if (!decompressor) {
-            throw std::runtime_error("Failed to allocate decompressor");
+            throw Napi::Error::New(env, "Failed to allocate decompressor");
         }
 
         // Decompress gzip data
@@ -100,13 +98,13 @@ namespace Babylon::Polyfills::Internal
         if (decompress_result != LIBDEFLATE_SUCCESS) {
             switch (decompress_result) {
             case LIBDEFLATE_BAD_DATA:
-                throw std::runtime_error("Gzip decompression failed: bad or corrupted data");
+                    throw Napi::Error::New(env, "Gzip decompression failed: bad or corrupted data");
             case LIBDEFLATE_SHORT_OUTPUT:
-                throw std::runtime_error("Gzip decompression failed: output buffer too small");
+                throw Napi::Error::New(env, "Gzip decompression failed: output buffer too small");
             case LIBDEFLATE_INSUFFICIENT_SPACE:
-                throw std::runtime_error("Gzip decompression failed: insufficient space");
+                throw Napi::Error::New(env, "Gzip decompression failed: insufficient space");
             default:
-                throw std::runtime_error("Gzip decompression failed: unknown error");
+                throw Napi::Error::New(env, "Gzip decompression failed: unknown error");
             }
         }
 
@@ -116,28 +114,5 @@ namespace Babylon::Polyfills::Internal
         return result;
     }
 
-    void DecompressionStream::Enqueue(const Napi::CallbackInfo& info)
-    {
-        const Napi::Env env{info.Env()};
-        auto value = info[0];
-        Napi::TypedArray typed = value.As<Napi::TypedArray>();
 
-        if (typed.TypedArrayType() == napi_uint8_array)
-        {
-            Napi::Uint8Array array = typed.As<Napi::Uint8Array>();
-            
-            gsl::span<uint8_t> buffer = {array.Data(), array.ByteLength()};
-            if (buffer.empty())
-            {
-                throw Napi::Error::New(env, "GZip data buffer is empty.");
-            }
-
-            m_data = DecompressGzip(buffer);
-        }
-    }
-
-
-    void DecompressionStream::Close(const Napi::CallbackInfo& /*info*/)
-    {
-    }
 }

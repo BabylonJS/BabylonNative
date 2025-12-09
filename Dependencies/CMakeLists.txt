@@ -32,7 +32,6 @@ target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
 # --------------------------------------------------
 set(BGFX_BUILD_EXAMPLES OFF)
 set(BGFX_BUILD_TOOLS OFF)
-set(BGFX_CONFIG_DEBUG_ANNOTATION OFF)
 set(BGFX_CONFIG_MULTITHREADED ON)
 set(BGFX_CUSTOM_TARGETS OFF)
 set(BGFX_INSTALL OFF)
@@ -40,7 +39,17 @@ set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
 FetchContent_MakeAvailable_With_Message(bgfx.cmake)
 
+# Turn off debug annotations as it causes an access violation in D3D12.
+# This flag is set using compile definitions because the bgfx.cmake option is ignored in debug configuration.
+# See https://github.com/BabylonJS/bgfx.cmake/blob/0af3c9865a66aff1748a51bb466b24f05a123043/cmake/bgfx/bgfx.cmake#L126.
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_ANNOTATION=0)
+
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEFAULT_MAX_ENCODERS=2)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_VERTEX_STREAMS=18)
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MIN_RESOURCE_COMMAND_BUFFER_SIZE=16)
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MIN_UNIFORM_BUFFER_SIZE=4096)
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE=256)
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE=1024)
 if(GRAPHICS_API STREQUAL "D3D11")
     target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_DIRECT3D11=1)
 elseif(GRAPHICS_API STREQUAL "D3D12")
@@ -232,16 +241,6 @@ endif()
 # --------------------------------------------------
 if(WINDOWS_STORE)
     add_subdirectory(WindowsAppSDK)
-endif()
-
-# --------------------------------------------------
-# miniz
-# --------------------------------------------------
-if(BABYLON_NATIVE_PLUGIN_ZIP)
-    FetchContent_MakeAvailable_With_Message(miniz)
-    target_compile_definitions(miniz PRIVATE MINIZ_DISABLE_ZIP_READER_CRC32_CHECKS)
-    set_property(TARGET miniz PROPERTY UNITY_BUILD false)
-    set_property(TARGET miniz PROPERTY FOLDER Dependencies)
 endif()
 
 # --------------------------------------------------

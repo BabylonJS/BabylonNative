@@ -19,7 +19,7 @@
 #include <Babylon/Plugins/NativeXr.h>
 #include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
-#include <Babylon/Plugins/Zip.h>
+#include <Babylon/Plugins/NativeZip.h>
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
@@ -130,7 +130,7 @@ extern "C"
                 nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
                 Babylon::Plugins::NativeCamera::Initialize(env);
-                Babylon::Plugins::Zip::Initialize(env);
+                Babylon::Plugins::NativeZip::Initialize(env);
                 Babylon::Polyfills::DecompressionStream::Initialize(env);
                 Babylon::Polyfills::Window::Initialize(env);
 

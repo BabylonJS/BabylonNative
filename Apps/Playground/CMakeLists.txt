@@ -136,7 +136,7 @@ target_link_libraries(Playground
     PRIVATE NativeCapture
     PRIVATE NativeEncoding
     PRIVATE NativeEngine
-    PRIVATE Zip
+    PRIVATE NativeZip
     PRIVATE DecompressionStream
     PRIVATE NativeInput
     PRIVATE NativeOptimizations

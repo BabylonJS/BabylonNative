@@ -38,6 +38,6 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENCODING)
     add_subdirectory(NativeEncoding)
 endif()
 
-if(BABYLON_NATIVE_PLUGIN_ZIP)
-    add_subdirectory(Zip)
+if(BABYLON_NATIVE_PLUGIN_NATIVEZIP)
+    add_subdirectory(NativeZip)
 endif()

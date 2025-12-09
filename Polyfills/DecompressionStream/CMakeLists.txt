@@ -4,6 +4,7 @@ set(SOURCES
     "Source/DecompressionStream.h"
     "Source/TextDecoder.h"
     "Source/ReadableStream.h"
+    "Source/ReadableStreamDefaultController.h"
     "Source/Response.h")
 
 add_library(DecompressionStream ${SOURCES})
