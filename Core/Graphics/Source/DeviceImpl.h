@@ -46,6 +46,10 @@ namespace Babylon::Graphics
         void UpdateMSAA(uint8_t value);
         void UpdateAlphaPremultiplied(bool enabled);
 
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        void UpdateBackBuffer(BackBufferColorT backBufferColor, BackBufferDepthStencilT backBufferDepthStencil);
+#endif
+
         void AddToJavaScript(Napi::Env);
         static DeviceImpl& GetFromJavaScript(Napi::Env);
 
