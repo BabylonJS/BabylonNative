@@ -16,25 +16,57 @@ namespace Babylon::Polyfills::Internal
         explicit URL(const Napi::CallbackInfo& info);
 
     private:
-        Napi::Value GetSearch(const Napi::CallbackInfo& info);
-        void SetSearch(const Napi::CallbackInfo& info, const Napi::Value& value);
+        // Static methods (exposed to JavaScript)
+        static Napi::Value CanParse(const Napi::CallbackInfo& info);
+        static Napi::Value Parse(const Napi::CallbackInfo& info);
 
-        Napi::Value GetHref(const Napi::CallbackInfo& info);
-        void SetHref(const Napi::CallbackInfo& info, const Napi::Value& value);
+        // Parse the URL string and populate all components including searchParams
+        // Returns true if parsing succeeded, false otherwise
+        // If baseString is provided, resolves urlString relative to it
+        bool ParseURL(const std::string& urlString, const std::string& baseString = "");
 
-        Napi::Value GetOrigin(const Napi::CallbackInfo& info);
-        Napi::Value GetPathname(const Napi::CallbackInfo& info);
+        // Rebuild the full href from components
+        std::string BuildHref() const;
+
+        // Instance property getters
+        Napi::Value GetHash(const Napi::CallbackInfo& info);
+        Napi::Value GetHost(const Napi::CallbackInfo& info);
         Napi::Value GetHostname(const Napi::CallbackInfo& info);
-
-        std::string GetSearchQuery();
+        Napi::Value GetHref(const Napi::CallbackInfo& info);
+        Napi::Value GetOrigin(const Napi::CallbackInfo& info);
+        Napi::Value GetPassword(const Napi::CallbackInfo& info);
+        Napi::Value GetPathname(const Napi::CallbackInfo& info);
+        Napi::Value GetPort(const Napi::CallbackInfo& info);
+        Napi::Value GetProtocol(const Napi::CallbackInfo& info);
+        Napi::Value GetSearch(const Napi::CallbackInfo& info);
         Napi::Value GetSearchParams(const Napi::CallbackInfo& info);
+        Napi::Value GetUsername(const Napi::CallbackInfo& info);
 
-        std::unordered_map<std::string, std::vector<Napi::FunctionReference>> m_eventHandlerRefs;
-        std::string m_search;
-        std::string m_href;
-        std::string m_origin;
-        std::string m_pathname;
-        std::string m_hostname;
+        // Instance property setters
+        void SetHash(const Napi::CallbackInfo& info, const Napi::Value& value);
+        void SetHost(const Napi::CallbackInfo& info, const Napi::Value& value);
+        void SetHostname(const Napi::CallbackInfo& info, const Napi::Value& value);
+        void SetHref(const Napi::CallbackInfo& info, const Napi::Value& value);
+        void SetPassword(const Napi::CallbackInfo& info, const Napi::Value& value);
+        void SetPathname(const Napi::CallbackInfo& info, const Napi::Value& value);
+        void SetPort(const Napi::CallbackInfo& info, const Napi::Value& value);
+        void SetProtocol(const Napi::CallbackInfo& info, const Napi::Value& value);
+        void SetSearch(const Napi::CallbackInfo& info, const Napi::Value& value);
+        void SetUsername(const Napi::CallbackInfo& info, const Napi::Value& value);
+
+        // Instance methods
+        Napi::Value ToString(const Napi::CallbackInfo& info);
+        Napi::Value ToJSON(const Napi::CallbackInfo& info);
+
+        // URL components
+        std::string m_protocol;   // e.g., "https:"
+        std::string m_username;   // e.g., "user"
+        std::string m_password;   // e.g., "pass"
+        std::string m_hostname;   // e.g., "example.com"
+        std::string m_port;       // e.g., "8080"
+        std::string m_pathname;   // e.g., "/path/to/resource"
+        std::string m_hash;       // e.g., "#fragment"
+
         Napi::ObjectReference m_searchParamsReference;
     };
 }

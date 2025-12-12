@@ -38,4 +38,5 @@ target_link_libraries(UnitTestsJNI
     PRIVATE XMLHttpRequest
     PRIVATE WebSocket
     PRIVATE gtest_main
-    PRIVATE Blob)
+    PRIVATE Blob
+    PRIVATE Performance)

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "webpack",
-    "watch": "webpack -watch",
+    "watch": "webpack --watch",
     "postinstall": "npm run build"
   },
   "dependencies": {

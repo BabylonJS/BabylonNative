@@ -3,6 +3,7 @@
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/Polyfills/AbortController.h>
 #include <Babylon/Polyfills/Console.h>
+#include <Babylon/Polyfills/Performance.h>
 #include <Babylon/Polyfills/Scheduling.h>
 #include <Babylon/Polyfills/URL.h>
 #include <Babylon/Polyfills/WebSocket.h>
@@ -61,6 +62,7 @@ TEST(JavaScript, All)
         });
 
         Babylon::Polyfills::AbortController::Initialize(env);
+        Babylon::Polyfills::Performance::Initialize(env);
         Babylon::Polyfills::Scheduling::Initialize(env);
         Babylon::Polyfills::URL::Initialize(env);
         Babylon::Polyfills::WebSocket::Initialize(env);
