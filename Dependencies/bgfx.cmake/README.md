@@ -99,7 +99,7 @@ bgfx_compile_shaders(
 ```
 This defines a shaderc command to generate binaries or headers for a number of `TYPE` shaders with `SHADERS` files and `VARYING_DEF` file in the `OUTPUT_DIR` directory. There will be one generated shader for each supported rendering API on this current platform according to the `BGFX_EMBEDDED_SHADER` macro in `bgfx/embedded_shader.h` for headers and in the directory expected by `load_shader` in `bgfx_utils.h`.
 
-The generated headers will have names in the format of `${RENDERING_API}/${SHADERS}.bin[.h]` where `RENDERING_API` can be `glsl`, `essl`, `spv`, `dx11` and `mtl` depending on the availability of the platform.
+The generated headers will have names in the format of `${RENDERING_API}/${SHADERS}.bin[.h]` where `RENDERING_API` can be `glsl`, `essl`, `spirv`, `dx11` and `metal` depending on the availability of the platform.
 
 Adding these `SHADERS` as source files to a target will run `shaderc` at build time and they will rebuild if either the contents of the `SHADERS` or the `VARYING_DEF` change.
 
@@ -128,17 +128,17 @@ target_include_directories(myLib ${CMAKE_BINARY_DIR}/include/generated/shaders)
 // main.cpp
 #include <glsl/vs.sc.bin.h>
 #include <essl/vs.sc.bin.h>
-#include <spv/vs.sc.bin.h>
+#include <spirv/vs.sc.bin.h>
 #include <glsl/fs.sc.bin.h>
 #include <essl/fs.sc.bin.h>
-#include <spv/fs.sc.bin.h>
+#include <spirv/fs.sc.bin.h>
 #if defined(_WIN32)
 #include <dx11/vs.sc.bin.h>
 #include <dx11/fs.sc.bin.h>
 #endif //  defined(_WIN32)
 #if __APPLE__
-#include <mtl/vs.sc.bin.h>
-#include <mtl/fs.sc.bin.h>
+#include <metal/vs.sc.bin.h>
+#include <metal/fs.sc.bin.h>
 #endif // __APPLE__
 
 const bgfx::EmbeddedShader k_vs = BGFX_EMBEDDED_SHADER(vs);
