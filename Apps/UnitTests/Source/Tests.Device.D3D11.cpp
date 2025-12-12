@@ -95,6 +95,7 @@ TEST(Device, BackBuffer)
         update.Start();
 
         device.UpdateBackBuffer(renderTargetTextures[i].View.get());
+        device.UpdateSize(dimensions[i].cx, dimensions[i].cy);
 
         update.Finish();
         device.FinishRenderingCurrentFrame();
