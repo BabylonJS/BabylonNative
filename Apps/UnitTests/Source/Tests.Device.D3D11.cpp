@@ -75,7 +75,7 @@ TEST(Device, BackBuffer)
     };
 
     std::vector<RenderTargetTexture> renderTargetTextures;
-    for (int i = 0; i < std::size(dimensions); ++i)
+    for (size_t i = 0; i < std::size(dimensions); ++i)
     {
         renderTargetTextures.push_back(CreateTestRenderTargetTexture(d3dDevice.get(), dimensions[i].cx, dimensions[i].cy));
     }
@@ -89,7 +89,7 @@ TEST(Device, BackBuffer)
     Babylon::Graphics::Device device{config};
     Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
-    for (int i = 1; i < std::size(dimensions); ++i)
+    for (size_t i = 1; i < std::size(dimensions); ++i)
     {
         device.StartRenderingCurrentFrame();
         update.Start();
