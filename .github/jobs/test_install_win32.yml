@@ -1,59 +1,36 @@
 parameters:
-- name: name
-  type: string
-- name: vmImage
-  type: string
-- name: platform
-  type: string
-- name: napiType
-  type: string
-  default: direct
-  values:
-  - direct
-  - jsi
-  - V8
-- name: graphics_api
-  type: string
-  default: D3D11
+  - name: name
+    type: string
+  - name: vmImage
+    type: string
+  - name: graphics_api
+    type: string
+    default: D3D11
 
 jobs:
-  - job: ${{ parameters.name }}
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
-    timeoutInMinutes: 20
+  - job: ${{parameters.name}}
+    timeoutInMinutes: 30
     pool:
-      vmImage: ${{ parameters.vmImage }}
-    variables:
-      ${{ if eq(parameters.napiType, 'jsi') }}:
-        napiSuffix: '_JSI'
-        jsEngineDefine: '-DNAPI_JAVASCRIPT_ENGINE=JSI'
-      ${{ elseif eq(parameters.napiType, 'V8') }}:
-        napiSuffix: '_V8'
-        jsEngineDefine: '-DNAPI_JAVASCRIPT_ENGINE=V8'
-      ${{ else }}:
-        napiSuffix: ''
-        jsEngineDefine: ''
-      solutionName: 'Win32_${{ parameters.platform }}${{variables.napiSuffix}}'
+      vmImage: ${{parameters.vmImage}}
 
     steps:
       - template: cmake.yml
         parameters:
-          vmImage: ${{ parameters.vmImage }}
-
-      # BGFX_CONFIG_MAX_FRAME_BUFFERS is set so enough Framebuffers are available before V8 starts disposing unused ones
-      - script: |
-          cmake -G "Visual Studio 17 2022" -B build${{ variables.solutionName }} -A ${{ parameters.platform }} ${{ variables.jsEngineDefine }} -D BX_CONFIG_DEBUG=ON -D GRAPHICS_API=${{ parameters.graphics_api }} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256 -D BABYLON_DEBUG_TRACE=ON
-        displayName: 'Generate ${{ variables.solutionName }} solution'
-
-      - task: MSBuild@1
-        inputs:
-          solution: 'build${{ variables.solutionName }}/BabylonNative.sln'
-          maximumCpuCount: true
-          configuration: 'RelWithDebInfo'
-        displayName: 'Build ${{ variables.solutionName }}'
+          vmImage: ${{parameters.vmImage}}
 
       - script: |
-          cmake --build build${{ variables.solutionName }} --target INSTALL --config RelWithDebInfo
-          cd Install/Test
-          cmake . -DBINARY_DIR=../../build${{ variables.solutionName }} ${{ variables.jsEngineDefine }}
-          cmake --build . --config RelWithDebInfo
-        displayName: 'Install'
+          cmake -B build/Win32 -G "Visual Studio 17 2022" -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_NATIVE_BUILD_APPS=OFF -D BABYLON_DEBUG_TRACE=ON
+        displayName: "Configure"
+
+      - script: |
+          cmake --build build/Win32 --config RelWithDebInfo
+        displayName: "Build"
+
+      - script: |
+          cmake --install build/Win32 --prefix=build/Win32/Install --config RelWithDebInfo
+        displayName: "Install"
+
+      - script: |
+          cmake Install/Test -B build/TestInstall -D INSTALL_DIR=$(Build.SourcesDirectory)/build/Win32/Install
+          cmake --build build/TestInstall --config RelWithDebInfo
+        displayName: "Test Install"

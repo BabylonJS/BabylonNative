@@ -39,6 +39,13 @@ namespace Babylon::Graphics
         m_impl->UpdateAlphaPremultiplied(enabled);
     }
 
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+    void Device::UpdateBackBuffer(BackBufferColorT backBufferColor, BackBufferDepthStencilT backBufferDepthStencil)
+    {
+        m_impl->UpdateBackBuffer(backBufferColor, backBufferDepthStencil);
+    }
+#endif
+
     void Device::AddToJavaScript(Napi::Env env)
     {
         m_impl->AddToJavaScript(env);

@@ -1,36 +1,37 @@
 parameters:
-  name: ''
-  vmImage: ''
-  CC: ''
-  CXX: ''
-  JSEngine: ''
+  name: ""
+  vmImage: ""
+  CC: ""
+  CXX: ""
 
 jobs:
-  - job: ${{ parameters.name }}
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
-    timeoutInMinutes: 30
+  - job: ${{parameters.name}}
+    timeoutInMinutes: 20
     pool:
-      vmImage: ${{ parameters.vmImage }}
+      vmImage: ${{parameters.vmImage}}
 
     variables:
-      CC: ${{ parameters.CC }}
-      CXX: ${{ parameters.CXX }}
-  
+      CC: ${{parameters.CC}}
+      CXX: ${{parameters.CXX}}
+
     steps:
-    - template: cmake.yml
-      parameters:
-        vmImage: ${{ parameters.vmImage }}
+      - template: cmake.yml
+        parameters:
+          vmImage: ${{parameters.vmImage}}
 
-    - script: |
-        sudo apt-get update
-        sudo apt-get install libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev
-      displayName: 'Install packages'
+      - script: |
+          sudo apt-get update
+          sudo apt-get install libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev
+        displayName: "Install packages"
 
-    - script: |
-        cmake -G Ninja -B build -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so -D NAPI_JAVASCRIPT_ENGINE=${{ parameters.JSEngine }} -D CMAKE_BUILD_TYPE=RelWithDebInfo -D BX_CONFIG_DEBUG=ON -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D OpenGL_GL_PREFERENCE=GLVND  -D BABYLON_DEBUG_TRACE=ON
-        ninja -C build
-      displayName: 'Build X11'
+      - script: |
+          cmake -B build/Linux -G Ninja -D CMAKE_BUILD_TYPE=RelWithDebInfo -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_NATIVE_BUILD_APPS=OFF -D BABYLON_DEBUG_TRACE=ON
+        displayName: "Configure"
 
-    - script: |
-        cmake --install build --prefix="./install"
-      displayName: 'Install'
+      - script: |
+          cmake --build build/Linux --config RelWithDebInfo
+        displayName: "Build"
+
+      - script: |
+          cmake --install build/Linux --prefix=build/Linux/Install --config=RelWithDebInfo
+        displayName: "Install"
