@@ -16,11 +16,13 @@
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/TestUtils.h>
+#include <Babylon/Plugins/NativeZip.h>
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Canvas.h>
+#include <Babylon/Polyfills/DecompressionStream.h>
 #include <Babylon/DebugTrace.h>
 
 static const char* s_applicationName  = "BabylonNative Playground";
@@ -80,6 +82,8 @@ namespace
             });
 
             Babylon::Polyfills::Window::Initialize(env);
+            Babylon::Plugins::NativeZip::Initialize(env);
+            Babylon::Polyfills::DecompressionStream::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
             nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
 
