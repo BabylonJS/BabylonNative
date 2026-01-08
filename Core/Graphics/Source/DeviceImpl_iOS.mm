@@ -1,3 +1,4 @@
+#include <cmath>
 #include <Babylon/Graphics/Platform.h>
 #include "DeviceImpl.h"
 
@@ -14,6 +15,14 @@ namespace Babylon::Graphics
 
     float DeviceImpl::GetDevicePixelRatio(WindowT window)
     {
-        return window.contentScaleFactor;
+        // contentScaleFactor can return infinity if the view is not yet parented
+        // to a window hierarchy (and thus has no associated screen).
+        // Fallback to the scale from the main screen.
+        float scale = window.contentScaleFactor;
+        if (std::isinf(scale) || scale <= 0)
+        {
+            scale = UIScreen.mainScreen.scale;
+        }
+        return scale;
     }
 }
