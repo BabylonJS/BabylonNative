@@ -54,6 +54,13 @@ target_link_libraries(Canvas
     PRIVATE UrlLib
     PRIVATE base-n)
 
+if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP)
+    target_compile_definitions(Canvas
+        PRIVATE WEBP)
+    target_link_libraries(Canvas
+        PRIVATE webp)
+endif()
+
 if(SHADERC_PATH AND NOT IOS AND NOT VISIONOS AND NOT ANDROID)
     if(EXISTS "${SHADERC_PATH}")
         message(STATUS "Using shaderc from: ${SHADERC_PATH}")

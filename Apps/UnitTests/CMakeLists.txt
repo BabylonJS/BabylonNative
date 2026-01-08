@@ -56,6 +56,8 @@ target_link_libraries(UnitTests
     PRIVATE GraphicsDevice
     PRIVATE ExternalTexture
     PRIVATE NativeEngine
+    PRIVATE NativeZip
+    PRIVATE DecompressionStream
     PRIVATE NativeEncoding
     PRIVATE ScriptLoader
     PRIVATE UrlLib
