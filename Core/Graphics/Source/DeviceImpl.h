@@ -140,8 +140,8 @@ namespace Babylon::Graphics
 
             struct
             {
-                size_t Width{};
-                size_t Height{};
+                size_t Width{}; // in device-independent pixels
+                size_t Height{}; // in device-independent pixels
                 float HardwareScalingLevel{1.0f};
                 float DevicePixelRatio{1.0f};
             } Resolution{};

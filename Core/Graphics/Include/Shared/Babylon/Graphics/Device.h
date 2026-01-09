@@ -39,10 +39,12 @@ namespace Babylon::Graphics
         BackBufferDepthStencilT BackBufferDepthStencil{};
 #endif
 
-        // The resolution width.
+        // The resolution width in device-independent pixels (a.k.a., dp or dip).
+        // @remarks The rendering width is computed from this value divided by the hardware scaling level.
         size_t Width{};
 
-        // The resolution height.
+        // The resolution height in device-independent pixels (a.k.a., dp or dip).
+        // @remarks The rendering height is computed from this value divided by the hardware scaling level.
         size_t Height{};
 
         // MSAA sample values can be 2, 4, 8 or 16. Other values will disable MSAA.
