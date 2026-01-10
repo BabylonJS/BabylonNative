@@ -31,6 +31,8 @@ function(add_bgfx_shader FILE FOLDER)
 		set(COMMON FILE ${FILE} ${TYPE} INCLUDES ${BGFX_DIR}/src)
 		set(OUTPUTS "")
 		set(OUTPUTS_PRETTY "")
+		set(OUTPUT_FILES "")
+		set(COMMANDS "")
 
 		if(WIN32)
 			# dx11
@@ -85,10 +87,14 @@ function(add_bgfx_shader FILE FOLDER)
 			set(SPIRV_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/spirv/${FILENAME}.bin)
 			_bgfx_shaderc_parse(SPIRV ${COMMON} LINUX PROFILE spirv OUTPUT ${SPIRV_OUTPUT})
 			list(APPEND OUTPUTS "SPIRV")
-			set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}SPIRV")
-			set(OUTPUT_FILES "")
-			set(COMMANDS "")
+			set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}SPIRV, ")
 		endif()
+
+		# wgsl
+		set(WGSL_OUTPUT ${BGFX_DIR}/examples/runtime/shaders/wgsl/${FILENAME}.bin)
+		_bgfx_shaderc_parse(WGSL ${COMMON} LINUX PROFILE wgsl OUTPUT ${WGSL_OUTPUT})
+		list(APPEND OUTPUTS "WGSL")
+		set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}WGSL")
 
 		foreach(OUT ${OUTPUTS})
 			list(APPEND OUTPUT_FILES ${${OUT}_OUTPUT})

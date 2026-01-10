@@ -26,6 +26,7 @@ if(BGFX_BUILD_TOOLS_SHADER)
 	include(3rdparty/glsl-optimizer.cmake)
 	include(3rdparty/fcpp.cmake)
 	include(3rdparty/webgpu.cmake)
+	include(3rdparty/tint.cmake)
 	include(shaderc.cmake)
 endif()
 
