@@ -285,12 +285,12 @@ namespace Babylon::Polyfills::Internal
                 }
                 else
                 {
-                    int w = (int)fabsf(g);
+                    int w = (int)std::fabs(g);
                     if (spreadMode == SPREAD_REPEAT)
                     {
                         if (g < 0)
                         {
-                            g = 1 - (fabs(g) - w);
+                            g = 1 - (std::fabs(g) - w);
                         }
                         else
                         {
@@ -303,11 +303,11 @@ namespace Babylon::Polyfills::Internal
                         {
                             if (w % 2 == 0)
                             {   // even
-                                g = (fabsf(g) - w);
+                                g = (std::fabs(g) - w);
                             }
                             else
                             {   // odd
-                                g = (1 - (fabsf(g) - w));
+                                g = (1 - (std::fabs(g) - w));
                             }
                         }
                         else

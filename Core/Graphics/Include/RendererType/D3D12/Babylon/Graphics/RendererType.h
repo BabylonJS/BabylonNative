@@ -8,12 +8,6 @@ namespace Babylon::Graphics
     using TextureT = ID3D12Resource*;
     using TextureFormatT = DXGI_FORMAT;
 
-    struct DeviceConfiguration
-    {
-        DeviceT Device;
-        float DevicePixelRatio{1.f};
-    };
-
     struct PlatformInfo
     {
         DeviceT Device;

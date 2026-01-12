@@ -676,7 +676,6 @@ void nvgReset(NVGcontext* ctx)
 	state->fontBlur = 0.0f;
 	state->textAlign = NVG_ALIGN_LEFT | NVG_ALIGN_BASELINE;
 	state->fontId = 0;
-	state->m_filterStack.Clear();
 }
 
 // State setting
@@ -2438,7 +2437,7 @@ static void nvg__renderText(NVGcontext* ctx, NVGpaint* paint, NVGvertex* verts, 
 
 static float nvg__getSdfFontSize(NVGstate* state, float scale)
 {
-	int fontSize = state->fontSize*scale;
+	int fontSize = static_cast<int>(state->fontSize * scale);
 	int sdfFontSize = 32;
 
 	// We double the font size so that SDFs are also used for smaller font sizes
@@ -2447,7 +2446,7 @@ static float nvg__getSdfFontSize(NVGstate* state, float scale)
 	// Reduce the font size to a powers of 4 after 32 (e.g. 32, 32*4, 32*4*4)
 	fontSize /= sdfFontSize;
 	while (fontSize /= 4) sdfFontSize *= 4;
-	return sdfFontSize;
+	return static_cast<float>(sdfFontSize);
 }
 
 // Computes the distance in SDF values of a single pixel
@@ -2536,9 +2535,9 @@ float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char*
 	float scale = nvg__getFontScale(state) * ctx->devicePxRatio;
 	float pixelDist = nvg__getSdfPixelDist(state, scale);
 
-	paint.sdfMin = 0.5;
+	paint.sdfMin = 0.5f;
 	// Add an extra pixel so it doesn't start fading out in the middle of the text
-	paint.sdfMax = 1.0 + pixelDist;
+	paint.sdfMax = 1.0f + pixelDist;
 	// TODO: handle text blurring
 	paint.sdfBlur = pixelDist;
 	return nvg__text(ctx, &paint, scale, x, y, string, end);
@@ -2554,8 +2553,8 @@ float nvgStrokeText(NVGcontext* ctx, float x, float y, const char* string, const
 	// The distance in SDF values to get the required stroke width
 	float strokeDist = state->strokeWidth * strokeScale * pixelDist;
 
-	paint.sdfMin = 0.5 - strokeDist / 2;
-	paint.sdfMax = 0.5 + strokeDist / 2;
+	paint.sdfMin = 0.5f - strokeDist / 2.f;
+	paint.sdfMax = 0.5f + strokeDist / 2.f;
 	// TODO: handle text blurring
 	paint.sdfBlur = pixelDist;
 	return nvg__text(ctx, &paint, scale, x, y, string, end);

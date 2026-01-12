@@ -22,19 +22,20 @@ namespace Babylon::Polyfills
         struct MonitoredResource
         {
             MonitoredResource(Canvas::Impl& impl)
-                : m_impl(impl)
+                : m_impl(impl.shared_from_this())
             {
-                m_impl.AddMonitoredResource(this);
+                m_impl->AddMonitoredResource(this);
             }
             virtual ~MonitoredResource()
             {
-                m_impl.RemoveMonitoredResource(this);
+                m_impl->RemoveMonitoredResource(this);
             }
 
             virtual void FlushGraphicResources() = 0;
 
         private:
-            Canvas::Impl& m_impl;
+            // context is a monitoredResource managed by the GC while Canvas::Impl is managed by the app. Make sure the canvas impl is destroyed after all monitoredResources are.
+            std::shared_ptr<Canvas::Impl> m_impl;
         };
 
     private:

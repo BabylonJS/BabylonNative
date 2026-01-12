@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>

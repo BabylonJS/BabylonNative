@@ -376,24 +376,24 @@ namespace Babylon::Polyfills::Internal
             else if (radiiArrayLength == 2)
             {
                 const auto topLeftBottomRight = radiiArray[0u].As<Napi::Number>().FloatValue();
-                const auto topRightBottomLeft = radiiArray[1].As<Napi::Number>().FloatValue();
+                const auto topRightBottomLeft = radiiArray[1u].As<Napi::Number>().FloatValue();
 
                 nvgRoundedRectVarying(*m_nvg, x, y, width, height, topLeftBottomRight, topRightBottomLeft, topLeftBottomRight, topRightBottomLeft);
             }
             else if (radiiArrayLength == 3)
             {
                 const auto topLeft = radiiArray[0u].As<Napi::Number>().FloatValue();
-                const auto topRightBottomLeft = radiiArray[1].As<Napi::Number>().FloatValue();
-                const auto bottomRight = radiiArray[2].As<Napi::Number>().FloatValue();
+                const auto topRightBottomLeft = radiiArray[1u].As<Napi::Number>().FloatValue();
+                const auto bottomRight = radiiArray[2u].As<Napi::Number>().FloatValue();
 
                 nvgRoundedRectVarying(*m_nvg, x, y, width, height, topLeft, topRightBottomLeft, bottomRight, topRightBottomLeft);
             }
             else if (radiiArrayLength == 4)
             {
                 const auto topLeft = radiiArray[0u].As<Napi::Number>().FloatValue();
-                const auto topRight = radiiArray[1].As<Napi::Number>().FloatValue();
-                const auto bottomRight = radiiArray[2].As<Napi::Number>().FloatValue();
-                const auto bottomLeft = radiiArray[3].As<Napi::Number>().FloatValue();
+                const auto topRight = radiiArray[1u].As<Napi::Number>().FloatValue();
+                const auto bottomRight = radiiArray[2u].As<Napi::Number>().FloatValue();
+                const auto bottomLeft = radiiArray[3u].As<Napi::Number>().FloatValue();
 
                 nvgRoundedRectVarying(*m_nvg, x, y, width, height, topLeft, topRight, bottomRight, bottomLeft);
             }

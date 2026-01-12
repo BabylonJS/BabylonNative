@@ -9,41 +9,61 @@ include(FetchContent)
 # --------------------------------------------------
 # Declarations
 # --------------------------------------------------
+
+# EXCLUDE_FROM_ALL is used to prevent FetchContent from automatically adding
+# targets to the ALL_BUILD target.  We do this for all dependencies except
+# JsRuntimeHost because JsRuntimeHost has top-level targets (e.g., AppRuntime)
+# that are part of the Babylon Native contract. When adding dependencies using
+# FetchContent, add the EXCLUDE_FROM_ALL option except where there are top-level
+# targets that are part of the Babylon Native contract.
+
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG 66520bff9b57030b67894a4934d18ad7e161ba6f)
+    GIT_TAG f7ed149b5360cc8a4908fece66607c5ce1e6095b
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG c02527c32d51b6b3ffeda36f8cf140d2e1c60bb9)
+    GIT_TAG c02527c32d51b6b3ffeda36f8cf140d2e1c60bb9
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcore-android-sdk
     GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
-    GIT_TAG 98cb803de5482fb2b36effe8be3b5a0d3b726976)
+    GIT_TAG 98cb803de5482fb2b36effe8be3b5a0d3b726976
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(base-n
     GIT_REPOSITORY https://github.com/azawadzki/base-n.git
-    GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4)
+    GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG 0af3c9865a66aff1748a51bb466b24f05a123043)
+    GIT_TAG 0af3c9865a66aff1748a51bb466b24f05a123043
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
+    GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
-    GIT_TAG 6388a301b23edf0ae6a9342d46efa9cb21f05d9b)
+    GIT_TAG 39a80699a315cb7f66c4ab3180edd4e2910fab28
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(googletest
-    URL "https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz")
+    URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz"
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
-    GIT_TAG 4.5.0)
+    GIT_TAG 4.5.0
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG b3dbf370caf560fb5b93936efd4cdf4e990d4d0a)
+    GIT_TAG ae0253a458767ee28137312ac41c9c5c966f9ba4)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 6abfcf066d171e9ade7604d91381ebebe4209edc)
+    GIT_TAG 6abfcf066d171e9ade7604d91381ebebe4209edc
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(libwebp
     GIT_REPOSITORY https://github.com/webmproject/libwebp.git
-    GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c)
+    GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c
+    EXCLUDE_FROM_ALL)
+
 # --------------------------------------------------
 
 FetchContent_MakeAvailable(CMakeExtensions)
@@ -106,6 +126,34 @@ option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils.
 # Polyfills
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
+
+# Sanitizers
+option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
+
+if(ENABLE_SANITIZERS)
+    set(ENABLE_RTTI ON CACHE BOOL "" FORCE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        set(SANITIZERS "address,undefined")
+        # Check for Clang since vptr and fdsan are Clang-specific
+        if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            list(APPEND SANITIZERS "vptr")
+            # FDSan only works on Android builds with Clang
+            if (ANDROID)
+                list(APPEND SANITIZERS "fdsan")
+            endif()
+        endif()
+
+        string(JOIN "," SANITIZER_FLAGS ${SANITIZERS})
+
+        add_compile_options(-fsanitize=${SANITIZER_FLAGS} -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=${SANITIZER_FLAGS})
+    elseif(MSVC)
+        # MSVC only supports AddressSanitizer
+        add_compile_options(/fsanitize=address /Zi /Od)
+    else()
+        message(FATAL_ERROR "Sanitizers not supported on this compiler.")
+    endif()
+endif()
 
 # --------------------------------------------------
 

@@ -8,16 +8,16 @@ on:
 
 jobs:
   dispatch:
-    name: Dispatch ${{ github.sha }}
+    name: Dispatch ${{github.sha}}
     runs-on: windows-latest
     strategy:
       matrix:
-        repo: ['BabylonJS/BabylonReactNative']
+        repo: ["BabylonJS/BabylonReactNative"]
     steps:
       - name: Repository Dispatch
         uses: peter-evans/repository-dispatch@v3
         with:
-          token: ${{ secrets.REPO_ACCESS_TOKEN }}
-          repository: ${{ matrix.repo }}
+          token: ${{secrets.REPO_ACCESS_TOKEN}}
+          repository: ${{matrix.repo}}
           event-type: babylonnative-master-update
-          client-payload: '{ "sha": "${{ github.sha }}" }'
+          client-payload: '{ "sha": "${{github.sha}}" }'

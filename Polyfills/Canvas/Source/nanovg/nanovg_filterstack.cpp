@@ -85,7 +85,7 @@ bool nanovg_filterstack::ValidString(const std::string& string)
 
 void nanovg_filterstack::ParseString(const std::string& string)
 {
-    stackElements.clear();
+    stackElementCount = 0;
 
     std::smatch match;
     if (std::regex_match(string, match, blurRegex))
@@ -101,12 +101,12 @@ void nanovg_filterstack::ParseString(const std::string& string)
                 // TODO: convert non-px radius
             }
 
-            if (radius > 0)
+            assert(stackElementCount < MAX_STACK_SIZE);
+            if (radius > 0 && stackElementCount < MAX_STACK_SIZE)
             {
-                StackElement element = {};
+                StackElement& element = stackElements[stackElementCount++];
                 element.type = SE_BLUR;
                 element.blurElement = {radius, radius};
-                stackElements.push_back(element);
             }
         }
         else
@@ -165,15 +165,13 @@ void nanovg_filterstack::Render(
     std::function<void(Babylon::Graphics::FrameBuffer*)> release
 )
 {
-    if (stackElements.empty())
+    if (!stackElementCount)
     {
         // no filter, render straight into final framebuffer
         firstPass(firstProg, finalFrameBuffer);
     }
     else
     {
-        assert(stackElements.size() > 0);
-
         Babylon::Graphics::FrameBuffer* prevBuf = nullptr;
         Babylon::Graphics::FrameBuffer* nextBuf = acquire();
         bgfx::ProgramHandle lastProg = firstProg;
@@ -184,12 +182,13 @@ void nanovg_filterstack::Render(
         nextBuf = nullptr;
 
         int i = 0;
-        for (auto& element : stackElements)
+        for (int iStackElement = 0; iStackElement < stackElementCount; iStackElement++)
         {
+            auto& element = stackElements[iStackElement];
             assert(prevBuf != nullptr);
             assert(nextBuf == nullptr);
 
-            const bool lastElement = (i == stackElements.size() - 1);
+            const bool lastElement = (i == stackElementCount - 1);
 
             if (element.type == SE_BLUR)
             {

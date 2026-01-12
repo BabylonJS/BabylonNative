@@ -1,8 +1,8 @@
 parameters:
-  vmImage: ''
+  vmImage: ""
 
 # Force using older cmake See https://gitlab.kitware.com/cmake/cmake/-/issues/22021
-# On Mac, Bintray end of service makes the use of Homebrew to be difficult. 
+# On Mac, Bintray end of service makes the use of Homebrew to be difficult.
 # Using direct download instead to not be dependant on a 3rd party service.
 
 steps:
@@ -16,8 +16,8 @@ steps:
       unzip ninja-mac.zip
       sudo cp -v ninja /usr/local/bin
       cmake --version
-    displayName: 'CMake version'
-    condition: contains('${{ parameters.vmImage }}', 'macOS')
+    displayName: "CMake version"
+    condition: contains('${{parameters.vmImage}}', 'macOS')
 
   - script: |
       wget https://github.com/Kitware/CMake/releases/download/v$(CMAKE_VERSION)/cmake-$(CMAKE_VERSION)-Linux-x86_64.sh
@@ -28,10 +28,10 @@ steps:
       sudo apt-get update
       sudo apt-get install ninja-build
       cmake --version
-    condition: contains('${{ parameters.vmImage }}', 'ubuntu')
-    displayName: 'CMake version'
+    condition: contains('${{parameters.vmImage}}', 'ubuntu')
+    displayName: "CMake version"
 
   - powershell: |
       choco install cmake --version=$(CMAKE_VERSION) -y --allow-downgrade
-    condition: contains('${{ parameters.vmImage }}', 'windows')
-    displayName: 'CMake version'
+    condition: contains('${{parameters.vmImage}}', 'windows')
+    displayName: "CMake version"

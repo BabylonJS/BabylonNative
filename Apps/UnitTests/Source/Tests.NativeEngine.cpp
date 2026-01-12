@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Polyfills/Console.h>
@@ -6,8 +7,8 @@
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/ScriptLoader.h>
 #include <Babylon/ShaderCache.h>
+
 #include <chrono>
-#include <thread>
 #include <optional>
 #include <future>
 #include <iostream>

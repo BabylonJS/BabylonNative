@@ -1,49 +1,53 @@
 parameters:
-  name: ''
-  vmImage: ''
+  name: ""
+  vmImage: ""
+  enableSanitizers: false
 
 jobs:
-  - job: ${{ parameters.name }}
+  - job: ${{parameters.name}}
     timeoutInMinutes: 30
     pool:
-      vmImage: ${{ parameters.vmImage }}
-  
+      vmImage: ${{parameters.vmImage}}
+
+    variables:
+      SANITIZER_FLAG: ${{coalesce(replace(format('{0}', parameters.enableSanitizers), 'True', 'ON'), 'OFF')}}
+
     steps:
-    - template: cmake.yml
-      parameters:
-        vmImage: ${{ parameters.vmImage }}
+      - template: cmake.yml
+        parameters:
+          vmImage: ${{parameters.vmImage}}
 
-    - script: |
-        sudo xcode-select --switch /Applications/Xcode_$(XCODE_VERSION).app/Contents/Developer
-      displayName: 'Select XCode $(XCODE_VERSION)'
+      - script: |
+          sudo xcode-select --switch /Applications/Xcode_$(XCODE_VERSION).app/Contents/Developer
+        displayName: "Select XCode $(XCODE_VERSION)"
 
-    - script: |
-        cmake -G Xcode -B buildmacOS -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON
-      displayName: 'Generate macOS solution'
+      - script: |
+          cmake -G Xcode -B buildmacOS -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D ENABLE_SANITIZERS=$(SANITIZER_FLAG) -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
+        displayName: "Generate macOS solution"
 
-    - script: |
-        xcodebuild -list -project buildmacOS/BabylonNative.xcodeproj
-      displayName: 'List available project schemes'
+      - script: |
+          xcodebuild -list -project buildmacOS/BabylonNative.xcodeproj
+        displayName: "List available project schemes"
 
-    - task: Xcode@5
-      inputs:
-        xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
-        scheme: 'Playground'
-        sdk: 'macosx'
-        useXcpretty: false
-        configuration: RelWithDebInfo
-      displayName: 'Build Playground macOS'
+      - task: Xcode@5
+        inputs:
+          xcWorkspacePath: "buildmacOS/BabylonNative.xcodeproj"
+          scheme: "Playground"
+          sdk: "macosx"
+          useXcpretty: false
+          configuration: RelWithDebInfo
+        displayName: "Build Playground macOS"
 
-    - task: Xcode@5
-      inputs:
-        xcWorkspacePath: 'buildmacOS/BabylonNative.xcodeproj'
-        scheme: 'UnitTests'
-        sdk: 'macosx'
-        useXcpretty: false
-        configuration: RelWithDebInfo
-      displayName: 'Build UnitTests macOS'
+      - task: Xcode@5
+        inputs:
+          xcWorkspacePath: "buildmacOS/BabylonNative.xcodeproj"
+          scheme: "UnitTests"
+          sdk: "macosx"
+          useXcpretty: false
+          configuration: RelWithDebInfo
+        displayName: "Build UnitTests macOS"
 
-    - script: |
-        cd buildmacOS/Apps/UnitTests/RelWithDebInfo
-        ./UnitTests
-      displayName: 'Run UnitTests macOS'
+      - script: |
+          cd buildmacOS/Apps/UnitTests/RelWithDebInfo
+          ./UnitTests
+        displayName: "Run UnitTests macOS"

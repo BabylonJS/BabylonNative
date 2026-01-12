@@ -8,15 +8,9 @@ namespace Babylon::Graphics
     using TextureT = id<MTLTexture>;
     using TextureFormatT = MTLPixelFormat;
 
-    struct DeviceConfiguration
-    {
-        DeviceT Device;
-        float DevicePixelRatio{1.f};
-    };
-
     struct PlatformInfo
     {
-        struct MTLDevice* Device;
-        struct MTLCommandQueue* CommandQueue;
+        id<MTLDevice> Device;
+        id<MTLCommandQueue> CommandQueue;
     };
 }

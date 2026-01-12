@@ -8,12 +8,6 @@ namespace Babylon::Graphics
     using TextureT = unsigned int;
     using TextureFormatT = unsigned int;
 
-    struct DeviceConfiguration
-    {
-        DeviceT Device;
-        float DevicePixelRatio{1.f};
-    };
-
     struct PlatformInfo
     {
         DeviceT Device;
