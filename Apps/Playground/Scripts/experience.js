@@ -27,56 +27,6 @@ if (logPerf) {
     setTimeout(() => BABYLON.Tools.EndPerformanceCounter("test counter"), 500);
 }
 
-function CreateGSAsync(scene) {
-    var gs = new BABYLON.GaussianSplattingMesh("GS", undefined, scene, true);
-
-    var generateGS = function (time) {
-        // size of a single splat, int bytes
-        const rowLength = 3 * 4 + 3 * 4 + 4 + 4;
-
-        // chunck size of splats
-        const b = 100;
-        const splatCount = b * b;
-
-        const uBuffer = new Uint8Array(splatCount * rowLength);
-        const fBuffer = new Float32Array(uBuffer.buffer);
-
-        for (let j = 0; j < b; j++) {
-            for (let ji = 0; ji < b; ji++) {
-                const i = ji + j * b;
-                // position
-                x = j * 0.1 - 5;
-                y = -Math.sin(time + ji * 0.04 + j * 0.02) * 1 - 1;
-
-                fBuffer[8 * i + 0] = Math.cos(time) * x + Math.sin(time) * y;
-                fBuffer[8 * i + 1] = Math.sin(time) * x - Math.cos(time) * y;
-                fBuffer[8 * i + 2] = ji * 0.1 - 5;
-
-                // size
-                fBuffer[8 * i + 3 + 0] = 0.1;
-                fBuffer[8 * i + 3 + 1] = 0.1;
-                fBuffer[8 * i + 3 + 2] = 0.1;
-
-                // orientation
-                uBuffer[32 * i + 28 + 1] = 128;
-                uBuffer[32 * i + 28 + 2] = 128;
-                uBuffer[32 * i + 28 + 3] = 128;
-                uBuffer[32 * i + 28 + 0] = 255;
-
-                // color
-                uBuffer[32 * i + 24 + 0] = Math.cos((ji + time * 3) * 0.2) * 127 + 128;
-                uBuffer[32 * i + 24 + 1] = Math.cos((j + time * 4) * 0.3) * 127 + 128;
-                uBuffer[32 * i + 24 + 2] = Math.sin((j + ji + time * 2) * 0.3) * 127 + 128;
-                uBuffer[32 * i + 24 + 3] = 255;
-            }
-        }
-        gs.updateData(uBuffer);
-    };
-    generateGS(0);
-
-    return Promise.resolve();
-}
-
 function CreateSpheresAsync(scene) {
     const size = 12;
     for (let i = 0; i < size; i++) {
@@ -96,7 +46,7 @@ function CreateSpheresAsync(scene) {
 const engine = new BABYLON.NativeEngine();
 const scene = new BABYLON.Scene(engine);
 
-CreateGSAsync(scene).then(function () {
+CreateBoxAsync(scene).then(function () {
 //CreateSpheresAsync(scene).then(function () {
 //BABYLON.AppendSceneAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Box/glTF/Box.gltf").then(function () {
 //BABYLON.AppendSceneAsync("https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/BoxTextured/glTF/BoxTextured.gltf").then(function () {
