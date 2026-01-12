@@ -27,6 +27,11 @@ if (logPerf) {
     setTimeout(() => BABYLON.Tools.EndPerformanceCounter("test counter"), 500);
 }
 
+function CreateBoxAsync(scene) {
+    BABYLON.Mesh.CreateBox("box1", 0.2, scene);
+    return Promise.resolve();
+}
+
 function CreateSpheresAsync(scene) {
     const size = 12;
     for (let i = 0; i < size; i++) {

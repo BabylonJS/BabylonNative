@@ -282,7 +282,7 @@ namespace
 
 
     // This function is not threadsafe because of static
-    void SortGS(const Napi::CallbackInfo& info)
+    void _SortGS(const Napi::CallbackInfo& info)
     {
         const auto modelView{ info[0].As<Napi::Object>() };
         const auto m{ modelView.Get("_m").As<Napi::Float32Array>() };
