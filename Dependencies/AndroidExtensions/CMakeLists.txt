@@ -17,7 +17,7 @@ FetchContent_MakeAvailable(CMakeExtensions)
 
 project(AndroidExtensions)
 
-if(NOT ANDROID)
+if(NOT ANDROID AND NOT BABYLON_NATIVE_BUILD_SOURCETREE)
     message(FATAL_ERROR "This project can only build for Android")
 endif()
 
