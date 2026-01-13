@@ -57,7 +57,7 @@ FetchContent_Declare(JsRuntimeHost
     GIT_TAG ae0253a458767ee28137312ac41c9c5c966f9ba4)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 6abfcf066d171e9ade7604d91381ebebe4209edc
+    GIT_TAG 6277baf62877f6b1a66a5801da94f0c9276991dc
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(libwebp
     GIT_REPOSITORY https://github.com/webmproject/libwebp.git
