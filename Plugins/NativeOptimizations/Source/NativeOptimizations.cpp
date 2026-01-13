@@ -282,7 +282,7 @@ namespace
 
 
     // This function is not threadsafe because of static
-    void _SortGS(const Napi::CallbackInfo& info)
+    void sortSplats(const Napi::CallbackInfo& info)
     {
         const auto modelView{ info[0].As<Napi::Object>() };
         const auto m{ modelView.Get("_m").As<Napi::Float32Array>() };
@@ -332,6 +332,6 @@ namespace Babylon::Plugins::NativeOptimizations
         nativeObject.Set("_FlipFaces", Napi::Function::New(env, FlipFaces, "_FlipFaces"));
         nativeObject.Set("extractMinAndMaxIndexed", Napi::Function::New(env, ExtractMinAndMaxIndexed, "extractMinAndMaxIndexed"));
         nativeObject.Set("extractMinAndMax", Napi::Function::New(env, ExtractMinAndMax, "extractMinAndMax"));
-        nativeObject.Set("_SortGS", Napi::Function::New(env, _SortGS, "_SortGS"));
+        nativeObject.Set("sortSplats", Napi::Function::New(env, sortSplats, "sortSplats"));
     }
 }
