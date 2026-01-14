@@ -275,9 +275,15 @@ namespace
     }
 
     static int sortSplatQSort(const void* p1, const void* p2) {
-        const float* a = (float*)p1;
-        const float* b = (float*)p2;
-        return (a[1] < b[1]) ? -1 : 1;
+        const float* a = (const float*)p1;
+        const float* b = (const float*)p2;
+        if (a[1] < b[1]) {
+            return -1;
+        }
+        if (a[1] > b[1]) {
+            return 1;
+        }
+        return 0;
     }
 
 
