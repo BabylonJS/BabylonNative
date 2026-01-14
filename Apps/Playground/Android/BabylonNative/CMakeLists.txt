@@ -32,6 +32,8 @@ target_link_libraries(BabylonNativeJNI
     NativeCamera
     NativeEncoding
     NativeEngine
+    NativeZip
+    DecompressionStream
     NativeInput
     NativeOptimizations
     NativeXr

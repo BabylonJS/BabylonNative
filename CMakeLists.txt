@@ -63,7 +63,10 @@ FetchContent_Declare(libwebp
     GIT_REPOSITORY https://github.com/webmproject/libwebp.git
     GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c
     EXCLUDE_FROM_ALL)
-
+FetchContent_Declare(libdeflate
+    GIT_REPOSITORY https://github.com/ebiggers/libdeflate.git
+    GIT_TAG c8c56a20f8f621e6a966b716b31f1dedab6a41e3
+    EXCLUDE_FROM_ALL)
 # --------------------------------------------------
 
 FetchContent_MakeAvailable(CMakeExtensions)
@@ -122,10 +125,12 @@ option(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS "Include Babylon Native Plugin 
 option(BABYLON_NATIVE_PLUGIN_NATIVETRACING "Include Babylon Native Plugin NativeTracing." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEXR "Include Babylon Native Plugin XR." ON)
 option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils." ON)
+option(BABYLON_NATIVE_PLUGIN_NATIVEZIP "Include Babylon Native Plugin Zip." ON)
 
 # Polyfills
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
+option(BABYLON_NATIVE_POLYFILL_DECOMPRESSIONSTREAM "Include Babylon Native Polyfill Decompression Stream." ON)
 
 # Sanitizers
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
