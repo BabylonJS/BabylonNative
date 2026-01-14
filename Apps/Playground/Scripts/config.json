@@ -2,6 +2,12 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "Gaussian Splatting Update Data",
+            "playgroundId": "#Q0LBM8#2",
+            "renderCount": 15,
+            "referenceImage": "gsplat-update-data.png"
+        },
+        {
             "title": "Native Canvas",
             "playgroundId": "#TKVFSA#7",
             "referenceImage": "native-canvas.png",

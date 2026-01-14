@@ -273,6 +273,57 @@ namespace
             matrixTransform(finalMatrix, data[index], data[index + 1], data[index + 2]);
         }
     }
+
+    static int sortSplatQSort(const void* p1, const void* p2) {
+        const float* a = (const float*)p1;
+        const float* b = (const float*)p2;
+        if (a[1] < b[1]) {
+            return -1;
+        }
+        if (a[1] > b[1]) {
+            return 1;
+        }
+        return 0;
+    }
+
+
+    // This function is not threadsafe because of static
+    void sortSplats(const Napi::CallbackInfo& info)
+    {
+        const auto modelView{ info[0].As<Napi::Object>() };
+        const auto m{ modelView.Get("_m").As<Napi::Float32Array>() };
+
+        auto positions{ info[1].As<Napi::Float32Array>() };
+
+        auto indices{ info[2].As<Napi::Float32Array>() };
+
+        auto rightHand{ info[3].As<Napi::Boolean>() };
+
+
+        float depthFactor = -1.f;
+        if (rightHand) {
+            depthFactor = 1.f;
+        }
+
+        const auto splatCount = indices.ElementLength();
+        float vp[3] = { m[2], m[6], m[10] };
+        static std::vector<float> depthMix;
+
+        depthMix.resize(splatCount * 2);
+
+        for (size_t i = 0; i < splatCount; i++)
+        {
+            depthMix[i * 2 + 0] = float(i);
+            depthMix[i * 2 + 1] = 10000.f + (vp[0] * positions[4 * i + 0] + vp[1] * positions[4 * i + 1] + vp[2] * positions[4 * i + 2]) * depthFactor;
+        }
+
+        qsort(depthMix.data(), splatCount, 2 * sizeof(float), sortSplatQSort);
+
+        for (size_t i = 0; i < splatCount; i++)
+        {
+            indices[i] = depthMix[i * 2 + 0];
+        }
+    }
 }
 
 namespace Babylon::Plugins::NativeOptimizations
@@ -287,5 +338,6 @@ namespace Babylon::Plugins::NativeOptimizations
         nativeObject.Set("_FlipFaces", Napi::Function::New(env, FlipFaces, "_FlipFaces"));
         nativeObject.Set("extractMinAndMaxIndexed", Napi::Function::New(env, ExtractMinAndMaxIndexed, "extractMinAndMaxIndexed"));
         nativeObject.Set("extractMinAndMax", Napi::Function::New(env, ExtractMinAndMax, "extractMinAndMax"));
+        nativeObject.Set("sortSplats", Napi::Function::New(env, sortSplats, "sortSplats"));
     }
 }
