@@ -75,6 +75,14 @@ jobs:
         displayName: "Add ASAN runtime DLLs to PATH"
         condition: ${{parameters.enableSanitizers}}
 
+      # When running with Chakra, unhandled JavaScript exceptions trigger the JIT debugger, which
+      # causes the test to hang. This will disable the JIT debugger for Chakra.
+      - script: |
+          for /f %%i in ('vswhere -property instanceId') do (
+            reg add HKCU\Software\Microsoft\VisualStudio\Debugger\JIT\{F200A7E7-DEA5-11D0-B854-00A0244A1DE2}\%%i /f /v Disabled /t REG_DWORD /d 1
+          )
+        displayName: "Disable JIT Debugger for Script"
+
       - script: |
           cd build${{variables.solutionName}}\Apps\Playground
           cd RelWithDebInfo
