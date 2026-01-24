@@ -2,7 +2,8 @@
 //
 
 #include "App.h"
-
+#include <Shared/AppContext.h>
+#include <Babylon/Plugins/TestUtils.h>
 #include <Windows.h>
 #include <Windowsx.h>
 #include <Shlwapi.h>
@@ -11,23 +12,6 @@
 #include <optional>
 #include <sstream>
 
-#include <Babylon/AppRuntime.h>
-#include <Babylon/Graphics/Device.h>
-#include <Babylon/ScriptLoader.h>
-#include <Babylon/Plugins/NativeCapture.h>
-#include <Babylon/Plugins/NativeEncoding.h>
-#include <Babylon/Plugins/NativeEngine.h>
-#include <Babylon/Plugins/NativeOptimizations.h>
-#include <Babylon/Plugins/NativeCamera.h>
-#include <Babylon/Plugins/NativeInput.h>
-#include <Babylon/Plugins/TestUtils.h>
-#include <Babylon/Polyfills/Blob.h>
-#include <Babylon/Polyfills/Console.h>
-#include <Babylon/Polyfills/Window.h>
-#include <Babylon/Polyfills/XMLHttpRequest.h>
-#include <Babylon/Polyfills/Canvas.h>
-#include <Babylon/ShaderCache.h>
-#include <Babylon/DebugTrace.h>
 
 #define MAX_LOADSTRING 100
 
@@ -35,11 +19,7 @@
 HINSTANCE hInst;                     // current instance
 WCHAR szTitle[MAX_LOADSTRING];       // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
-std::optional<Babylon::AppRuntime> runtime{};
-std::optional<Babylon::Graphics::Device> device{};
-std::optional<Babylon::Graphics::DeviceUpdate> update{};
-Babylon::Plugins::NativeInput* nativeInput{};
-std::optional<Babylon::Polyfills::Canvas> nativeCanvas{};
+std::optional<AppContext> appContext{};
 bool minimized{false};
 int buttonRefCount{0};
 
@@ -51,21 +31,6 @@ INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 
 namespace
 {
-    const char* GetLogLevelString(Babylon::Polyfills::Console::LogLevel logLevel)
-    {
-        switch (logLevel)
-        {
-            case Babylon::Polyfills::Console::LogLevel::Log:
-                return "Log";
-            case Babylon::Polyfills::Console::LogLevel::Warn:
-                return "Warn";
-            case Babylon::Polyfills::Console::LogLevel::Error:
-                return "Error";
-            default:
-                return "";
-        }
-    }
-
     std::string GetUrlFromPath(const std::filesystem::path& path)
     {
         char url[1024];
@@ -102,22 +67,12 @@ namespace
 
     void Uninitialize()
     {
-        if (device)
-        {
-            update->Finish();
-            device->FinishRenderingCurrentFrame();
-        }
-
-        nativeCanvas.reset();
-        nativeInput = {};
-        runtime.reset();
-        update.reset();
-        device.reset();
+        appContext.reset();
     }
 
     void RefreshBabylon(HWND hWnd)
     {
-        Uninitialize();
+        appContext.reset();
 
         RECT rect;
         if (!GetClientRect(hWnd, &rect))
@@ -125,112 +80,42 @@ namespace
             return;
         }
 
-        Babylon::DebugTrace::EnableDebugTrace(true);
-        Babylon::DebugTrace::SetTraceOutput([](const char* trace) {
-            OutputDebugStringA(trace);
-            OutputDebugStringA("\n");
-        });
-
         auto width = static_cast<size_t>(rect.right - rect.left);
         auto height = static_cast<size_t>(rect.bottom - rect.top);
 
-        Babylon::Graphics::Configuration graphicsConfig{};
-        graphicsConfig.Window = hWnd;
-        graphicsConfig.Width = width;
-        graphicsConfig.Height = height;
-        graphicsConfig.MSAASamples = 4;
-
-        device.emplace(graphicsConfig);
-        update.emplace(device->GetUpdate("update"));
-
-        Babylon::ShaderCache::Enabled(true);
-
-        device->StartRenderingCurrentFrame();
-        update->Start();
-
-        Babylon::AppRuntime::Options options{};
-
-        options.EnableDebugger = true;
-
-        options.UnhandledExceptionHandler = [hWnd](const Napi::Error& error) {
-            std::ostringstream ss{};
-            ss << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
-            OutputDebugStringA(ss.str().data());
-
-            std::cerr << ss.str();
-            std::cerr.flush();
-
-            Babylon::Plugins::TestUtils::errorCode = -1;
-            PostMessage(hWnd, WM_CLOSE, 0, 0);
-        };
-
-        runtime.emplace(options);
-
-        runtime->Dispatch([hWnd](Napi::Env env) {
-            device->AddToJavaScript(env);
-
-            Babylon::Polyfills::Blob::Initialize(env);
-
-            Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel logLevel) {
+        appContext.emplace(
+            hWnd,
+            width,
+            height,
+            [](const char* message) {
                 std::ostringstream ss{};
-                ss << "[" << GetLogLevelString(logLevel) << "] " << message << std::endl;
+                ss << message << std::endl;
                 OutputDebugStringA(ss.str().data());
-
                 std::cout << ss.str();
-                std::cout.flush();
             });
 
-            Babylon::Polyfills::Window::Initialize(env);
-
-            Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-
-            nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
-
-            Babylon::Plugins::NativeEncoding::Initialize(env);
-
-            Babylon::Plugins::NativeEngine::Initialize(env);
-
-            Babylon::Plugins::NativeOptimizations::Initialize(env);
-
-            Babylon::Plugins::NativeCapture::Initialize(env);
-
-            Babylon::Plugins::NativeCamera::Initialize(env);
-
-            nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
-
-            Babylon::Plugins::TestUtils::Initialize(env, hWnd);
-        });
-
-        Babylon::ScriptLoader loader{*runtime};
-        loader.LoadScript("app:///Scripts/ammo.js");
-        // Commenting out recast.js for now because v8jsi is incompatible with asm.js.
-        // loader.LoadScript("app:///Scripts/recast.js");
-        loader.LoadScript("app:///Scripts/babylon.max.js");
-        loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
-        loader.LoadScript("app:///Scripts/babylonjs.materials.js");
-        loader.LoadScript("app:///Scripts/babylon.gui.js");
-        loader.LoadScript("app:///Scripts/meshwriter.min.js");
-        loader.LoadScript("app:///Scripts/babylonjs.serializers.js");
-
-        std::vector<std::string> scripts = GetCommandLineArguments();
-        if (scripts.empty())
+        std::vector<std::string> args = GetCommandLineArguments();
+        if (args.empty())
         {
-            loader.LoadScript("app:///Scripts/experience.js");
+            appContext->ScriptLoader().LoadScript("app:///Scripts/experience.js");
         }
         else
         {
-            for (const auto& script : scripts)
+            for (const auto& arg : args)
             {
-                loader.LoadScript(GetUrlFromPath(script));
+                appContext->ScriptLoader().LoadScript(GetUrlFromPath(arg));
             }
 
-            loader.LoadScript("app:///Scripts/playground_runner.js");
+            appContext->ScriptLoader().LoadScript("app:///Scripts/playground_runner.js");
         }
     }
 
     void UpdateWindowSize(size_t width, size_t height)
     {
-        device->UpdateSize(width, height);
+        if (appContext)
+        {
+            appContext->Device().UpdateSize(width, height);
+        }
     }
 }
 
@@ -268,12 +153,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
         else
         {
-            if (device)
+            if (appContext)
             {
-                update->Finish();
-                device->FinishRenderingCurrentFrame();
-                device->StartRenderingCurrentFrame();
-                update->Start();
+                appContext->DeviceUpdate().Finish();
+                appContext->Device().FinishRenderingCurrentFrame();
+                appContext->Device().StartRenderingCurrentFrame();
+                appContext->DeviceUpdate().Start();
             }
 
             result = PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) && msg.message != WM_QUIT;
@@ -354,22 +239,22 @@ void ProcessMouseButtons(tagPOINTER_BUTTON_CHANGE_TYPE changeType, int x, int y)
     switch (changeType)
     {
         case POINTER_CHANGE_FIRSTBUTTON_DOWN:
-            nativeInput->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
+            appContext->Input().MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
             break;
         case POINTER_CHANGE_FIRSTBUTTON_UP:
-            nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
+            appContext->Input().MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
             break;
         case POINTER_CHANGE_SECONDBUTTON_DOWN:
-            nativeInput->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
+            appContext->Input().MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
             break;
         case POINTER_CHANGE_SECONDBUTTON_UP:
-            nativeInput->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
+            appContext->Input().MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
             break;
         case POINTER_CHANGE_THIRDBUTTON_DOWN:
-            nativeInput->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
+            appContext->Input().MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
             break;
         case POINTER_CHANGE_THIRDBUTTON_UP:
-            nativeInput->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
+            appContext->Input().MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
             break;
     }
 }
@@ -392,13 +277,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             if ((wParam & 0xFFF0) == SC_MINIMIZE)
             {
-                if (device)
+                if (appContext)
                 {
-                    update->Finish();
-                    device->FinishRenderingCurrentFrame();
-                }
+                    appContext->DeviceUpdate().Finish();
+                    appContext->Device().FinishRenderingCurrentFrame();
 
-                runtime->Suspend();
+                    appContext->Runtime().Suspend();
+                }
 
                 minimized = true;
             }
@@ -406,14 +291,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 if (minimized)
                 {
-                    runtime->Resume();
-
                     minimized = false;
 
-                    if (device)
+                    if (appContext)
                     {
-                        device->StartRenderingCurrentFrame();
-                        update->Start();
+                        appContext->Runtime().Resume();
+
+                        appContext->Device().StartRenderingCurrentFrame();
+                        appContext->DeviceUpdate().Start();
                     }
                 }
             }
@@ -439,12 +324,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_SIZE:
         {
-            if (device)
-            {
-                auto width = static_cast<size_t>(LOWORD(lParam));
-                auto height = static_cast<size_t>(HIWORD(lParam));
-                UpdateWindowSize(width, height);
-            }
+            auto width = static_cast<size_t>(LOWORD(lParam));
+            auto height = static_cast<size_t>(HIWORD(lParam));
+            UpdateWindowSize(width, height);
             break;
         }
         case WM_DESTROY:
@@ -463,15 +345,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_POINTERWHEEL:
         {
-            if (nativeInput != nullptr)
+            if (appContext)
             {
-                nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -GET_WHEEL_DELTA_WPARAM(wParam));
+                appContext->Input().MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -GET_WHEEL_DELTA_WPARAM(wParam));
             }
             break;
         }
         case WM_POINTERDOWN:
         {
-            if (nativeInput != nullptr)
+            if (appContext)
             {
                 POINTER_INFO info;
                 auto pointerId = GET_POINTERID_WPARAM(wParam);
@@ -488,7 +370,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     }
                     else
                     {
-                        nativeInput->TouchDown(pointerId, x, y);
+                        appContext->Input().TouchDown(pointerId, x, y);
                     }
                 }
             }
@@ -496,7 +378,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_POINTERUPDATE:
         {
-            if (nativeInput != nullptr)
+            if (appContext)
             {
                 auto pointerId = GET_POINTERID_WPARAM(wParam);
                 POINTER_INFO info;
@@ -510,11 +392,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     if (info.pointerType == PT_MOUSE)
                     {
                         ProcessMouseButtons(info.ButtonChangeType, x, y);
-                        nativeInput->MouseMove(x, y);
+                        appContext->Input().MouseMove(x, y);
                     }
                     else
                     {
-                        nativeInput->TouchMove(pointerId, x, y);
+                        appContext->Input().TouchMove(pointerId, x, y);
                     }
                 }
             }
@@ -522,7 +404,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_POINTERUP:
         {
-            if (nativeInput != nullptr)
+            if (appContext)
             {
                 auto pointerId = GET_POINTERID_WPARAM(wParam);
                 POINTER_INFO info;
@@ -539,7 +421,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     }
                     else
                     {
-                        nativeInput->TouchUp(pointerId, x, y);
+                        appContext->Input().TouchUp(pointerId, x, y);
                     }
                 }
             }

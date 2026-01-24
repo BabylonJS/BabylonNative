@@ -6,127 +6,61 @@
 #include <unistd.h> // syscall
 #undef None
 #include <filesystem>
+#include <iostream>
 #include <optional>
 
-#include <Babylon/AppRuntime.h>
-#include <Babylon/Graphics/Device.h>
-#include <Babylon/ScriptLoader.h>
-#include <Babylon/Plugins/NativeEncoding.h>
-#include <Babylon/Plugins/NativeEngine.h>
-#include <Babylon/Plugins/NativeOptimizations.h>
-#include <Babylon/Plugins/NativeInput.h>
-#include <Babylon/Plugins/TestUtils.h>
-#include <Babylon/Polyfills/Blob.h>
-#include <Babylon/Polyfills/Console.h>
-#include <Babylon/Polyfills/Window.h>
-#include <Babylon/Polyfills/XMLHttpRequest.h>
-#include <Babylon/Polyfills/Canvas.h>
-#include <Babylon/DebugTrace.h>
+#include <Shared/AppContext.h>
 
 static const char* s_applicationName  = "BabylonNative Playground";
 static const char* s_applicationClass = "Playground";
 
-std::optional<Babylon::Graphics::Device> device{};
-std::optional<Babylon::Graphics::DeviceUpdate> update{};
-std::optional<Babylon::AppRuntime> runtime{};
-std::optional<Babylon::Polyfills::Canvas> nativeCanvas{};
-Babylon::Plugins::NativeInput* nativeInput{};
-
 namespace
 {
+    std::optional<AppContext> g_appContext{};
+
     void Uninitialize()
     {
-        if (device)
+        if (g_appContext)
         {
-            update->Finish();
-            device->FinishRenderingCurrentFrame();
+            g_appContext->DeviceUpdate().Finish();
+            g_appContext->Device().FinishRenderingCurrentFrame();
         }
 
-        nativeInput = {};
-        nativeCanvas.reset();
-        runtime.reset();
-        update.reset();
-        device.reset();
+        g_appContext.reset();
     }
 
     void InitBabylon(Window window, int width, int height, int argc, const char* const* argv)
     {
-        std::vector<std::string> scripts(argv + 1, argv + argc);
-
         Uninitialize();
 
-        Babylon::DebugTrace::EnableDebugTrace(true);
-        Babylon::DebugTrace::SetTraceOutput([](const char* trace) { printf("%s\n", trace); fflush(stdout); });
-
-        Babylon::Graphics::Configuration graphicsConfig{};
-        graphicsConfig.Window = window;
-        graphicsConfig.Width = static_cast<size_t>(width);
-        graphicsConfig.Height = static_cast<size_t>(height);
-        graphicsConfig.MSAASamples = 4;
-
-        device.emplace(graphicsConfig);
-        update.emplace(device->GetUpdate("update"));
-        device->StartRenderingCurrentFrame();
-        update->Start();
-
-        runtime.emplace();
-
-        runtime->Dispatch([window](Napi::Env env) {
-            Babylon::Polyfills::Blob::Initialize(env);
-
-            Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-                printf("%s\n", message);
-                fflush(stdout);
+        g_appContext.emplace(
+            window,
+            static_cast<size_t>(width),
+            static_cast<size_t>(height),
+            [](const char* message) {
+                std::cout << message << std::endl;
             });
 
-            Babylon::Polyfills::Window::Initialize(env);
-            Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-            nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
-
-            device->AddToJavaScript(env);
-            
-            Babylon::Plugins::NativeEncoding::Initialize(env);
-            
-            // Initialize NativeEngine plugin.
-            Babylon::Plugins::NativeEngine::Initialize(env);
-
-            Babylon::Plugins::NativeOptimizations::Initialize(env);
-
-            nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
-            
-            Babylon::Plugins::TestUtils::Initialize(env, window);
-        });
-
-
-        Babylon::ScriptLoader loader{*runtime};
-        loader.LoadScript("app:///Scripts/ammo.js");
-        loader.LoadScript("app:///Scripts/recast.js");
-        loader.LoadScript("app:///Scripts/babylon.max.js");
-        loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
-        loader.LoadScript("app:///Scripts/babylonjs.materials.js");
-        loader.LoadScript("app:///Scripts/babylon.gui.js");
-        loader.LoadScript("app:///Scripts/babylonjs.serializers.js"); 
-
-        if (scripts.empty())
+        if (argc == 0)
         {
-            loader.LoadScript("app:///Scripts/experience.js");
+            g_appContext->ScriptLoader().LoadScript("app:///Scripts/experience.js");
         }
         else
         {
-            for (const auto& script : scripts)
+            for (int i = 1; i < argc; ++i)
             {
-                loader.LoadScript(script);
+                g_appContext->ScriptLoader().LoadScript(argv[i]);
             }
 
-            loader.LoadScript("app:///Scripts/playground_runner.js");
+            g_appContext->ScriptLoader().LoadScript("app:///Scripts/playground_runner.js");
         }
     }
 
     void UpdateWindowSize(float width, float height)
     {
-        if (device)
+        if (g_appContext)
         {
-            device->UpdateSize(width, height);
+            g_appContext->Device().UpdateSize(width, height);
         }
     }
 }
@@ -205,12 +139,12 @@ int main(int _argc, const char* const* _argv)
     bool exit{};
     while (!exit)
     {
-        if (!XPending(display) && device)
+        if (!XPending(display) && g_appContext)
         {
-            update->Finish();
-            device->FinishRenderingCurrentFrame();
-            device->StartRenderingCurrentFrame();
-            update->Start();
+            g_appContext->DeviceUpdate().Finish();
+            g_appContext->Device().FinishRenderingCurrentFrame();
+            g_appContext->Device().StartRenderingCurrentFrame();
+            g_appContext->DeviceUpdate().Start();
         }
         else
         {
@@ -239,22 +173,22 @@ int main(int _argc, const char* const* _argv)
                         const XMotionEvent& xmotion = event.xmotion;
                         const XButtonEvent& xbutton = event.xbutton;
 
-                        if (nativeInput != nullptr) {
+                        if (g_appContext) {
                             switch (xbutton.button) {
                                 case Button1:
-                                    nativeInput->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_appContext->Input().MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
                                     break;
                                 case Button2:
-                                    nativeInput->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_appContext->Input().MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
                                     break;
                                 case Button3:
-                                    nativeInput->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_appContext->Input().MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
                                     break;
                                 case Button4:
-                                    nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -120);
+                                    g_appContext->Input().MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -120);
                                     break;
                                 case Button5:
-                                    nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, 120);
+                                    g_appContext->Input().MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, 120);
                                     break;
                             }
                         }
@@ -265,16 +199,18 @@ int main(int _argc, const char* const* _argv)
                         const XMotionEvent& xmotion = event.xmotion;
                         const XButtonEvent& xbutton = event.xbutton;
 
-                        if (nativeInput != nullptr) {
-                            switch (xbutton.button) {
+                        if (g_appContext)
+                        {
+                            switch (xbutton.button)
+                            {
                                 case Button1:
-                                    nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_appContext->Input().MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
                                     break;
                                 case Button2:
-                                    nativeInput->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_appContext->Input().MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
                                     break;
                                 case Button3:
-                                    nativeInput->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_appContext->Input().MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
                                     break;
                             }
                         }
@@ -283,8 +219,8 @@ int main(int _argc, const char* const* _argv)
                 case MotionNotify:
                     {
                         const XMotionEvent& xmotion = event.xmotion;
-                        if (nativeInput != nullptr) {
-                            nativeInput->MouseMove(xmotion.x, xmotion.y);
+                        if (g_appContext) {
+                            g_appContext->Input().MouseMove(xmotion.x, xmotion.y);
                         }
                     }
                     break;

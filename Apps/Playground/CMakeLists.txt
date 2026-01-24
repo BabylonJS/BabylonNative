@@ -18,6 +18,10 @@ set(SCRIPTS
     "Scripts/validation_native.js"
     "Scripts/config.json")
 
+set(SOURCES
+    "Shared/AppContext.cpp"
+    "Shared/AppContext.h")
+
 if(APPLE)
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
     if(IOS)
@@ -28,8 +32,7 @@ if(APPLE)
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/LaunchScreen.storyboard")
         set(RESOURCE_FILES ${STORYBOARD} ${SCRIPTS})
         set(ADDITIONAL_LIBRARIES PRIVATE z NativeXr)
-        set(SOURCES
-            ${SOURCES}
+        set(SOURCES ${SOURCES}
             "iOS/AppDelegate.swift"
             "iOS/ViewController.swift"
             "iOS/LibNativeBridge.h"
@@ -42,8 +45,7 @@ if(APPLE)
         set(PLIST_FILE
             "${CMAKE_CURRENT_LIST_DIR}/visionOS/Info.plist")
         set(RESOURCE_FILES ${SCRIPTS})
-        set(SOURCES
-            ${SOURCES}
+        set(SOURCES ${SOURCES}
             "visionOS/App.swift"
             "visionOS/LibNativeBridge.mm"
             "visionOS/LibNativeBridge.h"
@@ -55,8 +57,7 @@ if(APPLE)
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
         set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE NativeCamera)
         set(RESOURCE_FILES ${STORYBOARD})
-        set(SOURCES
-            ${SOURCES}
+        set(SOURCES ${SOURCES}
             "macOS/main.m"
             "macOS/AppDelegate.m"
             "macOS/AppDelegate.h"
@@ -72,8 +73,7 @@ if(APPLE)
     string(REPLACE "-Wall" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
     string(REPLACE "-Werror" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
 elseif(UNIX)
-    set(SOURCES
-        ${SOURCES}
+    set(SOURCES ${SOURCES}
         "X11/App.cpp")
 elseif(WINDOWS_STORE)
     set(APPX_FILES "UWP/Package.appxmanifest" "UWP/TemporaryKey.pfx")
@@ -88,15 +88,13 @@ elseif(WINDOWS_STORE)
         "UWP/Assets/Wide310x150Logo.scale-200.png")
     set_property(SOURCE ${APPX_ASSETS} PROPERTY VS_DEPLOYMENT_CONTENT 1)
     set_property(SOURCE ${APPX_ASSETS} PROPERTY VS_DEPLOYMENT_LOCATION "Assets")
-    set(SOURCES
-        ${SOURCES}
+    set(SOURCES ${SOURCES}
         ${APPX_FILES}
         ${APPX_ASSETS}
         "UWP/App.cpp"
         "UWP/App.h")
 elseif(WIN32)
-    set(SOURCES
-        ${SOURCES}
+    set(SOURCES ${SOURCES}
         "Win32/App.cpp"
         "Win32/App.h"
         "Win32/App.ico"
@@ -123,7 +121,7 @@ if(WINDOWS_STORE)
     target_compile_options(Playground PRIVATE /await)
 endif()
 
-target_include_directories(Playground PRIVATE "Source" ".")
+target_include_directories(Playground PRIVATE ".")
 
 target_link_libraries(Playground
     PRIVATE AppRuntime
@@ -133,6 +131,7 @@ target_link_libraries(Playground
     PRIVATE ExternalTexture
     PRIVATE GraphicsDevice
     PRIVATE NativeTracing
+    PRIVATE NativeCamera
     PRIVATE NativeCapture
     PRIVATE NativeEncoding
     PRIVATE NativeEngine
