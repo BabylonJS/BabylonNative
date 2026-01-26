@@ -88,8 +88,9 @@ if(NAPI_BUILD_ABI)
             "Source/js_native_api_v8_internals.h")
 
         if(ANDROID)
-            set(V8_PACKAGE_NAME "v8-android-jit-nointl-nosnapshot")
-            set(V8_ANDROID_DIR "${CMAKE_CURRENT_BINARY_DIR}/${V8_PACKAGE_NAME}")
+            set(V8_PACKAGE_BASE_NAME "v8-android-jit-nointl-nosnapshot")
+            set(V8_PACKAGE_NAME "@babylonjs/${V8_PACKAGE_BASE_NAME}")
+            set(V8_ANDROID_DIR "${CMAKE_CURRENT_BINARY_DIR}/${V8_PACKAGE_BASE_NAME}")
             napi_install_android_package(v8 "dist/org/chromium" ${V8_ANDROID_DIR})
 
             set(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES}
