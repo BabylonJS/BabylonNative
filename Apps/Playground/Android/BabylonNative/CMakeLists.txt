@@ -10,12 +10,12 @@ get_filename_component(REPO_ROOT_DIR "${PLAYGROUND_DIR}/../.." ABSOLUTE)
 
 add_subdirectory(${REPO_ROOT_DIR} "${CMAKE_CURRENT_BINARY_DIR}/BabylonNative")
 
-
 add_library(BabylonNativeJNI SHARED
-    src/main/cpp/BabylonNativeJNI.cpp)
+    src/main/cpp/BabylonNativeJNI.cpp
+    ${PLAYGROUND_DIR}/Shared/AppContext.cpp)
 
 target_include_directories(BabylonNativeJNI
-    PRIVATE ${PLAYGROUND_DIR}/Shared)
+    PRIVATE ${PLAYGROUND_DIR})
 
 target_link_libraries(BabylonNativeJNI
     GLESv3
@@ -30,11 +30,13 @@ target_link_libraries(BabylonNativeJNI
     Console
     GraphicsDevice
     NativeCamera
+    NativeCapture
     NativeEncoding
     NativeEngine
     NativeInput
     NativeOptimizations
     NativeXr
     ScriptLoader
+    TestUtils
     XMLHttpRequest
     Window)

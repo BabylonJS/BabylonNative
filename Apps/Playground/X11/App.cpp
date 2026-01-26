@@ -41,7 +41,7 @@ namespace
                 std::cout << message << std::endl;
             });
 
-        if (argc == 0)
+        if (argc == 1)
         {
             g_appContext->ScriptLoader().LoadScript("app:///Scripts/experience.js");
         }

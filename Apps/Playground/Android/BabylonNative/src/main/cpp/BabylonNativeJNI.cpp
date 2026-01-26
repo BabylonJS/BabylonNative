@@ -3,11 +3,9 @@
 #include <android/native_window_jni.h> // requires ndk r5 or newer
 #include <android/log.h>
 
-#include <stdlib.h>
-#include <string.h>
-#include <signal.h>
-#include <time.h>
 #include <optional>
+#include <string>
+#include <vector>
 
 #include <Shared/AppContext.h>
 #include <AndroidExtensions/Globals.h>
