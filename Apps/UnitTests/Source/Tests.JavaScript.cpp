@@ -45,10 +45,10 @@ TEST(JavaScript, All)
     Babylon::AppRuntime::Options options{};
 
     options.UnhandledExceptionHandler = [&exitCodePromise](const Napi::Error& error) {
-        std::cerr << "[Uncaught Error] " << error.Get("stack").As<Napi::String>().Utf8Value() << std::endl;
+        std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
         std::cerr.flush();
 
-        exitCodePromise.set_value(-1);
+        exitCodePromise.set_exception(std::make_exception_ptr(std::exception{}));
     };
 
     if (waitForDebugger)

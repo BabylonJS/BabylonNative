@@ -19,7 +19,7 @@ include(FetchContent)
 
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG f7ed149b5360cc8a4908fece66607c5ce1e6095b
+    GIT_TAG 2d5af72259cc73e5f249d3c99bee2010be9cb042
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
@@ -43,7 +43,7 @@ FetchContent_Declare(CMakeExtensions
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
-    GIT_TAG 6388a301b23edf0ae6a9342d46efa9cb21f05d9b
+    GIT_TAG 39a80699a315cb7f66c4ab3180edd4e2910fab28
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz"
@@ -57,7 +57,7 @@ FetchContent_Declare(JsRuntimeHost
     GIT_TAG b296fd8dcbb3f0761fef61f59fded7dfb85f577b)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 6abfcf066d171e9ade7604d91381ebebe4209edc
+    GIT_TAG 6277baf62877f6b1a66a5801da94f0c9276991dc
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(libwebp
     GIT_REPOSITORY https://github.com/webmproject/libwebp.git

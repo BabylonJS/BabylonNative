@@ -31,7 +31,16 @@ TEST(NativeEngine, ShaderCache)
     std::promise<void> scriptIsDone{};
     std::promise<void> sceneIsReady{};
 
-    Babylon::AppRuntime runtime{};
+    Babylon::AppRuntime::Options options{};
+
+    options.UnhandledExceptionHandler = [&scriptIsDone](const Napi::Error& error) {
+        std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
+        std::cerr.flush();
+
+        scriptIsDone.set_exception(std::make_exception_ptr(std::exception{}));
+    };
+
+    Babylon::AppRuntime runtime{options};
     runtime.Dispatch([&device, &sceneIsReady](Napi::Env env) {
         device.AddToJavaScript(env);
 
