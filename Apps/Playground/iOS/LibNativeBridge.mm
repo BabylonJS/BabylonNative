@@ -74,22 +74,22 @@ float screenScale{1.0f};
 
 - (void)setTouchDown:(int)pointerId x:(int)inX y:(int)inY
 {
-    if (appContext) {
-        appContext->Input().TouchDown(pointerId, inX * screenScale, inY * screenScale);
+    if (appContext && appContext->Input()) {
+        appContext->Input()->TouchDown(pointerId, inX * screenScale, inY * screenScale);
     }
 }
 
 - (void)setTouchMove:(int)pointerId x:(int)inX y:(int)inY
 {
-    if (appContext) {
-        appContext->Input().TouchMove(pointerId, inX * screenScale, inY * screenScale);
+    if (appContext && appContext->Input()) {
+        appContext->Input()->TouchMove(pointerId, inX * screenScale, inY * screenScale);
     }
 }
 
 - (void)setTouchUp:(int)pointerId x:(int)inX y:(int)inY
 {
-    if (appContext) {
-        appContext->Input().TouchUp(pointerId, inX * screenScale, inY * screenScale);
+    if (appContext && appContext->Input()) {
+        appContext->Input()->TouchUp(pointerId, inX * screenScale, inY * screenScale);
     }
 }
 

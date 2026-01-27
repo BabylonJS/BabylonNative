@@ -2,6 +2,9 @@
 
 #include <winrt/windows.ui.core.h>
 
+#include <sstream>
+#include <iostream>
+
 namespace
 {
     template <typename T>
@@ -38,27 +41,27 @@ int main(Platform::Array<Platform::String^>^)
 }
 
 // Helper function to handle mouse button routing
-void ProcessMouseButtons(Babylon::Plugins::NativeInput& input, PointerUpdateKind updateKind, int x, int y)
+void ProcessMouseButtons(Babylon::Plugins::NativeInput* input, PointerUpdateKind updateKind, int x, int y)
 {
     switch (updateKind)
     {
         case PointerUpdateKind::LeftButtonPressed:
-            input.MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
+            input->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
             break;
         case PointerUpdateKind::MiddleButtonPressed:
-            input.MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
+            input->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
             break;
         case PointerUpdateKind::RightButtonPressed:
-            input.MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
+            input->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
             break;
         case PointerUpdateKind::LeftButtonReleased:
-            input.MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
+            input->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
             break;
         case PointerUpdateKind::MiddleButtonReleased:
-            input.MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
+            input->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
             break;
         case PointerUpdateKind::RightButtonReleased:
-            input.MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
+            input->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
             break;
     }
 }
@@ -214,9 +217,12 @@ void App::OnResuming(Platform::Object^ sender, Platform::Object^ args)
 
 void App::OnWindowSizeChanged(CoreWindow^ /*sender*/, WindowSizeChangedEventArgs^ args)
 {
-    size_t width = static_cast<size_t>(args->Size.Width * m_displayScale);
-    size_t height = static_cast<size_t>(args->Size.Height * m_displayScale);
-    m_appContext->Device().UpdateSize(width, height);
+    if (m_appContext)
+    {
+        size_t width = static_cast<size_t>(args->Size.Width * m_displayScale);
+        size_t height = static_cast<size_t>(args->Size.Height * m_displayScale);
+        m_appContext->Device().UpdateSize(width, height);
+    }
 }
 
 void App::OnVisibilityChanged(CoreWindow^ sender, VisibilityChangedEventArgs^ args)
@@ -232,7 +238,7 @@ void App::OnWindowClosed(CoreWindow^ sender, CoreWindowEventArgs^ args)
 
 void App::OnPointerMoved(CoreWindow^, PointerEventArgs^ args)
 {
-    if (m_appContext)
+    if (m_appContext && m_appContext->Input())
     {
         const auto& position = args->CurrentPoint->RawPosition;
         const auto deviceType = args->CurrentPoint->PointerDevice->PointerDeviceType;
@@ -243,7 +249,7 @@ void App::OnPointerMoved(CoreWindow^, PointerEventArgs^ args)
 
         if (deviceType == Windows::Devices::Input::PointerDeviceType::Mouse)
         {
-            m_appContext->Input().MouseMove(x, y);
+            m_appContext->Input()->MouseMove(x, y);
 
             if (args->CurrentPoint->IsInContact)
             {
@@ -252,14 +258,14 @@ void App::OnPointerMoved(CoreWindow^, PointerEventArgs^ args)
         }
         else
         {
-            m_appContext->Input().TouchMove(deviceSlot, x, y);
+            m_appContext->Input()->TouchMove(deviceSlot, x, y);
         }
     }
 }
 
 void App::OnPointerPressed(CoreWindow^, PointerEventArgs^ args)
 {
-    if (m_appContext)
+    if (m_appContext && m_appContext->Input())
     {
         const auto& position = args->CurrentPoint->RawPosition;
         const auto deviceType = args->CurrentPoint->PointerDevice->PointerDeviceType;
@@ -274,14 +280,14 @@ void App::OnPointerPressed(CoreWindow^, PointerEventArgs^ args)
         }
         else
         {
-            m_appContext->Input().TouchDown(deviceSlot, x, y);
+            m_appContext->Input()->TouchDown(deviceSlot, x, y);
         }
     }
 }
 
 void App::OnPointerReleased(CoreWindow^, PointerEventArgs^ args)
 {
-    if (m_appContext)
+    if (m_appContext && m_appContext->Input())
     {
         const auto& position = args->CurrentPoint->RawPosition;
         const auto deviceType = args->CurrentPoint->PointerDevice->PointerDeviceType;
@@ -296,16 +302,16 @@ void App::OnPointerReleased(CoreWindow^, PointerEventArgs^ args)
         }
         else
         {
-            m_appContext->Input().TouchUp(deviceSlot, x, y);
+            m_appContext->Input()->TouchUp(deviceSlot, x, y);
         }
     }
 }
 void App::OnPointerWheelChanged(CoreWindow^, PointerEventArgs^ args)
 {
-    if (m_appContext)
+    if (m_appContext && m_appContext->Input())
     {
         const auto delta = args->CurrentPoint->Properties->MouseWheelDelta;
-        m_appContext->Input().MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -delta);
+        m_appContext->Input()->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -delta);
     }
 }
 

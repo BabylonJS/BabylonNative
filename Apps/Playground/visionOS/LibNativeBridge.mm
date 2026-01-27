@@ -48,20 +48,20 @@
 }
 
 - (void)setTouchDown:(int)pointerId x:(int)inX y:(int)inY {
-  if (_appContext) {
-    _appContext->Input().TouchDown(static_cast<int>(pointerId), static_cast<int>(inX), static_cast<int>(inY));
+  if (_appContext && _appContext->Input()) {
+    _appContext->Input()->TouchDown(static_cast<int>(pointerId), static_cast<int>(inX), static_cast<int>(inY));
   }
 }
 
 - (void)setTouchMove:(int)pointerId x:(int)inX y:(int)inY {
-  if (_appContext) {
-    _appContext->Input().TouchMove(static_cast<int>(pointerId), static_cast<int>(inX), static_cast<int>(inY));
+  if (_appContext && _appContext->Input()) {
+    _appContext->Input()->TouchMove(static_cast<int>(pointerId), static_cast<int>(inX), static_cast<int>(inY));
   }
 }
 
 - (void)setTouchUp:(int)pointerId x:(int)inX y:(int)inY {
-  if (_appContext) {
-    _appContext->Input().TouchUp(static_cast<int>(pointerId), static_cast<int>(inX), static_cast<int>(inY));
+  if (_appContext && _appContext->Input()) {
+    _appContext->Input()->TouchUp(static_cast<int>(pointerId), static_cast<int>(inX), static_cast<int>(inY));
   }
 }
 

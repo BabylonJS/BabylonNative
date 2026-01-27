@@ -147,17 +147,17 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_com_library_babylonnative_Wrapper_setTouchInfo(JNIEnv* env, jclass clazz, jint pointerId, jfloat x, jfloat y, jboolean buttonAction, jint buttonValue)
     {
-        if (appContext)
+        if (appContext && appContext->Input())
         {
             if (buttonAction)
             {
                 if (buttonValue == 1)
-                    appContext->Input().TouchDown(pointerId, x, y);
+                    appContext->Input()->TouchDown(pointerId, x, y);
                 else
-                    appContext->Input().TouchUp(pointerId, x, y);
+                    appContext->Input()->TouchUp(pointerId, x, y);
             }
             else {
-                appContext->Input().TouchMove(pointerId, x, y);
+                appContext->Input()->TouchMove(pointerId, x, y);
             }
         }
     }

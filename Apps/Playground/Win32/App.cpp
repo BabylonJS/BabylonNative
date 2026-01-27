@@ -239,22 +239,22 @@ void ProcessMouseButtons(tagPOINTER_BUTTON_CHANGE_TYPE changeType, int x, int y)
     switch (changeType)
     {
         case POINTER_CHANGE_FIRSTBUTTON_DOWN:
-            appContext->Input().MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
+            appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
             break;
         case POINTER_CHANGE_FIRSTBUTTON_UP:
-            appContext->Input().MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
+            appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
             break;
         case POINTER_CHANGE_SECONDBUTTON_DOWN:
-            appContext->Input().MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
+            appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
             break;
         case POINTER_CHANGE_SECONDBUTTON_UP:
-            appContext->Input().MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
+            appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
             break;
         case POINTER_CHANGE_THIRDBUTTON_DOWN:
-            appContext->Input().MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
+            appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
             break;
         case POINTER_CHANGE_THIRDBUTTON_UP:
-            appContext->Input().MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
+            appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
             break;
     }
 }
@@ -345,15 +345,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_POINTERWHEEL:
         {
-            if (appContext)
+            if (appContext && appContext->Input())
             {
-                appContext->Input().MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -GET_WHEEL_DELTA_WPARAM(wParam));
+                appContext->Input()->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -GET_WHEEL_DELTA_WPARAM(wParam));
             }
             break;
         }
         case WM_POINTERDOWN:
         {
-            if (appContext)
+            if (appContext && appContext->Input())
             {
                 POINTER_INFO info;
                 auto pointerId = GET_POINTERID_WPARAM(wParam);
@@ -370,7 +370,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     }
                     else
                     {
-                        appContext->Input().TouchDown(pointerId, x, y);
+                        appContext->Input()->TouchDown(pointerId, x, y);
                     }
                 }
             }
@@ -378,7 +378,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_POINTERUPDATE:
         {
-            if (appContext)
+            if (appContext && appContext->Input())
             {
                 auto pointerId = GET_POINTERID_WPARAM(wParam);
                 POINTER_INFO info;
@@ -392,11 +392,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     if (info.pointerType == PT_MOUSE)
                     {
                         ProcessMouseButtons(info.ButtonChangeType, x, y);
-                        appContext->Input().MouseMove(x, y);
+                        appContext->Input()->MouseMove(x, y);
                     }
                     else
                     {
-                        appContext->Input().TouchMove(pointerId, x, y);
+                        appContext->Input()->TouchMove(pointerId, x, y);
                     }
                 }
             }
@@ -404,7 +404,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_POINTERUP:
         {
-            if (appContext)
+            if (appContext && appContext->Input())
             {
                 auto pointerId = GET_POINTERID_WPARAM(wParam);
                 POINTER_INFO info;
@@ -421,7 +421,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     }
                     else
                     {
-                        appContext->Input().TouchUp(pointerId, x, y);
+                        appContext->Input()->TouchUp(pointerId, x, y);
                     }
                 }
             }

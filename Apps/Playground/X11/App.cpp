@@ -167,22 +167,22 @@ int main(int _argc, const char* const* _argv)
                         const XMotionEvent& xmotion = event.xmotion;
                         const XButtonEvent& xbutton = event.xbutton;
 
-                        if (g_appContext) {
+                        if (g_appContext && g_appContext->Input()) {
                             switch (xbutton.button) {
                                 case Button1:
-                                    g_appContext->Input().MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
                                     break;
                                 case Button2:
-                                    g_appContext->Input().MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
                                     break;
                                 case Button3:
-                                    g_appContext->Input().MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
                                     break;
                                 case Button4:
-                                    g_appContext->Input().MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -120);
+                                    g_appContext->Input()->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -120);
                                     break;
                                 case Button5:
-                                    g_appContext->Input().MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, 120);
+                                    g_appContext->Input()->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, 120);
                                     break;
                             }
                         }
@@ -193,18 +193,18 @@ int main(int _argc, const char* const* _argv)
                         const XMotionEvent& xmotion = event.xmotion;
                         const XButtonEvent& xbutton = event.xbutton;
 
-                        if (g_appContext)
+                        if (g_appContext && g_appContext->Input())
                         {
                             switch (xbutton.button)
                             {
                                 case Button1:
-                                    g_appContext->Input().MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
                                     break;
                                 case Button2:
-                                    g_appContext->Input().MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
                                     break;
                                 case Button3:
-                                    g_appContext->Input().MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
                                     break;
                             }
                         }
@@ -213,8 +213,8 @@ int main(int _argc, const char* const* _argv)
                 case MotionNotify:
                     {
                         const XMotionEvent& xmotion = event.xmotion;
-                        if (g_appContext) {
-                            g_appContext->Input().MouseMove(xmotion.x, xmotion.y);
+                        if (g_appContext && g_appContext->Input()) {
+                            g_appContext->Input()->MouseMove(xmotion.x, xmotion.y);
                         }
                     }
                     break;

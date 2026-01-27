@@ -39,7 +39,7 @@ public:
     Babylon::Graphics::DeviceUpdate& DeviceUpdate() { return *m_deviceUpdate; }
     Babylon::AppRuntime& Runtime() { return *m_runtime; }
     Babylon::Polyfills::Canvas& Canvas() { return *m_canvas; }
-    Babylon::Plugins::NativeInput& Input() { return *m_input; }
+    Babylon::Plugins::NativeInput* Input() { return m_input; }
     Babylon::ScriptLoader& ScriptLoader() { return *m_scriptLoader; }
 
 private:
