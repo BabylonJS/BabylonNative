@@ -20,12 +20,6 @@ namespace
 
     void Uninitialize()
     {
-        if (g_appContext)
-        {
-            g_appContext->DeviceUpdate().Finish();
-            g_appContext->Device().FinishRenderingCurrentFrame();
-        }
-
         g_appContext.reset();
     }
 

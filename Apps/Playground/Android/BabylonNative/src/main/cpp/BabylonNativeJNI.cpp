@@ -28,12 +28,6 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_com_library_babylonnative_Wrapper_finishEngine(JNIEnv* env, jclass clazz)
     {
-        if (appContext)
-        {
-            appContext->DeviceUpdate().Finish();
-            appContext->Device().FinishRenderingCurrentFrame();
-        }
-
         isXrActive = false;
 
         nativeXr.reset();

@@ -78,12 +78,9 @@
     if (!self.initialized) {
         return;
     }
-    if (_appContext) {
-        _appContext->DeviceUpdate().Finish();
-        _appContext->Device().FinishRenderingCurrentFrame();
-    }
 
     _appContext.reset();
+
     [_displayLink invalidate];
     _displayLink = NULL;
     self.initialized = NO;

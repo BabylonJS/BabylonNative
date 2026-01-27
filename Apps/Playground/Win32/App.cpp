@@ -72,7 +72,7 @@ namespace
 
     void RefreshBabylon(HWND hWnd)
     {
-        appContext.reset();
+        Uninitialize();
 
         RECT rect;
         if (!GetClientRect(hWnd, &rect))

@@ -155,12 +155,6 @@ void App::Run()
 // class is torn down while the app is in the foreground.
 void App::Uninitialize()
 {
-    if (m_appContext)
-    {
-        m_appContext->DeviceUpdate().Finish();
-        m_appContext->Device().FinishRenderingCurrentFrame();
-    }
-
     m_appContext.reset();
 }
 
