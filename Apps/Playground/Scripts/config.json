@@ -5,6 +5,7 @@
             "title": "Gaussian Splatting Update Data",
             "playgroundId": "#Q0LBM8#2",
             "renderCount": 15,
+            "excludedGraphicsApis": [ "OpenGL" ],
             "referenceImage": "gsplat-update-data.png"
         },
         {

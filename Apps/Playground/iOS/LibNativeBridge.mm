@@ -21,6 +21,8 @@ float screenScale{1.0f};
 
 - (void)dealloc
 {
+    isXRActive = false;
+
     nativeXr.reset();
     appContext.reset();
 }

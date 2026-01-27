@@ -10,6 +10,7 @@
 #include <optional>
 
 #include <Shared/AppContext.h>
+#include <Babylon/Plugins/TestUtils.h>
 
 static const char* s_applicationName  = "BabylonNative Playground";
 static const char* s_applicationClass = "Playground";
@@ -227,5 +228,6 @@ int main(int _argc, const char* const* _argv)
     XUnmapWindow(display, window);
     XDestroyWindow(display, window);
     XCloseDisplay(display);
-    return 0;
+
+    return Babylon::Plugins::TestUtils::errorCode;
 }
