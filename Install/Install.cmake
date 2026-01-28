@@ -198,3 +198,23 @@ if(TARGET Blob)
     install_targets(Blob)
     install_include_for_targets(Blob)
 endif()
+
+if(TARGET URL)
+    install_targets(URL)
+    install_include_for_targets(URL)
+endif()
+
+if(TARGET AbortController)
+    install_targets(AbortController)
+    install_include_for_targets(AbortController)
+endif()
+
+if(TARGET WebSocket)
+    install_targets(WebSocket)
+    install_include_for_targets(WebSocket)
+endif()
+
+if(TARGET Performance)
+    install_targets(Performance)
+    install_include_for_targets(Performance)
+endif()

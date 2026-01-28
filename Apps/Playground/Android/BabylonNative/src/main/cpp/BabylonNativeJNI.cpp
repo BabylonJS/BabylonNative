@@ -3,40 +3,18 @@
 #include <android/native_window_jni.h> // requires ndk r5 or newer
 #include <android/log.h>
 
-#include <stdlib.h>
-#include <string.h>
-#include <signal.h>
-#include <time.h>
 #include <optional>
+#include <string>
+#include <vector>
 
+#include <Shared/AppContext.h>
 #include <AndroidExtensions/Globals.h>
-#include <Babylon/AppRuntime.h>
-#include <Babylon/Graphics/Device.h>
-#include <Babylon/ScriptLoader.h>
-#include <Babylon/Plugins/NativeEncoding.h>
-#include <Babylon/Plugins/NativeEngine.h>
-#include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/NativeXr.h>
-#include <Babylon/Plugins/NativeCamera.h>
-#include <Babylon/Plugins/NativeOptimizations.h>
-#include <Babylon/Plugins/NativeZip.h>
-#include <Babylon/Polyfills/Blob.h>
-#include <Babylon/Polyfills/Console.h>
-#include <Babylon/Polyfills/Window.h>
-#include <Babylon/Polyfills/XMLHttpRequest.h>
-#include <Babylon/Polyfills/Canvas.h>
-#include <Babylon/Polyfills/DecompressionStream.h>
-#include <Babylon/DebugTrace.h>
 
 namespace
 {
-    std::optional<Babylon::Graphics::Device> device{};
-    std::optional<Babylon::Graphics::DeviceUpdate> deviceUpdate{};
-    std::optional<Babylon::AppRuntime> runtime{};
+    std::optional<AppContext> appContext{};
     std::optional<Babylon::Plugins::NativeXr> nativeXr{};
-    Babylon::Plugins::NativeInput* nativeInput{};
-    std::optional<Babylon::Polyfills::Canvas> nativeCanvas{};
-    std::optional<Babylon::ScriptLoader> scriptLoader{};
     bool isXrActive{};
 }
 
@@ -50,27 +28,16 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_com_library_babylonnative_Wrapper_finishEngine(JNIEnv* env, jclass clazz)
     {
-        if (device)
-        {
-            deviceUpdate->Finish();
-            device->FinishRenderingCurrentFrame();
-        }
-
         isXrActive = false;
 
-        scriptLoader.reset();
-
-        nativeInput = {};
         nativeXr.reset();
-        scriptLoader.reset();
-        runtime.reset();
-        device.reset();
+        appContext.reset();
     }
 
     JNIEXPORT void JNICALL
-    Java_com_library_babylonnative_Wrapper_surfaceCreated(JNIEnv* env, jclass clazz, jobject surface, jobject context)
+    Java_com_library_babylonnative_Wrapper_surfaceCreated(JNIEnv* env, jclass clazz, jobject surface, jobject jniContext)
     {
-        if (!runtime)
+        if (!appContext)
         {
             JavaVM* javaVM{};
             if (env->GetJavaVM(&javaVM) != JNI_OK)
@@ -78,86 +45,35 @@ extern "C"
                 throw std::runtime_error("Failed to get Java VM");
             }
 
-            android::global::Initialize(javaVM, context);
-
-            Babylon::DebugTrace::EnableDebugTrace(true);
-            Babylon::DebugTrace::SetTraceOutput([](const char* trace) { printf("%s\n", trace); fflush(stdout); });
+            android::global::Initialize(javaVM, jniContext);
 
             ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
             int32_t width  = ANativeWindow_getWidth(window);
             int32_t height = ANativeWindow_getHeight(window);
 
-            Babylon::Graphics::Configuration graphicsConfig{};
-            graphicsConfig.Window = window;
-            graphicsConfig.Width = static_cast<size_t>(width);
-            graphicsConfig.Height = static_cast<size_t>(height);
-            device.emplace(graphicsConfig);
-            deviceUpdate.emplace(device->GetUpdate("update"));
-            device->StartRenderingCurrentFrame();
-            deviceUpdate->Start();
-
-            runtime.emplace();
-
-            runtime->Dispatch([](Napi::Env env)
-            {
-                device->AddToJavaScript(env);
-
-                Babylon::Polyfills::Blob::Initialize(env);
-
-                Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel level)
-                {
-                    switch (level)
-                    {
-                    case Babylon::Polyfills::Console::LogLevel::Log:
-                        __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
-                        break;
-                    case Babylon::Polyfills::Console::LogLevel::Warn:
-                        __android_log_write(ANDROID_LOG_WARN, "BabylonNative", message);
-                        break;
-                    case Babylon::Polyfills::Console::LogLevel::Error:
-                        __android_log_write(ANDROID_LOG_ERROR, "BabylonNative", message);
-                        break;
-                    }
+            appContext.emplace(
+                window,
+                static_cast<size_t>(width),
+                static_cast<size_t>(height),
+                [](const char* message) {
+                    __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
+                },
+                [](Napi::Env env) {
+                    nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
+                    nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ ::isXrActive = isXrActive; });
                 });
-
-                Babylon::Plugins::NativeEncoding::Initialize(env);
-                Babylon::Plugins::NativeEngine::Initialize(env);
-                Babylon::Plugins::NativeOptimizations::Initialize(env);
-
-                nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
-                nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ ::isXrActive = isXrActive; });
-                
-                nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
-
-                Babylon::Plugins::NativeCamera::Initialize(env);
-                Babylon::Plugins::NativeZip::Initialize(env);
-                Babylon::Polyfills::DecompressionStream::Initialize(env);
-                Babylon::Polyfills::Window::Initialize(env);
-
-                Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-                nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
-            });
-
-            scriptLoader.emplace(*runtime);
-            scriptLoader->LoadScript("app:///Scripts/ammo.js");
-            scriptLoader->LoadScript("app:///Scripts/recast.js");
-            scriptLoader->LoadScript("app:///Scripts/babylon.max.js");
-            scriptLoader->LoadScript("app:///Scripts/babylonjs.loaders.js");
-            scriptLoader->LoadScript("app:///Scripts/babylonjs.materials.js");
-            scriptLoader->LoadScript("app:///Scripts/babylon.gui.js");
-            scriptLoader->LoadScript("app:///Scripts/babylonjs.serializers.js");
         }
     }
 
     JNIEXPORT void JNICALL
     Java_com_library_babylonnative_Wrapper_surfaceChanged(JNIEnv* env, jclass clazz, jint width, jint height, jobject surface)
     {
-        if (runtime)
+        if (appContext)
         {
             ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
-            runtime->Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto) {
-                device->UpdateWindow(window);
-                device->UpdateSize(width, height);
+            appContext->Runtime().Dispatch([window, width = static_cast<size_t>(width), height = static_cast<size_t>(height)](auto) {
+                appContext->Device().UpdateWindow(window);
+                appContext->Device().UpdateSize(width, height);
             });
         }
     }
@@ -172,18 +88,18 @@ extern "C"
     Java_com_library_babylonnative_Wrapper_activityOnPause(JNIEnv* env, jclass clazz)
     {
         android::global::Pause();
-        if (runtime)
+        if (appContext)
         {
-            runtime->Suspend();
+            appContext->Runtime().Suspend();
         }
     }
 
     JNIEXPORT void JNICALL
     Java_com_library_babylonnative_Wrapper_activityOnResume(JNIEnv* env, jclass clazz)
     {
-        if (runtime)
+        if (appContext)
         {
-            runtime->Resume();
+            appContext->Runtime().Resume();
         }
         android::global::Resume();
     }
@@ -211,37 +127,37 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_com_library_babylonnative_Wrapper_loadScript(JNIEnv* env, jclass clazz, jstring path)
     {
-        if (scriptLoader)
+        if (appContext)
         {
-            scriptLoader->LoadScript(env->GetStringUTFChars(path, nullptr));
+            appContext->ScriptLoader().LoadScript(env->GetStringUTFChars(path, nullptr));
         }
     }
 
     JNIEXPORT void JNICALL
     Java_com_library_babylonnative_Wrapper_eval(JNIEnv* env, jclass clazz, jstring source, jstring sourceURL)
     {
-        if (runtime)
+        if (appContext)
         {
             std::string url = env->GetStringUTFChars(sourceURL, nullptr);
             std::string src = env->GetStringUTFChars(source, nullptr);
-            scriptLoader->Eval(std::move(src), std::move(url));
+            appContext->ScriptLoader().Eval(std::move(src), std::move(url));
         }
     }
 
     JNIEXPORT void JNICALL
     Java_com_library_babylonnative_Wrapper_setTouchInfo(JNIEnv* env, jclass clazz, jint pointerId, jfloat x, jfloat y, jboolean buttonAction, jint buttonValue)
     {
-        if (nativeInput != nullptr)
+        if (appContext && appContext->Input())
         {
             if (buttonAction)
             {
                 if (buttonValue == 1)
-                    nativeInput->TouchDown(pointerId, x, y);
+                    appContext->Input()->TouchDown(pointerId, x, y);
                 else
-                    nativeInput->TouchUp(pointerId, x, y);
+                    appContext->Input()->TouchUp(pointerId, x, y);
             }
             else {
-                nativeInput->TouchMove(pointerId, x, y);
+                appContext->Input()->TouchMove(pointerId, x, y);
             }
         }
     }
@@ -249,12 +165,12 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_com_library_babylonnative_Wrapper_renderFrame(JNIEnv* env, jclass clazz)
     {
-        if (device)
+        if (appContext)
         {
-            deviceUpdate->Finish();
-            device->FinishRenderingCurrentFrame();
-            device->StartRenderingCurrentFrame();
-            deviceUpdate->Start();
+            appContext->DeviceUpdate().Finish();
+            appContext->Device().FinishRenderingCurrentFrame();
+            appContext->Device().StartRenderingCurrentFrame();
+            appContext->DeviceUpdate().Start();
         }
     }
 

@@ -17,14 +17,16 @@ set(TEST_ASSETS
 set(SOURCES
     "Source/App.h"
     "Source/App.cpp"
+    "Source/Tests.ExternalTexture.cpp"
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.NativeEngine.cpp"
-    "Source/Tests.ExternalTexture.cpp"
     "Source/Utils.h"
     "Source/Utils.${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
 if(GRAPHICS_API STREQUAL "D3D11")
-    set(SOURCES ${SOURCES} "Source/Tests.ExternalTexture.D3D11.cpp")
+    set(SOURCES ${SOURCES}
+        "Source/Tests.Device.${GRAPHICS_API}.cpp"
+        "Source/Tests.ExternalTexture.${GRAPHICS_API}.cpp")
 endif()
 
 if(APPLE)

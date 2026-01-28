@@ -1,10 +1,6 @@
 #pragma once
 
-#include <Babylon/Plugins/NativeInput.h>
-#include <Babylon/AppRuntime.h>
-#include <Babylon/Graphics/Device.h>
-#include <Babylon/Polyfills/Canvas.h>
-
+#include <Shared/AppContext.h>
 #include <optional>
 
 // Main entry point for our app. Connects the app with the Windows shell and handles application lifecycle events.
@@ -43,11 +39,7 @@ private:
 
     void RestartRuntime(Windows::Foundation::Rect bounds);
 
-    std::optional<Babylon::Graphics::Device> m_device{};
-    std::optional<Babylon::Graphics::DeviceUpdate> m_update{};
-    std::optional<Babylon::AppRuntime> m_runtime{};
-    std::optional<Babylon::Polyfills::Canvas> m_nativeCanvas{};
-    Babylon::Plugins::NativeInput* m_nativeInput{};
+    std::optional<AppContext> m_appContext{};
 
     Windows::Foundation::Collections::IVectorView<Windows::Storage::IStorageItem^>^ m_files;
     bool m_windowClosed;

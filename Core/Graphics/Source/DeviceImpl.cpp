@@ -82,8 +82,7 @@ namespace Babylon::Graphics
         UpdateDevice(config.Device);
 
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
-        init.platformData.backBuffer = config.BackBufferColor;
-        init.platformData.backBufferDS = config.BackBufferDepthStencil;
+        UpdateBackBuffer(config.BackBufferColor, config.BackBufferDepthStencil);
 #endif
     }
 
@@ -159,6 +158,16 @@ namespace Babylon::Graphics
         init.resolution.reset |= enabled ? BGFX_RESET_TRANSPARENT_BACKBUFFER : 0;
         m_state.Bgfx.Dirty = true;
     }
+
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+    void DeviceImpl::UpdateBackBuffer(BackBufferColorT backBufferColor, BackBufferDepthStencilT backBufferDepthStencil)
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        m_state.Bgfx.InitState.platformData.backBuffer = backBufferColor;
+        m_state.Bgfx.InitState.platformData.backBufferDS = backBufferDepthStencil;
+        m_state.Bgfx.Dirty = true;
+    }
+#endif
 
     void DeviceImpl::AddToJavaScript(Napi::Env env)
     {

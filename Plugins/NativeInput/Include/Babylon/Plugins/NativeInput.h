@@ -13,6 +13,9 @@ namespace Babylon::Plugins
         static NativeInput& BABYLON_API CreateForJavaScript(Napi::Env);
         static NativeInput& BABYLON_API GetFromJavaScript(Napi::Env);
 
+        // The `x` and `y` coordinates are in device-independent pixels (a.k.a., dp or dip) and are relative to the top-left
+        // corner of the target back buffer which is typically the window provided to `Babylon::Graphics::Device`.
+
         void MouseDown(uint32_t buttonIndex, int32_t x, int32_t y);
         void MouseUp(uint32_t buttonIndex, int32_t x, int32_t y);
         void MouseMove(int32_t x, int32_t y);

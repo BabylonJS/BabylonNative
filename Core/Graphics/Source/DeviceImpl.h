@@ -46,6 +46,10 @@ namespace Babylon::Graphics
         void UpdateMSAA(uint8_t value);
         void UpdateAlphaPremultiplied(bool enabled);
 
+#ifdef GRAPHICS_BACK_BUFFER_SUPPORT
+        void UpdateBackBuffer(BackBufferColorT backBufferColor, BackBufferDepthStencilT backBufferDepthStencil);
+#endif
+
         void AddToJavaScript(Napi::Env);
         static DeviceImpl& GetFromJavaScript(Napi::Env);
 
@@ -136,8 +140,8 @@ namespace Babylon::Graphics
 
             struct
             {
-                size_t Width{};
-                size_t Height{};
+                size_t Width{}; // in device-independent pixels
+                size_t Height{}; // in device-independent pixels
                 float HardwareScalingLevel{1.0f};
                 float DevicePixelRatio{1.0f};
             } Resolution{};
