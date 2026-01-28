@@ -35,8 +35,9 @@ target_link_libraries(BabylonNativeJNI
     NativeEngine
     NativeInput
     NativeOptimizations
+    NativeTracing
     NativeXr
     ScriptLoader
     TestUtils
-    XMLHttpRequest
-    Window)
+    Window
+    XMLHttpRequest)

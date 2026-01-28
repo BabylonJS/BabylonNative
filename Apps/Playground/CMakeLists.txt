@@ -130,17 +130,17 @@ target_link_libraries(Playground
     PRIVATE Console
     PRIVATE ExternalTexture
     PRIVATE GraphicsDevice
-    PRIVATE NativeTracing
     PRIVATE NativeCamera
     PRIVATE NativeCapture
     PRIVATE NativeEncoding
     PRIVATE NativeEngine
     PRIVATE NativeInput
     PRIVATE NativeOptimizations
+    PRIVATE NativeTracing
     PRIVATE ScriptLoader
+    PRIVATE TestUtils
     PRIVATE Window
     PRIVATE XMLHttpRequest
-    PRIVATE TestUtils
     ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 
