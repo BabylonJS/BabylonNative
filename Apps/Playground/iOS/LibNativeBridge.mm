@@ -2,8 +2,6 @@
 
 #import <Shared/AppContext.h>
 #import <Babylon/Plugins/NativeXr.h>
-#import <Babylon/Plugins/NativeTracing.h>
-#import <Babylon/PerfTrace.h>
 #import <optional>
 
 std::optional<AppContext> appContext{};
@@ -39,8 +37,6 @@ float screenScale{1.0f};
             NSLog(@"%s", message);
         },
         [xrView](Napi::Env env) {
-            Babylon::Plugins::NativeTracing::Initialize(env);
-
             nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
             nativeXr->UpdateWindow(xrView);
             nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ ::isXrActive = isXrActive; });

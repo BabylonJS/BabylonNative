@@ -6,7 +6,8 @@
             "playgroundId": "#Q0LBM8#2",
             "renderCount": 15,
             "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "gsplat-update-data.png"
+            "referenceImage": "gsplat-update-data.png",
+            "comment": "Test doesn't render correctly with OpenGL"
         },
         {
             "title": "Native Canvas",

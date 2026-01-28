@@ -13,6 +13,7 @@
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
+#include <Babylon/Plugins/NativeTracing.h>
 #include <Babylon/Plugins/TestUtils.h>
 
 #include <Babylon/Polyfills/Blob.h>
@@ -98,6 +99,8 @@ AppContext::AppContext(
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
         m_canvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
+
+        Babylon::Plugins::NativeTracing::Initialize(env);
 
         Babylon::Plugins::NativeEncoding::Initialize(env);
 
