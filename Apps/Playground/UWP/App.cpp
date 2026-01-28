@@ -1,18 +1,9 @@
 #include "App.h"
 
-#include <Babylon/Graphics/Device.h>
-#include <Babylon/ScriptLoader.h>
-#include <Babylon/Plugins/NativeEncoding.h>
-#include <Babylon/Plugins/NativeEngine.h>
-#include <Babylon/Plugins/NativeOptimizations.h>
-#include <Babylon/Polyfills/Blob.h>
-#include <Babylon/Polyfills/Console.h>
-#include <Babylon/Polyfills/Window.h>
-#include <Babylon/Polyfills/XMLHttpRequest.h>
-#include <Babylon/Polyfills/Canvas.h>
-#include <Babylon/DebugTrace.h>
-
 #include <winrt/windows.ui.core.h>
+
+#include <sstream>
+#include <iostream>
 
 namespace
 {
@@ -50,27 +41,27 @@ int main(Platform::Array<Platform::String^>^)
 }
 
 // Helper function to handle mouse button routing
-void ProcessMouseButtons(Babylon::Plugins::NativeInput* m_nativeInput, PointerUpdateKind updateKind, int x, int y)
+void ProcessMouseButtons(Babylon::Plugins::NativeInput* input, PointerUpdateKind updateKind, int x, int y)
 {
     switch (updateKind)
     {
         case PointerUpdateKind::LeftButtonPressed:
-            m_nativeInput->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
+            input->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
             break;
         case PointerUpdateKind::MiddleButtonPressed:
-            m_nativeInput->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
+            input->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
             break;
         case PointerUpdateKind::RightButtonPressed:
-            m_nativeInput->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
+            input->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
             break;
         case PointerUpdateKind::LeftButtonReleased:
-            m_nativeInput->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
+            input->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
             break;
         case PointerUpdateKind::MiddleButtonReleased:
-            m_nativeInput->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
+            input->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
             break;
         case PointerUpdateKind::RightButtonReleased:
-            m_nativeInput->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
+            input->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
             break;
     }
 }
@@ -150,12 +141,12 @@ void App::Run()
 {
     while (!m_windowClosed)
     {
-        if (m_device)
+        if (m_appContext)
         {
-            m_update->Finish();
-            m_device->FinishRenderingCurrentFrame();
-            m_device->StartRenderingCurrentFrame();
-            m_update->Start();
+            m_appContext->DeviceUpdate().Finish();
+            m_appContext->Device().FinishRenderingCurrentFrame();
+            m_appContext->Device().StartRenderingCurrentFrame();
+            m_appContext->DeviceUpdate().Start();
         }
 
         CoreWindow::GetForCurrentThread()->Dispatcher->ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
@@ -167,17 +158,7 @@ void App::Run()
 // class is torn down while the app is in the foreground.
 void App::Uninitialize()
 {
-    if (m_device)
-    {
-        m_update->Finish();
-        m_device->FinishRenderingCurrentFrame();
-    }
-
-    m_nativeInput = {};
-    m_nativeCanvas.reset();
-    m_runtime.reset();
-    m_update.reset();
-    m_device.reset();
+    m_appContext.reset();
 }
 
 // Application lifecycle event handlers.
@@ -207,28 +188,28 @@ void App::OnSuspending(Platform::Object^ sender, SuspendingEventArgs^ args)
     // the app will be forced to exit.
     auto deferral = args->SuspendingOperation->GetDeferral();
 
-    if (m_device)
+    if (m_appContext)
     {
-        m_update->Finish();
-        m_device->FinishRenderingCurrentFrame();
-    }
+        m_appContext->DeviceUpdate().Finish();
+        m_appContext->Device().FinishRenderingCurrentFrame();
 
-    m_runtime->Suspend();
+        m_appContext->Runtime().Suspend();
+    }
 
     deferral->Complete();
 }
 
 void App::OnResuming(Platform::Object^ sender, Platform::Object^ args)
 {
-    // Restore any data or state that was unloaded on suspend. By default, data
-    // and state are persisted when resuming from suspend. Note that this event
-    // does not occur if the app was previously terminated.
-    m_runtime->Resume();
-
-    if (m_device)
+    if (m_appContext)
     {
-        m_device->StartRenderingCurrentFrame();
-        m_update->Start();
+        // Restore any data or state that was unloaded on suspend. By default, data
+        // and state are persisted when resuming from suspend. Note that this event
+        // does not occur if the app was previously terminated.
+        m_appContext->Runtime().Resume();
+
+        m_appContext->Device().StartRenderingCurrentFrame();
+        m_appContext->DeviceUpdate().Start();
     }
 }
 
@@ -236,9 +217,12 @@ void App::OnResuming(Platform::Object^ sender, Platform::Object^ args)
 
 void App::OnWindowSizeChanged(CoreWindow^ /*sender*/, WindowSizeChangedEventArgs^ args)
 {
-    size_t width = static_cast<size_t>(args->Size.Width * m_displayScale);
-    size_t height = static_cast<size_t>(args->Size.Height * m_displayScale);
-    m_device->UpdateSize(width, height);
+    if (m_appContext)
+    {
+        size_t width = static_cast<size_t>(args->Size.Width * m_displayScale);
+        size_t height = static_cast<size_t>(args->Size.Height * m_displayScale);
+        m_appContext->Device().UpdateSize(width, height);
+    }
 }
 
 void App::OnVisibilityChanged(CoreWindow^ sender, VisibilityChangedEventArgs^ args)
@@ -254,7 +238,7 @@ void App::OnWindowClosed(CoreWindow^ sender, CoreWindowEventArgs^ args)
 
 void App::OnPointerMoved(CoreWindow^, PointerEventArgs^ args)
 {
-    if (m_nativeInput != nullptr)
+    if (m_appContext && m_appContext->Input())
     {
         const auto& position = args->CurrentPoint->RawPosition;
         const auto deviceType = args->CurrentPoint->PointerDevice->PointerDeviceType;
@@ -265,23 +249,23 @@ void App::OnPointerMoved(CoreWindow^, PointerEventArgs^ args)
 
         if (deviceType == Windows::Devices::Input::PointerDeviceType::Mouse)
         {
-            m_nativeInput->MouseMove(x, y);
+            m_appContext->Input()->MouseMove(x, y);
 
             if (args->CurrentPoint->IsInContact)
             {
-                ProcessMouseButtons(m_nativeInput, updateKind, x, y);
+                ProcessMouseButtons(m_appContext->Input(), updateKind, x, y);
             }
         }
         else
         {
-            m_nativeInput->TouchMove(deviceSlot, x, y);
+            m_appContext->Input()->TouchMove(deviceSlot, x, y);
         }
     }
 }
 
 void App::OnPointerPressed(CoreWindow^, PointerEventArgs^ args)
 {
-    if (m_nativeInput != nullptr)
+    if (m_appContext && m_appContext->Input())
     {
         const auto& position = args->CurrentPoint->RawPosition;
         const auto deviceType = args->CurrentPoint->PointerDevice->PointerDeviceType;
@@ -292,18 +276,18 @@ void App::OnPointerPressed(CoreWindow^, PointerEventArgs^ args)
 
         if (deviceType == Windows::Devices::Input::PointerDeviceType::Mouse)
         {
-            ProcessMouseButtons(m_nativeInput, updateKind, x, y);
+            ProcessMouseButtons(m_appContext->Input(), updateKind, x, y);
         }
         else
         {
-            m_nativeInput->TouchDown(deviceSlot, x, y);
+            m_appContext->Input()->TouchDown(deviceSlot, x, y);
         }
     }
 }
 
 void App::OnPointerReleased(CoreWindow^, PointerEventArgs^ args)
 {
-    if (m_nativeInput != nullptr)
+    if (m_appContext && m_appContext->Input())
     {
         const auto& position = args->CurrentPoint->RawPosition;
         const auto deviceType = args->CurrentPoint->PointerDevice->PointerDeviceType;
@@ -314,18 +298,21 @@ void App::OnPointerReleased(CoreWindow^, PointerEventArgs^ args)
 
         if (deviceType == Windows::Devices::Input::PointerDeviceType::Mouse)
         {
-            ProcessMouseButtons(m_nativeInput, updateKind, x, y);
+            ProcessMouseButtons(m_appContext->Input(), updateKind, x, y);
         }
         else
         {
-            m_nativeInput->TouchUp(deviceSlot, x, y);
+            m_appContext->Input()->TouchUp(deviceSlot, x, y);
         }
     }
 }
 void App::OnPointerWheelChanged(CoreWindow^, PointerEventArgs^ args)
 {
-    const auto delta = args->CurrentPoint->Properties->MouseWheelDelta;
-    m_nativeInput->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -delta);
+    if (m_appContext && m_appContext->Input())
+    {
+        const auto delta = args->CurrentPoint->Properties->MouseWheelDelta;
+        m_appContext->Input()->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -delta);
+    }
 }
 
 void App::OnKeyPressed(CoreWindow^ window, KeyEventArgs^ args)
@@ -361,67 +348,26 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
 {
     Uninitialize();
 
-    Babylon::DebugTrace::EnableDebugTrace(true);
-    Babylon::DebugTrace::SetTraceOutput([](const char* trace) {
-        OutputDebugStringA(trace);
-        OutputDebugStringA("\n");
-    });
-
     DisplayInformation^ displayInformation = DisplayInformation::GetForCurrentView();
     m_displayScale = static_cast<float>(displayInformation->RawPixelsPerViewPixel);
     size_t width = static_cast<size_t>(bounds.Width * m_displayScale);
     size_t height = static_cast<size_t>(bounds.Height * m_displayScale);
     auto window = from_cx<winrt::Windows::Foundation::IInspectable>(CoreWindow::GetForCurrentThread());
 
-    Babylon::Graphics::Configuration graphicsConfig{};
-    graphicsConfig.Window = window;
-    graphicsConfig.Width = width;
-    graphicsConfig.Height = height;
-    graphicsConfig.MSAASamples = 4;
-    m_device.emplace(graphicsConfig);
-    m_update.emplace(m_device->GetUpdate("update"));
-    m_device->StartRenderingCurrentFrame();
-    m_update->Start();
-
-    m_runtime.emplace();
-
-    m_runtime->Dispatch([this](Napi::Env env) {
-        m_device->AddToJavaScript(env);
-
-        Babylon::Polyfills::Blob::Initialize(env);
-
-        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
-            OutputDebugStringA(message);
+    m_appContext.emplace(
+        window,
+        width,
+        height,
+        [](const char* message) {
+            std::ostringstream ss{};
+            ss << message << std::endl;
+            OutputDebugStringA(ss.str().data());
+            std::cout << ss.str();
         });
-
-        m_nativeCanvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
-
-        Babylon::Polyfills::Window::Initialize(env);
-
-        Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-
-        Babylon::Plugins::NativeEncoding::Initialize(env);
-
-        Babylon::Plugins::NativeEngine::Initialize(env);
-
-        Babylon::Plugins::NativeOptimizations::Initialize(env);
-
-        m_nativeInput = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
-    });
-
-    Babylon::ScriptLoader loader{*m_runtime};
-    loader.LoadScript("app:///Scripts/ammo.js");
-    // Commenting out recast.js for now as v8jsi is incompatible with asm.js.
-    // loader.LoadScript("app:///Scripts/recast.js");
-    loader.LoadScript("app:///Scripts/babylon.max.js");
-    loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
-    loader.LoadScript("app:///Scripts/babylonjs.materials.js");
-    loader.LoadScript("app:///Scripts/babylon.gui.js");
-    loader.LoadScript("app:///Scripts/babylonjs.serializers.js"); 
 
     if (m_files == nullptr)
     {
-        loader.LoadScript("app:///Scripts/experience.js");
+        m_appContext->ScriptLoader().LoadScript("app:///Scripts/experience.js");
     }
     else
     {
@@ -431,9 +377,9 @@ void App::RestartRuntime(Windows::Foundation::Rect bounds)
 
             // There is no built-in way to convert a local file path to a url in UWP, but
             // Foundation::Uri works with a url constructed using "file:///" with a local path.
-            loader.LoadScript("file:///" + winrt::to_string(file->Path->Data()));
+            m_appContext->ScriptLoader().LoadScript("file:///" + winrt::to_string(file->Path->Data()));
         }
 
-        loader.LoadScript("app:///Scripts/playground_runner.js");
+        m_appContext->ScriptLoader().LoadScript("app:///Scripts/playground_runner.js");
     }
 }
