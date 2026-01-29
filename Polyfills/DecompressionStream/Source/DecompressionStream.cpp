@@ -14,7 +14,7 @@ namespace Babylon::Polyfills::DecompressionStream
         Internal::TextDecoder::Initialize(env);
         Internal::DecompressionStream::Initialize(env);
         Internal::ReadableStream::Initialize(env);
-        Internal::ReadableStreamDefaultController::Initialize(env);
+        //Internal::ReadableStreamDefaultController::Initialize(env);
         Internal::Response::Initialize(env);
     }
 }

@@ -16,6 +16,7 @@ target_include_directories(DecompressionStream PUBLIC
 target_link_libraries(DecompressionStream
     PUBLIC napi
     PRIVATE libdeflate_static
+    PRIVATE minz
     PRIVATE JsRuntimeInternal)
 
 set_property(TARGET DecompressionStream PROPERTY FOLDER Polyfills)

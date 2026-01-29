@@ -12,7 +12,9 @@ set(BABYLONJS_MATERIALS_ASSETS
 
 set(TEST_ASSETS
     "JavaScript/dist/tests.javaScript.all.js"
-    "JavaScript/dist/tests.nativeEngine.shaderCache.js")
+    "JavaScript/dist/tests.nativeEngine.shaderCache.js"
+    "JavaScript/dist/tests.inflate.zip.js"
+    "JavaScript/dist/tests.inflate.stream.js")
 
 set(SOURCES
     "Source/App.h"
@@ -20,6 +22,7 @@ set(SOURCES
     "Source/Tests.ExternalTexture.cpp"
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.NativeEngine.cpp"
+    "Source/Tests.Inflate.cpp"
     "Source/Utils.h"
     "Source/Utils.${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 

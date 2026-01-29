@@ -8,6 +8,8 @@ module.exports = {
   entry: {
     "tests.javaScript.all": './src/tests.javaScript.all.ts',
     "tests.nativeEngine.shaderCache": './src/tests.nativeEngine.shaderCache.ts',
+    "tests.inflate.zip": './src/tests.inflate.zip.ts',
+    "tests.inflate.stream": './src/tests.inflate.stream.ts',
   },
   externals: {
     "@babylonjs/core": "BABYLON",

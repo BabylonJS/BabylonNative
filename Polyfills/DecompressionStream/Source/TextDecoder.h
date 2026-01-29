@@ -1,7 +1,7 @@
 #pragma once
 
-#include <string>
 #include <Babylon/JsRuntimeScheduler.h>
+#include <string>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -11,8 +11,10 @@ namespace Babylon::Polyfills::Internal
         static void Initialize(Napi::Env env);
 
         explicit TextDecoder(const Napi::CallbackInfo& info);
+
     private:
         Napi::Value Decode(const Napi::CallbackInfo& info);
+        std::string m_encoding;
     };
 
     static constexpr auto JS_TEXTDECODER_CONSTRUCTOR_NAME = "TextDecoder";
@@ -28,26 +30,46 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("decode", &TextDecoder::Decode),
             });
 
-        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_TEXTDECODER_CONSTRUCTOR_NAME, func);
+        env.Global().Set(JS_TEXTDECODER_CONSTRUCTOR_NAME, func);
     }
 
     TextDecoder::TextDecoder(const Napi::CallbackInfo& info)
         : Napi::ObjectWrap<TextDecoder>{info}
+        , m_encoding{"utf-8"}
     {
+        if (info.Length() > 0 && info[0].IsString())
+        {
+            m_encoding = info[0].As<Napi::String>().Utf8Value();
+        }
     }
 
     Napi::Value TextDecoder::Decode(const Napi::CallbackInfo& info)
     {
-        const Napi::Env env{info.Env()};
-        if (info.Length() < 1 || !info[0].IsTypedArray()) {
-            throw Napi::Error::New(info.Env(), "Expected Uint8Array argument");
+        if (info.Length() < 1)
+        {
+            return Napi::String::New(info.Env(), "");
         }
 
-        // content
-        Napi::Uint8Array input = info[0].As<Napi::Uint8Array>();
-        const uint8_t* inputData = input.Data();
-        const size_t inputSize = input.ByteLength();
+        std::vector<uint8_t> data;
 
-        return Napi::Value::From(env, std::string(reinterpret_cast<const char*>(inputData), inputSize));
+        if (info[0].IsTypedArray())
+        {
+            auto typedArray = info[0].As<Napi::TypedArray>();
+            auto arrayBuffer = typedArray.ArrayBuffer();
+            auto byteOffset = typedArray.ByteOffset();
+            auto byteLength = typedArray.ByteLength();
+            data.resize(byteLength);
+            std::memcpy(data.data(), static_cast<uint8_t*>(arrayBuffer.Data()) + byteOffset, byteLength);
+        }
+        else if (info[0].IsArrayBuffer())
+        {
+            auto arrayBuffer = info[0].As<Napi::ArrayBuffer>();
+            data.resize(arrayBuffer.ByteLength());
+            std::memcpy(data.data(), arrayBuffer.Data(), arrayBuffer.ByteLength());
+        }
+
+        // Convert bytes to string (UTF-8)
+        std::string result(data.begin(), data.end());
+        return Napi::String::New(info.Env(), result);
     }
 }

@@ -33,7 +33,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceMethod("close", &ReadableStreamDefaultController::Close),
             });
 
-        JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_READABLESTREAMDFAULTCONTROLLER_CONSTRUCTOR_NAME, func);
+        env.Global().Set(JS_READABLESTREAMDFAULTCONTROLLER_CONSTRUCTOR_NAME, func);
     }
 
     ReadableStreamDefaultController::ReadableStreamDefaultController(const Napi::CallbackInfo& info)

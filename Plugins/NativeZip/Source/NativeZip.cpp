@@ -90,7 +90,7 @@ namespace Babylon::Plugins::Internal::NativeZip
 
         Napi::Object fflate = Napi::Object::New(env);
 
-        fflate.Set("UnzipSync", Napi::Function::New(env, UnzipSync, "UnzipSync"));
+        fflate.Set("unzipSync", Napi::Function::New(env, UnzipSync, "unzipSync"));
 
         // Attach to global scope
         env.Global().Set("fflate", fflate);
