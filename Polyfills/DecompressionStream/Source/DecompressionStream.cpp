@@ -3,7 +3,6 @@
 #include <Babylon/JsRuntime.h>
 #include "TextDecoder.h"
 #include "ReadableStream.h"
-#include "ReadableStreamDefaultController.h"
 #include "DecompressionStream.h"
 #include "Response.h"
 
@@ -14,7 +13,6 @@ namespace Babylon::Polyfills::DecompressionStream
         Internal::TextDecoder::Initialize(env);
         Internal::DecompressionStream::Initialize(env);
         Internal::ReadableStream::Initialize(env);
-        //Internal::ReadableStreamDefaultController::Initialize(env);
         Internal::Response::Initialize(env);
     }
 }

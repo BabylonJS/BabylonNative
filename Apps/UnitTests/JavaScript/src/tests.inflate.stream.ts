@@ -4,7 +4,6 @@ import { expect } from "chai";
 declare var describe: typeof Mocha.describe;
 declare var it: typeof Mocha.it;
 declare const setExitCode: (code: number) => void;
-declare const _native: any;
 
 Mocha.setup("bdd");
 // @ts-ignore
@@ -24,7 +23,7 @@ describe("InflateStream", function () {
     }
 
     it("Inflate GZip", async function () {
-        const xhr = await createRequest("GET", "https://raw.githubusercontent.com/CedricGuillemet/dump/master/hornedlizard/hornedlizard.sog");
+        const xhr = await createRequest("GET", "https://raw.githubusercontent.com/CedricGuillemet/dump/master/hornedlizard/hornedlizard.spz");
         expect(xhr.status).to.equal(200);
         var data = new Uint8Array(xhr.response);
 
@@ -39,10 +38,10 @@ describe("InflateStream", function () {
         const decompressionStream = new DecompressionStream("gzip");
         const decompressedStream = readableStream.pipeThrough(decompressionStream);
 
-        new Response(decompressedStream)
+        await new Response(decompressedStream)
             .arrayBuffer()
-            // eslint-disable-next-line github/no-then
             .then((buffer) => {
+                expect(buffer.byteLength).to.equal(50318928);
             });
     });
 });

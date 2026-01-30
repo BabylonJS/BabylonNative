@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Babylon/JsRuntimeScheduler.h>
+#include "DecompressionStream.h"
 #include <queue>
 
 namespace Babylon::Polyfills::Internal
@@ -72,10 +72,6 @@ namespace Babylon::Polyfills::Internal
         controller.Set("error", Napi::Function::New(env,
                                     [this](const Napi::CallbackInfo&) {
                                         m_closed = true;
-                                        while (!m_queue.empty())
-                                        {
-                                            m_queue.pop();
-                                        }
                                     }));
 
         // desiredSize property (read-only)
@@ -118,10 +114,6 @@ namespace Babylon::Polyfills::Internal
     {
         m_pullHandlerRef.Reset();
         m_cancelHandlerRef.Reset();
-        while (!m_queue.empty())
-        {
-            m_queue.pop();
-        }
     }
 
     Napi::Value ReadableStream::GetLocked(const Napi::CallbackInfo& info)
@@ -132,6 +124,38 @@ namespace Babylon::Polyfills::Internal
     Napi::Value ReadableStream::PipeThrough(const Napi::CallbackInfo& info)
     {
         Napi::Object transformStream = info[0].As<Napi::Object>();
+
+        // Try to unwrap the DecompressionStream
+        DecompressionStream* decompressionStream = DecompressionStream::Unwrap(transformStream);
+
+        if (decompressionStream)
+        {
+            // Process all items in the queue
+            while (!m_queue.empty())
+            {
+                Napi::Value chunk = m_queue.front().Value();
+                m_queue.pop();
+
+                if (chunk.IsTypedArray())
+                {
+                    Napi::TypedArray typedArray = chunk.As<Napi::TypedArray>();
+                    if (typedArray.TypedArrayType() == napi_uint8_array)
+                    {
+                        Napi::Uint8Array uint8Array = chunk.As<Napi::Uint8Array>();
+                        decompressionStream->AppendData(uint8Array.Data(), uint8Array.ByteLength());
+                    }
+                }
+                else if (chunk.IsArrayBuffer())
+                {
+                    Napi::ArrayBuffer arrayBuffer = chunk.As<Napi::ArrayBuffer>();
+                    decompressionStream->AppendData(static_cast<const uint8_t*>(arrayBuffer.Data()), arrayBuffer.ByteLength());
+                }
+            }
+
+            // Signal completion
+            decompressionStream->Finish();
+        }
+
         if (transformStream.Has("readable"))
         {
             return transformStream.Get("readable");

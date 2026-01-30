@@ -28230,7 +28230,6 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
 mocha__WEBPACK_IMPORTED_MODULE_2__.setup("bdd");
 // @ts-ignore
 mocha__WEBPACK_IMPORTED_MODULE_2__.reporter("spec");
@@ -28249,7 +28248,7 @@ describe("InflateStream", function () {
   }
 
   it("Inflate GZip", /*#__PURE__*/(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee() {var xhr, data, readableStream, decompressionStream, decompressedStream;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context) {while (1) switch (_context.prev = _context.next) {case 0:_context.next = 1;return (
-            createRequest("GET", "https://raw.githubusercontent.com/CedricGuillemet/dump/master/hornedlizard/hornedlizard.sog"));case 1:xhr = _context.sent;
+            createRequest("GET", "https://raw.githubusercontent.com/CedricGuillemet/dump/master/hornedlizard/hornedlizard.spz"));case 1:xhr = _context.sent;
           (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(xhr.status).to.equal(200);
           data = new Uint8Array(xhr.response);
 
@@ -28262,13 +28261,13 @@ describe("InflateStream", function () {
 
           // Use GZip DecompressionStream
           decompressionStream = new DecompressionStream("gzip");
-          decompressedStream = readableStream.pipeThrough(decompressionStream);
+          decompressedStream = readableStream.pipeThrough(decompressionStream);_context.next = 2;return (
 
-          new Response(decompressedStream).
-          arrayBuffer()
-          // eslint-disable-next-line github/no-then
-          .then(function (buffer) {
-          });case 2:case "end":return _context.stop();}}, _callee);}))
+            new Response(decompressedStream).
+            arrayBuffer().
+            then(function (buffer) {
+              (0,chai__WEBPACK_IMPORTED_MODULE_3__.expect)(buffer.byteLength).to.equal(50318928);
+            }));case 2:case "end":return _context.stop();}}, _callee);}))
   );
 });
 

@@ -1,6 +1,4 @@
 #pragma once
-
-#include <Babylon/JsRuntimeScheduler.h>
 #include "DecompressionStream.h"
 
 namespace Babylon::Polyfills::Internal
@@ -14,8 +12,6 @@ namespace Babylon::Polyfills::Internal
 
     private:
         Napi::Value ArrayBuffer(const Napi::CallbackInfo& info);
-        Napi::Value GetBody(const Napi::CallbackInfo& info);
-        Napi::Value GetOk(const Napi::CallbackInfo& info);
         std::vector<std::byte> m_data;
     };
 
@@ -30,8 +26,6 @@ namespace Babylon::Polyfills::Internal
             JS_RESPONSE_CONSTRUCTOR_NAME,
             {
                 InstanceMethod("arrayBuffer", &Response::ArrayBuffer),
-                InstanceAccessor("body", &Response::GetBody, nullptr),
-                InstanceAccessor("ok", &Response::GetOk, nullptr),
             });
 
         env.Global().Set(JS_RESPONSE_CONSTRUCTOR_NAME, func);
@@ -75,37 +69,5 @@ namespace Babylon::Polyfills::Internal
         const auto deferred = Napi::Promise::Deferred::New(Env());
         deferred.Resolve(arrayBuffer);
         return deferred.Promise();
-    }
-
-    Napi::Value Response::GetBody(const Napi::CallbackInfo& info)
-    {
-        // Create a ReadableStream from the response data
-        auto nativeObj = JsRuntime::NativeObject::GetFromJavaScript(info.Env());
-        auto readableStreamCtor = nativeObj.Get(JS_READABLESTREAM_CONSTRUCTOR_NAME).As<Napi::Function>();
-
-        // Create underlying source
-        Napi::Object source = Napi::Object::New(info.Env());
-        auto dataRef = std::make_shared<std::vector<std::byte>>(m_data);
-
-        source.Set("start", Napi::Function::New(info.Env(), [dataRef](const Napi::CallbackInfo& cbInfo) {
-            auto controller = cbInfo[0].As<Napi::Object>();
-            auto enqueue = controller.Get("enqueue").As<Napi::Function>();
-
-            auto arrayBuffer = Napi::ArrayBuffer::New(cbInfo.Env(), dataRef->size());
-            std::memcpy(arrayBuffer.Data(), dataRef->data(), dataRef->size());
-            auto uint8Array = Napi::Uint8Array::New(cbInfo.Env(), dataRef->size(), arrayBuffer, 0);
-
-            enqueue.Call(controller, {uint8Array});
-
-            auto close = controller.Get("close").As<Napi::Function>();
-            close.Call(controller, {});
-        }));
-
-        return readableStreamCtor.New({source});
-    }
-
-    Napi::Value Response::GetOk(const Napi::CallbackInfo& info)
-    {
-        return Napi::Boolean::New(info.Env(), true);
     }
 }

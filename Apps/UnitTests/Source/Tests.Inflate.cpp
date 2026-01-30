@@ -3,31 +3,14 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
-#include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/DecompressionStream.h>
+#include <Babylon/Polyfills/Console.h>
 #include <Babylon/Plugins/NativeZip.h>
 #include <Babylon/ScriptLoader.h>
+#include "Utils.h"
 #include <iostream>
 #include <future>
-
-namespace
-{
-    const char* EnumToString(Babylon::Polyfills::Console::LogLevel logLevel)
-    {
-        switch (logLevel)
-        {
-            case Babylon::Polyfills::Console::LogLevel::Log:
-                return "log";
-            case Babylon::Polyfills::Console::LogLevel::Warn:
-                return "warn";
-            case Babylon::Polyfills::Console::LogLevel::Error:
-                return "error";
-        }
-
-        return "unknown";
-    }
-}
 
 namespace
 {
@@ -83,12 +66,12 @@ namespace
         EXPECT_EQ(exitCode, 0);
     }
 }
-/*
+
 TEST(Inflate, zip)
 {
     RunInflateScript("app:///Assets/tests.inflate.zip.js");
 }
-*/
+
 TEST(Inflate, DecompressionStream)
 {
     RunInflateScript("app:///Assets/tests.inflate.stream.js");

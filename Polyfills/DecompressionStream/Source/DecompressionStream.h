@@ -1,31 +1,7 @@
 #pragma once
 
-#include <Babylon/JsRuntimeScheduler.h>
 #include <vector>
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4505) // error C4505: '' : unreferenced local function has been removed
-#endif
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"
-#endif
-
-#include "miniz.h"
-
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+#include <libdeflate.h>
 
 namespace Babylon::Polyfills::Internal
 {
@@ -46,9 +22,9 @@ namespace Babylon::Polyfills::Internal
 
     private:
         std::string m_format;
+        std::vector<uint8_t> m_compressedData;
         std::vector<std::byte> m_decompressedData;
-        mz_stream m_zstream{};
-        bool m_initialized{false};
+        struct libdeflate_decompressor* m_decompressor{nullptr};
     };
 
     static constexpr auto JS_DECOMPRESSIONSTREAM_CONSTRUCTOR_NAME = "DecompressionStream";
@@ -77,70 +53,81 @@ namespace Babylon::Polyfills::Internal
             m_format = info[0].As<Napi::String>().Utf8Value();
         }
 
-        m_zstream.zalloc = Z_NULL;
-        m_zstream.zfree = Z_NULL;
-        m_zstream.opaque = Z_NULL;
-
-        int windowBits = 15;
-        if (m_format == "gzip")
-        {
-            windowBits += 16; // gzip format
-        }
-        else if (m_format == "deflate-raw")
-        {
-            windowBits = -15; // raw deflate
-        }
-
-        if (inflateInit2(&m_zstream, windowBits) == Z_OK)
-        {
-            m_initialized = true;
-        }
+        m_decompressor = libdeflate_alloc_decompressor();
     }
 
     DecompressionStream::~DecompressionStream()
     {
-        if (m_initialized)
+        if (m_decompressor)
         {
-            inflateEnd(&m_zstream);
+            libdeflate_free_decompressor(m_decompressor);
+            m_decompressor = nullptr;
         }
     }
 
     void DecompressionStream::AppendData(const uint8_t* data, size_t length)
     {
-        if (!m_initialized)
-            return;
-
-        m_zstream.next_in = const_cast<Bytef*>(data);
-        m_zstream.avail_in = static_cast<uInt>(length);
-
-        std::vector<uint8_t> buffer(32768);
-        do
-        {
-            m_zstream.next_out = buffer.data();
-            m_zstream.avail_out = static_cast<uInt>(buffer.size());
-
-            int ret = inflate(&m_zstream, Z_NO_FLUSH);
-            if (ret == Z_STREAM_ERROR || ret == Z_DATA_ERROR || ret == Z_MEM_ERROR)
-            {
-                break;
-            }
-
-            size_t have = buffer.size() - m_zstream.avail_out;
-            for (size_t i = 0; i < have; ++i)
-            {
-                m_decompressedData.push_back(static_cast<std::byte>(buffer[i]));
-            }
-        }
-        while (m_zstream.avail_out == 0);
+        // libdeflate requires all data upfront, so accumulate chunks
+        m_compressedData.insert(m_compressedData.end(), data, data + length);
     }
 
     void DecompressionStream::Finish()
     {
-        if (m_initialized)
+        if (!m_decompressor || m_compressedData.empty())
+            return;
+
+        // Estimate output size (start with 4x input, grow if needed)
+        size_t outputCapacity = m_compressedData.size() * 4;
+        std::vector<uint8_t> outputBuffer(outputCapacity);
+        size_t actualOutBytes = 0;
+        libdeflate_result result;
+
+        do
         {
-            inflateEnd(&m_zstream);
-            m_initialized = false;
+            if (m_format == "gzip")
+            {
+                result = libdeflate_gzip_decompress(
+                    m_decompressor,
+                    m_compressedData.data(), m_compressedData.size(),
+                    outputBuffer.data(), outputBuffer.size(),
+                    &actualOutBytes);
+            }
+            else if (m_format == "deflate-raw")
+            {
+                result = libdeflate_deflate_decompress(
+                    m_decompressor,
+                    m_compressedData.data(), m_compressedData.size(),
+                    outputBuffer.data(), outputBuffer.size(),
+                    &actualOutBytes);
+            }
+            else // "deflate" (zlib wrapper)
+            {
+                result = libdeflate_zlib_decompress(
+                    m_decompressor,
+                    m_compressedData.data(), m_compressedData.size(),
+                    outputBuffer.data(), outputBuffer.size(),
+                    &actualOutBytes);
+            }
+
+            if (result == LIBDEFLATE_INSUFFICIENT_SPACE)
+            {
+                outputCapacity *= 2;
+                outputBuffer.resize(outputCapacity);
+            }
         }
+        while (result == LIBDEFLATE_INSUFFICIENT_SPACE);
+
+        if (result == LIBDEFLATE_SUCCESS)
+        {
+            m_decompressedData.reserve(actualOutBytes);
+            for (size_t i = 0; i < actualOutBytes; ++i)
+            {
+                m_decompressedData.push_back(static_cast<std::byte>(outputBuffer[i]));
+            }
+        }
+
+        // Clear compressed data after processing
+        m_compressedData.clear();
     }
 
     std::vector<std::byte> DecompressionStream::GetDecompressedData() const
@@ -150,13 +137,11 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value DecompressionStream::GetReadable(const Napi::CallbackInfo& info)
     {
-        // Return this object as the readable stream for piping
         return info.This();
     }
 
     Napi::Value DecompressionStream::GetWritable(const Napi::CallbackInfo& info)
     {
-        // Return this object as the writable stream
         return info.This();
     }
 }

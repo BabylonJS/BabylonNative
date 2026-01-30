@@ -10,27 +10,10 @@
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/NativeEncoding.h>
 #include <Babylon/ScriptLoader.h>
+#include "Utils.h"
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
-namespace
-{
-    const char* EnumToString(Babylon::Polyfills::Console::LogLevel logLevel)
-    {
-        switch (logLevel)
-        {
-            case Babylon::Polyfills::Console::LogLevel::Log:
-                return "log";
-            case Babylon::Polyfills::Console::LogLevel::Warn:
-                return "warn";
-            case Babylon::Polyfills::Console::LogLevel::Error:
-                return "error";
-        }
-
-        return "unknown";
-    }
-}
-/*
 TEST(JavaScript, All)
 {
     // Change this to true to wait for the JavaScript debugger to attach (only applies to V8)
@@ -94,4 +77,3 @@ TEST(JavaScript, All)
     auto exitCode{exitCodePromise.get_future().get()};
     EXPECT_EQ(exitCode, 0);
 }
-*/
