@@ -1,7 +1,7 @@
 #include "NativeEngine.h"
-#include "ShaderCompiler.h"
 
 #include <Babylon/Graphics/Texture.h>
+
 #include "JsConsoleLogger.h"
 
 #include <arcana/threading/task.h>
@@ -22,8 +22,6 @@
 #include <bx/math.h>
 
 #include <cmath>
-#include <Babylon/ShaderCache.h>
-#include "ShaderCache.h"
 
 #ifdef WEBP
 #include <webp/decode.h>
@@ -371,7 +369,7 @@ namespace Babylon
 
                         if (bgfx::getCaps()->originBottomLeft)
                         {
-                            FlipImage({ static_cast<uint8_t*>(image->m_data), image->m_size }, image->m_height);
+                            FlipImage({static_cast<uint8_t*>(image->m_data), image->m_size}, image->m_height);
                         }
 
                         bgfx::ReleaseFn releaseFn{[](void*, void* userData) {
@@ -395,7 +393,7 @@ namespace Babylon
                         {
                             if (bgfx::getCaps()->originBottomLeft)
                             {
-                                FlipImage({ const_cast<uint8_t*>(imageMip.m_data), imageMip.m_size }, image->m_height);
+                                FlipImage({const_cast<uint8_t*>(imageMip.m_data), imageMip.m_size}, image->m_height);
                             }
 
                             bgfx::ReleaseFn releaseFn{};
@@ -948,75 +946,11 @@ namespace Babylon
         }
     }
 
-    // Change VS output coordinate system
-    std::string NativeEngine::ProcessShaderCoordinates(const std::string& vertexSource)
-    {
-        const auto* caps = bgfx::getCaps();
-        // patching shader code to append clip space coordinates for the current rendering API
-        // Can be done with glslang shader traversal. Done with string patching for now.
-        if (!caps->homogeneousDepth)
-        {
-            std::string patchedVertexSource;
-            const auto lastClosingCurly = vertexSource.find_last_of('}');
-            patchedVertexSource = vertexSource.substr(0, lastClosingCurly);
-
-            patchedVertexSource += "gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0; }";
-            return patchedVertexSource;
-        }
-        return vertexSource;
-    }
-
-    std::string ProcessSamplerFlip(const std::string& vertexSource)
-    {
-        const auto* caps = bgfx::getCaps();
-        // for d3d, vulkan, metal, flip the texture sampling on vertical axis
-        if (!caps->originBottomLeft)
-        {
-            std::string patchedVertexSource = vertexSource;
-
-            static const std::string shaderNameDefineStr = "#define SHADER_NAME";
-            const auto shaderNameDefine = vertexSource.find(shaderNameDefineStr);
-            if (shaderNameDefine != std::string::npos)
-            {
-                static const auto textureSamplerFunctions = R"(
-                    highp vec2 flip(highp vec2 uv)
-                    {
-                        return vec2(uv.x, 1. - uv.y);
-                    }
-                    highp vec3 flip(highp vec3 uv)
-                    {
-                        return uv;
-                    }
-                    #define texture(x,y) texture(x, flip(y))
-                    #define textureLod(x,y,z) textureLod(x, flip(y), z)
-                    #define SHADER_NAME)";
-
-                patchedVertexSource.replace(shaderNameDefine, shaderNameDefineStr.length(), textureSamplerFunctions);
-            }
-            return patchedVertexSource;
-        }
-        return vertexSource;
-    }
-
-    std::unique_ptr<ProgramData> NativeEngine::CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource)
+    std::unique_ptr<ProgramData> NativeEngine::CreateProgramInternal(std::string_view vertexSource, std::string_view fragmentSource)
     {
         arcana::trace_region region{"NativeEngine::CreateProgramInternal"};
-        const ShaderCompiler::BgfxShaderInfo* shaderInfo{};
-        ShaderCompiler::BgfxShaderInfo bgfxShaderInfo{};
-        if (ShaderCacheImpl::GetImpl())
-        {
-            shaderInfo = ShaderCacheImpl::GetImpl()->GetShader(vertexSource, fragmentSource);
-        }
 
-        if (!shaderInfo)
-        {
-            bgfxShaderInfo = m_shaderCompiler.Compile(ProcessSamplerFlip(ProcessShaderCoordinates(vertexSource)), ProcessSamplerFlip(fragmentSource));
-            if (ShaderCacheImpl::GetImpl())
-            {
-                ShaderCacheImpl::GetImpl()->AddShader(vertexSource, fragmentSource, bgfxShaderInfo);
-            } 
-            shaderInfo = &bgfxShaderInfo;
-        }
+        auto shaderInfo = m_shaderProvider.Get(vertexSource, fragmentSource);
 
         static auto InitUniformInfos{
             [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex) {
@@ -1034,17 +968,29 @@ namespace Babylon
                     uniformInfos.emplace(std::make_pair(handle.idx, UniformInfo{itStage == uniformStages.end() ? uint8_t{} : itStage->second, handle, info.num}));
                     uniformNameToIndex[info.name] = handleIndex;
                 }
-            } };
+            }};
+
+        typedef std::shared_ptr<Graphics::BgfxShaderInfo> BgfxShaderInfoPtr;
+        static auto deleteShaderInfo = [](void*, void* userData) {
+            delete reinterpret_cast<BgfxShaderInfoPtr*>(userData);
+        };
 
         std::unique_ptr<ProgramData> program = std::make_unique<ProgramData>(m_deviceContext);
-        auto vertexShader = bgfx::createShader(bgfx::copy(shaderInfo->VertexBytes.data(), static_cast<uint32_t>(shaderInfo->VertexBytes.size())));
+
+        auto vertexShader = bgfx::createShader(
+            bgfx::makeRef(
+                shaderInfo->VertexBytes.data(), static_cast<uint32_t>(shaderInfo->VertexBytes.size()),
+                deleteShaderInfo, new BgfxShaderInfoPtr{shaderInfo}));
         InitUniformInfos(vertexShader, shaderInfo->UniformStages, program->UniformInfos, program->UniformNameToIndex);
 
-        auto fragmentShader = bgfx::createShader(bgfx::copy(shaderInfo->FragmentBytes.data(), static_cast<uint32_t>(shaderInfo->FragmentBytes.size())));
+        auto fragmentShader = bgfx::createShader(
+            bgfx::makeRef(
+                shaderInfo->FragmentBytes.data(), static_cast<uint32_t>(shaderInfo->FragmentBytes.size()),
+                deleteShaderInfo, new BgfxShaderInfoPtr{shaderInfo}));
         InitUniformInfos(fragmentShader, shaderInfo->UniformStages, program->UniformInfos, program->UniformNameToIndex);
 
         program->Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
-        program->VertexAttributeLocations = std::move(shaderInfo->VertexAttributeLocations);
+        program->VertexAttributeLocations = shaderInfo->VertexAttributeLocations;
 
         return program;
     }
@@ -1068,8 +1014,8 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateProgramAsync(const Napi::CallbackInfo& info)
     {
-        const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
-        const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
+        std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
         const Napi::Function onSuccess = info[2].As<Napi::Function>();
         const Napi::Function onError = info[3].As<Napi::Function>();
 

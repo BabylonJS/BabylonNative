@@ -1,11 +1,9 @@
-#include "BgfxCallback.h"
+#include <Babylon/Graphics/BgfxCallback.h>
+#include <bgfx/bgfx.h>
 #include <bx/bx.h>
 #include <bx/string.h>
-#include <bx/platform.h>
-#include <bx/debug.h>
-#include <stdarg.h>
-#include <bgfx/bgfx.h>
 #include <cassert>
+#include <stdarg.h>
 
 namespace Babylon::Graphics
 {

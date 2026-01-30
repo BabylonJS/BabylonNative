@@ -2,7 +2,7 @@
 
 #include "NativeDataStream.h"
 #include "PerFrameValue.h"
-#include "ShaderCompiler.h"
+#include "ShaderProvider.h"
 #include "VertexArray.h"
 
 #include <Babylon/JsRuntime.h>
@@ -149,7 +149,7 @@ namespace Babylon
         void DeleteVertexBuffer(NativeDataStream::Reader& data);
         void RecordVertexBuffer(const Napi::CallbackInfo& info);
         void UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info);
-        std::unique_ptr<ProgramData> CreateProgramInternal(const std::string vertexSource, const std::string fragmentSource);
+        std::unique_ptr<ProgramData> CreateProgramInternal(std::string_view vertexSource, std::string_view fragmentSource);
         Napi::Value CreateProgram(const Napi::CallbackInfo& info);
         Napi::Value CreateProgramAsync(const Napi::CallbackInfo& info);
         Napi::Value GetUniforms(const Napi::CallbackInfo& info);
@@ -223,14 +223,12 @@ namespace Babylon
         void PopulateFrameStats(const Napi::CallbackInfo& info);
         void DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode);
 
-        std::string ProcessShaderCoordinates(const std::string& vertexSource);
-
         Graphics::UpdateToken& GetUpdateToken();
         Graphics::FrameBuffer& GetBoundFrameBuffer(bgfx::Encoder& encoder);
 
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
 
-        ShaderCompiler m_shaderCompiler{};
+        ShaderProvider m_shaderProvider{};
 
         ProgramData* m_currentProgram{nullptr};
 

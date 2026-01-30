@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ShaderCompiler.h"
+#include <Babylon/Plugins/ShaderCompilerInternal.h>
 
 #include <gsl/gsl>
 #include <spirv_cross.hpp>
@@ -68,5 +68,5 @@ namespace Babylon::ShaderCompilerCommon
         std::unordered_map<std::string, std::string> AttributeRenaming;
     };
 
-    ShaderCompiler::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo);
+    Graphics::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo);
 }

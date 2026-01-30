@@ -1,5 +1,5 @@
-#include "Texture.h"
-#include "DeviceContext.h"
+#include <Babylon/Graphics/Texture.h>
+#include <Babylon/Graphics/DeviceContext.h>
 #include <cassert>
 #include <bimg/bimg.h>
 

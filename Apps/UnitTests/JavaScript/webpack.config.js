@@ -7,7 +7,7 @@ module.exports = {
   devtool: false,
   entry: {
     "tests.javaScript.all": './src/tests.javaScript.all.ts',
-    "tests.nativeEngine.shaderCache": './src/tests.nativeEngine.shaderCache.ts',
+    "tests.shaderCache.basicScene": './src/tests.shaderCache.basicScene.ts',
   },
   externals: {
     "@babylonjs/core": "BABYLON",

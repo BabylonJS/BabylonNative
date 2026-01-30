@@ -1,10 +1,9 @@
 #pragma once
 
-#include "BgfxCallback.h"
-#include "SafeTimespanGuarantor.h"
-#include "DeviceContext.h"
-
+#include <Babylon/Graphics/BgfxCallback.h>
 #include <Babylon/Graphics/Device.h>
+#include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/SafeTimespanGuarantor.h>
 
 #include <arcana/containers/ticketed_collection.h>
 #include <arcana/threading/blocking_concurrent_queue.h>

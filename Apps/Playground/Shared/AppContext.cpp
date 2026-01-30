@@ -5,7 +5,6 @@
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/PerfTrace.h>
 #include <Babylon/ScriptLoader.h>
-#include <Babylon/ShaderCache.h>
 
 #include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Plugins/NativeCapture.h>
@@ -62,8 +61,6 @@ AppContext::AppContext(
 
     m_device.emplace(graphicsConfig);
     m_deviceUpdate.emplace(m_device->GetUpdate("update"));
-
-    Babylon::ShaderCache::Enabled(true);
 
     m_device->StartRenderingCurrentFrame();
     m_deviceUpdate->Start();

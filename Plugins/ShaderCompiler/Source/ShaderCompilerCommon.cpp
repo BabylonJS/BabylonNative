@@ -1,5 +1,4 @@
 #include "ShaderCompilerCommon.h"
-#include "ShaderCompiler.h"
 #include <bx/bx.h>
 #include <bgfx/bgfx.h>
 
@@ -14,6 +13,8 @@ namespace bgfx
 
 namespace Babylon::ShaderCompilerCommon
 {
+    using namespace Babylon::Plugins;
+
     void AppendUniformBuffer(std::vector<uint8_t>& bytes, const NonSamplerUniformsInfo& uniformBuffer, bool isFragment)
     {
         const uint8_t fragmentBit = (isFragment ? BGFX_UNIFORM_FRAGMENTBIT : 0);
@@ -173,9 +174,9 @@ namespace Babylon::ShaderCompilerCommon
         return info;
     }
 
-    ShaderCompiler::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo)
+    Graphics::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo)
     {
-        ShaderCompiler::BgfxShaderInfo bgfxShaderInfo{};
+        Graphics::BgfxShaderInfo bgfxShaderInfo{};
 
         constexpr uint8_t BGFX_SHADER_BIN_VERSION{6};
 

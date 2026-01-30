@@ -3,6 +3,7 @@
 
 #include "App.h"
 #include <Shared/AppContext.h>
+#include <Babylon/Plugins/ShaderCache.h>
 #include <Babylon/Plugins/TestUtils.h>
 #include <Windows.h>
 #include <Windowsx.h>
@@ -31,6 +32,21 @@ INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 
 namespace
 {
+    std::filesystem::path GetModulePath(const char* fileName)
+    {
+        char modulePath[MAX_PATH];
+        DWORD length = GetModuleFileNameA(nullptr, modulePath, MAX_PATH);
+        if (length == 0 || length == MAX_PATH)
+        {
+            throw std::exception("Failed to get module file name");
+        }
+        std::filesystem::path path{ modulePath };
+        path.replace_filename(fileName);
+        return path;
+    }
+
+    const auto shaderCachePath = GetModulePath("ShaderCache.bin");
+
     std::string GetUrlFromPath(const std::filesystem::path& path)
     {
         char url[1024];
@@ -68,16 +84,32 @@ namespace
     void Uninitialize()
     {
         appContext.reset();
+
+        if (Babylon::Plugins::ShaderCache::IsEnabled())
+        {
+            std::ofstream stream{shaderCachePath, std::ios::binary};
+            Babylon::Plugins::ShaderCache::Save(stream);
+
+            Babylon::Plugins::ShaderCache::Disable();
+        }
     }
 
     void RefreshBabylon(HWND hWnd)
     {
         Uninitialize();
 
+        Babylon::Plugins::ShaderCache::Enable();
+
+        if (std::filesystem::exists(shaderCachePath))
+        {
+            std::ifstream stream{shaderCachePath, std::ios::binary};
+            Babylon::Plugins::ShaderCache::Load(stream);
+        }
+
         RECT rect;
         if (!GetClientRect(hWnd, &rect))
         {
-            return;
+            throw std::exception{"Unable to get client rect"};
         }
 
         auto width = static_cast<size_t>(rect.right - rect.left);

@@ -1,14 +1,16 @@
-#include "ShaderCompiler.h"
+#include <Babylon/Plugins/ShaderCompilerInternal.h>
+
 #include "ShaderCompilerCommon.h"
 #include "ShaderCompilerTraversers.h"
 #include <arcana/experimental/array.h>
+#include <bgfx/bgfx.h>
 #include <glslang/Public/ShaderLang.h>
 #include <glslang/Public/ResourceLimits.h>
 #include <SPIRV/GlslangToSpv.h>
 #include <spirv_parser.hpp>
-#include <spirv_glsl.hpp>
+#include <spirv_msl.hpp>
 
-namespace Babylon
+namespace Babylon::Plugins
 {
     namespace
     {
@@ -27,7 +29,7 @@ namespace Babylon
             program.addShader(&shader);
         }
 
-        std::pair<std::unique_ptr<spirv_cross::Parser>, std::unique_ptr<spirv_cross::Compiler>> CompileShader(glslang::TProgram& program, EShLanguage stage, std::string& glsl)
+        std::pair<std::unique_ptr<spirv_cross::Parser>, std::unique_ptr<spirv_cross::Compiler>> CompileShader(glslang::TProgram& program, EShLanguage stage, std::string& shaderResult)
         {
             std::vector<uint32_t> spirv;
             glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
@@ -35,17 +37,35 @@ namespace Babylon
             auto parser = std::make_unique<spirv_cross::Parser>(std::move(spirv));
             parser->parse();
 
-            auto compiler = std::make_unique<spirv_cross::CompilerGLSL>(parser->get_parsed_ir());
+            auto compiler = std::make_unique<spirv_cross::CompilerMSL>(parser->get_parsed_ir());
 
-            spirv_cross::CompilerGLSL::Options options = compiler->get_common_options();
+            // Enable decoration for texture binding
+            spirv_cross::CompilerMSL::Options opts{};
+            opts.enable_decoration_binding = true;
+            compiler->set_msl_options(opts);
 
-            options.version = 300;
-            options.es = true;
+            auto resources = compiler->get_shader_resources();
+            for (auto& resource : resources.uniform_buffers)
+            {
+                compiler->set_name(resource.id, "_mtl_u");
+            }
 
-            compiler->set_common_options(options);
+            // WebGL shaders use a single sampler uniform, Metal separates it into a sampler and a texture, appending "Texture" and "Sampler" to the original WebGL names.
+            // Remove 'Texture' from the uniform name to match JS expected names.
+            for (auto& resource : resources.separate_images)
+            {
+                std::string imageName = resource.name;
+                if (imageName.find("Texture") != std::string::npos)
+                {
+                    // Using rfind ensures the correct "Texture" is removed from WebGL uniforms with "texture" in their original name. (e.g., "shadowTexture1")
+                    imageName.replace(imageName.rfind("Texture"), std::string::npos, "");
+                    compiler->set_name(resource.id, imageName);
+                }
+            }
 
-            glsl = compiler->compile();
+            compiler->rename_entry_point("main", "xlatMtlMain", (stage == EShLangVertex) ? spv::ExecutionModelVertex : spv::ExecutionModelFragment);
 
+            shaderResult = compiler->compile();
             return {std::move(parser), std::move(compiler)};
         }
     }
@@ -60,7 +80,7 @@ namespace Babylon
         glslang::FinalizeProcess();
     }
 
-    ShaderCompiler::BgfxShaderInfo ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource)
+    ShaderCache::BgfxShaderInfo ShaderCompiler::CompileInternal(std::string_view vertexSource, std::string_view fragmentSource)
     {
         glslang::TProgram program;
 
@@ -77,13 +97,16 @@ namespace Babylon
 
         if (!program.link(EShMsgDefault))
         {
-            throw std::exception();
+            throw std::runtime_error{program.getInfoLog()};
         }
 
         ShaderCompilerTraversers::IdGenerator ids{};
         auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
+        auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
         std::unordered_map<std::string, std::string> vertexAttributeRenaming = {};
-        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryingsOpenGL(program, ids, vertexAttributeRenaming);
+        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryingsMetal(program, ids, vertexAttributeRenaming);
+        ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
+        ShaderCompilerTraversers::InvertYDerivativeOperands(program);
 
         std::string vertexGLSL(vertexSource.data(), vertexSource.size());
         auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, vertexGLSL);

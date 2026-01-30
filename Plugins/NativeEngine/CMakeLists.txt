@@ -1,31 +1,20 @@
 set(SOURCES
-    "Include/Babylon/ShaderCache.h"
     "Include/Babylon/Plugins/NativeEngine.h"
     "Source/IndexBuffer.cpp"
     "Source/IndexBuffer.h"
+    "Source/JsConsoleLogger.h"
+    "Source/JsConsoleLogger.cpp"
     "Source/NativeDataStream.h"
     "Source/NativeEngineAPI.cpp"
     "Source/NativeEngine.cpp"
     "Source/NativeEngine.h"
     "Source/PerFrameValue.h"
-    "Source/ShaderCompiler.h"
-    "Source/ShaderCompilerCommon.h"
-    "Source/ShaderCompilerCommon.cpp"
-    "Source/ShaderCache.cpp"
-    "Source/ShaderCache.h"
-    "Source/ShaderCompilerTraversers.cpp"
-    "Source/ShaderCompilerTraversers.h"
-    "Source/ShaderCompiler${GRAPHICS_API}.cpp"
+    "Source/ShaderProvider.h"
+    "Source/ShaderProvider.cpp"
     "Source/VertexArray.cpp"
     "Source/VertexArray.h"
     "Source/VertexBuffer.cpp"
-    "Source/VertexBuffer.h"
-    "Source/JsConsoleLogger.h"
-    "Source/JsConsoleLogger.cpp")
-
-if(WIN32)
-    set(SOURCES ${SOURCES} "Source/ShaderCompilerD3D.h")
-endif()
+    "Source/VertexBuffer.h")
 
 add_library(NativeEngine ${SOURCES})
 
@@ -44,12 +33,9 @@ target_link_libraries(NativeEngine
     PRIVATE bimg_decode
     PRIVATE bx
     PRIVATE minz
-    PRIVATE glslang
-    PRIVATE glslang-default-resource-limits
     PRIVATE GraphicsDevice
     PRIVATE GraphicsDeviceContext
-    PRIVATE JsRuntime
-    PRIVATE SPIRV)
+    PRIVATE JsRuntime)
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP)
     target_compile_definitions(NativeEngine
@@ -58,28 +44,24 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP)
         PRIVATE webp)
 endif()
 
-if(TARGET spirv-cross-hlsl)
+if(BABYLON_NATIVE_PLUGIN_SHADERCACHE)
+    target_compile_definitions(NativeEngine
+        PRIVATE SHADER_CACHE)
     target_link_libraries(NativeEngine
-        PRIVATE spirv-cross-hlsl)
-elseif(TARGET spirv-cross-msl)
+        PRIVATE ShaderCacheInternal)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_SHADERCOMPILER)
+    target_compile_definitions(NativeEngine
+        PRIVATE SHADER_COMPILER)
     target_link_libraries(NativeEngine
-        PRIVATE spirv-cross-msl)
-elseif(TARGET spirv-cross-glsl)
-    target_link_libraries(NativeEngine
-        PRIVATE spirv-cross-glsl)
+        PRIVATE ShaderCompilerInternal)
 endif()
 
 if(WIN32)
-    target_link_libraries(NativeEngine
-        PRIVATE "d3dcompiler.lib")
+    target_compile_definitions(NativeEngine
+        PRIVATE NOMINMAX)
 endif()
-
-target_compile_definitions(NativeEngine
-    PRIVATE NOMINMAX)
-
-# TODO: remove this once the #define in ShaderCompilerCommon gets split into separate compilation units
-target_compile_definitions(NativeEngine
-    PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
 
 set_property(TARGET NativeEngine PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

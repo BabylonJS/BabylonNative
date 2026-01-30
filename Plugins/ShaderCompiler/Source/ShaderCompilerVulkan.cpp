@@ -1,4 +1,5 @@
-#include "ShaderCompiler.h"
+#include <Babylon/Plugins/ShaderCompilerInternal.h>
+
 #include "ShaderCompilerCommon.h"
 #include "ShaderCompilerTraversers.h"
 #include <arcana/experimental/array.h>
@@ -9,7 +10,7 @@
 #include <spirv_glsl.hpp>
 #include <bgfx/bgfx.h>
 
-namespace Babylon
+namespace Babylon::Plugins
 {
     namespace
     {
@@ -54,7 +55,7 @@ namespace Babylon
         glslang::FinalizeProcess();
     }
 
-    ShaderCompiler::BgfxShaderInfo ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource)
+    ShaderCache::BgfxShaderInfo ShaderCompiler::CompileInternal(std::string_view vertexSource, std::string_view fragmentSource)
     {
         glslang::TProgram program;
 
@@ -71,7 +72,7 @@ namespace Babylon
 
         if (!program.link(EShMsgDefault))
         {
-            throw std::exception();
+            throw std::runtime_error{program.getInfoLog()};
         }
 
         ShaderCompilerTraversers::IdGenerator ids{};

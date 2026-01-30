@@ -5,8 +5,8 @@
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Plugins/NativeEngine.h>
+#include <Babylon/Plugins/ShaderCache.h>
 #include <Babylon/ScriptLoader.h>
-#include <Babylon/ShaderCache.h>
 
 #include <chrono>
 #include <optional>
@@ -18,9 +18,9 @@ using namespace std::chrono_literals;
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
-TEST(NativeEngine, ShaderCache)
+TEST(ShaderCache, SaveAndLoad)
 {
-    Babylon::ShaderCache::Enabled(true);
+    Babylon::Plugins::ShaderCache::Enable();
 
     Babylon::Graphics::Device device{g_deviceConfig};
     Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
@@ -61,7 +61,7 @@ TEST(NativeEngine, ShaderCache)
 
     Babylon::ScriptLoader loader{runtime};
     loader.LoadScript("app:///Assets/babylon.max.js");
-    loader.LoadScript("app:///Assets/tests.nativeEngine.shaderCache.js");
+    loader.LoadScript("app:///Assets/tests.shaderCache.basicScene.js");
     loader.Dispatch([&scriptIsDone](Napi::Env) {
         scriptIsDone.set_value();
     });
@@ -80,16 +80,18 @@ TEST(NativeEngine, ShaderCache)
     static const char* shaderCacheFileName = "shaderCache.bin";
     uint32_t shaderCount{};
     {
-        std::ofstream fileSerialize(shaderCacheFileName, std::ios::binary);
-        shaderCount = Babylon::ShaderCache::Serialize(fileSerialize);
+        std::ofstream stream(shaderCacheFileName, std::ios::binary);
+        shaderCount = Babylon::Plugins::ShaderCache::Save(stream);
         EXPECT_EQ(shaderCount, 1);
     }
     {
-        std::ifstream file(shaderCacheFileName, std::ios::binary);
-        auto deserializedCount = Babylon::ShaderCache::Deserialize(file);
+        std::ifstream stream(shaderCacheFileName, std::ios::binary);
+        auto deserializedCount = Babylon::Plugins::ShaderCache::Load(stream);
         EXPECT_EQ(deserializedCount, shaderCount);
     }
 
     update.Finish();
     device.FinishRenderingCurrentFrame();
+
+    Babylon::Plugins::ShaderCache::Disable();
 }
