@@ -114,6 +114,7 @@ file(
 	${SPIRV_TOOLS}/source/val/validate_extensions.cpp
 	${SPIRV_TOOLS}/source/val/validate_function.cpp
 	${SPIRV_TOOLS}/source/val/validate_graph.cpp
+	${SPIRV_TOOLS}/source/val/validate_group.cpp
 	${SPIRV_TOOLS}/source/val/validate_id.cpp
 	${SPIRV_TOOLS}/source/val/validate_image.cpp
 	${SPIRV_TOOLS}/source/val/validate_instruction.cpp
