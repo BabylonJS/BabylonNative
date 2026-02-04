@@ -1024,7 +1024,7 @@ namespace Babylon
                 std::vector<bgfx::UniformHandle> uniforms{numUniforms};
                 bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
 
-                for (uint8_t index = 0; index < numUniforms; index++)
+                for (uint16_t index = 0; index < numUniforms; index++)
                 {
                     bgfx::UniformInfo info{};
                     uint16_t handleIndex = uniforms[index].idx;
