@@ -44,7 +44,6 @@ if(WIN32)
         PRIVATE "d3dcompiler.lib")
 endif()
 
-# TODO: remove this once the #define in ShaderCompilerCommon gets split into separate compilation units
 target_compile_definitions(ShaderCompiler
     PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
 
@@ -55,4 +54,5 @@ add_library(ShaderCompilerInternal INTERFACE)
 target_include_directories(ShaderCompilerInternal
     INTERFACE "InternalInclude")
 target_link_libraries(ShaderCompilerInternal
-    INTERFACE ShaderCompiler)
+    INTERFACE ShaderCompiler
+    INTERFACE GraphicsDeviceContext)

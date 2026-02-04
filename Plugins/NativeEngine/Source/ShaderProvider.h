@@ -13,7 +13,7 @@ namespace Babylon
     class ShaderProvider
     {
     public:
-        std::shared_ptr<Graphics::BgfxShaderInfo> Get(std::string_view vertexSource, std::string_view fragmentSource);
+        std::shared_ptr<Graphics::BgfxShaderInfo> Get(std::string vertexSource, std::string fragmentSource);
 
     private:
 #ifdef SHADER_COMPILER

@@ -21,7 +21,7 @@ namespace Babylon::Plugins::ShaderCache
 
         void Clear();
 
-        std::shared_ptr<Graphics::BgfxShaderInfo> AddShader(std::string_view vertexSource, std::string_view fragmentSource, Graphics::BgfxShaderInfo shaderInfo);
+        std::shared_ptr<Graphics::BgfxShaderInfo> AddShader(std::string vertexSource, std::string fragmentSource, Graphics::BgfxShaderInfo shaderInfo);
         std::shared_ptr<Graphics::BgfxShaderInfo> GetShader(std::string_view vertexSource, std::string_view fragmentSource);
 
         static inline std::unique_ptr<ShaderCacheImpl> Instance;

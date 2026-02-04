@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <vector>
 
 namespace Babylon::Graphics
@@ -10,7 +10,7 @@ namespace Babylon::Graphics
     {
         std::vector<uint8_t> VertexBytes{};
         std::vector<uint8_t> FragmentBytes{};
-        std::unordered_map<std::string, uint32_t> VertexAttributeLocations{};
-        std::unordered_map<std::string, uint8_t> UniformStages{};
+        std::map<std::string, uint32_t> VertexAttributeLocations{};
+        std::map<std::string, uint8_t> UniformStages{};
     };
 }

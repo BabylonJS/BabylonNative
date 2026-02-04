@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string_view>
-#include <Babylon/Graphics/BgfxShaderInfo.h>
+#include <Babylon/Plugins/BgfxShaderInfo.h>
 
 namespace Babylon::Plugins
 {
@@ -13,9 +13,6 @@ namespace Babylon::Plugins
         ShaderCompiler();
         ~ShaderCompiler();
 
-        Graphics::BgfxShaderInfo Compile(std::string vertexSource, std::string fragmentSource);
-
-    private:
-        Graphics::BgfxShaderInfo CompileInternal(std::string vertexSource, std::string fragmentSource);
+        Babylon::Graphics::BgfxShaderInfo Compile(std::string_view vertexSource, std::string_view fragmentSource);
     };
 }

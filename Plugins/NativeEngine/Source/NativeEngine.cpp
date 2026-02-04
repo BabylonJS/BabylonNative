@@ -946,14 +946,14 @@ namespace Babylon
         }
     }
 
-    std::unique_ptr<ProgramData> NativeEngine::CreateProgramInternal(std::string_view vertexSource, std::string_view fragmentSource)
+    std::unique_ptr<ProgramData> NativeEngine::CreateProgramInternal(std::string vertexSource, std::string fragmentSource)
     {
         arcana::trace_region region{"NativeEngine::CreateProgramInternal"};
 
-        auto shaderInfo = m_shaderProvider.Get(vertexSource, fragmentSource);
+        auto shaderInfo = m_shaderProvider.Get(std::move(vertexSource), std::move(fragmentSource));
 
         static auto InitUniformInfos{
-            [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex) {
+            [](bgfx::ShaderHandle shader, const std::map<std::string, uint8_t>& uniformStages, std::map<uint16_t, UniformInfo>& uniformInfos, std::map<std::string, uint16_t>& uniformNameToIndex) {
                 auto numUniforms = bgfx::getShaderUniforms(shader);
                 std::vector<bgfx::UniformHandle> uniforms{numUniforms};
                 bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
@@ -997,8 +997,8 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
     {
-        const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
-        const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
+        std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
         ProgramData* program = new ProgramData{m_deviceContext};
         Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
         try
@@ -1023,8 +1023,8 @@ namespace Babylon
         Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, vertexSource, fragmentSource, cancellationSource{m_cancellationSource}]() -> std::unique_ptr<ProgramData> {
-                return CreateProgramInternal(vertexSource, fragmentSource);
+            [this, vertexSource = std::move(vertexSource), fragmentSource = std::move(fragmentSource), cancellationSource{m_cancellationSource}]() mutable {
+                return CreateProgramInternal(std::move(vertexSource), std::move(fragmentSource));
             })
             .then(m_runtimeScheduler, *m_cancellationSource,
                 [program,

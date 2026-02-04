@@ -22,7 +22,7 @@
 #include <gsl/gsl>
 
 #include <arcana/threading/cancellation.h>
-#include <unordered_map>
+#include <map>
 
 namespace Babylon
 {
@@ -98,10 +98,10 @@ namespace Babylon
             uint16_t ElementLength{};
         };
 
-        std::unordered_map<uint16_t, UniformValue> Uniforms{};
-        std::unordered_map<std::string, uint16_t> UniformNameToIndex{};
-        std::unordered_map<uint16_t, UniformInfo> UniformInfos{};
-        std::unordered_map<std::string, uint32_t> VertexAttributeLocations{};
+        std::map<uint16_t, UniformValue> Uniforms{};
+        std::map<std::string, uint16_t> UniformNameToIndex{};
+        std::map<uint16_t, UniformInfo> UniformInfos{};
+        std::map<std::string, uint32_t> VertexAttributeLocations{};
         uintptr_t DeviceID;
         Graphics::DeviceContext& DeviceContext;
 
@@ -149,7 +149,7 @@ namespace Babylon
         void DeleteVertexBuffer(NativeDataStream::Reader& data);
         void RecordVertexBuffer(const Napi::CallbackInfo& info);
         void UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info);
-        std::unique_ptr<ProgramData> CreateProgramInternal(std::string_view vertexSource, std::string_view fragmentSource);
+        std::unique_ptr<ProgramData> CreateProgramInternal(std::string vertexSource, std::string fragmentSource);
         Napi::Value CreateProgram(const Napi::CallbackInfo& info);
         Napi::Value CreateProgramAsync(const Napi::CallbackInfo& info);
         Napi::Value GetUniforms(const Napi::CallbackInfo& info);

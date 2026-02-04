@@ -7,9 +7,31 @@
 #include <Babylon/Plugins/ShaderCacheInternal.h>
 #endif
 
+#include <bgfx/bgfx.h>
+
+#ifdef OPENGL
+constexpr bool IsOpenGL = true;
+#else
+constexpr bool IsOpenGL = false;
+#endif
+
+namespace
+{
+#ifdef SHADER_COMPILER
+    void CheckShaderCompilerAssumptions()
+    {
+        const auto* caps = bgfx::getCaps();
+        if (caps->homogeneousDepth != IsOpenGL || caps->originBottomLeft != IsOpenGL)
+        {
+            throw std::runtime_error{"Shader compiler assumptions are not met."};
+        }
+    }
+#endif
+}
+
 namespace Babylon
 {
-    std::shared_ptr<Graphics::BgfxShaderInfo> ShaderProvider::Get(std::string_view vertexSource, std::string_view fragmentSource)
+    std::shared_ptr<Graphics::BgfxShaderInfo> ShaderProvider::Get(std::string vertexSource, std::string fragmentSource)
     {
 #ifdef SHADER_CACHE
         if (Plugins::ShaderCache::IsEnabled())
@@ -23,16 +45,17 @@ namespace Babylon
 #endif
 
 #ifdef SHADER_COMPILER
-        auto compiledShaderInfo = m_shaderCompiler.Compile(vertexSource, fragmentSource);
+        CheckShaderCompilerAssumptions();
 
 #ifdef SHADER_CACHE
         if (Plugins::ShaderCache::IsEnabled())
         {
-            return Plugins::ShaderCache::AddShader(vertexSource, fragmentSource, compiledShaderInfo);
+            auto compiledShaderInfo = m_shaderCompiler.Compile(vertexSource, fragmentSource);
+            return Plugins::ShaderCache::AddShader(std::move(vertexSource), std::move(fragmentSource), compiledShaderInfo);
         }
 #endif
 
-        return std::make_shared<Graphics::BgfxShaderInfo>(compiledShaderInfo);
+        return std::make_shared<Graphics::BgfxShaderInfo>(m_shaderCompiler.Compile(std::move(vertexSource), std::move(fragmentSource)));
 #else
         throw std::runtime_error{"Shader compiler is not available"};
 #endif

@@ -117,7 +117,7 @@ namespace Babylon::Plugins::ShaderCache
         return cacheSize;
     }
 
-    std::shared_ptr<Graphics::BgfxShaderInfo> ShaderCacheImpl::AddShader(std::string_view vertexSource, std::string_view fragmentSource, Graphics::BgfxShaderInfo shaderInfo)
+    std::shared_ptr<Graphics::BgfxShaderInfo> ShaderCacheImpl::AddShader(std::string vertexSource, std::string fragmentSource, Graphics::BgfxShaderInfo shaderInfo)
     {
         return m_cache.try_emplace({vertexSource, fragmentSource}, std::make_shared<Graphics::BgfxShaderInfo>(std::move(shaderInfo))).first->second;
     }
