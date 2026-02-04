@@ -242,3 +242,14 @@ endif()
 if(WINDOWS_STORE)
     add_subdirectory(WindowsAppSDK)
 endif()
+
+# --------------------------------------------------
+# libdeflate
+# --------------------------------------------------
+if(BABYLON_NATIVE_POLYFILL_DECOMPRESSIONSTREAM)
+    set(LIBDEFLATE_BUILD_SHARED_LIB OFF)
+    set(LIBDEFLATE_COMPRESSION_SUPPORT OFF)
+    FetchContent_MakeAvailable_With_Message(libdeflate)
+    set_property(TARGET libdeflate_static PROPERTY UNITY_BUILD false)
+    set_property(TARGET libdeflate_static PROPERTY FOLDER Dependencies)
+endif()

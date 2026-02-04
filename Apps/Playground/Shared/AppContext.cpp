@@ -15,12 +15,14 @@
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeTracing.h>
 #include <Babylon/Plugins/TestUtils.h>
+#include <Babylon/Plugins/NativeZip.h>
 
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
+#include <Babylon/Polyfills/DecompressionStream.h>
 
 #include <iostream>
 #include <sstream>
@@ -115,6 +117,10 @@ AppContext::AppContext(
         m_input = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 
         Babylon::Plugins::TestUtils::Initialize(env, window);
+
+        Babylon::Plugins::NativeZip::Initialize(env);
+
+        Babylon::Polyfills::DecompressionStream::Initialize(env);
 
         if (additionalInit)
         {

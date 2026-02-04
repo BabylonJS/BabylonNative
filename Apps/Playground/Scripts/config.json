@@ -2,6 +2,19 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "SOGS with SH",
+            "playgroundId": "#QA2662#13",
+            "renderCount": 15,
+            "errorRatio": 5,
+            "referenceImage": "gsplat-sogs-sh.png"
+        },
+        {
+            "title": "Gaussian Splatting SPZ SH",
+            "playgroundId": "#XSNFXP#2",
+            "renderCount": 15,
+            "referenceImage": "gsplat-spz-sh.png"
+        },
+        {
             "title": "Gaussian Splatting Update Data",
             "playgroundId": "#Q0LBM8#2",
             "renderCount": 15,

@@ -31,18 +31,21 @@ namespace Babylon::Polyfills::Internal
         Napi::Value GetNaturalWidth(const Napi::CallbackInfo&);
         Napi::Value GetNaturalHeight(const Napi::CallbackInfo&);
         Napi::Value GetSrc(const Napi::CallbackInfo&);
+        Napi::Value GetCrossOrigin(const Napi::CallbackInfo& info);
         Napi::Value GetImageContainer(const Napi::CallbackInfo&);
         void SetSrc(const Napi::CallbackInfo&, const Napi::Value&);
+        void SetCrossOrigin(const Napi::CallbackInfo& info, const Napi::Value& value);
         void SetOnload(const Napi::CallbackInfo&, const Napi::Value&);
         void SetOnerror(const Napi::CallbackInfo&, const Napi::Value&);
         void HandleLoadImageError(const Napi::Error& error);
-        bool SetBuffer(gsl::span<const std::byte> buffer);
+        bool SetBuffer(gsl::span<const uint8_t> buffer);
         void Dispose();
 
         uint32_t m_width{1};
         uint32_t m_height{1};
 
         std::string m_src{};
+        std::string m_crossOrigin{};
 
         JsRuntimeScheduler m_runtimeScheduler;
         Napi::FunctionReference m_onloadHandlerRef;

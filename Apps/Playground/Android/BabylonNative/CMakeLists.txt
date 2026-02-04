@@ -33,6 +33,8 @@ target_link_libraries(BabylonNativeJNI
     NativeCapture
     NativeEncoding
     NativeEngine
+    NativeZip
+    DecompressionStream
     NativeInput
     NativeOptimizations
     NativeTracing
