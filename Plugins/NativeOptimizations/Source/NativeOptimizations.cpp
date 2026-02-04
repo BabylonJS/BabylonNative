@@ -306,7 +306,7 @@ namespace
         }
 
         const auto splatCount = indices.ElementLength();
-        float vp[3] = { m[2], m[6], m[10] };
+        float vp[3] = { m[2u], m[6u], m[10u] };
         static std::vector<float> depthMix;
 
         depthMix.resize(splatCount * 2);
