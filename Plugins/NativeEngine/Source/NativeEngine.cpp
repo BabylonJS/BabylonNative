@@ -1020,7 +1020,7 @@ namespace Babylon
 
         static auto InitUniformInfos{
             [](bgfx::ShaderHandle shader, const std::unordered_map<std::string, uint8_t>& uniformStages, std::unordered_map<uint16_t, UniformInfo>& uniformInfos, std::unordered_map<std::string, uint16_t>& uniformNameToIndex) {
-                auto numUniforms = bgfx::getShaderUniforms(shader);
+                uint16_t numUniforms = bgfx::getShaderUniforms(shader);
                 std::vector<bgfx::UniformHandle> uniforms{numUniforms};
                 bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
 
