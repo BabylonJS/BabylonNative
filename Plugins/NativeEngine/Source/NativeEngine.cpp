@@ -954,11 +954,11 @@ namespace Babylon
 
         static auto InitUniformInfos{
             [](bgfx::ShaderHandle shader, const std::map<std::string, uint8_t>& uniformStages, std::map<uint16_t, UniformInfo>& uniformInfos, std::map<std::string, uint16_t>& uniformNameToIndex) {
-                auto numUniforms = bgfx::getShaderUniforms(shader);
+                uint16_t numUniforms = bgfx::getShaderUniforms(shader);
                 std::vector<bgfx::UniformHandle> uniforms{numUniforms};
                 bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
 
-                for (uint8_t index = 0; index < numUniforms; index++)
+                for (uint16_t index = 0; index < numUniforms; index++)
                 {
                     bgfx::UniformInfo info{};
                     uint16_t handleIndex = uniforms[index].idx;
