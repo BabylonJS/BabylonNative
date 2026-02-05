@@ -61,7 +61,7 @@ namespace Babylon::Plugins
         glslang::FinalizeProcess();
     }
 
-    ShaderCache::BgfxShaderInfo ShaderCompiler::CompileInternal(std::string_view vertexSource, std::string_view fragmentSource)
+    Graphics::BgfxShaderInfo ShaderCompiler::CompileInternal(std::string vertexSource, std::string fragmentSource)
     {
         glslang::TProgram program;
 
