@@ -7,9 +7,15 @@ namespace
     // Can be done with glslang shader traversal. Done with string patching for now.
     std::string_view ProcessShaderCoordinates(std::string_view source, std::string& workingBuffer)
     {
-        workingBuffer = source.substr(0, source.find_last_of('}'));
-        workingBuffer += "gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0; }";
-        return workingBuffer;
+        size_t lastBracePos = source.find_last_of('}');
+        if (lastBracePos != std::string_view::npos)
+        {
+            workingBuffer = source.substr(0, lastBracePos);
+            workingBuffer += "gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0; }";
+            return workingBuffer;
+        }
+
+        return source;
     }
 
     std::string_view ProcessSamplerFlip(std::string_view source, std::string& workingBuffer)
