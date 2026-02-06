@@ -3,7 +3,6 @@
 
 #include "App.h"
 #include <Shared/AppContext.h>
-#include <Babylon/Plugins/ShaderCache.h>
 #include <Babylon/Plugins/TestUtils.h>
 #include <Windows.h>
 #include <Windowsx.h>
