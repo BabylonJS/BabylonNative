@@ -40,15 +40,16 @@ set(NAPI_JAVASCRIPT_ENGINE "Chakra")
 if(WIN32 AND NOT WINDOWS_STORE)
     set(SOURCE_DIR "../../Apps/UnitTests/Source")
     set(SOURCES
-        "${SOURCE_DIR}/App.h"
         "${SOURCE_DIR}/App.cpp"
+        "${SOURCE_DIR}/App.h"
         "${SOURCE_DIR}/App.Win32.cpp"
-        "${SOURCE_DIR}/Tests.JavaScript.cpp"
-        "${SOURCE_DIR}/Tests.NativeEngine.cpp"
+        "${SOURCE_DIR}/Tests.Device.D3D11.cpp"
         "${SOURCE_DIR}/Tests.ExternalTexture.cpp"
         "${SOURCE_DIR}/Tests.ExternalTexture.D3D11.cpp"
-        "${SOURCE_DIR}/Utils.h"
-        "${SOURCE_DIR}/Utils.D3D11.cpp")
+        "${SOURCE_DIR}/Tests.JavaScript.cpp"
+        "${SOURCE_DIR}/Tests.ShaderCache.cpp"
+        "${SOURCE_DIR}/Utils.D3D11.cpp"
+        "${SOURCE_DIR}/Utils.h")
 else()
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()

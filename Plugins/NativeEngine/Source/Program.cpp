@@ -45,22 +45,28 @@ namespace Babylon
     {
         arcana::trace_region region{"Program::Initialize"};
 
-        m_shaderInfo = std::move(shaderInfo);
+        using ShaderInfoPtr = std::shared_ptr<Graphics::BgfxShaderInfo>;
 
-        auto vertexShader = bgfx::createShader(bgfx::makeRef(m_shaderInfo->VertexBytes.data(), static_cast<uint32_t>(m_shaderInfo->VertexBytes.size())));
-        InitUniformInfos(vertexShader, m_shaderInfo->UniformStages, m_uniformInfos, m_uniformNameToIndex);
+        static auto ShaderInfoReleaseFn = [](void*, void* userData) {
+            delete reinterpret_cast<ShaderInfoPtr*>(userData);
+        };
 
-        auto fragmentShader = bgfx::createShader(bgfx::makeRef(m_shaderInfo->FragmentBytes.data(), static_cast<uint32_t>(m_shaderInfo->FragmentBytes.size())));
-        InitUniformInfos(fragmentShader, m_shaderInfo->UniformStages, m_uniformInfos, m_uniformNameToIndex);
+        auto vertexShader = bgfx::createShader(bgfx::makeRef(
+            shaderInfo->VertexBytes.data(), static_cast<uint32_t>(shaderInfo->VertexBytes.size()),
+            ShaderInfoReleaseFn, new ShaderInfoPtr{shaderInfo}));
+        InitUniformInfos(vertexShader, shaderInfo->UniformStages, m_uniformInfos, m_uniformNameToIndex);
+
+        auto fragmentShader = bgfx::createShader(bgfx::makeRef(
+            shaderInfo->FragmentBytes.data(), static_cast<uint32_t>(shaderInfo->FragmentBytes.size()),
+            ShaderInfoReleaseFn, new ShaderInfoPtr{shaderInfo}));
+        InitUniformInfos(fragmentShader, shaderInfo->UniformStages, m_uniformInfos, m_uniformNameToIndex);
 
         m_handle = bgfx::createProgram(vertexShader, fragmentShader, true);
-        m_vertexAttributeLocations = m_shaderInfo->VertexAttributeLocations;
+        m_vertexAttributeLocations = shaderInfo->VertexAttributeLocations;
     }
 
     void Program::Dispose()
     {
-        m_shaderInfo.reset();
-
         if (bgfx::isValid(m_handle))
         {
             if (m_deviceID == m_deviceContext.GetDeviceId())

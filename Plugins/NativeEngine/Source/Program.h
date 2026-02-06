@@ -63,7 +63,6 @@ namespace Babylon
     private:
         Graphics::DeviceContext& m_deviceContext;
         uintptr_t m_deviceID;
-        std::shared_ptr<Graphics::BgfxShaderInfo> m_shaderInfo;
         bgfx::ProgramHandle m_handle;
         std::map<uint16_t, UniformValue> m_uniforms;
         std::map<std::string, uint16_t> m_uniformNameToIndex;

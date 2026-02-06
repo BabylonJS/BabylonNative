@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <fstream>
 
 namespace Babylon::Plugins::ShaderCache
