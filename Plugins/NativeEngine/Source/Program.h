@@ -35,7 +35,6 @@ namespace Babylon
         uint16_t ElementLength{};
     };
 
-
     class Program final
     {
     public:

@@ -965,8 +965,8 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateProgramAsync(const Napi::CallbackInfo& info)
     {
-        const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
-        const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
+        std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
         const Napi::Function onSuccess = info[2].As<Napi::Function>();
         const Napi::Function onError = info[3].As<Napi::Function>();
 
@@ -974,7 +974,7 @@ namespace Babylon
         Napi::Value jsProgram = Napi::Pointer<Program>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, vertexSource = std::move(vertexSource), fragmentSource = std::move(fragmentSource), program, cancellationSource{m_cancellationSource}]() mutable {
+            [this, vertexSource = std::move(vertexSource), fragmentSource = std::move(fragmentSource), program, cancellationSource{m_cancellationSource}]() {
                 program->Initialize(m_shaderProvider.Get(vertexSource, fragmentSource));
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [jsProgramRef{Napi::Persistent(jsProgram)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
