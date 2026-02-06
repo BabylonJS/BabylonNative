@@ -77,6 +77,7 @@ target_link_libraries(TestInstall
     ${INSTALL_LIB_NAMES}
     gtest_main
     chakrart
+    d3d11
     d3dcompiler
     onecore)
 
