@@ -1,6 +1,5 @@
 set(SOURCES
-    "InternalInclude/Babylon/Plugins/ShaderCompilerInternal.h"
-    "Source/ShaderCompiler.cpp"
+    "InternalInclude/Babylon/Plugins/ShaderCompiler.h"
     "Source/ShaderCompilerCommon.h"
     "Source/ShaderCompilerCommon.cpp"
     "Source/ShaderCompilerTraversers.cpp"
@@ -44,6 +43,7 @@ if(WIN32)
         PRIVATE "d3dcompiler.lib")
 endif()
 
+# TODO: remove this once the #define in ShaderCompilerCommon gets split into separate compilation units
 target_compile_definitions(ShaderCompiler
     PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
 

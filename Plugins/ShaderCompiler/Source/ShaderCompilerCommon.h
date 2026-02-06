@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Babylon/Plugins/ShaderCompilerInternal.h>
+#include <Babylon/Plugins/ShaderCompiler.h>
 
 #include <gsl/gsl>
 #include <spirv_cross.hpp>
@@ -10,6 +10,10 @@
 
 namespace Babylon::ShaderCompilerCommon
 {
+    std::string ProcessShaderCoordinates(std::string_view source);
+
+    std::string ProcessSamplerFlip(std::string_view source);
+
     template<typename AppendageT>
     inline void AppendBytes(std::vector<uint8_t>& bytes, const AppendageT appendage)
     {

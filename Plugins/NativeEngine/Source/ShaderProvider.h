@@ -3,7 +3,7 @@
 #include <Babylon/Graphics/BgfxShaderInfo.h>
 
 #ifdef SHADER_COMPILER
-#include <Babylon/Plugins/ShaderCompilerInternal.h>
+#include <Babylon/Plugins/ShaderCompiler.h>
 #endif
 
 #include <memory>

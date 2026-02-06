@@ -8,7 +8,7 @@
  *   ShaderTool -o <output_file> <vertex1> <fragment1> [<vertex2> <fragment2> ...]
  */
 
-#include <Babylon/Plugins/ShaderCompilerInternal.h>
+#include <Babylon/Plugins/ShaderCompiler.h>
 #include <Babylon/Plugins/ShaderCacheInternal.h>
 #include <Babylon/Plugins/ShaderCache.h>
 #include <Babylon/Graphics/BgfxShaderInfo.h>

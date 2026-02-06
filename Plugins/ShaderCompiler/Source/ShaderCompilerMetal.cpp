@@ -1,4 +1,4 @@
-#include <Babylon/Plugins/ShaderCompilerInternal.h>
+#include <Babylon/Plugins/ShaderCompiler.h>
 
 #include "ShaderCompilerCommon.h"
 #include "ShaderCompilerTraversers.h"
@@ -70,6 +70,8 @@ namespace
 
 namespace Babylon::Plugins
 {
+    using namespace ShaderCompilerCommon;
+
     ShaderCompiler::ShaderCompiler()
     {
         glslang::InitializeProcess();
@@ -80,15 +82,15 @@ namespace Babylon::Plugins
         glslang::FinalizeProcess();
     }
 
-    Graphics::BgfxShaderInfo ShaderCompiler::CompileInternal(std::string_view vertexSource, std::string_view fragmentSource)
+    Graphics::BgfxShaderInfo ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource)
     {
         glslang::TProgram program;
 
         glslang::TShader vertexShader{EShLangVertex};
-        AddShader(program, vertexShader, vertexSource);
+        AddShader(program, vertexShader, ProcessSamplerFlip(ProcessShaderCoordinates(vertexSource)));
 
         glslang::TShader fragmentShader{EShLangFragment};
-        AddShader(program, fragmentShader, fragmentSource);
+        AddShader(program, fragmentShader, ProcessSamplerFlip(fragmentSource));
 
         glslang::SpvVersion spv{};
         spv.spv = 0x10000;
@@ -114,7 +116,7 @@ namespace Babylon::Plugins
         std::string fragmentMSL(fragmentSource.data(), fragmentSource.size());
         auto [fragmentParser, fragmentCompiler] = CompileShader(program, EShLangFragment, fragmentMSL);
 
-        return ShaderCompilerCommon::CreateBgfxShader(
+        return CreateBgfxShader(
             {std::move(vertexParser), std::move(vertexCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(vertexMSL.data()), vertexMSL.size()), std::move(vertexAttributeRenaming)},
             {std::move(fragmentParser), std::move(fragmentCompiler), gsl::make_span(reinterpret_cast<uint8_t*>(fragmentMSL.data()), fragmentMSL.size()), {}});
     }
