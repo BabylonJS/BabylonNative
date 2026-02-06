@@ -50,8 +50,6 @@ namespace Babylon::Plugins::ShaderCache
         stream.write(reinterpret_cast<const char*>(&cacheSize), sizeof(uint32_t));
         for (auto& entry : m_cache)
         {
-            // TODO: Endianness of the hash values might be an issue.
-
             stream.write(reinterpret_cast<const char*>(&entry.first), sizeof(ShaderHash));
             const auto& info = entry.second;
             uint32_t vertexBytes{static_cast<uint32_t>(info->VertexBytes.size())};
@@ -134,12 +132,20 @@ namespace Babylon::Plugins::ShaderCache
 
     std::shared_ptr<Graphics::BgfxShaderInfo> ShaderCacheImpl::AddShader(std::string_view vertexSource, std::string_view fragmentSource, Graphics::BgfxShaderInfo shaderInfo)
     {
-        return m_cache.try_emplace({vertexSource, fragmentSource}, std::make_shared<Graphics::BgfxShaderInfo>(std::move(shaderInfo))).first->second;
+        return m_cache.try_emplace(Hash(vertexSource, fragmentSource), std::make_shared<Graphics::BgfxShaderInfo>(std::move(shaderInfo))).first->second;
     }
 
     std::shared_ptr<Graphics::BgfxShaderInfo> ShaderCacheImpl::GetShader(std::string_view vertexSource, std::string_view fragmentSource)
     {
-        const auto iter = m_cache.find({NormalizeLineEndings(vertexSource), NormalizeLineEndings(fragmentSource)});
+        const auto iter = m_cache.find(Hash(vertexSource, fragmentSource));
         return (iter == m_cache.end() ? nullptr : iter->second);
+    }
+
+    ShaderCacheImpl::ShaderHash ShaderCacheImpl::Hash(std::string_view vertexSource, std::string_view fragmentSource)
+    {
+        std::string normalizeVertexSource = NormalizeLineEndings(vertexSource);
+        std::string normalizeFragmentSource = NormalizeLineEndings(fragmentSource);
+        return {XXH3_64bits(normalizeVertexSource.data(), normalizeVertexSource.size()),
+                XXH3_64bits(normalizeFragmentSource.data(), normalizeFragmentSource.size())};
     }
 }
