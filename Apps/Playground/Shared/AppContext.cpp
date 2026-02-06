@@ -13,6 +13,7 @@
 #include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeTracing.h>
+#include <Babylon/Plugins/ShaderCache.h>
 #include <Babylon/Plugins/TestUtils.h>
 
 #include <Babylon/Polyfills/Blob.h>
@@ -52,6 +53,7 @@ AppContext::AppContext(
     Babylon::DebugTrace::EnableDebugTrace(true);
     Babylon::DebugTrace::SetTraceOutput(debugLog);
     Babylon::PerfTrace::SetLevel(Babylon::PerfTrace::Level::Mark);
+    Babylon::Plugins::ShaderCache::Enable();
 
     Babylon::Graphics::Configuration graphicsConfig{};
     graphicsConfig.Window = window;
@@ -145,4 +147,6 @@ AppContext::~AppContext()
     m_runtime.reset();
     m_deviceUpdate.reset();
     m_device.reset();
+
+    Babylon::Plugins::ShaderCache::Disable();
 }
