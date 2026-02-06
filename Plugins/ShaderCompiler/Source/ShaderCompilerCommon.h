@@ -5,7 +5,7 @@
 #include <gsl/gsl>
 #include <spirv_cross.hpp>
 #include <spirv_parser.hpp>
-#include <unordered_map>
+#include <map>
 #include <string>
 
 namespace Babylon::ShaderCompilerCommon
@@ -57,7 +57,7 @@ namespace Babylon::ShaderCompilerCommon
     };
 
     void AppendUniformBuffer(std::vector<uint8_t>& bytes, const NonSamplerUniformsInfo& uniformBuffer, bool isFragment);
-    void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::unordered_map<std::string, uint8_t>& stages);
+    void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::map<std::string, uint8_t>& stages);
     NonSamplerUniformsInfo CollectNonSamplerUniforms(spirv_cross::Parser& parser, const spirv_cross::Compiler& compiler);
 
     struct ShaderInfo
@@ -65,7 +65,7 @@ namespace Babylon::ShaderCompilerCommon
         std::unique_ptr<spirv_cross::Parser> Parser;
         std::unique_ptr<const spirv_cross::Compiler> Compiler;
         gsl::span<uint8_t> Bytes;
-        std::unordered_map<std::string, std::string> AttributeRenaming;
+        std::map<std::string, std::string> AttributeRenaming;
     };
 
     Graphics::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo);

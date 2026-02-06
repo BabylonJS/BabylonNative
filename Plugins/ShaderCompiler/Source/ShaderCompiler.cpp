@@ -1,36 +1,21 @@
 ﻿#include <Babylon/Plugins/ShaderCompilerInternal.h>
 
-#include <sstream>
-
 namespace
 {
-    void NormalizeLineEndings(std::string& source)
-    {
-        std::string temp;
-
-        for (char ch : source)
-        {
-            if (ch != '\r')
-            {
-                temp.push_back(ch);
-            }
-        }
-
-        source.swap(temp);
-    }
-
 #ifndef OPENGL
     // Patching shader code to append clip space coordinates for the current rendering API.
     // Can be done with glslang shader traversal. Done with string patching for now.
-    void ProcessShaderCoordinates(std::string& vertexSource)
+    std::string_view ProcessShaderCoordinates(std::string_view source, std::string& workingBuffer)
     {
-        vertexSource = vertexSource.substr(0, vertexSource.find_last_of('}')) + "gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0; }";
+        workingBuffer = source.substr(0, source.find_last_of('}'));
+        workingBuffer += "gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0; }";
+        return workingBuffer;
     }
 
-    void ProcessSamplerFlip(std::string& fragmentSource)
+    std::string_view ProcessSamplerFlip(std::string_view source, std::string& workingBuffer)
     {
         static const std::string shaderNameDefineStr = "#define SHADER_NAME";
-        const auto shaderNameDefine = fragmentSource.find(shaderNameDefineStr);
+        const auto shaderNameDefine = source.find(shaderNameDefineStr);
         if (shaderNameDefine != std::string::npos)
         {
             static const auto textureSamplerFunctions = R"(
@@ -46,24 +31,27 @@ namespace
                 #define textureLod(x,y,z) textureLod(x, flip(y), z)
                 #define SHADER_NAME)";
 
-            fragmentSource.replace(shaderNameDefine, shaderNameDefineStr.length(), textureSamplerFunctions);
+            workingBuffer = source;
+            return workingBuffer.replace(shaderNameDefine, shaderNameDefineStr.length(), textureSamplerFunctions);
         }
+
+        return source;
     }
 #endif
 }
 
 namespace Babylon::Plugins
 {
-    Graphics::BgfxShaderInfo ShaderCompiler::Compile(std::string vertexSource, std::string fragmentSource)
+    Graphics::BgfxShaderInfo ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource)
     {
-        NormalizeLineEndings(vertexSource);
-        NormalizeLineEndings(fragmentSource);
-
 #ifndef OPENGL
-        ProcessShaderCoordinates(vertexSource);
-        ProcessSamplerFlip(fragmentSource);
+        std::string vertexWorkingBuffer;
+        vertexSource = ProcessSamplerFlip(ProcessShaderCoordinates(vertexSource, vertexWorkingBuffer), vertexWorkingBuffer);
+
+        std::string fragmentWorkingBuffer;
+        fragmentSource = ProcessSamplerFlip(fragmentSource, fragmentWorkingBuffer);
 #endif
 
-        return CompileInternal(std::move(vertexSource), std::move(fragmentSource));
+        return CompileInternal(vertexSource, fragmentSource);
     }
 }

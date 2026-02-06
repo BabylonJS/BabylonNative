@@ -33,22 +33,32 @@ namespace Babylon::Plugins::ShaderCache
 
     uint32_t Save(std::ofstream& stream)
     {
+        if (!ShaderCacheImpl::Instance)
+        {
+            throw std::runtime_error("ShaderCache is not enabled.");
+        }
+
         return ShaderCacheImpl::Instance->Save(stream);
     }
 
     uint32_t Load(std::ifstream& stream)
-    {
-        return ShaderCacheImpl::Instance->Load(stream);
-    }
-
-    std::shared_ptr<Graphics::BgfxShaderInfo> AddShader(std::string vertexSource, std::string fragmentSource, Graphics::BgfxShaderInfo shaderInfo)
     {
         if (!ShaderCacheImpl::Instance)
         {
             throw std::runtime_error("ShaderCache is not enabled.");
         }
 
-        return ShaderCacheImpl::Instance->AddShader(std::move(vertexSource), std::move(fragmentSource), std::move(shaderInfo));
+        return ShaderCacheImpl::Instance->Load(stream);
+    }
+
+    std::shared_ptr<Graphics::BgfxShaderInfo> AddShader(std::string_view vertexSource, std::string_view fragmentSource, Graphics::BgfxShaderInfo shaderInfo)
+    {
+        if (!ShaderCacheImpl::Instance)
+        {
+            throw std::runtime_error("ShaderCache is not enabled.");
+        }
+
+        return ShaderCacheImpl::Instance->AddShader(vertexSource, fragmentSource, std::move(shaderInfo));
     }
 
     std::shared_ptr<Graphics::BgfxShaderInfo> GetShader(std::string_view vertexSource, std::string_view fragmentSource)

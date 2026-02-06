@@ -3,7 +3,7 @@
 #include <glslang/Public/ShaderLang.h>
 
 #include <memory>
-#include <unordered_map>
+#include <map>
 
 namespace Babylon::ShaderCompilerTraversers
 {
@@ -68,9 +68,9 @@ namespace Babylon::ShaderCompilerTraversers
 
     /// Changes the names and locations of varying attributes in the vertex shader to
     /// match bgfx's expectations.
-    void AssignLocationsAndNamesToVertexVaryingsOpenGL(glslang::TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& vertexAttributeRenaming);
-    void AssignLocationsAndNamesToVertexVaryingsMetal(glslang::TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& vertexAttributeRenaming);
-    void AssignLocationsAndNamesToVertexVaryingsD3D(glslang::TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& vertexAttributeRenaming);
+    void AssignLocationsAndNamesToVertexVaryingsOpenGL(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming);
+    void AssignLocationsAndNamesToVertexVaryingsMetal(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming);
+    void AssignLocationsAndNamesToVertexVaryingsD3D(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming);
 
     /// WebGL (and therefore Babylon.js) treats texture samplers as a single variable.
     /// Native platforms expect them to be two separate variables -- a texture and a

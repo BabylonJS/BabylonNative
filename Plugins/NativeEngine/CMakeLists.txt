@@ -9,6 +9,8 @@ set(SOURCES
     "Source/NativeEngine.cpp"
     "Source/NativeEngine.h"
     "Source/PerFrameValue.h"
+    "Source/Program.cpp"
+    "Source/Program.h"
     "Source/ShaderProvider.h"
     "Source/ShaderProvider.cpp"
     "Source/VertexArray.cpp"
@@ -62,6 +64,10 @@ if(WIN32)
     target_compile_definitions(NativeEngine
         PRIVATE NOMINMAX)
 endif()
+
+# Required by VertexBuffer::BuildInstanceDataBuffer. Remove once we have a better solution for that method.
+target_compile_definitions(NativeEngine
+    PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
 
 set_property(TARGET NativeEngine PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

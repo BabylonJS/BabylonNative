@@ -16,6 +16,21 @@ namespace
         string.resize(stringSize);
         stream.read(string.data(), stringSize);
     }
+
+    std::string NormalizeLineEndings(std::string_view source)
+    {
+        std::string result;
+
+        for (char ch : source)
+        {
+            if (ch != '\r')
+            {
+                result.push_back(ch);
+            }
+        }
+
+        return result;
+    }
 }
 
 namespace Babylon::Plugins::ShaderCache
@@ -117,14 +132,14 @@ namespace Babylon::Plugins::ShaderCache
         return cacheSize;
     }
 
-    std::shared_ptr<Graphics::BgfxShaderInfo> ShaderCacheImpl::AddShader(std::string vertexSource, std::string fragmentSource, Graphics::BgfxShaderInfo shaderInfo)
+    std::shared_ptr<Graphics::BgfxShaderInfo> ShaderCacheImpl::AddShader(std::string_view vertexSource, std::string_view fragmentSource, Graphics::BgfxShaderInfo shaderInfo)
     {
         return m_cache.try_emplace({vertexSource, fragmentSource}, std::make_shared<Graphics::BgfxShaderInfo>(std::move(shaderInfo))).first->second;
     }
 
     std::shared_ptr<Graphics::BgfxShaderInfo> ShaderCacheImpl::GetShader(std::string_view vertexSource, std::string_view fragmentSource)
     {
-        const auto iter = m_cache.find({vertexSource, fragmentSource});
+        const auto iter = m_cache.find({NormalizeLineEndings(vertexSource), NormalizeLineEndings(fragmentSource)});
         return (iter == m_cache.end() ? nullptr : iter->second);
     }
 }

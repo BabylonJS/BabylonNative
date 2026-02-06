@@ -13,9 +13,9 @@ namespace Babylon::Plugins
         ShaderCompiler();
         ~ShaderCompiler();
 
-        Graphics::BgfxShaderInfo Compile(std::string vertexSource, std::string fragmentSource);
+        Graphics::BgfxShaderInfo Compile(std::string_view vertexSource, std::string_view fragmentSource);
 
     private:
-        Graphics::BgfxShaderInfo CompileInternal(std::string vertexSource, std::string fragmentSource);
+        Graphics::BgfxShaderInfo CompileInternal(std::string_view vertexSource, std::string_view fragmentSource);
     };
 }

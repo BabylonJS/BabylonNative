@@ -194,9 +194,7 @@ int main(int argc, char* argv[])
 
             std::string vertexSource = ReadFileContents(pair.vertexPath);
             std::string fragmentSource = ReadFileContents(pair.fragmentPath);
-
-            Babylon::Graphics::BgfxShaderInfo shaderInfo = compiler.Compile(vertexSource, fragmentSource);
-            Babylon::Plugins::ShaderCache::AddShader(std::move(vertexSource), std::move(fragmentSource), std::move(shaderInfo));
+            Babylon::Plugins::ShaderCache::AddShader(vertexSource, fragmentSource, compiler.Compile(vertexSource, fragmentSource));
         }
 
         // Save the shader cache to the output file

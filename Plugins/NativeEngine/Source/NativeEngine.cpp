@@ -946,64 +946,15 @@ namespace Babylon
         }
     }
 
-    std::unique_ptr<ProgramData> NativeEngine::CreateProgramInternal(std::string vertexSource, std::string fragmentSource)
-    {
-        arcana::trace_region region{"NativeEngine::CreateProgramInternal"};
-
-        auto shaderInfo = m_shaderProvider.Get(std::move(vertexSource), std::move(fragmentSource));
-
-        static auto InitUniformInfos{
-            [](bgfx::ShaderHandle shader, const std::map<std::string, uint8_t>& uniformStages, std::map<uint16_t, UniformInfo>& uniformInfos, std::map<std::string, uint16_t>& uniformNameToIndex) {
-                uint16_t numUniforms = bgfx::getShaderUniforms(shader);
-                std::vector<bgfx::UniformHandle> uniforms{numUniforms};
-                bgfx::getShaderUniforms(shader, uniforms.data(), gsl::narrow_cast<uint16_t>(uniforms.size()));
-
-                for (uint16_t index = 0; index < numUniforms; index++)
-                {
-                    bgfx::UniformInfo info{};
-                    uint16_t handleIndex = uniforms[index].idx;
-                    bgfx::getUniformInfo(uniforms[index], info);
-                    auto itStage = uniformStages.find(info.name);
-                    auto& handle = uniforms[index];
-                    uniformInfos.emplace(std::make_pair(handle.idx, UniformInfo{itStage == uniformStages.end() ? uint8_t{} : itStage->second, handle, info.num}));
-                    uniformNameToIndex[info.name] = handleIndex;
-                }
-            }};
-
-        typedef std::shared_ptr<Graphics::BgfxShaderInfo> BgfxShaderInfoPtr;
-        static auto deleteShaderInfo = [](void*, void* userData) {
-            delete reinterpret_cast<BgfxShaderInfoPtr*>(userData);
-        };
-
-        std::unique_ptr<ProgramData> program = std::make_unique<ProgramData>(m_deviceContext);
-
-        auto vertexShader = bgfx::createShader(
-            bgfx::makeRef(
-                shaderInfo->VertexBytes.data(), static_cast<uint32_t>(shaderInfo->VertexBytes.size()),
-                deleteShaderInfo, new BgfxShaderInfoPtr{shaderInfo}));
-        InitUniformInfos(vertexShader, shaderInfo->UniformStages, program->UniformInfos, program->UniformNameToIndex);
-
-        auto fragmentShader = bgfx::createShader(
-            bgfx::makeRef(
-                shaderInfo->FragmentBytes.data(), static_cast<uint32_t>(shaderInfo->FragmentBytes.size()),
-                deleteShaderInfo, new BgfxShaderInfoPtr{shaderInfo}));
-        InitUniformInfos(fragmentShader, shaderInfo->UniformStages, program->UniformInfos, program->UniformNameToIndex);
-
-        program->Handle = bgfx::createProgram(vertexShader, fragmentShader, true);
-        program->VertexAttributeLocations = shaderInfo->VertexAttributeLocations;
-
-        return program;
-    }
-
     Napi::Value NativeEngine::CreateProgram(const Napi::CallbackInfo& info)
     {
-        std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
-        std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
-        ProgramData* program = new ProgramData{m_deviceContext};
-        Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
+        const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
+        const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        Program* program = new Program{m_deviceContext};
+        Napi::Value jsProgram = Napi::Pointer<Program>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
         try
         {
-            *program = std::move(*CreateProgramInternal(vertexSource, fragmentSource));
+            program->Initialize(m_shaderProvider.Get(vertexSource, fragmentSource));
         }
         catch (const std::exception& ex)
         {
@@ -1014,41 +965,35 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateProgramAsync(const Napi::CallbackInfo& info)
     {
-        std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
-        std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
+        const std::string vertexSource = info[0].As<Napi::String>().Utf8Value();
+        const std::string fragmentSource = info[1].As<Napi::String>().Utf8Value();
         const Napi::Function onSuccess = info[2].As<Napi::Function>();
         const Napi::Function onError = info[3].As<Napi::Function>();
 
-        ProgramData* program = new ProgramData{m_deviceContext};
-        Napi::Value jsProgram = Napi::Pointer<ProgramData>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
+        Program* program = new Program{m_deviceContext};
+        Napi::Value jsProgram = Napi::Pointer<Program>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, vertexSource = std::move(vertexSource), fragmentSource = std::move(fragmentSource), cancellationSource{m_cancellationSource}]() mutable {
-                return CreateProgramInternal(std::move(vertexSource), std::move(fragmentSource));
+            [this, vertexSource = std::move(vertexSource), fragmentSource = std::move(fragmentSource), program, cancellationSource{m_cancellationSource}]() mutable {
+                program->Initialize(m_shaderProvider.Get(vertexSource, fragmentSource));
             })
-            .then(m_runtimeScheduler, *m_cancellationSource,
-                [program,
-                    jsProgramRef{Napi::Persistent(jsProgram)},
-                    onSuccessRef{Napi::Persistent(onSuccess)},
-                    onErrorRef{Napi::Persistent(onError)},
-                    cancellationSource{m_cancellationSource}](const arcana::expected<std::unique_ptr<ProgramData>, std::exception_ptr>& result) {
-                    if (result.has_error())
-                    {
-                        onErrorRef.Call({Napi::Error::New(onErrorRef.Env(), result.error()).Value()});
-                    }
-                    else
-                    {
-                        *program = std::move(*result.value());
-                        onSuccessRef.Call({});
-                    }
-                });
+            .then(m_runtimeScheduler, *m_cancellationSource, [jsProgramRef{Napi::Persistent(jsProgram)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
+                if (result.has_error())
+                {
+                    onErrorRef.Call({Napi::Error::New(onErrorRef.Env(), result.error()).Value()});
+                }
+                else
+                {
+                    onSuccessRef.Call({});
+                }
+            });
 
         return jsProgram;
     }
 
     Napi::Value NativeEngine::GetUniforms(const Napi::CallbackInfo& info)
     {
-        const ProgramData* program = info[0].As<Napi::Pointer<ProgramData>>().Get();
+        const Program* program = info[0].As<Napi::Pointer<Program>>().Get();
         const Napi::Array names = info[1].As<Napi::Array>();
 
         const auto length{names.Length()};
@@ -1058,18 +1003,11 @@ namespace Babylon
             if (names[index].IsString())
             {
                 const auto name{names[index].As<Napi::String>().Utf8Value()};
-
-                const auto itUniformIndex = program->UniformNameToIndex.find(name);
-
-                if (itUniformIndex != program->UniformNameToIndex.end())
+                const UniformInfo* uniformInfo = program->GetUniformInfo(name);
+                if (uniformInfo != nullptr)
                 {
-                    const auto itUniformInfo{program->UniformInfos.find(itUniformIndex->second)};
-
-                    if (itUniformInfo != program->UniformInfos.end())
-                    {
-                        uniforms[index] = Napi::Pointer<UniformInfo>::Create(info.Env(), &itUniformInfo->second);
-                        continue;
-                    }
+                    uniforms[index] = Napi::Pointer<UniformInfo>::Create(info.Env(), uniformInfo);
+                    continue;
                 }
             }
 
@@ -1081,10 +1019,10 @@ namespace Babylon
 
     Napi::Value NativeEngine::GetAttributes(const Napi::CallbackInfo& info)
     {
-        const ProgramData* program = info[0].As<Napi::Pointer<ProgramData>>().Get();
+        const Program* program = info[0].As<Napi::Pointer<Program>>().Get();
         const Napi::Array names = info[1].As<Napi::Array>();
 
-        const auto& attributeLocations = program->VertexAttributeLocations;
+        const auto& attributeLocations = program->VertexAttributeLocations();
 
         auto length = names.Length();
         auto attributes = Napi::Array::New(info.Env(), length);
@@ -1101,7 +1039,7 @@ namespace Babylon
 
     void NativeEngine::SetProgram(NativeDataStream::Reader& data)
     {
-        m_currentProgram = data.ReadPointer<ProgramData>();
+        m_currentProgram = data.ReadPointer<Program>();
     }
 
     void NativeEngine::SetState(NativeDataStream::Reader& data)
@@ -1124,7 +1062,7 @@ namespace Babylon
 
     void NativeEngine::DeleteProgram(NativeDataStream::Reader& data)
     {
-        data.ReadPointer<ProgramData>()->Dispose();
+        data.ReadPointer<Program>()->Dispose();
     }
 
     void NativeEngine::SetZOffset(NativeDataStream::Reader& data)
@@ -2264,9 +2202,9 @@ namespace Babylon
             }
         }
 
-        for (const auto& it : m_currentProgram->Uniforms)
+        for (const auto& it : m_currentProgram->Uniforms())
         {
-            const ProgramData::UniformValue& value = it.second;
+            const UniformValue& value = it.second;
             encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
         }
 
@@ -2283,7 +2221,7 @@ namespace Babylon
         boundFrameBuffer.SetStencil(*encoder, m_stencilState);
 
         // Discard everything except textures since we keep the state of everything else.
-        boundFrameBuffer.Submit(*encoder, m_currentProgram->Handle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
+        boundFrameBuffer.Submit(*encoder, m_currentProgram->Handle(), BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
     }
 
     Graphics::UpdateToken& NativeEngine::GetUpdateToken()

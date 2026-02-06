@@ -13,8 +13,6 @@ namespace bgfx
 
 namespace Babylon::ShaderCompilerCommon
 {
-    using namespace Babylon::Plugins;
-
     void AppendUniformBuffer(std::vector<uint8_t>& bytes, const NonSamplerUniformsInfo& uniformBuffer, bool isFragment)
     {
         const uint8_t fragmentBit = (isFragment ? BGFX_UNIFORM_FRAGMENTBIT : 0);

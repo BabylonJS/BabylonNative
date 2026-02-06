@@ -2,6 +2,7 @@
 
 #include "NativeDataStream.h"
 #include "PerFrameValue.h"
+#include "Program.h"
 #include "ShaderProvider.h"
 #include "VertexArray.h"
 
@@ -26,101 +27,6 @@
 
 namespace Babylon
 {
-    struct UniformInfo final
-    {
-        UniformInfo(uint8_t stage, bgfx::UniformHandle handle, size_t maxElementLength)
-            : Stage{stage}
-            , Handle{handle}
-            , MaxElementLength{maxElementLength}
-        {
-        }
-
-        uint8_t Stage{};
-        bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
-        size_t MaxElementLength{};
-    };
-
-    struct ProgramData final
-    {
-        ProgramData(Graphics::DeviceContext& deviceContext) 
-           : DeviceID {deviceContext.GetDeviceId()}
-           , DeviceContext{deviceContext}
-
-        {
-
-        }
-
-        ProgramData(const ProgramData&) = delete;
-        ProgramData& operator=(const ProgramData&) = delete;
-
-        ProgramData(ProgramData&& other) noexcept
-            : Handle{other.Handle}
-            , Uniforms{std::move(other.Uniforms)}
-            , UniformNameToIndex{std::move(other.UniformNameToIndex)}
-            , UniformInfos{std::move(other.UniformInfos)}
-            , VertexAttributeLocations{std::move(other.VertexAttributeLocations)}
-            , DeviceID{other.DeviceID}
-            , DeviceContext{other.DeviceContext}
-        {
-            other.Handle = BGFX_INVALID_HANDLE;
-        }
-
-        ProgramData& operator=(ProgramData&& other) noexcept
-        {
-            Handle = std::move(other.Handle);
-            other.Handle = BGFX_INVALID_HANDLE;
-            Uniforms = std::move(other.Uniforms);
-            UniformNameToIndex = std::move(other.UniformNameToIndex);
-            UniformInfos = std::move(other.UniformInfos);
-            VertexAttributeLocations = std::move(other.VertexAttributeLocations);
-            return *this;
-        }
-
-        ~ProgramData()
-        {
-            Dispose();
-        }
-
-        void Dispose()
-        {
-            if (bgfx::isValid(Handle) && DeviceID == DeviceContext.GetDeviceId())
-            {
-                bgfx::destroy(Handle);
-                Handle = BGFX_INVALID_HANDLE;
-            }
-        }
-
-        bgfx::ProgramHandle Handle{bgfx::kInvalidHandle};
-
-        struct UniformValue
-        {
-            std::vector<float> Data{};
-            uint16_t ElementLength{};
-        };
-
-        std::map<uint16_t, UniformValue> Uniforms{};
-        std::map<std::string, uint16_t> UniformNameToIndex{};
-        std::map<uint16_t, UniformInfo> UniformInfos{};
-        std::map<std::string, uint32_t> VertexAttributeLocations{};
-        uintptr_t DeviceID;
-        Graphics::DeviceContext& DeviceContext;
-
-        void SetUniform(bgfx::UniformHandle handle, gsl::span<const float> data, size_t elementLength = 1)
-        {
-            UniformValue& value = Uniforms[handle.idx];
-
-            const auto itUniformInfo{UniformInfos.find(handle.idx)};
-
-            if (itUniformInfo != UniformInfos.end())
-            {
-                elementLength = std::min(itUniformInfo->second.MaxElementLength, elementLength);
-            }
-
-            value.Data.assign(data.begin(), data.end());
-            value.ElementLength = static_cast<uint16_t>(elementLength);
-        }
-    };
-
     class NativeEngine final : public Napi::ObjectWrap<NativeEngine>
     {
         static constexpr auto JS_CLASS_NAME = "_NativeEngine";
@@ -149,7 +55,6 @@ namespace Babylon
         void DeleteVertexBuffer(NativeDataStream::Reader& data);
         void RecordVertexBuffer(const Napi::CallbackInfo& info);
         void UpdateDynamicVertexBuffer(const Napi::CallbackInfo& info);
-        std::unique_ptr<ProgramData> CreateProgramInternal(std::string vertexSource, std::string fragmentSource);
         Napi::Value CreateProgram(const Napi::CallbackInfo& info);
         Napi::Value CreateProgramAsync(const Napi::CallbackInfo& info);
         Napi::Value GetUniforms(const Napi::CallbackInfo& info);
@@ -230,7 +135,7 @@ namespace Babylon
 
         ShaderProvider m_shaderProvider{};
 
-        ProgramData* m_currentProgram{nullptr};
+        Program* m_currentProgram{nullptr};
 
         JsRuntime& m_runtime;
         Graphics::DeviceContext& m_deviceContext;
