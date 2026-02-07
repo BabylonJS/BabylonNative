@@ -1,5 +1,4 @@
 #include "ShaderCompilerCommon.h"
-#include "ShaderCompiler.h"
 #include <bx/bx.h>
 #include <bgfx/bgfx.h>
 
@@ -14,6 +13,46 @@ namespace bgfx
 
 namespace Babylon::ShaderCompilerCommon
 {
+    // Patching shader code to append clip space coordinates for the current rendering API.
+    // Can be done with glslang shader traversal. Done with string patching for now.
+    std::string ProcessShaderCoordinates(std::string_view source)
+    {
+        size_t lastBrace = source.find_last_of('}');
+        if (lastBrace == std::string_view::npos)
+        {
+            throw std::runtime_error{"ProcessShaderCoordinates: Could not find closing brace."};
+        }
+
+        return std::string{source}.substr(0, lastBrace) + "gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0; }";
+    }
+
+    std::string ProcessSamplerFlip(std::string_view source)
+    {
+        static const std::string shaderNameDefineStr = "#define SHADER_NAME";
+        const auto shaderNameDefine = source.find(shaderNameDefineStr);
+        if (shaderNameDefine == std::string::npos)
+        {
+            throw std::runtime_error{"ProcessSamplerFlip: Could not find shader name define."};
+        }
+
+        static const auto textureSamplerFunctions = R"(
+            highp vec2 flip(highp vec2 uv)
+            {
+                return vec2(uv.x, 1. - uv.y);
+            }
+            highp vec3 flip(highp vec3 uv)
+            {
+                return uv;
+            }
+            #define texture(x,y) texture(x, flip(y))
+            #define textureLod(x,y,z) textureLod(x, flip(y), z)
+            #define SHADER_NAME)";
+
+        std::string result{source};
+        result.replace(shaderNameDefine, shaderNameDefineStr.length(), textureSamplerFunctions);
+        return result;
+    }
+
     void AppendUniformBuffer(std::vector<uint8_t>& bytes, const NonSamplerUniformsInfo& uniformBuffer, bool isFragment)
     {
         const uint8_t fragmentBit = (isFragment ? BGFX_UNIFORM_FRAGMENTBIT : 0);
@@ -46,7 +85,7 @@ namespace Babylon::ShaderCompilerCommon
         }
     }
 
-    void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::unordered_map<std::string, uint8_t>& stages)
+    void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::map<std::string, uint8_t>& stages)
     {
         for (const spirv_cross::Resource& sampler : samplers)
         {
@@ -173,9 +212,9 @@ namespace Babylon::ShaderCompilerCommon
         return info;
     }
 
-    ShaderCompiler::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo)
+    Graphics::BgfxShaderInfo CreateBgfxShader(ShaderInfo vertexShaderInfo, ShaderInfo fragmentShaderInfo)
     {
-        ShaderCompiler::BgfxShaderInfo bgfxShaderInfo{};
+        Graphics::BgfxShaderInfo bgfxShaderInfo{};
 
         constexpr uint8_t BGFX_SHADER_BIN_VERSION{6};
 

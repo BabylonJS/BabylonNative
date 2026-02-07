@@ -5,7 +5,6 @@
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/PerfTrace.h>
 #include <Babylon/ScriptLoader.h>
-#include <Babylon/ShaderCache.h>
 
 #include <Babylon/Plugins/NativeCamera.h>
 #include <Babylon/Plugins/NativeCapture.h>
@@ -14,6 +13,7 @@
 #include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/Plugins/NativeOptimizations.h>
 #include <Babylon/Plugins/NativeTracing.h>
+#include <Babylon/Plugins/ShaderCache.h>
 #include <Babylon/Plugins/TestUtils.h>
 
 #include <Babylon/Polyfills/Blob.h>
@@ -63,7 +63,7 @@ AppContext::AppContext(
     m_device.emplace(graphicsConfig);
     m_deviceUpdate.emplace(m_device->GetUpdate("update"));
 
-    Babylon::ShaderCache::Enabled(true);
+    Babylon::Plugins::ShaderCache::Enable();
 
     m_device->StartRenderingCurrentFrame();
     m_deviceUpdate->Start();
@@ -141,6 +141,8 @@ AppContext::~AppContext()
         m_deviceUpdate->Finish();
         m_device->FinishRenderingCurrentFrame();
     }
+
+    Babylon::Plugins::ShaderCache::Disable();
 
     m_scriptLoader.reset();
     m_canvas.reset();

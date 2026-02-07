@@ -12,14 +12,14 @@ set(BABYLONJS_MATERIALS_ASSETS
 
 set(TEST_ASSETS
     "JavaScript/dist/tests.javaScript.all.js"
-    "JavaScript/dist/tests.nativeEngine.shaderCache.js")
+    "JavaScript/dist/tests.shaderCache.basicScene.js")
 
 set(SOURCES
     "Source/App.h"
     "Source/App.cpp"
     "Source/Tests.ExternalTexture.cpp"
     "Source/Tests.JavaScript.cpp"
-    "Source/Tests.NativeEngine.cpp"
+    "Source/Tests.ShaderCache.cpp"
     "Source/Utils.h"
     "Source/Utils.${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
@@ -58,6 +58,7 @@ target_link_libraries(UnitTests
     PRIVATE NativeEngine
     PRIVATE NativeEncoding
     PRIVATE ScriptLoader
+    PRIVATE ShaderCache
     PRIVATE UrlLib
     PRIVATE Window
     PRIVATE XMLHttpRequest

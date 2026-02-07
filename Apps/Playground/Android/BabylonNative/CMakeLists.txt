@@ -38,6 +38,7 @@ target_link_libraries(BabylonNativeJNI
     NativeTracing
     NativeXr
     ScriptLoader
+    ShaderCache
     TestUtils
     Window
     XMLHttpRequest)
