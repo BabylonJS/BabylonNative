@@ -316,6 +316,8 @@ mod enabled {
         adapter: WGPUAdapter,
         device: WGPUDevice,
         queue: WGPUQueue,
+        prefer_low_power: bool,
+        adapter_probe: AdapterProbeInfo,
         cached_shader_source: String,
         cached_entry_point: String,
         cached_pipeline: WGPUComputePipeline,
@@ -575,6 +577,45 @@ mod enabled {
         Ok(state.device)
     }
 
+    fn query_adapter_probe_info(adapter: WGPUAdapter) -> Result<AdapterProbeInfo, String> {
+        let mut adapter_info = WGPUAdapterInfo::default();
+        // SAFETY: `adapter` and `adapter_info` are valid pointers.
+        let status = unsafe { wgpuAdapterGetInfo(adapter, &mut adapter_info) };
+        if status != WGPU_STATUS_SUCCESS {
+            return Err(format!(
+                "wgpuAdapterGetInfo failed with status code {status}"
+            ));
+        }
+
+        let description = {
+            let primary = string_view_to_string(adapter_info.description);
+            if !primary.is_empty() {
+                primary
+            } else {
+                let fallback = string_view_to_string(adapter_info.device);
+                if !fallback.is_empty() {
+                    fallback
+                } else {
+                    "wgpu-native adapter".to_string()
+                }
+            }
+        };
+
+        let probe = AdapterProbeInfo {
+            backend: map_backend_to_babylon_backend(adapter_info.backend_type),
+            vendor_id: adapter_info.vendor_id,
+            device_id: adapter_info.device_id,
+            adapter_name: description,
+        };
+
+        // SAFETY: adapter_info contains owned output strings from the C API.
+        unsafe {
+            wgpuAdapterInfoFreeMembers(adapter_info);
+        }
+
+        Ok(probe)
+    }
+
     fn compute_runtime_cell() -> &'static Mutex<Option<ComputeRuntime>> {
         COMPUTE_RUNTIME.get_or_init(|| Mutex::new(None))
     }
@@ -604,6 +645,8 @@ mod enabled {
                 adapter,
                 device,
                 queue,
+                prefer_low_power,
+                adapter_probe: query_adapter_probe_info(adapter)?,
                 cached_shader_source: String::new(),
                 cached_entry_point: String::new(),
                 cached_pipeline: ptr::null_mut(),
@@ -640,81 +683,41 @@ mod enabled {
         result
     }
 
+    fn ensure_runtime_locked(
+        runtime_slot: &mut Option<ComputeRuntime>,
+        prefer_low_power: bool,
+    ) -> Result<&mut ComputeRuntime, String> {
+        let needs_rebuild = match runtime_slot.as_ref() {
+            Some(runtime) => runtime.prefer_low_power != prefer_low_power,
+            None => true,
+        };
+
+        if needs_rebuild {
+            *runtime_slot = Some(initialize_compute_runtime(prefer_low_power)?);
+        }
+
+        Ok(runtime_slot
+            .as_mut()
+            .expect("runtime initialized before returning mutable reference"))
+    }
+
     pub fn version() -> u32 {
         // SAFETY: Symbol is provided by upstream wgpu-native staticlib.
         unsafe { wgpuGetVersion() }
     }
 
+    pub fn ensure_bootstrap_runtime(prefer_low_power: bool) -> Result<AdapterProbeInfo, String> {
+        let mut runtime_guard = match compute_runtime_cell().lock() {
+            Ok(lock) => lock,
+            Err(poisoned) => poisoned.into_inner(),
+        };
+
+        let runtime = ensure_runtime_locked(&mut runtime_guard, prefer_low_power)?;
+        Ok(runtime.adapter_probe.clone())
+    }
+
     pub fn probe_adapter(prefer_low_power: bool) -> Result<AdapterProbeInfo, String> {
-        // SAFETY: Null descriptor is explicitly supported by webgpu.h APIs for
-        // default instance creation.
-        let instance = unsafe { wgpuCreateInstance(ptr::null()) };
-        if instance.is_null() {
-            return Err("wgpuCreateInstance returned null".to_string());
-        }
-
-        let mut adapter: WGPUAdapter = ptr::null_mut();
-        let mut device: WGPUDevice = ptr::null_mut();
-        let result = (|| -> Result<AdapterProbeInfo, String> {
-            adapter = request_adapter(instance, prefer_low_power)?;
-            device = request_device(instance, adapter)?;
-
-            let mut adapter_info = WGPUAdapterInfo::default();
-            // SAFETY: `adapter` and `adapter_info` are valid pointers.
-            let status = unsafe { wgpuAdapterGetInfo(adapter, &mut adapter_info) };
-            if status != WGPU_STATUS_SUCCESS {
-                return Err(format!(
-                    "wgpuAdapterGetInfo failed with status code {status}"
-                ));
-            }
-
-            let description = {
-                let primary = string_view_to_string(adapter_info.description);
-                if !primary.is_empty() {
-                    primary
-                } else {
-                    let fallback = string_view_to_string(adapter_info.device);
-                    if !fallback.is_empty() {
-                        fallback
-                    } else {
-                        "wgpu-native adapter".to_string()
-                    }
-                }
-            };
-
-            let probe = AdapterProbeInfo {
-                backend: map_backend_to_babylon_backend(adapter_info.backend_type),
-                vendor_id: adapter_info.vendor_id,
-                device_id: adapter_info.device_id,
-                adapter_name: description,
-            };
-
-            // SAFETY: adapter_info contains owned output strings from the C API.
-            unsafe {
-                wgpuAdapterInfoFreeMembers(adapter_info);
-            }
-
-            Ok(probe)
-        })();
-
-        if !device.is_null() {
-            // SAFETY: Device handle came from upstream callback and owns a ref.
-            unsafe {
-                wgpuDeviceRelease(device);
-            }
-        }
-        if !adapter.is_null() {
-            // SAFETY: Adapter handle came from upstream callback and owns a ref.
-            unsafe {
-                wgpuAdapterRelease(adapter);
-            }
-        }
-        // SAFETY: Instance handle was created by `wgpuCreateInstance`.
-        unsafe {
-            wgpuInstanceRelease(instance);
-        }
-
-        result
+        ensure_bootstrap_runtime(prefer_low_power)
     }
 
     pub fn dispatch_compute_global(
@@ -730,14 +733,7 @@ mod enabled {
             Err(poisoned) => poisoned.into_inner(),
         };
 
-        if runtime_guard.is_none() {
-            let runtime = initialize_compute_runtime(prefer_low_power)?;
-            *runtime_guard = Some(runtime);
-        }
-
-        let runtime = runtime_guard
-            .as_mut()
-            .expect("compute runtime initialized before dispatch");
+        let runtime = ensure_runtime_locked(&mut runtime_guard, prefer_low_power)?;
 
         let entry = if entry_point.is_empty() {
             "main"
@@ -892,7 +888,9 @@ mod enabled {
 }
 
 #[cfg(feature = "upstream_wgpu_native")]
-pub use enabled::{dispatch_compute_global, probe_adapter, version};
+pub use enabled::{
+    dispatch_compute_global, ensure_bootstrap_runtime, probe_adapter, version,
+};
 
 #[cfg(not(feature = "upstream_wgpu_native"))]
 pub fn version() -> u32 {
@@ -903,6 +901,12 @@ pub fn version() -> u32 {
 #[allow(dead_code)]
 pub fn probe_adapter(_prefer_low_power: bool) -> Result<AdapterProbeInfo, String> {
     Err("upstream wgpu-native probe is disabled at compile time".to_string())
+}
+
+#[cfg(not(feature = "upstream_wgpu_native"))]
+#[allow(dead_code)]
+pub fn ensure_bootstrap_runtime(_prefer_low_power: bool) -> Result<AdapterProbeInfo, String> {
+    Err("upstream wgpu-native bootstrap runtime is disabled at compile time".to_string())
 }
 
 #[cfg(not(feature = "upstream_wgpu_native"))]

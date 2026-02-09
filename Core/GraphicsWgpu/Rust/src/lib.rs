@@ -1439,15 +1439,16 @@ fn create_context(config: BabylonWgpuConfig) -> Result<Box<BackendContext>, Stri
     };
 
     #[cfg(feature = "upstream_wgpu_native")]
-    let upstream_probe = match upstream_wgpu_native::probe_adapter(config.prefer_low_power != 0) {
-        Ok(info) => Some(info),
-        Err(error) => {
-            log_backend_error(&format!(
-                "GraphicsWgpu upstream adapter probe failed: {error}"
-            ));
-            None
-        }
-    };
+    let upstream_probe =
+        match upstream_wgpu_native::ensure_bootstrap_runtime(config.prefer_low_power != 0) {
+            Ok(info) => Some(info),
+            Err(error) => {
+                log_backend_error(&format!(
+                    "GraphicsWgpu upstream adapter probe failed: {error}"
+                ));
+                None
+            }
+        };
 
     #[cfg(not(feature = "upstream_wgpu_native"))]
     let upstream_probe: Option<upstream_wgpu_native::AdapterProbeInfo> = None;

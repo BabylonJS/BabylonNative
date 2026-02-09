@@ -52,6 +52,9 @@
 - Extracted upstream `wgpu-native` C ABI bindings/dispatch logic into a separate
   thin shim crate (`Core/GraphicsWgpu/Rust/upstream-shim`) to reduce
   `lib.rs` coupling and isolate upstream interop concerns.
+- Added persistent upstream bootstrap runtime initialization (`instance` +
+  `adapter` + `device` + `queue`) in the shim and switched feature-enabled
+  `create_context` probe path to consume that runtime.
 
 ## Current Spike Reality (as of this branch)
 - `Core/GraphicsWgpu/Rust/src/lib.rs` currently includes a large local backend
@@ -173,7 +176,8 @@
 - [x] Wire upstream `wgpu-native` staticlib build + link path into Babylon CMake/Rust build.
 - [x] Introduce a thin Rust shim crate that only wraps upstream `wgpu-native` handles and callbacks.
 - [ ] Port adapter/device/surface bootstrap to upstream ABI.
-  - In progress: adapter/device request bootstrap probe now uses upstream C ABI.
+  - In progress: adapter/device request bootstrap now initializes and reuses a
+    persistent upstream runtime via the shim.
 - [ ] Port queue submit + present path to upstream ABI.
 - [ ] Port async callback and error propagation tests.
 - [ ] Remove local duplicate render/pipeline management code once parity is achieved.
