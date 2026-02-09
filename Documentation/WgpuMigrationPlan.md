@@ -38,6 +38,14 @@
   churn and hot-path heap pressure.
 - Optimized debug canvas texture import path to reuse GPU texture resources when
   dimensions are stable, avoiding per-frame texture/view/bind-group rebuilds.
+- Eliminated a CanvasWgpu hot-loop allocation leak by avoiding render-target
+  recreation when width/height/DPI are unchanged across `nvgBeginFrame`.
+- Added native `destroy` aliases for CanvasWgpu `Canvas` and `Context` objects,
+  and wired disposal to release retained JS context references.
+- Reduced NativeWebGPU per-frame JS wrapper churn by caching shared no-op and
+  draw-marker callbacks instead of creating new function objects repeatedly.
+- Reworked local fallback compute dispatch to reuse a persistent device/queue
+  and cached compute pipeline, removing per-dispatch adapter/device setup.
 
 ## Current Spike Reality (as of this branch)
 - `Core/GraphicsWgpu/Rust/src/lib.rs` currently includes a large local backend

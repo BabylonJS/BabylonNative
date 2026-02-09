@@ -17,6 +17,15 @@ static DEBUG_TEXTURE_WIDTH: AtomicU32 = AtomicU32::new(0);
 static DEBUG_TEXTURE_HEIGHT: AtomicU32 = AtomicU32::new(0);
 static LAST_ERROR: OnceLock<Mutex<String>> = OnceLock::new();
 static DEBUG_TEXTURE_UPLOAD: OnceLock<Mutex<Option<DebugTextureUpload>>> = OnceLock::new();
+static COMPUTE_DISPATCH_CONTEXT: OnceLock<Mutex<Option<ComputeDispatchContext>>> = OnceLock::new();
+
+struct ComputeDispatchContext {
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    cached_shader_source: String,
+    cached_entry_point: String,
+    cached_pipeline: Option<wgpu::ComputePipeline>,
+}
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -1726,72 +1735,137 @@ fn dispatch_compute_global(shader_source: &str, entry_point: &str, x: u32, y: u3
 
 #[cfg(not(feature = "upstream_wgpu_native"))]
 fn dispatch_compute_global(shader_source: &str, entry_point: &str, x: u32, y: u32, z: u32) -> bool {
-    let instance = create_instance();
+    fn compute_dispatch_context() -> &'static Mutex<Option<ComputeDispatchContext>> {
+        COMPUTE_DISPATCH_CONTEXT.get_or_init(|| Mutex::new(None))
+    }
 
-    let adapter = match pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-        power_preference: wgpu::PowerPreference::HighPerformance,
-        force_fallback_adapter: false,
-        compatible_surface: None,
-    })) {
-        Ok(adapter) => adapter,
-        Err(_) => match pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
-            force_fallback_adapter: true,
-            compatible_surface: None,
-        })) {
-            Ok(fallback_adapter) => fallback_adapter,
-            Err(_) => return false,
-        },
+    fn initialize_compute_dispatch_context() -> Result<ComputeDispatchContext, String> {
+        let instance = create_instance();
+
+        let adapter =
+            match pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: wgpu::PowerPreference::HighPerformance,
+                force_fallback_adapter: false,
+                compatible_surface: None,
+            })) {
+                Ok(adapter) => adapter,
+                Err(_) => {
+                    pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+                        power_preference: wgpu::PowerPreference::HighPerformance,
+                        force_fallback_adapter: true,
+                        compatible_surface: None,
+                    }))
+                    .map_err(|error| {
+                        format!("request_adapter failed for compute context: {error}")
+                    })?
+                }
+            };
+
+        let device_descriptor = wgpu::DeviceDescriptor {
+            label: Some("babylon-native-webgpu.compute-device"),
+            required_features: wgpu::Features::empty(),
+            required_limits: adapter.limits(),
+            experimental_features: wgpu::ExperimentalFeatures::disabled(),
+            memory_hints: wgpu::MemoryHints::default(),
+            trace: wgpu::Trace::default(),
+        };
+
+        let (device, queue) = pollster::block_on(adapter.request_device(&device_descriptor))
+            .map_err(|error| format!("request_device failed for compute context: {error}"))?;
+
+        Ok(ComputeDispatchContext {
+            device,
+            queue,
+            cached_shader_source: String::new(),
+            cached_entry_point: String::new(),
+            cached_pipeline: None,
+        })
+    }
+
+    let mut guard = match compute_dispatch_context().lock() {
+        Ok(lock) => lock,
+        Err(poisoned) => poisoned.into_inner(),
     };
 
-    let device_descriptor = wgpu::DeviceDescriptor {
-        label: Some("babylon-native-webgpu.compute-device"),
-        required_features: wgpu::Features::empty(),
-        required_limits: adapter.limits(),
-        experimental_features: wgpu::ExperimentalFeatures::disabled(),
-        memory_hints: wgpu::MemoryHints::default(),
-        trace: wgpu::Trace::default(),
-    };
+    if guard.is_none() {
+        match initialize_compute_dispatch_context() {
+            Ok(context) => {
+                *guard = Some(context);
+            }
+            Err(error) => {
+                log_backend_error(&format!(
+                    "local compute dispatch context initialization failed: {error}"
+                ));
+                return false;
+            }
+        }
+    }
 
-    let (device, queue) = match pollster::block_on(adapter.request_device(&device_descriptor)) {
-        Ok(result) => result,
-        Err(_) => return false,
-    };
+    let context = guard
+        .as_mut()
+        .expect("compute dispatch context initialized before use");
 
-    let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("babylon-native-webgpu.compute-shader"),
-        source: wgpu::ShaderSource::Wgsl(shader_source.into()),
-    });
+    let pipeline_needs_rebuild = context.cached_pipeline.is_none()
+        || context.cached_shader_source != shader_source
+        || context.cached_entry_point != entry_point;
 
-    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-        label: Some("babylon-native-webgpu.compute-layout"),
-        bind_group_layouts: &[],
-        immediate_size: 0,
-    });
+    if pipeline_needs_rebuild {
+        let shader_module = context
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("babylon-native-webgpu.compute-shader"),
+                source: wgpu::ShaderSource::Wgsl(shader_source.into()),
+            });
 
-    let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-        label: Some("babylon-native-webgpu.compute-pipeline"),
-        layout: Some(&pipeline_layout),
-        module: &shader_module,
-        entry_point: Some(entry_point),
-        compilation_options: wgpu::PipelineCompilationOptions::default(),
-        cache: None,
-    });
+        let pipeline_layout =
+            context
+                .device
+                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: Some("babylon-native-webgpu.compute-layout"),
+                    bind_group_layouts: &[],
+                    immediate_size: 0,
+                });
 
-    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("babylon-native-webgpu.compute-encoder"),
-    });
+        let compute_pipeline =
+            context
+                .device
+                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some("babylon-native-webgpu.compute-pipeline"),
+                    layout: Some(&pipeline_layout),
+                    module: &shader_module,
+                    entry_point: Some(entry_point),
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                    cache: None,
+                });
+
+        context.cached_shader_source.clear();
+        context.cached_shader_source.push_str(shader_source);
+        context.cached_entry_point.clear();
+        context.cached_entry_point.push_str(entry_point);
+        context.cached_pipeline = Some(compute_pipeline);
+    }
+
+    let compute_pipeline = context
+        .cached_pipeline
+        .as_ref()
+        .expect("compute pipeline cached before encoding dispatch");
+
+    let mut encoder = context
+        .device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("babylon-native-webgpu.compute-encoder"),
+        });
 
     {
         let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: Some("babylon-native-webgpu.compute-pass"),
             timestamp_writes: None,
         });
-        pass.set_pipeline(&compute_pipeline);
+        pass.set_pipeline(compute_pipeline);
         pass.dispatch_workgroups(x.max(1), y.max(1), z.max(1));
     }
 
-    queue.submit(Some(encoder.finish()));
+    context.queue.submit(Some(encoder.finish()));
     true
 }
 
