@@ -29,6 +29,10 @@
 - Converted the `upstream_wgpu_native` feature seam from no-op to active probe:
   backend init now records upstream `wgpu-native` version via `wgpuGetVersion()`
   and includes that metadata in adapter diagnostics.
+- Expanded the upstream probe to use `wgpu-native` C ABI request flows
+  (`wgpuInstanceRequestAdapter` + `wgpuAdapterRequestDevice` + `wgpuInstanceWaitAny`)
+  so adapter/device bootstrap viability is validated through upstream primitives
+  before local fallback path execution.
 - Removed production `std::async` usage from NativeWebGPU Promise APIs (kept only
   under test hooks) and switched to JS-runtime deferred dispatch to cut thread
   churn and hot-path heap pressure.
@@ -155,6 +159,7 @@
 - [x] Wire upstream `wgpu-native` staticlib build + link path into Babylon CMake/Rust build.
 - [ ] Introduce a thin Rust shim crate that only wraps upstream `wgpu-native` handles and callbacks.
 - [ ] Port adapter/device/surface bootstrap to upstream ABI.
+  - In progress: adapter/device request bootstrap probe now uses upstream C ABI.
 - [ ] Port queue submit + present path to upstream ABI.
 - [ ] Port async callback and error propagation tests.
 - [ ] Remove local duplicate render/pipeline management code once parity is achieved.

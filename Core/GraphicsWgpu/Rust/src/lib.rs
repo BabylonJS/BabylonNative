@@ -1,31 +1,13 @@
+#[cfg(target_os = "android")]
+use std::ffi::CString;
 use std::ffi::{c_char, c_void, CStr};
 use std::ptr;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
-#[cfg(target_os = "android")]
-use std::ffi::CString;
 
 use wgpu::util::DeviceExt;
 
-#[cfg(feature = "upstream_wgpu_native")]
-mod upstream_wgpu_native {
-    unsafe extern "C" {
-        fn wgpuGetVersion() -> u32;
-    }
-
-    pub fn version() -> u32 {
-        // SAFETY: Symbol is provided by upstream wgpu-native staticlib when
-        // upstream_wgpu_native is enabled in CMake/Cargo.
-        unsafe { wgpuGetVersion() }
-    }
-}
-
-#[cfg(not(feature = "upstream_wgpu_native"))]
-mod upstream_wgpu_native {
-    pub fn version() -> u32 {
-        0
-    }
-}
+mod upstream_wgpu_native;
 
 static WEBGPU_DRAW_ENABLED: AtomicBool = AtomicBool::new(false);
 static RENDER_FRAME_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -741,7 +723,9 @@ impl BackendContext {
     }
 
     fn reconfigure_surface(&mut self) {
-        if let (Some(surface), Some(surface_config)) = (self.surface.as_ref(), self.surface_config.as_mut()) {
+        if let (Some(surface), Some(surface_config)) =
+            (self.surface.as_ref(), self.surface_config.as_mut())
+        {
             surface_config.width = self.width;
             surface_config.height = self.height;
             surface.configure(&self.device, surface_config);
@@ -749,7 +733,8 @@ impl BackendContext {
     }
 
     fn resize(&mut self, width: u32, height: u32) {
-        (self.width, self.height) = Self::clamped_extent(width, height, self.max_texture_dimension_2d);
+        (self.width, self.height) =
+            Self::clamped_extent(width, height, self.max_texture_dimension_2d);
 
         if self.surface.is_some() {
             self.reconfigure_surface();
@@ -842,11 +827,11 @@ impl BackendContext {
                 .clone()
         };
 
-        let mut encoder =
-            self.device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("babylon-native-webgpu.encoder"),
-                });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("babylon-native-webgpu.encoder"),
+            });
 
         let draw_enabled = WEBGPU_DRAW_ENABLED.load(Ordering::Acquire);
 
@@ -884,7 +869,8 @@ impl BackendContext {
                 render_pass.set_pipeline(&self.render_pipeline);
                 render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
                 render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-                render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+                render_pass
+                    .set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
                 render_pass.draw_indexed(0..self.index_count, 0, 0..1);
             }
         }
@@ -969,21 +955,13 @@ pub extern "C" fn babylon_wgpu_set_debug_texture_from_native(
 fn bytes_of<T>(value: &T) -> &[u8] {
     // SAFETY: T is plain-old-data for our FFI/vertex/uniform structs.
     unsafe {
-        std::slice::from_raw_parts(
-            (value as *const T).cast::<u8>(),
-            std::mem::size_of::<T>(),
-        )
+        std::slice::from_raw_parts((value as *const T).cast::<u8>(), std::mem::size_of::<T>())
     }
 }
 
 fn bytes_of_slice<T>(slice: &[T]) -> &[u8] {
     // SAFETY: T is plain-old-data for our FFI/vertex structs.
-    unsafe {
-        std::slice::from_raw_parts(
-            slice.as_ptr().cast::<u8>(),
-            std::mem::size_of_val(slice),
-        )
-    }
+    unsafe { std::slice::from_raw_parts(slice.as_ptr().cast::<u8>(), std::mem::size_of_val(slice)) }
 }
 
 fn mul_matrix(a: [f32; 16], b: [f32; 16]) -> [f32; 16] {
@@ -1075,11 +1053,7 @@ fn fill_adapter_name(name: &str) -> [c_char; 128] {
 
     // SAFETY: output and bytes are valid for copy_count bytes and non-overlapping.
     unsafe {
-        std::ptr::copy_nonoverlapping(
-            bytes.as_ptr(),
-            output.as_mut_ptr().cast::<u8>(),
-            copy_count,
-        );
+        std::ptr::copy_nonoverlapping(bytes.as_ptr(), output.as_mut_ptr().cast::<u8>(), copy_count);
     }
 
     output
@@ -1253,8 +1227,7 @@ fn read_texture_rgba_from_native_handle(
         return Err("invalid native texture width".to_string());
     }
 
-    let padded_bytes_per_row =
-        align_to(unpadded_bytes_per_row, wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
+    let padded_bytes_per_row = align_to(unpadded_bytes_per_row, wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
     let buffer_size = (padded_bytes_per_row as u64).saturating_mul(height as u64);
     if buffer_size == 0 {
         return Err("invalid native texture size".to_string());
@@ -1345,9 +1318,8 @@ fn create_surface(
         // SAFETY: The host passes a valid CoreAnimation layer pointer that stays alive
         // for the lifetime of this backend context.
         return unsafe {
-            instance.create_surface_unsafe(wgpu::SurfaceTargetUnsafe::CoreAnimationLayer(
-                surface_layer,
-            ))
+            instance
+                .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::CoreAnimationLayer(surface_layer))
         }
         .map(Some)
         .map_err(|error| format!("Failed to create CoreAnimation surface: {error}"));
@@ -1421,6 +1393,20 @@ fn create_context(config: BabylonWgpuConfig) -> Result<Box<BackendContext>, Stri
     } else {
         wgpu::PowerPreference::HighPerformance
     };
+
+    #[cfg(feature = "upstream_wgpu_native")]
+    let upstream_probe = match upstream_wgpu_native::probe_adapter(config.prefer_low_power != 0) {
+        Ok(info) => Some(info),
+        Err(error) => {
+            log_backend_error(&format!(
+                "GraphicsWgpu upstream adapter probe failed: {error}"
+            ));
+            None
+        }
+    };
+
+    #[cfg(not(feature = "upstream_wgpu_native"))]
+    let upstream_probe: Option<upstream_wgpu_native::AdapterProbeInfo> = None;
 
     let mut used_fallback_adapter = false;
     let mut adapter_errors: Vec<String> = Vec::new();
@@ -1507,8 +1493,12 @@ fn create_context(config: BabylonWgpuConfig) -> Result<Box<BackendContext>, Stri
     }
 
     #[allow(unused_mut)]
-    let mut adapter =
-        adapter.ok_or_else(|| format!("Failed to acquire GPU adapter. {}", adapter_errors.join("; ")))?;
+    let mut adapter = adapter.ok_or_else(|| {
+        format!(
+            "Failed to acquire GPU adapter. {}",
+            adapter_errors.join("; ")
+        )
+    })?;
 
     if used_fallback_adapter {
         log_backend_error(
@@ -1668,6 +1658,26 @@ fn create_context(config: BabylonWgpuConfig) -> Result<Box<BackendContext>, Stri
         index_count,
     ) = BackendContext::create_pipeline_resources(&device, &queue, render_target_format);
 
+    let context_info = if let Some(upstream_info) = upstream_probe.as_ref() {
+        BabylonWgpuInfo {
+            backend: upstream_info.backend,
+            vendor_id: upstream_info.vendor_id,
+            device_id: upstream_info.device_id,
+            adapter_name: fill_adapter_name(
+                decorated_adapter_name(upstream_info.adapter_name.as_str()).as_str(),
+            ),
+        }
+    } else {
+        BabylonWgpuInfo {
+            backend: backend_to_u32(adapter_info.backend),
+            vendor_id: adapter_info.vendor,
+            device_id: adapter_info.device,
+            adapter_name: fill_adapter_name(
+                decorated_adapter_name(adapter_info.name.as_str()).as_str(),
+            ),
+        }
+    };
+
     let context = BackendContext {
         device,
         queue,
@@ -1694,12 +1704,7 @@ fn create_context(config: BabylonWgpuConfig) -> Result<Box<BackendContext>, Stri
         width,
         height,
         frame_index: 0,
-        info: BabylonWgpuInfo {
-            backend: backend_to_u32(adapter_info.backend),
-            vendor_id: adapter_info.vendor,
-            device_id: adapter_info.device,
-            adapter_name: fill_adapter_name(decorated_adapter_name(adapter_info.name.as_str()).as_str()),
-        },
+        info: context_info,
     };
 
     Ok(Box::new(context))
