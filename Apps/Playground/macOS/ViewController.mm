@@ -42,7 +42,6 @@ std::optional<AppContext> appContext{};
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-    // Required for mouseMoved events.
     NSTrackingArea* trackingArea = [
         [NSTrackingArea alloc]
         initWithRect:NSZeroRect
@@ -64,6 +63,7 @@ std::optional<AppContext> appContext{};
     engineView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
     [[self view] addSubview:engineView];
     engineView.delegate = engineView;
+
     size_t width = static_cast<size_t>(engineView.drawableSize.width);
     size_t height = static_cast<size_t>(engineView.drawableSize.height);
 
@@ -74,12 +74,24 @@ std::optional<AppContext> appContext{};
         [](const char* message)
         {
             NSLog(@"%s", message);
+        },
+        [](Napi::Env env)
+        {
+            auto statusCallback = Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
+                if (info.Length() > 0)
+                {
+                    auto message = info[0].ToString().Utf8Value();
+                    NSLog(@"[Playground] %s", message.c_str());
+                }
+            });
+            env.Global().Set("__nativePlaygroundStatus", statusCallback);
         });
 
-    NSArray *arguments = [[NSProcessInfo processInfo] arguments];
+    NSArray* arguments = [[NSProcessInfo processInfo] arguments];
     if (arguments.count == 1)
     {
-        appContext->ScriptLoader().LoadScript("app:///Scripts/experience.js");
+        appContext->ScriptLoader().LoadScript("app:///Scripts/webgpu_smoke.js");
+        appContext->ScriptLoader().LoadScript("app:///Scripts/playground_runner.js");
     }
     else
     {
@@ -103,115 +115,48 @@ std::optional<AppContext> appContext{};
     [self uninitialize];
 }
 
-- (CGFloat)getScreenHeight {
-    return [self view].frame.size.height;
+- (void)mouseMoved:(NSEvent *)theEvent {
+    (void)theEvent;
 }
 
-- (void)mouseMoved:(NSEvent *) theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseMove(eventLocation.x * screenScale, invertedY * screenScale);
-    }
-}
-
-- (void)mouseDown:(NSEvent *) theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, eventLocation.x * screenScale, invertedY * screenScale);
-    }
+- (void)mouseDown:(NSEvent *)theEvent {
+    (void)theEvent;
 }
 
 - (void)mouseDragged:(NSEvent *)theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseMove(eventLocation.x * screenScale, invertedY * screenScale);
-    }
+    (void)theEvent;
 }
 
-- (void)mouseUp:(NSEvent *) theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, eventLocation.x * screenScale, invertedY * screenScale);
-    }
+- (void)mouseUp:(NSEvent *)theEvent {
+    (void)theEvent;
 }
 
-- (void)otherMouseDown:(NSEvent *) theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, eventLocation.x * screenScale, invertedY * screenScale);
-    }
+- (void)otherMouseDown:(NSEvent *)theEvent {
+    (void)theEvent;
 }
 
 - (void)otherMouseDragged:(NSEvent *)theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseMove(eventLocation.x * screenScale, invertedY * screenScale);
-    }
+    (void)theEvent;
 }
 
-- (void)otherMouseUp:(NSEvent *) theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, eventLocation.x * screenScale, invertedY * screenScale);
-    }
+- (void)otherMouseUp:(NSEvent *)theEvent {
+    (void)theEvent;
 }
 
-- (void)rightMouseDown:(NSEvent *) theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, eventLocation.x * screenScale, invertedY * screenScale);
-    }
+- (void)rightMouseDown:(NSEvent *)theEvent {
+    (void)theEvent;
 }
 
 - (void)rightMouseDragged:(NSEvent *)theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseMove(eventLocation.x * screenScale, invertedY * screenScale);
-    }
+    (void)theEvent;
 }
 
-- (void)rightMouseUp:(NSEvent *) theEvent {
-    if (appContext && appContext->Input())
-    {
-        NSPoint eventLocation = [theEvent locationInWindow];
-        auto invertedY = [self getScreenHeight] - eventLocation.y;
-        CGFloat screenScale = [[NSScreen mainScreen] backingScaleFactor];
-        appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, eventLocation.x * screenScale, invertedY * screenScale);
-    }
+- (void)rightMouseUp:(NSEvent *)theEvent {
+    (void)theEvent;
 }
 
-- (void)scrollWheel:(NSEvent *) theEvent {
-    if (appContext && appContext->Input())
-    {
-        appContext->Input()->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -theEvent.deltaY);
-    }
+- (void)scrollWheel:(NSEvent *)theEvent {
+    (void)theEvent;
 }
 
 - (IBAction)refresh:(id)__unused sender

@@ -158,7 +158,7 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
     @Deprecated
     @Override
     public void surfaceRedrawNeeded(SurfaceHolder holder) {
-        // Redraw happens in the bgfx thread. No need to handle it here.
+        // Redraw happens in the render thread. No need to handle it here.
     }
 
     @Override

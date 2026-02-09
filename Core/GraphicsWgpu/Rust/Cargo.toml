@@ -1,0 +1,11 @@
+[package]
+name = "babylon_graphics_backend"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+pollster = "0.4.0"
+wgpu = "28.0.0"

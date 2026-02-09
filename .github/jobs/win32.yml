@@ -42,9 +42,8 @@ jobs:
         parameters:
           vmImage: ${{parameters.vmImage}}
 
-      # BGFX_CONFIG_MAX_FRAME_BUFFERS is set so enough Framebuffers are available before V8 starts disposing unused ones
       - script: |
-          cmake -G "Visual Studio 17 2022" -B build${{variables.solutionName}} -A ${{parameters.platform}} ${{variables.jsEngineDefine}} -D BX_CONFIG_DEBUG=ON -D GRAPHICS_API=${{parameters.graphics_api}} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256 -D BABYLON_DEBUG_TRACE=ON -D ENABLE_SANITIZERS=$(SANITIZER_FLAG)
+          cmake -G "Visual Studio 17 2022" -B build${{variables.solutionName}} -A ${{parameters.platform}} ${{variables.jsEngineDefine}} -D GRAPHICS_API=${{parameters.graphics_api}} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D ENABLE_SANITIZERS=$(SANITIZER_FLAG)
         displayName: "Generate ${{variables.solutionName}} solution"
 
       - task: MSBuild@1
@@ -59,10 +58,6 @@ jobs:
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpType /t REG_DWORD /d 2
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpCount /t REG_DWORD /d 1
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
-          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe"
-          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpType /t REG_DWORD /d 2
-          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpCount /t REG_DWORD /d 1
-          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
         displayName: "Enable Crash Dumps"
 
       - powershell: |
@@ -107,21 +102,6 @@ jobs:
         inputs:
           sourceFolder: "build${{variables.solutionName}}/Apps/Playground/RelWithDebInfo"
           contents: Playground.*
-          targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
-          cleanTargetFolder: false
-        displayName: "Stage test app exe/pdb for publishing"
-        condition: failed()
-
-      - script: |
-          cd build${{variables.solutionName}}\Apps\UnitTests
-          cd RelWithDebInfo
-          UnitTests
-        displayName: "Unit Tests"
-
-      - task: CopyFiles@2
-        inputs:
-          sourceFolder: "build${{variables.solutionName}}/Apps/UnitTests/RelWithDebInfo"
-          contents: UnitTests.*
           targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
           cleanTargetFolder: false
         displayName: "Stage test app exe/pdb for publishing"

@@ -3,26 +3,16 @@
 #include <Babylon/AppRuntime.h>
 #include <Babylon/DebugTrace.h>
 #include <Babylon/Graphics/Device.h>
-#include <Babylon/PerfTrace.h>
 #include <Babylon/ScriptLoader.h>
-#include <Babylon/ShaderCache.h>
 
-#include <Babylon/Plugins/NativeCamera.h>
-#include <Babylon/Plugins/NativeCapture.h>
-#include <Babylon/Plugins/NativeEncoding.h>
-#include <Babylon/Plugins/NativeEngine.h>
-#include <Babylon/Plugins/NativeInput.h>
-#include <Babylon/Plugins/NativeOptimizations.h>
-#include <Babylon/Plugins/NativeTracing.h>
-#include <Babylon/Plugins/TestUtils.h>
+#include <Babylon/Plugins/NativeWebGPU.h>
 
 #include <Babylon/Polyfills/Blob.h>
-#include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/Polyfills/Console.h>
+#include <Babylon/Polyfills/URL.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 
-#include <iostream>
 #include <sstream>
 
 namespace
@@ -52,7 +42,6 @@ AppContext::AppContext(
 {
     Babylon::DebugTrace::EnableDebugTrace(true);
     Babylon::DebugTrace::SetTraceOutput(debugLog);
-    Babylon::PerfTrace::SetLevel(Babylon::PerfTrace::Level::Mark);
 
     Babylon::Graphics::Configuration graphicsConfig{};
     graphicsConfig.Window = window;
@@ -63,27 +52,21 @@ AppContext::AppContext(
     m_device.emplace(graphicsConfig);
     m_deviceUpdate.emplace(m_device->GetUpdate("update"));
 
-    Babylon::ShaderCache::Enabled(true);
-
     m_device->StartRenderingCurrentFrame();
     m_deviceUpdate->Start();
 
     Babylon::AppRuntime::Options options{};
-
     options.EnableDebugger = true;
-
     options.UnhandledExceptionHandler = [debugLog](const Napi::Error& error) {
         std::ostringstream ss{};
         ss << "[Uncaught Error] " << Napi::GetErrorString(error);
-
         debugLog(ss.str().data());
-
         std::quick_exit(1);
     };
 
     m_runtime.emplace(options);
 
-    m_runtime->Dispatch([this, window, debugLog, additionalInit = std::move(additionalInit)](Napi::Env env) {
+    m_runtime->Dispatch([this, debugLog, additionalInit = std::move(additionalInit)](Napi::Env env) {
         m_device->AddToJavaScript(env);
 
         Babylon::Polyfills::Blob::Initialize(env);
@@ -95,26 +78,10 @@ AppContext::AppContext(
         });
 
         Babylon::Polyfills::Window::Initialize(env);
-
+        Babylon::Polyfills::URL::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
 
-        m_canvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
-
-        Babylon::Plugins::NativeTracing::Initialize(env);
-
-        Babylon::Plugins::NativeEncoding::Initialize(env);
-
-        Babylon::Plugins::NativeEngine::Initialize(env);
-
-        Babylon::Plugins::NativeOptimizations::Initialize(env);
-
-        Babylon::Plugins::NativeCapture::Initialize(env);
-
-        Babylon::Plugins::NativeCamera::Initialize(env);
-
-        m_input = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
-
-        Babylon::Plugins::TestUtils::Initialize(env, window);
+        Babylon::Plugins::NativeWebGPU::Initialize(env);
 
         if (additionalInit)
         {
@@ -124,8 +91,6 @@ AppContext::AppContext(
 
     m_scriptLoader.emplace(*m_runtime);
     m_scriptLoader->LoadScript("app:///Scripts/ammo.js");
-    // Commenting out recast.js for now because v8jsi is incompatible with asm.js.
-    // m_scriptLoader->LoadScript("app:///Scripts/recast.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylon.max.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylonjs.loaders.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylonjs.materials.js");
@@ -143,7 +108,6 @@ AppContext::~AppContext()
     }
 
     m_scriptLoader.reset();
-    m_canvas.reset();
     m_input = {};
     m_runtime.reset();
     m_deviceUpdate.reset();
