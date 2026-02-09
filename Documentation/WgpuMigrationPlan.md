@@ -46,6 +46,9 @@
   draw-marker callbacks instead of creating new function objects repeatedly.
 - Reworked local fallback compute dispatch to reuse a persistent device/queue
   and cached compute pipeline, removing per-dispatch adapter/device setup.
+- Reworked upstream `wgpu-native` compute dispatch path to reuse a persistent
+  runtime (instance/adapter/device/queue) plus cached pipeline, removing
+  per-dispatch bootstrap and reducing hot-path allocation churn.
 
 ## Current Spike Reality (as of this branch)
 - `Core/GraphicsWgpu/Rust/src/lib.rs` currently includes a large local backend

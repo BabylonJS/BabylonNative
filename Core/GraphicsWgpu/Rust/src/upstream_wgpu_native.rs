@@ -15,6 +15,7 @@ pub struct AdapterProbeInfo {
 mod enabled {
     use super::*;
     use std::slice;
+    use std::sync::{Mutex, OnceLock};
     use std::thread;
     use std::time::{Duration, Instant};
 
@@ -310,6 +311,58 @@ mod enabled {
         }
     }
 
+    struct ComputeRuntime {
+        instance: WGPUInstance,
+        adapter: WGPUAdapter,
+        device: WGPUDevice,
+        queue: WGPUQueue,
+        cached_shader_source: String,
+        cached_entry_point: String,
+        cached_pipeline: WGPUComputePipeline,
+    }
+
+    impl Drop for ComputeRuntime {
+        fn drop(&mut self) {
+            if !self.cached_pipeline.is_null() {
+                // SAFETY: Handle belongs to this runtime and is released exactly once.
+                unsafe {
+                    wgpuComputePipelineRelease(self.cached_pipeline);
+                }
+                self.cached_pipeline = ptr::null_mut();
+            }
+            if !self.queue.is_null() {
+                // SAFETY: Handle belongs to this runtime and is released exactly once.
+                unsafe {
+                    wgpuQueueRelease(self.queue);
+                }
+                self.queue = ptr::null_mut();
+            }
+            if !self.device.is_null() {
+                // SAFETY: Handle belongs to this runtime and is released exactly once.
+                unsafe {
+                    wgpuDeviceRelease(self.device);
+                }
+                self.device = ptr::null_mut();
+            }
+            if !self.adapter.is_null() {
+                // SAFETY: Handle belongs to this runtime and is released exactly once.
+                unsafe {
+                    wgpuAdapterRelease(self.adapter);
+                }
+                self.adapter = ptr::null_mut();
+            }
+            if !self.instance.is_null() {
+                // SAFETY: Handle belongs to this runtime and is released exactly once.
+                unsafe {
+                    wgpuInstanceRelease(self.instance);
+                }
+                self.instance = ptr::null_mut();
+            }
+        }
+    }
+
+    static COMPUTE_RUNTIME: OnceLock<Mutex<Option<ComputeRuntime>>> = OnceLock::new();
+
     fn string_view_to_string(view: WGPUStringView) -> String {
         if view.data.is_null() {
             return String::new();
@@ -518,6 +571,71 @@ mod enabled {
         Ok(state.device)
     }
 
+    fn compute_runtime_cell() -> &'static Mutex<Option<ComputeRuntime>> {
+        COMPUTE_RUNTIME.get_or_init(|| Mutex::new(None))
+    }
+
+    fn initialize_compute_runtime(prefer_low_power: bool) -> Result<ComputeRuntime, String> {
+        // SAFETY: Null descriptor is explicitly supported by webgpu.h APIs for
+        // default instance creation.
+        let instance = unsafe { wgpuCreateInstance(ptr::null()) };
+        if instance.is_null() {
+            return Err("wgpuCreateInstance returned null".to_string());
+        }
+
+        let mut adapter: WGPUAdapter = ptr::null_mut();
+        let mut device: WGPUDevice = ptr::null_mut();
+        let mut queue: WGPUQueue = ptr::null_mut();
+        let result = (|| -> Result<ComputeRuntime, String> {
+            adapter = request_adapter(instance, prefer_low_power)?;
+            device = request_device(instance, adapter)?;
+            // SAFETY: Device handle is valid on successful request.
+            queue = unsafe { wgpuDeviceGetQueue(device) };
+            if queue.is_null() {
+                return Err("wgpuDeviceGetQueue returned null".to_string());
+            }
+
+            Ok(ComputeRuntime {
+                instance,
+                adapter,
+                device,
+                queue,
+                cached_shader_source: String::new(),
+                cached_entry_point: String::new(),
+                cached_pipeline: ptr::null_mut(),
+            })
+        })();
+
+        if let Err(error) = result {
+            if !queue.is_null() {
+                // SAFETY: Queue was acquired from device before failure.
+                unsafe {
+                    wgpuQueueRelease(queue);
+                }
+            }
+            if !device.is_null() {
+                // SAFETY: Device was acquired before failure.
+                unsafe {
+                    wgpuDeviceRelease(device);
+                }
+            }
+            if !adapter.is_null() {
+                // SAFETY: Adapter was acquired before failure.
+                unsafe {
+                    wgpuAdapterRelease(adapter);
+                }
+            }
+            // SAFETY: Instance was created by this function.
+            unsafe {
+                wgpuInstanceRelease(instance);
+            }
+
+            return Err(error);
+        }
+
+        result
+    }
+
     pub fn version() -> u32 {
         // SAFETY: Symbol is provided by upstream wgpu-native staticlib.
         unsafe { wgpuGetVersion() }
@@ -603,25 +721,38 @@ mod enabled {
         z: u32,
         prefer_low_power: bool,
     ) -> Result<(), String> {
-        // SAFETY: Null descriptor is explicitly supported by webgpu.h APIs for
-        // default instance creation.
-        let instance = unsafe { wgpuCreateInstance(ptr::null()) };
-        if instance.is_null() {
-            return Err("wgpuCreateInstance returned null".to_string());
+        let mut runtime_guard = match compute_runtime_cell().lock() {
+            Ok(lock) => lock,
+            Err(poisoned) => poisoned.into_inner(),
+        };
+
+        if runtime_guard.is_none() {
+            let runtime = initialize_compute_runtime(prefer_low_power)?;
+            *runtime_guard = Some(runtime);
         }
 
-        let mut adapter: WGPUAdapter = ptr::null_mut();
-        let mut device: WGPUDevice = ptr::null_mut();
-        let mut queue: WGPUQueue = ptr::null_mut();
-        let mut shader_module: WGPUShaderModule = ptr::null_mut();
-        let mut compute_pipeline: WGPUComputePipeline = ptr::null_mut();
-        let mut command_encoder: WGPUCommandEncoder = ptr::null_mut();
-        let mut compute_pass: WGPUComputePassEncoder = ptr::null_mut();
-        let mut command_buffer: WGPUCommandBuffer = ptr::null_mut();
+        let runtime = runtime_guard
+            .as_mut()
+            .expect("compute runtime initialized before dispatch");
 
-        let result = (|| -> Result<(), String> {
-            adapter = request_adapter(instance, prefer_low_power)?;
-            device = request_device(instance, adapter)?;
+        let entry = if entry_point.is_empty() {
+            "main"
+        } else {
+            entry_point
+        };
+
+        let pipeline_needs_rebuild = runtime.cached_pipeline.is_null()
+            || runtime.cached_shader_source != shader_source
+            || runtime.cached_entry_point != entry;
+
+        if pipeline_needs_rebuild {
+            if !runtime.cached_pipeline.is_null() {
+                // SAFETY: Existing cached pipeline belongs to this runtime.
+                unsafe {
+                    wgpuComputePipelineRelease(runtime.cached_pipeline);
+                }
+                runtime.cached_pipeline = ptr::null_mut();
+            }
 
             let shader_chain = WGPUShaderSourceWGSL {
                 chain: WGPUChainedStruct {
@@ -636,16 +767,12 @@ mod enabled {
             };
 
             // SAFETY: Device and descriptor are valid for the duration of the call.
-            shader_module = unsafe { wgpuDeviceCreateShaderModule(device, &shader_descriptor) };
+            let shader_module =
+                unsafe { wgpuDeviceCreateShaderModule(runtime.device, &shader_descriptor) };
             if shader_module.is_null() {
                 return Err("wgpuDeviceCreateShaderModule returned null".to_string());
             }
 
-            let entry = if entry_point.is_empty() {
-                "main"
-            } else {
-                entry_point
-            };
             let stage = WGPUProgrammableStageDescriptor {
                 next_in_chain: ptr::null(),
                 module: shader_module,
@@ -661,19 +788,35 @@ mod enabled {
             };
 
             // SAFETY: Device and descriptor are valid for the duration of the call.
-            compute_pipeline =
-                unsafe { wgpuDeviceCreateComputePipeline(device, &pipeline_descriptor) };
+            let compute_pipeline =
+                unsafe { wgpuDeviceCreateComputePipeline(runtime.device, &pipeline_descriptor) };
+            // SAFETY: Shader module is no longer needed once pipeline creation returns.
+            unsafe {
+                wgpuShaderModuleRelease(shader_module);
+            }
             if compute_pipeline.is_null() {
                 return Err("wgpuDeviceCreateComputePipeline returned null".to_string());
             }
 
+            runtime.cached_shader_source.clear();
+            runtime.cached_shader_source.push_str(shader_source);
+            runtime.cached_entry_point.clear();
+            runtime.cached_entry_point.push_str(entry);
+            runtime.cached_pipeline = compute_pipeline;
+        }
+
+        let mut command_encoder: WGPUCommandEncoder = ptr::null_mut();
+        let mut compute_pass: WGPUComputePassEncoder = ptr::null_mut();
+        let mut command_buffer: WGPUCommandBuffer = ptr::null_mut();
+
+        let result = (|| -> Result<(), String> {
             let encoder_descriptor = WGPUCommandEncoderDescriptor {
                 next_in_chain: ptr::null(),
                 label: empty_string_view(),
             };
             // SAFETY: Device and descriptor are valid for the duration of the call.
             command_encoder =
-                unsafe { wgpuDeviceCreateCommandEncoder(device, &encoder_descriptor) };
+                unsafe { wgpuDeviceCreateCommandEncoder(runtime.device, &encoder_descriptor) };
             if command_encoder.is_null() {
                 return Err("wgpuDeviceCreateCommandEncoder returned null".to_string());
             }
@@ -692,7 +835,7 @@ mod enabled {
 
             // SAFETY: All handles are valid and owned for the duration of this block.
             unsafe {
-                wgpuComputePassEncoderSetPipeline(compute_pass, compute_pipeline);
+                wgpuComputePassEncoderSetPipeline(compute_pass, runtime.cached_pipeline);
                 wgpuComputePassEncoderDispatchWorkgroups(
                     compute_pass,
                     x.max(1),
@@ -713,15 +856,9 @@ mod enabled {
                 return Err("wgpuCommandEncoderFinish returned null".to_string());
             }
 
-            // SAFETY: Device is valid and owns a queue.
-            queue = unsafe { wgpuDeviceGetQueue(device) };
-            if queue.is_null() {
-                return Err("wgpuDeviceGetQueue returned null".to_string());
-            }
-
             // SAFETY: Queue and command buffer are valid handles.
             unsafe {
-                wgpuQueueSubmit(queue, 1, &command_buffer as *const WGPUCommandBuffer);
+                wgpuQueueSubmit(runtime.queue, 1, &command_buffer as *const WGPUCommandBuffer);
             }
 
             Ok(())
@@ -744,40 +881,6 @@ mod enabled {
             unsafe {
                 wgpuCommandEncoderRelease(command_encoder);
             }
-        }
-        if !compute_pipeline.is_null() {
-            // SAFETY: Handle is valid if creation succeeded.
-            unsafe {
-                wgpuComputePipelineRelease(compute_pipeline);
-            }
-        }
-        if !shader_module.is_null() {
-            // SAFETY: Handle is valid if creation succeeded.
-            unsafe {
-                wgpuShaderModuleRelease(shader_module);
-            }
-        }
-        if !queue.is_null() {
-            // SAFETY: Handle is valid if retrieval succeeded.
-            unsafe {
-                wgpuQueueRelease(queue);
-            }
-        }
-        if !device.is_null() {
-            // SAFETY: Handle is valid if request succeeded.
-            unsafe {
-                wgpuDeviceRelease(device);
-            }
-        }
-        if !adapter.is_null() {
-            // SAFETY: Handle is valid if request succeeded.
-            unsafe {
-                wgpuAdapterRelease(adapter);
-            }
-        }
-        // SAFETY: Instance handle was created by `wgpuCreateInstance`.
-        unsafe {
-            wgpuInstanceRelease(instance);
         }
 
         result
