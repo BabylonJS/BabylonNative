@@ -7,5 +7,5 @@ edition = "2021"
 crate-type = ["rlib"]
 
 [features]
-default = ["upstream_wgpu_native"]
+default = []
 upstream_wgpu_native = []

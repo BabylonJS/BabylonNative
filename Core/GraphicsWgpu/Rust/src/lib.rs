@@ -5,42 +5,8 @@ use std::ptr;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 
-use wgpu::util::DeviceExt;
-
-#[cfg(feature = "upstream_wgpu_native")]
 use babylon_wgpu_native_shim as upstream_wgpu_native;
-
-#[cfg(not(feature = "upstream_wgpu_native"))]
-mod upstream_wgpu_native {
-    #[derive(Clone, Debug)]
-    pub struct AdapterProbeInfo {
-        pub backend: u32,
-        pub vendor_id: u32,
-        pub device_id: u32,
-        pub adapter_name: String,
-    }
-
-    pub fn version() -> u32 {
-        0
-    }
-
-    #[allow(dead_code)]
-    pub fn probe_adapter(_prefer_low_power: bool) -> Result<AdapterProbeInfo, String> {
-        Err("upstream wgpu-native probe is disabled at compile time".to_string())
-    }
-
-    #[allow(dead_code)]
-    pub fn dispatch_compute_global(
-        _shader_source: &str,
-        _entry_point: &str,
-        _x: u32,
-        _y: u32,
-        _z: u32,
-        _prefer_low_power: bool,
-    ) -> Result<(), String> {
-        Err("upstream wgpu-native dispatch path is disabled at compile time".to_string())
-    }
-}
+use wgpu::util::DeviceExt;
 
 static WEBGPU_DRAW_ENABLED: AtomicBool = AtomicBool::new(false);
 static RENDER_FRAME_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -479,7 +445,7 @@ impl BackendContext {
             address_mode_w: wgpu::AddressMode::ClampToEdge,
             mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,
-            mipmap_filter: wgpu::MipmapFilterMode::Linear,
+            mipmap_filter: wgpu::FilterMode::Linear,
             ..Default::default()
         });
 
@@ -575,7 +541,7 @@ impl BackendContext {
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("babylon-native-webgpu.pipeline-layout"),
             bind_group_layouts: &[&bind_group_layout],
-            immediate_size: 0,
+            push_constant_ranges: &[],
         });
 
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -653,7 +619,7 @@ impl BackendContext {
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
             }),
-            multiview_mask: None,
+            multiview: None,
             cache: None,
         });
 
@@ -906,7 +872,6 @@ impl BackendContext {
                 }),
                 occlusion_query_set: None,
                 timestamp_writes: None,
-                multiview_mask: None,
             });
 
             if draw_enabled {
@@ -1859,7 +1824,7 @@ fn dispatch_compute_global(shader_source: &str, entry_point: &str, x: u32, y: u3
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("babylon-native-webgpu.compute-layout"),
                     bind_group_layouts: &[],
-                    immediate_size: 0,
+                    push_constant_ranges: &[],
                 });
 
         let compute_pipeline =

@@ -55,6 +55,14 @@
 - Added persistent upstream bootstrap runtime initialization (`instance` +
   `adapter` + `device` + `queue`) in the shim and switched feature-enabled
   `create_context` probe path to consume that runtime.
+- Removed the remaining inline fallback shim definitions from
+  `Core/GraphicsWgpu/Rust/src/lib.rs`; shim dependency is now always present,
+  with upstream behavior selected via crate features.
+- Aligned local `wgpu` crate usage to the upstream `wgpu-native` major line
+  (`wgpu` 27.x) and updated local API callsites (`FilterMode` sampler mipmap
+  setting, `PipelineLayoutDescriptor.push_constant_ranges`, and
+  `RenderPipelineDescriptor.multiview`) to keep compatibility while reducing
+  drift during migration.
 
 ## Current Spike Reality (as of this branch)
 - `Core/GraphicsWgpu/Rust/src/lib.rs` currently includes a large local backend
