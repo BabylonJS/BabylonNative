@@ -54,14 +54,14 @@ if(BABYLON_NATIVE_PLUGIN_SHADERCACHE)
 endif()
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_COMPILESHADERS)
-    if(NOT BABYLON_NATIVE_PLUGIN_SHADERCOMPILER)
-        message(FATAL_ERROR "Compiling shaders in NativeEngine plugin requires the ShaderCompiler plugin.")
+    if(BABYLON_NATIVE_PLUGIN_SHADERCOMPILER)
+        target_compile_definitions(NativeEngine
+            PRIVATE SHADER_COMPILER)
+        target_link_libraries(NativeEngine
+            PRIVATE ShaderCompilerInternal)
+    else()
+        message(WARNING "Compiling shaders in NativeEngine plugin requires ShaderCompiler plugin to be enabled.")
     endif()
-
-    target_compile_definitions(NativeEngine
-        PRIVATE SHADER_COMPILER)
-    target_link_libraries(NativeEngine
-        PRIVATE ShaderCompilerInternal)
 endif()
 
 if(WIN32)
