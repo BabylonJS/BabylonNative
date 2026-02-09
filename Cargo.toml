@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "Core/GraphicsWgpu/Rust",
+    "Core/GraphicsWgpu/Rust/upstream-shim",
     "Polyfills/CanvasWgpu/Rust",
 ]
 resolver = "2"

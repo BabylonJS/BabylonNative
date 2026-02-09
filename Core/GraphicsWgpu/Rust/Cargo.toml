@@ -9,9 +9,10 @@ crate-type = ["staticlib"]
 
 [features]
 default = []
-upstream_wgpu_native = []
+upstream_wgpu_native = ["dep:babylon_wgpu_native_shim"]
 
 [dependencies]
+babylon_wgpu_native_shim = { path = "upstream-shim", optional = true }
 pollster = { workspace = true }
 raw-window-handle = { workspace = true }
 wgpu = { workspace = true }

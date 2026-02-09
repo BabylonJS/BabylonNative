@@ -60,10 +60,15 @@ dependencies = [
 name = "babylon_graphics_backend"
 version = "0.1.0"
 dependencies = [
+ "babylon_wgpu_native_shim",
  "pollster",
  "raw-window-handle",
  "wgpu",
 ]
+
+[[package]]
+name = "babylon_wgpu_native_shim"
+version = "0.1.0"
 
 [[package]]
 name = "bit-set"

@@ -49,6 +49,9 @@
 - Reworked upstream `wgpu-native` compute dispatch path to reuse a persistent
   runtime (instance/adapter/device/queue) plus cached pipeline, removing
   per-dispatch bootstrap and reducing hot-path allocation churn.
+- Extracted upstream `wgpu-native` C ABI bindings/dispatch logic into a separate
+  thin shim crate (`Core/GraphicsWgpu/Rust/upstream-shim`) to reduce
+  `lib.rs` coupling and isolate upstream interop concerns.
 
 ## Current Spike Reality (as of this branch)
 - `Core/GraphicsWgpu/Rust/src/lib.rs` currently includes a large local backend
@@ -168,7 +171,7 @@
 ## `wgpu-native` Rebase Checklist
 - [x] Add a compile-time backend selector (`local` vs `wgpu-native`) with `local` as temporary default.
 - [x] Wire upstream `wgpu-native` staticlib build + link path into Babylon CMake/Rust build.
-- [ ] Introduce a thin Rust shim crate that only wraps upstream `wgpu-native` handles and callbacks.
+- [x] Introduce a thin Rust shim crate that only wraps upstream `wgpu-native` handles and callbacks.
 - [ ] Port adapter/device/surface bootstrap to upstream ABI.
   - In progress: adapter/device request bootstrap probe now uses upstream C ABI.
 - [ ] Port queue submit + present path to upstream ABI.

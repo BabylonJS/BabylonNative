@@ -7,7 +7,40 @@ use std::sync::{Mutex, OnceLock};
 
 use wgpu::util::DeviceExt;
 
-mod upstream_wgpu_native;
+#[cfg(feature = "upstream_wgpu_native")]
+use babylon_wgpu_native_shim as upstream_wgpu_native;
+
+#[cfg(not(feature = "upstream_wgpu_native"))]
+mod upstream_wgpu_native {
+    #[derive(Clone, Debug)]
+    pub struct AdapterProbeInfo {
+        pub backend: u32,
+        pub vendor_id: u32,
+        pub device_id: u32,
+        pub adapter_name: String,
+    }
+
+    pub fn version() -> u32 {
+        0
+    }
+
+    #[allow(dead_code)]
+    pub fn probe_adapter(_prefer_low_power: bool) -> Result<AdapterProbeInfo, String> {
+        Err("upstream wgpu-native probe is disabled at compile time".to_string())
+    }
+
+    #[allow(dead_code)]
+    pub fn dispatch_compute_global(
+        _shader_source: &str,
+        _entry_point: &str,
+        _x: u32,
+        _y: u32,
+        _z: u32,
+        _prefer_low_power: bool,
+    ) -> Result<(), String> {
+        Err("upstream wgpu-native dispatch path is disabled at compile time".to_string())
+    }
+}
 
 static WEBGPU_DRAW_ENABLED: AtomicBool = AtomicBool::new(false);
 static RENDER_FRAME_COUNTER: AtomicU64 = AtomicU64::new(0);

@@ -321,6 +321,10 @@ mod enabled {
         cached_pipeline: WGPUComputePipeline,
     }
 
+    // SAFETY: Access is synchronized through `COMPUTE_RUNTIME`'s mutex and all
+    // handles are only touched while holding that lock.
+    unsafe impl Send for ComputeRuntime {}
+
     impl Drop for ComputeRuntime {
         fn drop(&mut self) {
             if !self.cached_pipeline.is_null() {
