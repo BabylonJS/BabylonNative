@@ -30,7 +30,7 @@
   backend init now records upstream `wgpu-native` version via `wgpuGetVersion()`
   and includes that metadata in adapter diagnostics.
 - Expanded the upstream probe to use `wgpu-native` C ABI request flows
-  (`wgpuInstanceRequestAdapter` + `wgpuAdapterRequestDevice` + `wgpuInstanceWaitAny`)
+  (`wgpuInstanceRequestAdapter` + `wgpuAdapterRequestDevice` + `wgpuInstanceProcessEvents`)
   so adapter/device bootstrap viability is validated through upstream primitives
   before local fallback path execution.
 - Removed production `std::async` usage from NativeWebGPU Promise APIs (kept only
