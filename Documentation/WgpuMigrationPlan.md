@@ -38,6 +38,9 @@
   churn and hot-path heap pressure.
 - Optimized debug canvas texture import path to reuse GPU texture resources when
   dimensions are stable, avoiding per-frame texture/view/bind-group rebuilds.
+- Added native readback staging-buffer reuse and CPU upload-buffer recycling in
+  the debug canvas-texture import path, eliminating per-frame GPU/heap buffer
+  allocations while preserving texture import behavior.
 - Eliminated a CanvasWgpu hot-loop allocation leak by avoiding render-target
   recreation when width/height/DPI are unchanged across `nvgBeginFrame`.
 - Added native `destroy` aliases for CanvasWgpu `Canvas` and `Context` objects,

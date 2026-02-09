@@ -16,8 +16,12 @@ static DEBUG_TEXTURE_WIDTH: AtomicU32 = AtomicU32::new(0);
 static DEBUG_TEXTURE_HEIGHT: AtomicU32 = AtomicU32::new(0);
 static LAST_ERROR: OnceLock<Mutex<String>> = OnceLock::new();
 static DEBUG_TEXTURE_UPLOAD: OnceLock<Mutex<Option<DebugTextureUpload>>> = OnceLock::new();
+static DEBUG_TEXTURE_UPLOAD_RECYCLER: OnceLock<Mutex<Vec<u8>>> = OnceLock::new();
+static NATIVE_READBACK_CACHE: OnceLock<Mutex<Option<NativeReadbackCache>>> = OnceLock::new();
 #[cfg(not(feature = "upstream_wgpu_native"))]
 static COMPUTE_DISPATCH_CONTEXT: OnceLock<Mutex<Option<ComputeDispatchContext>>> = OnceLock::new();
+
+const MAX_RECYCLED_UPLOAD_BYTES: usize = 64 * 1024 * 1024;
 
 #[cfg(not(feature = "upstream_wgpu_native"))]
 struct ComputeDispatchContext {
@@ -42,6 +46,13 @@ struct DebugTextureUpload {
     width: u32,
     height: u32,
     rgba: Vec<u8>,
+}
+
+struct NativeReadbackCache {
+    device_ptr: usize,
+    padded_bytes_per_row: u32,
+    buffer_size: u64,
+    buffer: wgpu::Buffer,
 }
 
 fn hash_bytes(bytes: &[u8]) -> u64 {
@@ -660,7 +671,7 @@ impl BackendContext {
         });
     }
 
-    fn install_debug_texture(&mut self, upload: DebugTextureUpload) -> bool {
+    fn install_debug_texture(&mut self, upload: &DebugTextureUpload) -> bool {
         if upload.width == 0 || upload.height == 0 {
             return false;
         }
@@ -726,7 +737,9 @@ impl BackendContext {
 
     fn apply_pending_debug_texture(&mut self) {
         if let Some(upload) = take_debug_texture_upload() {
-            if !self.install_debug_texture(upload) {
+            let applied = self.install_debug_texture(&upload);
+            recycle_upload_buffer(upload.rgba);
+            if !applied {
                 set_last_error("Failed to install native debug texture upload.");
             }
         }
@@ -1164,7 +1177,9 @@ fn set_debug_texture_upload(upload: DebugTextureUpload) {
 
     let storage = DEBUG_TEXTURE_UPLOAD.get_or_init(|| Mutex::new(None));
     if let Ok(mut value) = storage.lock() {
-        *value = Some(upload);
+        if let Some(previous) = value.replace(upload) {
+            recycle_upload_buffer(previous.rgba);
+        }
     }
 }
 
@@ -1187,6 +1202,81 @@ fn align_to(value: u32, alignment: u32) -> u32 {
     } else {
         value.saturating_add(alignment - remainder)
     }
+}
+
+fn take_recycled_upload_buffer(required_len: usize) -> Vec<u8> {
+    if required_len == 0 {
+        return Vec::new();
+    }
+
+    let storage = DEBUG_TEXTURE_UPLOAD_RECYCLER.get_or_init(|| Mutex::new(Vec::new()));
+    match storage.lock() {
+        Ok(mut recycled) => {
+            let mut buffer = std::mem::take(&mut *recycled);
+            if buffer.capacity() < required_len {
+                buffer.reserve(required_len - buffer.capacity());
+            }
+            buffer.resize(required_len, 0);
+            buffer
+        }
+        Err(_) => vec![0u8; required_len],
+    }
+}
+
+fn recycle_upload_buffer(mut buffer: Vec<u8>) {
+    if buffer.capacity() > MAX_RECYCLED_UPLOAD_BYTES {
+        return;
+    }
+
+    buffer.clear();
+    let storage = DEBUG_TEXTURE_UPLOAD_RECYCLER.get_or_init(|| Mutex::new(Vec::new()));
+    if let Ok(mut recycled) = storage.lock() {
+        *recycled = buffer;
+    }
+}
+
+fn acquire_native_readback_buffer(
+    source_device: &wgpu::Device,
+    device_ptr: usize,
+    padded_bytes_per_row: u32,
+    buffer_size: u64,
+) -> wgpu::Buffer {
+    let storage = NATIVE_READBACK_CACHE.get_or_init(|| Mutex::new(None));
+    let mut guard = match storage.lock() {
+        Ok(value) => value,
+        Err(poisoned) => poisoned.into_inner(),
+    };
+
+    let rebuild = match guard.as_ref() {
+        Some(cache) => {
+            cache.device_ptr != device_ptr
+                || cache.padded_bytes_per_row != padded_bytes_per_row
+                || cache.buffer_size < buffer_size
+        }
+        None => true,
+    };
+
+    if rebuild {
+        let buffer = source_device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("babylon-native-webgpu.native-debug-readback"),
+            size: buffer_size,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+        *guard = Some(NativeReadbackCache {
+            device_ptr,
+            padded_bytes_per_row,
+            buffer_size,
+            buffer: buffer.clone(),
+        });
+        return buffer;
+    }
+
+    guard
+        .as_ref()
+        .expect("readback cache initialized when not rebuilding")
+        .buffer
+        .clone()
 }
 
 fn read_texture_rgba_from_native_handle(
@@ -1242,12 +1332,12 @@ fn read_texture_rgba_from_native_handle(
         return Err("invalid native texture size".to_string());
     }
 
-    let staging_buffer = source_device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("babylon-native-webgpu.native-debug-readback"),
-        size: buffer_size,
-        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-        mapped_at_creation: false,
-    });
+    let staging_buffer = acquire_native_readback_buffer(
+        source_device,
+        handle.device as usize,
+        padded_bytes_per_row,
+        buffer_size,
+    );
 
     let mut encoder = source_device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
         label: Some("babylon-native-webgpu.native-debug-readback-encoder"),
@@ -1291,12 +1381,11 @@ fn read_texture_rgba_from_native_handle(
     }
 
     let mapped = slice.get_mapped_range();
-    let mut rgba = vec![
-        0u8;
+    let mut rgba = take_recycled_upload_buffer(
         (width as usize)
             .saturating_mul(height as usize)
-            .saturating_mul(4)
-    ];
+            .saturating_mul(4),
+    );
     for row in 0..(height as usize) {
         let src_start = row.saturating_mul(padded_bytes_per_row as usize);
         let src_end = src_start.saturating_add(unpadded_bytes_per_row as usize);
