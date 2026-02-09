@@ -1,5 +1,6 @@
+use std::ffi::c_void;
 #[cfg(feature = "upstream_wgpu_native")]
-use std::ffi::{c_char, c_void, CStr};
+use std::ffi::{c_char, CStr};
 #[cfg(feature = "upstream_wgpu_native")]
 use std::ptr;
 
@@ -23,6 +24,7 @@ mod enabled {
     type WGPUAdapter = *mut c_void;
     type WGPUDevice = *mut c_void;
     type WGPUQueue = *mut c_void;
+    type WGPUSurface = *mut c_void;
     type WGPUShaderModule = *mut c_void;
     type WGPUComputePipeline = *mut c_void;
     type WGPUCommandEncoder = *mut c_void;
@@ -50,6 +52,9 @@ mod enabled {
     const WGPU_BACKEND_TYPE_OPEN_GLES: u32 = 8;
 
     const WGPU_STYPE_SHADER_SOURCE_WGSL: u32 = 2;
+    const WGPU_STYPE_SURFACE_SOURCE_METAL_LAYER: u32 = 4;
+    const WGPU_STYPE_SURFACE_SOURCE_WINDOWS_HWND: u32 = 5;
+    const WGPU_STYPE_SURFACE_SOURCE_ANDROID_NATIVE_WINDOW: u32 = 8;
 
     #[repr(C)]
     #[derive(Clone, Copy)]
@@ -79,7 +84,7 @@ mod enabled {
         power_preference: u32,
         force_fallback_adapter: u32,
         backend_type: u32,
-        compatible_surface: *mut c_void,
+        compatible_surface: WGPUSurface,
     }
 
     #[repr(C)]
@@ -100,6 +105,35 @@ mod enabled {
         callback: Option<WGPURequestDeviceCallback>,
         userdata1: *mut c_void,
         userdata2: *mut c_void,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct WGPUSurfaceDescriptor {
+        next_in_chain: *const WGPUChainedStruct,
+        label: WGPUStringView,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct WGPUSurfaceSourceMetalLayer {
+        chain: WGPUChainedStruct,
+        layer: *mut c_void,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct WGPUSurfaceSourceAndroidNativeWindow {
+        chain: WGPUChainedStruct,
+        window: *mut c_void,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct WGPUSurfaceSourceWindowsHWND {
+        chain: WGPUChainedStruct,
+        hinstance: *mut c_void,
+        hwnd: *mut c_void,
     }
 
     #[repr(C)]
@@ -212,6 +246,10 @@ mod enabled {
         fn wgpuGetVersion() -> u32;
         fn wgpuCreateInstance(descriptor: *const c_void) -> WGPUInstance;
         fn wgpuInstanceProcessEvents(instance: WGPUInstance);
+        fn wgpuInstanceCreateSurface(
+            instance: WGPUInstance,
+            descriptor: *const WGPUSurfaceDescriptor,
+        ) -> WGPUSurface;
         fn wgpuInstanceRequestAdapter(
             instance: WGPUInstance,
             options: *const WGPURequestAdapterOptions,
@@ -267,6 +305,7 @@ mod enabled {
         fn wgpuAdapterRelease(adapter: WGPUAdapter);
         fn wgpuDeviceRelease(device: WGPUDevice);
         fn wgpuQueueRelease(queue: WGPUQueue);
+        fn wgpuSurfaceRelease(surface: WGPUSurface);
         fn wgpuShaderModuleRelease(shader_module: WGPUShaderModule);
         fn wgpuComputePipelineRelease(compute_pipeline: WGPUComputePipeline);
         fn wgpuComputePassEncoderRelease(compute_pass_encoder: WGPUComputePassEncoder);
@@ -496,9 +535,107 @@ mod enabled {
         }
     }
 
+    #[cfg(target_os = "windows")]
+    unsafe extern "system" {
+        fn GetModuleHandleW(lp_module_name: *const u16) -> *mut c_void;
+    }
+
+    fn create_surface(
+        instance: WGPUInstance,
+        surface_layer: *mut c_void,
+    ) -> Result<WGPUSurface, String> {
+        if surface_layer.is_null() {
+            return Err("surface layer pointer was null".to_string());
+        }
+
+        #[cfg(any(target_os = "macos", target_os = "ios"))]
+        {
+            let source = WGPUSurfaceSourceMetalLayer {
+                chain: WGPUChainedStruct {
+                    next: ptr::null(),
+                    s_type: WGPU_STYPE_SURFACE_SOURCE_METAL_LAYER,
+                },
+                layer: surface_layer,
+            };
+            let descriptor = WGPUSurfaceDescriptor {
+                next_in_chain: &source.chain,
+                label: empty_string_view(),
+            };
+            // SAFETY: Instance handle is valid and chained descriptor is live for this call.
+            let surface = unsafe { wgpuInstanceCreateSurface(instance, &descriptor) };
+            if surface.is_null() {
+                return Err("wgpuInstanceCreateSurface returned null for Metal layer".to_string());
+            }
+            return Ok(surface);
+        }
+
+        #[cfg(target_os = "android")]
+        {
+            let source = WGPUSurfaceSourceAndroidNativeWindow {
+                chain: WGPUChainedStruct {
+                    next: ptr::null(),
+                    s_type: WGPU_STYPE_SURFACE_SOURCE_ANDROID_NATIVE_WINDOW,
+                },
+                window: surface_layer,
+            };
+            let descriptor = WGPUSurfaceDescriptor {
+                next_in_chain: &source.chain,
+                label: empty_string_view(),
+            };
+            // SAFETY: Instance handle is valid and chained descriptor is live for this call.
+            let surface = unsafe { wgpuInstanceCreateSurface(instance, &descriptor) };
+            if surface.is_null() {
+                return Err(
+                    "wgpuInstanceCreateSurface returned null for Android native window".to_string(),
+                );
+            }
+            return Ok(surface);
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            // SAFETY: null module name queries current process executable module.
+            let hinstance = unsafe { GetModuleHandleW(ptr::null()) };
+            if hinstance.is_null() {
+                return Err("GetModuleHandleW returned null".to_string());
+            }
+            let source = WGPUSurfaceSourceWindowsHWND {
+                chain: WGPUChainedStruct {
+                    next: ptr::null(),
+                    s_type: WGPU_STYPE_SURFACE_SOURCE_WINDOWS_HWND,
+                },
+                hinstance,
+                hwnd: surface_layer,
+            };
+            let descriptor = WGPUSurfaceDescriptor {
+                next_in_chain: &source.chain,
+                label: empty_string_view(),
+            };
+            // SAFETY: Instance handle is valid and chained descriptor is live for this call.
+            let surface = unsafe { wgpuInstanceCreateSurface(instance, &descriptor) };
+            if surface.is_null() {
+                return Err("wgpuInstanceCreateSurface returned null for Win32 HWND".to_string());
+            }
+            return Ok(surface);
+        }
+
+        #[cfg(not(any(
+            target_os = "macos",
+            target_os = "ios",
+            target_os = "android",
+            target_os = "windows"
+        )))]
+        {
+            let _ = instance;
+            let _ = surface_layer;
+            Err("surface probing is not supported on this platform".to_string())
+        }
+    }
+
     fn request_adapter(
         instance: WGPUInstance,
         prefer_low_power: bool,
+        compatible_surface: WGPUSurface,
     ) -> Result<WGPUAdapter, String> {
         let mut state = AdapterRequestState::default();
         let request_options = WGPURequestAdapterOptions {
@@ -511,7 +648,7 @@ mod enabled {
             },
             force_fallback_adapter: 0,
             backend_type: preferred_backend_type(),
-            compatible_surface: ptr::null_mut(),
+            compatible_surface,
         };
 
         let callback_info = WGPURequestAdapterCallbackInfo {
@@ -632,7 +769,7 @@ mod enabled {
         let mut device: WGPUDevice = ptr::null_mut();
         let mut queue: WGPUQueue = ptr::null_mut();
         let result = (|| -> Result<ComputeRuntime, String> {
-            adapter = request_adapter(instance, prefer_low_power)?;
+            adapter = request_adapter(instance, prefer_low_power, ptr::null_mut())?;
             device = request_device(instance, adapter)?;
             // SAFETY: Device handle is valid on successful request.
             queue = unsafe { wgpuDeviceGetQueue(device) };
@@ -718,6 +855,67 @@ mod enabled {
 
     pub fn probe_adapter(prefer_low_power: bool) -> Result<AdapterProbeInfo, String> {
         ensure_bootstrap_runtime(prefer_low_power)
+    }
+
+    pub fn probe_surface_adapter(
+        surface_layer: *mut c_void,
+        prefer_low_power: bool,
+    ) -> Result<AdapterProbeInfo, String> {
+        // SAFETY: Null descriptor is explicitly supported by webgpu.h APIs for
+        // default instance creation.
+        let instance = unsafe { wgpuCreateInstance(ptr::null()) };
+        if instance.is_null() {
+            return Err("wgpuCreateInstance returned null".to_string());
+        }
+
+        let mut surface: WGPUSurface = ptr::null_mut();
+        let mut adapter: WGPUAdapter = ptr::null_mut();
+        let mut device: WGPUDevice = ptr::null_mut();
+        let mut queue: WGPUQueue = ptr::null_mut();
+
+        let result = (|| -> Result<AdapterProbeInfo, String> {
+            surface = create_surface(instance, surface_layer)?;
+            adapter = request_adapter(instance, prefer_low_power, surface)?;
+            let probe = query_adapter_probe_info(adapter)?;
+            device = request_device(instance, adapter)?;
+            // SAFETY: Device handle is valid on successful request.
+            queue = unsafe { wgpuDeviceGetQueue(device) };
+            if queue.is_null() {
+                return Err("wgpuDeviceGetQueue returned null".to_string());
+            }
+            Ok(probe)
+        })();
+
+        if !queue.is_null() {
+            // SAFETY: Queue was acquired from device before teardown.
+            unsafe {
+                wgpuQueueRelease(queue);
+            }
+        }
+        if !device.is_null() {
+            // SAFETY: Device was acquired before teardown.
+            unsafe {
+                wgpuDeviceRelease(device);
+            }
+        }
+        if !adapter.is_null() {
+            // SAFETY: Adapter was acquired before teardown.
+            unsafe {
+                wgpuAdapterRelease(adapter);
+            }
+        }
+        if !surface.is_null() {
+            // SAFETY: Surface was acquired before teardown.
+            unsafe {
+                wgpuSurfaceRelease(surface);
+            }
+        }
+        // SAFETY: Instance was created by this function.
+        unsafe {
+            wgpuInstanceRelease(instance);
+        }
+
+        result
     }
 
     pub fn dispatch_compute_global(
@@ -889,7 +1087,8 @@ mod enabled {
 
 #[cfg(feature = "upstream_wgpu_native")]
 pub use enabled::{
-    dispatch_compute_global, ensure_bootstrap_runtime, probe_adapter, version,
+    dispatch_compute_global, ensure_bootstrap_runtime, probe_adapter, probe_surface_adapter,
+    version,
 };
 
 #[cfg(not(feature = "upstream_wgpu_native"))]
@@ -907,6 +1106,15 @@ pub fn probe_adapter(_prefer_low_power: bool) -> Result<AdapterProbeInfo, String
 #[allow(dead_code)]
 pub fn ensure_bootstrap_runtime(_prefer_low_power: bool) -> Result<AdapterProbeInfo, String> {
     Err("upstream wgpu-native bootstrap runtime is disabled at compile time".to_string())
+}
+
+#[cfg(not(feature = "upstream_wgpu_native"))]
+#[allow(dead_code)]
+pub fn probe_surface_adapter(
+    _surface_layer: *mut c_void,
+    _prefer_low_power: bool,
+) -> Result<AdapterProbeInfo, String> {
+    Err("upstream wgpu-native surface probe is disabled at compile time".to_string())
 }
 
 #[cfg(not(feature = "upstream_wgpu_native"))]

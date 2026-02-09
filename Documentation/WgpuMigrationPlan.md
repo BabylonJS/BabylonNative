@@ -58,6 +58,10 @@
 - Added persistent upstream bootstrap runtime initialization (`instance` +
   `adapter` + `device` + `queue`) in the shim and switched feature-enabled
   `create_context` probe path to consume that runtime.
+- Extended upstream shim coverage with real surface-backed adapter probing
+  (`wgpuInstanceCreateSurface` for Metal/Android/Win32 + adapter request with
+  `compatibleSurface`) and switched `create_context` probe path to use it when
+  a platform surface handle is available.
 - Removed the remaining inline fallback shim definitions from
   `Core/GraphicsWgpu/Rust/src/lib.rs`; shim dependency is now always present,
   with upstream behavior selected via crate features.
