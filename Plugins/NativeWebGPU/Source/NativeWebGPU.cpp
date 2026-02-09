@@ -122,6 +122,58 @@ namespace Babylon::Plugins::NativeWebGPU
             return value.As<Napi::String>().Utf8Value();
         }
 
+        void NoOpCallback(const Napi::CallbackInfo& info)
+        {
+            (void)info;
+        }
+
+        void MarkDrawRequestedCallback(const Napi::CallbackInfo& info)
+        {
+            (void)info;
+            g_sawWebGpuDrawCall.store(true, std::memory_order_release);
+            babylon_wgpu_mark_webgpu_draw_requested();
+        }
+
+        void MarkDrawCallCallback(const Napi::CallbackInfo& info)
+        {
+            (void)info;
+            g_sawWebGpuDrawCall.store(true, std::memory_order_release);
+            g_drawCallCount.fetch_add(1, std::memory_order_relaxed);
+            babylon_wgpu_mark_webgpu_draw_requested();
+        }
+
+        Napi::Function GetCachedFunction(Napi::Env env, const char* key, void (*callback)(const Napi::CallbackInfo&))
+        {
+            auto nativeObject = JsRuntime::NativeObject::GetFromJavaScript(env);
+            if (nativeObject.Has(key))
+            {
+                auto cached = nativeObject.Get(key);
+                if (cached.IsFunction())
+                {
+                    return cached.As<Napi::Function>();
+                }
+            }
+
+            auto function = Napi::Function::New(env, callback);
+            nativeObject.Set(key, function);
+            return function;
+        }
+
+        Napi::Function GetNoOpFunction(Napi::Env env)
+        {
+            return GetCachedFunction(env, "__nativeWebGpuNoOp", &NoOpCallback);
+        }
+
+        Napi::Function GetMarkDrawRequestedFunction(Napi::Env env)
+        {
+            return GetCachedFunction(env, "__nativeWebGpuMarkDrawRequested", &MarkDrawRequestedCallback);
+        }
+
+        Napi::Function GetMarkDrawCallFunction(Napi::Env env)
+        {
+            return GetCachedFunction(env, "__nativeWebGpuMarkDrawCall", &MarkDrawCallCallback);
+        }
+
         using PromiseResolveFactory = std::function<Napi::Value(Napi::Env)>;
 
 #ifdef BABYLON_NATIVE_WEBGPU_TEST_HOOKS
@@ -520,15 +572,9 @@ namespace Babylon::Plugins::NativeWebGPU
         Napi::Object CreateGpuRenderPassEncoder(Napi::Env env)
         {
             auto pass = Napi::Object::New(env);
-            auto noOp = Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                (void)info;
-            });
+            auto noOp = GetNoOpFunction(env);
 
-            pass.Set("setPipeline", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                (void)info;
-                g_sawWebGpuDrawCall.store(true, std::memory_order_release);
-                babylon_wgpu_mark_webgpu_draw_requested();
-            }));
+            pass.Set("setPipeline", GetMarkDrawRequestedFunction(env));
             pass.Set("setBindGroup", noOp);
             pass.Set("setVertexBuffer", noOp);
             pass.Set("setIndexBuffer", noOp);
@@ -536,30 +582,11 @@ namespace Babylon::Plugins::NativeWebGPU
             pass.Set("setScissorRect", noOp);
             pass.Set("setStencilReference", noOp);
             pass.Set("setBlendConstant", noOp);
-            pass.Set("draw", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                (void)info;
-                g_sawWebGpuDrawCall.store(true, std::memory_order_release);
-                g_drawCallCount.fetch_add(1, std::memory_order_relaxed);
-                babylon_wgpu_mark_webgpu_draw_requested();
-            }));
-            pass.Set("drawIndexed", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                (void)info;
-                g_sawWebGpuDrawCall.store(true, std::memory_order_release);
-                g_drawCallCount.fetch_add(1, std::memory_order_relaxed);
-                babylon_wgpu_mark_webgpu_draw_requested();
-            }));
-            pass.Set("drawIndirect", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                (void)info;
-                g_sawWebGpuDrawCall.store(true, std::memory_order_release);
-                g_drawCallCount.fetch_add(1, std::memory_order_relaxed);
-                babylon_wgpu_mark_webgpu_draw_requested();
-            }));
-            pass.Set("drawIndexedIndirect", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                (void)info;
-                g_sawWebGpuDrawCall.store(true, std::memory_order_release);
-                g_drawCallCount.fetch_add(1, std::memory_order_relaxed);
-                babylon_wgpu_mark_webgpu_draw_requested();
-            }));
+            auto markDrawCall = GetMarkDrawCallFunction(env);
+            pass.Set("draw", markDrawCall);
+            pass.Set("drawIndexed", markDrawCall);
+            pass.Set("drawIndirect", markDrawCall);
+            pass.Set("drawIndexedIndirect", markDrawCall);
             pass.Set("executeBundles", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
                 if (info.Length() == 0 || !info[0].IsArray())
                 {
@@ -606,9 +633,7 @@ namespace Babylon::Plugins::NativeWebGPU
         {
             auto encoder = Napi::Object::New(env);
             auto state = std::make_shared<RenderBundleState>();
-            auto noOp = Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                (void)info;
-            });
+            auto noOp = GetNoOpFunction(env);
 
             encoder.Set("setPipeline", noOp);
             encoder.Set("setBindGroup", noOp);
@@ -651,9 +676,7 @@ namespace Babylon::Plugins::NativeWebGPU
         Napi::Object CreateGpuComputePassEncoder(Napi::Env env)
         {
             auto pass = Napi::Object::New(env);
-            auto noOp = Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                (void)info;
-            });
+            auto noOp = GetNoOpFunction(env);
             auto state = std::make_shared<ComputePassState>();
 
             pass.Set("setPipeline", Napi::Function::New(env, [state](const Napi::CallbackInfo& info) {
@@ -692,9 +715,7 @@ namespace Babylon::Plugins::NativeWebGPU
         Napi::Object CreateGpuCommandEncoder(Napi::Env env)
         {
             auto encoder = Napi::Object::New(env);
-            auto noOp = Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                (void)info;
-            });
+            auto noOp = GetNoOpFunction(env);
             auto state = std::make_shared<CommandEncoderState>();
 
             encoder.Set("beginRenderPass", Napi::Function::New(env, [state](const Napi::CallbackInfo& info) -> Napi::Value {
@@ -800,9 +821,7 @@ namespace Babylon::Plugins::NativeWebGPU
                 return Napi::ArrayBuffer::New(info.Env(), byteLength);
             }));
 
-            auto noOp = Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                (void)info;
-            });
+            auto noOp = GetNoOpFunction(env);
             buffer.Set("unmap", noOp);
             buffer.Set("destroy", noOp);
 
@@ -812,9 +831,7 @@ namespace Babylon::Plugins::NativeWebGPU
         Napi::Object CreateGpuQueue(Napi::Env env)
         {
             auto queue = Napi::Object::New(env);
-            auto noOp = Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                (void)info;
-            });
+            auto noOp = GetNoOpFunction(env);
 
             queue.Set("submit", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
                 (void)info;
@@ -837,9 +854,7 @@ namespace Babylon::Plugins::NativeWebGPU
         Napi::Object CreateGpuDevice(Napi::Env env)
         {
             auto device = Napi::Object::New(env);
-            auto noOp = Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
-                (void)info;
-            });
+            auto noOp = GetNoOpFunction(env);
 
             device.Set("features", CreateSet(env));
             device.Set("limits", CreateLimits(env));
