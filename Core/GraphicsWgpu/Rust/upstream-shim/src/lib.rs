@@ -25,6 +25,7 @@ mod enabled {
     type WGPUDevice = *mut c_void;
     type WGPUQueue = *mut c_void;
     type WGPUSurface = *mut c_void;
+    type WGPUTexture = *mut c_void;
     type WGPUShaderModule = *mut c_void;
     type WGPUComputePipeline = *mut c_void;
     type WGPUCommandEncoder = *mut c_void;
@@ -38,6 +39,8 @@ mod enabled {
     const WGPU_REQUEST_DEVICE_STATUS_SUCCESS: u32 = 1;
 
     const WGPU_STATUS_SUCCESS: u32 = 1;
+    const WGPU_SURFACE_GET_CURRENT_TEXTURE_STATUS_SUCCESS_OPTIMAL: u32 = 1;
+    const WGPU_SURFACE_GET_CURRENT_TEXTURE_STATUS_SUCCESS_SUBOPTIMAL: u32 = 2;
 
     const WGPU_FEATURE_LEVEL_CORE: u32 = 2;
 
@@ -53,8 +56,13 @@ mod enabled {
 
     const WGPU_STYPE_SHADER_SOURCE_WGSL: u32 = 2;
     const WGPU_STYPE_SURFACE_SOURCE_METAL_LAYER: u32 = 4;
+    #[cfg(target_os = "windows")]
     const WGPU_STYPE_SURFACE_SOURCE_WINDOWS_HWND: u32 = 5;
+    #[cfg(target_os = "android")]
     const WGPU_STYPE_SURFACE_SOURCE_ANDROID_NATIVE_WINDOW: u32 = 8;
+    const WGPU_TEXTURE_USAGE_RENDER_ATTACHMENT: u64 = 0x10;
+    const WGPU_PRESENT_MODE_FIFO: u32 = 1;
+    const WGPU_COMPOSITE_ALPHA_MODE_AUTO: u32 = 0;
 
     #[repr(C)]
     #[derive(Clone, Copy)]
@@ -109,6 +117,49 @@ mod enabled {
 
     #[repr(C)]
     #[derive(Clone, Copy)]
+    struct WGPUSurfaceCapabilities {
+        next_in_chain: *mut c_void,
+        usages: u64,
+        format_count: usize,
+        formats: *const u32,
+        present_mode_count: usize,
+        present_modes: *const u32,
+        alpha_mode_count: usize,
+        alpha_modes: *const u32,
+    }
+
+    impl Default for WGPUSurfaceCapabilities {
+        fn default() -> Self {
+            Self {
+                next_in_chain: ptr::null_mut(),
+                usages: 0,
+                format_count: 0,
+                formats: ptr::null(),
+                present_mode_count: 0,
+                present_modes: ptr::null(),
+                alpha_mode_count: 0,
+                alpha_modes: ptr::null(),
+            }
+        }
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct WGPUSurfaceConfiguration {
+        next_in_chain: *const WGPUChainedStruct,
+        device: WGPUDevice,
+        format: u32,
+        usage: u64,
+        width: u32,
+        height: u32,
+        view_format_count: usize,
+        view_formats: *const u32,
+        alpha_mode: u32,
+        present_mode: u32,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
     struct WGPUSurfaceDescriptor {
         next_in_chain: *const WGPUChainedStruct,
         label: WGPUStringView,
@@ -121,6 +172,7 @@ mod enabled {
         layer: *mut c_void,
     }
 
+    #[cfg(target_os = "android")]
     #[repr(C)]
     #[derive(Clone, Copy)]
     struct WGPUSurfaceSourceAndroidNativeWindow {
@@ -128,12 +180,31 @@ mod enabled {
         window: *mut c_void,
     }
 
+    #[cfg(target_os = "windows")]
     #[repr(C)]
     #[derive(Clone, Copy)]
     struct WGPUSurfaceSourceWindowsHWND {
         chain: WGPUChainedStruct,
         hinstance: *mut c_void,
         hwnd: *mut c_void,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct WGPUSurfaceTexture {
+        next_in_chain: *mut c_void,
+        texture: WGPUTexture,
+        status: u32,
+    }
+
+    impl Default for WGPUSurfaceTexture {
+        fn default() -> Self {
+            Self {
+                next_in_chain: ptr::null_mut(),
+                texture: ptr::null_mut(),
+                status: 0,
+            }
+        }
     }
 
     #[repr(C)]
@@ -262,6 +333,16 @@ mod enabled {
         ) -> WGPUFuture;
         fn wgpuAdapterGetInfo(adapter: WGPUAdapter, info: *mut WGPUAdapterInfo) -> u32;
         fn wgpuAdapterInfoFreeMembers(adapter_info: WGPUAdapterInfo);
+        fn wgpuSurfaceGetCapabilities(
+            surface: WGPUSurface,
+            adapter: WGPUAdapter,
+            capabilities: *mut WGPUSurfaceCapabilities,
+        ) -> u32;
+        fn wgpuSurfaceCapabilitiesFreeMembers(capabilities: WGPUSurfaceCapabilities);
+        fn wgpuSurfaceConfigure(surface: WGPUSurface, config: *const WGPUSurfaceConfiguration);
+        fn wgpuSurfaceGetCurrentTexture(surface: WGPUSurface, surface_texture: *mut WGPUSurfaceTexture);
+        fn wgpuSurfacePresent(surface: WGPUSurface) -> u32;
+        fn wgpuSurfaceUnconfigure(surface: WGPUSurface);
 
         fn wgpuDeviceCreateShaderModule(
             device: WGPUDevice,
@@ -306,6 +387,7 @@ mod enabled {
         fn wgpuDeviceRelease(device: WGPUDevice);
         fn wgpuQueueRelease(queue: WGPUQueue);
         fn wgpuSurfaceRelease(surface: WGPUSurface);
+        fn wgpuTextureRelease(texture: WGPUTexture);
         fn wgpuShaderModuleRelease(shader_module: WGPUShaderModule);
         fn wgpuComputePipelineRelease(compute_pipeline: WGPUComputePipeline);
         fn wgpuComputePassEncoderRelease(compute_pass_encoder: WGPUComputePassEncoder);
@@ -753,6 +835,109 @@ mod enabled {
         Ok(probe)
     }
 
+    fn probe_surface_texture_flow(
+        surface: WGPUSurface,
+        adapter: WGPUAdapter,
+        device: WGPUDevice,
+        width: u32,
+        height: u32,
+    ) -> Result<(), String> {
+        let mut capabilities = WGPUSurfaceCapabilities::default();
+        // SAFETY: handles and out-pointer are valid for this call.
+        let caps_status = unsafe { wgpuSurfaceGetCapabilities(surface, adapter, &mut capabilities) };
+        if caps_status != WGPU_STATUS_SUCCESS {
+            return Err(format!(
+                "wgpuSurfaceGetCapabilities failed with status {caps_status}"
+            ));
+        }
+
+        let pick_or = |count: usize, values: *const u32, fallback: u32| -> u32 {
+            if count == 0 || values.is_null() {
+                fallback
+            } else {
+                // SAFETY: pointer is valid for `count` entries when count > 0.
+                unsafe { *values }
+            }
+        };
+
+        let surface_format = pick_or(capabilities.format_count, capabilities.formats, 0);
+        if surface_format == 0 {
+            // SAFETY: capabilities may hold heap allocations owned by the C API.
+            unsafe {
+                wgpuSurfaceCapabilitiesFreeMembers(capabilities);
+            }
+            return Err("wgpuSurfaceGetCapabilities returned no formats".to_string());
+        }
+
+        let config = WGPUSurfaceConfiguration {
+            next_in_chain: ptr::null(),
+            device,
+            format: surface_format,
+            usage: WGPU_TEXTURE_USAGE_RENDER_ATTACHMENT,
+            width: width.max(1),
+            height: height.max(1),
+            view_format_count: 0,
+            view_formats: ptr::null(),
+            alpha_mode: pick_or(
+                capabilities.alpha_mode_count,
+                capabilities.alpha_modes,
+                WGPU_COMPOSITE_ALPHA_MODE_AUTO,
+            ),
+            present_mode: pick_or(
+                capabilities.present_mode_count,
+                capabilities.present_modes,
+                WGPU_PRESENT_MODE_FIFO,
+            ),
+        };
+
+        // SAFETY: capabilities may hold heap allocations owned by the C API.
+        unsafe {
+            wgpuSurfaceCapabilitiesFreeMembers(capabilities);
+        }
+
+        // SAFETY: handles and config pointer are valid for this call.
+        unsafe {
+            wgpuSurfaceConfigure(surface, &config);
+        }
+
+        let mut surface_texture = WGPUSurfaceTexture::default();
+        // SAFETY: handles and out-pointer are valid for this call.
+        unsafe {
+            wgpuSurfaceGetCurrentTexture(surface, &mut surface_texture);
+        }
+
+        let status_ok = matches!(
+            surface_texture.status,
+            WGPU_SURFACE_GET_CURRENT_TEXTURE_STATUS_SUCCESS_OPTIMAL
+                | WGPU_SURFACE_GET_CURRENT_TEXTURE_STATUS_SUCCESS_SUBOPTIMAL
+        );
+        if !status_ok || surface_texture.texture.is_null() {
+            // SAFETY: surface handle is valid and configured.
+            unsafe {
+                wgpuSurfaceUnconfigure(surface);
+            }
+            return Err(format!(
+                "wgpuSurfaceGetCurrentTexture failed with status {}",
+                surface_texture.status
+            ));
+        }
+
+        // SAFETY: surface is configured and has a current texture.
+        let present_status = unsafe { wgpuSurfacePresent(surface) };
+
+        // SAFETY: surface texture is returned with ownership.
+        unsafe {
+            wgpuTextureRelease(surface_texture.texture);
+            wgpuSurfaceUnconfigure(surface);
+        }
+
+        if present_status != WGPU_STATUS_SUCCESS {
+            return Err(format!("wgpuSurfacePresent failed with status {present_status}"));
+        }
+
+        Ok(())
+    }
+
     fn compute_runtime_cell() -> &'static Mutex<Option<ComputeRuntime>> {
         COMPUTE_RUNTIME.get_or_init(|| Mutex::new(None))
     }
@@ -883,6 +1068,70 @@ mod enabled {
             if queue.is_null() {
                 return Err("wgpuDeviceGetQueue returned null".to_string());
             }
+            Ok(probe)
+        })();
+
+        if !queue.is_null() {
+            // SAFETY: Queue was acquired from device before teardown.
+            unsafe {
+                wgpuQueueRelease(queue);
+            }
+        }
+        if !device.is_null() {
+            // SAFETY: Device was acquired before teardown.
+            unsafe {
+                wgpuDeviceRelease(device);
+            }
+        }
+        if !adapter.is_null() {
+            // SAFETY: Adapter was acquired before teardown.
+            unsafe {
+                wgpuAdapterRelease(adapter);
+            }
+        }
+        if !surface.is_null() {
+            // SAFETY: Surface was acquired before teardown.
+            unsafe {
+                wgpuSurfaceRelease(surface);
+            }
+        }
+        // SAFETY: Instance was created by this function.
+        unsafe {
+            wgpuInstanceRelease(instance);
+        }
+
+        result
+    }
+
+    pub fn probe_surface_present(
+        surface_layer: *mut c_void,
+        width: u32,
+        height: u32,
+        prefer_low_power: bool,
+    ) -> Result<AdapterProbeInfo, String> {
+        // SAFETY: Null descriptor is explicitly supported by webgpu.h APIs for
+        // default instance creation.
+        let instance = unsafe { wgpuCreateInstance(ptr::null()) };
+        if instance.is_null() {
+            return Err("wgpuCreateInstance returned null".to_string());
+        }
+
+        let mut surface: WGPUSurface = ptr::null_mut();
+        let mut adapter: WGPUAdapter = ptr::null_mut();
+        let mut device: WGPUDevice = ptr::null_mut();
+        let mut queue: WGPUQueue = ptr::null_mut();
+
+        let result = (|| -> Result<AdapterProbeInfo, String> {
+            surface = create_surface(instance, surface_layer)?;
+            adapter = request_adapter(instance, prefer_low_power, surface)?;
+            let probe = query_adapter_probe_info(adapter)?;
+            device = request_device(instance, adapter)?;
+            // SAFETY: Device handle is valid on successful request.
+            queue = unsafe { wgpuDeviceGetQueue(device) };
+            if queue.is_null() {
+                return Err("wgpuDeviceGetQueue returned null".to_string());
+            }
+            probe_surface_texture_flow(surface, adapter, device, width, height)?;
             Ok(probe)
         })();
 
@@ -1088,7 +1337,7 @@ mod enabled {
 #[cfg(feature = "upstream_wgpu_native")]
 pub use enabled::{
     dispatch_compute_global, ensure_bootstrap_runtime, probe_adapter, probe_surface_adapter,
-    version,
+    probe_surface_present, version,
 };
 
 #[cfg(not(feature = "upstream_wgpu_native"))]
@@ -1115,6 +1364,17 @@ pub fn probe_surface_adapter(
     _prefer_low_power: bool,
 ) -> Result<AdapterProbeInfo, String> {
     Err("upstream wgpu-native surface probe is disabled at compile time".to_string())
+}
+
+#[cfg(not(feature = "upstream_wgpu_native"))]
+#[allow(dead_code)]
+pub fn probe_surface_present(
+    _surface_layer: *mut c_void,
+    _width: u32,
+    _height: u32,
+    _prefer_low_power: bool,
+) -> Result<AdapterProbeInfo, String> {
+    Err("upstream wgpu-native surface present probe is disabled at compile time".to_string())
 }
 
 #[cfg(not(feature = "upstream_wgpu_native"))]

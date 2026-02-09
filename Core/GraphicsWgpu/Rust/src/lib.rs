@@ -1496,8 +1496,10 @@ fn create_context(config: BabylonWgpuConfig) -> Result<Box<BackendContext>, Stri
     let upstream_probe = match if config.surface_layer.is_null() {
         upstream_wgpu_native::ensure_bootstrap_runtime(config.prefer_low_power != 0)
     } else {
-        upstream_wgpu_native::probe_surface_adapter(
+        upstream_wgpu_native::probe_surface_present(
             config.surface_layer,
+            requested_width,
+            requested_height,
             config.prefer_low_power != 0,
         )
     } {
