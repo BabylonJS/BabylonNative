@@ -1710,6 +1710,21 @@ fn create_context(config: BabylonWgpuConfig) -> Result<Box<BackendContext>, Stri
     Ok(Box::new(context))
 }
 
+#[cfg(feature = "upstream_wgpu_native")]
+fn dispatch_compute_global(shader_source: &str, entry_point: &str, x: u32, y: u32, z: u32) -> bool {
+    if let Err(error) =
+        upstream_wgpu_native::dispatch_compute_global(shader_source, entry_point, x, y, z, false)
+    {
+        log_backend_error(&format!(
+            "upstream wgpu-native compute dispatch failed: {error}"
+        ));
+        return false;
+    }
+
+    true
+}
+
+#[cfg(not(feature = "upstream_wgpu_native"))]
 fn dispatch_compute_global(shader_source: &str, entry_point: &str, x: u32, y: u32, z: u32) -> bool {
     let instance = create_instance();
 

@@ -39,6 +39,8 @@
 #include <Babylon/Graphics/FrameBuffer.h>
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from '' to '', possible loss of data
 
+// bgfx names the HLSL shader profile family as "dx11" even when running
+// through the D3D12 renderer backend, so these blobs are shared by both.
 #include "Shaders/dx11/vs_nanovg_fill.h"
 #include "Shaders/dx11/fs_nanovg_fill.h"
 #include "Shaders/metal/vs_nanovg_fill.h"

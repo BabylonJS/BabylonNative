@@ -48,6 +48,7 @@ public class PlaygroundActivity extends Activity implements BabylonView.ViewDele
 
     @Override
     public void onViewReady() {
-        mView.loadScript("app:///Scripts/experience.js");
+        mView.loadScript("app:///Scripts/webgpu_smoke.js");
+        mView.loadScript("app:///Scripts/playground_runner.js");
     }
 }

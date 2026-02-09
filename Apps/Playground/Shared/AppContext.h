@@ -4,6 +4,9 @@
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Polyfills/Console.h>
 #include <Babylon/ScriptLoader.h>
+#if defined(BABYLON_NATIVE_PLAYGROUND_HAS_CANVAS)
+#include <Babylon/Polyfills/Canvas.h>
+#endif
 
 #include <functional>
 #include <optional>
@@ -50,4 +53,7 @@ private:
     std::optional<Babylon::AppRuntime> m_runtime;
     Babylon::Plugins::NativeInput* m_input{};
     std::optional<Babylon::ScriptLoader> m_scriptLoader;
+#if defined(BABYLON_NATIVE_PLAYGROUND_HAS_CANVAS)
+    std::optional<Babylon::Polyfills::Canvas> m_canvas;
+#endif
 };

@@ -18,9 +18,7 @@ target_include_directories(BabylonNativeJNI
     PRIVATE ${PLAYGROUND_DIR})
 
 target_link_libraries(BabylonNativeJNI
-    GLESv3
     android
-    EGL
     log
     -lz
     AndroidExtensions
@@ -29,15 +27,12 @@ target_link_libraries(BabylonNativeJNI
     Canvas
     Console
     GraphicsDevice
-    NativeCamera
-    NativeCapture
-    NativeEncoding
-    NativeEngine
     NativeInput
-    NativeOptimizations
-    NativeTracing
-    NativeXr
+    NativeWebGPU
     ScriptLoader
-    TestUtils
+    URL
     Window
     XMLHttpRequest)
+
+target_compile_definitions(BabylonNativeJNI
+    PRIVATE BABYLON_NATIVE_PLAYGROUND_HAS_CANVAS=1)

@@ -2,10 +2,16 @@
 name = "babylon_graphics_backend"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
 
 [lib]
 crate-type = ["staticlib"]
 
+[features]
+default = []
+upstream_wgpu_native = []
+
 [dependencies]
-pollster = "0.4.0"
-wgpu = "28.0.0"
+pollster = { workspace = true }
+raw-window-handle = { workspace = true }
+wgpu = { workspace = true }

@@ -198,7 +198,8 @@ function(add_bgfx_shader FILE FOLDER)
         set(OUTPUTS "")
         set(OUTPUTS_PRETTY "")
 
-        # dx11
+        # bgfx names its HLSL shader profile family as "DX11" (s_5_0) and
+        # reuses these blobs for both D3D11 and D3D12 renderer backends.
         if(WIN32)
             set(DX11_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/dx11/${FILENAME}.h)
             if(NOT "${TYPE}" STREQUAL "COMPUTE")

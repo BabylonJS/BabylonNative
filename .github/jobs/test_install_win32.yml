@@ -5,7 +5,7 @@ parameters:
     type: string
   - name: graphics_api
     type: string
-    default: D3D11
+    default: D3D12
 
 jobs:
   - job: ${{parameters.name}}

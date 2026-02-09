@@ -4,6 +4,7 @@
 #include <napi/napi.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <sstream>
 #include <stdexcept>
@@ -150,14 +151,45 @@ namespace Babylon::Graphics
 #else
             config.SurfaceLayer = m_state.Window != nullptr ? (__bridge void*)m_state.Window.layer : nullptr;
 #endif
+#elif defined(__ANDROID__)
+            config.SurfaceLayer = m_state.Window;
 #endif
 
             m_wgpu = std::make_shared<WgpuNative>(config);
             if (!m_wgpu->IsValid())
             {
+                std::string errorMessage{"Failed to initialize WGPU backend."};
+                const auto& details = m_wgpu->GetLastError();
+                if (!details.empty())
+                {
+                    if (m_diagnosticOutput)
+                    {
+                        m_diagnosticOutput(details.c_str());
+                    }
+
+                    errorMessage += " ";
+                    errorMessage += details;
+                }
+
                 m_wgpu.reset();
                 m_cancellationSource.reset();
-                throw std::runtime_error{"Failed to initialize WGPU backend."};
+#if defined(__ANDROID__)
+                if (m_diagnosticOutput)
+                {
+                    using clock = std::chrono::steady_clock;
+                    static auto s_lastRetryLog = clock::now() - std::chrono::seconds{5};
+                    const auto now = clock::now();
+                    if (now - s_lastRetryLog >= std::chrono::seconds{1})
+                    {
+                        m_diagnosticOutput(
+                            "WGPU initialization failed; deferring and retrying on future frames.");
+                        s_lastRetryLog = now;
+                    }
+                }
+                return;
+#else
+                throw std::runtime_error{errorMessage};
+#endif
             }
 
             m_rendering = true;

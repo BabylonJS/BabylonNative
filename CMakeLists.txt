@@ -56,6 +56,10 @@ FetchContent_Declare(libwebp
     GIT_REPOSITORY https://github.com/webmproject/libwebp.git
     GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c
     EXCLUDE_FROM_ALL)
+FetchContent_Declare(wgpu_native
+    GIT_REPOSITORY https://github.com/gfx-rs/wgpu-native.git
+    GIT_TAG ba4deb5d935652f40c7e051b15cbb5d097219941
+    EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------
 
@@ -84,6 +88,16 @@ elseif(IOS)
     set(DEPLOYMENT_TARGET "13" CACHE STRING "")
 endif()
 
+# Keep deployment targeting consistent across all generated Xcode targets.
+# Without this, transitive static libraries may default to the host SDK version
+# and become unloadable on older simulator runtimes.
+if(IOS)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "${DEPLOYMENT_TARGET}" CACHE STRING "" FORCE)
+    set(CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "${DEPLOYMENT_TARGET}")
+elseif(VISIONOS)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "${DEPLOYMENT_TARGET}" CACHE STRING "" FORCE)
+endif()
+
 project(BabylonNative)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -104,11 +118,15 @@ option(BABYLON_DEBUG_TRACE "Enable debug trace." OFF)
 option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphics device calls. It can be removed if hosting application ensures thread coherence." ON)
 
 # Plugins
+option(BABYLON_NATIVE_PLUGIN_NATIVEINPUT "Include Babylon Native Plugin NativeInput." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU "Include Babylon Native Plugin NativeWebGPU." ON)
+option(BABYLON_NATIVE_WGPU_USE_UPSTREAM_NATIVE "Use upstream wgpu-native as the Rust backend base (experimental)." OFF)
+option(BABYLON_NATIVE_BUILD_WEBGPU_TESTS "Build NativeWebGPU async bridge gtests on desktop hosts." OFF)
 
 # Polyfills
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." OFF)
+option(BABYLON_NATIVE_POLYFILL_CANVAS_WGPU "Use the wgpu/femtovg Canvas backend when Canvas polyfill is enabled." OFF)
 
 # Sanitizers
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
@@ -139,9 +157,15 @@ if(ENABLE_SANITIZERS)
 endif()
 
 set(BABYLON_NATIVE_INSTALL OFF CACHE BOOL "Include the install target." FORCE)
+set(BABYLON_NATIVE_PLUGIN_NATIVEINPUT ON CACHE BOOL "Include Babylon Native Plugin NativeInput." FORCE)
 set(BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU ON CACHE BOOL "Include Babylon Native Plugin NativeWebGPU." FORCE)
 set(BABYLON_NATIVE_POLYFILL_WINDOW ON CACHE BOOL "Include Babylon Native Polyfill Window." FORCE)
-set(BABYLON_NATIVE_POLYFILL_CANVAS OFF CACHE BOOL "Include Babylon Native Polyfill Canvas." FORCE)
+set(BABYLON_NATIVE_POLYFILL_CANVAS OFF CACHE BOOL "Include Babylon Native Polyfill Canvas.")
+set(BABYLON_NATIVE_POLYFILL_CANVAS_WGPU OFF CACHE BOOL "Use the wgpu/femtovg Canvas backend when Canvas polyfill is enabled.")
+
+if(BABYLON_NATIVE_WGPU_USE_UPSTREAM_NATIVE)
+    FetchContent_MakeAvailable_With_Message(wgpu_native)
+endif()
 
 # --------------------------------------------------
 
@@ -167,17 +191,17 @@ if(APPLE)
     set(GRAPHICS_API Metal)
 elseif(UNIX)
     if(NOT GRAPHICS_API)
-        set(GRAPHICS_API OpenGL)
+        set(GRAPHICS_API Vulkan)
     else()
-        if(NOT GRAPHICS_API STREQUAL Vulkan AND NOT GRAPHICS_API STREQUAL OpenGL)
+        if(NOT GRAPHICS_API STREQUAL Vulkan)
             message(FATAL_ERROR "Unrecognized/Unsupported render API: ${GRAPHICS_API}")
         endif()
     endif()
 elseif(WIN32)
     if(NOT GRAPHICS_API)
-        set(GRAPHICS_API D3D11)
+        set(GRAPHICS_API D3D12)
     else()
-        if(NOT GRAPHICS_API STREQUAL Vulkan AND NOT GRAPHICS_API STREQUAL D3D11 AND NOT GRAPHICS_API STREQUAL D3D12)
+        if(NOT GRAPHICS_API STREQUAL Vulkan AND NOT GRAPHICS_API STREQUAL D3D12)
             message(FATAL_ERROR "Unrecognized/Unsupported render API: ${GRAPHICS_API}")
         endif()
     endif()

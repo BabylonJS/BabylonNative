@@ -32,6 +32,7 @@ namespace
         bool babylon_wgpu_resize(void* context, uint32_t width, uint32_t height);
         bool babylon_wgpu_render(void* context);
         bool babylon_wgpu_get_info(const void* context, BabylonWgpuInfo* outputInfo);
+        bool babylon_wgpu_get_last_error(char* output, size_t outputLen);
     }
 }
 
@@ -49,6 +50,14 @@ namespace Babylon::Graphics
         nativeConfig.Reserved1 = 0;
 
         m_context = babylon_wgpu_create(&nativeConfig);
+        if (m_context == nullptr)
+        {
+            std::array<char, 1024> buffer{};
+            if (babylon_wgpu_get_last_error(buffer.data(), buffer.size()))
+            {
+                m_lastError = buffer.data();
+            }
+        }
     }
 
     WgpuNative::~WgpuNative()
@@ -108,5 +117,10 @@ namespace Babylon::Graphics
         info.AdapterName.assign(nativeInfo.AdapterName.cbegin(), nulTerminator);
 
         return info;
+    }
+
+    const std::string& WgpuNative::GetLastError() const
+    {
+        return m_lastError;
     }
 }

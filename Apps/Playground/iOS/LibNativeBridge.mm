@@ -1,12 +1,10 @@
 #include "LibNativeBridge.h"
 
 #import <Shared/AppContext.h>
-#import <Babylon/Plugins/NativeXr.h>
+#import <Babylon/Plugins/NativeInput.h>
 #import <optional>
 
 std::optional<AppContext> appContext{};
-std::optional<Babylon::Plugins::NativeXr> nativeXr{};
-bool isXrActive{};
 float screenScale{1.0f};
 
 @implementation LibNativeBridge
@@ -19,9 +17,6 @@ float screenScale{1.0f};
 
 - (void)dealloc
 {
-    isXrActive = false;
-
-    nativeXr.reset();
     appContext.reset();
 }
 
@@ -35,14 +30,31 @@ float screenScale{1.0f};
         static_cast<size_t>(inHeight),
         [](const char* message) {
             NSLog(@"%s", message);
-        },
-        [xrView](Napi::Env env) {
-            nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
-            nativeXr->UpdateWindow(xrView);
-            nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ ::isXrActive = isXrActive; });
         });
 
-    appContext->ScriptLoader().LoadScript("app:///Scripts/experience.js");
+    appContext->Runtime().Dispatch([](Napi::Env env) {
+        Napi::HandleScope scope{env};
+
+        auto statusCallback = Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
+            if (info.Length() > 0)
+            {
+                std::string message{};
+                if (info[0].IsString())
+                {
+                    message = info[0].As<Napi::String>().Utf8Value();
+                }
+                else
+                {
+                    message = info[0].ToString().Utf8Value();
+                }
+                NSLog(@"[Playground] %s", message.c_str());
+            }
+        });
+        env.Global().Set("__nativePlaygroundStatus", statusCallback);
+    });
+
+    appContext->ScriptLoader().LoadScript("app:///Scripts/webgpu_smoke.js");
+    appContext->ScriptLoader().LoadScript("app:///Scripts/playground_runner.js");
 }
 
 - (void)resize:(int)inWidth height:(int)inHeight
@@ -93,7 +105,7 @@ float screenScale{1.0f};
 
 - (bool)isXRActive
 {
-    return ::isXrActive;
+    return false;
 }
 
 @end

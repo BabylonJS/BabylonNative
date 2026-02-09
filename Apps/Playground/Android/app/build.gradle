@@ -5,7 +5,7 @@ if (project.hasProperty("jsEngine")) {
     jsEngine = project.property("jsEngine")
 }
 
-def graphics_api = "OpenGL"
+def graphics_api = "Vulkan"
 // min 24 for Vulkan
 def platformVersion = 25
 
@@ -24,7 +24,7 @@ android {
         applicationId "com.android.babylonnative.playground"
         minSdkVersion "${platformVersion}"
         targetSdkVersion 29
-        ndkVersion "23.1.7779620"
+        ndkVersion "28.2.13676358"
         if (project.hasProperty("NDK_VERSION")) {
             def NDKVersion = project.property("NDK_VERSION")
             ndkVersion  "${NDK_VERSION}"
@@ -136,4 +136,3 @@ task copyFiles {
 }
 
 preBuild.dependsOn(copyFiles)
-

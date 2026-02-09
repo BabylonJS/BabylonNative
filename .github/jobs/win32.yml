@@ -14,7 +14,7 @@ parameters:
       - V8
   - name: graphics_api
     type: string
-    default: D3D11
+    default: D3D12
   - name: enableSanitizers
     type: boolean
     default: false

@@ -7,7 +7,7 @@ if (project.hasProperty("jsEngine")) {
     jsEngine = project.property("jsEngine")
 }
 
-def graphics_api = "OpenGL"
+def graphics_api = "Vulkan"
 def platformVersion = 21
 if (project.hasProperty("GRAPHICS_API")) {
     graphics_api = project.property("GRAPHICS_API")
@@ -33,7 +33,7 @@ android {
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
-        ndkVersion "23.1.7779620"
+        ndkVersion "28.2.13676358"
         if (project.hasProperty("NDK_VERSION")) {
             def NDKVersion = project.property("NDK_VERSION")
             ndkVersion  "${NDK_VERSION}"
@@ -47,6 +47,8 @@ android {
                     "-DARCORE_LIBPATH=${arcore_libpath}/jni",
                     "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
                     "-DBABYLON_NATIVE_BUILD_APPS=ON",
+                    "-DBABYLON_NATIVE_POLYFILL_CANVAS=ON",
+                    "-DBABYLON_NATIVE_POLYFILL_CANVAS_WGPU=ON",
                     "-DCMAKE_UNITY_BUILD=${unity_build}",
                     "-DBABYLON_DEBUG_TRACE=ON"
             }
@@ -65,7 +67,7 @@ android {
 
     externalNativeBuild {
         cmake {
-            version '3.19.6+'
+            version '3.31.6'
             path 'CMakeLists.txt'
             buildStagingDirectory "../../../../Build/Android"
         }

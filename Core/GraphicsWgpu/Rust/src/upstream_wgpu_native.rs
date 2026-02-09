@@ -21,8 +21,13 @@ mod enabled {
     type WGPUInstance = *mut c_void;
     type WGPUAdapter = *mut c_void;
     type WGPUDevice = *mut c_void;
-
-    const WGPU_TRUE: u32 = 1;
+    type WGPUQueue = *mut c_void;
+    type WGPUShaderModule = *mut c_void;
+    type WGPUComputePipeline = *mut c_void;
+    type WGPUCommandEncoder = *mut c_void;
+    type WGPUComputePassEncoder = *mut c_void;
+    type WGPUCommandBuffer = *mut c_void;
+    type WGPUPipelineLayout = *mut c_void;
 
     const WGPU_CALLBACK_MODE_ALLOW_PROCESS_EVENTS: u32 = 2;
 
@@ -43,11 +48,20 @@ mod enabled {
     const WGPU_BACKEND_TYPE_OPEN_GL: u32 = 7;
     const WGPU_BACKEND_TYPE_OPEN_GLES: u32 = 8;
 
+    const WGPU_STYPE_SHADER_SOURCE_WGSL: u32 = 2;
+
     #[repr(C)]
     #[derive(Clone, Copy)]
     struct WGPUStringView {
         data: *const c_char,
         length: usize,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct WGPUChainedStruct {
+        next: *const WGPUChainedStruct,
+        s_type: u32,
     }
 
     #[repr(C)]
@@ -59,7 +73,7 @@ mod enabled {
     #[repr(C)]
     #[derive(Clone, Copy)]
     struct WGPURequestAdapterOptions {
-        next_in_chain: *mut c_void,
+        next_in_chain: *const WGPUChainedStruct,
         feature_level: u32,
         power_preference: u32,
         force_fallback_adapter: u32,
@@ -70,7 +84,7 @@ mod enabled {
     #[repr(C)]
     #[derive(Clone, Copy)]
     struct WGPURequestAdapterCallbackInfo {
-        next_in_chain: *mut c_void,
+        next_in_chain: *const WGPUChainedStruct,
         mode: u32,
         callback: Option<WGPURequestAdapterCallback>,
         userdata1: *mut c_void,
@@ -80,7 +94,7 @@ mod enabled {
     #[repr(C)]
     #[derive(Clone, Copy)]
     struct WGPURequestDeviceCallbackInfo {
-        next_in_chain: *mut c_void,
+        next_in_chain: *const WGPUChainedStruct,
         mode: u32,
         callback: Option<WGPURequestDeviceCallback>,
         userdata1: *mut c_void,
@@ -133,6 +147,61 @@ mod enabled {
         }
     }
 
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct WGPUShaderSourceWGSL {
+        chain: WGPUChainedStruct,
+        code: WGPUStringView,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct WGPUShaderModuleDescriptor {
+        next_in_chain: *const WGPUChainedStruct,
+        label: WGPUStringView,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct WGPUProgrammableStageDescriptor {
+        next_in_chain: *const WGPUChainedStruct,
+        module: WGPUShaderModule,
+        entry_point: WGPUStringView,
+        constant_count: usize,
+        constants: *const c_void,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct WGPUComputePipelineDescriptor {
+        next_in_chain: *const WGPUChainedStruct,
+        label: WGPUStringView,
+        layout: WGPUPipelineLayout,
+        compute: WGPUProgrammableStageDescriptor,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct WGPUCommandEncoderDescriptor {
+        next_in_chain: *const WGPUChainedStruct,
+        label: WGPUStringView,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct WGPUComputePassDescriptor {
+        next_in_chain: *const WGPUChainedStruct,
+        label: WGPUStringView,
+        timestamp_writes: *const c_void,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    struct WGPUCommandBufferDescriptor {
+        next_in_chain: *const WGPUChainedStruct,
+        label: WGPUStringView,
+    }
+
     type WGPURequestAdapterCallback =
         extern "C" fn(u32, WGPUAdapter, WGPUStringView, *mut c_void, *mut c_void);
     type WGPURequestDeviceCallback =
@@ -141,6 +210,7 @@ mod enabled {
     unsafe extern "C" {
         fn wgpuGetVersion() -> u32;
         fn wgpuCreateInstance(descriptor: *const c_void) -> WGPUInstance;
+        fn wgpuInstanceProcessEvents(instance: WGPUInstance);
         fn wgpuInstanceRequestAdapter(
             instance: WGPUInstance,
             options: *const WGPURequestAdapterOptions,
@@ -151,11 +221,56 @@ mod enabled {
             descriptor: *const c_void,
             callback_info: WGPURequestDeviceCallbackInfo,
         ) -> WGPUFuture;
-        fn wgpuInstanceProcessEvents(instance: WGPUInstance);
         fn wgpuAdapterGetInfo(adapter: WGPUAdapter, info: *mut WGPUAdapterInfo) -> u32;
         fn wgpuAdapterInfoFreeMembers(adapter_info: WGPUAdapterInfo);
+
+        fn wgpuDeviceCreateShaderModule(
+            device: WGPUDevice,
+            descriptor: *const WGPUShaderModuleDescriptor,
+        ) -> WGPUShaderModule;
+        fn wgpuDeviceCreateComputePipeline(
+            device: WGPUDevice,
+            descriptor: *const WGPUComputePipelineDescriptor,
+        ) -> WGPUComputePipeline;
+        fn wgpuDeviceCreateCommandEncoder(
+            device: WGPUDevice,
+            descriptor: *const WGPUCommandEncoderDescriptor,
+        ) -> WGPUCommandEncoder;
+        fn wgpuCommandEncoderBeginComputePass(
+            command_encoder: WGPUCommandEncoder,
+            descriptor: *const WGPUComputePassDescriptor,
+        ) -> WGPUComputePassEncoder;
+        fn wgpuComputePassEncoderSetPipeline(
+            compute_pass_encoder: WGPUComputePassEncoder,
+            pipeline: WGPUComputePipeline,
+        );
+        fn wgpuComputePassEncoderDispatchWorkgroups(
+            compute_pass_encoder: WGPUComputePassEncoder,
+            x: u32,
+            y: u32,
+            z: u32,
+        );
+        fn wgpuComputePassEncoderEnd(compute_pass_encoder: WGPUComputePassEncoder);
+        fn wgpuCommandEncoderFinish(
+            command_encoder: WGPUCommandEncoder,
+            descriptor: *const WGPUCommandBufferDescriptor,
+        ) -> WGPUCommandBuffer;
+
+        fn wgpuDeviceGetQueue(device: WGPUDevice) -> WGPUQueue;
+        fn wgpuQueueSubmit(
+            queue: WGPUQueue,
+            command_count: usize,
+            commands: *const WGPUCommandBuffer,
+        );
+
         fn wgpuAdapterRelease(adapter: WGPUAdapter);
         fn wgpuDeviceRelease(device: WGPUDevice);
+        fn wgpuQueueRelease(queue: WGPUQueue);
+        fn wgpuShaderModuleRelease(shader_module: WGPUShaderModule);
+        fn wgpuComputePipelineRelease(compute_pipeline: WGPUComputePipeline);
+        fn wgpuComputePassEncoderRelease(compute_pass_encoder: WGPUComputePassEncoder);
+        fn wgpuCommandEncoderRelease(command_encoder: WGPUCommandEncoder);
+        fn wgpuCommandBufferRelease(command_buffer: WGPUCommandBuffer);
         fn wgpuInstanceRelease(instance: WGPUInstance);
     }
 
@@ -213,6 +328,20 @@ mod enabled {
         String::from_utf8_lossy(bytes).into_owned()
     }
 
+    fn make_string_view(input: &str) -> WGPUStringView {
+        WGPUStringView {
+            data: input.as_ptr().cast::<c_char>(),
+            length: input.len(),
+        }
+    }
+
+    fn empty_string_view() -> WGPUStringView {
+        WGPUStringView {
+            data: ptr::null(),
+            length: usize::MAX,
+        }
+    }
+
     extern "C" fn request_adapter_callback(
         status: u32,
         adapter: WGPUAdapter,
@@ -225,7 +354,7 @@ mod enabled {
         }
 
         // SAFETY: userdata points to the `AdapterRequestState` allocated in
-        // `probe_adapter` and kept alive until the callback completes.
+        // `request_adapter` and kept alive until callback completion.
         let state = unsafe { &mut *(userdata1.cast::<AdapterRequestState>()) };
         state.status = status;
         state.adapter = adapter;
@@ -245,7 +374,7 @@ mod enabled {
         }
 
         // SAFETY: userdata points to the `DeviceRequestState` allocated in
-        // `probe_adapter` and kept alive until the callback completes.
+        // `request_device` and kept alive until callback completion.
         let state = unsafe { &mut *(userdata1.cast::<DeviceRequestState>()) };
         state.status = status;
         state.device = device;
@@ -264,7 +393,7 @@ mod enabled {
                 return Ok(());
             }
 
-            // SAFETY: Instance handle is valid while this probe is active.
+            // SAFETY: Instance handle is valid while this request is in flight.
             unsafe {
                 wgpuInstanceProcessEvents(instance);
             }
@@ -308,6 +437,87 @@ mod enabled {
         }
     }
 
+    fn request_adapter(
+        instance: WGPUInstance,
+        prefer_low_power: bool,
+    ) -> Result<WGPUAdapter, String> {
+        let mut state = AdapterRequestState::default();
+        let request_options = WGPURequestAdapterOptions {
+            next_in_chain: ptr::null(),
+            feature_level: WGPU_FEATURE_LEVEL_CORE,
+            power_preference: if prefer_low_power {
+                WGPU_POWER_PREFERENCE_LOW_POWER
+            } else {
+                WGPU_POWER_PREFERENCE_HIGH_PERFORMANCE
+            },
+            force_fallback_adapter: 0,
+            backend_type: preferred_backend_type(),
+            compatible_surface: ptr::null_mut(),
+        };
+
+        let callback_info = WGPURequestAdapterCallbackInfo {
+            next_in_chain: ptr::null(),
+            mode: WGPU_CALLBACK_MODE_ALLOW_PROCESS_EVENTS,
+            callback: Some(request_adapter_callback),
+            userdata1: (&mut state as *mut AdapterRequestState).cast::<c_void>(),
+            userdata2: ptr::null_mut(),
+        };
+
+        // SAFETY: Input pointers and callback userdata remain valid until callback completion.
+        let _future =
+            unsafe { wgpuInstanceRequestAdapter(instance, &request_options, callback_info) };
+        wait_for_callback(instance, || state.completed, "requestAdapter")?;
+
+        if !state.completed {
+            return Err("requestAdapter callback did not complete".to_string());
+        }
+        if state.status != WGPU_REQUEST_ADAPTER_STATUS_SUCCESS || state.adapter.is_null() {
+            let message = if state.message.is_empty() {
+                "no adapter message".to_string()
+            } else {
+                state.message
+            };
+            return Err(format!(
+                "requestAdapter failed with status {} ({message})",
+                state.status
+            ));
+        }
+
+        Ok(state.adapter)
+    }
+
+    fn request_device(instance: WGPUInstance, adapter: WGPUAdapter) -> Result<WGPUDevice, String> {
+        let mut state = DeviceRequestState::default();
+        let callback_info = WGPURequestDeviceCallbackInfo {
+            next_in_chain: ptr::null(),
+            mode: WGPU_CALLBACK_MODE_ALLOW_PROCESS_EVENTS,
+            callback: Some(request_device_callback),
+            userdata1: (&mut state as *mut DeviceRequestState).cast::<c_void>(),
+            userdata2: ptr::null_mut(),
+        };
+
+        // SAFETY: Null descriptor requests a default device from the adapter.
+        let _future = unsafe { wgpuAdapterRequestDevice(adapter, ptr::null(), callback_info) };
+        wait_for_callback(instance, || state.completed, "requestDevice")?;
+
+        if !state.completed {
+            return Err("requestDevice callback did not complete".to_string());
+        }
+        if state.status != WGPU_REQUEST_DEVICE_STATUS_SUCCESS || state.device.is_null() {
+            let message = if state.message.is_empty() {
+                "no device message".to_string()
+            } else {
+                state.message
+            };
+            return Err(format!(
+                "requestDevice failed with status {} ({message})",
+                state.status
+            ));
+        }
+
+        Ok(state.device)
+    }
+
     pub fn version() -> u32 {
         // SAFETY: Symbol is provided by upstream wgpu-native staticlib.
         unsafe { wgpuGetVersion() }
@@ -322,95 +532,10 @@ mod enabled {
         }
 
         let mut adapter: WGPUAdapter = ptr::null_mut();
+        let mut device: WGPUDevice = ptr::null_mut();
         let result = (|| -> Result<AdapterProbeInfo, String> {
-            let mut adapter_state = AdapterRequestState::default();
-            let mut request_options = WGPURequestAdapterOptions {
-                next_in_chain: ptr::null_mut(),
-                feature_level: WGPU_FEATURE_LEVEL_CORE,
-                power_preference: if prefer_low_power {
-                    WGPU_POWER_PREFERENCE_LOW_POWER
-                } else {
-                    WGPU_POWER_PREFERENCE_HIGH_PERFORMANCE
-                },
-                force_fallback_adapter: 0,
-                backend_type: preferred_backend_type(),
-                compatible_surface: ptr::null_mut(),
-            };
-
-            let adapter_callback_info = WGPURequestAdapterCallbackInfo {
-                next_in_chain: ptr::null_mut(),
-                mode: WGPU_CALLBACK_MODE_ALLOW_PROCESS_EVENTS,
-                callback: Some(request_adapter_callback),
-                userdata1: (&mut adapter_state as *mut AdapterRequestState).cast::<c_void>(),
-                userdata2: ptr::null_mut(),
-            };
-
-            // SAFETY: Input pointers and callback userdata stay valid until
-            // request completion.
-            let _adapter_future = unsafe {
-                wgpuInstanceRequestAdapter(
-                    instance,
-                    &mut request_options as *mut WGPURequestAdapterOptions,
-                    adapter_callback_info,
-                )
-            };
-            wait_for_callback(instance, || adapter_state.completed, "requestAdapter")?;
-
-            if !adapter_state.completed {
-                return Err("requestAdapter callback did not complete".to_string());
-            }
-            if adapter_state.status != WGPU_REQUEST_ADAPTER_STATUS_SUCCESS
-                || adapter_state.adapter.is_null()
-            {
-                let message = if adapter_state.message.is_empty() {
-                    "no adapter message".to_string()
-                } else {
-                    adapter_state.message
-                };
-                return Err(format!(
-                    "requestAdapter failed with status {} ({message})",
-                    adapter_state.status
-                ));
-            }
-
-            adapter = adapter_state.adapter;
-
-            let mut device_state = DeviceRequestState::default();
-            let device_callback_info = WGPURequestDeviceCallbackInfo {
-                next_in_chain: ptr::null_mut(),
-                mode: WGPU_CALLBACK_MODE_ALLOW_PROCESS_EVENTS,
-                callback: Some(request_device_callback),
-                userdata1: (&mut device_state as *mut DeviceRequestState).cast::<c_void>(),
-                userdata2: ptr::null_mut(),
-            };
-
-            // SAFETY: Null descriptor is valid and requests a default device.
-            let _device_future =
-                unsafe { wgpuAdapterRequestDevice(adapter, ptr::null(), device_callback_info) };
-            wait_for_callback(instance, || device_state.completed, "requestDevice")?;
-
-            if !device_state.completed {
-                return Err("requestDevice callback did not complete".to_string());
-            }
-            if device_state.status != WGPU_REQUEST_DEVICE_STATUS_SUCCESS
-                || device_state.device.is_null()
-            {
-                let message = if device_state.message.is_empty() {
-                    "no device message".to_string()
-                } else {
-                    device_state.message
-                };
-                return Err(format!(
-                    "requestDevice failed with status {} ({message})",
-                    device_state.status
-                ));
-            }
-
-            // SAFETY: Device handle is valid on successful request and can be
-            // immediately released after probing.
-            unsafe {
-                wgpuDeviceRelease(device_state.device);
-            }
+            adapter = request_adapter(instance, prefer_low_power)?;
+            device = request_device(instance, adapter)?;
 
             let mut adapter_info = WGPUAdapterInfo::default();
             // SAFETY: `adapter` and `adapter_info` are valid pointers.
@@ -450,14 +575,207 @@ mod enabled {
             Ok(probe)
         })();
 
+        if !device.is_null() {
+            // SAFETY: Device handle came from upstream callback and owns a ref.
+            unsafe {
+                wgpuDeviceRelease(device);
+            }
+        }
         if !adapter.is_null() {
-            // SAFETY: adapter came from a successful callback and still owns a ref.
+            // SAFETY: Adapter handle came from upstream callback and owns a ref.
             unsafe {
                 wgpuAdapterRelease(adapter);
             }
         }
+        // SAFETY: Instance handle was created by `wgpuCreateInstance`.
+        unsafe {
+            wgpuInstanceRelease(instance);
+        }
 
-        // SAFETY: instance was created by `wgpuCreateInstance` and is still live.
+        result
+    }
+
+    pub fn dispatch_compute_global(
+        shader_source: &str,
+        entry_point: &str,
+        x: u32,
+        y: u32,
+        z: u32,
+        prefer_low_power: bool,
+    ) -> Result<(), String> {
+        // SAFETY: Null descriptor is explicitly supported by webgpu.h APIs for
+        // default instance creation.
+        let instance = unsafe { wgpuCreateInstance(ptr::null()) };
+        if instance.is_null() {
+            return Err("wgpuCreateInstance returned null".to_string());
+        }
+
+        let mut adapter: WGPUAdapter = ptr::null_mut();
+        let mut device: WGPUDevice = ptr::null_mut();
+        let mut queue: WGPUQueue = ptr::null_mut();
+        let mut shader_module: WGPUShaderModule = ptr::null_mut();
+        let mut compute_pipeline: WGPUComputePipeline = ptr::null_mut();
+        let mut command_encoder: WGPUCommandEncoder = ptr::null_mut();
+        let mut compute_pass: WGPUComputePassEncoder = ptr::null_mut();
+        let mut command_buffer: WGPUCommandBuffer = ptr::null_mut();
+
+        let result = (|| -> Result<(), String> {
+            adapter = request_adapter(instance, prefer_low_power)?;
+            device = request_device(instance, adapter)?;
+
+            let shader_chain = WGPUShaderSourceWGSL {
+                chain: WGPUChainedStruct {
+                    next: ptr::null(),
+                    s_type: WGPU_STYPE_SHADER_SOURCE_WGSL,
+                },
+                code: make_string_view(shader_source),
+            };
+            let shader_descriptor = WGPUShaderModuleDescriptor {
+                next_in_chain: &shader_chain.chain as *const WGPUChainedStruct,
+                label: empty_string_view(),
+            };
+
+            // SAFETY: Device and descriptor are valid for the duration of the call.
+            shader_module = unsafe { wgpuDeviceCreateShaderModule(device, &shader_descriptor) };
+            if shader_module.is_null() {
+                return Err("wgpuDeviceCreateShaderModule returned null".to_string());
+            }
+
+            let entry = if entry_point.is_empty() {
+                "main"
+            } else {
+                entry_point
+            };
+            let stage = WGPUProgrammableStageDescriptor {
+                next_in_chain: ptr::null(),
+                module: shader_module,
+                entry_point: make_string_view(entry),
+                constant_count: 0,
+                constants: ptr::null(),
+            };
+            let pipeline_descriptor = WGPUComputePipelineDescriptor {
+                next_in_chain: ptr::null(),
+                label: empty_string_view(),
+                layout: ptr::null_mut(),
+                compute: stage,
+            };
+
+            // SAFETY: Device and descriptor are valid for the duration of the call.
+            compute_pipeline =
+                unsafe { wgpuDeviceCreateComputePipeline(device, &pipeline_descriptor) };
+            if compute_pipeline.is_null() {
+                return Err("wgpuDeviceCreateComputePipeline returned null".to_string());
+            }
+
+            let encoder_descriptor = WGPUCommandEncoderDescriptor {
+                next_in_chain: ptr::null(),
+                label: empty_string_view(),
+            };
+            // SAFETY: Device and descriptor are valid for the duration of the call.
+            command_encoder =
+                unsafe { wgpuDeviceCreateCommandEncoder(device, &encoder_descriptor) };
+            if command_encoder.is_null() {
+                return Err("wgpuDeviceCreateCommandEncoder returned null".to_string());
+            }
+
+            let pass_descriptor = WGPUComputePassDescriptor {
+                next_in_chain: ptr::null(),
+                label: empty_string_view(),
+                timestamp_writes: ptr::null(),
+            };
+            // SAFETY: Encoder and descriptor are valid for the duration of the call.
+            compute_pass =
+                unsafe { wgpuCommandEncoderBeginComputePass(command_encoder, &pass_descriptor) };
+            if compute_pass.is_null() {
+                return Err("wgpuCommandEncoderBeginComputePass returned null".to_string());
+            }
+
+            // SAFETY: All handles are valid and owned for the duration of this block.
+            unsafe {
+                wgpuComputePassEncoderSetPipeline(compute_pass, compute_pipeline);
+                wgpuComputePassEncoderDispatchWorkgroups(
+                    compute_pass,
+                    x.max(1),
+                    y.max(1),
+                    z.max(1),
+                );
+                wgpuComputePassEncoderEnd(compute_pass);
+            }
+
+            let command_buffer_descriptor = WGPUCommandBufferDescriptor {
+                next_in_chain: ptr::null(),
+                label: empty_string_view(),
+            };
+            // SAFETY: Encoder and descriptor are valid for the duration of the call.
+            command_buffer =
+                unsafe { wgpuCommandEncoderFinish(command_encoder, &command_buffer_descriptor) };
+            if command_buffer.is_null() {
+                return Err("wgpuCommandEncoderFinish returned null".to_string());
+            }
+
+            // SAFETY: Device is valid and owns a queue.
+            queue = unsafe { wgpuDeviceGetQueue(device) };
+            if queue.is_null() {
+                return Err("wgpuDeviceGetQueue returned null".to_string());
+            }
+
+            // SAFETY: Queue and command buffer are valid handles.
+            unsafe {
+                wgpuQueueSubmit(queue, 1, &command_buffer as *const WGPUCommandBuffer);
+            }
+
+            Ok(())
+        })();
+
+        if !compute_pass.is_null() {
+            // SAFETY: Handle is valid if creation succeeded.
+            unsafe {
+                wgpuComputePassEncoderRelease(compute_pass);
+            }
+        }
+        if !command_buffer.is_null() {
+            // SAFETY: Handle is valid if creation succeeded.
+            unsafe {
+                wgpuCommandBufferRelease(command_buffer);
+            }
+        }
+        if !command_encoder.is_null() {
+            // SAFETY: Handle is valid if creation succeeded.
+            unsafe {
+                wgpuCommandEncoderRelease(command_encoder);
+            }
+        }
+        if !compute_pipeline.is_null() {
+            // SAFETY: Handle is valid if creation succeeded.
+            unsafe {
+                wgpuComputePipelineRelease(compute_pipeline);
+            }
+        }
+        if !shader_module.is_null() {
+            // SAFETY: Handle is valid if creation succeeded.
+            unsafe {
+                wgpuShaderModuleRelease(shader_module);
+            }
+        }
+        if !queue.is_null() {
+            // SAFETY: Handle is valid if retrieval succeeded.
+            unsafe {
+                wgpuQueueRelease(queue);
+            }
+        }
+        if !device.is_null() {
+            // SAFETY: Handle is valid if request succeeded.
+            unsafe {
+                wgpuDeviceRelease(device);
+            }
+        }
+        if !adapter.is_null() {
+            // SAFETY: Handle is valid if request succeeded.
+            unsafe {
+                wgpuAdapterRelease(adapter);
+            }
+        }
+        // SAFETY: Instance handle was created by `wgpuCreateInstance`.
         unsafe {
             wgpuInstanceRelease(instance);
         }
@@ -467,7 +785,7 @@ mod enabled {
 }
 
 #[cfg(feature = "upstream_wgpu_native")]
-pub use enabled::{probe_adapter, version};
+pub use enabled::{dispatch_compute_global, probe_adapter, version};
 
 #[cfg(not(feature = "upstream_wgpu_native"))]
 pub fn version() -> u32 {
@@ -478,4 +796,17 @@ pub fn version() -> u32 {
 #[allow(dead_code)]
 pub fn probe_adapter(_prefer_low_power: bool) -> Result<AdapterProbeInfo, String> {
     Err("upstream wgpu-native probe is disabled at compile time".to_string())
+}
+
+#[cfg(not(feature = "upstream_wgpu_native"))]
+#[allow(dead_code)]
+pub fn dispatch_compute_global(
+    _shader_source: &str,
+    _entry_point: &str,
+    _x: u32,
+    _y: u32,
+    _z: u32,
+    _prefer_low_power: bool,
+) -> Result<(), String> {
+    Err("upstream wgpu-native dispatch path is disabled at compile time".to_string())
 }

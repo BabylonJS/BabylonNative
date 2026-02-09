@@ -38,8 +38,10 @@ namespace Babylon::Graphics
         bool Resize(uint32_t width, uint32_t height);
         bool Render();
         WgpuBootstrapInfo GetInfo() const;
+        const std::string& GetLastError() const;
 
     private:
         void* m_context{};
+        std::string m_lastError{};
     };
 }

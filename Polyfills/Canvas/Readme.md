@@ -1,6 +1,10 @@
 # Canvas
 Implements parts of the 2D Canvas API using bgfx. Still a very early WIP; many methods are not yet implemented.
 
+On Windows, this polyfill is currently constrained to D3D12 runtime usage in Babylon Native.
+The generated HLSL shader blobs are still stored in the `dx11` folder because that is bgfx's
+naming convention for shader model 5.x binaries reused by both D3D11 and D3D12 backends.
+
 # Nanovg
 This project contains a fork of Nanovg code and shaders found in bgfx repo. This fork features new filters stack to allow shadow, blur to be enabled in nanovg rendering (nanovg_filterstack.*).
 Also, the rendering backend of Nanovg is defined in nanovg_babylon.*. It implements nanovg rendering using bgfx with an extension to allow blending of 2 textures (used for gradient mixing) whereas default implementation only allow 1 texture. Shaders are modified accordingly.
