@@ -24,13 +24,10 @@ mod enabled {
 
     const WGPU_TRUE: u32 = 1;
 
-    const WGPU_CALLBACK_MODE_WAIT_ANY_ONLY: u32 = 1;
+    const WGPU_CALLBACK_MODE_ALLOW_PROCESS_EVENTS: u32 = 2;
 
     const WGPU_REQUEST_ADAPTER_STATUS_SUCCESS: u32 = 1;
     const WGPU_REQUEST_DEVICE_STATUS_SUCCESS: u32 = 1;
-
-    const WGPU_WAIT_STATUS_SUCCESS: u32 = 1;
-    const WGPU_WAIT_STATUS_TIMED_OUT: u32 = 2;
 
     const WGPU_STATUS_SUCCESS: u32 = 1;
 
@@ -88,13 +85,6 @@ mod enabled {
         callback: Option<WGPURequestDeviceCallback>,
         userdata1: *mut c_void,
         userdata2: *mut c_void,
-    }
-
-    #[repr(C)]
-    #[derive(Clone, Copy)]
-    struct WGPUFutureWaitInfo {
-        future: WGPUFuture,
-        completed: u32,
     }
 
     #[repr(C)]
@@ -161,12 +151,7 @@ mod enabled {
             descriptor: *const c_void,
             callback_info: WGPURequestDeviceCallbackInfo,
         ) -> WGPUFuture;
-        fn wgpuInstanceWaitAny(
-            instance: WGPUInstance,
-            future_count: usize,
-            futures: *mut WGPUFutureWaitInfo,
-            timeout_ns: u64,
-        ) -> u32;
+        fn wgpuInstanceProcessEvents(instance: WGPUInstance);
         fn wgpuAdapterGetInfo(adapter: WGPUAdapter, info: *mut WGPUAdapterInfo) -> u32;
         fn wgpuAdapterInfoFreeMembers(adapter_info: WGPUAdapterInfo);
         fn wgpuAdapterRelease(adapter: WGPUAdapter);
@@ -268,34 +253,30 @@ mod enabled {
         state.completed = true;
     }
 
-    fn wait_for_future(
+    fn wait_for_callback(
         instance: WGPUInstance,
-        future: WGPUFuture,
+        is_completed: impl Fn() -> bool,
         name: &str,
     ) -> Result<(), String> {
         let deadline = Instant::now() + Duration::from_secs(10);
-        let mut wait_info = WGPUFutureWaitInfo {
-            future,
-            completed: 0,
-        };
-
         loop {
-            // SAFETY: All pointers remain valid for the duration of the call.
-            let status = unsafe { wgpuInstanceWaitAny(instance, 1, &mut wait_info as *mut _, 0) };
-            match status {
-                WGPU_WAIT_STATUS_SUCCESS if wait_info.completed == WGPU_TRUE => return Ok(()),
-                WGPU_WAIT_STATUS_SUCCESS | WGPU_WAIT_STATUS_TIMED_OUT => {
-                    if Instant::now() >= deadline {
-                        return Err(format!("{name} timed out waiting for completion"));
-                    }
-                    thread::yield_now();
-                }
-                _ => {
-                    return Err(format!(
-                        "{name} failed during waitAny with status code {status}"
-                    ));
-                }
+            if is_completed() {
+                return Ok(());
             }
+
+            // SAFETY: Instance handle is valid while this probe is active.
+            unsafe {
+                wgpuInstanceProcessEvents(instance);
+            }
+
+            if is_completed() {
+                return Ok(());
+            }
+
+            if Instant::now() >= deadline {
+                return Err(format!("{name} timed out waiting for completion"));
+            }
+            thread::yield_now();
         }
     }
 
@@ -358,7 +339,7 @@ mod enabled {
 
             let adapter_callback_info = WGPURequestAdapterCallbackInfo {
                 next_in_chain: ptr::null_mut(),
-                mode: WGPU_CALLBACK_MODE_WAIT_ANY_ONLY,
+                mode: WGPU_CALLBACK_MODE_ALLOW_PROCESS_EVENTS,
                 callback: Some(request_adapter_callback),
                 userdata1: (&mut adapter_state as *mut AdapterRequestState).cast::<c_void>(),
                 userdata2: ptr::null_mut(),
@@ -366,14 +347,14 @@ mod enabled {
 
             // SAFETY: Input pointers and callback userdata stay valid until
             // request completion.
-            let adapter_future = unsafe {
+            let _adapter_future = unsafe {
                 wgpuInstanceRequestAdapter(
                     instance,
                     &mut request_options as *mut WGPURequestAdapterOptions,
                     adapter_callback_info,
                 )
             };
-            wait_for_future(instance, adapter_future, "requestAdapter")?;
+            wait_for_callback(instance, || adapter_state.completed, "requestAdapter")?;
 
             if !adapter_state.completed {
                 return Err("requestAdapter callback did not complete".to_string());
@@ -397,16 +378,16 @@ mod enabled {
             let mut device_state = DeviceRequestState::default();
             let device_callback_info = WGPURequestDeviceCallbackInfo {
                 next_in_chain: ptr::null_mut(),
-                mode: WGPU_CALLBACK_MODE_WAIT_ANY_ONLY,
+                mode: WGPU_CALLBACK_MODE_ALLOW_PROCESS_EVENTS,
                 callback: Some(request_device_callback),
                 userdata1: (&mut device_state as *mut DeviceRequestState).cast::<c_void>(),
                 userdata2: ptr::null_mut(),
             };
 
             // SAFETY: Null descriptor is valid and requests a default device.
-            let device_future =
+            let _device_future =
                 unsafe { wgpuAdapterRequestDevice(adapter, ptr::null(), device_callback_info) };
-            wait_for_future(instance, device_future, "requestDevice")?;
+            wait_for_callback(instance, || device_state.completed, "requestDevice")?;
 
             if !device_state.completed {
                 return Err("requestDevice callback did not complete".to_string());
