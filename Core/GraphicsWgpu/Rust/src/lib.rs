@@ -17,8 +17,10 @@ static DEBUG_TEXTURE_WIDTH: AtomicU32 = AtomicU32::new(0);
 static DEBUG_TEXTURE_HEIGHT: AtomicU32 = AtomicU32::new(0);
 static LAST_ERROR: OnceLock<Mutex<String>> = OnceLock::new();
 static DEBUG_TEXTURE_UPLOAD: OnceLock<Mutex<Option<DebugTextureUpload>>> = OnceLock::new();
+#[cfg(not(feature = "upstream_wgpu_native"))]
 static COMPUTE_DISPATCH_CONTEXT: OnceLock<Mutex<Option<ComputeDispatchContext>>> = OnceLock::new();
 
+#[cfg(not(feature = "upstream_wgpu_native"))]
 struct ComputeDispatchContext {
     device: wgpu::Device,
     queue: wgpu::Queue,
