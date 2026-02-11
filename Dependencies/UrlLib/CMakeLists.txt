@@ -12,8 +12,8 @@ FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
     GIT_TAG        2d5af72259cc73e5f249d3c99bee2010be9cb042)
 FetchContent_Declare(CMakeExtensions
-    GIT_REPOSITORY https://github.com/bghgary/CMakeExtensions.git
-    GIT_TAG bd3ee9c96e1729cf0c4c8647e991314221a1ca06)
+    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
+    GIT_TAG dc750e7f69dad76779419df6442f834c57a30a1f)
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
     GIT_TAG 4.4.1)
