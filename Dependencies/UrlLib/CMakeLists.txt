@@ -7,13 +7,13 @@ include(FetchContent)
 # --------------------------------------------------
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG        c726dbe58713eda65bfb139c257093c43479b894)
+    GIT_TAG        c02527c32d51b6b3ffeda36f8cf140d2e1c60bb9)
 FetchContent_Declare(AndroidExtensions
-    GIT_REPOSITORY https://github.com/bghgary/AndroidExtensions.git
-    GIT_TAG        c84cb305205338b6fd6ff121a0349a810967bbc8)
+    GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
+    GIT_TAG        2d5af72259cc73e5f249d3c99bee2010be9cb042)
 FetchContent_Declare(CMakeExtensions
-    GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419)
+    GIT_REPOSITORY https://github.com/bghgary/CMakeExtensions.git
+    GIT_TAG bd3ee9c96e1729cf0c4c8647e991314221a1ca06)
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
     GIT_TAG 4.4.1)
@@ -96,8 +96,7 @@ target_link_libraries(UrlLib
     ${ADDITIONAL_LIBRARIES})
 
 if(APPLE)
-    set_target_properties(UrlLib PROPERTIES
-        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
+    enable_objc_arc(UrlLib)
     set_property(TARGET UrlLib PROPERTY UNITY_BUILD false)
 endif()
 
