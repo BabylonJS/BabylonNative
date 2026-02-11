@@ -4,8 +4,6 @@
 
 namespace Babylon
 {
-    namespace
-    {
         // clang-format off
         constexpr std::array<float, 16> IDENTITY_MATRIX{
             1.f, 0.f, 0.f, 0.f,
@@ -15,7 +13,7 @@ namespace Babylon
         };
         // clang-format on
 
-        std::array<float, 16> CreateTransformMatrix(const xr::Space& space, bool viewSpace = true)
+        inline std::array<float, 16> CreateTransformMatrix(const xr::Space& space, bool viewSpace = true)
         {
             auto& quat = space.Pose.Orientation;
             auto& pos = space.Pose.Position;
