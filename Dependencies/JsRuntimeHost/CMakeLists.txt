@@ -15,7 +15,7 @@ FetchContent_Declare(AndroidExtensions
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG c02527c32d51b6b3ffeda36f8cf140d2e1c60bb9
+    GIT_TAG 7c6be8aaa29effbc8ee1a2217388fb6e399150d2
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(asio
     GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
@@ -37,7 +37,7 @@ FetchContent_Declare(llhttp
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(UrlLib
     GIT_REPOSITORY https://github.com/BabylonJS/UrlLib.git
-    GIT_TAG e698870b37b2e302fb179a137d7a96cc6813d2de
+    GIT_TAG d53beb958b1cccafd5411260ace6d32b68b56a83
     EXCLUDE_FROM_ALL)
 # --------------------------------------------------
 
@@ -55,7 +55,7 @@ project(JsRuntimeHost)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # --------------------------------------------------
