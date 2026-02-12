@@ -7,7 +7,7 @@ include(FetchContent)
 # --------------------------------------------------
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG        c02527c32d51b6b3ffeda36f8cf140d2e1c60bb9)
+    GIT_TAG        7c6be8aaa29effbc8ee1a2217388fb6e399150d2)
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
     GIT_TAG        2d5af72259cc73e5f249d3c99bee2010be9cb042)
@@ -38,7 +38,7 @@ endif()
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(ANDROID)
