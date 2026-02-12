@@ -87,7 +87,7 @@ namespace UrlLib
                         curl_check(curl_url_get(m_curlu, CURLUPART_PATH, &path, 0));
 
                         auto newPath = std::filesystem::path{exe}.parent_path() / host / (path + 1);
-                        curl_check(curl_url_set(m_curlu, CURLUPART_PATH, newPath.generic_u8string().data(), 0));
+                        curl_check(curl_url_set(m_curlu, CURLUPART_PATH, reinterpret_cast<const char*>(newPath.generic_u8string().data()), 0));
 
                         m_file = true;
                     }
