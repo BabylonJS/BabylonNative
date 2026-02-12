@@ -61,12 +61,15 @@ target_link_libraries(UnitTests
 add_custom_command(TARGET UnitTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:UnitTests>>,copy,true> $<TARGET_RUNTIME_DLLS:UnitTests> $<TARGET_FILE_DIR:UnitTests> COMMAND_EXPAND_LISTS)
 
+if(APPLE)
+    enable_objc_arc(UnitTests)
+endif()
+
 if(IOS)
     set_target_properties(UnitTests PROPERTIES
         MACOSX_BUNDLE true
         MACOSX_BUNDLE_INFO_PLIST "${PLIST_FILE}"
         RESOURCE "${STORYBOARD}"
-        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
         XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET ${DEPLOYMENT_TARGET}
         XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.jsruntimehost.unittests")
 else()

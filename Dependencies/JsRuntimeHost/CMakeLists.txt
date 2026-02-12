@@ -11,7 +11,7 @@ include(FetchContent)
 # --------------------------------------------------
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG f7ed149b5360cc8a4908fece66607c5ce1e6095b
+    GIT_TAG 2d5af72259cc73e5f249d3c99bee2010be9cb042
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
@@ -23,7 +23,7 @@ FetchContent_Declare(asio
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419
+    GIT_TAG dc750e7f69dad76779419df6442f834c57a30a1f
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz"
@@ -37,7 +37,7 @@ FetchContent_Declare(llhttp
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(UrlLib
     GIT_REPOSITORY https://github.com/BabylonJS/UrlLib.git
-    GIT_TAG 1f9d2c05f792d994b09fdfc1129b25294efbe182
+    GIT_TAG e698870b37b2e302fb179a137d7a96cc6813d2de
     EXCLUDE_FROM_ALL)
 # --------------------------------------------------
 
