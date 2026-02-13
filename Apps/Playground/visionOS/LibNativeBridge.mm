@@ -24,7 +24,7 @@
     [_displayLink addToRunLoop:NSRunLoop.mainRunLoop forMode:NSDefaultRunLoopMode];
     
     _appContext.emplace(
-        self.metalLayer,
+        (__bridge CA::MetalLayer*)self.metalLayer,
         static_cast<size_t>(width),
         static_cast<size_t>(height),
         [](const char* message) { NSLog(@"%s", message); });

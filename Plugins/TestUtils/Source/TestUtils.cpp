@@ -78,7 +78,8 @@ namespace Babylon::Plugins::Internal
 
         auto callbackPtr{ std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback)) };
         m_deviceContext.RequestScreenShot([this, callbackPtr{ std::move(callbackPtr) }](std::vector<uint8_t> array) {
-            m_runtime.Dispatch([callbackPtr{ std::move(callbackPtr) }, array{ std::move(array) }](Napi::Env env) {
+            m_runtime.Dispatch([callbackPtr{ std::move(callbackPtr) }, array{ std::move(array) }](Napi::Env env) mutable {
+                PostProcessFrameBufferData(array);
                 auto arrayBuffer{ Napi::ArrayBuffer::New(env, const_cast<uint8_t*>(array.data()), array.size()) };
                 auto typedArray{ Napi::Uint8Array::New(env, array.size(), arrayBuffer, 0) };
                 callbackPtr->Value().Call({ typedArray });

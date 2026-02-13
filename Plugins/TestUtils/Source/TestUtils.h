@@ -9,6 +9,7 @@
 #include <bimg/bimg.h>
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Graphics/DeviceContext.h>
+#include <vector>
 
 namespace Babylon::Plugins::Internal
 {
@@ -70,6 +71,8 @@ namespace Babylon::Plugins::Internal
         Napi::Value DecodeImage(const Napi::CallbackInfo& info);
         Napi::Value GetImageData(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
+
+        static void PostProcessFrameBufferData(std::vector<uint8_t>& data);
 
         JsRuntime& m_runtime;
         Graphics::DeviceContext& m_deviceContext;

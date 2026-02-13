@@ -2,6 +2,9 @@
 #include <Babylon/Graphics/Platform.h>
 #include "DeviceImpl.h"
 
+#import <QuartzCore/QuartzCore.h>
+#import <UIKit/UIKit.h>
+
 namespace Babylon::Graphics
 {
     void DeviceImpl::ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window)
@@ -15,10 +18,9 @@ namespace Babylon::Graphics
 
     float DeviceImpl::GetDevicePixelRatio(WindowT window)
     {
-        // contentScaleFactor can return infinity if the view is not yet parented
-        // to a window hierarchy (and thus has no associated screen).
+        // contentsScale can return 0 if it hasn't been set yet.
         // Fallback to the scale from the main screen.
-        float scale = window.contentScaleFactor;
+        float scale = static_cast<float>(((CAMetalLayer*)window).contentsScale);
         if (std::isinf(scale) || scale <= 0)
         {
             scale = UIScreen.mainScreen.scale;

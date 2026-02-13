@@ -1,4 +1,5 @@
 #pragma once
+
 #include <Babylon/Graphics/Device.h>
 #include "TestUtils.h"
 

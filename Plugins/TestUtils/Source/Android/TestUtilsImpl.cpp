@@ -19,6 +19,10 @@ namespace Babylon::Plugins::Internal
         auto path = "/data/data/com.android.babylonnative.playground/cache";
         return Napi::Value::From(info.Env(), path);
     }
+
+    void TestUtils::PostProcessFrameBufferData(std::vector<uint8_t>& /*data*/)
+    {
+    }
 }
 
 namespace Babylon::Plugins::TestUtils

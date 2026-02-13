@@ -1,5 +1,9 @@
+#include <cmath>
 #include <Babylon/Graphics/Platform.h>
 #include "DeviceImpl.h"
+
+#import <AppKit/AppKit.h>
+#import <QuartzCore/QuartzCore.h>
 
 namespace Babylon::Graphics
 {
@@ -14,6 +18,11 @@ namespace Babylon::Graphics
 
     float DeviceImpl::GetDevicePixelRatio(WindowT window)
     {
-        return window.window.screen.backingScaleFactor;
+        float scale = static_cast<float>(((CAMetalLayer*)window).contentsScale);
+        if (std::isinf(scale) || scale <= 0)
+        {
+            scale = NSScreen.mainScreen.backingScaleFactor;
+        }
+        return scale;
     }
 }

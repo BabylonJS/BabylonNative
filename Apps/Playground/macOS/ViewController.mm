@@ -1,8 +1,9 @@
 #import "ViewController.h"
 
-#import <Shared/AppContext.h>
+#include <Shared/AppContext.h>
+#include <optional>
 
-#import <optional>
+#import <MetalKit/MTKView.h>
 
 std::optional<AppContext> appContext{};
 
@@ -68,7 +69,7 @@ std::optional<AppContext> appContext{};
     size_t height = static_cast<size_t>(engineView.drawableSize.height);
 
     appContext.emplace(
-        engineView,
+        (__bridge CA::MetalLayer*)engineView.layer,
         width,
         height,
         [](const char* message)

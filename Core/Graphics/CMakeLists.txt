@@ -15,7 +15,7 @@ set(SOURCES
     "Source/DeviceImpl.cpp"
     "Source/DeviceImpl.h"
     "Source/DeviceImpl_${BABYLON_NATIVE_PLATFORM}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
-    "Source/DeviceImpl_${GRAPHICS_API}.cpp"
+    "Source/DeviceImpl_${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
     "Source/SafeTimespanGuarantor.cpp"
     "Source/Texture.cpp")
 
@@ -28,17 +28,12 @@ target_include_directories(Graphics
     PRIVATE "Include/RendererType/${GRAPHICS_API}"
     PRIVATE "InternalInclude")
 
-if(WINDOWS_STORE)
-    target_link_libraries(Graphics
-        PRIVATE WindowsAppSDK)
-elseif(WIN32)
-    target_link_libraries(Graphics
-        PRIVATE "shlwapi.lib")
-elseif(ANDROID)
-    target_link_libraries(Graphics
-        PRIVATE android
-        PRIVATE AndroidExtensions)
-endif()
+target_compile_definitions(Graphics
+    PRIVATE NOMINMAX)
+
+# TODO: remove this once the #define in GraphicsImpl is removed
+target_compile_definitions(Graphics
+    PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
 
 target_link_libraries(Graphics
     PRIVATE JsRuntimeInternal
@@ -49,36 +44,56 @@ target_link_libraries(Graphics
     PRIVATE minz
     PRIVATE bx)
 
-target_compile_definitions(Graphics
-    PRIVATE NOMINMAX)
-
-# TODO: remove this once the #define in GraphicsImpl is removed
-target_compile_definitions(Graphics
-    PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
+if(WINDOWS_STORE)
+    target_link_libraries(Graphics
+        PRIVATE WindowsAppSDK)
+elseif(WIN32)
+    target_link_libraries(Graphics
+        PRIVATE "shlwapi.lib")
+elseif(ANDROID)
+    target_link_libraries(Graphics
+        PRIVATE android
+        PRIVATE AndroidExtensions)
+elseif(APPLE)
+    target_link_libraries(Graphics
+        PRIVATE metal-cpp)
+endif()
 
 set_property(TARGET Graphics PROPERTY FOLDER Core)
 set_property(TARGET Graphics PROPERTY UNITY_BUILD false)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
-if(APPLE)
-    # compile as objc++
-    target_compile_options(Graphics PUBLIC "SHELL:-x objective-c++")
-endif()
+# --------------
+# GraphicsDevice
+# --------------
 
 add_library(GraphicsDevice INTERFACE)
+
 target_include_directories(GraphicsDevice
     INTERFACE "Include/Shared"
     INTERFACE "Include/Platform/${BABYLON_NATIVE_PLATFORM}"
     INTERFACE "Include/RendererType/${GRAPHICS_API}")
+
 target_link_libraries(GraphicsDevice
     INTERFACE Graphics
     INTERFACE JsRuntime)
 
+if(APPLE)
+    target_link_libraries(GraphicsDevice
+        INTERFACE metal-cpp)
+endif()
+
+# ---------------------
+# GraphicsDeviceContext
+# ---------------------
+
 add_library(GraphicsDeviceContext INTERFACE)
+
 target_include_directories(GraphicsDeviceContext
     INTERFACE "InternalInclude"
     INTERFACE "InternalInclude/${BABYLON_NATIVE_PLATFORM}")
+
 target_link_libraries(GraphicsDeviceContext
     INTERFACE Graphics
     INTERFACE JsRuntimeInternal
@@ -86,6 +101,11 @@ target_link_libraries(GraphicsDeviceContext
     INTERFACE bgfx
     INTERFACE bimg
     INTERFACE bx)
+
+if(APPLE)
+    target_link_libraries(GraphicsDevice
+        INTERFACE metal-cpp)
+endif()
 
 target_compile_definitions(GraphicsDeviceContext
     INTERFACE NOMINMAX)

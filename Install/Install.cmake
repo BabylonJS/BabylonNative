@@ -46,6 +46,12 @@ if(TARGET webp)
     install_targets(webp)
 endif()
 
+## metal-cpp
+if(APPLE)
+    install_targets(metal-cpp)
+    install_include_for_targets(metal-cpp)
+endif()
+
 ## SPIRV-Cross
 install_targets(spirv-cross-core)
 if(TARGET spirv-cross-glsl)
@@ -58,6 +64,9 @@ if(TARGET spirv-cross-hlsl)
     install_targets(spirv-cross-hlsl)
 endif()
 
+## UrlLib
+install_targets(UrlLib)
+
 ## XR
 if(TARGET openxr_loader)
     install_targets(openxr_loader)
@@ -67,37 +76,24 @@ if(TARGET xr)
     install_targets(xr)
 endif()
 
-## UrlLib
-install_targets(UrlLib)
-
 # ----------------
 # Core
 # ----------------
-
-install_targets(Foundation)
-install_include_for_targets(Foundation)
-
-install_targets(JsRuntime)
-install_include_for_targets(JsRuntime)
-
-# Note libs are in the `Graphics` target but includes are in `GraphicsDevice` target
-install_targets(Graphics)
-install_include_for_targets(GraphicsDevice)
 
 if(TARGET AppRuntime)
     install_targets(AppRuntime)
     install_include_for_targets(AppRuntime)
 endif()
 
-if(TARGET Scheduling)
-    install_targets(Scheduling)
-    install_include_for_targets(Scheduling)
-endif()
+install_targets(Foundation)
+install_include_for_targets(Foundation)
 
-if(TARGET ScriptLoader)
-    install_targets(ScriptLoader)
-    install_include_for_targets(ScriptLoader)
-endif()
+# Note libs are in the `Graphics` target but includes are in `GraphicsDevice` target
+install_targets(Graphics)
+install_include_for_targets(GraphicsDevice)
+
+install_targets(JsRuntime)
+install_include_for_targets(JsRuntime)
 
 install_targets(napi)
 install_include_for_targets(napi)
@@ -121,6 +117,16 @@ endif()
 install_targets(napi-extensions)
 install_include_for_targets(napi-extensions)
 
+if(TARGET Scheduling)
+    install_targets(Scheduling)
+    install_include_for_targets(Scheduling)
+endif()
+
+if(TARGET ScriptLoader)
+    install_targets(ScriptLoader)
+    install_include_for_targets(ScriptLoader)
+endif()
+
 # ----------------
 # Plugins
 # ----------------
@@ -138,6 +144,11 @@ endif()
 if(TARGET NativeCapture)
     install_targets(NativeCapture)
     install_include_for_targets(NativeCapture)
+endif()
+
+if(TARGET NativeEncoding)
+    install_targets(NativeEncoding)
+    install_include_for_targets(NativeEncoding)
 endif()
 
 if(TARGET NativeEngine)
@@ -165,11 +176,6 @@ if(TARGET NativeXr)
     install_include_for_targets(NativeXr)
 endif()
 
-if(TARGET NativeEncoding)
-    install_targets(NativeEncoding)
-    install_include_for_targets(NativeEncoding)
-endif()
-
 if(TARGET ShaderCache)
     install_targets(ShaderCache)
     install_include_for_targets(ShaderCache)
@@ -183,6 +189,16 @@ endif()
 # Polyfills
 # ----------------
 
+if(TARGET AbortController)
+    install_targets(AbortController)
+    install_include_for_targets(AbortController)
+endif()
+
+if(TARGET Blob)
+    install_targets(Blob)
+    install_include_for_targets(Blob)
+endif()
+
 if(TARGET Canvas)
     install_targets(Canvas)
     install_include_for_targets(Canvas)
@@ -193,6 +209,21 @@ if(TARGET Console)
     install_include_for_targets(Console)
 endif()
 
+if(TARGET Performance)
+    install_targets(Performance)
+    install_include_for_targets(Performance)
+endif()
+
+if(TARGET URL)
+    install_targets(URL)
+    install_include_for_targets(URL)
+endif()
+
+if(TARGET WebSocket)
+    install_targets(WebSocket)
+    install_include_for_targets(WebSocket)
+endif()
+
 if(TARGET Window)
     install_targets(Window)
     install_include_for_targets(Window)
@@ -201,29 +232,4 @@ endif()
 if(TARGET XMLHttpRequest)
     install_targets(XMLHttpRequest)
     install_include_for_targets(XMLHttpRequest)
-endif()
-
-if(TARGET Blob)
-    install_targets(Blob)
-    install_include_for_targets(Blob)
-endif()
-
-if(TARGET URL)
-    install_targets(URL)
-    install_include_for_targets(URL)
-endif()
-
-if(TARGET AbortController)
-    install_targets(AbortController)
-    install_include_for_targets(AbortController)
-endif()
-
-if(TARGET WebSocket)
-    install_targets(WebSocket)
-    install_include_for_targets(WebSocket)
-endif()
-
-if(TARGET Performance)
-    install_targets(Performance)
-    install_include_for_targets(Performance)
 endif()

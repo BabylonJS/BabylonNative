@@ -6,8 +6,7 @@ add_library(NativeTracing ${SOURCES})
 warnings_as_errors(NativeTracing)
 
 if (APPLE)
-    set_target_properties(NativeTracing PROPERTIES
-        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
+    enable_objc_arc(NativeTracing)
 endif()
 
 target_include_directories(NativeTracing PUBLIC "Include")

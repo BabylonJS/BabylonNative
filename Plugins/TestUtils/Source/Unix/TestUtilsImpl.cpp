@@ -58,6 +58,10 @@ namespace Babylon::Plugins::Internal
         auto path = std::filesystem::path{exe}.parent_path().generic_string();
         return Napi::Value::From(info.Env(), path);
     }
+
+    void TestUtils::PostProcessFrameBufferData(std::vector<uint8_t>& /*data*/)
+    {
+    }
 }
 
 namespace Babylon::Plugins::TestUtils

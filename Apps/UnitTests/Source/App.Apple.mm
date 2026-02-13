@@ -1,6 +1,5 @@
 #include "App.h"
 #include <Babylon/DebugTrace.h>
-#include <Metal/Metal.h>
 
 int main(int argc, char* argv[])
 {
@@ -10,7 +9,7 @@ int main(int argc, char* argv[])
     Babylon::Graphics::Configuration config{};
 
 #ifndef USE_NOOP_METAL_DEVICE
-    config.Device = MTLCreateSystemDefaultDevice();
+    config.Device = MTL::CreateSystemDefaultDevice();
     config.Width = 600;
     config.Height = 400;
 #endif
