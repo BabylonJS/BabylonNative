@@ -1,7 +1,12 @@
 #include "../TestUtilsImplData.h"
 #include <filesystem>
 
+#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
+#import <UIKit/UIKit.h>
+#else
 #import <AppKit/AppKit.h>
+#endif
+
 #import <QuartzCore/QuartzCore.h>
 
 namespace Babylon::Plugins::Internal
