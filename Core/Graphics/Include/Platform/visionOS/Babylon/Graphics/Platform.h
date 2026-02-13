@@ -1,9 +1,8 @@
 #pragma once
 
-#include <QuartzCore/QuartzCore.hpp>
+#include <Metal/Metal.hpp>
 
 namespace Babylon::Graphics
 {
-    // Use CAMetalLayer* from QuartzCore/CAMetalLayer.h.
     using WindowT = CA::MetalLayer*;
 }
