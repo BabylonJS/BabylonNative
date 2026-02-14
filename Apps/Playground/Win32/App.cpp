@@ -332,6 +332,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_DESTROY:
         {
             Uninitialize();
+            PostQuitMessage(0);
             break;
         }
         case WM_KEYDOWN:
