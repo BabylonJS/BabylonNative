@@ -229,5 +229,5 @@ int main(int _argc, const char* const* _argv)
     XDestroyWindow(display, window);
     XCloseDisplay(display);
 
-    return Babylon::Plugins::TestUtils::errorCode;
+    return 0;
 }

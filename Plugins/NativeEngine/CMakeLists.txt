@@ -50,7 +50,8 @@ if(BABYLON_NATIVE_PLUGIN_SHADERCACHE)
     target_compile_definitions(NativeEngine
         PRIVATE SHADER_CACHE)
     target_link_libraries(NativeEngine
-        PRIVATE ShaderCacheInternal)
+        PRIVATE ShaderCacheInternal
+        PRIVATE ShaderCache)
 endif()
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_COMPILESHADERS)

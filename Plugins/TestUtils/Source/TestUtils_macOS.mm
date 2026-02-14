@@ -1,36 +1,22 @@
-#include "../TestUtilsImplData.h"
+#include "TestUtils.h"
+
 #include <filesystem>
 
-#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
-#import <UIKit/UIKit.h>
-#else
 #import <AppKit/AppKit.h>
-#endif
-
 #import <QuartzCore/QuartzCore.h>
 
 namespace Babylon::Plugins::Internal
 {
     void TestUtils::Exit(const Napi::CallbackInfo& info)
     {
-        auto errorCode = info[0].As<Napi::Number>().Int32Value();
+        auto exitCode = info[0].As<Napi::Number>().Int32Value();
+        if (exitCode != 0)
+        {
+            std::quick_exit(exitCode);
+        }
 
         dispatch_async(dispatch_get_main_queue(), ^{
-#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
-            NSString* message = (errorCode == 0) ? @"Success!" : [NSString stringWithFormat:@"Error code: %d. Check logs!", errorCode];
-            UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Validation Tests" message:message preferredStyle:UIAlertControllerStyleAlert];
-            UIAlertAction* defaultAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(UIAlertAction * ) {}];
-            [alert addAction:defaultAction];
-            UIViewController *rootController = [[[[UIApplication sharedApplication]delegate] window] rootViewController];
-            [rootController presentViewController:alert animated:YES completion:nil];
-#else
-            if (errorCode != 0)
-            {
-                std::quick_exit(errorCode);
-            }
-
             [NSApp terminate:nil];
-#endif
         });
     }
 
@@ -40,7 +26,7 @@ namespace Babylon::Plugins::Internal
         const int32_t height = info[1].As<Napi::Number>().Int32Value();
 
         dispatch_async(dispatch_get_main_queue(), ^{
-            NSWindow* window = [(NSView*)((CAMetalLayer*)m_implData->m_window).delegate window];
+            auto* window = [(NSView*)((__bridge CAMetalLayer*)m_window).delegate window];
             CGFloat scale = window.backingScaleFactor;
             [window setContentSize:NSMakeSize(width / scale, height / scale)];
         });
@@ -50,7 +36,7 @@ namespace Babylon::Plugins::Internal
     {
         NSString* title = @(info[0].As<Napi::String>().Utf8Value().c_str());
         dispatch_async(dispatch_get_main_queue(), ^{
-            NSWindow* window = [(NSView*)((CAMetalLayer*)m_implData->m_window).delegate window];
+            auto* window = [(NSView*)((__bridge CAMetalLayer*)m_window).delegate window];
             [window setTitle:title];
         });
     }
@@ -69,14 +55,5 @@ namespace Babylon::Plugins::Internal
         {
             std::swap(data[i], data[i + 2]);
         }
-    }
-}
-
-namespace Babylon::Plugins::TestUtils
-{
-    void Initialize(Napi::Env env, Graphics::WindowT window)
-    {
-        auto implData{std::make_shared<Internal::TestUtils::ImplData>(window)};
-        Internal::TestUtils::CreateInstance(env, implData);
     }
 }

@@ -40,7 +40,6 @@ if(APPLE)
             "AppleShared/GestureRecognizer.swift")
         set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
         set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "ReferenceImages")
-        set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE NativeCamera)
     elseif(VISIONOS)
         set(PLIST_FILE
             "${CMAKE_CURRENT_LIST_DIR}/visionOS/Info.plist")
@@ -55,7 +54,6 @@ if(APPLE)
     else()
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
-        set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE NativeCamera)
         set(RESOURCE_FILES ${STORYBOARD})
         set(SOURCES ${SOURCES}
             "macOS/main.mm"
@@ -102,7 +100,6 @@ elseif(WIN32)
         "Win32/Resource.h"
         "Win32/small.ico"
         "Win32/targetver.h")
-    set(ADDITIONAL_LIBRARIES PRIVATE NativeCamera)
 endif()
 
 if(WIN32)
@@ -137,8 +134,8 @@ target_link_libraries(Playground
     PRIVATE NativeInput
     PRIVATE NativeOptimizations
     PRIVATE NativeTracing
-    PRIVATE ShaderCache
     PRIVATE ScriptLoader
+    PRIVATE ShaderCache
     PRIVATE TestUtils
     PRIVATE Window
     PRIVATE XMLHttpRequest

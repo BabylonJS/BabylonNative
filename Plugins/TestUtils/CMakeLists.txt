@@ -1,15 +1,8 @@
-if(APPLE)
-    set(PLATFORM Apple)
-else()
-    set(PLATFORM ${BABYLON_NATIVE_PLATFORM})
-endif()
-
 set(SOURCES
     "Include/Babylon/Plugins/TestUtils.h"
     "Source/TestUtils.h"
     "Source/TestUtils.cpp"
-    "Source/TestUtilsImplData.h"
-    "Source/${PLATFORM}/TestUtilsImpl.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
+    "Source/TestUtils_${BABYLON_NATIVE_PLATFORM}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
 add_library(TestUtils ${SOURCES})
 warnings_as_errors(TestUtils)
