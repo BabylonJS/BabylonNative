@@ -45,7 +45,7 @@ cmake_dependent_option(
 )
 cmake_dependent_option(BGFX_WITH_WAYLAND "Use Wayland backend." ON "CMAKE_SYSTEM_NAME STREQUAL Linux" OFF)
 option(BGFX_CUSTOM_TARGETS "Include convenience custom targets." ON)
-option(BGFX_CONFIG_MULTITHREADED "Build bgfx with multithreaded configuration" ON)
+cmake_dependent_option(BGFX_CONFIG_MULTITHREADED "Build bgfx with multithreaded configuration" ON "NOT CMAKE_SYSTEM_NAME STREQUAL Emscripten" OFF)
 option(BGFX_CONFIG_RENDERER_WEBGPU "Enable the webgpu renderer" OFF)
 option(BGFX_CONFIG_DEBUG_ANNOTATION "Enable gfx debug annotations (default: on in debug)" OFF)
 
