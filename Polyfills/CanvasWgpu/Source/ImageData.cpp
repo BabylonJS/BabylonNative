@@ -53,8 +53,12 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value ImageData::GetData(const Napi::CallbackInfo& info)
     {
-        // return a well size array with 0
-        // TODO: Get datas from context/canvas
+        // TODO(getImageData): Currently returns a zeroed-out buffer instead of
+        // actual pixel data. Implementing this requires GPU texture readback:
+        // copy the relevant region of the canvas render target into a staging
+        // buffer, map it to CPU memory, and fill the returned Uint8Array with
+        // the RGBA pixel values. This is needed for any JS code that inspects
+        // canvas contents (e.g. hit-testing, image processing, snapshots).
         const auto size{m_width * m_height * 4};
         auto data{Napi::Uint8Array::New(info.Env(), size)};
         memset(data.Data(), 0, size);

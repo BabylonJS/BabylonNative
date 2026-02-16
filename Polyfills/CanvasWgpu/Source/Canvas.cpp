@@ -5,9 +5,22 @@
 #include "Colors.h"
 #include "Gradient.h"
 
+#include <algorithm>
+#include <cstdint>
+
 namespace
 {
     constexpr auto JS_CANVAS_NAME = "_CanvasImpl";
+
+    struct CanvasNativeTextureHandle final
+    {
+        const void* texture{};
+        const void* device{};
+        const void* queue{};
+        uint32_t width{};
+        uint32_t height{};
+        uint64_t generation{};
+    };
 }
 
 namespace Babylon::Polyfills::Internal
@@ -159,6 +172,8 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value NativeCanvas::GetCanvasTexture(const Napi::CallbackInfo& info)
     {
+        // This payload is consumed by NativeWebGPU's implementation of
+        // `GPUQueue.copyExternalImageToTexture({ source: canvas }, ...)`.
         auto contextValue = GetContext(info);
         if (!contextValue.IsObject())
         {
@@ -177,10 +192,45 @@ namespace Babylon::Polyfills::Internal
             return Env().Null();
         }
 
-        auto payload = Napi::Object::New(info.Env());
-        payload.Set("nativeTexture", Napi::External<void>::New(info.Env(), nativeTexture));
-        payload.Set("width", Napi::Number::From(info.Env(), m_width));
-        payload.Set("height", Napi::Number::From(info.Env(), m_height));
+        Napi::Object payload{};
+        if (m_canvasTexturePayload.IsEmpty())
+        {
+            payload = Napi::Object::New(info.Env());
+            m_canvasTexturePayload = Napi::Persistent(payload);
+        }
+        else
+        {
+            payload = m_canvasTexturePayload.Value();
+        }
+
+        const auto* nativeHandle = reinterpret_cast<const CanvasNativeTextureHandle*>(nativeTexture);
+        if (m_canvasTextureNativeHandle != nativeTexture)
+        {
+            payload.Set("nativeTexture", Napi::External<void>::New(info.Env(), nativeTexture));
+            m_canvasTextureNativeHandle = nativeTexture;
+        }
+
+        const auto payloadWidth = static_cast<uint16_t>(std::max<uint32_t>(1, nativeHandle->width));
+        const auto payloadHeight = static_cast<uint16_t>(std::max<uint32_t>(1, nativeHandle->height));
+
+        if (m_canvasTexturePayloadWidth != payloadWidth)
+        {
+            payload.Set("width", Napi::Number::From(info.Env(), payloadWidth));
+            m_canvasTexturePayloadWidth = payloadWidth;
+        }
+
+        if (m_canvasTexturePayloadHeight != payloadHeight)
+        {
+            payload.Set("height", Napi::Number::From(info.Env(), payloadHeight));
+            m_canvasTexturePayloadHeight = payloadHeight;
+        }
+
+        if (m_canvasTexturePayloadGeneration != nativeHandle->generation)
+        {
+            payload.Set("generation", Napi::Number::From(info.Env(), static_cast<double>(nativeHandle->generation)));
+            m_canvasTexturePayloadGeneration = nativeHandle->generation;
+        }
+
         return payload;
     }
 
@@ -210,6 +260,15 @@ namespace Babylon::Polyfills::Internal
         {
             thisObject.Delete("_context");
         }
+
+        if (!m_canvasTexturePayload.IsEmpty())
+        {
+            m_canvasTexturePayload.Reset();
+        }
+        m_canvasTextureNativeHandle = nullptr;
+        m_canvasTexturePayloadWidth = 0;
+        m_canvasTexturePayloadHeight = 0;
+        m_canvasTexturePayloadGeneration = 0;
     }
 
     void NativeCanvas::Dispose(const Napi::CallbackInfo& /*info*/)
@@ -278,6 +337,10 @@ namespace Babylon::Polyfills
     {
     }
 
+    // Initialization contract: same as NativeWebGPU::Initialize — must be
+    // called from an AppRuntime::Dispatch callback before any JS runs.
+    // The FIFO WorkQueue guarantees _native.Canvas is synchronously available
+    // to scripts loaded via ScriptLoader. Embedders do NOT need to poll.
     Canvas BABYLON_API Canvas::Initialize(Napi::Env env)
     {
         auto impl{std::make_shared<Canvas::Impl>(env)};

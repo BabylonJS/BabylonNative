@@ -83,6 +83,11 @@ namespace Babylon::Polyfills::Internal
         void Dispose();
 
         Napi::ObjectReference m_contextObject{};
+        Napi::ObjectReference m_canvasTexturePayload{};
+        void* m_canvasTextureNativeHandle{};
+        uint16_t m_canvasTexturePayloadWidth{};
+        uint16_t m_canvasTexturePayloadHeight{};
+        uint64_t m_canvasTexturePayloadGeneration{};
         uint16_t m_width{1};
         uint16_t m_height{1};
         bool m_dirty{};

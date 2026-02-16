@@ -88,18 +88,21 @@ namespace Babylon::Polyfills::Internal
         void Dispose(const Napi::CallbackInfo&);
         void Dispose();
         bool SetFontFaceId();
+        void EnsureLoadedFonts();
         void Flush(const Napi::CallbackInfo&);
 
         NativeCanvas* m_canvas;
+        // Compatibility nvg* context handle backed by CanvasWgpu Rust/femtovg.
         std::shared_ptr<NVGcontext*> m_nvg;
 
         Font m_font;
         std::variant<std::string, CanvasGradient*> m_fillStyle{};
         std::string m_strokeStyle{};
-        std::string m_lineCap{};  // 'butt', 'round', 'square'
-        std::string m_lineJoin{}; // 'round', 'bevel', 'miter'
+        NVGlineCap m_lineCap{NVG_BUTT};
+        NVGlineCap m_lineJoin{NVG_MITER};
         std::string m_filter{};
-        std::string m_direction{"ltr"}; // 'ltr', 'rtl'
+        enum class Direction : uint8_t { LTR, RTL };
+        Direction m_direction{Direction::LTR};
         float m_miterLimit{0.f};
         float m_lineWidth{0.f};
         float m_globalAlpha{1.f};

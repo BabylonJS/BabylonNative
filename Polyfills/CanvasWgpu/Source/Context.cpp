@@ -8,6 +8,8 @@
 #pragma GCC diagnostic ignored "-Wpedantic"
 #endif
 
+// Compatibility ABI header: these nvg* symbols are implemented by CanvasWgpu
+// Rust/femtovg exports, not by upstream NanoVG.
 #include "nanovg/nanovg.h"
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
@@ -218,7 +220,7 @@ namespace Babylon::Polyfills::Internal
         {
             auto string = value.As<Napi::String>().Utf8Value();
             const auto color = StringToColor(info.Env(), string);
-            m_fillStyle = string;
+            m_fillStyle = std::move(string);
             nvgFillColor(*m_nvg, color);
         }
         else
@@ -560,8 +562,32 @@ namespace Babylon::Polyfills::Internal
         return MeasureText::CreateInstance(info.Env(), this, text);
     }
 
+    void Context::EnsureLoadedFonts()
+    {
+        if (!m_nvg)
+        {
+            return;
+        }
+
+        for (auto& font : NativeCanvas::fontsInfos)
+        {
+            if (m_fonts.find(font.first) != m_fonts.end())
+            {
+                continue;
+            }
+
+            auto fontId = nvgCreateFontMem(*m_nvg, font.first.c_str(), font.second.data(), static_cast<int>(font.second.size()), 0);
+            if (fontId >= 0)
+            {
+                m_fonts[font.first] = fontId;
+            }
+        }
+    }
+
     bool Context::SetFontFaceId()
     {
+        EnsureLoadedFonts();
+
         if (m_fonts.empty())
         {
             return false;
@@ -583,8 +609,10 @@ namespace Babylon::Polyfills::Internal
         auto x = info[1].As<Napi::Number>().FloatValue();
         auto y = info[2].As<Napi::Number>().FloatValue();
 
-        // TODO: support ligatures, etc.
-        if (m_direction.compare("rtl") == 0) {
+        if (m_direction == Direction::RTL) {
+            // TODO(bidi): std::reverse on a UTF-8 byte string is incorrect for
+            // multi-byte codepoints. Proper RTL/bidi support requires a Unicode
+            // bidi algorithm (e.g. ICU ubidi or HarfBuzz).
             std::reverse(text.begin(), text.end());
         }
 
@@ -617,6 +645,9 @@ namespace Babylon::Polyfills::Internal
 
     void Context::PutImageData(const Napi::CallbackInfo&)
     {
+        // TODO(putImageData): Implement by uploading the pixel data from the
+        // JavaScript ImageData object to a GPU texture (or staging buffer) and
+        // blitting it into the canvas render target at the specified offset.
         throw std::runtime_error{"not implemented"};
     }
 
@@ -688,6 +719,12 @@ namespace Babylon::Polyfills::Internal
         }
         else if (info.Length() == 9)
         {
+            // TODO(drawImage): The 9-argument form should use the source
+            // rectangle (sx, sy, sWidth, sHeight) to sample a sub-region of
+            // the source image. Currently the source rect is ignored and the
+            // entire source image is drawn into the destination rect. This
+            // requires computing UV offset/scale for nvgImagePattern or
+            // creating a cropped intermediate image.
             const auto sx = info[1].As<Napi::Number>().Int32Value();
             const auto sy = info[2].As<Napi::Number>().Int32Value();
             const auto sWidth = info[3].As<Napi::Number>().Uint32Value();
@@ -745,8 +782,10 @@ namespace Babylon::Polyfills::Internal
         auto x = info[1].As<Napi::Number>().FloatValue();
         auto y = info[2].As<Napi::Number>().FloatValue();
 
-        // TODO: support ligatures, etc.
-        if (m_direction.compare("rtl") == 0) {
+        if (m_direction == Direction::RTL) {
+            // TODO(bidi): std::reverse on a UTF-8 byte string is incorrect for
+            // multi-byte codepoints. Proper RTL/bidi support requires a Unicode
+            // bidi algorithm (e.g. ICU ubidi or HarfBuzz).
             std::reverse(text.begin(), text.end());
         }
 
@@ -839,26 +878,30 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetLineCap(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(Env(), m_lineCap);
+        const char* name = "butt";
+        if (m_lineCap == NVG_ROUND) name = "round";
+        else if (m_lineCap == NVG_SQUARE) name = "square";
+        return Napi::Value::From(Env(), name);
     }
 
     void Context::SetLineCap(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        m_lineCap = value.As<Napi::String>().Utf8Value();
-        const auto lineCap = StringToLineCap(info.Env(), m_lineCap);
-        nvgLineCap(*m_nvg, lineCap);
+        m_lineCap = StringToLineCap(info.Env(), value.As<Napi::String>().Utf8Value());
+        nvgLineCap(*m_nvg, m_lineCap);
     }
 
     Napi::Value Context::GetLineJoin(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(Env(), m_lineJoin);
+        const char* name = "miter";
+        if (m_lineJoin == NVG_ROUND) name = "round";
+        else if (m_lineJoin == NVG_BEVEL) name = "bevel";
+        return Napi::Value::From(Env(), name);
     }
 
     void Context::SetLineJoin(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        m_lineJoin = value.As<Napi::String>().Utf8Value();
-        const auto lineJoin = StringToLineJoin(info.Env(), m_lineJoin);
-        nvgLineJoin(*m_nvg, lineJoin);
+        m_lineJoin = StringToLineJoin(info.Env(), value.As<Napi::String>().Utf8Value());
+        nvgLineJoin(*m_nvg, m_lineJoin);
     }
 
     Napi::Value Context::GetMiterLimit(const Napi::CallbackInfo& info)
@@ -879,26 +922,28 @@ namespace Babylon::Polyfills::Internal
 
     void Context::SetFilter(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        std::string filterString = value.As<Napi::String>().Utf8Value();
-        // Keep existing filter if the new one is invalid
+        auto filterString = value.As<Napi::String>().Utf8Value();
         if (nanovg_filterstack::ValidString(filterString))
         {
-            m_filter = filterString;
+            m_filter = std::move(filterString);
         }
     }
 
     Napi::Value Context::GetDirection(const Napi::CallbackInfo& info)
     {
-        return Napi::Value::From(Env(), m_direction);
+        return Napi::Value::From(Env(), m_direction == Direction::RTL ? "rtl" : "ltr");
     }
 
     void Context::SetDirection(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        std::string direction = value.As<Napi::String>().Utf8Value();
-        const bool valid = !(direction.compare("ltr") && direction.compare("rtl"));
-        if (valid)
+        const auto direction = value.As<Napi::String>().Utf8Value();
+        if (direction == "rtl")
         {
-            m_direction = direction;
+            m_direction = Direction::RTL;
+        }
+        else if (direction == "ltr")
+        {
+            m_direction = Direction::LTR;
         }
     }
 
@@ -921,6 +966,7 @@ namespace Babylon::Polyfills::Internal
         }
 
         nvgFontSize(*m_nvg, font->Size());
+        EnsureLoadedFonts();
         if (m_fonts.find(font->Familiy()) == m_fonts.end())
         {
             // TODO: handle finding font face for a specific weight and style

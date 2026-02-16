@@ -47,9 +47,9 @@ Potential gaps to handle explicitly during port:
   using multi-pass weighted offsets (approximate gaussian blur). This remains
   explicit non-CTS behavior until BabylonJS CTS coverage is fully integrated.
 - `getCanvasTexture()` returns an opaque native interop handle (texture/device/
-  queue + dimensions) used by NativeWebGPU debug texture import.
+  queue + dimensions) used by NativeWebGPU canvas texture import.
 - The legacy `Graphics::Texture*` pointer contract is still not exposed by
-  `CanvasWgpu`; integration currently uses the WebGPU-native debug bridge.
+  `CanvasWgpu`; integration currently uses the WebGPU-native canvas bridge.
 
 ## Implementation intent
 

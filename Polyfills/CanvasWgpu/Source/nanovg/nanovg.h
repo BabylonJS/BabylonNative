@@ -3,6 +3,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// NOTE:
+// This is BabylonNative's Canvas 2D compatibility ABI, not the upstream NanoVG
+// implementation. CanvasWgpu C++ code keeps the historical nvg* call surface so
+// JavaScript-facing behavior stays stable while execution is backed by Rust
+// (Polyfills/CanvasWgpu/Rust/src/lib.rs) and femtovg/wgpu.
+//
+// Keeping these names preserves incremental migration and limits churn in the
+// C++ Canvas polyfill call sites. There is no bgfx dependency behind this API.
+
 #ifdef __cplusplus
 extern "C" {
 #endif

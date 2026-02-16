@@ -3,6 +3,8 @@
 #include <regex>
 #include <string>
 
+// Parser for the Canvas `filter` string accepted by the CanvasWgpu compatibility
+// nvg* layer. This is retained in C++ for incremental migration stability.
 class nanovg_filterstack
 {
 public:
