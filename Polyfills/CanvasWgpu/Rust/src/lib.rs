@@ -58,6 +58,7 @@ struct BabylonCanvasNativeTextureHandle {
     queue: *const c_void,
     width: u32,
     height: u32,
+    generation: u64,
 }
 
 struct Backend {
@@ -86,8 +87,11 @@ struct Backend {
     fonts: HashMap<i32, FontId>,
     font_names: HashMap<String, i32>,
     font_blobs: Vec<Vec<u8>>,
+    blur_offsets: Vec<(f32, f32, f32)>,
     global_alpha: f32,
     filter_blur_sigma: f32,
+    // Sole interop version source: bumped once per submitted frame so
+    // GraphicsWgpu can skip redundant native texture imports.
     interop_handle: BabylonCanvasNativeTextureHandle,
 }
 
@@ -219,6 +223,7 @@ impl Backend {
             fonts: HashMap::new(),
             font_names: HashMap::new(),
             font_blobs: Vec::new(),
+            blur_offsets: Vec::new(),
             global_alpha: 1.0,
             filter_blur_sigma: 0.0,
             interop_handle: BabylonCanvasNativeTextureHandle {
@@ -227,6 +232,7 @@ impl Backend {
                 queue: ptr::null(),
                 width: 0,
                 height: 0,
+                generation: 0,
             },
         };
 
@@ -252,6 +258,8 @@ impl Backend {
         self.canvas.set_size(self.width, self.height, self.dpi);
 
         if size_changed {
+            // Keep GPU residency bounded when callers resize canvases repeatedly.
+            self.render_texture.destroy();
             self.render_texture = create_render_texture(
                 &self.device,
                 self.width,
@@ -273,6 +281,18 @@ impl Backend {
     fn end_frame(&mut self) {
         let command_buffer = self.canvas.flush_to_surface(&self.render_texture);
         self.queue.submit(std::iter::once(command_buffer));
+        #[cfg(all(target_os = "ios", target_abi = "sim"))]
+        {
+            let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
+        }
+
+        #[cfg(not(all(target_os = "ios", target_abi = "sim")))]
+        {
+            let _ = self.device.poll(wgpu::PollType::Poll);
+        }
+        // Mark canvas content changed for cross-module texture import dedupe.
+        self.interop_handle.generation = self.interop_handle.generation.wrapping_add(1);
+        self.refresh_interop_handle();
     }
 
     fn refresh_interop_handle(&mut self) {
@@ -371,7 +391,9 @@ impl Backend {
         let radius = (sigma * 1.5).ceil().clamp(1.0, 8.0) as i32;
         let sigma_sq_2 = (2.0 * sigma * sigma).max(0.0001);
 
-        let mut offsets = Vec::with_capacity(((radius * 2 + 1) * (radius * 2 + 1)) as usize);
+        let mut offsets = std::mem::take(&mut self.blur_offsets);
+        offsets.clear();
+        offsets.reserve(((radius * 2 + 1) * (radius * 2 + 1)) as usize);
         let mut weight_sum = 0.0f32;
         for y in -radius..=radius {
             for x in -radius..=radius {
@@ -383,11 +405,12 @@ impl Backend {
         }
 
         if weight_sum <= f32::EPSILON {
+            self.blur_offsets = offsets;
             draw_call(self);
             return;
         }
 
-        for (dx, dy, weight) in offsets {
+        for (dx, dy, weight) in offsets.iter().copied() {
             self.canvas.save();
             self.canvas.translate(dx, dy);
             self.canvas
@@ -397,6 +420,7 @@ impl Backend {
         }
 
         self.canvas.set_global_alpha(self.global_alpha);
+        self.blur_offsets = offsets;
     }
 
     fn map_composite_operation(op: i32) -> CompositeOperation {
@@ -806,22 +830,32 @@ pub extern "C" fn nvgGlobalCompositeOperation(ctx: *mut NVGcontext, op: i32) {
 #[no_mangle]
 pub extern "C" fn nvgFill(ctx: *mut NVGcontext) {
     with_ctx_mut(ctx, (), |backend| {
-        let path = backend.current_path.clone();
-        let paint = backend.fill_paint.clone();
-        backend.draw_with_blur(|inner| {
-            inner.canvas.fill_path(&path, &paint);
-        });
+        // Fast path: skip clone when blur is zero (the common case).
+        if backend.filter_blur_sigma <= f32::EPSILON {
+            backend.canvas.fill_path(&backend.current_path, &backend.fill_paint);
+        } else {
+            let path = backend.current_path.clone();
+            let paint = backend.fill_paint.clone();
+            backend.draw_with_blur(|inner| {
+                inner.canvas.fill_path(&path, &paint);
+            });
+        }
     });
 }
 
 #[no_mangle]
 pub extern "C" fn nvgStroke(ctx: *mut NVGcontext) {
     with_ctx_mut(ctx, (), |backend| {
-        let path = backend.current_path.clone();
-        let paint = backend.stroke_paint.clone();
-        backend.draw_with_blur(|inner| {
-            inner.canvas.stroke_path(&path, &paint);
-        });
+        // Fast path: skip clone when blur is zero (the common case).
+        if backend.filter_blur_sigma <= f32::EPSILON {
+            backend.canvas.stroke_path(&backend.current_path, &backend.stroke_paint);
+        } else {
+            let path = backend.current_path.clone();
+            let paint = backend.stroke_paint.clone();
+            backend.draw_with_blur(|inner| {
+                inner.canvas.stroke_path(&path, &paint);
+            });
+        }
     });
 }
 

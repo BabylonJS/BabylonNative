@@ -1,53 +1,63 @@
 #include "WgpuNative.h"
+#include "WgpuInterop.h"
 
 #include <algorithm>
 #include <array>
 #include <cstring>
 
+#if defined(__APPLE__)
+extern "C"
+{
+    void* objc_autoreleasePoolPush();
+    void objc_autoreleasePoolPop(void* pool);
+}
+#endif
+
 namespace
 {
-    struct BabylonWgpuConfig final
+#if defined(__APPLE__)
+    class ScopedAutoreleasePool final
     {
-        uint32_t Width;
-        uint32_t Height;
-        void* SurfaceLayer;
-        uint8_t PreferLowPower;
-        uint8_t EnableValidation;
-        uint8_t Reserved0;
-        uint8_t Reserved1;
-    };
+    public:
+        ScopedAutoreleasePool()
+            : m_pool{objc_autoreleasePoolPush()}
+        {
+        }
 
-    struct BabylonWgpuInfo final
-    {
-        uint32_t Backend;
-        uint32_t VendorId;
-        uint32_t DeviceId;
-        std::array<char, 128> AdapterName;
-    };
+        ~ScopedAutoreleasePool()
+        {
+            objc_autoreleasePoolPop(m_pool);
+        }
 
-    extern "C"
+        ScopedAutoreleasePool(const ScopedAutoreleasePool&) = delete;
+        ScopedAutoreleasePool& operator=(const ScopedAutoreleasePool&) = delete;
+
+    private:
+        void* m_pool{};
+    };
+#else
+    class ScopedAutoreleasePool final
     {
-        void* babylon_wgpu_create(const BabylonWgpuConfig* config);
-        void babylon_wgpu_destroy(void* context);
-        bool babylon_wgpu_resize(void* context, uint32_t width, uint32_t height);
-        bool babylon_wgpu_render(void* context);
-        bool babylon_wgpu_get_info(const void* context, BabylonWgpuInfo* outputInfo);
-        bool babylon_wgpu_get_last_error(char* output, size_t outputLen);
-    }
+    };
+#endif
 }
 
 namespace Babylon::Graphics
 {
     WgpuNative::WgpuNative(const WgpuBootstrapConfig& config)
     {
+#if defined(__APPLE__)
+        const ScopedAutoreleasePool pool{};
+#endif
+
         BabylonWgpuConfig nativeConfig{};
-        nativeConfig.Width = config.Width;
-        nativeConfig.Height = config.Height;
-        nativeConfig.SurfaceLayer = config.SurfaceLayer;
-        nativeConfig.PreferLowPower = static_cast<uint8_t>(config.PreferLowPower);
-        nativeConfig.EnableValidation = static_cast<uint8_t>(config.EnableValidation);
-        nativeConfig.Reserved0 = 0;
-        nativeConfig.Reserved1 = 0;
+        nativeConfig.width = config.Width;
+        nativeConfig.height = config.Height;
+        nativeConfig.surface_layer = config.SurfaceLayer;
+        nativeConfig.prefer_low_power = static_cast<uint8_t>(config.PreferLowPower);
+        nativeConfig.enable_validation = static_cast<uint8_t>(config.EnableValidation);
+        nativeConfig.reserved0 = 0;
+        nativeConfig.reserved1 = 0;
 
         m_context = babylon_wgpu_create(&nativeConfig);
         if (m_context == nullptr)
@@ -64,6 +74,9 @@ namespace Babylon::Graphics
     {
         if (m_context != nullptr)
         {
+#if defined(__APPLE__)
+            const ScopedAutoreleasePool pool{};
+#endif
             babylon_wgpu_destroy(m_context);
             m_context = nullptr;
         }
@@ -81,6 +94,9 @@ namespace Babylon::Graphics
             return false;
         }
 
+#if defined(__APPLE__)
+        const ScopedAutoreleasePool pool{};
+#endif
         return babylon_wgpu_resize(m_context, width, height);
     }
 
@@ -91,11 +107,17 @@ namespace Babylon::Graphics
             return false;
         }
 
+#if defined(__APPLE__)
+        const ScopedAutoreleasePool pool{};
+#endif
         return babylon_wgpu_render(m_context);
     }
 
     WgpuBootstrapInfo WgpuNative::GetInfo() const
     {
+#if defined(__APPLE__)
+        const ScopedAutoreleasePool pool{};
+#endif
         WgpuBootstrapInfo info{};
 
         if (m_context == nullptr)
@@ -109,12 +131,14 @@ namespace Babylon::Graphics
             return info;
         }
 
-        info.Backend = nativeInfo.Backend;
-        info.VendorId = nativeInfo.VendorId;
-        info.DeviceId = nativeInfo.DeviceId;
+        info.Backend = nativeInfo.backend;
+        info.VendorId = nativeInfo.vendor_id;
+        info.DeviceId = nativeInfo.device_id;
 
-        auto nulTerminator = std::find(nativeInfo.AdapterName.cbegin(), nativeInfo.AdapterName.cend(), '\0');
-        info.AdapterName.assign(nativeInfo.AdapterName.cbegin(), nulTerminator);
+        auto adapterNameBegin = nativeInfo.adapter_name;
+        auto adapterNameEnd = nativeInfo.adapter_name + std::size(nativeInfo.adapter_name);
+        auto nulTerminator = std::find(adapterNameBegin, adapterNameEnd, '\0');
+        info.AdapterName.assign(adapterNameBegin, nulTerminator);
 
         return info;
     }

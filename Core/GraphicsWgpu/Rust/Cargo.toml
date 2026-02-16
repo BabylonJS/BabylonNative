@@ -2,17 +2,21 @@
 name = "babylon_graphics_backend"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.76"
 build = "build.rs"
 
 [lib]
 crate-type = ["staticlib"]
 
-[features]
-default = []
-upstream_wgpu_native = ["babylon_wgpu_native_shim/upstream_wgpu_native"]
-
 [dependencies]
-babylon_wgpu_native_shim = { path = "upstream-shim" }
+bytemuck = { workspace = true }
+femtovg = { workspace = true }
+image = { workspace = true }
+imgref = { workspace = true }
 pollster = { workspace = true }
 raw-window-handle = { workspace = true }
+rgb = { workspace = true }
 wgpu = { workspace = true }
+
+[build-dependencies]
+bindgen = "=0.72.1"

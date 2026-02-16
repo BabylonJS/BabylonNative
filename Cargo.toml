@@ -1,13 +1,12 @@
 [workspace]
 members = [
     "Core/GraphicsWgpu/Rust",
-    "Core/GraphicsWgpu/Rust/upstream-shim",
-    "Polyfills/CanvasWgpu/Rust",
 ]
 resolver = "2"
 
 [workspace.dependencies]
-femtovg = { version = "=0.20.1", default-features = false, features = ["wgpu", "textlayout"] }
+bytemuck = { version = "=1.23.2", features = ["derive"] }
+femtovg = { version = "=0.19.3", default-features = false, features = ["wgpu", "textlayout"] }
 image = { version = "=0.25.9", default-features = false, features = ["png", "jpeg", "gif", "bmp", "webp"] }
 imgref = "=1.12.0"
 pollster = "=0.4.0"
