@@ -79,7 +79,7 @@ namespace Babylon::Polyfills::Internal
         {
             const auto buffer = info[1].As<Napi::ArrayBuffer>();
             std::vector<uint8_t> fontBuffer(buffer.ByteLength());
-            memcpy(fontBuffer.data(), (uint8_t*)buffer.Data(), buffer.ByteLength());
+            memcpy(fontBuffer.data(), static_cast<uint8_t*>(buffer.Data()), buffer.ByteLength());
             fontsInfos[fontName] = std::move(fontBuffer);
         }
     }

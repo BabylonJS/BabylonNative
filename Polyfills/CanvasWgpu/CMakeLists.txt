@@ -34,7 +34,10 @@ target_link_libraries(babylon_canvas_wgpu_backend INTERFACE babylon_graphics_bac
 
 add_library(Canvas ${SOURCES})
 warnings_as_errors(Canvas)
-target_compile_options(Canvas PRIVATE -Wno-unused-parameter -Wno-unused-variable)
+target_compile_options(Canvas PRIVATE
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wno-unused-parameter -Wno-unused-variable>)
+target_compile_definitions(Canvas PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS>)
 
 target_include_directories(Canvas
     PUBLIC "Include"

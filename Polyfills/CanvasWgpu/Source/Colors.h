@@ -1,17 +1,16 @@
 #pragma once
 #include <algorithm>
-#include <string>
+#include <cstdio>
 #include <regex>
+#include <string>
 #include <unordered_map>
 #include "nanovg/nanovg.h"
 
 namespace Babylon::Polyfills::Internal
 {
-    namespace
-    {
-        const NVGcolor TRANSPARENT_BLACK = nvgRGBA(0, 0, 0, 0);
-    }
-    static NVGcolor StringToColor(Napi::Env env, const std::string& colorString)
+    inline const NVGcolor TRANSPARENT_BLACK = nvgRGBA(0, 0, 0, 0);
+
+    inline NVGcolor StringToColor(Napi::Env env, const std::string& colorString)
     {
         std::string str = colorString;
         std::transform(str.begin(), str.end(), str.begin(),

@@ -1,13 +1,12 @@
 #pragma once
 #include <algorithm>
 #include <string>
-#include <regex>
 #include <unordered_map>
 #include "nanovg/nanovg.h"
 
 namespace Babylon::Polyfills::Internal
 {
-    static NVGlineCap StringToLineCap(Napi::Env, const std::string& lineCapString)
+    inline NVGlineCap StringToLineCap(Napi::Env, const std::string& lineCapString)
     {
         std::string str = lineCapString;
         std::transform(str.begin(), str.end(), str.begin(),
@@ -18,18 +17,16 @@ namespace Babylon::Polyfills::Internal
             {"round", NVG_ROUND},
             {"square", NVG_SQUARE}};
 
-		auto iter = lineCaps.find(str);
-		if (iter != lineCaps.end())
-		{
-			auto lineCap = iter->second;
-			return lineCap;
-		}
+        auto iter = lineCaps.find(str);
+        if (iter != lineCaps.end())
+        {
+            return iter->second;
+        }
 
-        // fallback default 'butt'
         return NVG_BUTT;
     }
 
-    static NVGlineCap StringToLineJoin(Napi::Env, const std::string& lineJoinString)
+    inline NVGlineCap StringToLineJoin(Napi::Env, const std::string& lineJoinString)
     {
         std::string str = lineJoinString;
         std::transform(str.begin(), str.end(), str.begin(),
@@ -40,14 +37,12 @@ namespace Babylon::Polyfills::Internal
             {"round", NVG_ROUND},
             {"miter", NVG_MITER}};
 
-		auto iter = lineJoins.find(str);
-		if (iter != lineJoins.end())
-		{
-			auto lineJoin = iter->second;
-			return lineJoin;
-		}
+        auto iter = lineJoins.find(str);
+        if (iter != lineJoins.end())
+        {
+            return iter->second;
+        }
 
-        // fallback default 'miter'
         return NVG_MITER;
     }
 }
