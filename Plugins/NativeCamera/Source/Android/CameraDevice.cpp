@@ -238,7 +238,13 @@ namespace Babylon::Plugins
 
                 EGLConfig config;
                 EGLint numConfig = 0;
-                GL_CHECK(eglChooseConfig(m_impl->display, attrs, &config, 1, &numConfig));
+                EGLBoolean chooseConfigResult = eglChooseConfig(m_impl->display, attrs, &config, 1, &numConfig);
+                if (chooseConfigResult != EGL_TRUE || numConfig <= 0)
+                {
+                    // Retrieve EGL error for debugging purposes.
+                    eglGetError();
+                    throw std::runtime_error{"Unable to choose a valid EGLConfig for camera texture."};
+                }
 
                 static const EGLint contextAttribs[] = {
                     EGL_CONTEXT_MAJOR_VERSION_KHR,
