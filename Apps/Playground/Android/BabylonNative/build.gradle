@@ -40,7 +40,11 @@ android {
         }
         externalNativeBuild {
             cmake {
-                abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
+                if (project.hasProperty("ARM64Only")) {
+                    abiFilters "arm64-v8a"
+                } else {
+                    abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
+                }
                 arguments "-DANDROID_STL=c++_shared",
                     "-DENABLE_PCH=OFF",
                     "-DGRAPHICS_API=${graphics_api}",
@@ -49,15 +53,17 @@ android {
                     "-DBABYLON_NATIVE_BUILD_APPS=ON",
                     "-DBABYLON_NATIVE_POLYFILL_CANVAS=ON",
                     "-DBABYLON_NATIVE_POLYFILL_CANVAS_WGPU=ON",
-                    "-DCMAKE_UNITY_BUILD=${unity_build}",
-                    "-DBABYLON_DEBUG_TRACE=ON"
+                    "-DCMAKE_UNITY_BUILD=${unity_build}"
+                if (project.hasProperty("ENABLE_SANITIZERS")) {
+                    arguments "-DENABLE_SANITIZERS=${project.property("ENABLE_SANITIZERS")}"
+                }
             }
         }
         ndk {
             if (project.hasProperty("ARM64Only")) {
                 abiFilters "arm64-v8a"
             } else {
-                abiFilters "arm64-v8a", "armeabi-v7a", "x86"
+                abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
             }
         }
         packagingOptions {
@@ -79,9 +85,25 @@ android {
     }
 
     buildTypes {
+        debug {
+            externalNativeBuild {
+                cmake {
+                    arguments "-DBABYLON_DEBUG_TRACE=ON"
+                }
+            }
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            ndk {
+                debugSymbolLevel 'NONE'
+                abiFilters "arm64-v8a"
+            }
+            externalNativeBuild {
+                cmake {
+                    arguments "-DBABYLON_DEBUG_TRACE=OFF", "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON"
+                }
+            }
         }
     }
     compileOptions {

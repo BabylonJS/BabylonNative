@@ -53,6 +53,15 @@ float screenScale{1.0f};
         env.Global().Set("__nativePlaygroundStatus", statusCallback);
     });
 
+    appContext->ScriptLoader().Eval(
+        "(function(){"
+        "globalThis.createScene=undefined;"
+        "globalThis.__babylonPlaygroundSceneFactoryReady=undefined;"
+        "globalThis.__babylonPlaygroundWebGpuSmokeReady=undefined;"
+        "globalThis.__webgpuSmokeDispose=undefined;"
+        "})();",
+        "app:///Scripts/playground_bootstrap_reset.js");
+
     appContext->ScriptLoader().LoadScript("app:///Scripts/webgpu_smoke.js");
     appContext->ScriptLoader().LoadScript("app:///Scripts/playground_runner.js");
 }

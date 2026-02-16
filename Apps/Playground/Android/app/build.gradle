@@ -14,6 +14,9 @@ if (project.hasProperty("UNITY_BUILD")) {
     unity_build = project.property("UNITY_BUILD")
 }
 def arcore_libpath = "${buildDir}/arcore-native"
+def enable_sanitizers = project.hasProperty("ENABLE_SANITIZERS") &&
+    project.property("ENABLE_SANITIZERS").toString().toLowerCase() in ["1", "true", "on", "yes"]
+def ndk_version = project.hasProperty("NDK_VERSION") ? project.property("NDK_VERSION").toString() : "28.2.13676358"
 
 configurations { natives }
 
@@ -37,14 +40,24 @@ android {
         }
     }
 
+    sourceSets {
+        main {
+            jniLibs.srcDirs += ["${buildDir}/sanitizer-jniLibs"]
+        }
+    }
+
     buildTypes {
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
             signingConfig signingConfigs.debug
             minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
-            debuggable true
+            debuggable false
+            ndk {
+                abiFilters "arm64-v8a"
+            }
         }
     }
 
@@ -82,10 +95,81 @@ task extractNativeLibraries() {
     }
 }
 
+task stageSanitizerRuntimeLibs {
+    outputs.upToDateWhen { false }
+    doFirst {
+        if (!enable_sanitizers) {
+            return
+        }
+
+        def osName = System.getProperty("os.name").toLowerCase()
+        def hostTag
+        if (osName.contains("mac")) {
+            hostTag = "darwin-x86_64"
+        } else if (osName.contains("linux")) {
+            hostTag = "linux-x86_64"
+        } else if (osName.contains("win")) {
+            hostTag = "windows-x86_64"
+        } else {
+            throw new GradleException("Unsupported host OS for sanitizer runtime staging: ${osName}")
+        }
+
+        def clangRoot = file("${android.sdkDirectory}/ndk/${ndk_version}/toolchains/llvm/prebuilt/${hostTag}/lib/clang")
+        if (!clangRoot.exists()) {
+            throw new GradleException("Missing NDK clang runtime root: ${clangRoot}")
+        }
+
+        def clangVersionDir = clangRoot.listFiles()
+            ?.findAll { it.isDirectory() }
+            ?.sort { a, b -> a.name <=> b.name }
+            ?.last()
+        if (clangVersionDir == null) {
+            throw new GradleException("Unable to find clang version dir under ${clangRoot}")
+        }
+
+        def runtimeDir = file("${clangVersionDir}/lib/linux")
+        if (!runtimeDir.exists()) {
+            throw new GradleException("Missing sanitizer runtime dir: ${runtimeDir}")
+        }
+
+        def outDir = file("${buildDir}/sanitizer-jniLibs")
+        delete(outDir)
+
+        def abiToArch = [
+            "arm64-v8a"  : "aarch64",
+            "armeabi-v7a": "arm",
+            "x86"        : "i686",
+            "x86_64"     : "x86_64"
+        ]
+
+        abiToArch.each { abi, arch ->
+            def abiOut = file("${outDir}/${abi}")
+            abiOut.mkdirs()
+
+            [
+                "libclang_rt.ubsan_standalone-${arch}-android.so",
+                "libclang_rt.asan-${arch}-android.so"
+            ].each { runtimeLib ->
+                def src = file("${runtimeDir}/${runtimeLib}")
+                if (src.exists()) {
+                    copy {
+                        from src
+                        into abiOut
+                    }
+                }
+            }
+        }
+    }
+}
+
 tasks.configureEach { task ->
     if ((task.name.contains("buildCMake") || task.name.contains("configureCMake")) && !task.name.contains("Clean")) {
         task.dependsOn(extractNativeLibraries)
     }
+}
+
+if (enable_sanitizers) {
+    preBuild.dependsOn(stageSanitizerRuntimeLibs)
 }
 
 preBuild.dependsOn ':BabylonNative:assembleRelease'
@@ -131,6 +215,8 @@ task copyFiles {
     {
         from '../../Scripts'
         include "*.js"
+        include "*.json"
+        include "*.ttf"
         into 'src/main/assets/Scripts'
     }
 }

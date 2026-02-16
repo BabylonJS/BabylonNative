@@ -3,7 +3,9 @@
 #include <android/native_window_jni.h> // requires ndk r5 or newer
 #include <android/log.h>
 
+#include <cstdio>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -15,10 +17,17 @@
 namespace
 {
     std::optional<AppContext> appContext{};
+    JavaVM* sJavaVM{};
 }
 
 extern "C"
 {
+    JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*)
+    {
+        sJavaVM = vm;
+        return JNI_VERSION_1_6;
+    }
+
     JNIEXPORT void JNICALL
     Java_com_library_babylonnative_Wrapper_initEngine(JNIEnv* env, jclass clazz)
     {
@@ -35,13 +44,27 @@ extern "C"
     {
         if (!appContext)
         {
-            JavaVM* javaVM{};
-            if (env->GetJavaVM(&javaVM) != JNI_OK)
+            char pointerLog[256]{};
+            std::snprintf(pointerLog, sizeof(pointerLog), "surfaceCreated env=%p sJavaVM(before)=%p", static_cast<void*>(env), static_cast<void*>(sJavaVM));
+            __android_log_write(ANDROID_LOG_INFO, "BabylonNative", pointerLog);
+
+            if (sJavaVM == nullptr && env != nullptr)
             {
-                throw std::runtime_error("Failed to get Java VM");
+                JavaVM* javaVM{};
+                if (env->GetJavaVM(&javaVM) == JNI_OK)
+                {
+                    sJavaVM = javaVM;
+                    std::snprintf(pointerLog, sizeof(pointerLog), "surfaceCreated sJavaVM(from env)=%p", static_cast<void*>(sJavaVM));
+                    __android_log_write(ANDROID_LOG_INFO, "BabylonNative", pointerLog);
+                }
             }
 
-            android::global::Initialize(javaVM, jniContext);
+            if (sJavaVM == nullptr)
+            {
+                throw std::runtime_error{"Failed to get Java VM"};
+            }
+
+            android::global::Initialize(sJavaVM, jniContext);
 
             ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
             int32_t width  = ANativeWindow_getWidth(window);

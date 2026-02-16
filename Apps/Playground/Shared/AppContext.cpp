@@ -68,6 +68,16 @@ AppContext::AppContext(
 
     m_runtime.emplace(options);
 
+    // Initialization ordering guarantee: AppRuntime::Dispatch uses a FIFO
+    // WorkQueue. This callback runs on the JS thread before any ScriptLoader
+    // work because ScriptLoader also dispatches through the same WorkQueue,
+    // and it is constructed after this Dispatch call (line 99). This means
+    // navigator.gpu, _native.Canvas, and all other N-API modules are fully
+    // available before any user JavaScript executes.
+    //
+    // Embedders do NOT need defensive polling loops or readiness promises to
+    // wait for these APIs. Simply call Initialize() in the Dispatch callback,
+    // then load scripts via ScriptLoader — the ordering is guaranteed.
     m_runtime->Dispatch([this, debugLog, additionalInit = std::move(additionalInit)](Napi::Env env) {
         m_device->AddToJavaScript(env);
 

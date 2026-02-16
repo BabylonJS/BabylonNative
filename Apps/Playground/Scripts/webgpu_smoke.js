@@ -1,11 +1,54 @@
 globalThis.__babylonUseWebGPU = true;
 
+var previousSceneFactorySignal = globalThis.__babylonPlaygroundSceneFactoryReady;
+var sceneFactorySignalVersion =
+    previousSceneFactorySignal && typeof previousSceneFactorySignal.version === "number"
+        ? previousSceneFactorySignal.version + 1
+        : 1;
+var sceneFactorySignalResolve = null;
+var sceneFactorySignalPromise = new Promise(function (resolve) {
+    sceneFactorySignalResolve = resolve;
+});
+globalThis.__babylonPlaygroundSceneFactoryReady = {
+    version: sceneFactorySignalVersion,
+    promise: sceneFactorySignalPromise
+};
+
+var previousSmokeReadySignal = globalThis.__babylonPlaygroundWebGpuSmokeReady;
+var smokeReadySignalVersion =
+    previousSmokeReadySignal && typeof previousSmokeReadySignal.version === "number"
+        ? previousSmokeReadySignal.version + 1
+        : 1;
+var smokeReadySignalResolve = null;
+var smokeReadySignalPromise = new Promise(function (resolve) {
+    smokeReadySignalResolve = resolve;
+});
+globalThis.__babylonPlaygroundWebGpuSmokeReady = {
+    version: smokeReadySignalVersion,
+    promise: smokeReadySignalPromise
+};
+
 var kSmokeFontName = "wgpu_smoke_font";
-var kSmokeFontUrl = "https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf";
+var kSmokeFontUrl = "app:///Scripts/RobotoSlab.ttf";
 var smokeFontLoaded = false;
 var smokeFontLoadPromise = null;
 var smokeCanvas = null;
 var smokeCtx = null;
+var smokeGradient = null;
+var smokeReportedMetrics = false;
+var smokeFontFamily = "sans-serif";
+var smokeUploadAttemptCount = 0;
+var smokeUploadSucceeded = false;
+var smokeUploadStateReported = null;
+var smokeMetricsInvalidReported = false;
+var smokeNeedsFontRefreshUpload = false;
+var smokeDisposed = false;
+var smokeOnBeforeRenderLogged = false;
+var smokeDrawRequestSignaled = false;
+var smokeQueueCopyReadyPromise = null;
+var smokeQueueCopyQueue = null;
+var smokeQueueCopyTexture = null;
+var smokeUploadModeReported = null;
 
 function reportStatus(message) {
     try {
@@ -14,6 +57,55 @@ function reportStatus(message) {
         }
     } catch (error) {
         void error;
+    }
+}
+
+function resolveSmokeReadySignal(reason) {
+    if (typeof smokeReadySignalResolve !== "function") {
+        return;
+    }
+
+    smokeReadySignalResolve({
+        reason: String(reason || "unknown")
+    });
+    smokeReadySignalResolve = null;
+    reportStatus("webgpu-smoke:ready:" + String(reason || "unknown"));
+}
+
+function markWebGpuDrawRequested(reason) {
+    if (smokeDrawRequestSignaled) {
+        return;
+    }
+
+    if (navigator.gpu && typeof navigator.gpu._markWebGpuDrawRequested === "function") {
+        navigator.gpu._markWebGpuDrawRequested();
+        smokeDrawRequestSignaled = true;
+        reportStatus("webgpu-smoke:draw-requested:" + String(reason || "unknown"));
+    }
+}
+
+function getNativeWebGpuStatsSnapshot() {
+    if (!navigator.gpu) {
+        return null;
+    }
+
+    var statsFn = null;
+    if (typeof navigator.gpu._backendStats === "function") {
+        statsFn = navigator.gpu._backendStats;
+    } else if (typeof navigator.gpu._debugStats === "function") {
+        // Back-compat while older bridge names are still present.
+        statsFn = navigator.gpu._debugStats;
+    }
+
+    if (!statsFn) {
+        return null;
+    }
+
+    try {
+        return statsFn();
+    } catch (error) {
+        reportStatus("webgpu-smoke:stats-call-error:" + String(error));
+        return null;
     }
 }
 
@@ -46,6 +138,8 @@ function ensureCanvasFontLoaded() {
 
                 Promise.resolve(loadResult).then(function () {
                     smokeFontLoaded = true;
+                    smokeFontFamily = "\"" + kSmokeFontName + "\", sans-serif";
+                    smokeNeedsFontRefreshUpload = true;
                     reportStatus("webgpu-smoke:font-loaded");
                     resolve(true);
                 }).catch(function (error) {
@@ -78,6 +172,10 @@ function ensureCanvasFontLoaded() {
 }
 
 function ensureSmokeCanvasContext() {
+    if (smokeDisposed) {
+        smokeDisposed = false;
+    }
+
     if (smokeCanvas && smokeCtx) {
         return smokeCtx;
     }
@@ -86,14 +184,104 @@ function ensureSmokeCanvasContext() {
         return null;
     }
 
-    smokeCanvas = new _native.Canvas();
+    try {
+        smokeCanvas = new _native.Canvas();
+    } catch (error) {
+        reportStatus("webgpu-smoke:canvas-ctor-failed:" + String(error));
+        return null;
+    }
     smokeCanvas.width = 512;
     smokeCanvas.height = 512;
     smokeCtx = smokeCanvas.getContext("2d");
     return smokeCtx;
 }
 
-function buildCanvasTexturePayload(frameSeed) {
+function ensureStandardQueueCopyPath() {
+    if (smokeQueueCopyReadyPromise) {
+        return smokeQueueCopyReadyPromise;
+    }
+
+    smokeQueueCopyReadyPromise = (async function () {
+        if (!navigator.gpu || typeof navigator.gpu.requestAdapter !== "function") {
+            reportStatus("webgpu-smoke:queue-copy-ready:0:navigator.gpu-missing");
+            return false;
+        }
+
+        var adapter = await navigator.gpu.requestAdapter();
+        if (!adapter || typeof adapter.requestDevice !== "function") {
+            reportStatus("webgpu-smoke:queue-copy-ready:0:adapter-missing");
+            return false;
+        }
+
+        var device = await adapter.requestDevice();
+        if (!device || !device.queue || typeof device.queue.copyExternalImageToTexture !== "function") {
+            reportStatus("webgpu-smoke:queue-copy-ready:0:queue-copy-missing");
+            return false;
+        }
+
+        var width = smokeCanvas && smokeCanvas.width ? smokeCanvas.width : 512;
+        var height = smokeCanvas && smokeCanvas.height ? smokeCanvas.height : 512;
+        var format = "bgra8unorm";
+        if (typeof navigator.gpu.getPreferredCanvasFormat === "function") {
+            format = navigator.gpu.getPreferredCanvasFormat();
+        }
+
+        var textureUsageCopyDst = (typeof GPUTextureUsage !== "undefined" && GPUTextureUsage.COPY_DST) ? GPUTextureUsage.COPY_DST : 0x08;
+        var textureUsageTextureBinding = (typeof GPUTextureUsage !== "undefined" && GPUTextureUsage.TEXTURE_BINDING) ? GPUTextureUsage.TEXTURE_BINDING : 0x04;
+        smokeQueueCopyTexture = device.createTexture({
+            label: "webgpu-smoke.copyExternalImageToTexture.dst",
+            size: [width, height, 1],
+            format: format,
+            usage: textureUsageCopyDst | textureUsageTextureBinding
+        });
+        smokeQueueCopyQueue = device.queue;
+        reportStatus("webgpu-smoke:queue-copy-ready:1");
+        return true;
+    })().catch(function (error) {
+        reportStatus("webgpu-smoke:queue-copy-ready:0:error:" + String(error));
+        return false;
+    });
+
+    return smokeQueueCopyReadyPromise;
+}
+
+function disposeSmokeCanvas() {
+    smokeDisposed = true;
+    smokeUploadSucceeded = false;
+    smokeNeedsFontRefreshUpload = false;
+    smokeUploadStateReported = null;
+    smokeGradient = null;
+    smokeReportedMetrics = false;
+    smokeMetricsInvalidReported = false;
+    smokeUploadAttemptCount = 0;
+    smokeQueueCopyReadyPromise = null;
+    smokeQueueCopyQueue = null;
+    smokeQueueCopyTexture = null;
+    smokeUploadModeReported = null;
+
+    try {
+        if (smokeCtx && typeof smokeCtx.destroy === "function") {
+            smokeCtx.destroy();
+        }
+    } catch (error) {
+        void error;
+    }
+
+    try {
+        if (smokeCanvas && typeof smokeCanvas.destroy === "function") {
+            smokeCanvas.destroy();
+        }
+    } catch (error) {
+        void error;
+    }
+
+    smokeCtx = null;
+    smokeCanvas = null;
+}
+
+globalThis.__webgpuSmokeDispose = disposeSmokeCanvas;
+
+function drawCanvasTextureSource(frameSeed) {
     var ctx = ensureSmokeCanvasContext();
     if (!ctx) {
         reportStatus("webgpu-smoke:canvas-unavailable");
@@ -106,11 +294,13 @@ function buildCanvasTexturePayload(frameSeed) {
         ctx.flush();
     }
 
-    var gradient = ctx.createLinearGradient(0, 0, 512, 512);
-    gradient.addColorStop(0.0, "#162c4e");
-    gradient.addColorStop(0.4, "#3a95ff");
-    gradient.addColorStop(1.0, "#b25dff");
-    ctx.fillStyle = gradient;
+    if (!smokeGradient) {
+        smokeGradient = ctx.createLinearGradient(0, 0, 512, 512);
+        smokeGradient.addColorStop(0.0, "#162c4e");
+        smokeGradient.addColorStop(0.4, "#3a95ff");
+        smokeGradient.addColorStop(1.0, "#b25dff");
+    }
+    ctx.fillStyle = smokeGradient;
     ctx.fillRect(0, 0, 512, 512);
 
     ctx.filter = "blur(10px)";
@@ -123,12 +313,35 @@ function buildCanvasTexturePayload(frameSeed) {
     ctx.fillStyle = "#f6fbff";
     ctx.strokeStyle = "#02050c";
     ctx.lineWidth = 8;
-    ctx.font = "bold 132px \"" + kSmokeFontName + "\"";
+    ctx.font = "bold 132px " + smokeFontFamily;
     var titleMetrics = ctx.measureText("WGPU");
-    reportStatus("webgpu-smoke:metrics:title=" + String(titleMetrics && titleMetrics.width ? titleMetrics.width : 0));
+    var titleWidth = titleMetrics && titleMetrics.width ? titleMetrics.width : 0;
+    if (!isFinite(titleWidth) || titleWidth <= 0 || titleWidth > 2048) {
+        // Some simulator runs can start before custom font registration resolves.
+        // Fallback keeps text rendering deterministic and avoids invalid metrics.
+        smokeFontFamily = "sans-serif";
+        ctx.font = "bold 132px " + smokeFontFamily;
+        titleMetrics = ctx.measureText("WGPU");
+        titleWidth = titleMetrics && titleMetrics.width ? titleMetrics.width : 0;
+    }
+    if (!isFinite(titleWidth) || titleWidth <= 0 || titleWidth > 2048) {
+        if (!smokeMetricsInvalidReported) {
+            reportStatus("webgpu-smoke:metrics:title-invalid");
+            smokeMetricsInvalidReported = true;
+        }
+        // Keep uploads alive even when simulator text metrics are temporarily invalid.
+        // This avoids long startup gaps where no canvas texture reaches native.
+        titleWidth = 360;
+    } else {
+        smokeMetricsInvalidReported = false;
+    }
+    if (!smokeReportedMetrics) {
+        reportStatus("webgpu-smoke:metrics:title=" + String(titleWidth));
+        smokeReportedMetrics = true;
+    }
     ctx.strokeText("WGPU", 54, 246);
     ctx.fillText("WGPU", 54, 246);
-    ctx.font = "bold 46px \"" + kSmokeFontName + "\"";
+    ctx.font = "bold 46px " + smokeFontFamily;
     ctx.fillStyle = "#8fe9ff";
     ctx.strokeText("Canvas", 58, 300);
     ctx.fillText("Canvas", 58, 300);
@@ -136,10 +349,10 @@ function buildCanvasTexturePayload(frameSeed) {
     ctx.fillStyle = "#0a162c";
     ctx.fillRect(36, 360, 440, 116);
     ctx.fillStyle = "#bcdaff";
-    ctx.font = "bold 34px \"" + kSmokeFontName + "\"";
+    ctx.font = "bold 34px " + smokeFontFamily;
     ctx.strokeText("WebGPU + CanvasWgpu", 52, 426);
     ctx.fillText("WebGPU + CanvasWgpu", 52, 426);
-    ctx.font = "30px \"" + kSmokeFontName + "\"";
+    ctx.font = "30px " + smokeFontFamily;
     ctx.fillStyle = "#ffeeba";
     ctx.strokeText("frame " + String(frameSeed), 52, 470);
     ctx.fillText("frame " + String(frameSeed), 52, 470);
@@ -148,33 +361,128 @@ function buildCanvasTexturePayload(frameSeed) {
         ctx.flush();
     }
 
-    return smokeCanvas.getCanvasTexture();
+    return smokeCanvas;
 }
 
-function pushCanvasTexturePayload(payload) {
-    if (!payload) {
+function pushCanvasTexturePayload(sourceCanvas) {
+    if (!sourceCanvas) {
         return false;
     }
 
-    if (!navigator.gpu || typeof navigator.gpu._setDebugTextureFromNative !== "function") {
-        reportStatus("webgpu-smoke:debug-texture-bridge-missing");
+    if (!smokeQueueCopyQueue || !smokeQueueCopyTexture) {
+        if (smokeUploadAttemptCount % 20 === 0) {
+            reportStatus("webgpu-smoke:queue-copy-not-ready");
+        }
         return false;
     }
 
-    var ok = !!navigator.gpu._setDebugTextureFromNative(payload);
-    reportStatus("webgpu-smoke:canvas-texture-uploaded:" + (ok ? "1" : "0"));
+    var ok = false;
+    try {
+        smokeQueueCopyQueue.copyExternalImageToTexture(
+            { source: sourceCanvas },
+            { texture: smokeQueueCopyTexture },
+            [sourceCanvas.width, sourceCanvas.height, 1]
+        );
+        ok = true;
+    } catch (error) {
+        reportStatus("webgpu-smoke:queue-copy-failed:" + String(error));
+        return false;
+    }
+
+    if (smokeUploadModeReported !== "queue-copyExternalImageToTexture") {
+        smokeUploadModeReported = "queue-copyExternalImageToTexture";
+        reportStatus("webgpu-smoke:canvas-upload-mode:queue-copyExternalImageToTexture");
+    }
+    if (smokeUploadStateReported !== ok) {
+        reportStatus("webgpu-smoke:canvas-texture-uploaded:" + (ok ? "1" : "0"));
+        smokeUploadStateReported = ok;
+    }
     return ok;
 }
 
-async function createScene() {
+function uploadCanvasTexture(frameSeed) {
+    smokeUploadAttemptCount += 1;
+    var sourceCanvas = drawCanvasTextureSource(frameSeed);
+    if (!sourceCanvas) {
+        smokeUploadSucceeded = false;
+        return false;
+    }
+    var hadSuccessfulUpload = smokeUploadSucceeded;
+    var ok = pushCanvasTexturePayload(sourceCanvas);
+    if (ok) {
+        smokeUploadSucceeded = true;
+    } else if (!hadSuccessfulUpload) {
+        smokeUploadSucceeded = false;
+    }
+    if (ok && smokeNeedsFontRefreshUpload) {
+        smokeNeedsFontRefreshUpload = false;
+    }
+    if (ok) {
+        resolveSmokeReadySignal("canvas-texture-uploaded");
+    }
+    if (!ok && smokeUploadAttemptCount % 10 === 0) {
+        reportStatus("webgpu-smoke:canvas-texture-retry:" + String(smokeUploadAttemptCount));
+    }
+    return ok;
+}
+
+async function createScene(engineArg) {
     reportStatus("webgpu-smoke:createScene");
     BABYLON.Tools.Log("[WebGPUSmoke] createScene");
 
-    var fontReady = await ensureCanvasFontLoaded();
-    reportStatus("webgpu-smoke:font-ready:" + (fontReady ? "1" : "0"));
+    if (!engineArg || typeof engineArg.getClassName !== "function") {
+        throw new Error("WebGPU smoke requires a valid Babylon engine instance.");
+    }
 
-    var scene = new BABYLON.Scene(engine);
+    var engineClassName = String(engineArg.getClassName());
+    reportStatus("webgpu-smoke:engine-class:" + engineClassName);
+    var constructorName = "";
+    if (engineArg.constructor && typeof engineArg.constructor.name === "string") {
+        constructorName = engineArg.constructor.name;
+    }
+    reportStatus("webgpu-smoke:engine-ctor:" + constructorName);
+
+    // Babylon builds can report "AbstractEngine" via getClassName even when
+    // running WebGPUEngine internals. Require at least one WebGPU signal.
+    var hasWebGpuSignal =
+        engineClassName === "WebGPUEngine" ||
+        constructorName.indexOf("WebGPU") !== -1 ||
+        engineArg.isWebGPU === true ||
+        (typeof navigator !== "undefined" &&
+            navigator.gpu &&
+            typeof navigator.gpu.requestAdapter === "function");
+    if (!hasWebGpuSignal) {
+        throw new Error("WebGPU smoke requires WebGPU engine signals; class=" + engineClassName + ", ctor=" + constructorName);
+    }
+
+    // Signal draw intent immediately when scene creation begins so native
+    // presentation does not stay in a gray wait state while async scene
+    // readiness work continues.
+    markWebGpuDrawRequested("createScene");
+
+    var fontLoadPromise = ensureCanvasFontLoaded().then(function (fontReady) {
+        reportStatus("webgpu-smoke:font-ready:" + (fontReady ? "1" : "0"));
+        return fontReady;
+    }).catch(function (error) {
+        reportStatus("webgpu-smoke:font-ready-error:" + String(error));
+        return false;
+    });
+
+    var fontReadyAtStartup = await Promise.race([
+        fontLoadPromise,
+        new Promise(function (resolve) { setTimeout(function () { resolve(false); }, 120); })
+    ]);
+    reportStatus("webgpu-smoke:font-ready-startup:" + (fontReadyAtStartup ? "1" : "0"));
+    fontLoadPromise.then(function (fontReady) {
+        if (fontReady && !fontReadyAtStartup) {
+            smokeNeedsFontRefreshUpload = true;
+            reportStatus("webgpu-smoke:font-ready-late:1");
+        }
+    });
+
+    var scene = new BABYLON.Scene(engineArg);
     scene.clearColor = new BABYLON.Color4(0.08, 0.2, 0.32, 1.0);
+    ensureStandardQueueCopyPath();
 
     var camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 0, -5), scene);
     camera.setTarget(BABYLON.Vector3.Zero());
@@ -194,87 +502,56 @@ async function createScene() {
     standard.emissiveColor = new BABYLON.Color3(0.04, 0.04, 0.06);
     box.material = standard;
 
-    standard.forceCompilationAsync(box).then(function () {
-        reportStatus("webgpu-smoke:force-compilation-ok");
-    }).catch(function (error) {
-        reportStatus("webgpu-smoke:force-compilation-error:" + String(error));
-    });
-
-    var readyProbeCount = 0;
-    var readyProbeId = setInterval(function () {
-        try {
-            readyProbeCount += 1;
-            var meshReady = scene.meshes.length > 0 ? scene.meshes[0].isReady(true) : true;
-            var cameraReady = scene.activeCamera ? scene.activeCamera.isReady(true) : true;
-            var sceneReady = scene.isReady(false);
-
-            var materialReady = true;
-            var effectReady = "none";
-            var effectError = "";
-            var definesDirty = "na";
-            var hasSubMeshEffect = false;
-            if (scene.meshes.length > 0 && scene.meshes[0].material && scene.meshes[0].subMeshes && scene.meshes[0].subMeshes.length > 0) {
-                var mesh = scene.meshes[0];
-                var subMesh = mesh.subMeshes[0];
-                materialReady = mesh.material.isReadyForSubMesh(mesh, subMesh, false);
-                if (subMesh.materialDefines) {
-                    definesDirty = subMesh.materialDefines.isDirty ? "true" : "false";
-                }
-                hasSubMeshEffect = !!subMesh.effect;
-
-                var activeEffect = null;
-                if (subMesh._drawWrappers && subMesh._drawWrappers.length > 0) {
-                    for (var i = 0; i < subMesh._drawWrappers.length; ++i) {
-                        if (subMesh._drawWrappers[i] && subMesh._drawWrappers[i].effect) {
-                            activeEffect = subMesh._drawWrappers[i].effect;
-                            break;
-                        }
-                    }
-                }
-
-                if (!activeEffect && mesh.material && typeof mesh.material.getEffect === "function") {
-                    activeEffect = mesh.material.getEffect();
-                }
-
-                if (activeEffect) {
-                    effectReady = activeEffect.isReady() ? "ready" : "not-ready";
-                    if (activeEffect._compilationError) {
-                        effectError = String(activeEffect._compilationError).replace(/\s+/g, " ").slice(0, 180);
-                    }
-                }
-            }
-
-            reportStatus(
-                "webgpu-smoke:ready-probe:" +
-                readyProbeCount +
-                ":scene=" + sceneReady +
-                ":mesh=" + meshReady +
-                ":camera=" + cameraReady +
-                ":material=" + materialReady +
-                ":effect=" + effectReady +
-                ":hasEffect=" + hasSubMeshEffect +
-                ":definesDirty=" + definesDirty +
-                ":err=" + effectError
-            );
-            if (sceneReady || readyProbeCount >= 20) {
-                clearInterval(readyProbeId);
-            }
-        } catch (error) {
-            reportStatus("webgpu-smoke:ready-probe-error:" + String(error));
-            clearInterval(readyProbeId);
-        }
-    }, 200);
-
+    var smokeFrameCounter = 0;
     scene.onBeforeRenderObservable.add(function () {
+        smokeFrameCounter += 1;
+        if (!smokeOnBeforeRenderLogged) {
+            smokeOnBeforeRenderLogged = true;
+            reportStatus("webgpu-smoke:onBeforeRender:first");
+            markWebGpuDrawRequested("onBeforeRender");
+        }
         box.rotation.y += 0.02;
         box.rotation.x = Math.sin(Date.now() * 0.0006) * 0.12;
+
+        // Keep refresh traffic minimal to avoid steady-state upload churn.
+        // We only refresh when startup upload has not succeeded yet or when
+        // late font registration requires a one-time texture rebuild.
+        var shouldRefreshUpload = false;
+        if (smokeNeedsFontRefreshUpload) {
+            shouldRefreshUpload = true;
+        } else if (!smokeUploadSucceeded) {
+            shouldRefreshUpload = smokeFrameCounter % 15 === 0;
+        }
+
+        if (shouldRefreshUpload) {
+            uploadCanvasTexture(smokeFrameCounter % 10000);
+        }
+
+        if (globalThis.__nativePlaygroundVerboseStats === true && smokeFrameCounter % 300 === 0) {
+            var stats = getNativeWebGpuStatsSnapshot();
+            if (stats) {
+                reportStatus(
+                    "webgpu-smoke:frame-stats:" +
+                    String(smokeFrameCounter) +
+                    ":pipeline=" + String(stats.renderPipelineCreateCount || 0) +
+                    ":submit=" + String(stats.queueSubmitCount || 0) +
+                    ":draw=" + String(stats.drawCallCount || 0) +
+                    ":texture=" + String(stats.textureCreateCount || 0) +
+                    ":view=" + String(stats.textureViewCreateCount || 0) +
+                    ":bindGroup=" + String(stats.bindGroupCreateCount || 0) +
+                    ":buffer=" + String(stats.bufferCreateCount || 0) +
+                    ":canvasSkip=" + String(stats.canvasTextureImportSkipCount || stats.debugTextureImportSkipCount || 0)
+                );
+            }
+        }
     });
 
     scene.whenReadyAsync().then(function () {
         reportStatus("webgpu-smoke:scene-ready");
+        markWebGpuDrawRequested("scene-ready");
+        resolveSmokeReadySignal("scene-ready");
 
-        var payload = buildCanvasTexturePayload(Date.now() % 10000);
-        if (!pushCanvasTexturePayload(payload)) {
+        if (!uploadCanvasTexture(Date.now() % 10000)) {
             reportStatus("webgpu-smoke:canvas-texture-upload-failed");
         }
 
@@ -288,29 +565,58 @@ async function createScene() {
             );
             reportStatus("webgpu-smoke:compute-dispatched");
         }
+
+        // Assert BabylonJS WebGPU path usage based on JS-visible WebGPU API counters.
+        setTimeout(function () {
+            try {
+                var stats = getNativeWebGpuStatsSnapshot();
+                if (!stats) {
+                    reportStatus("webgpu-smoke:babylon-webgpu-path:0:missing-backend-stats");
+                    return;
+                }
+                var hasPipeline = Number(stats.renderPipelineCreateCount || 0) > 0;
+                var hasSubmit = Number(stats.queueSubmitCount || 0) > 0;
+                var hasDraw = Number(stats.drawCallCount || 0) > 0 || stats.drawPathActive === true;
+                var ok = hasPipeline && hasSubmit && hasDraw;
+                reportStatus(
+                    "webgpu-smoke:babylon-webgpu-path:" + (ok ? "1" : "0") +
+                    ":pipeline=" + String(stats.renderPipelineCreateCount || 0) +
+                    ":submit=" + String(stats.queueSubmitCount || 0) +
+                    ":draw=" + String(stats.drawCallCount || 0) +
+                    ":drawPath=" + String(!!stats.drawPathActive) +
+                    ":backendMode=" + String(stats.backendMode || "unknown")
+                );
+            } catch (error) {
+                reportStatus("webgpu-smoke:babylon-webgpu-path:0:error:" + String(error));
+            }
+        }, 1000);
+
+        setTimeout(function () {
+            try {
+                var stats = getNativeWebGpuStatsSnapshot();
+                if (!stats) {
+                    return;
+                }
+                reportStatus(
+                    "webgpu-smoke:runtime-counters:" +
+                    "frames=" + String(stats.nativeRenderFrameCount || 0) +
+                    ":submit=" + String(stats.queueSubmitCount || 0) +
+                    ":draw=" + String(stats.drawCallCount || 0) +
+                    ":canvasSkip=" + String(stats.canvasTextureImportSkipCount || stats.debugTextureImportSkipCount || 0) +
+                    ":canvasHash=" + String(stats.canvasTextureHash || stats.debugTextureHash || 0) +
+                    ":canvasW=" + String(stats.canvasTextureWidth || stats.debugTextureWidth || 0) +
+                    ":canvasH=" + String(stats.canvasTextureHeight || stats.debugTextureHeight || 0) +
+                    ":gpuBytes=" + String(stats.estimatedGpuMemoryBytes || 0)
+                );
+            } catch (error) {
+                reportStatus("webgpu-smoke:runtime-counters-error:" + String(error));
+            }
+        }, 10000);
     }).catch(function (error) {
         reportStatus("webgpu-smoke:whenReadyAsync-failed:" + String(error));
+        resolveSmokeReadySignal("scene-ready-failed");
         BABYLON.Tools.Error("[WebGPUSmoke] whenReadyAsync failed: " + error);
     });
-
-    setTimeout(function () {
-        var payload = buildCanvasTexturePayload(Date.now() % 10000);
-        pushCanvasTexturePayload(payload);
-    }, 2000);
-
-    var statsProbeCount = 0;
-    var statsProbe = setInterval(function () {
-        statsProbeCount += 1;
-        if (navigator.gpu && typeof navigator.gpu._debugStats === "function") {
-            reportStatus("webgpu-smoke:stats:" + JSON.stringify(navigator.gpu._debugStats()));
-        }
-        if (navigator.gpu && typeof navigator.gpu._isDrawPathActive === "function") {
-            reportStatus("webgpu-smoke:draw-path-active:" + String(!!navigator.gpu._isDrawPathActive()));
-        }
-        if (statsProbeCount >= 20) {
-            clearInterval(statsProbe);
-        }
-    }, 500);
 
     // Keep one face reliably visible with the imported canvas texture so visual
     // screenshots can verify end-to-end texture pointer interop across platforms.
@@ -326,3 +632,8 @@ async function createScene() {
 
     return scene;
 }
+
+if (typeof sceneFactorySignalResolve === "function") {
+    sceneFactorySignalResolve(createScene);
+}
+reportStatus("webgpu-smoke:createScene-ready:" + String(sceneFactorySignalVersion));

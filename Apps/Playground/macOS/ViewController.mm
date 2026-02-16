@@ -80,7 +80,9 @@ std::optional<AppContext> appContext{};
             auto statusCallback = Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
                 if (info.Length() > 0)
                 {
-                    auto message = info[0].ToString().Utf8Value();
+                    std::string message = info[0].IsString()
+                        ? info[0].As<Napi::String>().Utf8Value()
+                        : info[0].ToString().Utf8Value();
                     NSLog(@"[Playground] %s", message.c_str());
                 }
             });
@@ -90,6 +92,14 @@ std::optional<AppContext> appContext{};
     NSArray* arguments = [[NSProcessInfo processInfo] arguments];
     if (arguments.count == 1)
     {
+        appContext->ScriptLoader().Eval(
+            "(function(){"
+            "globalThis.createScene=undefined;"
+            "globalThis.__babylonPlaygroundSceneFactoryReady=undefined;"
+            "globalThis.__babylonPlaygroundWebGpuSmokeReady=undefined;"
+            "globalThis.__webgpuSmokeDispose=undefined;"
+            "})();",
+            "app:///Scripts/playground_bootstrap_reset.js");
         appContext->ScriptLoader().LoadScript("app:///Scripts/webgpu_smoke.js");
         appContext->ScriptLoader().LoadScript("app:///Scripts/playground_runner.js");
     }
