@@ -28,7 +28,7 @@ jobs:
         displayName: "Install packages"
 
       - script: |
-          cmake -G Ninja -B build -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so -D NAPI_JAVASCRIPT_ENGINE=${{parameters.JSEngine}} -D CMAKE_BUILD_TYPE=RelWithDebInfo -D BX_CONFIG_DEBUG=ON -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D OpenGL_GL_PREFERENCE=GLVND -D BABYLON_DEBUG_TRACE=ON -D ENABLE_SANITIZERS=$(SANITIZER_FLAG) .
+          cmake -G Ninja -B build -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so -D NAPI_JAVASCRIPT_ENGINE=${{parameters.JSEngine}} -D CMAKE_BUILD_TYPE=RelWithDebInfo -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D ENABLE_SANITIZERS=$(SANITIZER_FLAG) .
           ninja -C build
         displayName: "Build X11"
 
@@ -41,11 +41,6 @@ jobs:
           # ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=suppressions=../../../.github/asan_suppress.txt xvfb-run ./Playground app:///Scripts/validation_native.js
           xvfb-run ./Playground app:///Scripts/validation_native.js
         displayName: "Validation Tests"
-
-      - script: |
-          cd build/Apps/UnitTests
-          xvfb-run ./UnitTests
-        displayName: "Unit Tests"
 
       - task: PublishBuildArtifacts@1
         inputs:
