@@ -1,9 +1,11 @@
 #include <Babylon/Plugins/NativeWebGPU.h>
 #include <Babylon/JsRuntime.h>
+#include <Babylon/Graphics/WgpuInterop.h>
 
 #include <napi/napi.h>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -12,33 +14,30 @@
 #endif
 #include <limits>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace Babylon::Plugins::NativeWebGPU
 {
     namespace
     {
-        extern "C"
-        {
-            bool babylon_wgpu_dispatch_compute_global(const char* shaderSource, const char* entryPoint, uint32_t x, uint32_t y, uint32_t z);
-            void babylon_wgpu_mark_webgpu_draw_requested();
-            bool babylon_wgpu_is_webgpu_draw_enabled();
-            uint64_t babylon_wgpu_get_render_frame_count();
-            uint64_t babylon_wgpu_get_debug_texture_hash();
-            uint32_t babylon_wgpu_get_debug_texture_width();
-            uint32_t babylon_wgpu_get_debug_texture_height();
-            void babylon_wgpu_reset_webgpu_draw_requested();
-            bool babylon_wgpu_set_debug_texture_from_native(const void* nativeTexture, uint32_t width, uint32_t height);
-        }
-
         std::atomic_bool g_sawWebGpuDrawCall{false};
         std::atomic_uint64_t g_renderPipelineCreateCount{0};
         std::atomic_uint64_t g_commandEncoderCreateCount{0};
         std::atomic_uint64_t g_renderPassBeginCount{0};
         std::atomic_uint64_t g_queueSubmitCount{0};
         std::atomic_uint64_t g_drawCallCount{0};
+        std::atomic_uint64_t g_textureCreateCount{0};
+        std::atomic_uint64_t g_textureViewCreateCount{0};
+        std::atomic_uint64_t g_bindGroupCreateCount{0};
+        std::atomic_uint64_t g_bufferCreateCount{0};
+        std::atomic_uint64_t g_bufferRequestedBytes{0};
+        constexpr auto kBackendMode = "interop-shim-babylonjs-webgpu";
+        constexpr auto kWebGpuDeveloperFeaturesMode = "webgpu-developer-features";
+        constexpr auto kUnsafeWebGpuMode = "unsafe-webgpu";
 
         constexpr auto JS_NAVIGATOR_NAME = "navigator";
         constexpr auto JS_GPU_NAME = "gpu";
@@ -106,20 +105,100 @@ namespace Babylon::Plugins::NativeWebGPU
             return object.Has(key) ? ToUint32(object.Get(key), fallback) : fallback;
         }
 
-        std::string GetString(const Napi::Object& object, const char* key, std::string fallback)
+        std::string GetString(const Napi::Object& object, const char* key, std::string_view fallback = "")
         {
             if (!object.Has(key))
             {
-                return fallback;
+                return std::string{fallback};
             }
 
             const auto value = object.Get(key);
             if (!value.IsString())
             {
-                return fallback;
+                return std::string{fallback};
             }
 
             return value.As<Napi::String>().Utf8Value();
+        }
+
+        bool ImportCanvasTexturePayload(const Napi::Object& payload)
+        {
+            if (!payload.Has("nativeTexture"))
+            {
+                return false;
+            }
+
+            const auto nativeTextureValue = payload.Get("nativeTexture");
+            if (!nativeTextureValue.IsExternal())
+            {
+                return false;
+            }
+
+            const void* nativeTexture = nativeTextureValue.As<Napi::External<void>>().Data();
+            if (nativeTexture == nullptr)
+            {
+                return false;
+            }
+
+            const uint32_t width = payload.Has("width") ? ToUint32(payload.Get("width"), 1) : 1;
+            const uint32_t height = payload.Has("height") ? ToUint32(payload.Get("height"), 1) : 1;
+            return babylon_wgpu_import_canvas_texture_from_native(nativeTexture, width, height);
+        }
+
+        std::optional<Napi::Object> ExtractCanvasTexturePayload(const Napi::Value& sourceDescriptor)
+        {
+            if (!sourceDescriptor.IsObject())
+            {
+                return std::nullopt;
+            }
+
+            auto descriptor = sourceDescriptor.As<Napi::Object>();
+            if (descriptor.Has("nativeTexture") && descriptor.Get("nativeTexture").IsExternal())
+            {
+                return descriptor;
+            }
+
+            if (!descriptor.Has("source"))
+            {
+                return std::nullopt;
+            }
+
+            auto sourceValue = descriptor.Get("source");
+            if (!sourceValue.IsObject())
+            {
+                return std::nullopt;
+            }
+
+            auto sourceObject = sourceValue.As<Napi::Object>();
+            if (sourceObject.Has("nativeTexture") && sourceObject.Get("nativeTexture").IsExternal())
+            {
+                return sourceObject;
+            }
+
+            if (!sourceObject.Has("getCanvasTexture"))
+            {
+                return std::nullopt;
+            }
+
+            auto getCanvasTextureValue = sourceObject.Get("getCanvasTexture");
+            if (!getCanvasTextureValue.IsFunction())
+            {
+                return std::nullopt;
+            }
+
+            auto payloadValue = getCanvasTextureValue.As<Napi::Function>().Call(sourceObject, {});
+            if (!payloadValue.IsObject())
+            {
+                return std::nullopt;
+            }
+
+            auto payloadObject = payloadValue.As<Napi::Object>();
+            if (!payloadObject.Has("nativeTexture") || !payloadObject.Get("nativeTexture").IsExternal())
+            {
+                return std::nullopt;
+            }
+
+            return payloadObject;
         }
 
         void NoOpCallback(const Napi::CallbackInfo& info)
@@ -172,6 +251,86 @@ namespace Babylon::Plugins::NativeWebGPU
         Napi::Function GetMarkDrawCallFunction(Napi::Env env)
         {
             return GetCachedFunction(env, "__nativeWebGpuMarkDrawCall", &MarkDrawCallCallback);
+        }
+
+        constexpr bool kBuildEnableWebGpuDeveloperFeatures =
+#if defined(BABYLON_NATIVE_ENABLE_WEBGPU_DEVELOPER_FEATURES) || defined(BABYLON_NATIVE_WEBGPU_TEST_HOOKS)
+            true;
+#else
+            false;
+#endif
+
+        constexpr bool kBuildEnableUnsafeWebGpu =
+#if defined(BABYLON_NATIVE_ENABLE_UNSAFE_WEBGPU) || defined(BABYLON_NATIVE_WEBGPU_TEST_HOOKS)
+            true;
+#else
+            false;
+#endif
+
+        bool ReadBooleanFlag(const Napi::Object& object, const char* key)
+        {
+            if (!object.Has(key))
+            {
+                return false;
+            }
+
+            auto value = object.Get(key);
+            if (value.IsBoolean())
+            {
+                return value.As<Napi::Boolean>().Value();
+            }
+
+            if (value.IsNumber())
+            {
+                return value.As<Napi::Number>().Int64Value() != 0;
+            }
+
+            if (value.IsString())
+            {
+                const auto text = value.As<Napi::String>().Utf8Value();
+                return text == "1" || text == "true" || text == "on";
+            }
+
+            return false;
+        }
+
+        bool IsWebGpuDeveloperFeaturesEnabled(Napi::Env env)
+        {
+            if (kBuildEnableWebGpuDeveloperFeatures)
+            {
+                return true;
+            }
+
+            auto global = env.Global();
+            // Chromium/WebKit-aligned naming for non-standard developer surfaces.
+            static constexpr std::array<const char*, 4> kFlagNames{
+                "__enableWebGPUDeveloperFeatures",
+                "__webgpuDeveloperFeatures",
+                "__webkitWebGPUDeveloperModeEnabled",
+                "__webkitWebGPUDeveloperExtrasEnabled",
+            };
+            return std::any_of(kFlagNames.begin(), kFlagNames.end(), [&global](const char* flagName) {
+                return ReadBooleanFlag(global, flagName);
+            });
+        }
+
+        bool IsUnsafeWebGpuEnabled(Napi::Env env)
+        {
+            if (kBuildEnableUnsafeWebGpu)
+            {
+                return true;
+            }
+
+            auto global = env.Global();
+            // Chromium-aligned "unsafe webgpu" naming for host-only interop hooks.
+            static constexpr std::array<const char*, 3> kFlagNames{
+                "__enableUnsafeWebGPU",
+                "__unsafeWebGPU",
+                "__allowUnsafeWebGPU",
+            };
+            return std::any_of(kFlagNames.begin(), kFlagNames.end(), [&global](const char* flagName) {
+                return ReadBooleanFlag(global, flagName);
+            });
         }
 
         using PromiseResolveFactory = std::function<Napi::Value(Napi::Env)>;
@@ -388,6 +547,9 @@ namespace Babylon::Plugins::NativeWebGPU
             auto promise = deferred.Promise();
             // Hot-path APIs (mapAsync/onSubmittedWorkDone/popErrorScope) can be
             // called every frame; reusing a settled Promise avoids per-frame churn.
+            // wgpu-native currently reports NULL_FUTURE for these async C-ABI calls
+            // on our target matrix, so completion is callback/immediate-driven and
+            // we intentionally do not model per-call future identity here.
             // Non-CTS note: this is intentionally not per-call Promise identity.
             global.Set(CACHE_KEY, promise);
             return promise;
@@ -419,6 +581,9 @@ namespace Babylon::Plugins::NativeWebGPU
             return setCtorValue.As<Napi::Function>().New({});
         }
 
+        // TODO(spec-compliance): These limits are hardcoded conservative defaults rather
+        // than queried from the actual GPU adapter via the Rust backend. They should be
+        // forwarded from the adapter's real limits once the FFI surface supports it.
         Napi::Object CreateLimits(Napi::Env env)
         {
             auto limits = Napi::Object::New(env);
@@ -502,6 +667,7 @@ namespace Babylon::Plugins::NativeWebGPU
         {
             auto env = info.Env();
             auto texture = Napi::Object::New(env);
+            g_textureCreateCount.fetch_add(1, std::memory_order_relaxed);
 
             texture.Set("label", Napi::String::New(env, descriptor.Label));
             texture.Set("format", Napi::String::New(env, descriptor.Format));
@@ -528,11 +694,12 @@ namespace Babylon::Plugins::NativeWebGPU
                     }
                 }
 
-                auto view = Napi::Object::New(viewInfo.Env());
                 auto viewFormat = descriptor.Format;
                 auto viewDimension = descriptor.Dimension;
                 auto mipLevelCount = descriptor.MipLevelCount;
                 auto arrayLayerCount = descriptor.DepthOrArrayLayers;
+                double descriptorCacheHash{0.0};
+                std::string viewLabel{};
 
                 if (hasDescriptor)
                 {
@@ -541,12 +708,41 @@ namespace Babylon::Plugins::NativeWebGPU
                     viewDimension = GetString(viewDescriptor, "dimension", viewDimension);
                     mipLevelCount = GetUint32(viewDescriptor, "mipLevelCount", mipLevelCount);
                     arrayLayerCount = GetUint32(viewDescriptor, "arrayLayerCount", arrayLayerCount);
-                    view.Set("label", Napi::String::New(viewInfo.Env(), GetString(viewDescriptor, "label", "")));
+                    viewLabel = GetString(viewDescriptor, "label", "");
+
+                    // Hash the descriptor components to avoid per-frame string
+                    // allocation for cache key comparison. FNV-1a on the concatenated
+                    // format|dimension|mipLevel|arrayLayer values.
+                    auto fnvHash = [](std::string_view s, uint64_t h = 14695981039346656037ULL) -> uint64_t {
+                        for (auto c : s) { h ^= static_cast<uint64_t>(c); h *= 1099511628211ULL; }
+                        return h;
+                    };
+                    auto h = fnvHash(viewFormat);
+                    h = fnvHash(viewDimension, h ^ 0xff);
+                    h ^= static_cast<uint64_t>(mipLevelCount) * 2654435761ULL;
+                    h ^= static_cast<uint64_t>(arrayLayerCount) * 2246822519ULL;
+                    const double descriptorCacheHash = static_cast<double>(h);
+
+                    if (textureObject.Has("__descriptorViewKey"))
+                    {
+                        auto cachedKey = textureObject.Get("__descriptorViewKey");
+                        if (cachedKey.IsNumber() &&
+                            cachedKey.As<Napi::Number>().DoubleValue() == descriptorCacheHash &&
+                            textureObject.Has("__descriptorView"))
+                        {
+                            auto cachedView = textureObject.Get("__descriptorView");
+                            if (cachedView.IsObject())
+                            {
+                                return cachedView;
+                            }
+                        }
+                    }
+
                 }
-                else
-                {
-                    view.Set("label", Napi::String::New(viewInfo.Env(), ""));
-                }
+
+                auto view = Napi::Object::New(viewInfo.Env());
+                g_textureViewCreateCount.fetch_add(1, std::memory_order_relaxed);
+                view.Set("label", Napi::String::New(viewInfo.Env(), viewLabel));
 
                 view.Set("format", Napi::String::New(viewInfo.Env(), viewFormat));
                 view.Set("dimension", Napi::String::New(viewInfo.Env(), viewDimension));
@@ -557,6 +753,11 @@ namespace Babylon::Plugins::NativeWebGPU
                 if (!hasDescriptor)
                 {
                     textureObject.Set("__defaultView", view);
+                }
+                else
+                {
+                    textureObject.Set("__descriptorViewKey", Napi::Number::New(viewInfo.Env(), descriptorCacheHash));
+                    textureObject.Set("__descriptorView", view);
                 }
 
                 return view;
@@ -792,6 +993,8 @@ namespace Babylon::Plugins::NativeWebGPU
         {
             auto buffer = Napi::Object::New(env);
             buffer.Set("size", Napi::Number::From(env, size));
+            g_bufferCreateCount.fetch_add(1, std::memory_order_relaxed);
+            g_bufferRequestedBytes.fetch_add(static_cast<uint64_t>(size), std::memory_order_relaxed);
 
             buffer.Set("mapAsync", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
                 return GetCachedResolvedUndefinedPromise(info.Env());
@@ -818,7 +1021,42 @@ namespace Babylon::Plugins::NativeWebGPU
                     byteLength = 0;
                 }
 
-                return Napi::ArrayBuffer::New(info.Env(), byteLength);
+                auto bufferObject = info.This().As<Napi::Object>();
+                if (bufferObject.Has("__cachedMappedRange") &&
+                    bufferObject.Has("__cachedMappedRangeOffset") &&
+                    bufferObject.Has("__cachedMappedRangeLength"))
+                {
+                    const auto cachedOffsetValue = bufferObject.Get("__cachedMappedRangeOffset");
+                    const auto cachedLengthValue = bufferObject.Get("__cachedMappedRangeLength");
+                    const auto cachedRangeValue = bufferObject.Get("__cachedMappedRange");
+
+                    if (cachedOffsetValue.IsNumber() &&
+                        cachedLengthValue.IsNumber() &&
+                        cachedRangeValue.IsArrayBuffer())
+                    {
+                        const auto cachedOffset = static_cast<size_t>(
+                            std::max<int64_t>(0, cachedOffsetValue.As<Napi::Number>().Int64Value()));
+                        const auto cachedLength = static_cast<size_t>(
+                            std::max<int64_t>(0, cachedLengthValue.As<Napi::Number>().Int64Value()));
+
+                        if (cachedOffset == offset && cachedLength == byteLength)
+                        {
+                            return cachedRangeValue;
+                        }
+                    }
+                }
+
+                auto mappedRange = Napi::ArrayBuffer::New(info.Env(), byteLength);
+                // Hot-path optimization: Babylon can query mapped ranges every frame.
+                // Reusing the same backing ArrayBuffer for identical range requests
+                // avoids transient JS heap churn in simulator/device loops.
+                // Non-CTS note: this intentionally keeps stable object identity.
+                bufferObject.Set("__cachedMappedRange", mappedRange);
+                bufferObject.Set("__cachedMappedRangeOffset",
+                    Napi::Number::From(info.Env(), static_cast<double>(offset)));
+                bufferObject.Set("__cachedMappedRangeLength",
+                    Napi::Number::From(info.Env(), static_cast<double>(byteLength)));
+                return mappedRange;
             }));
 
             auto noOp = GetNoOpFunction(env);
@@ -843,7 +1081,26 @@ namespace Babylon::Plugins::NativeWebGPU
             }));
             queue.Set("writeBuffer", noOp);
             queue.Set("writeTexture", noOp);
-            queue.Set("copyExternalImageToTexture", noOp);
+            queue.Set("copyExternalImageToTexture", Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
+                if (info.Length() == 0)
+                {
+                    return;
+                }
+
+                // Standards-aligned bridge:
+                // copyExternalImageToTexture({ source: canvasLike }, dst, size)
+                // where `canvasLike` can expose getCanvasTexture() in this host.
+                auto payload = ExtractCanvasTexturePayload(info[0]);
+                if (!payload.has_value())
+                {
+                    return;
+                }
+
+                if (ImportCanvasTexturePayload(*payload))
+                {
+                    babylon_wgpu_mark_webgpu_draw_requested();
+                }
+            }));
             queue.Set("onSubmittedWorkDone", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
                 return GetCachedResolvedUndefinedPromise(info.Env());
             }));
@@ -859,11 +1116,18 @@ namespace Babylon::Plugins::NativeWebGPU
             device.Set("features", CreateSet(env));
             device.Set("limits", CreateLimits(env));
             device.Set("queue", CreateGpuQueue(env));
+            // TODO(spec-compliance): device.lost is a never-resolving promise. The shim
+            // does not model device loss. When the Rust backend detects device loss (e.g.
+            // adapter removal), this should resolve with a GPUDeviceLostInfo.
             device.Set("lost", CreateNeverPromise(env));
 
             device.Set("addEventListener", noOp);
             device.Set("removeEventListener", noOp);
             device.Set("destroy", noOp);
+            // TODO(spec-compliance): Error scopes are completely opaque -- pushErrorScope
+            // is a no-op and popErrorScope always resolves with undefined. GPU validation
+            // errors from the Rust backend are never surfaced to JS. This should forward
+            // to the wgpu device's error callback once the FFI supports it.
             device.Set("pushErrorScope", noOp);
 
             device.Set("popErrorScope", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
@@ -932,6 +1196,7 @@ namespace Babylon::Plugins::NativeWebGPU
             }));
 
             device.Set("createBindGroup", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                g_bindGroupCreateCount.fetch_add(1, std::memory_order_relaxed);
                 return Napi::Object::New(info.Env());
             }));
 
@@ -1130,6 +1395,8 @@ namespace Babylon::Plugins::NativeWebGPU
             }));
 
             adapter.Set("requestDevice", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                // Keep JS-observable async timing semantics without assuming
+                // wgpu-native future IDs are available (NULL_FUTURE paths).
                 return ResolvePromiseAsync(info.Env(), [](Napi::Env callbackEnv) {
                     return CreateGpuDevice(callbackEnv);
                 }, "GPUAdapter.requestDevice");
@@ -1138,12 +1405,30 @@ namespace Babylon::Plugins::NativeWebGPU
             return adapter;
         }
 
-        Napi::Object CreateGpu(Napi::Env env)
+        Napi::Value ImportCanvasTextureFromNative(const Napi::CallbackInfo& info)
+        {
+            if (info.Length() == 0)
+            {
+                return Napi::Boolean::New(info.Env(), false);
+            }
+
+            auto payload = ExtractCanvasTexturePayload(info[0]);
+            if (!payload.has_value())
+            {
+                return Napi::Boolean::New(info.Env(), false);
+            }
+
+            return Napi::Boolean::New(info.Env(), ImportCanvasTexturePayload(*payload));
+        }
+
+        Napi::Object CreateGpu(Napi::Env env, bool developerFeaturesEnabled, bool unsafeWebGpuEnabled)
         {
             auto gpu = Napi::Object::New(env);
 
             gpu.Set("wgslLanguageFeatures", CreateSet(env));
             gpu.Set("requestAdapter", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                // Keep JS-observable async timing semantics without assuming
+                // wgpu-native future IDs are available (NULL_FUTURE paths).
                 return ResolvePromiseAsync(info.Env(), [](Napi::Env callbackEnv) {
                     return CreateGpuAdapter(callbackEnv);
                 }, "GPU.requestAdapter");
@@ -1159,76 +1444,80 @@ namespace Babylon::Plugins::NativeWebGPU
                 return CreateGpuCanvasContext(info.Env());
             }));
 
-            // Non-standard helper for native validation to execute a WGSL compute shader
-            // through the native Rust wgpu backend.
-            gpu.Set("_dispatchCompute", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
-                if (info.Length() == 0 || !info[0].IsString())
-                {
-                    return Napi::Boolean::New(info.Env(), false);
-                }
+            if (developerFeaturesEnabled)
+            {
+                // Non-standard helper for native validation to execute a WGSL compute shader
+                // through the native Rust wgpu backend.
+                gpu.Set("_dispatchCompute", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    if (info.Length() == 0 || !info[0].IsString())
+                    {
+                        return Napi::Boolean::New(info.Env(), false);
+                    }
 
-                const auto shaderCode = info[0].As<Napi::String>().Utf8Value();
-                const auto entryPoint = info.Length() > 1 && info[1].IsString() ? info[1].As<Napi::String>().Utf8Value() : std::string{"main"};
-                const auto x = info.Length() > 2 ? ToUint32(info[2], 1) : 1;
-                const auto y = info.Length() > 3 ? ToUint32(info[3], 1) : 1;
-                const auto z = info.Length() > 4 ? ToUint32(info[4], 1) : 1;
+                    const auto shaderCode = info[0].As<Napi::String>().Utf8Value();
+                    const auto entryPoint = info.Length() > 1 && info[1].IsString() ? info[1].As<Napi::String>().Utf8Value() : std::string{"main"};
+                    const auto x = info.Length() > 2 ? ToUint32(info[2], 1) : 1;
+                    const auto y = info.Length() > 3 ? ToUint32(info[3], 1) : 1;
+                    const auto z = info.Length() > 4 ? ToUint32(info[4], 1) : 1;
 
-                const bool ok = babylon_wgpu_dispatch_compute_global(shaderCode.c_str(), entryPoint.c_str(), x, y, z);
-                return Napi::Boolean::New(info.Env(), ok);
-            }));
+                    const bool ok = babylon_wgpu_dispatch_compute_global(shaderCode.c_str(), entryPoint.c_str(), x, y, z);
+                    return Napi::Boolean::New(info.Env(), ok);
+                }));
 
-            // Non-standard helper used by Playground validation to import a
-            // CanvasWgpu native interop handle into the debug cube renderer path.
-            gpu.Set("_setDebugTextureFromNative", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
-                if (info.Length() == 0 || !info[0].IsObject())
-                {
-                    return Napi::Boolean::New(info.Env(), false);
-                }
+                gpu.Set("_markWebGpuDrawRequested", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    (void)info;
+                    babylon_wgpu_mark_webgpu_draw_requested();
+                    return info.Env().Undefined();
+                }));
 
-                const auto payload = info[0].As<Napi::Object>();
-                if (!payload.Has("nativeTexture"))
-                {
-                    return Napi::Boolean::New(info.Env(), false);
-                }
+                gpu.Set("_isDrawPathActive", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    (void)info;
+                    return Napi::Boolean::New(info.Env(), babylon_wgpu_is_webgpu_draw_enabled());
+                }));
 
-                const auto nativeTextureValue = payload.Get("nativeTexture");
-                if (!nativeTextureValue.IsExternal())
-                {
-                    return Napi::Boolean::New(info.Env(), false);
-                }
+                auto backendStats = Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
+                    auto env = info.Env();
+                    auto stats = Napi::Object::New(env);
+                    stats.Set("renderPipelineCreateCount", Napi::Number::From(env, static_cast<double>(g_renderPipelineCreateCount.load(std::memory_order_relaxed))));
+                    stats.Set("commandEncoderCreateCount", Napi::Number::From(env, static_cast<double>(g_commandEncoderCreateCount.load(std::memory_order_relaxed))));
+                    stats.Set("renderPassBeginCount", Napi::Number::From(env, static_cast<double>(g_renderPassBeginCount.load(std::memory_order_relaxed))));
+                    stats.Set("queueSubmitCount", Napi::Number::From(env, static_cast<double>(g_queueSubmitCount.load(std::memory_order_relaxed))));
+                    stats.Set("drawCallCount", Napi::Number::From(env, static_cast<double>(g_drawCallCount.load(std::memory_order_relaxed))));
+                    stats.Set("textureCreateCount", Napi::Number::From(env, static_cast<double>(g_textureCreateCount.load(std::memory_order_relaxed))));
+                    stats.Set("textureViewCreateCount", Napi::Number::From(env, static_cast<double>(g_textureViewCreateCount.load(std::memory_order_relaxed))));
+                    stats.Set("bindGroupCreateCount", Napi::Number::From(env, static_cast<double>(g_bindGroupCreateCount.load(std::memory_order_relaxed))));
+                    stats.Set("bufferCreateCount", Napi::Number::From(env, static_cast<double>(g_bufferCreateCount.load(std::memory_order_relaxed))));
+                    stats.Set("bufferRequestedBytes", Napi::Number::From(env, static_cast<double>(g_bufferRequestedBytes.load(std::memory_order_relaxed))));
+                    stats.Set("drawPathActive", Napi::Boolean::New(env, babylon_wgpu_is_webgpu_draw_enabled()));
+                    stats.Set("nativeRenderFrameCount", Napi::Number::From(env, static_cast<double>(babylon_wgpu_get_render_frame_count())));
+                    stats.Set("canvasTextureHash", Napi::Number::From(env, static_cast<double>(babylon_wgpu_get_canvas_texture_hash())));
+                    stats.Set("canvasTextureWidth", Napi::Number::From(env, static_cast<double>(babylon_wgpu_get_canvas_texture_width())));
+                    stats.Set("canvasTextureHeight", Napi::Number::From(env, static_cast<double>(babylon_wgpu_get_canvas_texture_height())));
+                    // Legacy stat keys kept for compatibility with older scripts.
+                    stats.Set("debugTextureHash", Napi::Number::From(env, static_cast<double>(babylon_wgpu_get_canvas_texture_hash())));
+                    stats.Set("debugTextureWidth", Napi::Number::From(env, static_cast<double>(babylon_wgpu_get_canvas_texture_width())));
+                    stats.Set("debugTextureHeight", Napi::Number::From(env, static_cast<double>(babylon_wgpu_get_canvas_texture_height())));
+                    stats.Set("estimatedGpuMemoryBytes", Napi::Number::From(env, static_cast<double>(babylon_wgpu_get_estimated_gpu_memory_bytes())));
+                    stats.Set("canvasTextureImportSkipCount", Napi::Number::From(env, static_cast<double>(babylon_wgpu_get_canvas_texture_import_skip_count())));
+                    stats.Set("debugTextureImportSkipCount", Napi::Number::From(env, static_cast<double>(babylon_wgpu_get_canvas_texture_import_skip_count())));
+                    stats.Set("backendMode", Napi::String::New(env, kBackendMode));
+                    stats.Set("developerFeaturesMode", Napi::String::New(env, kWebGpuDeveloperFeaturesMode));
+                    return stats;
+                });
+                gpu.Set("_backendStats", backendStats);
+                // Back-compat alias kept for existing tests/scripts.
+                gpu.Set("_debugStats", backendStats);
+            }
 
-                const void* nativeTexture = nativeTextureValue.As<Napi::External<void>>().Data();
-                if (nativeTexture == nullptr)
-                {
-                    return Napi::Boolean::New(info.Env(), false);
-                }
-
-                const uint32_t width = payload.Has("width") ? ToUint32(payload.Get("width"), 1) : 1;
-                const uint32_t height = payload.Has("height") ? ToUint32(payload.Get("height"), 1) : 1;
-                const bool ok = babylon_wgpu_set_debug_texture_from_native(nativeTexture, width, height);
-                return Napi::Boolean::New(info.Env(), ok);
-            }));
-
-            gpu.Set("_isDrawPathActive", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
-                (void)info;
-                return Napi::Boolean::New(info.Env(), babylon_wgpu_is_webgpu_draw_enabled());
-            }));
-
-            gpu.Set("_debugStats", Napi::Function::New(env, [](const Napi::CallbackInfo& info) -> Napi::Value {
-                auto env = info.Env();
-                auto stats = Napi::Object::New(env);
-                stats.Set("renderPipelineCreateCount", Napi::Number::From(env, static_cast<double>(g_renderPipelineCreateCount.load(std::memory_order_relaxed))));
-                stats.Set("commandEncoderCreateCount", Napi::Number::From(env, static_cast<double>(g_commandEncoderCreateCount.load(std::memory_order_relaxed))));
-                stats.Set("renderPassBeginCount", Napi::Number::From(env, static_cast<double>(g_renderPassBeginCount.load(std::memory_order_relaxed))));
-                stats.Set("queueSubmitCount", Napi::Number::From(env, static_cast<double>(g_queueSubmitCount.load(std::memory_order_relaxed))));
-                stats.Set("drawCallCount", Napi::Number::From(env, static_cast<double>(g_drawCallCount.load(std::memory_order_relaxed))));
-                stats.Set("drawPathActive", Napi::Boolean::New(env, babylon_wgpu_is_webgpu_draw_enabled()));
-                stats.Set("nativeRenderFrameCount", Napi::Number::From(env, static_cast<double>(babylon_wgpu_get_render_frame_count())));
-                stats.Set("debugTextureHash", Napi::Number::From(env, static_cast<double>(babylon_wgpu_get_debug_texture_hash())));
-                stats.Set("debugTextureWidth", Napi::Number::From(env, static_cast<double>(babylon_wgpu_get_debug_texture_width())));
-                stats.Set("debugTextureHeight", Napi::Number::From(env, static_cast<double>(babylon_wgpu_get_debug_texture_height())));
-                return stats;
-            }));
+            if (unsafeWebGpuEnabled)
+            {
+                // Non-standard helper used to import a CanvasWgpu native interop
+                // handle into the GraphicsWgpu-presented texture path.
+                gpu.Set("_importCanvasTextureFromNative", Napi::Function::New(env, &ImportCanvasTextureFromNative));
+                // Back-compat alias kept for existing Playground/test scripts.
+                gpu.Set("_setDebugTextureFromNative", Napi::Function::New(env, &ImportCanvasTextureFromNative));
+                gpu.Set("_unsafeMode", Napi::String::New(env, kUnsafeWebGpuMode));
+            }
 
 #ifdef BABYLON_NATIVE_WEBGPU_TEST_HOOKS
             // Non-standard helpers used only by native unit tests to validate
@@ -1241,6 +1530,11 @@ namespace Babylon::Plugins::NativeWebGPU
                 g_renderPassBeginCount.store(0, std::memory_order_relaxed);
                 g_queueSubmitCount.store(0, std::memory_order_relaxed);
                 g_drawCallCount.store(0, std::memory_order_relaxed);
+                g_textureCreateCount.store(0, std::memory_order_relaxed);
+                g_textureViewCreateCount.store(0, std::memory_order_relaxed);
+                g_bindGroupCreateCount.store(0, std::memory_order_relaxed);
+                g_bufferCreateCount.store(0, std::memory_order_relaxed);
+                g_bufferRequestedBytes.store(0, std::memory_order_relaxed);
                 babylon_wgpu_reset_webgpu_draw_requested();
                 return info.Env().Undefined();
             }));
@@ -1284,6 +1578,16 @@ namespace Babylon::Plugins::NativeWebGPU
         }
     }
 
+    // Initialization contract: this function must be called from an
+    // AppRuntime::Dispatch callback BEFORE any user JavaScript executes.
+    // The AppRuntime WorkQueue is FIFO, and ScriptLoader dispatches through
+    // the same queue, so navigator.gpu is guaranteed to be synchronously
+    // available by the time any script runs. Embedders do NOT need to poll
+    // for navigator.gpu or use a readiness promise — just call Initialize()
+    // in the Dispatch callback and load scripts via ScriptLoader afterward.
+    //
+    // This matches the W3C WebGPU spec where navigator.gpu is a synchronous
+    // [SameObject] attribute, always present when WebGPU is enabled.
     void Initialize(Napi::Env env)
     {
         Napi::HandleScope scope{env};
@@ -1306,10 +1610,16 @@ namespace Babylon::Plugins::NativeWebGPU
             auto existingGpu = navigator.Get(JS_GPU_NAME);
             if (existingGpu.IsObject())
             {
+                // navigator.gpu already exists (e.g. re-initialization after
+                // Android surface recreation). Per W3C spec, navigator.gpu is
+                // a [SameObject] attribute — nothing else to do.
                 return;
             }
         }
 
-        navigator.Set(JS_GPU_NAME, CreateGpu(env));
+        const bool developerFeaturesEnabled = IsWebGpuDeveloperFeaturesEnabled(env);
+        const bool unsafeWebGpuEnabled = developerFeaturesEnabled || IsUnsafeWebGpuEnabled(env);
+        auto gpu = CreateGpu(env, developerFeaturesEnabled, unsafeWebGpuEnabled);
+        navigator.Set(JS_GPU_NAME, gpu);
     }
 }
