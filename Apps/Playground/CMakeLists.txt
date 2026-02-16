@@ -17,6 +17,7 @@ set(SCRIPTS
     "Scripts/playground_runner.js"
     "Scripts/validation_native.js"
     "Scripts/webgpu_smoke.js"
+    "Scripts/RobotoSlab.ttf"
     "Scripts/config.json")
 
 set(SOURCES

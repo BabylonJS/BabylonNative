@@ -36,3 +36,16 @@ target_link_libraries(BabylonNativeJNI
 
 target_compile_definitions(BabylonNativeJNI
     PRIVATE BABYLON_NATIVE_PLAYGROUND_HAS_CANVAS=1)
+
+if(ENABLE_SANITIZERS AND DEFINED BABYLON_NATIVE_SANITIZER_FLAGS)
+    target_compile_options(BabylonNativeJNI
+        PRIVATE -fsanitize=${BABYLON_NATIVE_SANITIZER_FLAGS} -fno-omit-frame-pointer)
+    target_link_options(BabylonNativeJNI
+        PRIVATE -fsanitize=${BABYLON_NATIVE_SANITIZER_FLAGS})
+
+    if(ANDROID)
+        # JNI dispatch can fault under ASAN on tagged-pointer ART internals (API 31 emulator).
+        # Keep ASAN on backend libraries and turn it off for this JNI entrypoint shim.
+        target_compile_options(BabylonNativeJNI PRIVATE -fno-sanitize=address)
+    endif()
+endif()

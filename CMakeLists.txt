@@ -56,6 +56,10 @@ FetchContent_Declare(libwebp
     GIT_REPOSITORY https://github.com/webmproject/libwebp.git
     GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c
     EXCLUDE_FROM_ALL)
+FetchContent_Declare(webgpu_headers
+    GIT_REPOSITORY https://github.com/webgpu-native/webgpu-headers.git
+    GIT_TAG bac520839ff5ed2e2b648ed540bd9ec45edbccbc
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(wgpu_native
     GIT_REPOSITORY https://github.com/gfx-rs/wgpu-native.git
     GIT_TAG ba4deb5d935652f40c7e051b15cbb5d097219941
@@ -119,32 +123,54 @@ option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphic
 
 # Plugins
 option(BABYLON_NATIVE_PLUGIN_NATIVEINPUT "Include Babylon Native Plugin NativeInput." ON)
-option(BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU "Include Babylon Native Plugin NativeWebGPU." ON)
-option(BABYLON_NATIVE_WGPU_USE_UPSTREAM_NATIVE "Use upstream wgpu-native as the Rust backend base (experimental)." OFF)
+# NativeWebGPU/Canvas options are hardwired ON for the wgpu branch (see FORCE overrides below).
+# TODO(bgfx-removal): Convert these back to user-facing option() toggles once the bgfx backend
+# is fully removed and the wgpu path is the only backend.
 option(BABYLON_NATIVE_BUILD_WEBGPU_TESTS "Build NativeWebGPU async bridge gtests on desktop hosts." OFF)
+option(BABYLON_NATIVE_ENABLE_WEBGPU_DEVELOPER_FEATURES "Expose non-standard WebGPU developer hooks (Chromium/WebKit developer-features analog)." ON)
+option(BABYLON_NATIVE_ENABLE_UNSAFE_WEBGPU "Expose non-standard unsafe WebGPU hooks (Chromium enable-unsafe-webgpu analog)." ON)
 
 # Polyfills
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
-option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." OFF)
-option(BABYLON_NATIVE_POLYFILL_CANVAS_WGPU "Use the wgpu/femtovg Canvas backend when Canvas polyfill is enabled." OFF)
 
 # Sanitizers
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
 
 if(ENABLE_SANITIZERS)
+    include(CheckCCompilerFlag)
+    include(CheckCXXCompilerFlag)
     set(ENABLE_RTTI ON CACHE BOOL "" FORCE)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-        set(SANITIZERS "address,undefined")
+        # Android app processes require explicit sanitizer runtime packaging.
+        # Prefer ASan there for actionable heap safety checks with manageable
+        # signal-to-noise in emulator/device runs.
+        if(ANDROID)
+            set(SANITIZERS "address")
+        else()
+            set(SANITIZERS "address,undefined")
+        endif()
         # Check for Clang since vptr and fdsan are Clang-specific
         if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-            list(APPEND SANITIZERS "vptr")
+            # vptr depends on UBSan runtime and is useful on non-Android hosts.
+            if(NOT ANDROID)
+                list(APPEND SANITIZERS "vptr")
+            endif()
             # FDSan only works on Android builds with Clang
             if (ANDROID)
-                list(APPEND SANITIZERS "fdsan")
+                check_c_compiler_flag("-fsanitize=fdsan" BABYLON_NATIVE_HAS_C_FDSAN)
+                check_cxx_compiler_flag("-fsanitize=fdsan" BABYLON_NATIVE_HAS_CXX_FDSAN)
+                if(BABYLON_NATIVE_HAS_C_FDSAN AND BABYLON_NATIVE_HAS_CXX_FDSAN)
+                    list(APPEND SANITIZERS "fdsan")
+                else()
+                    message(STATUS "Skipping fdsan sanitizer: compiler does not support -fsanitize=fdsan")
+                endif()
             endif()
         endif()
 
         string(JOIN "," SANITIZER_FLAGS ${SANITIZERS})
+        # Export for wrapper launch targets (e.g. Android JNI host) that are
+        # created outside this directory scope.
+        set(BABYLON_NATIVE_SANITIZER_FLAGS "${SANITIZER_FLAGS}" CACHE INTERNAL "Babylon Native sanitizer flag list" FORCE)
 
         add_compile_options(-fsanitize=${SANITIZER_FLAGS} -fno-omit-frame-pointer)
         add_link_options(-fsanitize=${SANITIZER_FLAGS})
@@ -156,14 +182,18 @@ if(ENABLE_SANITIZERS)
     endif()
 endif()
 
+# Hardwired for wgpu branch: these are not user-configurable until bgfx is fully removed.
+# TODO(bgfx-removal): Remove FORCE overrides and restore as user-facing option() toggles.
 set(BABYLON_NATIVE_INSTALL OFF CACHE BOOL "Include the install target." FORCE)
 set(BABYLON_NATIVE_PLUGIN_NATIVEINPUT ON CACHE BOOL "Include Babylon Native Plugin NativeInput." FORCE)
 set(BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU ON CACHE BOOL "Include Babylon Native Plugin NativeWebGPU." FORCE)
+set(BABYLON_NATIVE_WGPU_USE_UPSTREAM_NATIVE ON CACHE BOOL "Use upstream wgpu-native as the Rust backend base." FORCE)
 set(BABYLON_NATIVE_POLYFILL_WINDOW ON CACHE BOOL "Include Babylon Native Polyfill Window." FORCE)
-set(BABYLON_NATIVE_POLYFILL_CANVAS OFF CACHE BOOL "Include Babylon Native Polyfill Canvas.")
-set(BABYLON_NATIVE_POLYFILL_CANVAS_WGPU OFF CACHE BOOL "Use the wgpu/femtovg Canvas backend when Canvas polyfill is enabled.")
+set(BABYLON_NATIVE_POLYFILL_CANVAS ON CACHE BOOL "Include Babylon Native Polyfill Canvas." FORCE)
+set(BABYLON_NATIVE_POLYFILL_CANVAS_WGPU ON CACHE BOOL "Use the wgpu/femtovg Canvas backend when Canvas polyfill is enabled." FORCE)
 
 if(BABYLON_NATIVE_WGPU_USE_UPSTREAM_NATIVE)
+    FetchContent_MakeAvailable_With_Message(webgpu_headers)
     FetchContent_MakeAvailable_With_Message(wgpu_native)
 endif()
 

@@ -5,6 +5,11 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 # --------------------------------------------------
 if(ANDROID OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(AndroidExtensions)
+    if(ENABLE_SANITIZERS AND TARGET AndroidExtensions)
+        # AndroidExtensions/JNI VM bridge can trip ASAN on API 31 (tagged-pointer JNI internals).
+        # Keep strict sanitizers for the engine, but exclude this bridge target.
+        target_compile_options(AndroidExtensions PRIVATE -fno-sanitize=address)
+    endif()
 endif()
 
 # --------------------------------------------------
@@ -55,7 +60,23 @@ endif()
 # --------------------------------------------------
 # JsRuntimeHost
 # --------------------------------------------------
+#
+# BabylonNative already applies sanitizer compile/link flags globally from the
+# root CMakeLists. JsRuntimeHost has its own sanitizer block keyed on the same
+# ENABLE_SANITIZERS option and currently appends Android fdsan unconditionally.
+# Temporarily disable that local block while fetching JsRuntimeHost to avoid
+# duplicate/incompatible flags; targets still inherit the root sanitizer flags.
+if(ENABLE_SANITIZERS)
+    set(_BABYLON_NATIVE_ENABLE_SANITIZERS_SAVED "${ENABLE_SANITIZERS}")
+    set(ENABLE_SANITIZERS OFF CACHE BOOL "" FORCE)
+endif()
+
 FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
+
+if(DEFINED _BABYLON_NATIVE_ENABLE_SANITIZERS_SAVED)
+    set(ENABLE_SANITIZERS "${_BABYLON_NATIVE_ENABLE_SANITIZERS_SAVED}" CACHE BOOL "" FORCE)
+    unset(_BABYLON_NATIVE_ENABLE_SANITIZERS_SAVED)
+endif()
 
 # UrlLib enables ARC only through an Xcode target attribute in its own CMake.
 # Add explicit ARC flags so Unix Makefiles/Ninja builds on Apple also work.
