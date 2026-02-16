@@ -22,7 +22,7 @@ using namespace android;
 using namespace android::global;
 
 #define GL_CHECK(_call) \
-_call; assert(glGetError() == 0);
+do { _call; assert(glGetError() == GL_NO_ERROR); } while(0);
 
 namespace Babylon::Plugins
 {
@@ -224,7 +224,7 @@ namespace Babylon::Plugins
             {
                 // create a shared context with bgfx so JNI thread (by surfaceTexture) can update the texture
                 m_impl->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-                GL_CHECK(eglInitialize(m_impl->display, nullptr, nullptr));
+                eglInitialize(m_impl->display, nullptr, nullptr);
 
                 static const EGLint attrs[] = {
                     EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR,
@@ -238,7 +238,7 @@ namespace Babylon::Plugins
 
                 EGLConfig config;
                 EGLint numConfig = 0;
-                GL_CHECK(eglChooseConfig(m_impl->display, attrs, &config, 1, &numConfig));
+                eglChooseConfig(m_impl->display, attrs, &config, 1, &numConfig);
 
                 static const EGLint contextAttribs[] = {
                     EGL_CONTEXT_MAJOR_VERSION_KHR,
