@@ -721,7 +721,7 @@ namespace Babylon::Plugins::NativeWebGPU
                     h = fnvHash(viewDimension, h ^ 0xff);
                     h ^= static_cast<uint64_t>(mipLevelCount) * 2654435761ULL;
                     h ^= static_cast<uint64_t>(arrayLayerCount) * 2246822519ULL;
-                    const double descriptorCacheHash = static_cast<double>(h);
+                    descriptorCacheHash = static_cast<double>(h);
 
                     if (textureObject.Has("__descriptorViewKey"))
                     {

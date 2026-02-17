@@ -202,7 +202,11 @@ namespace Babylon::Polyfills::Internal
                     components[i] += components[i] << bitShift;
                 }
             }
-            return nvgRGBA(components[0], components[1], components[2], components[3]);
+            return nvgRGBA(
+                static_cast<unsigned char>(components[0]),
+                static_cast<unsigned char>(components[1]),
+                static_cast<unsigned char>(components[2]),
+                static_cast<unsigned char>(components[3]));
         }
         else
         {
@@ -210,7 +214,10 @@ namespace Babylon::Polyfills::Internal
             if (iter != webColors.end())
             {
                 uint32_t color = iter->second;
-                return nvgRGBA((color >> 16), (color >> 8) & 0xFF, (color & 0xFF), 0xFF);
+                return nvgRGBA(
+                    static_cast<unsigned char>(color >> 16),
+                    static_cast<unsigned char>((color >> 8) & 0xFF),
+                    static_cast<unsigned char>(color & 0xFF), 0xFF);
             }
 
             // matches strings of the form rgb(#,#,#) or rgba(#,#,#,#)
@@ -222,11 +229,18 @@ namespace Babylon::Polyfills::Internal
                 {
                     if (rgbMatch[4].matched)
                     {
-                        return nvgRGBA(std::clamp(std::stoi(rgbMatch[1]), 0, 255), std::clamp(std::stoi(rgbMatch[2]), 0, 255), std::clamp(std::stoi(rgbMatch[3]), 0, 255), std::clamp(std::stoi(rgbMatch[4]), 0, 255));
+                        return nvgRGBA(
+                            static_cast<unsigned char>(std::clamp(std::stoi(rgbMatch[1]), 0, 255)),
+                            static_cast<unsigned char>(std::clamp(std::stoi(rgbMatch[2]), 0, 255)),
+                            static_cast<unsigned char>(std::clamp(std::stoi(rgbMatch[3]), 0, 255)),
+                            static_cast<unsigned char>(std::clamp(std::stoi(rgbMatch[4]), 0, 255)));
                     }
                     else
                     {
-                        return nvgRGB(std::clamp(std::stoi(rgbMatch[1]), 0, 255), std::clamp(std::stoi(rgbMatch[2]), 0, 255), std::clamp(std::stoi(rgbMatch[3]), 0, 255));
+                        return nvgRGB(
+                            static_cast<unsigned char>(std::clamp(std::stoi(rgbMatch[1]), 0, 255)),
+                            static_cast<unsigned char>(std::clamp(std::stoi(rgbMatch[2]), 0, 255)),
+                            static_cast<unsigned char>(std::clamp(std::stoi(rgbMatch[3]), 0, 255)));
                     }
                 }
             }

@@ -255,7 +255,7 @@ namespace Babylon::Polyfills::Internal
             m_contextObject.Reset();
         }
 
-        auto thisObject = Value();
+        auto thisObject = this->Value();
         if (!thisObject.IsEmpty())
         {
             thisObject.Delete("_context");

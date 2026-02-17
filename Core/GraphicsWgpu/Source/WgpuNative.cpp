@@ -56,8 +56,6 @@ namespace Babylon::Graphics
         nativeConfig.surface_layer = config.SurfaceLayer;
         nativeConfig.prefer_low_power = static_cast<uint8_t>(config.PreferLowPower);
         nativeConfig.enable_validation = static_cast<uint8_t>(config.EnableValidation);
-        nativeConfig.reserved0 = 0;
-        nativeConfig.reserved1 = 0;
 
         m_context = babylon_wgpu_create(&nativeConfig);
         if (m_context == nullptr)

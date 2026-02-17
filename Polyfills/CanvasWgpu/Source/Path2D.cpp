@@ -8,10 +8,17 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #endif
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4456) // nanosvg.h: declaration of 'name' hides previous local
+#endif
 
 #define NANOSVG_IMPLEMENTATION // Expands implementation
 #include "nanosvg.h"
 
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
@@ -64,8 +71,8 @@ namespace Babylon::Polyfills::Internal
         if (!d.empty())
         {
             NSVGparser* parser = nsvg__createParser();
-            const char* path[] = {"d", d.c_str(), NULL};
-            const char** attr = {path};
+            const char* svgAttr[] = {"d", d.c_str(), NULL};
+            const char** attr = svgAttr;
 
             assert(strcmp(attr[0], "d") == 0);
             assert(!attr[2]); // nsvg__parsePath terminates attr parsing on falsy
