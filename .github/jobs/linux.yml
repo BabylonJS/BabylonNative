@@ -24,7 +24,7 @@ jobs:
 
       - script: |
           sudo apt-get update
-          sudo apt-get install libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang
+          sudo apt-get install libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev libvulkan-dev clang
         displayName: "Install packages"
 
       - script: |

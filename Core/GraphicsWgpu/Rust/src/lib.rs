@@ -1915,7 +1915,7 @@ mod upstream_wgpu_native {
     }
 
     pub fn create_local_surface(
-        instance: &wgpu::Instance,
+        _instance: &wgpu::Instance,
         surface_layer: *mut c_void,
     ) -> Result<Option<wgpu::Surface<'static>>, String> {
         if surface_layer.is_null() {
@@ -1927,7 +1927,7 @@ mod upstream_wgpu_native {
             // SAFETY: The caller passes a valid CoreAnimation layer pointer that stays alive
             // for the lifetime of the created surface.
             return unsafe {
-                instance.create_surface_unsafe(wgpu::SurfaceTargetUnsafe::CoreAnimationLayer(
+                _instance.create_surface_unsafe(wgpu::SurfaceTargetUnsafe::CoreAnimationLayer(
                     surface_layer,
                 ))
             }
@@ -1951,7 +1951,7 @@ mod upstream_wgpu_native {
             // SAFETY: The caller passes an ANativeWindow* that remains valid while the
             // surface is alive.
             return unsafe {
-                instance.create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
+                _instance.create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
                     raw_display_handle,
                     raw_window_handle,
                 })
@@ -1975,7 +1975,7 @@ mod upstream_wgpu_native {
             // SAFETY: The caller passes a valid HWND that remains alive while the
             // surface is alive.
             return unsafe {
-                instance.create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
+                _instance.create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
                     raw_display_handle,
                     raw_window_handle,
                 })
