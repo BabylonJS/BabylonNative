@@ -241,9 +241,9 @@ namespace Babylon::Plugins
                 EGLBoolean chooseConfigResult = eglChooseConfig(m_impl->display, attrs, &config, 1, &numConfig);
                 if (chooseConfigResult != EGL_TRUE || numConfig <= 0)
                 {
-                    // Retrieve EGL error for debugging purposes.
-                    eglGetError();
-                    throw std::runtime_error{"Unable to choose a valid EGLConfig for camera texture."};
+                    std::ostringstream message;
+                    message << "Unable to choose a valid EGLConfig for camera texture. Error : " << eglGetError();
+                    throw std::runtime_error{message.str()};
                 }
 
                 static const EGLint contextAttribs[] = {
@@ -256,7 +256,9 @@ namespace Babylon::Plugins
                 m_impl->context = eglCreateContext(m_impl->display, config, bgfx::getInternalData()->context, contextAttribs);
                 if (eglMakeCurrent(m_impl->display, 0 /*surface*/, 0 /*surface*/, m_impl->context) == EGL_FALSE)
                 {
-                    throw std::runtime_error{"Unable to create a shared GL context for camera texture."};
+                    std::ostringstream message;
+                    message << "Unable to create a shared GL context for camera texture. Error : " << eglGetError();
+                    throw std::runtime_error{message.str()};
                 }
             }
 
