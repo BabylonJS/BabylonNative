@@ -17,6 +17,7 @@
 #include <arcana/macros.h>
 #include <memory>
 #include "CameraWrappers.h"
+#include <sstream>
 
 using namespace android;
 using namespace android::global;
