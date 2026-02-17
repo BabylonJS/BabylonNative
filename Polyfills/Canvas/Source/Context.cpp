@@ -953,14 +953,14 @@ namespace Babylon::Polyfills::Internal
         }
 
         nvgFontSize(*m_nvg, font->Size());
-        if (m_fonts.find(font->Familiy()) == m_fonts.end())
+        if (m_fonts.find(font->Family()) == m_fonts.end())
         {
             // TODO: handle finding font face for a specific weight and style
             m_currentFontId = -1;
         }
         else
         {
-            m_currentFontId = m_fonts.at(font->Familiy());
+            m_currentFontId = m_fonts.at(font->Family());
         }
 
         m_font = std::move(*font);

@@ -1,4 +1,4 @@
-#include "SafeTimespanGuarantor.h"
+#include <Babylon/Graphics/SafeTimespanGuarantor.h>
 
 namespace Babylon::Graphics
 {

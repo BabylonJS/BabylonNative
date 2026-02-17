@@ -18,7 +18,7 @@ namespace Babylon::Polyfills::Internal
         static std::optional<Font> Parse(const std::string& fontString);
 
         float Size() const { return m_size; }
-        const std::string& Familiy() const { return m_family; }
+        const std::string& Family() const { return m_family; }
 
     private:
         static constexpr const int NORMAL_WEIGHT = 400;

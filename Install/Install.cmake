@@ -167,6 +167,15 @@ if(TARGET NativeEncoding)
     install_include_for_targets(NativeEncoding)
 endif()
 
+if(TARGET ShaderCache)
+    install_targets(ShaderCache)
+    install_include_for_targets(ShaderCache)
+endif()
+
+if(TARGET ShaderCompiler)
+    install_targets(ShaderCompiler)
+endif()
+
 # ----------------
 # Polyfills
 # ----------------

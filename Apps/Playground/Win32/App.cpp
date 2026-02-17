@@ -77,7 +77,7 @@ namespace
         RECT rect;
         if (!GetClientRect(hWnd, &rect))
         {
-            return;
+            throw std::exception{"Unable to get client rect"};
         }
 
         auto width = static_cast<size_t>(rect.right - rect.left);

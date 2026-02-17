@@ -26,7 +26,7 @@ target_include_directories(Graphics
     PRIVATE "Include/Shared"
     PRIVATE "Include/Platform/${BABYLON_NATIVE_PLATFORM}"
     PRIVATE "Include/RendererType/${GRAPHICS_API}"
-    PRIVATE "InternalInclude/Babylon/Graphics")
+    PRIVATE "InternalInclude")
 
 if(WINDOWS_STORE)
     target_link_libraries(Graphics

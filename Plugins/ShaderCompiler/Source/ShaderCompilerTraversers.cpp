@@ -479,7 +479,11 @@ namespace Babylon::ShaderCompilerTraversers
             // This function is platform-dependent so it's left unimplemented in the base class.
             virtual std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name) = 0;
 
-            static void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName, VertexVaryingInTraverser& traverser)
+            static void Traverse(
+                TIntermediate* intermediate,
+                IdGenerator& ids,
+                std::map<std::string, std::string>& replacementToOriginalName,
+                VertexVaryingInTraverser& traverser)
             {
                 std::map<std::string, TIntermTyped*> originalNameToReplacement{};
 
@@ -500,7 +504,15 @@ namespace Babylon::ShaderCompilerTraversers
                 MakeReplacements(originalNameToReplacement, traverser.m_symbolsToParents);
             }
 
-            static void HandleVarying(const std::string& name, glslang::TIntermSymbol* symbol, TPublicType& publicType, TIntermediate* intermediate, IdGenerator& ids, std::map<std::string, TIntermTyped*>& originalNameToReplacement, std::unordered_map<std::string, std::string>& replacementToOriginalName, VertexVaryingInTraverser& traverser)
+            static void HandleVarying(
+                const std::string& name,
+                glslang::TIntermSymbol* symbol,
+                TPublicType& publicType,
+                TIntermediate* intermediate,
+                IdGenerator& ids,
+                std::map<std::string, TIntermTyped*>& originalNameToReplacement,
+                std::map<std::string, std::string>& replacementToOriginalName,
+                VertexVaryingInTraverser& traverser)
             {
                 const auto& type = symbol->getType();
                 publicType.qualifier = type.getQualifier();
@@ -577,7 +589,7 @@ namespace Babylon::ShaderCompilerTraversers
         class VertexVaryingInTraverserOpenGL final : private VertexVaryingInTraverser
         {
         public:
-            static void Traverse(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
+            static void Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
             {
                 auto intermediate{program.getIntermediate(EShLangVertex)};
                 VertexVaryingInTraverserOpenGL traverser{};
@@ -608,7 +620,7 @@ namespace Babylon::ShaderCompilerTraversers
         class VertexVaryingInTraverserMetal final : private VertexVaryingInTraverser
         {
         public:
-            static void Traverse(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
+            static void Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
             {
                 auto intermediate{program.getIntermediate(EShLangVertex)};
                 VertexVaryingInTraverserMetal traverser{};
@@ -617,7 +629,7 @@ namespace Babylon::ShaderCompilerTraversers
             }
 
         private:
-            void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
+            void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
             {
                 std::map<std::string, TIntermTyped*> originalNameToReplacement{};
 
@@ -678,7 +690,7 @@ namespace Babylon::ShaderCompilerTraversers
         class VertexVaryingInTraverserD3D final : private VertexVaryingInTraverser
         {
         public:
-            static void Traverse(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
+            static void Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
             {
                 auto intermediate{program.getIntermediate(EShLangVertex)};
                 VertexVaryingInTraverserD3D traverser{};
@@ -917,17 +929,17 @@ namespace Babylon::ShaderCompilerTraversers
         return UniformTypeChangeTraverser::Traverse(program, ids);
     }
 
-    void AssignLocationsAndNamesToVertexVaryingsOpenGL(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
+    void AssignLocationsAndNamesToVertexVaryingsOpenGL(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
     {
         VertexVaryingInTraverserOpenGL::Traverse(program, ids, replacementToOriginalName);
     }
 
-    void AssignLocationsAndNamesToVertexVaryingsMetal(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
+    void AssignLocationsAndNamesToVertexVaryingsMetal(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
     {
         VertexVaryingInTraverserMetal::Traverse(program, ids, replacementToOriginalName);
     }
 
-    void AssignLocationsAndNamesToVertexVaryingsD3D(TProgram& program, IdGenerator& ids, std::unordered_map<std::string, std::string>& replacementToOriginalName)
+    void AssignLocationsAndNamesToVertexVaryingsD3D(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
     {
         VertexVaryingInTraverserD3D::Traverse(program, ids, replacementToOriginalName);
     }
