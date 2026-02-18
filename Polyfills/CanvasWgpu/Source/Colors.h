@@ -13,8 +13,10 @@ namespace Babylon::Polyfills::Internal
     inline NVGcolor StringToColor(Napi::Env env, const std::string& colorString)
     {
         std::string str = colorString;
-        std::transform(str.begin(), str.end(), str.begin(),
-            [](unsigned char c) -> char { return static_cast<char>(std::tolower(c)); });
+        for (auto& ch : str)
+        {
+            ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+        }
 
         static const std::unordered_map<std::string, uint32_t> webColors = {
             {"aliceblue", 0xf0f8ff},

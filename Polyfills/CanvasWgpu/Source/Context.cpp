@@ -3,6 +3,11 @@
 #include <cassert>
 #include <regex>
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4100) // unreferenced formal parameter (napi callback signatures)
+#endif
+
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
@@ -1048,3 +1053,7 @@ namespace Babylon::Polyfills::Internal
         throw Napi::Error::New(info.Env(), "not implemented");
     }
 }
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
