@@ -101,7 +101,9 @@ function(FetchContent_MakeAvailable_With_Message)
 
     if(names)
         message(STATUS "Fetching ${names}")
+        list(APPEND CMAKE_MESSAGE_INDENT "  ")
         FetchContent_MakeAvailable(${names})
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
         message(STATUS "Fetching ${names} - done")
     endif()
 
