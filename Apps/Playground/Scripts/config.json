@@ -328,7 +328,7 @@
             "playgroundId": "#W7E7CF#34",
             "referenceImage": "scissor-test.png",
             "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
-            "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx. Incorrect rendering with OpenGL."
+            "comment": "TODO: reenable D3D12 when automatic mip-map generation issue is fixed. Incorrect rendering with OpenGL."
         },
         {
             "title": "Scissor test with 0.9 hardware scaling",
@@ -337,7 +337,7 @@
             "referenceImage": "scissor-test-2.png",
             "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
             "errorRatio": 50,
-            "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx. Incorrect rendering with OpenGL"
+            "comment": "TODO: reenable D3D12 when automatic mip-map generation issue is fixed. Incorrect rendering with OpenGL"
         },
         {
             "title": "Scissor test with 1.5 hardware scaling",
@@ -345,7 +345,7 @@
             "replace": "//options//, hardwareScalingLevel = 1.5;",
             "referenceImage": "scissor-test-3.png",
             "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
-            "comment": "TODO: reenable D3D12 when automatic mip-maps issue is fixed in bgfx. Incorrect rendering with OpenGL"
+            "comment": "TODO: reenable D3D12 when automatic mip-map generation issue is fixed. Incorrect rendering with OpenGL"
         },
         {
             "title": "Scissor test with negative x and y",

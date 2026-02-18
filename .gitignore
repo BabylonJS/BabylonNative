@@ -1,3 +1,12 @@
 /build
+/build_*
+/target
+**/target/
 .DS_Store
 .vscode
+.idea/
+cmake-build-*/
+compile_commands.json
+*.swp
+*.swo
+*~

@@ -391,7 +391,7 @@
     }, false);
 
 
-    BABYLON.Tools.LoadFile("https://raw.githubusercontent.com/CedricGuillemet/dump/master/droidsans.ttf", (data) => {
+    BABYLON.Tools.LoadFile("app:///Scripts/RobotoSlab.ttf", (data) => {
         _native.Canvas.loadTTFAsync("droidsans", data).then(function () {
             _native.RootUrl = "https://playground.babylonjs.com";
             console.log("Starting");

@@ -7,7 +7,7 @@ if (project.hasProperty("jsEngine")) {
     jsEngine = project.property("jsEngine")
 }
 
-def graphics_api = "OpenGL"
+def graphics_api = "Vulkan"
 def platformVersion = 21
 if (project.hasProperty("GRAPHICS_API")) {
     graphics_api = project.property("GRAPHICS_API")
@@ -33,29 +33,37 @@ android {
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
-        ndkVersion "23.1.7779620"
+        ndkVersion "28.2.13676358"
         if (project.hasProperty("NDK_VERSION")) {
             def NDKVersion = project.property("NDK_VERSION")
             ndkVersion  "${NDK_VERSION}"
         }
         externalNativeBuild {
             cmake {
-                abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
+                if (project.hasProperty("ARM64Only")) {
+                    abiFilters "arm64-v8a"
+                } else {
+                    abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
+                }
                 arguments "-DANDROID_STL=c++_shared",
                     "-DENABLE_PCH=OFF",
                     "-DGRAPHICS_API=${graphics_api}",
                     "-DARCORE_LIBPATH=${arcore_libpath}/jni",
                     "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
                     "-DBABYLON_NATIVE_BUILD_APPS=ON",
-                    "-DCMAKE_UNITY_BUILD=${unity_build}",
-                    "-DBABYLON_DEBUG_TRACE=ON"
+                    "-DBABYLON_NATIVE_POLYFILL_CANVAS=ON",
+                    "-DBABYLON_NATIVE_POLYFILL_CANVAS_WGPU=ON",
+                    "-DCMAKE_UNITY_BUILD=${unity_build}"
+                if (project.hasProperty("ENABLE_SANITIZERS")) {
+                    arguments "-DENABLE_SANITIZERS=${project.property("ENABLE_SANITIZERS")}"
+                }
             }
         }
         ndk {
             if (project.hasProperty("ARM64Only")) {
                 abiFilters "arm64-v8a"
             } else {
-                abiFilters "arm64-v8a", "armeabi-v7a", "x86"
+                abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
             }
         }
         packagingOptions {
@@ -65,7 +73,7 @@ android {
 
     externalNativeBuild {
         cmake {
-            version '3.19.6+'
+            version '3.31.6'
             path 'CMakeLists.txt'
             buildStagingDirectory "../../../../Build/Android"
         }
@@ -77,9 +85,25 @@ android {
     }
 
     buildTypes {
+        debug {
+            externalNativeBuild {
+                cmake {
+                    arguments "-DBABYLON_DEBUG_TRACE=ON"
+                }
+            }
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            ndk {
+                debugSymbolLevel 'NONE'
+                abiFilters "arm64-v8a"
+            }
+            externalNativeBuild {
+                cmake {
+                    arguments "-DBABYLON_DEBUG_TRACE=OFF", "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON"
+                }
+            }
         }
     }
     compileOptions {

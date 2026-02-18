@@ -4,6 +4,12 @@ if(NOT IOS AND NOT VISIONOS AND NOT ANDROID)
     set(SHADERC_PATH "" CACHE FILEPATH "Optional full path to shaderc built from bgfx.")
 endif()
 
+# Canvas still uses bgfx internals. On Windows we intentionally constrain this
+# polyfill to the D3D12 runtime path to match the wgpu backend migration.
+if(WIN32 AND NOT GRAPHICS_API STREQUAL "D3D12")
+    message(FATAL_ERROR "Canvas polyfill on Windows currently supports GRAPHICS_API=D3D12 only.")
+endif()
+
 set(SOURCES
     "Include/Babylon/Polyfills/Canvas.h"
     "Source/Canvas.cpp"

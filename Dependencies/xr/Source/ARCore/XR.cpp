@@ -481,7 +481,7 @@ namespace xr
                 }
             }
 
-            // min size for a RT is 8x8. eglQuerySurface may return a width or height of 0 which will assert in bgfx
+            // Min size for a RT is 8x8. eglQuerySurface may return a width or height of 0 which can assert in renderer paths.
             width = std::max(width, size_t(8));
             height = std::max(height, size_t(8));
 
@@ -663,8 +663,8 @@ namespace xr
                 glDrawArrays(GL_TRIANGLE_STRIP, 0, VERTEX_COUNT);
 
                 // Present to the screen
-                // NOTE: For a yet to be determined reason, bgfx is also doing an eglSwapBuffers when running in the Babylon Native and Babylon React Native Playground apps.
-                //       The "double" eglSwapBuffers causes rendering issues, so until we figure out this issue, comment out this line while testing in the BN/BRN playground apps.
+                // NOTE: Some integration paths may trigger an additional eglSwapBuffers in host apps.
+                //       The "double" eglSwapBuffers causes rendering issues, so this explicit swap must stay coordinated with the host render loop.
                 eglSwapBuffers(eglGetCurrentDisplay(), eglGetCurrentSurface(EGL_DRAW));
             }
         }

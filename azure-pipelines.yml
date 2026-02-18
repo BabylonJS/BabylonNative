@@ -42,36 +42,33 @@ jobs:
   # Win32
   - template: .github/jobs/win32.yml
     parameters:
-      name: Win32_x64_D3D11
-      vmImage: "windows-latest"
-      platform: x64
-
-  - template: .github/jobs/win32.yml
-    parameters:
-      name: Win32_x64_JSI_D3D11
-      vmImage: "windows-latest"
-      platform: x64
-      napiType: jsi
-
-  - template: .github/jobs/win32.yml
-    parameters:
-      name: Win32_x64_V8_D3D11
-      vmImage: "windows-latest"
-      platform: x64
-      napiType: V8
-
-  - template: .github/jobs/win32.yml
-    parameters:
-      name: Win32_x64_D3D11_Sanitizers
-      vmImage: "windows-latest"
-      platform: x64
-      enableSanitizers: true
-
-  - template: .github/jobs/win32.yml
-    parameters:
       name: Win32_x64_D3D12
       vmImage: "windows-latest"
       platform: x64
+      graphics_api: D3D12
+
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x64_JSI_D3D12
+      vmImage: "windows-latest"
+      platform: x64
+      napiType: jsi
+      graphics_api: D3D12
+
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x64_V8_D3D12
+      vmImage: "windows-latest"
+      platform: x64
+      napiType: V8
+      graphics_api: D3D12
+
+  - template: .github/jobs/win32.yml
+    parameters:
+      name: Win32_x64_D3D12_Sanitizers
+      vmImage: "windows-latest"
+      platform: x64
+      enableSanitizers: true
       graphics_api: D3D12
 
   # UWP

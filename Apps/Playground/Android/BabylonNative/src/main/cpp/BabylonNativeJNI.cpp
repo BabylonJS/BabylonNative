@@ -3,23 +3,31 @@
 #include <android/native_window_jni.h> // requires ndk r5 or newer
 #include <android/log.h>
 
+#include <cstdio>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
 #include <Shared/AppContext.h>
 #include <AndroidExtensions/Globals.h>
-#include <Babylon/Plugins/NativeXr.h>
+#include <Babylon/Plugins/NativeInput.h>
+#include <napi/napi.h>
 
 namespace
 {
     std::optional<AppContext> appContext{};
-    std::optional<Babylon::Plugins::NativeXr> nativeXr{};
-    bool isXrActive{};
+    JavaVM* sJavaVM{};
 }
 
 extern "C"
 {
+    JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*)
+    {
+        sJavaVM = vm;
+        return JNI_VERSION_1_6;
+    }
+
     JNIEXPORT void JNICALL
     Java_com_library_babylonnative_Wrapper_initEngine(JNIEnv* env, jclass clazz)
     {
@@ -28,9 +36,6 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_com_library_babylonnative_Wrapper_finishEngine(JNIEnv* env, jclass clazz)
     {
-        isXrActive = false;
-
-        nativeXr.reset();
         appContext.reset();
     }
 
@@ -39,13 +44,27 @@ extern "C"
     {
         if (!appContext)
         {
-            JavaVM* javaVM{};
-            if (env->GetJavaVM(&javaVM) != JNI_OK)
+            char pointerLog[256]{};
+            std::snprintf(pointerLog, sizeof(pointerLog), "surfaceCreated env=%p sJavaVM(before)=%p", static_cast<void*>(env), static_cast<void*>(sJavaVM));
+            __android_log_write(ANDROID_LOG_INFO, "BabylonNative", pointerLog);
+
+            if (sJavaVM == nullptr && env != nullptr)
             {
-                throw std::runtime_error("Failed to get Java VM");
+                JavaVM* javaVM{};
+                if (env->GetJavaVM(&javaVM) == JNI_OK)
+                {
+                    sJavaVM = javaVM;
+                    std::snprintf(pointerLog, sizeof(pointerLog), "surfaceCreated sJavaVM(from env)=%p", static_cast<void*>(sJavaVM));
+                    __android_log_write(ANDROID_LOG_INFO, "BabylonNative", pointerLog);
+                }
             }
 
-            android::global::Initialize(javaVM, jniContext);
+            if (sJavaVM == nullptr)
+            {
+                throw std::runtime_error{"Failed to get Java VM"};
+            }
+
+            android::global::Initialize(sJavaVM, jniContext);
 
             ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
             int32_t width  = ANativeWindow_getWidth(window);
@@ -59,8 +78,25 @@ extern "C"
                     __android_log_write(ANDROID_LOG_INFO, "BabylonNative", message);
                 },
                 [](Napi::Env env) {
-                    nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
-                    nativeXr->SetSessionStateChangedCallback([](bool isXrActive){ ::isXrActive = isXrActive; });
+                    Napi::HandleScope scope{env};
+                    auto statusCallback = Napi::Function::New(env, [](const Napi::CallbackInfo& info) {
+                        if (info.Length() > 0)
+                        {
+                            std::string message{};
+                            if (info[0].IsString())
+                            {
+                                message = info[0].As<Napi::String>().Utf8Value();
+                            }
+                            else
+                            {
+                                message = info[0].ToString().Utf8Value();
+                            }
+
+                            const auto taggedMessage = std::string{"[Playground] "} + message;
+                            __android_log_write(ANDROID_LOG_INFO, "BabylonNative", taggedMessage.c_str());
+                        }
+                    });
+                    env.Global().Set("__nativePlaygroundStatus", statusCallback);
                 });
         }
     }
@@ -129,7 +165,9 @@ extern "C"
     {
         if (appContext)
         {
-            appContext->ScriptLoader().LoadScript(env->GetStringUTFChars(path, nullptr));
+            const char* sourcePath = env->GetStringUTFChars(path, nullptr);
+            appContext->ScriptLoader().LoadScript(sourcePath);
+            env->ReleaseStringUTFChars(path, sourcePath);
         }
     }
 
@@ -138,8 +176,12 @@ extern "C"
     {
         if (appContext)
         {
-            std::string url = env->GetStringUTFChars(sourceURL, nullptr);
-            std::string src = env->GetStringUTFChars(source, nullptr);
+            const char* sourceUrlChars = env->GetStringUTFChars(sourceURL, nullptr);
+            const char* sourceChars = env->GetStringUTFChars(source, nullptr);
+            std::string url = sourceUrlChars;
+            std::string src = sourceChars;
+            env->ReleaseStringUTFChars(sourceURL, sourceUrlChars);
+            env->ReleaseStringUTFChars(source, sourceChars);
             appContext->ScriptLoader().Eval(std::move(src), std::move(url));
         }
     }
@@ -177,20 +219,12 @@ extern "C"
     JNIEXPORT void JNICALL
     Java_com_library_babylonnative_Wrapper_xrSurfaceChanged(JNIEnv* env, jclass clazz, jobject surface)
     {
-        if (nativeXr)
-        {
-            ANativeWindow* window{};
-            if (surface)
-            {
-                window = ANativeWindow_fromSurface(env, surface);
-            }
-            nativeXr->UpdateWindow(window);
-        }
+        // Native XR integration is disabled in this WGPU migration spike.
     }
 
     JNIEXPORT jboolean JNICALL
     Java_com_library_babylonnative_Wrapper_isXRActive(JNIEnv* env, jclass clazz)
     {
-        return isXrActive;
+        return false;
     }
 }

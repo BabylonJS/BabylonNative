@@ -5,6 +5,11 @@ set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 # --------------------------------------------------
 if(ANDROID OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(AndroidExtensions)
+    if(ENABLE_SANITIZERS AND TARGET AndroidExtensions)
+        # AndroidExtensions/JNI VM bridge can trip ASAN on API 31 (tagged-pointer JNI internals).
+        # Keep strict sanitizers for the engine, but exclude this bridge target.
+        target_compile_options(AndroidExtensions PRIVATE -fno-sanitize=address)
+    endif()
 endif()
 
 # --------------------------------------------------
@@ -26,67 +31,6 @@ FetchContent_MakeAvailable_With_Message(base-n)
 
 add_library(base-n INTERFACE)
 target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
-
-# --------------------------------------------------
-# bgfx.cmake
-# --------------------------------------------------
-set(BGFX_BUILD_EXAMPLES OFF)
-set(BGFX_BUILD_TOOLS OFF)
-set(BGFX_CONFIG_MULTITHREADED ON)
-set(BGFX_CUSTOM_TARGETS OFF)
-set(BGFX_INSTALL OFF)
-set(BGFX_OPENGL_USE_EGL ON)
-set(BGFX_USE_DEBUG_SUFFIX OFF)
-FetchContent_MakeAvailable_With_Message(bgfx.cmake)
-
-# Turn off debug annotations as it causes an access violation in D3D12.
-# This flag is set using compile definitions because the bgfx.cmake option is ignored in debug configuration.
-# See https://github.com/BabylonJS/bgfx.cmake/blob/0af3c9865a66aff1748a51bb466b24f05a123043/cmake/bgfx/bgfx.cmake#L126.
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_ANNOTATION=0)
-
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEFAULT_MAX_ENCODERS=2)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_VERTEX_STREAMS=18)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MIN_RESOURCE_COMMAND_BUFFER_SIZE=16)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MIN_UNIFORM_BUFFER_SIZE=4096)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE=256)
-target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE=1024)
-if(GRAPHICS_API STREQUAL "D3D11")
-    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_DIRECT3D11=1)
-elseif(GRAPHICS_API STREQUAL "D3D12")
-    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_DIRECT3D12=1)
-elseif(GRAPHICS_API STREQUAL "Metal")
-    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_METAL=1)
-elseif(GRAPHICS_API STREQUAL "OpenGL")
-    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_OPENGLES=30)
-    target_compile_definitions(bgfx PRIVATE BGFX_GL_CONFIG_BLIT_EMULATION=1)
-    target_compile_definitions(bgfx PRIVATE BGFX_GL_CONFIG_TEXTURE_READ_BACK_EMULATION=1)
-elseif(GRAPHICS_API STREQUAL "Vulkan")
-    target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_VULKAN=1)
-endif()
-set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET bimg PROPERTY UNITY_BUILD false)
-set_property(TARGET bimg_encode PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET bimg_encode PROPERTY UNITY_BUILD false)
-set_property(TARGET bimg_decode PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET bimg_decode PROPERTY UNITY_BUILD false)
-set_property(TARGET minz PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET minz PROPERTY UNITY_BUILD false)
-if(TARGET tinyexr)
-    set_property(TARGET tinyexr PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-endif()
-set_property(TARGET bgfx PROPERTY FOLDER Dependencies/bgfx)
-set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx)
-set_property(TARGET bx PROPERTY FOLDER Dependencies/bgfx)
-target_compile_definitions(bx PRIVATE _CRT_SECURE_NO_WARNINGS)
-
-if(APPLE)
-    set_property(TARGET bgfx PROPERTY UNITY_BUILD false)
-endif()
-
-if(UNIX AND NOT APPLE AND NOT ANDROID)
-    # Use GLVND libraries for EGL support in bgfx
-    set(OpenGL_GL_PREFERENCE GLVND)
-endif()
 
 # --------------------------------------------------
 # glslang
@@ -114,29 +58,31 @@ if(NOT TARGET glslang)
 endif()
 
 # --------------------------------------------------
-# googletest
-# --------------------------------------------------
-if(BABYLON_NATIVE_BUILD_APPS AND (WIN32 OR (APPLE AND NOT IOS AND NOT VISIONOS) OR (UNIX AND NOT ANDROID AND NOT APPLE)))
-    if(WIN32)
-        # For Windows: Prevent overriding the parent project's compiler/linker settings
-        # Default build type for my test projects are /MDd (MultiThreaded DLL) but GTests default to /MTd (MultiTreaded)
-        # see https://github.com/google/googletest/blob/main/googletest/README.md
-        # "Enabling this option will make gtest link the runtimes dynamically too, and match the project in which it is included."
-        set(gtest_force_shared_crt OFF)
-    endif()
-
-    FetchContent_MakeAvailable_With_Message(googletest)
-
-    set_property(TARGET gmock PROPERTY FOLDER Dependencies/GoogleTest)
-    set_property(TARGET gmock_main PROPERTY FOLDER Dependencies/GoogleTest)
-    set_property(TARGET gtest PROPERTY FOLDER Dependencies/GoogleTest)
-    set_property(TARGET gtest_main PROPERTY FOLDER Dependencies/GoogleTest)
-endif()
-
-# --------------------------------------------------
 # JsRuntimeHost
 # --------------------------------------------------
+#
+# BabylonNative already applies sanitizer compile/link flags globally from the
+# root CMakeLists. JsRuntimeHost has its own sanitizer block keyed on the same
+# ENABLE_SANITIZERS option and currently appends Android fdsan unconditionally.
+# Temporarily disable that local block while fetching JsRuntimeHost to avoid
+# duplicate/incompatible flags; targets still inherit the root sanitizer flags.
+if(ENABLE_SANITIZERS)
+    set(_BABYLON_NATIVE_ENABLE_SANITIZERS_SAVED "${ENABLE_SANITIZERS}")
+    set(ENABLE_SANITIZERS OFF CACHE BOOL "" FORCE)
+endif()
+
 FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
+
+if(DEFINED _BABYLON_NATIVE_ENABLE_SANITIZERS_SAVED)
+    set(ENABLE_SANITIZERS "${_BABYLON_NATIVE_ENABLE_SANITIZERS_SAVED}" CACHE BOOL "" FORCE)
+    unset(_BABYLON_NATIVE_ENABLE_SANITIZERS_SAVED)
+endif()
+
+# UrlLib enables ARC only through an Xcode target attribute in its own CMake.
+# Add explicit ARC flags so Unix Makefiles/Ninja builds on Apple also work.
+if(APPLE AND TARGET UrlLib)
+    target_compile_options(UrlLib PRIVATE -fobjc-arc)
+endif()
 
 set_property(TARGET JsRuntime PROPERTY UNITY_BUILD false)
 if(TARGET AppRuntime)
@@ -195,45 +141,6 @@ if(TARGET SPIRV)
 endif()
 if(TARGET MachineIndependent)
     disable_warnings(MachineIndependent)
-endif()
-
-# --------------------------------------------------
-# xr
-# --------------------------------------------------
-# Currently supported on Android via ARCore, and iOS via ARKit.
-if((BABYLON_NATIVE_PLUGIN_NATIVEXR AND (ANDROID OR IOS)) OR BABYLON_NATIVE_BUILD_SOURCETREE)
-    add_subdirectory(xr)
-    set_property(TARGET xr PROPERTY FOLDER Dependencies/xr)
-    warnings_as_errors(xr)
-endif()
-
-# --------------------------------------------------
-# WebP
-# --------------------------------------------------
-if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP)
-    set(WEBP_BUILD_ANIM_UTILS OFF)
-    set(WEBP_BUILD_CWEBP OFF)
-    set(WEBP_BUILD_DWEBP OFF)
-    set(WEBP_BUILD_GIF2WEBP OFF)
-    set(WEBP_BUILD_IMG2WEBP OFF)
-    set(WEBP_BUILD_VWEBP OFF)
-    set(WEBP_BUILD_WEBPINFO OFF)
-    set(WEBP_BUILD_LIBWEBPMUX OFF)
-    set(WEBP_BUILD_WEBPMUX OFF)
-    set(WEBP_BUILD_EXTRAS OFF)
-    FetchContent_MakeAvailable_With_Message(libwebp)
-
-    set_property(TARGET sharpyuv PROPERTY UNITY_BUILD false)
-    set_property(TARGET sharpyuv PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webp PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpdecode PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpdecoder PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpdemux PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpdsp PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpdspdecode PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpencode PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webputils PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webputilsdecode PROPERTY FOLDER Dependencies/libwebp)
 endif()
 
 # --------------------------------------------------

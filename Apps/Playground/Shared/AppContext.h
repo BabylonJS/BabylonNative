@@ -2,15 +2,21 @@
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
-#include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/Polyfills/Console.h>
-#include <Babylon/Plugins/NativeInput.h>
 #include <Babylon/ScriptLoader.h>
+#if defined(BABYLON_NATIVE_PLAYGROUND_HAS_CANVAS)
+#include <Babylon/Polyfills/Canvas.h>
+#endif
 
 #include <functional>
 #include <optional>
 #include <vector>
 #include <string>
+
+namespace Babylon::Plugins
+{
+    class NativeInput;
+}
 
 class AppContext
 {
@@ -38,7 +44,6 @@ public:
     Babylon::Graphics::Device& Device() { return *m_device; }
     Babylon::Graphics::DeviceUpdate& DeviceUpdate() { return *m_deviceUpdate; }
     Babylon::AppRuntime& Runtime() { return *m_runtime; }
-    Babylon::Polyfills::Canvas& Canvas() { return *m_canvas; }
     Babylon::Plugins::NativeInput* Input() { return m_input; }
     Babylon::ScriptLoader& ScriptLoader() { return *m_scriptLoader; }
 
@@ -46,7 +51,9 @@ private:
     std::optional<Babylon::Graphics::Device> m_device;
     std::optional<Babylon::Graphics::DeviceUpdate> m_deviceUpdate;
     std::optional<Babylon::AppRuntime> m_runtime;
-    std::optional<Babylon::Polyfills::Canvas> m_canvas;
     Babylon::Plugins::NativeInput* m_input{};
     std::optional<Babylon::ScriptLoader> m_scriptLoader;
+#if defined(BABYLON_NATIVE_PLAYGROUND_HAS_CANVAS)
+    std::optional<Babylon::Polyfills::Canvas> m_canvas;
+#endif
 };

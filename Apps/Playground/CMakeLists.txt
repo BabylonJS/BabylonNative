@@ -16,6 +16,8 @@ set(SCRIPTS
     "Scripts/experience.js"
     "Scripts/playground_runner.js"
     "Scripts/validation_native.js"
+    "Scripts/webgpu_smoke.js"
+    "Scripts/RobotoSlab.ttf"
     "Scripts/config.json")
 
 set(SOURCES
@@ -27,11 +29,9 @@ if(APPLE)
     if(IOS)
         set(PLIST_FILE
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Info.plist")
-        set(STORYBOARD
-            "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/Main.storyboard"
-            "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/LaunchScreen.storyboard")
-        set(RESOURCE_FILES ${STORYBOARD} ${SCRIPTS})
-        set(ADDITIONAL_LIBRARIES PRIVATE z NativeXr)
+        set(STORYBOARD)
+        set(RESOURCE_FILES ${SCRIPTS})
+        set(ADDITIONAL_LIBRARIES PRIVATE z)
         set(SOURCES ${SOURCES}
             "iOS/AppDelegate.swift"
             "iOS/ViewController.swift"
@@ -40,7 +40,6 @@ if(APPLE)
             "AppleShared/GestureRecognizer.swift")
         set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
         set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "ReferenceImages")
-        set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE NativeCamera)
     elseif(VISIONOS)
         set(PLIST_FILE
             "${CMAKE_CURRENT_LIST_DIR}/visionOS/Info.plist")
@@ -55,7 +54,6 @@ if(APPLE)
     else()
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
-        set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE NativeCamera)
         set(RESOURCE_FILES ${STORYBOARD})
         set(SOURCES ${SOURCES}
             "macOS/main.m"
@@ -102,7 +100,6 @@ elseif(WIN32)
         "Win32/Resource.h"
         "Win32/small.ico"
         "Win32/targetver.h")
-    set(ADDITIONAL_LIBRARIES PRIVATE NativeCamera)
 endif()
 
 if(WIN32)
@@ -123,32 +120,55 @@ endif()
 
 target_include_directories(Playground PRIVATE ".")
 
+set(PLAYGROUND_PLATFORM_LIBRARIES)
+if(APPLE AND NOT IOS AND NOT VISIONOS)
+    list(APPEND PLAYGROUND_PLATFORM_LIBRARIES
+        "-framework Cocoa"
+        "-framework Foundation"
+        "-framework CoreFoundation"
+        "-framework Metal"
+        "-framework MetalKit"
+        "-framework QuartzCore"
+        "-lobjc")
+endif()
+
 target_link_libraries(Playground
     PRIVATE AppRuntime
     PRIVATE Blob
-    PRIVATE Canvas
     PRIVATE Console
-    PRIVATE ExternalTexture
     PRIVATE GraphicsDevice
-    PRIVATE NativeCamera
-    PRIVATE NativeCapture
-    PRIVATE NativeEncoding
-    PRIVATE NativeEngine
     PRIVATE NativeInput
-    PRIVATE NativeOptimizations
-    PRIVATE NativeTracing
-    PRIVATE ShaderCache
+    PRIVATE NativeWebGPU
     PRIVATE ScriptLoader
-    PRIVATE TestUtils
+    PRIVATE URL
     PRIVATE Window
     PRIVATE XMLHttpRequest
+    ${PLAYGROUND_PLATFORM_LIBRARIES}
     ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
+
+if(TARGET Canvas)
+    target_link_libraries(Playground PRIVATE Canvas)
+    target_compile_definitions(Playground PRIVATE BABYLON_NATIVE_PLAYGROUND_HAS_CANVAS=1)
+endif()
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
 # If we can set minimum required to 3.26+, then we can use the `copy -t` syntax instead.
 add_custom_command(TARGET Playground POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:Playground>>,copy,true> $<TARGET_RUNTIME_DLLS:Playground> $<TARGET_FILE_DIR:Playground> COMMAND_EXPAND_LISTS)
+
+if(APPLE)
+    add_custom_command(TARGET Playground POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:Playground>/../Resources/Scripts")
+
+    foreach(SCRIPT_PATH ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES})
+        get_filename_component(SCRIPT_NAME "${SCRIPT_PATH}" NAME)
+        add_custom_command(TARGET Playground POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT_PATH}"
+                "$<TARGET_FILE_DIR:Playground>/../Resources/Scripts/${SCRIPT_NAME}")
+    endforeach()
+endif()
 
 if (UNIX AND NOT APPLE AND NOT ANDROID)
     # Ubuntu mixes old experimental header and new runtime libraries
@@ -160,6 +180,12 @@ endif()
 
 if(APPLE)
     if(IOS)
+        if(PLATFORM MATCHES "SIMULATOR")
+            set(PLAYGROUND_IOS_SDKROOT "iphonesimulator")
+        else()
+            set(PLAYGROUND_IOS_SDKROOT "iphoneos")
+        endif()
+
         set_target_properties(Playground PROPERTIES
             MACOSX_BUNDLE true
             MACOSX_BUNDLE_INFO_PLIST "${PLIST_FILE}"
@@ -173,6 +199,9 @@ if(APPLE)
             XCODE_ATTRIBUTE_SWIFT_OBJC_BRIDGING_HEADER "${CMAKE_CURRENT_LIST_DIR}/iOS/LibNativeBridge.h"
             XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@executable_path/Frameworks"
             XCODE_ATTRIBUTE_FRAMEWORK_SEARCH_PATHS "$(inherited) $(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks"
+            XCODE_ATTRIBUTE_LIBRARY_SEARCH_PATHS "$(inherited) $(SDKROOT)/usr/lib $(SDKROOT)/usr/lib/swift"
+            XCODE_ATTRIBUTE_SUPPORTED_PLATFORMS "iphoneos iphonesimulator"
+            XCODE_ATTRIBUTE_SDKROOT "${PLAYGROUND_IOS_SDKROOT}"
             XCODE_ATTRIBUTE_ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES YES
 
             # CMake seems to add a custom flag "-Wno-unknown-pragmas" to the Swift compiler. That flag is used for Clang,
@@ -229,9 +258,17 @@ if(WINDOWS_STORE)
 else()
     foreach(SCRIPT ${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES})
         get_filename_component(SCRIPT_NAME "${SCRIPT}" NAME)
+        if(APPLE)
+            set(SCRIPT_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/Playground.app/Contents/Resources/Scripts")
+            set(SCRIPT_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/Playground.app/Contents/Resources/Scripts/${SCRIPT_NAME}")
+        else()
+            set(SCRIPT_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Scripts")
+            set(SCRIPT_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}")
+        endif()
         add_custom_command(
-            OUTPUT "${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
-            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Scripts/${SCRIPT_NAME}"
+            OUTPUT "${SCRIPT_OUTPUT_PATH}"
+            COMMAND "${CMAKE_COMMAND}" -E make_directory "${SCRIPT_OUTPUT_DIR}"
+            COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}" "${SCRIPT_OUTPUT_PATH}"
             COMMENT "Copying ${SCRIPT_NAME}"
             MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${SCRIPT}")
     endforeach()

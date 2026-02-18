@@ -33,10 +33,6 @@ FetchContent_Declare(base-n
     GIT_REPOSITORY https://github.com/azawadzki/base-n.git
     GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
     EXCLUDE_FROM_ALL)
-FetchContent_Declare(bgfx.cmake
-    GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG 0af3c9865a66aff1748a51bb466b24f05a123043
-    EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419
@@ -44,9 +40,6 @@ FetchContent_Declare(CMakeExtensions
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
     GIT_TAG 39a80699a315cb7f66c4ab3180edd4e2910fab28
-    EXCLUDE_FROM_ALL)
-FetchContent_Declare(googletest
-    URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz"
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(ios-cmake
     GIT_REPOSITORY https://github.com/leetal/ios-cmake.git
@@ -63,6 +56,14 @@ FetchContent_Declare(libwebp
     GIT_REPOSITORY https://github.com/webmproject/libwebp.git
     GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c
     EXCLUDE_FROM_ALL)
+FetchContent_Declare(webgpu_headers
+    GIT_REPOSITORY https://github.com/webgpu-native/webgpu-headers.git
+    GIT_TAG bac520839ff5ed2e2b648ed540bd9ec45edbccbc
+    EXCLUDE_FROM_ALL)
+FetchContent_Declare(wgpu_native
+    GIT_REPOSITORY https://github.com/gfx-rs/wgpu-native.git
+    GIT_TAG ba4deb5d935652f40c7e051b15cbb5d097219941
+    EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------
 
@@ -73,7 +74,7 @@ FetchContent_MakeAvailable(CMakeExtensions)
 # which makes all dependencies to be fetched and packaged.
 # At build time, cmake is run again on BabylonNative root but FETCHCONTENT_FULLY_DISCONNECTED is ON
 # and FetchContent_MakeAvailable_With_Message will use provided local folder provided to cmake command line
-# like '-DFETCHCONTENT_SOURCE_DIR_BGFX.CMAKE=../shared/Babylon/....'
+# like '-DFETCHCONTENT_SOURCE_DIR_JSRUNTIMEHOST=../shared/Babylon/....'
 
 if(VISIONOS OR IOS OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(ios-cmake)
@@ -89,6 +90,16 @@ if(VISIONOS)
 elseif(IOS)
     set(PLATFORM "OS64COMBINED" CACHE STRING "")
     set(DEPLOYMENT_TARGET "13" CACHE STRING "")
+endif()
+
+# Keep deployment targeting consistent across all generated Xcode targets.
+# Without this, transitive static libraries may default to the host SDK version
+# and become unloadable on older simulator runtimes.
+if(IOS)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "${DEPLOYMENT_TARGET}" CACHE STRING "" FORCE)
+    set(CMAKE_XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET "${DEPLOYMENT_TARGET}")
+elseif(VISIONOS)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "${DEPLOYMENT_TARGET}" CACHE STRING "" FORCE)
 endif()
 
 project(BabylonNative)
@@ -111,6 +122,13 @@ option(BABYLON_DEBUG_TRACE "Enable debug trace." OFF)
 option(BABYLON_NATIVE_CHECK_THREAD_AFFINITY "Checks thread safety in the graphics device calls. It can be removed if hosting application ensures thread coherence." ON)
 
 # Plugins
+# wgpu-path plugins (hardwired ON below)
+option(BABYLON_NATIVE_PLUGIN_NATIVEINPUT "Include Babylon Native Plugin NativeInput." ON)
+option(BABYLON_NATIVE_BUILD_WEBGPU_TESTS "Build NativeWebGPU async bridge gtests on desktop hosts." OFF)
+option(BABYLON_NATIVE_ENABLE_WEBGPU_DEVELOPER_FEATURES "Expose non-standard WebGPU developer hooks (Chromium/WebKit developer-features analog)." ON)
+option(BABYLON_NATIVE_ENABLE_UNSAFE_WEBGPU "Expose non-standard unsafe WebGPU hooks (Chromium enable-unsafe-webgpu analog)." ON)
+
+# bgfx-era plugins (declared for structural completeness; forced OFF on wgpu branch)
 option(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE "Include Babylon Native Plugin ExternalTexture." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAMERA "Include Babylon Native Plugin NativeCamera." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE "Include Babylon Native Plugin NativeCapture." ON)
@@ -118,10 +136,15 @@ option(BABYLON_NATIVE_PLUGIN_NATIVEENCODING "Include Babylon Native Plugin Nativ
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE "Include Babylon Native Plugin NativeEngine." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP "Include Babylon Native Plugin NativeEngine - WebP." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_COMPILESHADERS "Include Babylon Native Plugin NativeEngine - Compile Shaders." ON)
-option(BABYLON_NATIVE_PLUGIN_NATIVEINPUT "Include Babylon Native Plugin NativeInput." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS "Include Babylon Native Plugin NativeOptimizations." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVETRACING "Include Babylon Native Plugin NativeTracing." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEXR "Include Babylon Native Plugin XR." ON)
+# ShaderCache: On the bgfx path this caches compiled vertex+fragment binaries
+# (BgfxShaderInfo) keyed by GLSL source hash.  The wgpu path uses WGSL→naga and
+# has no bgfx consumer.  Equivalent functionality will come from wgpu's
+# PipelineCache API once it stabilises in wgpu-native.
+# TODO(wgpu-pipeline-cache): Implement wgpu-native pipeline cache behind the same
+# Enable/Disable/Save/Load public API surface once wgpu::PipelineCache is stable.
 option(BABYLON_NATIVE_PLUGIN_SHADERCACHE "Include Babylon Native Plugin ShaderCache." ON)
 option(BABYLON_NATIVE_PLUGIN_SHADERCOMPILER "Include Babylon Native Plugin ShaderCompiler." ON)
 option(BABYLON_NATIVE_PLUGIN_SHADERTOOL "Include Babylon Native Plugin ShaderTool." ON)
@@ -129,25 +152,45 @@ option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils.
 
 # Polyfills
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
-option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
 
 # Sanitizers
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
 
 if(ENABLE_SANITIZERS)
+    include(CheckCCompilerFlag)
+    include(CheckCXXCompilerFlag)
     set(ENABLE_RTTI ON CACHE BOOL "" FORCE)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-        set(SANITIZERS "address,undefined")
+        # Android app processes require explicit sanitizer runtime packaging.
+        # Prefer ASan there for actionable heap safety checks with manageable
+        # signal-to-noise in emulator/device runs.
+        if(ANDROID)
+            set(SANITIZERS "address")
+        else()
+            set(SANITIZERS "address,undefined")
+        endif()
         # Check for Clang since vptr and fdsan are Clang-specific
         if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-            list(APPEND SANITIZERS "vptr")
+            # vptr depends on UBSan runtime and is useful on non-Android hosts.
+            if(NOT ANDROID)
+                list(APPEND SANITIZERS "vptr")
+            endif()
             # FDSan only works on Android builds with Clang
             if (ANDROID)
-                list(APPEND SANITIZERS "fdsan")
+                check_c_compiler_flag("-fsanitize=fdsan" BABYLON_NATIVE_HAS_C_FDSAN)
+                check_cxx_compiler_flag("-fsanitize=fdsan" BABYLON_NATIVE_HAS_CXX_FDSAN)
+                if(BABYLON_NATIVE_HAS_C_FDSAN AND BABYLON_NATIVE_HAS_CXX_FDSAN)
+                    list(APPEND SANITIZERS "fdsan")
+                else()
+                    message(STATUS "Skipping fdsan sanitizer: compiler does not support -fsanitize=fdsan")
+                endif()
             endif()
         endif()
 
         string(JOIN "," SANITIZER_FLAGS ${SANITIZERS})
+        # Export for wrapper launch targets (e.g. Android JNI host) that are
+        # created outside this directory scope.
+        set(BABYLON_NATIVE_SANITIZER_FLAGS "${SANITIZER_FLAGS}" CACHE INTERNAL "Babylon Native sanitizer flag list" FORCE)
 
         add_compile_options(-fsanitize=${SANITIZER_FLAGS} -fno-omit-frame-pointer)
         add_link_options(-fsanitize=${SANITIZER_FLAGS})
@@ -157,6 +200,38 @@ if(ENABLE_SANITIZERS)
     else()
         message(FATAL_ERROR "Sanitizers not supported on this compiler.")
     endif()
+endif()
+
+# Hardwired for wgpu branch: these are not user-configurable until bgfx is fully removed.
+# TODO(bgfx-removal): Remove FORCE overrides and restore as user-facing option() toggles.
+set(BABYLON_NATIVE_INSTALL OFF CACHE BOOL "Include the install target." FORCE)
+set(BABYLON_NATIVE_PLUGIN_NATIVEINPUT ON CACHE BOOL "Include Babylon Native Plugin NativeInput." FORCE)
+set(BABYLON_NATIVE_PLUGIN_NATIVEWEBGPU ON CACHE BOOL "Include Babylon Native Plugin NativeWebGPU." FORCE)
+set(BABYLON_NATIVE_WGPU_USE_UPSTREAM_NATIVE ON CACHE BOOL "Use upstream wgpu-native as the Rust backend base." FORCE)
+set(BABYLON_NATIVE_POLYFILL_WINDOW ON CACHE BOOL "Include Babylon Native Polyfill Window." FORCE)
+set(BABYLON_NATIVE_POLYFILL_CANVAS ON CACHE BOOL "Include Babylon Native Polyfill Canvas." FORCE)
+set(BABYLON_NATIVE_POLYFILL_CANVAS_WGPU ON CACHE BOOL "Use the wgpu/femtovg Canvas backend when Canvas polyfill is enabled." FORCE)
+
+# bgfx-dependent plugins: disabled on wgpu branch (no bgfx consumer exists).
+# ShaderCache/ShaderCompiler/ShaderTool use BgfxShaderInfo and bgfx shader binaries.
+# NativeEngine is the bgfx rendering backend replaced by NativeWebGPU.
+# TODO(bgfx-removal): Remove these FORCE overrides when bgfx is fully removed.
+set(BABYLON_NATIVE_PLUGIN_EXTERNALTEXTURE OFF CACHE BOOL "" FORCE)
+set(BABYLON_NATIVE_PLUGIN_NATIVECAMERA OFF CACHE BOOL "" FORCE)
+set(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE OFF CACHE BOOL "" FORCE)
+set(BABYLON_NATIVE_PLUGIN_NATIVEENCODING OFF CACHE BOOL "" FORCE)
+set(BABYLON_NATIVE_PLUGIN_NATIVEENGINE OFF CACHE BOOL "" FORCE)
+set(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS OFF CACHE BOOL "" FORCE)
+set(BABYLON_NATIVE_PLUGIN_NATIVETRACING OFF CACHE BOOL "" FORCE)
+set(BABYLON_NATIVE_PLUGIN_NATIVEXR OFF CACHE BOOL "" FORCE)
+set(BABYLON_NATIVE_PLUGIN_SHADERCACHE OFF CACHE BOOL "" FORCE)
+set(BABYLON_NATIVE_PLUGIN_SHADERCOMPILER OFF CACHE BOOL "" FORCE)
+set(BABYLON_NATIVE_PLUGIN_SHADERTOOL OFF CACHE BOOL "" FORCE)
+set(BABYLON_NATIVE_PLUGIN_TESTUTILS OFF CACHE BOOL "" FORCE)
+
+if(BABYLON_NATIVE_WGPU_USE_UPSTREAM_NATIVE)
+    FetchContent_MakeAvailable_With_Message(webgpu_headers)
+    FetchContent_MakeAvailable_With_Message(wgpu_native)
 endif()
 
 # --------------------------------------------------
@@ -183,17 +258,17 @@ if(APPLE)
     set(GRAPHICS_API Metal)
 elseif(UNIX)
     if(NOT GRAPHICS_API)
-        set(GRAPHICS_API OpenGL)
+        set(GRAPHICS_API Vulkan)
     else()
-        if(NOT GRAPHICS_API STREQUAL Vulkan AND NOT GRAPHICS_API STREQUAL OpenGL)
+        if(NOT GRAPHICS_API STREQUAL Vulkan)
             message(FATAL_ERROR "Unrecognized/Unsupported render API: ${GRAPHICS_API}")
         endif()
     endif()
 elseif(WIN32)
     if(NOT GRAPHICS_API)
-        set(GRAPHICS_API D3D11)
+        set(GRAPHICS_API D3D12)
     else()
-        if(NOT GRAPHICS_API STREQUAL Vulkan AND NOT GRAPHICS_API STREQUAL D3D11 AND NOT GRAPHICS_API STREQUAL D3D12)
+        if(NOT GRAPHICS_API STREQUAL Vulkan AND NOT GRAPHICS_API STREQUAL D3D12)
             message(FATAL_ERROR "Unrecognized/Unsupported render API: ${GRAPHICS_API}")
         endif()
     endif()
@@ -218,6 +293,13 @@ if(MSVC)
 endif()
 
 if(APPLE)
+    set(ENABLE_ARC ON CACHE STRING "Enables or disables ARC support." FORCE)
+    if(NOT CMAKE_GENERATOR MATCHES "Xcode")
+        # Some fetched dependencies gate ARC behind Xcode-only attributes.
+        # Apply ARC explicitly for non-Xcode generators (Makefiles/Ninja).
+        add_compile_options(-fobjc-arc)
+    endif()
+
     # Without this option on azure pipelines, there is a mismatch with math.h giving a lot of undefined functions on macOS.
     # Only enabled for Apple as there is no issue for Windows.
     set(CMAKE_NO_SYSTEM_FROM_IMPORTED TRUE)
