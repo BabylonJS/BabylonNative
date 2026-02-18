@@ -39,7 +39,7 @@ FetchContent_Declare(bgfx.cmake
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG ea28b7689530bfdc4905806f27ecf7e8ed4b5419
+    GIT_TAG 892b0b70d908c37adeb5d8719fd8b0212a8fa17d
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
@@ -97,6 +97,9 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Suppress "Performing Test ..." output from check_c_compiler_flag() and similar macros.
+set(CMAKE_REQUIRED_QUIET TRUE)
 
 # --------------------------------------------------
 # Options
