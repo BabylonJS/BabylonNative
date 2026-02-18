@@ -31,7 +31,7 @@ namespace Babylon::Plugins::ShaderCache
         ShaderCacheImpl::Instance->Clear();
     }
 
-    uint32_t Save(std::ofstream& stream)
+    uint32_t Save(std::ostream& stream)
     {
         if (!ShaderCacheImpl::Instance)
         {
@@ -41,7 +41,7 @@ namespace Babylon::Plugins::ShaderCache
         return ShaderCacheImpl::Instance->Save(stream);
     }
 
-    uint32_t Load(std::ifstream& stream)
+    uint32_t Load(std::istream& stream)
     {
         if (!ShaderCacheImpl::Instance)
         {

@@ -2,14 +2,14 @@
 
 namespace
 {
-    void SaveString(std::ofstream& stream, const std::string& string)
+    void SaveString(std::ostream& stream, const std::string& string)
     {
         uint32_t stringSize{static_cast<uint32_t>(string.size())};
         stream.write(reinterpret_cast<const char*>(&stringSize), sizeof(uint32_t));
         stream.write(reinterpret_cast<const char*>(string.data()), string.size());
     }
 
-    void LoadString(std::ifstream& stream, std::string& string)
+    void LoadString(std::istream& stream, std::string& string)
     {
         uint32_t stringSize;
         stream.read(reinterpret_cast<char*>(&stringSize), sizeof(uint32_t));
@@ -42,7 +42,7 @@ namespace Babylon::Plugins::ShaderCache
         m_cache.clear();
     }
 
-    uint32_t ShaderCacheImpl::Save(std::ofstream& stream)
+    uint32_t ShaderCacheImpl::Save(std::ostream& stream)
     {
         uint32_t cacheVersion{CACHE_VERSION};
         stream.write(reinterpret_cast<const char*>(&cacheVersion), sizeof(uint32_t));
@@ -79,7 +79,7 @@ namespace Babylon::Plugins::ShaderCache
         return cacheSize;
     }
 
-    uint32_t ShaderCacheImpl::Load(std::ifstream& stream)
+    uint32_t ShaderCacheImpl::Load(std::istream& stream)
     {
         uint32_t cacheVersion;
         stream.read(reinterpret_cast<char*>(&cacheVersion), sizeof(uint32_t));

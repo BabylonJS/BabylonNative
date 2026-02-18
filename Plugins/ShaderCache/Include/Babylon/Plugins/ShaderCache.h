@@ -19,9 +19,9 @@ namespace Babylon::Plugins::ShaderCache
 
     // Saves the shader cache to an output file stream.
     // Returns the number of entries in the shader cache.
-    uint32_t Save(std::ofstream& stream);
+    uint32_t Save(std::ostream& stream);
 
     // Loads the shader cache from an input file stream.
     // Returns the number of entries in the shader cache.
-    uint32_t Load(std::ifstream& stream);
+    uint32_t Load(std::istream& stream);
 }
