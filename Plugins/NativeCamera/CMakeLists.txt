@@ -36,8 +36,6 @@ elseif(APPLE)
     set(ADDITIONAL_LIBRARIES
         PRIVATE "-framework CoreMedia -framework AVFoundation")
     enable_objc_arc(NativeCamera)
-    set_property(TARGET NativeCamera PROPERTY UNITY_BUILD false)
-    target_compile_options(NativeCamera PRIVATE -Wno-shadow-ivar)
 endif()
 
 target_link_libraries(NativeCamera

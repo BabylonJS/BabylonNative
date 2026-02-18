@@ -19,58 +19,64 @@ jobs:
   - template: .github/jobs/macos.yml
     parameters:
       name: MacOS
-      vmImage: "macOS-latest"
+      vmImage: macOS-latest
+
+  - template: .github/jobs/macos.yml
+    parameters:
+      name: MacOS_Ninja
+      vmImage: macOS-latest
+      generator: Ninja Multi-Config
 
   - template: .github/jobs/macos.yml
     parameters:
       name: MacOS_Sanitizers
-      vmImage: "macOS-latest"
+      vmImage: macOS-latest
       enableSanitizers: true
 
   - template: .github/jobs/ios.yml
     parameters:
       name: iOS_iOS180
-      vmImage: "macOS-latest"
+      vmImage: macOS-latest
       deploymentTarget: 18.0
 
   - template: .github/jobs/ios.yml
     parameters:
       name: iOS_iOS175
-      vmImage: "macOS-latest"
+      vmImage: macOS-latest
       deploymentTarget: 17.5
 
   # Win32
   - template: .github/jobs/win32.yml
     parameters:
       name: Win32_x64_D3D11
-      vmImage: "windows-latest"
+      vmImage: windows-latest
       platform: x64
 
   - template: .github/jobs/win32.yml
     parameters:
       name: Win32_x64_JSI_D3D11
-      vmImage: "windows-latest"
+      vmImage: windows-latest
       platform: x64
       napiType: jsi
 
   - template: .github/jobs/win32.yml
     parameters:
       name: Win32_x64_V8_D3D11
-      vmImage: "windows-latest"
+      vmImage: windows-latest
       platform: x64
       napiType: V8
 
   - template: .github/jobs/win32.yml
     parameters:
       name: Win32_x64_D3D11_Sanitizers
-      vmImage: "windows-latest"
+      vmImage: windows-latest
       platform: x64
       enableSanitizers: true
 
   - template: .github/jobs/win32.yml
     parameters:
       name: Win32_x64_D3D12
-      vmImage: "windows-latest"
+      vmImage: windows-latest
       platform: x64
       graphics_api: D3D12
 
@@ -78,19 +84,19 @@ jobs:
   - template: .github/jobs/uwp.yml
     parameters:
       name: UWP_x64
-      vmImage: "windows-latest"
+      vmImage: windows-latest
       platform: x64
 
   - template: .github/jobs/uwp.yml
     parameters:
       name: UWP_arm64
-      vmImage: "windows-latest"
+      vmImage: windows-latest
       platform: arm64
 
   - template: .github/jobs/uwp.yml
     parameters:
       name: UWP_arm64_JSI
-      vmImage: "windows-latest"
+      vmImage: windows-latest
       platform: arm64
       napiType: jsi
 
@@ -102,7 +108,7 @@ jobs:
   - template: .github/jobs/linux.yml
     parameters:
       name: Ubuntu_Clang_JSC
-      vmImage: "ubuntu-latest"
+      vmImage: ubuntu-latest
       CC: clang
       CXX: clang++
       JSEngine: JavaScriptCore
@@ -110,7 +116,7 @@ jobs:
   - template: .github/jobs/linux.yml
     parameters:
       name: Ubuntu_GCC_JSC
-      vmImage: "ubuntu-latest"
+      vmImage: ubuntu-latest
       CC: gcc
       CXX: g++
       JSEngine: JavaScriptCore
@@ -130,55 +136,55 @@ jobs:
   - template: .github/jobs/android.yml
     parameters:
       name: Android_Ubuntu_JSC
-      vmImage: "ubuntu-latest"
+      vmImage: ubuntu-latest
       JSEngine: JavaScriptCore
 
   - template: .github/jobs/android.yml
     parameters:
       name: Android_Ubuntu_V8
-      vmImage: "ubuntu-latest"
+      vmImage: ubuntu-latest
       JSEngine: V8
 
   - template: .github/jobs/android.yml
     parameters:
       name: Android_MacOS_JSC
-      vmImage: "macOS-latest"
+      vmImage: macOS-latest
       JSEngine: JavaScriptCore
 
   - template: .github/jobs/android.yml
     parameters:
       name: Android_MacOS_V8
-      vmImage: "macOS-latest"
+      vmImage: macOS-latest
       JSEngine: V8
 
   # Installation tests
   - template: .github/jobs/test_install_ios.yml
     parameters:
       name: iOS_Installation
-      vmImage: "macOS-latest"
+      vmImage: macOS-latest
       deploymentTarget: 17.2
   - template: .github/jobs/test_install_linux.yml
     parameters:
       name: Linux_Installation
-      vmImage: "ubuntu-latest"
+      vmImage: ubuntu-latest
   - template: .github/jobs/test_install_macos.yml
     parameters:
       name: MacOS_Installation
-      vmImage: "macOS-latest"
+      vmImage: macOS-latest
   - template: .github/jobs/test_install_win32.yml
     parameters:
       name: Win32_Installation
-      vmImage: "windows-latest"
+      vmImage: windows-latest
 
 # These Android tests are unstable on the CI emulator. Disabled until a more reliable solution is found.
 #  - template: .github/jobs/android_tests.yml
 #    parameters:
 #      name: Android_Tests_MacOS_JSC
-#      vmImage: 'macOS-latest'
+#      vmImage: macOS-latest
 #      JSEngine: JavaScriptCore
 #
 #  - template: .github/jobs/android_tests.yml
 #    parameters:
 #      name: Android_Tests_MacOS_V8
-#      vmImage: 'macOS-latest'
+#      vmImage: macOS-latest
 #      JSEngine: V8
