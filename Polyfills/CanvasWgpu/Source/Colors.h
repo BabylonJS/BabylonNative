@@ -14,7 +14,7 @@ namespace Babylon::Polyfills::Internal
     {
         std::string str = colorString;
         std::transform(str.begin(), str.end(), str.begin(),
-            [](unsigned char c) { return std::tolower(c); });
+            [](unsigned char c) -> char { return static_cast<char>(std::tolower(c)); });
 
         static const std::unordered_map<std::string, uint32_t> webColors = {
             {"aliceblue", 0xf0f8ff},
