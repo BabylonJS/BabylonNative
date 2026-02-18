@@ -20,6 +20,7 @@ endfunction()
 function(install_bin)
     foreach(target IN LISTS ARGN)
         install(FILES "$<TARGET_FILE:${target}>" DESTINATION bin)
+        install(FILES "$<TARGET_FILE_DIR:${target}>/$<TARGET_FILE_PREFIX:${target}>$<TARGET_FILE_BASE_NAME:${target}>.pdb" DESTINATION bin OPTIONAL)
     endforeach()
 endfunction()
 
