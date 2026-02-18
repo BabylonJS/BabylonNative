@@ -109,7 +109,7 @@ function(FetchContent_MakeAvailable_With_Message)
         string(TOLOWER ${name} name_lowercase)
         set(${name_lowercase}_POPULATED ${${name_lowercase}_POPULATED} PARENT_SCOPE)
         set(${name_lowercase}_SOURCE_DIR ${${name_lowercase}_SOURCE_DIR} PARENT_SCOPE)
-        set(${name_lowercase}_BINARY_DIR ${${sname_lowercase}_BINARY_DIR} PARENT_SCOPE)
+        set(${name_lowercase}_BINARY_DIR ${${name_lowercase}_BINARY_DIR} PARENT_SCOPE)
     endforeach()
 endfunction()
 
