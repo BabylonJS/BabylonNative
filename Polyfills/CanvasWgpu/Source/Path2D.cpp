@@ -80,9 +80,9 @@ namespace Babylon::Polyfills::Internal
             nsvg__parsePath(parser, attr);
 
             for (NSVGshape *shape = parser->image->shapes; shape != NULL; shape = shape->next) {
-                for (NSVGpath *path = shape->paths; path != NULL; path = path->next) {
-                    for (int i = 0; i < path->npts-1; i += 3) {
-                        float* p = &path->pts[i*2];
+                for (NSVGpath *svgPath = shape->paths; svgPath != NULL; svgPath = svgPath->next) {
+                    for (int i = 0; i < svgPath->npts-1; i += 3) {
+                        float* p = &svgPath->pts[i*2];
 
                         auto x0 = p[0]; // start x, same as end x of previous
                         auto y0 = p[1]; // start y, same as end y of previous
