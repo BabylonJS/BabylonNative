@@ -60,7 +60,8 @@ FetchContent_Declare(libwebp
     GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(metal-cpp
-    URL https://developer.apple.com/metal/cpp/files/metal-cpp_26.zip
+    GIT_REPOSITORY https://github.com/bkaradzic/metal-cpp.git
+    GIT_TAG metal-cpp_26
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
