@@ -17,9 +17,13 @@
 #include <arcana/macros.h>
 #include <memory>
 #include "CameraWrappers.h"
+#include <sstream>
 
 using namespace android;
 using namespace android::global;
+
+#define GL_CHECK(_call) \
+do { _call; assert(glGetError() == GL_NO_ERROR); } while(0);
 
 namespace Babylon::Plugins
 {
@@ -39,11 +43,11 @@ namespace Babylon::Plugins
         GLuint GenerateOESTexture()
         {
             GLuint oesTexture;
-            glGenTextures(1, &oesTexture);
-            glBindTexture(GL_TEXTURE_EXTERNAL_OES, oesTexture);
-            glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0);
+            GL_CHECK(glGenTextures(1, &oesTexture));
+            GL_CHECK(glBindTexture(GL_TEXTURE_EXTERNAL_OES, oesTexture));
+            GL_CHECK(glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+            GL_CHECK(glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+            GL_CHECK(glBindTexture(GL_TEXTURE_EXTERNAL_OES, 0));
             return oesTexture;
         }
 
@@ -235,7 +239,13 @@ namespace Babylon::Plugins
 
                 EGLConfig config;
                 EGLint numConfig = 0;
-                eglChooseConfig(m_impl->display, attrs, &config, 1, &numConfig);
+                EGLBoolean chooseConfigResult = eglChooseConfig(m_impl->display, attrs, &config, 1, &numConfig);
+                if (chooseConfigResult != EGL_TRUE || numConfig <= 0)
+                {
+                    std::ostringstream message;
+                    message << "Unable to choose a valid EGLConfig for camera texture. Error : " << eglGetError();
+                    throw std::runtime_error{message.str()};
+                }
 
                 static const EGLint contextAttribs[] = {
                     EGL_CONTEXT_MAJOR_VERSION_KHR,
@@ -247,7 +257,9 @@ namespace Babylon::Plugins
                 m_impl->context = eglCreateContext(m_impl->display, config, bgfx::getInternalData()->context, contextAttribs);
                 if (eglMakeCurrent(m_impl->display, 0 /*surface*/, 0 /*surface*/, m_impl->context) == EGL_FALSE)
                 {
-                    throw std::runtime_error{"Unable to create a shared GL context for camera texture."};
+                    std::ostringstream message;
+                    message << "Unable to create a shared GL context for camera texture. Error : " << eglGetError();
+                    throw std::runtime_error{message.str()};
                 }
             }
 
@@ -445,52 +457,55 @@ namespace Babylon::Plugins
 
         if (m_impl->updateTextureDimensions)
         {
-            glGenTextures(1, &m_impl->cameraRGBATextureId);
-            glBindTexture(GL_TEXTURE_2D, m_impl->cameraRGBATextureId);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, !sensorIsPortrait ? m_impl->cameraDimensions.width : m_impl->cameraDimensions.height, !sensorIsPortrait ? m_impl->cameraDimensions.height : m_impl->cameraDimensions.width, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glGenerateMipmap(GL_TEXTURE_2D);
+            if (m_impl->cameraRGBATextureId)
+            {
+                GL_CHECK(glDeleteTextures(1, &m_impl->cameraRGBATextureId));
+                GL_CHECK(glDeleteFramebuffers(1, &m_impl->frameBufferId));
+            }
+            GL_CHECK(glGenTextures(1, &m_impl->cameraRGBATextureId));
+            GL_CHECK(glGenFramebuffers(1, &m_impl->frameBufferId));
+            GL_CHECK(glBindTexture(GL_TEXTURE_2D, m_impl->cameraRGBATextureId));
+            GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, !sensorIsPortrait ? m_impl->cameraDimensions.width : m_impl->cameraDimensions.height, !sensorIsPortrait ? m_impl->cameraDimensions.height : m_impl->cameraDimensions.width, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr));
+            GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+            GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+            GL_CHECK(glGenerateMipmap(GL_TEXTURE_2D));
+            GL_CHECK(glBindTexture(GL_TEXTURE_2D, 0));
 
-            glBindTexture(GL_TEXTURE_2D, 0);
-
-            glGenFramebuffers(1, &m_impl->frameBufferId);
-            glBindFramebuffer(GL_FRAMEBUFFER, m_impl->frameBufferId);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_impl->cameraRGBATextureId, 0);
-
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, m_impl->frameBufferId));
+            GL_CHECK(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_impl->cameraRGBATextureId, 0));
+            GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 
             m_impl->updateTextureDimensions = false;
         }
 
         m_impl->surfaceTexture.updateTexImage();
 
-        glBindFramebuffer(GL_FRAMEBUFFER, m_impl->frameBufferId);
-        glViewport(0, 0, !sensorIsPortrait ? m_impl->cameraDimensions.width : m_impl->cameraDimensions.height, !sensorIsPortrait ? m_impl->cameraDimensions.height : m_impl->cameraDimensions.width);
-        glUseProgram(m_impl->cameraShaderProgramId);
+        GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, m_impl->frameBufferId));
+        GL_CHECK(glViewport(0, 0, !sensorIsPortrait ? m_impl->cameraDimensions.width : m_impl->cameraDimensions.height, !sensorIsPortrait ? m_impl->cameraDimensions.height : m_impl->cameraDimensions.width));
+        GL_CHECK(glUseProgram(m_impl->cameraShaderProgramId));
 
         auto vertexPositionsUniformLocation{glGetUniformLocation(m_impl->cameraShaderProgramId, "positions")};
-        glUniform2fv(vertexPositionsUniformLocation, CAMERA_VERTEX_COUNT, CAMERA_VERTEX_POSITIONS);
+        GL_CHECK(glUniform2fv(vertexPositionsUniformLocation, CAMERA_VERTEX_COUNT, CAMERA_VERTEX_POSITIONS));
 
         auto uvsUniformLocation{glGetUniformLocation(m_impl->cameraShaderProgramId, "uvs")};
-        glUniform2fv(uvsUniformLocation, CAMERA_UVS_COUNT,
+        GL_CHECK(glUniform2fv(uvsUniformLocation, CAMERA_UVS_COUNT,
             m_impl->sensorRotationDiff == 90    ? CAMERA_UVS_ROTATION_90
             : m_impl->sensorRotationDiff == 180 ? CAMERA_UVS_ROTATION_180
             : m_impl->sensorRotationDiff == 270 ? CAMERA_UVS_ROTATION_270
-                                                : CAMERA_UVS_ROTATION_0);
+                                                : CAMERA_UVS_ROTATION_0));
 
         // Configure the camera texture
         auto cameraTextureUniformLocation{glGetUniformLocation(m_impl->cameraShaderProgramId, "cameraTexture")};
-        glUniform1i(cameraTextureUniformLocation, android::OpenGLHelpers::GetTextureUnit(GL_TEXTURE0));
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_EXTERNAL_OES, m_impl->cameraOESTextureId);
-        glBindSampler(android::OpenGLHelpers::GetTextureUnit(GL_TEXTURE0), 0);
+        GL_CHECK(glUniform1i(cameraTextureUniformLocation, android::OpenGLHelpers::GetTextureUnit(GL_TEXTURE0)));
+        GL_CHECK(glActiveTexture(GL_TEXTURE0));
+        GL_CHECK(glBindTexture(GL_TEXTURE_EXTERNAL_OES, m_impl->cameraOESTextureId));
+        GL_CHECK(glBindSampler(android::OpenGLHelpers::GetTextureUnit(GL_TEXTURE0), 0));
 
         // Draw the quad
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, CAMERA_VERTEX_COUNT);
+        GL_CHECK(glDrawArrays(GL_TRIANGLE_STRIP, 0, CAMERA_VERTEX_COUNT));
 
-        glUseProgram(0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        GL_CHECK(glUseProgram(0));
+        GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 
         // bind previously bound context
         if (eglMakeCurrent(m_impl->display, 0 /*surface*/, 0 /*surface*/, currentContext) == EGL_FALSE)

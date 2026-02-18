@@ -2,87 +2,84 @@
 
 namespace Babylon
 {
-    namespace
+    class XRView : public Napi::ObjectWrap<XRView>
     {
-        class XRView : public Napi::ObjectWrap<XRView>
+        static constexpr auto JS_CLASS_NAME = "XRView";
+        static constexpr size_t MATRIX_SIZE = 16;
+
+    public:
+        static void Initialize(Napi::Env env)
         {
-            static constexpr auto JS_CLASS_NAME = "XRView";
-            static constexpr size_t MATRIX_SIZE = 16;
+            Napi::HandleScope scope{env};
 
-        public:
-            static void Initialize(Napi::Env env)
-            {
-                Napi::HandleScope scope{env};
-
-                Napi::Function func = DefineClass(
-                    env,
-                    JS_CLASS_NAME,
-                    {
-                        InstanceAccessor("eye", &XRView::GetEye, nullptr),
-                        InstanceAccessor("projectionMatrix", &XRView::GetProjectionMatrix, nullptr),
-                        InstanceAccessor("transform", &XRView::GetTransform, nullptr),
-                        InstanceAccessor("isFirstPersonObserver", &XRView::IsFirstPersonObserver, nullptr),
-                    });
-
-                env.Global().Set(JS_CLASS_NAME, func);
-            }
-
-            static Napi::Object New(const Napi::CallbackInfo& info)
-            {
-                return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
-            }
-
-            XRView(const Napi::CallbackInfo& info)
-                : Napi::ObjectWrap<XRView>{info}
-                , m_eyeIdx{0}
-                , m_eye{XREye::IndexToEye(m_eyeIdx)}
-                , m_projectionMatrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
-                , m_rigidTransform{Napi::Persistent(XRRigidTransform::New(info.Env()))}
-                , m_isFirstPersonObserver{false}
-            {
-            }
-
-            void Update(size_t eyeIdx, gsl::span<const float, 16> projectionMatrix, const xr::Space& space, bool isFirstPersonObserver)
-            {
-                if (eyeIdx != m_eyeIdx)
+            Napi::Function func = DefineClass(
+                env,
+                JS_CLASS_NAME,
                 {
-                    m_eyeIdx = eyeIdx;
-                    m_eye = XREye::IndexToEye(m_eyeIdx);
-                }
+                    InstanceAccessor("eye", &XRView::GetEye, nullptr),
+                    InstanceAccessor("projectionMatrix", &XRView::GetProjectionMatrix, nullptr),
+                    InstanceAccessor("transform", &XRView::GetTransform, nullptr),
+                    InstanceAccessor("isFirstPersonObserver", &XRView::IsFirstPersonObserver, nullptr),
+                });
 
-                std::memcpy(m_projectionMatrix.Value().Data(), projectionMatrix.data(), m_projectionMatrix.Value().ByteLength());
+            env.Global().Set(JS_CLASS_NAME, func);
+        }
 
-                XRRigidTransform::Unwrap(m_rigidTransform.Value())->Update(space, false);
+        static Napi::Object New(const Napi::CallbackInfo& info)
+        {
+            return info.Env().Global().Get(JS_CLASS_NAME).As<Napi::Function>().New({});
+        }
 
-                m_isFirstPersonObserver = isFirstPersonObserver;
-            }
+        XRView(const Napi::CallbackInfo& info)
+            : Napi::ObjectWrap<XRView>{info}
+            , m_eyeIdx{0}
+            , m_eye{XREye::IndexToEye(m_eyeIdx)}
+            , m_projectionMatrix{Napi::Persistent(Napi::Float32Array::New(info.Env(), MATRIX_SIZE))}
+            , m_rigidTransform{Napi::Persistent(XRRigidTransform::New(info.Env()))}
+            , m_isFirstPersonObserver{false}
+        {
+        }
 
-        private:
-            size_t m_eyeIdx{};
-            gsl::czstring m_eye{};
-            Napi::Reference<Napi::Float32Array> m_projectionMatrix{};
-            Napi::ObjectReference m_rigidTransform{};
-            bool m_isFirstPersonObserver{};
-
-            Napi::Value GetEye(const Napi::CallbackInfo& info)
+        void Update(size_t eyeIdx, gsl::span<const float, 16> projectionMatrix, const xr::Space& space, bool isFirstPersonObserver)
+        {
+            if (eyeIdx != m_eyeIdx)
             {
-                return Napi::String::From(info.Env(), m_eye);
+                m_eyeIdx = eyeIdx;
+                m_eye = XREye::IndexToEye(m_eyeIdx);
             }
 
-            Napi::Value GetProjectionMatrix(const Napi::CallbackInfo&)
-            {
-                return m_projectionMatrix.Value();
-            }
+            std::memcpy(m_projectionMatrix.Value().Data(), projectionMatrix.data(), m_projectionMatrix.Value().ByteLength());
 
-            Napi::Value GetTransform(const Napi::CallbackInfo&)
-            {
-                return m_rigidTransform.Value();
-            }
+            XRRigidTransform::Unwrap(m_rigidTransform.Value())->Update(space, false);
 
-            Napi::Value IsFirstPersonObserver(const Napi::CallbackInfo& info)
-            {
-                return Napi::Boolean::From(info.Env(), m_isFirstPersonObserver);
-            }
-        };
-    }
+            m_isFirstPersonObserver = isFirstPersonObserver;
+        }
+
+    private:
+        size_t m_eyeIdx{};
+        gsl::czstring m_eye{};
+        Napi::Reference<Napi::Float32Array> m_projectionMatrix{};
+        Napi::ObjectReference m_rigidTransform{};
+        bool m_isFirstPersonObserver{};
+
+        Napi::Value GetEye(const Napi::CallbackInfo& info)
+        {
+            return Napi::String::From(info.Env(), m_eye);
+        }
+
+        Napi::Value GetProjectionMatrix(const Napi::CallbackInfo&)
+        {
+            return m_projectionMatrix.Value();
+        }
+
+        Napi::Value GetTransform(const Napi::CallbackInfo&)
+        {
+            return m_rigidTransform.Value();
+        }
+
+        Napi::Value IsFirstPersonObserver(const Napi::CallbackInfo& info)
+        {
+            return Napi::Boolean::From(info.Env(), m_isFirstPersonObserver);
+        }
+    };
 } // Babylon
