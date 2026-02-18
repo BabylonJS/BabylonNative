@@ -11,6 +11,7 @@
 #include <Babylon/Graphics/Platform.h>
 
 #include <functional>
+#include <gsl/span>
 #include <memory>
 #include <sstream>
 
@@ -83,12 +84,12 @@ namespace Babylon::Plugins::Internal
         auto callbackPtr{ std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback)) };
         m_deviceContext.RequestScreenShot([this, callbackPtr{ std::move(callbackPtr) }](std::vector<uint8_t> array) {
             m_runtime.Dispatch([callbackPtr{ std::move(callbackPtr) }, array{ std::move(array) }](Napi::Env env) mutable {
-                PostProcessFrameBufferData(array);
-                auto arrayBuffer{ Napi::ArrayBuffer::New(env, const_cast<uint8_t*>(array.data()), array.size()) };
-                auto typedArray{ Napi::Uint8Array::New(env, array.size(), arrayBuffer, 0) };
+                auto span = gsl::span<uint8_t>{array};
+                auto arrayBuffer{ Napi::ArrayBuffer::New(env, span.data(), span.size(), [array = std::move(array)](Napi::Env, void*) {}) };
+                auto typedArray{ Napi::Uint8Array::New(env, span.size(), arrayBuffer, 0) };
                 callbackPtr->Value().Call({ typedArray });
-                });
             });
+        });
     }
 }
 

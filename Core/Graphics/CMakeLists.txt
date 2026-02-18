@@ -103,7 +103,7 @@ target_link_libraries(GraphicsDeviceContext
     INTERFACE bx)
 
 if(APPLE)
-    target_link_libraries(GraphicsDevice
+    target_link_libraries(GraphicsDeviceContext
         INTERFACE metal-cpp)
 endif()
 

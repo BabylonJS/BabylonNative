@@ -28,8 +28,4 @@ namespace Babylon::Plugins::Internal
         auto localFolder = winrt::Windows::Storage::ApplicationData::Current().LocalFolder();
         return Napi::Value::From(info.Env(), winrt::to_string(localFolder.Path().data()));
     }
-
-    void TestUtils::PostProcessFrameBufferData(std::vector<uint8_t>& /*data*/)
-    {
-    }
 }

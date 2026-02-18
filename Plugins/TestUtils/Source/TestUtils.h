@@ -70,8 +70,6 @@ namespace Babylon::Plugins::Internal
         Napi::Value GetImageData(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
 
-        static void PostProcessFrameBufferData(std::vector<uint8_t>& data);
-
         JsRuntime& m_runtime;
         Graphics::DeviceContext& m_deviceContext;
         Graphics::WindowT m_window;

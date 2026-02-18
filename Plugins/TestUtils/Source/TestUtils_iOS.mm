@@ -22,9 +22,4 @@ namespace Babylon::Plugins::Internal
         // Not implemented for iOS
         return {};
     }
-
-    void TestUtils::PostProcessFrameBufferData(std::vector<uint8_t>& /*data*/)
-    {
-        // Not implemented for iOS
-    }
 }

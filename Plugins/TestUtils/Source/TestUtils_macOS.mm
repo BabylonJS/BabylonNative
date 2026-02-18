@@ -47,13 +47,4 @@ namespace Babylon::Plugins::Internal
             .parent_path().parent_path().parent_path().parent_path().parent_path().generic_string();
         return Napi::Value::From(info.Env(), path);
     }
-
-    void TestUtils::PostProcessFrameBufferData(std::vector<uint8_t>& data)
-    {
-        // swizzle the data from BGRA to RGBA on Apple platforms
-        for (size_t i = 0; i < data.size(); i += 4)
-        {
-            std::swap(data[i], data[i + 2]);
-        }
-    }
 }
