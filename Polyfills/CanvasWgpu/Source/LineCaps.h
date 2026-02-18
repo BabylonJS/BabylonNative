@@ -1,5 +1,5 @@
 #pragma once
-#include <algorithm>
+#include <cctype>
 #include <string>
 #include <unordered_map>
 #include "nanovg/nanovg.h"
@@ -9,8 +9,10 @@ namespace Babylon::Polyfills::Internal
     inline NVGlineCap StringToLineCap(Napi::Env, const std::string& lineCapString)
     {
         std::string str = lineCapString;
-        std::transform(str.begin(), str.end(), str.begin(),
-            [](unsigned char c) { return std::tolower(c); });
+        for (auto& ch : str)
+        {
+            ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+        }
 
         static const std::unordered_map<std::string, NVGlineCap> lineCaps = {
             {"butt", NVG_BUTT},
@@ -29,8 +31,10 @@ namespace Babylon::Polyfills::Internal
     inline NVGlineCap StringToLineJoin(Napi::Env, const std::string& lineJoinString)
     {
         std::string str = lineJoinString;
-        std::transform(str.begin(), str.end(), str.begin(),
-            [](unsigned char c) { return std::tolower(c); });
+        for (auto& ch : str)
+        {
+            ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+        }
 
         static const std::unordered_map<std::string, NVGlineCap> lineJoins = {
             {"bevel", NVG_BEVEL},
