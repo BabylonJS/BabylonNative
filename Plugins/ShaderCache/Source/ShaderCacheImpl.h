@@ -16,8 +16,8 @@ namespace Babylon::Plugins::ShaderCache
     public:
         ShaderCacheImpl() = default;
 
-        uint32_t Save(std::ofstream& stream);
-        uint32_t Load(std::ifstream& stream);
+        uint32_t Save(std::ostream& stream);
+        uint32_t Load(std::istream& stream);
 
         void Clear();
 
