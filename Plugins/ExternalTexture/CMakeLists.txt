@@ -1,16 +1,11 @@
 set(SOURCES
     "Include/Babylon/Plugins/ExternalTexture.h"
-    "Source/ExternalTexture_${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
+    "Source/ExternalTexture_${GRAPHICS_API}.cpp"
     "Source/ExternalTexture_Base.h"
     "Source/ExternalTexture_Shared.h")
 
 add_library(ExternalTexture ${SOURCES})
 warnings_as_errors(ExternalTexture)
-
-if (APPLE)
-    set_target_properties(ExternalTexture PROPERTIES
-        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES)
-endif()
 
 target_include_directories(ExternalTexture
     PUBLIC "Include")

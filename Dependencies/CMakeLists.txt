@@ -149,6 +149,50 @@ if(WIN32)
 endif()
 
 # --------------------------------------------------
+# metal-cpp
+# --------------------------------------------------
+if(APPLE)
+    FetchContent_MakeAvailable_With_Message(metal-cpp)
+
+    # Generate a single header.
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    set(METAL_CPP_GENERATED_DIR "${CMAKE_BINARY_DIR}/metal-cpp")
+    execute_process(
+        COMMAND ${Python3_EXECUTABLE}
+            "${metal-cpp_SOURCE_DIR}/SingleHeader/MakeSingleHeader.py"
+            "${metal-cpp_SOURCE_DIR}/Foundation/Foundation.hpp"
+            "${metal-cpp_SOURCE_DIR}/Metal/Metal.hpp"
+            "${metal-cpp_SOURCE_DIR}/QuartzCore/QuartzCore.hpp"
+            -o "${METAL_CPP_GENERATED_DIR}/Include/Metal/Metal.hpp"
+        RESULT_VARIABLE METAL_CPP_RESULT)
+    if(NOT METAL_CPP_RESULT EQUAL 0)
+        message(FATAL_ERROR "Failed to generate metal-cpp single header")
+    endif()
+
+    # Generate source that includes the single header with the necessary implementation defines.
+    file(WRITE "${METAL_CPP_GENERATED_DIR}/Source/Metal.cpp"
+        "#define NS_PRIVATE_IMPLEMENTATION\n"
+        "#define MTL_PRIVATE_IMPLEMENTATION\n"
+        "#define CA_PRIVATE_IMPLEMENTATION\n"
+        "#include <Metal/Metal.hpp>\n")
+
+    set(SOURCES
+        "${METAL_CPP_GENERATED_DIR}/Include/Metal/Metal.hpp"
+        "${METAL_CPP_GENERATED_DIR}/Source/Metal.cpp")
+
+    add_library(metal-cpp ${SOURCES})
+    target_include_directories(metal-cpp SYSTEM PUBLIC "${METAL_CPP_GENERATED_DIR}/Include")
+    target_link_libraries(metal-cpp
+        PRIVATE "-framework Foundation"
+        PRIVATE "-framework Metal"
+        PRIVATE "-framework QuartzCore")
+
+    source_group(TREE "${metal-cpp_SOURCE_DIR}" FILES ${METAL_CPP_HEADERS})
+    source_group(TREE "${METAL_CPP_GENERATED_DIR}" FILES ${SOURCES})
+    set_property(TARGET metal-cpp PROPERTY FOLDER Dependencies)
+endif()
+
+# --------------------------------------------------
 # SPIRV-Cross
 # --------------------------------------------------
 set(SPIRV_CROSS_CLI OFF)
@@ -198,16 +242,6 @@ if(TARGET MachineIndependent)
 endif()
 
 # --------------------------------------------------
-# xr
-# --------------------------------------------------
-# Currently supported on Android via ARCore, and iOS via ARKit.
-if((BABYLON_NATIVE_PLUGIN_NATIVEXR AND (ANDROID OR IOS)) OR BABYLON_NATIVE_BUILD_SOURCETREE)
-    add_subdirectory(xr)
-    set_property(TARGET xr PROPERTY FOLDER Dependencies/xr)
-    warnings_as_errors(xr)
-endif()
-
-# --------------------------------------------------
 # WebP
 # --------------------------------------------------
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP)
@@ -241,4 +275,14 @@ endif()
 # --------------------------------------------------
 if(WINDOWS_STORE)
     add_subdirectory(WindowsAppSDK)
+endif()
+
+# --------------------------------------------------
+# xr
+# --------------------------------------------------
+# Currently supported on Android via ARCore, and iOS via ARKit.
+if((BABYLON_NATIVE_PLUGIN_NATIVEXR AND (ANDROID OR IOS)) OR BABYLON_NATIVE_BUILD_SOURCETREE)
+    add_subdirectory(xr)
+    set_property(TARGET xr PROPERTY FOLDER Dependencies/xr)
+    warnings_as_errors(xr)
 endif()

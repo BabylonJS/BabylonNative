@@ -854,10 +854,10 @@ namespace Babylon::Plugins
 @implementation CameraTextureDelegate {
 }
 
-- (id)init:(CVMetalTextureCacheRef)textureCache
+- (id)init:(CVMetalTextureCacheRef)aTextureCache
 {
     self = [super init];
-    self->textureCache = textureCache;
+    self->textureCache = aTextureCache;
 #if (TARGET_OS_IPHONE)
     [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(OrientationDidChange:) name:UIDeviceOrientationDidChangeNotification object:nil];
     [self updateOrientation];
@@ -1019,10 +1019,10 @@ namespace Babylon::Plugins
 @implementation PhotoCaptureDelegate {
 }
 
-- (id)init:(TakePhotoTaskCompletionSource)taskCompletionSource orientation:(VideoOrientation)orientation
+- (id)init:(TakePhotoTaskCompletionSource)aTaskCompletionSource orientation:(VideoOrientation)anOrientation
 {
-    self->taskCompletionSource = std::move(taskCompletionSource);
-    self->orientation = orientation;
+    self->taskCompletionSource = std::move(aTaskCompletionSource);
+    self->orientation = anOrientation;
     return self;
 }
 

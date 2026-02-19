@@ -1,4 +1,5 @@
 #pragma once
+
 #include <napi/env.h>
 
 #if _MSC_VER
@@ -9,23 +10,20 @@
 #include <bimg/bimg.h>
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/Platform.h>
+#include <vector>
 
 namespace Babylon::Plugins::Internal
 {
     class TestUtils final : public Napi::ObjectWrap<TestUtils>
     {
     public:
-        class ImplData;
-
         static inline constexpr const char* JS_INSTANCE_NAME{"TestUtils"};
 
         using ParentT = Napi::ObjectWrap<TestUtils>;
 
-        static void CreateInstance(Napi::Env env, std::shared_ptr<ImplData> implData)
+        static void CreateInstance(Napi::Env env, Graphics::WindowT window)
         {
-            m_implData = std::move(implData);
-            Napi::HandleScope scope{env};
-
             Napi::Function func = ParentT::DefineClass(
                 env,
                 "TestUtilsClass",
@@ -39,26 +37,27 @@ namespace Babylon::Plugins::Internal
                     ParentT::InstanceMethod("getImageData", &TestUtils::GetImageData),
                     ParentT::InstanceMethod("getOutputDirectory", &TestUtils::GetOutputDirectory),
                     ParentT::InstanceMethod("getFrameBufferData", &TestUtils::GetFrameBufferData),
-                });
+                },
+                &window);
+
             env.Global().Set(JS_INSTANCE_NAME, func.New({}));
         }
 
         TestUtils(const Napi::CallbackInfo& info)
-            : TestUtils(info, JsRuntime::GetFromJavaScript(info.Env()))
+            : TestUtils(info, JsRuntime::GetFromJavaScript(info.Env()), *static_cast<Graphics::WindowT*>(info.Data()))
         {
         }
 
-        explicit TestUtils(const Napi::CallbackInfo& info, JsRuntime& runtime)
+        explicit TestUtils(const Napi::CallbackInfo& info, JsRuntime& runtime, Graphics::WindowT window)
             : ParentT{info}
             , m_runtime{runtime}
-            , m_deviceContext{ Graphics::DeviceContext::GetFromJavaScript(info.Env()) }
+            , m_deviceContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
+            , m_window{window}
         {
         }
 
     private:
         static inline Napi::FunctionReference constructor{};
-
-        inline static std::shared_ptr<ImplData> m_implData;
 
         void Exit(const Napi::CallbackInfo& info);
         void UpdateSize(const Napi::CallbackInfo& info);
@@ -73,6 +72,7 @@ namespace Babylon::Plugins::Internal
 
         JsRuntime& m_runtime;
         Graphics::DeviceContext& m_deviceContext;
+        Graphics::WindowT m_window;
 
         struct Image
         {
@@ -88,4 +88,4 @@ namespace Babylon::Plugins::Internal
             bimg::ImageContainer* m_Image{};
         };
     };
-} // namespace
+}

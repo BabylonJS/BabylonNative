@@ -1,4 +1,4 @@
-#include "../TestUtilsImplData.h"
+#include "TestUtils.h"
 
 namespace Babylon::Plugins::Internal
 {
@@ -18,14 +18,5 @@ namespace Babylon::Plugins::Internal
     {
         auto path = "/data/data/com.android.babylonnative.playground/cache";
         return Napi::Value::From(info.Env(), path);
-    }
-}
-
-namespace Babylon::Plugins::TestUtils
-{
-    void Initialize(Napi::Env env, Graphics::WindowT window)
-    {
-        auto implData{std::make_shared<Internal::TestUtils::ImplData>(window)};
-        Internal::TestUtils::CreateInstance(env, implData);
     }
 }

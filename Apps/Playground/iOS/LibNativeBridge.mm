@@ -30,7 +30,7 @@ float screenScale{1.0f};
     screenScale = inScreenScale;
 
     appContext.emplace(
-        view,
+        (__bridge CA::MetalLayer*)view.layer,
         static_cast<size_t>(inWidth),
         static_cast<size_t>(inHeight),
         [](const char* message) {

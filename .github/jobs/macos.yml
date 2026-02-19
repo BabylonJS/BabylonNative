@@ -2,6 +2,7 @@ parameters:
   name: ""
   vmImage: ""
   enableSanitizers: false
+  generator: Xcode
 
 jobs:
   - job: ${{parameters.name}}
@@ -22,32 +23,18 @@ jobs:
         displayName: "Select XCode $(XCODE_VERSION)"
 
       - script: |
-          cmake -G Xcode -B buildmacOS -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D ENABLE_SANITIZERS=$(SANITIZER_FLAG) -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
+          cmake -G "${{parameters.generator}}" -B build/macOS -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D ENABLE_SANITIZERS=$(SANITIZER_FLAG) -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
         displayName: "Generate macOS solution"
 
       - script: |
-          xcodebuild -list -project buildmacOS/BabylonNative.xcodeproj
-        displayName: "List available project schemes"
-
-      - task: Xcode@5
-        inputs:
-          xcWorkspacePath: "buildmacOS/BabylonNative.xcodeproj"
-          scheme: "Playground"
-          sdk: "macosx"
-          useXcpretty: false
-          configuration: RelWithDebInfo
+          cmake --build build/macOS --target Playground --config RelWithDebInfo
         displayName: "Build Playground macOS"
 
-      - task: Xcode@5
-        inputs:
-          xcWorkspacePath: "buildmacOS/BabylonNative.xcodeproj"
-          scheme: "UnitTests"
-          sdk: "macosx"
-          useXcpretty: false
-          configuration: RelWithDebInfo
+      - script: |
+          cmake --build build/macOS --target UnitTests --config RelWithDebInfo
         displayName: "Build UnitTests macOS"
 
       - script: |
-          cd buildmacOS/Apps/UnitTests/RelWithDebInfo
+          cd build/macOS/Apps/UnitTests/RelWithDebInfo
           ./UnitTests
         displayName: "Run UnitTests macOS"

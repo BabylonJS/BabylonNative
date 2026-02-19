@@ -24,5 +24,3 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 add_library(ShaderCacheInternal INTERFACE)
 target_include_directories(ShaderCacheInternal
     INTERFACE "InternalInclude")
-target_link_libraries(ShaderCacheInternal
-    INTERFACE ShaderCache)

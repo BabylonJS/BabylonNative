@@ -19,12 +19,12 @@ jobs:
         displayName: "Select Xcode $(XCODE_VERSION)"
 
       - script: |
-          cmake -G Xcode -B buildiOS -D IOS=ON -D DEPLOYMENT_TARGET=${{parameters.deploymentTarget}} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D CMAKE_IOS_INSTALL_COMBINED=NO
+          cmake -G Xcode -B build/iOS -D IOS=ON -D DEPLOYMENT_TARGET=${{parameters.deploymentTarget}} -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_DEBUG_TRACE=ON -D CMAKE_IOS_INSTALL_COMBINED=NO
         displayName: "Generate iOS solution"
 
       - task: Xcode@5
         inputs:
-          xcWorkspacePath: "buildiOS/BabylonNative.xcodeproj"
+          xcWorkspacePath: "build/iOS/BabylonNative.xcodeproj"
           scheme: "Playground"
           sdk: "iphoneos"
           useXcpretty: false

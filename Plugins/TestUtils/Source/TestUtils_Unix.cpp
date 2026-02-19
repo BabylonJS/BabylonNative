@@ -1,4 +1,4 @@
-#include "../TestUtilsImplData.h"
+#include "TestUtils.h"
 #define XK_MISCELLANY
 #define XK_LATIN1
 #include <X11/keysymdef.h>
@@ -8,25 +8,24 @@
 #undef None
 #include <filesystem>
 
-namespace Babylon::Plugins::TestUtils
-{
-    int errorCode{};
-}
-
 namespace Babylon::Plugins::Internal
 {
     void TestUtils::Exit(const Napi::CallbackInfo& info)
     {
-        auto window = (Window)m_implData->m_window;
-        const int32_t exitCode = info[0].As<Napi::Number>().Int32Value();
-        Plugins::TestUtils::errorCode = exitCode;
+        auto exitCode = info[0].As<Napi::Number>().Int32Value();
+        if (exitCode != 0)
+        {
+            std::quick_exit(exitCode);
+        }
+
+        auto window = (Window)m_window;
         auto display = XOpenDisplay(NULL);
         XClientMessageEvent dummyEvent;
         memset(&dummyEvent, 0, sizeof(XClientMessageEvent));
         dummyEvent.type = ClientMessage;
         dummyEvent.window = window;
         dummyEvent.format = 32;
-        dummyEvent.data.l[0] = XInternAtom(display, "WM_DELETE_WINDOW", False);;
+        dummyEvent.data.l[0] = XInternAtom(display, "WM_DELETE_WINDOW", False);
         XSendEvent(display, window, 0, 0, (XEvent*)&dummyEvent);
         XFlush(display);
         XCloseDisplay(display);
@@ -40,7 +39,7 @@ namespace Babylon::Plugins::Internal
     {
         const auto title = info[0].As<Napi::String>().Utf8Value();
         auto display = XOpenDisplay(NULL);
-        auto window = (Window)m_implData->m_window;
+        auto window = (Window)m_window;
         XStoreName(display, window, title.c_str());
         XCloseDisplay(display);
     }
@@ -57,14 +56,5 @@ namespace Babylon::Plugins::Internal
 
         auto path = std::filesystem::path{exe}.parent_path().generic_string();
         return Napi::Value::From(info.Env(), path);
-    }
-}
-
-namespace Babylon::Plugins::TestUtils
-{
-    void Initialize(Napi::Env env, Graphics::WindowT window)
-    {
-        auto implData{std::make_shared<Internal::TestUtils::ImplData>(window)};
-        Internal::TestUtils::CreateInstance(env, implData);
     }
 }

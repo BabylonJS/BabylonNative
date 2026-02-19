@@ -15,112 +15,112 @@ namespace
 	// referencing format, and requiring use of ifdefery to reference format. To reduce ifdefery
 	// bgfx uses redefined formats, and on initialization it sets up format caps and provides
 	// availability.
-	constexpr MTLPixelFormat kMtlPixelFormatInvalid               = MTLPixelFormat(0);
-	constexpr MTLPixelFormat kMtlPixelFormatA8Unorm               = MTLPixelFormat(1);
-	constexpr MTLPixelFormat kMtlPixelFormatR8Unorm               = MTLPixelFormat(10);
-	constexpr MTLPixelFormat kMtlPixelFormatR8Unorm_sRGB          = MTLPixelFormat(11);
-	constexpr MTLPixelFormat kMtlPixelFormatR8Snorm               = MTLPixelFormat(12);
-	constexpr MTLPixelFormat kMtlPixelFormatR8Uint                = MTLPixelFormat(13);
-	constexpr MTLPixelFormat kMtlPixelFormatR8Sint                = MTLPixelFormat(14);
-	constexpr MTLPixelFormat kMtlPixelFormatR16Unorm              = MTLPixelFormat(20);
-	constexpr MTLPixelFormat kMtlPixelFormatR16Snorm              = MTLPixelFormat(22);
-	constexpr MTLPixelFormat kMtlPixelFormatR16Uint               = MTLPixelFormat(23);
-	constexpr MTLPixelFormat kMtlPixelFormatR16Sint               = MTLPixelFormat(24);
-	constexpr MTLPixelFormat kMtlPixelFormatR16Float              = MTLPixelFormat(25);
-	constexpr MTLPixelFormat kMtlPixelFormatRG8Unorm              = MTLPixelFormat(30);
-	constexpr MTLPixelFormat kMtlPixelFormatRG8Unorm_sRGB         = MTLPixelFormat(31);
-	constexpr MTLPixelFormat kMtlPixelFormatRG8Snorm              = MTLPixelFormat(32);
-	constexpr MTLPixelFormat kMtlPixelFormatRG8Uint               = MTLPixelFormat(33);
-	constexpr MTLPixelFormat kMtlPixelFormatRG8Sint               = MTLPixelFormat(34);
-	constexpr MTLPixelFormat kMtlPixelFormatB5G6R5Unorm           = MTLPixelFormat(40);
-	constexpr MTLPixelFormat kMtlPixelFormatABGR4Unorm            = MTLPixelFormat(42);
-	constexpr MTLPixelFormat kMtlPixelFormatBGR5A1Unorm           = MTLPixelFormat(43);
-	constexpr MTLPixelFormat kMtlPixelFormatR32Uint               = MTLPixelFormat(53);
-	constexpr MTLPixelFormat kMtlPixelFormatR32Sint               = MTLPixelFormat(54);
-	constexpr MTLPixelFormat kMtlPixelFormatR32Float              = MTLPixelFormat(55);
-	constexpr MTLPixelFormat kMtlPixelFormatRG16Unorm             = MTLPixelFormat(60);
-	constexpr MTLPixelFormat kMtlPixelFormatRG16Snorm             = MTLPixelFormat(62);
-	constexpr MTLPixelFormat kMtlPixelFormatRG16Uint              = MTLPixelFormat(63);
-	constexpr MTLPixelFormat kMtlPixelFormatRG16Sint              = MTLPixelFormat(64);
-	constexpr MTLPixelFormat kMtlPixelFormatRG16Float             = MTLPixelFormat(65);
-	constexpr MTLPixelFormat kMtlPixelFormatRGBA8Unorm            = MTLPixelFormat(70);
-	constexpr MTLPixelFormat kMtlPixelFormatRGBA8Unorm_sRGB       = MTLPixelFormat(71);
-	constexpr MTLPixelFormat kMtlPixelFormatRGBA8Snorm            = MTLPixelFormat(72);
-	constexpr MTLPixelFormat kMtlPixelFormatRGBA8Uint             = MTLPixelFormat(73);
-	constexpr MTLPixelFormat kMtlPixelFormatRGBA8Sint             = MTLPixelFormat(74);
-	constexpr MTLPixelFormat kMtlPixelFormatBGRA8Unorm            = MTLPixelFormat(80);
-	constexpr MTLPixelFormat kMtlPixelFormatBGRA8Unorm_sRGB       = MTLPixelFormat(81);
-	constexpr MTLPixelFormat kMtlPixelFormatRGB10A2Unorm          = MTLPixelFormat(90);
-	constexpr MTLPixelFormat kMtlPixelFormatRG11B10Float          = MTLPixelFormat(92);
-	constexpr MTLPixelFormat kMtlPixelFormatRGB9E5Float           = MTLPixelFormat(93);
-	constexpr MTLPixelFormat kMtlPixelFormatRG32Uint              = MTLPixelFormat(103);
-	constexpr MTLPixelFormat kMtlPixelFormatRG32Sint              = MTLPixelFormat(104);
-	constexpr MTLPixelFormat kMtlPixelFormatRG32Float             = MTLPixelFormat(105);
-	constexpr MTLPixelFormat kMtlPixelFormatRGBA16Unorm           = MTLPixelFormat(110);
-	constexpr MTLPixelFormat kMtlPixelFormatRGBA16Snorm           = MTLPixelFormat(112);
-	constexpr MTLPixelFormat kMtlPixelFormatRGBA16Uint            = MTLPixelFormat(113);
-	constexpr MTLPixelFormat kMtlPixelFormatRGBA16Sint            = MTLPixelFormat(114);
-	constexpr MTLPixelFormat kMtlPixelFormatRGBA16Float           = MTLPixelFormat(115);
-	constexpr MTLPixelFormat kMtlPixelFormatRGBA32Uint            = MTLPixelFormat(123);
-	constexpr MTLPixelFormat kMtlPixelFormatRGBA32Sint            = MTLPixelFormat(124);
-	constexpr MTLPixelFormat kMtlPixelFormatRGBA32Float           = MTLPixelFormat(125);
-	constexpr MTLPixelFormat kMtlPixelFormatBC1_RGBA              = MTLPixelFormat(130);
-	constexpr MTLPixelFormat kMtlPixelFormatBC1_RGBA_sRGB         = MTLPixelFormat(131);
-	constexpr MTLPixelFormat kMtlPixelFormatBC2_RGBA              = MTLPixelFormat(132);
-	constexpr MTLPixelFormat kMtlPixelFormatBC2_RGBA_sRGB         = MTLPixelFormat(133);
-	constexpr MTLPixelFormat kMtlPixelFormatBC3_RGBA              = MTLPixelFormat(134);
-	constexpr MTLPixelFormat kMtlPixelFormatBC3_RGBA_sRGB         = MTLPixelFormat(135);
-	constexpr MTLPixelFormat kMtlPixelFormatBC4_RUnorm            = MTLPixelFormat(140);
-	constexpr MTLPixelFormat kMtlPixelFormatBC5_RGUnorm           = MTLPixelFormat(142);
-	constexpr MTLPixelFormat kMtlPixelFormatBC6H_RGBFloat         = MTLPixelFormat(150);
-	constexpr MTLPixelFormat kMtlPixelFormatBC7_RGBAUnorm         = MTLPixelFormat(152);
-	constexpr MTLPixelFormat kMtlPixelFormatBC7_RGBAUnorm_sRGB    = MTLPixelFormat(153);
-	constexpr MTLPixelFormat kMtlPixelFormatPVRTC_RGB_2BPP        = MTLPixelFormat(160);
-	constexpr MTLPixelFormat kMtlPixelFormatPVRTC_RGB_2BPP_sRGB   = MTLPixelFormat(161);
-	constexpr MTLPixelFormat kMtlPixelFormatPVRTC_RGB_4BPP        = MTLPixelFormat(162);
-	constexpr MTLPixelFormat kMtlPixelFormatPVRTC_RGB_4BPP_sRGB   = MTLPixelFormat(163);
-	constexpr MTLPixelFormat kMtlPixelFormatPVRTC_RGBA_2BPP       = MTLPixelFormat(164);
-	constexpr MTLPixelFormat kMtlPixelFormatPVRTC_RGBA_2BPP_sRGB  = MTLPixelFormat(165);
-	constexpr MTLPixelFormat kMtlPixelFormatPVRTC_RGBA_4BPP       = MTLPixelFormat(166);
-	constexpr MTLPixelFormat kMtlPixelFormatPVRTC_RGBA_4BPP_sRGB  = MTLPixelFormat(167);
-	constexpr MTLPixelFormat kMtlPixelFormatEAC_RGBA8             = MTLPixelFormat(178);
-	constexpr MTLPixelFormat kMtlPixelFormatEAC_RGBA8_sRGB        = MTLPixelFormat(179);
-	constexpr MTLPixelFormat kMtlPixelFormatETC2_RGB8             = MTLPixelFormat(180);
-	constexpr MTLPixelFormat kMtlPixelFormatETC2_RGB8_sRGB        = MTLPixelFormat(181);
-	constexpr MTLPixelFormat kMtlPixelFormatETC2_RGB8A1           = MTLPixelFormat(182);
-	constexpr MTLPixelFormat kMtlPixelFormatETC2_RGB8A1_sRGB      = MTLPixelFormat(183);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_4x4_sRGB         = MTLPixelFormat(186);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_5x4_sRGB         = MTLPixelFormat(187);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_5x5_sRGB         = MTLPixelFormat(188);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_6x5_sRGB         = MTLPixelFormat(189);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_6x6_sRGB         = MTLPixelFormat(190);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_8x5_sRGB         = MTLPixelFormat(192);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_8x6_sRGB         = MTLPixelFormat(193);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_8x8_sRGB         = MTLPixelFormat(194);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_10x5_sRGB        = MTLPixelFormat(195);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_10x6_sRGB        = MTLPixelFormat(196);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_10x8_sRGB        = MTLPixelFormat(197);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_10x10_sRGB       = MTLPixelFormat(198);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_12x10_sRGB       = MTLPixelFormat(199);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_12x12_sRGB       = MTLPixelFormat(200);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_4x4_LDR          = MTLPixelFormat(204);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_5x4_LDR          = MTLPixelFormat(205);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_5x5_LDR          = MTLPixelFormat(206);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_6x5_LDR          = MTLPixelFormat(207);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_6x6_LDR          = MTLPixelFormat(208);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_8x5_LDR          = MTLPixelFormat(210);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_8x6_LDR          = MTLPixelFormat(211);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_8x8_LDR          = MTLPixelFormat(212);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_10x5_LDR         = MTLPixelFormat(213);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_10x6_LDR         = MTLPixelFormat(214);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_10x8_LDR         = MTLPixelFormat(215);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_10x10_LDR        = MTLPixelFormat(216);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_12x10_LDR        = MTLPixelFormat(217);
-	constexpr MTLPixelFormat kMtlPixelFormatASTC_12x12_LDR        = MTLPixelFormat(218);
-	constexpr MTLPixelFormat kMtlPixelFormatDepth16Unorm          = MTLPixelFormat(250);
-	constexpr MTLPixelFormat kMtlPixelFormatDepth32Float          = MTLPixelFormat(252);
-	constexpr MTLPixelFormat kMtlPixelFormatStencil8              = MTLPixelFormat(253);
-	constexpr MTLPixelFormat kMtlPixelFormatDepth24Unorm_Stencil8 = MTLPixelFormat(255);
+	constexpr MTL::PixelFormat kMtlPixelFormatInvalid               = MTL::PixelFormat(0);
+	constexpr MTL::PixelFormat kMtlPixelFormatA8Unorm               = MTL::PixelFormat(1);
+	constexpr MTL::PixelFormat kMtlPixelFormatR8Unorm               = MTL::PixelFormat(10);
+	constexpr MTL::PixelFormat kMtlPixelFormatR8Unorm_sRGB          = MTL::PixelFormat(11);
+	constexpr MTL::PixelFormat kMtlPixelFormatR8Snorm               = MTL::PixelFormat(12);
+	constexpr MTL::PixelFormat kMtlPixelFormatR8Uint                = MTL::PixelFormat(13);
+	constexpr MTL::PixelFormat kMtlPixelFormatR8Sint                = MTL::PixelFormat(14);
+	constexpr MTL::PixelFormat kMtlPixelFormatR16Unorm              = MTL::PixelFormat(20);
+	constexpr MTL::PixelFormat kMtlPixelFormatR16Snorm              = MTL::PixelFormat(22);
+	constexpr MTL::PixelFormat kMtlPixelFormatR16Uint               = MTL::PixelFormat(23);
+	constexpr MTL::PixelFormat kMtlPixelFormatR16Sint               = MTL::PixelFormat(24);
+	constexpr MTL::PixelFormat kMtlPixelFormatR16Float              = MTL::PixelFormat(25);
+	constexpr MTL::PixelFormat kMtlPixelFormatRG8Unorm              = MTL::PixelFormat(30);
+	constexpr MTL::PixelFormat kMtlPixelFormatRG8Unorm_sRGB         = MTL::PixelFormat(31);
+	constexpr MTL::PixelFormat kMtlPixelFormatRG8Snorm              = MTL::PixelFormat(32);
+	constexpr MTL::PixelFormat kMtlPixelFormatRG8Uint               = MTL::PixelFormat(33);
+	constexpr MTL::PixelFormat kMtlPixelFormatRG8Sint               = MTL::PixelFormat(34);
+	constexpr MTL::PixelFormat kMtlPixelFormatB5G6R5Unorm           = MTL::PixelFormat(40);
+	constexpr MTL::PixelFormat kMtlPixelFormatABGR4Unorm            = MTL::PixelFormat(42);
+	constexpr MTL::PixelFormat kMtlPixelFormatBGR5A1Unorm           = MTL::PixelFormat(43);
+	constexpr MTL::PixelFormat kMtlPixelFormatR32Uint               = MTL::PixelFormat(53);
+	constexpr MTL::PixelFormat kMtlPixelFormatR32Sint               = MTL::PixelFormat(54);
+	constexpr MTL::PixelFormat kMtlPixelFormatR32Float              = MTL::PixelFormat(55);
+	constexpr MTL::PixelFormat kMtlPixelFormatRG16Unorm             = MTL::PixelFormat(60);
+	constexpr MTL::PixelFormat kMtlPixelFormatRG16Snorm             = MTL::PixelFormat(62);
+	constexpr MTL::PixelFormat kMtlPixelFormatRG16Uint              = MTL::PixelFormat(63);
+	constexpr MTL::PixelFormat kMtlPixelFormatRG16Sint              = MTL::PixelFormat(64);
+	constexpr MTL::PixelFormat kMtlPixelFormatRG16Float             = MTL::PixelFormat(65);
+	constexpr MTL::PixelFormat kMtlPixelFormatRGBA8Unorm            = MTL::PixelFormat(70);
+	constexpr MTL::PixelFormat kMtlPixelFormatRGBA8Unorm_sRGB       = MTL::PixelFormat(71);
+	constexpr MTL::PixelFormat kMtlPixelFormatRGBA8Snorm            = MTL::PixelFormat(72);
+	constexpr MTL::PixelFormat kMtlPixelFormatRGBA8Uint             = MTL::PixelFormat(73);
+	constexpr MTL::PixelFormat kMtlPixelFormatRGBA8Sint             = MTL::PixelFormat(74);
+	constexpr MTL::PixelFormat kMtlPixelFormatBGRA8Unorm            = MTL::PixelFormat(80);
+	constexpr MTL::PixelFormat kMtlPixelFormatBGRA8Unorm_sRGB       = MTL::PixelFormat(81);
+	constexpr MTL::PixelFormat kMtlPixelFormatRGB10A2Unorm          = MTL::PixelFormat(90);
+	constexpr MTL::PixelFormat kMtlPixelFormatRG11B10Float          = MTL::PixelFormat(92);
+	constexpr MTL::PixelFormat kMtlPixelFormatRGB9E5Float           = MTL::PixelFormat(93);
+	constexpr MTL::PixelFormat kMtlPixelFormatRG32Uint              = MTL::PixelFormat(103);
+	constexpr MTL::PixelFormat kMtlPixelFormatRG32Sint              = MTL::PixelFormat(104);
+	constexpr MTL::PixelFormat kMtlPixelFormatRG32Float             = MTL::PixelFormat(105);
+	constexpr MTL::PixelFormat kMtlPixelFormatRGBA16Unorm           = MTL::PixelFormat(110);
+	constexpr MTL::PixelFormat kMtlPixelFormatRGBA16Snorm           = MTL::PixelFormat(112);
+	constexpr MTL::PixelFormat kMtlPixelFormatRGBA16Uint            = MTL::PixelFormat(113);
+	constexpr MTL::PixelFormat kMtlPixelFormatRGBA16Sint            = MTL::PixelFormat(114);
+	constexpr MTL::PixelFormat kMtlPixelFormatRGBA16Float           = MTL::PixelFormat(115);
+	constexpr MTL::PixelFormat kMtlPixelFormatRGBA32Uint            = MTL::PixelFormat(123);
+	constexpr MTL::PixelFormat kMtlPixelFormatRGBA32Sint            = MTL::PixelFormat(124);
+	constexpr MTL::PixelFormat kMtlPixelFormatRGBA32Float           = MTL::PixelFormat(125);
+	constexpr MTL::PixelFormat kMtlPixelFormatBC1_RGBA              = MTL::PixelFormat(130);
+	constexpr MTL::PixelFormat kMtlPixelFormatBC1_RGBA_sRGB         = MTL::PixelFormat(131);
+	constexpr MTL::PixelFormat kMtlPixelFormatBC2_RGBA              = MTL::PixelFormat(132);
+	constexpr MTL::PixelFormat kMtlPixelFormatBC2_RGBA_sRGB         = MTL::PixelFormat(133);
+	constexpr MTL::PixelFormat kMtlPixelFormatBC3_RGBA              = MTL::PixelFormat(134);
+	constexpr MTL::PixelFormat kMtlPixelFormatBC3_RGBA_sRGB         = MTL::PixelFormat(135);
+	constexpr MTL::PixelFormat kMtlPixelFormatBC4_RUnorm            = MTL::PixelFormat(140);
+	constexpr MTL::PixelFormat kMtlPixelFormatBC5_RGUnorm           = MTL::PixelFormat(142);
+	constexpr MTL::PixelFormat kMtlPixelFormatBC6H_RGBFloat         = MTL::PixelFormat(150);
+	constexpr MTL::PixelFormat kMtlPixelFormatBC7_RGBAUnorm         = MTL::PixelFormat(152);
+	constexpr MTL::PixelFormat kMtlPixelFormatBC7_RGBAUnorm_sRGB    = MTL::PixelFormat(153);
+	constexpr MTL::PixelFormat kMtlPixelFormatPVRTC_RGB_2BPP        = MTL::PixelFormat(160);
+	constexpr MTL::PixelFormat kMtlPixelFormatPVRTC_RGB_2BPP_sRGB   = MTL::PixelFormat(161);
+	constexpr MTL::PixelFormat kMtlPixelFormatPVRTC_RGB_4BPP        = MTL::PixelFormat(162);
+	constexpr MTL::PixelFormat kMtlPixelFormatPVRTC_RGB_4BPP_sRGB   = MTL::PixelFormat(163);
+	constexpr MTL::PixelFormat kMtlPixelFormatPVRTC_RGBA_2BPP       = MTL::PixelFormat(164);
+	constexpr MTL::PixelFormat kMtlPixelFormatPVRTC_RGBA_2BPP_sRGB  = MTL::PixelFormat(165);
+	constexpr MTL::PixelFormat kMtlPixelFormatPVRTC_RGBA_4BPP       = MTL::PixelFormat(166);
+	constexpr MTL::PixelFormat kMtlPixelFormatPVRTC_RGBA_4BPP_sRGB  = MTL::PixelFormat(167);
+	constexpr MTL::PixelFormat kMtlPixelFormatEAC_RGBA8             = MTL::PixelFormat(178);
+	constexpr MTL::PixelFormat kMtlPixelFormatEAC_RGBA8_sRGB        = MTL::PixelFormat(179);
+	constexpr MTL::PixelFormat kMtlPixelFormatETC2_RGB8             = MTL::PixelFormat(180);
+	constexpr MTL::PixelFormat kMtlPixelFormatETC2_RGB8_sRGB        = MTL::PixelFormat(181);
+	constexpr MTL::PixelFormat kMtlPixelFormatETC2_RGB8A1           = MTL::PixelFormat(182);
+	constexpr MTL::PixelFormat kMtlPixelFormatETC2_RGB8A1_sRGB      = MTL::PixelFormat(183);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_4x4_sRGB         = MTL::PixelFormat(186);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_5x4_sRGB         = MTL::PixelFormat(187);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_5x5_sRGB         = MTL::PixelFormat(188);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_6x5_sRGB         = MTL::PixelFormat(189);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_6x6_sRGB         = MTL::PixelFormat(190);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_8x5_sRGB         = MTL::PixelFormat(192);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_8x6_sRGB         = MTL::PixelFormat(193);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_8x8_sRGB         = MTL::PixelFormat(194);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_10x5_sRGB        = MTL::PixelFormat(195);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_10x6_sRGB        = MTL::PixelFormat(196);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_10x8_sRGB        = MTL::PixelFormat(197);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_10x10_sRGB       = MTL::PixelFormat(198);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_12x10_sRGB       = MTL::PixelFormat(199);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_12x12_sRGB       = MTL::PixelFormat(200);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_4x4_LDR          = MTL::PixelFormat(204);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_5x4_LDR          = MTL::PixelFormat(205);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_5x5_LDR          = MTL::PixelFormat(206);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_6x5_LDR          = MTL::PixelFormat(207);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_6x6_LDR          = MTL::PixelFormat(208);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_8x5_LDR          = MTL::PixelFormat(210);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_8x6_LDR          = MTL::PixelFormat(211);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_8x8_LDR          = MTL::PixelFormat(212);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_10x5_LDR         = MTL::PixelFormat(213);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_10x6_LDR         = MTL::PixelFormat(214);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_10x8_LDR         = MTL::PixelFormat(215);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_10x10_LDR        = MTL::PixelFormat(216);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_12x10_LDR        = MTL::PixelFormat(217);
+	constexpr MTL::PixelFormat kMtlPixelFormatASTC_12x12_LDR        = MTL::PixelFormat(218);
+	constexpr MTL::PixelFormat kMtlPixelFormatDepth16Unorm          = MTL::PixelFormat(250);
+	constexpr MTL::PixelFormat kMtlPixelFormatDepth32Float          = MTL::PixelFormat(252);
+	constexpr MTL::PixelFormat kMtlPixelFormatStencil8              = MTL::PixelFormat(253);
+	constexpr MTL::PixelFormat kMtlPixelFormatDepth24Unorm_Stencil8 = MTL::PixelFormat(255);
 }
 
 // Copied from renderer_mtl.cpp
@@ -128,8 +128,8 @@ namespace
 {
     struct TextureFormatInfo
     {
-        MTLPixelFormat m_fmt;
-        MTLPixelFormat m_fmtSrgb;
+        MTL::PixelFormat m_fmt;
+        MTL::PixelFormat m_fmtSrgb;
     };
 
 	static TextureFormatInfo s_textureFormat[] =
@@ -247,33 +247,33 @@ namespace Babylon::Plugins
 
         Graphics::TextureT Get() const
         {
-            return m_ptr;
+            return m_ptr.get();
         }
 
     private:
         static void GetInfo(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, Info& info)
         {
-            if (ptr.textureType != MTLTextureType2D && ptr.textureType != MTLTextureType2DMultisample)
+            if (ptr->textureType() != MTL::TextureType2D && ptr->textureType() != MTL::TextureType2DMultisample)
             {
                 throw std::runtime_error{"Unsupported texture type"};
             }
 
-            info.Width = static_cast<uint16_t>(ptr.width);
-            info.Height = static_cast<uint16_t>(ptr.height);
-            info.MipLevels = static_cast<uint16_t>(ptr.mipmapLevelCount);
-            info.NumLayers = static_cast<uint16_t>(ptr.arrayLength);
+            info.Width = static_cast<uint16_t>(ptr->width());
+            info.Height = static_cast<uint16_t>(ptr->height());
+            info.MipLevels = static_cast<uint16_t>(ptr->mipmapLevelCount());
+            info.NumLayers = static_cast<uint16_t>(ptr->arrayLength());
 
-            if ((ptr.usage & MTLTextureUsageRenderTarget) != 0)
+            if ((ptr->usage() & MTL::TextureUsageRenderTarget) != 0)
             {
                 info.Flags |= BGFX_TEXTURE_RT;
 
-                if (ptr.sampleCount > 1)
+                if (ptr->sampleCount() > 1)
                 {
-                    info.Flags |= BGFX_TEXTURE_MSAA_SAMPLE | RenderTargetSamplesToBgfxMsaaFlag(ptr.sampleCount);
+                    info.Flags |= BGFX_TEXTURE_MSAA_SAMPLE | RenderTargetSamplesToBgfxMsaaFlag(ptr->sampleCount());
                 }
             }
 
-            const auto targetFormat = overrideFormat.has_value() ? overrideFormat.value() : ptr.pixelFormat;
+            const auto targetFormat = overrideFormat.has_value() ? overrideFormat.value() : ptr->pixelFormat();
             for (size_t i = 0; i < BX_COUNTOF(s_textureFormat); ++i)
             {
                 const auto& format = s_textureFormat[i];
@@ -291,10 +291,10 @@ namespace Babylon::Plugins
 
         void Set(Graphics::TextureT ptr)
         {
-            m_ptr = ptr;
+            m_ptr = RetainPtr(ptr);
         }
 
-        id<MTLTexture> m_ptr;
+        NS::SharedPtr<MTL::Texture> m_ptr;
     };
 }
 

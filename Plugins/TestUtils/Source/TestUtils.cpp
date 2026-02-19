@@ -5,10 +5,15 @@
 #include <bimg/decode.h>
 #include <bimg/encode.h>
 #include <bx/file.h>
-#include <functional>
-#include <sstream>
+
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Graphics/DeviceContext.h>
+#include <Babylon/Graphics/Platform.h>
+
+#include <functional>
+#include <gsl/span>
+#include <memory>
+#include <sstream>
 
 #define STRINGIZEX(x) #x
 #define STRINGIZE(x) STRINGIZEX(x)
@@ -78,11 +83,20 @@ namespace Babylon::Plugins::Internal
 
         auto callbackPtr{ std::make_shared<Napi::FunctionReference>(Napi::Persistent(callback)) };
         m_deviceContext.RequestScreenShot([this, callbackPtr{ std::move(callbackPtr) }](std::vector<uint8_t> array) {
-            m_runtime.Dispatch([callbackPtr{ std::move(callbackPtr) }, array{ std::move(array) }](Napi::Env env) {
-                auto arrayBuffer{ Napi::ArrayBuffer::New(env, const_cast<uint8_t*>(array.data()), array.size()) };
-                auto typedArray{ Napi::Uint8Array::New(env, array.size(), arrayBuffer, 0) };
+            m_runtime.Dispatch([callbackPtr{ std::move(callbackPtr) }, array{ std::move(array) }](Napi::Env env) mutable {
+                auto span = gsl::span<uint8_t>{array};
+                auto arrayBuffer{ Napi::ArrayBuffer::New(env, span.data(), span.size(), [array = std::move(array)](Napi::Env, void*) {}) };
+                auto typedArray{ Napi::Uint8Array::New(env, span.size(), arrayBuffer, 0) };
                 callbackPtr->Value().Call({ typedArray });
-                });
             });
+        });
+    }
+}
+
+namespace Babylon::Plugins::TestUtils
+{
+    void BABYLON_API Initialize(Napi::Env env, Graphics::WindowT window)
+    {
+        Internal::TestUtils::CreateInstance(env, window);
     }
 }

@@ -1,8 +1,8 @@
 #pragma once
 
-#import <MetalKit/MTKView.h>
+#include <Metal/Metal.hpp>
 
 namespace Babylon::Graphics
 {
-    using WindowT = MTKView*;
+    using WindowT = CA::MetalLayer*;
 }

@@ -53,6 +53,12 @@ if(TARGET webp)
     install_lib(webp)
 endif()
 
+## metal-cpp
+if(APPLE)
+    install_lib(metal-cpp)
+    install_include(metal-cpp)
+endif()
+
 ## SPIRV-Cross
 install_lib(spirv-cross-core)
 if(TARGET spirv-cross-glsl)
@@ -65,6 +71,9 @@ if(TARGET spirv-cross-hlsl)
     install_lib(spirv-cross-hlsl)
 endif()
 
+## UrlLib
+install_lib(UrlLib)
+
 ## XR
 if(TARGET openxr_loader)
     install_lib(openxr_loader)
@@ -74,37 +83,24 @@ if(TARGET xr)
     install_lib(xr)
 endif()
 
-## UrlLib
-install_lib(UrlLib)
-
 # ----------------
 # Core
 # ----------------
-
-install_lib(Foundation)
-install_include(Foundation)
-
-install_lib(JsRuntime)
-install_include(JsRuntime)
-
-# Note libs are in the `Graphics` target but includes are in `GraphicsDevice` target
-install_lib(Graphics)
-install_include(GraphicsDevice)
 
 if(TARGET AppRuntime)
     install_lib(AppRuntime)
     install_include(AppRuntime)
 endif()
 
-if(TARGET Scheduling)
-    install_lib(Scheduling)
-    install_include(Scheduling)
-endif()
+install_lib(Foundation)
+install_include(Foundation)
 
-if(TARGET ScriptLoader)
-    install_lib(ScriptLoader)
-    install_include(ScriptLoader)
-endif()
+# Note libs are in the `Graphics` target but includes are in `GraphicsDevice` target
+install_lib(Graphics)
+install_include(GraphicsDevice)
+
+install_lib(JsRuntime)
+install_include(JsRuntime)
 
 install_lib(napi)
 install_include(napi)
@@ -128,6 +124,16 @@ endif()
 install_lib(napi-extensions)
 install_include(napi-extensions)
 
+if(TARGET Scheduling)
+    install_lib(Scheduling)
+    install_include(Scheduling)
+endif()
+
+if(TARGET ScriptLoader)
+    install_lib(ScriptLoader)
+    install_include(ScriptLoader)
+endif()
+
 # ----------------
 # Plugins
 # ----------------
@@ -145,6 +151,11 @@ endif()
 if(TARGET NativeCapture)
     install_lib(NativeCapture)
     install_include(NativeCapture)
+endif()
+
+if(TARGET NativeEncoding)
+    install_lib(NativeEncoding)
+    install_include(NativeEncoding)
 endif()
 
 if(TARGET NativeEngine)
@@ -172,11 +183,6 @@ if(TARGET NativeXr)
     install_include(NativeXr)
 endif()
 
-if(TARGET NativeEncoding)
-    install_lib(NativeEncoding)
-    install_include(NativeEncoding)
-endif()
-
 if(TARGET ShaderCache)
     install_lib(ShaderCache)
     install_include(ShaderCache)
@@ -194,6 +200,16 @@ endif()
 # Polyfills
 # ----------------
 
+if(TARGET AbortController)
+    install_lib(AbortController)
+    install_include(AbortController)
+endif()
+
+if(TARGET Blob)
+    install_lib(Blob)
+    install_include(Blob)
+endif()
+
 if(TARGET Canvas)
     install_lib(Canvas)
     install_include(Canvas)
@@ -204,6 +220,21 @@ if(TARGET Console)
     install_include(Console)
 endif()
 
+if(TARGET Performance)
+    install_lib(Performance)
+    install_include(Performance)
+endif()
+
+if(TARGET URL)
+    install_lib(URL)
+    install_include(URL)
+endif()
+
+if(TARGET WebSocket)
+    install_lib(WebSocket)
+    install_include(WebSocket)
+endif()
+
 if(TARGET Window)
     install_lib(Window)
     install_include(Window)
@@ -212,29 +243,4 @@ endif()
 if(TARGET XMLHttpRequest)
     install_lib(XMLHttpRequest)
     install_include(XMLHttpRequest)
-endif()
-
-if(TARGET Blob)
-    install_lib(Blob)
-    install_include(Blob)
-endif()
-
-if(TARGET URL)
-    install_lib(URL)
-    install_include(URL)
-endif()
-
-if(TARGET AbortController)
-    install_lib(AbortController)
-    install_include(AbortController)
-endif()
-
-if(TARGET WebSocket)
-    install_lib(WebSocket)
-    install_include(WebSocket)
-endif()
-
-if(TARGET Performance)
-    install_lib(Performance)
-    install_include(Performance)
 endif()

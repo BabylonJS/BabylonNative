@@ -45,9 +45,7 @@ add_library(xrInternal INTERFACE)
 target_compile_definitions(xr PRIVATE _CRT_SECURE_NO_WARNINGS)
 
 if (APPLE)
-    set_target_properties(xr PROPERTIES
-        XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
-    )
+    enable_objc_arc(xr)
     set_property(TARGET xr PROPERTY UNITY_BUILD false)
 endif()
 

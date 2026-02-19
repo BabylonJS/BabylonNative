@@ -8,8 +8,9 @@ namespace Babylon::Graphics
     PlatformInfo DeviceImpl::GetPlatformInfo() const
     {
         auto internalData = bgfx::getInternalData();
-        id<MTLDevice> device = (id<MTLDevice>)internalData->context;
-        id<MTLCommandQueue> commandQueue = (id<MTLCommandQueue>)internalData->commandQueue;
-        return {device, commandQueue};
+        return {
+            reinterpret_cast<MTL::Device*>(internalData->context),
+            reinterpret_cast<MTL::CommandQueue*>(internalData->commandQueue),
+        };
     }
 }

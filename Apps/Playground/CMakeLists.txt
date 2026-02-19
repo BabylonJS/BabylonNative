@@ -40,7 +40,6 @@ if(APPLE)
             "AppleShared/GestureRecognizer.swift")
         set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
         set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "ReferenceImages")
-        set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE NativeCamera)
     elseif(VISIONOS)
         set(PLIST_FILE
             "${CMAKE_CURRENT_LIST_DIR}/visionOS/Info.plist")
@@ -55,10 +54,9 @@ if(APPLE)
     else()
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
-        set(ADDITIONAL_LIBRARIES ${ADDITIONAL_LIBRARIES} PRIVATE NativeCamera)
         set(RESOURCE_FILES ${STORYBOARD})
         set(SOURCES ${SOURCES}
-            "macOS/main.m"
+            "macOS/main.mm"
             "macOS/AppDelegate.m"
             "macOS/AppDelegate.h"
             "macOS/ViewController.mm"
@@ -102,7 +100,6 @@ elseif(WIN32)
         "Win32/Resource.h"
         "Win32/small.ico"
         "Win32/targetver.h")
-    set(ADDITIONAL_LIBRARIES PRIVATE NativeCamera)
 endif()
 
 if(WIN32)
@@ -137,8 +134,8 @@ target_link_libraries(Playground
     PRIVATE NativeInput
     PRIVATE NativeOptimizations
     PRIVATE NativeTracing
-    PRIVATE ShaderCache
     PRIVATE ScriptLoader
+    PRIVATE ShaderCache
     PRIVATE TestUtils
     PRIVATE Window
     PRIVATE XMLHttpRequest
@@ -163,7 +160,6 @@ if(APPLE)
         set_target_properties(Playground PROPERTIES
             MACOSX_BUNDLE true
             MACOSX_BUNDLE_INFO_PLIST "${PLIST_FILE}"
-            XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
             RESOURCE "${RESOURCE_FILES}"
 
             XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET ${DEPLOYMENT_TARGET}
@@ -187,7 +183,6 @@ if(APPLE)
         set_target_properties(Playground PROPERTIES
             MACOSX_BUNDLE true
             MACOSX_BUNDLE_INFO_PLIST "${PLIST_FILE}"
-            XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
             RESOURCE "${RESOURCE_FILES}"
 
             XCODE_ATTRIBUTE_XROS_DEPLOYMENT_TARGET ${DEPLOYMENT_TARGET}
@@ -214,10 +209,10 @@ if(APPLE)
         set_target_properties(Playground PROPERTIES
             MACOSX_BUNDLE true
             MACOSX_BUNDLE_INFO_PLIST "${PLIST_FILE}"
-            XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC YES
             RESOURCE "${RESOURCE_FILES}"
             FOLDER "Playground")
     endif()
+    enable_objc_arc(Playground)
     set_property(TARGET Playground PROPERTY UNITY_BUILD false)
     set_property(TARGET Playground PROPERTY XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED YES)
 endif()
@@ -252,5 +247,3 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${REFERENCE_IMAGES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Playground)
-
-set_property(TARGET Playground PROPERTY XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED YES)

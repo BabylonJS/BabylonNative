@@ -54,14 +54,18 @@ FetchContent_Declare(ios-cmake
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 06d4420e92f9555b5356071444cd13767d3e4eb8)
-FetchContent_Declare(SPIRV-Cross
-    GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 6277baf62877f6b1a66a5801da94f0c9276991dc
-    EXCLUDE_FROM_ALL)
+    GIT_TAG fec7975b4e19f7eda6507f1f2a7253ac38fd971c)
 FetchContent_Declare(libwebp
     GIT_REPOSITORY https://github.com/webmproject/libwebp.git
     GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c
+    EXCLUDE_FROM_ALL)
+FetchContent_Declare(metal-cpp
+    GIT_REPOSITORY https://github.com/bkaradzic/metal-cpp.git
+    GIT_TAG metal-cpp_26
+    EXCLUDE_FROM_ALL)
+FetchContent_Declare(SPIRV-Cross
+    GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
+    GIT_TAG 6277baf62877f6b1a66a5801da94f0c9276991dc
     EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------
@@ -221,9 +225,6 @@ if(MSVC)
 endif()
 
 if(APPLE)
-    # Without this option on azure pipelines, there is a mismatch with math.h giving a lot of undefined functions on macOS.
-    # Only enabled for Apple as there is no issue for Windows.
-    set(CMAKE_NO_SYSTEM_FROM_IMPORTED TRUE)
     # Create scheme for installation and other targets
     set(CMAKE_XCODE_GENERATE_SCHEME TRUE)
 endif()

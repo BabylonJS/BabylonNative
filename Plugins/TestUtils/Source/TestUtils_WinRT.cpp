@@ -1,13 +1,18 @@
-#include "../TestUtilsImplData.h"
+#include "TestUtils.h"
+#include <winrt/Windows.ApplicationModel.Core.h>
 #include <winrt/windows.storage.h>
 
 namespace Babylon::Plugins::Internal
 {
     void TestUtils::Exit(const Napi::CallbackInfo& info)
     {
-        const int32_t exitCode = info[0].As<Napi::Number>().Int32Value();
-        // ceguille: I didn't find a better way to do it for UWP
-        exit(exitCode);
+        auto exitCode = info[0].As<Napi::Number>().Int32Value();
+        if (exitCode != 0)
+        {
+            std::quick_exit(exitCode);
+        }
+
+        winrt::Windows::ApplicationModel::Core::CoreApplication::Exit();
     }
 
     void TestUtils::UpdateSize(const Napi::CallbackInfo& /*info*/)
@@ -22,14 +27,5 @@ namespace Babylon::Plugins::Internal
     {
         auto localFolder = winrt::Windows::Storage::ApplicationData::Current().LocalFolder();
         return Napi::Value::From(info.Env(), winrt::to_string(localFolder.Path().data()));
-    }
-}
-
-namespace Babylon::Plugins::TestUtils
-{
-    void BABYLON_API Initialize(Napi::Env env, Graphics::WindowT window)
-    {
-        auto implData{std::make_shared<Internal::TestUtils::ImplData>(window)};
-        Internal::TestUtils::CreateInstance(env, implData);
     }
 }
