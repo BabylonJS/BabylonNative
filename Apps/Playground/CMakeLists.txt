@@ -134,6 +134,7 @@ target_link_libraries(Playground
     PRIVATE NativeInput
     PRIVATE NativeOptimizations
     PRIVATE NativeTracing
+    PRIVATE Performance
     PRIVATE ScriptLoader
     PRIVATE ShaderCache
     PRIVATE TestUtils
