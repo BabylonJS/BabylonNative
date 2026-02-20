@@ -6,6 +6,12 @@
 
 namespace Babylon::Polyfills::Internal
 {
+    // Plain loop instead of std::transform: MSVC 2022's STL leaks the int
+    // return type of std::tolower through the transform template, triggering
+    // C4244 (int-to-char truncation) inside <algorithm> even when the lambda
+    // explicitly narrows.  The unsigned char cast is the canonical way to call
+    // std::tolower on a char — tolower(int) is UB for negative values and
+    // char is signed on MSVC/x86.
     inline NVGlineCap StringToLineCap(Napi::Env, const std::string& lineCapString)
     {
         std::string str = lineCapString;
