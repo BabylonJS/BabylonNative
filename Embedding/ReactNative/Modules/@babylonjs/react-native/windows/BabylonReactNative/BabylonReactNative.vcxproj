@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Note: CppWinRT NuGet dependency should be resolved for the solution not the individual project -->
+  <Import Project="$(SolutionDir)\packages\Microsoft.Windows.CppWinRT.2.0.230706.1\build\native\Microsoft.Windows.CppWinRT.props" Condition="Exists('$(SolutionDir)\packages\Microsoft.Windows.CppWinRT.2.0.230706.1\build\native\Microsoft.Windows.CppWinRT.props')" />
+  <PropertyGroup Label="Globals">
+    <CppWinRTOptimized>true</CppWinRTOptimized>
+    <CppWinRTRootNamespaceAutoMerge>true</CppWinRTRootNamespaceAutoMerge>
+    <CppWinRTGenerateWindowsMetadata>true</CppWinRTGenerateWindowsMetadata>
+    <MinimalCoreWin>true</MinimalCoreWin>
+    <ProjectGuid>{0362370A-ED67-41E5-85FC-394F27993115}</ProjectGuid>
+    <ProjectName>BabylonReactNative</ProjectName>
+    <RootNamespace>BabylonReactNative</RootNamespace>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <MinimumVisualStudioVersion>16.0</MinimumVisualStudioVersion>
+    <AppContainerApplication>true</AppContainerApplication>
+    <ApplicationType>Windows Store</ApplicationType>
+    <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
+ <WindowsTargetPlatformVersion Condition=" '$(WindowsTargetPlatformVersion)' == '' ">10.0.19041.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion>10.0.18362.0</WindowsTargetPlatformMinVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="ReactNativeWindowsProps">
+    <!-- First try and resolve react-native-windows package at a relative location when installing the @babylonjs/react-native package in your project -->
+    <ReactNativeWindowsDir Condition="'$(ReactNativeWindowsDir)' == '' And Exists('$(ProjectDir)..\..\..\..\..\node_modules\react-native-windows\package.json')">$(ProjectDir)..\..\..\..\..\node_modules\react-native-windows\</ReactNativeWindowsDir>
+    <!-- Else try and resolve react-native-windows package in the Apps\Playground\node_modules folder relative to the BabylonNative.vcxproj location in the github repo -->
+    <ReactNativeWindowsDir Condition="'$(ReactNativeWindowsDir)' == '' And Exists('$(SolutionDir)..\node_modules\react-native-windows\package.json')">$(SolutionDir)..\node_modules\react-native-windows\</ReactNativeWindowsDir>
+    <!-- If all else failes, try and resolve react-native-windows package using the Playground app node_modules -->
+    <ReactNativeWindowsDir Condition="'$(ReactNativeWindowsDir)' == '' And Exists('$(ProjectDir)..\..\..\..\..\Apps\Playground\node_modules\react-native-windows\package.json')">$(ProjectDir)..\..\..\..\..\Apps\Playground\node_modules\react-native-windows\</ReactNativeWindowsDir>
+  </PropertyGroup>
+  <PropertyGroup Label="BabylonReactNativeProps">
+    <BabylonReactNativeDir Condition="'$(BabylonReactNativeDir)' == '' And Exists('$(ProjectDir)\..\..\..\react-native\package.json')">$(ProjectDir)..\..\..\react-native\</BabylonReactNativeDir>
+    <BabylonReactNativeDir Condition="'$(BabylonReactNativeDir)' == '' And Exists('$(ProjectDir)\..\..\package.json')">$(ProjectDir)..\..\</BabylonReactNativeDir>
+    <BabylonReactNativeDir Condition="'$(BabylonReactNativeDir)' == ''">$(ProjectDir)..\..\</BabylonReactNativeDir>
+    <BabylonNativeBuildDir Condition="'$(Platform)'=='x64'">$(BabylonReactNativeDir)Build\uwp_x64\</BabylonNativeBuildDir>
+    <BabylonNativeBuildDir Condition="'$(Platform)'=='Win32'">$(BabylonReactNativeDir)Build\uwp_x86\</BabylonNativeBuildDir>
+    <BabylonNativeBuildDir Condition="'$(Platform)'=='ARM'">$(BabylonReactNativeDir)Build\uwp_arm\</BabylonNativeBuildDir>
+    <BabylonNativeBuildDir Condition="'$(Platform)'=='ARM64'">$(BabylonReactNativeDir)Build\uwp_arm64\</BabylonNativeBuildDir>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|ARM">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|ARM64">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM">
+      <Configuration>Release</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset Condition="'$(BabylonReactNativeToolset)'!=''">$(BabylonReactNativeToolset)</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <GenerateManifest>false</GenerateManifest>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="PropertySheet.props" />
+  </ImportGroup>
+  <ImportGroup Label="ReactNativeWindowsPropertySheets">
+    <Import Project="$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppLib.props" Condition="Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppLib.props')" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
+      <WarningLevel>Level4</WarningLevel>
+      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>
+      <DisableSpecificWarnings>
+      </DisableSpecificWarnings>
+      <PreprocessorDefinitions>_WINRT_DLL;WIN32_LEAN_AND_MEAN;WINRT_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalUsingDirectories>$(WindowsSDK_WindowsMetadata);$(AdditionalUsingDirectories)</AdditionalUsingDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateWindowsMetadata>true</GenerateWindowsMetadata>
+      <ModuleDefinitionFile>BabylonReactNative.def</ModuleDefinitionFile>
+      <!-- Library directories when building in repo -->
+      <!-- Note: you can add BabylonNative component build folders here as needed -->
+      <AdditionalLibraryDirectories>
+        $(ReactNativeWindowsDir)_A;
+        $(ProjectDir)_B;
+        $(ProjectDir)\..\..\..\react-native_C;
+        $(BabylonNativeDir)_D;
+        $(BabylonReactNativeDir)_E;
+        $(BabylonNativeBuildDir)shared\babylonnative\Repo\Core\Graphics\$(Configuration);
+        $(BabylonNativeBuildDir)shared\babylonnative\Repo\Dependencies\xr\$(Configuration);
+        $(BabylonNativeBuildDir)shared\babylonnative\Repo\Plugins\NativeCamera\$(Configuration);
+        $(BabylonNativeBuildDir)shared\babylonnative\Repo\Plugins\NativeCapture\$(Configuration);
+        $(BabylonNativeBuildDir)shared\babylonnative\Repo\Plugins\NativeEngine\$(Configuration);
+        $(BabylonNativeBuildDir)shared\babylonnative\Repo\Plugins\NativeInput\$(Configuration);
+        $(BabylonNativeBuildDir)shared\babylonnative\Repo\Plugins\NativeOptimizations\$(Configuration);
+        $(BabylonNativeBuildDir)shared\babylonnative\Repo\Plugins\NativeTracing\$(Configuration);
+        $(BabylonNativeBuildDir)shared\babylonnative\Repo\Plugins\ShaderCache\$(Configuration);
+        $(BabylonNativeBuildDir)shared\babylonnative\Repo\Plugins\ShaderCompiler\$(Configuration);
+        $(BabylonNativeBuildDir)shared\babylonnative\Repo\Polyfills\Window\$(Configuration);
+        $(BabylonNativeBuildDir)shared\babylonnative\Repo\Polyfills\Canvas\$(Configuration);
+        $(BabylonNativeBuildDir)jsi\$(Configuration);
+        $(BabylonNativeBuildDir)$(Configuration);
+        $(BabylonNativeBuildDir)_deps\arcana.cpp-build\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Polyfills\Scheduling\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Core\JsRuntime\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Core\Node-API-JSI\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Polyfills\XMLHttpRequest\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\jsruntimehost-build\Core\Foundation\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\urllib-build\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\libwebp-build\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\bgfx.cmake-build\cmake\bgfx\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\bgfx.cmake-build\cmake\bx\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\bgfx.cmake-build\cmake\bimg\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\glslang-build\glslang\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\glslang-build\glslang\OSDependent\Windows\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\glslang-build\OGLCompilersDLL\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\glslang-build\SPIRV\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\spirv-cross-build\$(Configuration);
+        $(BabylonNativeBuildDir)_deps\openxr-sdk-build\src\loader\$(Configuration);
+        %(AdditionalLibraryDirectories);
+      </AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
+    <ClCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- Include project headers when building in the repo -->
+      <AdditionalIncludeDirectories Condition="Exists('$(BabylonReactNativeDir)shared')">$(BabylonReactNativeDir)shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <!-- Debug Libraries -->
+      <AdditionalDependencies Condition="'$(BABYLON_NATIVE_PLUGIN_NATIVECAMERA)' != '0'">
+        NativeCamera.lib;
+      </AdditionalDependencies>
+      <AdditionalDependencies>
+        arcana.lib;
+        BabylonNative.lib;
+        bgfx.lib;
+        bimg.lib;
+        bimg_encode.lib;
+        bimg_decode.lib;
+        minz.lib;
+        bx.lib;
+        Canvas.lib;
+        GenericCodeGend.lib;
+        glslangd.lib;
+        glslang-default-resource-limitsd.lib;
+        Graphics.lib;
+        jsi.lib;
+        JsRuntime.lib;
+        MachineIndependentd.lib;
+        napi.lib;
+        NativeCapture.lib;
+        NativeEngine.lib;
+        NativeInput.lib;
+        NativeOptimizations.lib;
+        NativeTracing.lib;
+        ShaderCache.lib;
+        ShaderCompiler.lib;
+        Foundationd.lib;
+        OGLCompilerd.lib;
+        OSDependentd.lib;
+        spirv-cross-cored.lib;
+        spirv-cross-hlsld.lib;
+        SPIRVd.lib;
+        UrlLib.lib;
+        Window.lib;
+        libwebp.lib;
+        libsharpyuv.lib;
+        Scheduling.lib;
+        XMLHttpRequest.lib;
+        WindowsApp.lib;
+        %(AdditionalDependencies);
+      </AdditionalDependencies>
+      <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
+    <ClCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories Condition="Exists('$(BabylonReactNativeDir)shared')">$(BabylonReactNativeDir)shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <!-- Release Libraries -->
+      <AdditionalDependencies Condition="'$(BABYLON_NATIVE_PLUGIN_NATIVECAMERA)' != '0'">
+        NativeCamera.lib;
+      </AdditionalDependencies>
+      <AdditionalDependencies>
+        arcana.lib;
+        BabylonNative.lib;
+        bgfx.lib;
+        bimg.lib;
+        bimg_encode.lib;
+        bimg_decode.lib;
+        minz.lib;
+        bx.lib;
+        Canvas.lib;
+        GenericCodeGen.lib;
+        glslang.lib;
+        glslang-default-resource-limits.lib;
+        Graphics.lib;
+        jsi.lib;
+        JsRuntime.lib;
+        MachineIndependent.lib;
+        napi.lib;
+        NativeCapture.lib;
+        NativeEngine.lib;
+        NativeInput.lib;
+        NativeOptimizations.lib;
+        NativeTracing.lib;
+        ShaderCache.lib;
+        ShaderCompiler.lib;
+        Foundation.lib;
+        OGLCompiler.lib;
+        OSDependent.lib;
+        spirv-cross-core.lib;
+        spirv-cross-hlsl.lib;
+        SPIRV.lib;
+        UrlLib.lib;
+        Window.lib;
+        Scheduling.lib;
+        XMLHttpRequest.lib;
+        WindowsApp.lib;
+        libwebp.lib;
+        libsharpyuv.lib;
+        %(AdditionalDependencies);
+      </AdditionalDependencies>
+      <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="BabylonModule.h" />
+    <ClInclude Include="EngineView.h" />
+    <ClInclude Include="EngineViewManager.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="ReactPackageProvider.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="BabylonModule.cpp" />
+    <ClCompile Include="EngineView.cpp" />
+    <ClCompile Include="EngineViewManager.cpp" />
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
+    <ClCompile Include="ReactPackageProvider.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Midl Include="EngineView.idl" />
+    <Midl Include="ReactPackageProvider.idl" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="BabylonReactNative.def" />
+    <None Include="packages.config" />
+    <None Include="PropertySheet.props" />
+    <Text Include="readme.txt">
+      <DeploymentContent>false</DeploymentContent>
+    </Text>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ReactNativeWindowsTargets">
+    <Import Project="$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppLib.targets" Condition="Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppLib.targets')" />
+  </ImportGroup>
+  <Target Name="BabylonNativeBuild" BeforeTargets="PrepareForBuild">
+    <Exec Command='cmake --version' />
+    <!-- Pass the same CppWinRT NuGet package include path used by this vcxproj so cmake-built
+         BabylonNative targets compile with the same C++/WinRT version.
+         $(CppWinRTToolkitDir) is set by packages.config-restored Microsoft.Windows.CppWinRT.props,
+         which nuget restore runs BEFORE this build step, so the path is guaranteed to exist.
+         Using $(NuGetPackageRoot) was unreliable because PackageReference auto-restore for this
+         project runs AFTER PrepareForBuild, i.e. after cmake has already configured. -->
+    <Exec Command='cmake ^
+    -G"Visual Studio 17 2022" ^
+    -B$(ProjectDir)..\..\..\react-native\Build\uwp_$(Platform) ^
+    -DCMAKE_SYSTEM_NAME=WindowsStore ^
+    -DCMAKE_SYSTEM_VERSION=$(TargetPlatformVersion) ^
+    -A$(Platform) ^
+    -DJSRUNTIMEHOST_CORE_APPRUNTIME=0 ^
+    -DCPPWINRT_INCLUDE_PATH="$(CppWinRTToolkitDir)build\native\include" ^
+    -S"$(ProjectDir).."' />
+    <Exec Command='"MSBuild.exe" ^
+      "$(ProjectDir)\..\..\..\react-native\Build\uwp_$(Platform)\ReactNativeBabylon.sln" ^
+      /p:Configuration=$(Configuration) ^
+      /p:WindowsTargetPlatformVersion=$(WindowsTargetPlatformVersion) ^
+      /p:Platform=$(Platform)' />
+  </Target>
+  <Target Name="EnsureReactNativeWindowsTargets" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references targets in your node_modules\react-native folder that are missing. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppLib.props')" Text="$([System.String]::Format('$(ErrorText)', '$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppLib.props'))" />
+    <Error Condition="!Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppLib.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppLib.targets'))" />
+  </Target>
+  <Target Name="EnsureBabylonReactNative" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project is missing the @babylonjs/react-native npm package. Please install this @babylonjs/react-native with npm.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(BabylonReactNativeDir)')" Text="$(ErrorText)" />
+  </Target>
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(SolutionDir)\packages\Microsoft.Windows.CppWinRT.2.0.230706.1\build\native\Microsoft.Windows.CppWinRT.targets" Condition="Exists('$(SolutionDir)\packages\Microsoft.Windows.CppWinRT.2.0.230706.1\build\native\Microsoft.Windows.CppWinRT.targets')" />
+  </ImportGroup>
+</Project>

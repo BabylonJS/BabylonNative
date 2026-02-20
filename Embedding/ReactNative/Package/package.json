@@ -7,5 +7,8 @@
     "gulp": "^4.0.2",
     "gulp-rename": "2.0.0",
     "shelljs": "^0.8.4"
+  },
+  "dependencies": {
+    "unzipper": "^0.12.3"
   }
 }

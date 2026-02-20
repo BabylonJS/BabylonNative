@@ -35,9 +35,13 @@ Note: Official support for React Native frameworks, like Expo, is not provided b
 
 ## Contributing
 
-This quick overview will help you get started developing in the Babylon React Native repository. We support development on Windows and MacOS, but assume the use of [PowerShell](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell) in the instructions below (unless otherwise noted).
+This quick overview will help you get started developing in the Babylon React Native repository. We support development on Windows and macOS, but assume the use of [PowerShell](https://docs.microsoft.com/en-us/powershell/scripting/install/installing-powershell) in the instructions below (unless otherwise noted).
 
 If you are interested in making contributions, be sure to also review [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Using BabylonReactNative
+
+The following section will describe how to build locally a package and how to develop BabylonReactNative. If your intent is to use the plugin, follow instructions in the NPM [BabylonReactNative readme](Modules/@babylonjs/react-native/README.md).
 
 ### **Preparing a new Repo**
 
@@ -49,27 +53,32 @@ Step 1 for all development environments and targets is to clone the repo. Use a 
 git clone https://github.com/BabylonJS/BabylonReactNative
 ```
 
-Then, a React Native target must be chosen. For a React-Native 0.64 build:
+Run setup_dev.js script :
 
 ```
-cd Apps/Playground
-npm ci
-npm run select 0.64
+cd Package
+node setup_dev.js
 ```
-Selecting the React Native install will also install all NPM packages and its dependencies for the Playground sample/test app.
-
-> :warning: When setting up the Playground app for UWP, the `npm run select` command must be run with Administrator rights, because of the symbolic links. Not doing so will result in this build error will popup when trying to run the Playground:
-```
- The path cannot be traversed because it contains an untrusted mount point.
- ```
 
 This will also automatically do the following to prepare your repo for development:
 
 - Update git submodules to fetch Babylon Native and its dependencies
-- [MacOS only] Run CMake to generate the iOS XCode project for Babylon React Native
-- [MacOS only] Run `pod install` to install cocoa pod depdendencies
+- [macOS only] Run CMake to generate the iOS Xcode project for Babylon React Native
+- [macOS only] Run `pod install` to install cocoa pod dependencies
 
-After merging upstream changes in the future, you will need to either run `npm install` again, or run individual commands for the above operations (e.g. `git submodule update --init --submodule` / `npm run iosCMake` / `pod install`).
+Finally run Playground Test App using:
+
+```
+cd Apps/Playground
+npm run ios
+```
+
+or 
+
+```
+cd Apps/Playground
+npm run android
+```
 
 ### **Configuring a Mac Dev Environment**
 
@@ -112,7 +121,7 @@ With Ubuntu, you can install needed packages by this command:
 sudo apt-get install adb ninja-build openjdk-14-jdk android-sdk
 ```
 
-Update PATH with this commands:
+Update PATH with these commands:
 
 ```
 export ANDROID_HOME=$HOME/Android/Sdk
@@ -123,37 +132,12 @@ export PATH=$PATH:$ANDROID_HOME/platform-tools
 ```
 
 ### **Troubleshooting**
-- If the Metro server is not started with `npm run android` , you can start it manually by running `npm run start` in a terminal.
+- If the Metro server is not started with `npm run android`, you can start it manually by running `npm run start` in a terminal.
 - Android Studio is the tool of choice for downloading the various versions of NDK.
 - If something goes wrong with the build `npm run android --verbose` can give some hints.
 - If the emulator is not launched by the build, you can run `~/Android/Sdk/emulator/emulator @name_of_your_image`.
-- If `ld: library not found for -lBabylonNative` appears when building for iOS, this is because of CMake 3.26+. use 3.24 or remove `CONFIGURATION_BUILD_DIR`entries for every `.pbxproj` file.
 - For other emulator issues, follow the [instructions](https://github.com/BabylonJS/BabylonNative/blob/master/Documentation/AndroidEmulator.md) from Babylon Native documentation.
 - Refer to the [Babylon Native documentation](https://github.com/BabylonJS/BabylonNative/tree/master/Documentation#babylon-native-documention) for additional information that may help troubleshoot issues.
-
-### **Building and Running the Playground App**
-
-On either Mac or Windows, NPM is used to build and run the Playground sample/test app from the command line. Open a command prompt at the root of the BabylonReactNative repo if you don't have one already open.
-
-#### Android
-
-```
-cd Apps/Playground/Playground
-npm run android
-```
-
-After having run the above commands, you can also open `Apps/Playground/android` in Android Studio and run the app from there.
-
-#### iOS
-
-iOS can only be built on a Mac.
-
-```
-cd Apps/Playground/Playground
-npm run ios
-```
-
-After having run the above commands, you can also open `Apps/Playground/ios/Playground.xcworkspace` in XCode and run the app from there.
 
 #### Universal Windows Platform (UWP)
 
@@ -185,90 +169,40 @@ When making local changes, the following manual test steps should be performed w
 
 ### **Building the NPM Package**
 
-If you want to test using a local build of the NPM package with your own React Native app, you can do so with a `gulp` command on a Mac (this requires a Mac as it builds binaries for both iOS and Android).
+Every change for a Pull Request will trigger the build of the NPM package. The artifact is named `BabylonReactNative` and can be found in the Artifact section of the corresponding GitHub Action.
+
+> :warning: The zip contains a Tarball Gzipped `.tgz` that is automatically decompressed on macOS. When installing that directory ( `npm install /path/to/unzipped/untarred/package` ) npm creates symlinks that are not supported by the build system. Installing the .tgz instead of its decompressed version works correctly.
+
+To get a `.tgz` that can be shared or published, follow these steps:
+
+Prepare tools:
 
 ```
 cd Package
 npm install
-gulp pack
 ```
 
-The NPM package will be built into the `Package` directory where the `gulp` command was run. Once the local NPM package has been built, it can be installed into a project using `npm`.
-
+Prepare package dependencies
 ```
-cd <directory of your React Native app>
-npm install <root directory of your BabylonReactNative clone>/Package/Assembled/babylonjs-react-native-0.0.1.tgz
-```
-
-If you wish to test the locally-built NPM packages with the apps in the `PackageTest` directory, before running `npm install` be sure to run:
-
-```
-cd Apps\PackageTest\<package test app version>
-
-npm uninstall @babylon/react-native
-
-# If you're also updating the react-native-windows package:
-npm uninstall @bablyon/react-native-windows
+cd ../Modules/@babylonjs/react-native
+export BABYLON_NO_CMAKE_POSTINSTALL=1
+npm install
 ```
 
-This will allow the local package dependencies to update without the package-lock.json file worrying about new content without a new version number. You can then run the above command to install the locally-built NPM modules located in `Package/Assembled`.
-
-### **Debugging in Context**
-
-If you want to consume `@babylonjs/react-native` as source in your React Native app (for debugging or for iterating on the code when making a contribution), you can install the package source directory as an npm package.
+Build BabylonNative source tree, build TypeScript copy mandatory files:
 
 ```
-cd <directory of your React Native app>
-npm install <root directory of your BabylonReactNative clone>/Modules/@babylonjs/react-native
-cd ios
-pod install
+cd Package
+npx gulp buildAssembled
 ```
 
-This will create a symbolic link in your `node_modules` directory to the `@babylonjs/react-native` source directory. However, this also requires a custom `metro.config.js` as the Metro bundler does not support symbolic links by default. See the [GitHub issue](https://github.com/react-native-community/cli/issues/1238#issue-673055870) on this for a solution.
-
-For iOS the XCode project needs to be generated with `CMake` as described [above](#ios) and added to your `xcworkspace`.
+Package content is in `Package/Assembled` folder. 
+Run `npm pack` to make a .tgz.
 
 ## Supported Versions
 
-| React Native | Babylon React Native |
-|---|---|
-| 0.64 | 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.3, 1.8.1, 1.8.2, 1.8.5 |
-| 0.65 -> 0.68 | 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.3, 1.8.1, 1.8.2, 1.8.5 |
-| 0.69 | 1.4.0, 1.4.1, 1.4.2, 1.4.3, 1.4.4, 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.3, 1.8.1, 1.8.2, 1.8.5 |
-| 0.70 | 1.5.0, 1.5.1, 1.6.0, 1.6.1, 1.6.3, 1.8.1, 1.8.2, 1.8.5 |
-| 0.71 -> 0.73 | 1.6.0, 1.6.1, 1.6.3, 1.8.1, 1.8.2, 1.8.5 |
-
-Here are the package names for Android/iOS and Windows:
-
-| React Native | Android/iOS Package | Windows Package |
-|---|---|---|
-| 0.64 | [@babylonjs/react-native-iosandroid-0-64](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-64) | [@babylonjs/react-native-windows-0-64](https://www.npmjs.com/package/@babylonjs/react-native-windows-0-64) |
-| 0.65 -> 0.68 | [@babylonjs/react-native-iosandroid-0-65](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-65) | [@babylonjs/react-native-windows-0-65](https://www.npmjs.com/package/@babylonjs/react-native-windows-0-65) |
-| 0.69 | [@babylonjs/react-native-iosandroid-0-69](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-69) | [@babylonjs/react-native-windows-0-69](https://www.npmjs.com/package/@babylonjs/react-native-windows-0-69) |
-| 0.70 | [@babylonjs/react-native-iosandroid-0-70](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-70) | [@babylonjs/react-native-windows-0-70](https://www.npmjs.com/package/@babylonjs/react-native-windows-0-70) |
-| 0.71 -> 0.73 | [@babylonjs/react-native-iosandroid-0-71](https://www.npmjs.com/package/@babylonjs/react-native-iosandroid-0-71) | [@babylonjs/react-native-windows-0-71](https://www.npmjs.com/package/@babylonjs/react-native-windows-0-71) |
-
-Also, [@babylonjs/react-native](https://www.npmjs.com/package/@babylonjs/react-native) is a needed dependency for all platforms.
-
-## Supported Babylon.js Versions
-
-Depending on the Babylon React Native NPM package version, some Babylon.js NPM dependency versions may or may not be compatible. Here is a compatibility list that has been tested:
-
-| Babylon React Native | Babylon.js ([@babylonjs/core](https://www.npmjs.com/package/@babylonjs/core), [@babylonjs/loaders](https://www.npmjs.com/package/@babylonjs/loaders), ...) |
-|---|---|
-| 1.4.0 | 5.27.1 |
-| 1.4.1 | 5.32.2, 5.33.0, 5.33.1, 5.33.2, 5.34.0, 5.35.0 |
-| 1.4.2 | 5.35.1, 5.36.0, 5.37.0, 5.38.0, 5.39.0, 5.42.0, 5.42.1 |
-| 1.4.3 | 5.42.2, 5.43.0, 5.43.1, 5.43.2, 5.44.0, 5.45.0, 5.45.1, 5.45.2, 5.46.0, 5.47.0, 5.47.1, 5.48.0, 5.48.1, 5.49.0, 5.49.1, 5.49.2, 5.50.0, 5.50.1, 5.51.0, 5.52.0, 5.53.0, 5.54.0, 5.55.0, 5.56.0, 5.57.0, 5.57.1, 6.0.0, 6.1.0, 6.2.0, 6.3.1, 6.4.0, 6.4.1 |
-| 1.4.4 | 5.42.2, 5.43.0, 5.43.1, 5.43.2, 5.44.0, 5.45.0, 5.45.1, 5.45.2, 5.46.0, 5.47.0, 5.47.1, 5.48.0, 5.48.1, 5.49.0, 5.49.1, 5.49.2, 5.50.0, 5.50.1, 5.51.0, 5.52.0, 5.53.0, 5.54.0, 5.55.0, 5.56.0, 5.57.0, 5.57.1, 6.0.0, 6.1.0, 6.2.0, 6.3.0, 6.3.1, 6.4.0, 6.4.1 |
-| 1.5.0 | 5.42.2, 5.43.0, 5.43.1, 5.43.2, 5.44.0, 5.45.0, 5.45.1, 5.45.2, 5.46.0, 5.47.0, 5.47.1, 5.48.0, 5.48.1, 5.49.0, 5.49.1, 5.49.2, 5.50.0, 5.50.1, 5.51.0, 5.52.0, 5.53.0, 5.54.0, 5.55.0, 5.56.0, 5.57.0, 5.57.1, 6.0.0, 6.1.0, 6.2.0, 6.3.0, 6.3.1, 6.4.0, 6.4.1 |
-| 1.5.1 | 5.42.2, 5.43.0, 5.43.1, 5.43.2, 5.44.0, 5.45.0, 5.45.1, 5.45.2, 5.46.0, 5.47.0, 5.47.1, 5.48.0, 5.48.1, 5.49.0, 5.49.1, 5.49.2, 5.50.0, 5.50.1, 5.51.0, 5.52.0, 5.53.0, 5.54.0, 5.55.0, 5.56.0, 5.57.0, 5.57.1, 6.0.0, 6.1.0, 6.2.0, 6.3.0, 6.3.1, 6.4.0, 6.4.1 |
-| 1.6.0 | 5.42.2, 5.43.0, 5.43.1, 5.43.2, 5.44.0, 5.45.0, 5.45.1, 5.45.2, 5.46.0, 5.47.0, 5.48.0, 5.48.1, 5.49.1 |
-| 1.6.1 | 5.42.2, 5.43.0, 5.43.1, 5.43.2, 5.44.0, 5.45.0, 5.45.1, 5.45.2, 5.46.0, 5.47.0, 5.48.0, 5.48.1, 5.49.1 |
-| 1.6.3 | 5.53.1, 5.54.0, 5.55.0, 5.56.0, 5.57.0, 5.57.1, 6.0.0, 6.1.0, 6.2.0, 6.3.0, 6.3.1, 6.4.0, 6.4.1, 6.5.0, 6.5.1, 6.6.0, 6.6.1, 6.7.0, 6.8.1, 6.9.0, 6.11.2, 6.12.0, 6.12.1,6.12.2, 6.12.3, 6.14.0 |
-| 1.8.1,1.8.2, 1.8.5 | 5.53.1, 5.54.0, 5.55.0, 5.56.0, 5.57.0, 5.57.1, 6.0.0, 6.1.0, 6.2.0, 6.3.0, 6.3.1, 6.4.0, 6.4.1, 6.5.0, 6.5.1, 6.6.0, 6.6.1, 6.7.0, 6.8.1, 6.9.0, 6.11.2, 6.12.0, 6.12.1,6.12.2, 6.12.3, 6.14.0 |
+Package versions are listed on this npm.js page: [@babylonjs/react-native](https://www.npmjs.com/package/@babylonjs/react-native). Check supported Babylon.js version and corresponding BabylonNative dependency in package [README](Modules/@babylonjs/react-native/README.md)
 
 ## Security
 
 If you believe you have found a security vulnerability in this repository, please see [SECURITY.md](SECURITY.md).
-

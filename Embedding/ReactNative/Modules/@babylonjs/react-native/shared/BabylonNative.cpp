@@ -2,11 +2,11 @@
 
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/JsRuntime.h>
-#ifndef BASEKIT_BUILD
+#if BABYLON_NATIVE_PLUGIN_NATIVECAMERA
 #include <Babylon/Plugins/NativeCamera.h>
-#if !defined(_MSC_VER)
-#include <Babylon/Plugins/NativeXr.h>
 #endif
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
+#include <Babylon/Plugins/NativeXr.h>
 #endif
 #include <Babylon/Plugins/NativeCapture.h>
 #include <Babylon/Plugins/NativeEngine.h>
@@ -52,9 +52,11 @@ namespace BabylonNative
             Babylon::JsRuntime::CreateForJavaScript(m_env, Babylon::CreateJsRuntimeDispatcher(m_env, jsiRuntime, m_jsDispatcher, m_isRunning));
 
             // Initialize Babylon Native plugins
-#if !defined(BASEKIT_BUILD) && !defined(_MSC_VER)
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
             m_nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(m_env));
             m_nativeXr->SetSessionStateChangedCallback([isXRActive{ m_isXRActive }](bool isSessionActive) { *isXRActive = isSessionActive; });
+#endif
+#if BABYLON_NATIVE_PLUGIN_NATIVECAMERA
             Babylon::Plugins::NativeCamera::Initialize(m_env);
 #endif
             Babylon::Plugins::NativeCapture::Initialize(m_env);
@@ -217,7 +219,7 @@ namespace BabylonNative
 #if defined(__APPLE__) || defined(ANDROID)
         void UpdateXRView(WindowType window)
         {
-#if !defined(BASEKIT_BUILD) && !defined(_MSC_VER)
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
             m_nativeXr->UpdateWindow(window);
 #endif
         }
@@ -270,7 +272,7 @@ namespace BabylonNative
         bool m_isRenderingEnabled{};
         std::once_flag m_isGraphicsInitialized{};
         Babylon::Plugins::NativeInput* m_nativeInput{};
-#if !defined(BASEKIT_BUILD) && !defined(WIN32)
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
         std::optional<Babylon::Plugins::NativeXr> m_nativeXr{};
 #endif
         Babylon::Graphics::Configuration m_graphicsConfig{};

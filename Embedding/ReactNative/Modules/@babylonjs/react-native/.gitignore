@@ -27,6 +27,7 @@ DerivedData
 *.ipa
 *.xcuserstate
 project.xcworkspace
+ios/libs
 
 # Android/IntelliJ
 #
@@ -35,6 +36,9 @@ build/
 .gradle
 local.properties
 *.iml
+
+# glslang (iOS)
+ios/include/
 
 # BUCK
 buck-out/
@@ -49,3 +53,9 @@ cmake_install.cmake
 ReactNativeBabylon.xcodeproj
 *.tgz
 jsi
+
+shared/BabylonNative
+Build_uwp*/
+*.map
+*.d.ts
+*.js
