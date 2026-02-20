@@ -207,8 +207,12 @@ namespace Babylon::Graphics
 
             // Initialize bgfx.
             const auto& init{m_state.Bgfx.InitState};
-            m_state.Bgfx.Initialized = bgfx::init(init);
+            if (!bgfx::init(init))
+            {
+                throw std::runtime_error{"Failed to initialize bgfx."};
+            }
 
+            m_state.Bgfx.Initialized = true;
             m_state.Bgfx.Dirty = false;
 
             m_cancellationSource.emplace();
