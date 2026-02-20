@@ -206,11 +206,9 @@ namespace Babylon::Graphics
             bgfx::renderFrame();
 
             // Initialize bgfx.
-            auto& init{m_state.Bgfx.InitState};
-            bgfx::setPlatformData(init.platformData);
-            bgfx::init(init);
+            const auto& init{m_state.Bgfx.InitState};
+            m_state.Bgfx.Initialized = bgfx::init(init);
 
-            m_state.Bgfx.Initialized = true;
             m_state.Bgfx.Dirty = false;
 
             m_cancellationSource.emplace();
