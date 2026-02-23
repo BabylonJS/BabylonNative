@@ -9,17 +9,17 @@
 
 #include <bgfx/bgfx.h>
 
-#ifdef OPENGL
-constexpr bool IsOpenGL = true;
-#else
-constexpr bool IsOpenGL = false;
-#endif
-
 namespace
 {
 #ifdef SHADER_COMPILER
     void CheckShaderCompilerAssumptions()
     {
+#ifdef OPENGL
+        constexpr bool IsOpenGL = true;
+#else
+        constexpr bool IsOpenGL = false;
+#endif
+
         const auto* caps = bgfx::getCaps();
         if (caps->homogeneousDepth != IsOpenGL || caps->originBottomLeft != IsOpenGL)
         {
