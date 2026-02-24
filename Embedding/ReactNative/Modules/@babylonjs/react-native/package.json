@@ -26,6 +26,7 @@
     "readmeFilename": "README.md",
     "dependencies": {
         "base-64": "^0.1.0",
+        "cmake-runtime": "3.31.0",
         "semver": "^7.3.2"
     },
     "peerDependencies": {
@@ -35,7 +36,6 @@
         "react-native-permissions": ">=3.0.0"
     },
     "devDependencies": {
-        "cmake-runtime": "3.31.0",
         "@babel/core": "^7.8.4",
         "@babel/runtime": "^7.8.4",
         "@babylonjs/core": ">=5.53.1",
