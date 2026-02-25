@@ -29,3 +29,7 @@ endif()
 if(JSRUNTIMEHOST_POLYFILL_PERFORMANCE)
     add_subdirectory(Performance)
 endif()
+
+if(JSRUNTIMEHOST_POLYFILL_TEXTDECODER)
+    add_subdirectory(TextDecoder)
+endif()

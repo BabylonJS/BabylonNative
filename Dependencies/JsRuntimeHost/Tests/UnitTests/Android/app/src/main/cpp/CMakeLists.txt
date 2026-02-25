@@ -39,4 +39,5 @@ target_link_libraries(UnitTestsJNI
     PRIVATE WebSocket
     PRIVATE gtest_main
     PRIVATE Blob
+    PRIVATE TextDecoder
     PRIVATE Performance)

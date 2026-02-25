@@ -1240,6 +1240,36 @@ describe("Performance", function () {
     });
 });
 
+describe("TextDecoder", function () {
+    it("should decode a Uint8Array to a string", function () {
+        const decoder = new TextDecoder();
+        const encoded = new Uint8Array([72, 101, 108, 108, 111]); // "Hello"
+        const result = decoder.decode(encoded);
+        expect(result).to.equal("Hello");
+    });
+
+    it("should decode an empty Uint8Array to an empty string", function () {
+        const decoder = new TextDecoder();
+        const result = decoder.decode(new Uint8Array([]));
+        expect(result).to.equal("");
+    });
+
+    it("should decode an ArrayBuffer to a string", function () {
+        const decoder = new TextDecoder();
+        const buffer = new Uint8Array([87, 111, 114, 108, 100]).buffer; // "World"
+        const result = decoder.decode(buffer);
+        expect(result).to.equal("World");
+    });
+
+    it("should decode a TypedArray subarray with non-zero byteOffset", function () {
+        const decoder = new TextDecoder();
+        const full = new Uint8Array([88, 72, 105]); // "XHi"
+        const sub = full.subarray(1); // [72, 105] -> "Hi"
+        const result = decoder.decode(sub);
+        expect(result).to.equal("Hi");
+    });
+});
+
 function runTests() {
     mocha.run((failures: number) => {
         // Test program will wait for code to be set before exiting
