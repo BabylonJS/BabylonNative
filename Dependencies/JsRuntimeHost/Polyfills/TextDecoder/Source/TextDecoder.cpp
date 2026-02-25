@@ -35,8 +35,7 @@ namespace
                 auto encoding = info[0].As<Napi::String>().Utf8Value();
                 if (encoding != "utf-8" && encoding != "UTF-8")
                 {
-                    Napi::Error::New(info.Env(), "TextDecoder: unsupported encoding '" + encoding + "', only 'utf-8' is supported")
-                        .ThrowAsJavaScriptException();
+                    throw Napi::Error::New(Env(), "TextDecoder: unsupported encoding '" + encoding + "', only 'utf-8' is supported");
                 }
             }
         }
@@ -75,9 +74,7 @@ namespace
             }
             else
             {
-                Napi::TypeError::New(info.Env(), "TextDecoder.decode: input must be a BufferSource (ArrayBuffer or TypedArray)")
-                    .ThrowAsJavaScriptException();
-                return info.Env().Undefined();
+                throw Napi::TypeError::New(Env(), "TextDecoder.decode: input must be a BufferSource (ArrayBuffer or TypedArray)");
             }
 
             return Napi::String::New(info.Env(), data);
