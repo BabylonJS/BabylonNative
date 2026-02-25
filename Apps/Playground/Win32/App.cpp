@@ -35,7 +35,7 @@ namespace
     {
         char url[1024];
         DWORD length = ARRAYSIZE(url);
-        HRESULT hr = UrlCreateFromPathA(path.u8string().data(), url, &length, 0);
+        HRESULT hr = UrlCreateFromPathA(reinterpret_cast<const char*>(path.u8string().c_str()), url, &length, 0);
         if (FAILED(hr))
         {
             throw std::exception("Failed to create url from path", hr);

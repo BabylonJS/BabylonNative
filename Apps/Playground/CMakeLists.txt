@@ -140,6 +140,7 @@ target_link_libraries(Playground
     PRIVATE TestUtils
     PRIVATE Window
     PRIVATE XMLHttpRequest
+    PRIVATE TextDecoder
     ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 
