@@ -23,7 +23,7 @@ FetchContent_Declare(AndroidExtensions
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG c02527c32d51b6b3ffeda36f8cf140d2e1c60bb9
+    GIT_TAG 7c6be8aaa29effbc8ee1a2217388fb6e399150d2
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcore-android-sdk
     GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
@@ -54,7 +54,7 @@ FetchContent_Declare(ios-cmake
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG fec7975b4e19f7eda6507f1f2a7253ac38fd971c)
+    GIT_TAG 185ef9158385371b36dc9e2e19fd6e5d544f6ff9)
 FetchContent_Declare(libwebp
     GIT_REPOSITORY https://github.com/webmproject/libwebp.git
     GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c
@@ -99,7 +99,7 @@ project(BabylonNative)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Suppress "Performing Test ..." output from check_c_compiler_flag() and similar macros.
