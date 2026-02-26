@@ -41,6 +41,6 @@ target_link_libraries(BabylonNativeJNI
     PRIVATE ScriptLoader
     PRIVATE ShaderCache
     PRIVATE TestUtils
-    PRIVATE Window
     PRIVATE TextDecoder
+    PRIVATE Window
     PRIVATE XMLHttpRequest)

@@ -44,11 +44,7 @@ namespace Babylon::ShaderCompilerCommon
             {
                 return uv;
             }
-            ivec2 flipY(ivec2 uv, highp usampler2D tex, int lod)
-            {
-                int h = textureSize(tex, lod).y;
-                return ivec2(uv.x, h - 1 - uv.y);
-            }
+
             #define texture(x,y) texture(x, flip(y))
             #define textureLod(x,y,z) textureLod(x, flip(y), z)
             #define texelFetch(tex, uv, lod) texelFetch((tex), ivec2((uv).x, textureSize((tex), (lod)).y - 1 - (uv).y), (lod))
