@@ -220,14 +220,14 @@ if(TARGET Console)
     install_include(Console)
 endif()
 
-if(TARGET TextDecoder)
-    install_lib(TextDecoder)
-    install_include(TextDecoder)
-endif()
-
 if(TARGET Performance)
     install_lib(Performance)
     install_include(Performance)
+endif()
+
+if(TARGET TextDecoder)
+    install_lib(TextDecoder)
+    install_include(TextDecoder)
 endif()
 
 if(TARGET URL)
