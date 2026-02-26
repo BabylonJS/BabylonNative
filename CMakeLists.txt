@@ -64,8 +64,8 @@ FetchContent_Declare(metal-cpp
     GIT_TAG metal-cpp_26
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(SPIRV-Cross
-    GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 879242d5e26bb6d1123715d357ba67700084434a
+    GIT_REPOSITORY https://github.com/cedricguillemet/SPIRV-Cross.git
+    GIT_TAG 2a87cbf1242253548f6de5edaceab1414cb97e8c
     EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------
