@@ -114,8 +114,7 @@ target_compile_definitions(Playground PRIVATE UNICODE)
 target_compile_definitions(Playground PRIVATE _UNICODE)
 
 if(WINDOWS_STORE)
-    target_compile_options(Playground PRIVATE /ZW)
-    target_compile_options(Playground PRIVATE /await)
+    target_link_libraries(Playground PRIVATE windowsapp)
 endif()
 
 target_include_directories(Playground PRIVATE ".")
