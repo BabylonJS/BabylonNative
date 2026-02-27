@@ -225,6 +225,11 @@ if(TARGET Performance)
     install_include(Performance)
 endif()
 
+if(TARGET TextDecoder)
+    install_lib(TextDecoder)
+    install_include(TextDecoder)
+endif()
+
 if(TARGET URL)
     install_lib(URL)
     install_include(URL)

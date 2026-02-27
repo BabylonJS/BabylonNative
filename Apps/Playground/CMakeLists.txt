@@ -137,6 +137,7 @@ target_link_libraries(Playground
     PRIVATE ScriptLoader
     PRIVATE ShaderCache
     PRIVATE TestUtils
+    PRIVATE TextDecoder
     PRIVATE Window
     PRIVATE XMLHttpRequest
     ${ADDITIONAL_LIBRARIES}

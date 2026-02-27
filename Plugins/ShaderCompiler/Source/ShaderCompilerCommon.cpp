@@ -44,8 +44,10 @@ namespace Babylon::ShaderCompilerCommon
             {
                 return uv;
             }
+
             #define texture(x,y) texture(x, flip(y))
             #define textureLod(x,y,z) textureLod(x, flip(y), z)
+            #define texelFetch(tex, uv, lod) texelFetch((tex), ivec2((uv).x, textureSize((tex), (lod)).y - 1 - (uv).y), (lod))
             #define SHADER_NAME)";
 
         std::string result{source};
