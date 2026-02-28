@@ -20,23 +20,23 @@ def unity_build = "false"
 if (project.hasProperty("UNITY_BUILD")) {
     unity_build = project.property("UNITY_BUILD")
 }
-def arcore_libpath = "${buildDir}/arcore-native"
+def arcore_libpath = layout.buildDirectory.dir("arcore-native").get().asFile.absolutePath
 
 configurations { natives }
 
 android {
-    namespace 'com.android.library.babylonnative'
-    compileSdk 34
+    namespace = 'com.android.library.babylonnative'
+    compileSdk = 34
 
     defaultConfig {
-        minSdk 25
+        minSdk = 25
 
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "android.support.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
-        ndkVersion "23.1.7779620"
+        ndkVersion = "29.0.14206865"
         if (project.hasProperty("NDK_VERSION")) {
             def NDKVersion = project.property("NDK_VERSION")
-            ndkVersion  "${NDK_VERSION}"
+            ndkVersion = "${NDK_VERSION}"
         }
         externalNativeBuild {
             cmake {
@@ -49,6 +49,7 @@ android {
                     "-DBABYLON_NATIVE_BUILD_APPS=ON",
                     "-DCMAKE_UNITY_BUILD=${unity_build}",
                     "-DBABYLON_DEBUG_TRACE=ON"
+                cppFlags += ["-Wno-deprecated-literal-operator"]
             }
         }
         ndk {
@@ -58,19 +59,19 @@ android {
                 abiFilters "arm64-v8a", "armeabi-v7a", "x86"
             }
         }
-        packagingOptions {
+        packaging {
             exclude '**/libarcore_sdk_c.so'
         }
     }
 
     externalNativeBuild {
         cmake {
-            version '3.19.6+'
-            path 'CMakeLists.txt'
-            buildStagingDirectory "../../../../Build/Android"
+            version = '3.19.6+'
+            path = 'CMakeLists.txt'
+            buildStagingDirectory = "../../../../Build/Android"
         }
     }
-    packagingOptions {
+    packaging {
         jniLibs {
             pickFirsts += ['lib/*/libv8android.so', 'lib/*/libjsc.so']
         }
@@ -78,20 +79,20 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 
 dependencies {
     // ARCore library
-    implementation 'com.google.ar:core:1.14.0'
-    natives 'com.google.ar:core:1.14.0'
+    implementation 'com.google.ar:core:1.52.0'
+    natives 'com.google.ar:core:1.52.0'
     implementation 'com.android.support:appcompat-v7:28.0.0'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
@@ -101,7 +102,7 @@ dependencies {
 
 // Extracts the shared libraries from aars in the natives configuration.
 // This is done so that NDK builds can access these libraries.
-task extractNativeLibraries() {
+tasks.register('extractNativeLibraries') {
     // Always extract, this insures the native libs are updated if the version changes.
     outputs.upToDateWhen { false }
     doFirst {
@@ -117,6 +118,6 @@ task extractNativeLibraries() {
 
 tasks.configureEach { task ->
     if ((task.name.contains("buildCMake") || task.name.contains("configureCMake")) && !task.name.contains("Clean")) {
-        task.dependsOn(extractNativeLibraries)
+        task.dependsOn('extractNativeLibraries')
     }
 }

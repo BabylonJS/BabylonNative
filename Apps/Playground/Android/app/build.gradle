@@ -1,4 +1,6 @@
-apply plugin: 'com.android.application'
+plugins {
+    id 'com.android.application'
+}
 
 def jsEngine = "V8"
 if (project.hasProperty("jsEngine")) {
@@ -13,25 +15,25 @@ def unity_build = "false"
 if (project.hasProperty("UNITY_BUILD")) {
     unity_build = project.property("UNITY_BUILD")
 }
-def arcore_libpath = "${buildDir}/arcore-native"
+def arcore_libpath = layout.buildDirectory.dir("arcore-native").get().asFile.absolutePath
 
 configurations { natives }
 
 android {
-    compileSdkVersion 29
+    compileSdk = 34
 
     defaultConfig {
-        applicationId "com.android.babylonnative.playground"
-        minSdkVersion "${platformVersion}"
-        targetSdkVersion 29
-        ndkVersion "23.1.7779620"
+        applicationId = "com.android.babylonnative.playground"
+        minSdk = platformVersion
+        targetSdk = 29
+        ndkVersion = "29.0.14206865"
         if (project.hasProperty("NDK_VERSION")) {
             def NDKVersion = project.property("NDK_VERSION")
-            ndkVersion  "${NDK_VERSION}"
+            ndkVersion = "${NDK_VERSION}"
         }
     }
 
-    packagingOptions {
+    packaging {
         jniLibs {
             pickFirsts += ['lib/*/libv8android.so', 'lib/*/libjsc.so', 'lib/*/libBabylonNativeJNI.so', 'lib/*/libc++_shared.so']
         }
@@ -41,26 +43,19 @@ android {
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
-            debuggable true
+            signingConfig = signingConfigs.debug
+            minifyEnabled = true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+            debuggable = false
         }
     }
 
-    namespace 'com.android.babylonnative.playground'
-}
-
-repositories {
-    // Add flatDir repository
-    flatDir {
-        dirs '../BabylonNative/build/outputs/aar'
-    }
+    namespace = 'com.android.babylonnative.playground'
 }
 
 dependencies {
     implementation project(':BabylonNative')
-    natives 'com.google.ar:core:1.14.0'
+    natives 'com.google.ar:core:1.52.0'
 
     implementation 'com.android.support:appcompat-v7:27.1.1'
     implementation 'com.android.support:design:27.1.1'
@@ -68,7 +63,7 @@ dependencies {
 
 // Extracts the shared libraries from aars in the natives configuration.
 // This is done so that NDK builds can access these libraries.
-task extractNativeLibraries() {
+tasks.register('extractNativeLibraries') {
     // Always extract, this insures the native libs are updated if the version changes.
     outputs.upToDateWhen { false }
     doFirst {
@@ -84,56 +79,51 @@ task extractNativeLibraries() {
 
 tasks.configureEach { task ->
     if ((task.name.contains("buildCMake") || task.name.contains("configureCMake")) && !task.name.contains("Clean")) {
-        task.dependsOn(extractNativeLibraries)
+        task.dependsOn('extractNativeLibraries')
     }
 }
 
-preBuild.dependsOn ':BabylonNative:assembleRelease'
+tasks.named('preBuild').configure { dependsOn ':BabylonNative:assembleRelease' }
 
-task copyFiles {
-    copy
-    {
-        from '../../../node_modules/babylonjs'
-        include "babylon.max.js"
-        into 'src/main/assets/Scripts'
-    }
-    copy
-    {
-        from '../../../node_modules/babylonjs-loaders'
-        include "babylonjs.loaders.js"
-        into 'src/main/assets/Scripts'
-    }
-    copy
-    {
-        from '../../../node_modules/babylonjs-materials'
-        include "babylonjs.materials.js"
-        into 'src/main/assets/Scripts'
-    }
-    copy
-    {
-        from '../../../node_modules/babylonjs-gui'
-        include "babylon.gui.js"
-        into 'src/main/assets/Scripts'
-    }
-    copy
-    {
-        from '../../../node_modules/babylonjs-serializers'
-        include "babylonjs.serializers.js"
-        into 'src/main/assets/Scripts'
-    }
-    copy
-    {
-        from '../../../Dependencies'
-        include "*.js"
-        into 'src/main/assets/Scripts'
-    }
-    copy
-    {
-        from '../../Scripts'
-        include "*.js"
-        into 'src/main/assets/Scripts'
+tasks.register('copyFiles') {
+    doLast {
+        copy {
+            from '../../../node_modules/babylonjs'
+            include "babylon.max.js"
+            into 'src/main/assets/Scripts'
+        }
+        copy {
+            from '../../../node_modules/babylonjs-loaders'
+            include "babylonjs.loaders.js"
+            into 'src/main/assets/Scripts'
+        }
+        copy {
+            from '../../../node_modules/babylonjs-materials'
+            include "babylonjs.materials.js"
+            into 'src/main/assets/Scripts'
+        }
+        copy {
+            from '../../../node_modules/babylonjs-gui'
+            include "babylon.gui.js"
+            into 'src/main/assets/Scripts'
+        }
+        copy {
+            from '../../../node_modules/babylonjs-serializers'
+            include "babylonjs.serializers.js"
+            into 'src/main/assets/Scripts'
+        }
+        copy {
+            from '../../../Dependencies'
+            include "*.js"
+            into 'src/main/assets/Scripts'
+        }
+        copy {
+            from '../../Scripts'
+            include "*.js"
+            into 'src/main/assets/Scripts'
+        }
     }
 }
 
-preBuild.dependsOn(copyFiles)
+tasks.named('preBuild').configure { dependsOn 'copyFiles' }
 
