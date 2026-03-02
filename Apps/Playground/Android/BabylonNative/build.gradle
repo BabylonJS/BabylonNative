@@ -35,8 +35,7 @@ android {
         consumerProguardFiles "consumer-rules.pro"
         ndkVersion = "29.0.14206865"
         if (project.hasProperty("NDK_VERSION")) {
-            def NDKVersion = project.property("NDK_VERSION")
-            ndkVersion = "${NDK_VERSION}"
+            ndkVersion = project.property("NDK_VERSION")
         }
         externalNativeBuild {
             cmake {
