@@ -80,12 +80,24 @@ function(npm)
         set(NPM_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
     endif()
 
-    message(STATUS "Installing npm modules (${NPM_WORKING_DIRECTORY})")
-    execute_process(COMMAND ${NPM_COMMAND} ${NPM_UNPARSED_ARGUMENTS} WORKING_DIRECTORY ${NPM_WORKING_DIRECTORY} RESULT_VARIABLE NPM_RESULT)
+    list(JOIN NPM_UNPARSED_ARGUMENTS " " NPM_ARGS_STRING)
+    message(STATUS "Running npm ${NPM_ARGS_STRING} (${NPM_WORKING_DIRECTORY})")
+    execute_process(
+        COMMAND ${NPM_COMMAND} ${NPM_UNPARSED_ARGUMENTS}
+        WORKING_DIRECTORY ${NPM_WORKING_DIRECTORY}
+        RESULT_VARIABLE NPM_RESULT
+        OUTPUT_VARIABLE NPM_OUTPUT
+        ERROR_VARIABLE NPM_ERROR)
     if(NOT ${NPM_RESULT} EQUAL 0)
-        message(FATAL_ERROR "npm command failed: ${NPM_RESULT}")
+        message(FATAL_ERROR "npm command failed: ${NPM_RESULT}\n${NPM_OUTPUT}\n${NPM_ERROR}")
     else()
-        message(STATUS "Installing npm modules (${NPM_WORKING_DIRECTORY}) - done")
+        if(NPM_OUTPUT)
+            message(VERBOSE "${NPM_OUTPUT}")
+        endif()
+        if(NPM_ERROR)
+            message(VERBOSE "${NPM_ERROR}")
+        endif()
+        message(STATUS "Running npm ${NPM_ARGS_STRING} (${NPM_WORKING_DIRECTORY}) - done")
     endif()
 endfunction()
 
