@@ -37,6 +37,7 @@ set(BGFX_CUSTOM_TARGETS OFF)
 set(BGFX_INSTALL OFF)
 set(BGFX_OPENGL_USE_EGL ON)
 set(BGFX_USE_DEBUG_SUFFIX OFF)
+
 FetchContent_MakeAvailable_With_Message(bgfx.cmake)
 
 # Turn off debug annotations as it causes an access violation in D3D12.
@@ -50,6 +51,9 @@ target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MIN_RESOURCE_COMMAND_BUFFER_
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MIN_UNIFORM_BUFFER_SIZE=4096)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE=256)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE=1024)
+target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
+target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_DXIL=0)
+
 if(GRAPHICS_API STREQUAL "D3D11")
     target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_DIRECT3D11=1)
 elseif(GRAPHICS_API STREQUAL "D3D12")

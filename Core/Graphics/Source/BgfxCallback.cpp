@@ -85,7 +85,7 @@ namespace Babylon::Graphics
     {
     }
 
-    void BgfxCallback::screenShot(const char* /*filePath*/, uint32_t width, uint32_t height, uint32_t pitch, const void* data, uint32_t /*size*/, bool yflip)
+    void BgfxCallback::screenShot(const char* /*filePath*/, uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum, const void* data, uint32_t /*size*/, bool yflip)
     {
         assert(!m_screenShotCallbacks.empty()); // addScreenShotCallback not called before doing the screenshot call on bgfx
 
