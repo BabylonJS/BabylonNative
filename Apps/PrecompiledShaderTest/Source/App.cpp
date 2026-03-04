@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <fstream>
+#include <future>
 #include <iostream>
 
 namespace

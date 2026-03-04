@@ -29,10 +29,10 @@ jobs:
         displayName: "Build PrecompiledShaderTest"
 
       - script: |
-          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\PrecompiledShaderTest.exe"
-          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\PrecompiledShaderTest.exe" /v DumpType /t REG_DWORD /d 2
-          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\PrecompiledShaderTest.exe" /v DumpCount /t REG_DWORD /d 1
-          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\PrecompiledShaderTest.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps"
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\PrecompiledShaderTest.exe" /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\PrecompiledShaderTest.exe" /v DumpType /t REG_DWORD /d 2 /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\PrecompiledShaderTest.exe" /v DumpCount /t REG_DWORD /d 1 /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\PrecompiledShaderTest.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps" /f
         displayName: "Enable Crash Dumps"
 
       - script: |
