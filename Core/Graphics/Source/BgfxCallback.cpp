@@ -85,24 +85,46 @@ namespace Babylon::Graphics
     {
     }
 
-    void BgfxCallback::screenShot(const char* /*filePath*/, uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum, const void* data, uint32_t /*size*/, bool yflip)
+    void BgfxCallback::screenShot(const char* /*filePath*/, uint32_t width, uint32_t height, uint32_t pitch, bgfx::TextureFormat::Enum format, const void* data, uint32_t /*size*/, bool yflip)
     {
         assert(!m_screenShotCallbacks.empty()); // addScreenShotCallback not called before doing the screenshot call on bgfx
 
         std::vector<uint8_t> array(width * height * 4); // do not use pitch to define output size because it's padded
         uint8_t* bitmap{array.data()};
 
-        for (uint32_t py = 0; py < height; py++)
+        if (format == bgfx::TextureFormat::BGRA8)
         {
-            const uint8_t* ptr = static_cast<const uint8_t*>(data) + (yflip ? (height - py - 1) : py) * pitch;
-            for (uint32_t px = 0; px < width; px++)
+            for (uint32_t py = 0; py < height; py++)
             {
-                // bgfx screenshot is BGRA
-                *bitmap++ = ptr[px * 4 + 2];
-                *bitmap++ = ptr[px * 4 + 1];
-                *bitmap++ = ptr[px * 4 + 0];
-                *bitmap++ = ptr[px * 4 + 3];
+                const uint8_t* ptr = static_cast<const uint8_t*>(data) + (yflip ? (height - py - 1) : py) * pitch;
+                for (uint32_t px = 0; px < width; px++)
+                {
+                    // bgfx screenshot is BGRA
+                    *bitmap++ = ptr[px * 4 + 2];
+                    *bitmap++ = ptr[px * 4 + 1];
+                    *bitmap++ = ptr[px * 4 + 0];
+                    *bitmap++ = ptr[px * 4 + 3];
+                }
             }
+        }
+        else if (format == bgfx::TextureFormat::RGBA8)
+        {
+            for (uint32_t py = 0; py < height; py++)
+            {
+                const uint8_t* ptr = static_cast<const uint8_t*>(data) + (yflip ? (height - py - 1) : py) * pitch;
+                for (uint32_t px = 0; px < width; px++)
+                {
+                    // bgfx screenshot is RGBA
+                    *bitmap++ = ptr[px * 4 + 0];
+                    *bitmap++ = ptr[px * 4 + 1];
+                    *bitmap++ = ptr[px * 4 + 2];
+                    *bitmap++ = ptr[px * 4 + 3];
+                }
+            }
+        }
+        else
+        {
+            assert(false && "Unsupported format for screenshot");
         }
 
         m_screenShotCallbacks.front()(std::move(array));
