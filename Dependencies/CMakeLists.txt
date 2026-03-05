@@ -54,6 +54,9 @@ target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREM
 target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_DXIL=0)
 
+# Temporary disable uniform debug.
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_UNIFORM=0)
+
 # bx no longer supports C++ exceptions on MSVC.
 if(MSVC)
     target_compile_options(bx PRIVATE /EHs- /EHc-)
