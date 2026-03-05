@@ -238,6 +238,15 @@ add_subdirectory(Core)
 add_subdirectory(Plugins)
 add_subdirectory(Polyfills)
 
+# Patch bgfx.cmake dependency with custom thread.cpp to test CI fix
+FetchContent_GetProperties(bgfx.cmake)
+if(bgfx.cmake_POPULATED)
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/hack/thread.cpp
+        ${bgfx.cmake_SOURCE_DIR}/bx/src/thread.cpp
+        COPYONLY)
+endif()
+
 if(BABYLON_NATIVE_BUILD_APPS)
     add_subdirectory(Apps)
 endif()
