@@ -4,6 +4,7 @@
 #include <bx/string.h>
 #include <cassert>
 #include <stdarg.h>
+#include <stdexcept>
 
 namespace Babylon::Graphics
 {
@@ -124,7 +125,7 @@ namespace Babylon::Graphics
         }
         else
         {
-            throw std::runtime_error("Unsupported format for screenshot");
+            throw std::runtime_error{"Unsupported format for screenshot"};
         }
 
         m_screenShotCallbacks.front()(std::move(array));
