@@ -54,6 +54,10 @@ target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREM
 target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_DXIL=0)
 
+# bx no longer supports C++ exceptions on MSVC.
+if(MSVC)
+    target_compile_options(bx PRIVATE /EHs- /EHc-)
+endif()
 
 if(GRAPHICS_API STREQUAL "D3D11")
     target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_DIRECT3D11=1)
