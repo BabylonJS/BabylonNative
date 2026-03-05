@@ -19,22 +19,25 @@ if(NOT IS_DIRECTORY ${BGFX_DIR})
 	return()
 endif()
 
-if(NOT APPLE)
-	set(BGFX_AMALGAMATED_SOURCE ${BGFX_DIR}/src/amalgamated.cpp)
-else()
-	set(BGFX_AMALGAMATED_SOURCE ${BGFX_DIR}/src/amalgamated.mm)
-endif()
-
 # Grab the bgfx source files
 file(
 	GLOB
 	BGFX_SOURCES
 	${BGFX_DIR}/src/*.cpp
-	${BGFX_DIR}/src/*.mm
 	${BGFX_DIR}/src/*.h
 	${BGFX_DIR}/include/bgfx/*.h
 	${BGFX_DIR}/include/bgfx/c99/*.h
 )
+
+if(APPLE)
+	file(GLOB BGFX_OBJC_SOURCES ${BGFX_DIR}/src/*.mm)
+	list(APPEND BGFX_SOURCES ${BGFX_OBJC_SOURCES})
+	list(REMOVE_ITEM BGFX_SOURCES ${BGFX_DIR}/src/amalgamated.cpp)
+	set(BGFX_AMALGAMATED_SOURCE ${BGFX_DIR}/src/amalgamated.mm)
+else()
+	set(BGFX_AMALGAMATED_SOURCE ${BGFX_DIR}/src/amalgamated.cpp)
+endif()
+
 if(BGFX_AMALGAMATED)
 	set(BGFX_NOBUILD ${BGFX_SOURCES})
 	list(REMOVE_ITEM BGFX_NOBUILD ${BGFX_AMALGAMATED_SOURCE})
@@ -43,8 +46,7 @@ if(BGFX_AMALGAMATED)
 	endforeach()
 else()
 	# Do not build using amalgamated sources
-	set_source_files_properties(${BGFX_DIR}/src/amalgamated.cpp PROPERTIES HEADER_FILE_ONLY ON)
-	set_source_files_properties(${BGFX_DIR}/src/amalgamated.mm PROPERTIES HEADER_FILE_ONLY ON)
+	set_source_files_properties(${BGFX_AMALGAMATED_SOURCE} PROPERTIES HEADER_FILE_ONLY ON)
 endif()
 
 # Create the bgfx target

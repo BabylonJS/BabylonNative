@@ -22,16 +22,6 @@ add_executable(shaderc ${SHADERC_SOURCES})
 target_link_libraries(
 	shaderc
 	PRIVATE bx
-			bgfx-vertexlayout
-			fcpp
-			glslang
-			glsl-optimizer
-			spirv-opt
-			spirv-cross
-)
-target_link_libraries(
-	shaderc
-	PRIVATE bx
 			bimg
 			bgfx-vertexlayout
 			fcpp
@@ -40,7 +30,28 @@ target_link_libraries(
 			spirv-opt
 			spirv-cross
 			webgpu
+			tint
 )
+
+target_include_directories(
+	shaderc
+	PRIVATE ${BGFX_DIR}/3rdparty/dawn
+			${BGFX_DIR}/3rdparty/dawn/src
+)
+
+if(UNIX
+   AND NOT APPLE
+   AND NOT EMSCRIPTEN
+   AND NOT ANDROID
+)
+	target_include_directories(
+		shaderc
+		PRIVATE ${BGFX_DIR}/3rdparty/directx-headers/include/directx
+				${BGFX_DIR}/3rdparty/directx-headers/include
+				${BGFX_DIR}/3rdparty/directx-headers/include/wsl/stubs
+	)
+endif()
+
 if(BGFX_AMALGAMATED)
 	target_link_libraries(shaderc PRIVATE bgfx-shader)
 endif()

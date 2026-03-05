@@ -60,6 +60,11 @@ endforeach()
 
 add_library(bx STATIC ${BX_SOURCES})
 
+if(MSVC)
+	target_compile_options(bx PRIVATE /EHs-c-)
+	target_compile_definitions(bx PRIVATE _HAS_EXCEPTIONS=0)
+endif()
+
 # Put in a "bgfx" folder in Visual Studio
 set_target_properties(bx PROPERTIES FOLDER "bgfx")
 
