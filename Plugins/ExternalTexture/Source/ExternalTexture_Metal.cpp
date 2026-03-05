@@ -83,6 +83,10 @@ namespace
 	constexpr MTL::PixelFormat kMtlPixelFormatPVRTC_RGBA_2BPP_sRGB  = MTL::PixelFormat(165);
 	constexpr MTL::PixelFormat kMtlPixelFormatPVRTC_RGBA_4BPP       = MTL::PixelFormat(166);
 	constexpr MTL::PixelFormat kMtlPixelFormatPVRTC_RGBA_4BPP_sRGB  = MTL::PixelFormat(167);
+	constexpr MTL::PixelFormat kMtlPixelFormatEAC_R11Unorm          = MTL::PixelFormat(170);
+	constexpr MTL::PixelFormat kMtlPixelFormatEAC_R11Snorm          = MTL::PixelFormat(172);
+	constexpr MTL::PixelFormat kMtlPixelFormatEAC_RG11Unorm         = MTL::PixelFormat(174);
+	constexpr MTL::PixelFormat kMtlPixelFormatEAC_RG11Snorm         = MTL::PixelFormat(176);
 	constexpr MTL::PixelFormat kMtlPixelFormatEAC_RGBA8             = MTL::PixelFormat(178);
 	constexpr MTL::PixelFormat kMtlPixelFormatEAC_RGBA8_sRGB        = MTL::PixelFormat(179);
 	constexpr MTL::PixelFormat kMtlPixelFormatETC2_RGB8             = MTL::PixelFormat(180);
