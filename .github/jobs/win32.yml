@@ -94,14 +94,14 @@ jobs:
           artifactName: "${{variables.solutionName}} - ${{parameters.graphics_api}} Rendered Pictures"
           pathtoPublish: "build/${{variables.solutionName}}/Apps/Playground/Results"
         displayName: "Publish Tests ${{variables.solutionName}} Results"
-        condition: and(always(), ne('${{parameters.graphics_api}}', 'D3D12'))
+        condition: ne('${{parameters.graphics_api}}', 'D3D12')
 
       - task: PublishBuildArtifacts@1
         inputs:
           artifactName: "${{variables.solutionName}} - ${{parameters.graphics_api}} Error Pictures"
           pathtoPublish: "build/${{variables.solutionName}}/Apps/Playground/Errors"
         displayName: "Publish Tests ${{variables.solutionName}} Errors"
-        condition: and(failed(), ne('${{parameters.graphics_api}}', 'D3D12'))
+        condition: failed()
 
       - task: CopyFiles@2
         inputs:
@@ -110,7 +110,7 @@ jobs:
           targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
           cleanTargetFolder: false
         displayName: "Stage test app exe/pdb for publishing"
-        condition: and(failed(), ne('${{parameters.graphics_api}}', 'D3D12'))
+        condition: failed()
 
       - script: |
           cd build\${{variables.solutionName}}\Apps\UnitTests
@@ -126,11 +126,11 @@ jobs:
           targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
           cleanTargetFolder: false
         displayName: "Stage test app exe/pdb for publishing"
-        condition: and(failed(), ne('${{parameters.graphics_api}}', 'D3D12'))
+        condition: failed()
 
       - task: PublishBuildArtifacts@1
         inputs:
           artifactName: "${{variables.solutionName}} - ${{parameters.graphics_api}} Crash Dumps"
           pathtoPublish: "$(Build.ArtifactStagingDirectory)/Dumps"
         displayName: "Publish Tests ${{variables.solutionName}} Dumps"
-        condition: and(failed(), ne('${{parameters.graphics_api}}', 'D3D12'))
+        condition: failed()
