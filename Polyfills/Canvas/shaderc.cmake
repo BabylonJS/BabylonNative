@@ -207,7 +207,7 @@ function(add_bgfx_shader FILE FOLDER)
                     PROFILE s_5_0
                     O 3
                     OUTPUT ${DX11_OUTPUT}
-                    BIN2C "${FILENAME}_dx11"
+                    BIN2C "${FILENAME}_dxbc"
                 )
             else()
                 _bn_shaderc_parse(
@@ -215,7 +215,7 @@ function(add_bgfx_shader FILE FOLDER)
                     PROFILE s_5_0
                     O 1
                     OUTPUT ${DX11_OUTPUT}
-                    BIN2C "${FILENAME}_dx11"
+                    BIN2C "${FILENAME}_dxbc"
                 )
             endif()
             list(APPEND OUTPUTS "DX11")
