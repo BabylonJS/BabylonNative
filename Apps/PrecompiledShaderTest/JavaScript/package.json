@@ -1,0 +1,32 @@
+{
+    "name": "precompiled-shader-test-js",
+    "version": "1.0.0",
+    "private": true,
+    "description": "JavaScript scene and shader preparation for PrecompiledShaderTest",
+    "main": "dist/index.js",
+    "type": "module",
+    "scripts": {
+        "build": "npm run build:bundle && npm run prepare:shaders",
+        "build:bundle": "webpack --env=prod --config webpack.config.js && babel dist/index.js --out-file dist/index.js --presets=@babel/preset-env",
+        "prepare:shaders": "tsx ./tools/prepareShaders.ts"
+    },
+    "license": "MIT",
+    "dependencies": {},
+    "devDependencies": {
+        "@babel/cli": "^7.28.3",
+        "@babel/core": "^7.28.3",
+        "@babel/preset-env": "^7.28.3",
+        "@babylonjs/core": "^8.45.5",
+        "@types/node": "^24.7.1",
+        "rimraf": "^6.0.1",
+        "ts-loader": "^9.5.4",
+        "tsx": "^4.20.6",
+        "typescript": "^5.5.4",
+        "terser-webpack-plugin": "^5.3.10",
+        "webpack": "^5.101.3",
+        "webpack-cli": "^6.0.1"
+    },
+    "engines": {
+        "node": ">=18"
+    }
+}

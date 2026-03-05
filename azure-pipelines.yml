@@ -80,6 +80,12 @@ jobs:
       platform: x64
       graphics_api: D3D12
 
+  - template: .github/jobs/win32_precompiled_shader_test.yml
+    parameters:
+      name: Win32_x64_D3D11_PrecompiledShaderTest
+      vmImage: windows-latest
+      platform: x64
+
   # UWP
   - template: .github/jobs/uwp.yml
     parameters:
