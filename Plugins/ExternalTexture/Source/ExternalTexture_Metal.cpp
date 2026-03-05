@@ -145,6 +145,10 @@ namespace
 		{ kMtlPixelFormatETC2_RGB8,             kMtlPixelFormatETC2_RGB8_sRGB,       }, // ETC2
 		{ kMtlPixelFormatEAC_RGBA8,             kMtlPixelFormatEAC_RGBA8_sRGB,       }, // ETC2A
 		{ kMtlPixelFormatETC2_RGB8A1,           kMtlPixelFormatETC2_RGB8A1_sRGB,     }, // ETC2A1
+		{ kMtlPixelFormatEAC_R11Unorm,          kMtlPixelFormatInvalid               }, // EACR11 UNORM
+		{ kMtlPixelFormatEAC_R11Snorm,          kMtlPixelFormatInvalid               }, // EACR11 SNORM
+		{ kMtlPixelFormatEAC_RG11Unorm,         kMtlPixelFormatInvalid               }, // EACRG11 UNORM
+		{ kMtlPixelFormatEAC_RG11Snorm,         kMtlPixelFormatInvalid               }, // EACRG11 SNORM
 		{ kMtlPixelFormatPVRTC_RGB_2BPP,        kMtlPixelFormatPVRTC_RGB_2BPP_sRGB,  }, // PTC12
 		{ kMtlPixelFormatPVRTC_RGB_4BPP,        kMtlPixelFormatPVRTC_RGB_4BPP_sRGB,  }, // PTC14
 		{ kMtlPixelFormatPVRTC_RGBA_2BPP,       kMtlPixelFormatPVRTC_RGBA_2BPP_sRGB, }, // PTC12A
