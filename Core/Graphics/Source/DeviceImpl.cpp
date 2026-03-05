@@ -84,11 +84,19 @@ namespace Babylon::Graphics
 #ifdef GRAPHICS_BACK_BUFFER_SUPPORT
         UpdateBackBuffer(config.BackBufferColor, config.BackBufferDepthStencil);
 #endif
+
+        // Signal to bgfx that this calling thread (main/UI) will be
+        // the render thread.  Must be called before bgfx::init().
+        bgfx::renderFrame();
     }
 
     DeviceImpl::~DeviceImpl()
     {
-        DisableRendering();
+        // bgfx::shutdown() is expected to have been called on the JS thread
+        // (via DisableRendering) before the DeviceImpl is destroyed.
+        // If it wasn't (e.g. abnormal teardown), the state will still show
+        // Initialized but we intentionally do NOT call bgfx::shutdown here
+        // because it must run on the same thread that called bgfx::init.
     }
 
     uintptr_t DeviceImpl::GetId() const
@@ -199,13 +207,12 @@ namespace Babylon::Graphics
 
         if (!m_state.Bgfx.Initialized)
         {
-            // Set the thread affinity (all other rendering operations must happen on this thread).
-            m_renderThreadAffinity = std::this_thread::get_id();
+            // Set the thread affinity — bgfx API calls (init, frame, etc.)
+            // must happen on this thread (the JS thread).
+            m_bgfxThreadAffinity = std::this_thread::get_id();
 
-            // This tells bgfx to not create its own render thread.
-            bgfx::renderFrame();
-
-            // Initialize bgfx.
+            // Initialize bgfx.  The initial bgfx::renderFrame() was already
+            // called from the DeviceImpl constructor on the main/render thread.
             const auto& init{m_state.Bgfx.InitState};
             if (!bgfx::init(init))
             {
@@ -229,7 +236,7 @@ namespace Babylon::Graphics
 
     void DeviceImpl::DisableRendering()
     {
-        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
+        ASSERT_THREAD_AFFINITY(m_bgfxThreadAffinity);
 
         std::scoped_lock lock{m_state.Mutex};
 
@@ -243,9 +250,11 @@ namespace Babylon::Graphics
                 m_readTextureRequests.pop();
             }
 
-            // HACK: Render one more frame to drain the before/after render work queues.
-            StartRenderingCurrentFrame();
-            FinishRenderingCurrentFrame();
+            // If a frame is already in flight, finish it before shutting down.
+            if (m_rendering)
+            {
+                FinishRenderingCurrentFrame();
+            }
 
             m_cancellationSource->cancel();
 
@@ -253,7 +262,7 @@ namespace Babylon::Graphics
             m_state.Bgfx.Initialized = false;
             m_bgfxId++;
 
-            m_renderThreadAffinity = {};
+            m_bgfxThreadAffinity = {};
         }
     }
 
@@ -272,15 +281,12 @@ namespace Babylon::Graphics
 
     void DeviceImpl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
     {
-        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
         m_bgfxCallback.SetDiagnosticOutput(std::move(diagnosticOutput));
     }
 
     void DeviceImpl::StartRenderingCurrentFrame()
     {
         arcana::trace_region startRenderingRegion{"DeviceImpl::StartRenderingCurrentFrame"};
-
-        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
 
         if (m_rendering)
         {
@@ -289,33 +295,13 @@ namespace Babylon::Graphics
 
         m_rendering = true;
 
-        // Ensure rendering is enabled.
+        // Ensure rendering is enabled (bgfx::init on first call).
         EnableRendering();
-
-        // Unlock the update safe timespans.
-        {
-            std::scoped_lock lock{m_updateSafeTimespansMutex};
-            for (auto& [key, value] : m_updateSafeTimespans)
-            {
-                value.Unlock();
-            }
-        }
     }
 
     void DeviceImpl::FinishRenderingCurrentFrame()
     {
-        // Lock the update safe timespans.
-        {
-            std::scoped_lock lock{m_updateSafeTimespansMutex};
-            for (auto& [key, value] : m_updateSafeTimespans)
-            {
-                value.Lock();
-            }
-        }
-
         arcana::trace_region finishRenderingRegion{"DeviceImpl::FinishRenderingCurrentFrame"};
-
-        ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
 
         if (!m_rendering)
         {
@@ -329,6 +315,37 @@ namespace Babylon::Graphics
         m_afterRenderDispatcher.tick(*m_cancellationSource);
 
         m_rendering = false;
+    }
+
+    void DeviceImpl::RenderFrame(int32_t _timeoutInMs)
+    {
+        // Only drain render-thread callbacks after a real render, not
+        // after a timeout.  bgfx::renderFrame() returns Timeout when the
+        // API thread hasn't called bgfx::frame() within the deadline.
+        // Callbacks queued via DispatchToRenderThread (e.g.
+        // bgfx::overrideInternal) depend on the preceding bgfx::frame()
+        // having been processed (e.g. createTexture2D).  Draining them
+        // on a timeout would execute them before the resource exists.
+        auto result = bgfx::renderFrame(_timeoutInMs);
+
+        if (result == bgfx::RenderFrame::Render || result == bgfx::RenderFrame::Exiting)
+        {
+            std::vector<std::function<void()>> callbacks;
+            {
+                std::scoped_lock lock{m_renderThreadCallbacksMutex};
+                callbacks.swap(m_renderThreadCallbacks);
+            }
+            for (auto& cb : callbacks)
+            {
+                cb();
+            }
+        }
+    }
+
+    void DeviceImpl::DispatchToRenderThread(std::function<void()> callback)
+    {
+        std::scoped_lock lock{m_renderThreadCallbacksMutex};
+        m_renderThreadCallbacks.push_back(std::move(callback));
     }
 
     float DeviceImpl::GetHardwareScalingLevel() const
@@ -395,7 +412,7 @@ namespace Babylon::Graphics
         return m_captureCallbacks.insert(std::move(callback), m_captureCallbacksMutex);
     }
 
-    bgfx::ViewId DeviceImpl::AcquireNewViewId(bgfx::Encoder&)
+    bgfx::ViewId DeviceImpl::AcquireNewViewId()
     {
         bgfx::ViewId viewId = m_nextViewId.fetch_add(1);
         if (viewId >= bgfx::getCaps()->limits.maxViews)
@@ -452,9 +469,6 @@ namespace Babylon::Graphics
     {
         arcana::trace_region frameRegion{"DeviceImpl::Frame"};
 
-        // Automatically end bgfx encoders.
-        EndEncoders();
-
         // Update bgfx state if necessary.
         UpdateBgfxState();
 
@@ -472,34 +486,6 @@ namespace Babylon::Graphics
         }
 
         m_nextViewId.store(0);
-    }
-
-    bgfx::Encoder* DeviceImpl::GetEncoderForThread()
-    {
-        assert(!m_renderThreadAffinity.check());
-        std::scoped_lock lock{m_threadIdToEncoderMutex};
-
-        const auto threadId{std::this_thread::get_id()};
-        auto it{m_threadIdToEncoder.find(threadId)};
-        if (it == m_threadIdToEncoder.end())
-        {
-            bgfx::Encoder* encoder{bgfx::begin(true)};
-            it = m_threadIdToEncoder.emplace(threadId, encoder).first;
-        }
-
-        return it->second;
-    }
-
-    void DeviceImpl::EndEncoders()
-    {
-        std::scoped_lock lock{m_threadIdToEncoderMutex};
-
-        for (auto [threadId, encoder] : m_threadIdToEncoder)
-        {
-            bgfx::end(encoder);
-        }
-
-        m_threadIdToEncoder.clear();
     }
 
     void DeviceImpl::CaptureCallback(const BgfxCallback::CaptureData& data)

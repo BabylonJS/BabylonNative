@@ -128,8 +128,7 @@ namespace Babylon
         void PopulateFrameStats(const Napi::CallbackInfo& info);
         void DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode);
 
-        Graphics::UpdateToken& GetUpdateToken();
-        Graphics::FrameBuffer& GetBoundFrameBuffer(bgfx::Encoder& encoder);
+        Graphics::FrameBuffer& GetBoundFrameBuffer();
 
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
 
@@ -142,8 +141,6 @@ namespace Babylon
         Graphics::Update m_update;
 
         JsRuntimeScheduler m_runtimeScheduler;
-
-        std::optional<Graphics::UpdateToken> m_updateToken{};
 
         void ScheduleRequestAnimationFrameCallbacks();
         bool m_requestAnimationFrameCallbacksScheduled{};

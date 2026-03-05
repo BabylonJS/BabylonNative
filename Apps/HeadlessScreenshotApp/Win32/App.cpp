@@ -91,14 +91,8 @@ int main()
     winrt::com_ptr<ID3D11DeviceContext> d3dDeviceContext;
     d3dDevice->GetImmediateContext(d3dDeviceContext.put());
 
-    // Create the Babylon Native graphics device and update.
+    // Create the Babylon Native graphics device.
     auto device = CreateGraphicsDevice(d3dDevice.get());
-    auto deviceUpdate = device.GetUpdate("update");
-
-    // Start rendering a frame to unblock the JavaScript from queuing graphics
-    // commands.
-    device.StartRenderingCurrentFrame();
-    deviceUpdate.Start();
 
     // Create a Babylon Native application runtime which hosts a JavaScript
     // engine on a new thread.
@@ -127,14 +121,21 @@ int main()
     // Create a render target texture for the output.
     winrt::com_ptr<ID3D11Texture2D> outputTexture = CreateD3DRenderTargetTexture(d3dDevice.get());
 
-    std::promise<void> addToContext{};
+    // Helper: pump RenderFrame() on the main thread until a future is ready.
+    auto waitWhilePumping = [&device](std::future<void>& future) {
+        while (future.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+        {
+            device.RenderFrame();
+        }
+    };
+
     std::promise<void> startup{};
+    auto startupFuture = startup.get_future();
 
     // Create an external texture for the render target texture and pass it to
     // the `startup` JavaScript function.
-    loader.Dispatch([externalTexture = Babylon::Plugins::ExternalTexture{outputTexture.get()}, &addToContext, &startup](Napi::Env env) {
+    loader.Dispatch([externalTexture = Babylon::Plugins::ExternalTexture{outputTexture.get()}, &startup](Napi::Env env) {
         auto jsPromise = externalTexture.AddToContextAsync(env);
-        addToContext.set_value();
 
         auto jsOnFulfilled = Napi::Function::New(env, [&startup](const Napi::CallbackInfo& info) {
             auto nativeTexture = info[0];
@@ -152,15 +153,8 @@ int main()
         CatchAndLogError(jsPromise);
     });
 
-    // Wait for `AddToContextAsync` to be called.
-    addToContext.get_future().wait();
-
-    // Render a frame so that `AddToContextAsync` will complete.
-    deviceUpdate.Finish();
-    device.FinishRenderingCurrentFrame();
-
-    // Wait for `startup` to finish.
-    startup.get_future().wait();
+    // Pump RenderFrame() on this (main) thread while waiting for startup.
+    waitWhilePumping(startupFuture);
 
     struct Asset
     {
@@ -179,11 +173,8 @@ int main()
         // Tell RenderDoc to start capturing.
         RenderDoc::StartFrameCapture(d3dDevice.get());
 
-        // Start rendering a frame to unblock the JavaScript again.
-        device.StartRenderingCurrentFrame();
-        deviceUpdate.Start();
-
         std::promise<void> loadAndRenderAsset{};
+        auto loadAndRenderFuture = loadAndRenderAsset.get_future();
 
         // Call `loadAndRenderAssetAsync` with the asset URL.
         loader.Dispatch([&loadAndRenderAsset, &asset](Napi::Env env) {
@@ -200,17 +191,13 @@ int main()
             CatchAndLogError(jsPromise);
         });
 
-        // Wait for the function to complete.
-        loadAndRenderAsset.get_future().wait();
-
-        // Finish rendering the frame.
-        deviceUpdate.Finish();
-        device.FinishRenderingCurrentFrame();
+        // Pump RenderFrame() while waiting for the asset to load and render.
+        waitWhilePumping(loadAndRenderFuture);
 
         // Tell RenderDoc to stop capturing.
         RenderDoc::StopFrameCapture(d3dDevice.get());
 
-        // Save the texture into an PNG next to the executable.
+        // Save the texture into a PNG next to the executable.
         auto filePath = GetModulePath() / asset.Name;
         filePath.concat(".png");
         std::cout << "Writing " << filePath.string() << std::endl;
@@ -218,6 +205,9 @@ int main()
         // See https://github.com/Microsoft/DirectXTK/wiki/ScreenGrab#srgb-vs-linear-color-space
         winrt::check_hresult(DirectX::SaveWICTextureToFile(d3dDeviceContext.get(), outputTexture.get(), GUID_ContainerFormatPng, filePath.c_str(), nullptr, nullptr, true));
     }
+
+    // Shut down bgfx on the JS thread, then destroy the runtime.
+    device.Shutdown();
 
     return 0;
 }

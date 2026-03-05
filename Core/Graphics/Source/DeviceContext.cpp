@@ -6,20 +6,6 @@
 
 namespace Babylon::Graphics
 {
-    UpdateToken::UpdateToken(DeviceContext& context, SafeTimespanGuarantor& guarantor)
-        : m_context{context}
-        , m_guarantee{guarantor.GetSafetyGuarantee()}
-    {
-    }
-
-    bgfx::Encoder* UpdateToken::GetEncoder()
-    {
-        return m_context.m_graphicsImpl.GetEncoderForThread();
-    }
-}
-
-namespace Babylon::Graphics
-{
     DeviceContext& DeviceContext::GetFromJavaScript(Napi::Env env)
     {
         return DeviceImpl::GetFromJavaScript(env).GetContext();
@@ -101,9 +87,9 @@ namespace Babylon::Graphics
         return m_graphicsImpl.AddCaptureCallback(std::move(callback));
     }
 
-    bgfx::ViewId DeviceContext::AcquireNewViewId(bgfx::Encoder& encoder)
+    bgfx::ViewId DeviceContext::AcquireNewViewId()
     {
-        return m_graphicsImpl.AcquireNewViewId(encoder);
+        return m_graphicsImpl.AcquireNewViewId();
     }
 
     void DeviceContext::AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)
@@ -128,5 +114,10 @@ namespace Babylon::Graphics
     uintptr_t DeviceContext::GetDeviceId() const
     {
        return m_graphicsImpl.GetId();
+    }
+
+    void DeviceContext::DispatchToRenderThread(std::function<void()> callback)
+    {
+        m_graphicsImpl.DispatchToRenderThread(std::move(callback));
     }
 }

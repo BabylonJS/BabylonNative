@@ -66,6 +66,14 @@ namespace Babylon::Graphics
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();
 
+        // Called from the render thread (main/UI thread) to pump bgfx rendering.
+        // Blocks until the API thread (JS thread) calls bgfx::frame().
+        void RenderFrame(int32_t _timeoutInMs);
+
+        // Thread-safe: enqueue a callback to run on the render thread
+        // (the thread that calls RenderFrame / bgfx::renderFrame).
+        void DispatchToRenderThread(std::function<void()> callback);
+
         float GetHardwareScalingLevel() const;
         void SetHardwareScalingLevel(float level);
 
@@ -92,7 +100,7 @@ namespace Babylon::Graphics
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
-        bgfx::ViewId AcquireNewViewId(bgfx::Encoder&);
+        bgfx::ViewId AcquireNewViewId();
 
         /* ********** END DEVICE CONTEXT CONTRACT ********** */
 
@@ -103,8 +111,6 @@ namespace Babylon::Graphics
         }
 
     private:
-        friend class UpdateToken;
-
         static const bgfx::RendererType::Enum s_bgfxRenderType;
         static void ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window);
         static void ConfigureBgfxRenderType(bgfx::PlatformData& pd, bgfx::RendererType::Enum& renderType);
@@ -114,11 +120,9 @@ namespace Babylon::Graphics
         void UpdateBgfxResolution();
         void RequestScreenShots();
         void Frame();
-        bgfx::Encoder* GetEncoderForThread();
-        void EndEncoders();
         void CaptureCallback(const BgfxCallback::CaptureData&);
 
-        arcana::affinity m_renderThreadAffinity{};
+        arcana::affinity m_bgfxThreadAffinity{};
         bool m_rendering{};
 
         std::atomic<bgfx::ViewId> m_nextViewId{0};
@@ -156,9 +160,6 @@ namespace Babylon::Graphics
 
         arcana::blocking_concurrent_queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks{};
 
-        std::map<std::thread::id, bgfx::Encoder*> m_threadIdToEncoder{};
-        std::mutex m_threadIdToEncoderMutex{};
-
         std::queue<std::pair<uint32_t, arcana::task_completion_source<void, std::exception_ptr>>> m_readTextureRequests{};
 
         std::map<std::string, SafeTimespanGuarantor> m_updateSafeTimespans{};
@@ -167,5 +168,8 @@ namespace Babylon::Graphics
         DeviceContext m_context;
         uintptr_t m_bgfxId = 0;
         std::function<void()> m_renderResetCallback;
+
+        std::mutex m_renderThreadCallbacksMutex{};
+        std::vector<std::function<void()>> m_renderThreadCallbacks{};
     };
 }

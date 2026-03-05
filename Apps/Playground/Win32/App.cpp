@@ -127,6 +127,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
+	SetThreadDescription(GetCurrentThread(), L"Playground Main Thread");
+
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_PLAYGROUNDWIN32, szWindowClass, MAX_LOADSTRING);
@@ -155,10 +157,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         {
             if (appContext)
             {
-                appContext->DeviceUpdate().Finish();
-                appContext->Device().FinishRenderingCurrentFrame();
-                appContext->Device().StartRenderingCurrentFrame();
-                appContext->DeviceUpdate().Start();
+                // Pump bgfx rendering.  Blocks until the JS thread
+                // calls bgfx::frame() (i.e. one frame is submitted).
+                appContext->Device().RenderFrame();
             }
 
             result = PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) && msg.message != WM_QUIT;
@@ -279,9 +280,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 if (appContext)
                 {
-                    appContext->DeviceUpdate().Finish();
-                    appContext->Device().FinishRenderingCurrentFrame();
-
                     appContext->Runtime().Suspend();
                 }
 
@@ -296,9 +294,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     if (appContext)
                     {
                         appContext->Runtime().Resume();
-
-                        appContext->Device().StartRenderingCurrentFrame();
-                        appContext->DeviceUpdate().Start();
                     }
                 }
             }

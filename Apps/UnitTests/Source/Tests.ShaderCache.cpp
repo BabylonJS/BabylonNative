@@ -23,10 +23,6 @@ TEST(ShaderCache, SaveAndLoad)
     Babylon::Plugins::ShaderCache::Enable();
 
     Babylon::Graphics::Device device{g_deviceConfig};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
-
-    device.StartRenderingCurrentFrame();
-    update.Start();
 
     std::promise<void> scriptIsDone{};
     std::promise<void> sceneIsReady{};
@@ -66,15 +62,21 @@ TEST(ShaderCache, SaveAndLoad)
         scriptIsDone.set_value();
     });
 
-    scriptIsDone.get_future().get();
+    // Pump RenderFrame() while scripts load (the JS-side frame loop
+    // needs renderFrame() on this thread to make progress).
+    auto scriptIsDoneFuture = scriptIsDone.get_future();
+    while (scriptIsDoneFuture.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+    {
+        device.RenderFrame();
+    }
+    scriptIsDoneFuture.get();
 
+    // Pump RenderFrame() on the test thread (render thread) until the
+    // JS-driven scene signals ready.
     auto sceneIsReadyFuture = sceneIsReady.get_future();
     while (sceneIsReadyFuture.wait_for(16ms) != std::future_status::ready)
     {
-        update.Finish();
-        device.FinishRenderingCurrentFrame();
-        device.StartRenderingCurrentFrame();
-        update.Start();
+        device.RenderFrame();
     }
 
     static const char* shaderCacheFileName = "shaderCache.bin";
@@ -90,8 +92,7 @@ TEST(ShaderCache, SaveAndLoad)
         EXPECT_EQ(deserializedCount, shaderCount);
     }
 
-    update.Finish();
-    device.FinishRenderingCurrentFrame();
+    device.Shutdown();
 
     Babylon::Plugins::ShaderCache::Disable();
 }

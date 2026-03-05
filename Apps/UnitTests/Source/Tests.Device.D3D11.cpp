@@ -100,4 +100,6 @@ TEST(Device, BackBuffer)
         update.Finish();
         device.FinishRenderingCurrentFrame();
     }
+
+    device.DisableRendering();
 }
