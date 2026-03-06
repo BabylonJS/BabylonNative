@@ -20,12 +20,10 @@ TEST(ExternalTexture, Construction)
     GTEST_SKIP();
 #else
     Babylon::Graphics::Device device{g_deviceConfig};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
-    device.StartRenderingCurrentFrame();
-    update.Start();
+    device.EnableRendering();
 
-	{
+	{ // scope to ensure destruction of externalTexture before device.Shutdown()
         auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256);
         Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
         DestroyTestTexture(nativeTexture);
@@ -34,8 +32,6 @@ TEST(ExternalTexture, Construction)
 		EXPECT_EQ(externalTexture.Height(), 256u);
     }
 
-    update.Finish();
-    device.FinishRenderingCurrentFrame();
     device.DisableRendering();
 #endif
 }

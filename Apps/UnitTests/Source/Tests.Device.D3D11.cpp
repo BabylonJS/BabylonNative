@@ -87,18 +87,13 @@ TEST(Device, BackBuffer)
     config.Height = dimensions[0].cy;
 
     Babylon::Graphics::Device device{config};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
+
+    device.EnableRendering();
 
     for (size_t i = 1; i < std::size(dimensions); ++i)
     {
-        device.StartRenderingCurrentFrame();
-        update.Start();
-
         device.UpdateBackBuffer(renderTargetTextures[i].View.get());
         device.UpdateSize(dimensions[i].cx, dimensions[i].cy);
-
-        update.Finish();
-        device.FinishRenderingCurrentFrame();
     }
 
     device.DisableRendering();

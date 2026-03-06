@@ -101,14 +101,8 @@ int RunApp(
         return EXIT_FAILURE;
     }
 
-    // Create the Babylon Native graphics device and update.
+    // Create the Babylon Native graphics device.
     auto device = Babylon::Graphics::Device(config);
-    auto deviceUpdate = device.GetUpdate("update");
-
-    // Start rendering a frame to unblock the JavaScript from queuing graphics
-    // commands.
-    device.StartRenderingCurrentFrame();
-    deviceUpdate.Start();
 
     // Create a Babylon Native application runtime which hosts a JavaScript
     // engine on a new thread.
@@ -121,6 +115,7 @@ int RunApp(
         env.Global().Set("globalThis", env.Global());
 
         // Add the Babylon Native graphics device to the JavaScript environment.
+        // This automatically starts the frame loop on the JS thread.
         device.AddToJavaScript(env);
 
         // Initialize polyfills.
@@ -159,19 +154,18 @@ int RunApp(
         CatchAndLogError(jsPromise);
     });
 
-    // Wait for `AddToContextAsync` to be called.
-    addToContext.get_future().wait();
+    // Pump RenderFrame while waiting for AddToContextAsync and startup.
+    auto addToContextFuture = addToContext.get_future();
+    while (addToContextFuture.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready)
+    {
+        device.RenderFrame();
+    }
 
-    // Render a frame so that `AddToContextAsync` will complete.
-    deviceUpdate.Finish();
-    device.FinishRenderingCurrentFrame();
-
-    // Wait for `startup` to finish.
-    startup.get_future().wait();
-
-    // Start a new frame for rendering the scene.
-    device.StartRenderingCurrentFrame();
-    deviceUpdate.Start();
+    auto startupFuture = startup.get_future();
+    while (startupFuture.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready)
+    {
+        device.RenderFrame();
+    }
 
     std::promise<void> renderScene{};
 
@@ -189,12 +183,15 @@ int RunApp(
         CatchAndLogError(jsPromise);
     });
 
-    // Wait for the scene to render.
-    renderScene.get_future().wait();
+    // Pump RenderFrame while waiting for the scene to render.
+    auto renderSceneFuture = renderScene.get_future();
+    while (renderSceneFuture.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready)
+    {
+        device.RenderFrame();
+    }
 
-    // Finish the frame.
-    deviceUpdate.Finish();
-    device.FinishRenderingCurrentFrame();
+    // Shut down rendering.
+    device.Shutdown();
 
     // Save the rendered output as a PNG.
     auto filePath = executablePath / "output.png";

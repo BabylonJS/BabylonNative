@@ -131,9 +131,6 @@ namespace Babylon::Graphics
 
         DeviceUpdate GetUpdate(const char* updateName);
 
-        void StartRenderingCurrentFrame();
-        void FinishRenderingCurrentFrame();
-
         // Called from the render thread (main/UI thread) to pump bgfx rendering.
         // Blocks until the API thread (JS thread) calls bgfx::frame().
         void RenderFrame(int32_t _timeoutInMs = -1);
@@ -169,6 +166,9 @@ namespace Babylon::Graphics
         void StopFrameLoop();
 
         bool IsFrameLoopRunning() const;
+
+        void StartRenderingCurrentFrame();
+        void FinishRenderingCurrentFrame();
 
         std::unique_ptr<DeviceImpl> m_impl{};
         JsRuntime* m_jsRuntime{};
