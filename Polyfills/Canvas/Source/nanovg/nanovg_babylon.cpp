@@ -799,7 +799,7 @@ namespace
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
-        finalFrameBuffer->Bind(*gl->encoder); // Should this be bound elsewhere?
+        finalFrameBuffer->Bind(); // Should this be bound elsewhere?
 
         call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
     }
@@ -861,7 +861,7 @@ namespace
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
-        finalFrameBuffer->Bind(*gl->encoder); // Should this be bound elsewhere?
+        finalFrameBuffer->Bind(); // Should this be bound elsewhere?
 
         call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
     }
@@ -906,7 +906,7 @@ namespace
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
-        finalFrameBuffer->Bind(*gl->encoder); // Should this be bound elsewhere?
+        finalFrameBuffer->Bind(); // Should this be bound elsewhere?
 
         call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
     }
@@ -946,7 +946,7 @@ namespace
                 outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
 			};
             Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
-            finalFrameBuffer->Bind(*gl->encoder); // Should this be bound elsewhere?
+            finalFrameBuffer->Bind(); // Should this be bound elsewhere?
 
             call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
         }
@@ -994,7 +994,7 @@ namespace
     static void nvgRenderFlush(void* _userPtr)
     {
         struct GLNVGcontext* gl = (struct GLNVGcontext*)_userPtr;
-        //gl->frameBuffer->SetViewPort(gl->encoder, 0.f, 0.f, gl->view[0], gl->view[1]);
+        //gl->frameBuffer->SetViewPort(0.f, 0.f, gl->view[0], gl->view[1]);
         if (!gl->prog.idx)
         {
             bgfx::RendererType::Enum type = bgfx::getRendererType();

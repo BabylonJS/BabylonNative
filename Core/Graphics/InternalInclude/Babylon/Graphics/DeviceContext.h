@@ -10,6 +10,8 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
+#include <gsl/gsl>
+
 #include <mutex>
 #include <unordered_map>
 
@@ -29,40 +31,12 @@ namespace Babylon::Graphics
         bgfx::TextureFormat::Enum Format{};
     };
 
-    class UpdateToken final
-    {
-    public:
-        UpdateToken(const UpdateToken& other) = delete;
-        UpdateToken& operator=(const UpdateToken& other) = delete;
-
-        UpdateToken(UpdateToken&&) noexcept = default;
-
-        // The move assignment of `SafeTimespanGuarantor::SafetyGuarantee` is marked as delete.
-        // See https://github.com/Microsoft/GSL/issues/705.
-        //UpdateToken& operator=(UpdateToken&& other) = delete;
-
-        bgfx::Encoder* GetEncoder();
-
-    private:
-        friend class Update;
-
-        UpdateToken(DeviceContext&, SafeTimespanGuarantor&);
-
-        DeviceContext& m_context;
-        SafeTimespanGuarantor::SafetyGuarantee m_guarantee;
-    };
-
     class Update
     {
     public:
         continuation_scheduler<>& Scheduler()
         {
             return m_safeTimespanGuarantor.OpenScheduler();
-        }
-
-        UpdateToken GetUpdateToken()
-        {
-            return {m_context, m_safeTimespanGuarantor};
         }
 
     private:
@@ -113,7 +87,11 @@ namespace Babylon::Graphics
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
-        bgfx::ViewId AcquireNewViewId(bgfx::Encoder&);
+        bgfx::ViewId AcquireNewViewId();
+
+        // Enqueue a callback to run on the render thread (the thread that
+        // pumps bgfx::renderFrame).  Thread-safe; can be called from any thread.
+        void DispatchToRenderThread(std::function<void()> callback);
 
         // TODO: find a different way to get the texture info for frame capture
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
@@ -122,8 +100,6 @@ namespace Babylon::Graphics
         static bx::AllocatorI& GetDefaultAllocator() { return m_allocator; }
 
     private:
-        friend UpdateToken;
-
         DeviceImpl& m_graphicsImpl;
 
         std::unordered_map<uint16_t, TextureInfo> m_textureHandleToInfo{};

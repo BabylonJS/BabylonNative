@@ -11,8 +11,24 @@ namespace Babylon::Graphics
     Device::~Device() = default;
 
     // Move semantics
-    Device::Device(Device&&) noexcept = default;
-    Device& Device::operator=(Device&&) noexcept = default;
+    Device::Device(Device&& other) noexcept
+        : m_impl{std::move(other.m_impl)}
+        , m_jsRuntime{other.m_jsRuntime}
+        , m_frameLoopRunning{other.m_frameLoopRunning.load()}
+        , m_stopRequested{other.m_stopRequested.load()}
+    {
+        other.m_jsRuntime = nullptr;
+    }
+
+    Device& Device::operator=(Device&& other) noexcept
+    {
+        m_impl = std::move(other.m_impl);
+        m_jsRuntime = other.m_jsRuntime;
+        m_frameLoopRunning.store(other.m_frameLoopRunning.load());
+        m_stopRequested.store(other.m_stopRequested.load());
+        other.m_jsRuntime = nullptr;
+        return *this;
+    }
 
     void Device::UpdateDevice(DeviceT device) 
     {
@@ -49,6 +65,7 @@ namespace Babylon::Graphics
     void Device::AddToJavaScript(Napi::Env env)
     {
         m_impl->AddToJavaScript(env);
+        StartFrameLoop("update", env);
     }
 
     Napi::Value Device::CreateContext(Napi::Env env)
@@ -87,6 +104,88 @@ namespace Babylon::Graphics
     void Device::FinishRenderingCurrentFrame()
     {
         m_impl->FinishRenderingCurrentFrame();
+    }
+
+    void Device::RenderFrame(int32_t _timeoutInMs)
+    {
+        m_impl->RenderFrame(_timeoutInMs);
+    }
+
+    void Device::StartFrameLoop(const char* updateName, Napi::Env env)
+    {
+        auto& guarantor = m_impl->GetSafeTimespanGuarantor(updateName);
+
+        // First frame: init bgfx and open the guarantor.
+        m_impl->StartRenderingCurrentFrame();
+        guarantor.Open();
+
+        m_stopRequested.store(false);
+        m_frameLoopRunning.store(true);
+
+        auto& jsRuntime = JsRuntime::GetFromJavaScript(env);
+        m_jsRuntime = &jsRuntime;
+        auto framePump = std::make_shared<std::function<void(Napi::Env)>>();
+        auto* stopFlag = &m_stopRequested;
+        auto* runningFlag = &m_frameLoopRunning;
+        *framePump = [impl = m_impl.get(), &guarantor, &jsRuntime, framePump, stopFlag, runningFlag](Napi::Env) {
+            if (stopFlag->load())
+            {
+                // Signal that the frame loop is done BEFORE calling
+                // FinishRenderingCurrentFrame.  bgfx::frame() inside Finish
+                // wakes the main thread's bgfx::renderFrame(); if runningFlag
+                // were still true at that point the main thread would re-enter
+                // bgfx::renderFrame(-1) and block forever (nobody left to call
+                // bgfx::frame).
+                runningFlag->store(false);
+                impl->FinishRenderingCurrentFrame();
+                return;
+            }
+            impl->FinishRenderingCurrentFrame();
+            impl->StartRenderingCurrentFrame();
+            guarantor.Open();
+            jsRuntime.Dispatch(*framePump);
+        };
+        jsRuntime.Dispatch(*framePump);
+    }
+
+    void Device::StopFrameLoop()
+    {
+        m_stopRequested.store(true);
+    }
+
+    bool Device::IsFrameLoopRunning() const
+    {
+        return m_frameLoopRunning.load();
+    }
+
+    void Device::Shutdown(std::function<void()> beforeDisableRendering)
+    {
+        // Phase 1: Stop the frame loop.  Pump RenderFrame() on this (main)
+        // thread so the in-flight bgfx::frame() on the JS thread can complete.
+        StopFrameLoop();
+        while (IsFrameLoopRunning())
+        {
+            RenderFrame();
+        }
+
+        // Phase 2: Dispatch cleanup + DisableRendering to the JS thread
+        // (the thread that owns the bgfx API).
+        std::atomic<bool> done{false};
+        m_jsRuntime->Dispatch([this, &done, beforeDisableRendering = std::move(beforeDisableRendering)](Napi::Env) {
+            if (beforeDisableRendering)
+            {
+                beforeDisableRendering();
+            }
+            DisableRendering();
+            done.store(true);
+        });
+
+        // Pump RenderFrame() so bgfx::frame() / bgfx::shutdown() inside
+        // DisableRendering can complete.
+        while (!done.load())
+        {
+            RenderFrame();
+        }
     }
 
     void Device::SetDiagnosticOutput(std::function<void(const char* output)> outputFunction)

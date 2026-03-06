@@ -4,6 +4,7 @@
 #include <Babylon/Graphics/Platform.h>
 #include <Babylon/Graphics/RendererType.h>
 
+#include <atomic>
 #include <future>
 #include <memory>
 
@@ -130,8 +131,20 @@ namespace Babylon::Graphics
 
         DeviceUpdate GetUpdate(const char* updateName);
 
-        void StartRenderingCurrentFrame();
-        void FinishRenderingCurrentFrame();
+        // Called from the render thread (main/UI thread) to pump bgfx rendering.
+        // Blocks until the API thread (JS thread) calls bgfx::frame().
+        void RenderFrame(int32_t _timeoutInMs = -1);
+
+        // Shuts down the frame loop and rendering.  Must be called from the
+        // render/main thread (the thread that calls RenderFrame).
+        // 1. Stops the frame loop and pumps RenderFrame() until the JS thread
+        //    finishes the in-flight frame.
+        // 2. Dispatches beforeDisableRendering (if provided) and DisableRendering()
+        //    to the JS thread, and pumps RenderFrame() until bgfx::shutdown()
+        //    completes.
+        // After this call the device is shut down; destroy the JS runtime and
+        // then the Device.
+        void Shutdown(std::function<void()> beforeDisableRendering = {});
 
         void SetDiagnosticOutput(std::function<void(const char* output)> outputFunction);
 
@@ -143,6 +156,23 @@ namespace Babylon::Graphics
         PlatformInfo GetPlatformInfo() const;
 
     private:
+        // Starts a self-driving frame loop on the JS thread.
+        // Initialises bgfx, opens the guarantor, and uses JsRuntime::Dispatch
+        // to continuously pump frames (bgfx::frame) after rAF callbacks.
+        void StartFrameLoop(const char* updateName, Napi::Env env);
+
+        // Signal the frame pump to stop.  After calling this, keep pumping
+        // RenderFrame() on the render thread to unblock any in-flight bgfx::frame().
+        void StopFrameLoop();
+
+        bool IsFrameLoopRunning() const;
+
+        void StartRenderingCurrentFrame();
+        void FinishRenderingCurrentFrame();
+
         std::unique_ptr<DeviceImpl> m_impl{};
+        JsRuntime* m_jsRuntime{};
+        std::atomic<bool> m_frameLoopRunning{false};
+        std::atomic<bool> m_stopRequested{false};
     };
 }

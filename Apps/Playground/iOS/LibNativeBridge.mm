@@ -49,13 +49,7 @@ float screenScale{1.0f};
 {
     if (appContext)
     {
-        appContext->DeviceUpdate().Finish();
-        appContext->Device().FinishRenderingCurrentFrame();
-
         appContext->Device().UpdateSize(static_cast<size_t>(inWidth), static_cast<size_t>(inHeight));
-
-        appContext->Device().StartRenderingCurrentFrame();
-        appContext->DeviceUpdate().Start();
     }
 }
 
@@ -63,10 +57,7 @@ float screenScale{1.0f};
 {
     if (appContext)
     {
-        appContext->DeviceUpdate().Finish();
-        appContext->Device().FinishRenderingCurrentFrame();
-        appContext->Device().StartRenderingCurrentFrame();
-        appContext->DeviceUpdate().Start();
+        appContext->Device().RenderFrame();
     }
 }
 

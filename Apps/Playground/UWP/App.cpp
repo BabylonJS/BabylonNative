@@ -109,10 +109,7 @@ void App::Run()
     {
         if (m_appContext)
         {
-            m_appContext->DeviceUpdate().Finish();
-            m_appContext->Device().FinishRenderingCurrentFrame();
-            m_appContext->Device().StartRenderingCurrentFrame();
-            m_appContext->DeviceUpdate().Start();
+            m_appContext->Device().RenderFrame();
         }
 
         CoreWindow::GetForCurrentThread().Dispatcher().ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
@@ -156,9 +153,6 @@ void App::OnSuspending(IInspectable const& /*sender*/, SuspendingEventArgs const
 
     if (m_appContext)
     {
-        m_appContext->DeviceUpdate().Finish();
-        m_appContext->Device().FinishRenderingCurrentFrame();
-
         m_appContext->Runtime().Suspend();
     }
 
@@ -173,9 +167,6 @@ void App::OnResuming(IInspectable const& /*sender*/, IInspectable const& /*args*
         // and state are persisted when resuming from suspend. Note that this event
         // does not occur if the app was previously terminated.
         m_appContext->Runtime().Resume();
-
-        m_appContext->Device().StartRenderingCurrentFrame();
-        m_appContext->DeviceUpdate().Start();
     }
 }
 

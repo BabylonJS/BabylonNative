@@ -84,35 +84,86 @@ namespace Babylon::Plugins
                 return;
             }
 
+            // createTexture2D queues a CreateTexture command in the current
+            // submit buffer.  In multi-threaded bgfx the command is only
+            // processed by the render thread after bgfx::frame() swaps the
+            // buffer and the subsequent bgfx::renderFrame() runs
+            // rendererExecCommands.  The chain below ensures that the render
+            // thread has fully processed the CreateTexture before we call
+            // overrideInternal:
+            //
+            //   1. AfterRender  – Frame() (bgfx::frame) just ran; the submit
+            //                     buffer containing CreateTexture has been
+            //                     swapped to the render side.
+            //   2. BeforeRender – we are now in the *next* frame.  The
+            //                     upcoming Frame() will call bgfx::frame()
+            //                     whose renderSemWait guarantees the render
+            //                     thread finished processing the previous
+            //                     frame (the one with CreateTexture).
+            //   3. DispatchToRenderThread – the callback runs on the render
+            //                     thread between renderFrame() calls, after
+            //                     the frame that contained CreateTexture has
+            //                     been fully processed.
             arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&runtime, &context, deferred = std::move(deferred), handle, impl = std::move(impl), layerIndex = std::move(layerIndex)]() mutable {
-                if (bgfx::overrideInternal(handle, uintptr_t(impl->Get()), layerIndex.value_or(0)) == 0)
-                {
-                    runtime.Dispatch([deferred = std::move(deferred), handle](Napi::Env env) {
-                        bgfx::destroy(handle);
-                        deferred.Reject(Napi::Error::New(env, "Failed to override native texture").Value());
-                    });
-
-                    return;
-                }
-
-                runtime.Dispatch([deferred = std::move(deferred), handle, &context, impl = std::move(impl)](Napi::Env env) mutable {
-                    auto* texture = new Graphics::Texture{context};
-                    DEBUG_TRACE("ExternalTexture [0x%p] attach %d x %d %d mips. Format : %d Flags : %d. (bgfx handle id %d)",
-                        impl.get(), int(impl->Width()), int(impl->Height()), int(impl->HasMips()), int(impl->Format()), int(impl->Flags()), int(handle.idx));
-                    texture->Attach(handle, true, impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
-
-                    impl->AddHandle(texture->Handle());
-
-                    auto jsObject = Napi::Pointer<Graphics::Texture>::Create(env, texture, [texture, weakImpl = std::weak_ptr{impl}] {
-                        if (auto impl = weakImpl.lock())
+                arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(), [&runtime, &context, deferred = std::move(deferred), handle, impl = std::move(impl), layerIndex = std::move(layerIndex)]() mutable {
+                    context.DispatchToRenderThread([&runtime, &context, deferred = std::move(deferred), handle, impl = std::move(impl), layerIndex = std::move(layerIndex)]() mutable {
+                        if (bgfx::overrideInternal(handle, uintptr_t(impl->Get()), layerIndex.value_or(0)) == 0)
                         {
-                            impl->RemoveHandle(texture->Handle());
+                            // The texture may not have been processed yet
+                            // (unlikely with the 3-hop chain, but possible
+                            // due to render-thread timing).  Retry once: the
+                            // next renderFrame(Render) drain is guaranteed to
+                            // run after the frame containing CreateTexture.
+                            context.DispatchToRenderThread([&runtime, deferred = std::move(deferred), handle, impl = std::move(impl), &context, layerIndex = std::move(layerIndex)]() mutable {
+                                if (bgfx::overrideInternal(handle, uintptr_t(impl->Get()), layerIndex.value_or(0)) == 0)
+                                {
+                                    runtime.Dispatch([deferred = std::move(deferred), handle](Napi::Env env) {
+                                        bgfx::destroy(handle);
+                                        deferred.Reject(Napi::Error::New(env, "Failed to override native texture").Value());
+                                    });
+                                    return;
+                                }
+
+                                runtime.Dispatch([deferred = std::move(deferred), handle, &context, impl = std::move(impl)](Napi::Env env) mutable {
+                                    auto* texture = new Graphics::Texture{context};
+                                    DEBUG_TRACE("ExternalTexture [0x%p] attach (retry) (bgfx handle id %d)", impl.get(), int(handle.idx));
+                                    texture->Attach(handle, true, impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
+                                    impl->AddHandle(texture->Handle());
+
+                                    auto jsObject = Napi::Pointer<Graphics::Texture>::Create(env, texture, [texture, weakImpl = std::weak_ptr{impl}] {
+                                        if (auto impl = weakImpl.lock())
+                                        {
+                                            impl->RemoveHandle(texture->Handle());
+                                        }
+                                        delete texture;
+                                    });
+                                    deferred.Resolve(jsObject);
+                                });
+                            });
+
+                            return;
                         }
 
-                        delete texture;
-                    });
+                        runtime.Dispatch([deferred = std::move(deferred), handle, &context, impl = std::move(impl)](Napi::Env env) mutable {
+                            auto* texture = new Graphics::Texture{context};
+                            DEBUG_TRACE("ExternalTexture [0x%p] attach %d x %d %d mips. Format : %d Flags : %d. (bgfx handle id %d)",
+                                impl.get(), int(impl->Width()), int(impl->Height()), int(impl->HasMips()), int(impl->Format()), int(impl->Flags()), int(handle.idx));
+                            texture->Attach(handle, true, impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
 
-                    deferred.Resolve(jsObject);
+                            impl->AddHandle(texture->Handle());
+
+                            auto jsObject = Napi::Pointer<Graphics::Texture>::Create(env, texture, [texture, weakImpl = std::weak_ptr{impl}] {
+                                if (auto impl = weakImpl.lock())
+                                {
+                                    impl->RemoveHandle(texture->Handle());
+                                }
+
+                                delete texture;
+                            });
+
+                            deferred.Resolve(jsObject);
+                        });
+                    });
                 });
             });
         });

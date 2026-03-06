@@ -88,9 +88,18 @@ TEST(JavaScript, All)
     loader.LoadScript("app:///Assets/babylonjs.materials.js");
     loader.LoadScript("app:///Assets/tests.javaScript.all.js");
 
-    device.StartRenderingCurrentFrame();
-    device.FinishRenderingCurrentFrame();
+    // Pump RenderFrame() on the test thread (render thread) until the
+    // JavaScript tests signal completion.  The JS-side frame loop is
+    // driven automatically by AddToJavaScript/StartFrameLoop.
+    auto exitCodeFuture = exitCodePromise.get_future();
+    while (exitCodeFuture.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+    {
+        device.RenderFrame();
+    }
 
-    auto exitCode{exitCodePromise.get_future().get()};
+    auto exitCode{exitCodeFuture.get()};
+
+    device.Shutdown();
+
     EXPECT_EQ(exitCode, 0);
 }

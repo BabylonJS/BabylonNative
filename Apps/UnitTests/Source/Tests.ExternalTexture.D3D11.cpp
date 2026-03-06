@@ -19,20 +19,13 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdateWithLayerIndex)
     GTEST_SKIP();
 #else
     Babylon::Graphics::Device device{g_deviceConfig};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
-    device.StartRenderingCurrentFrame();
-    update.Start();
-
-    auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256, 3);
-
-    Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
-
-    std::promise<void> addToContext{};
+    Babylon::Graphics::TextureT nativeTexture{};
+    std::optional<Babylon::Plugins::ExternalTexture> externalTexture{};
     std::promise<void> promiseResolved{};
 
     Babylon::AppRuntime runtime{};
-    runtime.Dispatch([&device, &addToContext, &promiseResolved, externalTexture](Napi::Env env) {
+    runtime.Dispatch([&device, &promiseResolved, &externalTexture, &nativeTexture](Napi::Env env) {
         device.AddToJavaScript(env);
 
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
@@ -43,9 +36,11 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdateWithLayerIndex)
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 
+        nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256, 3);
+        externalTexture.emplace(nativeTexture);
+
         // Test with explicit layer index 1
-        auto jsPromise = externalTexture.AddToContextAsync(env, 1);
-        addToContext.set_value();
+        auto jsPromise = externalTexture->AddToContextAsync(env, 1);
 
         auto jsOnFulfilled = Napi::Function::New(env, [&promiseResolved](const Napi::CallbackInfo& info) {
             promiseResolved.set_value();
@@ -58,26 +53,21 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdateWithLayerIndex)
         jsPromise.Get("then").As<Napi::Function>().Call(jsPromise, {jsOnFulfilled, jsOnRejected});
     });
 
-    // Wait for AddToContextAsync to be called.
-    addToContext.get_future().wait();
+    // Pump RenderFrame() on the test thread (render thread) until
+    // the AddToContextAsync promise resolves.
+    auto promiseResolvedFuture = promiseResolved.get_future();
+    while (promiseResolvedFuture.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+    {
+        device.RenderFrame();
+    }
 
-    // Render a frame so that AddToContextAsync will complete.
-    update.Finish();
-    device.FinishRenderingCurrentFrame();
-
-    // Wait for promise to resolve.
-    promiseResolved.get_future().wait();
-
-    // Start a new frame.
-    device.StartRenderingCurrentFrame();
-    update.Start();
+    promiseResolvedFuture.get();
 
     // Update the external texture to a new texture with explicit layer index 2.
-    externalTexture.Update(nativeTexture, std::nullopt, 2);
+    externalTexture->Update(nativeTexture, std::nullopt, 2);
 
     DestroyTestTexture(nativeTexture);
 
-    update.Finish();
-    device.FinishRenderingCurrentFrame();
+    device.Shutdown();
 #endif
 }

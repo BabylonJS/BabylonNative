@@ -67,9 +67,6 @@ AppContext::AppContext(
 
     Babylon::Plugins::ShaderCache::Enable();
 
-    m_device->StartRenderingCurrentFrame();
-    m_deviceUpdate->Start();
-
     Babylon::AppRuntime::Options options{};
 
     options.EnableDebugger = true;
@@ -141,18 +138,24 @@ AppContext::AppContext(
 
 AppContext::~AppContext()
 {
-    if (m_device)
-    {
-        m_deviceUpdate->Finish();
-        m_device->FinishRenderingCurrentFrame();
-    }
+    // Shut down the frame loop and bgfx.  The callback flushes Canvas GPU
+    // resources (nvgDelete etc.) while bgfx is still alive, so that when GC
+    // runs during m_runtime.reset() the Canvas Dispose() is a safe no-op.
+    m_device->Shutdown([this] {
+        if (m_canvas)
+        {
+            m_canvas->FlushGraphicResources();
+        }
+    });
 
+    // Destroy the JS runtime (cancels WorkQueue, joins the JS thread).
+    m_runtime.reset();
+
+    // Now that the JS thread is dead, safe to destroy everything else.
     Babylon::Plugins::ShaderCache::Disable();
-
     m_scriptLoader.reset();
     m_canvas.reset();
     m_input = {};
-    m_runtime.reset();
     m_deviceUpdate.reset();
     m_device.reset();
 }

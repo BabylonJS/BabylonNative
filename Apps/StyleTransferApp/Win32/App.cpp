@@ -69,7 +69,6 @@ namespace
     WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 
     std::optional<Babylon::Graphics::Device> g_device{};
-    std::optional<Babylon::Graphics::DeviceUpdate> g_update{};
     Babylon::Plugins::NativeInput* g_nativeInput{};
     std::optional<Babylon::AppRuntime> g_runtime{};
     bool g_minimized{false};
@@ -219,13 +218,11 @@ namespace
     {
         if (g_device)
         {
-            g_update->Finish();
-            g_device->FinishRenderingCurrentFrame();
+            g_device->Shutdown();
         }
 
         g_nativeInput = {};
         g_runtime.reset();
-        g_update.reset();
         g_device.reset();
     }
 
@@ -300,12 +297,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // --------------------- Babylon Native initialization --------------------------
 
     g_device = CreateBabylonGraphicsDevice(d3d11Device.get());
-    g_update.emplace(g_device->GetUpdate("update"));
-
-    // Start rendering a frame to unblock the JavaScript from queuing graphics
-    // commands.
-    g_device->StartRenderingCurrentFrame();
-    g_update->Start();
 
     // Create a Babylon Native application runtime which hosts a JavaScript
     // engine on a new thread.
@@ -334,16 +325,23 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
     loader.LoadScript("app:///Scripts/index.js");
 
-    std::promise<void> addToContext{};
+    // Helper: pump RenderFrame() on the main thread until a future is ready.
+    auto waitWhilePumping = [](std::future<void>& future) {
+        while (future.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+        {
+            g_device->RenderFrame();
+        }
+    };
+
     std::promise<void> startup{};
+    auto startupFuture = startup.get_future();
 
     // Create an external texture for the render target texture and pass it to
     // the `startup` JavaScript function.
-    loader.Dispatch([externalTexture = Babylon::Plugins::ExternalTexture{g_BabylonRenderTexture.get()}, &addToContext, &startup](Napi::Env env) {
+    loader.Dispatch([externalTexture = Babylon::Plugins::ExternalTexture{g_BabylonRenderTexture.get()}, &startup](Napi::Env env) {
         auto jsPromise = externalTexture.AddToContextAsync(env);
-        addToContext.set_value();
 
-        jsPromise.Get("then").As<Napi::Function>().Call(jsPromise, {Napi::Function::New(env, [&startup](const Napi::CallbackInfo& info) {
+        auto jsOnFulfilled = Napi::Function::New(env, [&startup](const Napi::CallbackInfo& info) {
             auto nativeTexture = info[0];
             info.Env().Global().Get("startup").As<Napi::Function>().Call(
                 {
@@ -352,27 +350,27 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                     Napi::Value::From(info.Env(), HEIGHT),
                 });
             startup.set_value();
-        })});
+        });
+
+        jsPromise = jsPromise.Get("then").As<Napi::Function>().Call(jsPromise, {jsOnFulfilled}).As<Napi::Promise>();
+
+        auto jsOnRejected = Napi::Function::New(env, [&startup](const Napi::CallbackInfo& info) {
+            auto console = info.Env().Global().Get("console").As<Napi::Object>();
+            console.Get("error").As<Napi::Function>().Call(console, {info[0]});
+            startup.set_exception(std::make_exception_ptr(std::runtime_error{"ExternalTexture setup failed"}));
+        });
+
+        jsPromise.Get("catch").As<Napi::Function>().Call(jsPromise, {jsOnRejected});
     });
 
-    // Wait for `AddToContextAsync` to be called.
-    addToContext.get_future().wait();
-
-    // Render a frame so that `AddToContextAsync` will complete.
-    g_update->Finish();
-    g_device->FinishRenderingCurrentFrame();
-
-    // Wait for `startup` to finish.
-    startup.get_future().wait();
+    // Pump RenderFrame() on this (main) thread while waiting for startup.
+    waitWhilePumping(startupFuture);
 
     // --------------------------- Rendering loop -------------------------
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_PLAYGROUNDWIN32));
 
     MSG msg{};
-
-    g_device->StartRenderingCurrentFrame();
-    g_update->Start();
 
     // Main message loop:
     while (msg.message != WM_QUIT)
@@ -387,9 +385,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         {
             if (g_device)
             {
-                // Finish Babylon Native rendering.
-                g_update->Finish();
-                g_device->FinishRenderingCurrentFrame();
+                // Pump bgfx rendering. Blocks until the JS thread
+                // calls bgfx::frame() (i.e. one frame is submitted).
+                g_device->RenderFrame();
 
                 if (g_selectedModel >= 0)
                 {
@@ -403,10 +401,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                     CopyTo(result, g_BabylonRenderTexture.get(), d3d11Context);
                 }
 
-                // Present and start rendering next frame.
+                // Present.
                 swapChain->Present(1, 0);
-                g_device->StartRenderingCurrentFrame();
-                g_update->Start();
             }
 
             result = PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) && msg.message != WM_QUIT;
@@ -458,13 +454,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             if ((wParam & 0xFFF0) == SC_MINIMIZE)
             {
-                if (g_device)
+                if (g_runtime)
                 {
-                    g_update->Finish();
-                    g_device->FinishRenderingCurrentFrame();
+                    g_runtime->Suspend();
                 }
-
-                g_runtime->Suspend();
 
                 g_minimized = true;
             }
@@ -472,14 +465,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 if (g_minimized)
                 {
-                    g_runtime->Resume();
-
                     g_minimized = false;
 
-                    if (g_device)
+                    if (g_runtime)
                     {
-                        g_device->StartRenderingCurrentFrame();
-                        g_update->Start();
+                        g_runtime->Resume();
                     }
                 }
             }
