@@ -203,22 +203,33 @@ namespace Babylon::Graphics
 
     void DeviceImpl::EnableRendering()
     {
-        std::scoped_lock lock{m_state.Mutex};
-
-        if (!m_state.Bgfx.Initialized)
+        bgfx::Init initCopy;
         {
+            std::scoped_lock lock{m_state.Mutex};
+
+            if (m_state.Bgfx.Initialized)
+            {
+                return;
+            }
+
             // Set the thread affinity — bgfx API calls (init, frame, etc.)
             // must happen on this thread (the JS thread).
             m_bgfxThreadAffinity = std::this_thread::get_id();
 
-            // Initialize bgfx.  The initial bgfx::renderFrame() was already
-            // called from the DeviceImpl constructor on the main/render thread.
-            const auto& init{m_state.Bgfx.InitState};
-            if (!bgfx::init(init))
-            {
-                throw std::runtime_error{"Failed to initialize bgfx."};
-            }
+            // Copy the init state so we can release the mutex before calling
+            // bgfx::init().  bgfx::init() blocks until the render thread calls
+            // bgfx::renderFrame(), so holding the mutex here would deadlock if
+            // the render thread tries to acquire it (e.g. via UpdateSize).
+            initCopy = m_state.Bgfx.InitState;
+        }
 
+        if (!bgfx::init(initCopy))
+        {
+            throw std::runtime_error{"Failed to initialize bgfx."};
+        }
+
+        {
+            std::scoped_lock lock{m_state.Mutex};
             m_state.Bgfx.Initialized = true;
             m_state.Bgfx.Dirty = false;
 
