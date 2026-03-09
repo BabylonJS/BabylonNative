@@ -42,14 +42,12 @@ namespace Babylon::Graphics
     private:
         friend class DeviceContext;
 
-        Update(SafeTimespanGuarantor& safeTimespanGuarantor, DeviceContext& context)
+        Update(SafeTimespanGuarantor& safeTimespanGuarantor)
             : m_safeTimespanGuarantor{safeTimespanGuarantor}
-            , m_context{context}
         {
         }
 
         SafeTimespanGuarantor& m_safeTimespanGuarantor;
-        DeviceContext& m_context;
     };
 
     class DeviceContext

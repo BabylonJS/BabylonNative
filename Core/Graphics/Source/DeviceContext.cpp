@@ -39,7 +39,7 @@ namespace Babylon::Graphics
 
     Update DeviceContext::GetUpdate(const char* updateName)
     {
-        return {m_graphicsImpl.GetSafeTimespanGuarantor(updateName), *this};
+        return {m_graphicsImpl.GetSafeTimespanGuarantor(updateName)};
     }
 
     void DeviceContext::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)
