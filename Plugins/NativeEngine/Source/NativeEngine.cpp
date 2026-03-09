@@ -1,4 +1,4 @@
-﻿#include "NativeEngine.h"
+#include "NativeEngine.h"
 
 #include <Babylon/Graphics/Texture.h>
 
