@@ -392,6 +392,7 @@ namespace Babylon::Graphics
 
     arcana::task<void, std::exception_ptr> DeviceImpl::ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel)
     {
+        ASSERT_THREAD_AFFINITY(m_bgfxThreadAffinity);
         arcana::task_completion_source<void, std::exception_ptr> completionSource{};
         m_readTextureRequests.emplace(bgfx::readTexture(handle, data.data(), mipLevel), completionSource);
         return completionSource.as_task();
