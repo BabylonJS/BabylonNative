@@ -207,10 +207,14 @@ endif()
 # Put in a "bgfx" folder in Visual Studio
 set_target_properties(bgfx PROPERTIES FOLDER "bgfx")
 
-# in Xcode we need to specify this file as objective-c++ (instead of renaming to .mm)
+# in Xcode we need to specify these files as objective-c++ (instead of renaming to .mm)
 if(XCODE)
 	set_source_files_properties(
-		${BGFX_DIR}/src/renderer_vk.cpp PROPERTIES LANGUAGE OBJCXX XCODE_EXPLICIT_FILE_TYPE sourcecode.cpp.objcpp
+		${BGFX_DIR}/src/renderer_vk.cpp
+		${BGFX_DIR}/src/renderer_webgpu.cpp
+		PROPERTIES
+			LANGUAGE OBJCXX
+			XCODE_EXPLICIT_FILE_TYPE sourcecode.cpp.objcpp
 	)
 endif()
 
