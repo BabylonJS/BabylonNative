@@ -279,7 +279,7 @@ The minimal requirement target is an OpenGL 3.3 compatible GPU. Clang 9+ or GCC 
 First step is to install packages mandatory for building. For example, with a GCC toolchain:
 
 ```
-sudo apt install libgl1-mesa-dev x11proto-core-dev libx11-dev libcurl4-openssl-dev libjavascriptcoregtk-4.1-dev g++ cmake ninja-build npm
+sudo apt-get install libgl1-mesa-dev x11proto-core-dev libx11-dev libcurl4-openssl-dev g++ cmake ninja-build npm
 ```
 
 Depending on the JavaScript engine you want to use, you will have to install the package accordingly:
