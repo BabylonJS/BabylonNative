@@ -3,7 +3,6 @@
 #include <Babylon/Graphics/BgfxCallback.h>
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Graphics/DeviceContext.h>
-#include <Babylon/Graphics/SafeTimespanGuarantor.h>
 
 #include <arcana/containers/ticketed_collection.h>
 #include <arcana/threading/blocking_concurrent_queue.h>
@@ -59,8 +58,6 @@ namespace Babylon::Graphics
         void EnableRendering();
         void DisableRendering();
 
-        SafeTimespanGuarantor& GetSafeTimespanGuarantor(const char* updateName);
-
         void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
 
         void StartRenderingCurrentFrame();
@@ -101,6 +98,8 @@ namespace Babylon::Graphics
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
         bgfx::ViewId AcquireNewViewId();
+
+        bool IsInitialized() const;
 
         /* ********** END DEVICE CONTEXT CONTRACT ********** */
 
@@ -161,9 +160,6 @@ namespace Babylon::Graphics
         arcana::blocking_concurrent_queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks{};
 
         std::queue<std::pair<uint32_t, arcana::task_completion_source<void, std::exception_ptr>>> m_readTextureRequests{};
-
-        std::map<std::string, SafeTimespanGuarantor> m_updateSafeTimespans{};
-        std::mutex m_updateSafeTimespansMutex{};
 
         DeviceContext m_context;
         uintptr_t m_bgfxId = 0;

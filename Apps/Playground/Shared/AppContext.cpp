@@ -63,7 +63,6 @@ AppContext::AppContext(
     graphicsConfig.MSAASamples = 4;
 
     m_device.emplace(graphicsConfig);
-    m_deviceUpdate.emplace(m_device->GetUpdate("update"));
 
     Babylon::Plugins::ShaderCache::Enable();
 
@@ -156,6 +155,5 @@ AppContext::~AppContext()
     m_scriptLoader.reset();
     m_canvas.reset();
     m_input = {};
-    m_deviceUpdate.reset();
     m_device.reset();
 }

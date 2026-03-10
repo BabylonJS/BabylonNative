@@ -83,19 +83,6 @@ namespace Babylon::Graphics
         m_impl->DisableRendering();
     }
 
-    DeviceUpdate Device::GetUpdate(const char* updateName)
-    {
-        auto& guarantor = m_impl->GetSafeTimespanGuarantor(updateName);
-        return {
-            [&guarantor] {
-                guarantor.Open();
-            },
-            [&guarantor](std::function<void()> callback) {
-                guarantor.CloseScheduler()(std::move(callback));
-                guarantor.RequestClose();
-            }};
-    }
-
     void Device::StartRenderingCurrentFrame()
     {
         m_impl->StartRenderingCurrentFrame();
@@ -111,13 +98,10 @@ namespace Babylon::Graphics
         m_impl->RenderFrame(_timeoutInMs);
     }
 
-    void Device::StartFrameLoop(const char* updateName, Napi::Env env)
+    void Device::StartFrameLoop(const char*, Napi::Env env)
     {
-        auto& guarantor = m_impl->GetSafeTimespanGuarantor(updateName);
-
         // First frame: init bgfx and open the guarantor.
         m_impl->StartRenderingCurrentFrame();
-        guarantor.Open();
 
         m_stopRequested.store(false);
         m_frameLoopRunning.store(true);
@@ -127,7 +111,7 @@ namespace Babylon::Graphics
         auto framePump = std::make_shared<std::function<void(Napi::Env)>>();
         auto* stopFlag = &m_stopRequested;
         auto* runningFlag = &m_frameLoopRunning;
-        *framePump = [impl = m_impl.get(), &guarantor, &jsRuntime, framePump, stopFlag, runningFlag](Napi::Env) {
+        *framePump = [impl = m_impl.get(), &jsRuntime, framePump, stopFlag, runningFlag](Napi::Env) {
             if (stopFlag->load())
             {
                 // Signal that the frame loop is done BEFORE calling
@@ -142,7 +126,6 @@ namespace Babylon::Graphics
             }
             impl->FinishRenderingCurrentFrame();
             impl->StartRenderingCurrentFrame();
-            guarantor.Open();
             jsRuntime.Dispatch(*framePump);
         };
         jsRuntime.Dispatch(*framePump);

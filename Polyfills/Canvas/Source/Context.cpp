@@ -105,7 +105,6 @@ namespace Babylon::Polyfills::Internal
         , m_canvas{NativeCanvas::Unwrap(info[0].As<Napi::Object>())}
         , m_nvg{std::make_shared<NVGcontext*>(nvgCreate(1))}
         , m_graphicsContext{m_canvas->GetGraphicsContext()}
-        , m_update{m_graphicsContext.GetUpdate("update")}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}

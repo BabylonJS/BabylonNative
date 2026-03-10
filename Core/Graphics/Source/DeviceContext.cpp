@@ -37,11 +37,6 @@ namespace Babylon::Graphics
         return m_graphicsImpl.AfterRenderScheduler();
     }
 
-    Update DeviceContext::GetUpdate(const char* updateName)
-    {
-        return {m_graphicsImpl.GetSafeTimespanGuarantor(updateName)};
-    }
-
     void DeviceContext::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)
     {
         return m_graphicsImpl.RequestScreenShot(std::move(callback));
@@ -90,6 +85,11 @@ namespace Babylon::Graphics
     bgfx::ViewId DeviceContext::AcquireNewViewId()
     {
         return m_graphicsImpl.AcquireNewViewId();
+    }
+
+    bool DeviceContext::IsInitialized() const
+    {
+        return m_graphicsImpl.IsInitialized();
     }
 
     void DeviceContext::AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)

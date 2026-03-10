@@ -138,7 +138,6 @@ namespace Babylon
 
         JsRuntime& m_runtime;
         Graphics::DeviceContext& m_deviceContext;
-        Graphics::Update m_update;
 
         JsRuntimeScheduler m_runtimeScheduler;
 

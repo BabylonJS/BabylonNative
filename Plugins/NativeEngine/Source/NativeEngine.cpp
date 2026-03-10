@@ -744,7 +744,6 @@ namespace Babylon
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtime{runtime}
         , m_deviceContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
-        , m_update{m_deviceContext.GetUpdate("update")}
         , m_runtimeScheduler{runtime}
         , m_defaultFrameBuffer{m_deviceContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
         , m_boundFrameBuffer{&m_defaultFrameBuffer}
@@ -2127,6 +2126,11 @@ namespace Babylon
 
     void NativeEngine::SubmitCommands(const Napi::CallbackInfo& info)
     {
+        if (!m_deviceContext.IsInitialized())
+        {
+            return;
+        }
+
         try
         {
             NativeDataStream::Reader reader = m_commandStream->GetReader();
@@ -2139,6 +2143,7 @@ namespace Babylon
         {
             throw Napi::Error::New(info.Env(), exception);
         }
+
     }
 
     void NativeEngine::PopulateFrameStats(const Napi::CallbackInfo& info)
@@ -2242,22 +2247,24 @@ namespace Babylon
 
         m_requestAnimationFrameCallbacksScheduled = true;
 
-        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
-                m_requestAnimationFrameCallbacksScheduled = false;
+        // Dispatch callback invocation to the JS thread.  The frame pump
+        // (Device::StartFrameLoop) also dispatches via JsRuntime::Dispatch,
+        // so rAF callbacks naturally run between StartRenderingCurrentFrame
+        // and the next FinishRenderingCurrentFrame — no explicit gating needed.
+        m_runtime.Dispatch([this](Napi::Env) {
+            m_requestAnimationFrameCallbacksScheduled = false;
 
-                arcana::trace_region scheduleRegion{"NativeEngine::ScheduleRequestAnimationFrameCallbacks invoke JS callbacks"};
-                auto callbacks{std::move(m_requestAnimationFrameCallbacks)};
-                for (auto& callback : callbacks)
-                {
-                    callback.Value().Call({});
-                }
-            }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
-                if (!cancellationSource->cancelled() && result.has_error())
-                {
-                    Napi::Error::New(Env(), result.error()).ThrowAsJavaScriptException();
-                }
-            });
+            if (!m_deviceContext.IsInitialized())
+            {
+                return;
+            }
+
+            arcana::trace_region scheduleRegion{"NativeEngine::ScheduleRequestAnimationFrameCallbacks invoke JS callbacks"};
+            auto callbacks{std::move(m_requestAnimationFrameCallbacks)};
+            for (auto& callback : callbacks)
+            {
+                callback.Value().Call({});
+            }
         });
     }
 }

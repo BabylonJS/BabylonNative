@@ -110,7 +110,6 @@ namespace Babylon::Polyfills::Internal
         int m_currentFontId{-1};
 
         Graphics::DeviceContext& m_graphicsContext;
-        Graphics::Update m_update;
 
         bool m_isClipped{false};
 

@@ -3,7 +3,6 @@
 #include "BgfxCallback.h"
 #include <bx/allocator.h>
 #include "continuation_scheduler.h"
-#include "SafeTimespanGuarantor.h"
 
 #include <napi/env.h>
 
@@ -12,6 +11,7 @@
 
 #include <gsl/gsl>
 
+#include <arcana/threading/task.h>
 #include <mutex>
 #include <unordered_map>
 
@@ -29,25 +29,6 @@ namespace Babylon::Graphics
         bool HasMips{};
         uint16_t NumLayers{};
         bgfx::TextureFormat::Enum Format{};
-    };
-
-    class Update
-    {
-    public:
-        continuation_scheduler<>& Scheduler()
-        {
-            return m_safeTimespanGuarantor.OpenScheduler();
-        }
-
-    private:
-        friend class DeviceContext;
-
-        Update(SafeTimespanGuarantor& safeTimespanGuarantor)
-            : m_safeTimespanGuarantor{safeTimespanGuarantor}
-        {
-        }
-
-        SafeTimespanGuarantor& m_safeTimespanGuarantor;
     };
 
     class DeviceContext
@@ -86,6 +67,8 @@ namespace Babylon::Graphics
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
         bgfx::ViewId AcquireNewViewId();
+
+        bool IsInitialized() const;
 
         // Enqueue a callback to run on the render thread (the thread that
         // pumps bgfx::renderFrame).  Thread-safe; can be called from any thread.

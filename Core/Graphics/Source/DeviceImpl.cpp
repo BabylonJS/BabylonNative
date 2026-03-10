@@ -245,6 +245,12 @@ namespace Babylon::Graphics
         }
     }
 
+    bool DeviceImpl::IsInitialized() const
+    {
+        std::scoped_lock lock{m_state.Mutex};
+        return m_state.Bgfx.Initialized;
+    }
+
     void DeviceImpl::DisableRendering()
     {
         ASSERT_THREAD_AFFINITY(m_bgfxThreadAffinity);
@@ -275,19 +281,6 @@ namespace Babylon::Graphics
 
             m_bgfxThreadAffinity = {};
         }
-    }
-
-    SafeTimespanGuarantor& DeviceImpl::GetSafeTimespanGuarantor(const char* updateName)
-    {
-        std::scoped_lock lock{m_updateSafeTimespansMutex};
-        std::string updateNameStr{updateName};
-        auto found = m_updateSafeTimespans.find(updateNameStr);
-        if (found == m_updateSafeTimespans.end())
-        {
-            m_updateSafeTimespans.emplace(std::piecewise_construct, std::forward_as_tuple(updateNameStr), std::forward_as_tuple(m_cancellationSource));
-            found = m_updateSafeTimespans.find(updateNameStr);
-        }
-        return found->second;
     }
 
     void DeviceImpl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)

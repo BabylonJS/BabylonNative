@@ -129,8 +129,6 @@ namespace Babylon::Graphics
         void EnableRendering();
         void DisableRendering();
 
-        DeviceUpdate GetUpdate(const char* updateName);
-
         // Called from the render thread (main/UI thread) to pump bgfx rendering.
         // Blocks until the API thread (JS thread) calls bgfx::frame().
         void RenderFrame(int32_t _timeoutInMs = -1);
