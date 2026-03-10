@@ -295,7 +295,7 @@ sudo apt-get install libjavascriptcoregtk-4.1-dev
 Then, run cmake targetting a Ninja make file:
 
 ```
-cmake -G Ninja -D -D NAPI_JAVASCRIPT_ENGINE=JavaScriptCore
+cmake -B build/linux -G Ninja -D NAPI_JAVASCRIPT_ENGINE=JavaScriptCore
 ```
 
 ### V8
@@ -309,13 +309,13 @@ sudo apt-get install libv8-dev
 Then, run cmake targetting a Ninja make file:
 
 ```
-cmake -G Ninja -D NAPI_JAVASCRIPT_ENGINE=V8
+cmake -B build/linux -G Ninja -D NAPI_JAVASCRIPT_ENGINE=V8
 ```
 
 And finally, for any JavaScript engine, run a build:
 
 ```
-ninja
+cmake --build build/linux
 ```
 
 You can switch compiler between GCC and Clang by defining shell variables.
