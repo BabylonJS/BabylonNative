@@ -276,7 +276,7 @@ _Follow the steps from [All Development Platforms](#all-development-platforms) b
 
 The minimal requirement target is an OpenGL 3.3 compatible GPU. Clang 9+ or GCC 9+ are required for building.
 
-First step is to install packages mandatory for building. For example, with Clang-9 toolchain:
+First step is to install packages mandatory for building. For example, with a GCC toolchain:
 
 ```
 sudo apt install libgl1-mesa-dev x11proto-core-dev libx11-dev libcurl4-openssl-dev libjavascriptcoregtk-4.1-dev g++ cmake ninja-build npm
