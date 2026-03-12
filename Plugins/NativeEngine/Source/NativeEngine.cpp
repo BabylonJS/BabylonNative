@@ -398,8 +398,7 @@ namespace Babylon
                             }
 
                             bgfx::ReleaseFn releaseFn{};
-                            if (side == 5
-                            &&  mip == image->m_numMips - 1)
+                            if (mip == image->m_numMips - 1)
                             {
                                 releaseFn = [](void*, void* userData) {
                                     bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
