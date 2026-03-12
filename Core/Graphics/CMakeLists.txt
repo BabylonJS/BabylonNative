@@ -26,6 +26,10 @@ target_include_directories(Graphics
     PRIVATE "Include/RendererType/${GRAPHICS_API}"
     PRIVATE "InternalInclude")
 
+if(GRAPHICS_API STREQUAL "OpenGL")
+    target_include_directories(Graphics PRIVATE "${BGFX_KHRONOS_INCLUDE_DIR}")
+endif()
+
 target_compile_definitions(Graphics
     PRIVATE NOMINMAX)
 
@@ -72,6 +76,10 @@ target_include_directories(GraphicsDevice
     INTERFACE "Include/Shared"
     INTERFACE "Include/Platform/${BABYLON_NATIVE_PLATFORM}"
     INTERFACE "Include/RendererType/${GRAPHICS_API}")
+
+if(GRAPHICS_API STREQUAL "OpenGL")
+    target_include_directories(GraphicsDevice INTERFACE "${BGFX_KHRONOS_INCLUDE_DIR}")
+endif()
 
 target_link_libraries(GraphicsDevice
     INTERFACE Graphics
