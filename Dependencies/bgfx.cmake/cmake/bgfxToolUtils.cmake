@@ -459,16 +459,10 @@ if(TARGET bgfx::shaderc)
 
 		# --define
 		if(ARG_DEFINES)
-			list(APPEND CLI "--defines")
-			set(DEFINES "")
-			foreach(DEFINE ${ARG_DEFINES})
-				if(NOT "${DEFINES}" STREQUAL "")
-					set(DEFINES "${DEFINES}\\\\;${DEFINE}")
-				else()
-					set(DEFINES "${DEFINE}")
-				endif()
-			endforeach()
-			list(APPEND CLI "${DEFINES}")
+			# Add extra escapes or CMake will expand in the final CLI
+			string(REPLACE ";" "\\\\\\;" DEFINES "${ARG_DEFINES}")
+			# Also need to quote escape for Unix shells
+			list(APPEND CLI "--define" "\"${DEFINES}\"")
 		endif()
 
 		# --raw
@@ -566,13 +560,14 @@ if(TARGET bgfx::shaderc)
 	# 	OUTPUT_DIR directory
 	# 	OUT_FILES_VAR variable name
 	# 	INCLUDE_DIRS directories
+	# 	DEFINES defines
 	# 	[AS_HEADERS]
 	# )
 	#
 	function(bgfx_compile_shaders)
 		set(options AS_HEADERS)
 		set(oneValueArgs TYPE VARYING_DEF OUTPUT_DIR OUT_FILES_VAR)
-		set(multiValueArgs SHADERS INCLUDE_DIRS)
+		set(multiValueArgs SHADERS INCLUDE_DIRS DEFINES)
 		cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" "${ARGN}")
 
 		set(PROFILES 120 300_es spirv)
@@ -642,6 +637,7 @@ if(TARGET bgfx::shaderc)
 					O "$<$<CONFIG:debug>:0>$<$<CONFIG:release>:3>$<$<CONFIG:relwithdebinfo>:3>$<$<CONFIG:minsizerel>:3>"
 					VARYINGDEF ${ARGS_VARYING_DEF}
 					INCLUDES ${BGFX_SHADER_INCLUDE_PATH} ${ARGS_INCLUDE_DIRS}
+					DEFINES ${ARGS_DEFINES}
 				)
 				list(APPEND OUTPUTS ${OUTPUT})
 				list(APPEND ALL_OUTPUTS ${OUTPUT})
