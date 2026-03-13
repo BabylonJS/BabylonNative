@@ -535,21 +535,25 @@ if(TARGET bgfx::shaderc)
 
 	# extensions consistent with those listed under bgfx/runtime/shaders
 	function(_bgfx_get_profile_path_ext PROFILE PROFILE_PATH_EXT)
+		string(REPLACE 100_es essl PROFILE ${PROFILE})
 		string(REPLACE 300_es essl PROFILE ${PROFILE})
 		string(REPLACE 120 glsl PROFILE ${PROFILE})
-		string(REPLACE s_4_0 dx10 PROFILE ${PROFILE})
-		string(REPLACE s_5_0 dx11 PROFILE ${PROFILE})
+		string(REPLACE 430 glsl PROFILE ${PROFILE})
+		string(REPLACE s_5_0 dxbc PROFILE ${PROFILE})
+		string(REPLACE s_6_0 dxil PROFILE ${PROFILE})
 		set(${PROFILE_PATH_EXT} ${PROFILE} PARENT_SCOPE)
 	endfunction()
 
 	# extensions consistent with embedded_shader.h
 	function(_bgfx_get_profile_ext PROFILE PROFILE_EXT)
+		string(REPLACE 100_es essl PROFILE ${PROFILE})
 		string(REPLACE 300_es essl PROFILE ${PROFILE})
 		string(REPLACE 120 glsl PROFILE ${PROFILE})
+		string(REPLACE 430 glsl PROFILE ${PROFILE})
 		string(REPLACE spirv spv PROFILE ${PROFILE})
 		string(REPLACE metal mtl PROFILE ${PROFILE})
-		string(REPLACE s_4_0 dx10 PROFILE ${PROFILE})
-		string(REPLACE s_5_0 dx11 PROFILE ${PROFILE})
+		string(REPLACE s_5_0 dxbc PROFILE ${PROFILE})
+		string(REPLACE s_6_0 dxil PROFILE ${PROFILE})
 		set(${PROFILE_EXT} ${PROFILE} PARENT_SCOPE)
 	endfunction()
 
@@ -570,7 +574,15 @@ if(TARGET bgfx::shaderc)
 		set(multiValueArgs SHADERS INCLUDE_DIRS DEFINES)
 		cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" "${ARGN}")
 
-		set(PROFILES 120 300_es spirv)
+		set(PROFILES spirv)
+		if(ARGS_TYPE STREQUAL "COMPUTE")
+			list(APPEND PROFILES 430 300_es)
+		else()
+			list(APPEND PROFILES 120 100_es)
+		endif()
+		if(BGFX_CONFIG_RENDERER_WEBGPU)
+			list(APPEND PROFILES wgsl)
+		endif()
 		if(IOS)
 			set(PLATFORM IOS)
 			list(APPEND PROFILES metal)
@@ -590,8 +602,8 @@ if(TARGET bgfx::shaderc)
 			OR CYGWIN
 		)
 			set(PLATFORM WINDOWS)
-			list(APPEND PROFILES s_4_0)
 			list(APPEND PROFILES s_5_0)
+			list(APPEND PROFILES s_6_0)
 		elseif(ORBIS) # ORBIS should be defined by a PS4 CMake toolchain
 			set(PLATFORM ORBIS)
 			list(APPEND PROFILES pssl)
@@ -620,9 +632,6 @@ if(TARGET bgfx::shaderc)
 				endif()
 				set(OUTPUT ${ARGS_OUTPUT_DIR}/${PROFILE_PATH_EXT}/${SHADER_FILE_BASENAME}.bin${HEADER_PREFIX})
 				set(PLATFORM_I ${PLATFORM})
-				if(PROFILE STREQUAL "spirv")
-					set(PLATFORM_I LINUX)
-				endif()
 				set(BIN2C_PART "")
 				if(ARGS_AS_HEADERS)
 					set(BIN2C_PART BIN2C ${SHADER_FILE_NAME_WE}_${PROFILE_EXT})
@@ -630,11 +639,11 @@ if(TARGET bgfx::shaderc)
 				_bgfx_shaderc_parse(
 					CLI #
 					${BIN2C_PART} #
-					${ARGS_TYPE} ${PLATFORM_I} WERROR "$<$<CONFIG:debug>:DEBUG>$<$<CONFIG:relwithdebinfo>:DEBUG>"
+					${ARGS_TYPE} ${PLATFORM_I} WERROR "$<$<CONFIG:Debug,RelWithDebInfo>:DEBUG>"
 					FILE ${SHADER_FILE_ABSOLUTE}
 					OUTPUT ${OUTPUT}
 					PROFILE ${PROFILE}
-					O "$<$<CONFIG:debug>:0>$<$<CONFIG:release>:3>$<$<CONFIG:relwithdebinfo>:3>$<$<CONFIG:minsizerel>:3>"
+					O "$<IF:$<CONFIG:Debug>:0,3>"
 					VARYINGDEF ${ARGS_VARYING_DEF}
 					INCLUDES ${BGFX_SHADER_INCLUDE_PATH} ${ARGS_INCLUDE_DIRS}
 					DEFINES ${ARGS_DEFINES}
