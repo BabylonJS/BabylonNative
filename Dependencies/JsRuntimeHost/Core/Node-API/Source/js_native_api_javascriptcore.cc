@@ -7,8 +7,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <locale>
-#include <codecvt>
+
 
 struct napi_callback_info__ {
   napi_value newTarget;
@@ -103,13 +102,68 @@ namespace {
     }
 
    private:
+    // Decode UTF-8 to UTF-16, replacing invalid sequences with U+FFFD.
+    static std::u16string Utf8ToUtf16(const char* str, size_t len) {
+      std::u16string result;
+      result.reserve(len);
+      const auto* s = reinterpret_cast<const unsigned char*>(str);
+      const auto* end = s + len;
+      while (s < end) {
+        uint32_t cp;
+        int trail;
+        unsigned char lead = *s++;
+        if (lead < 0x80) {
+          cp = lead; trail = 0;
+        } else if ((lead >> 5) == 0x6) {
+          cp = lead & 0x1F; trail = 1;
+        } else if ((lead >> 4) == 0xE) {
+          cp = lead & 0x0F; trail = 2;
+        } else if ((lead >> 3) == 0x1E) {
+          cp = lead & 0x07; trail = 3;
+        } else {
+          result.push_back(0xFFFD);
+          continue;
+        }
+        if (s + trail > end) {
+          result.push_back(0xFFFD);
+          break;
+        }
+        bool valid = true;
+        for (int i = 0; i < trail; ++i) {
+          if ((s[i] & 0xC0) != 0x80) { valid = false; break; }
+          cp = (cp << 6) | (s[i] & 0x3F);
+        }
+        if (!valid) {
+          result.push_back(0xFFFD);
+          continue;
+        }
+        s += trail;
+        // Reject overlong encodings, surrogates, and out-of-range values.
+        if ((trail == 1 && cp < 0x80) ||
+            (trail == 2 && cp < 0x800) ||
+            (trail == 3 && cp < 0x10000) ||
+            (cp >= 0xD800 && cp <= 0xDFFF) ||
+            cp > 0x10FFFF) {
+          result.push_back(0xFFFD);
+          continue;
+        }
+        if (cp <= 0xFFFF) {
+          result.push_back(static_cast<char16_t>(cp));
+        } else {
+          cp -= 0x10000;
+          result.push_back(static_cast<char16_t>(0xD800 + (cp >> 10)));
+          result.push_back(static_cast<char16_t>(0xDC00 + (cp & 0x3FF)));
+        }
+      }
+      return result;
+    }
+
     static JSStringRef CreateUTF8(const char* string, size_t length) {
       if (length == NAPI_AUTO_LENGTH) {
         return JSStringCreateWithUTF8CString(string);
       }
 
-      std::u16string u16str{std::wstring_convert<
-        std::codecvt_utf8_utf16<char16_t>, char16_t>{}.from_bytes(string, string + length)};
+      std::u16string u16str{Utf8ToUtf16(string, length)};
       return JSStringCreateWithCharacters(reinterpret_cast<JSChar*>(u16str.data()), u16str.size());
     }
 

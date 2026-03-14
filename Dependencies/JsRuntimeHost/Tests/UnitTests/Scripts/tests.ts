@@ -196,6 +196,21 @@ describe("XMLHTTPRequest", function () {
         var response = new Uint8Array(xhr.response);
         expect(response).to.eql(expected);
     });
+
+    it("should load a PLY file and parse vertex count from header using TextDecoder", async function () {
+        this.timeout(30000);
+        const xhr = await createRequest("GET", "app:///Assets/Halo_Believe.ply", undefined, "arraybuffer");
+        expect(xhr.status).to.equal(200);
+
+        const ubuf = new Uint8Array(xhr.response);
+        const header = new TextDecoder().decode(ubuf.slice(0, 1024 * 10));
+        const headerEnd = "end_header\n";
+        const headerEndIndex = header.indexOf(headerEnd);
+        expect(headerEndIndex).to.be.greaterThan(0);
+
+        const vertexCount = parseInt(/element vertex (\d+)\n/.exec(header)![1]);
+        expect(vertexCount).to.equal(18713);
+    });
 });
 
 describe("setTimeout", function () {
@@ -1267,6 +1282,14 @@ describe("TextDecoder", function () {
         const sub = full.subarray(1); // [72, 105] -> "Hi"
         const result = decoder.decode(sub);
         expect(result).to.equal("Hi");
+    });
+
+    it("should decode a Uint8Array containing a null byte", function () {
+        const decoder = new TextDecoder();
+        const encoded = new Uint8Array([72, 0, 105]); // "H\0i"
+        const result = decoder.decode(encoded);
+        expect(result).to.equal("H\0i");
+        expect(result.length).to.equal(3);
     });
 });
 

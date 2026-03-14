@@ -88,6 +88,12 @@ task copyScripts {
             include "*.js"
             into 'src/main/assets/Scripts'
         }
+        copy
+        {
+            from '../../Assets'
+            include "*.*"
+            into 'src/main/assets/Assets'
+        }
     }
 }
 

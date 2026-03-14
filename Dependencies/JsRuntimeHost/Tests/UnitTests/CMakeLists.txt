@@ -5,6 +5,8 @@ set(SCRIPTS
 set(TYPE_SCRIPTS
     "Scripts/tests.ts")
 
+file(GLOB ASSETS "${CMAKE_CURRENT_SOURCE_DIR}/Assets/*")
+
 set(SOURCES
     "Shared/Shared.cpp"
     "Shared/Shared.h")
@@ -25,6 +27,10 @@ if(APPLE)
             ${SCRIPTS}
             ${TYPE_SCRIPTS}
             PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
+
+        set_source_files_properties(
+            ${ASSETS}
+            PROPERTIES MACOSX_PACKAGE_LOCATION "Assets")
     else()
         set(SOURCES ${SOURCES}
             macOS/App.mm)
@@ -37,7 +43,7 @@ elseif(UNIX AND NOT ANDROID)
         Linux/App.cpp)
 endif()
 
-add_executable(UnitTests ${SOURCES} ${SCRIPTS} ${TYPE_SCRIPTS})
+add_executable(UnitTests ${SOURCES} ${SCRIPTS} ${TYPE_SCRIPTS} ${ASSETS})
 target_compile_definitions(UnitTests PRIVATE JSRUNTIMEHOST_PLATFORM="${JSRUNTIMEHOST_PLATFORM}")
 
 target_link_libraries(UnitTests
@@ -87,9 +93,17 @@ else()
         COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Scripts/symlink_target.js" "${CMAKE_CFG_INTDIR}/Scripts/symlink_1.js")
     add_custom_command(TARGET UnitTests POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Scripts/symlink_1.js" "${CMAKE_CFG_INTDIR}/Scripts/symlink_2.js")
+
+    foreach(ASSET ${ASSETS})
+        get_filename_component(ASSET_NAME "${ASSET}" NAME)
+        add_custom_command(TARGET UnitTests POST_BUILD
+            COMMAND "${CMAKE_COMMAND}" -E copy "${ASSET}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Assets/${ASSET_NAME}"
+            COMMENT "Copying ${ASSET_NAME}")
+    endforeach()
 endif()
 
 set_property(TARGET UnitTests PROPERTY FOLDER Tests)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES} ${SCRIPTS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Scripts PREFIX scripts FILES ${TYPE_SCRIPTS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/Assets PREFIX assets FILES ${ASSETS})
