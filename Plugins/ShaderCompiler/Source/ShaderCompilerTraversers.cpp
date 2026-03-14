@@ -530,6 +530,10 @@ namespace Babylon::ShaderCompilerTraversers
                 {
                     publicType.setVector(type.getVectorSize());
                 }
+                else
+                {
+                    publicType.setVector(1);
+                }
 
                 TType newType{publicType};
                 newType.setBasicType(symbol->getType().getBasicType());
