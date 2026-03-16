@@ -64,8 +64,6 @@ if(BGFX_CONFIG_RENDERER_WEBGPU)
 	else()
 		target_link_libraries(bgfx PRIVATE webgpu)
 	endif()
-else()
-	target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_WEBGPU=0)
 endif()
 
 if(EMSCRIPTEN)
