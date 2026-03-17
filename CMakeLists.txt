@@ -138,6 +138,10 @@ option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils.
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
 
+# Dependencies
+option(BABYLON_NATIVE_ENABLE_GLSLANG_WEBMIN "Enable glslang WEBMIN mode." ON)
+option(BABYLON_NATIVE_SPIRV_CROSS_ENABLE_WEBMIN "Enable SPIRV-Cross WEBMIN mode." ON)
+
 # Sanitizers
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
 
