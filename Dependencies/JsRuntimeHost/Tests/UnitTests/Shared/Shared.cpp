@@ -80,6 +80,12 @@ TEST(JavaScript, All)
         env.Global().Set("setExitCode", setExitCodeCallback);
 
         env.Global().Set("hostPlatform", Napi::Value::From(env, JSRUNTIMEHOST_PLATFORM));
+
+#ifdef JSRUNTIMEHOST_SANITIZERS_ENABLED
+        env.Global().Set("sanitizersEnabled", Napi::Value::From(env, true));
+#else
+        env.Global().Set("sanitizersEnabled", Napi::Value::From(env, false));
+#endif
     });
 
     Babylon::ScriptLoader loader{runtime};

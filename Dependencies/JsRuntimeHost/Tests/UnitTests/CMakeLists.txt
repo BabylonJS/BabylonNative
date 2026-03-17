@@ -46,6 +46,10 @@ endif()
 add_executable(UnitTests ${SOURCES} ${SCRIPTS} ${TYPE_SCRIPTS} ${ASSETS})
 target_compile_definitions(UnitTests PRIVATE JSRUNTIMEHOST_PLATFORM="${JSRUNTIMEHOST_PLATFORM}")
 
+if(ENABLE_SANITIZERS)
+    target_compile_definitions(UnitTests PRIVATE JSRUNTIMEHOST_SANITIZERS_ENABLED=1)
+endif()
+
 target_link_libraries(UnitTests
     PRIVATE AppRuntime
     PRIVATE Console

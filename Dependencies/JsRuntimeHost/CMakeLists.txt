@@ -92,7 +92,10 @@ if(ENABLE_SANITIZERS)
         set(SANITIZERS "address,undefined")
         # Check for Clang since vptr and fdsan are Clang-specific
         if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-            list(APPEND SANITIZERS "vptr")
+            # vptr is not supported on Windows.
+            if(NOT WIN32)
+                list(APPEND SANITIZERS "vptr")
+            endif()
             # FDSan only works on Android builds with Clang
             if (ANDROID)
                 list(APPEND SANITIZERS "fdsan")
