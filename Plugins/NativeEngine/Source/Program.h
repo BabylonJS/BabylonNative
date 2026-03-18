@@ -17,15 +17,17 @@ namespace Babylon
 {
     struct UniformInfo final
     {
-        UniformInfo(uint8_t stage, bgfx::UniformHandle handle, size_t maxElementLength)
+        UniformInfo(uint8_t stage, bgfx::UniformHandle handle, bgfx::UniformType::Enum type, size_t maxElementLength)
             : Stage{stage}
             , Handle{handle}
+            , Type{type}
             , MaxElementLength{maxElementLength}
         {
         }
 
         uint8_t Stage{};
         bgfx::UniformHandle Handle{bgfx::kInvalidHandle};
+        bgfx::UniformType::Enum Type{bgfx::UniformType::Count};
         size_t MaxElementLength{};
     };
 
