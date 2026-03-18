@@ -27,10 +27,6 @@ jobs:
         displayName: "Generate macOS solution"
 
       - script: |
-          cmake --build build/macOS --target Playground --config RelWithDebInfo
-        displayName: "Build Playground macOS"
-
-      - script: |
           cmake --build build/macOS --target UnitTests --config RelWithDebInfo
         displayName: "Build UnitTests macOS"
 
