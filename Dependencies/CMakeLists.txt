@@ -165,9 +165,11 @@ endif()
 # --------------------------------------------------
 # metal-cpp
 # --------------------------------------------------
-if(APPLE)
+if(APPLE OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(metal-cpp)
+endif()
 
+if(APPLE)
     # Generate a single header.
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
     set(METAL_CPP_GENERATED_DIR "${CMAKE_BINARY_DIR}/metal-cpp")
