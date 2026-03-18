@@ -15,11 +15,17 @@ using namespace std::chrono_literals;
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
-// Exercises the SetInt → SetUniform → DrawInternal → bgfx::setUniform path
-// to verify that sub-vec4 uniform data is padded to 16 bytes.
-// Without the fix, AddressSanitizer detects a heap-buffer-overflow because
-// bgfx always reads 16 bytes from uniform storage.
-TEST(UniformPadding, SetIntDoesNotOverflowUnderASAN)
+// Exercises all sub-vec4 uniform setter paths followed by a draw call to
+// verify that uniform data is padded to at least 16 bytes (vec4).
+// bgfx always reads 16 bytes from uniform storage, so anything smaller
+// causes a heap-buffer-overflow detectable by AddressSanitizer.
+//
+// Paths exercised:
+//   setInt    → NativeEngine::SetInt    → Program::SetUniform (1 float)
+//   setFloat  → NativeEngine::SetFloat  → SetFloatN<1>        (1 float + 3 pad)
+//   setVector2→ NativeEngine::SetFloat2 → SetFloatN<2>        (2 floats + 2 pad)
+//   setVector3→ NativeEngine::SetFloat3 → SetFloatN<3>        (3 floats + 1 pad)
+TEST(UniformPadding, SubVec4UniformsDoNotOverflow)
 {
     Babylon::Graphics::Device device{g_deviceConfig};
     Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
@@ -54,9 +60,9 @@ TEST(UniformPadding, SetIntDoesNotOverflowUnderASAN)
     Babylon::ScriptLoader loader{runtime};
     loader.LoadScript("app:///Assets/babylon.max.js");
 
-    // Create a scene with a ShaderMaterial that uses setInt (sub-vec4 uniform).
-    // When the scene renders, this triggers:
-    //   NativeEngine::SetInt → Program::SetUniform → DrawInternal → bgfx::setUniform
+    // Create a scene with a ShaderMaterial that declares int, float, vec2,
+    // and vec3 uniforms. Setting and rendering these exercises every sub-vec4
+    // code path through Program::SetUniform → DrawInternal → bgfx::setUniform.
     loader.Eval(R"(
         const engine = new BABYLON.NativeEngine();
         const scene = new BABYLON.Scene(engine);
@@ -71,13 +77,25 @@ TEST(UniformPadding, SetIntDoesNotOverflowUnderASAN)
             fragmentSource: `
                 precision highp float;
                 uniform int testInt;
-                void main() { gl_FragColor = vec4(float(testInt), 0.0, 0.0, 1.0); }
+                uniform float testFloat;
+                uniform vec2 testVec2;
+                uniform vec3 testVec3;
+                void main() {
+                    gl_FragColor = vec4(
+                        float(testInt) + testFloat + testVec2.x + testVec3.x,
+                        testVec2.y + testVec3.y,
+                        testVec3.z,
+                        1.0);
+                }
             `
         }, {
             attributes: ["position"],
-            uniforms: ["worldViewProjection", "testInt"]
+            uniforms: ["worldViewProjection", "testInt", "testFloat", "testVec2", "testVec3"]
         });
         mat.setInt("testInt", 1);
+        mat.setFloat("testFloat", 2.0);
+        mat.setVector2("testVec2", new BABYLON.Vector2(3.0, 4.0));
+        mat.setVector3("testVec3", new BABYLON.Vector3(5.0, 6.0, 7.0));
         sphere.material = mat;
         scene.executeWhenReady(function() {
             scene.render();
