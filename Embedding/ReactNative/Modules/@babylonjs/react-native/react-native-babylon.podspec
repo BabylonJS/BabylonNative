@@ -23,6 +23,7 @@ items = ['/shared/BabylonNative/Repo/Polyfills/Canvas',
   '/shared/BabylonNative/Repo/Plugins/ShaderCompiler',
   '/shared/BabylonNative/Repo/Core/Graphics',
   '/shared/BabylonNative/Repo/Dependencies/xr', 
+  '/shared/BabylonNative/Repo/Dependencies',
   '/_deps/bgfx.cmake-build/cmake/bgfx',
   '/_deps/bgfx.cmake-build/cmake/bimg',
   '/_deps/bgfx.cmake-build/cmake/bx',
@@ -103,6 +104,7 @@ Pod::Spec.new do |s|
           'ShaderCache',
           'ShaderCompiler',
           'webp',
+          'metal-cpp',
           'sharpyuv']
 
   if ENV['BABYLON_NATIVE_PLUGIN_NATIVECAMERA'] != '0'
