@@ -348,6 +348,7 @@ namespace Babylon
             arcana::trace_region endFrameRegion{"NativeXR::EndFrame"};
 
             m_sessionState->Frame->Render();
+            m_sessionState->Frame.reset();
         }
     } // Plugins
 } // Babylon

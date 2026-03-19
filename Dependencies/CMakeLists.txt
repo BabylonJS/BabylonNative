@@ -105,7 +105,15 @@ set(ENABLE_HLSL OFF)
 set(ENABLE_OPT OFF)
 set(ENABLE_CTEST OFF)
 set(SKIP_GLSLANG_INSTALL ON)
-set(ENABLE_GLSLANG_WEBMIN OFF)
+set(BABYLON_NATIVE_DISABLE_WEBMIN ON)
+# BABYLON_NATIVE_DISABLE_WEBMIN is used to disable WebMin in both glslang and SPIRV-Cross.
+# This flag should be removed when the code coverage in these library corresponds to exactly what we use in Babylon.js
+# and webGL2 glsl. 
+if(BABYLON_NATIVE_DISABLE_WEBMIN)
+    set(ENABLE_GLSLANG_WEBMIN OFF)
+else()
+    set(ENABLE_GLSLANG_WEBMIN ON)
+endif()
 set(ENABLE_GLSLANG_WEBMIN_DEVEL OFF)
 
 if(NOT TARGET glslang)
@@ -158,9 +166,11 @@ endif()
 # --------------------------------------------------
 # metal-cpp
 # --------------------------------------------------
-if(APPLE)
+if(APPLE OR BABYLON_NATIVE_BUILD_SOURCETREE)
     FetchContent_MakeAvailable_With_Message(metal-cpp)
+endif()
 
+if(APPLE)
     # Generate a single header.
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
     set(METAL_CPP_GENERATED_DIR "${CMAKE_BINARY_DIR}/metal-cpp")
@@ -209,7 +219,12 @@ set(SPIRV_CROSS_ENABLE_REFLECT OFF)
 set(SPIRV_CROSS_ENABLE_C_API OFF)
 set(SPIRV_CROSS_ENABLE_UTIL OFF)
 set(SPIRV_CROSS_SKIP_INSTALL ON)
-set(SPIRV_CROSS_ENABLE_WEBMIN OFF)
+# BABYLON_NATIVE_DISABLE_WEBMIN : see comment in section above.
+if(BABYLON_NATIVE_DISABLE_WEBMIN)
+    set(SPIRV_CROSS_ENABLE_WEBMIN OFF)
+else()
+    set(SPIRV_CROSS_ENABLE_WEBMIN ON)
+endif()
 if(NOT GRAPHICS_API STREQUAL "OpenGL")
     set(SPIRV_CROSS_ENABLE_GLSL OFF)
 endif()
