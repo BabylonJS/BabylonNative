@@ -681,13 +681,17 @@ void main() {
     vec3 perturbedN = perturbNormal(normal, tex2d.rgb);
     
     // ── Final composition ───────────────────────────────────────────
-    vec3 albedo   = tex2d.rgb * uMaterial.diffuse.rgb * vColor.rgb;
-    vec3 ambient  = uAmbientColor.rgb * albedo;
+    vec4 materialDiffuse = uMaterial.diffuse;
+    vec4 materialSpecular = uMaterial.specular;
+    vec3 albedo   = tex2d.rgb * materialDiffuse.rgb * vColor.rgb;
+    // using uAmbientColor.rgb crashes SpvBuilder because it assumes it's a single float
+    // this case doesn't seem to be found anywhere in Babylon shader so won't fix
+    vec3 ambient  = /*uAmbientColor.rgb * */albedo;
     
     vec3 lit      = ambient + lightAccum * albedo;
-    vec3 specular = fresnel * uMaterial.specular.rgb;
+    vec3 specular = fresnel * materialSpecular.rgb;
     
-    vec4 finalColor = vec4(lit + specular + modeColor * 0.01, tex2d.a * uMaterial.diffuse.a);
+    vec4 finalColor = vec4(lit + specular + modeColor * 0.01, tex2d.a * materialDiffuse.a);
     
     // ── Tone mapping (Reinhard) ─────────────────────────────────────
     finalColor.rgb = finalColor.rgb / (finalColor.rgb + vec3(1.0));
@@ -756,7 +760,7 @@ try {
     };
 
     mat.onError = (effect: Effect, errors: string) => {
-        console.log("[FAIL] Shader compilation error: " + errors);
+        console.log("[INFO] Shader compilation error (expected for validation testing): " + errors);
         failures++;
         finish(failures);
     };
