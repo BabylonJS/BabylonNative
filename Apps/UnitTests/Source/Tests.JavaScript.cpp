@@ -11,6 +11,8 @@
 #include <Babylon/Plugins/NativeEncoding.h>
 #include <Babylon/ScriptLoader.h>
 
+#include <cstdlib>
+
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
 namespace
@@ -36,19 +38,16 @@ TEST(JavaScript, All)
     // Change this to true to wait for the JavaScript debugger to attach (only applies to V8)
     constexpr const bool waitForDebugger = false;
 
-    std::promise<int32_t> exitCodePromise;
-
     Babylon::Graphics::Device device{g_deviceConfig};
 
     std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
 
     Babylon::AppRuntime::Options options{};
 
-    options.UnhandledExceptionHandler = [&exitCodePromise](const Napi::Error& error) {
+    options.UnhandledExceptionHandler = [](const Napi::Error& error) {
         std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
         std::cerr.flush();
-
-        exitCodePromise.set_exception(std::make_exception_ptr(std::exception{}));
+        std::quick_exit(1);
     };
 
     if (waitForDebugger)
@@ -58,6 +57,8 @@ TEST(JavaScript, All)
     }
 
     Babylon::AppRuntime runtime{options};
+
+    std::promise<int32_t> exitCodePromise;
 
     runtime.Dispatch([&exitCodePromise, &device, &nativeCanvas](Napi::Env env) {
         device.AddToJavaScript(env);
