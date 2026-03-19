@@ -756,7 +756,7 @@ try {
     };
 
     mat.onError = (effect: Effect, errors: string) => {
-        console.log("[INFO] Shader compilation error (expected for validation testing): " + errors);
+        console.log("[FAIL] Shader compilation error: " + errors);
         failures++;
         finish(failures);
     };
