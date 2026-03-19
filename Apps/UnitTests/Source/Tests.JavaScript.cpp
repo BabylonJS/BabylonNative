@@ -46,7 +46,6 @@ TEST(JavaScript, All)
 
     options.UnhandledExceptionHandler = [](const Napi::Error& error) {
         std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
-        std::cerr.flush();
         std::quick_exit(1);
     };
 
@@ -66,7 +65,6 @@ TEST(JavaScript, All)
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, Babylon::Polyfills::Console::LogLevel logLevel) {
             std::cout << "[" << EnumToString(logLevel) << "] " << message << std::endl;
-            std::cout.flush();
         });
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Polyfills::Blob::Initialize(env);

@@ -34,8 +34,6 @@ TEST(UniformPadding, SubVec4UniformsDoNotOverflow)
     Babylon::AppRuntime::Options options{};
     options.UnhandledExceptionHandler = [](const Napi::Error& error) {
         std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
-        std::cerr.flush();
-
         std::quick_exit(1);
     };
 

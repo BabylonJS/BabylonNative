@@ -33,7 +33,6 @@ TEST(ShaderCache, SaveAndLoad)
 
     options.UnhandledExceptionHandler = [](const Napi::Error& error) {
         std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
-        std::cerr.flush();
         std::quick_exit(1);
     };
 
@@ -47,7 +46,6 @@ TEST(ShaderCache, SaveAndLoad)
 
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
             std::cout << message << std::endl;
-            std::cout.flush();
         });
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
