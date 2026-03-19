@@ -86,4 +86,6 @@ TEST(ShadersCross, CompileComprehensiveGLSL)
 
     update.Finish();
     device.FinishRenderingCurrentFrame();
+
+    EXPECT_EQ(failures, 0);
 }

@@ -76,6 +76,22 @@ uniform highp sampler3D       uSampler3D;
 uniform highp samplerCube     uSamplerCube;
 uniform highp sampler2DArray  uSampler2DArray;
 
+// ── Gaussian Splatting uniforms ─────────────────────────────────────────
+uniform vec2  gsInvViewport;
+uniform vec2  gsDataTextureSize;
+uniform vec2  gsFocal;
+uniform float gsKernelSize;
+uniform vec3  gsEyePosition;
+uniform float gsAlpha;
+
+uniform highp sampler2D    gsCovariancesATexture;
+uniform highp sampler2D    gsCovariancesBTexture;
+uniform highp sampler2D    gsCentersTexture;
+uniform highp sampler2D    gsColorsTexture;
+uniform highp usampler2D   gsShTexture0;
+uniform highp usampler2D   gsShTexture1;
+uniform highp usampler2D   gsShTexture2;
+
 // ── Vertex inputs (names matching Babylon attribute binding) ────────────
 in vec3  position;
 in vec3  normal;
@@ -91,6 +107,7 @@ flat out int   vVertexID;
 flat out uint  vFlagsOut;
 smooth out vec4 vColor;
 centroid out vec2 vCentroidUV;
+out vec4 vSplatColor;
 
 // ── Constant declarations ───────────────────────────────────────────────
 const float EPSILON = 1e-6;
@@ -147,8 +164,214 @@ void testMatrixTypes() {
     mat3 outer   = outerProduct(vec3(1.0), vec3(1.0));
     mat3 trans   = transpose(m3);
     float det    = determinant(m3);
-    mat3 inv     = inverse(m3);
-    mat4 inv4    = inverse(m4);
+    // inverse not used in Babylon.js shaders
+    //mat3 inv     = inverse(m3);
+    //mat4 inv4    = inverse(m4);
+}
+
+// ── Gaussian Splatting: struct and functions ─────────────────────────────
+// Adapted from Babylon.js gaussianSplatting.fx with SH degree 2.
+struct Splat {
+    vec4  center;
+    vec4  color;
+    vec4  covA;
+    vec4  covB;
+    uvec4 sh0;
+    uvec4 sh1;
+    uvec4 sh2;
+};
+
+vec2 gsGetDataUV(float index, vec2 textureSize) {
+    float y = floor(index / textureSize.x);
+    float x = index - y * textureSize.x;
+    return vec2((x + 0.5) / textureSize.x, (y + 0.5) / textureSize.y);
+}
+
+ivec2 gsGetDataUVint(float index, vec2 textureSize) {
+    float y = floor(index / textureSize.x);
+    float x = index - y * textureSize.x;
+    return ivec2(uint(x + 0.5), uint(y + 0.5));
+}
+
+Splat gsReadSplat(float splatIndex) {
+    Splat splat;
+    vec2  splatUV    = gsGetDataUV(splatIndex, gsDataTextureSize);
+    ivec2 splatUVint = gsGetDataUVint(splatIndex, gsDataTextureSize);
+
+    splat.center = texture(gsCentersTexture, splatUV);
+    splat.color  = texture(gsColorsTexture, splatUV);
+    splat.covA   = texture(gsCovariancesATexture, splatUV) * splat.center.w;
+    splat.covB   = texture(gsCovariancesBTexture, splatUV) * splat.center.w;
+
+    splat.sh0 = texelFetch(gsShTexture0, splatUVint, 0);
+    splat.sh1 = texelFetch(gsShTexture1, splatUVint, 0);
+    splat.sh2 = texelFetch(gsShTexture2, splatUVint, 0);
+
+    return splat;
+}
+
+vec4 gsDecompose(uint value) {
+    vec4 components = vec4(
+        float((value            ) & 255u),
+        float((value >> uint( 8)) & 255u),
+        float((value >> uint(16)) & 255u),
+        float((value >> uint(24)) & 255u));
+    return components * vec4(2.0 / 255.0) - vec4(1.0);
+}
+
+vec3 gsComputeColorFromSH(vec3 dir, vec3 sh[16]) {
+    const float SH_C0 = 0.28209479;
+    const float SH_C1 = 0.48860251;
+    float SH_C2[5];
+    SH_C2[0] =  1.092548430;
+    SH_C2[1] = -1.092548430;
+    SH_C2[2] =  0.315391565;
+    SH_C2[3] = -1.092548430;
+    SH_C2[4] =  0.546274215;
+
+    float SH_C3[7];
+    SH_C3[0] = -0.59004358;
+    SH_C3[1] =  2.890611442;
+    SH_C3[2] = -0.45704579;
+    SH_C3[3] =  0.373176332;
+    SH_C3[4] = -0.45704579;
+    SH_C3[5] =  1.445305721;
+    SH_C3[6] = -0.59004358;
+
+    vec3 result = sh[0];
+
+    float x = dir.x;
+    float y = dir.y;
+    float z = dir.z;
+    result += -SH_C1 * y * sh[1] + SH_C1 * z * sh[2] - SH_C1 * x * sh[3];
+
+    float xx = x * x, yy = y * y, zz = z * z;
+    float xy = x * y, yz = y * z, xz = x * z;
+    result +=
+        SH_C2[0] * xy * sh[4] +
+        SH_C2[1] * yz * sh[5] +
+        SH_C2[2] * (2.0 * zz - xx - yy) * sh[6] +
+        SH_C2[3] * xz * sh[7] +
+        SH_C2[4] * (xx - yy) * sh[8];
+
+    result +=
+        SH_C3[0] * y * (3.0 * xx - yy) * sh[9] +
+        SH_C3[1] * xy * z * sh[10] +
+        SH_C3[2] * y * (4.0 * zz - xx - yy) * sh[11] +
+        SH_C3[3] * z * (2.0 * zz - 3.0 * xx - 3.0 * yy) * sh[12] +
+        SH_C3[4] * x * (4.0 * zz - xx - yy) * sh[13] +
+        SH_C3[5] * z * (xx - yy) * sh[14] +
+        SH_C3[6] * x * (xx - 3.0 * yy) * sh[15];
+
+    return result;
+}
+
+vec3 gsComputeSH(Splat splat, vec3 dir) {
+    vec3 sh[16];
+    sh[0] = vec3(0.0);
+
+    // Degree 1: 3 coefficients from sh0.xyz
+    vec4 d00 = gsDecompose(splat.sh0.x);
+    vec4 d01 = gsDecompose(splat.sh0.y);
+    vec4 d02 = gsDecompose(splat.sh0.z);
+    sh[1] = vec3(d00.x, d00.y, d00.z);
+    sh[2] = vec3(d00.w, d01.x, d01.y);
+    sh[3] = vec3(d01.z, d01.w, d02.x);
+
+    // Degree 2: 5 coefficients from sh0.w + sh1.xy
+    vec4 d03 = gsDecompose(splat.sh0.w);
+    vec4 d04 = gsDecompose(splat.sh1.x);
+    vec4 d05 = gsDecompose(splat.sh1.y);
+    sh[4] = vec3(d02.y, d02.z, d02.w);
+    sh[5] = vec3(d03.x, d03.y, d03.z);
+    sh[6] = vec3(d03.w, d04.x, d04.y);
+    sh[7] = vec3(d04.z, d04.w, d05.x);
+    sh[8] = vec3(d05.y, d05.z, d05.w);
+
+    // Degree 3: 7 coefficients from sh1.zw + sh2.xyzw
+    vec4 d06 = gsDecompose(splat.sh1.z);
+    vec4 d07 = gsDecompose(splat.sh1.w);
+    vec4 d08 = gsDecompose(splat.sh2.x);
+    vec4 d09 = gsDecompose(splat.sh2.y);
+    vec4 d10 = gsDecompose(splat.sh2.z);
+    vec4 d11 = gsDecompose(splat.sh2.w);
+    sh[9]  = vec3(d06.x, d06.y, d06.z);
+    sh[10] = vec3(d06.w, d07.x, d07.y);
+    sh[11] = vec3(d07.z, d07.w, d08.x);
+    sh[12] = vec3(d08.y, d08.z, d08.w);
+    sh[13] = vec3(d09.x, d09.y, d09.z);
+    sh[14] = vec3(d09.w, d10.x, d10.y);
+    sh[15] = vec3(d10.z, d10.w, d11.x);
+
+    return gsComputeColorFromSH(dir, sh);
+}
+
+vec4 gsGaussianSplatting(
+    vec2 meshPos, vec3 worldPos, vec2 scale,
+    vec3 covA, vec3 covB,
+    mat4 worldMatrix, mat4 viewMatrix, mat4 projectionMatrix
+) {
+    mat4 modelView = viewMatrix * worldMatrix;
+    vec4 camspace  = viewMatrix * vec4(worldPos, 1.0);
+    vec4 pos2d     = projectionMatrix * camspace;
+
+    float bounds = 1.2 * pos2d.w;
+    if (pos2d.z < -pos2d.w || pos2d.x < -bounds || pos2d.x > bounds
+        || pos2d.y < -bounds || pos2d.y > bounds) {
+        return vec4(0.0, 0.0, 2.0, 1.0);
+    }
+
+    mat3 Vrk = mat3(
+        covA.x, covA.y, covA.z,
+        covA.y, covB.x, covB.y,
+        covA.z, covB.y, covB.z
+    );
+
+    bool isOrtho = abs(projectionMatrix[3][3] - 1.0) < 0.001;
+
+    mat3 J;
+    if (isOrtho) {
+        J = mat3(
+            gsFocal.x, 0.0, 0.0,
+            0.0, gsFocal.y, 0.0,
+            0.0, 0.0, 0.0
+        );
+    } else {
+        J = mat3(
+            gsFocal.x / camspace.z, 0.0, -(gsFocal.x * camspace.x) / (camspace.z * camspace.z),
+            0.0, gsFocal.y / camspace.z, -(gsFocal.y * camspace.y) / (camspace.z * camspace.z),
+            0.0, 0.0, 0.0
+        );
+    }
+
+    mat3 T = transpose(mat3(modelView)) * J;
+    mat3 cov2d = transpose(T) * Vrk * T;
+
+    cov2d[0][0] += gsKernelSize;
+    cov2d[1][1] += gsKernelSize;
+
+    float mid = (cov2d[0][0] + cov2d[1][1]) / 2.0;
+    float radius = length(vec2((cov2d[0][0] - cov2d[1][1]) / 2.0, cov2d[0][1]));
+    float epsilon = 0.0001;
+    float lambda1 = mid + radius + epsilon;
+    float lambda2 = mid - radius + epsilon;
+
+    if (lambda2 < 0.0) {
+        return vec4(0.0, 0.0, 2.0, 1.0);
+    }
+
+    vec2 diagonalVector = normalize(vec2(cov2d[0][1], lambda1 - cov2d[0][0]));
+    vec2 majorAxis = min(sqrt(2.0 * lambda1), 1024.0) * diagonalVector;
+    vec2 minorAxis = min(sqrt(2.0 * lambda2), 1024.0) * vec2(diagonalVector.y, -diagonalVector.x);
+
+    vec2 vCenter = vec2(pos2d);
+    float scaleFactor = isOrtho ? 1.0 : pos2d.w;
+
+    return vec4(
+        vCenter
+        + ((meshPos.x * majorAxis
+        +   meshPos.y * minorAxis) * gsInvViewport * scaleFactor) * scale,
+        pos2d.zw);
 }
 
 // ── Main vertex shader ──────────────────────────────────────────────────
@@ -318,13 +541,14 @@ void main() {
     bvec3 notV = not(bv3);
 
     // ── Packing/unpacking functions (ES 3.0) ────────────────────────
+    /* Not used in Babylon
     uint  packed1  = packSnorm2x16(v2);
     vec2  unpack1  = unpackSnorm2x16(packed1);
     uint  packed2  = packUnorm2x16(v2);
     vec2  unpack2  = unpackUnorm2x16(packed2);
     uint  packed3  = packHalf2x16(v2);
     vec2  unpack3  = unpackHalf2x16(packed3);
-
+    */
     // ── Texture functions in vertex shader ──────────────────────────
     ivec2 texSize  = textureSize(uSampler2D, 0);
     vec4  texLod   = textureLod(uSampler2D, v2, 0.0);
@@ -421,6 +645,27 @@ void main() {
     a = 1.0;
     b2 = 2.0;
 
+    // ── Gaussian Splatting test ────────────────────────────────────
+    Splat testSplat = gsReadSplat(0.0);
+    vec3 gsCovA = testSplat.covA.xyz;
+    vec3 gsCovB = vec3(testSplat.covA.w, testSplat.covB.xy);
+    vec4 gsWorldPos = uModel * vec4(testSplat.center.xyz, 1.0);
+
+    // SH color computation (exercises mat3 inverse, uint decomposition, array passing)
+    mat3 worldRot = mat3(uModel);
+    // should be following but inverse not tested here: Not used in Babylon and results in a lot of spirv cross code
+    //vec3 eyeToSplat = normalize(inverse(worldRot) * (gsWorldPos.xyz - gsEyePosition));
+    vec3 eyeToSplat = normalize(worldRot * (gsWorldPos.xyz - gsEyePosition));
+    vec3 shColor = gsComputeSH(testSplat, eyeToSplat);
+
+    vSplatColor = vec4(testSplat.color.rgb + shColor, testSplat.color.a * gsAlpha);
+
+    // Full splatting projection
+    vec4 splatProj = gsGaussianSplatting(
+        position.xy, gsWorldPos.xyz, vec2(1.0),
+        gsCovA, gsCovB,
+        uModel, uViewProj, uViewProj);
+
     // ── Built-in vertex variables ───────────────────────────────────
     vVertexID    = gl_VertexID;
     vFlagsOut    = uFlags;
@@ -515,6 +760,7 @@ flat in int   vVertexID;
 flat in uint  vFlagsOut;
 smooth in vec4 vColor;
 centroid in vec2 vCentroidUV;
+in vec4 vSplatColor;
 
 // ── Fragment output (MRT-capable) ───────────────────────────────────────
 layout(location = 0) out vec4 fragColor;
@@ -702,8 +948,8 @@ void main() {
     // ── Write fragment depth (ES 3.0) ───────────────────────────────
     gl_FragDepth = fragDepth;
 
-    // ── Output ──────────────────────────────────────────────────────
-    fragColor = finalColor;
+    // ── Output (blend in splat color contribution) ────────────────────
+    fragColor = finalColor + vSplatColor * 0.001;
 }
 `;
 
@@ -742,12 +988,17 @@ try {
         uniforms: [
             "world", "worldViewProjection", "worldView", "view", "projection",
             "uCustomFloat", "uCustomInt", "uCustomUint", "uCustomBool",
+            "gsInvViewport", "gsDataTextureSize", "gsFocal", "gsKernelSize",
+            "gsEyePosition", "gsAlpha",
         ],
         samplers: [
             "uSampler2D", "uSampler3D", "uSamplerCube", "uSampler2DArray",
             "uSampler2DShadow", "uSamplerCubeShadow", "uSampler2DArrayShadow",
             "uISampler2D", "uISampler3D", "uISamplerCube", "uISampler2DArray",
             "uUSampler2D", "uUSampler3D", "uUSamplerCube", "uUSampler2DArray",
+            "gsCovariancesATexture", "gsCovariancesBTexture",
+            "gsCentersTexture", "gsColorsTexture",
+            "gsShTexture0", "gsShTexture1", "gsShTexture2",
         ],
         uniformBuffers: [
             "TransformBlock", "SceneBlock",
