@@ -1115,8 +1115,8 @@ namespace Babylon
     void NativeEngine::SetInt(NativeDataStream::Reader& data)
     {
         const auto& uniformInfo{*data.ReadPointer<UniformInfo>()};
-        const auto value{static_cast<float>(data.ReadInt32())};
-        m_currentProgram->SetUniform(uniformInfo.Handle, gsl::make_span(&value, 1));
+        const float values[] = {static_cast<float>(data.ReadInt32()), 0.f, 0.f, 0.f};
+        m_currentProgram->SetUniform(uniformInfo.Handle, values);
     }
 
     template<int size, typename arrayType>

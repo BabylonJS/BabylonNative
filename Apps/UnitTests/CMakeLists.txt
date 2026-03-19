@@ -20,6 +20,7 @@ set(SOURCES
     "Source/Tests.ExternalTexture.cpp"
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.ShaderCache.cpp"
+    "Source/Tests.UniformPadding.cpp"
     "Source/Utils.h"
     "Source/Utils.${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
