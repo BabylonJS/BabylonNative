@@ -803,7 +803,7 @@ void main() {
     
     // ── Texture sampling: texture() ─────────────────────────────────
     vec4  tex2d       = texture(uSampler2D, vUV);
-    /*vec4  tex3d       = texture(uSampler3D, vec3(vUV, 0.0));
+    vec4  tex3d       = texture(uSampler3D, vec3(vUV, 0.0));
     vec4  texCube     = texture(uSamplerCube, vNormal);
     vec4  texArr      = texture(uSampler2DArray, vec3(vUV, 0.0));
 
@@ -815,22 +815,24 @@ void main() {
 
     // ── Texture sampling: textureGrad() ─────────────────────────────
     vec4  tex2dGrad   = textureGrad(uSampler2D, vUV, dxUV, dyUV);
-
+    /* textureProj not used in Babylon
     // ── Texture sampling: textureProj() ─────────────────────────────
     vec4  tex2dProj   = textureProj(uSampler2D, vec3(vUV, 1.0));
     vec4  tex2dProj4  = textureProj(uSampler2D, vec4(vUV, 0.0, 1.0));
 
     // ── Texture sampling: textureProjLod() ──────────────────────────
     vec4  tex2dProjL  = textureProjLod(uSampler2D, vec3(vUV, 1.0), 0.0);
-
+    */
     // ── Texture sampling: texelFetch() ──────────────────────────────
     ivec2 texCoord = ivec2(gl_FragCoord.xy);
     vec4  fetched  = texelFetch(uSampler2D, texCoord, 0);
-
+    
     // ── Texture sampling: textureSize() ─────────────────────────────
     ivec2 size2d    = textureSize(uSampler2D, 0);
     ivec3 size3d    = textureSize(uSampler3D, 0);
+    
     ivec2 sizeCube  = textureSize(uSamplerCube, 0);
+    /* No 2D array support
     ivec3 sizeArr   = textureSize(uSampler2DArray, 0);
 
     // ── Shadow sampler ──────────────────────────────────────────────
