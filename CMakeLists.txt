@@ -54,7 +54,7 @@ FetchContent_Declare(ios-cmake
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG a7bcbd4bcd0d92e2ef05a92daf490298fde74ead)
+    GIT_TAG 08b5ecc5c7d85e617bb44f9394b3517097dd7e3e)
 FetchContent_Declare(libwebp
     GIT_REPOSITORY https://github.com/webmproject/libwebp.git
     GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c
@@ -147,7 +147,10 @@ if(ENABLE_SANITIZERS)
         set(SANITIZERS "address,undefined")
         # Check for Clang since vptr and fdsan are Clang-specific
         if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-            list(APPEND SANITIZERS "vptr")
+            # vptr is not supported on Windows.
+            if(NOT WIN32)
+                list(APPEND SANITIZERS "vptr")
+            endif()
             # FDSan only works on Android builds with Clang
             if (ANDROID)
                 list(APPEND SANITIZERS "fdsan")
