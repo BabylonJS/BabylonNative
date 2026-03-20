@@ -63,7 +63,7 @@ jobs:
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpType /t REG_DWORD /d 2 /f
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpCount /t REG_DWORD /d 1 /f
           reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps" /f
-        displayName: "Enable Crash Dumps"
+        displayName: "Enable Crash Dump"
 
       - powershell: |
           $vs = vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
@@ -110,7 +110,7 @@ jobs:
           contents: Playground.*
           targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
           cleanTargetFolder: false
-        displayName: "Stage test app exe/pdb for publishing"
+        displayName: "Stage Playground Crash Dump"
         condition: failed()
       
       # Temporary disabling D3D12 unit tests. Changes in bgfx require changes in our D3D12 shader pipeline. This is been tracked by issue #1621
@@ -127,12 +127,12 @@ jobs:
           contents: UnitTests.*
           targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
           cleanTargetFolder: false
-        displayName: "Stage test app exe/pdb for publishing"
+        displayName: "Stage UnitTests Crash Dump"
         condition: failed()
 
       - task: PublishBuildArtifacts@1
         inputs:
           artifactName: "${{variables.solutionName}} - ${{parameters.graphics_api}} Crash Dumps"
           pathtoPublish: "$(Build.ArtifactStagingDirectory)/Dumps"
-        displayName: "Publish Tests ${{variables.solutionName}} Dumps"
+        displayName: "Publish Crash Dumps"
         condition: failed()

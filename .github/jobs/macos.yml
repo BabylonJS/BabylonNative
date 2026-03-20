@@ -36,7 +36,7 @@ jobs:
 
       - script: |
           sudo sysctl -w kern.corefile=%N.core.%P
-        displayName: "Enable Core Dumps"
+        displayName: "Enable Core Dump"
 
       - script: |
           cd build/macOS/Apps/UnitTests/RelWithDebInfo
@@ -52,12 +52,12 @@ jobs:
             *.core.*
           targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
           cleanTargetFolder: false
-        displayName: "Stage UnitTests crash dumps"
+        displayName: "Stage UnitTests Core Dump"
         condition: failed()
 
       - task: PublishBuildArtifacts@1
         inputs:
-          artifactName: "${{parameters.name}} Crash Dumps"
+          artifactName: "UnitTests Core Dumps"
           pathtoPublish: "$(Build.ArtifactStagingDirectory)/Dumps"
-        displayName: "Publish ${{parameters.name}} Crash Dumps"
+        displayName: "Publish UnitTests Core Dumps"
         condition: failed()

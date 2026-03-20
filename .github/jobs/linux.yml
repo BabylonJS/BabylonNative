@@ -34,7 +34,7 @@ jobs:
 
       - script: |
           sudo sysctl -w kernel.core_pattern=core.%p
-        displayName: "Enable Core Dumps"
+        displayName: "Enable Core Dump"
 
       # Memory leaks on CI is disabled due to memory leaks reported with xvfb and impossible to add to ignore list.
       # See https://github.com/BabylonJS/BabylonNative/issues/1575
@@ -75,7 +75,7 @@ jobs:
             core.*
           targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
           cleanTargetFolder: false
-        displayName: "Stage Playground crash dumps"
+        displayName: "Stage Playground Core Dump"
         condition: failed()
 
       - task: CopyFiles@2
@@ -86,12 +86,12 @@ jobs:
             core.*
           targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
           cleanTargetFolder: false
-        displayName: "Stage UnitTests crash dumps"
+        displayName: "Stage UnitTests Core Dump"
         condition: failed()
 
       - task: PublishBuildArtifacts@1
         inputs:
-          artifactName: "${{parameters.name}} Crash Dumps"
+          artifactName: "Core Dumps"
           pathtoPublish: "$(Build.ArtifactStagingDirectory)/Dumps"
-        displayName: "Publish ${{parameters.name}} Crash Dumps"
+        displayName: "Publish Core Dumps"
         condition: failed()
