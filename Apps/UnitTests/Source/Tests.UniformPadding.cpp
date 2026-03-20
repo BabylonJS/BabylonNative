@@ -7,6 +7,7 @@
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/ScriptLoader.h>
 
+#include <cstdlib>
 #include <future>
 #include <iostream>
 
@@ -30,12 +31,10 @@ TEST(UniformPadding, SubVec4UniformsDoNotOverflow)
     device.StartRenderingCurrentFrame();
     update.Start();
 
-    std::promise<void> done{};
-
     Babylon::AppRuntime::Options options{};
-    options.UnhandledExceptionHandler = [&done](const Napi::Error& error) {
+    options.UnhandledExceptionHandler = [](const Napi::Error& error) {
         std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
-        done.set_exception(std::make_exception_ptr(std::exception{}));
+        std::quick_exit(1);
     };
 
     Babylon::AppRuntime runtime{options};
@@ -94,6 +93,8 @@ TEST(UniformPadding, SubVec4UniformsDoNotOverflow)
         scene.render();
         if (!scene.isReady()) { throw new Error("Scene should be ready with synchronous shader compilation"); }
     )", "uniform_padding_test.js");
+
+    std::promise<void> done{};
 
     loader.Dispatch([&done](Napi::Env) {
         done.set_value();
