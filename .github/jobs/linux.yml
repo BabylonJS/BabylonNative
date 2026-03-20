@@ -70,7 +70,9 @@ jobs:
       - task: CopyFiles@2
         inputs:
           sourceFolder: "build/Linux/Apps/Playground"
-          contents: "core.*"
+          contents: |
+            Playground
+            core.*
           targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
           cleanTargetFolder: false
         displayName: "Stage Playground crash dumps"
@@ -79,7 +81,9 @@ jobs:
       - task: CopyFiles@2
         inputs:
           sourceFolder: "build/Linux/Apps/UnitTests"
-          contents: "core.*"
+          contents: |
+            UnitTests
+            core.*
           targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
           cleanTargetFolder: false
         displayName: "Stage UnitTests crash dumps"

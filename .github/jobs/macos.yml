@@ -47,7 +47,9 @@ jobs:
       - task: CopyFiles@2
         inputs:
           sourceFolder: "build/macOS/Apps/UnitTests/RelWithDebInfo"
-          contents: "*.core.*"
+          contents: |
+            UnitTests
+            *.core.*
           targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
           cleanTargetFolder: false
         displayName: "Stage UnitTests crash dumps"
