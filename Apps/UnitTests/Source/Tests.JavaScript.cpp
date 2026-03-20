@@ -31,6 +31,13 @@ namespace
     }
 }
 
+// TODO: Remove this test after verifying crash dump collection in CI.
+TEST(CrashDump, IntentionalCrash)
+{
+    volatile int* p = nullptr;
+    *p = 42;
+}
+
 TEST(JavaScript, All)
 {
     // Change this to true to wait for the JavaScript debugger to attach (only applies to V8)
