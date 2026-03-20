@@ -748,6 +748,67 @@ namespace Babylon::ShaderCompilerTraversers
             const unsigned int FIRST_GENERIC_ATTRIBUTE_LOCATION{10};
         };
 
+        /// Implementation of VertexVaryingInTraverser for Vulkan.
+        /// Vulkan uses SPIR-V directly with location-based attribute bindings.
+        /// Similar to D3D, it maps Babylon.js attribute names to specific bgfx
+        /// attribute locations using bgfx's a_* naming convention.
+        class VertexVaryingInTraverserVulkan final : private VertexVaryingInTraverser
+        {
+        public:
+            static void Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
+            {
+                auto intermediate{program.getIntermediate(EShLangVertex)};
+                VertexVaryingInTraverserVulkan traverser{};
+                intermediate->getTreeRoot()->traverse(&traverser);
+                // UVs are effectively a special kind of generic attribute since they both use
+                // are implemented using texture coordinates, so we preprocess to pre-count the
+                // number of UV coordinate variables to prevent collisions.
+                for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
+                {
+                    if (name.size() >= 2 && name[0] == 'u' && name[1] == 'v')
+                    {
+                        traverser.m_genericAttributesRunningCount++;
+                    }
+                }
+                VertexVaryingInTraverser::Traverse(intermediate, ids, replacementToOriginalName, traverser);
+            }
+
+        private:
+            std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
+            {
+#define IF_NAME_RETURN_ATTRIB(varyingName, attrib, newName)  \
+    if (std::strcmp(name, varyingName) == 0)                 \
+    {                                                        \
+        return {static_cast<unsigned int>(attrib), newName}; \
+    }
+                IF_NAME_RETURN_ATTRIB("position", bgfx::Attrib::Position, "a_position")
+                IF_NAME_RETURN_ATTRIB("normal", bgfx::Attrib::Normal, "a_normal")
+                IF_NAME_RETURN_ATTRIB("tangent", bgfx::Attrib::Tangent, "a_tangent")
+                IF_NAME_RETURN_ATTRIB("uv", bgfx::Attrib::TexCoord0, "a_texcoord0")
+                IF_NAME_RETURN_ATTRIB("uv2", bgfx::Attrib::TexCoord1, "a_texcoord1")
+                IF_NAME_RETURN_ATTRIB("uv3", bgfx::Attrib::TexCoord2, "a_texcoord2")
+                IF_NAME_RETURN_ATTRIB("uv4", bgfx::Attrib::TexCoord3, "a_texcoord3")
+                IF_NAME_RETURN_ATTRIB("color", bgfx::Attrib::Color0, "a_color0")
+                IF_NAME_RETURN_ATTRIB("matricesIndices", bgfx::Attrib::Indices, "a_indices")
+                IF_NAME_RETURN_ATTRIB("matricesWeights", bgfx::Attrib::Weight, "a_weight")
+                IF_NAME_RETURN_ATTRIB("instanceColor", bgfx::Attrib::TexCoord3, "i_data5")
+                IF_NAME_RETURN_ATTRIB("world0", bgfx::Attrib::TexCoord4, "i_data0")
+                IF_NAME_RETURN_ATTRIB("world1", bgfx::Attrib::TexCoord5, "i_data1")
+                IF_NAME_RETURN_ATTRIB("world2", bgfx::Attrib::TexCoord6, "i_data2")
+                IF_NAME_RETURN_ATTRIB("world3", bgfx::Attrib::TexCoord7, "i_data3")
+                IF_NAME_RETURN_ATTRIB("splatIndex0", bgfx::Attrib::TexCoord4, "i_data0")
+                IF_NAME_RETURN_ATTRIB("splatIndex1", bgfx::Attrib::TexCoord5, "i_data1")
+                IF_NAME_RETURN_ATTRIB("splatIndex2", bgfx::Attrib::TexCoord6, "i_data2")
+                IF_NAME_RETURN_ATTRIB("splatIndex3", bgfx::Attrib::TexCoord7, "i_data3")
+#undef IF_NAME_RETURN_ATTRIB
+                const unsigned int attributeLocation = FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++;
+                if (attributeLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
+                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
+                return {attributeLocation, name};
+            }
+            const unsigned int FIRST_GENERIC_ATTRIBUTE_LOCATION{10};
+        };
+
         /// <summary>
         /// Split sampler symbols into separate sampler and texture symbols and assign bindings.
         /// This is required for DirectX and Metal. Note that bgfx expects sequential bindings
@@ -946,6 +1007,11 @@ namespace Babylon::ShaderCompilerTraversers
     void AssignLocationsAndNamesToVertexVaryingsD3D(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
     {
         VertexVaryingInTraverserD3D::Traverse(program, ids, replacementToOriginalName);
+    }
+
+    void AssignLocationsAndNamesToVertexVaryingsVulkan(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
+    {
+        VertexVaryingInTraverserVulkan::Traverse(program, ids, replacementToOriginalName);
     }
 
     void SplitSamplersIntoSamplersAndTextures(TProgram& program, IdGenerator& ids)

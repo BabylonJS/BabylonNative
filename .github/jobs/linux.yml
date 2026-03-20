@@ -4,6 +4,7 @@ parameters:
   CC: ""
   CXX: ""
   JSEngine: ""
+  graphics_api: ""
   enableSanitizers: false
 
 jobs:
@@ -16,6 +17,10 @@ jobs:
       SANITIZER_FLAG: ${{coalesce(replace(format('{0}', parameters.enableSanitizers), 'True', 'ON'), 'OFF')}}
       CC: ${{parameters.CC}}
       CXX: ${{parameters.CXX}}
+      ${{if eq(parameters.graphics_api, '')}}:
+        graphicsApiDefine: ""
+      ${{else}}:
+        graphicsApiDefine: "-D GRAPHICS_API=${{parameters.graphics_api}}"
 
     steps:
       - template: cmake.yml
@@ -26,9 +31,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang
         displayName: "Install packages"
+        condition: ne('${{parameters.graphics_api}}', 'Vulkan')
 
       - script: |
-          cmake -G Ninja -B build/Linux -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so -D NAPI_JAVASCRIPT_ENGINE=${{parameters.JSEngine}} -D CMAKE_BUILD_TYPE=RelWithDebInfo -D BX_CONFIG_DEBUG=ON -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D OpenGL_GL_PREFERENCE=GLVND -D BABYLON_DEBUG_TRACE=ON -D ENABLE_SANITIZERS=$(SANITIZER_FLAG) .
+          sudo apt-get update
+          sudo apt-get install libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev libvulkan-dev vulkan-validationlayers clang
+        displayName: "Install packages (Vulkan)"
+        condition: eq('${{parameters.graphics_api}}', 'Vulkan')
+
+      - script: |
+          cmake -G Ninja -B build/Linux -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so -D NAPI_JAVASCRIPT_ENGINE=${{parameters.JSEngine}} -D CMAKE_BUILD_TYPE=RelWithDebInfo -D BX_CONFIG_DEBUG=ON -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D OpenGL_GL_PREFERENCE=GLVND -D BABYLON_DEBUG_TRACE=ON -D ENABLE_SANITIZERS=$(SANITIZER_FLAG) $(graphicsApiDefine) .
           ninja -C build/Linux
         displayName: "Build X11"
 
