@@ -907,11 +907,24 @@ namespace Babylon::Plugins
     UIApplication* sharedApplication{[UIApplication sharedApplication]};
     UIInterfaceOrientation orientation{UIInterfaceOrientationUnknown};
 #if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
-    UIScene* scene{[[[sharedApplication connectedScenes] allObjects] firstObject]};
-    orientation = [(UIWindowScene*)scene interfaceOrientation];
+    UIWindowScene* windowScene = (UIWindowScene*)[[[sharedApplication connectedScenes] allObjects] firstObject];
+    if (@available(iOS 26.0, *)) {
+        orientation = windowScene.effectiveGeometry.interfaceOrientation;
+    } else {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        orientation = [windowScene interfaceOrientation];
+#pragma clang diagnostic pop
+    }
 #else
-    if (@available(iOS 13.0, *)) {
+    if (@available(iOS 26.0, *)) {
+        UIWindowScene* windowScene = [[[sharedApplication windows] firstObject] windowScene];
+        orientation = windowScene.effectiveGeometry.interfaceOrientation;
+    } else if (@available(iOS 13.0, *)) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         orientation = [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
+#pragma clang diagnostic pop
     }
     else {
         orientation = [sharedApplication statusBarOrientation];
