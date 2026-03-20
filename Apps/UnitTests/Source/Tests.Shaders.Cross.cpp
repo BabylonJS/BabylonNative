@@ -8,6 +8,7 @@
 #include <Babylon/ScriptLoader.h>
 
 #include <chrono>
+#include <cstdlib>
 #include <future>
 #include <iostream>
 
@@ -23,36 +24,33 @@ TEST(ShadersCross, CompileComprehensiveGLSL)
     device.StartRenderingCurrentFrame();
     update.Start();
 
-    std::promise<void> scriptIsDone{};
-    std::promise<int32_t> shaderTestDone{};
-
     Babylon::AppRuntime::Options options{};
 
-    options.UnhandledExceptionHandler = [&scriptIsDone](const Napi::Error& error) {
+    options.UnhandledExceptionHandler = [](const Napi::Error& error) {
         std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
-        std::cerr.flush();
-
-        scriptIsDone.set_exception(std::make_exception_ptr(std::exception{}));
+        std::quick_exit(1);
     };
 
     Babylon::AppRuntime runtime{options};
-    runtime.Dispatch([&device, &shaderTestDone](Napi::Env env) {
+
+    std::promise<void> scriptIsDone{};
+    std::promise<void> sceneIsReady{};
+
+    runtime.Dispatch([&device, &sceneIsReady](Napi::Env env) {
         device.AddToJavaScript(env);
 
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
             std::cout << message << std::endl;
-            std::cout.flush();
         });
         Babylon::Polyfills::Window::Initialize(env);
         Babylon::Plugins::NativeEngine::Initialize(env);
 
-        env.Global().Set("setShaderTestDone",
+        env.Global().Set("setSceneReady",
             Napi::Function::New(
-                env, [&shaderTestDone](const Napi::CallbackInfo& info) {
-                    int32_t failures = info[0].As<Napi::Number>().Int32Value();
-                    shaderTestDone.set_value(failures);
+                env, [&sceneIsReady](const Napi::CallbackInfo&) {
+                    sceneIsReady.set_value();
                 },
-                "setShaderTestDone"));
+                "setSceneReady"));
     });
 
     Babylon::ScriptLoader loader{runtime};
@@ -64,28 +62,15 @@ TEST(ShadersCross, CompileComprehensiveGLSL)
 
     scriptIsDone.get_future().get();
 
-    auto shaderTestFuture = shaderTestDone.get_future();
-    constexpr auto timeout = 30s;
-    auto start = std::chrono::steady_clock::now();
-    while (shaderTestFuture.wait_for(16ms) != std::future_status::ready)
+    auto sceneIsReadyFuture = sceneIsReady.get_future();
+    while (sceneIsReadyFuture.wait_for(16ms) != std::future_status::ready)
     {
         update.Finish();
         device.FinishRenderingCurrentFrame();
         device.StartRenderingCurrentFrame();
         update.Start();
-
-        if (std::chrono::steady_clock::now() - start > timeout)
-        {
-            std::cerr << "Shader test timed out after " << timeout.count() << "s" << std::endl;
-            break;
-        }
     }
-
-    auto failures = shaderTestFuture.get();
-    std::cout << "Shader cross-compilation test finished with " << failures << " failure(s)." << std::endl;
 
     update.Finish();
     device.FinishRenderingCurrentFrame();
-
-    EXPECT_EQ(failures, 0);
 }

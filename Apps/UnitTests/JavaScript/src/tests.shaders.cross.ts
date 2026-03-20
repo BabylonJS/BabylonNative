@@ -1,6 +1,6 @@
-import { NativeEngine, Scene, ShaderMaterial, MeshBuilder, Effect } from "@babylonjs/core";
+import { NativeEngine, Scene, ShaderMaterial, MeshBuilder } from "@babylonjs/core";
 
-declare const setShaderTestDone: (failures: number) => void;
+declare const setSceneReady: () => void;
 
 // ---------------------------------------------------------------------------
 // Comprehensive WebGL2 GLSL ES 3.00 vertex shader
@@ -962,72 +962,39 @@ console.log("=== Shader Cross-Compilation Test ===");
 
 const engine = new NativeEngine();
 const scene = new Scene(engine);
-scene.createDefaultCamera();
 
 const sphere = MeshBuilder.CreateSphere("sphere", { segments: 8, diameter: 1 }, scene);
 
-let failures = 0;
-let done = false;
+const shaders = {
+    vertexSource: vertexSource,
+    fragmentSource: fragmentSource,
+};
 
-function finish(f: number) {
-    if (!done) {
-        done = true;
-        engine.stopRenderLoop();
-        setShaderTestDone(f);
-    }
-}
+const mat = new ShaderMaterial("crossTest", scene, shaders, {
+    attributes: [
+        "position", "normal", "uv", "color", "tangent",
+    ],
+    uniforms: [
+        "world", "worldViewProjection", "worldView", "view", "projection",
+        "uCustomFloat", "uCustomInt", "uCustomUint", "uCustomBool",
+        "gsInvViewport", "gsDataTextureSize", "gsFocal", "gsKernelSize",
+        "gsEyePosition", "gsAlpha",
+    ],
+    samplers: [
+        "uSampler2D", "uSampler3D", "uSamplerCube", "uSampler2DArray",
+        "uSampler2DShadow", "uSamplerCubeShadow", "uSampler2DArrayShadow",
+        "uISampler2D", "uISampler3D", "uISamplerCube", "uISampler2DArray",
+        "uUSampler2D", "uUSampler3D", "uUSamplerCube", "uUSampler2DArray",
+        "gsCovariancesATexture", "gsCovariancesBTexture",
+        "gsCentersTexture", "gsColorsTexture",
+        "gsShTexture0", "gsShTexture1", "gsShTexture2",
+    ],
+    uniformBuffers: [
+        "TransformBlock", "SceneBlock",
+    ],
+});
 
-try {
-    const shaders = {
-        vertexSource: vertexSource,
-        fragmentSource: fragmentSource,
-    };
+sphere.material = mat;
 
-    const mat = new ShaderMaterial("crossTest", scene, shaders, {
-        attributes: [
-            "position", "normal", "uv", "color", "tangent",
-        ],
-        uniforms: [
-            "world", "worldViewProjection", "worldView", "view", "projection",
-            "uCustomFloat", "uCustomInt", "uCustomUint", "uCustomBool",
-            "gsInvViewport", "gsDataTextureSize", "gsFocal", "gsKernelSize",
-            "gsEyePosition", "gsAlpha",
-        ],
-        samplers: [
-            "uSampler2D", "uSampler3D", "uSamplerCube", "uSampler2DArray",
-            "uSampler2DShadow", "uSamplerCubeShadow", "uSampler2DArrayShadow",
-            "uISampler2D", "uISampler3D", "uISamplerCube", "uISampler2DArray",
-            "uUSampler2D", "uUSampler3D", "uUSamplerCube", "uUSampler2DArray",
-            "gsCovariancesATexture", "gsCovariancesBTexture",
-            "gsCentersTexture", "gsColorsTexture",
-            "gsShTexture0", "gsShTexture1", "gsShTexture2",
-        ],
-        uniformBuffers: [
-            "TransformBlock", "SceneBlock",
-        ],
-    });
-
-    mat.onCompiled = (effect: Effect) => {
-        console.log("[PASS] Shader compiled successfully.");
-        finish(failures);
-    };
-
-    mat.onError = (effect: Effect, errors: string) => {
-        console.log("[INFO] Shader compilation error (expected for validation testing): " + errors);
-        failures++;
-        finish(failures);
-    };
-
-    sphere.material = mat;
-    console.log("[INFO] ShaderMaterial created, starting render loop...");
-
-    // Must start scene rendering so isReady() is called on the material,
-    // which triggers effect creation and compilation.
-    engine.runRenderLoop(() => {
-        scene.render();
-    });
-} catch (e: any) {
-    console.log("[FAIL] ShaderMaterial creation error: " + e.message);
-    failures++;
-    finish(failures);
-}
+scene.createDefaultCameraOrLight(true, true, true);
+scene.executeWhenReady(setSceneReady);

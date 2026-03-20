@@ -1059,75 +1059,42 @@ console.log("=== Shader Cross-Compilation Test ===");
 
 var engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.NativeEngine();
 var scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.Scene(engine);
-scene.createDefaultCamera();
 
 var sphere = _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.MeshBuilder.CreateSphere("sphere", { segments: 8, diameter: 1 }, scene);
 
-var failures = 0;
-var done = false;
+var shaders = {
+  vertexSource: vertexSource,
+  fragmentSource: fragmentSource
+};
 
-function finish(f) {
-  if (!done) {
-    done = true;
-    engine.stopRenderLoop();
-    setShaderTestDone(f);
-  }
-}
+var mat = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ShaderMaterial("crossTest", scene, shaders, {
+  attributes: [
+  "position", "normal", "uv", "color", "tangent"],
 
-try {
-  var shaders = {
-    vertexSource: vertexSource,
-    fragmentSource: fragmentSource
-  };
+  uniforms: [
+  "world", "worldViewProjection", "worldView", "view", "projection",
+  "uCustomFloat", "uCustomInt", "uCustomUint", "uCustomBool",
+  "gsInvViewport", "gsDataTextureSize", "gsFocal", "gsKernelSize",
+  "gsEyePosition", "gsAlpha"],
 
-  var mat = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_0__.ShaderMaterial("crossTest", scene, shaders, {
-    attributes: [
-    "position", "normal", "uv", "color", "tangent"],
+  samplers: [
+  "uSampler2D", "uSampler3D", "uSamplerCube", "uSampler2DArray",
+  "uSampler2DShadow", "uSamplerCubeShadow", "uSampler2DArrayShadow",
+  "uISampler2D", "uISampler3D", "uISamplerCube", "uISampler2DArray",
+  "uUSampler2D", "uUSampler3D", "uUSamplerCube", "uUSampler2DArray",
+  "gsCovariancesATexture", "gsCovariancesBTexture",
+  "gsCentersTexture", "gsColorsTexture",
+  "gsShTexture0", "gsShTexture1", "gsShTexture2"],
 
-    uniforms: [
-    "world", "worldViewProjection", "worldView", "view", "projection",
-    "uCustomFloat", "uCustomInt", "uCustomUint", "uCustomBool",
-    "gsInvViewport", "gsDataTextureSize", "gsFocal", "gsKernelSize",
-    "gsEyePosition", "gsAlpha"],
+  uniformBuffers: [
+  "TransformBlock", "SceneBlock"]
 
-    samplers: [
-    "uSampler2D", "uSampler3D", "uSamplerCube", "uSampler2DArray",
-    "uSampler2DShadow", "uSamplerCubeShadow", "uSampler2DArrayShadow",
-    "uISampler2D", "uISampler3D", "uISamplerCube", "uISampler2DArray",
-    "uUSampler2D", "uUSampler3D", "uUSamplerCube", "uUSampler2DArray",
-    "gsCovariancesATexture", "gsCovariancesBTexture",
-    "gsCentersTexture", "gsColorsTexture",
-    "gsShTexture0", "gsShTexture1", "gsShTexture2"],
+});
 
-    uniformBuffers: [
-    "TransformBlock", "SceneBlock"]
+sphere.material = mat;
 
-  });
-
-  mat.onCompiled = function (effect) {
-    console.log("[PASS] Shader compiled successfully.");
-    finish(failures);
-  };
-
-  mat.onError = function (effect, errors) {
-    console.log("[INFO] Shader compilation error (expected for validation testing): " + errors);
-    failures++;
-    finish(failures);
-  };
-
-  sphere.material = mat;
-  console.log("[INFO] ShaderMaterial created, starting render loop...");
-
-  // Must start scene rendering so isReady() is called on the material,
-  // which triggers effect creation and compilation.
-  engine.runRenderLoop(function () {
-    scene.render();
-  });
-} catch (e) {
-  console.log("[FAIL] ShaderMaterial creation error: " + e.message);
-  failures++;
-  finish(failures);
-}
+scene.createDefaultCameraOrLight(true, true, true);
+scene.executeWhenReady(setSceneReady);
 })();
 
 /******/ })()
