@@ -35,6 +35,29 @@ jobs:
         displayName: "Build UnitTests macOS"
 
       - script: |
+          sudo sysctl -w kern.corefile=%N.core.%P
+        displayName: "Enable Core Dump"
+
+      - script: |
           cd build/macOS/Apps/UnitTests/RelWithDebInfo
+          ulimit -c unlimited
           ./UnitTests
         displayName: "Run UnitTests macOS"
+
+      - task: CopyFiles@2
+        inputs:
+          sourceFolder: "build/macOS/Apps/UnitTests/RelWithDebInfo"
+          contents: |
+            UnitTests
+            *.core.*
+          targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
+          cleanTargetFolder: false
+        displayName: "Stage UnitTests Core Dump"
+        condition: failed()
+
+      - task: PublishBuildArtifacts@1
+        inputs:
+          artifactName: "UnitTests Core Dumps"
+          pathtoPublish: "$(Build.ArtifactStagingDirectory)/Dumps"
+        displayName: "Publish UnitTests Core Dumps"
+        condition: failed()
