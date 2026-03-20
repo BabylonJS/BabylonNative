@@ -33,7 +33,6 @@ jobs:
         displayName: "Build X11"
 
       - script: |
-          ulimit -c unlimited
           sudo sysctl -w kernel.core_pattern=core.%p
         displayName: "Enable Core Dumps"
 

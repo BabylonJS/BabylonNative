@@ -35,7 +35,6 @@ jobs:
         displayName: "Build UnitTests macOS"
 
       - script: |
-          ulimit -c unlimited
           sudo sysctl -w kern.corefile=core.%P
         displayName: "Enable Core Dumps"
 
@@ -45,19 +44,9 @@ jobs:
           ./UnitTests
         displayName: "Run UnitTests macOS"
 
-      - task: CopyFiles@2
-        inputs:
-          sourceFolder: "build/macOS/Apps/UnitTests/RelWithDebInfo"
-          contents: |
-            UnitTests
-            core.*
-          targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
-          cleanTargetFolder: false
-        displayName: "Stage UnitTests crash dumps"
-        condition: failed()
-
       - bash: |
           if ls ~/Library/Logs/DiagnosticReports/UnitTests* 1>/dev/null 2>&1; then
+            mkdir -p $(Build.ArtifactStagingDirectory)/Dumps
             cp ~/Library/Logs/DiagnosticReports/UnitTests* $(Build.ArtifactStagingDirectory)/Dumps/
           fi
         displayName: "Stage macOS crash logs"
