@@ -18,7 +18,7 @@ jobs:
       sha: ${{ steps.version.outputs.sha }}
       tag: ${{ steps.version.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
           fetch-depth: 0
@@ -51,7 +51,7 @@ jobs:
       CMAKE_INSTALL_DIR: ${{ github.workspace }}/install/
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
       - name: Install Linux dependencies
@@ -80,7 +80,7 @@ jobs:
       - name: Build
         run: |
           cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target install --config Release
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.os }}
           path: ${{ github.workspace }}/install/
@@ -93,7 +93,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: recursive
           fetch-depth: 0
@@ -102,15 +102,15 @@ jobs:
           find src/bgfx.cmake -name ".git*" -exec rm -rf {} +
           find src/bgfx.cmake -name ".editorconfig" -delete
           rm src/bgfx.cmake/.cmake-format.py
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: windows-latest
           path: ${{ github.workspace }}/install/windows/bgfx.cmake
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: ubuntu-latest
           path: ${{ github.workspace }}/install/linux/bgfx.cmake
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: macos-latest
           path: ${{ github.workspace }}/install/macos/bgfx.cmake
