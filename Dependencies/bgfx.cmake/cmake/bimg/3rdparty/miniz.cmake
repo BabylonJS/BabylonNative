@@ -19,5 +19,5 @@ if(NOT MINIZ_LIBRARIES)
 		 MINIZ_SOURCES #
 		 ${BIMG_DIR}/3rdparty/tinyexr/deps/miniz/miniz.* #
 	)
-	set(MINIZ_INCLUDE_DIR ${BIMG_DIR}/3rdparty/tinyexr/deps/miniz)
+	set(MINIZ_INCLUDE_DIR ${BIMG_DIR}/3rdparty/tinyexr/deps)
 endif()

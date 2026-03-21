@@ -29,14 +29,7 @@ file(
 	${BGFX_DIR}/include/bgfx/c99/*.h
 )
 
-if(APPLE)
-	file(GLOB BGFX_OBJC_SOURCES ${BGFX_DIR}/src/*.mm)
-	list(APPEND BGFX_SOURCES ${BGFX_OBJC_SOURCES})
-	list(REMOVE_ITEM BGFX_SOURCES ${BGFX_DIR}/src/amalgamated.cpp)
-	set(BGFX_AMALGAMATED_SOURCE ${BGFX_DIR}/src/amalgamated.mm)
-else()
-	set(BGFX_AMALGAMATED_SOURCE ${BGFX_DIR}/src/amalgamated.cpp)
-endif()
+set(BGFX_AMALGAMATED_SOURCE ${BGFX_DIR}/src/amalgamated.cpp)
 
 if(BGFX_AMALGAMATED)
 	set(BGFX_NOBUILD ${BGFX_SOURCES})
@@ -189,13 +182,6 @@ if(UNIX
 	#find_library(LIBRT_LIBRARIES rt)
 	#find_library(LIBDL_LIBRARIES dl)
 	target_link_libraries(bgfx PUBLIC ${X11_LIBRARIES} ${OPENGL_LIBRARIES})
-endif()
-
-# Exclude mm files if not on OS X
-if(NOT APPLE)
-	set_source_files_properties(${BGFX_DIR}/src/glcontext_eagl.mm PROPERTIES HEADER_FILE_ONLY ON)
-	set_source_files_properties(${BGFX_DIR}/src/glcontext_nsgl.mm PROPERTIES HEADER_FILE_ONLY ON)
-	set_source_files_properties(${BGFX_DIR}/src/renderer_mtl.mm PROPERTIES HEADER_FILE_ONLY ON)
 endif()
 
 # Exclude glx context on non-unix
