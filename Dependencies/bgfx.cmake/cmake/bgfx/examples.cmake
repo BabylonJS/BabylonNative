@@ -346,6 +346,10 @@ if(BGFX_BUILD_EXAMPLES)
 		45-bokeh
 		46-fsr
 		47-pixelformats
+		48-drawindirect
+		49-hextile
+		50-headless
+		51-gpufont
 	)
 
 	foreach(EXAMPLE ${BGFX_EXAMPLES})
