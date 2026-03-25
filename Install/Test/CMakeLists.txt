@@ -45,7 +45,6 @@ if(WIN32 AND NOT WINDOWS_STORE)
         "${SOURCE_DIR}/App.Win32.cpp"
         "${SOURCE_DIR}/Tests.Device.D3D11.cpp"
         "${SOURCE_DIR}/Tests.ExternalTexture.cpp"
-        "${SOURCE_DIR}/Tests.ExternalTexture.D3D11.cpp"
         "${SOURCE_DIR}/Tests.JavaScript.cpp"
         "${SOURCE_DIR}/Tests.ShaderCache.cpp"
         "${SOURCE_DIR}/Utils.D3D11.cpp"

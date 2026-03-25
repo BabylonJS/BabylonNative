@@ -354,6 +354,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     startup.get_future().wait();
 
+    // Pump an extra frame so overrideInternal applies the native texture.
+    g_device->StartRenderingCurrentFrame();
+    g_update->Start();
+    g_update->Finish();
+    g_device->FinishRenderingCurrentFrame();
+
     // --------------------------- Rendering loop -------------------------
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_PLAYGROUNDWIN32));
