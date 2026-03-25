@@ -16,7 +16,7 @@ if (project.hasProperty("GRAPHICS_API")) {
     }
 }
 
-def arcore_libpath= layout.buildDirectory.dir("arcore-native").get().asFile.absolutePath
+def arcore_libpath = layout.buildDirectory.dir("arcore-native").get().asFile.absolutePath
 
 configurations { natives }
 
