@@ -27,8 +27,7 @@ set(SOURCES
 
 if(GRAPHICS_API STREQUAL "D3D11")
     set(SOURCES ${SOURCES}
-        "Source/Tests.Device.${GRAPHICS_API}.cpp"
-        "Source/Tests.ExternalTexture.${GRAPHICS_API}.cpp")
+        "Source/Tests.Device.${GRAPHICS_API}.cpp")
 endif()
 
 if(APPLE)

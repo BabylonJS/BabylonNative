@@ -349,12 +349,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         startup.set_value();
     });
 
-    // Wait for startup to finish before ending the frame so that
-    // bgfx::frame() processes the texture creation from CreateForJavaScript.
-    startup.get_future().wait();
-
     g_update->Finish();
     g_device->FinishRenderingCurrentFrame();
+
+    startup.get_future().wait();
 
     // --------------------------- Rendering loop -------------------------
 
