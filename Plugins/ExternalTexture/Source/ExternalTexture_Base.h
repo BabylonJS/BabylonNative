@@ -86,8 +86,8 @@ namespace Babylon::Plugins
                     NumLayers(),
                     Format(),
                     Flags(),
-                    0, // _mem
-                    NativeHandleToUintPtr(ptr) // _external
+                    0,
+                    NativeHandleToUintPtr(ptr)
                 );
 
                 if (!bgfx::isValid(handle))

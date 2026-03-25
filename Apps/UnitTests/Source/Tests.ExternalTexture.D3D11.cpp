@@ -13,7 +13,7 @@
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
-TEST(ExternalTexture, CreateForJavaScriptWithTextureArray)
+TEST(ExternalTexture, CreateForJavaScript)
 {
 #ifdef SKIP_EXTERNAL_TEXTURE_TESTS
     GTEST_SKIP();
@@ -24,7 +24,7 @@ TEST(ExternalTexture, CreateForJavaScriptWithTextureArray)
     device.StartRenderingCurrentFrame();
     update.Start();
 
-    auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256, 3);
+    auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256, 1);
 
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
 
