@@ -14,7 +14,7 @@ namespace Babylon::Plugins
         Set(ptr);
     }
 
-    void ExternalTexture::Impl::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, std::optional<uint16_t> layerIndex)
+    void ExternalTexture::Impl::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
     {
         Info info;
         GetInfo(ptr, overrideFormat, info);
@@ -25,7 +25,7 @@ namespace Babylon::Plugins
         m_info = info;
 
         Set(ptr);
-        UpdateHandles(ptr, layerIndex);
+        UpdateTextures(ptr);
     }
 
     ExternalTexture::ExternalTexture(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
@@ -45,83 +45,71 @@ namespace Babylon::Plugins
 
     uint32_t ExternalTexture::Width() const
     {
+        std::scoped_lock lock{m_impl->Mutex()};
+
         return m_impl->Width();
     }
 
     uint32_t ExternalTexture::Height() const
     {
+        std::scoped_lock lock{m_impl->Mutex()};
+
         return m_impl->Height();
     }
 
     Graphics::TextureT ExternalTexture::Get() const
     {
+        std::scoped_lock lock{m_impl->Mutex()};
+
         return m_impl->Get();
     }
 
-    Napi::Promise ExternalTexture::AddToContextAsync(Napi::Env env, std::optional<uint16_t> layerIndex) const
+    Napi::Value ExternalTexture::CreateForJavaScript(Napi::Env env) const
     {
-        Graphics::DeviceContext& context = Graphics::DeviceContext::GetFromJavaScript(env);
-        JsRuntime& runtime = JsRuntime::GetFromJavaScript(env);
+        std::scoped_lock lock{m_impl->Mutex()};
 
-        auto deferred{Napi::Promise::Deferred::New(env)};
-        auto promise{deferred.Promise()};
+        bgfx::TextureHandle handle = bgfx::createTexture2D(
+            m_impl->Width(),
+            m_impl->Height(),
+            m_impl->HasMips(),
+            m_impl->NumLayers(),
+            m_impl->Format(),
+            m_impl->Flags(),
+            0,
+            reinterpret_cast<uintptr_t>(m_impl->Get())
+        );
 
-        DEBUG_TRACE("ExternalTexture [0x%p] AddToContextAsync", m_impl.get());
+        DEBUG_TRACE("ExternalTexture [0x%p] CreateForJavaScript %d x %d %d mips %d layers. Format : %d Flags : %d. (bgfx handle id %d)",
+            m_impl.get(), int(m_impl->Width()), int(m_impl->Height()), int(m_impl->HasMips()), int(m_impl->NumLayers()), int(m_impl->Format()), int(m_impl->Flags()), int(handle.idx));
 
-        arcana::make_task(context.BeforeRenderScheduler(), arcana::cancellation_source::none(), [&context, &runtime, deferred = std::move(deferred), impl = m_impl, layerIndex = std::move(layerIndex)]() mutable {
-            // REVIEW: The bgfx texture handle probably needs to be an RAII object to make sure it gets clean up during the asynchrony.
-            //         For example, if any of the schedulers/dispatches below don't fire, then the texture handle will leak.
-            bgfx::TextureHandle handle = bgfx::createTexture2D(impl->Width(), impl->Height(), impl->HasMips(), impl->NumLayers(), impl->Format(), impl->Flags());
-            DEBUG_TRACE("ExternalTexture [0x%p] create %d x %d %d mips %d layers. Format : %d Flags : %d. (bgfx handle id %d)",
-                impl.get(), int(impl->Width()), int(impl->Height()), int(impl->HasMips()), int(impl->NumLayers()), int(impl->Format()), int(impl->Flags()), int(handle.idx));
-            if (!bgfx::isValid(handle))
+        if (!bgfx::isValid(handle))
+        {
+            throw Napi::Error::New(env, "Failed to create external texture");
+        }
+
+        auto* texture = new Graphics::Texture{Graphics::DeviceContext::GetFromJavaScript(env)};
+        texture->Attach(handle, true, m_impl->Width(), m_impl->Height(), m_impl->HasMips(), m_impl->NumLayers(), m_impl->Format(), m_impl->Flags());
+
+        m_impl->AddTexture(texture);
+
+        auto jsObject = Napi::Pointer<Graphics::Texture>::Create(env, texture, [texture, weakImpl = std::weak_ptr{m_impl}] {
+            if (auto impl = weakImpl.lock())
             {
-                DEBUG_TRACE("ExternalTexture [0x%p] is not valid", impl.get());
-                runtime.Dispatch([deferred{std::move(deferred)}](Napi::Env env) {
-                    deferred.Reject(Napi::Error::New(env, "Failed to create native texture").Value());
-                });
+                std::scoped_lock lock{impl->Mutex()};
 
-                return;
+                impl->RemoveTexture(texture);
             }
 
-            arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(), [&runtime, &context, deferred = std::move(deferred), handle, impl = std::move(impl), layerIndex = std::move(layerIndex)]() mutable {
-                if (bgfx::overrideInternal(handle, uintptr_t(impl->Get()), layerIndex.value_or(0)) == 0)
-                {
-                    runtime.Dispatch([deferred = std::move(deferred), handle](Napi::Env env) {
-                        bgfx::destroy(handle);
-                        deferred.Reject(Napi::Error::New(env, "Failed to override native texture").Value());
-                    });
-
-                    return;
-                }
-
-                runtime.Dispatch([deferred = std::move(deferred), handle, &context, impl = std::move(impl)](Napi::Env env) mutable {
-                    auto* texture = new Graphics::Texture{context};
-                    DEBUG_TRACE("ExternalTexture [0x%p] attach %d x %d %d mips. Format : %d Flags : %d. (bgfx handle id %d)",
-                        impl.get(), int(impl->Width()), int(impl->Height()), int(impl->HasMips()), int(impl->Format()), int(impl->Flags()), int(handle.idx));
-                    texture->Attach(handle, true, impl->Width(), impl->Height(), impl->HasMips(), 1, impl->Format(), impl->Flags());
-
-                    impl->AddHandle(texture->Handle());
-
-                    auto jsObject = Napi::Pointer<Graphics::Texture>::Create(env, texture, [texture, weakImpl = std::weak_ptr{impl}] {
-                        if (auto impl = weakImpl.lock())
-                        {
-                            impl->RemoveHandle(texture->Handle());
-                        }
-
-                        delete texture;
-                    });
-
-                    deferred.Resolve(jsObject);
-                });
-            });
+            delete texture;
         });
 
-        return promise;
+        return jsObject;
     }
 
-    void ExternalTexture::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, std::optional<uint16_t> layerIndex)
+    void ExternalTexture::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
     {
-        m_impl->Update(ptr, overrideFormat, layerIndex);
+        std::scoped_lock lock{m_impl->Mutex()};
+
+        m_impl->Update(ptr, overrideFormat);
     }
 }

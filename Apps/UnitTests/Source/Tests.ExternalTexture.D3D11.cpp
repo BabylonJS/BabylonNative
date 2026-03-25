@@ -13,7 +13,7 @@
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
-TEST(ExternalTexture, AddToContextAsyncAndUpdateWithLayerIndex)
+TEST(ExternalTexture, CreateForJavaScriptWithTextureArray)
 {
 #ifdef SKIP_EXTERNAL_TEXTURE_TESTS
     GTEST_SKIP();
@@ -28,11 +28,10 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdateWithLayerIndex)
 
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
 
-    std::promise<void> addToContext{};
-    std::promise<void> promiseResolved{};
+    std::promise<void> done{};
 
     Babylon::AppRuntime runtime{};
-    runtime.Dispatch([&device, &addToContext, &promiseResolved, externalTexture](Napi::Env env) {
+    runtime.Dispatch([&device, &done, externalTexture](Napi::Env env) {
         device.AddToJavaScript(env);
 
         Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
@@ -43,37 +42,14 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdateWithLayerIndex)
 
         Babylon::Plugins::NativeEngine::Initialize(env);
 
-        // Test with explicit layer index 1
-        auto jsPromise = externalTexture.AddToContextAsync(env, 1);
-        addToContext.set_value();
+        auto jsTexture = externalTexture.CreateForJavaScript(env);
+        EXPECT_TRUE(jsTexture.IsObject());
 
-        auto jsOnFulfilled = Napi::Function::New(env, [&promiseResolved](const Napi::CallbackInfo& info) {
-            promiseResolved.set_value();
-        });
-
-        auto jsOnRejected = Napi::Function::New(env, [&promiseResolved](const Napi::CallbackInfo& info) {
-            promiseResolved.set_exception(std::make_exception_ptr(info[0].As<Napi::Error>()));
-        });
-
-        jsPromise.Get("then").As<Napi::Function>().Call(jsPromise, {jsOnFulfilled, jsOnRejected});
+        done.set_value();
     });
 
-    // Wait for AddToContextAsync to be called.
-    addToContext.get_future().wait();
-
-    // Render a frame so that AddToContextAsync will complete.
-    update.Finish();
-    device.FinishRenderingCurrentFrame();
-
-    // Wait for promise to resolve.
-    promiseResolved.get_future().wait();
-
-    // Start a new frame.
-    device.StartRenderingCurrentFrame();
-    update.Start();
-
-    // Update the external texture to a new texture with explicit layer index 2.
-    externalTexture.Update(nativeTexture, std::nullopt, 2);
+    // Wait for CreateForJavaScript to complete.
+    done.get_future().wait();
 
     DestroyTestTexture(nativeTexture);
 

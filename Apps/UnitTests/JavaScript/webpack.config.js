@@ -7,6 +7,7 @@ module.exports = {
   devtool: false,
   entry: {
     "tests.javaScript.all": './src/tests.javaScript.all.ts',
+    "tests.externalTexture.render": './src/tests.externalTexture.render.ts',
     "tests.shaderCache.basicScene": './src/tests.shaderCache.basicScene.ts',
   },
   externals: {

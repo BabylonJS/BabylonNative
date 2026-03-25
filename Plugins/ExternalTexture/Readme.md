@@ -25,80 +25,52 @@ To set the ExternalTexture to be used as a render target by Babylon.js one must 
 int width = 1024;  // Your render target width.
 int height = 768; // Your render target height. 
 
-std::promise<void> textureCreationSubmitted {};
-std::promise<void> textureCreationDone {};
-
 // Create an ExternalTexture from an ID3D12Resource.
 auto externalTexture = std::make_shared<Babylon::Plugins::ExternalTexture>(d3d12Resource);
 
-jsRuntime.Dispatch([&externalTexture, &textureCreationSubmitted, width, height, &textureCreationDone](Napi::Env env)
+jsRuntime.Dispatch([&externalTexture, width, height](Napi::Env env)
 {
    // Creates a JS object that can be used by the Babylon Engine to create a render texture.
-   auto jsPromisse = externalTexture->AddToContextAsync(env);
+   auto jsTexture = externalTexture->CreateForJavaScript(env);
    auto result = env.Global().Get("YOUR_JS_FUNCTION").As<Napi::Function>().Call(
       { 
-         jsPromisse, 
+         jsTexture, 
          Napi::Value::From(env, width),
          Napi::Value::From(env, height),
-         Napi::Function::New(env, [&textureCreationDone](const Napi::CallbackInfo& info)
-         {
-            textureCreationDone.set_value();
-         })
       });
-   textureCreationSubmitted.set_value();
 });
-
-// Wait for texture creation to be submitted.
-textureCreationSubmitted.get_future().get();
-
-// Run 1 render loop so the texture can get created. 
-m_update->Finish();
-m_device->FinishRenderingCurrentFrame();
-m_device->StartRenderingCurrentFrame();
-m_update->Start();
-
-// Wait for callback to confirm the texture is created on the JS side.
-textureCreated.get_future().get();
 ```
 
 The usual JS function to assign the external texture object as a render target for the Babylon scene camera looks like the following:
 
 ```js
-function YOUR_JS_FUNCTION(externalTexturePromisse, width, height, textureCreatedCallback) {
-    externalTexturePromisse.then((externalTexture) => {
-        const outputTexture = engine.wrapNativeTexture(externalTexture);
-        scene.activeCamera.outputRenderTarget = new BABYLON.RenderTargetTexture(
-            "ExternalTexture",
-            {
-                width: width,
-                height: height,
-            },
-            scene,
-            {
-                colorAttachment: outputTexture,
-                generateDepthBuffer: true,
-                generateStencilBuffer: true,
-            }
-        );
-        textureCreatedCallback();
-    });
+function YOUR_JS_FUNCTION(externalTexture, width, height) {
+    const outputTexture = engine.wrapNativeTexture(externalTexture);
+    scene.activeCamera.outputRenderTarget = new BABYLON.RenderTargetTexture(
+        "ExternalTexture",
+        {
+            width: width,
+            height: height,
+        },
+        scene,
+        {
+            colorAttachment: outputTexture,
+            generateDepthBuffer: true,
+            generateStencilBuffer: true,
+        }
+    );
 }
 ```
 
 ## ExternalTexture class
 
-`Babylon::Plugins::ExternalTexture` is a class that can be constructed with a native texture and then used to send to the JavaScript environment using `ExternalTexture::AddToContextAsync`. It is important to note that the constructor will only store the necessary information to convert the native texture to the bgfx texture, but it will _not_ create bgfx texture. This class will hold a strong reference to the native texture when possible. The native texture ownership will be shared with JS when `ExternalTexture::AddToContextAsync` is called. It is safe to destroy this class before `ExternalTexture::AddToContextAsync` async operation completes.
+`Babylon::Plugins::ExternalTexture` is a class that can be constructed with a native texture and then used to create a JavaScript texture object via `ExternalTexture::CreateForJavaScript`. The constructor stores the necessary information about the native texture (dimensions, format, flags) and holds a strong reference to the native texture when possible.
 
 This class assumes that the native texture was created using the same graphics device used to create the Babylon::Device. See [Properly Initialize `Babylon::Graphics::Device`](#properly-initialize-babylongraphicsdevice).
 
-The following will happen inside a call to `ExternalTexture::AddToContextAsync`:
+`ExternalTexture::CreateForJavaScript` synchronously returns a `Napi::Value` wrapping a bgfx texture handle. The native texture backing is applied via `bgfx::overrideInternal` on the next render frame. The returned value can be passed to `engine.wrapNativeTexture` on the JS side.
 
-- A `Napi::Promise` will be created to encapsulate the async operation over a frame.
-- During `Babylon::Graphics::DeviceContext::BeforeRenderScheduler()`, a new dummy bgfx texture will be created.
-- During `Babylon::Graphics::DeviceContext::AfterRenderScheduler()`, this bgfx texture will be overridden with the native texture.
-- On the JS thread, a `Napi::Pointer` will be created to hold the texture and the JS promise will resolved with this object.
-
-It is safe to create multiple JS objects from the same `Babylon::Plugins::ExternalTexture` via `ExternalTexture::AddToContextAsync`.
+It is safe to create multiple JS objects from the same `Babylon::Plugins::ExternalTexture` via `ExternalTexture::CreateForJavaScript`.
 
 Once the JS texture is available on the JS side, use `engine.wrapNativeTexture` to create an Babylon.js `InternalTexture`.
 

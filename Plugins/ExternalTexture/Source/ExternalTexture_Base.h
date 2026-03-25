@@ -2,6 +2,7 @@
 
 #include <Babylon/DebugTrace.h>
 #include <Babylon/Graphics/RendererType.h>
+#include <Babylon/Graphics/Texture.h>
 #include <bgfx/bgfx.h>
 #include <set>
 #include <cassert>
@@ -19,26 +20,24 @@ namespace Babylon::Plugins
         uint16_t NumLayers() const { return m_info.NumLayers; }
         uint64_t Flags() const { return m_info.Flags; }
 
-        void AddHandle(bgfx::TextureHandle handle)
+        void AddTexture(Graphics::Texture* texture)
         {
-            std::scoped_lock lock{m_mutex};
-
-            if (!m_handles.insert(handle).second)
+            if (!m_textures.insert(texture).second)
             {
-                assert(!"Failed to insert handle");
+                assert(!"Failed to insert texture");
             }
         }
 
-        void RemoveHandle(bgfx::TextureHandle handle)
+        void RemoveTexture(Graphics::Texture* texture)
         {
-            std::scoped_lock lock{m_mutex};
-
-            auto it = m_handles.find(handle);
-            if (it != m_handles.end())
+            auto it = m_textures.find(texture);
+            if (it != m_textures.end())
             {
-                m_handles.erase(it);
+                m_textures.erase(it);
             }
         }
+
+        std::mutex& Mutex() const { return m_mutex; }
 
     protected:
         static bool IsFullMipChain(uint16_t mipLevel, uint16_t width, uint16_t height)
@@ -63,16 +62,27 @@ namespace Babylon::Plugins
             return BGFX_TEXTURE_NONE;
         }
 
-        void UpdateHandles(Graphics::TextureT ptr, std::optional<uint16_t> layerIndex)
+        void UpdateTextures(Graphics::TextureT ptr)
         {
-            std::scoped_lock lock{m_mutex};
-
-            for (auto handle : m_handles)
+            for (auto* texture : m_textures)
             {
-                if (bgfx::overrideInternal(handle, uintptr_t(ptr), layerIndex.value_or(0)) == 0)
+                bgfx::TextureHandle handle = bgfx::createTexture2D(
+                    Width(),
+                    Height(),
+                    HasMips(),
+                    NumLayers(),
+                    Format(),
+                    Flags(),
+                    0, // _mem
+                    reinterpret_cast<uintptr_t>(ptr) // _external
+                );
+
+                if (!bgfx::isValid(handle))
                 {
-                    assert(!"Failed to override texture");
+                    throw std::runtime_error{"Failed to create external texture"};
                 }
+
+                texture->Attach(handle, true, m_info.Width, m_info.Height, HasMips(), m_info.NumLayers, m_info.Format, m_info.Flags);
             }
         }
 
@@ -89,15 +99,7 @@ namespace Babylon::Plugins
         Info m_info{};
 
     private:
-        struct TextureHandleLess
-        {
-            bool operator()(const bgfx::TextureHandle& a, const bgfx::TextureHandle& b) const
-            {
-                return a.idx < b.idx;
-            }
-        };
-
         mutable std::mutex m_mutex{};
-        std::set<bgfx::TextureHandle, TextureHandleLess> m_handles{};
+        std::set<Graphics::Texture*> m_textures{};
     };
 }
