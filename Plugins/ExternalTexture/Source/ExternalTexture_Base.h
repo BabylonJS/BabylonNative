@@ -7,9 +7,22 @@
 #include <set>
 #include <cassert>
 #include <cmath>
+#include <type_traits>
 
 namespace Babylon::Plugins
 {
+    namespace
+    {
+        template<typename T>
+        uintptr_t NativeHandleToUintPtr(T value)
+        {
+            if constexpr (std::is_pointer_v<T>)
+                return reinterpret_cast<uintptr_t>(value);
+            else
+                return static_cast<uintptr_t>(value);
+        }
+    }
+
     class ExternalTexture::ImplBase
     {
     public:
@@ -74,7 +87,7 @@ namespace Babylon::Plugins
                     Format(),
                     Flags(),
                     0, // _mem
-                    reinterpret_cast<uintptr_t>(ptr) // _external
+                    NativeHandleToUintPtr(ptr) // _external
                 );
 
                 if (!bgfx::isValid(handle))

@@ -76,7 +76,7 @@ namespace Babylon::Plugins
             m_impl->Format(),
             m_impl->Flags(),
             0,
-            reinterpret_cast<uintptr_t>(m_impl->Get())
+            NativeHandleToUintPtr(m_impl->Get())
         );
 
         DEBUG_TRACE("ExternalTexture [0x%p] CreateForJavaScript %d x %d %d mips %d layers. Format : %d Flags : %d. (bgfx handle id %d)",
