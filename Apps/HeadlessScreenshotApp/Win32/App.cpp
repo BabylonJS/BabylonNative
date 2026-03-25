@@ -142,11 +142,12 @@ int main()
         startup.set_value();
     });
 
+    // Wait for startup to finish before ending the frame so that
+    // bgfx::frame() processes the texture creation from CreateForJavaScript.
+    startup.get_future().wait();
+
     deviceUpdate.Finish();
     device.FinishRenderingCurrentFrame();
-
-    // Wait for `startup` to finish.
-    startup.get_future().wait();
 
     struct Asset
     {
