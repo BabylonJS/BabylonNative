@@ -3,7 +3,6 @@
 #include <Babylon/Graphics/BgfxCallback.h>
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Graphics/DeviceContext.h>
-#include <Babylon/Graphics/SafeTimespanGuarantor.h>
 
 #include <arcana/containers/ticketed_collection.h>
 #include <arcana/threading/blocking_concurrent_queue.h>
@@ -16,8 +15,9 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
+#include <atomic>
+#include <condition_variable>
 #include <memory>
-#include <map>
 #include <optional>
 #include <unordered_map>
 
@@ -59,8 +59,6 @@ namespace Babylon::Graphics
         void EnableRendering();
         void DisableRendering();
 
-        SafeTimespanGuarantor& GetSafeTimespanGuarantor(const char* updateName);
-
         void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
 
         void StartRenderingCurrentFrame();
@@ -84,6 +82,7 @@ namespace Babylon::Graphics
 
         continuation_scheduler<>& BeforeRenderScheduler();
         continuation_scheduler<>& AfterRenderScheduler();
+        continuation_scheduler<>& FrameStartScheduler();
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
 
@@ -92,7 +91,15 @@ namespace Babylon::Graphics
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
-        bgfx::ViewId AcquireNewViewId(bgfx::Encoder&);
+        bgfx::ViewId AcquireNewViewId();
+
+        // Frame completion scope support
+        void IncrementPendingFrameScopes();
+        void DecrementPendingFrameScopes();
+
+        // Active encoder for the current frame.
+        void SetActiveEncoder(bgfx::Encoder* encoder);
+        bgfx::Encoder* GetActiveEncoder() const;
 
         /* ********** END DEVICE CONTEXT CONTRACT ********** */
 
@@ -103,7 +110,7 @@ namespace Babylon::Graphics
         }
 
     private:
-        friend class UpdateToken;
+        friend class FrameCompletionScope;
 
         static const bgfx::RendererType::Enum s_bgfxRenderType;
         static void ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window);
@@ -114,12 +121,15 @@ namespace Babylon::Graphics
         void UpdateBgfxResolution();
         void RequestScreenShots();
         void Frame();
-        bgfx::Encoder* GetEncoderForThread();
-        void EndEncoders();
         void CaptureCallback(const BgfxCallback::CaptureData&);
 
         arcana::affinity m_renderThreadAffinity{};
         bool m_rendering{};
+
+        // The single bgfx encoder for the current frame. Acquired in
+        // StartRenderingCurrentFrame, ended in FinishRenderingCurrentFrame.
+        // Read by all consumers via DeviceContext::GetActiveEncoder() → DeviceImpl::GetActiveEncoder().
+        bgfx::Encoder* m_frameEncoder{nullptr};
 
         std::atomic<bgfx::ViewId> m_nextViewId{0};
 
@@ -151,18 +161,48 @@ namespace Babylon::Graphics
         continuation_dispatcher<> m_beforeRenderDispatcher{};
         continuation_dispatcher<> m_afterRenderDispatcher{};
 
+        // Ticked by StartRenderingCurrentFrame(). NativeEngine and NativeXr schedule
+        // requestAnimationFrame tasks here so they fire once per frame at the right time.
+        continuation_dispatcher<> m_frameStartDispatcher{};
+
+        // --- Frame synchronization between main thread and JS thread ---
+        //
+        // bgfx itself can handle concurrent bgfx::begin() and bgfx::frame() safely
+        // (begin blocks on a mutex until frame releases it). However, BabylonNative needs
+        // to ensure LOGICAL frame correctness: all encoder commands intended for frame N
+        // must be submitted (bgfx::end) before bgfx::frame() for frame N runs, otherwise
+        // draw calls are lost or appear in the wrong frame (causing flickering/artifacts).
+        //
+        // Solution: a blocking gate with a reference counter.
+        //
+        // m_frameBlocked (bool):
+        //   - true  = JS cannot acquire new FrameCompletionScopes (blocks in IncrementPendingFrameScopes)
+        //   - false = JS is free to acquire scopes and use encoders
+        //   - Set to false in StartRenderingCurrentFrame (opens the gate)
+        //   - Set to true in FinishRenderingCurrentFrame after all scopes are released (closes the gate)
+        //   - Starts as true (no frame in progress at init)
+        //
+        // m_pendingFrameScopes (int):
+        //   - Count of active FrameCompletionScope instances
+        //   - FinishRenderingCurrentFrame waits for this to reach 0
+        //   - Incremented by IncrementPendingFrameScopes (called by FrameCompletionScope constructor)
+        //   - Decremented by DecrementPendingFrameScopes (called by FrameCompletionScope destructor)
+        //
+        // m_frameSyncMutex + m_frameSyncCV:
+        //   - Protects m_frameBlocked and m_pendingFrameScopes
+        //   - CV is waited on by: main thread (for scopes==0) and JS thread (for !blocked)
+        //   - CV is notified by: JS thread (scope released) and main thread (unblocked)
+        std::mutex m_frameSyncMutex{};
+        std::condition_variable m_frameSyncCV{};
+        int m_pendingFrameScopes{0};
+        bool m_frameBlocked{true};
+
         std::mutex m_captureCallbacksMutex{};
         arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>> m_captureCallbacks{};
 
         arcana::blocking_concurrent_queue<std::function<void(std::vector<uint8_t>)>> m_screenShotCallbacks{};
 
-        std::map<std::thread::id, bgfx::Encoder*> m_threadIdToEncoder{};
-        std::mutex m_threadIdToEncoderMutex{};
-
         std::queue<std::pair<uint32_t, arcana::task_completion_source<void, std::exception_ptr>>> m_readTextureRequests{};
-
-        std::map<std::string, SafeTimespanGuarantor> m_updateSafeTimespans{};
-        std::mutex m_updateSafeTimespansMutex{};
 
         DeviceContext m_context;
         uintptr_t m_bgfxId = 0;
