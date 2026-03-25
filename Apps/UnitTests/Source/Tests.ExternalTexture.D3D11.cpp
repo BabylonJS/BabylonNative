@@ -51,9 +51,9 @@ TEST(ExternalTexture, CreateForJavaScriptWithTextureArray)
     // Wait for CreateForJavaScript to complete.
     done.get_future().wait();
 
-    DestroyTestTexture(nativeTexture);
-
     update.Finish();
     device.FinishRenderingCurrentFrame();
+
+    DestroyTestTexture(nativeTexture);
 #endif
 }
