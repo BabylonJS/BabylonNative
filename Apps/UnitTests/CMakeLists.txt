@@ -3,6 +3,7 @@ if(NOT((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT AND
 endif()
 
 option(BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE "Use a noop Metal device for Apple platforms." OFF)
+option(BABYLON_NATIVE_SKIP_RENDER_TESTS "Skip GPU render tests (e.g. on CI without real GPU)." OFF)
 
 set(BABYLONJS_ASSETS
     "../node_modules/babylonjs/babylon.max.js")
