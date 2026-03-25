@@ -1,10 +1,14 @@
 #include "RenderDoc.h"
-#include <Windows.h>
-#include <cassert>
 
 #ifdef RENDERDOC
 
-#include "C:\\Program Files\\RenderDoc\\renderdoc_app.h"
+#ifdef _WIN32
+#include <Windows.h>
+#include "C:\Program Files\RenderDoc\renderdoc_app.h"
+#elif defined(__linux__)
+#include <dlfcn.h>
+#include "renderdoc_app.h"
+#endif
 
 namespace
 {
@@ -16,33 +20,44 @@ namespace
 void RenderDoc::Init()
 {
 #ifdef RENDERDOC
+#ifdef _WIN32
     if (HMODULE mod = GetModuleHandleA("renderdoc.dll"))
     {
         pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
-        int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_1_2, (void **)&rdoc_api);
-        assert(ret == 1);
-        // Don't override capture path — let bgfx manage it
-        rdoc_api->SetCaptureOptionU32(eRENDERDOC_Option_RefAllResources, 1);
+        int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_1_2, (void**)&rdoc_api);
+        (void)ret;
     }
+#elif defined(__linux__)
+    if (void* mod = dlopen("librenderdoc.so", RTLD_NOW | RTLD_NOLOAD))
+    {
+        pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)dlsym(mod, "RENDERDOC_GetAPI");
+        int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_1_2, (void**)&rdoc_api);
+        (void)ret;
+    }
+#endif
 #endif
 }
 
-void RenderDoc::StartFrameCapture(ID3D11Device* d3dDevice)
+void RenderDoc::StartFrameCapture(void* device)
 {
 #ifdef RENDERDOC
     if (rdoc_api)
     {
-        rdoc_api->StartFrameCapture(d3dDevice, nullptr);
+        rdoc_api->StartFrameCapture(device, nullptr);
     }
+#else
+    (void)device;
 #endif
 }
 
-void RenderDoc::StopFrameCapture(ID3D11Device* d3dDevice)
+void RenderDoc::StopFrameCapture(void* device)
 {
 #ifdef RENDERDOC
     if (rdoc_api)
     {
-        rdoc_api->EndFrameCapture(d3dDevice, nullptr);
+        rdoc_api->EndFrameCapture(device, nullptr);
     }
+#else
+    (void)device;
 #endif
 }

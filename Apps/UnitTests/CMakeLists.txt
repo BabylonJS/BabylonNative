@@ -28,10 +28,7 @@ set(SOURCES
 if(GRAPHICS_API STREQUAL "D3D11")
     set(SOURCES ${SOURCES}
         "Source/Tests.Device.${GRAPHICS_API}.cpp"
-        "Source/Tests.ExternalTexture.${GRAPHICS_API}.cpp"
-        "Source/RenderDoc.h"
-        "Source/RenderDoc.cpp")
-    set(ADDITIONAL_COMPILE_DEFINITIONS ${ADDITIONAL_COMPILE_DEFINITIONS} PRIVATE HAS_RENDERDOC)
+        "Source/Tests.ExternalTexture.${GRAPHICS_API}.cpp")
 endif()
 
 if(APPLE)
@@ -48,7 +45,10 @@ elseif(UNIX AND NOT ANDROID)
     set(ADDITIONAL_COMPILE_DEFINITIONS PRIVATE SKIP_EXTERNAL_TEXTURE_TESTS)
 elseif(WIN32)
     set(SOURCES ${SOURCES}
-        "Source/App.Win32.cpp")
+        "Source/App.Win32.cpp"
+        "Source/RenderDoc.h"
+        "Source/RenderDoc.cpp")
+    set(ADDITIONAL_COMPILE_DEFINITIONS ${ADDITIONAL_COMPILE_DEFINITIONS} PRIVATE HAS_RENDERDOC)
 endif()
 
 add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${SOURCES})
