@@ -21,12 +21,12 @@ namespace Babylon
         {
         }
 
-        T Get(bgfx::Encoder&) const
+        T Get() const
         {
             return m_value;
         }
 
-        void Set(bgfx::Encoder&, bool value)
+        void Set(bool value)
         {
             m_value = value;
             if (!m_isResetScheduled)

@@ -362,8 +362,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     g_update->Finish();
     g_device->FinishRenderingCurrentFrame();
 
+    // Reopen the gate so JS can continue running (startup may issue bgfx commands).
+    g_device->StartRenderingCurrentFrame();
+    g_update->Start();
+
     // Wait for `startup` to finish.
     startup.get_future().wait();
+
+    // Close the frame opened above.
+    g_update->Finish();
+    g_device->FinishRenderingCurrentFrame();
 
     // --------------------------- Rendering loop -------------------------
 

@@ -2,6 +2,7 @@
 #include <map>
 #include <algorithm>
 #include <cassert>
+#include <optional>
 #include <regex>
 
 #ifdef __GNUC__
@@ -105,7 +106,6 @@ namespace Babylon::Polyfills::Internal
         , m_canvas{NativeCanvas::Unwrap(info[0].As<Napi::Object>())}
         , m_nvg{std::make_shared<NVGcontext*>(nvgCreate(1))}
         , m_graphicsContext{m_canvas->GetGraphicsContext()}
-        , m_update{m_graphicsContext.GetUpdate("update")}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
@@ -608,18 +608,26 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Flush(const Napi::CallbackInfo&)
     {
+        // If called outside the frame cycle (e.g., during initialization/font loading),
+        // acquire a FrameCompletionScope which blocks until StartRenderingCurrentFrame
+        // provides the encoder, and keeps the frame open while we use it.
+        std::optional<Graphics::FrameCompletionScope> scope;
+        if (m_graphicsContext.GetActiveEncoder() == nullptr)
+        {
+            scope.emplace(m_graphicsContext.AcquireFrameCompletionScope());
+        }
+
         bool needClear = m_canvas->UpdateRenderTarget();
 
         Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
 
-        auto updateToken{m_update.GetUpdateToken()};
-        bgfx::Encoder* encoder = updateToken.GetEncoder();
-        frameBuffer.Bind(*encoder);
+        bgfx::Encoder* encoder = m_graphicsContext.GetActiveEncoder();
+        frameBuffer.Bind();
         if (needClear)
         {
             frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
         }
-        frameBuffer.SetViewPort(*encoder, 0.f, 0.f, 1.f, 1.f);
+        frameBuffer.SetViewPort(0.f, 0.f, 1.f, 1.f);
         const auto width = m_canvas->GetWidth();
         const auto height = m_canvas->GetHeight();
 
@@ -630,21 +638,21 @@ namespace Babylon::Polyfills::Internal
         }
         std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this, encoder]() -> Babylon::Graphics::FrameBuffer* {
             Babylon::Graphics::FrameBuffer *frameBuffer = this->m_canvas->m_frameBufferPool.Acquire();
-            frameBuffer->Bind(*encoder);
+            frameBuffer->Bind();
             return frameBuffer;
         };
         std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
             // clear framebuffer when released
             frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
             this->m_canvas->m_frameBufferPool.Release(frameBuffer);
-            frameBuffer->Unbind(*encoder);
+            frameBuffer->Unbind();
         };
 
         nvgBeginFrame(*m_nvg, float(width), float(height), 1.0f);
         nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder);
         nvgSetFrameBufferPool(*m_nvg, { acquire, release });
         nvgEndFrame(*m_nvg);
-        frameBuffer.Unbind(*encoder);
+        frameBuffer.Unbind();
 
         for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
         {
