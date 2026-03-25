@@ -47,7 +47,7 @@ rdc open path/to/capture.rdc   # Start daemon, load capture
 rdc close                       # Release resources, stop daemon
 ```
 
-Check session state with `rdc status`. Only one capture can be open per session (use `--session name` for parallel sessions).
+Check session state with `rdc status`. Only one capture can be open at a time.
 
 **IMPORTANT**: Always close sessions when done. Leaked daemon processes consume GPU memory.
 
@@ -85,8 +85,8 @@ For Vulkan apps, the RenderDoc Vulkan layer must be registered:
 ### If headless capture fails
 
 Headless Vulkan apps (no swapchain / no `vkQueuePresentKHR`) cannot be captured by RenderDoc since frame boundaries are defined by present calls. Options:
-1. Use `--interactive` mode if the app supports it (opens a window with a swapchain)
-2. Use the Python API via `capture_frame.py` for reliable programmatic capture
+1. If possible, run the app in a non-headless mode that opens a window with a swapchain
+2. Use the RenderDoc Python API for reliable programmatic capture (see [RenderDoc documentation](https://renderdoc.org/docs/in_application_api.html))
 3. Use `--trigger` mode (inject without auto-capture, then `rdc capture-trigger`)
 4. Fall back to `renderdoccmd capture` directly
 

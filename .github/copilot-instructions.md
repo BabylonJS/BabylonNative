@@ -27,10 +27,10 @@ This project provides Copilot with instructions for GPU frame capture, inspectio
 
 ## Capture Requirements
 
-- **Vulkan layer**: Must be registered (see README.md for setup)
+- **Vulkan layer**: Must be registered (see `.github/instructions/renderdoc-gpu-debug.instructions.md` for setup details)
 - **Environment**: `ENABLE_VULKAN_RENDERDOC_CAPTURE=1` must be set for Vulkan apps
 - **Swapchain**: The app must present frames (headless apps without `vkQueuePresentKHR` cannot be captured)
-- **Capture script**: See `capture_frame.py` for an example using the RenderDoc Python API directly
+- **Capture script**: Use `rdc capture` or the RenderDoc Python API for programmatic capture
 
 ## Quick Start
 
@@ -38,8 +38,8 @@ This project provides Copilot with instructions for GPU frame capture, inspectio
 # Check setup
 rdc doctor
 
-# Capture a frame (adapt the capture script for your app)
-python capture_frame.py
+# Capture a frame
+rdc capture -o ./captures/my_capture.rdc -- /path/to/app [args...]
 
 # Inspect
 rdc open ./captures/my_capture.rdc
