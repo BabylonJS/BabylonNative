@@ -72,6 +72,10 @@ target_link_libraries(UnitTests
 
 target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
 
+if(BABYLON_NATIVE_SKIP_RENDER_TESTS)
+    target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS)
+endif()
+
 add_test(NAME UnitTests COMMAND UnitTests)
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
