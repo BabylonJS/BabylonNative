@@ -1050,4 +1050,72 @@ namespace Babylon::ShaderCompilerTraversers
     {
         InvertYDerivativeOperandsTraverser::Traverse(program);
     }
+
+    void AssignLocationsToInterStageVaryings(TProgram& program)
+    {
+        auto* vsIntermediate = program.getIntermediate(EShLangVertex);
+        auto* fsIntermediate = program.getIntermediate(EShLangFragment);
+        if (!vsIntermediate || !fsIntermediate)
+            return;
+
+        // First pass: collect VS output varying names from linker objects
+        // and assign sequential locations.
+        auto* vsRoot = vsIntermediate->getTreeRoot()->getAsAggregate();
+        if (!vsRoot) return;
+        auto* vsLinker = vsRoot->getSequence().back()->getAsAggregate();
+        if (!vsLinker) return;
+
+        std::map<std::string, int> nameToLocation;
+        int nextLocation = 0;
+
+        for (auto* node : vsLinker->getSequence())
+        {
+            auto* symbol = node->getAsSymbolNode();
+            if (symbol
+                && symbol->getType().getQualifier().isPipeOutput()
+                && symbol->getType().getQualifier().builtIn == EbvNone)
+            {
+                const std::string name = symbol->getName().c_str();
+                const auto& type = symbol->getType();
+                int locationCount = type.isMatrix() ? type.getMatrixCols() : 1;
+                nameToLocation[name] = nextLocation;
+                nextLocation += locationCount;
+            }
+        }
+
+        // Traverser that sets location on ALL symbol instances matching
+        // the varying names, not just linker objects.
+        class LocationSetter : public TIntermTraverser
+        {
+        public:
+            const std::map<std::string, int>& locations;
+            TStorageQualifier targetStorage;
+
+            LocationSetter(const std::map<std::string, int>& locs, TStorageQualifier storage)
+                : TIntermTraverser(true, false, false)
+                , locations(locs)
+                , targetStorage(storage) {}
+
+            void visitSymbol(TIntermSymbol* symbol) override
+            {
+                if (symbol->getType().getQualifier().storage == targetStorage
+                    && symbol->getType().getQualifier().builtIn == EbvNone)
+                {
+                    auto it = locations.find(symbol->getName().c_str());
+                    if (it != locations.end())
+                    {
+                        symbol->getWritableType().getQualifier().layoutLocation = it->second;
+                    }
+                }
+            }
+        };
+
+        // Second pass: apply locations to ALL VS output symbols
+        LocationSetter vsSetter(nameToLocation, EvqVaryingOut);
+        vsIntermediate->getTreeRoot()->traverse(&vsSetter);
+
+        // Third pass: apply matching locations to ALL FS input symbols
+        LocationSetter fsSetter(nameToLocation, EvqVaryingIn);
+        fsIntermediate->getTreeRoot()->traverse(&fsSetter);
+    }
 }
