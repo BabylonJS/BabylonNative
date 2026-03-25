@@ -257,19 +257,6 @@ namespace Babylon::Graphics
         }
     }
 
-    SafeTimespanGuarantor& DeviceImpl::GetSafeTimespanGuarantor(const char* updateName)
-    {
-        std::scoped_lock lock{m_updateSafeTimespansMutex};
-        std::string updateNameStr{updateName};
-        auto found = m_updateSafeTimespans.find(updateNameStr);
-        if (found == m_updateSafeTimespans.end())
-        {
-            m_updateSafeTimespans.emplace(std::piecewise_construct, std::forward_as_tuple(updateNameStr), std::forward_as_tuple(m_cancellationSource));
-            found = m_updateSafeTimespans.find(updateNameStr);
-        }
-        return found->second;
-    }
-
     void DeviceImpl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
     {
         ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
@@ -292,37 +279,55 @@ namespace Babylon::Graphics
         // Ensure rendering is enabled.
         EnableRendering();
 
-        // Unlock the update safe timespans.
+        // Acquire the frame encoder BEFORE opening the gate. This guarantees
+        // that when JS code unblocks from AcquireFrameCompletionScope, the
+        // encoder is already available in DeviceContext.
+        m_frameEncoder = bgfx::begin(true);
+
+        // Open the gate: allow JS thread to acquire FrameCompletionScopes and use the encoder.
         {
-            std::scoped_lock lock{m_updateSafeTimespansMutex};
-            for (auto& [key, value] : m_updateSafeTimespans)
-            {
-                value.Unlock();
-            }
+            std::lock_guard lock{m_frameSyncMutex};
+            m_frameBlocked = false;
         }
+        m_frameSyncCV.notify_all();
+
+        // Tick the frame start dispatcher. This fires requestAnimationFrame tasks that
+        // were scheduled by NativeEngine/NativeXr. Those tasks acquire FrameCompletionScopes
+        // (keeping the gate reference count > 0) and dispatch JS callbacks to the JS thread.
+        m_frameStartDispatcher.tick(*m_cancellationSource);
     }
 
     void DeviceImpl::FinishRenderingCurrentFrame()
     {
-        // Lock the update safe timespans.
-        {
-            std::scoped_lock lock{m_updateSafeTimespansMutex};
-            for (auto& [key, value] : m_updateSafeTimespans)
-            {
-                value.Lock();
-            }
-        }
-
         arcana::trace_region finishRenderingRegion{"DeviceImpl::FinishRenderingCurrentFrame"};
 
         ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
 
         if (!m_rendering)
         {
-            throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
+            // First call at startup — no frame in progress yet, nothing to finish.
+            return;
+        }
+
+        // Close the gate: wait until JS thread has released all FrameCompletionScopes
+        // (meaning all encoder work for this frame is done), then block new acquisitions.
+        // After this point, no bgfx encoder calls can be in flight on the JS thread.
+        {
+            std::unique_lock lock{m_frameSyncMutex};
+            m_frameSyncCV.wait(lock, [this] { return m_pendingFrameScopes == 0; });
+            m_frameBlocked = true;
         }
 
         m_beforeRenderDispatcher.tick(*m_cancellationSource);
+
+        // End the frame encoder before calling bgfx::frame(). frame() waits for
+        // all encoders to be returned via encoderApiWait(), so the encoder must
+        // be ended first to avoid a deadlock on the same thread.
+        if (m_frameEncoder)
+        {
+            bgfx::end(m_frameEncoder);
+            m_frameEncoder = nullptr;
+        }
 
         Frame();
 
@@ -368,6 +373,43 @@ namespace Babylon::Graphics
         return m_afterRenderDispatcher.scheduler();
     }
 
+    continuation_scheduler<>& DeviceImpl::FrameStartScheduler()
+    {
+        return m_frameStartDispatcher.scheduler();
+    }
+
+    // Called by FrameCompletionScope constructor (on any thread).
+    // Blocks if the gate is closed (m_frameBlocked), meaning bgfx::frame() is running
+    // or no frame has started yet. Once unblocked, increments the scope counter.
+    void DeviceImpl::IncrementPendingFrameScopes()
+    {
+        std::unique_lock lock{m_frameSyncMutex};
+        m_frameSyncCV.wait(lock, [this] { return !m_frameBlocked; });
+        m_pendingFrameScopes++;
+    }
+
+    // Called by FrameCompletionScope destructor (on any thread).
+    // Decrements the scope counter and wakes the main thread, which may be waiting
+    // in FinishRenderingCurrentFrame for all scopes to be released.
+    void DeviceImpl::DecrementPendingFrameScopes()
+    {
+        {
+            std::lock_guard lock{m_frameSyncMutex};
+            m_pendingFrameScopes--;
+        }
+        m_frameSyncCV.notify_all();
+    }
+
+    void DeviceImpl::SetActiveEncoder(bgfx::Encoder* encoder)
+    {
+        m_frameEncoder = encoder;
+    }
+
+    bgfx::Encoder* DeviceImpl::GetActiveEncoder() const
+    {
+        return m_frameEncoder;
+    }
+
     void DeviceImpl::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)
     {
         m_screenShotCallbacks.push(std::move(callback));
@@ -395,7 +437,7 @@ namespace Babylon::Graphics
         return m_captureCallbacks.insert(std::move(callback), m_captureCallbacksMutex);
     }
 
-    bgfx::ViewId DeviceImpl::AcquireNewViewId(bgfx::Encoder&)
+    bgfx::ViewId DeviceImpl::AcquireNewViewId()
     {
         bgfx::ViewId viewId = m_nextViewId.fetch_add(1);
         if (viewId >= bgfx::getCaps()->limits.maxViews)
@@ -452,9 +494,6 @@ namespace Babylon::Graphics
     {
         arcana::trace_region frameRegion{"DeviceImpl::Frame"};
 
-        // Automatically end bgfx encoders.
-        EndEncoders();
-
         // Update bgfx state if necessary.
         UpdateBgfxState();
 
@@ -472,34 +511,6 @@ namespace Babylon::Graphics
         }
 
         m_nextViewId.store(0);
-    }
-
-    bgfx::Encoder* DeviceImpl::GetEncoderForThread()
-    {
-        assert(!m_renderThreadAffinity.check());
-        std::scoped_lock lock{m_threadIdToEncoderMutex};
-
-        const auto threadId{std::this_thread::get_id()};
-        auto it{m_threadIdToEncoder.find(threadId)};
-        if (it == m_threadIdToEncoder.end())
-        {
-            bgfx::Encoder* encoder{bgfx::begin(true)};
-            it = m_threadIdToEncoder.emplace(threadId, encoder).first;
-        }
-
-        return it->second;
-    }
-
-    void DeviceImpl::EndEncoders()
-    {
-        std::scoped_lock lock{m_threadIdToEncoderMutex};
-
-        for (auto [threadId, encoder] : m_threadIdToEncoder)
-        {
-            bgfx::end(encoder);
-        }
-
-        m_threadIdToEncoder.clear();
     }
 
     void DeviceImpl::CaptureCallback(const BgfxCallback::CaptureData& data)

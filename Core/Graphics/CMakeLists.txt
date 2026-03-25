@@ -6,7 +6,6 @@ set(SOURCES
     "InternalInclude/Babylon/Graphics/continuation_scheduler.h"
     "InternalInclude/Babylon/Graphics/FrameBuffer.h"
     "InternalInclude/Babylon/Graphics/DeviceContext.h"
-    "InternalInclude/Babylon/Graphics/SafeTimespanGuarantor.h"
     "InternalInclude/Babylon/Graphics/Texture.h"
     "Source/BgfxCallback.cpp"
     "Source/FrameBuffer.cpp"
@@ -16,7 +15,6 @@ set(SOURCES
     "Source/DeviceImpl.h"
     "Source/DeviceImpl_${BABYLON_NATIVE_PLATFORM}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
     "Source/DeviceImpl_${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
-    "Source/SafeTimespanGuarantor.cpp"
     "Source/Texture.cpp")
 
 add_library(Graphics ${SOURCES})
