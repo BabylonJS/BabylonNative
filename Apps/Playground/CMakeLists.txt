@@ -214,7 +214,6 @@ if(APPLE)
             FOLDER "Playground")
     endif()
     enable_objc_arc(Playground)
-    set_property(TARGET Playground PROPERTY UNITY_BUILD false)
     set_property(TARGET Playground PROPERTY XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED YES)
 endif()
 

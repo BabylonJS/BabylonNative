@@ -11,11 +11,7 @@ def graphics_api = "OpenGL"
 // min 24 for Vulkan
 def platformVersion = 25
 
-def unity_build = "false"
-if (project.hasProperty("UNITY_BUILD")) {
-    unity_build = project.property("UNITY_BUILD")
-}
-def arcore_libpath = layout.buildDirectory.dir("arcore-native").get().asFile.absolutePath
+def arcore_libpath= layout.buildDirectory.dir("arcore-native").get().asFile.absolutePath
 
 configurations { natives }
 
