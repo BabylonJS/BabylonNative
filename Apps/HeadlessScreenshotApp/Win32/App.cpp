@@ -127,40 +127,31 @@ int main()
     // Create a render target texture for the output.
     winrt::com_ptr<ID3D11Texture2D> outputTexture = CreateD3DRenderTargetTexture(d3dDevice.get());
 
-    std::promise<void> addToContext{};
     std::promise<void> startup{};
 
     // Create an external texture for the render target texture and pass it to
     // the `startup` JavaScript function.
-    loader.Dispatch([externalTexture = Babylon::Plugins::ExternalTexture{outputTexture.get()}, &addToContext, &startup](Napi::Env env) {
-        auto jsPromise = externalTexture.AddToContextAsync(env);
-        addToContext.set_value();
-
-        auto jsOnFulfilled = Napi::Function::New(env, [&startup](const Napi::CallbackInfo& info) {
-            auto nativeTexture = info[0];
-            info.Env().Global().Get("startup").As<Napi::Function>().Call(
-                {
-                    nativeTexture,
-                    Napi::Value::From(info.Env(), WIDTH),
-                    Napi::Value::From(info.Env(), HEIGHT),
-                });
-            startup.set_value();
-        });
-
-        jsPromise = jsPromise.Get("then").As<Napi::Function>().Call(jsPromise, {jsOnFulfilled}).As<Napi::Promise>();
-
-        CatchAndLogError(jsPromise);
+    loader.Dispatch([externalTexture = Babylon::Plugins::ExternalTexture{outputTexture.get()}, &startup](Napi::Env env) {
+        auto nativeTexture = externalTexture.CreateForJavaScript(env);
+        env.Global().Get("startup").As<Napi::Function>().Call(
+            {
+                nativeTexture,
+                Napi::Value::From(env, WIDTH),
+                Napi::Value::From(env, HEIGHT),
+            });
+        startup.set_value();
     });
 
-    // Wait for `AddToContextAsync` to be called.
-    addToContext.get_future().wait();
-
-    // Render a frame so that `AddToContextAsync` will complete.
     deviceUpdate.Finish();
     device.FinishRenderingCurrentFrame();
 
-    // Wait for `startup` to finish.
     startup.get_future().wait();
+
+    // Pump an extra frame so overrideInternal applies the native texture.
+    device.StartRenderingCurrentFrame();
+    deviceUpdate.Start();
+    deviceUpdate.Finish();
+    device.FinishRenderingCurrentFrame();
 
     struct Asset
     {

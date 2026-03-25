@@ -1,16 +1,16 @@
 #pragma once
 
-#include <Babylon/JsRuntime.h>
+#include <napi/env.h>
 #include <Babylon/Graphics/RendererType.h>
 #include <memory>
 #include <optional>
 
 namespace Babylon::Plugins
 {
+    // All operations of this class must be called from the graphics thread unless otherwise noted.
     class ExternalTexture final
     {
     public:
-        // NOTE: Must call from the Graphics thread.
         ExternalTexture(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {});
         ~ExternalTexture();
 
@@ -31,13 +31,14 @@ namespace Babylon::Plugins
         // Returns the underlying texture.
         Graphics::TextureT Get() const;
 
-        // Adds this texture to the graphics context of the given N-API environment.
-        // NOTE: Must call from the JavaScript thread.
-        Napi::Promise AddToContextAsync(Napi::Env, std::optional<uint16_t> layerIndex = {}) const;
+        // Creates a JavaScript value wrapping this external texture.
+        // Wrap the returned value with `engine.wrapNativeTexture` on the JS side to get a Babylon.js `InternalTexture`.
+        // This method must be called from the JavaScript thread. The caller must ensure no other thread
+        // is concurrently calling any other operations on this object, including move operations.
+        Napi::Value CreateForJavaScript(Napi::Env) const;
 
         // Updates to a new texture.
-        // NOTE: Must call from the Graphics thread.
-        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {}, std::optional<uint16_t> layerIndex = {});
+        void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {});
 
     private:
         class Impl;

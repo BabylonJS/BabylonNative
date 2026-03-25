@@ -25,14 +25,17 @@ namespace Babylon::Graphics
 
     void BgfxCallback::fatal(const char* filePath, uint16_t line, bgfx::Fatal::Enum code, const char* str)
     {
+        // Always log fatal errors to stderr so they appear in CI logs.
+        trace(filePath, line, "BGFX FATAL 0x%08x: %s\n", code, str);
+        fprintf(stderr, "BGFX FATAL %s (%d): 0x%08x: %s\n", filePath, line, code, str);
+        fflush(stderr);
+
         if (bgfx::Fatal::DebugCheck == code)
         {
             bx::debugBreak();
         }
         else
         {
-            trace(filePath, line, "BGFX 0x%08x: %s\n", code, str);
-            BX_UNUSED(code, str);
             abort();
         }
     }
