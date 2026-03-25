@@ -93,6 +93,14 @@ TEST(ExternalTexture, RenderTextureArray)
 
     startupDone.get_future().wait();
 
+    // Pump an extra frame so that bgfx::frame() processes the placeholder
+    // texture creation and AfterRenderScheduler fires overrideInternal
+    // to apply the native texture backing.
+    device.StartRenderingCurrentFrame();
+    update.Start();
+    update.Finish();
+    device.FinishRenderingCurrentFrame();
+
     for (uint32_t sliceIndex = 0; sliceIndex < SLICE_COUNT; ++sliceIndex)
     {
 #ifdef HAS_RENDERDOC

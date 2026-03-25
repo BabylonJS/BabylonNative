@@ -68,15 +68,22 @@ namespace Babylon::Plugins
     {
         std::scoped_lock lock{m_impl->Mutex()};
 
+        Graphics::DeviceContext& context = Graphics::DeviceContext::GetFromJavaScript(env);
+
+        // Create a placeholder bgfx texture. The native resource backing is
+        // applied via overrideInternal on the AfterRenderScheduler, which runs
+        // during bgfx::frame(). This two-step approach is required because
+        // bgfx's _external parameter to createTexture2D causes
+        // CreateShaderResourceView failures on WARP (E_INVALIDARG).
+        // The caller must pump one frame (FinishRenderingCurrentFrame) before
+        // the texture is usable for rendering.
         bgfx::TextureHandle handle = bgfx::createTexture2D(
             m_impl->Width(),
             m_impl->Height(),
             m_impl->HasMips(),
             m_impl->NumLayers(),
             m_impl->Format(),
-            m_impl->Flags(),
-            0,
-            NativeHandleToUintPtr(m_impl->Get())
+            m_impl->Flags()
         );
 
         DEBUG_TRACE("ExternalTexture [0x%p] CreateForJavaScript %d x %d %d mips %d layers. Format : %d Flags : %d. (bgfx handle id %d)",
@@ -87,7 +94,13 @@ namespace Babylon::Plugins
             throw Napi::Error::New(env, "Failed to create external texture");
         }
 
-        auto* texture = new Graphics::Texture{Graphics::DeviceContext::GetFromJavaScript(env)};
+        // Schedule the native resource override for the render thread.
+        arcana::make_task(context.AfterRenderScheduler(), arcana::cancellation_source::none(),
+            [handle, impl = m_impl]() {
+                bgfx::overrideInternal(handle, NativeHandleToUintPtr(impl->Get()));
+            });
+
+        auto* texture = new Graphics::Texture{context};
         texture->Attach(handle, true, m_impl->Width(), m_impl->Height(), m_impl->HasMips(), m_impl->NumLayers(), m_impl->Format(), m_impl->Flags());
 
         m_impl->AddTexture(texture);
