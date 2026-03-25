@@ -274,6 +274,54 @@ namespace Babylon::ShaderCompilerCommon
 
             AppendBytes(vertexBytes, static_cast<uint8_t>(resources.stage_inputs.size()));
 
+#if VULKAN
+            // bgfx's Vulkan renderer uses the attribute's index in the shader binary
+            // as the Vulkan location (via m_attrRemap[attr] = index). The SPIR-V uses
+            // Attrib::Enum values as Locations (e.g., TexCoord0=10). To make
+            // m_attrRemap[attr] == Location, we must write attributes at indices that
+            // match their Location, padding gaps with a dummy ID (0) that bgfx skips.
+            {
+                static const std::map<std::string, bgfx::Attrib::Enum> nameToAttrib = {
+                    {"a_position", bgfx::Attrib::Position},
+                    {"a_normal", bgfx::Attrib::Normal},
+                    {"a_tangent", bgfx::Attrib::Tangent},
+                    {"a_texcoord0", bgfx::Attrib::TexCoord0},
+                    {"a_texcoord1", bgfx::Attrib::TexCoord1},
+                    {"a_texcoord2", bgfx::Attrib::TexCoord2},
+                    {"a_texcoord3", bgfx::Attrib::TexCoord3},
+                    {"a_color0", bgfx::Attrib::Color0},
+                    {"a_indices", bgfx::Attrib::Indices},
+                    {"a_weight", bgfx::Attrib::Weight},
+                };
+                uint32_t maxLocation = 0;
+                for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
+                {
+                    const uint32_t loc = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
+                    if (loc > maxLocation) maxLocation = loc;
+                }
+                // Build a location-indexed map
+                std::vector<uint16_t> attribIds(maxLocation + 1, 0);
+                for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
+                {
+                    const uint32_t loc = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
+                    auto it = nameToAttrib.find(stageInput.name);
+                    bgfx::Attrib::Enum attrib = (it != nameToAttrib.end())
+                        ? it->second
+                        : static_cast<bgfx::Attrib::Enum>(loc);
+                    attribIds[loc] = bgfx::attribToId(attrib);
+
+                    const std::string& originalName = vertexShaderInfo.AttributeRenaming[stageInput.name];
+                    bgfxShaderInfo.VertexAttributeLocations[originalName] = static_cast<uint32_t>(attrib);
+                }
+                // Rewrite the count to include padding entries
+                vertexBytes.resize(vertexBytes.size() - 1); // remove the count we just wrote
+                AppendBytes(vertexBytes, static_cast<uint8_t>(attribIds.size()));
+                for (uint16_t id : attribIds)
+                {
+                    AppendBytes(vertexBytes, id);
+                }
+            }
+#else
             for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
             {
                 const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
@@ -282,6 +330,7 @@ namespace Babylon::ShaderCompilerCommon
                 // Map from symbolName -> originalName to associate babylon.js shader attribute -> Babylon Native attribute location.
                 bgfxShaderInfo.VertexAttributeLocations[vertexShaderInfo.AttributeRenaming[stageInput.name]] = location;
             }
+#endif
             AppendBytes(vertexBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
         }
 
