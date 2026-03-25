@@ -9,7 +9,7 @@
 #include <Babylon/ScriptLoader.h>
 
 #include "Utils.h"
-#ifdef WIN32
+#ifdef HAS_RENDERDOC
 #include "RenderDoc.h"
 #endif
 
@@ -33,7 +33,7 @@ TEST(ExternalTexture, RenderTextureArray)
         {0, 0, 255, 255},
     };
 
-#ifdef WIN32
+#ifdef HAS_RENDERDOC
     RenderDoc::Init();
 #endif
 
@@ -95,7 +95,7 @@ TEST(ExternalTexture, RenderTextureArray)
 
     for (uint32_t sliceIndex = 0; sliceIndex < SLICE_COUNT; ++sliceIndex)
     {
-#ifdef WIN32
+#ifdef HAS_RENDERDOC
         RenderDoc::StartFrameCapture(device.GetPlatformInfo().Device);
 #endif
 
@@ -121,7 +121,7 @@ TEST(ExternalTexture, RenderTextureArray)
         update.Finish();
         device.FinishRenderingCurrentFrame();
 
-#ifdef WIN32
+#ifdef HAS_RENDERDOC
         RenderDoc::StopFrameCapture(device.GetPlatformInfo().Device);
 #endif
 
