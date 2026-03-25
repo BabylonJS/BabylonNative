@@ -13,7 +13,7 @@
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
-TEST(ExternalTexture, CreateForJavaScript)
+TEST(ExternalTexture, CreateForJavaScriptD3D11)
 {
 #ifdef SKIP_EXTERNAL_TEXTURE_TESTS
     GTEST_SKIP();
