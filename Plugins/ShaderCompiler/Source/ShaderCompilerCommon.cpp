@@ -87,7 +87,7 @@ namespace Babylon::ShaderCompilerCommon
         }
     }
 
-    void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::map<std::string, uint8_t>& stages)
+    void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::map<std::string, uint8_t>& stages, bool isFragment)
     {
         for (const spirv_cross::Resource& sampler : samplers)
         {
@@ -95,15 +95,32 @@ namespace Babylon::ShaderCompilerCommon
             AppendBytes(bytes, sampler.name);
             AppendBytes(bytes, static_cast<uint8_t>(bgfx::UniformType::Sampler | BGFX_UNIFORM_SAMPLERBIT));
 
-            // TODO : These values (num, regIndex, regCount) are only used by Vulkan and should be set for that API
+#if VULKAN
+            // bgfx's Vulkan renderer uses regIndex as the texture descriptor binding.
+            // The sampler's SPIR-V binding is texture_binding + kSpirvSamplerShift (16),
+            // so subtract 16 to recover the texture binding that bgfx expects.
+            const auto samplerBinding = compiler.get_decoration(sampler.id, spv::DecorationBinding);
+            const uint16_t regIndex = static_cast<uint16_t>(samplerBinding >= 16 ? samplerBinding - 16 : samplerBinding);
+            AppendBytes(bytes, static_cast<uint8_t>(0));
+            AppendBytes(bytes, regIndex);
+            AppendBytes(bytes, static_cast<uint16_t>(0));
+#else
+            BX_UNUSED(isFragment);
+            // These values (num, regIndex, regCount) are only used by Vulkan.
             AppendBytes(bytes, static_cast<uint8_t>(0));
             AppendBytes(bytes, static_cast<uint16_t>(0));
             AppendBytes(bytes, static_cast<uint16_t>(0));
+#endif
 
 #if OPENGL
             BX_UNUSED(compiler);
             const auto stage{static_cast<uint8_t>(stages.size())};
             stages[sampler.name] = stage;
+#elif VULKAN
+            // Stage index must match what bgfx computes: regIndex - reverseShift.
+            // For old binding model: reverseShift = (fragment ? 48 : 0) + 16
+            const uint8_t reverseShift = static_cast<uint8_t>(isFragment ? 64 : 16);
+            stages[sampler.name] = static_cast<uint8_t>(regIndex - reverseShift);
 #else
             stages[sampler.name] = static_cast<uint8_t>(compiler.get_decoration(sampler.id, spv::DecorationBinding));
 #endif
@@ -249,7 +266,7 @@ namespace Babylon::ShaderCompilerCommon
 
             AppendBytes(vertexBytes, static_cast<uint16_t>(numUniforms));
             AppendUniformBuffer(vertexBytes, uniformsInfo, false);
-            AppendSamplers(vertexBytes, compiler, samplers, bgfxShaderInfo.UniformStages);
+            AppendSamplers(vertexBytes, compiler, samplers, bgfxShaderInfo.UniformStages, false);
 
             AppendBytes(vertexBytes, static_cast<uint32_t>(vertexShaderInfo.Bytes.size()));
             AppendBytes(vertexBytes, vertexShaderInfo.Bytes);
@@ -290,7 +307,7 @@ namespace Babylon::ShaderCompilerCommon
 
             AppendBytes(fragmentBytes, static_cast<uint16_t>(numUniforms));
             AppendUniformBuffer(fragmentBytes, uniformsInfo, true);
-            AppendSamplers(fragmentBytes, compiler, samplers, bgfxShaderInfo.UniformStages);
+            AppendSamplers(fragmentBytes, compiler, samplers, bgfxShaderInfo.UniformStages, true);
 
             AppendBytes(fragmentBytes, static_cast<uint32_t>(fragmentShaderInfo.Bytes.size()));
             AppendBytes(fragmentBytes, fragmentShaderInfo.Bytes);

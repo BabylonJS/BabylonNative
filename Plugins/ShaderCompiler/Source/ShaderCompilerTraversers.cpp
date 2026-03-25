@@ -165,6 +165,8 @@ namespace Babylon::ShaderCompilerTraversers
                 publicType.qualifier.layoutMatrix = ElmColumnMajor;
                 publicType.qualifier.layoutPacking = ElpStd140;
 
+                const bool isFragment = (intermediate->getStage() == EShLangFragment);
+
                 std::vector<std::string> originalNames{};
                 scope.TypeLists.emplace_back(std::make_unique<TTypeList>());
                 auto* structMembers = scope.TypeLists.back().get();
@@ -212,7 +214,14 @@ namespace Babylon::ShaderCompilerTraversers
                 qualifier.storage = EvqUniform;
                 qualifier.layoutMatrix = ElmColumnMajor;
                 qualifier.layoutPacking = ElpStd140;
-                qualifier.layoutBinding = 0; // Determines which cbuffer it's bounds to (b0, b1, b2, etc.)
+#if VULKAN
+                // bgfx's old binding model (shader version < 11) expects the fragment
+                // shader uniform buffer at binding 48 (kSpirvOldFragmentBinding) and
+                // the vertex shader uniform buffer at binding 0.
+                qualifier.layoutBinding = isFragment ? 48 : 0;
+#else
+                qualifier.layoutBinding = 0;
+#endif
 
                 // Create the struct type. Name chosen arbitrarily (legacy reasons).
                 TType structType(structMembers, "Frame", qualifier);
@@ -838,9 +847,21 @@ namespace Babylon::ShaderCompilerTraversers
 
             static void Traverse(TProgram& program, IdGenerator& ids)
             {
+#if VULKAN
+                // bgfx's old binding model (shader version < 11) expects texture bindings
+                // offset by kSpirvOldTextureShift (16) for VS and by
+                // kSpirvOldFragmentShift + kSpirvOldTextureShift (48+16=64) for FS.
+                // Samplers use the same binding as their texture (bgfx adds
+                // kSpirvSamplerShift at runtime).
+                unsigned int vsTextureBinding{16};  // kSpirvOldTextureShift
+                Traverse(program.getIntermediate(EShLangVertex), ids, vsTextureBinding);
+                unsigned int fsTextureBinding{64};  // kSpirvOldFragmentShift + kSpirvOldTextureShift
+                Traverse(program.getIntermediate(EShLangFragment), ids, fsTextureBinding);
+#else
                 unsigned int layoutBinding{0};
                 Traverse(program.getIntermediate(EShLangVertex), ids, layoutBinding);
                 Traverse(program.getIntermediate(EShLangFragment), ids, layoutBinding);
+#endif
             }
 
         private:
@@ -886,7 +907,13 @@ namespace Babylon::ShaderCompilerTraversers
                         publicType.basicType = type.getBasicType();
                         publicType.qualifier = type.getQualifier();
                         publicType.qualifier.precision = EpqHigh;
+#if VULKAN
+                        // bgfx's Vulkan renderer expects the sampler binding to be
+                        // texture binding + kSpirvSamplerShift (16).
+                        publicType.qualifier.layoutBinding = layoutBinding + 16;
+#else
                         publicType.qualifier.layoutBinding = layoutBinding;
+#endif
                         publicType.sampler.sampler = true;
 
                         TType newType{publicType};
