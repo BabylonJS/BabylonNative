@@ -25,7 +25,7 @@ jobs:
         displayName: "Install packages"
 
       - script: |
-          cmake -B build/Linux -G Ninja -D CMAKE_BUILD_TYPE=RelWithDebInfo -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D BABYLON_NATIVE_BUILD_APPS=OFF -D BABYLON_DEBUG_TRACE=ON
+          cmake -B build/Linux -G Ninja -D CMAKE_BUILD_TYPE=RelWithDebInfo -D BABYLON_NATIVE_BUILD_APPS=OFF -D BABYLON_DEBUG_TRACE=ON
         displayName: "Configure"
 
       - script: |

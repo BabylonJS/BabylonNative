@@ -225,6 +225,9 @@ if(MSVC)
 
     # default to /W3
     add_compile_options(/W3)
+
+    # Enable multiprocessor compilation for faster builds
+    add_compile_options(/MP)
 endif()
 
 if(APPLE)

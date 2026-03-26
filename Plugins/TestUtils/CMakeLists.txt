@@ -20,7 +20,6 @@ target_compile_definitions(TestUtils PRIVATE GRAPHICS_API=${GRAPHICS_API})
 
 if(APPLE)
     enable_objc_arc(TestUtils)
-    set_property(TARGET TestUtils PROPERTY UNITY_BUILD false)
 endif()
 
 set_property(TARGET TestUtils PROPERTY FOLDER Plugins)
