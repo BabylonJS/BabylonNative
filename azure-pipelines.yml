@@ -9,8 +9,6 @@ variables:
     value: 3.31.6
   - name: NDK_VERSION
     value: 28.2.13676358
-  - name: UNITY_BUILD
-    value: true
 
 jobs:
   # Apple

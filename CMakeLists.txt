@@ -35,7 +35,7 @@ FetchContent_Declare(base-n
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG 353465dbc9fc9cfd9d4593f74f0107e87776ddc7
+    GIT_TAG ccbe08cbef9e370d0b7a2a4023d424247a727624
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
@@ -225,6 +225,9 @@ if(MSVC)
 
     # default to /W3
     add_compile_options(/W3)
+
+    # Enable multiprocessor compilation for faster builds
+    add_compile_options(/MP)
 endif()
 
 if(APPLE)
