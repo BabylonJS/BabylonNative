@@ -10,8 +10,8 @@
     "windows": "react-native run-windows --sln windows/Playground.sln"
   },
   "dependencies": {
-    "@babylonjs/core": "8.44.0",
-    "@babylonjs/loaders": "8.44.0",
+    "@babylonjs/core": "9.0.0",
+    "@babylonjs/loaders": "9.0.0",
     "@babylonjs/react-native": "file:../../Modules/@babylonjs/react-native",
     "@react-native-community/slider": "^4.2.2",
     "@react-native/new-app-screen": "0.80.0",
