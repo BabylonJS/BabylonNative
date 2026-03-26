@@ -3,6 +3,8 @@
 /// <reference path="../../node_modules/babylonjs-materials/babylonjs.materials.module.d.ts" />
 /// <reference path="../../node_modules/babylonjs-gui/babylon.gui.module.d.ts" />
 
+debugger;
+
 const wireframe = false;
 const turntable = false;
 const logfps = true;
