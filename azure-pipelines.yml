@@ -9,8 +9,6 @@ variables:
     value: 3.31.6
   - name: NDK_VERSION
     value: 28.2.13676358
-  - name: XCODE_VERSION
-    value: 16.4
 
 jobs:
   # Apple
@@ -18,30 +16,49 @@ jobs:
     parameters:
       name: MacOS
       vmImage: macOS-latest
+      xcodeVersion: "16.4"
 
   - template: .github/jobs/macos.yml
     parameters:
       name: MacOS_Ninja
       vmImage: macOS-latest
+      xcodeVersion: "16.4"
       generator: Ninja Multi-Config
 
   - template: .github/jobs/macos.yml
     parameters:
       name: MacOS_Sanitizers
       vmImage: macOS-latest
+      xcodeVersion: "16.4"
       enableSanitizers: true
 
   - template: .github/jobs/ios.yml
     parameters:
       name: iOS_iOS180
       vmImage: macOS-latest
+      xcodeVersion: "16.4"
       deploymentTarget: 18.0
 
   - template: .github/jobs/ios.yml
     parameters:
       name: iOS_iOS175
       vmImage: macOS-latest
+      xcodeVersion: "16.4"
       deploymentTarget: 17.5
+
+  # Xcode 26
+  - template: .github/jobs/macos.yml
+    parameters:
+      name: MacOS_Xcode26
+      vmImage: macOS-latest
+      xcodeVersion: "26.3"
+
+  - template: .github/jobs/ios.yml
+    parameters:
+      name: iOS_Xcode26
+      vmImage: macOS-latest
+      xcodeVersion: "26.3"
+      deploymentTarget: 26.0
 
   # Win32
   - template: .github/jobs/win32.yml
@@ -166,6 +183,7 @@ jobs:
     parameters:
       name: iOS_Installation
       vmImage: macOS-latest
+      xcodeVersion: "16.4"
       deploymentTarget: 17.2
   - template: .github/jobs/test_install_linux.yml
     parameters:
@@ -175,6 +193,7 @@ jobs:
     parameters:
       name: MacOS_Installation
       vmImage: macOS-latest
+      xcodeVersion: "16.4"
   - template: .github/jobs/test_install_win32.yml
     parameters:
       name: Win32_Installation

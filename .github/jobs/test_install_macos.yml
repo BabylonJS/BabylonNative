@@ -1,6 +1,7 @@
 parameters:
   name: ""
   vmImage: ""
+  xcodeVersion: ""
 
 jobs:
   - job: ${{parameters.name}}
@@ -14,8 +15,8 @@ jobs:
           vmImage: ${{parameters.vmImage}}
 
       - script: |
-          sudo xcode-select --switch /Applications/Xcode_$(XCODE_VERSION).app/Contents/Developer
-        displayName: "Select XCode $(XCODE_VERSION)"
+          sudo xcode-select --switch /Applications/Xcode_${{parameters.xcodeVersion}}.app/Contents/Developer
+        displayName: "Select Xcode ${{parameters.xcodeVersion}}"
 
       - script: |
           cmake -B build/macOS -G Xcode -D BABYLON_NATIVE_BUILD_APPS=OFF -D BABYLON_DEBUG_TRACE=ON
