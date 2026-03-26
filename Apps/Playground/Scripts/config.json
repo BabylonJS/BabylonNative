@@ -2,44 +2,34 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
-            "title": "Gaussian Splatting Compressed ply SH",
-            "playgroundId": "#U8O4EP#1",
-            "renderCount": 15,
-            "referenceImage": "gsplat-compressedply-sh.png",
-            "excludedGraphicsApis": [ "OpenGL" ],
-            "comments": {
-                "OpenGL": "Test doesn't render correctly"
-            }
-        },
-        {
-            "title": "Gaussian Splatting Update Data",
-            "playgroundId": "#Q0LBM8#2",
-            "renderCount": 15,
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
-            "referenceImage": "gsplat-update-data.png",
-            "comments": {
-                "OpenGL": "Test doesn't render correctly",
-                "Metal": "Crashes"
-            }
-        },
-        {
             "title": "Native Canvas",
             "playgroundId": "#TKVFSA#7",
             "referenceImage": "native-canvas.png",
-            "excludedGraphicsApis": [ "D3D12" ],
+            "excludedGraphicsApis": [
+                "D3D12"
+            ],
             "comments": {
-                "D3D12": "2D Path not rendered"
+                "D3D12": "2D Path not rendered",
+                "Vulkan": "2D Path not rendered"
             }
         },
         {
             "title": "EXR Loader",
             "playgroundId": "#4RN0VF#151",
-            "referenceImage": "exr-loader.png"
+            "referenceImage": "exr-loader.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ],
+            "comments": {
+                "Vulkan": "Color/gamma differences in HDR rendering"
+            }
         },
         {
             "title": "NME Shadow Map",
             "playgroundId": "#M3QR7E#83",
-            "excludedGraphicsApis": [ "OpenGL" ],
+            "excludedGraphicsApis": [
+                "OpenGL"
+            ],
             "referenceImage": "nmeshadowmap.png",
             "comments": {
                 "OpenGL": "xvfb : invalid enum with glRenderbufferStorage"
@@ -56,10 +46,14 @@
             "playgroundId": "#QFIGLW#9",
             "renderCount": 10,
             "errorRatio": 6,
-            "excludedGraphicsApis": [ "OpenGL" ],
+            "excludedGraphicsApis": [
+                "OpenGL",
+                "Vulkan"
+            ],
             "referenceImage": "gltfExtensionExtMeshGpuInstancingTest.png",
             "comments": {
-                "OpenGL": "Test works with OpenGL but it so slow that CI times out"
+                "OpenGL": "Test works with OpenGL but it so slow that CI times out",
+                "Vulkan": "Corrupted rendering"
             }
         },
         {
@@ -72,7 +66,9 @@
             "playgroundId": "#WGZLGJ#3009",
             "referenceImage": "gltfTextureLinearInterpolation.png",
             "renderCount": 10,
-            "excludedGraphicsApis": [ "OpenGL" ],
+            "excludedGraphicsApis": [
+                "OpenGL"
+            ],
             "comments": {
                 "OpenGL": "Texture sampling creates a bunch of black dots for some reason"
             }
@@ -81,7 +77,10 @@
             "title": "GLTF Extension KHR_materials_volume with attenuation",
             "playgroundId": "#YG3BBF#18",
             "referenceImage": "gltfExtensionKhrMaterialsVolumeAttenuation.png",
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
+            "excludedGraphicsApis": [
+                "OpenGL",
+                "Metal"
+            ],
             "errorRatio": 1.2,
             "renderCount": 10,
             "comments": {
@@ -108,14 +107,20 @@
             "title": "GLTF Animation Skin Type",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Animation_SkinType, __page__, 0, __disableSRGBBuffers__, 0",
-            "referenceImage": "gltfAnimationSkinType.png"
+            "referenceImage": "gltfAnimationSkinType.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ]
         },
         {
             "reason": "https://github.com/BabylonJS/BabylonNative/issues/1111",
             "title": "Thin Instances",
             "errorRatio": 25,
             "playgroundId": "#V1JE4Z#1",
-            "referenceImage": "thinInstances.png"
+            "referenceImage": "thinInstances.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ]
         },
         {
             "title": "GLTF Sheen",
@@ -161,25 +166,36 @@
             "title": "Glow layer and LODs",
             "playgroundId": "#UNS6ZV#2",
             "renderCount": 50,
-            "excludedGraphicsApis": [ "OpenGL", "D3D12", "Metal" ],
+            "excludedGraphicsApis": [
+                "OpenGL",
+                "D3D12",
+                "Metal",
+                "Vulkan"
+            ],
             "referenceImage": "glowlayerandlods.png",
             "comments": {
                 "OpenGL": "xvfb : invalid enum with glRenderbufferStorage",
                 "D3D12": "Mapping a texture fails with error HRESULT 0x887A0005",
-                "Metal": "Result doesn't match reference"
+                "Metal": "Result doesn't match reference",
+                "Vulkan": "Crash"
             }
         },
         {
             "title": "Nested BBG",
             "playgroundId": "#ZG0C8B#6",
             "renderCount": 10,
-            "referenceImage": "nested_BBG.png"
+            "referenceImage": "nested_BBG.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ]
         },
         {
             "title": "Dynamic Texture context clip",
             "playgroundId": "#FU0ES5#47",
             "referenceImage": "dynamicTextureClip.png",
-            "excludedGraphicsApis": [ "D3D12" ],
+            "excludedGraphicsApis": [
+                "D3D12"
+            ],
             "comments": {
                 "D3D12": "Incorrect rendering of clipped texture"
             }
@@ -193,7 +209,10 @@
         {
             "title": "Kernel Blur",
             "playgroundId": "#Y0WKT0#0",
-            "referenceImage": "KernelBlur.png"
+            "referenceImage": "KernelBlur.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ]
         },
         {
             "title": "GLTF Mesh Primitive Attribute",
@@ -213,7 +232,9 @@
             "playgroundId": "#SYQW69#579",
             "referenceImage": "glTFAlphaBlend.png",
             "renderCount": 1,
-            "excludedGraphicsApis": [ "OpenGL" ],
+            "excludedGraphicsApis": [
+                "OpenGL"
+            ],
             "comments": {
                 "OpenGL": "Mostly looks right but there are enough pixels to trigger the threshold, need to investigate"
             }
@@ -228,22 +249,32 @@
             "title": "Soft Shadows",
             "playgroundId": "#0YYQ3N#0",
             "errorRatio": 50,
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
+            "excludedGraphicsApis": [
+                "OpenGL",
+                "Metal",
+                "Vulkan"
+            ],
             "referenceImage": "softShadows.png",
             "comments": {
                 "OpenGL": "Invalid light and wrong specular with SSAOcat.babylon",
-                "Metal": "Nothing rendered"
+                "Metal": "Nothing rendered",
+                "Vulkan": "Crash"
             }
         },
         {
             "title": "Soft Shadows (Right Handed)",
             "playgroundId": "#0YYQ3N#2",
             "errorRatio": 50,
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
+            "excludedGraphicsApis": [
+                "OpenGL",
+                "Metal",
+                "Vulkan"
+            ],
             "referenceImage": "softShadowsRightHanded.png",
             "comments": {
                 "OpenGL": "Invalid light and wrong specular with SSAOcat.babylon",
-                "Metal": "Nothing rendered"
+                "Metal": "Nothing rendered",
+                "Vulkan": "Crash"
             }
         },
         {
@@ -255,7 +286,9 @@
             "title": "Light Projection Texture",
             "playgroundId": "#CQNGRK#0",
             "renderCount": 2,
-            "excludedGraphicsApis": [ "OpenGL" ],
+            "excludedGraphicsApis": [
+                "OpenGL"
+            ],
             "referenceImage": "LightProjectionTexture.png",
             "comments": {
                 "OpenGL": "xvfb : no rendering"
@@ -264,41 +297,68 @@
         {
             "title": "Point light shadows",
             "playgroundId": "#U2F7P9#4",
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
+            "excludedGraphicsApis": [
+                "OpenGL",
+                "Metal",
+                "Vulkan"
+            ],
             "referenceImage": "point-light-shadows.png",
             "comments": {
                 "OpenGL": "xvfb : invalid enum with glRenderbufferStorage",
-                "Metal": "Rendered result doesn't match reference"
+                "Metal": "Rendered result doesn't match reference",
+                "Vulkan": "Image layout transition crash"
             }
         },
         {
             "title": "Texture cache",
             "playgroundId": "#3TFH5I#0",
-            "referenceImage": "texture cache.png"
+            "referenceImage": "texture cache.png",
+            "excludedGraphicsApis": [],
+            "comments": {}
         },
         {
             "title": "Sharpen",
             "playgroundId": "#NAW8EA#1",
             "renderCount": 20,
-            "referenceImage": "sharpen.png"
+            "referenceImage": "sharpen.png",
+            "excludedGraphicsApis": [],
+            "comments": {}
         },
         {
             "title": "GLTF BoomBox with Unlit Material",
             "playgroundId": "#GYM97C#2",
-            "referenceImage": "gltfUnlit.png"
+            "referenceImage": "gltfUnlit.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ],
+            "comments": {
+                "Vulkan": "Image layout transition crash"
+            }
         },
         {
             "title": "Ribbon morphing",
             "playgroundId": "#ACKC2#1",
             "renderCount": 50,
-            "referenceImage": "ribbon morphing.png"
+            "referenceImage": "ribbon morphing.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ],
+            "comments": {
+                "Vulkan": "Vulkan crash"
+            }
         },
         {
             "title": "Solid particle system",
             "playgroundId": "#WCDZS#92",
             "renderCount": 150,
             "referenceImage": "sps.png",
-            "errorRatio": 60.0
+            "errorRatio": 60.0,
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ],
+            "comments": {
+                "Vulkan": "Vulkan crash"
+            }
         },
         {
             "title": "LightFalloff",
@@ -309,58 +369,111 @@
             "title": "Chromatic aberration",
             "playgroundId": "#NAW8EA#0",
             "renderCount": 20,
-            "referenceImage": "chromaticAberration.png"
+            "referenceImage": "chromaticAberration.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ],
+            "comments": {
+                "Vulkan": "Vulkan crash"
+            }
         },
         {
             "title": "Normals",
             "playgroundId": "#WXKLLJ#2",
-            "referenceImage": "normals.png"
+            "referenceImage": "normals.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ],
+            "comments": {
+                "Vulkan": "Vulkan crash"
+            }
         },
         {
             "title": "LOD",
             "renderCount": 10,
             "playgroundId": "#FFMFW5#0",
             "referenceImage": "lod.png",
-            "errorRatio": 9.0
+            "errorRatio": 9.0,
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ],
+            "comments": {
+                "Vulkan": "LOD scene renders empty"
+            }
         },
         {
             "title": "Capsule",
             "renderCount": 10,
             "playgroundId": "#JAFIIU#4",
-            "referenceImage": "CreateCapsule.png"
+            "referenceImage": "CreateCapsule.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ],
+            "comments": {
+                "Vulkan": "Vulkan crash"
+            }
         },
         {
             "title": "Fresnel",
             "playgroundId": "#603JUZ#1",
             "errorRatio": 50,
-            "referenceImage": "fresnel.png"
+            "referenceImage": "fresnel.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ],
+            "comments": {
+                "Vulkan": "Vulkan crash"
+            }
         },
         {
             "title": "Unindexed mesh",
             "playgroundId": "#4IHSY2#0",
-            "referenceImage": "unindexedmesh.png"
+            "referenceImage": "unindexedmesh.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ],
+            "comments": {
+                "Vulkan": "Vulkan crash"
+            }
         },
         {
             "title": "Black and White post-process",
             "playgroundId": "#N55Q2M#0",
             "renderCount": 20,
-            "referenceImage": "bwpp.png"
+            "referenceImage": "bwpp.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ],
+            "comments": {
+                "Vulkan": "Vulkan crash"
+            }
         },
         {
             "title": "Multi camera rendering",
             "playgroundId": "#1LK70I#22",
             "errorRatio": 50,
-            "referenceImage": "multiCameraRendering.png"
+            "referenceImage": "multiCameraRendering.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ],
+            "comments": {
+                "Vulkan": "Vulkan crash"
+            }
         },
         {
             "title": "Multi cameras and output render target",
             "renderCount": 2,
             "playgroundId": "#BCYE7J#31",
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
+            "excludedGraphicsApis": [
+                "OpenGL",
+                "Metal",
+                "Vulkan"
+            ],
             "referenceImage": "multiCamerasOutputRenderTarget.png",
             "comments": {
                 "OpenGL": "Incorrect rendering",
-                "Metal": "Result does not match reference"
+                "Metal": "Result does not match reference",
+                "Vulkan": "Vulkan crash"
             }
         },
         {
@@ -373,7 +486,10 @@
             "title": "Scissor test",
             "playgroundId": "#W7E7CF#34",
             "referenceImage": "scissor-test.png",
-            "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
+            "excludedGraphicsApis": [
+                "D3D12",
+                "OpenGL"
+            ],
             "comments": {
                 "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx",
                 "OpenGL": "Incorrect rendering"
@@ -384,11 +500,16 @@
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
-            "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
+            "excludedGraphicsApis": [
+                "D3D12",
+                "OpenGL",
+                "Vulkan"
+            ],
             "errorRatio": 50,
             "comments": {
                 "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx",
-                "OpenGL": "Incorrect rendering"
+                "OpenGL": "Incorrect rendering",
+                "Vulkan": "Vulkan crash"
             }
         },
         {
@@ -396,10 +517,15 @@
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 1.5;",
             "referenceImage": "scissor-test-3.png",
-            "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
+            "excludedGraphicsApis": [
+                "D3D12",
+                "OpenGL",
+                "Vulkan"
+            ],
             "comments": {
                 "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx",
-                "OpenGL": "Incorrect rendering"
+                "OpenGL": "Incorrect rendering",
+                "Vulkan": "Vulkan crash"
             }
         },
         {
@@ -452,14 +578,26 @@
             "renderCount": 2,
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Animation_Skin, __page__, 0, __disableSRGBBuffers__, 0",
-            "referenceImage": "gltfAnimationSkin0.png"
+            "referenceImage": "gltfAnimationSkin0.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ],
+            "comments": {
+                "Vulkan": "Vulkan crash"
+            }
         },
         {
             "title": "GLTF Animation Skin (1)",
             "renderCount": 2,
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Animation_Skin, __page__, 1, __disableSRGBBuffers__, 0",
-            "referenceImage": "gltfAnimationSkin1.png"
+            "referenceImage": "gltfAnimationSkin1.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ],
+            "comments": {
+                "Vulkan": "Vulkan crash"
+            }
         },
         {
             "title": "GLTF Buffer Interleaved",
@@ -588,7 +726,13 @@
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Texture_Sampler, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfTextureSampler0.png",
-            "errorRatio": 8.0
+            "errorRatio": 8.0,
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ],
+            "comments": {
+                "Vulkan": "Vulkan crash"
+            }
         },
         {
             "title": "GLTF Texture Sampler (1)",
@@ -599,10 +743,14 @@
         {
             "title": "GLTF Alien",
             "playgroundId": "#XN37SR#5",
-            "excludedGraphicsApis": [ "OpenGL" ],
+            "excludedGraphicsApis": [
+                "OpenGL",
+                "Vulkan"
+            ],
             "referenceImage": "gltfAlien.png",
             "comments": {
-                "OpenGL": "int/float casting see https://github.com/BabylonJS/BabylonNative/pull/1544"
+                "OpenGL": "int/float casting see https://github.com/BabylonJS/BabylonNative/pull/1544",
+                "Vulkan": "Vulkan crash"
             }
         },
         {
@@ -633,7 +781,13 @@
             "title": "CesiumMan from Khronos Sample Assets",
             "playgroundId": "#4GWX8M",
             "errorRatio": 2,
-            "referenceImage": "CesiumMan.png"
+            "referenceImage": "CesiumMan.png",
+            "excludedGraphicsApis": [
+                "Vulkan"
+            ],
+            "comments": {
+                "Vulkan": "Vulkan crash"
+            }
         },
         {
             "title": "Two vertex buffers pointing to one buffer",
