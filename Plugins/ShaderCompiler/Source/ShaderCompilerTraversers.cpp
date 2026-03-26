@@ -165,8 +165,6 @@ namespace Babylon::ShaderCompilerTraversers
                 publicType.qualifier.layoutMatrix = ElmColumnMajor;
                 publicType.qualifier.layoutPacking = ElpStd140;
 
-                const bool isFragment = (intermediate->getStage() == EShLangFragment);
-
                 std::vector<std::string> originalNames{};
                 scope.TypeLists.emplace_back(std::make_unique<TTypeList>());
                 auto* structMembers = scope.TypeLists.back().get();
@@ -215,6 +213,7 @@ namespace Babylon::ShaderCompilerTraversers
                 qualifier.layoutMatrix = ElmColumnMajor;
                 qualifier.layoutPacking = ElpStd140;
 #if VULKAN
+                const bool isFragment = (intermediate->getStage() == EShLangFragment);
                 // bgfx's old binding model (shader version < 11) expects the fragment
                 // shader uniform buffer at binding 48 (kSpirvOldFragmentBinding) and
                 // the vertex shader uniform buffer at binding 0.
