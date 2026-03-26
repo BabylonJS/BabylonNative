@@ -412,7 +412,7 @@ namespace Babylon::Plugins
 
             if (!m_impl->cameraPipelineState) {
                 return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{
-                    std::string("Failed to create camera pipeline state") + (error ? [error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding] : "")}));
+                    std::string("Failed to create camera pipeline state") + (error ? std::string(": ") + [error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding] : "")}));
             }
 
             m_impl->isInitialized = true;
