@@ -107,6 +107,7 @@ namespace Babylon::ShaderCompilerCommon
 #if OPENGL
             const auto stage{static_cast<uint8_t>(stages.size())};
             stages[sampler.name] = stage;
+            BX_UNUSED(isFragment);
 #elif VULKAN
             // Stage index must match what bgfx computes: regIndex - reverseShift.
             // For old binding model: reverseShift = (fragment ? 48 : 0) + 16
@@ -266,13 +267,12 @@ namespace Babylon::ShaderCompilerCommon
 
             AppendBytes(vertexBytes, static_cast<uint8_t>(resources.stage_inputs.size()));
 
+#if VULKAN
             // bgfx's Vulkan renderer uses the attribute's index in the shader binary
             // as the Vulkan location (via m_attrRemap[attr] = index). The SPIR-V uses
             // Attrib::Enum values as Locations (e.g., TexCoord0=10). To make
             // m_attrRemap[attr] == Location, we must write attributes at indices that
             // match their Location, padding gaps with a dummy ID (0) that bgfx skips.
-            // On non-Vulkan backends the padding is harmless since these fields are
-            // interpreted the same way.
             {
                 const auto& nameToAttrib = GetBgfxNameToAttribMap();
                 uint32_t maxLocation = 0;
@@ -281,7 +281,6 @@ namespace Babylon::ShaderCompilerCommon
                     const uint32_t loc = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
                     if (loc > maxLocation) maxLocation = loc;
                 }
-                // Build a location-indexed map
                 std::vector<uint16_t> attribIds(maxLocation + 1, 0);
                 for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
                 {
@@ -296,13 +295,21 @@ namespace Babylon::ShaderCompilerCommon
                     bgfxShaderInfo.VertexAttributeLocations[originalName] = static_cast<uint32_t>(attrib);
                 }
                 // Rewrite the count to include padding entries
-                vertexBytes.resize(vertexBytes.size() - 1); // remove the count we just wrote
+                vertexBytes.resize(vertexBytes.size() - 1);
                 AppendBytes(vertexBytes, static_cast<uint8_t>(attribIds.size()));
                 for (uint16_t id : attribIds)
                 {
                     AppendBytes(vertexBytes, id);
                 }
             }
+#else
+            for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
+            {
+                const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
+                AppendBytes(vertexBytes, bgfx::attribToId(static_cast<bgfx::Attrib::Enum>(location)));
+                bgfxShaderInfo.VertexAttributeLocations[vertexShaderInfo.AttributeRenaming[stageInput.name]] = location;
+            }
+#endif
             AppendBytes(vertexBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
         }
 
