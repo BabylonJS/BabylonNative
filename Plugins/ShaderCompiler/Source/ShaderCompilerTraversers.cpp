@@ -1,4 +1,5 @@
 #include "ShaderCompilerTraversers.h"
+#include "ShaderCompilerCommon.h"
 
 #include <glslang/Include/intermediate.h>
 #include <glslang/MachineIndependent/localintermediate.h>
@@ -784,31 +785,44 @@ namespace Babylon::ShaderCompilerTraversers
         private:
             std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
             {
-#define IF_NAME_RETURN_ATTRIB(varyingName, attrib, newName)  \
-    if (std::strcmp(name, varyingName) == 0)                 \
-    {                                                        \
-        return {static_cast<unsigned int>(attrib), newName}; \
-    }
-                IF_NAME_RETURN_ATTRIB("position", bgfx::Attrib::Position, "a_position")
-                IF_NAME_RETURN_ATTRIB("normal", bgfx::Attrib::Normal, "a_normal")
-                IF_NAME_RETURN_ATTRIB("tangent", bgfx::Attrib::Tangent, "a_tangent")
-                IF_NAME_RETURN_ATTRIB("uv", bgfx::Attrib::TexCoord0, "a_texcoord0")
-                IF_NAME_RETURN_ATTRIB("uv2", bgfx::Attrib::TexCoord1, "a_texcoord1")
-                IF_NAME_RETURN_ATTRIB("uv3", bgfx::Attrib::TexCoord2, "a_texcoord2")
-                IF_NAME_RETURN_ATTRIB("uv4", bgfx::Attrib::TexCoord3, "a_texcoord3")
-                IF_NAME_RETURN_ATTRIB("color", bgfx::Attrib::Color0, "a_color0")
-                IF_NAME_RETURN_ATTRIB("matricesIndices", bgfx::Attrib::Indices, "a_indices")
-                IF_NAME_RETURN_ATTRIB("matricesWeights", bgfx::Attrib::Weight, "a_weight")
-                IF_NAME_RETURN_ATTRIB("instanceColor", bgfx::Attrib::TexCoord3, "i_data5")
-                IF_NAME_RETURN_ATTRIB("world0", bgfx::Attrib::TexCoord4, "i_data0")
-                IF_NAME_RETURN_ATTRIB("world1", bgfx::Attrib::TexCoord5, "i_data1")
-                IF_NAME_RETURN_ATTRIB("world2", bgfx::Attrib::TexCoord6, "i_data2")
-                IF_NAME_RETURN_ATTRIB("world3", bgfx::Attrib::TexCoord7, "i_data3")
-                IF_NAME_RETURN_ATTRIB("splatIndex0", bgfx::Attrib::TexCoord4, "i_data0")
-                IF_NAME_RETURN_ATTRIB("splatIndex1", bgfx::Attrib::TexCoord5, "i_data1")
-                IF_NAME_RETURN_ATTRIB("splatIndex2", bgfx::Attrib::TexCoord6, "i_data2")
-                IF_NAME_RETURN_ATTRIB("splatIndex3", bgfx::Attrib::TexCoord7, "i_data3")
-#undef IF_NAME_RETURN_ATTRIB
+                const auto& nameToAttrib = ShaderCompilerCommon::GetBgfxNameToAttribMap();
+
+                // Map BabylonJS attribute names to bgfx names. The bgfx name is used
+                // to look up the Attrib::Enum (and thus the SPIR-V Location) from the
+                // shared mapping in ShaderCompilerCommon.h.
+                static const std::map<std::string, const char*> babylonToBgfx = {
+                    {"position",        "a_position"},
+                    {"normal",          "a_normal"},
+                    {"tangent",         "a_tangent"},
+                    {"uv",              "a_texcoord0"},
+                    {"uv2",             "a_texcoord1"},
+                    {"uv3",             "a_texcoord2"},
+                    {"uv4",             "a_texcoord3"},
+                    {"color",           "a_color0"},
+                    {"matricesIndices", "a_indices"},
+                    {"matricesWeights", "a_weight"},
+                    {"instanceColor",   "i_data5"},
+                    {"world0",          "i_data0"},
+                    {"world1",          "i_data1"},
+                    {"world2",          "i_data2"},
+                    {"world3",          "i_data3"},
+                    {"splatIndex0",     "i_data0"},
+                    {"splatIndex1",     "i_data1"},
+                    {"splatIndex2",     "i_data2"},
+                    {"splatIndex3",     "i_data3"},
+                };
+
+                auto babylonIt = babylonToBgfx.find(name);
+                if (babylonIt != babylonToBgfx.end())
+                {
+                    const char* bgfxName = babylonIt->second;
+                    auto attribIt = nameToAttrib.find(bgfxName);
+                    if (attribIt != nameToAttrib.end())
+                    {
+                        return {static_cast<unsigned int>(attribIt->second), bgfxName};
+                    }
+                }
+
                 const unsigned int attributeLocation = FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++;
                 if (attributeLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
                     throw std::runtime_error("Cannot support more than 18 vertex attributes.");
