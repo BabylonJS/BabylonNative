@@ -4,6 +4,7 @@ parameters:
   CC: ""
   CXX: ""
   JSEngine: ""
+  graphics_api: ""
   enableSanitizers: false
 
 jobs:
@@ -16,6 +17,10 @@ jobs:
       SANITIZER_FLAG: ${{coalesce(replace(format('{0}', parameters.enableSanitizers), 'True', 'ON'), 'OFF')}}
       CC: ${{parameters.CC}}
       CXX: ${{parameters.CXX}}
+      ${{if eq(parameters.graphics_api, '')}}:
+        graphicsApiDefine: ""
+      ${{else}}:
+        graphicsApiDefine: "-D GRAPHICS_API=${{parameters.graphics_api}}"
 
     steps:
       - template: cmake.yml
@@ -24,7 +29,7 @@ jobs:
 
       - script: |
           sudo apt-get update
-          sudo apt-get install libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang
+          sudo apt-get install libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang libvulkan-dev vulkan-validationlayers
         displayName: "Install packages"
 
       - script: |

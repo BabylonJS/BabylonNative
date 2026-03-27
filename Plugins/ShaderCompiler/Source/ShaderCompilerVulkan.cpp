@@ -81,9 +81,10 @@ namespace Babylon::Plugins
         auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
         auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
         std::map<std::string, std::string> vertexAttributeRenaming = {};
-        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryingsD3D(program, ids, vertexAttributeRenaming);
+        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryingsVulkan(program, ids, vertexAttributeRenaming);
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
         ShaderCompilerTraversers::InvertYDerivativeOperands(program);
+        ShaderCompilerTraversers::AssignLocationsToInterStageVaryings(program);
 
         std::vector<uint32_t> spirvVS;
         auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, spirvVS);

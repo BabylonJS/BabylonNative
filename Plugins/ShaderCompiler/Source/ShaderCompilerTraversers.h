@@ -71,6 +71,7 @@ namespace Babylon::ShaderCompilerTraversers
     void AssignLocationsAndNamesToVertexVaryingsOpenGL(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming);
     void AssignLocationsAndNamesToVertexVaryingsMetal(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming);
     void AssignLocationsAndNamesToVertexVaryingsD3D(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming);
+    void AssignLocationsAndNamesToVertexVaryingsVulkan(glslang::TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& vertexAttributeRenaming);
 
     /// WebGL (and therefore Babylon.js) treats texture samplers as a single variable.
     /// Native platforms expect them to be two separate variables -- a texture and a
@@ -82,4 +83,9 @@ namespace Babylon::ShaderCompilerTraversers
     /// https://github.com/bkaradzic/bgfx/blob/7be225bf490bb1cd231cfb4abf7e617bf35b59cb/src/bgfx_shader.sh#L44-L45
     /// https://github.com/bkaradzic/bgfx/blob/7be225bf490bb1cd231cfb4abf7e617bf35b59cb/src/bgfx_shader.sh#L62-L65
     void InvertYDerivativeOperands(glslang::TProgram& program);
+
+    /// Assign explicit Location decorations to inter-stage varyings (VS outputs
+    /// and FS inputs). Vulkan SPIR-V requires explicit locations on all varyings;
+    /// without them, VS outputs and FS inputs may not match correctly.
+    void AssignLocationsToInterStageVaryings(glslang::TProgram& program);
 }
