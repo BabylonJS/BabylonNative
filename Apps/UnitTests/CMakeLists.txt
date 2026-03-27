@@ -47,8 +47,6 @@ elseif(WIN32)
 endif()
 
 add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${SOURCES})
-set_property(TARGET UnitTests PROPERTY UNITY_BUILD false)
-
 target_link_libraries(UnitTests
     PRIVATE AppRuntime
     PRIVATE Blob

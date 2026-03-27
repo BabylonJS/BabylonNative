@@ -29,20 +29,17 @@ jobs:
 
       - script: |
           sudo apt-get update
-          sudo apt-get install libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang
+          sudo apt-get install libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang libvulkan-dev vulkan-validationlayers
         displayName: "Install packages"
-        condition: ne('${{parameters.graphics_api}}', 'Vulkan')
 
       - script: |
-          sudo apt-get update
-          sudo apt-get install libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev libvulkan-dev vulkan-validationlayers clang
-        displayName: "Install packages (Vulkan)"
-        condition: eq('${{parameters.graphics_api}}', 'Vulkan')
-
-      - script: |
-          cmake -G Ninja -B build/Linux -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so -D NAPI_JAVASCRIPT_ENGINE=${{parameters.JSEngine}} -D CMAKE_BUILD_TYPE=RelWithDebInfo -D BX_CONFIG_DEBUG=ON -D CMAKE_UNITY_BUILD=$(UNITY_BUILD) -D OpenGL_GL_PREFERENCE=GLVND -D BABYLON_DEBUG_TRACE=ON -D ENABLE_SANITIZERS=$(SANITIZER_FLAG) $(graphicsApiDefine) .
+          cmake -G Ninja -B build/Linux -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so -D NAPI_JAVASCRIPT_ENGINE=${{parameters.JSEngine}} -D CMAKE_BUILD_TYPE=RelWithDebInfo -D BX_CONFIG_DEBUG=ON -D OpenGL_GL_PREFERENCE=GLVND -D BABYLON_DEBUG_TRACE=ON -D ENABLE_SANITIZERS=$(SANITIZER_FLAG) .
           ninja -C build/Linux
         displayName: "Build X11"
+
+      - script: |
+          sudo sysctl -w kernel.core_pattern=core.%p
+        displayName: "Enable Core Dump"
 
       # Memory leaks on CI is disabled due to memory leaks reported with xvfb and impossible to add to ignore list.
       # See https://github.com/BabylonJS/BabylonNative/issues/1575
@@ -51,11 +48,13 @@ jobs:
           cd build/Linux/Apps/Playground
           # Command line to suppress false positive memory leaks :
           # ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=suppressions=../../../../.github/asan_suppress.txt xvfb-run ./Playground app:///Scripts/validation_native.js
+          ulimit -c unlimited
           xvfb-run ./Playground app:///Scripts/validation_native.js
         displayName: "Validation Tests"
 
       - script: |
           cd build/Linux/Apps/UnitTests
+          ulimit -c unlimited
           xvfb-run ./UnitTests
         displayName: "Unit Tests"
 
@@ -65,9 +64,39 @@ jobs:
           pathtoPublish: "build/Linux/Apps/Playground/Results"
         displayName: "Publish Tests ${{parameters.name}} Results"
         condition: always()
+
       - task: PublishBuildArtifacts@1
         inputs:
           artifactName: "${{parameters.name}} Error Pictures"
           pathtoPublish: "build/Linux/Apps/Playground/Errors"
         displayName: "Publish Tests ${{parameters.name}} Errors"
+        condition: failed()
+
+      - task: CopyFiles@2
+        inputs:
+          sourceFolder: "build/Linux/Apps/Playground"
+          contents: |
+            Playground
+            core.*
+          targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
+          cleanTargetFolder: false
+        displayName: "Stage Playground Core Dump"
+        condition: failed()
+
+      - task: CopyFiles@2
+        inputs:
+          sourceFolder: "build/Linux/Apps/UnitTests"
+          contents: |
+            UnitTests
+            core.*
+          targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
+          cleanTargetFolder: false
+        displayName: "Stage UnitTests Core Dump"
+        condition: failed()
+
+      - task: PublishBuildArtifacts@1
+        inputs:
+          artifactName: "Core Dumps"
+          pathtoPublish: "$(Build.ArtifactStagingDirectory)/Dumps"
+        displayName: "Publish Core Dumps"
         condition: failed()

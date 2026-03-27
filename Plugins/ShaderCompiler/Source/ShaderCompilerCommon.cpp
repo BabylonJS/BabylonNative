@@ -95,25 +95,16 @@ namespace Babylon::ShaderCompilerCommon
             AppendBytes(bytes, sampler.name);
             AppendBytes(bytes, static_cast<uint8_t>(bgfx::UniformType::Sampler | BGFX_UNIFORM_SAMPLERBIT));
 
-#if VULKAN
-            // bgfx's Vulkan renderer uses regIndex as the texture descriptor binding.
-            // The sampler's SPIR-V binding is texture_binding + kSpirvSamplerShift (16),
-            // so subtract 16 to recover the texture binding that bgfx expects.
+            // num, regIndex, regCount — only used by bgfx's Vulkan renderer.
+            // regIndex is the texture descriptor binding; bgfx computes the sampler
+            // binding at regIndex + kSpirvSamplerShift (16).
             const auto samplerBinding = compiler.get_decoration(sampler.id, spv::DecorationBinding);
             const uint16_t regIndex = static_cast<uint16_t>(samplerBinding >= 16 ? samplerBinding - 16 : samplerBinding);
             AppendBytes(bytes, static_cast<uint8_t>(0));
             AppendBytes(bytes, regIndex);
             AppendBytes(bytes, static_cast<uint16_t>(0));
-#else
-            BX_UNUSED(isFragment);
-            // These values (num, regIndex, regCount) are only used by Vulkan.
-            AppendBytes(bytes, static_cast<uint8_t>(0));
-            AppendBytes(bytes, static_cast<uint16_t>(0));
-            AppendBytes(bytes, static_cast<uint16_t>(0));
-#endif
 
 #if OPENGL
-            BX_UNUSED(compiler);
             const auto stage{static_cast<uint8_t>(stages.size())};
             stages[sampler.name] = stage;
 #elif VULKAN
@@ -122,6 +113,7 @@ namespace Babylon::ShaderCompilerCommon
             const uint8_t reverseShift = static_cast<uint8_t>(isFragment ? 64 : 16);
             stages[sampler.name] = static_cast<uint8_t>(regIndex - reverseShift);
 #else
+            BX_UNUSED(isFragment);
             stages[sampler.name] = static_cast<uint8_t>(compiler.get_decoration(sampler.id, spv::DecorationBinding));
 #endif
         }
@@ -274,25 +266,15 @@ namespace Babylon::ShaderCompilerCommon
 
             AppendBytes(vertexBytes, static_cast<uint8_t>(resources.stage_inputs.size()));
 
-#if VULKAN
             // bgfx's Vulkan renderer uses the attribute's index in the shader binary
             // as the Vulkan location (via m_attrRemap[attr] = index). The SPIR-V uses
             // Attrib::Enum values as Locations (e.g., TexCoord0=10). To make
             // m_attrRemap[attr] == Location, we must write attributes at indices that
             // match their Location, padding gaps with a dummy ID (0) that bgfx skips.
+            // On non-Vulkan backends the padding is harmless since these fields are
+            // interpreted the same way.
             {
-                static const std::map<std::string, bgfx::Attrib::Enum> nameToAttrib = {
-                    {"a_position", bgfx::Attrib::Position},
-                    {"a_normal", bgfx::Attrib::Normal},
-                    {"a_tangent", bgfx::Attrib::Tangent},
-                    {"a_texcoord0", bgfx::Attrib::TexCoord0},
-                    {"a_texcoord1", bgfx::Attrib::TexCoord1},
-                    {"a_texcoord2", bgfx::Attrib::TexCoord2},
-                    {"a_texcoord3", bgfx::Attrib::TexCoord3},
-                    {"a_color0", bgfx::Attrib::Color0},
-                    {"a_indices", bgfx::Attrib::Indices},
-                    {"a_weight", bgfx::Attrib::Weight},
-                };
+                const auto& nameToAttrib = GetBgfxNameToAttribMap();
                 uint32_t maxLocation = 0;
                 for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
                 {
@@ -321,16 +303,6 @@ namespace Babylon::ShaderCompilerCommon
                     AppendBytes(vertexBytes, id);
                 }
             }
-#else
-            for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
-            {
-                const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
-                AppendBytes(vertexBytes, bgfx::attribToId(static_cast<bgfx::Attrib::Enum>(location)));
-
-                // Map from symbolName -> originalName to associate babylon.js shader attribute -> Babylon Native attribute location.
-                bgfxShaderInfo.VertexAttributeLocations[vertexShaderInfo.AttributeRenaming[stageInput.name]] = location;
-            }
-#endif
             AppendBytes(vertexBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
         }
 
