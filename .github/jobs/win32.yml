@@ -83,6 +83,22 @@ jobs:
           )
         displayName: "Disable JIT Debugger for Script"
 
+      # Install Lavapipe (CPU-based Vulkan software renderer) for Vulkan CI testing.
+      # Microsoft-hosted agents have no GPU, so a software Vulkan ICD is required.
+      - powershell: |
+          $ProgressPreference = 'SilentlyContinue'
+          $url = "https://github.com/jakoch/rasterizers/releases/download/20260302/lavapipe-win64-25.2.5.zip"
+          $zipPath = "$(Agent.TempDirectory)\lavapipe.zip"
+          $extractPath = "$(Agent.TempDirectory)\lavapipe"
+          Invoke-WebRequest -Uri $url -OutFile $zipPath
+          Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+          $icdJson = Get-ChildItem -Path $extractPath -Filter "*.json" -Recurse | Select-Object -First 1
+          Write-Host "Lavapipe ICD: $($icdJson.FullName)"
+          Write-Host "##vso[task.setvariable variable=VK_ICD_FILENAMES]$($icdJson.FullName)"
+          Write-Host "##vso[task.setvariable variable=VK_DRIVER_FILES]$($icdJson.FullName)"
+        displayName: "Install Lavapipe (Vulkan software renderer)"
+        condition: eq('${{parameters.graphics_api}}', 'Vulkan')
+
       # Temporary disabling D3D12 validation tests. Changes in bgfx require changes in our D3D12 shader pipeline. This is been tracked by issue #1621
       - script: |
           cd build\${{variables.solutionName}}\Apps\Playground\RelWithDebInfo
