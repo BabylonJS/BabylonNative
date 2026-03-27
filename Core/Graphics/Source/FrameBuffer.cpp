@@ -74,19 +74,8 @@ namespace Babylon::Graphics
         m_viewId.reset();
     }
 
-    void FrameBuffer::Unbind(bgfx::Encoder& encoder)
+    void FrameBuffer::Unbind(bgfx::Encoder&)
     {
-        // For render-to-texture framebuffers, insert a transition view so bgfx
-        // transitions the attachment textures from attachment layout to sampled
-        // layout before any subsequent draw call tries to sample them.
-        if (!m_defaultBackBuffer && m_viewId.has_value())
-        {
-            auto transitionViewId = m_deviceContext.AcquireNewViewId(encoder);
-            bgfx::setViewFrameBuffer(transitionViewId, BGFX_INVALID_HANDLE);
-            bgfx::setViewRect(transitionViewId, 0, 0, 1, 1);
-            encoder.touch(transitionViewId);
-        }
-        m_viewId.reset();
     }
 
     void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)

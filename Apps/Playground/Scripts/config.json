@@ -2,6 +2,29 @@
     "root": "https://cdn.babylonjs.com",
     "tests": [
         {
+            "title": "Gaussian Splatting Compressed ply SH",
+            "playgroundId": "#U8O4EP#1",
+            "renderCount": 15,
+            "referenceImage": "gsplat-compressedply-sh.png",
+            "excludedGraphicsApis": [ "OpenGL", "Vulkan"],
+            "comments": {
+                "OpenGL": "Test doesn't render correctly",
+                "Vulkan": "Crashes"
+            }
+        },
+        {
+            "title": "Gaussian Splatting Update Data",
+            "playgroundId": "#Q0LBM8#2",
+            "renderCount": 15,
+            "excludedGraphicsApis": [ "OpenGL", "Metal", "Vulkan" ],
+            "referenceImage": "gsplat-update-data.png",
+            "comments": {
+                "OpenGL": "Test doesn't render correctly",
+                "Metal": "Crashes",
+                "Vulkan": "Crashes"
+            }
+        },
+        {
             "title": "Native Canvas",
             "playgroundId": "#TKVFSA#7",
             "referenceImage": "native-canvas.png",
