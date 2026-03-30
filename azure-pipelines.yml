@@ -51,13 +51,13 @@ jobs:
     parameters:
       name: MacOS_Xcode26
       vmImage: macOS-latest
-      xcodeVersion: "26.3"
+      xcodeVersion: "26.4"
 
   - template: .github/jobs/ios.yml
     parameters:
       name: iOS_Xcode26
       vmImage: macOS-latest
-      xcodeVersion: "26.3"
+      xcodeVersion: "26.4"
       deploymentTarget: 26.0
 
   # Win32
