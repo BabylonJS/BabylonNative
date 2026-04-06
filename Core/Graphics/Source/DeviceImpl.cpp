@@ -275,6 +275,7 @@ namespace Babylon::Graphics
         }
 
         m_rendering = true;
+        m_firstFrameStarted = true;
 
         // Ensure rendering is enabled.
         EnableRendering();
@@ -305,8 +306,13 @@ namespace Babylon::Graphics
 
         if (!m_rendering)
         {
-            // First call at startup — no frame in progress yet, nothing to finish.
-            return;
+            if (!m_firstFrameStarted)
+            {
+                // First call at startup - no frame in progress yet, nothing to finish.
+                return;
+            }
+
+            throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
         }
 
         // Close the gate: wait until JS thread has released all FrameCompletionScopes

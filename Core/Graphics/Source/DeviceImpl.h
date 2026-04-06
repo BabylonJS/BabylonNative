@@ -125,6 +125,7 @@ namespace Babylon::Graphics
 
         arcana::affinity m_renderThreadAffinity{};
         bool m_rendering{};
+        bool m_firstFrameStarted{};
 
         // The single bgfx encoder for the current frame. Acquired in
         // StartRenderingCurrentFrame, ended in FinishRenderingCurrentFrame.
