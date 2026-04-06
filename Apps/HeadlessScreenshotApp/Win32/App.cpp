@@ -91,14 +91,12 @@ int main()
     winrt::com_ptr<ID3D11DeviceContext> d3dDeviceContext;
     d3dDevice->GetImmediateContext(d3dDeviceContext.put());
 
-    // Create the Babylon Native graphics device and update.
+    // Create the Babylon Native graphics device.
     auto device = CreateGraphicsDevice(d3dDevice.get());
-    auto deviceUpdate = device.GetUpdate("update");
 
     // Start rendering a frame to unblock the JavaScript from queuing graphics
     // commands.
     device.StartRenderingCurrentFrame();
-    deviceUpdate.Start();
 
     // Create a Babylon Native application runtime which hosts a JavaScript
     // engine on a new thread.
@@ -156,7 +154,6 @@ int main()
     addToContext.get_future().wait();
 
     // Render a frame so that `AddToContextAsync` will complete.
-    deviceUpdate.Finish();
     device.FinishRenderingCurrentFrame();
 
     // Wait for `startup` to finish.
@@ -181,7 +178,6 @@ int main()
 
         // Start rendering a frame to unblock the JavaScript again.
         device.StartRenderingCurrentFrame();
-        deviceUpdate.Start();
 
         std::promise<void> loadAndRenderAsset{};
 
@@ -204,7 +200,6 @@ int main()
         loadAndRenderAsset.get_future().wait();
 
         // Finish rendering the frame.
-        deviceUpdate.Finish();
         device.FinishRenderingCurrentFrame();
 
         // Tell RenderDoc to stop capturing.

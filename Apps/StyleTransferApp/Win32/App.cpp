@@ -69,7 +69,6 @@ namespace
     WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 
     std::optional<Babylon::Graphics::Device> g_device{};
-    std::optional<Babylon::Graphics::DeviceUpdate> g_update{};
     Babylon::Plugins::NativeInput* g_nativeInput{};
     std::optional<Babylon::AppRuntime> g_runtime{};
     bool g_minimized{false};
@@ -219,13 +218,11 @@ namespace
     {
         if (g_device)
         {
-            g_update->Finish();
             g_device->FinishRenderingCurrentFrame();
         }
 
         g_nativeInput = {};
         g_runtime.reset();
-        g_update.reset();
         g_device.reset();
     }
 
@@ -300,12 +297,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     // --------------------- Babylon Native initialization --------------------------
 
     g_device = CreateBabylonGraphicsDevice(d3d11Device.get());
-    g_update.emplace(g_device->GetUpdate("update"));
 
     // Start rendering a frame to unblock the JavaScript from queuing graphics
     // commands.
     g_device->StartRenderingCurrentFrame();
-    g_update->Start();
 
     // Create a Babylon Native application runtime which hosts a JavaScript
     // engine on a new thread.
@@ -359,7 +354,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     addToContext.get_future().wait();
 
     // Render a frame so that `AddToContextAsync` will complete.
-    g_update->Finish();
     g_device->FinishRenderingCurrentFrame();
 
     // Wait for `startup` to finish.
@@ -372,7 +366,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MSG msg{};
 
     g_device->StartRenderingCurrentFrame();
-    g_update->Start();
 
     // Main message loop:
     while (msg.message != WM_QUIT)
@@ -388,7 +381,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
             if (g_device)
             {
                 // Finish Babylon Native rendering.
-                g_update->Finish();
                 g_device->FinishRenderingCurrentFrame();
 
                 if (g_selectedModel >= 0)
@@ -406,7 +398,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                 // Present and start rendering next frame.
                 swapChain->Present(1, 0);
                 g_device->StartRenderingCurrentFrame();
-                g_update->Start();
             }
 
             result = PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) && msg.message != WM_QUIT;
@@ -460,7 +451,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 if (g_device)
                 {
-                    g_update->Finish();
                     g_device->FinishRenderingCurrentFrame();
                 }
 
@@ -479,7 +469,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     if (g_device)
                     {
                         g_device->StartRenderingCurrentFrame();
-                        g_update->Start();
                     }
                 }
             }

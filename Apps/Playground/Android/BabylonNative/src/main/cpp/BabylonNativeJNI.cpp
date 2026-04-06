@@ -167,10 +167,8 @@ extern "C"
     {
         if (appContext)
         {
-            appContext->DeviceUpdate().Finish();
             appContext->Device().FinishRenderingCurrentFrame();
             appContext->Device().StartRenderingCurrentFrame();
-            appContext->DeviceUpdate().Start();
         }
     }
 

@@ -101,14 +101,12 @@ int RunApp(
         return EXIT_FAILURE;
     }
 
-    // Create the Babylon Native graphics device and update.
+    // Create the Babylon Native graphics device.
     auto device = Babylon::Graphics::Device(config);
-    auto deviceUpdate = device.GetUpdate("update");
 
     // Start rendering a frame to unblock the JavaScript from queuing graphics
     // commands.
     device.StartRenderingCurrentFrame();
-    deviceUpdate.Start();
 
     // Create a Babylon Native application runtime which hosts a JavaScript
     // engine on a new thread.
@@ -163,7 +161,6 @@ int RunApp(
     addToContext.get_future().wait();
 
     // Render a frame so that `AddToContextAsync` will complete.
-    deviceUpdate.Finish();
     device.FinishRenderingCurrentFrame();
 
     // Wait for `startup` to finish.
@@ -171,7 +168,6 @@ int RunApp(
 
     // Start a new frame for rendering the scene.
     device.StartRenderingCurrentFrame();
-    deviceUpdate.Start();
 
     std::promise<void> renderScene{};
 
@@ -193,7 +189,6 @@ int RunApp(
     renderScene.get_future().wait();
 
     // Finish the frame.
-    deviceUpdate.Finish();
     device.FinishRenderingCurrentFrame();
 
     // Save the rendered output as a PNG.
