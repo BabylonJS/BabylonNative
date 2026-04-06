@@ -3,7 +3,8 @@
 #include "BgfxCallback.h"
 #include <bx/allocator.h>
 #include "continuation_scheduler.h"
-#include "SafeTimespanGuarantor.h"
+
+#include <arcana/threading/task.h>
 
 #include <napi/env.h>
 
@@ -15,7 +16,6 @@
 
 namespace Babylon::Graphics
 {
-    class Update;
     class DeviceContext;
     class DeviceImpl;
 
@@ -29,53 +29,22 @@ namespace Babylon::Graphics
         bgfx::TextureFormat::Enum Format{};
     };
 
-    class UpdateToken final
+    // RAII scope that prevents FinishRenderingCurrentFrame from proceeding
+    // until all outstanding scopes are destroyed. Replaces UpdateToken/SafeTimespanGuarantor.
+    class FrameCompletionScope final
     {
     public:
-        UpdateToken(const UpdateToken& other) = delete;
-        UpdateToken& operator=(const UpdateToken& other) = delete;
+        FrameCompletionScope(const FrameCompletionScope&) = delete;
+        FrameCompletionScope& operator=(const FrameCompletionScope&) = delete;
+        FrameCompletionScope& operator=(FrameCompletionScope&&) = delete;
 
-        UpdateToken(UpdateToken&&) noexcept = default;
-
-        // The move assignment of `SafeTimespanGuarantor::SafetyGuarantee` is marked as delete.
-        // See https://github.com/Microsoft/GSL/issues/705.
-        //UpdateToken& operator=(UpdateToken&& other) = delete;
-
-        bgfx::Encoder* GetEncoder();
-
-    private:
-        friend class Update;
-
-        UpdateToken(DeviceContext&, SafeTimespanGuarantor&);
-
-        DeviceContext& m_context;
-        SafeTimespanGuarantor::SafetyGuarantee m_guarantee;
-    };
-
-    class Update
-    {
-    public:
-        continuation_scheduler<>& Scheduler()
-        {
-            return m_safeTimespanGuarantor.OpenScheduler();
-        }
-
-        UpdateToken GetUpdateToken()
-        {
-            return {m_context, m_safeTimespanGuarantor};
-        }
+        FrameCompletionScope(FrameCompletionScope&&) noexcept;
+        ~FrameCompletionScope();
 
     private:
         friend class DeviceContext;
-
-        Update(SafeTimespanGuarantor& safeTimespanGuarantor, DeviceContext& context)
-            : m_safeTimespanGuarantor{safeTimespanGuarantor}
-            , m_context{context}
-        {
-        }
-
-        SafeTimespanGuarantor& m_safeTimespanGuarantor;
-        DeviceContext& m_context;
+        FrameCompletionScope(DeviceImpl&);
+        DeviceImpl* m_impl;
     };
 
     class DeviceContext
@@ -93,7 +62,16 @@ namespace Babylon::Graphics
         continuation_scheduler<>& BeforeRenderScheduler();
         continuation_scheduler<>& AfterRenderScheduler();
 
-        Update GetUpdate(const char* updateName);
+        // Scheduler that fires when StartRenderingCurrentFrame ticks the frame start dispatcher.
+        // Use this to schedule work (e.g., requestAnimationFrame callbacks) that should run each frame.
+        continuation_scheduler<>& FrameStartScheduler();
+
+        // Acquire a scope that prevents FinishRenderingCurrentFrame from completing.
+        // The scope must be held while JS frame callbacks are running.
+        FrameCompletionScope AcquireFrameCompletionScope();
+
+        // Get a bgfx encoder for the calling thread. Creates one lazily via bgfx::begin().
+        bgfx::Encoder* GetEncoderForThread();
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
         void SetRenderResetCallback(std::function<void()> callback);
@@ -122,8 +100,6 @@ namespace Babylon::Graphics
         static bx::AllocatorI& GetDefaultAllocator() { return m_allocator; }
 
     private:
-        friend UpdateToken;
-
         DeviceImpl& m_graphicsImpl;
 
         std::unordered_map<uint16_t, TextureInfo> m_textureHandleToInfo{};

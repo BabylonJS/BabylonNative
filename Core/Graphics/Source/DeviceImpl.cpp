@@ -257,19 +257,6 @@ namespace Babylon::Graphics
         }
     }
 
-    SafeTimespanGuarantor& DeviceImpl::GetSafeTimespanGuarantor(const char* updateName)
-    {
-        std::scoped_lock lock{m_updateSafeTimespansMutex};
-        std::string updateNameStr{updateName};
-        auto found = m_updateSafeTimespans.find(updateNameStr);
-        if (found == m_updateSafeTimespans.end())
-        {
-            m_updateSafeTimespans.emplace(std::piecewise_construct, std::forward_as_tuple(updateNameStr), std::forward_as_tuple(m_cancellationSource));
-            found = m_updateSafeTimespans.find(updateNameStr);
-        }
-        return found->second;
-    }
-
     void DeviceImpl::SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput)
     {
         ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
@@ -292,27 +279,22 @@ namespace Babylon::Graphics
         // Ensure rendering is enabled.
         EnableRendering();
 
-        // Unlock the update safe timespans.
+        // Unblock JS threads waiting to acquire FrameCompletionScopes.
         {
-            std::scoped_lock lock{m_updateSafeTimespansMutex};
-            for (auto& [key, value] : m_updateSafeTimespans)
-            {
-                value.Unlock();
-            }
+            std::lock_guard lock{m_frameSyncMutex};
+            m_frameBlocked = false;
         }
+        m_frameSyncCV.notify_all();
+
+        // Tick the frame start dispatcher. This fires any pending requestAnimationFrame
+        // callbacks that were scheduled via FrameStartScheduler(). Those callbacks will
+        // acquire FrameCompletionScopes to prevent FinishRenderingCurrentFrame from
+        // proceeding until JS rendering is complete.
+        m_frameStartDispatcher.tick(*m_cancellationSource);
     }
 
     void DeviceImpl::FinishRenderingCurrentFrame()
     {
-        // Lock the update safe timespans.
-        {
-            std::scoped_lock lock{m_updateSafeTimespansMutex};
-            for (auto& [key, value] : m_updateSafeTimespans)
-            {
-                value.Lock();
-            }
-        }
-
         arcana::trace_region finishRenderingRegion{"DeviceImpl::FinishRenderingCurrentFrame"};
 
         ASSERT_THREAD_AFFINITY(m_renderThreadAffinity);
@@ -320,6 +302,15 @@ namespace Babylon::Graphics
         if (!m_rendering)
         {
             throw std::runtime_error{"Current frame cannot be finished prior to having been started."};
+        }
+
+        // Wait for all outstanding FrameCompletionScopes to be released, then block
+        // new scope acquisitions. This ensures no bgfx API calls are in flight when
+        // bgfx::frame() is called.
+        {
+            std::unique_lock lock{m_frameSyncMutex};
+            m_frameSyncCV.wait(lock, [this] { return m_pendingFrameScopes == 0; });
+            m_frameBlocked = true;
         }
 
         m_beforeRenderDispatcher.tick(*m_cancellationSource);
@@ -366,6 +357,27 @@ namespace Babylon::Graphics
     continuation_scheduler<>& DeviceImpl::AfterRenderScheduler()
     {
         return m_afterRenderDispatcher.scheduler();
+    }
+
+    continuation_scheduler<>& DeviceImpl::FrameStartScheduler()
+    {
+        return m_frameStartDispatcher.scheduler();
+    }
+
+    void DeviceImpl::IncrementPendingFrameScopes()
+    {
+        std::unique_lock lock{m_frameSyncMutex};
+        m_frameSyncCV.wait(lock, [this] { return !m_frameBlocked; });
+        m_pendingFrameScopes++;
+    }
+
+    void DeviceImpl::DecrementPendingFrameScopes()
+    {
+        {
+            std::lock_guard lock{m_frameSyncMutex};
+            m_pendingFrameScopes--;
+        }
+        m_frameSyncCV.notify_all();
     }
 
     void DeviceImpl::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)

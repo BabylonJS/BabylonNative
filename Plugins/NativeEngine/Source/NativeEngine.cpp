@@ -727,8 +727,12 @@ namespace Babylon
                 InstanceMethod("submitCommands", &NativeEngine::SubmitCommands),
 
                 InstanceMethod("populateFrameStats", &NativeEngine::PopulateFrameStats),
+                InstanceMethod("beginFrame", &NativeEngine::BeginFrame),
+                InstanceMethod("endFrame", &NativeEngine::EndFrame),
 
                 InstanceMethod("setDeviceLostCallback", &NativeEngine::SetRenderResetCallback),
+
+
             });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
@@ -744,7 +748,6 @@ namespace Babylon
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtime{runtime}
         , m_deviceContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
-        , m_update{m_deviceContext.GetUpdate("update")}
         , m_runtimeScheduler{runtime}
         , m_defaultFrameBuffer{m_deviceContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
         , m_boundFrameBuffer{&m_defaultFrameBuffer}
@@ -1342,7 +1345,7 @@ namespace Babylon
 
     void NativeEngine::CopyTexture(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
+        bgfx::Encoder* encoder = GetEncoder();
 
         const auto textureSource = data.ReadPointer<Graphics::Texture>();
         const auto textureDestination = data.ReadPointer<Graphics::Texture>();
@@ -1569,7 +1572,7 @@ namespace Babylon
 
     void NativeEngine::SetTexture(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
+        bgfx::Encoder* encoder = GetEncoder();
 
         const UniformInfo* uniformInfo = data.ReadPointer<UniformInfo>();
         const Graphics::Texture* texture = data.ReadPointer<Graphics::Texture>();
@@ -1579,7 +1582,7 @@ namespace Babylon
 
     void NativeEngine::UnsetTexture(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
+        bgfx::Encoder* encoder = GetEncoder();
 
         const UniformInfo* uniformInfo = data.ReadPointer<UniformInfo>();
 
@@ -1588,7 +1591,7 @@ namespace Babylon
 
     void NativeEngine::DiscardAllTextures(NativeDataStream::Reader&)
     {
-        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
+        bgfx::Encoder* encoder = GetEncoder();
         encoder->discard(BGFX_DISCARD_BINDINGS);
     }
 
@@ -1654,7 +1657,7 @@ namespace Babylon
             if (x != 0 || y != 0 || width != (texture->Width() >> mipLevel) || height != (texture->Height() >> mipLevel) || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
             {
                 const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
-                bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+                bgfx::Encoder* encoder{GetEncoder()};
                 encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0, sourceTextureHandle, mipLevel, x, y, /*srcZ*/ 0, width, height, /*depth*/ 0);
 
                 sourceTextureHandle = blitTextureHandle;
@@ -1798,7 +1801,7 @@ namespace Babylon
 
     void NativeEngine::BindFrameBuffer(NativeDataStream::Reader& data)
     {
-        auto encoder = GetUpdateToken().GetEncoder();
+        auto encoder = GetEncoder();
 
         Graphics::FrameBuffer* frameBuffer = data.ReadPointer<Graphics::FrameBuffer>();
         m_boundFrameBuffer->Unbind(*encoder);
@@ -1809,7 +1812,7 @@ namespace Babylon
 
     void NativeEngine::UnbindFrameBuffer(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
+        bgfx::Encoder* encoder = GetEncoder();
 
         const Graphics::FrameBuffer* frameBuffer = data.ReadPointer<Graphics::FrameBuffer>();
 
@@ -1825,7 +1828,7 @@ namespace Babylon
     // In that case the instanceCount will be calculated inside the SetVertexBuffers method.
     void NativeEngine::DrawIndexed(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+        bgfx::Encoder* encoder{GetEncoder()};
 
         const uint32_t fillMode = data.ReadUint32();
         const uint32_t indexStart = data.ReadUint32();
@@ -1842,7 +1845,7 @@ namespace Babylon
 
     void NativeEngine::DrawIndexedInstanced(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+        bgfx::Encoder* encoder{GetEncoder()};
 
         const uint32_t fillMode = data.ReadUint32();
         const uint32_t indexStart = data.ReadUint32();
@@ -1862,7 +1865,7 @@ namespace Babylon
     // In that case the instanceCount will be calculated inside the SetVertexBuffers method.
     void NativeEngine::Draw(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+        bgfx::Encoder* encoder{GetEncoder()};
 
         const uint32_t fillMode = data.ReadUint32();
         const uint32_t verticesStart = data.ReadUint32();
@@ -1878,7 +1881,7 @@ namespace Babylon
 
     void NativeEngine::DrawInstanced(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+        bgfx::Encoder* encoder{GetEncoder()};
 
         const uint32_t fillMode = data.ReadUint32();
         const uint32_t verticesStart = data.ReadUint32();
@@ -1895,7 +1898,7 @@ namespace Babylon
 
     void NativeEngine::Clear(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+        bgfx::Encoder* encoder{GetEncoder()};
 
         uint16_t flags{0};
         uint32_t rgba{0x000000ff};
@@ -2103,7 +2106,7 @@ namespace Babylon
 
     void NativeEngine::SetViewPort(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+        bgfx::Encoder* encoder{GetEncoder()};
 
         const float x{data.ReadFloat32()};
         const float y{data.ReadFloat32()};
@@ -2116,7 +2119,7 @@ namespace Babylon
 
     void NativeEngine::SetScissor(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+        bgfx::Encoder* encoder{GetEncoder()};
 
         const float x{data.ReadFloat32()};
         const float y{data.ReadFloat32()};
@@ -2151,12 +2154,19 @@ namespace Babylon
 
     void NativeEngine::PopulateFrameStats(const Napi::CallbackInfo& info)
     {
-        const auto updateToken{m_update.GetUpdateToken()};
         const auto stats{bgfx::getStats()};
         const double toGpuNs = 1000000000.0 / double(stats->gpuTimerFreq);
         const double gpuTimeNs = (stats->gpuTimeEnd - stats->gpuTimeBegin) * toGpuNs;
         Napi::Object jsStatsObject = info[0].As<Napi::Object>();
         jsStatsObject.Set("gpuTimeNs", gpuTimeNs);
+    }
+
+    void NativeEngine::BeginFrame(const Napi::CallbackInfo&)
+    {
+    }
+
+    void NativeEngine::EndFrame(const Napi::CallbackInfo&)
+    {
     }
 
     void NativeEngine::DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode)
@@ -2225,19 +2235,6 @@ namespace Babylon
         boundFrameBuffer.Submit(*encoder, m_currentProgram->Handle(), BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
     }
 
-    Graphics::UpdateToken& NativeEngine::GetUpdateToken()
-    {
-        if (!m_updateToken)
-        {
-            m_updateToken.emplace(m_update.GetUpdateToken());
-            m_runtime.Dispatch([this](auto) {
-                m_updateToken.reset();
-            });
-        }
-
-        return m_updateToken.value();
-    }
-
     Graphics::FrameBuffer& NativeEngine::GetBoundFrameBuffer(bgfx::Encoder& encoder)
     {
         if (m_boundFrameBuffer == nullptr)
@@ -2264,8 +2261,8 @@ namespace Babylon
 
         m_requestAnimationFrameCallbacksScheduled = true;
 
-        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{m_update.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() {
+        arcana::make_task(m_deviceContext.FrameStartScheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
+            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, frameScope{std::make_shared<Graphics::FrameCompletionScope>(m_deviceContext.AcquireFrameCompletionScope())}, cancellationSource{m_cancellationSource}]() {
                 m_requestAnimationFrameCallbacksScheduled = false;
 
                 arcana::trace_region scheduleRegion{"NativeEngine::ScheduleRequestAnimationFrameCallbacks invoke JS callbacks"};
@@ -2274,6 +2271,12 @@ namespace Babylon
                 {
                     callback.Value().Call({});
                 }
+
+                // Defer FrameCompletionScope release to the next JS dispatch cycle.
+                // This ensures all bgfx API calls from the current JS execution
+                // (including resource destruction) complete before the main thread
+                // can call bgfx::frame() in FinishRenderingCurrentFrame.
+                m_runtime.Dispatch([prevent_frame = frameScope](auto) {});
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
                 if (!cancellationSource->cancelled() && result.has_error())
                 {
@@ -2281,5 +2284,19 @@ namespace Babylon
                 }
             });
         });
+    }
+
+    bgfx::Encoder* NativeEngine::GetEncoder()
+    {
+        if (!m_currentFrameScope)
+        {
+            m_currentFrameScope = std::make_shared<Graphics::FrameCompletionScope>(m_deviceContext.AcquireFrameCompletionScope());
+            // Release the scope on the next JS dispatch cycle, ensuring all bgfx
+            // API calls from the current cycle complete before bgfx::frame() runs.
+            m_runtime.Dispatch([this](auto) {
+                m_currentFrameScope.reset();
+            });
+        }
+        return m_deviceContext.GetEncoderForThread();
     }
 }

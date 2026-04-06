@@ -6,15 +6,24 @@
 
 namespace Babylon::Graphics
 {
-    UpdateToken::UpdateToken(DeviceContext& context, SafeTimespanGuarantor& guarantor)
-        : m_context{context}
-        , m_guarantee{guarantor.GetSafetyGuarantee()}
+    FrameCompletionScope::FrameCompletionScope(DeviceImpl& impl)
+        : m_impl{&impl}
     {
+        m_impl->IncrementPendingFrameScopes();
     }
 
-    bgfx::Encoder* UpdateToken::GetEncoder()
+    FrameCompletionScope::FrameCompletionScope(FrameCompletionScope&& other) noexcept
+        : m_impl{other.m_impl}
     {
-        return m_context.m_graphicsImpl.GetEncoderForThread();
+        other.m_impl = nullptr;
+    }
+
+    FrameCompletionScope::~FrameCompletionScope()
+    {
+        if (m_impl)
+        {
+            m_impl->DecrementPendingFrameScopes();
+        }
     }
 }
 
@@ -51,9 +60,19 @@ namespace Babylon::Graphics
         return m_graphicsImpl.AfterRenderScheduler();
     }
 
-    Update DeviceContext::GetUpdate(const char* updateName)
+    continuation_scheduler<>& DeviceContext::FrameStartScheduler()
     {
-        return {m_graphicsImpl.GetSafeTimespanGuarantor(updateName), *this};
+        return m_graphicsImpl.FrameStartScheduler();
+    }
+
+    FrameCompletionScope DeviceContext::AcquireFrameCompletionScope()
+    {
+        return FrameCompletionScope{m_graphicsImpl};
+    }
+
+    bgfx::Encoder* DeviceContext::GetEncoderForThread()
+    {
+        return m_graphicsImpl.GetEncoderForThread();
     }
 
     void DeviceContext::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)

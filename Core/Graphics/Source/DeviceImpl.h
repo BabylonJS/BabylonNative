@@ -3,7 +3,6 @@
 #include <Babylon/Graphics/BgfxCallback.h>
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Graphics/DeviceContext.h>
-#include <Babylon/Graphics/SafeTimespanGuarantor.h>
 
 #include <arcana/containers/ticketed_collection.h>
 #include <arcana/threading/blocking_concurrent_queue.h>
@@ -16,6 +15,8 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 
+#include <atomic>
+#include <condition_variable>
 #include <memory>
 #include <map>
 #include <optional>
@@ -59,8 +60,6 @@ namespace Babylon::Graphics
         void EnableRendering();
         void DisableRendering();
 
-        SafeTimespanGuarantor& GetSafeTimespanGuarantor(const char* updateName);
-
         void SetDiagnosticOutput(std::function<void(const char* output)> diagnosticOutput);
 
         void StartRenderingCurrentFrame();
@@ -84,6 +83,7 @@ namespace Babylon::Graphics
 
         continuation_scheduler<>& BeforeRenderScheduler();
         continuation_scheduler<>& AfterRenderScheduler();
+        continuation_scheduler<>& FrameStartScheduler();
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
 
@@ -94,6 +94,12 @@ namespace Babylon::Graphics
 
         bgfx::ViewId AcquireNewViewId(bgfx::Encoder&);
 
+        // Frame completion scope support
+        void IncrementPendingFrameScopes();
+        void DecrementPendingFrameScopes();
+
+        bgfx::Encoder* GetEncoderForThread();
+
         /* ********** END DEVICE CONTEXT CONTRACT ********** */
 
         // TODO: HACK
@@ -103,7 +109,7 @@ namespace Babylon::Graphics
         }
 
     private:
-        friend class UpdateToken;
+        friend class FrameCompletionScope;
 
         static const bgfx::RendererType::Enum s_bgfxRenderType;
         static void ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window);
@@ -114,7 +120,6 @@ namespace Babylon::Graphics
         void UpdateBgfxResolution();
         void RequestScreenShots();
         void Frame();
-        bgfx::Encoder* GetEncoderForThread();
         void EndEncoders();
         void CaptureCallback(const BgfxCallback::CaptureData&);
 
@@ -150,6 +155,15 @@ namespace Babylon::Graphics
 
         continuation_dispatcher<> m_beforeRenderDispatcher{};
         continuation_dispatcher<> m_afterRenderDispatcher{};
+        continuation_dispatcher<> m_frameStartDispatcher{};
+
+        // Frame completion synchronization (replaces SafeTimespanGuarantor)
+        // m_frameBlocked: when true, IncrementPendingFrameScopes blocks (bgfx::frame is running or no frame started)
+        // m_pendingFrameScopes: number of active FrameCompletionScopes; FinishRenderingCurrentFrame waits for 0
+        std::mutex m_frameSyncMutex{};
+        std::condition_variable m_frameSyncCV{};
+        int m_pendingFrameScopes{0};
+        bool m_frameBlocked{true};
 
         std::mutex m_captureCallbacksMutex{};
         arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>> m_captureCallbacks{};
@@ -160,9 +174,6 @@ namespace Babylon::Graphics
         std::mutex m_threadIdToEncoderMutex{};
 
         std::queue<std::pair<uint32_t, arcana::task_completion_source<void, std::exception_ptr>>> m_readTextureRequests{};
-
-        std::map<std::string, SafeTimespanGuarantor> m_updateSafeTimespans{};
-        std::mutex m_updateSafeTimespansMutex{};
 
         DeviceContext m_context;
         uintptr_t m_bgfxId = 0;

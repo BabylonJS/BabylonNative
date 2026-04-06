@@ -105,7 +105,6 @@ namespace Babylon::Polyfills::Internal
         , m_canvas{NativeCanvas::Unwrap(info[0].As<Napi::Object>())}
         , m_nvg{std::make_shared<NVGcontext*>(nvgCreate(1))}
         , m_graphicsContext{m_canvas->GetGraphicsContext()}
-        , m_update{m_graphicsContext.GetUpdate("update")}
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtimeScheduler{Babylon::JsRuntime::GetFromJavaScript(info.Env())}
         , Polyfills::Canvas::Impl::MonitoredResource{Polyfills::Canvas::Impl::GetFromJavaScript(info.Env())}
@@ -612,8 +611,10 @@ namespace Babylon::Polyfills::Internal
 
         Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
 
-        auto updateToken{m_update.GetUpdateToken()};
-        bgfx::Encoder* encoder = updateToken.GetEncoder();
+        // Hold a FrameCompletionScope for the duration of Flush to prevent
+        // bgfx::frame() from running while we're making bgfx API calls.
+        auto frameScope = m_graphicsContext.AcquireFrameCompletionScope();
+        bgfx::Encoder* encoder = m_graphicsContext.GetEncoderForThread();
         frameBuffer.Bind(*encoder);
         if (needClear)
         {
