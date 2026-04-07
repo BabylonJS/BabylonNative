@@ -9,6 +9,7 @@ get_filename_component(UNIT_TESTS_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../../.."
 get_filename_component(TESTS_DIR "${UNIT_TESTS_DIR}/.." ABSOLUTE)
 get_filename_component(REPO_ROOT_DIR "${TESTS_DIR}/.." ABSOLUTE)
 
+set(JSRUNTIMEHOST_TESTS ON CACHE BOOL "" FORCE)
 add_subdirectory(${REPO_ROOT_DIR} "${CMAKE_CURRENT_BINARY_DIR}/JsRuntimeHost")
 
 FetchContent_MakeAvailable_With_Message(googletest)
@@ -21,6 +22,7 @@ add_library(UnitTestsJNI SHARED
     ${UNIT_TESTS_DIR}/Shared/Shared.cpp)
 
 target_compile_definitions(UnitTestsJNI PRIVATE JSRUNTIMEHOST_PLATFORM="${JSRUNTIMEHOST_PLATFORM}")
+target_compile_definitions(UnitTestsJNI PRIVATE ARCANA_TESTING_HOOKS)
 
 target_include_directories(UnitTestsJNI
     PRIVATE ${UNIT_TESTS_DIR})

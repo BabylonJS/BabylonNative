@@ -10,8 +10,8 @@ namespace Babylon
     }
 
     AppRuntime::AppRuntime(Options options)
-        : m_workQueue{std::make_unique<WorkQueue>([this] { RunPlatformTier(); })}
-        , m_options{std::move(options)}
+        : m_options{std::move(options)}
+        , m_workQueue{std::make_unique<WorkQueue>([this] { RunPlatformTier(); })}
     {
         Dispatch([this](Napi::Env env) {
             JsRuntime::CreateForJavaScript(env, [this](auto func) { Dispatch(std::move(func)); });

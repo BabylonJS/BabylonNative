@@ -61,7 +61,7 @@ namespace Babylon
         // extra logic around the invocation of a dispatched callback.
         void Execute(Dispatchable<void()> callback);
 
-        std::unique_ptr<WorkQueue> m_workQueue;
         Options m_options;
+        std::unique_ptr<WorkQueue> m_workQueue;
     };
 }
