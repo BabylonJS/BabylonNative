@@ -60,21 +60,6 @@ namespace Babylon::Graphics
 
     class DeviceImpl;
 
-    // Deprecated: DeviceUpdate is a no-op compatibility shim. Frame synchronization
-    // is now handled by FrameCompletionScope inside StartRenderingCurrentFrame/
-    // FinishRenderingCurrentFrame. This class will be removed in a future PR.
-    class DeviceUpdate
-    {
-    public:
-        void Start() {}
-        void Finish() {}
-
-        void RequestFinish(std::function<void()> onFinishCallback)
-        {
-            onFinishCallback();
-        }
-    };
-
     class Device
     {
     public:
@@ -105,8 +90,6 @@ namespace Babylon::Graphics
 
         void EnableRendering();
         void DisableRendering();
-
-        DeviceUpdate GetUpdate(const char* /*updateName*/) { return {}; }
 
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();

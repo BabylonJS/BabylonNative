@@ -63,12 +63,10 @@ AppContext::AppContext(
     graphicsConfig.MSAASamples = 4;
 
     m_device.emplace(graphicsConfig);
-    m_deviceUpdate.emplace(m_device->GetUpdate("update"));
 
     Babylon::Plugins::ShaderCache::Enable();
 
     m_device->StartRenderingCurrentFrame();
-    m_deviceUpdate->Start();
 
     Babylon::AppRuntime::Options options{};
 
@@ -143,7 +141,6 @@ AppContext::~AppContext()
 {
     if (m_device)
     {
-        m_deviceUpdate->Finish();
         m_device->FinishRenderingCurrentFrame();
     }
 
@@ -153,6 +150,5 @@ AppContext::~AppContext()
     m_canvas.reset();
     m_input = {};
     m_runtime.reset();
-    m_deviceUpdate.reset();
     m_device.reset();
 }

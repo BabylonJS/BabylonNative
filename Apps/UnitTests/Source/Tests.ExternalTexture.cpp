@@ -19,10 +19,8 @@ TEST(ExternalTexture, Construction)
     GTEST_SKIP();
 #else
     Babylon::Graphics::Device device{g_deviceConfig};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
@@ -31,7 +29,6 @@ TEST(ExternalTexture, Construction)
     EXPECT_EQ(externalTexture.Width(), 256u);
     EXPECT_EQ(externalTexture.Height(), 256u);
 
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 #endif
 }
@@ -42,10 +39,8 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
     GTEST_SKIP();
 #else
     Babylon::Graphics::Device device{g_deviceConfig};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
@@ -84,7 +79,6 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
     addToContext.get_future().wait();
 
     // Render a frame so that AddToContextAsync will complete.
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 
     // Wait for promise to resolve.
@@ -92,14 +86,12 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
 
     // Start a new frame.
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     // Update the external texture to a new texture.
     auto nativeTexture2 = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256);
     externalTexture.Update(nativeTexture2);
     DestroyTestTexture(nativeTexture2);
 
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 #endif
 }

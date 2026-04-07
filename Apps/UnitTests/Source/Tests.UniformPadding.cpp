@@ -26,10 +26,8 @@ extern Babylon::Graphics::Configuration g_deviceConfig;
 TEST(UniformPadding, SubVec4UniformsDoNotOverflow)
 {
     Babylon::Graphics::Device device{g_deviceConfig};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     Babylon::AppRuntime::Options options{};
     options.UnhandledExceptionHandler = [](const Napi::Error& error) {
@@ -102,6 +100,5 @@ TEST(UniformPadding, SubVec4UniformsDoNotOverflow)
 
     done.get_future().get();
 
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 }

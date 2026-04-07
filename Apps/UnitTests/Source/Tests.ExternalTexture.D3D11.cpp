@@ -19,12 +19,10 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdateWithLayerIndex)
     GTEST_SKIP();
 #else
     Babylon::Graphics::Device device{g_deviceConfig};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
     device.StartRenderingCurrentFrame();
-    update.Start();
 
-    auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256, 3);
+    auto nativeTexture= CreateTestTexture(device.GetPlatformInfo().Device, 256, 256, 3);
 
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
 
@@ -62,7 +60,6 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdateWithLayerIndex)
     addToContext.get_future().wait();
 
     // Render a frame so that AddToContextAsync will complete.
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 
     // Wait for promise to resolve.
@@ -70,14 +67,12 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdateWithLayerIndex)
 
     // Start a new frame.
     device.StartRenderingCurrentFrame();
-    update.Start();
 
-    // Update the external texture to a new texture with explicit layer index 2.
+    // Update the external textureto a new texture with explicit layer index 2.
     externalTexture.Update(nativeTexture, std::nullopt, 2);
 
     DestroyTestTexture(nativeTexture);
 
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 #endif
 }
