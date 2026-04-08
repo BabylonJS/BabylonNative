@@ -93,13 +93,11 @@ TEST(JavaScript, All)
     // Pump frames while JS tests run — tests use RAF internally and
     // SubmitCommands requires an active frame.
     auto exitCodeFuture = exitCodePromise.get_future();
-    device.StartRenderingCurrentFrame();
-    while (exitCodeFuture.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready)
+    while (exitCodeFuture.wait_for(std::chrono::milliseconds(16)) != std::future_status::ready)
     {
-        device.FinishRenderingCurrentFrame();
         device.StartRenderingCurrentFrame();
+        device.FinishRenderingCurrentFrame();
     }
-    device.FinishRenderingCurrentFrame();
 
     auto exitCode = exitCodeFuture.get();
     EXPECT_EQ(exitCode, 0);
