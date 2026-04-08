@@ -2150,15 +2150,12 @@ namespace Babylon
 
     void NativeEngine::SubmitCommands(const Napi::CallbackInfo& info)
     {
-        // If called outside the frame cycle (e.g., scene.dispose() from a
-        // getFrameBufferData callback), acquire a FrameCompletionScope. This
-        // blocks until StartRenderingCurrentFrame provides the encoder,
-        // then keeps the frame open so the encoder stays valid.
-        std::optional<Graphics::FrameCompletionScope> scope;
-        if (m_deviceContext.GetActiveEncoder() == nullptr)
-        {
-            scope.emplace(m_deviceContext.AcquireFrameCompletionScope());
-        }
+        // Acquire a FrameCompletionScope to ensure the encoder stays valid for
+        // the duration of command processing. When called within a RAF callback,
+        // the frame is already open and this returns immediately. When called
+        // outside (e.g., scene.dispose() from an XHR callback), this blocks
+        // until StartRenderingCurrentFrame provides the encoder.
+        Graphics::FrameCompletionScope scope{m_deviceContext.AcquireFrameCompletionScope()};
 
         try
         {
