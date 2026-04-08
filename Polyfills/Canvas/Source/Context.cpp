@@ -608,20 +608,25 @@ namespace Babylon::Polyfills::Internal
 
     void Context::Flush(const Napi::CallbackInfo&)
     {
-        // If called outside the frame cycle (e.g., during initialization/font loading),
-        // acquire a FrameCompletionScope which blocks until StartRenderingCurrentFrame
-        // provides the encoder, and keeps the frame open while we use it.
+        // If called outside the frame cycle (e.g., during initialization/font loading
+        // or async texture load callbacks), acquire a FrameCompletionScope which blocks
+        // until StartRenderingCurrentFrame provides the encoder.
         std::optional<Graphics::FrameCompletionScope> scope;
         if (m_graphicsContext.GetActiveEncoder() == nullptr)
         {
             scope.emplace(m_graphicsContext.AcquireFrameCompletionScope());
         }
 
+        bgfx::Encoder* encoder = m_graphicsContext.GetActiveEncoder();
+        if (encoder == nullptr)
+        {
+            return;
+        }
+
         bool needClear = m_canvas->UpdateRenderTarget();
 
         Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
 
-        bgfx::Encoder* encoder = m_graphicsContext.GetActiveEncoder();
         frameBuffer.Bind();
         if (needClear)
         {
