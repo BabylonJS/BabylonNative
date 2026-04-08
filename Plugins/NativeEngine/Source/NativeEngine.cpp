@@ -1741,7 +1741,7 @@ namespace Babylon
                         }
                         return textureBuffer;
                     })
-                    .then(m_runtimeScheduler, *m_cancellationSource, [this, bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred, tempTexture, sourceTextureHandle](std::vector<uint8_t> textureBuffer) mutable {
+                    .then(m_runtimeScheduler, *m_cancellationSource, [bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred](std::vector<uint8_t> textureBuffer) mutable {
                         assert(bufferRef.Value().ByteLength() - bufferOffset >= textureBuffer.size());
                         uint8_t* buf{static_cast<uint8_t*>(bufferRef.Value().Data())};
                         std::memcpy(buf + bufferOffset, textureBuffer.data(), textureBuffer.size());
