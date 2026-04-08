@@ -2154,15 +2154,10 @@ namespace Babylon
         // getFrameBufferData callback), acquire a FrameCompletionScope. This
         // blocks until StartRenderingCurrentFrame provides the encoder,
         // then keeps the frame open so the encoder stays valid.
-        // The scope is released via deferred dispatch on the next JS tick.
+        std::optional<Graphics::FrameCompletionScope> scope;
         if (m_deviceContext.GetActiveEncoder() == nullptr)
         {
-            // Release any stale scope from a previous frame before acquiring a new one.
-            m_outsideFrameScope.reset();
-            m_outsideFrameScope.emplace(m_deviceContext.AcquireFrameCompletionScope());
-            m_runtime.Dispatch([this](auto) {
-                m_outsideFrameScope.reset();
-            });
+            scope.emplace(m_deviceContext.AcquireFrameCompletionScope());
         }
 
         try

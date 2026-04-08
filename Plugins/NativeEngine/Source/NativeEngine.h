@@ -145,11 +145,6 @@ namespace Babylon
 
         JsRuntimeScheduler m_runtimeScheduler;
 
-        // When bgfx API calls happen outside the frame cycle (e.g., scene.dispose()
-        // from a callback), a FrameCompletionScope keeps the frame encoder alive.
-        // Released via deferred dispatch on the next JS tick.
-        std::optional<Graphics::FrameCompletionScope> m_outsideFrameScope;
-
         void ScheduleRequestAnimationFrameCallbacks();
         bool m_requestAnimationFrameCallbacksScheduled{};
 
