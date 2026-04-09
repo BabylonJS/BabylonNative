@@ -2,7 +2,7 @@
 
 namespace Babylon::Graphics
 {
-    using DeviceT = void *;
+    using DeviceT = void*;
     using TextureT = unsigned int;
     using TextureFormatT = unsigned int;
 
