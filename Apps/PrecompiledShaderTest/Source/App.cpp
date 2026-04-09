@@ -166,8 +166,16 @@ int RunApp(
     deviceUpdate.Finish();
     device.FinishRenderingCurrentFrame();
 
+    // Reopen the gate so JS can continue running (startup may issue bgfx commands).
+    device.StartRenderingCurrentFrame();
+    deviceUpdate.Start();
+
     // Wait for `startup` to finish.
     startup.get_future().wait();
+
+    // Close the frame opened above.
+    deviceUpdate.Finish();
+    device.FinishRenderingCurrentFrame();
 
     // Start a new frame for rendering the scene.
     device.StartRenderingCurrentFrame();
