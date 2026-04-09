@@ -39,7 +39,7 @@ FetchContent_Declare(bgfx.cmake
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG 631780e42886e5f12bfd1a5568c7395f1d657f43 
+    GIT_TAG 631780e42886e5f12bfd1a5568c7395f1d657f43
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
@@ -203,7 +203,7 @@ elseif(WIN32)
     if(NOT GRAPHICS_API)
         set(GRAPHICS_API D3D11)
     else()
-        if(NOT GRAPHICS_API STREQUAL Vulkan AND NOT GRAPHICS_API STREQUAL D3D11 AND NOT GRAPHICS_API STREQUAL D3D12)
+        if(NOT GRAPHICS_API STREQUAL Vulkan AND NOT GRAPHICS_API STREQUAL OpenGL AND NOT GRAPHICS_API STREQUAL D3D11 AND NOT GRAPHICS_API STREQUAL D3D12)
             message(FATAL_ERROR "Unrecognized/Unsupported render API: ${GRAPHICS_API}")
         endif()
     endif()
