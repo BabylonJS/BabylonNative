@@ -24,10 +24,8 @@ TEST(ShaderCache, SaveAndLoad)
     Babylon::Plugins::ShaderCache::Enable();
 
     Babylon::Graphics::Device device{g_deviceConfig};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     Babylon::AppRuntime::Options options{};
 
@@ -70,10 +68,8 @@ TEST(ShaderCache, SaveAndLoad)
     auto sceneIsReadyFuture = sceneIsReady.get_future();
     while (sceneIsReadyFuture.wait_for(16ms) != std::future_status::ready)
     {
-        update.Finish();
         device.FinishRenderingCurrentFrame();
         device.StartRenderingCurrentFrame();
-        update.Start();
     }
 
     static const char* shaderCacheFileName = "shaderCache.bin";
@@ -89,7 +85,6 @@ TEST(ShaderCache, SaveAndLoad)
         EXPECT_EQ(deserializedCount, shaderCount);
     }
 
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 
     Babylon::Plugins::ShaderCache::Disable();

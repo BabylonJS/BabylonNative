@@ -111,7 +111,6 @@ The code assumes the Native D3D12 frame buffer is stored in the ```externalTextu
 ```cpp
 
 // Make sure Babylon is done rendering.
-babylonDeviceUpdate->Finish();
 babylonDevice->FinishRenderingCurrentFrame();
 
 // Get CommandQueue used by Babylon Native.
@@ -217,6 +216,5 @@ readbackBuffer->Unmap(0, nullptr);
 
 // If the application needs to render more frames, release the JS Thread to run the next frame.
 babylonDevice->StartRenderingCurrentFrame();
-babylonDeviceUpdate->Start();
 
 ```

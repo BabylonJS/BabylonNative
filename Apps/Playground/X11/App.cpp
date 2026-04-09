@@ -136,10 +136,8 @@ int main(int _argc, const char* const* _argv)
     {
         if (!XPending(display) && g_appContext)
         {
-            g_appContext->DeviceUpdate().Finish();
             g_appContext->Device().FinishRenderingCurrentFrame();
             g_appContext->Device().StartRenderingCurrentFrame();
-            g_appContext->DeviceUpdate().Start();
         }
         else
         {

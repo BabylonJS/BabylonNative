@@ -93,12 +93,10 @@ int main()
 
     // Create the Babylon Native graphics device and update.
     auto device = CreateGraphicsDevice(d3dDevice.get());
-    auto deviceUpdate = device.GetUpdate("update");
 
     // Start rendering a frame to unblock the JavaScript from queuing graphics
     // commands.
     device.StartRenderingCurrentFrame();
-    deviceUpdate.Start();
 
     // Create a Babylon Native application runtime which hosts a JavaScript
     // engine on a new thread.
@@ -156,18 +154,15 @@ int main()
     addToContext.get_future().wait();
 
     // Render a frame so that `AddToContextAsync` will complete.
-    deviceUpdate.Finish();
     device.FinishRenderingCurrentFrame();
 
     // Reopen the gate so JS can continue running (startup may issue bgfx commands).
     device.StartRenderingCurrentFrame();
-    deviceUpdate.Start();
 
     // Wait for `startup` to finish.
     startup.get_future().wait();
 
     // Close the frame opened above.
-    deviceUpdate.Finish();
     device.FinishRenderingCurrentFrame();
 
     struct Asset
@@ -189,7 +184,6 @@ int main()
 
         // Start rendering a frame to unblock the JavaScript again.
         device.StartRenderingCurrentFrame();
-        deviceUpdate.Start();
 
         std::promise<void> loadAndRenderAsset{};
 
@@ -212,7 +206,6 @@ int main()
         loadAndRenderAsset.get_future().wait();
 
         // Finish rendering the frame.
-        deviceUpdate.Finish();
         device.FinishRenderingCurrentFrame();
 
         // Tell RenderDoc to stop capturing.
