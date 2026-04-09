@@ -1648,6 +1648,11 @@ namespace Babylon
         }
         else
         {
+            // Acquire a FrameCompletionScope for the duration of the read operation.
+            // This ensures the encoder is available for the blit (if needed) and that
+            // bgfx::readTexture lands in the same frame as the blit.
+            Graphics::FrameCompletionScope scope{m_deviceContext.AcquireFrameCompletionScope()};
+
             bgfx::TextureHandle sourceTextureHandle{texture->Handle()};
             auto tempTexture = std::make_shared<bool>(false);
 
@@ -1656,10 +1661,7 @@ namespace Babylon
             {
                 const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
 
-                // Acquire a scope to ensure the encoder is available, then blit inline.
-                Graphics::FrameCompletionScope blitScope{m_deviceContext.AcquireFrameCompletionScope()};
-                bgfx::Encoder* encoder = m_deviceContext.GetActiveEncoder();
-                assert(encoder != nullptr);
+                bgfx::Encoder* encoder = GetEncoder();
                 encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0, sourceTextureHandle, mipLevel, x, y, /*srcZ*/ 0, width, height, /*depth*/ 0);
 
                 sourceTextureHandle = blitTextureHandle;
