@@ -99,6 +99,15 @@ TEST(JavaScript, All)
         device.FinishRenderingCurrentFrame();
     }
 
+    // Keep the frame open during shutdown so any pending JS work
+    // (e.g., SubmitCommands acquiring a FrameCompletionScope) can complete.
+    device.StartRenderingCurrentFrame();
+
     auto exitCode = exitCodeFuture.get();
     EXPECT_EQ(exitCode, 0);
+
+    // Runtime destructor joins the JS thread; must happen before Finish.
+    nativeCanvas.reset();
+
+    device.FinishRenderingCurrentFrame();
 }
