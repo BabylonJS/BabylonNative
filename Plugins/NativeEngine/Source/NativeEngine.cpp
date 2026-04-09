@@ -1652,108 +1652,64 @@ namespace Babylon
             auto tempTexture = std::make_shared<bool>(false);
 
             // If the image needs to be cropped or the texture lacks the READ_BACK flag, blit to a temp texture.
-            // Both the blit and readTexture must be submitted in the correct order within
-            // the same frame, so when a blit is needed they are both scheduled together
-            // via BeforeRenderScheduler (runs on main thread before encoder is ended).
             if (x != 0 || y != 0 || width != (texture->Width() >> mipLevel) || height != (texture->Height() >> mipLevel) || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
             {
                 const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
 
+                // Acquire a scope to ensure the encoder is available, then blit inline.
+                Graphics::FrameCompletionScope blitScope{m_deviceContext.AcquireFrameCompletionScope()};
+                bgfx::Encoder* encoder = m_deviceContext.GetActiveEncoder();
+                assert(encoder != nullptr);
+                encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0, sourceTextureHandle, mipLevel, x, y, /*srcZ*/ 0, width, height, /*depth*/ 0);
+
                 sourceTextureHandle = blitTextureHandle;
                 *tempTexture = true;
                 mipLevel = 0;
-
-                // Schedule blit + readTexture on the main thread. Only bgfx calls
-                // go here — no N-API objects (they aren't thread-safe).
-                auto readTextureTask = arcana::make_task(m_deviceContext.BeforeRenderScheduler(), *m_cancellationSource,
-                    [this, src = texture->Handle(), dst = blitTextureHandle, origMipLevel = static_cast<uint8_t>(info[1].As<Napi::Number>().Uint32Value()), x, y, width, height, storageSize = sourceTextureInfo.storageSize]() {
-                        bgfx::Encoder* encoder = m_deviceContext.GetActiveEncoder();
-                        assert(encoder != nullptr);
-                        encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), dst, /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0, src, origMipLevel, x, y, /*srcZ*/ 0, width, height, /*depth*/ 0);
-
-                        std::vector<uint8_t> textureBuffer(storageSize);
-                        return m_deviceContext.ReadTextureAsync(dst, textureBuffer, 0)
-                            .then(arcana::inline_scheduler, *m_cancellationSource, [textureBuffer{std::move(textureBuffer)}]() mutable {
-                                return std::move(textureBuffer);
-                            });
-                    });
-
-                // Continue on JS thread with N-API objects.
-                std::move(readTextureTask)
-                    .then(arcana::inline_scheduler, *m_cancellationSource, [sourceTextureInfo, targetTextureInfo](std::vector<uint8_t> textureBuffer) mutable {
-                        if (targetTextureInfo.format != sourceTextureInfo.format)
-                        {
-                            std::vector<uint8_t> convertedTextureBuffer(targetTextureInfo.storageSize);
-                            if (!bimg::imageConvert(&Graphics::DeviceContext::GetDefaultAllocator(), convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
-                            {
-                                throw std::runtime_error{"Texture conversion to RBGA8 failed."};
-                            }
-                            textureBuffer = convertedTextureBuffer;
-                        }
-                        assert(textureBuffer.size() == targetTextureInfo.storageSize);
-                        if (bgfx::getCaps()->originBottomLeft)
-                        {
-                            FlipImage(textureBuffer, targetTextureInfo.height);
-                        }
-                        return textureBuffer;
-                    })
-                    .then(m_runtimeScheduler, *m_cancellationSource, [this, bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred, tempTexture, blitTextureHandle](std::vector<uint8_t> textureBuffer) mutable {
-                        assert(bufferRef.Value().ByteLength() - bufferOffset >= textureBuffer.size());
-                        uint8_t* buf{static_cast<uint8_t*>(bufferRef.Value().Data())};
-                        std::memcpy(buf + bufferOffset, textureBuffer.data(), textureBuffer.size());
-                        if (*tempTexture && !m_cancellationSource->cancelled())
-                        {
-                            bgfx::destroy(blitTextureHandle);
-                            *tempTexture = false;
-                        }
-                        deferred.Resolve(bufferRef.Value());
-                    })
-                    .then(m_runtimeScheduler, arcana::cancellation::none(), [this, deferred, tempTexture, blitTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
-                        if (*tempTexture && !m_cancellationSource->cancelled())
-                        {
-                            bgfx::destroy(blitTextureHandle);
-                        }
-                        if (result.has_error())
-                        {
-                            deferred.Reject(Napi::Error::New(Env(), result.error()).Value());
-                        }
-                    });
             }
-            else
-            {
-                // No blit needed — texture already has READ_BACK flag and correct region.
-                std::vector<uint8_t> textureBuffer(sourceTextureInfo.storageSize);
-                m_deviceContext.ReadTextureAsync(sourceTextureHandle, textureBuffer, mipLevel)
-                    .then(arcana::inline_scheduler, *m_cancellationSource, [textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
-                        if (targetTextureInfo.format != sourceTextureInfo.format)
+
+            // Allocate a buffer to store the source pixel data.
+            std::vector<uint8_t> textureBuffer(sourceTextureInfo.storageSize);
+
+            // Read the source texture (async — completes after bgfx::frame).
+            m_deviceContext.ReadTextureAsync(sourceTextureHandle, textureBuffer, mipLevel)
+                .then(arcana::inline_scheduler, *m_cancellationSource, [textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
+                    if (targetTextureInfo.format != sourceTextureInfo.format)
+                    {
+                        std::vector<uint8_t> convertedTextureBuffer(targetTextureInfo.storageSize);
+                        if (!bimg::imageConvert(&Graphics::DeviceContext::GetDefaultAllocator(), convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
                         {
-                            std::vector<uint8_t> convertedTextureBuffer(targetTextureInfo.storageSize);
-                            if (!bimg::imageConvert(&Graphics::DeviceContext::GetDefaultAllocator(), convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
-                            {
-                                throw std::runtime_error{"Texture conversion to RBGA8 failed."};
-                            }
-                            textureBuffer = convertedTextureBuffer;
+                            throw std::runtime_error{"Texture conversion to RBGA8 failed."};
                         }
-                        assert(textureBuffer.size() == targetTextureInfo.storageSize);
-                        if (bgfx::getCaps()->originBottomLeft)
-                        {
-                            FlipImage(textureBuffer, targetTextureInfo.height);
-                        }
-                        return textureBuffer;
-                    })
-                    .then(m_runtimeScheduler, *m_cancellationSource, [bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred](std::vector<uint8_t> textureBuffer) mutable {
-                        assert(bufferRef.Value().ByteLength() - bufferOffset >= textureBuffer.size());
-                        uint8_t* buf{static_cast<uint8_t*>(bufferRef.Value().Data())};
-                        std::memcpy(buf + bufferOffset, textureBuffer.data(), textureBuffer.size());
-                        deferred.Resolve(bufferRef.Value());
-                    })
-                    .then(m_runtimeScheduler, arcana::cancellation::none(), [this, deferred](const arcana::expected<void, std::exception_ptr>& result) {
-                        if (result.has_error())
-                        {
-                            deferred.Reject(Napi::Error::New(Env(), result.error()).Value());
-                        }
-                    });
-            }
+                        textureBuffer = convertedTextureBuffer;
+                    }
+                    assert(textureBuffer.size() == targetTextureInfo.storageSize);
+                    if (bgfx::getCaps()->originBottomLeft)
+                    {
+                        FlipImage(textureBuffer, targetTextureInfo.height);
+                    }
+                    return textureBuffer;
+                })
+                .then(m_runtimeScheduler, *m_cancellationSource, [this, bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred, tempTexture, sourceTextureHandle](std::vector<uint8_t> textureBuffer) mutable {
+                    assert(bufferRef.Value().ByteLength() - bufferOffset >= textureBuffer.size());
+                    uint8_t* buf{static_cast<uint8_t*>(bufferRef.Value().Data())};
+                    std::memcpy(buf + bufferOffset, textureBuffer.data(), textureBuffer.size());
+                    if (*tempTexture && !m_cancellationSource->cancelled())
+                    {
+                        bgfx::destroy(sourceTextureHandle);
+                        *tempTexture = false;
+                    }
+                    deferred.Resolve(bufferRef.Value());
+                })
+                .then(m_runtimeScheduler, arcana::cancellation::none(), [this, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
+                    if (*tempTexture && !m_cancellationSource->cancelled())
+                    {
+                        bgfx::destroy(sourceTextureHandle);
+                    }
+                    if (result.has_error())
+                    {
+                        deferred.Reject(Napi::Error::New(Env(), result.error()).Value());
+                    }
+                });
         }
 
         return deferred.Promise();
