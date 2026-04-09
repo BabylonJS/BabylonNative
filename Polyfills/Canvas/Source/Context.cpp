@@ -623,6 +623,11 @@ namespace Babylon::Polyfills::Internal
             return;
         }
 
+        // Discard any residual encoder state from NativeEngine rendering.
+        // In the old model Canvas had its own per-thread encoder with clean state;
+        // now it shares the frame encoder with NativeEngine.
+        encoder->discard(BGFX_DISCARD_ALL);
+
         bool needClear = m_canvas->UpdateRenderTarget();
 
         Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
