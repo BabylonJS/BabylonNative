@@ -1,6 +1,5 @@
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
-import org.java_websocket.framing.CloseFrame;
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -25,12 +24,6 @@ public class WebSocket extends WebSocketClient {
     @Override
     public void onClose(int code, String reason, boolean remote)
     {
-        // For all other close frames, we need to trigger the error callback
-        if (code != CloseFrame.NORMAL && code != CloseFrame.ABNORMAL_CLOSE && code != CloseFrame.NEVER_CONNECTED)
-        {
-            this.errorCallback(reason);
-        }
-
         this.closeCallback(code, reason);
     }
 
