@@ -318,7 +318,7 @@ namespace Babylon
                 texture->Create2D(static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), (image->m_numMips > 1), 1, Cast(image->m_format), flags);
             }
 
-            for (uint8_t mip = 0; mip < image->m_numMips; ++mip)
+            for (uint8_t mip = 0, numMips = image->m_numMips; mip < numMips; ++mip)
             {
                 bimg::ImageMip imageMip{};
                 if (bimg::imageGetRawData(*image, 0, mip, image->m_data, image->m_size, imageMip))
@@ -387,7 +387,7 @@ namespace Babylon
                 for (uint8_t side = 0; side < 6; ++side)
                 {
                     bimg::ImageContainer* image{images[side]};
-                    for (uint8_t mip = 0; mip < image->m_numMips; ++mip)
+                    for (uint8_t mip = 0, numMips = image->m_numMips; mip < numMips; ++mip)
                     {
                         bimg::ImageMip imageMip{};
                         if (bimg::imageGetRawData(*image, 0, mip, image->m_data, image->m_size, imageMip))
