@@ -3,6 +3,7 @@ parameters:
   vmImage: ""
   enableSanitizers: false
   generator: Xcode
+  xcodeVersion: ""
 
 jobs:
   - job: ${{parameters.name}}
@@ -19,8 +20,8 @@ jobs:
           vmImage: ${{parameters.vmImage}}
 
       - script: |
-          sudo xcode-select --switch /Applications/Xcode_$(XCODE_VERSION).app/Contents/Developer
-        displayName: "Select XCode $(XCODE_VERSION)"
+          sudo xcode-select --switch /Applications/Xcode_${{parameters.xcodeVersion}}.app/Contents/Developer
+        displayName: "Select Xcode ${{parameters.xcodeVersion}}"
 
       - script: |
           cmake -G "${{parameters.generator}}" -B build/macOS -D BABYLON_DEBUG_TRACE=ON -D ENABLE_SANITIZERS=$(SANITIZER_FLAG) -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
