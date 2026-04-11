@@ -90,6 +90,24 @@ TEST(JavaScript, All)
     device.StartRenderingCurrentFrame();
     device.FinishRenderingCurrentFrame();
 
-    auto exitCode{exitCodePromise.get_future().get()};
+    // Pump frames while JS tests run — tests use RAF internally and
+    // SubmitCommands requires an active frame.
+    auto exitCodeFuture = exitCodePromise.get_future();
+    while (exitCodeFuture.wait_for(std::chrono::milliseconds(16)) != std::future_status::ready)
+    {
+        device.StartRenderingCurrentFrame();
+        device.FinishRenderingCurrentFrame();
+    }
+
+    // Keep the frame open during shutdown so any pending JS work
+    // (e.g., SubmitCommands acquiring a FrameCompletionScope) can complete.
+    device.StartRenderingCurrentFrame();
+
+    auto exitCode = exitCodeFuture.get();
     EXPECT_EQ(exitCode, 0);
+
+    // Runtime destructor joins the JS thread; must happen before Finish.
+    nativeCanvas.reset();
+
+    device.FinishRenderingCurrentFrame();
 }

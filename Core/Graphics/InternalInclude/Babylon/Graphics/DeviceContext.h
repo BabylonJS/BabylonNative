@@ -3,7 +3,8 @@
 #include "BgfxCallback.h"
 #include <bx/allocator.h>
 #include "continuation_scheduler.h"
-#include "SafeTimespanGuarantor.h"
+
+#include <arcana/threading/task.h>
 
 #include <napi/env.h>
 
@@ -15,7 +16,6 @@
 
 namespace Babylon::Graphics
 {
-    class Update;
     class DeviceContext;
     class DeviceImpl;
 
@@ -29,53 +29,38 @@ namespace Babylon::Graphics
         bgfx::TextureFormat::Enum Format{};
     };
 
-    class UpdateToken final
+    // FrameCompletionScope is an RAII guard that keeps a frame "open" on the JS thread.
+    // While any scope is alive, FinishRenderingCurrentFrame() on the main thread will
+    // block — it cannot call bgfx::frame() until all scopes are destroyed.
+    //
+    // This prevents a race where the main thread submits a bgfx frame while the JS
+    // thread is still recording encoder commands (which would cause bgfx deadlocks
+    // or lost draw calls).
+    //
+    // Three usage patterns:
+    //   1. RAF scheduling: scope acquired on main thread during StartRenderingCurrentFrame,
+    //      transferred to JS thread, released after RAF callbacks complete + one extra
+    //      dispatch cycle (to cover GC-triggered resource destruction).
+    //   2. NativeEngine::GetEncoder(): scope acquired lazily when JS code uses the encoder
+    //      outside RAF (e.g., async texture loads, LOD switches). Released on next dispatch.
+    //   3. Canvas::Flush(): stack-scoped for the duration of nanovg rendering.
+    //
+    // Construction blocks if m_frameBlocked is true (frame submission in progress).
+    // Destruction decrements counter and wakes main thread via condition variable.
+    class FrameCompletionScope final
     {
     public:
-        UpdateToken(const UpdateToken& other) = delete;
-        UpdateToken& operator=(const UpdateToken& other) = delete;
+        FrameCompletionScope(const FrameCompletionScope&) = delete;
+        FrameCompletionScope& operator=(const FrameCompletionScope&) = delete;
+        FrameCompletionScope& operator=(FrameCompletionScope&&) = delete;
 
-        UpdateToken(UpdateToken&&) noexcept = default;
-
-        // The move assignment of `SafeTimespanGuarantor::SafetyGuarantee` is marked as delete.
-        // See https://github.com/Microsoft/GSL/issues/705.
-        //UpdateToken& operator=(UpdateToken&& other) = delete;
-
-        bgfx::Encoder* GetEncoder();
-
-    private:
-        friend class Update;
-
-        UpdateToken(DeviceContext&, SafeTimespanGuarantor&);
-
-        DeviceContext& m_context;
-        SafeTimespanGuarantor::SafetyGuarantee m_guarantee;
-    };
-
-    class Update
-    {
-    public:
-        continuation_scheduler<>& Scheduler()
-        {
-            return m_safeTimespanGuarantor.OpenScheduler();
-        }
-
-        UpdateToken GetUpdateToken()
-        {
-            return {m_context, m_safeTimespanGuarantor};
-        }
+        FrameCompletionScope(FrameCompletionScope&&) noexcept;
+        ~FrameCompletionScope();
 
     private:
         friend class DeviceContext;
-
-        Update(SafeTimespanGuarantor& safeTimespanGuarantor, DeviceContext& context)
-            : m_safeTimespanGuarantor{safeTimespanGuarantor}
-            , m_context{context}
-        {
-        }
-
-        SafeTimespanGuarantor& m_safeTimespanGuarantor;
-        DeviceContext& m_context;
+        FrameCompletionScope(DeviceImpl&);
+        DeviceImpl* m_impl;
     };
 
     class DeviceContext
@@ -93,7 +78,19 @@ namespace Babylon::Graphics
         continuation_scheduler<>& BeforeRenderScheduler();
         continuation_scheduler<>& AfterRenderScheduler();
 
-        Update GetUpdate(const char* updateName);
+        // Scheduler that fires when StartRenderingCurrentFrame ticks the frame start dispatcher.
+        // Use this to schedule work (e.g., requestAnimationFrame callbacks) that should run each frame.
+        continuation_scheduler<>& FrameStartScheduler();
+
+        // Acquire a scope that prevents FinishRenderingCurrentFrame from completing.
+        // The scope must be held while JS frame callbacks are running.
+        FrameCompletionScope AcquireFrameCompletionScope();
+
+        // Active encoder for the current frame. Managed by DeviceImpl in
+        // StartRenderingCurrentFrame/FinishRenderingCurrentFrame.
+        // Used by NativeEngine, Canvas, and NativeXr.
+        void SetActiveEncoder(bgfx::Encoder* encoder);
+        bgfx::Encoder* GetActiveEncoder();
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
         void SetRenderResetCallback(std::function<void()> callback);
@@ -113,7 +110,7 @@ namespace Babylon::Graphics
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
-        bgfx::ViewId AcquireNewViewId(bgfx::Encoder&);
+        bgfx::ViewId AcquireNewViewId();
 
         // TODO: find a different way to get the texture info for frame capture
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);
@@ -122,8 +119,6 @@ namespace Babylon::Graphics
         static bx::AllocatorI& GetDefaultAllocator() { return m_allocator; }
 
     private:
-        friend UpdateToken;
-
         DeviceImpl& m_graphicsImpl;
 
         std::unordered_map<uint16_t, TextureInfo> m_textureHandleToInfo{};
