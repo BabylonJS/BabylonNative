@@ -1,4 +1,5 @@
 #include "ShaderCompilerTraversers.h"
+#include "ShaderCompilerCommon.h"
 
 #include <glslang/Include/intermediate.h>
 #include <glslang/MachineIndependent/localintermediate.h>
@@ -212,7 +213,15 @@ namespace Babylon::ShaderCompilerTraversers
                 qualifier.storage = EvqUniform;
                 qualifier.layoutMatrix = ElmColumnMajor;
                 qualifier.layoutPacking = ElpStd140;
-                qualifier.layoutBinding = 0; // Determines which cbuffer it's bounds to (b0, b1, b2, etc.)
+#if VULKAN
+                const bool isFragment = (intermediate->getStage() == EShLangFragment);
+                // bgfx's old binding model (shader version < 11) expects the fragment
+                // shader uniform buffer at binding 48 (kSpirvOldFragmentBinding) and
+                // the vertex shader uniform buffer at binding 0.
+                qualifier.layoutBinding = isFragment ? 48 : 0;
+#else
+                qualifier.layoutBinding = 0;
+#endif
 
                 // Create the struct type. Name chosen arbitrarily (legacy reasons).
                 TType structType(structMembers, "Frame", qualifier);
@@ -748,6 +757,80 @@ namespace Babylon::ShaderCompilerTraversers
             const unsigned int FIRST_GENERIC_ATTRIBUTE_LOCATION{10};
         };
 
+        /// Implementation of VertexVaryingInTraverser for Vulkan.
+        /// Vulkan uses SPIR-V directly with location-based attribute bindings.
+        /// Similar to D3D, it maps Babylon.js attribute names to specific bgfx
+        /// attribute locations using bgfx's a_* naming convention.
+        class VertexVaryingInTraverserVulkan final : private VertexVaryingInTraverser
+        {
+        public:
+            static void Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
+            {
+                auto intermediate{program.getIntermediate(EShLangVertex)};
+                VertexVaryingInTraverserVulkan traverser{};
+                intermediate->getTreeRoot()->traverse(&traverser);
+                // UVs are effectively a special kind of generic attribute since they both use
+                // are implemented using texture coordinates, so we preprocess to pre-count the
+                // number of UV coordinate variables to prevent collisions.
+                for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
+                {
+                    if (name.size() >= 2 && name[0] == 'u' && name[1] == 'v')
+                    {
+                        traverser.m_genericAttributesRunningCount++;
+                    }
+                }
+                VertexVaryingInTraverser::Traverse(intermediate, ids, replacementToOriginalName, traverser);
+            }
+
+        private:
+            std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
+            {
+                const auto& nameToAttrib = ShaderCompilerCommon::GetBgfxNameToAttribMap();
+
+                // Map BabylonJS attribute names to bgfx names. The bgfx name is used
+                // to look up the Attrib::Enum (and thus the SPIR-V Location) from the
+                // shared mapping in ShaderCompilerCommon.h.
+                static const std::map<std::string, const char*> babylonToBgfx = {
+                    {"position",        "a_position"},
+                    {"normal",          "a_normal"},
+                    {"tangent",         "a_tangent"},
+                    {"uv",              "a_texcoord0"},
+                    {"uv2",             "a_texcoord1"},
+                    {"uv3",             "a_texcoord2"},
+                    {"uv4",             "a_texcoord3"},
+                    {"color",           "a_color0"},
+                    {"matricesIndices", "a_indices"},
+                    {"matricesWeights", "a_weight"},
+                    {"instanceColor",   "i_data5"},
+                    {"world0",          "i_data0"},
+                    {"world1",          "i_data1"},
+                    {"world2",          "i_data2"},
+                    {"world3",          "i_data3"},
+                    {"splatIndex0",     "i_data0"},
+                    {"splatIndex1",     "i_data1"},
+                    {"splatIndex2",     "i_data2"},
+                    {"splatIndex3",     "i_data3"},
+                };
+
+                auto babylonIt = babylonToBgfx.find(name);
+                if (babylonIt != babylonToBgfx.end())
+                {
+                    const char* bgfxName = babylonIt->second;
+                    auto attribIt = nameToAttrib.find(bgfxName);
+                    if (attribIt != nameToAttrib.end())
+                    {
+                        return {static_cast<unsigned int>(attribIt->second), bgfxName};
+                    }
+                }
+
+                const unsigned int attributeLocation = FIRST_GENERIC_ATTRIBUTE_LOCATION + m_genericAttributesRunningCount++;
+                if (attributeLocation >= static_cast<unsigned int>(bgfx::Attrib::Count))
+                    throw std::runtime_error("Cannot support more than 18 vertex attributes.");
+                return {attributeLocation, name};
+            }
+            const unsigned int FIRST_GENERIC_ATTRIBUTE_LOCATION{10};
+        };
+
         /// <summary>
         /// Split sampler symbols into separate sampler and texture symbols and assign bindings.
         /// This is required for DirectX and Metal. Note that bgfx expects sequential bindings
@@ -777,9 +860,21 @@ namespace Babylon::ShaderCompilerTraversers
 
             static void Traverse(TProgram& program, IdGenerator& ids)
             {
+#if VULKAN
+                // bgfx's old binding model (shader version < 11) expects texture bindings
+                // offset by kSpirvOldTextureShift (16) for VS and by
+                // kSpirvOldFragmentShift + kSpirvOldTextureShift (48+16=64) for FS.
+                // Samplers use the same binding as their texture (bgfx adds
+                // kSpirvSamplerShift at runtime).
+                unsigned int vsTextureBinding{16};  // kSpirvOldTextureShift
+                Traverse(program.getIntermediate(EShLangVertex), ids, vsTextureBinding);
+                unsigned int fsTextureBinding{64};  // kSpirvOldFragmentShift + kSpirvOldTextureShift
+                Traverse(program.getIntermediate(EShLangFragment), ids, fsTextureBinding);
+#else
                 unsigned int layoutBinding{0};
                 Traverse(program.getIntermediate(EShLangVertex), ids, layoutBinding);
                 Traverse(program.getIntermediate(EShLangFragment), ids, layoutBinding);
+#endif
             }
 
         private:
@@ -825,7 +920,13 @@ namespace Babylon::ShaderCompilerTraversers
                         publicType.basicType = type.getBasicType();
                         publicType.qualifier = type.getQualifier();
                         publicType.qualifier.precision = EpqHigh;
+#if VULKAN
+                        // bgfx's Vulkan renderer expects the sampler binding to be
+                        // texture binding + kSpirvSamplerShift (16).
+                        publicType.qualifier.layoutBinding = layoutBinding + 16;
+#else
                         publicType.qualifier.layoutBinding = layoutBinding;
+#endif
                         publicType.sampler.sampler = true;
 
                         TType newType{publicType};
@@ -948,6 +1049,11 @@ namespace Babylon::ShaderCompilerTraversers
         VertexVaryingInTraverserD3D::Traverse(program, ids, replacementToOriginalName);
     }
 
+    void AssignLocationsAndNamesToVertexVaryingsVulkan(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
+    {
+        VertexVaryingInTraverserVulkan::Traverse(program, ids, replacementToOriginalName);
+    }
+
     void SplitSamplersIntoSamplersAndTextures(TProgram& program, IdGenerator& ids)
     {
         SamplerSplitterTraverser::Traverse(program, ids);
@@ -956,5 +1062,73 @@ namespace Babylon::ShaderCompilerTraversers
     void InvertYDerivativeOperands(TProgram& program)
     {
         InvertYDerivativeOperandsTraverser::Traverse(program);
+    }
+
+    void AssignLocationsToInterStageVaryings(TProgram& program)
+    {
+        auto* vsIntermediate = program.getIntermediate(EShLangVertex);
+        auto* fsIntermediate = program.getIntermediate(EShLangFragment);
+        if (!vsIntermediate || !fsIntermediate)
+            return;
+
+        // First pass: collect VS output varying names from linker objects
+        // and assign sequential locations.
+        auto* vsRoot = vsIntermediate->getTreeRoot()->getAsAggregate();
+        if (!vsRoot) return;
+        auto* vsLinker = vsRoot->getSequence().back()->getAsAggregate();
+        if (!vsLinker) return;
+
+        std::map<std::string, int> nameToLocation;
+        int nextLocation = 0;
+
+        for (auto* node : vsLinker->getSequence())
+        {
+            auto* symbol = node->getAsSymbolNode();
+            if (symbol
+                && symbol->getType().getQualifier().isPipeOutput()
+                && symbol->getType().getQualifier().builtIn == EbvNone)
+            {
+                const std::string name = symbol->getName().c_str();
+                const auto& type = symbol->getType();
+                int locationCount = type.isMatrix() ? type.getMatrixCols() : 1;
+                nameToLocation[name] = nextLocation;
+                nextLocation += locationCount;
+            }
+        }
+
+        // Traverser that sets location on ALL symbol instances matching
+        // the varying names, not just linker objects.
+        class LocationSetter : public TIntermTraverser
+        {
+        public:
+            const std::map<std::string, int>& locations;
+            TStorageQualifier targetStorage;
+
+            LocationSetter(const std::map<std::string, int>& locs, TStorageQualifier storage)
+                : TIntermTraverser(true, false, false)
+                , locations(locs)
+                , targetStorage(storage) {}
+
+            void visitSymbol(TIntermSymbol* symbol) override
+            {
+                if (symbol->getType().getQualifier().storage == targetStorage
+                    && symbol->getType().getQualifier().builtIn == EbvNone)
+                {
+                    auto it = locations.find(symbol->getName().c_str());
+                    if (it != locations.end())
+                    {
+                        symbol->getWritableType().getQualifier().layoutLocation = it->second;
+                    }
+                }
+            }
+        };
+
+        // Second pass: apply locations to ALL VS output symbols
+        LocationSetter vsSetter(nameToLocation, EvqVaryingOut);
+        vsIntermediate->getTreeRoot()->traverse(&vsSetter);
+
+        // Third pass: apply matching locations to ALL FS input symbols
+        LocationSetter fsSetter(nameToLocation, EvqVaryingIn);
+        fsIntermediate->getTreeRoot()->traverse(&fsSetter);
     }
 }

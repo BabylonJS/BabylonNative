@@ -87,7 +87,7 @@ namespace Babylon::ShaderCompilerCommon
         }
     }
 
-    void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::map<std::string, uint8_t>& stages)
+    void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::map<std::string, uint8_t>& stages, bool isFragment)
     {
         for (const spirv_cross::Resource& sampler : samplers)
         {
@@ -95,16 +95,26 @@ namespace Babylon::ShaderCompilerCommon
             AppendBytes(bytes, sampler.name);
             AppendBytes(bytes, static_cast<uint8_t>(bgfx::UniformType::Sampler | BGFX_UNIFORM_SAMPLERBIT));
 
-            // TODO : These values (num, regIndex, regCount) are only used by Vulkan and should be set for that API
+            // num, regIndex, regCount — only used by bgfx's Vulkan renderer.
+            // regIndex is the texture descriptor binding; bgfx computes the sampler
+            // binding at regIndex + kSpirvSamplerShift (16).
+            const auto samplerBinding = compiler.get_decoration(sampler.id, spv::DecorationBinding);
+            const uint16_t regIndex = static_cast<uint16_t>(samplerBinding >= 16 ? samplerBinding - 16 : samplerBinding);
             AppendBytes(bytes, static_cast<uint8_t>(0));
-            AppendBytes(bytes, static_cast<uint16_t>(0));
+            AppendBytes(bytes, regIndex);
             AppendBytes(bytes, static_cast<uint16_t>(0));
 
 #if OPENGL
-            BX_UNUSED(compiler);
             const auto stage{static_cast<uint8_t>(stages.size())};
             stages[sampler.name] = stage;
+            BX_UNUSED(isFragment);
+#elif VULKAN
+            // Stage index must match what bgfx computes: regIndex - reverseShift.
+            // For old binding model: reverseShift = (fragment ? 48 : 0) + 16
+            const uint8_t reverseShift = static_cast<uint8_t>(isFragment ? 64 : 16);
+            stages[sampler.name] = static_cast<uint8_t>(regIndex - reverseShift);
 #else
+            BX_UNUSED(isFragment);
             stages[sampler.name] = static_cast<uint8_t>(compiler.get_decoration(sampler.id, spv::DecorationBinding));
 #endif
         }
@@ -249,7 +259,7 @@ namespace Babylon::ShaderCompilerCommon
 
             AppendBytes(vertexBytes, static_cast<uint16_t>(numUniforms));
             AppendUniformBuffer(vertexBytes, uniformsInfo, false);
-            AppendSamplers(vertexBytes, compiler, samplers, bgfxShaderInfo.UniformStages);
+            AppendSamplers(vertexBytes, compiler, samplers, bgfxShaderInfo.UniformStages, false);
 
             AppendBytes(vertexBytes, static_cast<uint32_t>(vertexShaderInfo.Bytes.size()));
             AppendBytes(vertexBytes, vertexShaderInfo.Bytes);
@@ -257,14 +267,49 @@ namespace Babylon::ShaderCompilerCommon
 
             AppendBytes(vertexBytes, static_cast<uint8_t>(resources.stage_inputs.size()));
 
+#if VULKAN
+            // bgfx's Vulkan renderer uses the attribute's index in the shader binary
+            // as the Vulkan location (via m_attrRemap[attr] = index). The SPIR-V uses
+            // Attrib::Enum values as Locations (e.g., TexCoord0=10). To make
+            // m_attrRemap[attr] == Location, we must write attributes at indices that
+            // match their Location, padding gaps with a dummy ID (0) that bgfx skips.
+            {
+                const auto& nameToAttrib = GetBgfxNameToAttribMap();
+                uint32_t maxLocation = 0;
+                for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
+                {
+                    const uint32_t loc = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
+                    if (loc > maxLocation) maxLocation = loc;
+                }
+                std::vector<uint16_t> attribIds(maxLocation + 1, 0);
+                for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
+                {
+                    const uint32_t loc = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
+                    auto it = nameToAttrib.find(stageInput.name);
+                    bgfx::Attrib::Enum attrib = (it != nameToAttrib.end())
+                        ? it->second
+                        : static_cast<bgfx::Attrib::Enum>(loc);
+                    attribIds[loc] = bgfx::attribToId(attrib);
+
+                    const std::string& originalName = vertexShaderInfo.AttributeRenaming[stageInput.name];
+                    bgfxShaderInfo.VertexAttributeLocations[originalName] = static_cast<uint32_t>(attrib);
+                }
+                // Rewrite the count to include padding entries
+                vertexBytes.resize(vertexBytes.size() - 1);
+                AppendBytes(vertexBytes, static_cast<uint8_t>(attribIds.size()));
+                for (uint16_t id : attribIds)
+                {
+                    AppendBytes(vertexBytes, id);
+                }
+            }
+#else
             for (const spirv_cross::Resource& stageInput : resources.stage_inputs)
             {
                 const uint32_t location = compiler.get_decoration(stageInput.id, spv::DecorationLocation);
                 AppendBytes(vertexBytes, bgfx::attribToId(static_cast<bgfx::Attrib::Enum>(location)));
-
-                // Map from symbolName -> originalName to associate babylon.js shader attribute -> Babylon Native attribute location.
                 bgfxShaderInfo.VertexAttributeLocations[vertexShaderInfo.AttributeRenaming[stageInput.name]] = location;
             }
+#endif
             AppendBytes(vertexBytes, static_cast<uint16_t>(uniformsInfo.ByteSize));
         }
 
@@ -290,7 +335,7 @@ namespace Babylon::ShaderCompilerCommon
 
             AppendBytes(fragmentBytes, static_cast<uint16_t>(numUniforms));
             AppendUniformBuffer(fragmentBytes, uniformsInfo, true);
-            AppendSamplers(fragmentBytes, compiler, samplers, bgfxShaderInfo.UniformStages);
+            AppendSamplers(fragmentBytes, compiler, samplers, bgfxShaderInfo.UniformStages, true);
 
             AppendBytes(fragmentBytes, static_cast<uint32_t>(fragmentShaderInfo.Bytes.size()));
             AppendBytes(fragmentBytes, fragmentShaderInfo.Bytes);
