@@ -15,7 +15,7 @@ FetchContent_Declare(AndroidExtensions
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG d5dd03cc6dd138fc17c277f61abbe2bc388444af
+    GIT_TAG b9bf9d85fce37d5fc9dbfc4a4dc5e1531bee215a
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(asio
     GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
@@ -114,7 +114,7 @@ endif()
 # --------------------------------------------------
 
 if(JSRUNTIMEHOST_TESTS)
-    add_compile_definitions(ARCANA_TESTING_HOOKS)
+    add_compile_definitions(ARCANA_TEST_HOOKS)
 endif()
 
 FetchContent_MakeAvailable_With_Message(arcana.cpp)

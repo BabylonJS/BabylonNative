@@ -125,82 +125,99 @@ TEST(Console, Log)
 
 TEST(AppRuntime, DestroyDoesNotDeadlock)
 {
-    // Deterministic test for the race condition in the AppRuntime destructor.
+    // Regression test verifying AppRuntime destruction doesn't deadlock.
+    // Uses a global arcana hook to sleep while holding the queue mutex
+    // before wait(), ensuring the worker is in the vulnerable window
+    // when the destructor fires. See #147 for details on the bug and fix.
     //
-    // A global hook sleeps WHILE HOLDING the queue mutex, right before
-    // condition_variable::wait(). We synchronize so the worker is definitely
-    // in the hook before triggering destruction.
+    // The entire test runs on a separate thread so the gtest thread can
+    // detect a deadlock via timeout without hanging the process.
     //
-    // Old (broken) code: cancel() + notify_all() fire without the mutex,
-    //   so the notification is lost while the worker sleeps → deadlock.
-    // Fixed code: cancel() + Append(no-op), where push() NEEDS the mutex,
-    //   so it blocks until the worker enters wait() → notification delivered.
+    // Test flow:
+    //
+    //   Test Thread                    Worker Thread
+    //   -----------                    -------------
+    //   1. Create AppRuntime           Worker starts, enters blocking_tick
+    //      Wait for init to complete
+    //   2. Install hook
+    //      Dispatch(no-op)             Worker wakes, runs no-op,
+    //                                  returns to blocking_tick
+    //                                  Hook fires:
+    //                                    signal workerInHook
+    //                                    sleep 200ms (holding mutex!)
+    //   3. workerInHook.wait()
+    //      Worker is sleeping in hook
+    //   4. ~AppRuntime():
+    //          cancel()
+    //          Append(no-op):
+    //            push() blocks ------> (worker holds mutex)
+    //                                  200ms sleep ends
+    //                                  wait(lock) releases mutex
+    //            push() acquires mutex
+    //            pushes, notifies ---> wakes up!
+    //            join() waits          drains no-op, cancelled -> exit
+    //            join() returns <----- thread exits
+    //   5. destroy completes -> PASS
 
-    // Shared state for hook synchronization
-    std::atomic<bool> hookEnabled{false};
-    std::atomic<bool> hookSignaled{false};
+    bool hookSignaled{false};
     std::promise<void> workerInHook;
+    std::promise<void> testDone;
 
-    // Set the callback. It checks hookEnabled so we control
-    // when it actually sleeps.
-    arcana::set_before_wait_callback([&]() {
-        if (hookEnabled.load() && !hookSignaled.exchange(true))
-        {
+    // Run the full lifecycle on a separate thread so the gtest thread
+    // can detect a deadlock via timeout.
+    std::thread testThread([&]() {
+        auto runtime = std::make_unique<Babylon::AppRuntime>();
+
+        // Wait for the runtime to fully initialize. The constructor dispatches
+        // CreateForJavaScript which must complete before we install the hook
+        // so the worker is idle and ready to enter the hook on the next wait.
+        std::promise<void> ready;
+        runtime->Dispatch([&ready](Napi::Env) {
+            ready.set_value();
+        });
+        ready.get_future().wait();
+
+        // Install the hook and dispatch a no-op to wake the worker,
+        // ensuring it cycles through the hook on its way back to idle.
+        arcana::test_hooks::blocking_concurrent_queue::set_before_wait_callback([&]() {
+            if (hookSignaled)
+            {
+                return;
+            }
+            hookSignaled = true;
             workerInHook.set_value();
-        }
-        if (hookEnabled.load())
-        {
+            // This sleep is not truly deterministic. Its purpose is to hold the
+            // mutex long enough for runtime.reset() (called by the test thread
+            // after workerInHook signals) to reach push() while the mutex is
+            // still held. When the sleep ends, the worker enters wait() which
+            // releases the mutex, allowing push() to acquire it and deliver the
+            // wake-up notification. If runtime.reset() hasn't reached push()
+            // by the time the sleep ends, the test still passes but doesn't
+            // exercise the intended contention window.
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        }
+        });
+        runtime->Dispatch([](Napi::Env) {});
+
+        // Wait for the worker to be in the hook (holding mutex, sleeping)
+        workerInHook.get_future().wait();
+
+        // Destroy — if the fix works, the destructor completes.
+        // If broken, it deadlocks and the timeout detects it.
+        runtime.reset();
+        testDone.set_value();
     });
 
-    auto runtime = std::make_unique<Babylon::AppRuntime>();
+    auto status = testDone.get_future().wait_for(std::chrono::seconds(5));
 
-    // Dispatch work and wait for completion
-    std::promise<void> ready;
-    runtime->Dispatch([&ready](Napi::Env) {
-        ready.set_value();
-    });
-    ready.get_future().wait();
+    arcana::test_hooks::blocking_concurrent_queue::set_before_wait_callback([]() {});
 
-    // Enable the hook and dispatch a no-op to wake the worker,
-    // ensuring it cycles through the hook on its way back to idle
-    hookEnabled.store(true);
-    runtime->Dispatch([](Napi::Env) {});
-
-    // Wait for the worker to be in the hook (holding mutex, sleeping)
-    auto hookStatus = workerInHook.get_future().wait_for(std::chrono::seconds(5));
-    if (hookStatus == std::future_status::timeout)
-    {
-        // Hook didn't fire — no deadlock risk, clean up normally
-        arcana::set_before_wait_callback([]() {});
-        FAIL() << "Worker thread did not enter before-wait hook";
-    }
-
-    // Worker is in the hook (holding mutex, sleeping). Destroy on a
-    // detachable thread so the test doesn't hang if the destructor deadlocks.
-    auto runtimePtr = std::make_shared<std::unique_ptr<Babylon::AppRuntime>>(std::move(runtime));
-    std::promise<void> destroyDone;
-    auto destroyFuture = destroyDone.get_future();
-    std::thread destroyThread([runtimePtr, &destroyDone]() {
-        runtimePtr->reset();
-        destroyDone.set_value();
-    });
-
-    auto status = destroyFuture.wait_for(std::chrono::seconds(5));
     if (status == std::future_status::timeout)
     {
-        destroyThread.detach();
-    }
-    else
-    {
-        destroyThread.join();
+        testThread.detach();
+        FAIL() << "Deadlock detected: AppRuntime destructor did not complete within 5 seconds";
     }
 
-    arcana::set_before_wait_callback([]() {});
-
-    ASSERT_NE(status, std::future_status::timeout)
-        << "Deadlock detected: AppRuntime destructor did not complete within 5 seconds";
+    testThread.join();
 }
 
 int RunTests()
