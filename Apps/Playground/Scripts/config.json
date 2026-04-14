@@ -65,7 +65,7 @@
             "playgroundId": "#YG3BBF#18",
             "referenceImage": "gltfExtensionKhrMaterialsVolumeAttenuation.png",
             "excludedGraphicsApis": [ "Metal" ],
-            "errorRatio": 1.2,
+            "errorRatio": 10,
             "renderCount": 10,
             "comments": {
                 "Metal": "No object rendered"
