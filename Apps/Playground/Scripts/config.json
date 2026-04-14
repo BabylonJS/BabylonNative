@@ -30,11 +30,7 @@
         {
             "title": "NME Shadow Map",
             "playgroundId": "#M3QR7E#83",
-            "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "nmeshadowmap.png",
-            "comments": {
-                "OpenGL": "xvfb : invalid enum with glRenderbufferStorage"
-            }
+            "referenceImage": "nmeshadowmap.png"
         },
         {
             "title": "Procedural texture with NME",
@@ -46,12 +42,8 @@
             "title": "GLTF Extension EXT_mesh_gpu_instancing",
             "playgroundId": "#QFIGLW#9",
             "renderCount": 10,
-            "errorRatio": 6,
-            "referenceImage": "gltfExtensionExtMeshGpuInstancingTest.png",
-            "excludedGraphicsApis": [ "OpenGL" ],
-            "comments": {
-                 "OpenGL": "Test works with OpenGL but it so slow that CI times out"
-            }
+            "errorRatio": 25,
+            "referenceImage": "gltfExtensionExtMeshGpuInstancingTest.png"
         },
         {
             "title": "GLTF ext MSFT_LOD",
@@ -72,11 +64,10 @@
             "title": "GLTF Extension KHR_materials_volume with attenuation",
             "playgroundId": "#YG3BBF#18",
             "referenceImage": "gltfExtensionKhrMaterialsVolumeAttenuation.png",
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
+            "excludedGraphicsApis": [ "Metal" ],
             "errorRatio": 1.2,
             "renderCount": 10,
             "comments": {
-                "OpenGL": "xvfb : invalid enum with glRenderbufferStorage",
                 "Metal": "No object rendered"
             }
         },
@@ -152,10 +143,9 @@
             "title": "Glow layer and LODs",
             "playgroundId": "#UNS6ZV#2",
             "renderCount": 50,
-            "excludedGraphicsApis": [ "OpenGL", "D3D12", "Metal" ],
+            "excludedGraphicsApis": [ "D3D12", "Metal" ],
             "referenceImage": "glowlayerandlods.png",
             "comments": {
-                "OpenGL": "xvfb : invalid enum with glRenderbufferStorage",
                 "D3D12": "Mapping a texture fails with error HRESULT 0x887A0005",
                 "Metal": "Result doesn't match reference"
             }
@@ -255,10 +245,9 @@
         {
             "title": "Point light shadows",
             "playgroundId": "#U2F7P9#4",
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
+            "excludedGraphicsApis": [ "Metal" ],
             "referenceImage": "point-light-shadows.png",
             "comments": {
-                "OpenGL": "xvfb : invalid enum with glRenderbufferStorage",
                 "Metal": "Rendered result doesn't match reference"
             }
         },
@@ -364,10 +353,9 @@
             "title": "Scissor test",
             "playgroundId": "#W7E7CF#34",
             "referenceImage": "scissor-test.png",
-            "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
+            "excludedGraphicsApis": [ "D3D12" ],
             "comments": {
-                "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx",
-                "OpenGL": "Incorrect rendering"
+                "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx"
             }
         },
         {
@@ -375,11 +363,10 @@
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
-            "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
+            "excludedGraphicsApis": [ "D3D12" ],
             "errorRatio": 50,
             "comments": {
-                "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx",
-                "OpenGL": "Incorrect rendering"
+                "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx"
             }
         },
         {
@@ -387,10 +374,9 @@
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 1.5;",
             "referenceImage": "scissor-test-3.png",
-            "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
+            "excludedGraphicsApis": [ "D3D12" ],
             "comments": {
-                "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx",
-                "OpenGL": "Incorrect rendering"
+                "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx"
             }
         },
         {
