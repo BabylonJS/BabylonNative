@@ -54,11 +54,7 @@
             "title": "GLTF Texture Linear Interpolation Test",
             "playgroundId": "#WGZLGJ#3009",
             "referenceImage": "gltfTextureLinearInterpolation.png",
-            "renderCount": 10,
-            "excludedGraphicsApis": [ "OpenGL" ],
-            "comments": {
-                "OpenGL": "Texture sampling creates a bunch of black dots for some reason"
-            }
+            "renderCount": 10
         },
         {
             "title": "GLTF Extension KHR_materials_volume with attenuation",
@@ -193,11 +189,7 @@
             "title": "GLTF Alpha Blend",
             "playgroundId": "#SYQW69#579",
             "referenceImage": "glTFAlphaBlend.png",
-            "renderCount": 1,
-            "excludedGraphicsApis": [ "OpenGL" ],
-            "comments": {
-                "OpenGL": "Mostly looks right but there are enough pixels to trigger the threshold, need to investigate"
-            }
+            "renderCount": 1
         },
         {
             "title": "GLTF Node Attribute (1)",
@@ -209,10 +201,9 @@
             "title": "Soft Shadows",
             "playgroundId": "#0YYQ3N#0",
             "errorRatio": 50,
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
+            "excludedGraphicsApis": [ "Metal" ],
             "referenceImage": "softShadows.png",
             "comments": {
-                "OpenGL": "Invalid light and wrong specular with SSAOcat.babylon",
                 "Metal": "Nothing rendered"
             }
         },
@@ -220,10 +211,9 @@
             "title": "Soft Shadows (Right Handed)",
             "playgroundId": "#0YYQ3N#2",
             "errorRatio": 50,
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
+            "excludedGraphicsApis": [ "Metal" ],
             "referenceImage": "softShadowsRightHanded.png",
             "comments": {
-                "OpenGL": "Invalid light and wrong specular with SSAOcat.babylon",
                 "Metal": "Nothing rendered"
             }
         },
@@ -236,11 +226,7 @@
             "title": "Light Projection Texture",
             "playgroundId": "#CQNGRK#0",
             "renderCount": 2,
-            "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "LightProjectionTexture.png",
-            "comments": {
-                "OpenGL": "xvfb : no rendering"
-            }
+            "referenceImage": "LightProjectionTexture.png"
         },
         {
             "title": "Point light shadows",
@@ -336,10 +322,9 @@
             "title": "Multi cameras and output render target",
             "renderCount": 2,
             "playgroundId": "#BCYE7J#31",
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
+            "excludedGraphicsApis": [ "Metal" ],
             "referenceImage": "multiCamerasOutputRenderTarget.png",
             "comments": {
-                "OpenGL": "Incorrect rendering",
                 "Metal": "Result does not match reference"
             }
         },
@@ -576,11 +561,7 @@
         {
             "title": "GLTF Alien",
             "playgroundId": "#XN37SR#5",
-            "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "gltfAlien.png",
-            "comments": {
-                "OpenGL": "int/float casting see https://github.com/BabylonJS/BabylonNative/pull/1544"
-            }
+            "referenceImage": "gltfAlien.png"
         },
         {
             "title": "Interleaved buffers test",
