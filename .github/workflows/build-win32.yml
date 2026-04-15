@@ -107,7 +107,7 @@ jobs:
 
       - name: Upload Rendered Pictures
         if: ${{ inputs.graphics-api != 'D3D12' && !cancelled() }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
           path: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/Results
@@ -115,7 +115,7 @@ jobs:
 
       - name: Upload Error Pictures
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-error-pictures
           path: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/Errors
@@ -143,7 +143,7 @@ jobs:
 
       - name: Upload Crash Dumps
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-crash-dumps
           path: ${{ runner.temp }}/Dumps/

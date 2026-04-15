@@ -68,21 +68,21 @@ jobs:
 
       - name: Upload Rendered Pictures
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.cc }}-${{ inputs.js-engine }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
           path: build/Linux/Apps/Playground/Results
 
       - name: Upload Error Pictures
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.cc }}-${{ inputs.js-engine }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-error-pictures
           path: build/Linux/Apps/Playground/Errors
 
       - name: Upload Core Dumps
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.cc }}-${{ inputs.js-engine }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-core-dumps
           path: |
