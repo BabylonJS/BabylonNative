@@ -21,7 +21,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: ./.github/actions/setup-cmake
         with:
@@ -54,7 +54,7 @@ jobs:
 
       - name: Upload UnitTests Core Dumps
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: macos-${{ inputs.generator }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-core-dumps
           path: |
