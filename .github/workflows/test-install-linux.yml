@@ -33,4 +33,4 @@ jobs:
         run: cmake --build build/Linux --config RelWithDebInfo
 
       - name: Install
-        run: cmake --install build/Linux --prefix=build/Linux/Install --config=RelWithDebInfo
+        run: cmake --install build/Linux --prefix=build/Linux/Install --config RelWithDebInfo
