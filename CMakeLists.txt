@@ -19,11 +19,11 @@ include(FetchContent)
 
 FetchContent_Declare(AndroidExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/AndroidExtensions.git
-    GIT_TAG 2d5af72259cc73e5f249d3c99bee2010be9cb042
+    GIT_TAG 2e85a8d43b89246c460112c9e5546ad54b6e87b4
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG 53e5b05eaf53154b60dff8ffb45e52a417cf5020
+    GIT_TAG b9bf9d85fce37d5fc9dbfc4a4dc5e1531bee215a
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcore-android-sdk
     GIT_REPOSITORY https://github.com/google-ar/arcore-android-sdk.git
@@ -35,11 +35,11 @@ FetchContent_Declare(base-n
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG 1b10ed55fadc0171c736f9638514ae715a1d97de
+    GIT_TAG 53d884a6e221f96fade72a15e0ad5f92ec7b66b5
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
-    GIT_TAG 631780e42886e5f12bfd1a5568c7395f1d657f43 
+    GIT_TAG 631780e42886e5f12bfd1a5568c7395f1d657f43
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
@@ -54,7 +54,7 @@ FetchContent_Declare(ios-cmake
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG a7bcbd4bcd0d92e2ef05a92daf490298fde74ead)
+    GIT_TAG 808601482588b7f806d91231288310b94766dc84)
 FetchContent_Declare(libwebp
     GIT_REPOSITORY https://github.com/webmproject/libwebp.git
     GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c
@@ -147,7 +147,10 @@ if(ENABLE_SANITIZERS)
         set(SANITIZERS "address,undefined")
         # Check for Clang since vptr and fdsan are Clang-specific
         if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-            list(APPEND SANITIZERS "vptr")
+            # vptr is not supported on Windows.
+            if(NOT WIN32)
+                list(APPEND SANITIZERS "vptr")
+            endif()
             # FDSan only works on Android builds with Clang
             if (ANDROID)
                 list(APPEND SANITIZERS "fdsan")
@@ -199,10 +202,58 @@ elseif(UNIX)
 elseif(WIN32)
     if(NOT GRAPHICS_API)
         set(GRAPHICS_API D3D11)
+    elseif(GRAPHICS_API STREQUAL "OpenGLWindowsDevOnly")
+        # OpenGLES via ANGLE from a Chromium-based browser (dev-only).
+        set(GRAPHICS_API OpenGL)
+        set(BABYLON_NATIVE_OPENGLES_FROM_BROWSER ON)
     else()
         if(NOT GRAPHICS_API STREQUAL Vulkan AND NOT GRAPHICS_API STREQUAL D3D11 AND NOT GRAPHICS_API STREQUAL D3D12)
             message(FATAL_ERROR "Unrecognized/Unsupported render API: ${GRAPHICS_API}")
         endif()
+    endif()
+endif()
+
+# Find ANGLE libraries from Edge or Chrome when using OpenGLWindowsDevOnly.
+if(BABYLON_NATIVE_OPENGLES_FROM_BROWSER)
+    foreach(_browser_exe "msedge.exe" "chrome.exe")
+        if(ANGLE_LIBEGL)
+            break()
+        endif()
+        foreach(_reg_root "HKLM" "HKCU")
+            if(ANGLE_LIBEGL)
+                break()
+            endif()
+            execute_process(
+                COMMAND reg query "${_reg_root}\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\${_browser_exe}" /ve
+                OUTPUT_VARIABLE _reg_output
+                ERROR_QUIET
+                RESULT_VARIABLE _reg_result
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+            if(NOT _reg_result EQUAL 0)
+                continue()
+            endif()
+            string(REGEX MATCH "REG_SZ[ \t]+([^\r\n]+)" _ "${_reg_output}")
+            string(STRIP "${CMAKE_MATCH_1}" _browser_path)
+            if(NOT _browser_path)
+                continue()
+            endif()
+            cmake_path(GET _browser_path PARENT_PATH _browser_dir)
+            file(GLOB _version_dirs LIST_DIRECTORIES true "${_browser_dir}/[0-9]*")
+            list(SORT _version_dirs ORDER DESCENDING)
+            foreach(_version_dir ${_version_dirs})
+                if(IS_DIRECTORY "${_version_dir}" AND EXISTS "${_version_dir}/libEGL.dll")
+                    set(ANGLE_LIBEGL "${_version_dir}/libEGL.dll")
+                    set(ANGLE_LIBGLESV2 "${_version_dir}/libGLESv2.dll")
+                    message(STATUS "Found ANGLE libraries in: ${_version_dir}")
+                    break()
+                endif()
+            endforeach()
+        endforeach()
+    endforeach()
+
+    if(NOT ANGLE_LIBEGL)
+        message(FATAL_ERROR "OpenGLWindowsDevOnly requires ANGLE libraries (libEGL.dll, libGLESv2.dll) from Edge or Chrome, but none were found.")
     endif()
 endif()
 
@@ -222,6 +273,9 @@ if(MSVC)
 
     # default to /W3
     add_compile_options(/W3)
+
+    # Enable multiprocessor compilation for faster builds
+    add_compile_options(/MP)
 endif()
 
 if(APPLE)
