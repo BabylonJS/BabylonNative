@@ -70,21 +70,21 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-rendered-pictures
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
           path: build/Linux/Apps/Playground/Results
 
       - name: Upload Error Pictures
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-error-pictures
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-error-pictures
           path: build/Linux/Apps/Playground/Errors
 
       - name: Upload Core Dumps
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-core-dumps
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-core-dumps
           path: |
             build/Linux/Apps/Playground/Playground
             build/Linux/Apps/Playground/core.*

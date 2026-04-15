@@ -109,7 +109,7 @@ jobs:
         if: ${{ inputs.graphics-api != 'D3D12' && !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}-rendered-pictures
+          name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
           path: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/Results
           if-no-files-found: ignore
 
@@ -117,7 +117,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}-error-pictures
+          name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-error-pictures
           path: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/Errors
           if-no-files-found: ignore
 
@@ -145,6 +145,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}-crash-dumps
+          name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-crash-dumps
           path: ${{ runner.temp }}/Dumps/
           if-no-files-found: ignore
