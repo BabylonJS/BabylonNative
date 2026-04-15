@@ -39,8 +39,10 @@
 #include <Babylon/Graphics/FrameBuffer.h>
 BX_PRAGMA_DIAGNOSTIC_IGNORED_MSVC(4244) // warning C4244: '=' : conversion from '' to '', possible loss of data
 
-#include "Shaders/dx11/vs_nanovg_fill.h"
-#include "Shaders/dx11/fs_nanovg_fill.h"
+#include "Shaders/dxbc/vs_nanovg_fill.h"
+#include "Shaders/dxbc/fs_nanovg_fill.h"
+#include "Shaders/dxil/vs_nanovg_fill.h"
+#include "Shaders/dxil/fs_nanovg_fill.h"
 #include "Shaders/metal/vs_nanovg_fill.h"
 #include "Shaders/metal/fs_nanovg_fill.h"
 #include "Shaders/glsl/vs_nanovg_fill.h"

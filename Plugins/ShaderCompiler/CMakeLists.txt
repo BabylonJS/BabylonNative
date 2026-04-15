@@ -5,8 +5,10 @@ set(SOURCES
     "Source/ShaderCompilerTraversers.cpp"
     "Source/ShaderCompilerTraversers.h")
 
-if(GRAPHICS_API STREQUAL "D3D11" OR GRAPHICS_API STREQUAL "D3D12")
-    set(SOURCES ${SOURCES} "Source/ShaderCompilerD3D.cpp")
+if(GRAPHICS_API STREQUAL "D3D11")
+    set(SOURCES ${SOURCES} "Source/ShaderCompilerDXBC.cpp")
+elseif(GRAPHICS_API STREQUAL "D3D12")
+    set(SOURCES ${SOURCES} "Source/ShaderCompilerDXIL.cpp")
 else()
     set(SOURCES ${SOURCES} "Source/ShaderCompiler${GRAPHICS_API}.cpp")
 endif()
@@ -38,14 +40,14 @@ elseif(TARGET spirv-cross-glsl)
         PRIVATE spirv-cross-glsl)
 endif()
 
-if(WIN32)
+if(GRAPHICS_API STREQUAL "D3D11")
     target_link_libraries(ShaderCompiler
         PRIVATE "d3dcompiler.lib")
 endif()
 
 # TODO: remove this once the #define in ShaderCompilerCommon gets split into separate compilation units
 target_compile_definitions(ShaderCompiler
-    PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
+    PRIVATE ${GRAPHICS_API})
 
 set_property(TARGET ShaderCompiler PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
