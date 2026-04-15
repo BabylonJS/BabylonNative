@@ -19,6 +19,12 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -x objective-c++")
 
+# wstring_convert and codecvt_utf8_utf16 are deprecated in C++17; prevent this from
+# being treated as a hard error so the build succeeds on Xcode 26+ / Clang 20+.
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    add_compile_options(-Wno-deprecated-declarations)
+endif()
+
 set(BABYLON_NATIVE_PLUGIN_NATIVEXR 1)
 if(DEFINED ENV{BABYLON_NATIVE_PLUGIN_NATIVEXR})
     set(BABYLON_NATIVE_PLUGIN_NATIVEXR $ENV{BABYLON_NATIVE_PLUGIN_NATIVEXR})

@@ -2,6 +2,11 @@ const os = require("os");
 const path = require("path");
 
 function getCmakeExecutable() {
+  // When BABYLON_USE_SYSTEM_CMAKE=1, skip the npm cmake package and use whatever
+  // cmake is found on PATH (e.g. a Homebrew or system install).
+  if (process.env.BABYLON_USE_SYSTEM_CMAKE === '1') {
+    return 'cmake';
+  }
   try {
     // cmake-runtime ships the cmake binary; resolve it directly to avoid
     // relying on npx or PATH.

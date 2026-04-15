@@ -34,6 +34,11 @@ To disable post install CMake generation, set this variable before running `npm 
 export BABYLON_NO_CMAKE_POSTINSTALL=1
 ```
 
+To use the system cmake (e.g. a Homebrew or system install) instead of the cmake bundled in the npm package, set this variable before running `npm install`:
+```
+export BABYLON_USE_SYSTEM_CMAKE=1
+```
+
 ### Plugins selection
 
 Plugins can be disabled at build time. They are all enabled by default and disabling is done with environment variables:
@@ -56,6 +61,7 @@ Babylon.js minimal version:
 
 |BabylonReactNative version | Babylon.js version | BabylonNative commit |
 | ----------- | ------------------------ | --- |
+|2.0.2 | 9.0.0 | ce2edf0851e0c8483559832a4f8eb9d39c6b2f53
 |2.0.0 | 8.3.0 | 6c25966e8f8c0f3a0c13fdf77064f1bde790391f
 
 
