@@ -1,0 +1,98 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: '0 23 * * 1-5'
+  workflow_dispatch:
+
+env:
+  CMAKE_VERSION: '3.30.3'
+
+jobs:
+  nightly:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-cmake
+        with:
+          cmake-version: ${{ env.CMAKE_VERSION }}
+
+      - name: Generate solution
+        shell: cmd
+        run: |
+          cmake -G "Visual Studio 17 2022" -B build -A x64 ^
+            -D BX_CONFIG_DEBUG=ON ^
+            -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256 ^
+            -D BABYLON_DEBUG_TRACE=ON
+
+      - name: Download nightly
+        working-directory: Apps
+        run: npm run getNightly
+
+      - name: Build
+        shell: cmd
+        run: cmake --build build --config RelWithDebInfo -- /m
+
+      - name: Enable Crash Dump
+        shell: cmd
+        run: |
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpType /t REG_DWORD /d 2 /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpCount /t REG_DWORD /d 1 /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpFolder /t REG_SZ /d "%RUNNER_TEMP%\Dumps" /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpType /t REG_DWORD /d 2 /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpCount /t REG_DWORD /d 1 /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpFolder /t REG_SZ /d "%RUNNER_TEMP%\Dumps" /f
+
+      - name: Run Visualization Tests
+        shell: cmd
+        working-directory: build/Apps/Playground/RelWithDebInfo
+        run: Playground.exe app:///Scripts/validation_native.js
+
+      - name: Run Unit Tests
+        shell: cmd
+        working-directory: build/Apps/UnitTests/RelWithDebInfo
+        run: UnitTests.exe
+
+      - name: Upload Error Images
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-error-images
+          path: build/Apps/Playground/Errors
+          if-no-files-found: ignore
+
+      - name: Stage Playground Crash Dump
+        if: failure()
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\Dumps" | Out-Null
+          Copy-Item -Path "build\Apps\Playground\RelWithDebInfo\Playground.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
+
+      - name: Stage UnitTests Crash Dump
+        if: failure()
+        shell: powershell
+        run: |
+          Copy-Item -Path "build\Apps\UnitTests\RelWithDebInfo\UnitTests.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
+
+      - name: Upload Crash Dumps
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-crash-dumps
+          path: ${{ runner.temp }}/Dumps/
+          if-no-files-found: ignore
+
+      - name: Upload Playground
+        uses: actions/upload-artifact@v4
+        with:
+          name: BabylonNativeNightlyPlayground
+          path: build/Apps/Playground
+
+      - name: Upload UnitTests
+        uses: actions/upload-artifact@v4
+        with:
+          name: BabylonNativeNightlyUnitTests
+          path: build/Apps/UnitTests

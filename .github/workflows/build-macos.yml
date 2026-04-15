@@ -1,0 +1,62 @@
+name: Build macOS
+
+on:
+  workflow_call:
+    inputs:
+      generator:
+        required: false
+        type: string
+        default: Xcode
+      enable-sanitizers:
+        required: false
+        type: boolean
+        default: false
+
+env:
+  CMAKE_VERSION: '3.31.6'
+  XCODE_VERSION: '16.4'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-cmake
+        with:
+          cmake-version: ${{ env.CMAKE_VERSION }}
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        run: sudo xcode-select --switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
+
+      - name: Generate macOS solution
+        run: |
+          cmake -G "${{ inputs.generator }}" -B build/macOS \
+            -D BABYLON_DEBUG_TRACE=ON \
+            -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} \
+            -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
+
+      - name: Build Playground macOS
+        run: cmake --build build/macOS --target Playground --config RelWithDebInfo
+
+      - name: Build UnitTests macOS
+        run: cmake --build build/macOS --target UnitTests --config RelWithDebInfo
+
+      - name: Enable Core Dump
+        run: sudo sysctl -w kern.corefile=%N.core.%P
+
+      - name: Run UnitTests macOS
+        run: |
+          cd build/macOS/Apps/UnitTests/RelWithDebInfo
+          ulimit -c unlimited
+          ./UnitTests
+
+      - name: Upload UnitTests Core Dumps
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ inputs.generator }}-${{ inputs.enable-sanitizers }}-core-dumps
+          path: |
+            build/macOS/Apps/UnitTests/RelWithDebInfo/UnitTests
+            build/macOS/Apps/UnitTests/RelWithDebInfo/*.core.*

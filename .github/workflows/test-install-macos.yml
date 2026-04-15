@@ -1,0 +1,34 @@
+name: Test Install macOS
+
+on:
+  workflow_call: {}
+
+env:
+  CMAKE_VERSION: '3.31.6'
+  XCODE_VERSION: '16.4'
+
+jobs:
+  test-install:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-cmake
+        with:
+          cmake-version: ${{ env.CMAKE_VERSION }}
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        run: sudo xcode-select --switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
+
+      - name: Configure
+        run: |
+          cmake -B build/macOS -G Xcode \
+            -D BABYLON_NATIVE_BUILD_APPS=OFF \
+            -D BABYLON_DEBUG_TRACE=ON
+
+      - name: Build
+        run: cmake --build build/macOS --config RelWithDebInfo
+
+      - name: Install
+        run: cmake --install build/macOS --prefix=build/macOS/Install --config RelWithDebInfo

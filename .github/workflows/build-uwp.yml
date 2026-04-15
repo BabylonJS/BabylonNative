@@ -1,0 +1,54 @@
+name: Build UWP
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+      napi-type:
+        required: false
+        type: string
+        default: direct
+
+env:
+  CMAKE_VERSION: '3.31.6'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-cmake
+        with:
+          cmake-version: ${{ env.CMAKE_VERSION }}
+
+      - name: Set NAPI variables
+        id: napi
+        shell: bash
+        run: |
+          if [ "${{ inputs.napi-type }}" = "jsi" ]; then
+            echo "suffix=_JSI" >> "$GITHUB_OUTPUT"
+            echo "define=-DNAPI_JAVASCRIPT_ENGINE=JSI" >> "$GITHUB_OUTPUT"
+          else
+            echo "suffix=" >> "$GITHUB_OUTPUT"
+            echo "define=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate UWP solution
+        shell: cmd
+        run: |
+          cmake -G "Visual Studio 17 2022" ^
+            -B build/UWP_${{ inputs.platform }}${{ steps.napi.outputs.suffix }} ^
+            -D CMAKE_SYSTEM_NAME=WindowsStore ^
+            -D CMAKE_SYSTEM_VERSION=10.0 ^
+            ${{ steps.napi.outputs.define }} ^
+            -A ${{ inputs.platform }} ^
+            -D BABYLON_DEBUG_TRACE=ON
+
+      - name: Build UWP
+        shell: cmd
+        run: |
+          cmake --build build/UWP_${{ inputs.platform }}${{ steps.napi.outputs.suffix }} --config RelWithDebInfo -- /m /p:AppxPackageSigningEnabled=false

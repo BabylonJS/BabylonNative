@@ -1,0 +1,150 @@
+name: Build Win32
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+      napi-type:
+        required: false
+        type: string
+        default: direct
+      graphics-api:
+        required: false
+        type: string
+        default: D3D11
+      enable-sanitizers:
+        required: false
+        type: boolean
+        default: false
+
+env:
+  CMAKE_VERSION: '3.31.6'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-cmake
+        with:
+          cmake-version: ${{ env.CMAKE_VERSION }}
+
+      - name: Set variables
+        id: vars
+        shell: bash
+        run: |
+          SUFFIX=""
+          JS_DEFINE=""
+          if [ "${{ inputs.napi-type }}" = "jsi" ]; then
+            SUFFIX="_JSI"
+            JS_DEFINE="-DNAPI_JAVASCRIPT_ENGINE=JSI"
+          elif [ "${{ inputs.napi-type }}" = "V8" ]; then
+            SUFFIX="_V8"
+            JS_DEFINE="-DNAPI_JAVASCRIPT_ENGINE=V8"
+          fi
+          echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
+          echo "js_define=$JS_DEFINE" >> "$GITHUB_OUTPUT"
+          echo "solution_name=Win32_${{ inputs.platform }}${SUFFIX}" >> "$GITHUB_OUTPUT"
+          echo "sanitizer_flag=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate solution
+        shell: cmd
+        run: |
+          cmake -G "Visual Studio 17 2022" ^
+            -B build/${{ steps.vars.outputs.solution_name }} ^
+            -A ${{ inputs.platform }} ^
+            ${{ steps.vars.outputs.js_define }} ^
+            -D BX_CONFIG_DEBUG=ON ^
+            -D GRAPHICS_API=${{ inputs.graphics-api }} ^
+            -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256 ^
+            -D BABYLON_DEBUG_TRACE=ON ^
+            -D ENABLE_SANITIZERS=${{ steps.vars.outputs.sanitizer_flag }}
+
+      - name: Build
+        shell: cmd
+        run: |
+          cmake --build build/${{ steps.vars.outputs.solution_name }} --config RelWithDebInfo -- /m
+
+      - name: Enable Crash Dumps
+        shell: cmd
+        run: |
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpType /t REG_DWORD /d 2 /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpCount /t REG_DWORD /d 1 /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpFolder /t REG_SZ /d "%RUNNER_TEMP%\Dumps" /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpType /t REG_DWORD /d 2 /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpCount /t REG_DWORD /d 1 /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpFolder /t REG_SZ /d "%RUNNER_TEMP%\Dumps" /f
+
+      - name: Add ASAN runtime DLLs to PATH
+        if: ${{ inputs.enable-sanitizers }}
+        shell: powershell
+        run: |
+          $vs = vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          $msvc = Get-ChildItem "$vs\VC\Tools\MSVC" | Sort-Object Name -Descending | Select-Object -First 1
+          $asanPath = "$($msvc.FullName)\bin\Hostx64\x64"
+          Write-Host "Adding ASAN runtime folder to PATH: $asanPath"
+          echo "$asanPath" >> $env:GITHUB_PATH
+
+      - name: Disable JIT Debugger for Script
+        shell: cmd
+        run: |
+          for /f %%i in ('vswhere -property instanceId') do (
+            reg add HKCU\Software\Microsoft\VisualStudio\Debugger\JIT\{F200A7E7-DEA5-11D0-B854-00A0244A1DE2}\%%i /f /v Disabled /t REG_DWORD /d 1
+          )
+
+      - name: Validation Tests
+        if: ${{ inputs.graphics-api != 'D3D12' }}
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
+          Playground app:///Scripts/validation_native.js
+
+      - name: Upload Rendered Pictures
+        if: ${{ inputs.graphics-api != 'D3D12' && !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}-rendered-pictures
+          path: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/Results
+          if-no-files-found: ignore
+
+      - name: Upload Error Pictures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}-error-pictures
+          path: build/${{ steps.vars.outputs.solution_name }}/Apps/Playground/Errors
+          if-no-files-found: ignore
+
+      - name: Stage Playground Crash Dump
+        if: failure()
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\Dumps" | Out-Null
+          Copy-Item -Path "build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo\Playground.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
+
+      - name: Unit Tests
+        if: ${{ inputs.graphics-api != 'D3D12' }}
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Apps\UnitTests\RelWithDebInfo
+          UnitTests
+
+      - name: Stage UnitTests Crash Dump
+        if: failure()
+        shell: powershell
+        run: |
+          Copy-Item -Path "build\${{ steps.vars.outputs.solution_name }}\Apps\UnitTests\RelWithDebInfo\UnitTests.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
+
+      - name: Upload Crash Dumps
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}-crash-dumps
+          path: ${{ runner.temp }}/Dumps/
+          if-no-files-found: ignore

@@ -1,0 +1,92 @@
+name: Build Linux
+
+on:
+  workflow_call:
+    inputs:
+      cc:
+        required: true
+        type: string
+      cxx:
+        required: true
+        type: string
+      js-engine:
+        required: true
+        type: string
+      enable-sanitizers:
+        required: false
+        type: boolean
+        default: false
+
+env:
+  CMAKE_VERSION: '3.31.6'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CC: ${{ inputs.cc }}
+      CXX: ${{ inputs.cxx }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-cmake
+        with:
+          cmake-version: ${{ env.CMAKE_VERSION }}
+
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang
+
+      - name: Build X11
+        run: |
+          cmake -G Ninja -B build/Linux \
+            -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so \
+            -D NAPI_JAVASCRIPT_ENGINE=${{ inputs.js-engine }} \
+            -D CMAKE_BUILD_TYPE=RelWithDebInfo \
+            -D BX_CONFIG_DEBUG=ON \
+            -D OpenGL_GL_PREFERENCE=GLVND \
+            -D BABYLON_DEBUG_TRACE=ON \
+            -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} .
+          ninja -C build/Linux
+
+      - name: Enable Core Dump
+        run: sudo sysctl -w kernel.core_pattern=core.%p
+
+      - name: Validation Tests
+        run: |
+          cd build/Linux/Apps/Playground
+          ulimit -c unlimited
+          xvfb-run ./Playground app:///Scripts/validation_native.js
+
+      - name: Unit Tests
+        run: |
+          cd build/Linux/Apps/UnitTests
+          ulimit -c unlimited
+          xvfb-run ./UnitTests
+
+      - name: Upload Rendered Pictures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-rendered-pictures
+          path: build/Linux/Apps/Playground/Results
+
+      - name: Upload Error Pictures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-error-pictures
+          path: build/Linux/Apps/Playground/Errors
+
+      - name: Upload Core Dumps
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-core-dumps
+          path: |
+            build/Linux/Apps/Playground/Playground
+            build/Linux/Apps/Playground/core.*
+            build/Linux/Apps/UnitTests/UnitTests
+            build/Linux/Apps/UnitTests/core.*

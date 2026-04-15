@@ -1,0 +1,41 @@
+name: 'Setup CMake'
+description: 'Install the required CMake version and Ninja'
+inputs:
+  cmake-version:
+    description: 'CMake version to install'
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Install CMake and Ninja (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        wget -q https://github.com/Kitware/CMake/releases/download/v${{ inputs.cmake-version }}/cmake-${{ inputs.cmake-version }}-macos-universal.tar.gz
+        sudo mkdir -p /opt/cmake
+        sudo tar xzf cmake-${{ inputs.cmake-version }}-macos-universal.tar.gz -C /opt/cmake
+        sudo rm -f /usr/local/bin/cmake
+        sudo ln -s /opt/cmake/cmake-${{ inputs.cmake-version }}-macos-universal/CMake.app/Contents/bin/cmake /usr/local/bin/cmake
+        wget -q https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-mac.zip
+        unzip -o ninja-mac.zip
+        sudo cp -v ninja /usr/local/bin
+        cmake --version
+
+    - name: Install CMake and Ninja (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        wget -q https://github.com/Kitware/CMake/releases/download/v${{ inputs.cmake-version }}/cmake-${{ inputs.cmake-version }}-Linux-x86_64.sh
+        sudo mkdir -p /opt/cmake/cmake-${{ inputs.cmake-version }}-linux-x86_64
+        sudo sh cmake-${{ inputs.cmake-version }}-Linux-x86_64.sh --prefix=/opt/cmake/cmake-${{ inputs.cmake-version }}-linux-x86_64 --skip-license
+        sudo rm -f /usr/local/bin/cmake
+        sudo ln -s /opt/cmake/cmake-${{ inputs.cmake-version }}-linux-x86_64/bin/cmake /usr/local/bin/cmake
+        sudo apt-get update
+        sudo apt-get install -y ninja-build
+        cmake --version
+
+    - name: Install CMake (Windows)
+      if: runner.os == 'Windows'
+      shell: powershell
+      run: |
+        choco install cmake --version=${{ inputs.cmake-version }} -y --allow-downgrade
