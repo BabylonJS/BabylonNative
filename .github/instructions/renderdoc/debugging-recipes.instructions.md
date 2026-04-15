@@ -1,10 +1,4 @@
----
-applyTo: "**/*.{rdc,frag,vert,comp,glsl,hlsl,spv}"
----
-
 # GPU Debugging Recipes
-
-> Adapted from [rudybear/renderdoc-skill](https://github.com/rudybear/renderdoc-skill) for GitHub Copilot.
 
 Extended debugging workflows with expected output shapes.
 
