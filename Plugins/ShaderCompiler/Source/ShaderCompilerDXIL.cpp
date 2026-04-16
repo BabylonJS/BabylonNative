@@ -30,8 +30,20 @@ namespace
 
     struct DxcCompilerState
     {
-        HMODULE Module{};
-        Microsoft::WRL::ComPtr<IDxcUtils> Utils;
+        // Order matters: ComPtrs must be destroyed before FreeLibrary so COM
+        // object vtables (which live inside dxcompiler.dll) remain valid during
+        // Release(). Members are destroyed in reverse declaration order.
+        struct ModuleDeleter
+        {
+            void operator()(HMODULE m) const noexcept
+            {
+                if (m != nullptr)
+                {
+                    FreeLibrary(m);
+                }
+            }
+        };
+        std::unique_ptr<std::remove_pointer_t<HMODULE>, ModuleDeleter> Module;
         Microsoft::WRL::ComPtr<IDxcCompiler3> Compiler;
     };
 
@@ -41,22 +53,17 @@ namespace
         static DxcCompilerState state = []() {
             DxcCompilerState s;
 
-            s.Module = LoadLibraryW(L"dxcompiler.dll");
+            s.Module.reset(LoadLibraryExW(L"dxcompiler.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32 | LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS));
             if (!s.Module)
             {
                 throw std::runtime_error{"Failed to load dxcompiler.dll"};
             }
 
             auto createInstance = reinterpret_cast<DxcCreateInstanceProc>(
-                GetProcAddress(s.Module, "DxcCreateInstance"));
+                GetProcAddress(s.Module.get(), "DxcCreateInstance"));
             if (!createInstance)
             {
                 throw std::runtime_error{"Failed to find DxcCreateInstance in dxcompiler.dll"};
-            }
-
-            if (FAILED(createInstance(CLSID_DxcUtils, IID_PPV_ARGS(&s.Utils))))
-            {
-                throw std::runtime_error{"Failed to create IDxcUtils"};
             }
 
             if (FAILED(createInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&s.Compiler))))

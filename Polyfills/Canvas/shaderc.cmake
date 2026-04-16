@@ -201,23 +201,13 @@ function(add_bgfx_shader FILE FOLDER)
         # dxbc / D3D11
         if(WIN32)
             set(DXBC_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/dxbc/${FILENAME}.h)
-            if(NOT "${TYPE}" STREQUAL "COMPUTE")
-                _bn_shaderc_parse(
-                    DXBC ${COMMON} WINDOWS
-                    PROFILE s_5_0
-                    O 3
-                    OUTPUT ${DXBC_OUTPUT}
-                    BIN2C "${FILENAME}_dxbc"
-                )
-            else()
-                _bn_shaderc_parse(
-                    DXBC ${COMMON} WINDOWS
-                    PROFILE s_5_0
-                    O 3
-                    OUTPUT ${DXBC_OUTPUT}
-                    BIN2C "${FILENAME}_dxbc"
-                )
-            endif()
+            _bn_shaderc_parse(
+                DXBC ${COMMON} WINDOWS
+                PROFILE s_5_0
+                O 3
+                OUTPUT ${DXBC_OUTPUT}
+                BIN2C "${FILENAME}_dxbc"
+            )
             list(APPEND OUTPUTS "DXBC")
             set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}DXBC, ")
         endif()
@@ -225,23 +215,13 @@ function(add_bgfx_shader FILE FOLDER)
         # dxil / D3D12
         if(WIN32)
             set(DXIL_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Source/Shaders/dxil/${FILENAME}.h)
-            if(NOT "${TYPE}" STREQUAL "COMPUTE")
-                _bn_shaderc_parse(
-                    DXIL ${COMMON} WINDOWS
-                    PROFILE s_6_0
-                    O 3
-                    OUTPUT ${DXIL_OUTPUT}
-                    BIN2C "${FILENAME}_dxil"
-                )
-            else()
-                _bn_shaderc_parse(
-                    DXIL ${COMMON} WINDOWS
-                    PROFILE s_6_0
-                    O 3
-                    OUTPUT ${DXIL_OUTPUT}
-                    BIN2C "${FILENAME}_dxil"
-                )
-            endif()
+            _bn_shaderc_parse(
+                DXIL ${COMMON} WINDOWS
+                PROFILE s_6_0
+                O 3
+                OUTPUT ${DXIL_OUTPUT}
+                BIN2C "${FILENAME}_dxil"
+            )
             list(APPEND OUTPUTS "DXIL")
             set(OUTPUTS_PRETTY "${OUTPUTS_PRETTY}DXIL, ")
         endif()
