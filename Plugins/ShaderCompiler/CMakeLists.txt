@@ -47,7 +47,7 @@ endif()
 
 # TODO: remove this once the #define in ShaderCompilerCommon gets split into separate compilation units
 target_compile_definitions(ShaderCompiler
-    PRIVATE ${GRAPHICS_API})
+    PRIVATE $<UPPER_CASE:${GRAPHICS_API}>)
 
 set_property(TARGET ShaderCompiler PROPERTY FOLDER Plugins)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
