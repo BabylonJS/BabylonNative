@@ -8,7 +8,6 @@
 #include <SPIRV/GlslangToSpv.h>
 #include <spirv_parser.hpp>
 #include <spirv_hlsl.hpp>
-#include <d3dcompiler.h>
 #include <wrl/client.h>
 #include <dxcapi.h>
 
@@ -70,7 +69,7 @@ namespace
         return state;
     }
 
-    std::pair<std::unique_ptr<spirv_cross::Parser>, std::unique_ptr<spirv_cross::Compiler>> CompileShader(glslang::TProgram& program, EShLanguage stage, gsl::span<const spirv_cross::HLSLVertexAttributeRemap> attributes, ID3DBlob** blob)
+    std::pair<std::unique_ptr<spirv_cross::Parser>, std::unique_ptr<spirv_cross::Compiler>> CompileShader(glslang::TProgram& program, EShLanguage stage, gsl::span<const spirv_cross::HLSLVertexAttributeRemap> attributes, IDxcBlob** blob)
     {
         std::vector<uint32_t> spirv;
         glslang::GlslangToSpv(*program.getIntermediate(stage), spirv);
@@ -126,7 +125,10 @@ namespace
                 : "DXC compilation failed"};
         }
 
-        result->GetOutput(DXC_OUT_OBJECT, __uuidof(ID3DBlob), reinterpret_cast<void**>(blob), nullptr);
+        if (FAILED(result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(blob), nullptr)) || *blob == nullptr)
+        {
+            throw std::runtime_error{"DXC did not produce a shader object"};
+        }
 
         return {std::move(parser), std::move(compiler)};
     }
@@ -193,7 +195,7 @@ namespace Babylon::Plugins
         };
         // clang-format on
 
-        Microsoft::WRL::ComPtr<ID3DBlob> vertexBlob;
+        Microsoft::WRL::ComPtr<IDxcBlob> vertexBlob;
         auto [vertexParser, vertexCompiler] = CompileShader(program, EShLangVertex, attributes, &vertexBlob);
         ShaderInfo vertexShaderInfo{
             std::move(vertexParser),
@@ -201,7 +203,7 @@ namespace Babylon::Plugins
             gsl::make_span(static_cast<uint8_t*>(vertexBlob->GetBufferPointer()), vertexBlob->GetBufferSize()),
             std::move(vertexAttributeRenaming)};
 
-        Microsoft::WRL::ComPtr<ID3DBlob> fragmentBlob;
+        Microsoft::WRL::ComPtr<IDxcBlob> fragmentBlob;
         auto [fragmentParser, fragmentCompiler] = CompileShader(program, EShLangFragment, {}, &fragmentBlob);
         ShaderInfo fragmentShaderInfo{
             std::move(fragmentParser),
