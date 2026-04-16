@@ -6,14 +6,21 @@ on:
       deployment-target:
         required: true
         type: string
+      xcode-version:
+        required: false
+        type: string
+        default: '16.4'
+      runs-on:
+        required: false
+        type: string
+        default: macos-latest
 
 env:
   CMAKE_VERSION: '3.31.6'
-  XCODE_VERSION: '16.4'
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ${{ inputs.runs-on }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -23,8 +30,8 @@ jobs:
           cmake-version: ${{ env.CMAKE_VERSION }}
 
 
-      - name: Select Xcode ${{ env.XCODE_VERSION }}
-        run: sudo xcode-select --switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
+      - name: Select Xcode ${{ inputs.xcode-version }}
+        run: sudo xcode-select --switch /Applications/Xcode_${{ inputs.xcode-version }}.app/Contents/Developer
 
       - name: Generate iOS solution
         run: |
