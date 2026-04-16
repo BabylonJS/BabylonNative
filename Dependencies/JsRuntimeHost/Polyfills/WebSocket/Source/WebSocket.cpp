@@ -51,11 +51,13 @@ namespace Babylon::Polyfills::Internal
         m_cancellationSource->cancel();
     }
 
-    void WebSocket::Close(const Napi::CallbackInfo& info)
+    void WebSocket::Close(const Napi::CallbackInfo&)
     {
+        // Per the WHATWG WebSocket spec, calling close() on a socket that is
+        // already CLOSING or CLOSED is a no-op.
         if (m_readyState == ReadyState::Closed || m_readyState == ReadyState::Closing)
         {
-            throw Napi::Error::New(info.Env(), "Close has already been called.");
+            return;
         }
         m_readyState = ReadyState::Closing;
         m_webSocket.Close();
@@ -63,9 +65,17 @@ namespace Babylon::Polyfills::Internal
 
     void WebSocket::Send(const Napi::CallbackInfo& info)
     {
+        // Per the WHATWG WebSocket spec, send() throws InvalidStateError only
+        // when readyState is CONNECTING. When CLOSING or CLOSED, the data is
+        // silently discarded (the spec still bumps bufferedAmount, which this
+        // polyfill does not track).
+        if (m_readyState == ReadyState::Connecting)
+        {
+            throw Napi::Error::New(info.Env(), "WebSocket is still in CONNECTING state.");
+        }
         if (m_readyState != ReadyState::Open)
         {
-            throw Napi::Error::New(info.Env(), "Websocket readyState is not open.");
+            return;
         }
         std::string message = info[0].As<Napi::String>();
         m_webSocket.Send(message);
