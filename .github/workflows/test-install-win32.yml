@@ -1,0 +1,40 @@
+name: Test Install Win32
+
+on:
+  workflow_call: {}
+
+env:
+  CMAKE_VERSION: '3.31.6'
+
+jobs:
+  test-install:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: ${{ env.CMAKE_VERSION }}
+
+
+      - name: Configure
+        shell: cmd
+        run: |
+          cmake -B build/Win32 -G "Visual Studio 17 2022" ^
+            -D BABYLON_NATIVE_BUILD_APPS=OFF ^
+            -D BABYLON_DEBUG_TRACE=ON
+
+      - name: Build
+        shell: cmd
+        run: cmake --build build/Win32 --config RelWithDebInfo
+
+      - name: Install
+        shell: cmd
+        run: cmake --install build/Win32 --prefix=build/Win32/Install --config RelWithDebInfo
+
+      - name: Test Install
+        shell: cmd
+        run: |
+          cmake Install/Test -B build/TestInstall -D INSTALL_DIR=%GITHUB_WORKSPACE%\build\Win32\Install
+          cmake --build build/TestInstall --config RelWithDebInfo

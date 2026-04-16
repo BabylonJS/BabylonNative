@@ -1,0 +1,42 @@
+name: Test Install iOS
+
+on:
+  workflow_call:
+    inputs:
+      deployment-target:
+        required: true
+        type: string
+
+env:
+  CMAKE_VERSION: '3.31.6'
+  XCODE_VERSION: '16.4'
+
+jobs:
+  test-install:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: ${{ env.CMAKE_VERSION }}
+
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        run: sudo xcode-select --switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
+
+      - name: Configure
+        run: |
+          cmake -B build/iOS -G Xcode \
+            -D IOS=ON \
+            -D DEPLOYMENT_TARGET=${{ inputs.deployment-target }} \
+            -D CMAKE_IOS_INSTALL_COMBINED=NO \
+            -D BABYLON_NATIVE_BUILD_APPS=OFF \
+            -D BABYLON_DEBUG_TRACE=ON
+
+      - name: Build
+        run: cmake --build build/iOS --config RelWithDebInfo -- -sdk iphoneos CODE_SIGNING_ALLOWED=NO
+
+      - name: Install
+        run: cmake --install build/iOS --prefix=build/iOS/Install --config RelWithDebInfo
