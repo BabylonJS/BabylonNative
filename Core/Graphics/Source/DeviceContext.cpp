@@ -6,20 +6,6 @@
 
 namespace Babylon::Graphics
 {
-    UpdateToken::UpdateToken(DeviceContext& context, SafeTimespanGuarantor& guarantor)
-        : m_context{context}
-        , m_guarantee{guarantor.GetSafetyGuarantee()}
-    {
-    }
-
-    bgfx::Encoder* UpdateToken::GetEncoder()
-    {
-        return m_context.m_graphicsImpl.GetEncoderForThread();
-    }
-}
-
-namespace Babylon::Graphics
-{
     DeviceContext& DeviceContext::GetFromJavaScript(Napi::Env env)
     {
         return DeviceImpl::GetFromJavaScript(env).GetContext();
@@ -51,9 +37,44 @@ namespace Babylon::Graphics
         return m_graphicsImpl.AfterRenderScheduler();
     }
 
-    Update DeviceContext::GetUpdate(const char* updateName)
+    continuation_scheduler<>& DeviceContext::FrameStartScheduler()
     {
-        return {m_graphicsImpl.GetSafeTimespanGuarantor(updateName), *this};
+        return m_graphicsImpl.FrameStartScheduler();
+    }
+
+    FrameCompletionScope::FrameCompletionScope(DeviceImpl& impl)
+        : m_impl{&impl}
+    {
+        m_impl->IncrementPendingFrameScopes();
+    }
+
+    FrameCompletionScope::FrameCompletionScope(FrameCompletionScope&& other) noexcept
+        : m_impl{other.m_impl}
+    {
+        other.m_impl = nullptr;
+    }
+
+    FrameCompletionScope::~FrameCompletionScope()
+    {
+        if (m_impl)
+        {
+            m_impl->DecrementPendingFrameScopes();
+        }
+    }
+
+    FrameCompletionScope DeviceContext::AcquireFrameCompletionScope()
+    {
+        return FrameCompletionScope{m_graphicsImpl};
+    }
+
+    void DeviceContext::SetActiveEncoder(bgfx::Encoder* encoder)
+    {
+        m_graphicsImpl.SetActiveEncoder(encoder);
+    }
+
+    bgfx::Encoder* DeviceContext::GetActiveEncoder()
+    {
+        return m_graphicsImpl.GetActiveEncoder();
     }
 
     void DeviceContext::RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback)
@@ -101,9 +122,9 @@ namespace Babylon::Graphics
         return m_graphicsImpl.AddCaptureCallback(std::move(callback));
     }
 
-    bgfx::ViewId DeviceContext::AcquireNewViewId(bgfx::Encoder& encoder)
+    bgfx::ViewId DeviceContext::AcquireNewViewId()
     {
-        return m_graphicsImpl.AcquireNewViewId(encoder);
+        return m_graphicsImpl.AcquireNewViewId();
     }
 
     void DeviceContext::AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)
