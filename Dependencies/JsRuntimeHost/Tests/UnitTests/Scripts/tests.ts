@@ -526,13 +526,25 @@ if (hostPlatform !== "Unix") {
             };
         });
 
-        // TODO: This is not working reliably: see https://github.com/BabylonJS/JsRuntimeHost/issues/131
-        // it("should trigger error callback with invalid server", function (done) {
-        //     const ws = new WebSocket("wss://caddddfd-ee88-4771-b293-8a8e13b330ee.com");
-        //     ws.onerror = () => {
-        //         done();
-        //     };
-        // });
+        it("should trigger error callback with invalid server", function (done) {
+            this.timeout(10000);
+            // Random UUID-based hostname so the domain is guaranteed unregistered
+            // (RFC-reserved `.invalid` causes a >10s DNS path on Win32 x86 Chakra).
+            const ws = new WebSocket("wss://caddddfd-ee88-4771-b293-8a8e13b330ee.com");
+            let errorFired = false;
+            ws.onerror = () => {
+                errorFired = true;
+            };
+            ws.onclose = () => {
+                try {
+                    expect(errorFired).to.be.true;
+                    done();
+                }
+                catch (e) {
+                    done(e);
+                }
+            };
+        });
 
         it("should trigger error callback with invalid domain", function (done) {
             this.timeout(10000);
