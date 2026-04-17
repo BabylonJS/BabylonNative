@@ -1,0 +1,45 @@
+name: Build iOS
+
+on:
+  workflow_call:
+    inputs:
+      xcode-version:
+        required: true
+        type: string
+      runs-on:
+        required: false
+        type: string
+        default: macos-latest
+      simulator:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode ${{ inputs.xcode-version }}
+        run: sudo xcode-select --switch /Applications/Xcode_${{ inputs.xcode-version }}.app/Contents/Developer
+
+      - name: Configure CMake
+        run: cmake -B Build/iOS -G Xcode -D IOS=ON
+
+      - name: Boot Simulator
+        run: xcrun simctl boot "${{ inputs.simulator }}"
+
+      - name: Build
+        run: |
+          xcodebuild \
+            -project Build/iOS/JsRuntimeHost.xcodeproj \
+            -scheme UnitTests \
+            -sdk iphonesimulator \
+            -configuration RelWithDebInfo
+
+      - name: Run Tests
+        run: |
+          xcrun simctl install booted "Build/iOS/Tests/UnitTests/RelWithDebInfo-iphonesimulator/UnitTests.app"
+          xcrun simctl launch --console booted "com.jsruntimehost.unittests" 2> /tmp/exitCode
+          (exit $(cat /tmp/exitCode))

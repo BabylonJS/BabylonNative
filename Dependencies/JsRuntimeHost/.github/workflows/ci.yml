@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Win32 ─────────────────────────────────────────────────────
+  Win32_x86_Chakra:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: win32
+      js-engine: Chakra
+
+  Win32_x64_Chakra:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: x64
+      js-engine: Chakra
+
+  Win32_x64_JSI:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: x64
+      js-engine: JSI
+
+  Win32_x64_V8:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: x64
+      js-engine: V8
+
+  # ── UWP ───────────────────────────────────────────────────────
+  UWP_x64_Chakra:
+    uses: ./.github/workflows/build-uwp.yml
+    with:
+      platform: x64
+      js-engine: Chakra
+
+  UWP_x64_JSI:
+    uses: ./.github/workflows/build-uwp.yml
+    with:
+      platform: x64
+      js-engine: JSI
+
+  UWP_arm64_JSI:
+    uses: ./.github/workflows/build-uwp.yml
+    with:
+      platform: arm64
+      js-engine: JSI
+
+  UWP_x64_V8:
+    uses: ./.github/workflows/build-uwp.yml
+    with:
+      platform: x64
+      js-engine: V8
+
+  # ── Android ───────────────────────────────────────────────────
+  # TODO: Re-enable when Android emulator works reliably on GitHub Actions runners.
+  # Android_JSC:
+  #   uses: ./.github/workflows/build-android.yml
+  #   with:
+  #     js-engine: JavaScriptCore
+
+  # Android_V8:
+  #   uses: ./.github/workflows/build-android.yml
+  #   with:
+  #     js-engine: V8
+
+  # ── macOS ─────────────────────────────────────────────────────
+  macOS_Xcode164:
+    uses: ./.github/workflows/build-macos.yml
+    with:
+      xcode-version: '16.4'
+      runs-on: macos-latest
+
+  macOS_Xcode164_Sanitizers:
+    uses: ./.github/workflows/build-macos.yml
+    with:
+      xcode-version: '16.4'
+      runs-on: macos-latest
+      enable-sanitizers: true
+
+  # ── iOS ───────────────────────────────────────────────────────
+  iOS_Xcode164:
+    uses: ./.github/workflows/build-ios.yml
+    with:
+      xcode-version: '16.4'
+      runs-on: macos-latest
+      simulator: 'iPhone 16'
+
+  iOS_Xcode152:
+    uses: ./.github/workflows/build-ios.yml
+    with:
+      xcode-version: '15.2'
+      runs-on: macos-14
+      simulator: 'iPhone 15'
+
+  # ── Linux ─────────────────────────────────────────────────────
+  Ubuntu_gcc:
+    uses: ./.github/workflows/build-linux.yml
+
+  Ubuntu_clang:
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      cc: clang
+      cxx: clang++
+
+  Ubuntu_Sanitizers_clang:
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      cc: clang
+      cxx: clang++
+      enable-sanitizers: true

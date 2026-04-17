@@ -1,4 +1,4 @@
-[![Build Status](https://dev.azure.com/babylonjs/ContinousIntegration/_apis/build/status/JsRuntimeHost%20CI?branchName=main)](https://dev.azure.com/babylonjs/ContinousIntegration/_build/latest?definitionId=22&branchName=main)
+[![CI](https://github.com/BabylonJS/JsRuntimeHost/actions/workflows/ci.yml/badge.svg)](https://github.com/BabylonJS/JsRuntimeHost/actions/workflows/ci.yml)
 
 # JavaScript Runtime Host
 The JsRuntimeHost is a library that provides cross-platform C++ JavaScript hosting for

@@ -1,0 +1,28 @@
+name: Build UWP
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+      js-engine:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: >
+          cmake -B Build/UWP -A ${{ inputs.platform }}
+          -D NAPI_JAVASCRIPT_ENGINE=${{ inputs.js-engine }}
+          -D CMAKE_SYSTEM_NAME=WindowsStore
+          -D CMAKE_SYSTEM_VERSION=10.0
+
+      - name: Build Solution
+        run: cmake --build Build/UWP --config RelWithDebInfo -- /m

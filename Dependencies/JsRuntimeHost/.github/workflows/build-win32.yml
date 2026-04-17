@@ -1,0 +1,52 @@
+name: Build Win32
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        required: true
+        type: string
+      js-engine:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: cmake -B Build/Win32 -A ${{ inputs.platform }} -D NAPI_JAVASCRIPT_ENGINE=${{ inputs.js-engine }}
+
+      - name: Build Solution
+        run: cmake --build Build/Win32 --config RelWithDebInfo -- /m
+
+      - name: Enable Crash Dumps
+        shell: cmd
+        run: |
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpType /t REG_DWORD /d 2 /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpCount /t REG_DWORD /d 1 /f
+          reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpFolder /t REG_SZ /d "%RUNNER_TEMP%\Dumps" /f
+
+      - name: Run Tests
+        shell: cmd
+        working-directory: Build/Win32/Tests/UnitTests/RelWithDebInfo
+        run: UnitTests.exe
+
+      - name: Stage Test App for Crash Dumps
+        if: failure()
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\Dumps" | Out-Null
+          Copy-Item -Path "Build\Win32\Tests\UnitTests\RelWithDebInfo\UnitTests.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
+
+      - name: Upload Crash Dumps
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.platform }}-${{ inputs.js-engine }}-crash-dumps
+          path: ${{ runner.temp }}/Dumps/
+          if-no-files-found: ignore
