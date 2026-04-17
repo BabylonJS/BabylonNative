@@ -5,8 +5,10 @@ set(SOURCES
     "Source/ShaderCompilerTraversers.cpp"
     "Source/ShaderCompilerTraversers.h")
 
-if(GRAPHICS_API STREQUAL "D3D11" OR GRAPHICS_API STREQUAL "D3D12")
-    set(SOURCES ${SOURCES} "Source/ShaderCompilerD3D.cpp")
+if(GRAPHICS_API STREQUAL "D3D11")
+    set(SOURCES ${SOURCES} "Source/ShaderCompilerDXBC.cpp")
+elseif(GRAPHICS_API STREQUAL "D3D12")
+    set(SOURCES ${SOURCES} "Source/ShaderCompilerDXIL.cpp")
 else()
     set(SOURCES ${SOURCES} "Source/ShaderCompiler${GRAPHICS_API}.cpp")
 endif()
@@ -38,7 +40,7 @@ elseif(TARGET spirv-cross-glsl)
         PRIVATE spirv-cross-glsl)
 endif()
 
-if(WIN32)
+if(GRAPHICS_API STREQUAL "D3D11")
     target_link_libraries(ShaderCompiler
         PRIVATE "d3dcompiler.lib")
 endif()
