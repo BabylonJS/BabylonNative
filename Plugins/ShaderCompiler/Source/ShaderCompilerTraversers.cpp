@@ -548,7 +548,11 @@ namespace Babylon::ShaderCompilerTraversers
                         !strcmp(name, "world1") ||
                         !strcmp(name, "world2") ||
                         !strcmp(name, "world3") ||
-                        !strcmp(name, "instanceColor"));
+                        !strcmp(name, "instanceColor") ||
+                        !strcmp(name, "splatIndex0") ||
+                        !strcmp(name, "splatIndex1") ||
+                        !strcmp(name, "splatIndex2") ||
+                        !strcmp(name, "splatIndex3"));
             }
 
             unsigned int m_genericAttributesRunningCount{0};
@@ -598,6 +602,18 @@ namespace Babylon::ShaderCompilerTraversers
                 auto intermediate{program.getIntermediate(EShLangVertex)};
                 VertexVaryingInTraverserOpenGL traverser{};
                 intermediate->getTreeRoot()->traverse(&traverser);
+
+                // Pre-count instance attributes so i_data names can be assigned in reverse.
+                // bgfx maps i_data0 to the last attribute (TEXCOORD7), so instance names
+                // must be assigned in reverse order, matching the Metal traverser.
+                for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
+                {
+                    if (IsInstance(name.c_str()))
+                    {
+                        traverser.m_instanceAttributeCount++;
+                    }
+                }
+
                 VertexVaryingInTraverser::Traverse(intermediate, ids, replacementToOriginalName, traverser);
             }
 
@@ -611,14 +627,16 @@ namespace Babylon::ShaderCompilerTraversers
                 m_genericAttributesRunningCount++;
                 if (IsInstance(name))
                 {
-                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[m_instanceAttributeIndex++]};
+                    // Reverse: bgfx maps i_data0 to the highest semantic (TEXCOORD7),
+                    // so the first instance attribute gets the highest i_data index.
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[--m_instanceAttributeCount]};
                 }
                 if (m_genericAttributesRunningCount >= static_cast<unsigned int>(bgfx::Attrib::Count))
                     throw std::runtime_error("Cannot support more than 18 vertex attributes.");
 
                 return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribName[static_cast<unsigned int>(m_genericAttributesRunningCount - 1)]};
             }
-            unsigned int m_instanceAttributeIndex{0};
+            unsigned int m_instanceAttributeCount{0};
         };
 
         class VertexVaryingInTraverserMetal final : private VertexVaryingInTraverser

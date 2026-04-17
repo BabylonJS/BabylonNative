@@ -1,0 +1,138 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  # ── Apple: macOS ──────────────────────────────────────────────
+  MacOS:
+    uses: ./.github/workflows/build-macos.yml
+
+  MacOS_Ninja:
+    uses: ./.github/workflows/build-macos.yml
+    with:
+      generator: 'Ninja Multi-Config'
+
+  MacOS_Sanitizers:
+    uses: ./.github/workflows/build-macos.yml
+    with:
+      enable-sanitizers: true
+
+  # ── Apple: iOS ────────────────────────────────────────────────
+  iOS_iOS180:
+    uses: ./.github/workflows/build-ios.yml
+    with:
+      deployment-target: '18.0'
+
+  iOS_iOS175:
+    uses: ./.github/workflows/build-ios.yml
+    with:
+      deployment-target: '17.5'
+
+  # ── Win32 ─────────────────────────────────────────────────────
+  Win32_x64_D3D11:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: x64
+
+  Win32_x64_JSI_D3D11:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: x64
+      napi-type: jsi
+
+  Win32_x64_V8_D3D11:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: x64
+      napi-type: V8
+
+  Win32_x64_D3D11_Sanitizers:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: x64
+      enable-sanitizers: true
+
+  Win32_x64_D3D12:
+    uses: ./.github/workflows/build-win32.yml
+    with:
+      platform: x64
+      graphics-api: D3D12
+
+  Win32_x64_D3D11_PrecompiledShaderTest:
+    uses: ./.github/workflows/build-win32-shader.yml
+
+  # ── UWP ───────────────────────────────────────────────────────
+  UWP_x64:
+    uses: ./.github/workflows/build-uwp.yml
+    with:
+      platform: x64
+
+  UWP_arm64:
+    uses: ./.github/workflows/build-uwp.yml
+    with:
+      platform: arm64
+
+  UWP_arm64_JSI:
+    uses: ./.github/workflows/build-uwp.yml
+    with:
+      platform: arm64
+      napi-type: jsi
+
+  # ── Ubuntu / Linux ────────────────────────────────────────────
+  Ubuntu_Clang_JSC:
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      cc: clang
+      cxx: clang++
+      js-engine: JavaScriptCore
+
+  Ubuntu_GCC_JSC:
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      cc: gcc
+      cxx: g++
+      js-engine: JavaScriptCore
+
+  # ── Android ───────────────────────────────────────────────────
+  Android_Ubuntu_JSC:
+    uses: ./.github/workflows/build-android.yml
+    with:
+      runs-on: ubuntu-latest
+      js-engine: JavaScriptCore
+
+  Android_Ubuntu_V8:
+    uses: ./.github/workflows/build-android.yml
+    with:
+      runs-on: ubuntu-latest
+      js-engine: V8
+
+  Android_MacOS_JSC:
+    uses: ./.github/workflows/build-android.yml
+    with:
+      runs-on: macos-latest
+      js-engine: JavaScriptCore
+
+  Android_MacOS_V8:
+    uses: ./.github/workflows/build-android.yml
+    with:
+      runs-on: macos-latest
+      js-engine: V8
+
+  # ── Installation Tests ────────────────────────────────────────
+  iOS_Installation:
+    uses: ./.github/workflows/test-install-ios.yml
+    with:
+      deployment-target: '17.2'
+
+  Linux_Installation:
+    uses: ./.github/workflows/test-install-linux.yml
+
+  MacOS_Installation:
+    uses: ./.github/workflows/test-install-macos.yml
+
+  Win32_Installation:
+    uses: ./.github/workflows/test-install-win32.yml

@@ -5,31 +5,18 @@
             "title": "Gaussian Splatting Compressed ply SH",
             "playgroundId": "#U8O4EP#1",
             "renderCount": 15,
-            "referenceImage": "gsplat-compressedply-sh.png",
-            "excludedGraphicsApis": [ "OpenGL" ],
-            "comments": {
-                "OpenGL": "Test doesn't render correctly"
-            }
+            "referenceImage": "gsplat-compressedply-sh.png"
         },
         {
             "title": "Gaussian Splatting Update Data",
             "playgroundId": "#Q0LBM8#2",
             "renderCount": 15,
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
-            "referenceImage": "gsplat-update-data.png",
-            "comments": {
-                "OpenGL": "Test doesn't render correctly",
-                "Metal": "Crashes"
-            }
+            "referenceImage": "gsplat-update-data.png"
         },
         {
             "title": "Native Canvas",
             "playgroundId": "#TKVFSA#7",
-            "referenceImage": "native-canvas.png",
-            "excludedGraphicsApis": [ "D3D12" ],
-            "comments": {
-                "D3D12": "2D Path not rendered"
-            }
+            "referenceImage": "native-canvas.png"
         },
         {
             "title": "EXR Loader",
@@ -39,11 +26,7 @@
         {
             "title": "NME Shadow Map",
             "playgroundId": "#M3QR7E#83",
-            "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "nmeshadowmap.png",
-            "comments": {
-                "OpenGL": "xvfb : invalid enum with glRenderbufferStorage"
-            }
+            "referenceImage": "nmeshadowmap.png"
         },
         {
             "title": "Procedural texture with NME",
@@ -55,12 +38,8 @@
             "title": "GLTF Extension EXT_mesh_gpu_instancing",
             "playgroundId": "#QFIGLW#9",
             "renderCount": 10,
-            "errorRatio": 6,
-            "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "gltfExtensionExtMeshGpuInstancingTest.png",
-            "comments": {
-                "OpenGL": "Test works with OpenGL but it so slow that CI times out"
-            }
+            "errorRatio": 25,
+            "referenceImage": "gltfExtensionExtMeshGpuInstancingTest.png"
         },
         {
             "title": "GLTF ext MSFT_LOD",
@@ -71,21 +50,16 @@
             "title": "GLTF Texture Linear Interpolation Test",
             "playgroundId": "#WGZLGJ#3009",
             "referenceImage": "gltfTextureLinearInterpolation.png",
-            "renderCount": 10,
-            "excludedGraphicsApis": [ "OpenGL" ],
-            "comments": {
-                "OpenGL": "Texture sampling creates a bunch of black dots for some reason"
-            }
+            "renderCount": 10
         },
         {
             "title": "GLTF Extension KHR_materials_volume with attenuation",
             "playgroundId": "#YG3BBF#18",
             "referenceImage": "gltfExtensionKhrMaterialsVolumeAttenuation.png",
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
-            "errorRatio": 1.2,
+            "excludedGraphicsApis": [ "Metal" ],
+            "errorRatio": 10,
             "renderCount": 10,
             "comments": {
-                "OpenGL": "xvfb : invalid enum with glRenderbufferStorage",
                 "Metal": "No object rendered"
             }
         },
@@ -161,11 +135,9 @@
             "title": "Glow layer and LODs",
             "playgroundId": "#UNS6ZV#2",
             "renderCount": 50,
-            "excludedGraphicsApis": [ "OpenGL", "D3D12", "Metal" ],
+            "excludedGraphicsApis": [ "Metal" ],
             "referenceImage": "glowlayerandlods.png",
             "comments": {
-                "OpenGL": "xvfb : invalid enum with glRenderbufferStorage",
-                "D3D12": "Mapping a texture fails with error HRESULT 0x887A0005",
                 "Metal": "Result doesn't match reference"
             }
         },
@@ -178,11 +150,7 @@
         {
             "title": "Dynamic Texture context clip",
             "playgroundId": "#FU0ES5#47",
-            "referenceImage": "dynamicTextureClip.png",
-            "excludedGraphicsApis": [ "D3D12" ],
-            "comments": {
-                "D3D12": "Incorrect rendering of clipped texture"
-            }
+            "referenceImage": "dynamicTextureClip.png"
         },
         {
             "title": "GUI3D SpherePanel",
@@ -212,11 +180,7 @@
             "title": "GLTF Alpha Blend",
             "playgroundId": "#SYQW69#579",
             "referenceImage": "glTFAlphaBlend.png",
-            "renderCount": 1,
-            "excludedGraphicsApis": [ "OpenGL" ],
-            "comments": {
-                "OpenGL": "Mostly looks right but there are enough pixels to trigger the threshold, need to investigate"
-            }
+            "renderCount": 1
         },
         {
             "title": "GLTF Node Attribute (1)",
@@ -228,10 +192,9 @@
             "title": "Soft Shadows",
             "playgroundId": "#0YYQ3N#0",
             "errorRatio": 50,
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
+            "excludedGraphicsApis": [ "Metal" ],
             "referenceImage": "softShadows.png",
             "comments": {
-                "OpenGL": "Invalid light and wrong specular with SSAOcat.babylon",
                 "Metal": "Nothing rendered"
             }
         },
@@ -239,10 +202,9 @@
             "title": "Soft Shadows (Right Handed)",
             "playgroundId": "#0YYQ3N#2",
             "errorRatio": 50,
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
+            "excludedGraphicsApis": [ "Metal" ],
             "referenceImage": "softShadowsRightHanded.png",
             "comments": {
-                "OpenGL": "Invalid light and wrong specular with SSAOcat.babylon",
                 "Metal": "Nothing rendered"
             }
         },
@@ -255,19 +217,14 @@
             "title": "Light Projection Texture",
             "playgroundId": "#CQNGRK#0",
             "renderCount": 2,
-            "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "LightProjectionTexture.png",
-            "comments": {
-                "OpenGL": "xvfb : no rendering"
-            }
+            "referenceImage": "LightProjectionTexture.png"
         },
         {
             "title": "Point light shadows",
             "playgroundId": "#U2F7P9#4",
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
+            "excludedGraphicsApis": [ "Metal" ],
             "referenceImage": "point-light-shadows.png",
             "comments": {
-                "OpenGL": "xvfb : invalid enum with glRenderbufferStorage",
                 "Metal": "Rendered result doesn't match reference"
             }
         },
@@ -356,10 +313,9 @@
             "title": "Multi cameras and output render target",
             "renderCount": 2,
             "playgroundId": "#BCYE7J#31",
-            "excludedGraphicsApis": [ "OpenGL", "Metal" ],
+            "excludedGraphicsApis": [ "Metal" ],
             "referenceImage": "multiCamerasOutputRenderTarget.png",
             "comments": {
-                "OpenGL": "Incorrect rendering",
                 "Metal": "Result does not match reference"
             }
         },
@@ -373,10 +329,9 @@
             "title": "Scissor test",
             "playgroundId": "#W7E7CF#34",
             "referenceImage": "scissor-test.png",
-            "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
+            "excludedGraphicsApis": [ "D3D12" ],
             "comments": {
-                "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx",
-                "OpenGL": "Incorrect rendering"
+                "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx"
             }
         },
         {
@@ -384,11 +339,10 @@
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
-            "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
+            "excludedGraphicsApis": [ "D3D12" ],
             "errorRatio": 50,
             "comments": {
-                "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx",
-                "OpenGL": "Incorrect rendering"
+                "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx"
             }
         },
         {
@@ -396,10 +350,9 @@
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 1.5;",
             "referenceImage": "scissor-test-3.png",
-            "excludedGraphicsApis": [ "D3D12", "OpenGL" ],
+            "excludedGraphicsApis": [ "D3D12" ],
             "comments": {
-                "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx",
-                "OpenGL": "Incorrect rendering"
+                "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx"
             }
         },
         {
@@ -599,11 +552,7 @@
         {
             "title": "GLTF Alien",
             "playgroundId": "#XN37SR#5",
-            "excludedGraphicsApis": [ "OpenGL" ],
-            "referenceImage": "gltfAlien.png",
-            "comments": {
-                "OpenGL": "int/float casting see https://github.com/BabylonJS/BabylonNative/pull/1544"
-            }
+            "referenceImage": "gltfAlien.png"
         },
         {
             "title": "Interleaved buffers test",

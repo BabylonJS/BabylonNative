@@ -52,7 +52,6 @@ target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MIN_UNIFORM_BUFFER_SIZE=4096
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESHOLD_SIZE=256)
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE=1024)
 target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
-target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_DXIL=0)
 
 # Temporary disable uniform debug.
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_UNIFORM=0)
@@ -71,13 +70,9 @@ elseif(GRAPHICS_API STREQUAL "Vulkan")
     target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_RENDERER_VULKAN=1)
 endif()
 set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET bimg PROPERTY UNITY_BUILD false)
 set_property(TARGET bimg_encode PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET bimg_encode PROPERTY UNITY_BUILD false)
 set_property(TARGET bimg_decode PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET bimg_decode PROPERTY UNITY_BUILD false)
 set_property(TARGET minz PROPERTY FOLDER Dependencies/bgfx/3rdparty)
-set_property(TARGET minz PROPERTY UNITY_BUILD false)
 if(TARGET tinyexr)
     set_property(TARGET tinyexr PROPERTY FOLDER Dependencies/bgfx/3rdparty)
 endif()
@@ -85,10 +80,6 @@ set_property(TARGET bgfx PROPERTY FOLDER Dependencies/bgfx)
 set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx)
 set_property(TARGET bx PROPERTY FOLDER Dependencies/bgfx)
 target_compile_definitions(bx PRIVATE _CRT_SECURE_NO_WARNINGS)
-
-if(APPLE)
-    set_property(TARGET bgfx PROPERTY UNITY_BUILD false)
-endif()
 
 if(UNIX AND NOT APPLE AND NOT ANDROID)
     # Use GLVND libraries for EGL support in bgfx
@@ -151,16 +142,6 @@ endif()
 # JsRuntimeHost
 # --------------------------------------------------
 FetchContent_MakeAvailable_With_Message(JsRuntimeHost)
-
-set_property(TARGET JsRuntime PROPERTY UNITY_BUILD false)
-if(TARGET AppRuntime)
-    set_property(TARGET AppRuntime PROPERTY UNITY_BUILD false)
-endif()
-
-if(WIN32)
-    # UrlLib does not support unity build on win32
-    set_property(TARGET UrlLib PROPERTY UNITY_BUILD false)
-endif()
 
 # --------------------------------------------------
 # metal-cpp
@@ -278,7 +259,6 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP)
     set(WEBP_BUILD_EXTRAS OFF)
     FetchContent_MakeAvailable_With_Message(libwebp)
 
-    set_property(TARGET sharpyuv PROPERTY UNITY_BUILD false)
     set_property(TARGET sharpyuv PROPERTY FOLDER Dependencies/libwebp)
     set_property(TARGET webp PROPERTY FOLDER Dependencies/libwebp)
     set_property(TARGET webpdecode PROPERTY FOLDER Dependencies/libwebp)
