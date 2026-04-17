@@ -20,6 +20,7 @@ if(NOT MINIZ_LIBRARIES)
 		 ${BIMG_DIR}/3rdparty/tinyexr/deps/miniz/miniz.* #
 	)
 	set(MINIZ_INCLUDE_DIR ${BIMG_DIR}/3rdparty/tinyexr/deps/miniz)
+	set(MINIZ_INCLUDE_DIR ${BIMG_DIR}/3rdparty/tinyexr/deps)
 
 	add_library(minz STATIC ${MINIZ_SOURCES_INTERNAL})
 	target_include_directories(minz PUBLIC ${MINIZ_INCLUDE_DIR})
