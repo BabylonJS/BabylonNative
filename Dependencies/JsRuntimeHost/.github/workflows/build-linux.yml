@@ -15,6 +15,10 @@ on:
         required: false
         type: boolean
         default: false
+      enable-thread-sanitizer:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -36,6 +40,7 @@ jobs:
           cmake -B Build/ubuntu -G Ninja \
             -D CMAKE_BUILD_TYPE=RelWithDebInfo \
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} \
+            -D ENABLE_THREAD_SANITIZER=${{ inputs.enable-thread-sanitizer && 'ON' || 'OFF' }} \
             -D CMAKE_C_COMPILER=${{ inputs.cc }} \
             -D CMAKE_CXX_COMPILER=${{ inputs.cxx }}
 
@@ -45,3 +50,13 @@ jobs:
       - name: Run Tests
         working-directory: Build/ubuntu/Tests/UnitTests
         run: ./UnitTests
+        env:
+          TSAN_OPTIONS: ${{ inputs.enable-thread-sanitizer && format('suppressions={0}/.github/tsan_suppressions.txt', github.workspace) || '' }}
+          # JSC's concurrent GC on Linux uses SIGUSR1 + sem_wait to suspend mutator
+          # threads at safepoints. TSan's signal interception delays SIGUSR1 delivery
+          # indefinitely, deadlocking the Collector Thread's sem_wait. Disabling the
+          # concurrent collector removes the dedicated Collector Thread, so GC runs
+          # on the mutator without cross-thread signals. macOS JSC uses Mach
+          # thread_suspend() and is unaffected.
+          JSC_useConcurrentGC: ${{ inputs.enable-thread-sanitizer && '0' || '' }}
+

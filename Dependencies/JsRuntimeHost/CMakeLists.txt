@@ -15,7 +15,7 @@ FetchContent_Declare(AndroidExtensions
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(arcana.cpp
     GIT_REPOSITORY https://github.com/microsoft/arcana.cpp.git
-    GIT_TAG b9bf9d85fce37d5fc9dbfc4a4dc5e1531bee215a
+    GIT_TAG 0b9f9b6d761909fbca9d3ab1f2d8ff1c3d25ed3d
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(asio
     GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
@@ -37,7 +37,7 @@ FetchContent_Declare(llhttp
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(UrlLib
     GIT_REPOSITORY https://github.com/BabylonJS/UrlLib.git
-    GIT_TAG 880c2575e57ca0b59068ecc4860f185b9970e0ce
+    GIT_TAG d251ad44015e1ee6cd071514cb863d8ffc220f16
     EXCLUDE_FROM_ALL)
 # --------------------------------------------------
 
@@ -85,6 +85,11 @@ option(JSRUNTIMEHOST_POLYFILL_TEXTDECODER "Include JsRuntimeHost Polyfill TextDe
 
 # Sanitizers
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
+option(ENABLE_THREAD_SANITIZER "Enable ThreadSanitizer" OFF)
+
+if(ENABLE_SANITIZERS AND ENABLE_THREAD_SANITIZER)
+    message(FATAL_ERROR "ENABLE_SANITIZERS and ENABLE_THREAD_SANITIZER cannot be used together.")
+endif()
 
 if(ENABLE_SANITIZERS)
     set(ENABLE_RTTI ON CACHE BOOL "" FORCE)
@@ -108,6 +113,15 @@ if(ENABLE_SANITIZERS)
         add_link_options(-fsanitize=${SANITIZER_FLAGS})
     else()
         message(WARNING "Sanitizers not supported on this compiler.")
+    endif()
+endif()
+
+if(ENABLE_THREAD_SANITIZER)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        add_compile_options(-fsanitize=thread -fno-omit-frame-pointer)
+        add_link_options(-fsanitize=thread)
+    else()
+        message(WARNING "ThreadSanitizer not supported on this compiler.")
     endif()
 endif()
 

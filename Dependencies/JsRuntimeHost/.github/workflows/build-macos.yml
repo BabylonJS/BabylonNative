@@ -14,6 +14,10 @@ on:
         required: false
         type: boolean
         default: false
+      enable-thread-sanitizer:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -28,7 +32,8 @@ jobs:
       - name: Configure CMake
         run: |
           cmake -B Build/macOS -G Xcode \
-            -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }}
+            -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} \
+            -D ENABLE_THREAD_SANITIZER=${{ inputs.enable-thread-sanitizer && 'ON' || 'OFF' }}
 
       - name: Build
         run: cmake --build Build/macOS --target UnitTests --config RelWithDebInfo
@@ -36,3 +41,6 @@ jobs:
       - name: Run Tests
         working-directory: Build/macOS/Tests/UnitTests/RelWithDebInfo
         run: ./UnitTests
+        env:
+          TSAN_OPTIONS: ${{ inputs.enable-thread-sanitizer && format('suppressions={0}/.github/tsan_suppressions.txt', github.workspace) || '' }}
+

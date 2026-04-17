@@ -1,0 +1,17 @@
+# ThreadSanitizer suppressions for JsRuntimeHost
+#
+# These suppress data races internal to third-party libraries that we cannot fix.
+# TSan on macOS (JavaScriptCore via Xcode) passes clean — these suppressions are
+# only needed for the Ubuntu JSC build (libjavascriptcoregtk).
+
+# JavaScriptCore internal races in libjavascriptcoregtk.
+# Races manifest in TSan interceptors (free/malloc/memcpy/close) called from
+# JSC's JIT worker threads. function-name suppressions are needed because the
+# top frame is a libc interceptor attributed to UnitTests, not libjavascriptcoregtk.
+called_from_lib:libjavascriptcoregtk
+race:free
+race:close
+race:memcpy
+
+# JSC signal handler that doesn't save/restore errno
+signal:libjavascriptcoregtk

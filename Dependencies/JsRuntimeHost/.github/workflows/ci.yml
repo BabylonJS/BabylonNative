@@ -83,6 +83,14 @@ jobs:
       runs-on: macos-latest
       enable-sanitizers: true
 
+  macOS_Xcode164_ThreadSanitizer:
+    uses: ./.github/workflows/build-macos.yml
+    with:
+      xcode-version: '16.4'
+      runs-on: macos-latest
+      enable-thread-sanitizer: true
+
+
   # ── iOS ───────────────────────────────────────────────────────
   iOS_Xcode164:
     uses: ./.github/workflows/build-ios.yml
@@ -114,3 +122,10 @@ jobs:
       cc: clang
       cxx: clang++
       enable-sanitizers: true
+
+  Ubuntu_ThreadSanitizer_clang:
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      cc: clang
+      cxx: clang++
+      enable-thread-sanitizer: true
