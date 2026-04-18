@@ -328,32 +328,20 @@
         {
             "title": "Scissor test",
             "playgroundId": "#W7E7CF#34",
-            "referenceImage": "scissor-test.png",
-            "excludedGraphicsApis": [ "D3D12" ],
-            "comments": {
-                "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx"
-            }
+            "referenceImage": "scissor-test.png"
         },
         {
             "title": "Scissor test with 0.9 hardware scaling",
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
-            "excludedGraphicsApis": [ "D3D12" ],
-            "errorRatio": 50,
-            "comments": {
-                "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx"
-            }
+            "errorRatio": 50
         },
         {
             "title": "Scissor test with 1.5 hardware scaling",
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 1.5;",
-            "referenceImage": "scissor-test-3.png",
-            "excludedGraphicsApis": [ "D3D12" ],
-            "comments": {
-                "D3D12": "reenable when automatic mip-maps issue is fixed in bgfx"
-            }
+            "referenceImage": "scissor-test-3.png"
         },
         {
             "title": "Scissor test with negative x and y",
