@@ -15,7 +15,7 @@
         "@babel/cli": "^7.28.3",
         "@babel/core": "^7.28.3",
         "@babel/preset-env": "^7.28.3",
-        "@babylonjs/core": "^9.3.2",
+        "@babylonjs/core": "^9.3.3",
         "@types/node": "^24.7.1",
         "rimraf": "^6.0.1",
         "terser-webpack-plugin": "^5.3.10",
