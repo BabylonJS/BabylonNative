@@ -7,50 +7,39 @@ on:
     branches: [master]
 
 jobs:
-  # TODO(module-load-test): REVERT BEFORE READY-FOR-REVIEW — non-Win32 jobs gated with `if: false`
-  # to speed up CI iteration while seeding the ModuleLoadTest golden list. Restore by removing
-  # every `if: false` in this file.
-
   # ── Apple: macOS ──────────────────────────────────────────────
   MacOS:
-    if: false
     uses: ./.github/workflows/build-macos.yml
 
   MacOS_Ninja:
-    if: false
     uses: ./.github/workflows/build-macos.yml
     with:
       generator: 'Ninja Multi-Config'
 
   MacOS_Sanitizers:
-    if: false
     uses: ./.github/workflows/build-macos.yml
     with:
       enable-sanitizers: true
 
   # ── Apple: iOS ────────────────────────────────────────────────
   iOS_iOS180:
-    if: false
     uses: ./.github/workflows/build-ios.yml
     with:
       deployment-target: '18.0'
 
   iOS_iOS175:
-    if: false
     uses: ./.github/workflows/build-ios.yml
     with:
       deployment-target: '17.5'
 
   # ── Apple: Xcode 26 ──────────────────────────────────────────
   MacOS_Xcode26:
-    if: false
     uses: ./.github/workflows/build-macos.yml
     with:
       xcode-version: '26.4'
       runs-on: macos-26
 
   iOS_Xcode26:
-    if: false
     uses: ./.github/workflows/build-ios.yml
     with:
       deployment-target: '26.0'
@@ -76,7 +65,6 @@ jobs:
       napi-type: V8
 
   Win32_x64_D3D11_Sanitizers:
-    if: false
     uses: ./.github/workflows/build-win32.yml
     with:
       platform: x64
@@ -89,24 +77,20 @@ jobs:
       graphics-api: D3D12
 
   Win32_x64_D3D11_PrecompiledShaderTest:
-    if: false
     uses: ./.github/workflows/build-win32-shader.yml
 
   # ── UWP ───────────────────────────────────────────────────────
   UWP_x64:
-    if: false
     uses: ./.github/workflows/build-uwp.yml
     with:
       platform: x64
 
   UWP_arm64:
-    if: false
     uses: ./.github/workflows/build-uwp.yml
     with:
       platform: arm64
 
   UWP_arm64_JSI:
-    if: false
     uses: ./.github/workflows/build-uwp.yml
     with:
       platform: arm64
@@ -114,7 +98,6 @@ jobs:
 
   # ── Ubuntu / Linux ────────────────────────────────────────────
   Ubuntu_Clang_JSC:
-    if: false
     uses: ./.github/workflows/build-linux.yml
     with:
       cc: clang
@@ -122,7 +105,6 @@ jobs:
       js-engine: JavaScriptCore
 
   Ubuntu_GCC_JSC:
-    if: false
     uses: ./.github/workflows/build-linux.yml
     with:
       cc: gcc
@@ -131,28 +113,24 @@ jobs:
 
   # ── Android ───────────────────────────────────────────────────
   Android_Ubuntu_JSC:
-    if: false
     uses: ./.github/workflows/build-android.yml
     with:
       runs-on: ubuntu-latest
       js-engine: JavaScriptCore
 
   Android_Ubuntu_V8:
-    if: false
     uses: ./.github/workflows/build-android.yml
     with:
       runs-on: ubuntu-latest
       js-engine: V8
 
   Android_MacOS_JSC:
-    if: false
     uses: ./.github/workflows/build-android.yml
     with:
       runs-on: macos-latest
       js-engine: JavaScriptCore
 
   Android_MacOS_V8:
-    if: false
     uses: ./.github/workflows/build-android.yml
     with:
       runs-on: macos-latest
@@ -160,19 +138,15 @@ jobs:
 
   # ── Installation Tests ────────────────────────────────────────
   iOS_Installation:
-    if: false
     uses: ./.github/workflows/test-install-ios.yml
     with:
       deployment-target: '17.2'
 
   Linux_Installation:
-    if: false
     uses: ./.github/workflows/test-install-linux.yml
 
   MacOS_Installation:
-    if: false
     uses: ./.github/workflows/test-install-macos.yml
 
   Win32_Installation:
-    if: false
     uses: ./.github/workflows/test-install-win32.yml

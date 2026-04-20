@@ -137,10 +137,7 @@ jobs:
           UnitTests
 
       - name: Module Load Test
-        # TODO(module-load-test): REVERT BEFORE READY-FOR-REVIEW — use `always()` to run even
-        # when UnitTests fails (pre-existing light-projection regression blocks D3D11). Revert
-        # to `!inputs.enable-sanitizers` once upstream Babylon.js fix is picked up.
-        if: ${{ always() && !inputs.enable-sanitizers }}
+        if: ${{ !inputs.enable-sanitizers }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\ModuleLoadTest\RelWithDebInfo
