@@ -136,6 +136,13 @@ jobs:
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\UnitTests\RelWithDebInfo
           UnitTests
 
+      - name: Module Load Test
+        if: ${{ !inputs.enable-sanitizers }}
+        shell: cmd
+        run: |
+          cd build\${{ steps.vars.outputs.solution_name }}\Apps\ModuleLoadTest\RelWithDebInfo
+          ModuleLoadTest
+
       - name: Stage UnitTests Crash Dump
         if: failure()
         shell: powershell
