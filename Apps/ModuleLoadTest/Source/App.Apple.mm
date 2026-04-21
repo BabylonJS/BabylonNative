@@ -34,11 +34,14 @@ namespace ModuleLoadTest
         }
     }
 
-    // Empty initial seed — the CI run of this PR will print the observed
-    // delta and we'll append entries here in follow-up commits.
     const ModuleSnapshot& GetExpectedBootModules()
     {
-        static const ModuleSnapshot kModules{};
+        // Seeded from CI on macos-latest (ARM64 paravirtualized GPU runner).
+        // Append entries here as new configs surface deltas.
+        static const ModuleSnapshot kModules{
+            "appleparavirtgpumetaliogpufamily",
+            "iogpu",
+        };
         return kModules;
     }
 
