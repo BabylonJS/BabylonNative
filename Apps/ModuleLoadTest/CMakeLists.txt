@@ -1,15 +1,27 @@
-if(NOT(WIN32 AND NOT WINDOWS_STORE))
-    # Windows-only for the initial implementation.
-    # macOS and Linux support will be added in follow-up commits on this PR.
-    return()
-endif()
-
 set(SOURCES
     "Source/App.h"
     "Source/App.cpp"
-    "Source/App.Win32.cpp"
-    "Source/ModuleSnapshot.h"
-    "Source/ModuleSnapshot.Win32.cpp")
+    "Source/ModuleSnapshot.h")
+
+if(WIN32 AND NOT WINDOWS_STORE)
+    list(APPEND SOURCES
+        "Source/App.Win32.cpp"
+        "Source/ModuleSnapshot.Win32.cpp")
+elseif(APPLE AND NOT IOS)
+    list(APPEND SOURCES
+        "Source/App.Apple.mm"
+        "Source/ModuleSnapshot.macOS.mm")
+    find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
+    set(ADDITIONAL_LIBRARIES PRIVATE ${JAVASCRIPTCORE_LIBRARY})
+elseif(UNIX AND NOT ANDROID)
+    list(APPEND SOURCES
+        "Source/App.X11.cpp"
+        "Source/ModuleSnapshot.Linux.cpp")
+else()
+    # Unsupported platform (UWP, Android, iOS) — mobile/store bundling
+    # changes module-load semantics. Silently skip.
+    return()
+endif()
 
 add_executable(ModuleLoadTest ${SOURCES})
 
@@ -22,7 +34,8 @@ target_link_libraries(ModuleLoadTest
     PRIVATE NativeEngine
     PRIVATE NativeEncoding
     PRIVATE Window
-    PRIVATE XMLHttpRequest)
+    PRIVATE XMLHttpRequest
+    ${ADDITIONAL_LIBRARIES})
 
 add_test(NAME ModuleLoadTest COMMAND ModuleLoadTest CONFIGURATIONS Release RelWithDebInfo)
 

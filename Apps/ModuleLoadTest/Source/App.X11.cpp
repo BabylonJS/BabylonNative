@@ -1,0 +1,161 @@
+// gtest.h-style include ordering: X11 headers #define None (which collides
+// with lots of C++ code) so they must come before anything that cares.
+#define XK_MISCELLANY
+#define XK_LATIN1
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#undef None
+
+#include "App.h"
+#include "ModuleSnapshot.h"
+
+#include <Babylon/DebugTrace.h>
+#include <Babylon/Graphics/Device.h>
+
+#include <cstdio>
+#include <cstring>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <string_view>
+
+namespace ModuleLoadTest
+{
+    namespace
+    {
+        // Parse /proc/self/status for a non-zero TracerPid. Non-invasive
+        // (contrast with ptrace(PTRACE_TRACEME), which *creates* trace state
+        // if none exists).
+        bool IsBeingTraced()
+        {
+            std::ifstream status{"/proc/self/status"};
+            std::string line;
+            while (std::getline(status, line))
+            {
+                constexpr std::string_view prefix{"TracerPid:"};
+                if (line.size() >= prefix.size() && line.compare(0, prefix.size(), prefix) == 0)
+                {
+                    const char* p = line.c_str() + prefix.size();
+                    while (*p == ' ' || *p == '\t') ++p;
+                    return *p != '\0' && *p != '0';
+                }
+            }
+            return false;
+        }
+    }
+
+    // Empty initial seed — the CI run of this PR will print the observed delta
+    // and we'll append entries here in follow-up commits. See App.Win32.cpp
+    // for the full rationale of the asymmetric (permissive superset) check.
+    const ModuleSnapshot& GetExpectedBootModules()
+    {
+        static const ModuleSnapshot kModules{};
+        return kModules;
+    }
+
+    // Name patterns for modules whose presence in the delta is allowed but
+    // not required. On Linux the graphics stack varies a lot across runners:
+    // Mesa DRI drivers, llvmpipe/swrast, NVIDIA/AMD userspace libs, Vulkan
+    // ICD loaders, GL ABI variants. Seed a broad carve-out up front so the
+    // golden list doesn't have to re-list every distro/GPU permutation.
+    bool IsAllowedOptionalModule(std::string_view name)
+    {
+        static constexpr std::string_view kPrefixes[] = {
+            // Mesa and DRI driver shims (swrast, llvmpipe, iris, radeonsi, ...)
+            "libglapi",
+            "libdri",
+            "swrast",
+            "llvmpipe",
+            "iris",
+            "radeonsi",
+            "i965",
+            "i915",
+            "nouveau",
+            "virtio",
+            "vmwgfx",
+            "kms",
+            // NVIDIA proprietary
+            "libnvidia",
+            "libcuda",
+            "libgl_nvidia",
+            "libegl_nvidia",
+            // AMD proprietary
+            "libamdgpu",
+            "libdrm_amdgpu",
+            // Vulkan ICD loaders
+            "libvulkan",
+            // GLVND variants
+            "libgl.",
+            "libglx",
+            "libegl.",
+            "libgles",
+            "libopengl",
+        };
+        for (const auto& prefix : kPrefixes)
+        {
+            if (name.size() >= prefix.size() && name.compare(0, prefix.size(), prefix) == 0)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+namespace
+{
+    constexpr const char* kApplicationName = "Babylon Native ModuleLoadTest";
+    constexpr int kWidth = 640;
+    constexpr int kHeight = 480;
+}
+
+int main(int /*argc*/, char* /*argv*/[])
+{
+#if !defined(NDEBUG)
+    std::cout << "ModuleLoadTest: SKIP - Debug config is not supported. "
+                 "Build with Release or RelWithDebInfo." << std::endl;
+    return 0;
+#else
+    if (ModuleLoadTest::IsBeingTraced())
+    {
+        std::cout << "ModuleLoadTest: SKIP - running under a debugger." << std::endl;
+        return 0;
+    }
+
+    XInitThreads();
+    Display* display = XOpenDisplay(nullptr);
+    if (display == nullptr)
+    {
+        // Headless environments without an X display (e.g. local runs outside
+        // xvfb-run) cannot bring up bgfx's GL backend. CI wraps this binary
+        // in xvfb-run so the path below is the normal case there.
+        std::cout << "ModuleLoadTest: SKIP - no X display (set DISPLAY or run "
+                     "under xvfb-run)." << std::endl;
+        return 0;
+    }
+
+    const int screen = DefaultScreen(display);
+    const int depth = DefaultDepth(display, screen);
+    Visual* visual = DefaultVisual(display, screen);
+    const Window root = RootWindow(display, screen);
+
+    XSetWindowAttributes windowAttrs{};
+    const Window window = XCreateWindow(display, root, 0, 0, kWidth, kHeight, 0, depth,
+        InputOutput, visual, CWBorderPixel | CWEventMask, &windowAttrs);
+    XStoreName(display, window, kApplicationName);
+    XMapWindow(display, window);
+
+    Babylon::Graphics::Configuration config{};
+    config.Window = window;
+    config.Width = static_cast<size_t>(kWidth);
+    config.Height = static_cast<size_t>(kHeight);
+
+    Babylon::DebugTrace::EnableDebugTrace(true);
+    Babylon::DebugTrace::SetTraceOutput([](const char* trace) { std::printf("%s\n", trace); std::fflush(stdout); });
+
+    const int rc = ModuleLoadTest::CompareAndReport(ModuleLoadTest::RunBoot(config));
+
+    XCloseDisplay(display);
+    return rc;
+#endif
+}

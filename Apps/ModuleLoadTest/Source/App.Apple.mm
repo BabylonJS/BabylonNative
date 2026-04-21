@@ -1,0 +1,101 @@
+#include "App.h"
+#include "ModuleSnapshot.h"
+
+#include <Babylon/DebugTrace.h>
+#include <Babylon/Graphics/Device.h>
+
+#import <Metal/Metal.hpp>
+
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <iostream>
+#include <string_view>
+
+#import <Foundation/Foundation.h>
+
+namespace ModuleLoadTest
+{
+    namespace
+    {
+        // Apple equivalent of IsDebuggerPresent() — non-invasive.
+        // https://developer.apple.com/library/archive/qa/qa1361/_index.html
+        bool IsBeingTraced()
+        {
+            int name[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid() };
+            struct kinfo_proc info{};
+            size_t size = sizeof(info);
+            if (sysctl(name, 4, &info, &size, nullptr, 0) != 0)
+            {
+                return false;
+            }
+            return (info.kp_proc.p_flag & P_TRACED) != 0;
+        }
+    }
+
+    // Empty initial seed — the CI run of this PR will print the observed
+    // delta and we'll append entries here in follow-up commits.
+    const ModuleSnapshot& GetExpectedBootModules()
+    {
+        static const ModuleSnapshot kModules{};
+        return kModules;
+    }
+
+    // On macOS the interesting per-SKU variation is the Metal/GPU driver
+    // bundles (AMDMTLBronzeDriver, AppleIntelKBLGraphicsMTLDriver, ...), which
+    // dyld loads by path under /System/Library/Extensions/. Base names still
+    // differ between Apple Silicon and Intel. Seed a broad carve-out.
+    bool IsAllowedOptionalModule(std::string_view name)
+    {
+        static constexpr std::string_view kPrefixes[] = {
+            // Metal GPU driver bundles
+            "amdmtl",
+            "appleintel",
+            "applem1",
+            "applem2",
+            "applem3",
+            "nvmtl",
+            // Ambient/IOSurface layer
+            "iosurface",
+        };
+        for (const auto& prefix : kPrefixes)
+        {
+            if (name.size() >= prefix.size() && name.compare(0, prefix.size(), prefix) == 0)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+int main(int /*argc*/, char* /*argv*/[])
+{
+#if !defined(NDEBUG)
+    std::cout << "ModuleLoadTest: SKIP - Debug config is not supported. "
+                 "Build with Release or RelWithDebInfo." << std::endl;
+    return 0;
+#else
+    if (ModuleLoadTest::IsBeingTraced())
+    {
+        std::cout << "ModuleLoadTest: SKIP - running under a debugger." << std::endl;
+        return 0;
+    }
+
+    Babylon::DebugTrace::EnableDebugTrace(true);
+    Babylon::DebugTrace::SetTraceOutput([](const char* trace) { NSLog(@"%s", trace); });
+
+    Babylon::Graphics::Configuration config{};
+    config.Device = MTL::CreateSystemDefaultDevice();
+    if (config.Device == nullptr)
+    {
+        std::cout << "ModuleLoadTest: SKIP - no Metal device available." << std::endl;
+        return 0;
+    }
+    config.Width = 600;
+    config.Height = 400;
+
+    return ModuleLoadTest::CompareAndReport(ModuleLoadTest::RunBoot(config));
+#endif
+}
