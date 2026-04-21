@@ -139,11 +139,32 @@ int main(int /*argc*/, char* /*argv*/[])
     Visual* visual = DefaultVisual(display, screen);
     const Window root = RootWindow(display, screen);
 
-    XSetWindowAttributes windowAttrs{};
+    // Mirror Apps/UnitTests/Source/App.X11.cpp exactly: explicit zero-init of
+    // window attributes, explicit clear-to-black via XChangeWindowAttributes,
+    // and the same XMapWindow -> XStoreName order. bgfx's GL/EGL backend is
+    // sensitive to this sequencing under xvfb-run; deviations have been
+    // observed to cause "Failed to create surface" aborts.
+    XSetWindowAttributes windowAttrs;
+    windowAttrs.background_pixel = 0;
+    windowAttrs.background_pixmap = 0;
+    windowAttrs.border_pixel = 0;
+    windowAttrs.event_mask = 0;
+
     const Window window = XCreateWindow(display, root, 0, 0, kWidth, kHeight, 0, depth,
         InputOutput, visual, CWBorderPixel | CWEventMask, &windowAttrs);
-    XStoreName(display, window, kApplicationName);
+
+    // Clear window to black.
+    XSetWindowAttributes attr;
+    std::memset(&attr, 0, sizeof(attr));
+    XChangeWindowAttributes(display, window, CWBackPixel, &attr);
+
+    constexpr const char* wmDeleteWindowName = "WM_DELETE_WINDOW";
+    Atom wmDeleteWindow;
+    XInternAtoms(display, (char**)&wmDeleteWindowName, 1, False, &wmDeleteWindow);
+    XSetWMProtocols(display, window, &wmDeleteWindow, 1);
+
     XMapWindow(display, window);
+    XStoreName(display, window, kApplicationName);
 
     Babylon::Graphics::Configuration config{};
     config.Window = window;
