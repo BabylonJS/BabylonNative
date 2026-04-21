@@ -17,21 +17,18 @@
 
 namespace ModuleLoadTest
 {
-    namespace
+    // Apple equivalent of IsDebuggerPresent() — non-invasive.
+    // https://developer.apple.com/library/archive/qa/qa1361/_index.html
+    bool IsBeingTraced()
     {
-        // Apple equivalent of IsDebuggerPresent() — non-invasive.
-        // https://developer.apple.com/library/archive/qa/qa1361/_index.html
-        bool IsBeingTraced()
+        int name[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid() };
+        struct kinfo_proc info{};
+        size_t size = sizeof(info);
+        if (sysctl(name, 4, &info, &size, nullptr, 0) != 0)
         {
-            int name[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid() };
-            struct kinfo_proc info{};
-            size_t size = sizeof(info);
-            if (sysctl(name, 4, &info, &size, nullptr, 0) != 0)
-            {
-                return false;
-            }
-            return (info.kp_proc.p_flag & P_TRACED) != 0;
+            return false;
         }
+        return (info.kp_proc.p_flag & P_TRACED) != 0;
     }
 
     const ModuleSnapshot& GetExpectedBootModules()
@@ -75,14 +72,8 @@ namespace ModuleLoadTest
 
 int main(int /*argc*/, char* /*argv*/[])
 {
-#if !defined(NDEBUG)
-    std::cout << "ModuleLoadTest: SKIP - Debug config is not supported. "
-                 "Build with Release or RelWithDebInfo." << std::endl;
-    return 0;
-#else
-    if (ModuleLoadTest::IsBeingTraced())
+    if (ModuleLoadTest::ShouldSkipEnvironment())
     {
-        std::cout << "ModuleLoadTest: SKIP - running under a debugger." << std::endl;
         return 0;
     }
 
@@ -101,5 +92,4 @@ int main(int /*argc*/, char* /*argv*/[])
     config.Height = 400;
 
     return ModuleLoadTest::CompareAndReport(ModuleLoadTest::RunBoot(config));
-#endif
 }

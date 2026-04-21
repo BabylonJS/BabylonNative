@@ -18,6 +18,30 @@
 
 namespace ModuleLoadTest
 {
+    bool ShouldSkipEnvironment()
+    {
+#if !defined(NDEBUG)
+        // Debug builds load a different set of modules than optimized builds
+        // (debug CRT, heavier diagnostic DLLs, etc). The platform golden lists
+        // target Release/RelWithDebInfo. Rather than produce a confusing FAIL,
+        // make the skip explicit. CI runs only in optimized configs (see
+        // CMakeLists.txt's `add_test ... CONFIGURATIONS Release RelWithDebInfo`).
+        std::cout << "ModuleLoadTest: SKIP - Debug config is not supported. "
+                     "Build with Release or RelWithDebInfo." << std::endl;
+        return true;
+#else
+        // Running under a debugger injects additional modules (and changes
+        // some timing) that would cause spurious FAIL diagnostics. CI runs
+        // headless from the CLI, so this only affects local debugging.
+        if (IsBeingTraced())
+        {
+            std::cout << "ModuleLoadTest: SKIP - running under a debugger." << std::endl;
+            return true;
+        }
+        return false;
+#endif
+    }
+
     ModuleSnapshot RunBoot(const Babylon::Graphics::Configuration& config)
     {
         // Bring up the real graphics device. This triggers the backend

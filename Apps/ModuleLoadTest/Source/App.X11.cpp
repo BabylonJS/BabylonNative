@@ -21,32 +21,28 @@
 
 namespace ModuleLoadTest
 {
-    namespace
+    // Parse /proc/self/status for a non-zero TracerPid. Non-invasive
+    // (contrast with ptrace(PTRACE_TRACEME), which *creates* trace state
+    // if none exists).
+    bool IsBeingTraced()
     {
-        // Parse /proc/self/status for a non-zero TracerPid. Non-invasive
-        // (contrast with ptrace(PTRACE_TRACEME), which *creates* trace state
-        // if none exists).
-        bool IsBeingTraced()
+        std::ifstream status{"/proc/self/status"};
+        std::string line;
+        while (std::getline(status, line))
         {
-            std::ifstream status{"/proc/self/status"};
-            std::string line;
-            while (std::getline(status, line))
+            constexpr std::string_view prefix{"TracerPid:"};
+            if (line.size() >= prefix.size() && line.compare(0, prefix.size(), prefix) == 0)
             {
-                constexpr std::string_view prefix{"TracerPid:"};
-                if (line.size() >= prefix.size() && line.compare(0, prefix.size(), prefix) == 0)
-                {
-                    const char* p = line.c_str() + prefix.size();
-                    while (*p == ' ' || *p == '\t') ++p;
-                    return *p != '\0' && *p != '0';
-                }
+                const char* p = line.c_str() + prefix.size();
+                while (*p == ' ' || *p == '\t') ++p;
+                return *p != '\0' && *p != '0';
             }
-            return false;
         }
+        return false;
     }
 
-    // Empty initial seed — the CI run of this PR will print the observed delta
-    // and we'll append entries here in follow-up commits. See App.Win32.cpp
-    // for the full rationale of the asymmetric (permissive superset) check.
+    // See App.Win32.cpp for the full rationale of the asymmetric
+    // (permissive superset) check.
     const ModuleSnapshot& GetExpectedBootModules()
     {
         // Seeded from CI on ubuntu-latest (Mesa software renderer via xvfb).
@@ -140,14 +136,8 @@ namespace
 
 int main(int /*argc*/, char* /*argv*/[])
 {
-#if !defined(NDEBUG)
-    std::cout << "ModuleLoadTest: SKIP - Debug config is not supported. "
-                 "Build with Release or RelWithDebInfo." << std::endl;
-    return 0;
-#else
-    if (ModuleLoadTest::IsBeingTraced())
+    if (ModuleLoadTest::ShouldSkipEnvironment())
     {
-        std::cout << "ModuleLoadTest: SKIP - running under a debugger." << std::endl;
         return 0;
     }
 
@@ -208,5 +198,4 @@ int main(int /*argc*/, char* /*argv*/[])
 
     XCloseDisplay(display);
     return rc;
-#endif
 }

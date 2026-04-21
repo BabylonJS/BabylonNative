@@ -19,6 +19,11 @@ namespace ModuleLoadTest
         }
     }
 
+    bool IsBeingTraced()
+    {
+        return ::IsDebuggerPresent() != FALSE;
+    }
+
     // Expected set of modules loaded during BabylonNative boot, as a delta
     // from the baseline snapshot captured by the TLS callback before any C++
     // static initializer in this binary has run. Base names only, lower case.
@@ -146,24 +151,8 @@ namespace ModuleLoadTest
 
 int main(int /*argc*/, char* /*argv*/[])
 {
-#if !defined(NDEBUG)
-    // Debug builds load a different set of modules than RelWithDebInfo (debug
-    // CRT, heavier diagnostic DLLs, etc). The golden list in this file
-    // targets RelWithDebInfo only. Rather than produce a confusing FAIL, make
-    // the skip explicit.
-    std::cout << "ModuleLoadTest: SKIP - Debug config is not supported. "
-                 "Build with Release or RelWithDebInfo." << std::endl;
-    return 0;
-#else
-    // Running under a debugger injects additional modules (and changes some
-    // timing) that would cause spurious FAIL diagnostics. CI runs headless
-    // from the CLI, so this only affects local debugging. Non-debugger
-    // ambient modules (e.g. VS Ctrl-F5) are handled by IsAllowedOptionalModule.
-    if (::IsDebuggerPresent())
+    if (ModuleLoadTest::ShouldSkipEnvironment())
     {
-        std::cout << "ModuleLoadTest: SKIP - running under a debugger. "
-                     "Launch ModuleLoadTest.exe directly (no debugger attached) "
-                     "to exercise the full assertion." << std::endl;
         return 0;
     }
 
@@ -190,5 +179,4 @@ int main(int /*argc*/, char* /*argv*/[])
     });
 
     return ModuleLoadTest::CompareAndReport(ModuleLoadTest::RunBoot(config));
-#endif
 }

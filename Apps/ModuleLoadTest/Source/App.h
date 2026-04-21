@@ -22,6 +22,17 @@ namespace ModuleLoadTest
     // Print a labeled module list to stdout.
     void PrintList(const char* label, const ModuleSnapshot& items);
 
+    // Provided by each platform's App.<Platform>.{cpp,mm}: true if the
+    // current process is being traced/debugged. On Windows this wraps
+    // ::IsDebuggerPresent(); on Linux it reads /proc/self/status; on macOS
+    // it uses sysctl(KERN_PROC). All three are non-invasive.
+    bool IsBeingTraced();
+
+    // Shared preflight for main(). Prints a SKIP message and returns true
+    // when the test should not run in the current environment (Debug config,
+    // debugger attached). Returns false when the test should proceed.
+    bool ShouldSkipEnvironment();
+
     // Provided by each platform's App.<Platform>.{cpp,mm}: the golden list of
     // modules expected to be loaded during boot, as a delta from the baseline
     // returned by GetPreInitBaseline(). Base names only, lower case.
