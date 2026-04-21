@@ -51,6 +51,9 @@ jobs:
       - name: Build UnitTests macOS
         run: cmake --build build/macOS --target UnitTests --config RelWithDebInfo
 
+      - name: Build ModuleLoadTest macOS
+        run: cmake --build build/macOS --target ModuleLoadTest --config RelWithDebInfo
+
       - name: Enable Core Dump
         run: sudo sysctl -w kern.corefile=%N.core.%P
 
@@ -59,6 +62,12 @@ jobs:
           cd build/macOS/Apps/UnitTests/RelWithDebInfo
           ulimit -c unlimited
           ./UnitTests
+
+      - name: Run ModuleLoadTest macOS
+        run: |
+          cd build/macOS/Apps/ModuleLoadTest/RelWithDebInfo
+          ulimit -c unlimited
+          ./ModuleLoadTest
 
       - name: Upload UnitTests Core Dumps
         if: failure()

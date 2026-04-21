@@ -67,6 +67,12 @@ jobs:
           ulimit -c unlimited
           xvfb-run ./UnitTests
 
+      - name: Module Load Test
+        run: |
+          cd build/Linux/Apps/ModuleLoadTest
+          ulimit -c unlimited
+          xvfb-run ./ModuleLoadTest
+
       - name: Upload Rendered Pictures
         if: always()
         uses: actions/upload-artifact@v6
