@@ -257,18 +257,19 @@ namespace {
  Returns the orientation of the app
 */
 - (UIInterfaceOrientation)orientation {
-    UIApplication* sharedApplication = [UIApplication sharedApplication];
-#if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
-    UIScene* scene = [[[sharedApplication connectedScenes] allObjects] firstObject];
-    return [(UIWindowScene*)scene interfaceOrientation];
-#else
+    UIApplication* app = [UIApplication sharedApplication];
+    if (@available(iOS 26.0, *)) {
+        UIWindowScene* windowScene = (UIWindowScene*)[[[app connectedScenes] allObjects] firstObject];
+        return windowScene.effectiveGeometry.interfaceOrientation;
+    }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     if (@available(iOS 13.0, *)) {
-        return [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
+        UIWindowScene* windowScene = [[[app windows] firstObject] windowScene];
+        return [windowScene interfaceOrientation];
     }
-    else {
-        return [sharedApplication statusBarOrientation];
-    }
-#endif
+    return [app statusBarOrientation];
+#pragma clang diagnostic pop
 }
 
 /**

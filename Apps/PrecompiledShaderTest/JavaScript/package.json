@@ -16,7 +16,7 @@
         "@babel/cli": "^7.28.3",
         "@babel/core": "^7.28.3",
         "@babel/preset-env": "^7.28.3",
-        "@babylonjs/core": "^8.45.5",
+        "@babylonjs/core": "^9.0.0",
         "@types/node": "^24.7.1",
         "rimraf": "^6.0.1",
         "ts-loader": "^9.5.4",

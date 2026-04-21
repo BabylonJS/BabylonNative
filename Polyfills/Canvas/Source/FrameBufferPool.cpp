@@ -59,11 +59,17 @@ namespace Babylon::Polyfills
                 bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT | BGFX_SAMPLER_U_BORDER | BGFX_SAMPLER_V_BORDER | BGFX_SAMPLER_BORDER_COLOR(0), mem),
                 bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT | BGFX_SAMPLER_U_BORDER | BGFX_SAMPLER_V_BORDER | BGFX_SAMPLER_BORDER_COLOR(0))};
 
+            // See NativeEngine::CreateFrameBuffer: bgfx validation now asserts when BGFX_RESOLVE_AUTO_GEN_MIPS is used
+            // with a texture whose format doesn't have BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN. Gate the color attachment
+            // on the capability and pass BGFX_RESOLVE_NONE for the depth attachment (depth formats never support autogen).
+            const bgfx::Caps* caps = bgfx::getCaps();
+            const uint8_t colorResolve = 0 != (caps->formats[bgfx::TextureFormat::RGBA8] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN)
+                ? BGFX_RESOLVE_AUTO_GEN_MIPS
+                : BGFX_RESOLVE_NONE;
+
             std::array<bgfx::Attachment, textures.size()> attachments{};
-            for (size_t idx = 0; idx < attachments.size(); ++idx)
-            {
-                attachments[idx].init(textures[idx]);
-            }
+            attachments[0].init(textures[0], bgfx::Access::Write, 0, 1, 0, colorResolve);
+            attachments[1].init(textures[1], bgfx::Access::Write, 0, 1, 0, BGFX_RESOLVE_NONE);
             TextBuffer = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
 
             FrameBuffer = new Graphics::FrameBuffer(*m_graphicsContext, TextBuffer, m_width, m_height, false, false, false);

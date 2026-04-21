@@ -148,6 +148,14 @@ target_link_libraries(Playground
 add_custom_command(TARGET Playground POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:Playground>>,copy,true> $<TARGET_RUNTIME_DLLS:Playground> $<TARGET_FILE_DIR:Playground> COMMAND_EXPAND_LISTS)
 
+if(ANGLE_LIBEGL)
+    add_custom_command(TARGET Playground POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ANGLE_LIBEGL}" "$<TARGET_FILE_DIR:Playground>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ANGLE_LIBGLESV2}" "$<TARGET_FILE_DIR:Playground>"
+        COMMENT "Copying ANGLE libraries to Playground output directory"
+    )
+endif()
+
 if (UNIX AND NOT APPLE AND NOT ANDROID)
     # Ubuntu mixes old experimental header and new runtime libraries
     # Resulting in crash at runtime for std::filesystem

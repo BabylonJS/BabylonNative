@@ -1,4 +1,4 @@
-[![Build Status](https://dev.azure.com/babylonjs/ContinousIntegration/_apis/build/status/BabylonNative%20CI?branchName=master&label=Main%20branch)](https://dev.azure.com/babylonjs/ContinousIntegration/_build/latest?definitionId=6&branchName=master)
+[![CI](https://github.com/BabylonJS/BabylonNative/actions/workflows/ci.yml/badge.svg)](https://github.com/BabylonJS/BabylonNative/actions/workflows/ci.yml)
 [![Nightly Build](https://dev.azure.com/babylonjs/ContinousIntegration/_apis/build/status%2FBabylonNative%20Nightly%20CI?branchName=master&label=Nightly)](https://dev.azure.com/babylonjs/ContinousIntegration/_build/latest?definitionId=36&branchName=master)
 
 # Babylon Native

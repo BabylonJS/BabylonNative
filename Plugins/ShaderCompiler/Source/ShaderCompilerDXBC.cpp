@@ -48,7 +48,7 @@ namespace
         std::string hlsl = compiler->compile();
 
         Microsoft::WRL::ComPtr<ID3DBlob> errorMsgs;
-        const char* target = stage == EShLangVertex ? "vs_4_0" : "ps_4_0";
+        const char* target = stage == EShLangVertex ? "vs_5_0" : "ps_5_0";
 
         UINT flags = 0;
 

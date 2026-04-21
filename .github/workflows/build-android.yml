@@ -1,0 +1,42 @@
+name: Build Android
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: true
+        type: string
+      js-engine:
+        required: true
+        type: string
+
+env:
+  CMAKE_VERSION: '3.31.6'
+  NDK_VERSION: '28.2.13676358'
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: ${{ env.CMAKE_VERSION }}
+
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build Playground ${{ inputs.js-engine }}
+        working-directory: Apps/Playground/Android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            -PJSEngine=${{ inputs.js-engine }} \
+            -PARM64Only \
+            -PNDK_VERSION=${{ env.NDK_VERSION }} \
+            -PSANITIZERS=OFF

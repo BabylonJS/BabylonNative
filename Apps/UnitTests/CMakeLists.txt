@@ -72,6 +72,14 @@ add_test(NAME UnitTests COMMAND UnitTests)
 add_custom_command(TARGET UnitTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E $<IF:$<BOOL:$<TARGET_RUNTIME_DLLS:UnitTests>>,copy,true> $<TARGET_RUNTIME_DLLS:UnitTests> $<TARGET_FILE_DIR:UnitTests> COMMAND_EXPAND_LISTS)
 
+if(ANGLE_LIBEGL)
+    add_custom_command(TARGET UnitTests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ANGLE_LIBEGL}" "$<TARGET_FILE_DIR:UnitTests>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ANGLE_LIBGLESV2}" "$<TARGET_FILE_DIR:UnitTests>"
+        COMMENT "Copying ANGLE libraries to UnitTests output directory"
+    )
+endif()
+
 foreach(ASSET ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS})
     get_filename_component(ASSET_NAME "${ASSET}" NAME)
     add_custom_command(
