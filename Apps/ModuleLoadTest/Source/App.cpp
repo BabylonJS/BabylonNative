@@ -163,3 +163,19 @@ namespace ModuleLoadTest
         return 0;
     }
 }
+
+int main(int /*argc*/, char* /*argv*/[])
+{
+    if (ModuleLoadTest::ShouldSkipEnvironment())
+    {
+        return 0;
+    }
+
+    auto config = ModuleLoadTest::CreateGraphicsConfig();
+    if (!config)
+    {
+        return 0;
+    }
+
+    return ModuleLoadTest::CompareAndReport(ModuleLoadTest::RunBoot(*config));
+}

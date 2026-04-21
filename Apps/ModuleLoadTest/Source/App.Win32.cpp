@@ -147,36 +147,31 @@ namespace ModuleLoadTest
         }
         return false;
     }
-}
-
-int main(int /*argc*/, char* /*argv*/[])
-{
-    if (ModuleLoadTest::ShouldSkipEnvironment())
+    std::optional<Babylon::Graphics::Configuration> CreateGraphicsConfig()
     {
-        return 0;
+        ::SetConsoleOutputCP(CP_UTF8);
+
+        // bgfx D3D12 implementation requires an HWND to avoid a device refcount
+        // leak on shutdown. Create a hidden window to satisfy that requirement.
+        // Parked in function-local static storage so the handle lives for the
+        // duration of the process.
+        static WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L,
+            ::GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr,
+            "BabylonNativeModuleLoadTest", nullptr };
+        ::RegisterClassEx(&wc);
+        static HWND hWnd = ::CreateWindow(wc.lpszClassName, "BabylonNativeModuleLoadTest",
+            WS_OVERLAPPEDWINDOW, -1, -1, -1, -1, nullptr, nullptr, wc.hInstance, nullptr);
+
+        Babylon::DebugTrace::EnableDebugTrace(true);
+        Babylon::DebugTrace::SetTraceOutput([](const char* trace) {
+            ::OutputDebugStringA(trace);
+            ::OutputDebugStringA("\n");
+        });
+
+        Babylon::Graphics::Configuration config{};
+        config.Window = hWnd;
+        config.Width = 600;
+        config.Height = 400;
+        return config;
     }
-
-    ::SetConsoleOutputCP(CP_UTF8);
-
-    // bgfx D3D12 implementation requires an HWND to avoid a device refcount
-    // leak on shutdown. Create a hidden window to satisfy that requirement.
-    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, ModuleLoadTest::WndProc, 0L, 0L,
-        ::GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr,
-        "BabylonNativeModuleLoadTest", nullptr };
-    ::RegisterClassEx(&wc);
-    HWND hWnd = ::CreateWindow(wc.lpszClassName, "BabylonNativeModuleLoadTest",
-        WS_OVERLAPPEDWINDOW, -1, -1, -1, -1, nullptr, nullptr, wc.hInstance, nullptr);
-
-    Babylon::Graphics::Configuration config{};
-    config.Window = hWnd;
-    config.Width = 600;
-    config.Height = 400;
-
-    Babylon::DebugTrace::EnableDebugTrace(true);
-    Babylon::DebugTrace::SetTraceOutput([](const char* trace) {
-        ::OutputDebugStringA(trace);
-        ::OutputDebugStringA("\n");
-    });
-
-    return ModuleLoadTest::CompareAndReport(ModuleLoadTest::RunBoot(config));
 }

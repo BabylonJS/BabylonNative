@@ -2,6 +2,7 @@
 
 #include <Babylon/Graphics/Device.h>
 
+#include <optional>
 #include <string_view>
 
 #include "ModuleSnapshot.h"
@@ -9,12 +10,18 @@
 namespace ModuleLoadTest
 {
     // Drive BabylonNative to a stable boot state, then return the snapshot of
-    // loaded modules at that point. Platform-specific main() is responsible
-    // for:
-    //   1. Creating the platform window and Graphics::Configuration.
-    //   2. Invoking RunBoot() with the config.
-    //   3. Calling CompareAndReport() with the returned snapshot.
+    // loaded modules at that point.
     ModuleSnapshot RunBoot(const Babylon::Graphics::Configuration& config);
+
+    // Provided by each platform's App.<Platform>.{cpp,mm}: set up the platform
+    // window / graphics device and DebugTrace output, then return a populated
+    // Graphics::Configuration. Platform-owned resources (HWND / Display / Metal
+    // device) are parked in function-local static storage so they live for the
+    // duration of the process; teardown happens at process exit.
+    //
+    // Returns nullopt for platform-level SKIPs (no X display, no Metal device)
+    // after the platform has printed an explanatory message.
+    std::optional<Babylon::Graphics::Configuration> CreateGraphicsConfig();
 
     // Set-difference helper: elements in lhs that are not in rhs.
     ModuleSnapshot Subtract(const ModuleSnapshot& lhs, const ModuleSnapshot& rhs);
@@ -46,7 +53,6 @@ namespace ModuleLoadTest
 
     // Compare a post-boot snapshot against the baseline + platform-specific
     // expected list and allowed-optional filter. Prints baseline+delta and
-    // returns 0 on pass, 1 on fail. Called by each platform's main() after
-    // RunBoot().
+    // returns 0 on pass, 1 on fail.
     int CompareAndReport(const ModuleSnapshot& postBoot);
 }

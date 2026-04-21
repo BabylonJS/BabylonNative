@@ -68,28 +68,24 @@ namespace ModuleLoadTest
         }
         return false;
     }
-}
-
-int main(int /*argc*/, char* /*argv*/[])
-{
-    if (ModuleLoadTest::ShouldSkipEnvironment())
+    std::optional<Babylon::Graphics::Configuration> CreateGraphicsConfig()
     {
-        return 0;
+        // MTL::Device must outlive RunBoot. Park in function-local static
+        // storage so it lives for the duration of the process.
+        static NS::SharedPtr<MTL::Device> device = NS::TransferPtr(MTL::CreateSystemDefaultDevice());
+        if (!device)
+        {
+            std::cout << "ModuleLoadTest: SKIP - no Metal device available." << std::endl;
+            return std::nullopt;
+        }
+
+        Babylon::DebugTrace::EnableDebugTrace(true);
+        Babylon::DebugTrace::SetTraceOutput([](const char* trace) { NSLog(@"%s", trace); });
+
+        Babylon::Graphics::Configuration config{};
+        config.Device = device.get();
+        config.Width = 600;
+        config.Height = 400;
+        return config;
     }
-
-    Babylon::DebugTrace::EnableDebugTrace(true);
-    Babylon::DebugTrace::SetTraceOutput([](const char* trace) { NSLog(@"%s", trace); });
-
-    Babylon::Graphics::Configuration config{};
-    NS::SharedPtr<MTL::Device> device = NS::TransferPtr(MTL::CreateSystemDefaultDevice());
-    if (!device)
-    {
-        std::cout << "ModuleLoadTest: SKIP - no Metal device available." << std::endl;
-        return 0;
-    }
-    config.Device = device.get();
-    config.Width = 600;
-    config.Height = 400;
-
-    return ModuleLoadTest::CompareAndReport(ModuleLoadTest::RunBoot(config));
 }

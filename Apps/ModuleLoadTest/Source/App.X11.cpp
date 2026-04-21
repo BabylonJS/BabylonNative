@@ -125,77 +125,68 @@ namespace ModuleLoadTest
         }
         return false;
     }
-}
-
-namespace
-{
-    constexpr const char* kApplicationName = "Babylon Native ModuleLoadTest";
-    constexpr int kWidth = 640;
-    constexpr int kHeight = 480;
-}
-
-int main(int /*argc*/, char* /*argv*/[])
-{
-    if (ModuleLoadTest::ShouldSkipEnvironment())
+    std::optional<Babylon::Graphics::Configuration> CreateGraphicsConfig()
     {
-        return 0;
+        constexpr const char* kApplicationName = "Babylon Native ModuleLoadTest";
+        constexpr int kWidth = 640;
+        constexpr int kHeight = 480;
+
+        XInitThreads();
+
+        // Display and Window parked in function-local static storage so they
+        // live for the duration of the process; cleanup happens at process
+        // exit.
+        static Display* display = XOpenDisplay(nullptr);
+        if (display == nullptr)
+        {
+            // Headless environments without an X display (e.g. local runs outside
+            // xvfb-run) cannot bring up bgfx's GL backend. CI wraps this binary
+            // in xvfb-run so the path below is the normal case there.
+            std::cout << "ModuleLoadTest: SKIP - no X display (set DISPLAY or run "
+                         "under xvfb-run)." << std::endl;
+            return std::nullopt;
+        }
+
+        const int screen = DefaultScreen(display);
+        const int depth = DefaultDepth(display, screen);
+        Visual* visual = DefaultVisual(display, screen);
+        const ::Window root = RootWindow(display, screen);
+
+        // Mirror Apps/UnitTests/Source/App.X11.cpp exactly: explicit zero-init of
+        // window attributes, explicit clear-to-black via XChangeWindowAttributes,
+        // and the same XMapWindow -> XStoreName order. bgfx's GL/EGL backend is
+        // sensitive to this sequencing under xvfb-run; deviations have been
+        // observed to cause "Failed to create surface" aborts.
+        XSetWindowAttributes windowAttrs;
+        windowAttrs.background_pixel = 0;
+        windowAttrs.background_pixmap = 0;
+        windowAttrs.border_pixel = 0;
+        windowAttrs.event_mask = 0;
+
+        static const ::Window window = XCreateWindow(display, root, 0, 0, kWidth, kHeight, 0, depth,
+            InputOutput, visual, CWBorderPixel | CWEventMask, &windowAttrs);
+
+        // Clear window to black.
+        XSetWindowAttributes attr;
+        std::memset(&attr, 0, sizeof(attr));
+        XChangeWindowAttributes(display, window, CWBackPixel, &attr);
+
+        char wmDeleteWindowName[] = "WM_DELETE_WINDOW";
+        char* wmDeleteWindowNames[] = {wmDeleteWindowName};
+        Atom wmDeleteWindow;
+        XInternAtoms(display, wmDeleteWindowNames, 1, False, &wmDeleteWindow);
+        XSetWMProtocols(display, window, &wmDeleteWindow, 1);
+
+        XMapWindow(display, window);
+        XStoreName(display, window, kApplicationName);
+
+        Babylon::DebugTrace::EnableDebugTrace(true);
+        Babylon::DebugTrace::SetTraceOutput([](const char* trace) { std::printf("%s\n", trace); std::fflush(stdout); });
+
+        Babylon::Graphics::Configuration config{};
+        config.Window = window;
+        config.Width = static_cast<size_t>(kWidth);
+        config.Height = static_cast<size_t>(kHeight);
+        return config;
     }
-
-    XInitThreads();
-    Display* display = XOpenDisplay(nullptr);
-    if (display == nullptr)
-    {
-        // Headless environments without an X display (e.g. local runs outside
-        // xvfb-run) cannot bring up bgfx's GL backend. CI wraps this binary
-        // in xvfb-run so the path below is the normal case there.
-        std::cout << "ModuleLoadTest: SKIP - no X display (set DISPLAY or run "
-                     "under xvfb-run)." << std::endl;
-        return 0;
-    }
-
-    const int screen = DefaultScreen(display);
-    const int depth = DefaultDepth(display, screen);
-    Visual* visual = DefaultVisual(display, screen);
-    const Window root = RootWindow(display, screen);
-
-    // Mirror Apps/UnitTests/Source/App.X11.cpp exactly: explicit zero-init of
-    // window attributes, explicit clear-to-black via XChangeWindowAttributes,
-    // and the same XMapWindow -> XStoreName order. bgfx's GL/EGL backend is
-    // sensitive to this sequencing under xvfb-run; deviations have been
-    // observed to cause "Failed to create surface" aborts.
-    XSetWindowAttributes windowAttrs;
-    windowAttrs.background_pixel = 0;
-    windowAttrs.background_pixmap = 0;
-    windowAttrs.border_pixel = 0;
-    windowAttrs.event_mask = 0;
-
-    const Window window = XCreateWindow(display, root, 0, 0, kWidth, kHeight, 0, depth,
-        InputOutput, visual, CWBorderPixel | CWEventMask, &windowAttrs);
-
-    // Clear window to black.
-    XSetWindowAttributes attr;
-    std::memset(&attr, 0, sizeof(attr));
-    XChangeWindowAttributes(display, window, CWBackPixel, &attr);
-
-    char wmDeleteWindowName[] = "WM_DELETE_WINDOW";
-    char* wmDeleteWindowNames[] = {wmDeleteWindowName};
-    Atom wmDeleteWindow;
-    XInternAtoms(display, wmDeleteWindowNames, 1, False, &wmDeleteWindow);
-    XSetWMProtocols(display, window, &wmDeleteWindow, 1);
-
-    XMapWindow(display, window);
-    XStoreName(display, window, kApplicationName);
-
-    Babylon::Graphics::Configuration config{};
-    config.Window = window;
-    config.Width = static_cast<size_t>(kWidth);
-    config.Height = static_cast<size_t>(kHeight);
-
-    Babylon::DebugTrace::EnableDebugTrace(true);
-    Babylon::DebugTrace::SetTraceOutput([](const char* trace) { std::printf("%s\n", trace); std::fflush(stdout); });
-
-    const int rc = ModuleLoadTest::CompareAndReport(ModuleLoadTest::RunBoot(config));
-
-    XCloseDisplay(display);
-    return rc;
 }
