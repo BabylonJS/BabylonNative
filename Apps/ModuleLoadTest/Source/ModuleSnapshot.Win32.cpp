@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <vector>
 
 #pragma comment(lib, "Psapi.lib")
@@ -104,19 +105,36 @@ namespace ModuleLoadTest
 
         const HANDLE process = ::GetCurrentProcess();
 
-        DWORD requiredBytes = 0;
-        if (!::EnumProcessModules(process, nullptr, 0, &requiredBytes) || requiredBytes == 0)
-        {
-            return snapshot;
-        }
+        // Large up-front buffer avoids the documented race in the
+        // two-call sizing pattern: EnumProcessModules "may fail or return
+        // incorrect information" if the module list changes during the
+        // call. The pre-init + post-boot module sets are on the order of
+        // 50-150 entries on realistic SKUs, so 512 gives ample headroom.
+        constexpr size_t kMaxModules = 512;
+        std::vector<HMODULE> modules(kMaxModules);
 
-        std::vector<HMODULE> modules(requiredBytes / sizeof(HMODULE));
-        if (!::EnumProcessModules(process, modules.data(), static_cast<DWORD>(modules.size() * sizeof(HMODULE)), &requiredBytes))
+        DWORD requiredBytes = 0;
+        if (!::EnumProcessModules(process, modules.data(),
+                static_cast<DWORD>(modules.size() * sizeof(HMODULE)), &requiredBytes))
         {
-            return snapshot;
+            std::fprintf(stderr,
+                "ModuleLoadTest FAIL: EnumProcessModules failed (error %lu).\n",
+                ::GetLastError());
+            ::ExitProcess(1);
         }
 
         const size_t count = requiredBytes / sizeof(HMODULE);
+        if (count > modules.size())
+        {
+            // Silent truncation would hide exactly the kind of regression
+            // this test exists to catch. Bail loudly instead.
+            std::fprintf(stderr,
+                "ModuleLoadTest FAIL: module buffer too small (need %zu, have %zu). "
+                "Increase kMaxModules in ModuleSnapshot.Win32.cpp.\n",
+                count, modules.size());
+            ::ExitProcess(1);
+        }
+
         for (size_t i = 0; i < count; ++i)
         {
             wchar_t path[MAX_PATH]{};

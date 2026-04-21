@@ -90,12 +90,13 @@ int main(int /*argc*/, char* /*argv*/[])
     Babylon::DebugTrace::SetTraceOutput([](const char* trace) { NSLog(@"%s", trace); });
 
     Babylon::Graphics::Configuration config{};
-    config.Device = MTL::CreateSystemDefaultDevice();
-    if (config.Device == nullptr)
+    NS::SharedPtr<MTL::Device> device = NS::TransferPtr(MTL::CreateSystemDefaultDevice());
+    if (!device)
     {
         std::cout << "ModuleLoadTest: SKIP - no Metal device available." << std::endl;
         return 0;
     }
+    config.Device = device.get();
     config.Width = 600;
     config.Height = 400;
 

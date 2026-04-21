@@ -84,6 +84,19 @@ namespace ModuleLoadTest
     {
         const ModuleSnapshot& baseline = GetPreInitBaseline();
 
+        if (baseline.empty())
+        {
+            // The baseline is captured by a platform pre-static-init hook
+            // (TLS callback on Windows, __attribute__((constructor)) on
+            // Linux/macOS). If it's empty the hook did not run, which means
+            // the entire delta is "new" modules relative to an empty set,
+            // and IsAllowedOptionalModule would silently filter most of
+            // them and report a spurious PASS. Fail loudly instead.
+            std::cerr << "ModuleLoadTest FAIL: pre-init baseline was not captured. "
+                         "The platform pre-init hook did not run." << std::endl;
+            return 1;
+        }
+
         // Delta = what boot caused to load. Filter out GPU ICD and
         // launch-environment noise (see platform IsAllowedOptionalModule).
         ModuleSnapshot delta = Subtract(postBoot, baseline);
