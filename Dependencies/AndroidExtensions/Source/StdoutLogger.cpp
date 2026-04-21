@@ -92,29 +92,24 @@ namespace android::StdoutLogger
 
         g_started = false;
 
+        // Close the write ends of the pipes. This signals EOF to the reader
+        // threads, which will then call fclose() to close the read ends.
+        // Do NOT close the read ends here: fdopen() transferred ownership of
+        // fd[0] to the FILE* inside the reader thread, and calling close() on
+        // an fd owned by a FILE* is a fdsan violation on Android API 29+.
         if (fd_stdout[1] != -1)
         {
             close(fd_stdout[1]);
             fd_stdout[1] = -1;
         }
-
-        if (fd_stdout[0] != -1)
-        {
-            close(fd_stdout[0]);
-            fd_stdout[0] = -1;
-        }
+        fd_stdout[0] = -1; // owned by reader thread's FILE*; closed via fclose()
 
         if (fd_stderr[1] != -1)
         {
             close(fd_stderr[1]);
             fd_stderr[1] = -1;
         }
-
-        if (fd_stderr[0] != -1)
-        {
-            close(fd_stderr[0]);
-            fd_stderr[0] = -1;
-        }
+        fd_stderr[0] = -1; // owned by reader thread's FILE*; closed via fclose()
     }
 
     bool IsStarted()
