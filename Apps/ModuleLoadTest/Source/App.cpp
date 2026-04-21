@@ -10,8 +10,10 @@
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 
+#include <algorithm>
 #include <future>
 #include <iostream>
+#include <iterator>
 #include <optional>
 
 namespace ModuleLoadTest
@@ -19,7 +21,7 @@ namespace ModuleLoadTest
     ModuleSnapshot RunBoot(const Babylon::Graphics::Configuration& config)
     {
         // Bring up the real graphics device. This triggers the backend
-        // (D3D11/D3D12/Metal/OpenGL) and GPU ICD DLLs to load.
+        // (D3D11/D3D12/Metal/OpenGL) and GPU ICD DLLs/dylibs/sos to load.
         Babylon::Graphics::Device device{config};
         device.StartRenderingCurrentFrame();
 
@@ -59,5 +61,68 @@ namespace ModuleLoadTest
         // the graphics backend and every polyfill/plugin has been initialized,
         // but no user JS has executed.
         return CaptureSnapshot();
+    }
+
+    ModuleSnapshot Subtract(const ModuleSnapshot& lhs, const ModuleSnapshot& rhs)
+    {
+        ModuleSnapshot result;
+        std::set_difference(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
+            std::inserter(result, result.end()));
+        return result;
+    }
+
+    void PrintList(const char* label, const ModuleSnapshot& items)
+    {
+        std::cout << label << " (" << items.size() << "):" << std::endl;
+        for (const auto& item : items)
+        {
+            std::cout << "  " << item << std::endl;
+        }
+    }
+
+    int CompareAndReport(const ModuleSnapshot& postBoot)
+    {
+        const ModuleSnapshot& baseline = GetPreInitBaseline();
+
+        // Delta = what boot caused to load. Filter out GPU ICD and
+        // launch-environment noise (see platform IsAllowedOptionalModule).
+        ModuleSnapshot delta = Subtract(postBoot, baseline);
+        for (auto it = delta.begin(); it != delta.end();)
+        {
+            if (IsAllowedOptionalModule(*it))
+            {
+                it = delta.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        const ModuleSnapshot& expected = GetExpectedBootModules();
+
+        // Only fail on NEW modules. Missing-from-delta is environmental variance
+        // (GPU SKU, OS patch, launch env, config) and is not a regression.
+        const ModuleSnapshot unexpected = Subtract(delta, expected);
+
+        // Always print both snapshots so CI logs can be used to extend the
+        // golden list. The actual pass/fail is decided by the `unexpected`
+        // diff below.
+        PrintList("Baseline (modules loaded before C++ static init)", baseline);
+        PrintList("Delta (modules loaded during BN boot)", delta);
+
+        if (!unexpected.empty())
+        {
+            std::cout << std::endl;
+            std::cout << "FAIL: ModuleLoadTest detected unexpected modules loaded on boot." << std::endl;
+            PrintList("Unexpected new modules", unexpected);
+            std::cout << std::endl;
+            std::cout << "If these are intentional, add them to GetExpectedBootModules() "
+                         "in the platform-specific App source." << std::endl;
+            return 1;
+        }
+
+        std::cout << "ModuleLoadTest: PASS" << std::endl;
+        return 0;
     }
 }

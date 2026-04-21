@@ -6,34 +6,16 @@
 
 #include <Windows.h>
 
-#include <algorithm>
 #include <iostream>
-#include <iterator>
-#include <set>
-#include <string>
 #include <string_view>
 
-namespace
+namespace ModuleLoadTest
 {
-    LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+    namespace
     {
-        return ::DefWindowProc(hWnd, msg, wParam, lParam);
-    }
-
-    ModuleLoadTest::ModuleSnapshot Subtract(const ModuleLoadTest::ModuleSnapshot& lhs, const ModuleLoadTest::ModuleSnapshot& rhs)
-    {
-        ModuleLoadTest::ModuleSnapshot result;
-        std::set_difference(lhs.begin(), lhs.end(), rhs.begin(), rhs.end(),
-            std::inserter(result, result.end()));
-        return result;
-    }
-
-    void PrintList(const char* label, const ModuleLoadTest::ModuleSnapshot& items)
-    {
-        std::cout << label << " (" << items.size() << "):" << std::endl;
-        for (const auto& item : items)
+        LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         {
-            std::cout << "  " << item << std::endl;
+            return ::DefWindowProc(hWnd, msg, wParam, lParam);
         }
     }
 
@@ -62,12 +44,12 @@ namespace
     // we therefore golden-list the full delta (including OS modules) and only
     // allow a narrow name-pattern carve-out for GPU driver ICDs whose exact
     // names differ per runner SKU (see IsAllowedOptionalModule).
-    const ModuleLoadTest::ModuleSnapshot& GetExpectedBootModules()
+    const ModuleSnapshot& GetExpectedBootModules()
     {
         // Seeded from a local RelWithDebInfo run on Windows 11 x64 with D3D11
         // and Chakra. CI may add more entries for other Win32 configs
         // (V8/JSI/D3D12) — those should be appended as the draft PR runs.
-        static const ModuleLoadTest::ModuleSnapshot kModules{
+        static const ModuleSnapshot kModules{
             "bcryptprimitives.dll",
             "cfgmgr32.dll",
             "crypt32.dll",
@@ -164,7 +146,7 @@ namespace
 
 int main(int /*argc*/, char* /*argv*/[])
 {
-#if defined(_DEBUG)
+#if !defined(NDEBUG)
     // Debug builds load a different set of modules than RelWithDebInfo (debug
     // CRT, heavier diagnostic DLLs, etc). The golden list in this file
     // targets RelWithDebInfo only. Rather than produce a confusing FAIL, make
@@ -185,17 +167,11 @@ int main(int /*argc*/, char* /*argv*/[])
         return 0;
     }
 
-    // Baseline was captured by a TLS callback before any C++ static
-    // initializer in this binary ran, so modules loaded by bx-style static
-    // objects (e.g. dbghelp.dll from bx's DbgHelpSymbolResolve) appear in the
-    // delta below rather than in the baseline.
-    const ModuleLoadTest::ModuleSnapshot& baseline = ModuleLoadTest::GetPreInitBaseline();
-
     ::SetConsoleOutputCP(CP_UTF8);
 
     // bgfx D3D12 implementation requires an HWND to avoid a device refcount
     // leak on shutdown. Create a hidden window to satisfy that requirement.
-    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L,
+    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, ModuleLoadTest::WndProc, 0L, 0L,
         ::GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr,
         "BabylonNativeModuleLoadTest", nullptr };
     ::RegisterClassEx(&wc);
@@ -213,46 +189,6 @@ int main(int /*argc*/, char* /*argv*/[])
         ::OutputDebugStringA("\n");
     });
 
-    const ModuleLoadTest::ModuleSnapshot postBoot = ModuleLoadTest::RunBoot(config);
-
-    // Delta = what boot caused to load. Filter out GPU ICD and
-    // launch-environment noise (see IsAllowedOptionalModule).
-    ModuleLoadTest::ModuleSnapshot delta = Subtract(postBoot, baseline);
-    for (auto it = delta.begin(); it != delta.end();)
-    {
-        if (IsAllowedOptionalModule(*it))
-        {
-            it = delta.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
-    }
-
-    const ModuleLoadTest::ModuleSnapshot& expected = GetExpectedBootModules();
-
-    // Only fail on NEW modules. Missing-from-delta is environmental variance
-    // (GPU SKU, Windows patch, launch env, config) and is not a regression.
-    const ModuleLoadTest::ModuleSnapshot unexpected = Subtract(delta, expected);
-
-    // Always print both snapshots so CI logs can be used to extend the golden
-    // list. The actual pass/fail is decided by the `unexpected` diff below.
-    PrintList("Baseline (modules loaded before C++ static init)", baseline);
-    PrintList("Delta (modules loaded during BN boot)", delta);
-
-    if (!unexpected.empty())
-    {
-        std::cout << std::endl;
-        std::cout << "FAIL: ModuleLoadTest detected unexpected modules loaded on boot." << std::endl;
-        PrintList("Unexpected new modules", unexpected);
-        std::cout << std::endl;
-        std::cout << "If these are intentional, add them to GetExpectedBootModules() "
-                     "in Apps/ModuleLoadTest/Source/App.Win32.cpp." << std::endl;
-        return 1;
-    }
-
-    std::cout << "ModuleLoadTest: PASS" << std::endl;
-    return 0;
+    return ModuleLoadTest::CompareAndReport(ModuleLoadTest::RunBoot(config));
 #endif
 }
