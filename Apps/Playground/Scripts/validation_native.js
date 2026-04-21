@@ -7,6 +7,33 @@
     const testHeight = 400;
     const generateReferences = false;
 
+    // -- TEMPORARY VALIDATION PATCH for BabylonJS PR #18355 --
+    // Mirrors the fix in packages/dev/core/src/Meshes/Builders/groundBuilder.ts
+    // by registering pending scene data around the async heightmap load so that
+    // scene.isReady() correctly waits for it. Remove this block before merging;
+    // once the BJS fix ships in a published version and BN bumps to it, the
+    // patch becomes redundant.
+    (function patchCreateGroundFromHeightMap() {
+        const original = BABYLON.Mesh.CreateGroundFromHeightMap;
+        BABYLON.Mesh.CreateGroundFromHeightMap = function (name, url) {
+            const ground = original.apply(this, arguments);
+            if (typeof url !== "string") {
+                return ground;
+            }
+            const scene = ground.getScene();
+            scene.addPendingData(ground);
+            const originalSetReady = ground._setReady.bind(ground);
+            ground._setReady = function (ready) {
+                originalSetReady(ready);
+                if (ready) {
+                    scene.removePendingData(ground);
+                    ground._setReady = originalSetReady;
+                }
+            };
+            return ground;
+        };
+    })();
+
     const engine = new BABYLON.NativeEngine();
     engine.getCaps().parallelShaderCompile = undefined;
 
