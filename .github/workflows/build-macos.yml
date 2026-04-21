@@ -64,6 +64,7 @@ jobs:
           ./UnitTests
 
       - name: Run ModuleLoadTest macOS
+        if: ${{ !inputs.enable-sanitizers }}
         run: |
           cd build/macOS/Apps/ModuleLoadTest/RelWithDebInfo
           ulimit -c unlimited

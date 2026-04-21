@@ -187,9 +187,10 @@ int main(int /*argc*/, char* /*argv*/[])
     std::memset(&attr, 0, sizeof(attr));
     XChangeWindowAttributes(display, window, CWBackPixel, &attr);
 
-    constexpr const char* wmDeleteWindowName = "WM_DELETE_WINDOW";
+    char wmDeleteWindowName[] = "WM_DELETE_WINDOW";
+    char* wmDeleteWindowNames[] = {wmDeleteWindowName};
     Atom wmDeleteWindow;
-    XInternAtoms(display, (char**)&wmDeleteWindowName, 1, False, &wmDeleteWindow);
+    XInternAtoms(display, wmDeleteWindowNames, 1, False, &wmDeleteWindow);
     XSetWMProtocols(display, window, &wmDeleteWindow, 1);
 
     XMapWindow(display, window);

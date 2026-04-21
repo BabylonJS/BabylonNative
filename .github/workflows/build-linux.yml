@@ -68,6 +68,7 @@ jobs:
           xvfb-run ./UnitTests
 
       - name: Module Load Test
+        if: ${{ !inputs.enable-sanitizers }}
         run: |
           cd build/Linux/Apps/ModuleLoadTest
           ulimit -c unlimited

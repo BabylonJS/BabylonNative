@@ -59,8 +59,13 @@ namespace ModuleLoadTest
                 return {};
             }
 
-            std::string result(static_cast<size_t>(size - 1), '\0');
-            ::WideCharToMultiByte(CP_UTF8, 0, wide, -1, result.data(), size, nullptr, nullptr);
+            std::string result(static_cast<size_t>(size), '\0');
+            const int converted = ::WideCharToMultiByte(CP_UTF8, 0, wide, -1, result.data(), size, nullptr, nullptr);
+            if (converted <= 0)
+            {
+                return {};
+            }
+            result.resize(static_cast<size_t>(converted - 1));
             return result;
         }
     }
