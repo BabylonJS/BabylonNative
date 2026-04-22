@@ -71,7 +71,7 @@ target_link_libraries(UnitTests
 
 target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
 
-if(BABYLON_NATIVE_SKIP_RENDER_TESTS)
+if(BABYLON_NATIVE_SKIP_RENDER_TESTS OR GRAPHICS_API STREQUAL "D3D12")
     target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS)
 endif()
 
@@ -87,6 +87,18 @@ if(ANGLE_LIBEGL)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ANGLE_LIBEGL}" "$<TARGET_FILE_DIR:UnitTests>"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ANGLE_LIBGLESV2}" "$<TARGET_FILE_DIR:UnitTests>"
         COMMENT "Copying ANGLE libraries to UnitTests output directory"
+    )
+endif()
+
+if(WIN32 AND GRAPHICS_API STREQUAL "D3D12")
+    # bgfx's D3D12 renderer uses DXC for runtime shader compilation.
+    # dxcompiler.dll + dxil.dll aren't part of Windows, so deploy the copies shipped with bgfx.
+    FetchContent_GetProperties(bgfx.cmake SOURCE_DIR BGFX_CMAKE_SOURCE_DIR)
+    set(BGFX_DXC_DLL_DIR "${BGFX_CMAKE_SOURCE_DIR}/bgfx/tools/bin/windows")
+    add_custom_command(TARGET UnitTests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${BGFX_DXC_DLL_DIR}/dxcompiler.dll" "$<TARGET_FILE_DIR:UnitTests>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${BGFX_DXC_DLL_DIR}/dxil.dll" "$<TARGET_FILE_DIR:UnitTests>"
+        COMMENT "Copying DXC runtime DLLs for D3D12"
     )
 endif()
 

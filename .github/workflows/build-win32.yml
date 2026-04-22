@@ -130,7 +130,6 @@ jobs:
           Copy-Item -Path "build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo\Playground.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
 
       - name: Unit Tests
-        if: ${{ inputs.graphics-api != 'D3D12' }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\UnitTests\RelWithDebInfo
