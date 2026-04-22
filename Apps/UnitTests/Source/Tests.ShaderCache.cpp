@@ -10,6 +10,7 @@
 
 #include <chrono>
 #include <cstdlib>
+#include <filesystem>
 #include <optional>
 #include <future>
 #include <iostream>
@@ -76,18 +77,20 @@ TEST(ShaderCache, SaveAndLoad)
         update.Start();
     }
 
-    static const char* shaderCacheFileName = "shaderCache.bin";
+    const auto shaderCachePath = std::filesystem::temp_directory_path() / "BabylonNativeTests.shaderCache.bin";
     uint32_t shaderCount{};
     {
-        std::ofstream stream(shaderCacheFileName, std::ios::binary);
+        std::ofstream stream(shaderCachePath, std::ios::binary);
         shaderCount = Babylon::Plugins::ShaderCache::Save(stream);
         EXPECT_EQ(shaderCount, 1);
     }
     {
-        std::ifstream stream(shaderCacheFileName, std::ios::binary);
+        std::ifstream stream(shaderCachePath, std::ios::binary);
         auto deserializedCount = Babylon::Plugins::ShaderCache::Load(stream);
         EXPECT_EQ(deserializedCount, shaderCount);
     }
+    std::error_code ec;
+    std::filesystem::remove(shaderCachePath, ec);
 
     update.Finish();
     device.FinishRenderingCurrentFrame();
