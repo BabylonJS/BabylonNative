@@ -9,19 +9,22 @@
 std::regex blurRegex(R"(blur\((\d*\.?\d+)(px|rem)?\)|blur\(\))");
 std::regex noneRegex(R"(^\s*none\s*$)");
 
-#include "Shaders/dx11/vs_fspass.h"
+#include "Shaders/dxbc/vs_fspass.h"
+#include "Shaders/dxil/vs_fspass.h"
 #include "Shaders/metal/vs_fspass.h"
 #include "Shaders/glsl/vs_fspass.h"
 #include "Shaders/essl/vs_fspass.h"
 #include "Shaders/spirv/vs_fspass.h"
 
-#include "Shaders/dx11/fs_gaussblur.h"
+#include "Shaders/dxbc/fs_gaussblur.h"
+#include "Shaders/dxil/fs_gaussblur.h"
 #include "Shaders/metal/fs_gaussblur.h"
 #include "Shaders/glsl/fs_gaussblur.h"
 #include "Shaders/essl/fs_gaussblur.h"
 #include "Shaders/spirv/fs_gaussblur.h"
 
-#include "Shaders/dx11/fs_boxblur.h"
+#include "Shaders/dxbc/fs_boxblur.h"
+#include "Shaders/dxil/fs_boxblur.h"
 #include "Shaders/metal/fs_boxblur.h"
 #include "Shaders/glsl/fs_boxblur.h"
 #include "Shaders/essl/fs_boxblur.h"

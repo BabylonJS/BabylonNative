@@ -412,7 +412,7 @@ namespace Babylon::Plugins
 
             if (!m_impl->cameraPipelineState) {
                 return arcana::task_from_error<CameraDimensions>(std::make_exception_ptr(std::runtime_error{
-                    std::string("Failed to create camera pipeline state: ") + [error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding]}));
+                    std::string("Failed to create camera pipeline state") + (error ? std::string(": ") + [error.localizedDescription cStringUsingEncoding:NSASCIIStringEncoding] : "")}));
             }
 
             m_impl->isInitialized = true;
@@ -900,23 +900,27 @@ namespace Babylon::Plugins
 }
 
 #if (TARGET_OS_IPHONE)
+
+static UIInterfaceOrientation GetCurrentInterfaceOrientation(UIApplication* app) {
+    if (@available(iOS 26.0, *)) {
+        UIWindowScene* windowScene = (UIWindowScene*)[[[app connectedScenes] allObjects] firstObject];
+        return windowScene.effectiveGeometry.interfaceOrientation;
+    }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+    if (@available(iOS 13.0, *)) {
+        UIWindowScene* windowScene = [[[app windows] firstObject] windowScene];
+        return [windowScene interfaceOrientation];
+    }
+    return [app statusBarOrientation];
+#pragma clang diagnostic pop
+}
+
 /**
  Updates target video orientation.
 */
 - (void)updateOrientation {
-    UIApplication* sharedApplication{[UIApplication sharedApplication]};
-    UIInterfaceOrientation orientation{UIInterfaceOrientationUnknown};
-#if (__IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0)
-    UIScene* scene{[[[sharedApplication connectedScenes] allObjects] firstObject]};
-    orientation = [(UIWindowScene*)scene interfaceOrientation];
-#else
-    if (@available(iOS 13.0, *)) {
-        orientation = [[[[sharedApplication windows] firstObject] windowScene] interfaceOrientation];
-    }
-    else {
-        orientation = [sharedApplication statusBarOrientation];
-    }
-#endif
+    UIInterfaceOrientation orientation = GetCurrentInterfaceOrientation([UIApplication sharedApplication]);
 
     // Convert from UIInterfaceOrientation to VideoOrientation.
     switch (orientation)

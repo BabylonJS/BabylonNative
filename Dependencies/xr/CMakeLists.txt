@@ -46,7 +46,6 @@ target_compile_definitions(xr PRIVATE _CRT_SECURE_NO_WARNINGS)
 
 if (APPLE)
     enable_objc_arc(xr)
-    set_property(TARGET xr PROPERTY UNITY_BUILD false)
 endif()
 
 if (ANDROID)

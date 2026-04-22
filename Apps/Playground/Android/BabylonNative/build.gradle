@@ -16,10 +16,6 @@ if (project.hasProperty("GRAPHICS_API")) {
     }
 }
 
-def unity_build = "false"
-if (project.hasProperty("UNITY_BUILD")) {
-    unity_build = project.property("UNITY_BUILD")
-}
 def arcore_libpath = layout.buildDirectory.dir("arcore-native").get().asFile.absolutePath
 
 configurations { natives }
@@ -46,7 +42,6 @@ android {
                     "-DARCORE_LIBPATH=${arcore_libpath}/jni",
                     "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
                     "-DBABYLON_NATIVE_BUILD_APPS=ON",
-                    "-DCMAKE_UNITY_BUILD=${unity_build}",
                     "-DBABYLON_DEBUG_TRACE=ON"
                 cppFlags += ["-Wno-deprecated-literal-operator"]
             }

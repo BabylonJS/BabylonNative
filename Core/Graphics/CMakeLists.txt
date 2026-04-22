@@ -60,7 +60,6 @@ elseif(APPLE)
 endif()
 
 set_property(TARGET Graphics PROPERTY FOLDER Core)
-set_property(TARGET Graphics PROPERTY UNITY_BUILD false)
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 

@@ -1,10 +1,8 @@
 #pragma once
 
-#include <EGL/egl.h>
-
 namespace Babylon::Graphics
 {
-    using DeviceT = EGLContext;
+    using DeviceT = void*;
     using TextureT = unsigned int;
     using TextureFormatT = unsigned int;
 

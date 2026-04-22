@@ -412,8 +412,8 @@ namespace Babylon::Graphics
         {
             bgfx::setPlatformData(m_state.Bgfx.InitState.platformData);
 
-            // Ensure bgfx rebinds all texture information.
-            bgfx::discard();
+            // Discard the whole frame.
+            bgfx::frame(BGFX_FRAME_DISCARD);
 
             auto& res = m_state.Bgfx.InitState.resolution;
             bgfx::reset(res.width, res.height, res.reset);

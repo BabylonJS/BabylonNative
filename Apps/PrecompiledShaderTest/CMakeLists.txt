@@ -62,7 +62,6 @@ if(WIN32)
 
     if(NOT TARGET DirectXTK)
         FetchContent_MakeAvailable_With_Message(DirectXTK)
-        set_property(TARGET DirectXTK PROPERTY UNITY_BUILD false)
         set_property(TARGET DirectXTK PROPERTY FOLDER Apps/Dependencies)
     endif()
 
@@ -104,7 +103,6 @@ target_link_libraries(PrecompiledShaderTest
 
 if(APPLE)
     enable_objc_arc(PrecompiledShaderTest)
-    set_property(TARGET PrecompiledShaderTest PROPERTY UNITY_BUILD false)
 endif()
 
 # ---- Copy assets to output directory ----

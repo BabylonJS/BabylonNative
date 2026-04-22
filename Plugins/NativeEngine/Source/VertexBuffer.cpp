@@ -145,12 +145,10 @@ namespace Babylon
         uint8_t* data{instanceDataBuffer.data};
         uint32_t offset{};
 
-        // Reverse because bgfx is also reversed: https://github.com/bkaradzic/bgfx/blob/4581f14cd481bad1e0d6292f0dd0a6e298c2ee18/src/renderer_d3d11.cpp#L2701
-#if D3D11 || D3D12
+        // Reverse because bgfx maps instance data in reverse attrib order:
+        // D3D11: TEXCOORD7 = i_data0, TEXCOORD6 = i_data1, etc.
+        // OpenGL also expects this layout since bgfx abstracts the mapping.
         for (auto iter = instances.rbegin(); iter != instances.rend(); ++iter)
-#else
-        for (auto iter = instances.cbegin(); iter != instances.cend(); ++iter)
-#endif
         {
             const auto& element{iter->second};
             const auto* source{element.Buffer->m_bytes.data()};

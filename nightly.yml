@@ -37,6 +37,17 @@ jobs:
     displayName: 'Build'
 
   - script: |
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpType /t REG_DWORD /d 2 /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpCount /t REG_DWORD /d 1 /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\Playground.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps" /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpType /t REG_DWORD /d 2 /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpCount /t REG_DWORD /d 1 /f
+      reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\UnitTests.exe" /v DumpFolder /t REG_SZ /d "$(Build.ArtifactStagingDirectory)/Dumps" /f
+    displayName: 'Enable Crash Dump'
+
+  - script: |
       Playground.exe app:///Scripts/validation_native.js
     workingDirectory: build/Apps/Playground/RelWithDebInfo
     displayName: 'Run VisualizationTests'
@@ -52,6 +63,31 @@ jobs:
     inputs:
       PathtoPublish: build/Apps/Playground/Errors
       ArtifactName: ErrorImages
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: "build/Apps/Playground/RelWithDebInfo"
+      contents: Playground.*
+      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
+      cleanTargetFolder: false
+    displayName: "Stage Playground Crash Dump"
+    condition: failed()
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: "build/Apps/UnitTests/RelWithDebInfo"
+      contents: UnitTests.*
+      targetFolder: "$(Build.ArtifactStagingDirectory)/Dumps"
+      cleanTargetFolder: false
+    displayName: "Stage UnitTests Crash Dump"
+    condition: failed()
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      artifactName: "Crash Dumps"
+      pathtoPublish: "$(Build.ArtifactStagingDirectory)/Dumps"
+    displayName: "Publish Crash Dumps"
+    condition: failed()
 
   - task: PublishBuildArtifacts@1
     displayName: Upload Playground

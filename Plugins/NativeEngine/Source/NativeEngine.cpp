@@ -318,7 +318,7 @@ namespace Babylon
                 texture->Create2D(static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), (image->m_numMips > 1), 1, Cast(image->m_format), flags);
             }
 
-            for (uint8_t mip = 0; mip < image->m_numMips; ++mip)
+            for (uint8_t mip = 0, numMips = image->m_numMips; mip < numMips; ++mip)
             {
                 bimg::ImageMip imageMip{};
                 if (bimg::imageGetRawData(*image, 0, mip, image->m_data, image->m_size, imageMip))
@@ -387,7 +387,7 @@ namespace Babylon
                 for (uint8_t side = 0; side < 6; ++side)
                 {
                     bimg::ImageContainer* image{images[side]};
-                    for (uint8_t mip = 0; mip < image->m_numMips; ++mip)
+                    for (uint8_t mip = 0, numMips = image->m_numMips; mip < numMips; ++mip)
                     {
                         bimg::ImageMip imageMip{};
                         if (bimg::imageGetRawData(*image, 0, mip, image->m_data, image->m_size, imageMip))
@@ -1115,8 +1115,8 @@ namespace Babylon
     void NativeEngine::SetInt(NativeDataStream::Reader& data)
     {
         const auto& uniformInfo{*data.ReadPointer<UniformInfo>()};
-        const auto value{static_cast<float>(data.ReadInt32())};
-        m_currentProgram->SetUniform(uniformInfo.Handle, gsl::make_span(&value, 1));
+        const float values[] = {static_cast<float>(data.ReadInt32()), 0.f, 0.f, 0.f};
+        m_currentProgram->SetUniform(uniformInfo.Handle, values);
     }
 
     template<int size, typename arrayType>
@@ -1742,7 +1742,13 @@ namespace Babylon
 
         if (texture != nullptr)
         {
-            attachments[numAttachments++].init(texture->Handle());
+            const bgfx::Caps* caps = bgfx::getCaps();
+            // bgfx validation now asserts when trying to use BGFX_RESOLVE_AUTO_GEN_MIPS with a texture that doesn't have the BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN flag,
+            // but before it would just ignore the flag and not generate mips without any warning. This prevents validation assert, but rendering might be broken if autogen
+            // mips were expected. Basically this change preserves previous behavior.
+            attachments[numAttachments++].init(texture->Handle(), bgfx::Access::Write, 0, 1, 0
+                , 0 != (caps->formats[texture->Format()] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN) ? BGFX_RESOLVE_AUTO_GEN_MIPS : BGFX_RESOLVE_NONE
+                );
         }
 
         bgfx::TextureHandle depthStencilTextureHandle = BGFX_INVALID_HANDLE;
@@ -1772,7 +1778,7 @@ namespace Babylon
             // only allows mipmaps resolve step when mipmapping is asked and for the color texture, not the depth.
             // https://github.com/bkaradzic/bgfx/blob/2c21f68998595fa388e25cb6527e82254d0e9bff/src/renderer_d3d11.cpp#L4525
             depthStencilAttachmentIndex = numAttachments;
-            attachments[numAttachments++].init(depthStencilTextureHandle);
+            attachments[numAttachments++].init(depthStencilTextureHandle, bgfx::Access::Write, 0, 1, 0, BGFX_RESOLVE_NONE);
         }
 
         bgfx::FrameBufferHandle frameBufferHandle = bgfx::createFrameBuffer(numAttachments, attachments.data());

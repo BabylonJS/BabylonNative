@@ -2,6 +2,8 @@
 
 #include <arcana/tracing/trace_region.h>
 
+#include <cassert>
+
 namespace
 {
     void InitUniformInfos(
@@ -21,7 +23,7 @@ namespace
             bgfx::getUniformInfo(uniforms[index], info);
             auto itStage = uniformStages.find(info.name);
             auto& handle = uniforms[index];
-            uniformInfos.emplace(std::make_pair(handle.idx, Babylon::UniformInfo{itStage == uniformStages.end() ? uint8_t{} : itStage->second, handle, info.num}));
+            uniformInfos.emplace(std::make_pair(handle.idx, Babylon::UniformInfo{itStage == uniformStages.end() ? uint8_t{} : itStage->second, handle, info.type, info.num}));
             uniformNameToIndex[info.name] = handleIndex;
         }
     }
@@ -95,6 +97,18 @@ namespace Babylon
         }
 
         value.Data.assign(data.begin(), data.end());
+
+        // bgfx reads a type-dependent number of floats per array element from uniform data.
+        // Must match bgfx g_uniformTypeSize (bgfx.cpp): Vec4=4, Mat3=9, Mat4=16.
+        assert((itUniformInfo == m_uniformInfos.end() || [&]() {
+            static_assert(bgfx::UniformType::Vec4 == 2 && bgfx::UniformType::Mat3 == 3 && bgfx::UniformType::Mat4 == 4);
+            const size_t FloatsPerElement[] = {4, 9, 16};
+            bgfx::UniformType::Enum type = itUniformInfo->second.Type;
+            return (type >= bgfx::UniformType::Vec4 && type <= bgfx::UniformType::Mat4)
+                       ? value.Data.size() == FloatsPerElement[type - bgfx::UniformType::Vec4] * elementLength
+                       : false;
+        }()));
+
         value.ElementLength = static_cast<uint16_t>(elementLength);
     }
 

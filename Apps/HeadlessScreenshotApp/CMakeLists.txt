@@ -11,7 +11,6 @@ set(DIRECTX_ARCH ${CMAKE_VS_PLATFORM_NAME})
 
 FetchContent_MakeAvailable_With_Message(DirectXTK)
 
-set_property(TARGET DirectXTK PROPERTY UNITY_BUILD false)
 set_property(TARGET DirectXTK PROPERTY FOLDER Apps/Dependencies)
 
 set(BABYLON_SCRIPTS
