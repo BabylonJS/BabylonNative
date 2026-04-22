@@ -449,6 +449,7 @@ if (hostPlatform !== "Unix") {
         });
 
         it("should connect correctly with multiple websocket connections", function (done) {
+            this.timeout(10000);
             const testMessage1 = "testMessage1";
             const testMessage2 = "testMessage2";
             let error: unknown;

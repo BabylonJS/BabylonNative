@@ -1,5 +1,5 @@
 #include <jni.h>
-#include <Android/log.h>
+#include <android/log.h>
 #include <AndroidExtensions/Globals.h>
 #include <AndroidExtensions/JavaWrappers.h>
 #include <AndroidExtensions/StdoutLogger.h>

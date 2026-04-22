@@ -28,7 +28,7 @@ jobs:
       CC: ${{ inputs.cc }}
       CXX: ${{ inputs.cxx }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install packages
         run: |
