@@ -18,5 +18,3 @@ Babylon::Graphics::TextureT CreateTestTextureArrayWithData(Babylon::Graphics::De
 Babylon::Graphics::TextureT CreateRenderTargetTexture(Babylon::Graphics::DeviceT device, uint32_t width, uint32_t height);
 std::vector<uint8_t> ReadBackRenderTarget(Babylon::Graphics::DeviceT device, Babylon::Graphics::TextureT texture, uint32_t width, uint32_t height);
 void DestroyRenderTargetTexture(Babylon::Graphics::TextureT texture);
-
-void DispatchSync(Babylon::AppRuntime& runtime, std::function<void(Napi::Env)> func);

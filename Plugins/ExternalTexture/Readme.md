@@ -26,12 +26,12 @@ int width = 1024;  // Your render target width.
 int height = 768; // Your render target height. 
 
 // Create an ExternalTexture from an ID3D12Resource.
-auto externalTexture = std::make_shared<Babylon::Plugins::ExternalTexture>(d3d12Resource);
+Babylon::Plugins::ExternalTexture externalTexture{d3d12Resource};
 
-jsRuntime.Dispatch([&externalTexture, width, height](Napi::Env env)
+jsRuntime.Dispatch([externalTexture = std::move(externalTexture), width, height](Napi::Env env)
 {
    // Creates a JS object that can be used by the Babylon Engine to create a render texture.
-   auto jsTexture = externalTexture->CreateForJavaScript(env);
+   auto jsTexture = externalTexture.CreateForJavaScript(env);
    auto result = env.Global().Get("YOUR_JS_FUNCTION").As<Napi::Function>().Call(
       { 
          jsTexture, 
@@ -68,7 +68,7 @@ function YOUR_JS_FUNCTION(externalTexture, width, height) {
 
 This class assumes that the native texture was created using the same graphics device used to create the Babylon::Device. See [Properly Initialize `Babylon::Graphics::Device`](#properly-initialize-babylongraphicsdevice).
 
-`ExternalTexture::CreateForJavaScript` synchronously returns a `Napi::Value` wrapping a bgfx texture handle. The native texture backing is applied via `bgfx::overrideInternal` on the next render frame. The returned value can be passed to `engine.wrapNativeTexture` on the JS side.
+`ExternalTexture::CreateForJavaScript` synchronously returns a `Napi::Value` wrapping a bgfx texture handle that is backed directly by the native texture. The returned value can be passed to `engine.wrapNativeTexture` on the JS side.
 
 It is safe to create multiple JS objects from the same `Babylon::Plugins::ExternalTexture` via `ExternalTexture::CreateForJavaScript`.
 

@@ -147,12 +147,6 @@ int main()
 
     startup.get_future().wait();
 
-    // Pump an extra frame so overrideInternal applies the native texture.
-    device.StartRenderingCurrentFrame();
-    deviceUpdate.Start();
-    deviceUpdate.Finish();
-    device.FinishRenderingCurrentFrame();
-
     struct Asset
     {
         const char* Name;
