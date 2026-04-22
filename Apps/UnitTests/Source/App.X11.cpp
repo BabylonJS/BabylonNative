@@ -16,6 +16,11 @@ namespace
     constexpr const char* wmDeleteWindowName = "WM_DELETE_WINDOW";
 }
 
+std::filesystem::path GetExecutableDirectory()
+{
+    return std::filesystem::canonical("/proc/self/exe").parent_path();
+}
+
 int main(int argc, char* argv[])
 {
     XInitThreads();
