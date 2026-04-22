@@ -17,9 +17,13 @@ namespace Babylon::Plugins
         uintptr_t NativeHandleToUintPtr(T value)
         {
             if constexpr (std::is_pointer_v<T>)
+            {
                 return reinterpret_cast<uintptr_t>(value);
+            }
             else
+            {
                 return static_cast<uintptr_t>(value);
+            }
         }
     }
 
