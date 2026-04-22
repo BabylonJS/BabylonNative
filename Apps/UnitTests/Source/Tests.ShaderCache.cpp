@@ -15,6 +15,7 @@
 #include <future>
 #include <iostream>
 #include <fstream>
+#include <thread>
 
 using namespace std::chrono_literals;
 
@@ -77,20 +78,33 @@ TEST(ShaderCache, SaveAndLoad)
         update.Start();
     }
 
-    const auto shaderCachePath = std::filesystem::temp_directory_path() / "BabylonNativeTests.shaderCache.bin";
+    std::error_code ec;
+    const auto tempDir = std::filesystem::temp_directory_path(ec);
+    ASSERT_FALSE(ec) << "Failed to get temp_directory_path: " << ec.message();
+
+    // Include a per-run suffix so two concurrent UnitTests.exe invocations on the same
+    // machine don't stomp on each other's file.
+    const auto uniqueSuffix = std::to_string(
+        std::hash<std::thread::id>{}(std::this_thread::get_id()) ^
+        static_cast<size_t>(std::chrono::steady_clock::now().time_since_epoch().count()));
+    const auto shaderCachePath = tempDir / ("BabylonNativeTests." + uniqueSuffix + ".shaderCache.bin");
+
     uint32_t shaderCount{};
     {
         std::ofstream stream(shaderCachePath, std::ios::binary);
+        ASSERT_TRUE(stream.is_open()) << "Failed to open for write: " << shaderCachePath;
         shaderCount = Babylon::Plugins::ShaderCache::Save(stream);
         EXPECT_EQ(shaderCount, 1);
     }
     {
         std::ifstream stream(shaderCachePath, std::ios::binary);
+        ASSERT_TRUE(stream.is_open()) << "Failed to open for read: " << shaderCachePath;
         auto deserializedCount = Babylon::Plugins::ShaderCache::Load(stream);
         EXPECT_EQ(deserializedCount, shaderCount);
     }
-    std::error_code ec;
-    std::filesystem::remove(shaderCachePath, ec);
+    const auto removed = std::filesystem::remove(shaderCachePath, ec);
+    EXPECT_FALSE(ec) << "Failed to remove " << shaderCachePath << ": " << ec.message();
+    EXPECT_TRUE(removed) << "Expected shader cache file to be removed: " << shaderCachePath;
 
     update.Finish();
     device.FinishRenderingCurrentFrame();
