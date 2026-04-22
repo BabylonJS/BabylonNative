@@ -63,7 +63,6 @@ jobs:
             -D GRAPHICS_API=${{ inputs.graphics-api }} ^
             -D BGFX_CONFIG_MAX_FRAME_BUFFERS=256 ^
             -D BABYLON_DEBUG_TRACE=ON ^
-            -D BABYLON_NATIVE_SKIP_RENDER_TESTS=ON ^
             -D ENABLE_SANITIZERS=${{ steps.vars.outputs.sanitizer_flag }}
 
       - name: Build
