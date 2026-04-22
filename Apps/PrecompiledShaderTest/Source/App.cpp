@@ -155,12 +155,6 @@ int RunApp(
 
     startup.get_future().wait();
 
-    // Pump an extra frame so overrideInternal applies the native texture.
-    device.StartRenderingCurrentFrame();
-    deviceUpdate.Start();
-    deviceUpdate.Finish();
-    device.FinishRenderingCurrentFrame();
-
     // Start a new frame for rendering the scene.
     device.StartRenderingCurrentFrame();
     deviceUpdate.Start();
