@@ -71,6 +71,8 @@ TEST(ExternalTexture, CreateForJavaScript)
         done.set_value();
     });
 
+    done.get_future().wait();
+
     update.Finish();
     device.FinishRenderingCurrentFrame();
 #endif

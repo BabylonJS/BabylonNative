@@ -90,10 +90,10 @@ TEST(ExternalTexture, RenderTextureArray)
         startupDone.set_value();
     });
 
+    startupDone.get_future().wait();
+
     update.Finish();
     device.FinishRenderingCurrentFrame();
-
-    startupDone.get_future().wait();
 
     for (uint32_t sliceIndex = 0; sliceIndex < SLICE_COUNT; ++sliceIndex)
     {
