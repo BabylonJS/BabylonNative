@@ -4,11 +4,10 @@
 
 #ifdef _WIN32
 #include <Windows.h>
-#include "C:\Program Files\RenderDoc\renderdoc_app.h"
 #elif defined(__linux__)
 #include <dlfcn.h>
-#include "renderdoc_app.h"
 #endif
+#include "renderdoc_app.h"
 
 namespace
 {

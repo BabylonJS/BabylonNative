@@ -71,8 +71,42 @@ TEST(ExternalTexture, CreateForJavaScript)
         done.set_value();
     });
 
-    // Wait for CreateForJavaScript to complete.
-    done.get_future().wait();
+    update.Finish();
+    device.FinishRenderingCurrentFrame();
+#endif
+}
+
+TEST(ExternalTexture, Update)
+{
+#ifdef SKIP_EXTERNAL_TEXTURE_TESTS
+    GTEST_SKIP();
+#else
+    Babylon::Graphics::Device device{g_deviceConfig};
+    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
+
+    device.StartRenderingCurrentFrame();
+    update.Start();
+
+    auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256);
+    Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
+    DestroyTestTexture(nativeTexture);
+
+    EXPECT_EQ(externalTexture.Width(), 256u);
+    EXPECT_EQ(externalTexture.Height(), 256u);
+
+    update.Finish();
+    device.FinishRenderingCurrentFrame();
+
+    // Update the external texture to point at a new native texture with different dimensions.
+    device.StartRenderingCurrentFrame();
+    update.Start();
+
+    auto nativeTexture2 = CreateTestTexture(device.GetPlatformInfo().Device, 128, 128);
+    externalTexture.Update(nativeTexture2);
+    DestroyTestTexture(nativeTexture2);
+
+    EXPECT_EQ(externalTexture.Width(), 128u);
+    EXPECT_EQ(externalTexture.Height(), 128u);
 
     update.Finish();
     device.FinishRenderingCurrentFrame();

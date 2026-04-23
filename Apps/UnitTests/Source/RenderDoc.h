@@ -1,6 +1,8 @@
 #pragma once
 
-// Uncomment this to enable renderdoc captures
+// To enable RenderDoc captures, uncomment the define below and ensure renderdoc_app.h is
+// on the include path (e.g. copy it from the RenderDoc SDK into this directory, or add
+// the SDK include directory to UnitTests via CMake).
 // #define RENDERDOC
 
 namespace RenderDoc
