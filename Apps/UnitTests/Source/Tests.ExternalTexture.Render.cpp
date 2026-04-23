@@ -13,9 +13,11 @@
 #include "RenderDoc.h"
 #endif
 
+#include <chrono>
 #include <cmath>
 #include <future>
 #include <iostream>
+#include <stdexcept>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
@@ -113,10 +115,18 @@ TEST(ExternalTexture, RenderTextureArray)
                 renderDone.set_value();
             });
 
-            jsPromise.Get("then").As<Napi::Function>().Call(jsPromise, {jsOnFulfilled});
+            auto jsOnRejected = Napi::Function::New(env, [&renderDone](const Napi::CallbackInfo& info) {
+                renderDone.set_exception(std::make_exception_ptr(
+                    std::runtime_error{Napi::GetErrorString(info[0].As<Napi::Error>())}));
+            });
+
+            jsPromise.Get("then").As<Napi::Function>().Call(jsPromise, {jsOnFulfilled, jsOnRejected});
         });
 
-        renderDone.get_future().wait();
+        auto renderFuture = renderDone.get_future();
+        ASSERT_EQ(renderFuture.wait_for(std::chrono::seconds(30)), std::future_status::ready)
+            << "Slice " << sliceIndex << ": renderSlice timed out";
+        ASSERT_NO_THROW(renderFuture.get()) << "Slice " << sliceIndex << ": renderSlice rejected";
 
         update.Finish();
         device.FinishRenderingCurrentFrame();
