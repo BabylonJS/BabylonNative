@@ -37,6 +37,11 @@ namespace Babylon::Plugins
         // is concurrently calling any other operations on this object, including move operations.
         Napi::Value CreateForJavaScript(Napi::Env) const;
 
+        // Deprecated: use CreateForJavaScript instead. Retained as a shim for existing consumers.
+        // Returns a Promise that is already resolved with the value from CreateForJavaScript.
+        [[deprecated("Use CreateForJavaScript instead.")]]
+        Napi::Promise AddToContextAsync(Napi::Env) const;
+
         // Updates to a new texture.
         void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {});
 

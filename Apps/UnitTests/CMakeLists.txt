@@ -3,7 +3,6 @@ if(NOT((WIN32 AND NOT WINDOWS_STORE) OR (APPLE AND NOT IOS) OR (UNIX AND NOT AND
 endif()
 
 option(BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE "Use a noop Metal device for Apple platforms." OFF)
-option(BABYLON_NATIVE_SKIP_RENDER_TESTS "Skip GPU render tests (for backends without a render-test harness, e.g. D3D12)." OFF)
 
 set(BABYLONJS_ASSETS
     "../node_modules/babylonjs/babylon.max.js")
@@ -71,7 +70,7 @@ target_link_libraries(UnitTests
 
 target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
 
-if(BABYLON_NATIVE_SKIP_RENDER_TESTS)
+if(GRAPHICS_API STREQUAL "D3D12")
     target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS)
 endif()
 
