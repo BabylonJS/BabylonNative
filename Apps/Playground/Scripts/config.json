@@ -56,12 +56,8 @@
             "title": "GLTF Extension KHR_materials_volume with attenuation",
             "playgroundId": "#YG3BBF#18",
             "referenceImage": "gltfExtensionKhrMaterialsVolumeAttenuation.png",
-            "excludedGraphicsApis": [ "Metal" ],
             "errorRatio": 10,
-            "renderCount": 10,
-            "comments": {
-                "Metal": "No object rendered"
-            }
+            "renderCount": 10
         },
         {
             "title": "GLTF ClearCoat",
@@ -135,11 +131,7 @@
             "title": "Glow layer and LODs",
             "playgroundId": "#UNS6ZV#2",
             "renderCount": 50,
-            "excludedGraphicsApis": [ "Metal" ],
-            "referenceImage": "glowlayerandlods.png",
-            "comments": {
-                "Metal": "Result doesn't match reference"
-            }
+            "referenceImage": "glowlayerandlods.png"
         },
         {
             "title": "Nested BBG",
@@ -192,21 +184,13 @@
             "title": "Soft Shadows",
             "playgroundId": "#0YYQ3N#0",
             "errorRatio": 50,
-            "excludedGraphicsApis": [ "Metal" ],
-            "referenceImage": "softShadows.png",
-            "comments": {
-                "Metal": "Nothing rendered"
-            }
+            "referenceImage": "softShadows.png"
         },
         {
             "title": "Soft Shadows (Right Handed)",
             "playgroundId": "#0YYQ3N#2",
             "errorRatio": 50,
-            "excludedGraphicsApis": [ "Metal" ],
-            "referenceImage": "softShadowsRightHanded.png",
-            "comments": {
-                "Metal": "Nothing rendered"
-            }
+            "referenceImage": "softShadowsRightHanded.png"
         },
         {
             "title": "RenderingGroupId",
@@ -222,11 +206,7 @@
         {
             "title": "Point light shadows",
             "playgroundId": "#U2F7P9#4",
-            "excludedGraphicsApis": [ "Metal" ],
-            "referenceImage": "point-light-shadows.png",
-            "comments": {
-                "Metal": "Rendered result doesn't match reference"
-            }
+            "referenceImage": "point-light-shadows.png"
         },
         {
             "title": "Texture cache",
@@ -313,11 +293,7 @@
             "title": "Multi cameras and output render target",
             "renderCount": 2,
             "playgroundId": "#BCYE7J#31",
-            "excludedGraphicsApis": [ "Metal" ],
-            "referenceImage": "multiCamerasOutputRenderTarget.png",
-            "comments": {
-                "Metal": "Result does not match reference"
-            }
+            "referenceImage": "multiCamerasOutputRenderTarget.png"
         },
         {
             "title": "Multi camera rendering with scissors",
