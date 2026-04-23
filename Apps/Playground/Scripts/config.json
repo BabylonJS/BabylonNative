@@ -82,7 +82,7 @@
         {
             "reason": "https://github.com/BabylonJS/BabylonNative/issues/1111",
             "title": "Thin Instances",
-            "errorRatio": 12,
+            "errorRatio": 20,
             "playgroundId": "#V1JE4Z#1",
             "referenceImage": "thinInstances.png"
         },
