@@ -157,9 +157,9 @@ TEST(ExternalTexture, RenderTextureArray)
             const uint8_t g = pixels[i * 4 + 1];
             const uint8_t b = pixels[i * 4 + 2];
 
-            if (std::abs(static_cast<int>(r) - expected.R) < 25 &&
-                std::abs(static_cast<int>(g) - expected.G) < 25 &&
-                std::abs(static_cast<int>(b) - expected.B) < 25)
+            if (std::abs(static_cast<int>(r) - expected.R) < 2 &&
+                std::abs(static_cast<int>(g) - expected.G) < 2 &&
+                std::abs(static_cast<int>(b) - expected.B) < 2)
             {
                 ++matchCount;
             }
@@ -172,7 +172,7 @@ TEST(ExternalTexture, RenderTextureArray)
                   << totalPixels << " pixels match (" << matchPercent << "%)"
                   << std::endl;
 
-        EXPECT_GE(matchPercent, 90.0)
+        EXPECT_EQ(matchPercent, 100.0)
             << "Slice " << sliceIndex << ": expected ("
             << static_cast<int>(expected.R) << ", "
             << static_cast<int>(expected.G) << ", "
