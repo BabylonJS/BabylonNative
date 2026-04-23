@@ -373,6 +373,11 @@ namespace Babylon::Graphics
         m_screenShotCallbacks.push(std::move(callback));
     }
 
+    void DeviceImpl::RequestCaptureNextFrame()
+    {
+        m_captureNextFrame.store(true);
+    }
+
     arcana::task<void, std::exception_ptr> DeviceImpl::ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel)
     {
         arcana::task_completion_source<void, std::exception_ptr> completionSource{};
@@ -462,7 +467,8 @@ namespace Babylon::Graphics
         RequestScreenShots();
 
         // Advance frame and render!
-        uint32_t frameNumber{bgfx::frame()};
+        const uint8_t frameFlags = m_captureNextFrame.exchange(false) ? BGFX_FRAME_DEBUG_CAPTURE : 0;
+        uint32_t frameNumber{bgfx::frame(frameFlags)};
 
         // Process read texture requests.
         while (!m_readTextureRequests.empty() && m_readTextureRequests.front().first <= frameNumber)

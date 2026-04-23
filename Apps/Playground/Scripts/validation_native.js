@@ -118,6 +118,9 @@
             }
             engine.runRenderLoop(function () {
                 try {
+                    if (test.capture && renderCount === 1 && TestUtils.captureNextFrame) {
+                        TestUtils.captureNextFrame();
+                    }
                     currentScene.render();
                     renderCount--;
 
