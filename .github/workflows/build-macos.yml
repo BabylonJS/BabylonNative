@@ -22,6 +22,8 @@ on:
 
 env:
   CMAKE_VERSION: '3.31.6'
+  UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
+  ASAN_OPTIONS: abort_on_error=1
 
 jobs:
   build:

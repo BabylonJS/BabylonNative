@@ -159,7 +159,10 @@ if(ENABLE_SANITIZERS)
 
         string(JOIN "," SANITIZER_FLAGS ${SANITIZERS})
 
-        add_compile_options(-fsanitize=${SANITIZER_FLAGS} -fno-omit-frame-pointer)
+        # -fno-sanitize-recover=all makes UBSan findings fatal. Without it, UBSan
+        # only prints a diagnostic to stderr and execution continues, so CI stays
+        # green while latent UB goes unreported.
+        add_compile_options(-fsanitize=${SANITIZER_FLAGS} -fno-omit-frame-pointer -fno-sanitize-recover=all)
         add_link_options(-fsanitize=${SANITIZER_FLAGS})
     elseif(MSVC)
         # MSVC only supports AddressSanitizer
