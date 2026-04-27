@@ -1703,7 +1703,7 @@ namespace Babylon
                         std::vector<uint8_t> convertedTextureBuffer(targetTextureInfo.storageSize);
                         if (!bimg::imageConvert(&Graphics::DeviceContext::GetDefaultAllocator(), convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
                         {
-                            throw std::runtime_error{"Texture conversion to RBGA8 failed."};
+                            throw std::runtime_error{"Texture conversion to RGBA8 failed."};
                         }
                         textureBuffer = convertedTextureBuffer;
 #endif
