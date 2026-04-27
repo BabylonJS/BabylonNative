@@ -92,10 +92,14 @@ TEST(ExternalTexture, CreateForJavaScript)
 // system_error("resource_deadlock_would_occur") on MSVC. With the fix, the lookup runs
 // before the mutex is taken, and Width() succeeds.
 //
-// The test is restricted to Win32 (Chakra + MSVC std::mutex deadlock detection).
+// The test is restricted to Win32 + Chakra. It uses MSVC's std::mutex deadlock detection
+// to surface the recursive lock as a recoverable exception, and uses the Node-API C
+// `napi_define_properties` to install the test accessor (the JSI Node-API shim does not
+// expose that symbol; on JSI the test is skipped). Chakra is detected via NAPI_VERSION,
+// which is defined by the shared Node-API header but not by the JSI Node-API shim.
 TEST(ExternalTexture, CreateForJavaScriptDoesNotHoldImplMutexAcrossJsCallout)
 {
-#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || !defined(_WIN32)
+#if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || !defined(_WIN32) || !defined(NAPI_VERSION)
     GTEST_SKIP();
 #else
     Babylon::Graphics::Device device{g_deviceConfig};
