@@ -93,6 +93,7 @@ namespace Babylon::Graphics
         bgfx::Encoder* GetActiveEncoder();
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
+        void RequestCaptureNextFrame();
         void SetRenderResetCallback(std::function<void()> callback);
 
         arcana::task<void, std::exception_ptr> ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel = 0);
