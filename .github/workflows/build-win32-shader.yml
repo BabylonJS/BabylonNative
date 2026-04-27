@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: jwlawson/actions-setup-cmake@v2
+      - uses: jwlawson/actions-setup-cmake@v2.2
         with:
           cmake-version: ${{ env.CMAKE_VERSION }}
 
