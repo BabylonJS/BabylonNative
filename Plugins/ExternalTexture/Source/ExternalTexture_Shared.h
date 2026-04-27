@@ -66,9 +66,16 @@ namespace Babylon::Plugins
 
     Napi::Value ExternalTexture::CreateForJavaScript(Napi::Env env) const
     {
-        std::scoped_lock lock{m_impl->Mutex()};
-
+        // Resolve the Graphics::DeviceContext via a JS property lookup BEFORE acquiring the
+        // impl mutex. The lookup can run user JS or engine GC/finalizers (e.g. a sibling
+        // Texture finalizer registered by Napi::Pointer::Create below), which themselves
+        // re-enter m_impl->Mutex() on this same thread. Holding the mutex across this lookup
+        // recursively locks std::mutex, throwing system_error on MSVC and aborting the
+        // AppRuntime dispatch lambda. DeviceContext is process-scoped and does not need the
+        // impl mutex.
         Graphics::DeviceContext& context = Graphics::DeviceContext::GetFromJavaScript(env);
+
+        std::scoped_lock lock{m_impl->Mutex()};
 
         bgfx::TextureHandle handle = bgfx::createTexture2D(
             m_impl->Width(),
