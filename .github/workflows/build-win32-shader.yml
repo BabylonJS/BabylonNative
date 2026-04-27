@@ -9,7 +9,7 @@ on:
         default: x64
 
 env:
-  CMAKE_VERSION: '3.31.6'
+  CMAKE_VERSION: '4.3.2'
 
 jobs:
   build:
