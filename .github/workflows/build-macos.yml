@@ -23,6 +23,7 @@ on:
 env:
   UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
   ASAN_OPTIONS: abort_on_error=1
+  SCCACHE_GHA_ENABLED: "true"
 
 jobs:
   build:
@@ -35,9 +36,14 @@ jobs:
       - name: Select Xcode ${{ inputs.xcode-version }}
         run: sudo xcode-select --switch /Applications/Xcode_${{ inputs.xcode-version }}.app/Contents/Developer
 
+      - name: Run sccache-cache
+        if: ${{ inputs.generator != 'Xcode' }}
+        uses: mozilla-actions/sccache-action@v0.0.10
+
       - name: Generate macOS solution
         run: |
           cmake -G "${{ inputs.generator }}" -B build/macOS \
+            ${{ inputs.generator != 'Xcode' && '-D CMAKE_C_COMPILER_LAUNCHER=sccache -D CMAKE_CXX_COMPILER_LAUNCHER=sccache -D CMAKE_OBJC_COMPILER_LAUNCHER=sccache -D CMAKE_OBJCXX_COMPILER_LAUNCHER=sccache' || '' }} \
             -D BABYLON_DEBUG_TRACE=ON \
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} \
             -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON
@@ -50,6 +56,10 @@ jobs:
 
       - name: Build ModuleLoadTest macOS
         run: cmake --build build/macOS --target ModuleLoadTest --config RelWithDebInfo
+
+      - name: sccache stats
+        if: ${{ always() && inputs.generator != 'Xcode' }}
+        run: sccache --show-stats
 
       - name: Enable Core Dump
         run: sudo sysctl -w kern.corefile=%N.core.%P
