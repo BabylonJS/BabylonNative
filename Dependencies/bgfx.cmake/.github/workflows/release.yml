@@ -98,6 +98,55 @@ jobs:
           submodules: recursive
           fetch-depth: 0
           path: src/bgfx.cmake
+      - name: Generate release notes
+        id: notes
+        working-directory: src/bgfx.cmake
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          if [ -z "$PREV_TAG" ]; then
+            PREV_TAG=$(git tag --sort=-creatordate | head -n 1)
+          fi
+          NOTES_FILE="${{ github.workspace }}/release_notes.md"
+          NEW_TAG="${{ needs.version.outputs.tag }}"
+          PARENT_REPO="${{ github.repository }}"
+          : > "$NOTES_FILE"
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "Initial release; no previous tag to diff against." >> "$NOTES_FILE"
+          else
+            echo "## What's new since $PREV_TAG" >> "$NOTES_FILE"
+            echo "" >> "$NOTES_FILE"
+
+            PARENT_PREV=$(git rev-parse "$PREV_TAG")
+            PARENT_HEAD=$(git rev-parse HEAD)
+            if [ "$PARENT_PREV" != "$PARENT_HEAD" ]; then
+              echo "### bgfx.cmake ([\`${PARENT_PREV:0:7}...${PARENT_HEAD:0:7}\`](https://github.com/$PARENT_REPO/compare/$PREV_TAG...$NEW_TAG))" >> "$NOTES_FILE"
+              echo "" >> "$NOTES_FILE"
+              git log --no-merges --pretty=format:"- %s ([\`%h\`](https://github.com/$PARENT_REPO/commit/%H))" "$PARENT_PREV..$PARENT_HEAD" >> "$NOTES_FILE"
+              echo "" >> "$NOTES_FILE"
+              echo "" >> "$NOTES_FILE"
+            fi
+
+            for SUB in $(git config --file .gitmodules --get-regexp '\.path$' | awk '{print $2}'); do
+              PREV_SHA=$(git ls-tree "$PREV_TAG" "$SUB" | awk '{print $3}')
+              CUR_SHA=$(git ls-tree HEAD "$SUB" | awk '{print $3}')
+
+              if [ -z "$PREV_SHA" ] || [ "$PREV_SHA" = "$CUR_SHA" ]; then
+                continue
+              fi
+
+              URL=$(git config --file .gitmodules --get "submodule.$SUB.url")
+              UPSTREAM=${URL#*github.com[/:]}; UPSTREAM=${UPSTREAM%.git}
+              echo "### $SUB ([\`${PREV_SHA:0:7}...${CUR_SHA:0:7}\`](https://github.com/$UPSTREAM/compare/$PREV_SHA...$CUR_SHA))" >> "$NOTES_FILE"
+              echo "" >> "$NOTES_FILE"
+              git -C "$SUB" fetch --unshallow 2>/dev/null || true
+              git -C "$SUB" log --no-merges --pretty=format:"- %s ([\`%h\`](https://github.com/$UPSTREAM/commit/%H))" "$PREV_SHA..$CUR_SHA" >> "$NOTES_FILE"
+              echo "" >> "$NOTES_FILE"
+              echo "" >> "$NOTES_FILE"
+            done
+          fi
+
+          echo "file=$NOTES_FILE" >> $GITHUB_OUTPUT
       - run: |
           find src/bgfx.cmake -name ".git*" -exec rm -rf {} +
           find src/bgfx.cmake -name ".editorconfig" -delete
@@ -175,4 +224,4 @@ jobs:
         with:
           tag: ${{ needs.version.outputs.tag }}
           artifacts: "src/bgfx.cmake.${{ needs.version.outputs.tag }}.zip,src/bgfx.cmake.${{ needs.version.outputs.tag }}.tar.gz,install/*/*.${{ needs.version.outputs.tag }}.zip,install/*/*.${{ needs.version.outputs.tag }}.tar.gz"
-          generateReleaseNotes: true
+          bodyFile: ${{ steps.notes.outputs.file }}
