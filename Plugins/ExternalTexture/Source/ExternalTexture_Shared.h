@@ -36,7 +36,6 @@ namespace Babylon::Plugins
     {
         std::scoped_lock lock{m_mutex};
 
-        auto* self = static_cast<Impl*>(this);
         bgfx::TextureHandle handle = bgfx::createTexture2D(
             m_info.Width,
             m_info.Height,
@@ -45,7 +44,7 @@ namespace Babylon::Plugins
             m_info.Format,
             m_info.Flags,
             0,
-            NativeHandleToUintPtr(self->Get())
+            NativeHandleToUintPtr(static_cast<Impl*>(this)->Get())
         );
 
         DEBUG_TRACE("ExternalTexture [0x%p] CreateForJavaScript %d x %d %d mips %d layers. Format : %d Flags : %d. (bgfx handle id %d)",
