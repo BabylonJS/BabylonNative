@@ -565,27 +565,34 @@ if(TARGET bgfx::shaderc)
 	# 	OUT_FILES_VAR variable name
 	# 	INCLUDE_DIRS directories
 	# 	DEFINES defines
+	# 	[PROFILES profiles]
 	# 	[AS_HEADERS]
 	# )
 	#
 	function(bgfx_compile_shaders)
 		set(options AS_HEADERS)
 		set(oneValueArgs TYPE VARYING_DEF OUTPUT_DIR OUT_FILES_VAR)
-		set(multiValueArgs SHADERS INCLUDE_DIRS DEFINES)
+		set(multiValueArgs SHADERS INCLUDE_DIRS DEFINES PROFILES)
 		cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" "${ARGN}")
 
-		set(PROFILES spirv)
-		if(ARGS_TYPE STREQUAL "COMPUTE")
-			list(APPEND PROFILES 430 300_es)
+		if(ARGS_PROFILES)
+			set(PROFILES ${ARGS_PROFILES})
 		else()
-			list(APPEND PROFILES 120 100_es)
-		endif()
-		if(BGFX_CONFIG_RENDERER_WEBGPU)
-			list(APPEND PROFILES wgsl)
+			set(PROFILES spirv)
+			if(ARGS_TYPE STREQUAL "COMPUTE")
+				list(APPEND PROFILES 430 300_es)
+			else()
+				list(APPEND PROFILES 120 100_es)
+			endif()
+			if(BGFX_CONFIG_RENDERER_WEBGPU)
+				list(APPEND PROFILES wgsl)
+			endif()
 		endif()
 		if(IOS)
 			set(PLATFORM IOS)
-			list(APPEND PROFILES metal)
+			if(NOT ARGS_PROFILES)
+				list(APPEND PROFILES metal)
+			endif()
 		elseif(ANDROID)
 			set(PLATFORM ANDROID)
 		elseif(UNIX AND NOT APPLE)
@@ -594,7 +601,9 @@ if(TARGET bgfx::shaderc)
 			set(PLATFORM ASM_JS)
 		elseif(APPLE)
 			set(PLATFORM OSX)
-			list(APPEND PROFILES metal)
+			if(NOT ARGS_PROFILES)
+				list(APPEND PROFILES metal)
+			endif()
 		elseif(
 			WIN32
 			OR MINGW
@@ -602,11 +611,14 @@ if(TARGET bgfx::shaderc)
 			OR CYGWIN
 		)
 			set(PLATFORM WINDOWS)
-			list(APPEND PROFILES s_5_0)
-			list(APPEND PROFILES s_6_0)
+			if(NOT ARGS_PROFILES)
+				list(APPEND PROFILES s_5_0 s_6_0)
+			endif()
 		elseif(ORBIS) # ORBIS should be defined by a PS4 CMake toolchain
 			set(PLATFORM ORBIS)
-			list(APPEND PROFILES pssl)
+			if(NOT ARGS_PROFILES)
+				list(APPEND PROFILES pssl)
+			endif()
 		else()
 			# pssl for Agc and Gnm renderers
 			# nvn for Nvn renderer
