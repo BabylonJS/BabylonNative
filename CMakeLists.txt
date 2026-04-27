@@ -35,7 +35,7 @@ FetchContent_Declare(base-n
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG c6575c5644e37ccc06b83d59d1d536cf8ec9f265
+    GIT_TAG e5f3f31c1ec8a376dde75f8b20366e2696810ea0
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
@@ -43,7 +43,7 @@ FetchContent_Declare(CMakeExtensions
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
-    GIT_TAG 39a80699a315cb7f66c4ab3180edd4e2910fab28
+    GIT_TAG 284e4301e5a6b44b279635276588db7cdd942624
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz"
@@ -159,7 +159,10 @@ if(ENABLE_SANITIZERS)
 
         string(JOIN "," SANITIZER_FLAGS ${SANITIZERS})
 
-        add_compile_options(-fsanitize=${SANITIZER_FLAGS} -fno-omit-frame-pointer)
+        # -fno-sanitize-recover=all makes UBSan findings fatal. Without it, UBSan
+        # only prints a diagnostic to stderr and execution continues, so CI stays
+        # green while latent UB goes unreported.
+        add_compile_options(-fsanitize=${SANITIZER_FLAGS} -fno-omit-frame-pointer -fno-sanitize-recover=all)
         add_link_options(-fsanitize=${SANITIZER_FLAGS})
     elseif(MSVC)
         # MSVC only supports AddressSanitizer
