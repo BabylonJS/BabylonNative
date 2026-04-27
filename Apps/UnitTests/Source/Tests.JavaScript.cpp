@@ -72,7 +72,12 @@ namespace
             {
             }
         }
-        return 60;
+        // 600s default: empirically the JavaScript_All test on Ubuntu llvmpipe
+        // takes ~4 min wall-clock (most of which is silent shader compile inside
+        // bgfx::frame()), so 60s produced false positives. 600s only fires on
+        // genuine progress loss while still leaving budget within the 30-min job
+        // timeout.
+        return 600;
     }
 }
 
