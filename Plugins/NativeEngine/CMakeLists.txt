@@ -30,14 +30,21 @@ target_link_libraries(NativeEngine
     PUBLIC napi
     PRIVATE arcana
     PRIVATE bgfx
-    PRIVATE bimg
-    PRIVATE bimg_encode
-    PRIVATE bimg_decode
     PRIVATE bx
     PRIVATE minz
     PRIVATE GraphicsDevice
     PRIVATE GraphicsDeviceContext
     PRIVATE JsRuntime)
+
+if(BABYLON_NATIVE_DISABLE_IMAGE_LOADING)
+    target_compile_definitions(NativeEngine
+        PRIVATE BABYLON_NATIVE_DISABLE_IMAGE_LOADING)
+else()
+    target_link_libraries(NativeEngine
+        PRIVATE bimg
+        PRIVATE bimg_encode
+        PRIVATE bimg_decode)
+endif()
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP)
     target_compile_definitions(NativeEngine
