@@ -17,7 +17,7 @@
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
-#ifndef BABYLON_NATIVE_DISABLE_IMAGE_LOADING
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 #include <bimg/bimg.h>
 #include <bx/allocator.h>
 #endif

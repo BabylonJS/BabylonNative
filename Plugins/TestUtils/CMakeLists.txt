@@ -14,7 +14,10 @@ target_link_libraries(TestUtils
     PUBLIC napi
     PRIVATE JsRuntimeInternal
     PRIVATE GraphicsDevice
-    PRIVATE GraphicsDeviceContext)
+    PRIVATE GraphicsDeviceContext
+    PRIVATE bimg
+    PRIVATE bimg_encode
+    PRIVATE bimg_decode)
 
 target_compile_definitions(TestUtils PRIVATE GRAPHICS_API=${GRAPHICS_API})
 

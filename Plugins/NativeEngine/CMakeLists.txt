@@ -36,10 +36,9 @@ target_link_libraries(NativeEngine
     PRIVATE GraphicsDeviceContext
     PRIVATE JsRuntime)
 
-if(BABYLON_NATIVE_DISABLE_IMAGE_LOADING)
+if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
     target_compile_definitions(NativeEngine
-        PRIVATE BABYLON_NATIVE_DISABLE_IMAGE_LOADING)
-else()
+        PRIVATE BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
     target_link_libraries(NativeEngine
         PRIVATE bimg
         PRIVATE bimg_encode

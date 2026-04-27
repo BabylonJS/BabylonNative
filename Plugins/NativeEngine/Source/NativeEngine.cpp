@@ -14,7 +14,7 @@
 
 #include <bgfx/bgfx.h>
 
-#ifndef BABYLON_NATIVE_DISABLE_IMAGE_LOADING
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 #include <bimg/bimg.h>
 #include <bimg/decode.h>
 #include <bimg/encode.h>
@@ -25,7 +25,7 @@
 
 #include <cmath>
 
-#if !defined(BABYLON_NATIVE_DISABLE_IMAGE_LOADING) && defined(WEBP)
+#if defined(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES) && defined(WEBP)
 #include <webp/decode.h>
 #endif
 
@@ -91,7 +91,7 @@ namespace Babylon
             }
         }
 
-#ifndef BABYLON_NATIVE_DISABLE_IMAGE_LOADING
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::Count) == bgfx::TextureFormat::Count);
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::RGBA8) == bgfx::TextureFormat::RGBA8);
         static_assert(static_cast<bgfx::TextureFormat::Enum>(bimg::TextureFormat::RGB8) == bgfx::TextureFormat::RGB8);
@@ -415,7 +415,7 @@ namespace Babylon
                 }
             }
         }
-#endif // !BABYLON_NATIVE_DISABLE_IMAGE_LOADING
+#endif // BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 
         auto RenderTargetSamplesToBgfxMsaaFlag(uint32_t renderTargetSamples)
         {
@@ -1315,8 +1315,8 @@ namespace Babylon
 
     void NativeEngine::LoadTexture(const Napi::CallbackInfo& info)
     {
-#ifdef BABYLON_NATIVE_DISABLE_IMAGE_LOADING
-        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_DISABLE_IMAGE_LOADING).");
+#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF).");
 #else
         const auto texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         const auto data = info[1].As<Napi::TypedArray>();
@@ -1360,8 +1360,8 @@ namespace Babylon
 
     void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)
     {
-#ifdef BABYLON_NATIVE_DISABLE_IMAGE_LOADING
-        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_DISABLE_IMAGE_LOADING).");
+#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF).");
 #else
         const auto texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
         const auto data{info[1].As<Napi::TypedArray>()};
@@ -1385,8 +1385,8 @@ namespace Babylon
 
     void NativeEngine::LoadRawTexture2DArray(const Napi::CallbackInfo& info)
     {
-#ifdef BABYLON_NATIVE_DISABLE_IMAGE_LOADING
-        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_DISABLE_IMAGE_LOADING).");
+#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF).");
 #else
         const auto texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
         const auto data = info[1].As<Napi::TypedArray>();
@@ -1434,8 +1434,8 @@ namespace Babylon
 
     void NativeEngine::LoadCubeTexture(const Napi::CallbackInfo& info)
     {
-#ifdef BABYLON_NATIVE_DISABLE_IMAGE_LOADING
-        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_DISABLE_IMAGE_LOADING).");
+#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF).");
 #else
         const auto texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         const auto data{info[1].As<Napi::Array>()};
@@ -1478,8 +1478,8 @@ namespace Babylon
 
     void NativeEngine::LoadCubeTextureWithMips(const Napi::CallbackInfo& info)
     {
-#ifdef BABYLON_NATIVE_DISABLE_IMAGE_LOADING
-        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_DISABLE_IMAGE_LOADING).");
+#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF).");
 #else
         const auto texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         const auto data{info[1].As<Napi::Array>()};
@@ -1697,8 +1697,8 @@ namespace Babylon
                     // If the source texture format does not match the target texture format, convert it.
                     if (targetTextureInfo.format != sourceTextureInfo.format)
                     {
-#ifdef BABYLON_NATIVE_DISABLE_IMAGE_LOADING
-                        throw std::runtime_error{"Texture format conversion is disabled in this build (BABYLON_NATIVE_DISABLE_IMAGE_LOADING)."};
+#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+                        throw std::runtime_error{"Texture format conversion is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF)."};
 #else
                         std::vector<uint8_t> convertedTextureBuffer(targetTextureInfo.storageSize);
                         if (!bimg::imageConvert(&Graphics::DeviceContext::GetDefaultAllocator(), convertedTextureBuffer.data(), bimg::TextureFormat::Enum(targetTextureInfo.format), textureBuffer.data(), bimg::TextureFormat::Enum(sourceTextureInfo.format), sourceTextureInfo.width, sourceTextureInfo.height, /*depth*/ 1))
@@ -1991,8 +1991,8 @@ namespace Babylon
 
     Napi::Value NativeEngine::CreateImageBitmap(const Napi::CallbackInfo& info)
     {
-#ifdef BABYLON_NATIVE_DISABLE_IMAGE_LOADING
-        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_DISABLE_IMAGE_LOADING).");
+#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF).");
 #else
         const Napi::Env env{info.Env()};
         bimg::ImageContainer* image{nullptr};
@@ -2054,8 +2054,8 @@ namespace Babylon
 
     Napi::Value NativeEngine::ResizeImageBitmap(const Napi::CallbackInfo& info)
     {
-#ifdef BABYLON_NATIVE_DISABLE_IMAGE_LOADING
-        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_DISABLE_IMAGE_LOADING).");
+#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF).");
 #else
         const auto imageBitmap = info[0].As<Napi::Object>();
         const auto bufferWidth = info[1].As<Napi::Number>().Uint32Value();
