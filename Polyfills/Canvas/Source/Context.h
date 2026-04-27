@@ -7,6 +7,8 @@
 #include "Path2D.h"
 #include "Font.h"
 #include "nanovg/nanovg_filterstack.h"
+#include <variant>
+#include <vector>
 
 struct NVGcontext;
 
@@ -89,6 +91,7 @@ namespace Babylon::Polyfills::Internal
         void Dispose(const Napi::CallbackInfo&);
         void Dispose();
         bool SetFontFaceId();
+        void EnsureFontsLoaded();
         void Flush(const Napi::CallbackInfo&);
 
         NativeCanvas* m_canvas;
@@ -108,6 +111,13 @@ namespace Babylon::Polyfills::Internal
 
         std::map<std::string, int> m_fonts;
         int m_currentFontId{-1};
+
+        struct SavedStyle
+        {
+            std::variant<std::string, CanvasGradient*> fillStyle;
+            std::string strokeStyle;
+        };
+        std::vector<SavedStyle> m_savedStyles;
 
         Graphics::DeviceContext& m_graphicsContext;
         Graphics::Update m_update;

@@ -410,6 +410,11 @@ namespace Babylon::Graphics
         return viewId;
     }
 
+    bgfx::ViewId DeviceImpl::PeekNextViewId() const
+    {
+        return m_nextViewId.load();
+    }
+
     void DeviceImpl::UpdateBgfxState()
     {
         std::scoped_lock lock{m_state.Mutex};

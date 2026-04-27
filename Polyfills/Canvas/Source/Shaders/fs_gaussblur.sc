@@ -6,7 +6,6 @@ $input v_position, v_texcoord0
 #define W_MID 6
 #define W_USIZE 5
 
-uniform vec4 u_viewSize;			// vec4 (width, height, unused, unused)
 uniform vec4 u_direction;			// vec4 (x, y, unused, unused)
 uniform vec4 u_sigma;				// vec4 (sigma, unused, unused, unused)
 uniform vec4 u_weights[W_USIZE];	// vec4 (weight0, weight1, ..., weight12, unused, unused, unused)
@@ -24,7 +23,7 @@ void main()
 {
 	vec2 texcoord0 = v_texcoord0;
 	vec4 color = texture2D(s_tex, texcoord0) * getWeight(W_MID); // center pixel
-	vec2 texelSize = vec2_splat(1.0) / u_viewSize.xy;
+	vec2 texelSize = vec2_splat(1.0) / u_viewRect.zw;
 
 	for (int i = 1; i <= W_MID; i++)
 	{

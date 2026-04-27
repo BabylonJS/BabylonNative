@@ -1355,7 +1355,8 @@ namespace Babylon
         const auto textureSource = data.ReadPointer<Graphics::Texture>();
         const auto textureDestination = data.ReadPointer<Graphics::Texture>();
 
-        GetBoundFrameBuffer(*encoder).Blit(*encoder, textureDestination->Handle(), 0, 0, textureSource->Handle());
+        const bgfx::ViewId blitView = m_deviceContext.PeekNextViewId();
+        encoder->blit(blitView, textureDestination->Handle(), 0, 0, textureSource->Handle());
     }
 
     void NativeEngine::LoadRawTexture(const Napi::CallbackInfo& info)
