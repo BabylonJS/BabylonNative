@@ -91,6 +91,11 @@ namespace Babylon::Plugins::Internal
             });
         });
     }
+
+    void TestUtils::CaptureNextFrame(const Napi::CallbackInfo& /*info*/)
+    {
+        m_deviceContext.RequestCaptureNextFrame();
+    }
 }
 
 namespace Babylon::Plugins::TestUtils

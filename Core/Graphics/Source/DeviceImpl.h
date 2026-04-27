@@ -87,6 +87,8 @@ namespace Babylon::Graphics
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
 
+        void RequestCaptureNextFrame();
+
         arcana::task<void, std::exception_ptr> ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel);
 
         using CaptureCallbackTicketT = arcana::ticketed_collection<std::function<void(const BgfxCallback::CaptureData&)>>::ticket;
@@ -122,6 +124,8 @@ namespace Babylon::Graphics
         bool m_rendering{};
 
         std::atomic<bgfx::ViewId> m_nextViewId{0};
+
+        std::atomic<bool> m_captureNextFrame{false};
 
         std::optional<arcana::cancellation_source> m_cancellationSource{};
 

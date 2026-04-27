@@ -61,6 +61,11 @@ namespace Babylon::Graphics
         return m_graphicsImpl.RequestScreenShot(std::move(callback));
     }
 
+    void DeviceContext::RequestCaptureNextFrame()
+    {
+        m_graphicsImpl.RequestCaptureNextFrame();
+    }
+
     void DeviceContext::SetRenderResetCallback(std::function<void()> callback)
     {
         return m_graphicsImpl.SetRenderResetCallback(std::move(callback));
