@@ -20,7 +20,7 @@ on:
         default: false
 
 env:
-  CMAKE_VERSION: '3.31.8'
+  CMAKE_VERSION: '3.31.12'
 
 jobs:
   build:

@@ -11,7 +11,7 @@ on:
         type: string
 
 env:
-  CMAKE_VERSION: '3.31.8'
+  CMAKE_VERSION: '3.31.12'
   NDK_VERSION: '28.2.13676358'
 
 jobs:

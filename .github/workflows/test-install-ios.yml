@@ -12,7 +12,7 @@ on:
         default: '16.4'
 
 env:
-  CMAKE_VERSION: '3.31.8'
+  CMAKE_VERSION: '3.31.12'
 
 jobs:
   test-install:
