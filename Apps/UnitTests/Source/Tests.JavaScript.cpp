@@ -38,11 +38,20 @@ namespace
         return "unknown";
     }
 
-    // Watchdog: aborts the test with a core dump if the JS thread stops producing console
-    // output for too long. Replaces opaque CI job timeouts with an immediate, debuggable
-    // failure pointing at the last test that ran. Threshold tunable via BN_WATCHDOG_TIMEOUT_S
-    // (set to 0 to disable).
+    // Watchdog: aborts the test with a core dump if both JS console output AND
+    // render-thread frame progress stop for too long. Replaces opaque CI job
+    // timeouts with an immediate, debuggable failure pointing at the last test
+    // that ran. Threshold tunable via BN_WATCHDOG_TIMEOUT_S (set to 0 to disable).
+    //
+    // Two activity sources feed the watchdog:
+    //  1. JS console output (via the polyfill console handler) — surfaces test progress.
+    //  2. Render-thread frame count (via the pump loop below) — distinguishes a real
+    //     deadlock (render thread stuck) from slow-but-progressing software-GL shader
+    //     compile (mocha silent for minutes while bgfx::frame() chews through shader
+    //     variants on llvmpipe). With the heartbeat, the watchdog only fires when
+    //     forward progress has actually stopped.
     std::atomic<std::int64_t> g_lastConsoleActivityNs{0};
+    std::atomic<std::uint64_t> g_pumpFrameCount{0};
     std::mutex g_lastMessageMutex;
     std::string g_lastMessage;
 
@@ -72,12 +81,10 @@ namespace
             {
             }
         }
-        // 600s default: empirically the JavaScript_All test on Ubuntu llvmpipe
-        // takes ~4 min wall-clock (most of which is silent shader compile inside
-        // bgfx::frame()), so 60s produced false positives. 600s only fires on
-        // genuine progress loss while still leaving budget within the 30-min job
-        // timeout.
-        return 600;
+        // 60s default. The watchdog also resets on render-thread frame progress
+        // (see g_pumpFrameCount), so slow-but-progressing software-GL shader compile
+        // no longer trips it; only a real stall (render thread stuck) does.
+        return 60;
     }
 }
 
@@ -149,9 +156,26 @@ TEST(JavaScript, All)
     {
         watchdogThread = std::thread{[&watchdogStop, watchdogTimeoutSeconds]() {
             const std::int64_t thresholdNs = std::int64_t{watchdogTimeoutSeconds} * 1'000'000'000LL;
+            std::uint64_t lastSeenFrameCount = g_pumpFrameCount.load(std::memory_order_relaxed);
+            auto lastHeartbeat = std::chrono::steady_clock::now();
             while (!watchdogStop.load(std::memory_order_relaxed))
             {
                 std::this_thread::sleep_for(std::chrono::seconds{1});
+                // Treat render-thread frame progress as activity — distinguishes slow
+                // shader compile (frames advancing while JS console is silent) from a
+                // real deadlock (frames frozen).
+                const std::uint64_t currentFrameCount = g_pumpFrameCount.load(std::memory_order_relaxed);
+                if (currentFrameCount != lastSeenFrameCount)
+                {
+                    lastSeenFrameCount = currentFrameCount;
+                    g_lastConsoleActivityNs.store(NowNs(), std::memory_order_relaxed);
+                    auto now = std::chrono::steady_clock::now();
+                    if (now - lastHeartbeat >= std::chrono::seconds{30})
+                    {
+                        std::cerr << "[watchdog-heartbeat] pump_frames=" << currentFrameCount << "\n" << std::flush;
+                        lastHeartbeat = now;
+                    }
+                }
                 const std::int64_t idleNs = NowNs() - g_lastConsoleActivityNs.load(std::memory_order_relaxed);
                 if (idleNs >= thresholdNs)
                 {
@@ -160,9 +184,10 @@ TEST(JavaScript, All)
                         std::lock_guard lock{g_lastMessageMutex};
                         lastMessage = g_lastMessage;
                     }
-                    std::cerr << "\n=== WATCHDOG: no console output for "
+                    std::cerr << "\n=== WATCHDOG: no console output or pump-frame progress for "
                               << (idleNs / 1'000'000'000LL) << "s ==="
                               << "\n=== Last console message: " << lastMessage << " ==="
+                              << "\n=== Last pump frame count: " << currentFrameCount << " ==="
                               << "\n=== Aborting to produce a core dump for post-mortem analysis ==="
                               << "\n=== (raise BN_WATCHDOG_TIMEOUT_S or set to 0 to disable) ===\n"
                               << std::flush;
@@ -173,12 +198,15 @@ TEST(JavaScript, All)
     }
 
     // Pump frames while JS tests run — tests use RAF internally and
-    // SubmitCommands requires an active frame.
+    // SubmitCommands requires an active frame. Each iteration publishes
+    // forward progress to the watchdog so slow-but-progressing shader
+    // compile (silent on the JS console) doesn't trip a false positive.
     auto exitCodeFuture = exitCodePromise.get_future();
     while (exitCodeFuture.wait_for(std::chrono::milliseconds(16)) != std::future_status::ready)
     {
         device.StartRenderingCurrentFrame();
         device.FinishRenderingCurrentFrame();
+        g_pumpFrameCount.fetch_add(1, std::memory_order_relaxed);
     }
 
     watchdogStop.store(true, std::memory_order_relaxed);
