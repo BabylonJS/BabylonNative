@@ -55,6 +55,11 @@ namespace
     std::mutex g_lastMessageMutex;
     std::string g_lastMessage;
 
+    // Per-frame timing accumulators (nanoseconds), published by pump loop, sampled by stats thread.
+    std::atomic<std::uint64_t> g_pumpStartNs{0};   // total time inside StartRenderingCurrentFrame()
+    std::atomic<std::uint64_t> g_pumpFinishNs{0};  // total time inside FinishRenderingCurrentFrame()
+    std::atomic<std::uint64_t> g_pumpWaitNs{0};    // total time in wait_for(16ms)
+
     std::int64_t NowNs()
     {
         return std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -172,7 +177,17 @@ TEST(JavaScript, All)
                     auto now = std::chrono::steady_clock::now();
                     if (now - lastHeartbeat >= std::chrono::seconds{30})
                     {
-                        std::cerr << "[watchdog-heartbeat] pump_frames=" << currentFrameCount << "\n" << std::flush;
+                        // Snapshot per-phase accumulators so we can tell where wall time is going
+                        // on slow runners (start / finish / wait split) and emit a delta from
+                        // the last heartbeat to make per-30s rates easy to read in CI logs.
+                        const std::uint64_t startNs = g_pumpStartNs.load(std::memory_order_relaxed);
+                        const std::uint64_t finishNs = g_pumpFinishNs.load(std::memory_order_relaxed);
+                        const std::uint64_t waitNs = g_pumpWaitNs.load(std::memory_order_relaxed);
+                        std::cerr << "[watchdog-heartbeat] pump_frames=" << currentFrameCount
+                                  << " start_ms=" << (startNs / 1'000'000ULL)
+                                  << " finish_ms=" << (finishNs / 1'000'000ULL)
+                                  << " wait_ms=" << (waitNs / 1'000'000ULL)
+                                  << "\n" << std::flush;
                         lastHeartbeat = now;
                     }
                 }
@@ -202,10 +217,35 @@ TEST(JavaScript, All)
     // forward progress to the watchdog so slow-but-progressing shader
     // compile (silent on the JS console) doesn't trip a false positive.
     auto exitCodeFuture = exitCodePromise.get_future();
-    while (exitCodeFuture.wait_for(std::chrono::milliseconds(16)) != std::future_status::ready)
+    while (true)
     {
+        const auto waitStart = std::chrono::steady_clock::now();
+        const auto waitStatus = exitCodeFuture.wait_for(std::chrono::milliseconds(16));
+        g_pumpWaitNs.fetch_add(
+            static_cast<std::uint64_t>(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    std::chrono::steady_clock::now() - waitStart).count()),
+            std::memory_order_relaxed);
+        if (waitStatus == std::future_status::ready)
+        {
+            break;
+        }
+
+        const auto startBegin = std::chrono::steady_clock::now();
         device.StartRenderingCurrentFrame();
+        const auto startEnd = std::chrono::steady_clock::now();
+        g_pumpStartNs.fetch_add(
+            static_cast<std::uint64_t>(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(startEnd - startBegin).count()),
+            std::memory_order_relaxed);
+
         device.FinishRenderingCurrentFrame();
+        const auto finishEnd = std::chrono::steady_clock::now();
+        g_pumpFinishNs.fetch_add(
+            static_cast<std::uint64_t>(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(finishEnd - startEnd).count()),
+            std::memory_order_relaxed);
+
         g_pumpFrameCount.fetch_add(1, std::memory_order_relaxed);
     }
 
