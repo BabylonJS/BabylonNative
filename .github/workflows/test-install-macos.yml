@@ -8,19 +8,12 @@ on:
         type: string
         default: '16.4'
 
-env:
-  CMAKE_VERSION: '3.31.6'
-
 jobs:
   test-install:
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-
-      - uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: ${{ env.CMAKE_VERSION }}
 
 
       - name: Select Xcode ${{ inputs.xcode-version }}

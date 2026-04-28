@@ -21,7 +21,6 @@ on:
         default: macos-latest
 
 env:
-  CMAKE_VERSION: '3.31.6'
   UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
   ASAN_OPTIONS: abort_on_error=1
 
@@ -31,10 +30,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
-
-      - uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: ${{ env.CMAKE_VERSION }}
 
 
       - name: Select Xcode ${{ inputs.xcode-version }}
