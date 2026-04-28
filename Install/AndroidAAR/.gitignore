@@ -1,0 +1,10 @@
+# Build outputs
+build/
+.cxx/
+.gradle/
+local.properties
+*.iml
+.idea/
+
+# AAR build staging (out-of-tree)
+../../Build/Android-AAR/

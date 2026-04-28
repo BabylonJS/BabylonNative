@@ -1,0 +1,4 @@
+// Top-level build file for the Babylon Native AAR project.
+plugins {
+    id 'com.android.library' version '8.9.1' apply false
+}
