@@ -1,8 +1,8 @@
 #include <array>
+#include <cstring>
 #include <vector>
 #include <stdexcept>
 
-#include <bimg/bimg.h>
 #include <bgfx/bgfx.h>
 #include "FrameBufferPool.h"
 
@@ -46,13 +46,8 @@ namespace Babylon::Polyfills
             Graphics::FrameBuffer* FrameBuffer;
 
             // make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
-            bgfx::ReleaseFn releaseFn{[](void*, void* userData) {
-                bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
-            }};
-
-            bimg::ImageContainer* image = bimg::imageAlloc(&Babylon::Graphics::DeviceContext::GetDefaultAllocator(), bimg::TextureFormat::RGBA8, m_width, m_height, 1 /*depth*/, 1, false /*cubeMap*/, false /*hasMips*/);
-            const bgfx::Memory* mem = bgfx::makeRef(image->m_data, image->m_size, releaseFn, image);
-            bx::memSet(image->m_data, 0, image->m_size);
+            const bgfx::Memory* mem = bgfx::alloc(static_cast<uint32_t>(m_width) * static_cast<uint32_t>(m_height) * 4);
+            std::memset(mem->data, 0, mem->size);
             // TODO: make sampler flags configurable
             // border sampling will result in transparent edge artifacts for blur, but this behaviour is consistent with browser implementation
             std::array<bgfx::TextureHandle, 2> textures{
