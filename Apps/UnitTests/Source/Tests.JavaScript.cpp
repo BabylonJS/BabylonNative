@@ -100,6 +100,13 @@ TEST(JavaScript, All)
 
     Babylon::Graphics::Device device{g_deviceConfig};
 
+    // Start rendering a frame to unblock the JavaScript from queuing graphics
+    // commands. The frame is held open through script load and the test pump
+    // (which only ticks bgfx via Finish; Start) so the JS thread can submit
+    // at any time without racing the gate. A final Finish closes it after
+    // runtime teardown.
+    device.StartRenderingCurrentFrame();
+
     std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
 
     Babylon::AppRuntime::Options options{};
@@ -147,9 +154,6 @@ TEST(JavaScript, All)
     loader.LoadScript("app:///Assets/babylon.max.js");
     loader.LoadScript("app:///Assets/babylonjs.materials.js");
     loader.LoadScript("app:///Assets/tests.javaScript.all.js");
-
-    device.StartRenderingCurrentFrame();
-    device.FinishRenderingCurrentFrame();
 
     // Start the JS-progress watchdog. Anchor "last activity" to now so we don't fire
     // before the JS engine produces its first console output.
@@ -213,21 +217,13 @@ TEST(JavaScript, All)
     }
 
     // Pump frames while JS tests run — tests use RAF internally and
-    // SubmitCommands requires an active frame (the FrameCompletionScope
-    // gate is open only between StartRenderingCurrentFrame and
-    // FinishRenderingCurrentFrame). Hold the gate OPEN during the
-    // wait_for so JS-thread submits/scope-acquires can land at any
-    // point, then briefly close+reopen each iteration to allow
-    // bgfx::frame() to advance. Without this pattern the open window
-    // collapses to ~zero between back-to-back Start/Finish calls and
-    // JS-thread work has to win a scheduler race against the pump
-    // thread to land its scope before the gate closes — that race is
-    // lost frequently on contended CI runners and produces 4-30x
-    // runtime variance for the same code. Each iteration publishes
-    // forward progress to the watchdog so slow-but-progressing shader
-    // compile (silent on the JS console) doesn't trip a false positive.
+    // SubmitCommands requires an active frame. The frame was opened
+    // immediately after device creation; the loop just ticks bgfx
+    // (Finish; Start) once per iteration so commands can advance.
+    // Each iteration publishes forward progress to the watchdog so
+    // slow-but-progressing shader compile (silent on the JS console)
+    // doesn't trip a false positive.
     auto exitCodeFuture = exitCodePromise.get_future();
-    device.StartRenderingCurrentFrame();
     while (true)
     {
         const auto waitStart = std::chrono::steady_clock::now();
@@ -266,9 +262,6 @@ TEST(JavaScript, All)
         watchdogThread.join();
     }
 
-    // Gate is already OPEN here (last loop op was Start, or initial Start
-    // if the loop never iterated). Pending JS work can complete before
-    // we tear down the runtime.
 
     auto exitCode = exitCodeFuture.get();
     EXPECT_EQ(exitCode, 0);
