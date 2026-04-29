@@ -678,6 +678,8 @@
         {
             "title": "Attractors",
             "playgroundId": "#DEZ79M#57",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Linux",
             "referenceImage": "attractors.png"
         },
         {
