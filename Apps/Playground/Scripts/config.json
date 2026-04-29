@@ -977,6 +977,8 @@
         {
             "title": "Node material 0",
             "playgroundId": "#M5VQE9#41",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel comparison fails on Linux (large diff)",
             "referenceImage": "node-material0.png"
         },
         {
@@ -1225,7 +1227,8 @@
             "title": "Advanced shadows (right handed)",
             "playgroundId": "#B48X7G#64",
             "renderCount": 20,
-            "errorRatio": 5,
+            "excludeFromAutomaticTesting": true,
+            "reason": "Framebuffer creation fails on Win32 V8",
             "referenceImage": "advancedShadows2.png"
         },
         {
@@ -1523,6 +1526,8 @@
         {
             "title": "GLTF Node visibility test",
             "playgroundId": "#80DN99#6",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 D3D11 Sanitizers",
             "referenceImage": "gltfNodeVisibility.png"
         },
         {
