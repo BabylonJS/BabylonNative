@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [master, unittest-watchdog]
   pull_request:
     branches: [master]
 
