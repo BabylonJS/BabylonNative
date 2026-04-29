@@ -334,6 +334,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
     loader.LoadScript("app:///Scripts/index.js");
 
+    // Close the script-load frame.
+    g_update->Finish();
+    g_device->FinishRenderingCurrentFrame();
+
+    // Open a new frame for `startup` so the JS-side resource creation and
+    // startup() call run in the same frame as the wait that observes them.
+    g_device->StartRenderingCurrentFrame();
+    g_update->Start();
+
     std::promise<void> startup{};
 
     // Create an external texture for the render target texture and pass it to
@@ -349,17 +358,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         startup.set_value();
     });
 
-    g_update->Finish();
-    g_device->FinishRenderingCurrentFrame();
-
-    // Reopen the gate so JS can continue running (startup may issue bgfx commands).
-    g_device->StartRenderingCurrentFrame();
-    g_update->Start();
-
     // Wait for `startup` to finish.
     startup.get_future().wait();
 
-    // Close the frame opened above.
+    // Close the startup frame.
     g_update->Finish();
     g_device->FinishRenderingCurrentFrame();
 
