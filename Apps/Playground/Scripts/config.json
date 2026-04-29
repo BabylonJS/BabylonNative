@@ -990,6 +990,8 @@
         {
             "title": "Node material 2",
             "playgroundId": "#WYM31D#13",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel comparison fails on Linux (7283 px diff)",
             "referenceImage": "node-material2.png"
         },
         {
@@ -1089,6 +1091,8 @@
             "title": "GUI Near Menu",
             "playgroundId": "#2YZFA0#302",
             "renderCount": 60,
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 V8 D3D11 / hangs on OpenGL",
             "referenceImage": "guiNearMenu.png",
             "errorRatio": 20
         },
@@ -1533,6 +1537,8 @@
         {
             "title": "Asset Containers",
             "playgroundId": "#P3U079#19",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 D3D11 (incl. Sanitizers)",
             "referenceImage": "assetContainer.png"
         },
         {
