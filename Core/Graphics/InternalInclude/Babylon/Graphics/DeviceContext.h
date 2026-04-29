@@ -93,6 +93,7 @@ namespace Babylon::Graphics
         bgfx::Encoder* GetActiveEncoder();
 
         void RequestScreenShot(std::function<void(std::vector<uint8_t>)> callback);
+        void RequestCaptureNextFrame();
         void SetRenderResetCallback(std::function<void()> callback);
 
         arcana::task<void, std::exception_ptr> ReadTextureAsync(bgfx::TextureHandle handle, gsl::span<uint8_t> data, uint8_t mipLevel = 0);
@@ -111,6 +112,7 @@ namespace Babylon::Graphics
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
         bgfx::ViewId AcquireNewViewId();
+        bgfx::ViewId PeekNextViewId() const;
 
         // TODO: find a different way to get the texture info for frame capture
         void AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format);

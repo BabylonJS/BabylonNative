@@ -3,19 +3,12 @@ name: Test Install Linux
 on:
   workflow_call: {}
 
-env:
-  CMAKE_VERSION: '3.31.6'
-
 jobs:
   test-install:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-
-      - uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: ${{ env.CMAKE_VERSION }}
 
 
       - name: Install packages

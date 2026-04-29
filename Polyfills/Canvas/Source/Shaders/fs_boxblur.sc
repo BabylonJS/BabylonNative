@@ -2,7 +2,6 @@ $input v_position, v_texcoord0
 
 #include "./common.sh"
 
-uniform vec4 u_viewSize;	// vec4 (width, height, unused, unused)
 uniform vec4 u_direction;	// vec4 (x, y, unused, unused)
 uniform vec4 u_weights;		// vec4 (kernel, radius, offsetX, offsetY)
 
@@ -27,7 +26,7 @@ void main()
 
 	// shift by offset (ie. even kernel)
 	vec2 direction = u_direction.xy + vec2(offsetX, offsetY);
-	vec2 texelSize = vec2_splat(1.0) / u_viewSize.xy;
+	vec2 texelSize = vec2_splat(1.0) / u_viewRect.zw;
 
 	// sample sides
 	for (int i = 1; i <= int(radius); i++)

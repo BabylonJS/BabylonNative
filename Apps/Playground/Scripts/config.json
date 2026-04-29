@@ -38,7 +38,7 @@
             "title": "GLTF Extension EXT_mesh_gpu_instancing",
             "playgroundId": "#QFIGLW#9",
             "renderCount": 10,
-            "errorRatio": 25,
+            "errorRatio": 8,
             "referenceImage": "gltfExtensionExtMeshGpuInstancingTest.png"
         },
         {
@@ -56,12 +56,7 @@
             "title": "GLTF Extension KHR_materials_volume with attenuation",
             "playgroundId": "#YG3BBF#18",
             "referenceImage": "gltfExtensionKhrMaterialsVolumeAttenuation.png",
-            "excludedGraphicsApis": [ "Metal" ],
-            "errorRatio": 10,
-            "renderCount": 10,
-            "comments": {
-                "Metal": "No object rendered"
-            }
+            "renderCount": 10
         },
         {
             "title": "GLTF ClearCoat",
@@ -87,7 +82,7 @@
         {
             "reason": "https://github.com/BabylonJS/BabylonNative/issues/1111",
             "title": "Thin Instances",
-            "errorRatio": 25,
+            "errorRatio": 20,
             "playgroundId": "#V1JE4Z#1",
             "referenceImage": "thinInstances.png"
         },
@@ -135,11 +130,7 @@
             "title": "Glow layer and LODs",
             "playgroundId": "#UNS6ZV#2",
             "renderCount": 50,
-            "excludedGraphicsApis": [ "Metal" ],
-            "referenceImage": "glowlayerandlods.png",
-            "comments": {
-                "Metal": "Result doesn't match reference"
-            }
+            "referenceImage": "glowlayerandlods.png"
         },
         {
             "title": "Nested BBG",
@@ -191,22 +182,12 @@
         {
             "title": "Soft Shadows",
             "playgroundId": "#0YYQ3N#0",
-            "errorRatio": 50,
-            "excludedGraphicsApis": [ "Metal" ],
-            "referenceImage": "softShadows.png",
-            "comments": {
-                "Metal": "Nothing rendered"
-            }
+            "referenceImage": "softShadows.png"
         },
         {
             "title": "Soft Shadows (Right Handed)",
             "playgroundId": "#0YYQ3N#2",
-            "errorRatio": 50,
-            "excludedGraphicsApis": [ "Metal" ],
-            "referenceImage": "softShadowsRightHanded.png",
-            "comments": {
-                "Metal": "Nothing rendered"
-            }
+            "referenceImage": "softShadowsRightHanded.png"
         },
         {
             "title": "RenderingGroupId",
@@ -222,11 +203,7 @@
         {
             "title": "Point light shadows",
             "playgroundId": "#U2F7P9#4",
-            "excludedGraphicsApis": [ "Metal" ],
-            "referenceImage": "point-light-shadows.png",
-            "comments": {
-                "Metal": "Rendered result doesn't match reference"
-            }
+            "referenceImage": "point-light-shadows.png"
         },
         {
             "title": "Texture cache",
@@ -255,7 +232,7 @@
             "playgroundId": "#WCDZS#92",
             "renderCount": 150,
             "referenceImage": "sps.png",
-            "errorRatio": 60.0
+            "errorRatio": 6.0
         },
         {
             "title": "LightFalloff",
@@ -278,7 +255,7 @@
             "renderCount": 10,
             "playgroundId": "#FFMFW5#0",
             "referenceImage": "lod.png",
-            "errorRatio": 9.0
+            "errorRatio": 7.0
         },
         {
             "title": "Capsule",
@@ -289,7 +266,7 @@
         {
             "title": "Fresnel",
             "playgroundId": "#603JUZ#1",
-            "errorRatio": 50,
+            "errorRatio": 42,
             "referenceImage": "fresnel.png"
         },
         {
@@ -306,23 +283,19 @@
         {
             "title": "Multi camera rendering",
             "playgroundId": "#1LK70I#22",
-            "errorRatio": 50,
+            "errorRatio": 10,
             "referenceImage": "multiCameraRendering.png"
         },
         {
             "title": "Multi cameras and output render target",
             "renderCount": 2,
             "playgroundId": "#BCYE7J#31",
-            "excludedGraphicsApis": [ "Metal" ],
-            "referenceImage": "multiCamerasOutputRenderTarget.png",
-            "comments": {
-                "Metal": "Result does not match reference"
-            }
+            "referenceImage": "multiCamerasOutputRenderTarget.png"
         },
         {
             "title": "Multi camera rendering with scissors",
             "playgroundId": "#1LK70I#35",
-            "errorRatio": 50,
+            "errorRatio": 35,
             "referenceImage": "multiCameraRenderingWithScissors.png"
         },
         {
@@ -335,7 +308,7 @@
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
-            "errorRatio": 50
+            "errorRatio": 21
         },
         {
             "title": "Scissor test with 1.5 hardware scaling",
@@ -418,8 +391,7 @@
             "title": "GLTF Material Alpha Blend",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_AlphaBlend, __page__, 0, __disableSRGBBuffers__, 0",
-            "referenceImage": "gltfMaterialAlphaBlend.png",
-            "errorRatio": 8.0
+            "referenceImage": "gltfMaterialAlphaBlend.png"
         },
         {
             "title": "GLTF Material Alpha Mask",
@@ -443,8 +415,7 @@
             "title": "GLTF Material Metallic Roughness (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_MetallicRoughness, __page__, 0, __disableSRGBBuffers__, 0",
-            "referenceImage": "gltfMaterialMetallicRoughness0.png",
-            "errorRatio": 5.0
+            "referenceImage": "gltfMaterialMetallicRoughness0.png"
         },
         {
             "title": "GLTF Material Metallic Roughness (1)",
@@ -462,8 +433,7 @@
             "title": "GLTF Material Specular Glossiness (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Material_SpecularGlossiness, __page__, 0, __disableSRGBBuffers__, 0",
-            "referenceImage": "gltfMaterialSpecularGlossiness0.png",
-            "errorRatio": 5.0
+            "referenceImage": "gltfMaterialSpecularGlossiness0.png"
         },
         {
             "title": "GLTF Material Specular Glossiness (1)",
@@ -496,8 +466,7 @@
             "title": "GLTF Mesh Primitives UV (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Mesh_PrimitivesUV, __page__, 0, __disableSRGBBuffers__, 0",
-            "referenceImage": "gltfMeshPrimitivesUV0.png",
-            "errorRatio": 5.0
+            "referenceImage": "gltfMeshPrimitivesUV0.png"
         },
         {
             "title": "GLTF Mesh Primitives UV (1)",
@@ -515,8 +484,7 @@
             "title": "GLTF Node NegativeScale (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Node_NegativeScale, __page__, 0, __disableSRGBBuffers__, 0",
-            "referenceImage": "gltfNodeNegativeScale0.png",
-            "errorRatio": 5.0
+            "referenceImage": "gltfNodeNegativeScale0.png"
         },
         {
             "title": "GLTF Node NegativeScale (1)",
@@ -528,8 +496,7 @@
             "title": "GLTF Texture Sampler (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Texture_Sampler, __page__, 0, __disableSRGBBuffers__, 0",
-            "referenceImage": "gltfTextureSampler0.png",
-            "errorRatio": 8.0
+            "referenceImage": "gltfTextureSampler0.png"
         },
         {
             "title": "GLTF Texture Sampler (1)",
@@ -569,7 +536,6 @@
         {
             "title": "CesiumMan from Khronos Sample Assets",
             "playgroundId": "#4GWX8M",
-            "errorRatio": 2,
             "referenceImage": "CesiumMan.png"
         },
         {

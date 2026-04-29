@@ -7,6 +7,17 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return ::DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
+std::filesystem::path GetExecutableDirectory()
+{
+    wchar_t buffer[MAX_PATH];
+    const DWORD length = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+    if (length == 0 || length == MAX_PATH)
+    {
+        throw std::runtime_error{"GetModuleFileNameW failed"};
+    }
+    return std::filesystem::path{buffer}.parent_path();
+}
+
 int main(int argc, char* argv[])
 {
     SetConsoleOutputCP(CP_UTF8);
