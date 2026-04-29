@@ -238,7 +238,6 @@ namespace
         bgfx::UniformHandle u_paintMat;
         bgfx::UniformHandle u_innerCol;
         bgfx::UniformHandle u_outerCol;
-        bgfx::UniformHandle u_viewSize;
         bgfx::UniformHandle u_scissorExtScale;
         bgfx::UniformHandle u_extentRadius;
         bgfx::UniformHandle u_params;
@@ -365,7 +364,6 @@ namespace
         gl->u_paintMat        = bgfx::createUniform("u_paintMat",        bgfx::UniformType::Mat3);
         gl->u_innerCol        = bgfx::createUniform("u_innerCol",        bgfx::UniformType::Vec4);
         gl->u_outerCol        = bgfx::createUniform("u_outerCol",        bgfx::UniformType::Vec4);
-        gl->u_viewSize        = bgfx::createUniform("u_viewSize",        bgfx::UniformType::Vec4);
         gl->u_scissorExtScale = bgfx::createUniform("u_scissorExtScale", bgfx::UniformType::Vec4);
         gl->u_extentRadius    = bgfx::createUniform("u_extentRadius",    bgfx::UniformType::Vec4);
         gl->u_params          = bgfx::createUniform("u_params",          bgfx::UniformType::Vec4);
@@ -783,7 +781,6 @@ namespace
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
-            gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
             gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
@@ -791,7 +788,6 @@ namespace
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         std::function finalPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
-            gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
                 | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
                 | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
@@ -845,7 +841,6 @@ namespace
             }
         };
         std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
-            gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
             gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
@@ -853,7 +848,6 @@ namespace
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         std::function finalPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
-            gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
                 | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
                 | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
@@ -890,7 +884,6 @@ namespace
             }
         };
         std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
-            gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
             gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
             bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
@@ -898,7 +891,6 @@ namespace
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         std::function finalPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
-            gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
             gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
                 | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
                 | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
@@ -930,7 +922,6 @@ namespace
                 outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
             };
             std::function filterPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
-                gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
                 gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A);
                 gl->encoder->setTexture(0, gl->s_tex, bgfx::getTexture(inBuffer->Handle()));
                 bool s_originBottomLeft = bgfx::getCaps()->originBottomLeft;
@@ -938,7 +929,6 @@ namespace
                 outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
 			};
             std::function finalPass = [gl, call](bgfx::ProgramHandle prog, Babylon::Graphics::FrameBuffer *inBuffer, Babylon::Graphics::FrameBuffer *outBuffer) {
-                gl->encoder->setUniform(gl->u_viewSize, gl->view); // TODO: also set other common uniforms
                 gl->encoder->setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A
                     | BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_ONE, BGFX_STATE_BLEND_INV_SRC_ALPHA)
                     | BGFX_STATE_BLEND_EQUATION(BGFX_STATE_BLEND_EQUATION_ADD));
@@ -1023,8 +1013,6 @@ namespace
             }
 
             bx::memCopy(gl->tvb.data, gl->verts, gl->nverts * sizeof(struct NVGvertex) );
-
-            gl->encoder->setUniform(gl->u_viewSize, gl->view);
 
             for (uint32_t ii = 0, num = gl->ncalls; ii < num; ++ii)
             {
@@ -1325,7 +1313,6 @@ namespace
         bgfx::destroy(gl->u_paintMat);
         bgfx::destroy(gl->u_innerCol);
         bgfx::destroy(gl->u_outerCol);
-        bgfx::destroy(gl->u_viewSize);
         bgfx::destroy(gl->u_scissorExtScale);
         bgfx::destroy(gl->u_extentRadius);
         bgfx::destroy(gl->u_params);

@@ -5,6 +5,7 @@
 #include <bgfx/bgfx.h>
 #include <napi/pointer.h>
 #include <cassert>
+#include <cstring>
 #include "Colors.h"
 #include "Gradient.h"
 
@@ -156,13 +157,8 @@ namespace Babylon::Polyfills::Internal
         if (m_dirty)
         {
             // make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
-            bgfx::ReleaseFn releaseFn{ [](void*, void* userData) {
-                bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
-            }};
-
-            bimg::ImageContainer* image = bimg::imageAlloc(&Babylon::Graphics::DeviceContext::GetDefaultAllocator(), bimg::TextureFormat::RGBA8, m_width, m_height, 1/*depth*/, 1, false/*cubeMap*/, false/*hasMips*/);
-            const bgfx::Memory* mem = bgfx::makeRef(image->m_data, image->m_size, releaseFn, image);
-            bx::memSet(image->m_data, 0, image->m_size);
+            const bgfx::Memory* mem = bgfx::alloc(static_cast<uint32_t>(m_width) * static_cast<uint32_t>(m_height) * 4);
+            std::memset(mem->data, 0, mem->size);
 
             std::array<bgfx::TextureHandle, 2> textures{
                 bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT, mem),
