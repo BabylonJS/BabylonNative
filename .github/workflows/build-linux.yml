@@ -20,14 +20,6 @@ on:
 env:
   UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
   ASAN_OPTIONS: abort_on_error=1
-  # Force consistent software OpenGL (Mesa llvmpipe) across all GitHub-hosted
-  # runners. Some ubuntu-latest VMs cannot initialize DRI3 ("libEGL warning:
-  # DRI3 error: Could not get DRI3 device") and silently fall back to a slow
-  # software path that is dramatically slower than llvmpipe, producing
-  # 100x+ runtime variance for the same code on different runner instances.
-  # Forcing llvmpipe makes runner GL behavior deterministic.
-  LIBGL_ALWAYS_SOFTWARE: "1"
-  GALLIUM_DRIVER: llvmpipe
 
 jobs:
   build:
