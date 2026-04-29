@@ -94,6 +94,7 @@ namespace Babylon::Graphics
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
         bgfx::ViewId AcquireNewViewId();
+        bgfx::ViewId PeekNextViewId() const;
 
         // Frame completion scope support
         void IncrementPendingFrameScopes();

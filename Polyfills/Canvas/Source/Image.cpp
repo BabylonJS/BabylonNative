@@ -6,10 +6,13 @@
 #include <functional>
 #include <sstream>
 #include <assert.h>
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 #include <bimg/bimg.h>
 #include <bimg/decode.h>
+#endif
 #include "nanovg/nanovg.h"
 #include <cassert>
+#include <stdexcept>
 #include <napi/pointer.h>
 #include <basen.hpp>
 
@@ -53,11 +56,13 @@ namespace Babylon::Polyfills::Internal
 
     void NativeCanvasImage::Dispose()
     {
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
         if (m_imageContainer)
         {
             bimg::imageFree(m_imageContainer);
             m_imageContainer = nullptr;
         }
+#endif
         m_cancellationSource->cancel();
     }
 
@@ -88,18 +93,18 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value NativeCanvasImage::GetImageContainer(const Napi::CallbackInfo&)
     {
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
         if (m_imageContainer != nullptr)
         {
             return Napi::Pointer<bimg::ImageContainer>::Create(Env(), m_imageContainer);
         }
-        else
-        {
-            return Env().Null();
-        }
+#endif
+        return Env().Null();
     }
 
     bool NativeCanvasImage::SetBuffer(gsl::span<const std::byte> buffer)
     {
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
         m_imageContainer = bimg::imageParse(&Graphics::DeviceContext::GetDefaultAllocator(), buffer.data(), static_cast<uint32_t>(buffer.size_bytes()), bimg::TextureFormat::RGBA8);
 
         if (m_imageContainer == nullptr)
@@ -115,10 +120,19 @@ namespace Babylon::Polyfills::Internal
             m_onloadHandlerRef.Call({});
         }
         return true;
+#else
+        (void)buffer;
+        return false;
+#endif
     }
 
     void NativeCanvasImage::SetSrc(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
+#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        (void)value;
+        HandleLoadImageError(Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF)."));
+        return;
+#else
         auto text{value.As<Napi::String>().Utf8Value()};
 
         // try with base64
@@ -164,6 +178,7 @@ namespace Babylon::Polyfills::Internal
                 HandleLoadImageError(Napi::Error::New(env, "Unable to decode image with provided source URL."));
             }
         });
+#endif
     }
 
     void NativeCanvasImage::SetOnload(const Napi::CallbackInfo&, const Napi::Value& value)
@@ -180,7 +195,12 @@ namespace Babylon::Polyfills::Internal
 
     int NativeCanvasImage::CreateNVGImageForContext(NVGcontext* nvgContext) const
     {
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
         return nvgCreateImageRGBA(nvgContext, m_width, m_height, 0, static_cast<const unsigned char*>(m_imageContainer->m_data));
+#else
+        (void)nvgContext;
+        throw std::runtime_error{"Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF)."};
+#endif
     }
 
     void NativeCanvasImage::HandleLoadImageError(const Napi::Error& error)
