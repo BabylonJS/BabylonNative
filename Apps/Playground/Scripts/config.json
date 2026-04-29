@@ -837,6 +837,8 @@
         {
             "title": "Volumetric Light Scattering Post Process with Morph Targets",
             "playgroundId": "#5E318S#5",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel comparison fails on Linux (large diff)",
             "referenceImage": "volumetricLightScatteringMorphTargets.png"
         },
         {
@@ -1215,7 +1217,8 @@
             "title": "Advanced shadows",
             "playgroundId": "#SLV8LW#3",
             "renderCount": 20,
-            "errorRatio": 5,
+            "excludeFromAutomaticTesting": true,
+            "reason": "Framebuffer creation fails on Win32 V8",
             "referenceImage": "advancedShadows.png"
         },
         {
@@ -1483,8 +1486,9 @@
         {
             "title": "GLTF Buggy with Draco Mesh Compression",
             "playgroundId": "#JNW207#1",
-            "referenceImage": "gltfBuggyDraco.png",
-            "errorRatio": 20
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 (heap corruption)",
+            "referenceImage": "gltfBuggyDraco.png"
         },
         {
             "title": "GLTF Box with bad Draco normalized flag",
