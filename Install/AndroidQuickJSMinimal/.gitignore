@@ -7,4 +7,4 @@ local.properties
 .idea/
 
 # AAR build staging (out-of-tree)
-../../Build/Android-AAR/
+../../Build/Android-QuickJSMinimal/

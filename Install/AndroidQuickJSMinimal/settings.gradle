@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "BabylonNativeAAR"
+rootProject.name = "BabylonNativeQuickJSMinimal"
 include ':BabylonNative'

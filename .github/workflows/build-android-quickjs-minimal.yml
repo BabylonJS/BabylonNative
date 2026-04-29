@@ -1,4 +1,4 @@
-name: Build Android AAR
+name: Build Android QuickJS Minimal AAR
 
 on:
   workflow_call:
@@ -19,14 +19,14 @@ jobs:
           java-version: '17'
 
       - name: Build AAR (release / MinSizeRel)
-        working-directory: Install/AndroidAAR
+        working-directory: Install/AndroidQuickJSMinimal
         run: |
           chmod +x gradlew
           ./gradlew :BabylonNative:assembleRelease \
             -PNDK_VERSION=${{ env.NDK_VERSION }}
 
       - name: Print artifact sizes
-        working-directory: Install/AndroidAAR
+        working-directory: Install/AndroidQuickJSMinimal
         run: |
           AAR=BabylonNative/build/outputs/aar/BabylonNative-release.aar
           if [ ! -f "$AAR" ]; then
@@ -53,6 +53,6 @@ jobs:
       - name: Upload AAR
         uses: actions/upload-artifact@v4
         with:
-          name: BabylonNative-release-aar
-          path: Install/AndroidAAR/BabylonNative/build/outputs/aar/BabylonNative-release.aar
+          name: BabylonNative-QuickJSMinimal-release-aar
+          path: Install/AndroidQuickJSMinimal/BabylonNative/build/outputs/aar/BabylonNative-release.aar
           if-no-files-found: error

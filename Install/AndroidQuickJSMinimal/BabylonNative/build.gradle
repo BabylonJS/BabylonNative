@@ -48,7 +48,7 @@ android {
         cmake {
             version = '3.19.6+'
             path = 'CMakeLists.txt'
-            buildStagingDirectory = "../../../Build/Android-AAR"
+            buildStagingDirectory = "../../../Build/Android-QuickJSMinimal"
         }
     }
 

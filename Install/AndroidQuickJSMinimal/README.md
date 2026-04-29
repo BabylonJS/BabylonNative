@@ -1,4 +1,4 @@
-# Babylon Native — Android AAR
+# Babylon Native — Android QuickJS Minimal AAR
 
 This Gradle project produces a publishable Android AAR
 (`BabylonNative-release.aar`) embedding the [Babylon Native](https://github.com/BabylonJS/BabylonNative)
