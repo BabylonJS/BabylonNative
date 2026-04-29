@@ -304,16 +304,4 @@ extern "C"
             g_context->deviceUpdate->Start();
         }
     }
-
-    // No NativeXr linked — XR surface changes are ignored at this layer.
-    JNIEXPORT void JNICALL
-    Java_com_library_babylonnative_Wrapper_xrSurfaceChanged(JNIEnv*, jclass, jobject)
-    {
-    }
-
-    JNIEXPORT jboolean JNICALL
-    Java_com_library_babylonnative_Wrapper_isXRActive(JNIEnv*, jclass)
-    {
-        return JNI_FALSE;
-    }
 }

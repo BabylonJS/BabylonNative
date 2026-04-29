@@ -3,7 +3,6 @@ package com.library.babylonnative;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Canvas;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -17,8 +16,8 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
     private final ViewDelegate mViewDelegate;
     private Activity mCurrentActivity;
     private final SurfaceView primarySurfaceView;
-    private final SurfaceView xrSurfaceView;
     private final float pixelDensityScale = getResources().getDisplayMetrics().density;
+
     public BabylonView(Context context, ViewDelegate viewDelegate) {
         this(context, viewDelegate, (Activity)viewDelegate);
     }
@@ -36,27 +35,6 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
         holder.addCallback(this);
         setOnTouchListener(this);
         this.mViewDelegate = viewDelegate;
-
-        this.xrSurfaceView = new SurfaceView(context);
-        this.xrSurfaceView.setLayoutParams(childViewLayoutParams);
-        this.xrSurfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
-            @Override
-            public void surfaceCreated(SurfaceHolder holder) {
-                // surfaceChanged is also called when the surface is created, so just do all the handling there
-            }
-
-            @Override
-            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-                Wrapper.xrSurfaceChanged(holder.getSurface());
-            }
-
-            @Override
-            public void surfaceDestroyed(SurfaceHolder holder) {
-                Wrapper.xrSurfaceChanged(null);
-            }
-        });
-        this.xrSurfaceView.setVisibility(View.INVISIBLE);
-        this.addView(this.xrSurfaceView);
 
         setWillNotDraw(false);
 
@@ -163,12 +141,6 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
 
     @Override
     protected void onDraw(Canvas canvas) {
-        if (Wrapper.isXRActive()) {
-            this.xrSurfaceView.setVisibility(View.VISIBLE);
-        } else {
-            this.xrSurfaceView.setVisibility(View.INVISIBLE);
-        }
-
         Wrapper.renderFrame();
         invalidate();
     }
