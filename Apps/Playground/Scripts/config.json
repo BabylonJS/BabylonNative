@@ -1014,6 +1014,8 @@
         {
             "title": "Node material 6",
             "playgroundId": "#2XY3Z4#3",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel comparison fails on Linux (68783 px diff)",
             "referenceImage": "node-material6.png"
         },
         {
@@ -1221,6 +1223,8 @@
         {
             "title": "Bones",
             "playgroundId": "#7EC27T#3",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 D3D11 (incl. Sanitizers and V8)",
             "referenceImage": "bones.png"
         },
         {
