@@ -213,10 +213,21 @@ TEST(JavaScript, All)
     }
 
     // Pump frames while JS tests run — tests use RAF internally and
-    // SubmitCommands requires an active frame. Each iteration publishes
+    // SubmitCommands requires an active frame (the FrameCompletionScope
+    // gate is open only between StartRenderingCurrentFrame and
+    // FinishRenderingCurrentFrame). Hold the gate OPEN during the
+    // wait_for so JS-thread submits/scope-acquires can land at any
+    // point, then briefly close+reopen each iteration to allow
+    // bgfx::frame() to advance. Without this pattern the open window
+    // collapses to ~zero between back-to-back Start/Finish calls and
+    // JS-thread work has to win a scheduler race against the pump
+    // thread to land its scope before the gate closes — that race is
+    // lost frequently on contended CI runners and produces 4-30x
+    // runtime variance for the same code. Each iteration publishes
     // forward progress to the watchdog so slow-but-progressing shader
     // compile (silent on the JS console) doesn't trip a false positive.
     auto exitCodeFuture = exitCodePromise.get_future();
+    device.StartRenderingCurrentFrame();
     while (true)
     {
         const auto waitStart = std::chrono::steady_clock::now();
@@ -231,19 +242,19 @@ TEST(JavaScript, All)
             break;
         }
 
-        const auto startBegin = std::chrono::steady_clock::now();
-        device.StartRenderingCurrentFrame();
-        const auto startEnd = std::chrono::steady_clock::now();
-        g_pumpStartNs.fetch_add(
-            static_cast<std::uint64_t>(
-                std::chrono::duration_cast<std::chrono::nanoseconds>(startEnd - startBegin).count()),
-            std::memory_order_relaxed);
-
+        const auto finishBegin = std::chrono::steady_clock::now();
         device.FinishRenderingCurrentFrame();
         const auto finishEnd = std::chrono::steady_clock::now();
         g_pumpFinishNs.fetch_add(
             static_cast<std::uint64_t>(
-                std::chrono::duration_cast<std::chrono::nanoseconds>(finishEnd - startEnd).count()),
+                std::chrono::duration_cast<std::chrono::nanoseconds>(finishEnd - finishBegin).count()),
+            std::memory_order_relaxed);
+
+        device.StartRenderingCurrentFrame();
+        const auto startEnd = std::chrono::steady_clock::now();
+        g_pumpStartNs.fetch_add(
+            static_cast<std::uint64_t>(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(startEnd - finishEnd).count()),
             std::memory_order_relaxed);
 
         g_pumpFrameCount.fetch_add(1, std::memory_order_relaxed);
@@ -255,9 +266,9 @@ TEST(JavaScript, All)
         watchdogThread.join();
     }
 
-    // Keep the frame open during shutdown so any pending JS work
-    // (e.g., SubmitCommands acquiring a FrameCompletionScope) can complete.
-    device.StartRenderingCurrentFrame();
+    // Gate is already OPEN here (last loop op was Start, or initial Start
+    // if the loop never iterated). Pending JS work can complete before
+    // we tear down the runtime.
 
     auto exitCode = exitCodeFuture.get();
     EXPECT_EQ(exitCode, 0);
