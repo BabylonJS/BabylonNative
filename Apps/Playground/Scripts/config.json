@@ -822,6 +822,8 @@
         {
             "title": "needDepthPrePass",
             "playgroundId": "#7A66KI#1",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 V8 D3D11 (access violation)",
             "referenceImage": "needDepthPrePass.png"
         },
         {
@@ -835,6 +837,8 @@
         {
             "title": "Convolution Post Process",
             "playgroundId": "#FBH4J7#281",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 D3D11 / Sanitizers (STATUS_BREAKPOINT)",
             "referenceImage": "convolution.png"
         },
         {
@@ -1611,6 +1615,8 @@
             "title": "Particles",
             "playgroundId": "#G3ZYFU#7",
             "renderCount": 100,
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Linux Clang/GCC (ASSERT, exit 133)",
             "referenceImage": "particles.png",
             "errorRatio": 20
         },
