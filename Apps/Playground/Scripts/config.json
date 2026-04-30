@@ -488,7 +488,7 @@
             "replace": "__folder__, Node_NegativeScale, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfNodeNegativeScale0.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "GLTF Node NegativeScale (1)",
@@ -496,7 +496,7 @@
             "replace": "__folder__, Node_NegativeScale, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfNodeNegativeScale1.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "GLTF Texture Sampler (0)",
@@ -504,7 +504,7 @@
             "replace": "__folder__, Texture_Sampler, __page__, 0, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfTextureSampler0.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "GLTF Texture Sampler (1)",
@@ -512,14 +512,14 @@
             "replace": "__folder__, Texture_Sampler, __page__, 1, __disableSRGBBuffers__, 0",
             "referenceImage": "gltfTextureSampler1.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "GLTF Alien",
             "playgroundId": "#XN37SR#5",
             "referenceImage": "gltfAlien.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "Interleaved buffers test",
@@ -659,7 +659,7 @@
             "playgroundId": "#QDVYS4#4",
             "referenceImage": "rh-billboard2.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "MSDF",
@@ -797,7 +797,7 @@
             "playgroundId": "#MDVD75#19",
             "referenceImage": "lattice.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "HAL Lattice",
@@ -996,7 +996,7 @@
             "playgroundId": "#ZX8DJ3#1",
             "referenceImage": "Sprites.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "Procedural texture with NME",
@@ -1030,7 +1030,7 @@
             "playgroundId": "#QJ71C6#5",
             "referenceImage": "node-material1.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "Node material 2",
@@ -1044,7 +1044,7 @@
             "playgroundId": "#LWGVT0#2",
             "referenceImage": "node-material3.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
         },
         {
             "title": "Node material 4",
@@ -1058,7 +1058,7 @@
             "playgroundId": "#V8VH7B#0",
             "referenceImage": "node-material5.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
         },
         {
             "title": "Node material 6",
@@ -1093,7 +1093,7 @@
             "playgroundId": "#UAIZCS#0",
             "referenceImage": "lodbillboardinstances.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
         },
         {
             "title": "Nested BBG",
@@ -1128,14 +1128,14 @@
             "playgroundId": "#BS60AB#0",
             "referenceImage": "TransformStackPanel.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
         },
         {
             "title": "GUI StackPanel",
             "playgroundId": "#LLVZ90#0",
             "referenceImage": "StackPanel.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
         },
         {
             "title": "GUI Slate",
@@ -1166,7 +1166,7 @@
             "renderCount": 50,
             "referenceImage": "LineEdgesRenderer.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
         },
         {
             "title": "Simulate pointer",
@@ -1180,7 +1180,7 @@
             "playgroundId": "#8EDB5N#2",
             "referenceImage": "colorGrading.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
         },
         {
             "title": "Clip planes",
@@ -1188,7 +1188,7 @@
             "renderCount": 5,
             "referenceImage": "clipplanes.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
         },
         {
             "title": "ShadowOnlyMaterial",
@@ -1322,7 +1322,7 @@
             "playgroundId": "#WZ8JL4#0",
             "referenceImage": "displacementMap.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "Custom render target",
@@ -1617,7 +1617,7 @@
             "renderCount": 50,
             "referenceImage": "enableDisablePostProcess.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "Depth of field",
@@ -1719,7 +1719,7 @@
             "renderCount": 20,
             "referenceImage": "MultiSample-render-targets.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "Default rendering pipeline",
@@ -1740,7 +1740,7 @@
             "playgroundId": "#2YLJ1L#2",
             "referenceImage": "instancedBones.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "GlowLayer",
@@ -1763,7 +1763,7 @@
             "renderCount": 5,
             "referenceImage": "tga.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "DDS",
@@ -1777,21 +1777,21 @@
             "playgroundId": "#I2MSBE#0",
             "referenceImage": "dds2d.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "LightFalloff spots",
             "playgroundId": "#20OAV9#6653",
             "referenceImage": "lightFalloffSpots.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "LightFalloff point lights",
             "playgroundId": "#20OAV9#6654",
             "referenceImage": "lightFalloffPointLights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "MeshSimplification",
@@ -1806,7 +1806,7 @@
             "renderCount": 50,
             "referenceImage": "depthRenderer.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "Realtime Filtering",
@@ -1853,21 +1853,21 @@
             "playgroundId": "#SYQW69#1213",
             "referenceImage": "objTestLoaderLegacy.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "OBJ loader test",
             "playgroundId": "#SYQW69#1209",
             "referenceImage": "objTestLoader.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "OBJ Stanford Bunny normals (LH)",
             "playgroundId": "#26R8NS#6",
             "referenceImage": "objStanfordBunnyNormalsLH.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "OBJ Stanford Bunny normals (RH)",
@@ -1875,7 +1875,7 @@
             "replace": "//options//, useRightHandedSystem = true;",
             "referenceImage": "objStanfordBunnyNormalsRH.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "OBJ Stanford Bunny normals (round trip, LH)",
@@ -1913,7 +1913,7 @@
             "playgroundId": "#31UBR0#4",
             "referenceImage": "glbArrayBufferViewLoad.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "Motion Blur",
@@ -1928,7 +1928,7 @@
             "playgroundId": "#F7KZ7C#9",
             "referenceImage": "shadowsandlod.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "Shadows CSM and LODs",
@@ -2308,7 +2308,7 @@
             "renderCount": 5,
             "referenceImage": "customMatDepthRenderer.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "Baked Vertex Animation",
@@ -2368,7 +2368,7 @@
             "playgroundId": "#3ZQ1SL#7",
             "referenceImage": "serializeAndLoadInstancedHierarchy.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "Picking Visual Test",
@@ -2391,7 +2391,7 @@
             "playgroundId": "#3ZQ1SL#8",
             "referenceImage": "serializeAndLoadHierarchy.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "Serialize scene without materials",
@@ -2515,14 +2515,14 @@
             "playgroundId": "#KSGDML#10",
             "referenceImage": "babylonFileAnimationsUsingUniqueId.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test crashes Win32 D3D11 (exit code 2170) and fails on Linux Clang/GCC JSC."
+            "reason": "Newly added test crashes Win32 D3D11 (exit code 2170) and fails on Linux Clang/GCC JSC."
         },
         {
             "title": "Roundtrip babylon file with node, skeletal, and morph animations; id only",
             "playgroundId": "#KSGDML#7",
             "referenceImage": "babylonFileAnimationsUsingId.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test crashes Win32 D3D11 with STATUS_BREAKPOINT (-2147483645) and Sanitizers; passes locally but fails on CI runner."
+            "reason": "Newly added test crashes Win32 D3D11 with STATUS_BREAKPOINT (-2147483645) and Sanitizers; passes locally but fails on CI runner."
         },
         {
             "title": "Asset Container Instantiate to Scene",
@@ -2600,7 +2600,7 @@
             "playgroundId": "#XCPP9Y#18325",
             "referenceImage": "Rounding-values-on-controls-inside-StackPanel.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "Rounding cell widths on Grid",
@@ -2614,7 +2614,7 @@
             "playgroundId": "#ZUAPLL#2",
             "referenceImage": "GUI-for-Mesh-cloning.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "PBR Debug Modes",
@@ -2628,14 +2628,14 @@
             "playgroundId": "#UFDL9T#4",
             "referenceImage": "convertToFlatShadedMesh.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test crashes Win32 D3D11 with STATUS_BREAKPOINT (-2147483645) and Sanitizers; passes locally but fails on CI runner."
+            "reason": "Newly added test crashes Win32 D3D11 with STATUS_BREAKPOINT (-2147483645) and Sanitizers; passes locally but fails on CI runner."
         },
         {
             "title": "SerializeMesh with hierarchy",
             "playgroundId": "#TX92RN#5",
             "referenceImage": "SerializeMesh-with-hierarchy.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "MeshDebugPluginMaterial",
@@ -2649,7 +2649,7 @@
             "playgroundId": "#D4ZZ8#430",
             "referenceImage": "SerializeScene-and-ImportMesh-with-string-skeletonIds.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test crashes Win32 D3D11 with STATUS_BREAKPOINT (-2147483645) and Sanitizers; passes locally but fails on CI runner."
+            "reason": "Newly added test crashes Win32 D3D11 with STATUS_BREAKPOINT (-2147483645) and Sanitizers; passes locally but fails on CI runner."
         },
         {
             "title": "SerializeScene and ImportMesh with MorphTargetManager",
@@ -2691,7 +2691,7 @@
             "playgroundId": "#H1SEDF#1",
             "referenceImage": "AddmeshwithoutvertexnormalstoSPS.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test crashes Win32 D3D11 with STATUS_BREAKPOINT (-2147483645)."
+            "reason": "Newly added test crashes Win32 D3D11 with STATUS_BREAKPOINT (-2147483645)."
         },
         {
             "title": "Command encoder order in WebGPU 1",
@@ -2713,14 +2713,14 @@
             "renderCount": 5,
             "referenceImage": "edge-renderer-and-zOffset.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "cube-with-holes-using-stencil-buffer",
             "playgroundId": "#CW5PRI#11",
             "referenceImage": "cube-with-holes-using-stencil-buffer.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
         },
         {
             "title": "water-material",
@@ -2834,7 +2834,7 @@
             "renderCount": 20,
             "referenceImage": "skybox-with-boombox.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails after sync from Babylon.js: massive pixel difference (221k pixels) on Linux Clang/GCC JSC and Win32 D3D11."
+            "reason": "Test fails after sync from Babylon.js: massive pixel difference (221k pixels) on Linux Clang/GCC JSC and Win32 D3D11."
         },
         {
             "title": "custom-handling-of-materials-for-render-target-pass",
@@ -2889,7 +2889,7 @@
             "playgroundId": "#KICG93#2",
             "referenceImage": "lens-flare.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test fails: massive pixel difference (240k pixels off) on Linux Clang/GCC JSC, Win32 D3D11, and Sanitizers."
+            "reason": "Newly added test fails: massive pixel difference (240k pixels off) on Linux Clang/GCC JSC, Win32 D3D11, and Sanitizers."
         },
         {
             "title": "change-texture-of-material",
@@ -2897,7 +2897,7 @@
             "renderCount": 10,
             "referenceImage": "change-texture-of-material.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test fails: 35k pixel difference on Linux Clang/GCC JSC and Win32 D3D11."
+            "reason": "Newly added test fails: 35k pixel difference on Linux Clang/GCC JSC and Win32 D3D11."
         },
         {
             "title": "screen-space-curvature",
@@ -2913,14 +2913,14 @@
             "renderCount": 5,
             "referenceImage": "Render to 3D RT.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Shadows in RHS mode",
             "playgroundId": "#RO51RT#14",
             "referenceImage": "shadows-rhs.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Load environment from data buffer",
@@ -2970,7 +2970,7 @@
             "playgroundId": "#EBO3J1#10",
             "referenceImage": "glTFLoaderCapabilities.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "glTF Loader Cameras RH",
@@ -3047,7 +3047,7 @@
             "playgroundId": "#N5DLM7#1",
             "referenceImage": "UV2-Morphing.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "FrameGraph nrge shadows",
@@ -3366,7 +3366,7 @@
             "playgroundId": "#D9XXL3#1",
             "referenceImage": "Synchronous-Effect.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Show Loading Screen",
@@ -3388,7 +3388,7 @@
             "renderCount": 30,
             "referenceImage": "Flow-Graph-multiple-contexts.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "KHR diffuse transmission",
@@ -3457,7 +3457,7 @@
             "playgroundId": "#GRQHVV#23",
             "referenceImage": "Specular-reflectance-models-for-analytic-lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "F82 Specular Roughness vs Weight",
@@ -3492,7 +3492,7 @@
             "playgroundId": "#YG3BBF#51",
             "referenceImage": "Test-code-inlining.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Sponza Clustered Lighting (node material std)",
@@ -3678,28 +3678,28 @@
             "playgroundId": "#GRQHVV#42",
             "referenceImage": "OpenPBR-Analytic-Lights-Specular-Roughness-vs-Coat-Roughness.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Analytic Lights Specular Weight vs Metalness",
             "playgroundId": "#GRQHVV#34",
             "referenceImage": "OpenPBR-Analytic-Lights-Specular-Weight-vs-Metalness.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Analytic Lights Specular IOR vs Coat Weight",
             "playgroundId": "#GRQHVV#35",
             "referenceImage": "OpenPBR-Analytic-Lights-Specular-IOR-vs-Coat-Weight.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Analytic Lights Specular IOR vs Coat IOR",
             "playgroundId": "#GRQHVV#36",
             "referenceImage": "OpenPBR-Analytic-Lights-Specular-IOR-vs-Coat-IOR.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR IBL Normal and Coat Normal Mapping",
@@ -3727,14 +3727,14 @@
             "playgroundId": "#GRQHVV#47",
             "referenceImage": "OpenPBR-Analytic-Lights-Coat-Darkening.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Analytic Lights Coat Darkening vs Coat IOR",
             "playgroundId": "#GRQHVV#49",
             "referenceImage": "OpenPBR-Analytic-Lights-Coat-Darkening-vs-Coat-IOR.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR IBL Coat Color vs Coat Darkening",
@@ -3755,28 +3755,28 @@
             "playgroundId": "#GRQHVV#52",
             "referenceImage": "OpenPBR-Analytic-Lights-Coat-Color-vs-Coat-IOR.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Analytic Lights Coat Color vs Coat Darkening",
             "playgroundId": "#GRQHVV#53",
             "referenceImage": "OpenPBR-Analytic-Lights-Coat-Color-vs-Coat-Darkening.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Analytic Lights Anisotropy",
             "playgroundId": "#GRQHVV#61",
             "referenceImage": "OpenPBR-Analytic-Lights-Anisotropy.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Analytic Lights Anisotropy Texture",
             "playgroundId": "#GRQHVV#60",
             "referenceImage": "OpenPBR-Analytic-Lights-Anisotropy-Texture.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR IBL Anisotropy Metal",
@@ -3825,7 +3825,7 @@
             "playgroundId": "#GRQHVV#78",
             "referenceImage": "OpenPBR-Coat-Anisotropy---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Specular Reflectance with IOR V2 Manifest",
@@ -3839,7 +3839,7 @@
             "playgroundId": "#GRQHVV#80",
             "referenceImage": "OpenPBR-Coat-Roughness-vs-Coat-Ior---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Coat Roughness vs Coat Ior - IBL",
@@ -3987,7 +3987,7 @@
             "playgroundId": "#GRQHVV#122",
             "referenceImage": "OpenPBR-Transmission-Color-glTF---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Transmission Roughness glTF - IBL",
@@ -4001,14 +4001,14 @@
             "playgroundId": "#GRQHVV#124",
             "referenceImage": "OpenPBR-Transmission-Roughness-glTF---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Transmission Roughness vs IOR - Analytic Lights",
             "playgroundId": "#GRQHVV#134",
             "referenceImage": "OpenPBR-Transmission-Roughness-vs-IOR---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Transmission Anisotropy Roughness vs IOR - IBL",
@@ -4029,14 +4029,14 @@
             "playgroundId": "#GRQHVV#135",
             "referenceImage": "OpenPBR-Transmission-Anisotropy-Roughness-vs-IOR---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Transmission Anisotropy vs Roughness - Analytic Lights",
             "playgroundId": "#GRQHVV#136",
             "referenceImage": "OpenPBR-Transmission-Anisotropy-vs-Roughness---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Transmission Anisotropy vs Roughness - IBL",
@@ -4093,21 +4093,21 @@
             "playgroundId": "#GRQHVV#266",
             "referenceImage": "OpenPBR-Transmission-Scatter-Anisotropy-Refract---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Transmission Scatter Anisotropy Reflect - Analytic Lights",
             "playgroundId": "#GRQHVV#268",
             "referenceImage": "OpenPBR-Transmission-Scatter-Anisotropy-Reflect---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Transmission Scatter Roughness - Analytic Lights",
             "playgroundId": "#GRQHVV#269",
             "referenceImage": "OpenPBR-Transmission-Scatter-Roughness---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Subsurface Radius vs Roughness - IBL",
@@ -4130,7 +4130,7 @@
             "playgroundId": "#GRQHVV#272",
             "referenceImage": "OpenPBR-Subsurface-Radius-vs-Anisotropy---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Subsurface Radius vs Radius Scale - IBL",
@@ -4154,7 +4154,7 @@
             "renderCount": 2,
             "referenceImage": "OpenPBR-Subsurface-Transmission-Blending---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Subsurface Transmission Blending Zero Depth - IBL",
@@ -4194,7 +4194,7 @@
             "renderCount": 10,
             "referenceImage": "OpenPBR-Subsurface-Dense-Scattering---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Subsurface Dense Scattering - Realtime IBL",
@@ -4225,7 +4225,7 @@
             "playgroundId": "#GRQHVV#243",
             "referenceImage": "OpenPBR-Thin-Walled-Transmission-IOR-vs-Roughness---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Thin Walled Anisotropic Transmission - IBL",
@@ -4240,7 +4240,7 @@
             "playgroundId": "#GRQHVV#244",
             "referenceImage": "OpenPBR-Thin-Walled-Anisotropic-Transmission---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Thin Walled Subsurface Anisotropy - IBL",
@@ -4255,7 +4255,7 @@
             "playgroundId": "#GRQHVV#248",
             "referenceImage": "OpenPBR-Thin-Walled-Subsurface-Anisotropy---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "OpenPBR Thin Walled Subsurface Transmission Blending - IBL",
@@ -4270,7 +4270,7 @@
             "playgroundId": "#UU7RQ#4458",
             "referenceImage": "Background-material-blur.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Lighting Volume",
@@ -4294,7 +4294,7 @@
             "renderCount": 120,
             "referenceImage": "NME-Particles-with-PositionW.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
         },
         {
             "title": "Particles - Basic Properties - Size",
@@ -4302,7 +4302,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-size.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Basic Properties - Scale",
@@ -4310,7 +4310,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-scale.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Basic Properties - Color",
@@ -4318,7 +4318,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-color.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Basic Properties - Speed",
@@ -4326,7 +4326,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-speed.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Basic Properties - Angular Speed",
@@ -4334,7 +4334,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-angular-speed.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Basic Properties - Angular Speed - Rotation",
@@ -4342,7 +4342,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-angular-speed-rotation.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Basic Properties - Translation Pivot",
@@ -4350,7 +4350,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-translation-pivot.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Basic Properties - Direction",
@@ -4358,7 +4358,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-direction.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Basic Properties - Direction - Gravity",
@@ -4366,7 +4366,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-direction-gravity.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Basic Properties - Emit Rate - Slow",
@@ -4374,7 +4374,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-emit-rate-slow.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Basic Properties - Emit Rate - Fast",
@@ -4382,7 +4382,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-emit-rate-fast.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Basic Properties - Emission Limits",
@@ -4390,7 +4390,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-emission-limits.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Basic Properties - Lifetime - Short",
@@ -4398,7 +4398,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-lifetime-short.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Basic Properties - Lifetime - Long",
@@ -4406,7 +4406,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-lifetime-long.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Change - Size",
@@ -4414,7 +4414,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-size.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Change - Size 2",
@@ -4422,7 +4422,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-size-2.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Change - Color",
@@ -4430,7 +4430,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-color.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Change - Color 2",
@@ -4438,7 +4438,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-color-2.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Change - Speed",
@@ -4446,7 +4446,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-speed.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Change - Speed 2",
@@ -4454,7 +4454,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-speed-2.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Change - Speed Limit",
@@ -4462,7 +4462,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-speed-limit.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Change - Angular Speed",
@@ -4470,7 +4470,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-angular-speed.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Change - Angular Speed 2",
@@ -4478,7 +4478,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-angular-speed-2.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Change - Drag",
@@ -4486,7 +4486,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-drag.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Change - Drag 2",
@@ -4494,7 +4494,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-drag-2.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Change - Emit Rate",
@@ -4502,7 +4502,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-emit-rate.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Change - Emit Rate 2",
@@ -4510,7 +4510,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-emit-rate-2.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Change - Lifetime",
@@ -4518,7 +4518,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-lifetime.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Change - Lifetime 2",
@@ -4526,7 +4526,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-lifetime-2.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Change - Start Size",
@@ -4534,7 +4534,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-start-size.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Emitters - Point",
@@ -4542,7 +4542,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-point.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Emitters - Box",
@@ -4550,7 +4550,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-box.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
         },
         {
             "title": "Particles - Emitters - Sphere",
@@ -4558,7 +4558,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-sphere.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
         },
         {
             "title": "Particles - Emitters - Directed Sphere",
@@ -4566,7 +4566,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-directed-sphere.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Emitters - Hemisphere",
@@ -4574,7 +4574,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-hemisphere.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
         },
         {
             "title": "Particles - Emitters - Cylinder",
@@ -4582,7 +4582,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-cylinder.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
         },
         {
             "title": "Particles - Emitters - Directed Cylinder",
@@ -4598,7 +4598,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-cone.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
         },
         {
             "title": "Particles - Emitters - Directed Cone",
@@ -4606,7 +4606,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-directed-cone.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
         },
         {
             "title": "Particles - Emitters - Mesh",
@@ -4614,7 +4614,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-mesh.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
         },
         {
             "title": "Particles - Emitters - Custom",
@@ -4622,7 +4622,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-custom.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
         },
         {
             "title": "Particles - Animations",
@@ -4630,7 +4630,7 @@
             "renderCount": 120,
             "referenceImage": "particles-animations.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Animations 2",
@@ -4638,7 +4638,7 @@
             "renderCount": 120,
             "referenceImage": "particles-animations-2.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Ramp Gradient",
@@ -4646,7 +4646,7 @@
             "renderCount": 120,
             "referenceImage": "particles-ramp-gradient.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Ramp Gradient Remap",
@@ -4662,7 +4662,7 @@
             "renderCount": 120,
             "referenceImage": "particles-ramp-gradient-remap-alpha.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Particles - Billboard Y",
@@ -4678,7 +4678,7 @@
             "renderCount": 120,
             "referenceImage": "particles-billboard-false.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
         },
         {
             "title": "Particles - Multiply Blend",
@@ -4702,7 +4702,7 @@
             "renderCount": 120,
             "referenceImage": "particles-effects.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
         },
         {
             "title": "Particles - Helper - Sun",
@@ -4710,7 +4710,7 @@
             "renderCount": 120,
             "referenceImage": "particles-helper-sun.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
         },
         {
             "title": "Particles - Helper - Smoke",
@@ -4764,7 +4764,7 @@
             "playgroundId": "#8I487I#0",
             "referenceImage": "Selection-outline-layer-with-instances-and-LOD.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Vertex Pulling - Normals UVs Colors Tangents",
@@ -4778,28 +4778,28 @@
             "playgroundId": "#0C4ULD#2",
             "referenceImage": "vertexPullingIndexBufferVariants.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Vertex Pulling - Morph Targets and Bones",
             "playgroundId": "#CT4C3C#2",
             "referenceImage": "vertexPullingMorphBones.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Vertex Pulling - isUnIndexed with index buffer",
             "playgroundId": "#AWPYHM#4",
             "referenceImage": "vertexPullingIsUnIndexed.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "Vertex Pulling - UV Channels 1-6",
             "playgroundId": "#0SA2NH#4",
             "referenceImage": "vertexPullingUVChannels.png",
             "excludeFromAutomaticTesting": true,
-            "disabledReason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
         },
         {
             "title": "GPU Particles - Basic Properties - Size",
