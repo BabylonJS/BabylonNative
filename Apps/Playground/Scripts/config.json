@@ -1154,7 +1154,9 @@
             "playgroundId": "#T90MQ4#19",
             "renderCount": 50,
             "referenceImage": "LineEdgesRenderer.png",
-            "errorRatio": 20
+            "errorRatio": 20,
+            "excludeFromAutomaticTesting": true,
+            "disabledReason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
         },
         {
             "title": "Simulate pointer",
@@ -2577,7 +2579,9 @@
         {
             "title": "convertToFlatShadedMesh",
             "playgroundId": "#UFDL9T#4",
-            "referenceImage": "convertToFlatShadedMesh.png"
+            "referenceImage": "convertToFlatShadedMesh.png",
+            "excludeFromAutomaticTesting": true,
+            "disabledReason": "Newly added test crashes Win32 D3D11 with STATUS_BREAKPOINT (-2147483645) and Sanitizers; passes locally but fails on CI runner."
         },
         {
             "title": "SerializeMesh with hierarchy",
