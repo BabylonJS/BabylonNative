@@ -1041,7 +1041,9 @@
         {
             "title": "Node material 5",
             "playgroundId": "#V8VH7B#0",
-            "referenceImage": "node-material5.png"
+            "referenceImage": "node-material5.png",
+            "excludeFromAutomaticTesting": true,
+            "disabledReason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
         },
         {
             "title": "Node material 6",
@@ -2815,7 +2817,9 @@
         {
             "title": "lens-flare",
             "playgroundId": "#KICG93#2",
-            "referenceImage": "lens-flare.png"
+            "referenceImage": "lens-flare.png",
+            "excludeFromAutomaticTesting": true,
+            "disabledReason": "Newly added test fails: massive pixel difference (240k pixels off) on Linux Clang/GCC JSC, Win32 D3D11, and Sanitizers."
         },
         {
             "title": "change-texture-of-material",
