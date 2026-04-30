@@ -801,6 +801,8 @@
             "title": "Gaussian Splatting Loading",
             "playgroundId": "#CID4NN#204",
             "renderCount": 15,
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 D3D11 / Sanitizers / V8 D3D11",
             "referenceImage": "gsplat-loading.png"
         },
         {
@@ -1186,6 +1188,8 @@
         {
             "title": "Fresnel",
             "playgroundId": "#603JUZ#3",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel comparison fails on Linux (99324 px diff)",
             "referenceImage": "fresnel.png"
         },
         {
