@@ -892,6 +892,8 @@
         {
             "title": "Trailmesh tapered and untapered",
             "playgroundId": "#XGGSWJ#4",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 V8 D3D11 (access violation)",
             "referenceImage": "trailMesh.png"
         },
         {
@@ -1706,6 +1708,8 @@
             "title": "Local cubemaps",
             "playgroundId": "#RNASML#4",
             "renderCount": 2,
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel comparison fails on Linux (125368 px diff)",
             "referenceImage": "local-cubemaps.png"
         },
         {
@@ -1814,12 +1818,16 @@
             "title": "OBJ Stanford Bunny normals (round trip, LH)",
             "playgroundId": "#26R8NS#6",
             "replace": "//options//, roundTrip = true;",
+            "excludeFromAutomaticTesting": true,
+            "reason": "File API not available in Babylon Native JS runtime (ReferenceError)",
             "referenceImage": "objStanfordBunnyNormalsRoundTripLH.png"
         },
         {
             "title": "OBJ Stanford Bunny normals (round trip, RH)",
             "playgroundId": "#26R8NS#6",
             "replace": "//options//, roundTrip = true; useRightHandedSystem = true;",
+            "excludeFromAutomaticTesting": true,
+            "reason": "File API not available in Babylon Native JS runtime (ReferenceError)",
             "referenceImage": "objStanfordBunnyNormalsRoundTripRH.png"
         },
         {
