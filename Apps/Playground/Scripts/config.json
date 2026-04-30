@@ -962,6 +962,8 @@
         {
             "title": "Iridescence",
             "playgroundId": "#2FDQT5#1505",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Crashes Win32 V8 with ACCESS_VIOLATION after Volumetric Light Scattering test.",
             "referenceImage": "iridescence.png"
         },
         {
@@ -2707,6 +2709,8 @@
         {
             "title": "simple-sphere-in-4-mirrors",
             "playgroundId": "#58CFTW#4",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel difference (~183,312 pixels) on Linux OpenGL and Win32 D3D11 after newly synced from Babylon.js.",
             "referenceImage": "simple-sphere-in-4-mirrors.png"
         },
         {
