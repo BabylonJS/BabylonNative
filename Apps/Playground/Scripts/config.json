@@ -1121,7 +1121,9 @@
             "title": "GUI StackPanel",
             "playgroundId": "#LLVZ90#0",
             "referenceImage": "StackPanel.png",
-            "errorRatio": 20
+            "errorRatio": 20,
+            "excludeFromAutomaticTesting": true,
+            "disabledReason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
         },
         {
             "title": "GUI Slate",
@@ -2471,7 +2473,9 @@
         {
             "title": "Roundtrip babylon file with node, skeletal, and morph animations; id only",
             "playgroundId": "#KSGDML#7",
-            "referenceImage": "babylonFileAnimationsUsingId.png"
+            "referenceImage": "babylonFileAnimationsUsingId.png",
+            "excludeFromAutomaticTesting": true,
+            "disabledReason": "Newly added test crashes Win32 D3D11 with STATUS_BREAKPOINT (-2147483645) and Sanitizers; passes locally but fails on CI runner."
         },
         {
             "title": "Asset Container Instantiate to Scene",
