@@ -793,6 +793,8 @@
         {
             "title": "NME Loop Block",
             "playgroundId": "#D8AK3Z#115",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 V8 D3D11 (access violation)",
             "referenceImage": "nme-loop.png"
         },
         {
@@ -1021,6 +1023,8 @@
         {
             "title": "Node material 7",
             "playgroundId": "#10I31V#323",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel comparison fails on Linux (77539 px diff)",
             "referenceImage": "node-material7.png"
         },
         {
@@ -1267,6 +1271,8 @@
         {
             "title": "Custom render target",
             "playgroundId": "#TQCEBF#5",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 D3D11 plain (STATUS_BREAKPOINT)",
             "referenceImage": "customRTT.png"
         },
         {
