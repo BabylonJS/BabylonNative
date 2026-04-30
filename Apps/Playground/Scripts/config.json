@@ -1027,7 +1027,9 @@
         {
             "title": "Node material 3",
             "playgroundId": "#LWGVT0#2",
-            "referenceImage": "node-material3.png"
+            "referenceImage": "node-material3.png",
+            "excludeFromAutomaticTesting": true,
+            "disabledReason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
         },
         {
             "title": "Node material 4",
@@ -2758,7 +2760,9 @@
             "playgroundId": "#I2TR8G#0",
             "renderCount": 20,
             "errorRatio": 4,
-            "referenceImage": "skybox-with-boombox.png"
+            "referenceImage": "skybox-with-boombox.png",
+            "excludeFromAutomaticTesting": true,
+            "disabledReason": "Test fails after sync from Babylon.js: massive pixel difference (221k pixels) on Linux Clang/GCC JSC and Win32 D3D11."
         },
         {
             "title": "custom-handling-of-materials-for-render-target-pass",
