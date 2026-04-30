@@ -1,0 +1,35 @@
+#pragma once
+
+namespace Babylon::Integrations
+{
+    class Runtime;
+}
+
+namespace Playground
+{
+    // Apply process-wide settings shared by every Playground host:
+    // currently `Babylon::PerfTrace::SetLevel(Mark)`. Call once per
+    // process, before constructing any `Babylon::Integrations::Runtime`.
+    //
+    // (DebugTrace setup is now handled by `RuntimeOptions::log` in the
+    // Integrations layer, so it doesn't need to live here.)
+    void Initialize();
+
+    // Queue the standard Babylon.js bootstrap scripts (Babylon core,
+    // loaders, materials, GUI, serializers, plus a few common extras)
+    // onto `runtime` in dependency order.
+    //
+    // These were historically loaded by `AppContext`'s constructor; the
+    // `Babylon::Integrations` layer no longer bundles script loading
+    // (each host decides between the multi-UMD route this helper
+    // implements and a single pre-bundled `bundle.js` route — see
+    // SimplifiedAPI.md §4.1 "Loading Babylon.js: two supported routes").
+    // We keep the list here so every Playground host stays in sync as
+    // the bundle list evolves.
+    //
+    // Calls to `LoadScript` made before the first `View::Attach` are
+    // queued on the runtime and dispatched after engine initialization
+    // completes; this helper relies on that, so it's safe to call
+    // immediately after `Runtime::Create`.
+    void LoadBootstrapScripts(Babylon::Integrations::Runtime& runtime);
+}

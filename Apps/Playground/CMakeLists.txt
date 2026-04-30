@@ -20,7 +20,9 @@ set(SCRIPTS
 
 set(SOURCES
     "Shared/AppContext.cpp"
-    "Shared/AppContext.h")
+    "Shared/AppContext.h"
+    "Shared/PlaygroundScripts.cpp"
+    "Shared/PlaygroundScripts.h")
 
 if(APPLE)
     find_library(JAVASCRIPTCORE_LIBRARY JavaScriptCore)
@@ -126,6 +128,7 @@ target_link_libraries(Playground
     PRIVATE Console
     PRIVATE ExternalTexture
     PRIVATE GraphicsDevice
+    PRIVATE Integrations
     PRIVATE NativeCamera
     PRIVATE NativeCapture
     PRIVATE NativeEncoding

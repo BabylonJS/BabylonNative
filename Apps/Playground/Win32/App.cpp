@@ -1,17 +1,26 @@
 // App.cpp : Defines the entry point for the application.
 //
+// Migrated to Babylon::Integrations: this host no longer constructs
+// Babylon Native components directly. The cross-platform `Runtime` +
+// `View` API handles plugin/polyfill setup, GPU device construction,
+// frame rendering, and input forwarding.
 
 #include "App.h"
-#include <Shared/AppContext.h>
-#include <Babylon/Plugins/TestUtils.h>
+
+#include <Babylon/Integrations/Runtime.h>
+#include <Babylon/Integrations/View.h>
+
+#include <Shared/PlaygroundScripts.h>
+
 #include <Windows.h>
 #include <Windowsx.h>
 #include <Shlwapi.h>
+
 #include <filesystem>
 #include <iostream>
-#include <optional>
+#include <memory>
 #include <sstream>
-
+#include <vector>
 
 #define MAX_LOADSTRING 100
 
@@ -19,9 +28,16 @@
 HINSTANCE hInst;                     // current instance
 WCHAR szTitle[MAX_LOADSTRING];       // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
-std::optional<AppContext> appContext{};
+
+// Process-scoped: created on app start, recreated on 'R' refresh,
+// destroyed on app exit.
+std::unique_ptr<Babylon::Integrations::Runtime> g_runtime;
+
+// Window-scoped: created on InitInstance after CreateWindowW returns,
+// destroyed on WM_DESTROY (or torn down + recreated by RefreshBabylon).
+std::unique_ptr<Babylon::Integrations::View> g_view;
+
 bool minimized{false};
-int buttonRefCount{0};
 
 // Forward declarations of functions included in this code module:
 ATOM MyRegisterClass(HINSTANCE hInstance);
@@ -65,57 +81,83 @@ namespace
         return arguments;
     }
 
+    Babylon::Integrations::RuntimeOptions MakeRuntimeOptions()
+    {
+        Babylon::Integrations::RuntimeOptions options{};
+        options.enableDebugger = true;     // matches AppContext default
+        options.log = [](Babylon::Integrations::LogLevel level, std::string_view message) {
+            std::ostringstream ss{};
+            ss << message << std::endl;
+            OutputDebugStringA(ss.str().data());
+            std::cout << ss.str();
+
+            // Match AppContext's historical behavior: terminate on
+            // uncaught JS exceptions (Fatal). Routine console.error
+            // calls (Error) just print and continue.
+            if (level == Babylon::Integrations::LogLevel::Fatal)
+            {
+                std::quick_exit(1);
+            }
+        };
+        return options;
+    }
+
+    void QueueScripts()
+    {
+        // Babylon.js bootstrap (core + loaders/materials/gui/serializers).
+        // Shared with the other Playground hosts via Shared/PlaygroundScripts.
+        Playground::LoadBootstrapScripts(*g_runtime);
+
+        const auto args = GetCommandLineArguments();
+        if (args.empty())
+        {
+            g_runtime->LoadScript("app:///Scripts/experience.js");
+        }
+        else
+        {
+            for (const auto& arg : args)
+            {
+                g_runtime->LoadScript(GetUrlFromPath(arg));
+            }
+            g_runtime->LoadScript("app:///Scripts/playground_runner.js");
+        }
+    }
+
+    Babylon::Integrations::ViewDescriptor DescribeWindow(HWND hWnd)
+    {
+        RECT rect;
+        if (!GetClientRect(hWnd, &rect))
+        {
+            throw std::exception{"Unable to get client rect"};
+        }
+        Babylon::Integrations::ViewDescriptor descriptor{};
+        descriptor.nativeWindow = static_cast<void*>(hWnd);
+        descriptor.width = static_cast<uint32_t>(rect.right - rect.left);
+        descriptor.height = static_cast<uint32_t>(rect.bottom - rect.top);
+        descriptor.devicePixelRatio = 1.0f;
+        return descriptor;
+    }
+
     void Uninitialize()
     {
-        appContext.reset();
+        // Destroy in reverse-construction order: View first (so the
+        // surface is unbound and the in-flight frame is closed), then
+        // Runtime (which joins the JS thread).
+        g_view.reset();
+        g_runtime.reset();
     }
 
     void RefreshBabylon(HWND hWnd)
     {
         Uninitialize();
 
-        RECT rect;
-        if (!GetClientRect(hWnd, &rect))
-        {
-            throw std::exception{"Unable to get client rect"};
-        }
+        g_runtime = Babylon::Integrations::Runtime::Create(MakeRuntimeOptions());
+        QueueScripts();
 
-        auto width = static_cast<size_t>(rect.right - rect.left);
-        auto height = static_cast<size_t>(rect.bottom - rect.top);
-
-        appContext.emplace(
-            hWnd,
-            width,
-            height,
-            [](const char* message) {
-                std::ostringstream ss{};
-                ss << message << std::endl;
-                OutputDebugStringA(ss.str().data());
-                std::cout << ss.str();
-            });
-
-        std::vector<std::string> args = GetCommandLineArguments();
-        if (args.empty())
-        {
-            appContext->ScriptLoader().LoadScript("app:///Scripts/experience.js");
-        }
-        else
-        {
-            for (const auto& arg : args)
-            {
-                appContext->ScriptLoader().LoadScript(GetUrlFromPath(arg));
-            }
-
-            appContext->ScriptLoader().LoadScript("app:///Scripts/playground_runner.js");
-        }
-    }
-
-    void UpdateWindowSize(size_t width, size_t height)
-    {
-        if (appContext)
-        {
-            appContext->Device().UpdateSize(width, height);
-        }
+        // First View::Attach triggers GPU device construction, plugin
+        // initialization on the JS thread, and flushes the queued
+        // scripts.
+        g_view = Babylon::Integrations::View::Attach(*g_runtime, DescribeWindow(hWnd));
     }
 }
 
@@ -126,6 +168,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
+
+    // Process-wide Playground setup (PerfTrace level, etc.). Shared
+    // with the other Playground hosts via Shared/PlaygroundScripts.
+    Playground::Initialize();
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -142,7 +188,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     MSG msg{};
 
-    // Main message loop:
+    // Main message loop. When minimized, block on GetMessage to avoid
+    // spinning the CPU. Otherwise, peek + render one frame per loop
+    // iteration; View::RenderFrame is a no-op while suspended so we
+    // don't need to special-case that here.
     while (msg.message != WM_QUIT)
     {
         BOOL result;
@@ -153,14 +202,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
         else
         {
-            if (appContext)
+            if (g_view)
             {
-                appContext->DeviceUpdate().Finish();
-                appContext->Device().FinishRenderingCurrentFrame();
-                appContext->Device().StartRenderingCurrentFrame();
-                appContext->DeviceUpdate().Start();
+                g_view->RenderFrame();
             }
-
             result = PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) && msg.message != WM_QUIT;
         }
 
@@ -177,11 +222,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return (int)msg.wParam;
 }
 
-//
-//  FUNCTION: MyRegisterClass()
-//
-//  PURPOSE: Registers the window class.
-//
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
     WNDCLASSEXW wcex;
@@ -203,19 +243,9 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     return RegisterClassExW(&wcex);
 }
 
-//
-//   FUNCTION: InitInstance(HINSTANCE, int)
-//
-//   PURPOSE: Saves instance handle and creates main window
-//
-//   COMMENTS:
-//
-//        In this function, we save the instance handle in a global variable and
-//        create and display the main program window.
-//
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
-    hInst = hInstance; // Store instance handle in our global variable
+    hInst = hInstance;
 
     HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
@@ -236,55 +266,46 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 void ProcessMouseButtons(tagPOINTER_BUTTON_CHANGE_TYPE changeType, int x, int y)
 {
+    using View = Babylon::Integrations::View;
+    if (!g_view) return;
+
     switch (changeType)
     {
         case POINTER_CHANGE_FIRSTBUTTON_DOWN:
-            appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
+            g_view->OnMouseDown(View::LeftMouseButton(), static_cast<float>(x), static_cast<float>(y));
             break;
         case POINTER_CHANGE_FIRSTBUTTON_UP:
-            appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
+            g_view->OnMouseUp(View::LeftMouseButton(), static_cast<float>(x), static_cast<float>(y));
             break;
         case POINTER_CHANGE_SECONDBUTTON_DOWN:
-            appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
+            g_view->OnMouseDown(View::RightMouseButton(), static_cast<float>(x), static_cast<float>(y));
             break;
         case POINTER_CHANGE_SECONDBUTTON_UP:
-            appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
+            g_view->OnMouseUp(View::RightMouseButton(), static_cast<float>(x), static_cast<float>(y));
             break;
         case POINTER_CHANGE_THIRDBUTTON_DOWN:
-            appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
+            g_view->OnMouseDown(View::MiddleMouseButton(), static_cast<float>(x), static_cast<float>(y));
             break;
         case POINTER_CHANGE_THIRDBUTTON_UP:
-            appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
+            g_view->OnMouseUp(View::MiddleMouseButton(), static_cast<float>(x), static_cast<float>(y));
             break;
     }
 }
 
-//
-//  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  PURPOSE: Processes messages for the main window.
-//
-//  WM_COMMAND  - process the application menu
-//  WM_PAINT    - Paint the main window
-//  WM_DESTROY  - post a quit message and return
-//
-//
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    using View = Babylon::Integrations::View;
+
     switch (message)
     {
         case WM_SYSCOMMAND:
         {
             if ((wParam & 0xFFF0) == SC_MINIMIZE)
             {
-                if (appContext)
+                if (g_runtime)
                 {
-                    appContext->DeviceUpdate().Finish();
-                    appContext->Device().FinishRenderingCurrentFrame();
-
-                    appContext->Runtime().Suspend();
+                    g_runtime->Suspend();
                 }
-
                 minimized = true;
             }
             else if ((wParam & 0xFFF0) == SC_RESTORE)
@@ -292,13 +313,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 if (minimized)
                 {
                     minimized = false;
-
-                    if (appContext)
+                    if (g_runtime)
                     {
-                        appContext->Runtime().Resume();
-
-                        appContext->Device().StartRenderingCurrentFrame();
-                        appContext->DeviceUpdate().Start();
+                        g_runtime->Resume();
                     }
                 }
             }
@@ -308,7 +325,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_COMMAND:
         {
             int wmId = LOWORD(wParam);
-            // Parse the menu selections:
             switch (wmId)
             {
                 case IDM_ABOUT:
@@ -324,9 +340,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_SIZE:
         {
-            auto width = static_cast<size_t>(LOWORD(lParam));
-            auto height = static_cast<size_t>(HIWORD(lParam));
-            UpdateWindowSize(width, height);
+            if (g_view)
+            {
+                g_view->Resize(static_cast<uint32_t>(LOWORD(lParam)),
+                                static_cast<uint32_t>(HIWORD(lParam)));
+            }
             break;
         }
         case WM_DESTROY:
@@ -345,15 +363,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_POINTERWHEEL:
         {
-            if (appContext && appContext->Input())
+            if (g_view)
             {
-                appContext->Input()->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -GET_WHEEL_DELTA_WPARAM(wParam));
+                g_view->OnMouseWheel(View::MouseWheelY(), -GET_WHEEL_DELTA_WPARAM(wParam));
             }
             break;
         }
         case WM_POINTERDOWN:
         {
-            if (appContext && appContext->Input())
+            if (g_view)
             {
                 POINTER_INFO info;
                 auto pointerId = GET_POINTERID_WPARAM(wParam);
@@ -370,7 +388,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     }
                     else
                     {
-                        appContext->Input()->TouchDown(pointerId, x, y);
+                        g_view->OnPointerDown(static_cast<int32_t>(pointerId),
+                                                static_cast<float>(x),
+                                                static_cast<float>(y));
                     }
                 }
             }
@@ -378,7 +398,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_POINTERUPDATE:
         {
-            if (appContext && appContext->Input())
+            if (g_view)
             {
                 auto pointerId = GET_POINTERID_WPARAM(wParam);
                 POINTER_INFO info;
@@ -392,11 +412,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     if (info.pointerType == PT_MOUSE)
                     {
                         ProcessMouseButtons(info.ButtonChangeType, x, y);
-                        appContext->Input()->MouseMove(x, y);
+                        g_view->OnMouseMove(static_cast<float>(x), static_cast<float>(y));
                     }
                     else
                     {
-                        appContext->Input()->TouchMove(pointerId, x, y);
+                        g_view->OnPointerMove(static_cast<int32_t>(pointerId),
+                                                static_cast<float>(x),
+                                                static_cast<float>(y));
                     }
                 }
             }
@@ -404,7 +426,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         case WM_POINTERUP:
         {
-            if (appContext && appContext->Input())
+            if (g_view)
             {
                 auto pointerId = GET_POINTERID_WPARAM(wParam);
                 POINTER_INFO info;
@@ -421,7 +443,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     }
                     else
                     {
-                        appContext->Input()->TouchUp(pointerId, x, y);
+                        g_view->OnPointerUp(static_cast<int32_t>(pointerId),
+                                              static_cast<float>(x),
+                                              static_cast<float>(y));
                     }
                 }
             }
