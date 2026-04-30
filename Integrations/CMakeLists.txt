@@ -1,0 +1,118 @@
+set(SOURCES
+    "Include/Babylon/Integrations/LogLevel.h"
+    "Include/Babylon/Integrations/Runtime.h"
+    "Include/Babylon/Integrations/RuntimeOptions.h"
+    "Include/Babylon/Integrations/View.h"
+    "Include/Babylon/Integrations/ViewDescriptor.h"
+    "Source/Runtime.cpp"
+    "Source/RuntimeImpl.h"
+    "Source/View.cpp")
+
+add_library(Integrations ${SOURCES})
+
+warnings_as_errors(Integrations)
+
+target_include_directories(Integrations PUBLIC "Include")
+
+# Always-on dependencies. The Integrations layer formalizes the canonical
+# Babylon Native setup, so the polyfills that AppContext.cpp historically
+# initializes unconditionally (Blob / Console / Performance / TextDecoder /
+# XMLHttpRequest) are always linked.
+target_link_libraries(Integrations
+    PUBLIC napi
+    PRIVATE AppRuntime
+    PRIVATE ScriptLoader
+    PRIVATE GraphicsDevice
+    PRIVATE Blob
+    PRIVATE Console
+    PRIVATE Performance
+    PRIVATE TextDecoder
+    PRIVATE XMLHttpRequest)
+
+# ----- Conditionally-included polyfills -----
+#
+# Each flag is exposed as a PUBLIC compile definition so the public
+# headers (Runtime.h / View.h) and the impl source files can both gate
+# on the same value via `#if BABYLON_NATIVE_*`.
+
+if(BABYLON_NATIVE_POLYFILL_WINDOW)
+    target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_POLYFILL_WINDOW=1)
+    target_link_libraries(Integrations PRIVATE Window)
+endif()
+
+if(BABYLON_NATIVE_POLYFILL_CANVAS)
+    target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_POLYFILL_CANVAS=1)
+    target_link_libraries(Integrations PRIVATE Canvas)
+endif()
+
+# ----- Conditionally-included plugins -----
+
+if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE)
+    target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_PLUGIN_NATIVEENGINE=1)
+    target_link_libraries(Integrations PRIVATE NativeEngine)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVEINPUT)
+    target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_PLUGIN_NATIVEINPUT=1)
+    target_link_libraries(Integrations PRIVATE NativeInput)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVECAMERA)
+    target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_PLUGIN_NATIVECAMERA=1)
+    target_link_libraries(Integrations PRIVATE NativeCamera)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE)
+    target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_PLUGIN_NATIVECAPTURE=1)
+    target_link_libraries(Integrations PRIVATE NativeCapture)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVEENCODING)
+    target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_PLUGIN_NATIVEENCODING=1)
+    target_link_libraries(Integrations PRIVATE NativeEncoding)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS)
+    target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS=1)
+    target_link_libraries(Integrations PRIVATE NativeOptimizations)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVETRACING)
+    target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_PLUGIN_NATIVETRACING=1)
+    target_link_libraries(Integrations PRIVATE NativeTracing)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_NATIVEXR)
+    # Currently exposes no public API surface in the Integrations layer
+    # (XR-specific helpers are a future addition — see SimplifiedAPI.md
+    # §7 Risks). The flag is still propagated as a compile definition so
+    # future XR-gated methods on Runtime/View are picked up consistently.
+    target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_PLUGIN_NATIVEXR=1)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_SHADERCACHE)
+    target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_PLUGIN_SHADERCACHE=1)
+    target_link_libraries(Integrations PRIVATE ShaderCache)
+endif()
+
+if(BABYLON_NATIVE_PLUGIN_TESTUTILS)
+    target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_PLUGIN_TESTUTILS=1)
+    target_link_libraries(Integrations PRIVATE TestUtils)
+endif()
+
+set_property(TARGET Integrations PROPERTY FOLDER Integrations)
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+
+# ----- Per-platform interop layers -----
+#
+# Each platform's interop layer lives in its own subdirectory and is
+# opt-in via its own CMake flag. They depend on the cross-platform
+# `Integrations` target above.
+
+if(BABYLON_NATIVE_INTEGRATIONS_ANDROID)
+    add_subdirectory(Android)
+endif()
+
+if(BABYLON_NATIVE_INTEGRATIONS_APPLE)
+    add_subdirectory(Apple)
+endif()

@@ -143,6 +143,11 @@ option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils.
 option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
 
+# Integrations
+option(BABYLON_NATIVE_INTEGRATIONS "Build the cross-platform Babylon::Integrations facade (Runtime + View)." ON)
+option(BABYLON_NATIVE_INTEGRATIONS_ANDROID "Build the Android JNI interop layer for Babylon::Integrations." OFF)
+option(BABYLON_NATIVE_INTEGRATIONS_APPLE "Build the Apple (iOS / macOS / visionOS) Obj-C++ interop layer for Babylon::Integrations." OFF)
+
 # Sanitizers
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
 
@@ -299,6 +304,10 @@ add_subdirectory(Dependencies)
 add_subdirectory(Core)
 add_subdirectory(Plugins)
 add_subdirectory(Polyfills)
+
+if(BABYLON_NATIVE_INTEGRATIONS)
+    add_subdirectory(Integrations)
+endif()
 
 if(BABYLON_NATIVE_BUILD_APPS)
     add_subdirectory(Apps)
