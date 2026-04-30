@@ -22,13 +22,21 @@ namespace Babylon::Integrations
         // implemented for V8.
         bool waitForDebugger{false};
 
-        // Optional log sink. If unset, log output is discarded. Wired into
-        // both `Babylon::DebugTrace` and the Console polyfill.
+        // Optional log sink. Receives:
+        //   - `console.{log,warn,error}` output  → LogLevel::{Log,Warn,Error}
+        //   - `Babylon::DebugTrace` output      → LogLevel::Log
+        //   - Uncaught JS exceptions             → LogLevel::Fatal
+        //
+        // If unset, ordinary log output is silently discarded and
+        // uncaught exceptions fall back to
+        // `Babylon::AppRuntime::DefaultUnhandledExceptionHandler`
+        // (which writes to the program output).
+        //
+        // Hosts that want process termination on uncaught exceptions
+        // (matching the historical AppContext behavior) can do so from
+        // inside this callback, e.g.
+        //
+        //     if (level == LogLevel::Fatal) std::quick_exit(1);
         std::function<void(LogLevel, std::string_view)> log;
-
-        // Optional handler for unhandled JavaScript exceptions. If unset,
-        // `Babylon::AppRuntime::DefaultUnhandledExceptionHandler` is used
-        // (which writes the error to the program output).
-        std::function<void(std::string_view message)> onUnhandledError;
     };
 }

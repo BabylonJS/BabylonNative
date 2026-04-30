@@ -21,7 +21,6 @@ namespace Babylon::Integrations
         if (m_options.log)
         {
             Babylon::DebugTrace::EnableDebugTrace(true);
-            // DebugTrace doesn't carry a level; treat it as Log.
             const auto& logCallback = m_options.log;
             Babylon::DebugTrace::SetTraceOutput([logCallback](const char* message) {
                 logCallback(LogLevel::Log, message ? message : "");
@@ -34,13 +33,17 @@ namespace Babylon::Integrations
         Babylon::AppRuntime::Options appRuntimeOptions{};
         appRuntimeOptions.EnableDebugger = m_options.enableDebugger;
         appRuntimeOptions.WaitForDebugger = m_options.waitForDebugger;
-        if (m_options.onUnhandledError)
+
+        // Route uncaught JS exceptions through the host's log callback
+        // with LogLevel::Fatal. If no log callback is set, leave the
+        // AppRuntime default in place (writes to program output).
+        if (m_options.log)
         {
-            const auto& userHandler = m_options.onUnhandledError;
-            appRuntimeOptions.UnhandledExceptionHandler = [userHandler](const Napi::Error& error) {
+            const auto& logCallback = m_options.log;
+            appRuntimeOptions.UnhandledExceptionHandler = [logCallback](const Napi::Error& error) {
                 std::ostringstream ss{};
                 ss << "[Uncaught Error] " << Napi::GetErrorString(error);
-                userHandler(ss.str());
+                logCallback(LogLevel::Fatal, ss.str());
             };
         }
 
