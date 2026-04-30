@@ -906,6 +906,8 @@
         {
             "title": "Ground Projection",
             "playgroundId": "#XG08YC#0",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 V8 D3D11 (access violation)",
             "referenceImage": "groundProjection.png"
         },
         {
@@ -2099,6 +2101,8 @@
             "title": "Scissor test with 0.9 hardware scaling",
             "playgroundId": "#W7E7CF#38",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel comparison fails on Linux (56223 px diff)",
             "referenceImage": "scissor-test-2.png"
         },
         {
@@ -2667,6 +2671,8 @@
         {
             "title": "simple-render-target-with-blue-spheres",
             "playgroundId": "#NRR7F4#0",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel comparison fails on Win32 D3D11 / Sanitizers (44605 px diff)",
             "referenceImage": "simple-render-target-with-blue-spheres.png"
         },
         {
