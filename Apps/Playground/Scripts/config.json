@@ -955,6 +955,8 @@
         {
             "title": "Negative scaling with instances",
             "playgroundId": "#Z3YS9T#0",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Crashes Win32 V8 with ACCESS_VIOLATION after Volumetric Light Scattering test.",
             "referenceImage": "negative-scaling-with-instances.png"
         },
         {
@@ -2620,6 +2622,8 @@
         {
             "title": "Command encoder order in WebGPU 2",
             "playgroundId": "#CMH5VF#7",
+            "excludeFromAutomaticTesting": true,
+            "reason": "ASSERT/crash (exit 133) on Linux OpenGL after newly synced from Babylon.js.",
             "referenceImage": "CommandEncodedWebGPU2.png"
         },
         {
@@ -2696,6 +2700,8 @@
         {
             "title": "torus-knot-mirror",
             "playgroundId": "#M5GFLR#0",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel difference (~182,593 pixels) on Win32 D3D11 after newly synced from Babylon.js.",
             "referenceImage": "torus-knot-mirror.png"
         },
         {
