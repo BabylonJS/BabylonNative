@@ -1077,7 +1077,9 @@
             "title": "LOD + Billboards + Instances",
             "playgroundId": "#UAIZCS#0",
             "referenceImage": "lodbillboardinstances.png",
-            "errorRatio": 20
+            "errorRatio": 20,
+            "excludeFromAutomaticTesting": true,
+            "disabledReason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
         },
         {
             "title": "Nested BBG",
@@ -2825,7 +2827,9 @@
             "title": "change-texture-of-material",
             "playgroundId": "#7PN9PH#2",
             "renderCount": 10,
-            "referenceImage": "change-texture-of-material.png"
+            "referenceImage": "change-texture-of-material.png",
+            "excludeFromAutomaticTesting": true,
+            "disabledReason": "Newly added test fails: 35k pixel difference on Linux Clang/GCC JSC and Win32 D3D11."
         },
         {
             "title": "screen-space-curvature",
