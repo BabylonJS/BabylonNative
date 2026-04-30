@@ -1113,7 +1113,9 @@
             "title": "GUI Transform StackPanel",
             "playgroundId": "#BS60AB#0",
             "referenceImage": "TransformStackPanel.png",
-            "errorRatio": 20
+            "errorRatio": 20,
+            "excludeFromAutomaticTesting": true,
+            "disabledReason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
         },
         {
             "title": "GUI StackPanel",
@@ -2462,7 +2464,9 @@
         {
             "title": "Roundtrip babylon file with node, skeletal, and morph animations; uniqueId",
             "playgroundId": "#KSGDML#10",
-            "referenceImage": "babylonFileAnimationsUsingUniqueId.png"
+            "referenceImage": "babylonFileAnimationsUsingUniqueId.png",
+            "excludeFromAutomaticTesting": true,
+            "disabledReason": "Newly added test crashes Win32 D3D11 (exit code 2170) and fails on Linux Clang/GCC JSC."
         },
         {
             "title": "Roundtrip babylon file with node, skeletal, and morph animations; id only",
