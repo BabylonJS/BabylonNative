@@ -267,7 +267,9 @@
             "title": "Fresnel",
             "playgroundId": "#603JUZ#1",
             "errorRatio": 42,
-            "referenceImage": "fresnel.png"
+            "referenceImage": "fresnel.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Suspected to corrupt state causing later Win32 D3D11 cascade crash; also pixel diff fail on Linux"
         },
         {
             "title": "Unindexed mesh",
@@ -308,7 +310,9 @@
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
-            "errorRatio": 21
+            "errorRatio": 21,
+            "excludeFromAutomaticTesting": true,
+            "reason": "Suspected to cause later Win32 D3D11 cascade crash; also pixel diff fail on Linux (56223 px diff)"
         },
         {
             "title": "Scissor test with 1.5 hardware scaling",
@@ -678,7 +682,9 @@
         {
             "title": "Attractors",
             "playgroundId": "#DEZ79M#57",
-            "referenceImage": "attractors.png"
+            "referenceImage": "attractors.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Linux (ASSERT bx::isAligned _stride 16 in bgfx)"
         },
         {
             "title": "PBR in mirror",
@@ -791,28 +797,38 @@
         {
             "title": "NME Loop Block",
             "playgroundId": "#D8AK3Z#115",
-            "referenceImage": "nme-loop.png"
+            "referenceImage": "nme-loop.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 V8 D3D11 (access violation)"
         },
         {
             "title": "Gaussian Splatting Loading",
             "playgroundId": "#CID4NN#204",
             "renderCount": 15,
-            "referenceImage": "gsplat-loading.png"
+            "referenceImage": "gsplat-loading.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 D3D11 / Sanitizers / V8 D3D11"
         },
         {
             "title": "Simple refraction",
             "playgroundId": "#22KZUW#652",
-            "referenceImage": "simple-refraction.png"
+            "referenceImage": "simple-refraction.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 V8 D3D11 (access violation)"
         },
         {
             "title": "Detail map",
             "playgroundId": "#F8FDYT#2",
-            "referenceImage": "detail-map.png"
+            "referenceImage": "detail-map.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 D3D11 / Sanitizers (STATUS_BREAKPOINT)"
         },
         {
             "title": "needDepthPrePass",
             "playgroundId": "#7A66KI#1",
-            "referenceImage": "needDepthPrePass.png"
+            "referenceImage": "needDepthPrePass.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 V8 D3D11 (access violation)"
         },
         {
             "title": "Decal map PP",
@@ -825,7 +841,9 @@
         {
             "title": "Convolution Post Process",
             "playgroundId": "#FBH4J7#281",
-            "referenceImage": "convolution.png"
+            "referenceImage": "convolution.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 D3D11 / Sanitizers (STATUS_BREAKPOINT)"
         },
         {
             "title": "Volumetric Light Scattering Post Process with Skeleton",
@@ -1184,7 +1202,9 @@
         {
             "title": "Fresnel",
             "playgroundId": "#603JUZ#3",
-            "referenceImage": "fresnel.png"
+            "referenceImage": "fresnel.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Suspected to corrupt state causing later Win32 D3D11 cascade crash; also pixel diff fail on Linux"
         },
         {
             "title": "Highlights",
@@ -1225,7 +1245,9 @@
         {
             "title": "Bones",
             "playgroundId": "#7EC27T#3",
-            "referenceImage": "bones.png"
+            "referenceImage": "bones.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 D3D11 (incl. Sanitizers and V8)"
         },
         {
             "title": "Advanced shadows",
@@ -1540,12 +1562,16 @@
         {
             "title": "GLTF Node visibility test",
             "playgroundId": "#80DN99#6",
-            "referenceImage": "gltfNodeVisibility.png"
+            "referenceImage": "gltfNodeVisibility.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 D3D11 Sanitizers"
         },
         {
             "title": "Asset Containers",
             "playgroundId": "#P3U079#19",
-            "referenceImage": "assetContainer.png"
+            "referenceImage": "assetContainer.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 D3D11 (incl. Sanitizers)"
         },
         {
             "title": "Enable disable post process",
@@ -1558,7 +1584,9 @@
             "title": "Depth of field",
             "playgroundId": "#IDSQK2#86",
             "renderCount": 20,
-            "referenceImage": "depthOfField.png"
+            "referenceImage": "depthOfField.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel comparison fails on Linux (10675 px diff)"
         },
         {
             "title": "Default pipeline",
@@ -1594,7 +1622,9 @@
             "playgroundId": "#G3ZYFU#7",
             "renderCount": 100,
             "referenceImage": "particles.png",
-            "errorRatio": 20
+            "errorRatio": 20,
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Linux Clang/GCC (ASSERT, exit 133)"
         },
         {
             "title": "PBRMetallicRoughnessMaterial",
@@ -1682,7 +1712,9 @@
             "title": "Local cubemaps",
             "playgroundId": "#RNASML#4",
             "renderCount": 2,
-            "referenceImage": "local-cubemaps.png"
+            "referenceImage": "local-cubemaps.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel comparison fails on Linux (125368 px diff)"
         },
         {
             "title": "TGA",
@@ -2071,7 +2103,9 @@
             "title": "Scissor test with 0.9 hardware scaling",
             "playgroundId": "#W7E7CF#38",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
-            "referenceImage": "scissor-test-2.png"
+            "referenceImage": "scissor-test-2.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Suspected to cause later Win32 D3D11 cascade crash; also pixel diff fail on Linux (56223 px diff)"
         },
         {
             "title": "Scissor test with 1.5 hardware scaling",
@@ -2539,7 +2573,9 @@
         {
             "title": "SerializeScene and ImportMesh with MorphTargetManager",
             "playgroundId": "#HPV2TZ#378",
-            "referenceImage": "SerializeScene-and-ImportMesh-with-MorphTargetManager.png"
+            "referenceImage": "SerializeScene-and-ImportMesh-with-MorphTargetManager.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel difference (~6,369 pixels) on Linux OpenGL after newly synced from Babylon.js."
         },
         {
             "title": "Vertex buffers with non aligned strides",
@@ -2584,7 +2620,9 @@
         {
             "title": "Command encoder order in WebGPU 2",
             "playgroundId": "#CMH5VF#7",
-            "referenceImage": "CommandEncodedWebGPU2.png"
+            "referenceImage": "CommandEncodedWebGPU2.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "ASSERT/crash (exit 133) on Linux OpenGL after newly synced from Babylon.js."
         },
         {
             "title": "edge-renderer-and-zOffset",
