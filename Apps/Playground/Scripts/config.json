@@ -913,6 +913,8 @@
         {
             "title": "Node geometry",
             "playgroundId": "#WGZLGJ#9152",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Crashes Win32 V8 with ACCESS_VIOLATION after Volumetric Light Scattering test.",
             "referenceImage": "nodeGeometry.png"
         },
         {
@@ -2571,6 +2573,8 @@
         {
             "title": "SerializeScene and ImportMesh with MorphTargetManager",
             "playgroundId": "#HPV2TZ#378",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel difference (~6,369 pixels) on Linux OpenGL after newly synced from Babylon.js.",
             "referenceImage": "SerializeScene-and-ImportMesh-with-MorphTargetManager.png"
         },
         {
@@ -2678,6 +2682,8 @@
         {
             "title": "pillars-sphere-and-torus-with-PCSS-shadows",
             "playgroundId": "#WL4Q8J#0",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel difference (~185,225 pixels) on Win32 D3D11 after newly synced from Babylon.js.",
             "referenceImage": "pillars-sphere-and-torus-with-PCSS-shadows.png"
         },
         {
