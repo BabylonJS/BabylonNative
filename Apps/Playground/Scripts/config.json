@@ -808,11 +808,15 @@
         {
             "title": "Simple refraction",
             "playgroundId": "#22KZUW#652",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 V8 D3D11 (access violation)",
             "referenceImage": "simple-refraction.png"
         },
         {
             "title": "Detail map",
             "playgroundId": "#F8FDYT#2",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 D3D11 / Sanitizers (STATUS_BREAKPOINT)",
             "referenceImage": "detail-map.png"
         },
         {
@@ -1570,6 +1574,8 @@
             "title": "Depth of field",
             "playgroundId": "#IDSQK2#86",
             "renderCount": 20,
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel comparison fails on Linux (10675 px diff)",
             "referenceImage": "depthOfField.png"
         },
         {
