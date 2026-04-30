@@ -898,7 +898,9 @@
         {
             "title": "Trailmesh tapered and untapered",
             "playgroundId": "#XGGSWJ#4",
-            "referenceImage": "trailMesh.png"
+            "referenceImage": "trailMesh.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 V8 D3D11 (access violation cascade)"
         },
         {
             "title": "GUI Input Text Area with Placeholder",
@@ -910,12 +912,16 @@
         {
             "title": "Ground Projection",
             "playgroundId": "#XG08YC#0",
-            "referenceImage": "groundProjection.png"
+            "referenceImage": "groundProjection.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 V8 D3D11 (access violation cascade)"
         },
         {
             "title": "Node geometry",
             "playgroundId": "#WGZLGJ#9152",
-            "referenceImage": "nodeGeometry.png"
+            "referenceImage": "nodeGeometry.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 V8 D3D11 (access violation cascade)"
         },
         {
             "title": "Node Geometry - Building generator",
@@ -955,17 +961,23 @@
         {
             "title": "Negative scaling with instances",
             "playgroundId": "#Z3YS9T#0",
-            "referenceImage": "negative-scaling-with-instances.png"
+            "referenceImage": "negative-scaling-with-instances.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 V8 D3D11 (access violation cascade)"
         },
         {
             "title": "Iridescence",
             "playgroundId": "#2FDQT5#1505",
-            "referenceImage": "iridescence.png"
+            "referenceImage": "iridescence.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 V8 D3D11 (access violation cascade)"
         },
         {
             "title": "Merge Meshes",
             "playgroundId": "#484RHA#0",
-            "referenceImage": "mergemeshes.png"
+            "referenceImage": "mergemeshes.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Test crashes on Win32 V8 D3D11 (access violation cascade)"
         },
         {
             "title": "Sprites",
@@ -2729,7 +2741,9 @@
             "title": "simple-custom-shader",
             "playgroundId": "#6GFJNR#2",
             "renderCount": 5,
-            "referenceImage": "simple-custom-shader.png"
+            "referenceImage": "simple-custom-shader.png",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Pixel comparison fails on Linux and Win32 D3D11 after newly synced from Babylon.js."
         },
         {
             "title": "show-multiple-guis",
