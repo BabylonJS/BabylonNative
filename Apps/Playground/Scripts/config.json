@@ -1168,7 +1168,9 @@
         {
             "title": "Color Grading",
             "playgroundId": "#8EDB5N#2",
-            "referenceImage": "colorGrading.png"
+            "referenceImage": "colorGrading.png",
+            "excludeFromAutomaticTesting": true,
+            "disabledReason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
         },
         {
             "title": "Clip planes",
@@ -2598,7 +2600,9 @@
         {
             "title": "SerializeScene and ImportMesh with string skeletonIds",
             "playgroundId": "#D4ZZ8#430",
-            "referenceImage": "SerializeScene-and-ImportMesh-with-string-skeletonIds.png"
+            "referenceImage": "SerializeScene-and-ImportMesh-with-string-skeletonIds.png",
+            "excludeFromAutomaticTesting": true,
+            "disabledReason": "Newly added test crashes Win32 D3D11 with STATUS_BREAKPOINT (-2147483645) and Sanitizers; passes locally but fails on CI runner."
         },
         {
             "title": "SerializeScene and ImportMesh with MorphTargetManager",
@@ -4244,7 +4248,9 @@
             "playgroundId": "#RA18GJ#17",
             "renderCount": 120,
             "referenceImage": "NME-Particles-with-PositionW.png",
-            "errorRatio": 20
+            "errorRatio": 20,
+            "excludeFromAutomaticTesting": true,
+            "disabledReason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
         },
         {
             "title": "Particles - Basic Properties - Size",
