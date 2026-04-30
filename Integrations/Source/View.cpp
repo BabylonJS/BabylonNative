@@ -325,5 +325,51 @@ namespace Babylon::Integrations
                                    static_cast<int32_t>(y));
         }
     }
+
+    void View::OnMouseDown(uint32_t buttonIndex, float x, float y)
+    {
+        RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
+        if (impl.m_input)
+        {
+            impl.m_input->MouseDown(buttonIndex,
+                                     static_cast<int32_t>(x),
+                                     static_cast<int32_t>(y));
+        }
+    }
+
+    void View::OnMouseUp(uint32_t buttonIndex, float x, float y)
+    {
+        RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
+        if (impl.m_input)
+        {
+            impl.m_input->MouseUp(buttonIndex,
+                                   static_cast<int32_t>(x),
+                                   static_cast<int32_t>(y));
+        }
+    }
+
+    void View::OnMouseMove(float x, float y)
+    {
+        RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
+        if (impl.m_input)
+        {
+            impl.m_input->MouseMove(static_cast<int32_t>(x),
+                                     static_cast<int32_t>(y));
+        }
+    }
+
+    void View::OnMouseWheel(uint32_t wheelAxis, int32_t scrollValue)
+    {
+        RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
+        if (impl.m_input)
+        {
+            impl.m_input->MouseWheel(wheelAxis, scrollValue);
+        }
+    }
+
+    uint32_t View::LeftMouseButton()   { return Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID; }
+    uint32_t View::MiddleMouseButton() { return Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID; }
+    uint32_t View::RightMouseButton()  { return Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID; }
+    uint32_t View::MouseWheelY()       { return Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID; }
 #endif
 }

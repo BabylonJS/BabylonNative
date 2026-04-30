@@ -74,22 +74,45 @@ namespace Babylon::Integrations
         void Resize(uint32_t width, uint32_t height, float devicePixelRatio = 1.0f);
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
-        // ----- Pointer input forwarding -----
+        // ----- Pointer / mouse input forwarding -----
         //
         // Host calls these from its event loop while the view exists.
-        // Routed to the JS thread via `NativeInput::Touch*`. Coordinates
-        // are in logical pixels (same convention as Resize).
+        // Routed to the JS thread via `NativeInput`. Coordinates are in
+        // logical pixels (same convention as Resize).
         //
-        // Babylon Native's `NativeInput` only exposes pointer (touch /
-        // mouse-as-pointer) input today; keyboard input is not part of
-        // the public Babylon Native input contract and is therefore not
-        // exposed here. Hosts that need keyboard handling can do it at
-        // the platform level and forward into JS via Runtime::RunOnJsThread.
+        // Babylon Native distinguishes pointer (touch) input from mouse
+        // input; both methods feed the same Babylon.js pointer-event
+        // pipeline but with different `pointerType` ('touch' vs.
+        // 'mouse'). Hosts driven by touch (Android, iOS) typically use
+        // OnPointer*; hosts driven by a cursor (Win32, macOS, UWP, X11)
+        // typically use OnMouse*.
+        //
+        // Babylon Native does not currently expose keyboard input; hosts
+        // that need keyboard handling do it at the platform level and
+        // forward into JS via `Runtime::RunOnJsThread`.
         //
         // Safe to call from any thread.
+
+        // Touch / pointer events.
         void OnPointerDown(int32_t pointerId, float x, float y);
         void OnPointerMove(int32_t pointerId, float x, float y);
         void OnPointerUp(int32_t pointerId, float x, float y);
+
+        // Mouse events. `buttonIndex` is one of LeftMouseButton(),
+        // MiddleMouseButton(), RightMouseButton(); `wheelAxis` is
+        // MouseWheelY(). The accessors return the matching
+        // `Babylon::Plugins::NativeInput::*_ID` value (single source of
+        // truth — no duplication, no risk of drift) without exposing the
+        // NativeInput header from this public View.h.
+        void OnMouseDown(uint32_t buttonIndex, float x, float y);
+        void OnMouseUp(uint32_t buttonIndex, float x, float y);
+        void OnMouseMove(float x, float y);
+        void OnMouseWheel(uint32_t wheelAxis, int32_t scrollValue);
+
+        static uint32_t LeftMouseButton();
+        static uint32_t MiddleMouseButton();
+        static uint32_t RightMouseButton();
+        static uint32_t MouseWheelY();
 #endif
 
     private:
