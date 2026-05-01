@@ -20,7 +20,7 @@ namespace
     {
         const CGFloat scale = layer.contentsScale > 0 ? layer.contentsScale : 1.0;
         Babylon::Integrations::ViewDescriptor descriptor{};
-        descriptor.nativeWindow = (__bridge void*)layer;
+        descriptor.nativeWindow = (__bridge CA::MetalLayer*)layer;
         descriptor.width = static_cast<uint32_t>(layer.drawableSize.width / scale);
         descriptor.height = static_cast<uint32_t>(layer.drawableSize.height / scale);
         descriptor.devicePixelRatio = static_cast<float>(scale);

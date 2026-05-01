@@ -55,35 +55,6 @@ namespace Babylon::Integrations
             }
             return LogLevel::Log;
         }
-
-        // Reinterpret the platform-erased `void*` from ViewDescriptor as the
-        // platform's Babylon::Graphics::WindowT. WindowT varies by
-        // platform:
-        //
-        //   Win32        : HWND  (pointer)
-        //   Android      : ANativeWindow*  (pointer)
-        //   Apple        : CA::MetalLayer*  (pointer; metal-cpp wrapper)
-        //   X11 (Linux)  : Window  (XID — `unsigned long`)
-        //   UWP / WinRT  : winrt::Windows::Foundation::IInspectable
-        //                  (a value type wrapping a refcounted COM pointer)
-        //
-        // For UWP we reconstruct the wrapper from the ABI pointer the
-        // host stuffed in (typically via `winrt::get_abi(...)`); for
-        // every other platform a single `reinterpret_cast` covers
-        // pointer-to-pointer and void*-to-XID.
-        Babylon::Graphics::WindowT ToWindowT(void* nativeWindow)
-        {
-#if defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_APP)
-            Babylon::Graphics::WindowT result{nullptr};
-            if (nativeWindow != nullptr)
-            {
-                winrt::copy_from_abi(result, nativeWindow);
-            }
-            return result;
-#else
-            return reinterpret_cast<Babylon::Graphics::WindowT>(nativeWindow);
-#endif
-        }
     }
 
     // ---------------------------------------------------------------------
@@ -204,7 +175,7 @@ namespace Babylon::Integrations
             return nullptr;
         }
 
-        const auto window = ToWindowT(descriptor.nativeWindow);
+        const auto& window = descriptor.nativeWindow;
 
         if (!impl.m_device)
         {

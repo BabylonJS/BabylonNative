@@ -68,7 +68,7 @@ namespace
     ViewDescriptor MakeViewDescriptor(ANativeWindow* window, jint physicalW, jint physicalH, jfloat density)
     {
         ViewDescriptor descriptor{};
-        descriptor.nativeWindow = static_cast<void*>(window);
+        descriptor.nativeWindow = window;
         descriptor.width = static_cast<uint32_t>(static_cast<float>(physicalW) / density);
         descriptor.height = static_cast<uint32_t>(static_cast<float>(physicalH) / density);
         descriptor.devicePixelRatio = density;

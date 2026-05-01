@@ -20,9 +20,11 @@ target_include_directories(Integrations PUBLIC "Include")
 # XMLHttpRequest) are always linked.
 target_link_libraries(Integrations
     PUBLIC napi
+    # GraphicsDevice is PUBLIC because ViewDescriptor.h (a public header)
+    # references `Babylon::Graphics::WindowT` from <Babylon/Graphics/Platform.h>.
+    PUBLIC GraphicsDevice
     PRIVATE AppRuntime
     PRIVATE ScriptLoader
-    PRIVATE GraphicsDevice
     PRIVATE Blob
     PRIVATE Console
     PRIVATE Performance
