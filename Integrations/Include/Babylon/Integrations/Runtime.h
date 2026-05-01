@@ -58,7 +58,10 @@ namespace Babylon::Integrations
         // completes during that first Attach. Calls made after the first
         // Attach are dispatched immediately.
         //
-        // Safe to call from any thread.
+        // Threading: these methods are NOT internally synchronized.
+        // Hosts should call them from a single thread (typically the
+        // host's UI/main thread), matching the existing contract of
+        // `Babylon::ScriptLoader` and `Babylon::AppRuntime::Dispatch`.
         void LoadScript(std::string_view url);
         void Eval(std::string_view source, std::string_view sourceUrl = {});
 
@@ -67,7 +70,7 @@ namespace Babylon::Integrations
         // custom Napi globals, registering ObjectWrap classes, capturing
         // `Napi::FunctionReference`s for native→JS calls, etc.
         //
-        // Safe to call from any thread.
+        // Threading: same single-thread contract as LoadScript / Eval.
         void RunOnJsThread(std::function<void(Napi::Env)> callback);
 
         // ----- Suspend / Resume -----

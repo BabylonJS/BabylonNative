@@ -61,12 +61,6 @@ namespace Babylon::Integrations
         // ordering: destroy Views before destroying their Runtime.
         assert(m_currentView == nullptr && "View must be destroyed before its Runtime.");
 
-        // Discard any pending pre-init actions; we're tearing down.
-        {
-            std::lock_guard<std::mutex> lock{m_pendingMutex};
-            m_pending.clear();
-        }
-
         // Order matters here:
         //   1. ScriptLoader's dispatcher captures &m_appRuntime, so
         //      ~ScriptLoader must run before ~AppRuntime.
@@ -84,6 +78,11 @@ namespace Babylon::Integrations
         //      View::Attach calls on first attach.
         //   5. Device + DeviceUpdate destroyed last because the JS
         //      thread referenced them via Device::AddToJavaScript.
+        //
+        // m_initTcs is destroyed when this struct's members are
+        // destroyed. If complete() was never called (no View ever
+        // attached), the queued continuations are dropped without
+        // firing, which is the desired behavior on shutdown.
         m_scriptLoader.reset();
 
 #if BABYLON_NATIVE_POLYFILL_CANVAS
@@ -127,43 +126,20 @@ namespace Babylon::Integrations
 
     void Runtime::LoadScript(std::string_view url)
     {
-        std::string urlCopy{url};
-
-        std::lock_guard<std::mutex> lock{m_impl->m_pendingMutex};
-        if (!m_impl->m_initialized)
-        {
-            // Capture by value into a callable that the first-Attach
-            // init lambda will invoke after plugin init completes.
-            m_impl->m_pending.emplace_back(
-                [scriptLoader = &*m_impl->m_scriptLoader, url = std::move(urlCopy)]() mutable {
-                    scriptLoader->LoadScript(std::move(url));
-                });
-            return;
-        }
-
-        // Past init: dispatch directly. The scriptLoader serializes on
-        // the JS thread.
-        m_impl->m_scriptLoader->LoadScript(std::move(urlCopy));
+        m_impl->m_initTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(),
+            [scriptLoader = &*m_impl->m_scriptLoader, url = std::string{url}]() mutable {
+                scriptLoader->LoadScript(std::move(url));
+            });
     }
 
     void Runtime::Eval(std::string_view source, std::string_view sourceUrl)
     {
-        std::string sourceCopy{source};
-        std::string urlCopy{sourceUrl};
-
-        std::lock_guard<std::mutex> lock{m_impl->m_pendingMutex};
-        if (!m_impl->m_initialized)
-        {
-            m_impl->m_pending.emplace_back(
-                [scriptLoader = &*m_impl->m_scriptLoader,
-                 src = std::move(sourceCopy),
-                 url = std::move(urlCopy)]() mutable {
-                    scriptLoader->Eval(std::move(src), std::move(url));
-                });
-            return;
-        }
-
-        m_impl->m_scriptLoader->Eval(std::move(sourceCopy), std::move(urlCopy));
+        m_impl->m_initTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(),
+            [scriptLoader = &*m_impl->m_scriptLoader,
+             source = std::string{source},
+             url = std::string{sourceUrl}]() mutable {
+                scriptLoader->Eval(std::move(source), std::move(url));
+            });
     }
 
     void Runtime::RunOnJsThread(std::function<void(Napi::Env)> callback)
@@ -173,20 +149,10 @@ namespace Babylon::Integrations
             return;
         }
 
-        std::lock_guard<std::mutex> lock{m_impl->m_pendingMutex};
-        if (!m_impl->m_initialized)
-        {
-            // Defer through ScriptLoader so it stays serialized with
-            // any LoadScript / Eval calls the host queued before us.
-            m_impl->m_pending.emplace_back(
-                [scriptLoader = &*m_impl->m_scriptLoader,
-                 cb = std::move(callback)]() mutable {
-                    scriptLoader->Dispatch(std::move(cb));
-                });
-            return;
-        }
-
-        m_impl->m_scriptLoader->Dispatch(std::move(callback));
+        m_impl->m_initTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(),
+            [scriptLoader = &*m_impl->m_scriptLoader, cb = std::move(callback)]() mutable {
+                scriptLoader->Dispatch(std::move(cb));
+            });
     }
 
     void Runtime::Suspend()

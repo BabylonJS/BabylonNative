@@ -61,11 +61,13 @@ namespace Babylon::Integrations
     // First-Attach engine initialization: dispatched onto the JS thread by
     // the first View::Attach call. Runs all plugin/polyfill Initialize()
     // calls in the same order as Apps/Playground/Shared/AppContext.cpp,
-    // then flushes any LoadScript / Eval / RunOnJsThread calls the host
-    // queued before the first Attach.
+    // then completes m_initTcs to unblock any LoadScript / Eval /
+    // RunOnJsThread calls the host queued before the first Attach.
     //
-    // After this lambda returns, m_initialized is true and subsequent
-    // Runtime::LoadScript / Eval / RunOnJsThread calls dispatch directly.
+    // After m_initTcs is complete, subsequent host calls to
+    // Runtime::LoadScript / Eval / RunOnJsThread fire their continuation
+    // synchronously on the calling thread (via inline_scheduler), which
+    // then submits to ScriptLoader directly.
     // ---------------------------------------------------------------------
     static void RunFirstAttachInit(RuntimeImpl& impl, Babylon::Graphics::WindowT window)
     {
@@ -145,20 +147,14 @@ namespace Babylon::Integrations
             (void)window;
 #endif
 
-            // 4. Flush pending LoadScript / Eval / RunOnJsThread calls
-            //    in submission order. Holding m_pendingMutex across the
-            //    iteration ensures any concurrent host-thread call lands
-            //    *after* the queued ones in the JS thread queue (the
-            //    host call blocks on the mutex until the iteration
-            //    finishes appending each pending action to the
-            //    ScriptLoader's task chain).
-            std::lock_guard<std::mutex> lock{implPtr->m_pendingMutex};
-            for (auto& action : implPtr->m_pending)
-            {
-                action();
-            }
-            implPtr->m_pending.clear();
-            implPtr->m_initialized = true;
+            // 4. Unblock any LoadScript / Eval / RunOnJsThread calls
+            //    the host registered before first Attach. Each was
+            //    chained off m_initTcs.as_task().then(inline_scheduler,
+            //    ..., [...] { scriptLoader->...; });, so completing the
+            //    TCS here causes those continuations to fire (in
+            //    registration order) on the JS thread, each submitting
+            //    to ScriptLoader's task chain.
+            implPtr->m_initTcs.complete();
         });
     }
 

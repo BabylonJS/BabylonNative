@@ -19,11 +19,11 @@
 #include <Babylon/Plugins/NativeXr.h>
 #endif
 
+#include <arcana/threading/task.h>
+
 #include <atomic>
-#include <functional>
 #include <mutex>
 #include <optional>
-#include <vector>
 
 namespace Babylon::Integrations
 {
@@ -73,17 +73,23 @@ namespace Babylon::Integrations
         std::atomic<bool> m_isXrActive{false};
 #endif
 
-        // ----- Pre-init queueing ------
+        // ----- Pre-init queueing -----
         //
-        // Before the first View::Attach completes engine initialization
-        // on the JS thread, LoadScript / Eval / RunOnJsThread calls are
-        // recorded here and flushed (in submission order) inside the
-        // first-Attach init lambda after all plugin Initialize() calls.
-        // After flush, m_initialized is true and subsequent calls
-        // dispatch directly through ScriptLoader / AppRuntime.
-        bool m_initialized{false};
-        std::vector<std::function<void()>> m_pending;
-        std::mutex m_pendingMutex;
+        // Host calls to LoadScript / Eval / RunOnJsThread are chained
+        // off `m_initTcs.as_task().then(inline_scheduler, ...)`. While
+        // the TCS is uncompleted (i.e. the first View::Attach hasn't
+        // finished plugin initialization on the JS thread), continuations
+        // sit on the task payload. The first-Attach init lambda calls
+        // `m_initTcs.complete()` after all plugins are initialized,
+        // which fires every queued continuation in registration order
+        // on the JS thread. After completion, subsequent
+        // `.then(inline_scheduler, ...)` calls run their callable
+        // synchronously on the calling thread, which then submits to
+        // ScriptLoader directly.
+        //
+        // Host-side serialization is the host's responsibility, matching
+        // ScriptLoader's existing contract; we do not add an outer mutex.
+        arcana::task_completion_source<void, std::exception_ptr> m_initTcs;
 
         // Reference-counted Suspend/Resume.
         int m_suspendCount{0};
