@@ -3,6 +3,8 @@
 
 #include "App.h"
 #include <Shared/AppContext.h>
+#include <Shared/CommandLine.h>
+#include <Shared/Diagnostics.h>
 #include <Babylon/Plugins/TestUtils.h>
 #include <Windows.h>
 #include <Windowsx.h>
@@ -22,6 +24,7 @@ WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 std::optional<AppContext> appContext{};
 bool minimized{false};
 int buttonRefCount{0};
+PlaygroundOptions g_options{};
 
 // Forward declarations of functions included in this code module:
 ATOM MyRegisterClass(HINSTANCE hInstance);
@@ -44,7 +47,7 @@ namespace
         return {url};
     }
 
-    std::vector<std::string> GetCommandLineArguments()
+    std::vector<std::string> GetCommandLineArgumentsW()
     {
         int argc;
         auto argv = CommandLineToArgvW(GetCommandLineW(), &argc);
@@ -52,7 +55,7 @@ namespace
         std::vector<std::string> arguments{};
         arguments.reserve(argc);
 
-        for (int idx = 1; idx < argc; idx++)
+        for (int idx = 0; idx < argc; idx++)
         {
             std::wstring hstr{argv[idx]};
             int bytesRequired = ::WideCharToMultiByte(CP_UTF8, 0, &hstr[0], static_cast<int>(hstr.size()), nullptr, 0, nullptr, nullptr);
@@ -88,20 +91,30 @@ namespace
             width,
             height,
             [](const char* message) {
-                std::ostringstream ss{};
-                ss << message << std::endl;
-                OutputDebugStringA(ss.str().data());
-                std::cout << ss.str();
-            });
+                // Normalize trailing newline (bgfx traceVargs adds one;
+                // others don't) so we don't produce blank lines.
+                std::string text{message};
+                while (!text.empty() && (text.back() == '\n' || text.back() == '\r'))
+                {
+                    text.pop_back();
+                }
+                text.push_back('\n');
+                OutputDebugStringA(text.c_str());
+                // Use C stdio (unbuffered, set in wWinMain) so each line
+                // reaches the pipe even when the process exits via
+                // std::quick_exit / TestUtils.exit() without unwinding.
+                std::fputs(text.c_str(), stdout);
+            },
+            AppContext::AdditionalInitCallback{},
+            &g_options);
 
-        std::vector<std::string> args = GetCommandLineArguments();
-        if (args.empty())
+        if (g_options.Scripts.empty())
         {
             appContext->ScriptLoader().LoadScript("app:///Scripts/experience.js");
         }
         else
         {
-            for (const auto& arg : args)
+            for (const auto& arg : g_options.Scripts)
             {
                 appContext->ScriptLoader().LoadScript(GetUrlFromPath(arg));
             }
@@ -127,14 +140,66 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
+    // SUBSYSTEM:CONSOLE (see CMakeLists.txt) gives us inherited stdio.
+    // UTF-8 output so callstacks / non-ASCII filenames survive.
+    ::SetConsoleOutputCP(CP_UTF8);
+
+    // Unbuffered stdout/stderr so the tail of the log reaches the pipe even
+    // when we exit via std::quick_exit / _Exit / TestUtils.exit(). MSVC's
+    // CRT aliases _IOLBF to _IOFBF, so _IONBF is the only correct choice.
+    std::setvbuf(stdout, nullptr, _IONBF, 0);
+    std::setvbuf(stderr, nullptr, _IONBF, 0);
+
+    // Hook crash + assert handlers as early as possible.
+    Diagnostics::Initialize();
+
+    // Route TestUtils.exit(code) to the finish line. Fires on the JS thread
+    // before the platform's default exit (quick_exit / PostMessage).
+    Babylon::Plugins::TestUtils::SetExitCallback([](int code) {
+        Diagnostics::SetExitCode(code);
+        Diagnostics::PrintFinishLine();
+    });
+
+    // Parse argv before creating any window so --help / --list don't pop one.
+    auto args = GetCommandLineArgumentsW();
+    std::vector<const char*> argv;
+    argv.reserve(args.size());
+    for (const auto& a : args)
+    {
+        argv.push_back(a.c_str());
+    }
+    g_options = CommandLine::Parse(static_cast<int>(argv.size()), argv.data());
+
+    if (g_options.ParseError)
+    {
+        std::fprintf(stderr, "Error: %s\n\n", g_options.ErrorMessage.c_str());
+        CommandLine::PrintUsage(argv.empty() ? nullptr : argv[0]);
+        Diagnostics::SetExitCode(2);
+        return 2;
+    }
+
+    if (g_options.ShowHelp)
+    {
+        CommandLine::PrintUsage(argv.empty() ? nullptr : argv[0]);
+        Diagnostics::SetExitCode(0);
+        return 0;
+    }
+
+    // Preload renderdoc.dll (if requested) BEFORE bgfx::init so bgfx adopts
+    // it via findModule("renderdoc.dll"). Prints version info too.
+    Diagnostics::SetupRenderDoc(
+        g_options.RenderDocDll.has_value() ? g_options.RenderDocDll->c_str() : nullptr,
+        g_options.CaptureFrame.has_value());
+
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_PLAYGROUNDWIN32, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
-    if (!InitInstance(hInstance, nCmdShow))
+    if (!InitInstance(hInstance, g_options.Headless ? SW_HIDE : nCmdShow))
     {
+        Diagnostics::SetExitCode(FALSE);
         return FALSE;
     }
 
@@ -174,6 +239,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
     }
 
+    Diagnostics::SetExitCode(static_cast<int>(msg.wParam));
     return (int)msg.wParam;
 }
 

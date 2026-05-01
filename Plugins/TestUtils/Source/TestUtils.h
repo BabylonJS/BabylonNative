@@ -17,6 +17,10 @@
 
 namespace Babylon::Plugins::Internal
 {
+    // Defined in TestUtils.cpp. Invokes the optional host callback set via
+    // Babylon::Plugins::TestUtils::SetExitCallback(); no-op if unset.
+    void InvokeExitCallback(int exitCode);
+
     class TestUtils final : public Napi::ObjectWrap<TestUtils>
     {
     public:
@@ -40,6 +44,7 @@ namespace Babylon::Plugins::Internal
                     ParentT::InstanceMethod("getOutputDirectory", &TestUtils::GetOutputDirectory),
                     ParentT::InstanceMethod("getFrameBufferData", &TestUtils::GetFrameBufferData),
                     ParentT::InstanceMethod("captureNextFrame", &TestUtils::CaptureNextFrame),
+                    ParentT::InstanceMethod("referenceImageExists", &TestUtils::ReferenceImageExists),
                 },
                 &window);
 
@@ -73,6 +78,11 @@ namespace Babylon::Plugins::Internal
         Napi::Value GetImageData(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
         void CaptureNextFrame(const Napi::CallbackInfo& info);
+        // Returns true if a reference image with the given filename exists in
+        // ReferenceImages/ next to the executable (matching urllib's app:
+        // resolution on Win32). Win32 performs the real check; other
+        // platforms return true.
+        Napi::Value ReferenceImageExists(const Napi::CallbackInfo& info);
 
         JsRuntime& m_runtime;
         Graphics::DeviceContext& m_deviceContext;

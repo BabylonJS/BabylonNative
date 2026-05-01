@@ -19,6 +19,10 @@ namespace Babylon::Plugins::Internal
     void TestUtils::Exit(const Napi::CallbackInfo& info)
     {
         auto exitCode = info[0].As<Napi::Number>().Int32Value();
+
+        // Notify the host before terminating.
+        InvokeExitCallback(exitCode);
+
         if (exitCode != 0)
         {
             std::quick_exit(exitCode);
@@ -53,5 +57,15 @@ namespace Babylon::Plugins::Internal
     {
         auto path = GetModulePath().parent_path().generic_string();
         return Napi::Value::From(info.Env(), path);
+    }
+
+    Napi::Value TestUtils::ReferenceImageExists(const Napi::CallbackInfo& info)
+    {
+        auto name = info[0].As<Napi::String>().Utf8Value();
+        // Mirrors urllib's app: resolution: app:/// resolves to the exe dir.
+        auto path = GetModulePath() / "ReferenceImages" / name;
+        std::error_code ec;
+        const bool exists = std::filesystem::exists(path, ec);
+        return Napi::Boolean::New(info.Env(), exists && !ec);
     }
 }
