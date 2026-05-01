@@ -102,8 +102,8 @@ file(TO_CMAKE_PATH "${BGFX_DIR}" BGFX_DIR)
 # sets project version from api ver / git rev
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.cmake)
 if(BGFX_BUILD_TOOLS AND BGFX_CUSTOM_TARGETS)
-	add_custom_target(tools)
-	set_target_properties(tools PROPERTIES FOLDER "bgfx/tools")
+	add_custom_target(bgfx-tools)
+	set_target_properties(bgfx-tools PROPERTIES FOLDER "bgfx/tools")
 endif()
 
 if(BGFX_INSTALL)

@@ -25,7 +25,7 @@ set_target_properties(
 if(BGFX_BUILD_TOOLS_BIN2C)
 	add_executable(bgfx::bin2c ALIAS bin2c)
 	if(BGFX_CUSTOM_TARGETS)
-		add_dependencies(tools bin2c)
+		add_dependencies(bgfx-tools bin2c)
 	endif()
 endif()
 

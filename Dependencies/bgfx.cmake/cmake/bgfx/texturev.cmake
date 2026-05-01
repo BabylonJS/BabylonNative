@@ -26,7 +26,7 @@ set_target_properties(
 )
 
 if(BGFX_BUILD_TOOLS_TEXTURE AND BGFX_CUSTOM_TARGETS)
-	add_dependencies(tools texturev)
+	add_dependencies(bgfx-tools texturev)
 endif()
 
 if(ANDROID)

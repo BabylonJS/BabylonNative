@@ -228,7 +228,7 @@ function(add_example ARG_NAME)
 			set_target_properties(example-${ARG_NAME} PROPERTIES LINK_FLAGS "/ENTRY:\"mainCRTStartup\"")
 		endif()
 		if(BGFX_CUSTOM_TARGETS)
-			add_dependencies(examples example-${ARG_NAME})
+			add_dependencies(bgfx-examples example-${ARG_NAME})
 		endif()
 		if(IOS)
 			set_target_properties(
@@ -275,8 +275,8 @@ endfunction()
 
 # Build all examples target
 if(BGFX_CUSTOM_TARGETS)
-	add_custom_target(examples)
-	set_target_properties(examples PROPERTIES FOLDER "bgfx/examples")
+	add_custom_target(bgfx-examples)
+	set_target_properties(bgfx-examples PROPERTIES FOLDER "bgfx/examples")
 endif()
 
 # Add common library for examples

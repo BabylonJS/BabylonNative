@@ -68,7 +68,7 @@ set_target_properties(
 if(BGFX_BUILD_TOOLS_SHADER)
 	add_executable(bgfx::shaderc ALIAS shaderc)
 	if(BGFX_CUSTOM_TARGETS)
-		add_dependencies(tools shaderc)
+		add_dependencies(bgfx-tools shaderc)
 	endif()
 endif()
 
