@@ -85,7 +85,7 @@ jobs:
       # Build the examples which are excluded from all
       - name: Build examples
         run: |
-          cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target examples
+          cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target bgfx-examples
 
   cross-android:
     name: cross-android
@@ -122,4 +122,4 @@ jobs:
       # Build the examples which are excluded from all
       - name: Build examples
         run: |
-          cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target examples
+          cmake --build "${{ env.CMAKE_BUILD_DIR }}" --target bgfx-examples
