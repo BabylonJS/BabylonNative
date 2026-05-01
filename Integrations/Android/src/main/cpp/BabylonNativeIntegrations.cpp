@@ -201,6 +201,28 @@ Java_com_babylonjs_integrations_BabylonNative_runtimeIsSuspended(JNIEnv*, jclass
     return AsRuntime(handle)->IsSuspended() ? JNI_TRUE : JNI_FALSE;
 }
 
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
+
+JNIEXPORT void JNICALL
+Java_com_babylonjs_integrations_BabylonNative_runtimeSetXrSurface(
+    JNIEnv* env, jclass, jlong handle, jobject surface)
+{
+    ANativeWindow* window{nullptr};
+    if (surface != nullptr)
+    {
+        window = ANativeWindow_fromSurface(env, surface);
+    }
+    AsRuntime(handle)->SetXrWindow(window);
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_babylonjs_integrations_BabylonNative_runtimeIsXrActive(JNIEnv*, jclass, jlong handle)
+{
+    return AsRuntime(handle)->IsXrActive() ? JNI_TRUE : JNI_FALSE;
+}
+
+#endif // BABYLON_NATIVE_PLUGIN_NATIVEXR
+
 // =====================================================================
 // View
 // =====================================================================

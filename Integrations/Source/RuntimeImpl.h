@@ -15,6 +15,10 @@
 #include <Babylon/Plugins/NativeInput.h>
 #endif
 
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
+#include <Babylon/Plugins/NativeXr.h>
+#endif
+
 #include <atomic>
 #include <functional>
 #include <mutex>
@@ -53,6 +57,20 @@ namespace Babylon::Integrations
         // Owned by the JS world (returned by NativeInput::CreateForJavaScript).
         // We just keep a pointer for forwarding View::OnPointer* calls.
         Babylon::Plugins::NativeInput* m_input{nullptr};
+#endif
+
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
+        // NativeXr is initialized during the first View::Attach (it
+        // needs a Napi::Env). Until then, m_xrWindow holds the host's
+        // most recent SetXrWindow value so we can apply it as soon as
+        // the plugin is alive. m_xrMutex serializes both fields plus
+        // the optional itself. m_isXrActive is updated from the JS
+        // thread by NativeXr's session-state callback and read from
+        // any thread by IsXrActive() polling.
+        std::optional<Babylon::Plugins::NativeXr> m_nativeXr;
+        void* m_xrWindow{nullptr};
+        mutable std::mutex m_xrMutex;
+        std::atomic<bool> m_isXrActive{false};
 #endif
 
         // ----- Pre-init queueing ------

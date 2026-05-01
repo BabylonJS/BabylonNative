@@ -82,12 +82,15 @@ if(BABYLON_NATIVE_PLUGIN_NATIVETRACING)
     target_link_libraries(Integrations PRIVATE NativeTracing)
 endif()
 
-if(BABYLON_NATIVE_PLUGIN_NATIVEXR)
-    # Currently exposes no public API surface in the Integrations layer
-    # (XR-specific helpers are a future addition — see SimplifiedAPI.md
-    # §7 Risks). The flag is still propagated as a compile definition so
-    # future XR-gated methods on Runtime/View are picked up consistently.
+if(BABYLON_NATIVE_PLUGIN_NATIVEXR AND TARGET NativeXr)
+    # Public surface: Runtime::SetXrWindow / IsXrActive when this flag
+    # is set. RuntimeImpl.h includes <Babylon/Plugins/NativeXr.h>, but
+    # that's an internal header so the dependency stays PRIVATE here.
+    # NativeXr is only compiled on Android/iOS (see Plugins/CMakeLists.txt),
+    # so we additionally check `TARGET NativeXr` to skip XR support on
+    # platforms where the plugin isn't built even if the flag is ON.
     target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_PLUGIN_NATIVEXR=1)
+    target_link_libraries(Integrations PRIVATE NativeXr)
 endif()
 
 if(BABYLON_NATIVE_PLUGIN_SHADERCACHE)

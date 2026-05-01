@@ -88,6 +88,29 @@ namespace Babylon::Integrations
         void Resume();
         bool IsSuspended() const;
 
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
+        // ----- XR session control -----
+        //
+        // Set the platform window XR will render into. The `void*`
+        // type carries:
+        //   Android : ANativeWindow*  (typically from a separate
+        //             transparent SurfaceView overlay)
+        //   Apple   : CAMetalLayer* / MTKView* (a separate Metal layer
+        //             distinct from the main View's layer)
+        //
+        // Pass nullptr to clear the XR surface. Safe to call before
+        // the first `View::Attach`; the supplied window is applied
+        // when NativeXr finishes initializing during that first Attach.
+        // Safe to call from any thread.
+        void SetXrWindow(void* nativeWindow);
+
+        // True while an XR session is active. Updated from the JS
+        // thread by NativeXr's internal session-state callback;
+        // atomic so it can be polled from any thread (e.g. a host's
+        // draw callback choosing between rendering targets).
+        bool IsXrActive() const;
+#endif
+
     private:
         friend class View;
 

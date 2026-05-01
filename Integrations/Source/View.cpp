@@ -151,6 +151,23 @@ namespace Babylon::Integrations
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
             implPtr->m_input = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 #endif
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
+            // Initialize NativeXr; apply any pending xr window the host
+            // may have already supplied via Runtime::SetXrWindow; wire
+            // the session-state callback to keep m_isXrActive in sync.
+            {
+                std::lock_guard<std::mutex> xrLock{implPtr->m_xrMutex};
+                implPtr->m_nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
+                if (implPtr->m_xrWindow)
+                {
+                    implPtr->m_nativeXr->UpdateWindow(implPtr->m_xrWindow);
+                }
+                implPtr->m_nativeXr->SetSessionStateChangedCallback(
+                    [implPtr](bool isActive) {
+                        implPtr->m_isXrActive.store(isActive, std::memory_order_relaxed);
+                    });
+            }
+#endif
 #if BABYLON_NATIVE_PLUGIN_TESTUTILS
             Babylon::Plugins::TestUtils::Initialize(env, window);
 #else

@@ -94,6 +94,13 @@ namespace Babylon::Integrations
         m_input = nullptr;
 #endif
 
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
+        // NativeXr holds JS-thread-bound resources and a strong ref to
+        // the Napi::Env it was initialized with. Destroy it before the
+        // AppRuntime joins the JS thread; same reason as ScriptLoader.
+        m_nativeXr.reset();
+#endif
+
         m_appRuntime.reset();
 
 #if BABYLON_NATIVE_PLUGIN_SHADERCACHE
@@ -210,4 +217,24 @@ namespace Babylon::Integrations
         std::lock_guard<std::mutex> lock{m_impl->m_suspendMutex};
         return m_impl->m_suspendCount > 0;
     }
+
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
+    void Runtime::SetXrWindow(void* nativeWindow)
+    {
+        std::lock_guard<std::mutex> lock{m_impl->m_xrMutex};
+        m_impl->m_xrWindow = nativeWindow;
+        if (m_impl->m_nativeXr)
+        {
+            m_impl->m_nativeXr->UpdateWindow(nativeWindow);
+        }
+        // If NativeXr isn't initialized yet (no View::Attach has
+        // happened), the value is stashed in m_xrWindow and applied
+        // by the first-Attach init lambda when it constructs NativeXr.
+    }
+
+    bool Runtime::IsXrActive() const
+    {
+        return m_impl->m_isXrActive.load(std::memory_order_relaxed);
+    }
+#endif
 }
