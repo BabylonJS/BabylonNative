@@ -29,24 +29,27 @@ namespace Babylon::Graphics
         bgfx::TextureFormat::Enum Format{};
     };
 
-    // FrameCompletionScope is an RAII guard that keeps a frame "open" on the JS thread.
-    // While any scope is alive, FinishRenderingCurrentFrame() on the main thread will
-    // block — it cannot call bgfx::frame() until all scopes are destroyed.
+    // FrameCompletionScope is an RAII guard that prevents the render thread from
+    // closing a bgfx frame while JS-thread work is still in flight. While any
+    // scope is alive, FinishRenderingCurrentFrame() blocks before bgfx::frame()
+    // — so all encoder commands recorded while a scope was held land in the
+    // same bgfx frame, never split across two.
     //
-    // This prevents a race where the main thread submits a bgfx frame while the JS
-    // thread is still recording encoder commands (which would cause bgfx deadlocks
-    // or lost draw calls).
+    // Acquisition blocks if the gate is closed (m_frameBlocked == true), so a
+    // JS thread that picks up work between frames waits for the next Start
+    // before proceeding.
     //
-    // Three usage patterns:
-    //   1. RAF scheduling: scope acquired on main thread during StartRenderingCurrentFrame,
-    //      transferred to JS thread, released after RAF callbacks complete + one extra
-    //      dispatch cycle (to cover GC-triggered resource destruction).
-    //   2. NativeEngine::GetEncoder(): scope acquired lazily when JS code uses the encoder
-    //      outside RAF (e.g., async texture loads, LOD switches). Released on next dispatch.
-    //   3. Canvas::Flush(): stack-scoped for the duration of nanovg rendering.
-    //
-    // Construction blocks if m_frameBlocked is true (frame submission in progress).
-    // Destruction decrements counter and wakes main thread via condition variable.
+    // Two scoping patterns are used:
+    //   1. JS-frame scoped: capture the scope into an m_runtime.Dispatch lambda
+    //      so it survives until the JS-thread queue services the next
+    //      continuation. Use this when subsequent work in the same JS task may
+    //      also touch bgfx (chained submitCommands, RAF callbacks, scene
+    //      cleanup, etc.). NativeEngine::SubmitCommands and
+    //      ScheduleRequestAnimationFrameCallbacks both do this.
+    //   2. Block scoped: hold the scope on the stack across a single self-
+    //      contained bgfx phase. Used for one-shot operations like
+    //      Canvas::Flush() called outside an active frame, and
+    //      ReadTextureAsync.
     class FrameCompletionScope final
     {
     public:
@@ -82,8 +85,12 @@ namespace Babylon::Graphics
         // Use this to schedule work (e.g., requestAnimationFrame callbacks) that should run each frame.
         continuation_scheduler<>& FrameStartScheduler();
 
-        // Acquire a scope that prevents FinishRenderingCurrentFrame from completing.
-        // The scope must be held while JS frame callbacks are running.
+        // Acquire a scope that prevents FinishRenderingCurrentFrame from
+        // completing until the scope is destroyed. JS-thread callers that
+        // need coverage across the whole current JS task should capture the
+        // scope into an m_runtime.Dispatch lambda; callers needing only a
+        // single phase can hold it stack-scoped. See the class comment on
+        // FrameCompletionScope above for the two patterns.
         FrameCompletionScope AcquireFrameCompletionScope();
 
         // Active encoder for the current frame. Managed by DeviceImpl in
