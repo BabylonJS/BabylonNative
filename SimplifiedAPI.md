@@ -141,11 +141,18 @@ exists.
 namespace Babylon::Integrations
 {
     // Platform-surface handle. Populated by the platform interop layer
-    // from whatever native object the host's UI framework provides
-    // (HWND, ANativeWindow*, CAMetalLayer*, …). The interop layer is
-    // also responsible for any unit conversion (see "Pixel units" below).
+    // from whatever native object the host's UI framework provides.
+    // The interop layer is also responsible for any unit conversion
+    // (see "Pixel units" below).
+    //
+    // `nativeWindow` is `Babylon::Graphics::WindowT`, the same per-platform
+    // typedef the Graphics layer already uses (HWND on Win32,
+    // ANativeWindow* on Android, CA::MetalLayer* on Apple,
+    // X11 `Window` on Linux, winrt::IInspectable on UWP). Using the
+    // typed handle avoids a round-trip through `void*` and gives
+    // hosts compile-time safety.
     struct ViewDescriptor {
-        void* nativeWindow;        // HWND / ANativeWindow* / CAMetalLayer* / ...
+        Babylon::Graphics::WindowT nativeWindow{};
         uint32_t width;            // logical pixels (see "Pixel units")
         uint32_t height;           // logical pixels (see "Pixel units")
         float    devicePixelRatio = 1.0f;

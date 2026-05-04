@@ -26,6 +26,7 @@
 
 #include <AndroidExtensions/Globals.h>
 
+#include <android/log.h>
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
 
@@ -37,12 +38,26 @@
 
 namespace
 {
+    using Babylon::Integrations::LogLevel;
     using Babylon::Integrations::Runtime;
+    using Babylon::Integrations::RuntimeOptions;
     using Babylon::Integrations::View;
     using Babylon::Integrations::ViewDescriptor;
 
     Runtime* AsRuntime(jlong handle) { return reinterpret_cast<Runtime*>(handle); }
     View* AsView(jlong handle) { return reinterpret_cast<View*>(handle); }
+
+    int LogPriorityFor(LogLevel level)
+    {
+        switch (level)
+        {
+            case LogLevel::Log:   return ANDROID_LOG_INFO;
+            case LogLevel::Warn:  return ANDROID_LOG_WARN;
+            case LogLevel::Error: return ANDROID_LOG_ERROR;
+            case LogLevel::Fatal: return ANDROID_LOG_FATAL;
+        }
+        return ANDROID_LOG_INFO;
+    }
 
     // Convert a jstring to std::string. Returns empty string if `jstr`
     // is null or UTF lookup fails.
@@ -155,12 +170,24 @@ Java_com_babylonjs_integrations_BabylonNative_androidGlobalRequestPermissionsRes
 // =====================================================================
 
 JNIEXPORT jlong JNICALL
-Java_com_babylonjs_integrations_BabylonNative_runtimeCreate(JNIEnv*, jclass)
+Java_com_babylonjs_integrations_BabylonNative_runtimeCreate(JNIEnv*, jclass, jboolean enableDebugger)
 {
+    // Default Android consumers want logcat output; route Console
+    // polyfill / DebugTrace / uncaught JS exceptions there. Hosts
+    // that need different behavior can construct a Runtime in C++
+    // directly with their own RuntimeOptions.
+    RuntimeOptions options{};
+    options.enableDebugger = (enableDebugger == JNI_TRUE);
+    options.log = [](LogLevel level, std::string_view message) {
+        // logcat takes a NUL-terminated C string; copy the view.
+        std::string text{message};
+        __android_log_write(LogPriorityFor(level), "BabylonNative", text.c_str());
+    };
+
     // unique_ptr::release() returns the raw pointer and gives up
     // ownership *without* deleting; the JVM side now owns it via the
     // returned jlong handle and must call runtimeDestroy() to free it.
-    return reinterpret_cast<jlong>(Runtime::Create().release());
+    return reinterpret_cast<jlong>(Runtime::Create(std::move(options)).release());
 }
 
 JNIEXPORT void JNICALL
