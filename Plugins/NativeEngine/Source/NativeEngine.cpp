@@ -2174,6 +2174,14 @@ namespace Babylon
         {
             throw Napi::Error::New(info.Env(), exception);
         }
+
+        // Defer scope release to the next JS-thread dispatch cycle so the
+        // frame stays open across the rest of the current JS frame, not just
+        // across this command stream's processing. Any continuation work in
+        // the same JS frame (further submitCommands calls, immediate promise
+        // resolutions touching bgfx, etc.) sees count > 0 and remains
+        // protected from a concurrent FinishRenderingCurrentFrame.
+        m_runtime.Dispatch([scope = std::move(scope)](auto) {});
     }
 
     void NativeEngine::PopulateFrameStats(const Napi::CallbackInfo& info)
