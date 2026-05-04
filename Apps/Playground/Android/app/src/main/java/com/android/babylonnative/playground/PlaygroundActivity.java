@@ -1,23 +1,27 @@
 package com.android.babylonnative.playground;
 
-import android.Manifest;
 import android.app.Activity;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.view.View;
 
 import com.babylonjs.integrations.BabylonNative;
 import com.library.babylonnative.BabylonView;
 
-public class PlaygroundActivity extends Activity implements BabylonView.ViewDelegate {
+public class PlaygroundActivity extends Activity {
     /** {@link BabylonNative#androidGlobalInitialize} is process-wide; only call it once. */
     private static boolean sGlobalInitDone = false;
 
-    BabylonView mView;
+    /**
+     * Native helper bridging to {@code Apps/Playground/Shared/PlaygroundScripts.cpp},
+     * which holds the Babylon.js bootstrap script list shared with the
+     * other Playground hosts (Win32, iOS, macOS, …). Implemented in
+     * {@code Apps/Playground/Android/BabylonNative/src/main/cpp/PlaygroundJNI.cpp}.
+     */
+    private static native void loadBootstrapScripts(long runtimeHandle);
 
-    // Activity life
+    private long mRuntimeHandle = 0;
+    private BabylonView mView;
+
     @Override
     protected void onCreate(Bundle icicle) {
         super.onCreate(icicle);
@@ -32,7 +36,20 @@ public class PlaygroundActivity extends Activity implements BabylonView.ViewDele
         }
         BabylonNative.androidGlobalSetCurrentActivity(this);
 
-        mView = new BabylonView(getApplication(), this);
+        // Owner of the Runtime lifetime: created here, destroyed in
+        // onDestroy. The View only borrows the handle for its surface
+        // bindings.
+        mRuntimeHandle = BabylonNative.runtimeCreate(/*enableDebugger*/ true);
+
+        // Queue the Babylon.js bootstrap scripts, then the playground
+        // experience script. Both happen synchronously from this thread;
+        // the Runtime queues them internally and runs them after the
+        // first View::Attach completes engine initialization on the JS
+        // thread, in submission order.
+        loadBootstrapScripts(mRuntimeHandle);
+        BabylonNative.runtimeLoadScript(mRuntimeHandle, "app:///Scripts/experience.js");
+
+        mView = new BabylonView(getApplication(), mRuntimeHandle);
         setContentView(mView);
     }
 
@@ -58,6 +75,17 @@ public class PlaygroundActivity extends Activity implements BabylonView.ViewDele
     }
 
     @Override
+    protected void onDestroy() {
+        // Surface lifecycle (view detach) has already fired by the time
+        // we get here; just release the Runtime.
+        if (mRuntimeHandle != 0) {
+            BabylonNative.runtimeDestroy(mRuntimeHandle);
+            mRuntimeHandle = 0;
+        }
+        super.onDestroy();
+    }
+
+    @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         BabylonNative.androidGlobalRequestPermissionsResult(requestCode, permissions, results);
     }
@@ -68,10 +96,5 @@ public class PlaygroundActivity extends Activity implements BabylonView.ViewDele
         if (hasFocus && mView.getVisibility() == View.GONE) {
             mView.setVisibility(View.VISIBLE);
         }
-    }
-
-    @Override
-    public void onViewReady() {
-        mView.loadScript("app:///Scripts/experience.js");
     }
 }

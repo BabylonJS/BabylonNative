@@ -23,7 +23,7 @@ extern "C"
 {
 
 JNIEXPORT void JNICALL
-Java_com_library_babylonnative_BabylonView_loadBootstrapScripts(
+Java_com_android_babylonnative_playground_PlaygroundActivity_loadBootstrapScripts(
     JNIEnv*, jclass, jlong runtimeHandle)
 {
     auto* runtime = Babylon::Integrations::Android::RuntimeFromHandle(runtimeHandle);
@@ -33,7 +33,7 @@ Java_com_library_babylonnative_BabylonView_loadBootstrapScripts(
     }
 
     // Process-wide one-shot Playground setup (PerfTrace level, etc.).
-    // Re-calling is idempotent; safe even if multiple BabylonView
+    // Re-calling is idempotent; safe even if multiple PlaygroundActivity
     // instances queue bootstrap scripts.
     Playground::Initialize();
 
