@@ -1227,6 +1227,33 @@ runtime->Resume();    // dialog closed            -> count = 1, still suspended
 runtime->Resume();    // app foregrounded         -> count = 0, running
 ```
 
+### Per-platform Activity-lifecycle wiring
+
+Some platforms have a well-defined process-wide "the app is going to
+the background" signal; some don't. Where one exists, the platform
+interop layer auto-subscribes each Runtime to it on construction
+(via `Suspend` / `Resume`); where it doesn't, the host wires it up
+manually (or doesn't bother). This avoids forcing every host to
+re-implement the same boilerplate while keeping the cross-platform
+`Runtime::Suspend / Resume` available everywhere for hosts that want
+to wire it themselves.
+
+| Platform | Process-wide signal | Where it's wired |
+|---|---|---|
+| Android | `android::global::AddPauseCallback` / `AddResumeCallback`, fired by the host's Activity via `androidGlobalPause` / `androidGlobalResume` | Auto-subscribed inside `runtimeCreate` in `Integrations/Android/.../BabylonNativeIntegrations.cpp`. Tickets are dropped when the Runtime is destroyed. |
+| iOS / visionOS | `UIApplicationDidEnterBackgroundNotification` / `WillEnterForegroundNotification` (`NSNotificationCenter`) | Apple interop layer should subscribe in `BNRuntime`'s init; remove observers in `dealloc`. (Pending — wire up during the iOS migration.) |
+| UWP | `CoreApplication::Suspending` / `Resuming` | Host typically owns a `CoreApplication`-scoped object directly; interop layer can either auto-subscribe or document the pattern. (Pending — wire up during the UWP migration.) |
+| macOS | No clear "process backgrounded" notification (apps generally keep running). NSWorkspace sleep notifications exist but aren't usually what hosts want. | Don't auto-subscribe. Hosts call `Suspend / Resume` themselves if they need it. |
+| Win32 | No process-wide signal — only per-HWND `WM_ACTIVATE`. | Don't auto-subscribe. Hosts call `Suspend / Resume` from `WM_ACTIVATE`/etc. |
+| Linux / X11 | None standard. | Don't auto-subscribe. Host policy. |
+
+The auto-subscribe mechanism is **opaque** to hosts — they don't see the
+ticket plumbing. Whether or not it's wired on a given platform, the
+`Runtime::Suspend / Resume` C++ API is identical, so a host that wants
+finer-grained control (e.g. suspending while a modal dialog is up) gets
+the same code on every platform. Reference counting (above) makes the
+manual and automatic paths compose cleanly.
+
 ## 6. Implementation Phases
 
 ### Phase 1 — Shared C++ facade (no new functionality)
