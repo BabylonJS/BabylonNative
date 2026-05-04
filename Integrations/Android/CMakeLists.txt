@@ -15,11 +15,14 @@ if(NOT ANDROID)
 endif()
 
 set(SOURCES
+    "Include/Babylon/Integrations/Android/RuntimeHandle.h"
     "src/main/cpp/BabylonNativeIntegrations.cpp")
 
 add_library(BabylonNativeIntegrations SHARED ${SOURCES})
 
 warnings_as_errors(BabylonNativeIntegrations)
+
+target_include_directories(BabylonNativeIntegrations PUBLIC "Include")
 
 target_link_libraries(BabylonNativeIntegrations
     PRIVATE Integrations

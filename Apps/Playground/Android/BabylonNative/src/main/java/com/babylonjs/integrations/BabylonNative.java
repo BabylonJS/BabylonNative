@@ -61,11 +61,11 @@ public final class BabylonNative {
 
     public static native void runtimeEval(long handle, String source, String sourceUrl);
 
-    public static native void runtimeSuspend(long handle);
-
-    public static native void runtimeResume(long handle);
-
-    public static native boolean runtimeIsSuspended(long handle);
+    // Note: there is intentionally no per-Runtime Suspend/Resume on the
+    // Java surface. Each Runtime auto-subscribes to androidGlobalPause /
+    // androidGlobalResume in runtimeCreate, so the host Activity calls
+    // those once per state change and every Runtime in the process
+    // reacts. Hosts needing finer-grained control should use the C++ API.
 
     // Compiled into the native library only when BABYLON_NATIVE_PLUGIN_NATIVEXR
     // is enabled. Calling these without that flag will produce an UnsatisfiedLinkError.

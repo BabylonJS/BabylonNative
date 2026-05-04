@@ -13,6 +13,7 @@
 // duplicated on the Java side.
 
 #include <Babylon/Integrations/Runtime.h>
+#include <Babylon/Integrations/Android/RuntimeHandle.h>
 
 #include <Shared/PlaygroundScripts.h>
 
@@ -25,11 +26,11 @@ JNIEXPORT void JNICALL
 Java_com_library_babylonnative_BabylonView_loadBootstrapScripts(
     JNIEnv*, jclass, jlong runtimeHandle)
 {
-    if (runtimeHandle == 0)
+    auto* runtime = Babylon::Integrations::Android::RuntimeFromHandle(runtimeHandle);
+    if (runtime == nullptr)
     {
         return;
     }
-    auto* runtime = reinterpret_cast<Babylon::Integrations::Runtime*>(runtimeHandle);
 
     // Process-wide one-shot Playground setup (PerfTrace level, etc.).
     // Re-calling is idempotent; safe even if multiple BabylonView
@@ -44,3 +45,4 @@ Java_com_library_babylonnative_BabylonView_loadBootstrapScripts(
 }
 
 } // extern "C"
+

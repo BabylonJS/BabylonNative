@@ -67,13 +67,7 @@ namespace Babylon::Integrations
         //   2. The Canvas polyfill and NativeInput pointer are referenced
         //      from JS-thread state; clear them before joining the JS
         //      thread, but only after ScriptLoader has drained.
-        //   3. ~AppRuntime joins the JS thread. After it returns, no
-        //      JS-thread task is running. If the first-Attach init
-        //      lambda was queued but not yet run when ~Impl began, it
-        //      will run during the AppRuntime drain (if AppRuntime
-        //      drains its queue before joining); m_canvas / m_input
-        //      etc. may then be re-populated and discarded when ~Impl
-        //      itself destroys the optionals.
+        //   3. ~AppRuntime joins the JS thread.
         //   4. ShaderCache::Disable() balances the Enable() that
         //      View::Attach calls on first attach.
         //   5. Device + DeviceUpdate destroyed last because the JS

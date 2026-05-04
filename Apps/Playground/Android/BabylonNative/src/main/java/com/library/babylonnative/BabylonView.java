@@ -1,6 +1,5 @@
 package com.library.babylonnative;
 
-import android.app.Activity;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.view.MotionEvent;
@@ -12,10 +11,17 @@ import android.widget.FrameLayout;
 import com.babylonjs.integrations.BabylonNative;
 
 /**
- * Playground View built on top of {@link BabylonNative}. Holds a single
- * Runtime + View handle pair for the lifetime of this widget; reattaches
- * the View on every {@code surfaceChanged} (Android may hand us a new
- * surface after a configuration change or visibility transition).
+ * Playground View built on top of {@link BabylonNative}. Owns one
+ * Runtime + View handle pair for its lifetime.
+ *
+ * <p>Activity lifecycle: the host Activity is responsible for the
+ * process-wide {@code androidGlobalInitialize}, {@code SetCurrentActivity},
+ * {@code Pause}/{@code Resume}, and {@code RequestPermissionsResult}
+ * notifications (see {@code PlaygroundActivity.java}). The Runtime
+ * automatically subscribes to {@code androidGlobalPause / Resume} when
+ * created, so the host Activity does not need to invoke any per-view
+ * pause/resume method — telling the JNI layer once is enough for every
+ * Runtime in the process.
  */
 public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2, View.OnTouchListener {
     private static final FrameLayout.LayoutParams childViewLayoutParams =
@@ -31,12 +37,8 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
      */
     private static native void loadBootstrapScripts(long runtimeHandle);
 
-    /** {@link BabylonNative#androidGlobalInitialize(Context)} is process-wide; only call it once. */
-    private static boolean sGlobalInitDone = false;
-
     private boolean mViewReady = false;
     private final ViewDelegate mViewDelegate;
-    private Activity mCurrentActivity;
     private final SurfaceView primarySurfaceView;
     private final SurfaceView xrSurfaceView;
     private final float pixelDensityScale = getResources().getDisplayMetrics().density;
@@ -58,25 +60,13 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
     private android.view.Surface mAttachedSurface = null;
 
     public BabylonView(Context context, ViewDelegate viewDelegate) {
-        this(context, viewDelegate, (Activity)viewDelegate);
-    }
-
-    public BabylonView(Context context, ViewDelegate viewDelegate, Activity currentActivity) {
         super(context);
-
-        // Process-wide one-shot init for AndroidExtensions::Globals
-        // (used by NativeCamera, NativeXr, etc.).
-        if (!sGlobalInitDone) {
-            BabylonNative.androidGlobalInitialize(context.getApplicationContext());
-            sGlobalInitDone = true;
-        }
 
         this.primarySurfaceView = new SurfaceView(context);
         this.primarySurfaceView.setLayoutParams(BabylonView.childViewLayoutParams);
         this.primarySurfaceView.getHolder().addCallback(this);
         this.addView(this.primarySurfaceView);
 
-        this.mCurrentActivity = currentActivity;
         SurfaceHolder holder = this.primarySurfaceView.getHolder();
         holder.addCallback(this);
         setOnTouchListener(this);
@@ -116,13 +106,6 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
         loadBootstrapScripts(mRuntimeHandle);
     }
 
-    public void setCurrentActivity(Activity currentActivity) {
-        if (currentActivity != this.mCurrentActivity) {
-            this.mCurrentActivity = currentActivity;
-            BabylonNative.androidGlobalSetCurrentActivity(this.mCurrentActivity);
-        }
-    }
-
     public void loadScript(String path) {
         if (mRuntimeHandle != 0) {
             BabylonNative.runtimeLoadScript(mRuntimeHandle, path);
@@ -135,31 +118,11 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
         }
     }
 
-    public void onPause() {
-        setVisibility(View.GONE);
-        BabylonNative.androidGlobalPause();
-        if (mRuntimeHandle != 0) {
-            BabylonNative.runtimeSuspend(mRuntimeHandle);
-        }
-    }
-
-    public void onResume() {
-        if (mRuntimeHandle != 0) {
-            BabylonNative.runtimeResume(mRuntimeHandle);
-        }
-        BabylonNative.androidGlobalResume();
-    }
-
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
-        BabylonNative.androidGlobalRequestPermissionsResult(requestCode, permissions, results);
-    }
-
     /**
      * This method is part of the SurfaceHolder.Callback interface, and is
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceCreated(SurfaceHolder holder) {
-        BabylonNative.androidGlobalSetCurrentActivity(this.mCurrentActivity);
         if (!this.mViewReady) {
             this.mViewDelegate.onViewReady();
             this.mViewReady = true;

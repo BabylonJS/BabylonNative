@@ -23,6 +23,7 @@
 
 #include <Babylon/Integrations/Runtime.h>
 #include <Babylon/Integrations/View.h>
+#include <Babylon/Integrations/Android/RuntimeHandle.h>
 
 #include <AndroidExtensions/Globals.h>
 
@@ -33,6 +34,7 @@
 #include <jni.h>
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -44,7 +46,25 @@ namespace
     using Babylon::Integrations::View;
     using Babylon::Integrations::ViewDescriptor;
 
-    Runtime* AsRuntime(jlong handle) { return reinterpret_cast<Runtime*>(handle); }
+    // Wraps a Runtime with two `android::global` event tickets that
+    // auto-Suspend/Resume the Runtime in response to process-wide
+    // Activity lifecycle notifications. Member declaration order matters:
+    // tickets are declared *after* the Runtime so they're destroyed
+    // *before* the Runtime, which guarantees no callback can fire on a
+    // dead Runtime during teardown.
+    //
+    // Suspend/Resume on Babylon::Integrations::Runtime is reference-counted,
+    // so the auto-suspend composes safely with explicit host-side
+    // runtimeSuspend / runtimeResume calls.
+    struct AndroidRuntime
+    {
+        std::unique_ptr<Runtime> runtime;
+        android::global::AppStateChangedCallbackTicket pauseTicket;
+        android::global::AppStateChangedCallbackTicket resumeTicket;
+    };
+
+    AndroidRuntime* AsAndroidRuntime(jlong handle) { return reinterpret_cast<AndroidRuntime*>(handle); }
+    Runtime* AsRuntime(jlong handle) { return AsAndroidRuntime(handle)->runtime.get(); }
     View* AsView(jlong handle) { return reinterpret_cast<View*>(handle); }
 
     int LogPriorityFor(LogLevel level)
@@ -88,6 +108,21 @@ namespace
         descriptor.height = static_cast<uint32_t>(static_cast<float>(physicalH) / density);
         descriptor.devicePixelRatio = density;
         return descriptor;
+    }
+}
+
+// Public handle-decoding entry point. Hosts that ship app-specific JNI
+// helpers in the same `libBabylonNativeIntegrations.so` (e.g. the
+// Playground's PlaygroundJNI.cpp for the Babylon.js bootstrap script
+// list) call this to get back a Runtime* from the opaque jlong returned
+// by `runtimeCreate`. Direct `reinterpret_cast<Runtime*>(handle)` is
+// wrong because each Runtime is wrapped in `AndroidRuntime` to hold
+// Activity-lifecycle tickets.
+namespace Babylon::Integrations::Android
+{
+    Runtime* RuntimeFromHandle(jlong handle)
+    {
+        return handle == 0 ? nullptr : AsRuntime(handle);
     }
 }
 
@@ -184,16 +219,44 @@ Java_com_babylonjs_integrations_BabylonNative_runtimeCreate(JNIEnv*, jclass, jbo
         __android_log_write(LogPriorityFor(level), "BabylonNative", text.c_str());
     };
 
-    // unique_ptr::release() returns the raw pointer and gives up
-    // ownership *without* deleting; the JVM side now owns it via the
-    // returned jlong handle and must call runtimeDestroy() to free it.
-    return reinterpret_cast<jlong>(Runtime::Create(std::move(options)).release());
+    // Construct in two phases because the AppStateChangedCallbackTicket
+    // is neither default-constructible nor move-assignable: we need the
+    // Runtime pointer in hand before we can register the callbacks, and
+    // we register the callbacks before the wrapper itself exists.
+    auto runtime = Runtime::Create(std::move(options));
+    Runtime* runtimePtr = runtime.get();
+
+    // Auto-Suspend/Resume on Activity lifecycle. Hosts call
+    // androidGlobalPause / androidGlobalResume from their Activity's
+    // onPause / onResume; every Runtime in the process gets suspended
+    // and resumed automatically. Since Runtime::Suspend/Resume are
+    // refcounted, this composes safely with any explicit
+    // runtimeSuspend / runtimeResume calls the host might make for
+    // finer-grained reasons (e.g. modal dialogs).
+    auto pauseTicket = android::global::AddPauseCallback([runtimePtr]() {
+        runtimePtr->Suspend();
+    });
+    auto resumeTicket = android::global::AddResumeCallback([runtimePtr]() {
+        runtimePtr->Resume();
+    });
+
+    auto wrapper = std::unique_ptr<AndroidRuntime>{new AndroidRuntime{
+        std::move(runtime),
+        std::move(pauseTicket),
+        std::move(resumeTicket),
+    }};
+
+    // Ownership transfers to the JVM side via the returned jlong.
+    return reinterpret_cast<jlong>(wrapper.release());
 }
 
 JNIEXPORT void JNICALL
 Java_com_babylonjs_integrations_BabylonNative_runtimeDestroy(JNIEnv*, jclass, jlong handle)
 {
-    delete AsRuntime(handle);
+    // Member dtor order (reverse declaration): resumeTicket → pauseTicket
+    // → runtime. The tickets unsubscribe before the Runtime is destroyed,
+    // so no callback can fire on a dead Runtime during teardown.
+    delete AsAndroidRuntime(handle);
 }
 
 JNIEXPORT void JNICALL
@@ -210,23 +273,13 @@ Java_com_babylonjs_integrations_BabylonNative_runtimeEval(
     AsRuntime(handle)->Eval(ToStdString(env, source), ToStdString(env, sourceUrl));
 }
 
-JNIEXPORT void JNICALL
-Java_com_babylonjs_integrations_BabylonNative_runtimeSuspend(JNIEnv*, jclass, jlong handle)
-{
-    AsRuntime(handle)->Suspend();
-}
-
-JNIEXPORT void JNICALL
-Java_com_babylonjs_integrations_BabylonNative_runtimeResume(JNIEnv*, jclass, jlong handle)
-{
-    AsRuntime(handle)->Resume();
-}
-
-JNIEXPORT jboolean JNICALL
-Java_com_babylonjs_integrations_BabylonNative_runtimeIsSuspended(JNIEnv*, jclass, jlong handle)
-{
-    return AsRuntime(handle)->IsSuspended() ? JNI_TRUE : JNI_FALSE;
-}
+// Note: there is intentionally no per-Runtime Suspend/Resume on the JNI
+// surface. Activity-lifecycle Suspend/Resume is wired up automatically
+// inside runtimeCreate above (each Runtime subscribes to
+// android::global pause/resume callbacks). Hosts only call
+// `androidGlobalPause` / `androidGlobalResume` once per Activity state
+// change; every Runtime in the process reacts. Hosts that need
+// finer-grained control should use the C++ API directly.
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEXR
 
