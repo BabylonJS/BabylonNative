@@ -2155,17 +2155,24 @@ namespace Babylon
 
     void NativeEngine::SubmitCommands(const Napi::CallbackInfo& info)
     {
-        // Acquire a FrameCompletionScope to ensure the encoder stays valid for
-        // the duration of command processing. When called within a RAF callback,
-        // the frame is already open and this returns immediately. When called
-        // outside (e.g., scene.dispose() from an XHR callback), this blocks
-        // until StartRenderingCurrentFrame provides the encoder.
+        // Acquire a FrameCompletionScope and capture it into a Dispatch
+        // lambda so the frame stays open across the rest of the current JS
+        // task, not just this command-stream pass. Any continuation work in
+        // the same JS task (further submitCommands calls, immediate promise
+        // resolutions touching bgfx, scene.dispose() cleanup, etc.) sees
+        // count > 0 and remains protected from a concurrent
+        // FinishRenderingCurrentFrame.
         //
-        // Wrapped in shared_ptr so the captured lambda below is copy-
-        // constructible (Dispatchable is move-only at the AppRuntime layer
-        // but gets type-erased via std::function downstream).
-        auto scope = std::make_shared<Graphics::FrameCompletionScope>(
-            m_deviceContext.AcquireFrameCompletionScope());
+        // Dispatching at the top (before the try block) also makes the
+        // coverage exception-safe — if the command stream throws, the lambda
+        // is already queued so the scope still survives to the next dispatch
+        // cycle.
+        //
+        // shared_ptr because Dispatchable is move-only at the AppRuntime
+        // layer but JsRuntime downstream type-erases via std::function which
+        // requires copy-constructibility.
+        m_runtime.Dispatch([scope = std::make_shared<Graphics::FrameCompletionScope>(
+            m_deviceContext.AcquireFrameCompletionScope())](auto) {});
 
         try
         {
@@ -2179,14 +2186,6 @@ namespace Babylon
         {
             throw Napi::Error::New(info.Env(), exception);
         }
-
-        // Defer scope release to the next JS-thread dispatch cycle so the
-        // frame stays open across the rest of the current JS frame, not just
-        // across this command stream's processing. Any continuation work in
-        // the same JS frame (further submitCommands calls, immediate promise
-        // resolutions touching bgfx, etc.) sees count > 0 and remains
-        // protected from a concurrent FinishRenderingCurrentFrame.
-        m_runtime.Dispatch([scope](auto) {});
     }
 
     void NativeEngine::PopulateFrameStats(const Napi::CallbackInfo& info)
