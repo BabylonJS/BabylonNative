@@ -2160,7 +2160,12 @@ namespace Babylon
         // the frame is already open and this returns immediately. When called
         // outside (e.g., scene.dispose() from an XHR callback), this blocks
         // until StartRenderingCurrentFrame provides the encoder.
-        Graphics::FrameCompletionScope scope{m_deviceContext.AcquireFrameCompletionScope()};
+        //
+        // Wrapped in shared_ptr so the captured lambda below is copy-
+        // constructible (Dispatchable is move-only at the AppRuntime layer
+        // but gets type-erased via std::function downstream).
+        auto scope = std::make_shared<Graphics::FrameCompletionScope>(
+            m_deviceContext.AcquireFrameCompletionScope());
 
         try
         {
@@ -2181,7 +2186,7 @@ namespace Babylon
         // the same JS frame (further submitCommands calls, immediate promise
         // resolutions touching bgfx, etc.) sees count > 0 and remains
         // protected from a concurrent FinishRenderingCurrentFrame.
-        m_runtime.Dispatch([scope = std::move(scope)](auto) {});
+        m_runtime.Dispatch([scope](auto) {});
     }
 
     void NativeEngine::PopulateFrameStats(const Napi::CallbackInfo& info)
