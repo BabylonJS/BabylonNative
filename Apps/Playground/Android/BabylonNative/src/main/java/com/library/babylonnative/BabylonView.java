@@ -49,16 +49,6 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
     /** Native View handle (0 if not attached). Owned by this view. */
     private long mViewHandle = 0;
 
-    /**
-     * The {@link android.view.Surface} that {@code mViewHandle} is currently
-     * bound to (null if not attached). Compared by reference in
-     * {@link #surfaceChanged} to decide between resize-in-place and a full
-     * detach + reattach: Android reuses the same {@code Surface} object for
-     * pure size changes (orientation, layout), and hands us a new
-     * {@code Surface} after a destroy/recreate cycle.
-     */
-    private android.view.Surface mAttachedSurface = null;
-
     public BabylonView(Context context, ViewDelegate viewDelegate) {
         super(context);
 
@@ -123,6 +113,10 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceCreated(SurfaceHolder holder) {
+        android.graphics.Rect frame = holder.getSurfaceFrame();
+        mViewHandle = BabylonNative.viewAttach(mRuntimeHandle, holder.getSurface(),
+                frame.width(), frame.height(), this.pixelDensityScale);
+
         if (!this.mViewReady) {
             this.mViewDelegate.onViewReady();
             this.mViewReady = true;
@@ -134,14 +128,9 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceDestroyed(SurfaceHolder holder) {
-        // The Surface backing mViewHandle is being torn down. Drop the
-        // View so nothing tries to render into a dead surface; the next
-        // surfaceChanged will reattach. (Holding onto the Runtime is
-        // fine — it's surface-independent.)
         if (mViewHandle != 0) {
             BabylonNative.viewDetach(mViewHandle);
             mViewHandle = 0;
-            mAttachedSurface = null;
         }
     }
 
@@ -150,29 +139,9 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
-        if (mRuntimeHandle == 0) {
-            return;
-        }
-
-        android.view.Surface surface = holder.getSurface();
-
-        // Same Surface as last attach: this is a size-only change.
-        // (Triggered by orientation rotation, parent layout, etc.)
-        if (mViewHandle != 0 && surface == mAttachedSurface) {
-            BabylonNative.viewResize(mViewHandle, w, h, this.pixelDensityScale);
-            return;
-        }
-
-        // New Surface (or first attach). View::Attach contract requires
-        // at most one View per Runtime, so detach any stale one first.
         if (mViewHandle != 0) {
-            BabylonNative.viewDetach(mViewHandle);
-            mViewHandle = 0;
+            BabylonNative.viewResize(mViewHandle, w, h, this.pixelDensityScale);
         }
-
-        mViewHandle = BabylonNative.viewAttach(mRuntimeHandle, surface,
-                w, h, this.pixelDensityScale);
-        mAttachedSurface = (mViewHandle != 0) ? surface : null;
     }
 
     public interface ViewDelegate {
@@ -211,7 +180,6 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
             if (mViewHandle != 0) {
                 BabylonNative.viewDetach(mViewHandle);
                 mViewHandle = 0;
-                mAttachedSurface = null;
             }
             if (mRuntimeHandle != 0) {
                 BabylonNative.runtimeDestroy(mRuntimeHandle);
