@@ -101,8 +101,8 @@ target_compile_options(bx PUBLIC $<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus /Zc:p
 
 # bx/include/bx/simd_t.h states the x86 minspec is SSE4.2 (smmintrin.h is included unconditionally),
 # matching bx/scripts/toolchain.lua which passes -msse4.2 on linux-gcc/clang and mingw.
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64|i.86|x86)$")
-	target_compile_options(bx PUBLIC $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-msse4.2>)
+if(MINGW OR (UNIX AND NOT APPLE AND NOT ANDROID))
+	target_compile_options(bx PUBLIC -msse4.2)
 endif()
 
 # Link against psapi on Windows
