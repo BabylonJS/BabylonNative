@@ -102,7 +102,7 @@ namespace
         return options;
     }
 
-    void QueueScripts()
+    void LoadScripts()
     {
         // Babylon.js bootstrap (core + loaders/materials/gui/serializers).
         // Shared with the other Playground hosts via Shared/PlaygroundScripts.
@@ -137,7 +137,7 @@ namespace
         Uninitialize();
 
         g_runtime = Babylon::Integrations::Runtime::Create(MakeRuntimeOptions());
-        QueueScripts();
+        LoadScripts();
 
         // First View::Attach triggers GPU device construction, plugin
         // initialization on the JS thread, and flushes the queued
