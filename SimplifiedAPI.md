@@ -242,9 +242,7 @@ namespace Babylon::Integrations
         // `Device::DisableRendering`. The Device persists on the
         // Runtime, so the next Attach is fast.
         static std::unique_ptr<View> Attach(Runtime& runtime,
-                                            Babylon::Graphics::WindowT nativeWindow,
-                                            uint32_t width,
-                                            uint32_t height);
+                                            Babylon::Graphics::WindowT nativeWindow);
 
         // Render exactly one frame. Must be called from the same thread
         // each time (the "frame thread"). No-op if the runtime is
@@ -566,28 +564,32 @@ Beyond the 1:1 mirroring of `Runtime` and `View`, each interop layer
 owns two platform adaptations on the host's behalf so the host's
 UI-language code stays as simple as possible:
 
-1. **Pass platform-natural pixel dimensions through unchanged.** The
-   shared C++ `View::Attach(... nativeWindow, w, h)` and `View::Resize(w, h)`
-   take **physical pixels** — the actual pixel-buffer size of the
-   surface. The host hands the interop layer whatever its UI
-   framework gives it; the interop layer does no conversion.
-   - **Android.** `Surface.getSurfaceFrame()` and
-     `View.onSizeChanged(int w, int h, ...)` already report physical
-     pixels. The Kotlin/Java host passes the raw `w/h` through.
-   - **Apple.** `MTKViewDelegate.mtkView(_:drawableSizeWillChange:)`
-     and `CAMetalLayer.drawableSize` are already in physical pixels.
-     Pass through.
-   - **UWP.** `SwapChainPanel.SizeChanged` reports logical pixels;
-     the interop layer multiplies by `RasterizationScale` to recover
-     physical pixels before passing to C++.
-   - **Win32 / Linux.** `GetClientRect` and X11's per-window pixel
-     dimensions are already physical. Pass through.
+1. **Translate platform-native objects/units to the cross-platform C++
+   contract — but no conversion math.** Per-platform helpers in
+   `Integrations/Source/ViewImpl_*.cpp` (mirroring the existing
+   `Core/Graphics/Source/DeviceImpl_*.cpp` pattern) handle the platform
+   facts so the interop layer can stay a pure ABI bridge:
+   - **Querying the surface's pixel-buffer size from the native window
+     handle** — `ANativeWindow_getWidth/Height` on Android, `GetClientRect`
+     on Win32, `CAMetalLayer.drawableSize` on Apple, `XGetGeometry` on
+     X11, `Bounds × scale` on UWP. `View::Attach(runtime, nativeWindow)`
+     does this internally — no host-supplied dimensions, no pixel-unit
+     bookkeeping crossing the JNI / Obj-C++ boundary.
+   - **Converting native pointer-event coordinates to logical (CSS)
+     pixels.** Babylon.js consumes pointer events as
+     `PointerEvent.clientX/clientY` (CSS pixels). On platforms whose
+     native event system is already in logical units (iOS `UITouch`,
+     macOS `NSEvent`, UWP `PointerPoint`), `View`'s per-platform
+     `ToLogicalCoords` is a passthrough; on platforms that deliver
+     physical pixels (Android `MotionEvent`, Win32 `WM_POINTER*`, X11
+     button events), it divides by the Device's queried
+     device-pixel-ratio. Hosts pass coordinates from their native event
+     directly; the View handles the conversion.
 
-   The Device queries device-pixel-ratio from the system itself per
-   platform (`getDensityDpi() / 160` on Android, `layer.contentsScale`
-   on Apple, `GetDpiForWindow` on Win32, etc. — see
-   `Core/Graphics/Source/DeviceImpl_*.cpp`). The host doesn't
-   compute, store, or pass it.
+   Resize is the one exception: hosts already have the new dimensions
+   from their resize event, so `View::Resize(w, h)` takes them
+   explicitly rather than re-querying the window — same convention as
+   `Babylon::Graphics::Device::UpdateSize`.
 2. **Expose platform-specific lifecycle entries that don't belong on
    the cross-platform API.** Examples from `babylon-native-bridge`:
    - Android: `setCurrentActivity(Activity)` →
@@ -701,7 +703,7 @@ Method-level subset of the C++ header, illustrating the pattern:
 ```cpp
 class View {
 public:
-    static std::unique_ptr<View> Attach(Runtime&, Babylon::Graphics::WindowT, uint32_t w, uint32_t h);
+    static std::unique_ptr<View> Attach(Runtime&, Babylon::Graphics::WindowT);
     void RenderFrame();
     void Resize(uint32_t w, uint32_t h);
 

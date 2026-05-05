@@ -295,8 +295,7 @@ Java_com_babylonjs_integrations_BabylonNative_runtimeIsXrActive(JNIEnv*, jclass,
 
 JNIEXPORT jlong JNICALL
 Java_com_babylonjs_integrations_BabylonNative_viewAttach(
-    JNIEnv* env, jclass, jlong runtimeHandle, jobject surface,
-    jint width, jint height)
+    JNIEnv* env, jclass, jlong runtimeHandle, jobject surface)
 {
     if (surface == nullptr)
     {
@@ -307,10 +306,7 @@ Java_com_babylonjs_integrations_BabylonNative_viewAttach(
     {
         return 0;
     }
-    auto view = View::Attach(*AsRuntime(runtimeHandle),
-                              window,
-                              static_cast<uint32_t>(width),
-                              static_cast<uint32_t>(height));
+    auto view = View::Attach(*AsRuntime(runtimeHandle), window);
     if (!view)
     {
         ANativeWindow_release(window);
@@ -347,35 +343,23 @@ Java_com_babylonjs_integrations_BabylonNative_viewResize(
 
 JNIEXPORT void JNICALL
 Java_com_babylonjs_integrations_BabylonNative_viewPointerDown(
-    JNIEnv*, jclass, jlong handle, jint pointerId, jfloat physicalX, jfloat physicalY)
+    JNIEnv*, jclass, jlong handle, jint pointerId, jfloat x, jfloat y)
 {
-    View* view = AsView(handle);
-    const float dpr = view->DevicePixelRatio();
-    view->OnPointerDown(static_cast<int32_t>(pointerId),
-                         physicalX / dpr,
-                         physicalY / dpr);
+    AsView(handle)->OnPointerDown(static_cast<int32_t>(pointerId), x, y);
 }
 
 JNIEXPORT void JNICALL
 Java_com_babylonjs_integrations_BabylonNative_viewPointerMove(
-    JNIEnv*, jclass, jlong handle, jint pointerId, jfloat physicalX, jfloat physicalY)
+    JNIEnv*, jclass, jlong handle, jint pointerId, jfloat x, jfloat y)
 {
-    View* view = AsView(handle);
-    const float dpr = view->DevicePixelRatio();
-    view->OnPointerMove(static_cast<int32_t>(pointerId),
-                         physicalX / dpr,
-                         physicalY / dpr);
+    AsView(handle)->OnPointerMove(static_cast<int32_t>(pointerId), x, y);
 }
 
 JNIEXPORT void JNICALL
 Java_com_babylonjs_integrations_BabylonNative_viewPointerUp(
-    JNIEnv*, jclass, jlong handle, jint pointerId, jfloat physicalX, jfloat physicalY)
+    JNIEnv*, jclass, jlong handle, jint pointerId, jfloat x, jfloat y)
 {
-    View* view = AsView(handle);
-    const float dpr = view->DevicePixelRatio();
-    view->OnPointerUp(static_cast<int32_t>(pointerId),
-                       physicalX / dpr,
-                       physicalY / dpr);
+    AsView(handle)->OnPointerUp(static_cast<int32_t>(pointerId), x, y);
 }
 
 #endif

@@ -27,14 +27,12 @@ namespace Babylon::Integrations
         // per-platform typedef the Graphics layer already uses
         // (HWND on Win32, ANativeWindow* on Android, CA::MetalLayer*
         // on Apple, X11 `Window` on Linux, winrt::IInspectable on UWP).
-        //
-        // `width` and `height` are in **physical pixels** — the actual
-        // pixel-buffer dimensions of the surface. Hosts pass through
-        // whatever their platform's window/view delivers (Android's
-        // `Surface.getSurfaceFrame()`, Apple's `CAMetalLayer.drawableSize`,
-        // Win32's `GetClientRect`, etc.). The Device queries the screen
-        // device-pixel-ratio internally; the host doesn't need to
-        // compute or pass it.
+        // The View queries the surface's pixel-buffer size from the
+        // window itself (Android `ANativeWindow_getWidth/Height`,
+        // Apple `CAMetalLayer.drawableSize`, Win32 `GetClientRect`,
+        // X11 `XGetGeometry`, UWP bounds × scale) — the host doesn't
+        // pass dimensions. The Device queries the screen
+        // device-pixel-ratio internally as well.
         //
         // The first Attach on a given Runtime is the heavy step: it
         // constructs `Babylon::Graphics::Device`, dispatches GPU plugin
@@ -55,7 +53,7 @@ namespace Babylon::Integrations
         //
         // Must be called from the same thread that will call
         // `RenderFrame` and `Resize` (the "frame thread").
-        static std::unique_ptr<View> Attach(Runtime& runtime, Babylon::Graphics::WindowT nativeWindow, uint32_t width, uint32_t height);
+        static std::unique_ptr<View> Attach(Runtime& runtime, Babylon::Graphics::WindowT nativeWindow);
 
         ~View();
 
@@ -90,18 +88,15 @@ namespace Babylon::Integrations
         // Routed to the JS thread via `NativeInput`, where Babylon.js
         // consumes them as `PointerEvent.clientX/clientY`.
         //
-        // **Coordinates are in logical (CSS) pixels** — the same unit
-        // a browser would deliver. This matches Babylon.js's existing
-        // pointer pipeline: `clientX/clientY` are CSS pixels regardless
-        // of the canvas backing buffer's physical resolution.
-        //
-        // Some platforms' native pointer events are already in logical
-        // units (iOS `UITouch` points, macOS `NSEvent`, UWP
-        // `PointerPoint` at `RasterizationScale = 1`); others deliver
-        // physical pixels (Android `MotionEvent.getX/getY`, Win32
-        // `WM_POINTER*`). The host or interop layer is responsible for
-        // dividing by `DevicePixelRatio()` (below) when its native
-        // event system delivers physical pixels.
+        // **Pass coordinates in whatever unit your platform's native
+        // event system delivers.** The View internally normalizes to
+        // logical (CSS) pixels — the unit Babylon.js expects — using
+        // a per-platform helper. On platforms whose native pointer
+        // events are already in logical units (iOS `UITouch`, macOS
+        // `NSEvent`, UWP `PointerPoint`), this is a passthrough; on
+        // platforms that deliver physical pixels (Android `MotionEvent`,
+        // Win32 `WM_POINTER*`, X11 button events), the View divides by
+        // the Device's queried device-pixel-ratio.
         //
         // Babylon Native distinguishes pointer (touch) input from mouse
         // input; both methods feed the same Babylon.js pointer-event
@@ -136,17 +131,6 @@ namespace Babylon::Integrations
         static uint32_t MiddleMouseButton();
         static uint32_t RightMouseButton();
         static uint32_t MouseWheelY();
-
-        // Current screen device-pixel-ratio (physical/logical pixel
-        // ratio), as queried from the platform by the underlying
-        // `Babylon::Graphics::Device`. Use this to convert physical
-        // pointer coordinates to the logical pixels the OnPointer* /
-        // OnMouse* APIs expect, on platforms where the native event
-        // system delivers physical pixels (Android, Win32).
-        //
-        // Only valid post-Attach (the Device is constructed there);
-        // returns 1.0 if called pre-Attach.
-        float DevicePixelRatio() const;
 #endif
 
     private:

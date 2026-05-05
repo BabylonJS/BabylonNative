@@ -79,13 +79,11 @@ public final class BabylonNative {
 
     /**
      * Returns an opaque handle owned by the caller; release with {@link #viewDetach(long)}.
-     * {@code width} and {@code height} are the surface size in physical
-     * pixels (Android {@code Surface.getSurfaceFrame()} or
-     * {@code View.onSizeChanged} units). The Device queries the screen
-     * device-pixel-ratio internally; the host does not need to compute
-     * or pass it.
+     * The View queries the surface's pixel-buffer size from the native
+     * window itself, and the Device queries the screen device-pixel-ratio
+     * from the system, so no dimensional info needs to be passed from Java.
      */
-    public static native long viewAttach(long runtimeHandle, Surface surface, int width, int height);
+    public static native long viewAttach(long runtimeHandle, Surface surface);
 
     public static native void viewDetach(long handle);
 
@@ -94,17 +92,14 @@ public final class BabylonNative {
     public static native void viewResize(long handle, int width, int height);
 
     /**
-     * Pointer events. {@code physicalX}/{@code physicalY} are the raw
-     * coordinates from {@code MotionEvent.getX/getY} (physical pixels);
-     * the native layer converts them to logical (CSS) pixels using
-     * the underlying Device's queried device-pixel-ratio before
-     * forwarding to NativeInput, matching the browser's
-     * {@code PointerEvent.clientX/clientY} convention that Babylon.js
-     * consumes.
+     * Pointer events. Pass {@code MotionEvent.getX/getY} through unchanged
+     * (Android-native physical-pixel coordinates). The View internally
+     * normalizes to logical (CSS) pixels — the unit Babylon.js's
+     * {@code PointerEvent.clientX/clientY} pipeline expects.
      */
-    public static native void viewPointerDown(long handle, int pointerId, float physicalX, float physicalY);
+    public static native void viewPointerDown(long handle, int pointerId, float x, float y);
 
-    public static native void viewPointerMove(long handle, int pointerId, float physicalX, float physicalY);
+    public static native void viewPointerMove(long handle, int pointerId, float x, float y);
 
-    public static native void viewPointerUp(long handle, int pointerId, float physicalX, float physicalY);
+    public static native void viewPointerUp(long handle, int pointerId, float x, float y);
 }

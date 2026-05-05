@@ -86,9 +86,7 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceCreated(SurfaceHolder holder) {
-        android.graphics.Rect frame = holder.getSurfaceFrame();
-        mViewHandle = BabylonNative.viewAttach(mRuntimeHandle, holder.getSurface(),
-                frame.width(), frame.height());
+        mViewHandle = BabylonNative.viewAttach(mRuntimeHandle, holder.getSurface());
     }
 
     /**

@@ -115,6 +115,7 @@ namespace Babylon::Integrations
 
     private:
         friend class View;
+        friend struct ViewImpl;
 
         Runtime();
 

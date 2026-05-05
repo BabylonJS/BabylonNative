@@ -161,7 +161,7 @@ namespace Babylon::Integrations
     // ---------------------------------------------------------------------
     // View::Attach (first time and subsequent)
     // ---------------------------------------------------------------------
-    std::unique_ptr<View> View::Attach(Runtime& runtime, Babylon::Graphics::WindowT nativeWindow, uint32_t width, uint32_t height)
+    std::unique_ptr<View> View::Attach(Runtime& runtime, Babylon::Graphics::WindowT nativeWindow)
     {
         RuntimeImpl& impl = *runtime.m_impl;
 
@@ -170,6 +170,12 @@ namespace Babylon::Integrations
         {
             return nullptr;
         }
+
+        // Per-platform: query the surface's pixel-buffer size from the
+        // native window handle. ViewImpl_*.cpp implements this; e.g.
+        // ANativeWindow_getWidth on Android, GetClientRect on Win32,
+        // CAMetalLayer.drawableSize on Apple.
+        const auto [width, height] = ViewImpl::QuerySize(nativeWindow);
 
         if (!impl.m_device)
         {
@@ -274,9 +280,10 @@ namespace Babylon::Integrations
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
         if (impl.m_input)
         {
+            const auto [lx, ly] = m_impl->ToLogicalCoords(x, y);
             impl.m_input->TouchDown(static_cast<uint32_t>(pointerId),
-                                     static_cast<int32_t>(x),
-                                     static_cast<int32_t>(y));
+                                     static_cast<int32_t>(lx),
+                                     static_cast<int32_t>(ly));
         }
     }
 
@@ -285,9 +292,10 @@ namespace Babylon::Integrations
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
         if (impl.m_input)
         {
+            const auto [lx, ly] = m_impl->ToLogicalCoords(x, y);
             impl.m_input->TouchMove(static_cast<uint32_t>(pointerId),
-                                     static_cast<int32_t>(x),
-                                     static_cast<int32_t>(y));
+                                     static_cast<int32_t>(lx),
+                                     static_cast<int32_t>(ly));
         }
     }
 
@@ -296,9 +304,10 @@ namespace Babylon::Integrations
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
         if (impl.m_input)
         {
+            const auto [lx, ly] = m_impl->ToLogicalCoords(x, y);
             impl.m_input->TouchUp(static_cast<uint32_t>(pointerId),
-                                   static_cast<int32_t>(x),
-                                   static_cast<int32_t>(y));
+                                   static_cast<int32_t>(lx),
+                                   static_cast<int32_t>(ly));
         }
     }
 
@@ -307,9 +316,10 @@ namespace Babylon::Integrations
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
         if (impl.m_input)
         {
+            const auto [lx, ly] = m_impl->ToLogicalCoords(x, y);
             impl.m_input->MouseDown(buttonIndex,
-                                     static_cast<int32_t>(x),
-                                     static_cast<int32_t>(y));
+                                     static_cast<int32_t>(lx),
+                                     static_cast<int32_t>(ly));
         }
     }
 
@@ -318,9 +328,10 @@ namespace Babylon::Integrations
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
         if (impl.m_input)
         {
+            const auto [lx, ly] = m_impl->ToLogicalCoords(x, y);
             impl.m_input->MouseUp(buttonIndex,
-                                   static_cast<int32_t>(x),
-                                   static_cast<int32_t>(y));
+                                   static_cast<int32_t>(lx),
+                                   static_cast<int32_t>(ly));
         }
     }
 
@@ -329,8 +340,9 @@ namespace Babylon::Integrations
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
         if (impl.m_input)
         {
-            impl.m_input->MouseMove(static_cast<int32_t>(x),
-                                     static_cast<int32_t>(y));
+            const auto [lx, ly] = m_impl->ToLogicalCoords(x, y);
+            impl.m_input->MouseMove(static_cast<int32_t>(lx),
+                                     static_cast<int32_t>(ly));
         }
     }
 
@@ -347,11 +359,5 @@ namespace Babylon::Integrations
     uint32_t View::MiddleMouseButton() { return Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID; }
     uint32_t View::RightMouseButton()  { return Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID; }
     uint32_t View::MouseWheelY()       { return Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID; }
-
-    float View::DevicePixelRatio() const
-    {
-        RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
-        return impl.m_device ? impl.m_device->GetDevicePixelRatio() : 1.0f;
-    }
 #endif
 }

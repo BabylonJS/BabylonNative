@@ -25,14 +25,12 @@
     if ((self = [super init]))
     {
         // First attach on this runtime triggers GPU device construction
-        // + plugin initialization + queued-script flush.
-        // CAMetalLayer.drawableSize is already in physical pixels, which
-        // is what View::Attach expects.
+        // + plugin initialization + queued-script flush. The View
+        // queries the layer's drawableSize itself; the host doesn't
+        // need to pass dimensions.
         _view = Babylon::Integrations::View::Attach(
             *runtime.nativeRuntime,
-            (__bridge CA::MetalLayer*)layer,
-            static_cast<uint32_t>(layer.drawableSize.width),
-            static_cast<uint32_t>(layer.drawableSize.height));
+            (__bridge CA::MetalLayer*)layer);
         if (!_view)
         {
             return nil;

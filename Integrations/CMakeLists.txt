@@ -5,7 +5,8 @@ set(SOURCES
     "Include/Babylon/Integrations/View.h"
     "Source/Runtime.cpp"
     "Source/RuntimeImpl.h"
-    "Source/View.cpp")
+    "Source/View.cpp"
+    "Source/ViewImpl_${BABYLON_NATIVE_PLATFORM}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
 add_library(Integrations ${SOURCES})
 
@@ -19,7 +20,7 @@ target_include_directories(Integrations PUBLIC "Include")
 # XMLHttpRequest) are always linked.
 target_link_libraries(Integrations
     PUBLIC napi
-    # GraphicsDevice is PUBLIC because ViewDescriptor.h (a public header)
+    # GraphicsDevice is PUBLIC because View.h (a public header)
     # references `Babylon::Graphics::WindowT` from <Babylon/Graphics/Platform.h>.
     PUBLIC GraphicsDevice
     PRIVATE AppRuntime
@@ -29,6 +30,13 @@ target_link_libraries(Integrations
     PRIVATE Performance
     PRIVATE TextDecoder
     PRIVATE XMLHttpRequest)
+
+# ----- Per-platform link dependencies for ViewImpl_*.{cpp,mm} -----
+if(ANDROID)
+    target_link_libraries(Integrations PRIVATE android)   # ANativeWindow_getWidth/Height
+elseif(UNIX AND NOT APPLE)
+    target_link_libraries(Integrations PRIVATE X11)       # XOpenDisplay / XGetGeometry
+endif()
 
 # ----- Conditionally-included polyfills -----
 #

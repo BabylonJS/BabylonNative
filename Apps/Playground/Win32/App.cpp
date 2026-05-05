@@ -139,20 +139,10 @@ namespace
         g_runtime = Babylon::Integrations::Runtime::Create(MakeRuntimeOptions());
         QueueScripts();
 
-        RECT rect;
-        if (!GetClientRect(hWnd, &rect))
-        {
-            throw std::exception{"Unable to get client rect"};
-        }
-
         // First View::Attach triggers GPU device construction, plugin
         // initialization on the JS thread, and flushes the queued
-        // scripts.
-        g_view = Babylon::Integrations::View::Attach(
-            *g_runtime,
-            hWnd,
-            static_cast<uint32_t>(rect.right - rect.left),
-            static_cast<uint32_t>(rect.bottom - rect.top));
+        // scripts. The View queries the HWND's client rect itself.
+        g_view = Babylon::Integrations::View::Attach(*g_runtime, hWnd);
     }
 }
 
