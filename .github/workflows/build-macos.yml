@@ -35,9 +35,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/.fc-cache
-          key: fc-${{ runner.os }}-${{ hashFiles('**/CMakeLists.txt') }}
+          key: fc-macos-${{ inputs.generator }}-${{ hashFiles('**/CMakeLists.txt') }}
           restore-keys: |
-            fc-${{ runner.os }}-
+            fc-macos-${{ inputs.generator }}-
 
       - name: Select Xcode ${{ inputs.xcode-version }}
         run: sudo xcode-select --switch /Applications/Xcode_${{ inputs.xcode-version }}.app/Contents/Developer

@@ -19,9 +19,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/.fc-cache
-          key: fc-${{ runner.os }}-${{ hashFiles('**/CMakeLists.txt') }}
+          key: fc-win32shader-${{ inputs.platform }}-${{ hashFiles('**/CMakeLists.txt') }}
           restore-keys: |
-            fc-${{ runner.os }}-
+            fc-win32shader-${{ inputs.platform }}-
 
       - name: Generate solution
         shell: cmd
