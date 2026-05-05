@@ -1052,10 +1052,10 @@ class MainActivity : AppCompatActivity() {
 
 **Library-supplied Obj-C++ interop** (lives in `Integrations/Apple/`):
 
-The interop layer reads each `CAMetalLayer`'s `drawableSize`
-(physical pixels) and `contentsScale` (DPR) directly so the Swift
-host doesn't have to think about units — it just hands the layer
-over (see §4.2). Surface allocation is the host's responsibility.
+The interop layer takes a host-supplied `MTKView` directly. It installs
+itself as the view's `MTKViewDelegate` and drives the per-frame render
+and resize callbacks internally — the Swift host doesn't have to wire
+anything up beyond constructing the `BNView`.
 
 ```objc
 // BNRuntime.h  — public Obj-C header (Swift sees this via the bridge)
@@ -1067,11 +1067,22 @@ over (see §4.2). Surface allocation is the host's responsibility.
 @end
 
 @interface BNView : NSObject
-// `layer` is the user-visible CAMetalLayer (typically MTKView.layer).
-// The interop layer reads drawableSize and contentsScale from it.
-- (instancetype)initWithRuntime:(BNRuntime*)rt layer:(CAMetalLayer*)layer;
-- (void)renderFrame;
-- (void)resizeForLayer:(CAMetalLayer*)layer;    // re-reads size/scale
+// "Super simple" mode: BNView installs itself as the MTKView's delegate
+// and drives draw/resize internally — no MTKViewDelegate boilerplate
+// in host code.
+- (instancetype)initWithRuntime:(BNRuntime*)rt view:(MTKView*)view;
+
+// Explicit-mode init. With autoDelegate = NO, the host keeps ownership
+// of the MTKView's delegate and calls -renderFrame and
+// -resizeWithWidth:height: from its own MTKViewDelegate methods. Use
+// this when you need to interleave host work with the runtime's
+// per-frame render.
+- (instancetype)initWithRuntime:(BNRuntime*)rt
+                            view:(MTKView*)view
+                    autoDelegate:(BOOL)autoDelegate;
+
+- (void)renderFrame;                                    // manual mode only
+- (void)resizeWithWidth:(NSUInteger)w height:(NSUInteger)h;  // manual mode only
 @end
 ```
 
@@ -1092,40 +1103,111 @@ over (see §4.2). Surface allocation is the host's responsibility.
 - (Babylon::Integrations::Runtime*)native { return _rt.get(); }
 @end
 
+@interface BNView () <MTKViewDelegate>
+@end
+
 @implementation BNView {
     std::unique_ptr<Babylon::Integrations::View> _v;
+    MTKView* _mtkView;
+    BOOL _autoDelegate;
 }
-// Helper: read physical-pixel dims + DPR from the layer, convert to
-// the C++ logical-pixel + DPR convention.
-static Babylon::Integrations::ViewDescriptor MakeViewDescriptor(CAMetalLayer* layer) {
-    CGFloat scale = layer.contentsScale;
-    return {
-        (__bridge void*)layer,
-        (uint32_t)(layer.drawableSize.width  / scale),    // logical
-        (uint32_t)(layer.drawableSize.height / scale),
-        (float)scale
-    };
+- (instancetype)initWithRuntime:(BNRuntime*)rt view:(MTKView*)view {
+    return [self initWithRuntime:rt view:view autoDelegate:YES];
 }
-- (instancetype)initWithRuntime:(BNRuntime*)rt layer:(CAMetalLayer*)layer {
+- (instancetype)initWithRuntime:(BNRuntime*)rt
+                            view:(MTKView*)view
+                    autoDelegate:(BOOL)autoDelegate {
     if ((self = [super init])) {
+        _mtkView = view;
+        _autoDelegate = autoDelegate;
+        CAMetalLayer* layer = (CAMetalLayer*)view.layer;
+
+        // Force layout so bounds are valid, then seed drawableSize.
+        // MTKView's autoResizeDrawable keeps it in sync from here on,
+        // but it can still be (0, 0) at attach time.
+        [view layoutIfNeeded];
+        const CGFloat scale = view.contentScaleFactor;     // macOS: window.backingScaleFactor
+        layer.drawableSize = CGSizeMake(view.bounds.size.width * scale,
+                                         view.bounds.size.height * scale);
+
         // First Attach on this runtime triggers Device construction +
         // GPU plugin init + queued LoadScript flush.
-        _v = Babylon::Integrations::View::Attach(*[rt native], MakeViewDescriptor(layer));
+        _v = Babylon::Integrations::View::Attach(*[rt native],
+                                                  (__bridge CA::MetalLayer*)layer);
+        if (autoDelegate) view.delegate = self;   // install AFTER Attach
     }
     return self;
 }
-- (void)renderFrame { _v->RenderFrame(); }
-- (void)resizeForLayer:(CAMetalLayer*)layer {
-    auto h = MakeViewDescriptor(layer);
-    _v->Resize(h.width, h.height, h.devicePixelRatio);
+- (void)dealloc {
+    if (_autoDelegate && _mtkView.delegate == self) { _mtkView.delegate = nil; }
 }
+- (void)renderFrame { _v->RenderFrame(); }
+- (void)resizeWithWidth:(NSUInteger)w height:(NSUInteger)h {
+    _v->Resize((uint32_t)w, (uint32_t)h);
+}
+- (void)mtkView:(MTKView*)v drawableSizeWillChange:(CGSize)size {
+    [self resizeWithWidth:(NSUInteger)size.width height:(NSUInteger)size.height];
+}
+- (void)drawInMTKView:(MTKView*)v { [self renderFrame]; }
 @end
 ```
 
-**Host code — simple integration** (consumer's app — *not* shipped by the library):
+**Host code — "super simple" integration** (consumer's app — *not* shipped by the library):
 
-The simplest host creates the runtime at app start, loads scripts
+The minimal host creates the runtime at app start, loads scripts
 (queued), then constructs a `BNView` against the user-visible MTKView
+and is done — BNView drives the per-frame render and resize itself.
+
+```swift
+class AppDelegate: NSObject, UIApplicationDelegate {
+    let runtime: BNRuntime = {
+        let r = BNRuntime()
+        r.loadScript(Bundle.main.url(forResource: "experience",
+                                       withExtension: "js")!.absoluteString)
+        return r
+    }()
+    func applicationWillResignActive(_ app: UIApplication) { runtime.suspend() }
+    func applicationDidBecomeActive (_ app: UIApplication) { runtime.resume()  }
+}
+
+class BabylonViewController: UIViewController {
+    var babylonView: BNView?
+    override func viewDidLoad() {
+        let mtkView = view as! MTKView
+        let runtime = (UIApplication.shared.delegate as! AppDelegate).runtime
+        babylonView = BNView(runtime: runtime, view: mtkView)   // that's it
+    }
+}
+```
+
+**Host code — "simple" integration with manual delegate** (host needs to interleave per-frame work):
+
+When the host wants to do its own work each frame (e.g. toggling an
+overlay's visibility based on runtime state), pass `autoDelegate: false`
+and own the `MTKViewDelegate` yourself. Forward `draw(in:)` and
+`drawableSizeWillChange:` to `BNView`'s `renderFrame` / `resize`.
+
+```swift
+class BabylonViewController: UIViewController, MTKViewDelegate {
+    var babylonView: BNView?
+    var overlay: UIView!
+    let runtime = (UIApplication.shared.delegate as! AppDelegate).runtime
+
+    override func viewDidLoad() {
+        let mtkView = view as! MTKView
+        mtkView.delegate = self
+        babylonView = BNView(runtime: runtime, view: mtkView, autoDelegate: false)
+    }
+
+    func draw(in view: MTKView) {
+        overlay.isHidden = !runtime.isOverlayActive   // host's per-frame work
+        babylonView?.renderFrame()
+    }
+    func mtkView(_ v: MTKView, drawableSizeWillChange size: CGSize) {
+        babylonView?.resize(withWidth: UInt(size.width), height: UInt(size.height))
+    }
+}
+```
 layer in `viewDidLoad`.
 
 ```swift
@@ -1143,21 +1225,16 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     func applicationDidBecomeActive (_ app: UIApplication) { runtime.resume()  }
 }
 
-class BabylonViewController: UIViewController, MTKViewDelegate {
+class BabylonViewController: UIViewController {
     var babylonView: BNView?
 
     override func viewDidLoad() {
         let mtkView = view as! MTKView
-        mtkView.delegate = self
         let runtime = (UIApplication.shared.delegate as! AppDelegate).runtime
         // First Attach: triggers Device + plugin init + queued script flush.
-        babylonView = BNView(runtime: runtime, layer: mtkView.layer as! CAMetalLayer)
-    }
-
-    // Natural draw callback — no size arithmetic in Swift.
-    func draw(in view: MTKView) { babylonView?.renderFrame() }
-    func mtkView(_ v: MTKView, drawableSizeWillChange size: CGSize) {
-        babylonView?.resizeForLayer(v.layer as! CAMetalLayer)
+        // BNView installs itself as the MTKView's delegate and drives
+        // per-frame render/resize internally.
+        babylonView = BNView(runtime: runtime, view: mtkView)
     }
 }
 ```
@@ -1165,42 +1242,43 @@ class BabylonViewController: UIViewController, MTKViewDelegate {
 **Host code — pre-loading the engine before the user-visible UI exists:**
 
 A host that wants the engine warm at app start creates a `BNView`
-against an off-screen `CAMetalLayer` in the `AppDelegate` so the first
+against an off-screen `MTKView` in the `AppDelegate` so the first
 Attach fires immediately and starts initialization + scene
 construction. Later, when a view controller appears, the host destroys
 that View and constructs a new `BNView` against the user-visible
-layer.
+view.
 
 ```swift
 class AppDelegate: NSObject, UIApplicationDelegate {
     let runtime = BNRuntime()
-    var prewarmLayer: CAMetalLayer!
-    var prewarmView: BNView!
+    var prewarmView: MTKView!
+    var prewarmBN: BNView!
 
     func application(_ app: UIApplication, didFinishLaunchingWithOptions
                       options: [UIApplication.LaunchOptionsKey : Any]?) -> Bool {
         runtime.loadScript(Bundle.main.url(forResource: "experience",
                                             withExtension: "js")!.absoluteString)
 
-        prewarmLayer = CAMetalLayer()
-        prewarmLayer.drawableSize = CGSize(width: 16, height: 16)
-        prewarmLayer.isHidden = true
-        prewarmView = BNView(runtime: runtime, layer: prewarmLayer)
+        // Off-screen MTKView large enough to satisfy Metal validation;
+        // bgfx's first frame renders into this surface while the real
+        // UI is being assembled.
+        prewarmView = MTKView(frame: CGRect(x: 0, y: 0, width: 16, height: 16))
+        prewarmView.isHidden = true
+        prewarmBN = BNView(runtime: runtime, view: prewarmView)
         // First Attach fires here; engine is now booting up + scripts running.
         return true
     }
 
-    func releasePrewarm() { prewarmView = nil }    // call before binding real layer
+    func releasePrewarm() { prewarmBN = nil; prewarmView = nil }    // call before binding real view
 
     func applicationWillResignActive(_ app: UIApplication) { runtime.suspend() }
     func applicationDidBecomeActive (_ app: UIApplication) { runtime.resume()  }
 }
 // ... later, in the view controller:
 //      delegate.releasePrewarm()
-//      babylonView = BNView(runtime: delegate.runtime,
-//                           layer: mtkView.layer as! CAMetalLayer)
-//      // Device::UpdateWindow swaps to the user-visible layer; scene state
-//      // and JS state are preserved.
+//      babylonView = BNView(runtime: delegate.runtime, view: mtkView)
+//      // Device::UpdateWindow swaps to the user-visible surface; scene
+//      // state and JS state are preserved.
 ```
 
 ### Suspend/Resume is reference-counted

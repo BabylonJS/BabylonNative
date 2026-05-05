@@ -12,6 +12,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface BNRuntime ()
 - (Babylon::Integrations::Runtime*)nativeRuntime;
+
+/// Toggle the XR overlay view's visibility based on the runtime's
+/// current XR-active state. Called by BNView once per frame so the
+/// host doesn't have to manage XR overlay visibility itself.
+- (void)updateXrViewIfNeeded;
 @end
 
 NS_ASSUME_NONNULL_END

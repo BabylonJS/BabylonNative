@@ -4,6 +4,7 @@
 #import "BNRuntimeInternal.h"
 #import <BabylonNativeIntegrations/BNView.h>
 
+#import <MetalKit/MetalKit.h>
 #import <QuartzCore/CAMetalLayer.h>
 
 #include <Babylon/Integrations/View.h>
@@ -11,19 +12,57 @@
 #include <cstdint>
 #include <memory>
 
+@interface BNView () <MTKViewDelegate>
+@end
+
 @implementation BNView
 {
     std::unique_ptr<Babylon::Integrations::View> _view;
+    BNRuntime* _runtime;
+    MTKView* _mtkView;
+    BOOL _autoDelegate;
 }
 
-- (instancetype)initWithRuntime:(BNRuntime*)runtime layer:(CAMetalLayer*)layer
+- (instancetype)initWithRuntime:(BNRuntime*)runtime view:(MTKView*)view
 {
-    if (runtime == nil || layer == nil)
+    return [self initWithRuntime:runtime view:view autoDelegate:YES];
+}
+
+- (instancetype)initWithRuntime:(BNRuntime*)runtime
+                            view:(MTKView*)view
+                    autoDelegate:(BOOL)autoDelegate
+{
+    if (runtime == nil || view == nil)
     {
         return nil;
     }
     if ((self = [super init]))
     {
+        _runtime = runtime;
+        _mtkView = view;
+        _autoDelegate = autoDelegate;
+
+        // MTKView's underlying layer is always a CAMetalLayer (its
+        // +layerClass override).
+        CAMetalLayer* layer = (CAMetalLayer*)view.layer;
+
+        // Force a layout pass so the view's bounds are valid before we
+        // read them, and seed the layer's drawableSize from the view's
+        // logical bounds × backing scale. MTKView's autoResizeDrawable
+        // will keep drawableSize in sync from this point on, but at
+        // attach time it can still be (0, 0) — so we set it explicitly
+        // to avoid handing bgfx a zero-sized swap chain.
+        [view layoutIfNeeded];
+#if TARGET_OS_OSX
+        const CGFloat scale = view.window.backingScaleFactor > 0
+            ? view.window.backingScaleFactor
+            : 1.0;
+#else
+        const CGFloat scale = view.contentScaleFactor;
+#endif
+        layer.drawableSize = CGSizeMake(view.bounds.size.width * scale,
+                                         view.bounds.size.height * scale);
+
         // First attach on this runtime triggers GPU device construction
         // + plugin initialization + queued-script flush. The View
         // queries the layer's drawableSize itself; the host doesn't
@@ -33,14 +72,37 @@
             (__bridge CA::MetalLayer*)layer);
         if (!_view)
         {
+            _mtkView = nil;
             return nil;
+        }
+
+        // Install ourselves as the delegate AFTER Attach so that any
+        // drawableSizeWillChange: dispatched as a side-effect of
+        // assignment doesn't reach us before _view is constructed.
+        if (_autoDelegate)
+        {
+            view.delegate = self;
         }
     }
     return self;
 }
 
+- (void)dealloc
+{
+    if (_autoDelegate && _mtkView.delegate == self)
+    {
+        _mtkView.delegate = nil;
+    }
+}
+
 - (void)renderFrame
 {
+    // The runtime owns the XR overlay view (handed to it via
+    // -setXrView:), so it's the natural place to keep its visibility
+    // in sync with the XR session state. Doing this here means hosts
+    // never have to manage the XR overlay themselves.
+    [_runtime updateXrViewIfNeeded];
+
     if (_view)
     {
         _view->RenderFrame();
@@ -49,13 +111,27 @@
 
 - (void)resizeWithWidth:(NSUInteger)width height:(NSUInteger)height
 {
-    if (!_view)
+    if (_view)
     {
-        return;
+        _view->Resize(static_cast<uint32_t>(width),
+                       static_cast<uint32_t>(height));
     }
-    _view->Resize(static_cast<uint32_t>(width),
-                   static_cast<uint32_t>(height));
 }
+
+#pragma mark - MTKViewDelegate (auto-delegate mode only)
+
+- (void)mtkView:(MTKView* __unused)view drawableSizeWillChange:(CGSize)size
+{
+    [self resizeWithWidth:static_cast<NSUInteger>(size.width)
+                   height:static_cast<NSUInteger>(size.height)];
+}
+
+- (void)drawInMTKView:(MTKView* __unused)view
+{
+    [self renderFrame];
+}
+
+#pragma mark - Pointer forwarding
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
 

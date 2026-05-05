@@ -7,10 +7,6 @@ class ViewController: UIViewController {
     var xrView: MTKView!
     var bnView: BNView?
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-    }
-
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         guard
@@ -20,37 +16,32 @@ class ViewController: UIViewController {
 
         setupViews()
 
-        let device = MTLCreateSystemDefaultDevice()
-        mtkView.device = device
-
-        mtkView.colorPixelFormat = .bgra8Unorm_srgb
-        mtkView.depthStencilPixelFormat = .depth32Float
-
-        // Hand the runtime a reference to the XR overlay so NativeXr can
-        // render its content into a separate transparent layer when an
-        // XR session is active.
+        // Hand the runtime a reference to the XR overlay so NativeXr
+        // can render its content into a separate transparent layer
+        // when an XR session is active. The runtime keeps the
+        // overlay's visibility in sync with the XR session state on
+        // its own — the host doesn't need to toggle anything.
         runtime.setXrView(xrView)
 
-        // Construct the BNView against the main MetalLayer. First attach
-        // on this runtime triggers GPU device construction + plugin
-        // initialization on the JS thread + queued-script flush.
-        if let layer = mtkView.layer as? CAMetalLayer {
-            bnView = BNView(runtime: runtime, layer: layer)
-        }
+        // Attach BNView to the main MTKView. BNView installs itself as
+        // the view's MTKViewDelegate and drives the per-frame render
+        // and resize callbacks internally. First attach on this runtime
+        // triggers GPU device construction + plugin initialization on
+        // the JS thread + queued-script flush.
+        bnView = BNView(runtime: runtime, view: mtkView)
 
         // Simple gesture recognizer: forwards touches to BNView.
         let recognizer = UIBabylonGestureRecognizer(
             target: self,
-            onTouchDown: { [weak self] (id, x, y) in self?.bnView?.pointerDown(Int(id), atX: CGFloat(x), y: CGFloat(y)) },
-            onTouchMove: { [weak self] (id, x, y) in self?.bnView?.pointerMove(Int(id), atX: CGFloat(x), y: CGFloat(y)) },
-            onTouchUp:   { [weak self] (id, x, y) in self?.bnView?.pointerUp(Int(id), atX: CGFloat(x), y: CGFloat(y)) }
+            onTouchDown: { [weak self] (id, x, y) in self?.bnView?.pointerDown(id: Int(id), x: CGFloat(x), y: CGFloat(y)) },
+            onTouchMove: { [weak self] (id, x, y) in self?.bnView?.pointerMove(id: Int(id), x: CGFloat(x), y: CGFloat(y)) },
+            onTouchUp:   { [weak self] (id, x, y) in self?.bnView?.pointerUp  (id: Int(id), x: CGFloat(x), y: CGFloat(y)) }
         )
         mtkView.addGestureRecognizer(recognizer)
     }
 
     func setupViews() {
         mtkView = MTKView()
-        mtkView.delegate = self
         mtkView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(mtkView)
         view.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "|[mtkView]|", options: [], metrics: nil, views: ["mtkView" : mtkView]))
@@ -63,19 +54,6 @@ class ViewController: UIViewController {
         view.addSubview(xrView)
         view.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "|[xrView]|", options: [], metrics: nil, views: ["xrView" : xrView]))
         view.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "V:|[xrView]|", options: [], metrics: nil, views: ["xrView" : xrView]))
-    }
-}
-
-// MARK: MTKViewDelegate
-extension ViewController: MTKViewDelegate {
-    func draw(in view: MTKView) {
-        guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else { return }
-        xrView.isHidden = !(appDelegate.runtime?.isXRActive ?? false)
-        bnView?.renderFrame()
-    }
-
-    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-        bnView?.resize(withWidth: UInt(size.width), height: UInt(size.height))
     }
 }
 

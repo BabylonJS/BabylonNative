@@ -11,6 +11,7 @@
 @implementation BNRuntime
 {
     std::unique_ptr<Babylon::Integrations::Runtime> _runtime;
+    MTKView* _xrView;
 }
 
 - (instancetype)init
@@ -72,6 +73,7 @@
 - (void)setXrView:(MTKView*)xrView
 {
 #if BABYLON_NATIVE_PLUGIN_NATIVEXR
+    _xrView = xrView;
     _runtime->SetXrWindow((__bridge void*)xrView);
 #else
     (void)xrView;
@@ -90,6 +92,20 @@
 - (Babylon::Integrations::Runtime*)nativeRuntime
 {
     return _runtime.get();
+}
+
+- (void)updateXrViewIfNeeded
+{
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
+    if (_xrView != nil)
+    {
+        const BOOL shouldBeHidden = !_runtime->IsXrActive();
+        if (_xrView.hidden != shouldBeHidden)
+        {
+            _xrView.hidden = shouldBeHidden;
+        }
+    }
+#endif
 }
 
 @end
