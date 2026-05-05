@@ -7,28 +7,9 @@
 #import <QuartzCore/CAMetalLayer.h>
 
 #include <Babylon/Integrations/View.h>
-#include <Babylon/Integrations/ViewDescriptor.h>
 
 #include <cstdint>
 #include <memory>
-
-namespace
-{
-    // Read physical-pixel dimensions + DPR from a CAMetalLayer and
-    // Build a ViewDescriptor from a CAMetalLayer. drawableSize is in
-    // physical pixels (= surface backing buffer size), which is what
-    // ViewDescriptor wants directly. The Device queries the screen
-    // contentsScale itself for any DPR-based math; the host does not
-    // need to compute or pass it.
-    Babylon::Integrations::ViewDescriptor MakeViewDescriptor(CAMetalLayer* layer)
-    {
-        Babylon::Integrations::ViewDescriptor descriptor{};
-        descriptor.nativeWindow = (__bridge CA::MetalLayer*)layer;
-        descriptor.width = static_cast<uint32_t>(layer.drawableSize.width);
-        descriptor.height = static_cast<uint32_t>(layer.drawableSize.height);
-        return descriptor;
-    }
-}
 
 @implementation BNView
 {
@@ -45,7 +26,13 @@ namespace
     {
         // First attach on this runtime triggers GPU device construction
         // + plugin initialization + queued-script flush.
-        _view = Babylon::Integrations::View::Attach(*runtime.nativeRuntime, MakeViewDescriptor(layer));
+        // CAMetalLayer.drawableSize is already in physical pixels, which
+        // is what View::Attach expects.
+        _view = Babylon::Integrations::View::Attach(
+            *runtime.nativeRuntime,
+            (__bridge CA::MetalLayer*)layer,
+            static_cast<uint32_t>(layer.drawableSize.width),
+            static_cast<uint32_t>(layer.drawableSize.height));
         if (!_view)
         {
             return nil;
@@ -68,8 +55,8 @@ namespace
     {
         return;
     }
-    const auto descriptor = MakeViewDescriptor(layer);
-    _view->Resize(descriptor.width, descriptor.height);
+    _view->Resize(static_cast<uint32_t>(layer.drawableSize.width),
+                   static_cast<uint32_t>(layer.drawableSize.height));
 }
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT

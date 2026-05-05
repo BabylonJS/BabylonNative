@@ -140,26 +140,6 @@ exists.
 ```cpp
 namespace Babylon::Integrations
 {
-    // Platform-surface handle. Populated by the platform interop layer
-    // from whatever native object the host's UI framework provides.
-    //
-    // `nativeWindow` is `Babylon::Graphics::WindowT`, the same per-platform
-    // typedef the Graphics layer already uses (HWND on Win32,
-    // ANativeWindow* on Android, CA::MetalLayer* on Apple,
-    // X11 `Window` on Linux, winrt::IInspectable on UWP). Using the
-    // typed handle avoids a round-trip through `void*` and gives
-    // hosts compile-time safety.
-    //
-    // `width` and `height` are in **physical pixels** — the actual
-    // pixel-buffer dimensions of the surface. The Device queries the
-    // screen device-pixel-ratio from the system itself (see §4.2
-    // "Pixel units"); the host doesn't need to compute or pass it.
-    struct ViewDescriptor {
-        Babylon::Graphics::WindowT nativeWindow{};
-        uint32_t width;
-        uint32_t height;
-    };
-
     struct RuntimeOptions {
         uint32_t msaaSamples = 4;
         bool     enableDebugger = false;
@@ -261,7 +241,10 @@ namespace Babylon::Integrations
         // Detach (~View) closes the in-flight frame and calls
         // `Device::DisableRendering`. The Device persists on the
         // Runtime, so the next Attach is fast.
-        static std::unique_ptr<View> Attach(Runtime& runtime, const ViewDescriptor& handle);
+        static std::unique_ptr<View> Attach(Runtime& runtime,
+                                            Babylon::Graphics::WindowT nativeWindow,
+                                            uint32_t width,
+                                            uint32_t height);
 
         // Render exactly one frame. Must be called from the same thread
         // each time (the "frame thread"). No-op if the runtime is
@@ -584,7 +567,7 @@ owns two platform adaptations on the host's behalf so the host's
 UI-language code stays as simple as possible:
 
 1. **Pass platform-natural pixel dimensions through unchanged.** The
-   shared C++ `View::Resize(width, height)` and `ViewDescriptor`
+   shared C++ `View::Attach(... nativeWindow, w, h)` and `View::Resize(w, h)`
    take **physical pixels** — the actual pixel-buffer size of the
    surface. The host hands the interop layer whatever its UI
    framework gives it; the interop layer does no conversion.
@@ -718,9 +701,9 @@ Method-level subset of the C++ header, illustrating the pattern:
 ```cpp
 class View {
 public:
-    static std::unique_ptr<View> Attach(Runtime&, const ViewDescriptor&);
+    static std::unique_ptr<View> Attach(Runtime&, Babylon::Graphics::WindowT, uint32_t w, uint32_t h);
     void RenderFrame();
-    void Resize(uint32_t w, uint32_t h, float dpr = 1.0f);
+    void Resize(uint32_t w, uint32_t h);
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
     void OnPointerDown(int32_t pointerId, float x, float y);

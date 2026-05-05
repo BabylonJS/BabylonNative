@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Babylon/Integrations/RuntimeOptions.h>
-#include <Babylon/Integrations/ViewDescriptor.h>
 
 #include <napi/env.h>
 

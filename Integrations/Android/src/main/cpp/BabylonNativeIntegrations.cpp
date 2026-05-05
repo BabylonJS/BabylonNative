@@ -44,7 +44,6 @@ namespace
     using Babylon::Integrations::Runtime;
     using Babylon::Integrations::RuntimeOptions;
     using Babylon::Integrations::View;
-    using Babylon::Integrations::ViewDescriptor;
 
     // Wraps a Runtime with two `android::global` event tickets that
     // auto-Suspend/Resume the Runtime in response to process-wide
@@ -95,20 +94,6 @@ namespace
         std::string result{utf};
         env->ReleaseStringUTFChars(jstr, utf);
         return result;
-    }
-
-    // Build a ViewDescriptor from an Android Surface and its size in
-    // physical pixels (as Android natively reports it). The Device
-    // queries the screen DPR internally (see DeviceImpl_Android.cpp's
-    // GetDevicePixelRatio), so the host doesn't need to compute or
-    // pass it.
-    ViewDescriptor MakeViewDescriptor(ANativeWindow* window, jint width, jint height)
-    {
-        ViewDescriptor descriptor{};
-        descriptor.nativeWindow = window;
-        descriptor.width = static_cast<uint32_t>(width);
-        descriptor.height = static_cast<uint32_t>(height);
-        return descriptor;
     }
 }
 
@@ -323,7 +308,9 @@ Java_com_babylonjs_integrations_BabylonNative_viewAttach(
         return 0;
     }
     auto view = View::Attach(*AsRuntime(runtimeHandle),
-                              MakeViewDescriptor(window, width, height));
+                              window,
+                              static_cast<uint32_t>(width),
+                              static_cast<uint32_t>(height));
     if (!view)
     {
         ANativeWindow_release(window);

@@ -123,20 +123,6 @@ namespace
         }
     }
 
-    Babylon::Integrations::ViewDescriptor DescribeWindow(HWND hWnd)
-    {
-        RECT rect;
-        if (!GetClientRect(hWnd, &rect))
-        {
-            throw std::exception{"Unable to get client rect"};
-        }
-        Babylon::Integrations::ViewDescriptor descriptor{};
-        descriptor.nativeWindow = hWnd;
-        descriptor.width = static_cast<uint32_t>(rect.right - rect.left);
-        descriptor.height = static_cast<uint32_t>(rect.bottom - rect.top);
-        return descriptor;
-    }
-
     void Uninitialize()
     {
         // Destroy in reverse-construction order: View first (so the
@@ -153,10 +139,20 @@ namespace
         g_runtime = Babylon::Integrations::Runtime::Create(MakeRuntimeOptions());
         QueueScripts();
 
+        RECT rect;
+        if (!GetClientRect(hWnd, &rect))
+        {
+            throw std::exception{"Unable to get client rect"};
+        }
+
         // First View::Attach triggers GPU device construction, plugin
         // initialization on the JS thread, and flushes the queued
         // scripts.
-        g_view = Babylon::Integrations::View::Attach(*g_runtime, DescribeWindow(hWnd));
+        g_view = Babylon::Integrations::View::Attach(
+            *g_runtime,
+            hWnd,
+            static_cast<uint32_t>(rect.right - rect.left),
+            static_cast<uint32_t>(rect.bottom - rect.top));
     }
 }
 

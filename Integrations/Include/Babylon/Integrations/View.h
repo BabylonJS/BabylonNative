@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Babylon/Integrations/ViewDescriptor.h>
+#include <Babylon/Graphics/Platform.h>
 
 #include <cstdint>
 #include <memory>
@@ -20,11 +20,25 @@ namespace Babylon::Integrations
     class View
     {
     public:
-        // Attaches a surface described by `descriptor` to `runtime`.
+        // Attach `nativeWindow` (the platform-specific surface handle)
+        // to `runtime`.
+        //
+        // `nativeWindow` is `Babylon::Graphics::WindowT`, the same
+        // per-platform typedef the Graphics layer already uses
+        // (HWND on Win32, ANativeWindow* on Android, CA::MetalLayer*
+        // on Apple, X11 `Window` on Linux, winrt::IInspectable on UWP).
+        //
+        // `width` and `height` are in **physical pixels** — the actual
+        // pixel-buffer dimensions of the surface. Hosts pass through
+        // whatever their platform's window/view delivers (Android's
+        // `Surface.getSurfaceFrame()`, Apple's `CAMetalLayer.drawableSize`,
+        // Win32's `GetClientRect`, etc.). The Device queries the screen
+        // device-pixel-ratio internally; the host doesn't need to
+        // compute or pass it.
         //
         // The first Attach on a given Runtime is the heavy step: it
-        // constructs `Babylon::Graphics::Device` against `descriptor`,
-        // dispatches GPU plugin initialization (`Device::AddToJavaScript`,
+        // constructs `Babylon::Graphics::Device`, dispatches GPU plugin
+        // initialization (`Device::AddToJavaScript`,
         // `NativeEngine::Initialize`, `NativeInput::CreateForJavaScript`,
         // ...), and flushes any scripts queued via `Runtime::LoadScript`
         // before this point. Opens the first frame.
@@ -41,7 +55,7 @@ namespace Babylon::Integrations
         //
         // Must be called from the same thread that will call
         // `RenderFrame` and `Resize` (the "frame thread").
-        static std::unique_ptr<View> Attach(Runtime& runtime, const ViewDescriptor& descriptor);
+        static std::unique_ptr<View> Attach(Runtime& runtime, Babylon::Graphics::WindowT nativeWindow, uint32_t width, uint32_t height);
 
         ~View();
 

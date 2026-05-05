@@ -3,7 +3,6 @@ set(SOURCES
     "Include/Babylon/Integrations/Runtime.h"
     "Include/Babylon/Integrations/RuntimeOptions.h"
     "Include/Babylon/Integrations/View.h"
-    "Include/Babylon/Integrations/ViewDescriptor.h"
     "Source/Runtime.cpp"
     "Source/RuntimeImpl.h"
     "Source/View.cpp")

@@ -161,7 +161,7 @@ namespace Babylon::Integrations
     // ---------------------------------------------------------------------
     // View::Attach (first time and subsequent)
     // ---------------------------------------------------------------------
-    std::unique_ptr<View> View::Attach(Runtime& runtime, const ViewDescriptor& descriptor)
+    std::unique_ptr<View> View::Attach(Runtime& runtime, Babylon::Graphics::WindowT nativeWindow, uint32_t width, uint32_t height)
     {
         RuntimeImpl& impl = *runtime.m_impl;
 
@@ -171,17 +171,15 @@ namespace Babylon::Integrations
             return nullptr;
         }
 
-        const auto& window = descriptor.nativeWindow;
-
         if (!impl.m_device)
         {
             // First Attach on this Runtime: construct the Device and
             // open the first frame, then dispatch the engine-init lambda
             // onto the JS thread.
             Babylon::Graphics::Configuration config{};
-            config.Window = window;
-            config.Width = descriptor.width;
-            config.Height = descriptor.height;
+            config.Window = nativeWindow;
+            config.Width = width;
+            config.Height = height;
             config.MSAASamples = impl.m_options.msaaSamples;
 
             impl.m_device.emplace(config);
@@ -197,15 +195,15 @@ namespace Babylon::Integrations
             impl.m_device->StartRenderingCurrentFrame();
             impl.m_deviceUpdate->Start();
 
-            RunFirstAttachInit(impl, window);
+            RunFirstAttachInit(impl, nativeWindow);
         }
         else
         {
             // Subsequent Attach: reuse the existing Device, just rebind
             // the surface and re-enable rendering. Plugins, polyfills,
             // and any loaded scripts are preserved on the JS side.
-            impl.m_device->UpdateWindow(window);
-            impl.m_device->UpdateSize(descriptor.width, descriptor.height);
+            impl.m_device->UpdateWindow(nativeWindow);
+            impl.m_device->UpdateSize(width, height);
             impl.m_device->EnableRendering();
             impl.m_device->StartRenderingCurrentFrame();
             impl.m_deviceUpdate->Start();
