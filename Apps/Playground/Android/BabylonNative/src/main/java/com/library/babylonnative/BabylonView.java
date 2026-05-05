@@ -19,6 +19,11 @@ import com.babylonjs.integrations.BabylonNative;
  * attach in {@code surfaceCreated}, resize in {@code surfaceChanged},
  * detach in {@code surfaceDestroyed}.
  *
+ * <p>All sizes and coordinates passed to the native layer are in
+ * physical pixels (Android's natural unit) — the Device queries the
+ * screen device-pixel-ratio internally and applies any conversions
+ * needed at the rendering layer.
+ *
  * <p>Activity lifecycle: the host Activity is responsible for the
  * process-wide {@code androidGlobalInitialize}, {@code SetCurrentActivity},
  * {@code Pause}/{@code Resume}, and {@code RequestPermissionsResult}
@@ -34,7 +39,6 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
 
     private final SurfaceView primarySurfaceView;
     private final SurfaceView xrSurfaceView;
-    private final float pixelDensityScale = getResources().getDisplayMetrics().density;
 
     /** Runtime handle borrowed from the host. Not owned by this view. */
     private final long mRuntimeHandle;
@@ -84,7 +88,7 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
     public void surfaceCreated(SurfaceHolder holder) {
         android.graphics.Rect frame = holder.getSurfaceFrame();
         mViewHandle = BabylonNative.viewAttach(mRuntimeHandle, holder.getSurface(),
-                frame.width(), frame.height(), this.pixelDensityScale);
+                frame.width(), frame.height());
     }
 
     /**
@@ -104,7 +108,7 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
      */
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
         if (mViewHandle != 0) {
-            BabylonNative.viewResize(mViewHandle, w, h, this.pixelDensityScale);
+            BabylonNative.viewResize(mViewHandle, w, h);
         }
     }
 
@@ -115,20 +119,20 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
         }
 
         int pointerId = event.getPointerId(event.getActionIndex());
-        float mX = event.getX(event.getActionIndex()) / this.pixelDensityScale;
-        float mY = event.getY(event.getActionIndex()) / this.pixelDensityScale;
+        float x = event.getX(event.getActionIndex());
+        float y = event.getY(event.getActionIndex());
 
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
-                BabylonNative.viewPointerDown(mViewHandle, pointerId, mX, mY);
+                BabylonNative.viewPointerDown(mViewHandle, pointerId, x, y);
                 break;
             case MotionEvent.ACTION_MOVE:
-                BabylonNative.viewPointerMove(mViewHandle, pointerId, mX, mY);
+                BabylonNative.viewPointerMove(mViewHandle, pointerId, x, y);
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_POINTER_UP:
-                BabylonNative.viewPointerUp(mViewHandle, pointerId, mX, mY);
+                BabylonNative.viewPointerUp(mViewHandle, pointerId, x, y);
                 break;
         }
         return true;

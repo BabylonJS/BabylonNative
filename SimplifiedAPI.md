@@ -142,8 +142,6 @@ namespace Babylon::Integrations
 {
     // Platform-surface handle. Populated by the platform interop layer
     // from whatever native object the host's UI framework provides.
-    // The interop layer is also responsible for any unit conversion
-    // (see "Pixel units" below).
     //
     // `nativeWindow` is `Babylon::Graphics::WindowT`, the same per-platform
     // typedef the Graphics layer already uses (HWND on Win32,
@@ -151,11 +149,15 @@ namespace Babylon::Integrations
     // X11 `Window` on Linux, winrt::IInspectable on UWP). Using the
     // typed handle avoids a round-trip through `void*` and gives
     // hosts compile-time safety.
+    //
+    // `width` and `height` are in **physical pixels** — the actual
+    // pixel-buffer dimensions of the surface. The Device queries the
+    // screen device-pixel-ratio from the system itself (see §4.2
+    // "Pixel units"); the host doesn't need to compute or pass it.
     struct ViewDescriptor {
         Babylon::Graphics::WindowT nativeWindow{};
-        uint32_t width;            // logical pixels (see "Pixel units")
-        uint32_t height;           // logical pixels (see "Pixel units")
-        float    devicePixelRatio = 1.0f;
+        uint32_t width;
+        uint32_t height;
     };
 
     struct RuntimeOptions {
@@ -581,25 +583,28 @@ Beyond the 1:1 mirroring of `Runtime` and `View`, each interop layer
 owns two platform adaptations on the host's behalf so the host's
 UI-language code stays as simple as possible:
 
-1. **Translate platform-natural units to the C++ contract.** The
-   shared C++ `View::Resize(width, height, dpr)` and `ViewDescriptor`
-   take **logical pixels + DPR**. Each interop layer converts
-   whatever its UI framework hands the host:
-   - **Android.** `View.onSizeChanged(int w, int h, ...)` provides
-     **physical pixels**. The interop layer divides by
-     `Resources.getSystem().getDisplayMetrics().density` and passes
-     the result + the density itself to the native side. The host's
-     Kotlin code passes the raw `w/h` it received.
+1. **Pass platform-natural pixel dimensions through unchanged.** The
+   shared C++ `View::Resize(width, height)` and `ViewDescriptor`
+   take **physical pixels** — the actual pixel-buffer size of the
+   surface. The host hands the interop layer whatever its UI
+   framework gives it; the interop layer does no conversion.
+   - **Android.** `Surface.getSurfaceFrame()` and
+     `View.onSizeChanged(int w, int h, ...)` already report physical
+     pixels. The Kotlin/Java host passes the raw `w/h` through.
    - **Apple.** `MTKViewDelegate.mtkView(_:drawableSizeWillChange:)`
-     provides **physical pixels**; `view.contentsScale` is the DPR.
-     The interop layer divides and passes through. The host's Swift
-     code passes the `CGSize` it received (or hands over the layer
-     directly).
-   - **UWP.** `SwapChainPanel.SizeChanged` provides logical pixels +
-     `RasterizationScale` for DPR. The interop layer passes both
-     through unchanged.
-   - **Win32 / Linux.** No interop layer; the host C++ does the
-     conversion if its windowing system cares.
+     and `CAMetalLayer.drawableSize` are already in physical pixels.
+     Pass through.
+   - **UWP.** `SwapChainPanel.SizeChanged` reports logical pixels;
+     the interop layer multiplies by `RasterizationScale` to recover
+     physical pixels before passing to C++.
+   - **Win32 / Linux.** `GetClientRect` and X11's per-window pixel
+     dimensions are already physical. Pass through.
+
+   The Device queries device-pixel-ratio from the system itself per
+   platform (`getDensityDpi() / 160` on Android, `layer.contentsScale`
+   on Apple, `GetDpiForWindow` on Win32, etc. — see
+   `Core/Graphics/Source/DeviceImpl_*.cpp`). The host doesn't
+   compute, store, or pass it.
 2. **Expose platform-specific lifecycle entries that don't belong on
    the cross-platform API.** Examples from `babylon-native-bridge`:
    - Android: `setCurrentActivity(Activity)` →

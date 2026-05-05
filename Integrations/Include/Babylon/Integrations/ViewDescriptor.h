@@ -22,16 +22,17 @@ namespace Babylon::Integrations
     //   UWP / WinRT  : winrt::Windows::Foundation::IInspectable
     //                  (e.g. ICoreWindow, ISwapChainPanel)
     //
-    // `width` and `height` are in **logical pixels**; `devicePixelRatio`
-    // is the physical-to-logical ratio (e.g. 2.0 for a Retina display).
-    // The platform interop layer (Integrations/Android, Integrations/Apple)
-    // is responsible for converting whatever its UI framework hands the
-    // host into this convention.
+    // `width` and `height` are in **physical pixels** — the actual
+    // pixel-buffer dimensions of the surface the GPU will render into.
+    // Hosts pass through whatever their platform's window/view delivers
+    // (e.g. Android `Surface.getSurfaceFrame()` or `View.onSizeChanged`
+    // both report physical pixels). The Device queries the screen's
+    // device-pixel-ratio internally; the host does not need to compute
+    // or pass it.
     struct ViewDescriptor
     {
         Babylon::Graphics::WindowT nativeWindow{};
         uint32_t width{0};
         uint32_t height{0};
-        float devicePixelRatio{1.0f};
     };
 }

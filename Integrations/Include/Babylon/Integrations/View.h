@@ -60,25 +60,34 @@ namespace Babylon::Integrations
         void RenderFrame();
 
         // Resize the bound surface. `width` and `height` are in
-        // **logical pixels**; `devicePixelRatio` is the physical-to-logical
-        // ratio (e.g. 2.0 for a Retina display).
-        //
-        // The platform interop layer is responsible for converting
-        // whatever its UI framework provides into this convention
-        // (Android `View.onSizeChanged` is in physical pixels; iOS
-        // `MTKViewDelegate.drawableSizeWillChange:` is in physical
-        // pixels; UWP `SwapChainPanel.SizeChanged` is in logical pixels;
-        // etc.). See SimplifiedAPI.md §4.2 "Pixel units".
+        // **physical pixels** — the actual pixel-buffer dimensions of
+        // the surface the GPU will render into. Hosts pass through
+        // whatever their platform's view layer reports (e.g.
+        // Android's `View.onSizeChanged` w/h, iOS's
+        // `MTKViewDelegate.drawableSizeWillChange:` size).
         //
         // Must be called from the frame thread.
-        void Resize(uint32_t width, uint32_t height, float devicePixelRatio = 1.0f);
+        void Resize(uint32_t width, uint32_t height);
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
         // ----- Pointer / mouse input forwarding -----
         //
         // Host calls these from its event loop while the view exists.
-        // Routed to the JS thread via `NativeInput`. Coordinates are in
-        // logical pixels (same convention as Resize).
+        // Routed to the JS thread via `NativeInput`, where Babylon.js
+        // consumes them as `PointerEvent.clientX/clientY`.
+        //
+        // **Coordinates are in logical (CSS) pixels** — the same unit
+        // a browser would deliver. This matches Babylon.js's existing
+        // pointer pipeline: `clientX/clientY` are CSS pixels regardless
+        // of the canvas backing buffer's physical resolution.
+        //
+        // Some platforms' native pointer events are already in logical
+        // units (iOS `UITouch` points, macOS `NSEvent`, UWP
+        // `PointerPoint` at `RasterizationScale = 1`); others deliver
+        // physical pixels (Android `MotionEvent.getX/getY`, Win32
+        // `WM_POINTER*`). The host or interop layer is responsible for
+        // dividing by `DevicePixelRatio()` (below) when its native
+        // event system delivers physical pixels.
         //
         // Babylon Native distinguishes pointer (touch) input from mouse
         // input; both methods feed the same Babylon.js pointer-event
@@ -113,6 +122,17 @@ namespace Babylon::Integrations
         static uint32_t MiddleMouseButton();
         static uint32_t RightMouseButton();
         static uint32_t MouseWheelY();
+
+        // Current screen device-pixel-ratio (physical/logical pixel
+        // ratio), as queried from the platform by the underlying
+        // `Babylon::Graphics::Device`. Use this to convert physical
+        // pointer coordinates to the logical pixels the OnPointer* /
+        // OnMouse* APIs expect, on platforms where the native event
+        // system delivers physical pixels (Android, Win32).
+        //
+        // Only valid post-Attach (the Device is constructed there);
+        // returns 1.0 if called pre-Attach.
+        float DevicePixelRatio() const;
 #endif
 
     private:

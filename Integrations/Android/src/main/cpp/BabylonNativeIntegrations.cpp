@@ -97,16 +97,17 @@ namespace
         return result;
     }
 
-    // Convert physical pixels (Android `View.onSizeChanged` units) to
-    // logical pixels (the C++ ViewDescriptor convention) using the screen
-    // density factor. See SimplifiedAPI.md §4.2 "Pixel units".
-    ViewDescriptor MakeViewDescriptor(ANativeWindow* window, jint physicalW, jint physicalH, jfloat density)
+    // Build a ViewDescriptor from an Android Surface and its size in
+    // physical pixels (as Android natively reports it). The Device
+    // queries the screen DPR internally (see DeviceImpl_Android.cpp's
+    // GetDevicePixelRatio), so the host doesn't need to compute or
+    // pass it.
+    ViewDescriptor MakeViewDescriptor(ANativeWindow* window, jint width, jint height)
     {
         ViewDescriptor descriptor{};
         descriptor.nativeWindow = window;
-        descriptor.width = static_cast<uint32_t>(static_cast<float>(physicalW) / density);
-        descriptor.height = static_cast<uint32_t>(static_cast<float>(physicalH) / density);
-        descriptor.devicePixelRatio = density;
+        descriptor.width = static_cast<uint32_t>(width);
+        descriptor.height = static_cast<uint32_t>(height);
         return descriptor;
     }
 }
@@ -310,7 +311,7 @@ Java_com_babylonjs_integrations_BabylonNative_runtimeIsXrActive(JNIEnv*, jclass,
 JNIEXPORT jlong JNICALL
 Java_com_babylonjs_integrations_BabylonNative_viewAttach(
     JNIEnv* env, jclass, jlong runtimeHandle, jobject surface,
-    jint physicalW, jint physicalH, jfloat density)
+    jint width, jint height)
 {
     if (surface == nullptr)
     {
@@ -322,7 +323,7 @@ Java_com_babylonjs_integrations_BabylonNative_viewAttach(
         return 0;
     }
     auto view = View::Attach(*AsRuntime(runtimeHandle),
-                              MakeViewDescriptor(window, physicalW, physicalH, density));
+                              MakeViewDescriptor(window, width, height));
     if (!view)
     {
         ANativeWindow_release(window);
@@ -349,35 +350,45 @@ Java_com_babylonjs_integrations_BabylonNative_viewRenderFrame(JNIEnv*, jclass, j
 
 JNIEXPORT void JNICALL
 Java_com_babylonjs_integrations_BabylonNative_viewResize(
-    JNIEnv*, jclass, jlong handle, jint physicalW, jint physicalH, jfloat density)
+    JNIEnv*, jclass, jlong handle, jint width, jint height)
 {
-    AsView(handle)->Resize(
-        static_cast<uint32_t>(static_cast<float>(physicalW) / density),
-        static_cast<uint32_t>(static_cast<float>(physicalH) / density),
-        density);
+    AsView(handle)->Resize(static_cast<uint32_t>(width),
+                            static_cast<uint32_t>(height));
 }
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
 
 JNIEXPORT void JNICALL
 Java_com_babylonjs_integrations_BabylonNative_viewPointerDown(
-    JNIEnv*, jclass, jlong handle, jint pointerId, jfloat x, jfloat y)
+    JNIEnv*, jclass, jlong handle, jint pointerId, jfloat physicalX, jfloat physicalY)
 {
-    AsView(handle)->OnPointerDown(static_cast<int32_t>(pointerId), x, y);
+    View* view = AsView(handle);
+    const float dpr = view->DevicePixelRatio();
+    view->OnPointerDown(static_cast<int32_t>(pointerId),
+                         physicalX / dpr,
+                         physicalY / dpr);
 }
 
 JNIEXPORT void JNICALL
 Java_com_babylonjs_integrations_BabylonNative_viewPointerMove(
-    JNIEnv*, jclass, jlong handle, jint pointerId, jfloat x, jfloat y)
+    JNIEnv*, jclass, jlong handle, jint pointerId, jfloat physicalX, jfloat physicalY)
 {
-    AsView(handle)->OnPointerMove(static_cast<int32_t>(pointerId), x, y);
+    View* view = AsView(handle);
+    const float dpr = view->DevicePixelRatio();
+    view->OnPointerMove(static_cast<int32_t>(pointerId),
+                         physicalX / dpr,
+                         physicalY / dpr);
 }
 
 JNIEXPORT void JNICALL
 Java_com_babylonjs_integrations_BabylonNative_viewPointerUp(
-    JNIEnv*, jclass, jlong handle, jint pointerId, jfloat x, jfloat y)
+    JNIEnv*, jclass, jlong handle, jint pointerId, jfloat physicalX, jfloat physicalY)
 {
-    AsView(handle)->OnPointerUp(static_cast<int32_t>(pointerId), x, y);
+    View* view = AsView(handle);
+    const float dpr = view->DevicePixelRatio();
+    view->OnPointerUp(static_cast<int32_t>(pointerId),
+                       physicalX / dpr,
+                       physicalY / dpr);
 }
 
 #endif

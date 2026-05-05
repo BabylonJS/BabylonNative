@@ -134,7 +134,6 @@ namespace
         descriptor.nativeWindow = hWnd;
         descriptor.width = static_cast<uint32_t>(rect.right - rect.left);
         descriptor.height = static_cast<uint32_t>(rect.bottom - rect.top);
-        descriptor.devicePixelRatio = 1.0f;
         return descriptor;
     }
 

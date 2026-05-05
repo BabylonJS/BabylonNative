@@ -15,15 +15,17 @@
 namespace
 {
     // Read physical-pixel dimensions + DPR from a CAMetalLayer and
-    // convert to the C++ logical-pixel convention used by ViewDescriptor.
+    // Build a ViewDescriptor from a CAMetalLayer. drawableSize is in
+    // physical pixels (= surface backing buffer size), which is what
+    // ViewDescriptor wants directly. The Device queries the screen
+    // contentsScale itself for any DPR-based math; the host does not
+    // need to compute or pass it.
     Babylon::Integrations::ViewDescriptor MakeViewDescriptor(CAMetalLayer* layer)
     {
-        const CGFloat scale = layer.contentsScale > 0 ? layer.contentsScale : 1.0;
         Babylon::Integrations::ViewDescriptor descriptor{};
         descriptor.nativeWindow = (__bridge CA::MetalLayer*)layer;
-        descriptor.width = static_cast<uint32_t>(layer.drawableSize.width / scale);
-        descriptor.height = static_cast<uint32_t>(layer.drawableSize.height / scale);
-        descriptor.devicePixelRatio = static_cast<float>(scale);
+        descriptor.width = static_cast<uint32_t>(layer.drawableSize.width);
+        descriptor.height = static_cast<uint32_t>(layer.drawableSize.height);
         return descriptor;
     }
 }
@@ -67,7 +69,7 @@ namespace
         return;
     }
     const auto descriptor = MakeViewDescriptor(layer);
-    _view->Resize(descriptor.width, descriptor.height, descriptor.devicePixelRatio);
+    _view->Resize(descriptor.width, descriptor.height);
 }
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT

@@ -261,14 +261,8 @@ namespace Babylon::Integrations
         impl.m_deviceUpdate->Start();
     }
 
-    void View::Resize(uint32_t width, uint32_t height, float devicePixelRatio)
+    void View::Resize(uint32_t width, uint32_t height)
     {
-        // devicePixelRatio is informational at the C++ layer for now —
-        // Device computes its own DPR internally via GetDevicePixelRatio().
-        // The parameter is part of the API for ViewDescriptor parity and so
-        // future Device-level DPR plumbing has a place to land.
-        (void)devicePixelRatio;
-
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
         if (impl.m_device)
         {
@@ -355,5 +349,11 @@ namespace Babylon::Integrations
     uint32_t View::MiddleMouseButton() { return Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID; }
     uint32_t View::RightMouseButton()  { return Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID; }
     uint32_t View::MouseWheelY()       { return Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID; }
+
+    float View::DevicePixelRatio() const
+    {
+        RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
+        return impl.m_device ? impl.m_device->GetDevicePixelRatio() : 1.0f;
+    }
 #endif
 }
