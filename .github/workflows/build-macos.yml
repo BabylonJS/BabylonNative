@@ -38,9 +38,9 @@ jobs:
             ${{ github.workspace }}/.fc-cache
             !${{ github.workspace }}/.fc-cache/*-build
             !${{ github.workspace }}/.fc-cache/*-build/**
-          key: fc-macos-${{ inputs.generator }}-${{ hashFiles('**/CMakeLists.txt') }}
+          key: fc-v2-macos-${{ inputs.generator }}-${{ hashFiles('**/CMakeLists.txt') }}
           restore-keys: |
-            fc-macos-${{ inputs.generator }}-
+            fc-v2-macos-${{ inputs.generator }}-
 
       - name: Select Xcode ${{ inputs.xcode-version }}
         run: sudo xcode-select --switch /Applications/Xcode_${{ inputs.xcode-version }}.app/Contents/Developer

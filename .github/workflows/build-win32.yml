@@ -33,9 +33,9 @@ jobs:
             ${{ github.workspace }}/.fc-cache
             !${{ github.workspace }}/.fc-cache/*-build
             !${{ github.workspace }}/.fc-cache/*-build/**
-          key: fc-win32-${{ inputs.platform }}-${{ hashFiles('**/CMakeLists.txt') }}
+          key: fc-v2-win32-${{ inputs.platform }}-${{ hashFiles('**/CMakeLists.txt') }}
           restore-keys: |
-            fc-win32-${{ inputs.platform }}-
+            fc-v2-win32-${{ inputs.platform }}-
 
       - name: Set variables
         id: vars
