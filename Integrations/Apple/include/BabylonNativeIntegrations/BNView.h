@@ -7,10 +7,13 @@
 // Subsequent views attached to the same runtime are cheap surface
 // rebinds.
 //
-// BNView installs itself as the MTKView's `delegate` and drives the
-// per-frame render and resize callbacks internally — the host does
-// not need to forward `MTKViewDelegate.draw(in:)` or
-// `mtkView:drawableSizeWillChange:`.
+// By default, if the MTKView has no delegate when `BNView` is
+// constructed, BNView installs and strong-holds a `BNViewDelegate`
+// for you and the host doesn't have to wire anything up. If the host
+// wants to interleave per-frame work, they assign their own
+// `MTKViewDelegate` (typically a `BNViewDelegate` subclass) to the
+// MTKView before constructing the BNView; in that case BNView leaves
+// the host's delegate alone.
 //
 // See SimplifiedAPI.md §4.2 / §5 for the design and usage examples.
 
@@ -18,49 +21,64 @@
 
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
+#import <MetalKit/MTKView.h>
 
-@class MTKView;
 @class BNRuntime;
+@class BNView;
 
 NS_ASSUME_NONNULL_BEGIN
 
+/// Default `MTKViewDelegate` implementation that drives a `BNView`.
+/// Forwards `drawInMTKView:` to `[bnView renderFrame]` and
+/// `mtkView:drawableSizeWillChange:` to `[bnView resizeWithWidth:height:]`.
+///
+/// `BNView` automatically installs and retains an instance of this
+/// class when constructed against an `MTKView` that has no delegate
+/// yet, so most hosts never need to construct one explicitly.
+///
+/// To insert per-frame work, subclass `BNViewDelegate`, override the
+/// delegate methods, and call `super` to keep the default forwarding
+/// behavior.
+@interface BNViewDelegate : NSObject <MTKViewDelegate>
+
+/// Initialize a delegate that drives `view`. The reference is held
+/// weakly; the host (or BNView, when this is the auto-installed
+/// instance) is responsible for keeping the BNView alive.
+- (nullable instancetype)initWithView:(BNView*)view NS_DESIGNATED_INITIALIZER;
+
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
+
+@end
+
 @interface BNView : NSObject
 
-/// Attach `runtime` to render into `view` ("super simple" mode). BNView
-/// installs itself as the MTKView's `delegate` and drives the per-frame
-/// render and resize callbacks internally — the host does not need to
-/// forward anything.
+/// Attach `runtime` to render into `view`. On the first attach for a
+/// given runtime, this triggers GPU device construction and engine
+/// initialization. Subsequent attaches just rebind the surface.
 ///
-/// Equivalent to `-initWithRuntime:view:autoDelegate:` with
-/// `autoDelegate = YES`.
-- (instancetype)initWithRuntime:(BNRuntime*)runtime view:(MTKView*)view;
-
-/// Attach `runtime` to render into `view` with explicit control over
-/// the MTKView delegate.
+/// Returns `nil` if `runtime` or `view` is `nil`, or if the underlying
+/// `Babylon::Integrations::View::Attach` fails.
 ///
-/// - When `autoDelegate` is `YES`, BNView installs itself as the
-///   MTKView's delegate and drives `drawInMTKView:` and
-///   `mtkView:drawableSizeWillChange:` internally. The host should
-///   not assign its own delegate to the same MTKView.
-/// - When `autoDelegate` is `NO`, the host keeps ownership of the
-///   MTKView's delegate and is responsible for calling `-renderFrame`
-///   and `-resizeWithWidth:height:` from its own MTKViewDelegate
-///   methods. Use this mode when the host needs to interleave its
-///   own per-frame work with the runtime's render.
-- (instancetype)initWithRuntime:(BNRuntime*)runtime
-                            view:(MTKView*)view
-                    autoDelegate:(BOOL)autoDelegate NS_DESIGNATED_INITIALIZER;
+/// **Delegate management:** If `view.delegate` is `nil` at the time of
+/// construction, BNView creates a `BNViewDelegate` and assigns it to
+/// `view.delegate`, holding it strongly for the lifetime of the
+/// BNView (so the host doesn't have to retain it themselves —
+/// `MTKView.delegate` is a `weak` reference). If `view.delegate` is
+/// already set, BNView does *not* touch it; the host is expected to
+/// drive `-renderFrame` and `-resize(width:height:)` themselves
+/// (typically via their own `MTKViewDelegate` or a `BNViewDelegate`
+/// subclass).
+- (nullable instancetype)initWithRuntime:(BNRuntime*)runtime view:(MTKView*)view;
 
-/// Render exactly one frame. Only used in manual-delegate mode
-/// (`autoDelegate = NO`) — call from your own `MTKViewDelegate
-/// drawInMTKView:` method.
+/// Render exactly one frame. Call from your `MTKViewDelegate
+/// drawInMTKView:`, or rely on the auto-installed `BNViewDelegate`
+/// to call it for you.
 - (void)renderFrame;
 
 /// Inform the runtime that the underlying surface's pixel-buffer size
-/// has changed. Only used in manual-delegate mode — call from your
-/// own `MTKViewDelegate mtkView:drawableSizeWillChange:` method with
-/// the `size.width` / `size.height` it provides. Sizes are in physical
-/// pixels — the same convention as `CAMetalLayer.drawableSize`.
+/// has changed. Sizes are in physical pixels — the same convention as
+/// `CAMetalLayer.drawableSize`.
 - (void)resizeWithWidth:(NSUInteger)width height:(NSUInteger)height
     NS_SWIFT_NAME(resize(width:height:));
 

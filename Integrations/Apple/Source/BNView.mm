@@ -12,25 +12,20 @@
 #include <cstdint>
 #include <memory>
 
-@interface BNView () <MTKViewDelegate>
-@end
-
 @implementation BNView
 {
     std::unique_ptr<Babylon::Integrations::View> _view;
     BNRuntime* _runtime;
     MTKView* _mtkView;
-    BOOL _autoDelegate;
+
+    // When BNView auto-installs a default delegate (because the host
+    // didn't set one), it's held here so the strong reference outlives
+    // the MTKView's `weak` delegate slot. Stays nil if the host
+    // installed their own delegate before constructing BNView.
+    BNViewDelegate* _managedDelegate;
 }
 
 - (instancetype)initWithRuntime:(BNRuntime*)runtime view:(MTKView*)view
-{
-    return [self initWithRuntime:runtime view:view autoDelegate:YES];
-}
-
-- (instancetype)initWithRuntime:(BNRuntime*)runtime
-                            view:(MTKView*)view
-                    autoDelegate:(BOOL)autoDelegate
 {
     if (runtime == nil || view == nil)
     {
@@ -40,7 +35,6 @@
     {
         _runtime = runtime;
         _mtkView = view;
-        _autoDelegate = autoDelegate;
 
         // MTKView's underlying layer is always a CAMetalLayer (its
         // +layerClass override).
@@ -76,12 +70,15 @@
             return nil;
         }
 
-        // Install ourselves as the delegate AFTER Attach so that any
-        // drawableSizeWillChange: dispatched as a side-effect of
-        // assignment doesn't reach us before _view is constructed.
-        if (_autoDelegate)
+        // If the host hasn't installed their own MTKViewDelegate by
+        // now, install a default `BNViewDelegate` so frames start
+        // flowing without any extra host wiring. Done AFTER Attach so
+        // any drawableSizeWillChange: dispatched as a side-effect of
+        // the assignment doesn't reach us before _view is constructed.
+        if (view.delegate == nil)
         {
-            view.delegate = self;
+            _managedDelegate = [[BNViewDelegate alloc] initWithView:self];
+            view.delegate = _managedDelegate;
         }
     }
     return self;
@@ -89,7 +86,9 @@
 
 - (void)dealloc
 {
-    if (_autoDelegate && _mtkView.delegate == self)
+    // Only clear the MTKView's delegate slot if it still points at the
+    // delegate we installed; never disturb a host-installed delegate.
+    if (_managedDelegate != nil && _mtkView.delegate == _managedDelegate)
     {
         _mtkView.delegate = nil;
     }
@@ -100,7 +99,9 @@
     // The runtime owns the XR overlay view (handed to it via
     // -setXrView:), so it's the natural place to keep its visibility
     // in sync with the XR session state. Doing this here means hosts
-    // never have to manage the XR overlay themselves.
+    // never have to manage the XR overlay themselves, regardless of
+    // whether the runtime's frame is being driven by the auto-installed
+    // BNViewDelegate, a host subclass, or a fully-custom delegate.
     [_runtime updateXrViewIfNeeded];
 
     if (_view)
@@ -116,19 +117,6 @@
         _view->Resize(static_cast<uint32_t>(width),
                        static_cast<uint32_t>(height));
     }
-}
-
-#pragma mark - MTKViewDelegate (auto-delegate mode only)
-
-- (void)mtkView:(MTKView* __unused)view drawableSizeWillChange:(CGSize)size
-{
-    [self resizeWithWidth:static_cast<NSUInteger>(size.width)
-                   height:static_cast<NSUInteger>(size.height)];
-}
-
-- (void)drawInMTKView:(MTKView* __unused)view
-{
-    [self renderFrame];
 }
 
 #pragma mark - Pointer forwarding

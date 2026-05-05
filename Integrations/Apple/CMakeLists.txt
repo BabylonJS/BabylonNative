@@ -19,7 +19,8 @@ set(SOURCES
     "include/BabylonNativeIntegrations/BNView.h"
     "Source/BNRuntime.mm"
     "Source/BNRuntimeInternal.h"
-    "Source/BNView.mm")
+    "Source/BNView.mm"
+    "Source/BNViewDelegate.mm")
 
 add_library(BabylonNativeIntegrations STATIC ${SOURCES})
 
@@ -39,6 +40,7 @@ target_link_libraries(BabylonNativeIntegrations
 set_source_files_properties(
     "Source/BNRuntime.mm"
     "Source/BNView.mm"
+    "Source/BNViewDelegate.mm"
     PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 
 set_property(TARGET BabylonNativeIntegrations PROPERTY FOLDER Integrations)

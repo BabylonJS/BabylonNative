@@ -23,11 +23,12 @@ class ViewController: UIViewController {
         // its own — the host doesn't need to toggle anything.
         runtime.setXrView(xrView)
 
-        // Attach BNView to the main MTKView. BNView installs itself as
-        // the view's MTKViewDelegate and drives the per-frame render
-        // and resize callbacks internally. First attach on this runtime
-        // triggers GPU device construction + plugin initialization on
-        // the JS thread + queued-script flush.
+        // Attach BNView to the main MTKView. Because mtkView's delegate
+        // is still nil at this point, BNView auto-installs a managed
+        // `BNViewDelegate` that drives the per-frame render and resize
+        // callbacks. First attach on this runtime triggers GPU device
+        // construction + plugin initialization on the JS thread +
+        // queued-script flush.
         bnView = BNView(runtime: runtime, view: mtkView)
 
         // Simple gesture recognizer: forwards touches to BNView.
