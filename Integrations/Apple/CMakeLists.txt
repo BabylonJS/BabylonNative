@@ -32,7 +32,8 @@ target_include_directories(BabylonNativeIntegrations
 target_link_libraries(BabylonNativeIntegrations
     PRIVATE Integrations
     PRIVATE "-framework Foundation"
-    PRIVATE "-framework QuartzCore")
+    PRIVATE "-framework QuartzCore"
+    PRIVATE "-framework MetalKit")
 
 # Enable ARC for the Obj-C++ files.
 set_source_files_properties(

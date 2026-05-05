@@ -7,11 +7,6 @@
 // and queued-script flushing. Subsequent views attached to the same
 // runtime are cheap surface rebinds.
 //
-// Width/height handling: this interop layer reads the layer's
-// `drawableSize` (physical pixels) and `contentsScale` (DPR) directly,
-// converting to the C++ logical-pixel convention internally. The
-// Swift host does no unit math.
-//
 // See SimplifiedAPI.md §4.2 / §5 for the design and usage examples.
 
 #pragma once
@@ -37,15 +32,18 @@ NS_ASSUME_NONNULL_BEGIN
 /// suspended.
 - (void)renderFrame;
 
-/// Re-read drawableSize / contentsScale from the given layer and
-/// apply as a resize. Call from
-/// `MTKViewDelegate.mtkView(_:drawableSizeWillChange:)` or any other
-/// resize hook.
-- (void)resizeForLayer:(CAMetalLayer*)layer;
+/// Inform the view that the underlying surface's pixel-buffer size
+/// has changed. Call from
+/// `MTKViewDelegate.mtkView(_:drawableSizeWillChange:)` with the
+/// `size.width` / `size.height` it provides. Sizes are in physical
+/// pixels — the same convention as `CAMetalLayer.drawableSize`.
+- (void)resizeWithWidth:(NSUInteger)width height:(NSUInteger)height;
 
-/// Forward a pointer-down event. `x`, `y` are in logical pixels.
-/// Only present when `BABYLON_NATIVE_PLUGIN_NATIVEINPUT` is enabled
-/// at native build time.
+/// Forward a pointer-down event. `x`, `y` are in logical (CSS) pixels
+/// — pass `UITouch.location(in:)` (UIKit) or `NSEvent.locationInWindow`
+/// (AppKit) coordinates through unchanged. The view internally
+/// normalizes whatever you pass to the unit Babylon.js's pointer
+/// pipeline expects.
 - (void)pointerDown:(NSInteger)pointerId atX:(CGFloat)x y:(CGFloat)y;
 
 - (void)pointerMove:(NSInteger)pointerId atX:(CGFloat)x y:(CGFloat)y;
@@ -55,3 +53,4 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 NS_ASSUME_NONNULL_END
+

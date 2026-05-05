@@ -3,6 +3,9 @@
 
 #import "BNRuntimeInternal.h"
 
+#import <Foundation/Foundation.h>
+#import <MetalKit/MetalKit.h>
+
 #include <memory>
 
 @implementation BNRuntime
@@ -12,9 +15,21 @@
 
 - (instancetype)init
 {
+    return [self initWithEnableDebugger:NO];
+}
+
+- (instancetype)initWithEnableDebugger:(BOOL)enableDebugger
+{
     if ((self = [super init]))
     {
-        _runtime = Babylon::Integrations::Runtime::Create();
+        Babylon::Integrations::RuntimeOptions options{};
+        options.enableDebugger = enableDebugger ? true : false;
+        // Default log sink: route every level to NSLog. Hosts that need
+        // their own routing should drop down to the C++ API.
+        options.log = [](Babylon::Integrations::LogLevel /*level*/, std::string_view message) {
+            NSLog(@"%.*s", static_cast<int>(message.size()), message.data());
+        };
+        _runtime = Babylon::Integrations::Runtime::Create(std::move(options));
     }
     return self;
 }
@@ -54,9 +69,28 @@
     return _runtime->IsSuspended() ? YES : NO;
 }
 
+- (void)setXrView:(MTKView*)xrView
+{
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
+    _runtime->SetXrWindow((__bridge void*)xrView);
+#else
+    (void)xrView;
+#endif
+}
+
+- (BOOL)isXRActive
+{
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
+    return _runtime->IsXrActive() ? YES : NO;
+#else
+    return NO;
+#endif
+}
+
 - (Babylon::Integrations::Runtime*)nativeRuntime
 {
     return _runtime.get();
 }
 
 @end
+

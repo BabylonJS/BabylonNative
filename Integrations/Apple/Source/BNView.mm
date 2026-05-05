@@ -47,14 +47,14 @@
     }
 }
 
-- (void)resizeForLayer:(CAMetalLayer*)layer
+- (void)resizeWithWidth:(NSUInteger)width height:(NSUInteger)height
 {
-    if (!_view || layer == nil)
+    if (!_view)
     {
         return;
     }
-    _view->Resize(static_cast<uint32_t>(layer.drawableSize.width),
-                   static_cast<uint32_t>(layer.drawableSize.height));
+    _view->Resize(static_cast<uint32_t>(width),
+                   static_cast<uint32_t>(height));
 }
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT

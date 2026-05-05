@@ -146,7 +146,10 @@ option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." 
 # Integrations
 option(BABYLON_NATIVE_INTEGRATIONS "Build the cross-platform Babylon::Integrations facade (Runtime + View)." ON)
 option(BABYLON_NATIVE_INTEGRATIONS_ANDROID "Build the Android JNI interop layer for Babylon::Integrations." OFF)
-option(BABYLON_NATIVE_INTEGRATIONS_APPLE "Build the Apple (iOS / macOS / visionOS) Obj-C++ interop layer for Babylon::Integrations." OFF)
+# Default ON for Apple platforms — the iOS Playground (and future
+# macOS / visionOS Playground migrations) consume it directly. Apple
+# hosts that don't want the interop layer can explicitly disable.
+option(BABYLON_NATIVE_INTEGRATIONS_APPLE "Build the Apple (iOS / macOS / visionOS) Obj-C++ interop layer for Babylon::Integrations." ${APPLE})
 
 # Sanitizers
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)

@@ -10,6 +10,8 @@
 
 #import <Foundation/Foundation.h>
 
+@class MTKView;
+
 NS_ASSUME_NONNULL_BEGIN
 
 @interface BNRuntime : NSObject
@@ -17,7 +19,11 @@ NS_ASSUME_NONNULL_BEGIN
 /// Constructs the runtime: starts the JS engine + thread, sets up
 /// non-GPU polyfills and plugins. Cheap and synchronous; no GPU
 /// device is created yet (that happens on the first `BNView` attach).
+/// Default options: JS debugger off, log routes to `NSLog`.
 - (instancetype)init;
+
+/// Same as `init` but lets the host opt into the JS debugger.
+- (instancetype)initWithEnableDebugger:(BOOL)enableDebugger NS_DESIGNATED_INITIALIZER;
 
 /// Load a script from a URL onto the JS thread. Calls made before
 /// the first `BNView` is created are queued internally and dispatched
@@ -42,6 +48,22 @@ NS_ASSUME_NONNULL_BEGIN
 /// Whether the runtime is currently suspended.
 @property (nonatomic, readonly, getter=isSuspended) BOOL suspended;
 
+/// Set the platform view that XR will render into (typically a
+/// separate transparent `MTKView` overlay, distinct from the main
+/// view's Metal layer). Pass `nil` to clear the XR surface. Safe to
+/// call before the first `BNView` attach; the value is applied when
+/// NativeXr finishes initializing during that first attach.
+///
+/// Compiled-in only when `BABYLON_NATIVE_PLUGIN_NATIVEXR` is enabled
+/// at native build time; otherwise this is a no-op.
+- (void)setXrView:(nullable MTKView*)xrView;
+
+/// `YES` while an XR session is active. Updated from the JS thread
+/// by NativeXr's internal session-state callback; safe to poll from
+/// any thread.
+@property (nonatomic, readonly, getter=isXRActive) BOOL xrActive;
+
 @end
 
 NS_ASSUME_NONNULL_END
+
