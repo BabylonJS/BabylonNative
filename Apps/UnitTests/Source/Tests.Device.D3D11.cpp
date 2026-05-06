@@ -101,3 +101,49 @@ TEST(Device, BackBuffer)
         device.FinishRenderingCurrentFrame();
     }
 }
+
+// Verifies that UpdateDevice throws when called while bgfx is initialized.
+//
+// Without the throw, UpdateDevice would silently store the new device pointer in the bgfx init
+// state without applying it (bgfx::init only runs on the next EnableRendering, and EnableRendering
+// early-outs while already initialized). This is a footgun: the caller's swap appears to succeed
+// but the device never actually changes.
+TEST(Device, UpdateDeviceThrowsWhenRenderingEnabled)
+{
+    winrt::com_ptr<ID3D11Device> deviceA = CreateDevice();
+    winrt::com_ptr<ID3D11Device> deviceB = CreateDevice();
+
+    constexpr SIZE dimensions{1280, 720};
+    RenderTargetTexture rttA{CreateTestRenderTargetTexture(deviceA.get(), dimensions.cx, dimensions.cy)};
+
+    Babylon::Graphics::Configuration config{};
+    config.Device = deviceA.get();
+    config.BackBufferColor = rttA.View.get();
+    config.Width = dimensions.cx;
+    config.Height = dimensions.cy;
+
+    Babylon::Graphics::Device device{config};
+
+    // Before EnableRendering: UpdateDevice should be permitted (init state has not been consumed
+    // yet). This pattern is used by callers who deferred their device choice.
+    EXPECT_NO_THROW(device.UpdateDevice(deviceA.get()));
+
+    // After EnableRendering (driven by StartRenderingCurrentFrame): UpdateDevice must throw.
+    device.StartRenderingCurrentFrame();
+    EXPECT_THROW(device.UpdateDevice(deviceB.get()), std::runtime_error);
+    device.FinishRenderingCurrentFrame();
+
+    // Still initialized after the frame -- still throws.
+    EXPECT_THROW(device.UpdateDevice(deviceB.get()), std::runtime_error);
+
+    // After DisableRendering, UpdateDevice is permitted again. The next frame picks up the new device.
+    device.DisableRendering();
+    EXPECT_NO_THROW(device.UpdateDevice(deviceB.get()));
+
+    RenderTargetTexture rttB{CreateTestRenderTargetTexture(deviceB.get(), dimensions.cx, dimensions.cy)};
+    device.UpdateBackBuffer(rttB.View.get());
+    device.StartRenderingCurrentFrame();
+    device.FinishRenderingCurrentFrame();
+
+    EXPECT_EQ(device.GetPlatformInfo().Device, deviceB.get());
+}

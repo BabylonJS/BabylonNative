@@ -112,7 +112,23 @@ namespace Babylon::Graphics
         // method and structure might change.
 
         void UpdateWindow(WindowT window);
+
+        // Sets the underlying graphics device that bgfx is initialized with on the next
+        // EnableRendering call.
+        //
+        // This API is only valid when rendering is disabled. Calling it while rendering is
+        // enabled throws std::runtime_error: bgfx is already initialized with the previous device
+        // and the swap would otherwise be silently buffered until the caller happens to do a
+        // DisableRendering / EnableRendering cycle, leading to bugs that are hard to diagnose.
+        //
+        // The typical call sequence to swap to a new device (e.g. on D3D11 / D3D12 device-removed
+        // recovery) is:
+        //   device.DisableRendering();
+        //   device.UpdateDevice(newDevice);
+        //   // Optional: device.UpdateBackBuffer(newBackBuffer); on D3D11 if a caller-owned RTV is in use
+        //   device.StartRenderingCurrentFrame();   // implicitly calls EnableRendering with the new device
         void UpdateDevice(DeviceT device);
+
         void UpdateSize(size_t width, size_t height);
         void UpdateMSAA(uint8_t value);
         void UpdateAlphaPremultiplied(bool enabled);

@@ -108,6 +108,10 @@ namespace Babylon::Graphics
     void DeviceImpl::UpdateDevice(DeviceT device)
     {
         std::scoped_lock lock{m_state.Mutex};
+        if (m_state.Bgfx.Initialized)
+        {
+            throw std::runtime_error{"UpdateDevice called while rendering is enabled. Call DisableRendering first; the new device will take effect on the next EnableRendering / StartRenderingCurrentFrame."};
+        }
         m_state.Bgfx.InitState.platformData.context = device;
         m_state.Bgfx.Dirty = true;
     }
