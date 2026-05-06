@@ -143,7 +143,8 @@ namespace Diagnostics
         _set_invalid_parameter_handler(&OnInvalidParameter);
         std::signal(SIGABRT, &OnSignalAbort);
 
-        // Force CRT report output to stderr and through our hook.
+#if defined(_DEBUG)
+        // Force CRT report output to stderr and through our hook (debug CRT only).
         const int kReportTypes[] = {_CRT_WARN, _CRT_ERROR, _CRT_ASSERT};
         for (int reportType : kReportTypes)
         {
@@ -151,6 +152,7 @@ namespace Diagnostics
             _CrtSetReportFile(reportType, _CRTDBG_FILE_STDERR);
         }
         _CrtSetReportHook(&OnCrtReport);
+#endif
 #else
         std::signal(SIGABRT, &OnSignalAbort);
 #endif
@@ -590,7 +592,7 @@ namespace
 } // anonymous namespace
 #endif // _MSC_VER
 
-bool Diagnostics::SetupRenderDoc(const char* explicitDllPath, bool captureRequested)
+bool SetupRenderDoc(const char* explicitDllPath, bool captureRequested)
 {
 #if !defined(_MSC_VER)
     (void)explicitDllPath;
