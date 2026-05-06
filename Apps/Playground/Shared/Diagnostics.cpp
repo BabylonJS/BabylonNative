@@ -41,12 +41,6 @@ namespace
 
     bool s_ansiEnabled{false};
 
-    void DumpCallstack()
-    {
-        // Skip 1 frame (this helper).
-        bx::debugOutputCallstack(1);
-    }
-
 #if defined(_MSC_VER)
     void __cdecl OnInvalidParameter(
         const wchar_t* expression,
