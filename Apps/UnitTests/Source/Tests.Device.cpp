@@ -16,12 +16,13 @@ extern Babylon::Graphics::Configuration g_deviceConfig;
 //
 // Mechanics:
 //   UpdateDevice on its own only stores the new device pointer in Bgfx.InitState.platformData.
-//   While bgfx is already initialized, EnableRendering (called from StartRenderingCurrentFrame)
-//   early-outs because Bgfx.Initialized == true, so the new pointer never reaches bgfx::init.
-//   DisableRendering must be called first to shut bgfx down so the next frame re-runs bgfx::init
-//   with the new device. The render-reset callback (wired by NativeEngine to the JS-side
-//   setDeviceLostCallback) fires automatically as part of that second EnableRendering, allowing
-//   JS to rebuild GPU resources on the new device.
+//   bgfx::init only runs again on the next EnableRendering, which early-outs while
+//   Bgfx.Initialized == true. The contract is therefore: DisableRendering must be called first to
+//   shut bgfx down so the next frame re-runs bgfx::init with the new device. This contract is
+//   enforced -- UpdateDevice throws std::runtime_error if called while rendering is enabled (see
+//   TEST(Device, UpdateDeviceThrowsWhenRenderingEnabled) in Tests.Device.D3D11.cpp). The render-
+//   reset callback (wired by NativeEngine to the JS-side setDeviceLostCallback) fires automatically
+//   as part of the second EnableRendering, allowing JS to rebuild GPU resources on the new device.
 //
 // Quiescence requirement (not exercised here, but required in production):
 //   DisableRendering must be called between frames and with no outstanding JS / FrameCompletionScope
