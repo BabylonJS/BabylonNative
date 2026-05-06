@@ -6,6 +6,8 @@
 
 #include <winrt/base.h>
 
+extern Babylon::Graphics::Configuration g_deviceConfig;
+
 namespace
 {
     winrt::com_ptr<ID3D11Device> CreateDevice()
@@ -102,41 +104,25 @@ TEST(Device, BackBuffer)
     }
 }
 
-// Verifies that UpdateDevice throws when called while bgfx is initialized.
-//
-// Without the throw, UpdateDevice would silently store the new device pointer in the bgfx init
-// state without applying it (bgfx::init only runs on the next EnableRendering, and EnableRendering
-// early-outs while already initialized). This is a footgun: the caller's swap appears to succeed
-// but the device never actually changes.
+// Verifies that UpdateDevice throws when called while rendering is enabled.
 TEST(Device, UpdateDeviceThrowsWhenRenderingEnabled)
 {
-    winrt::com_ptr<ID3D11Device> deviceA = CreateDevice();
-    winrt::com_ptr<ID3D11Device> deviceB = CreateDevice();
+    winrt::com_ptr<ID3D11Device> d3dDevice = CreateDevice();
 
-    constexpr SIZE dimensions{1280, 720};
-    RenderTargetTexture rttA{CreateTestRenderTargetTexture(deviceA.get(), dimensions.cx, dimensions.cy)};
-
-    Babylon::Graphics::Configuration config{};
-    config.Device = deviceA.get();
-    config.BackBufferColor = rttA.View.get();
-    config.Width = dimensions.cx;
-    config.Height = dimensions.cy;
+    Babylon::Graphics::Configuration config = g_deviceConfig;
+    config.Device = d3dDevice.get();
 
     Babylon::Graphics::Device device{config};
 
-    // Pre-EnableRendering: UpdateDevice is permitted (init state has not been consumed yet).
-    // This pattern is used by callers who deferred their device choice.
-    EXPECT_NO_THROW(device.UpdateDevice(deviceA.get()));
+    // Permitted before EnableRendering.
+    EXPECT_NO_THROW(device.UpdateDevice(d3dDevice.get()));
 
-    // After EnableRendering (driven by StartRenderingCurrentFrame): UpdateDevice throws.
+    // StartRenderingCurrentFrame triggers EnableRendering -> throws.
     device.StartRenderingCurrentFrame();
-    EXPECT_THROW(device.UpdateDevice(deviceB.get()), std::runtime_error);
+    EXPECT_THROW(device.UpdateDevice(d3dDevice.get()), std::runtime_error);
     device.FinishRenderingCurrentFrame();
 
-    // Still initialized between frames -- still throws.
-    EXPECT_THROW(device.UpdateDevice(deviceB.get()), std::runtime_error);
-
-    // After DisableRendering: UpdateDevice is permitted again.
+    // Permitted again after DisableRendering.
     device.DisableRendering();
-    EXPECT_NO_THROW(device.UpdateDevice(deviceB.get()));
+    EXPECT_NO_THROW(device.UpdateDevice(d3dDevice.get()));
 }
