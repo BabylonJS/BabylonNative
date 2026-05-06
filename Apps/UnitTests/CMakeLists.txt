@@ -17,6 +17,7 @@ set(TEST_ASSETS
 set(SOURCES
     "Source/App.h"
     "Source/App.cpp"
+    "Source/Tests.Device.cpp"
     "Source/Tests.ExternalTexture.cpp"
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.ShaderCache.cpp"
@@ -42,6 +43,8 @@ if(APPLE)
 elseif(UNIX AND NOT ANDROID)
     set(SOURCES ${SOURCES} "Source/App.X11.cpp")
     set(ADDITIONAL_COMPILE_DEFINITIONS PRIVATE SKIP_EXTERNAL_TEXTURE_TESTS)
+    find_package(OpenGL REQUIRED)
+    set(ADDITIONAL_LIBRARIES PRIVATE OpenGL::GLX PRIVATE OpenGL::GL)
 elseif(WIN32)
     set(SOURCES ${SOURCES} "Source/App.Win32.cpp")
 endif()
@@ -63,7 +66,7 @@ target_link_libraries(UnitTests
     PRIVATE gtest_main
     ${ADDITIONAL_LIBRARIES})
 
-target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
+target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS} PRIVATE GRAPHICS_API_${GRAPHICS_API})
 
 add_test(NAME UnitTests COMMAND UnitTests)
 

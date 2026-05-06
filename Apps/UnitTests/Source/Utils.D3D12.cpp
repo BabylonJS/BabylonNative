@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "Utils.h"
 
+#include <dxgi1_4.h>
+
 Babylon::Graphics::TextureT CreateTestTexture(Babylon::Graphics::DeviceT device, uint32_t width, uint32_t height, uint32_t arraySize)
 {
     D3D12_RESOURCE_DESC desc{};
@@ -38,4 +40,29 @@ Babylon::Graphics::TextureT CreateTestTexture(Babylon::Graphics::DeviceT device,
 void DestroyTestTexture(Babylon::Graphics::TextureT texture)
 {
     texture->Release();
+}
+
+Babylon::Graphics::DeviceT CreateGraphicsDeviceForTest()
+{
+    IDXGIFactory4* factory = nullptr;
+    EXPECT_HRESULT_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&factory)));
+
+    IDXGIAdapter* warpAdapter = nullptr;
+    EXPECT_HRESULT_SUCCEEDED(factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
+
+    ID3D12Device* device = nullptr;
+    EXPECT_HRESULT_SUCCEEDED(D3D12CreateDevice(warpAdapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)));
+
+    warpAdapter->Release();
+    factory->Release();
+
+    return device;
+}
+
+void DestroyGraphicsDeviceForTest(Babylon::Graphics::DeviceT device)
+{
+    if (device != nullptr)
+    {
+        device->Release();
+    }
 }
