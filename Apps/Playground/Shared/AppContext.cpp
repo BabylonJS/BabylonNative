@@ -178,33 +178,32 @@ AppContext::AppContext(
         });
 
         // Wrap console.error so every call appends `new Error().stack` to its
-        // message. The Console polyfill stringifies args with spaces, so the
-        // stack ends up in the same string DumpFailure prints above. Runs
-        // before the polyfill's wrapper.
-        env.RunScript(R"JS(
-(function() {
-    if (typeof console === 'undefined' || typeof console.error !== 'function' || console.__bnDiagWrapped) {
-        return;
+        // message. Uses new Function(body) so it works on V8 + JSI/JSC.
+        {
+            const char* wrapBody = R"JS(
+if (typeof console === 'undefined' || typeof console.error !== 'function' || console.__bnDiagWrapped) {
+    return;
+}
+var origError = console.error;
+console.error = function() {
+    var stack;
+    try { stack = (new Error()).stack; } catch (e) { stack = '<no stack>'; }
+    var args = Array.prototype.slice.call(arguments);
+    if (typeof stack === 'string') {
+        var lines = stack.split('\n');
+        if (lines.length > 0 && lines[0].indexOf('Error') === 0) { lines.shift(); }
+        if (lines.length > 0 && lines[0].indexOf('console.error') !== -1) { lines.shift(); }
+        stack = lines.join('\n');
     }
-    var origError = console.error;
-    console.error = function() {
-        var stack;
-        try { stack = (new Error()).stack; } catch (e) { stack = '<no stack>'; }
-        var args = Array.prototype.slice.call(arguments);
-        // Strip "Error" header (V8) and our wrapper frame (V8 + JSC) so the
-        // user sees the actual callsite at the top of the stack.
-        if (typeof stack === 'string') {
-            var lines = stack.split('\n');
-            if (lines.length > 0 && lines[0].indexOf('Error') === 0) { lines.shift(); }
-            if (lines.length > 0 && lines[0].indexOf('console.error') !== -1) { lines.shift(); }
-            stack = lines.join('\n');
+    args.push('\nJS callstack:\n' + stack);
+    return origError.apply(this, args);
+};
+console.__bnDiagWrapped = true;
+)JS";
+            auto fnCtor = env.Global().Get("Function").As<Napi::Function>();
+            auto wrapper = fnCtor.New({Napi::String::New(env, wrapBody)});
+            wrapper.As<Napi::Function>().Call({});
         }
-        args.push('\nJS callstack:\n' + stack);
-        return origError.apply(this, args);
-    };
-    console.__bnDiagWrapped = true;
-})();
-)JS", "<bn-diag-console-error-wrap>");
 
         Babylon::Polyfills::Performance::Initialize(env);
 
