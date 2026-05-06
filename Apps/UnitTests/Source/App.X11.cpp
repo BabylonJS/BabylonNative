@@ -16,10 +16,6 @@ namespace
     constexpr const char* wmDeleteWindowName = "WM_DELETE_WINDOW";
 }
 
-// Exposed so that helpers in Utils.OpenGL.cpp can construct GLX contexts against the same X Display
-// the App layer is already using.
-Display* g_display = nullptr;
-
 std::filesystem::path GetExecutableDirectory()
 {
     return std::filesystem::canonical("/proc/self/exe").parent_path();
@@ -29,7 +25,6 @@ int main(int argc, char* argv[])
 {
     XInitThreads();
     Display* display = XOpenDisplay(NULL);
-    g_display = display;
     int32_t screen = DefaultScreen(display);
     int32_t depth = DefaultDepth(display, screen);
     Visual* visual = DefaultVisual(display, screen);

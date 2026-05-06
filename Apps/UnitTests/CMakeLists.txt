@@ -17,13 +17,17 @@ set(TEST_ASSETS
 set(SOURCES
     "Source/App.h"
     "Source/App.cpp"
-    "Source/Tests.Device.cpp"
     "Source/Tests.ExternalTexture.cpp"
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.ShaderCache.cpp"
     "Source/Tests.UniformPadding.cpp"
     "Source/Utils.h"
     "Source/Utils.${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
+
+if(GRAPHICS_API STREQUAL "D3D11" OR GRAPHICS_API STREQUAL "D3D12")
+    set(SOURCES ${SOURCES}
+        "Source/Tests.Device.cpp")
+endif()
 
 if(GRAPHICS_API STREQUAL "D3D11")
     set(SOURCES ${SOURCES}
@@ -43,8 +47,6 @@ if(APPLE)
 elseif(UNIX AND NOT ANDROID)
     set(SOURCES ${SOURCES} "Source/App.X11.cpp")
     set(ADDITIONAL_COMPILE_DEFINITIONS PRIVATE SKIP_EXTERNAL_TEXTURE_TESTS)
-    find_package(OpenGL REQUIRED)
-    set(ADDITIONAL_LIBRARIES PRIVATE OpenGL::GLX PRIVATE OpenGL::GL)
 elseif(WIN32)
     set(SOURCES ${SOURCES} "Source/App.Win32.cpp")
 endif()
@@ -66,7 +68,7 @@ target_link_libraries(UnitTests
     PRIVATE gtest_main
     ${ADDITIONAL_LIBRARIES})
 
-target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS} PRIVATE GRAPHICS_API_${GRAPHICS_API})
+target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
 
 add_test(NAME UnitTests COMMAND UnitTests)
 
