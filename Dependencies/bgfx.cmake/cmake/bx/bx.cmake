@@ -99,9 +99,10 @@ target_compile_features(bx PUBLIC cxx_std_14)
 # (note: see bx\scripts\toolchain.lua for equivalent compiler flag)
 target_compile_options(bx PUBLIC $<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus /Zc:preprocessor>)
 
-# bx/include/bx/simd_t.h states the x86 minspec is SSE4.2 (smmintrin.h is included unconditionally),
-# matching bx/scripts/toolchain.lua which passes -msse4.2 on linux-gcc/clang and mingw.
-if(MINGW OR (UNIX AND NOT APPLE AND NOT ANDROID))
+# bx/include/bx/simd_t.h includes smmintrin.h unconditionally, so x86/x64 builds need SSE4.2.
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag(-msse4.2 BX_HAS_MSSE42)
+if(BX_HAS_MSSE42)
 	target_compile_options(bx PUBLIC -msse4.2)
 endif()
 
