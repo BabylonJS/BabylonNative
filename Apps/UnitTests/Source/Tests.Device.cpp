@@ -6,54 +6,33 @@
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
-// Demonstrates the proper sequence for swapping the underlying graphics device at runtime.
-//
-// Motivating use cases:
-//   - D3D11/D3D12 device-removed recovery (DXGI_ERROR_DEVICE_REMOVED on Present, GPU TDR, hot
-//     unplug). The app detects the removal, creates a fresh device, and swaps it in.
-//   - Host-driven device swap in embedding scenarios (e.g. WPF/Win32 interop where the host's
-//     ID3D11Device changes).
-//
-// Mechanics:
-//   UpdateDevice on its own only stores the new device pointer in Bgfx.InitState.platformData.
-//   bgfx::init only runs again on the next EnableRendering, which early-outs while
-//   Bgfx.Initialized == true. The contract is therefore: DisableRendering must be called first to
-//   shut bgfx down so the next frame re-runs bgfx::init with the new device. This contract is
-//   enforced -- UpdateDevice throws std::runtime_error if called while rendering is enabled (see
-//   TEST(Device, UpdateDeviceThrowsWhenRenderingEnabled) in Tests.Device.D3D11.cpp). The render-
-//   reset callback (wired by NativeEngine to the JS-side setDeviceLostCallback) fires automatically
-//   as part of the second EnableRendering, allowing JS to rebuild GPU resources on the new device.
+// Exercises the canonical UpdateDevice flow: drive a frame, DisableRendering, UpdateDevice to a
+// new graphics device, drive another frame, and verify the active device pointer reflects the swap.
+// The motivating use cases are D3D11/D3D12 device-removed recovery (DXGI_ERROR_DEVICE_REMOVED on
+// Present, GPU TDR, hot unplug) and host-driven device swaps in embedding scenarios (e.g. WPF/Win32
+// interop where the host's ID3D11Device changes).
 //
 // Quiescence requirement (not exercised here, but required in production):
 //   DisableRendering must be called between frames and with no outstanding JS / FrameCompletionScope
 //   work. This test runs purely on the render thread with no JS engine attached, so the requirement
 //   is trivially satisfied.
 //
-// Production note for D3D11 callers using a caller-owned BackBufferColor:
-//   When the caller provides Configuration::BackBufferColor (an ID3D11RenderTargetView) and then
-//   swaps to a new ID3D11Device, the existing RTV is bound to the old device and must be replaced
-//   with one created on the new device via UpdateBackBuffer. This test does not exercise that
-//   path -- it lets bgfx manage its own swap chain on the App layer's HWND so the test focuses
-//   purely on the UpdateDevice contract. The caller-owned BackBuffer flow is covered by
-//   TEST(Device, BackBuffer) in Tests.Device.D3D11.cpp.
-//
 // Per-platform scope:
-//   D3D11 / D3D12 -> the test runs using bgfx-managed swap chain bound to the App-layer HWND.
-//                    On both backends bgfx::init / bgfx::shutdown handle a caller-provided
-//                    ID3D11Device or ID3D12Device cleanly through the
-//                    EnableRendering -> DisableRendering -> EnableRendering lifecycle.
+//   D3D11 / D3D12 -> the test runs using a bgfx-managed swap chain bound to the App-layer HWND.
 //                    Note: D3D12CreateDevice(WARP) returns the same singleton pointer on
-//                    successive calls (deviceA and deviceB compare equal), so post-swap distinctness
-//                    cannot be asserted on D3D12 + WARP. The test still exercises the full bgfx
-//                    teardown / re-init path -- bgfx::shutdown actually releases the command queue,
-//                    descriptor heaps, root signatures, etc. and bgfx::init recreates them, even
-//                    when the underlying ID3D12Device pointer happens to be the same. D3D11
-//                    (D3D11CreateDevice(WARP)) does return distinct pointers per call.
+//                    successive calls (deviceA and deviceB compare equal), so post-swap
+//                    distinctness cannot be asserted on D3D12 + WARP. The test still exercises the
+//                    full teardown / re-init path. D3D11 (D3D11CreateDevice(WARP)) does return
+//                    distinct pointers per call.
 //   Metal / OpenGL -> the test is not built on these platforms (see Apps/UnitTests/CMakeLists.txt).
 //                     Metal does not expose an API to create distinct devices for the same GPU
-//                     (MTL::Device is a per-GPU singleton), and the bgfx OpenGL backend does not
-//                     support a caller-provided GLXContext through bgfx::init. The shipping code
-//                     paths on those backends always use bgfx-owned contexts.
+//                     (MTL::Device is a per-GPU singleton), and the OpenGL backend does not
+//                     support a caller-provided GLXContext at init. The shipping code paths on
+//                     those backends always use backend-owned contexts.
+//
+// The test does not exercise the caller-owned BackBufferColor path; it lets the swap chain be
+// managed on the App layer's HWND so the test focuses purely on UpdateDevice. The caller-owned
+// BackBuffer flow is covered by TEST(Device, BackBuffer) in Tests.Device.D3D11.cpp.
 //
 // Cleanup order:
 //   The Babylon::Graphics::Device destructor calls DisableRendering internally, which still expects
