@@ -117,9 +117,7 @@ namespace Babylon::Graphics
         // the next EnableRendering call.
         //
         // This API is only valid when rendering is disabled. Calling it while rendering is enabled
-        // throws std::runtime_error: the swap would otherwise be silently buffered until the caller
-        // happens to do a DisableRendering / EnableRendering cycle, leading to bugs that are hard
-        // to diagnose.
+        // throws std::runtime_error.
         //
         // The typical call sequence to swap to a new device (e.g. on D3D11 / D3D12 device-removed
         // recovery) is:
