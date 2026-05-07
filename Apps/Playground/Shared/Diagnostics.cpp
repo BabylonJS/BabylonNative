@@ -23,10 +23,17 @@
 #include <io.h>
 #include <wchar.h>
 #include <wctype.h>
+#  if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#    define BN_DIAG_HAS_RENDERDOC 1
 // VS_FIXEDFILEINFO + VerQueryValueW
-#pragma comment(lib, "version.lib")
+#    pragma comment(lib, "version.lib")
+#  endif
 #else
 #include <unistd.h>
+#endif
+
+#ifndef BN_DIAG_HAS_RENDERDOC
+#define BN_DIAG_HAS_RENDERDOC 0
 #endif
 
 namespace
@@ -314,7 +321,7 @@ namespace Diagnostics
         va_end(args);
     }
 
-#if defined(_MSC_VER)
+#if BN_DIAG_HAS_RENDERDOC
 namespace
 {
     // Minimal RenderDoc API surface for diagnostic queries. GetAPIVersion is
@@ -584,11 +591,11 @@ namespace
 
     std::atomic<bool> s_renderDocSetupDone{false};
 } // anonymous namespace
-#endif // _MSC_VER
+#endif // BN_DIAG_HAS_RENDERDOC
 
 bool SetupRenderDoc(const char* explicitDllPath, bool captureRequested)
 {
-#if !defined(_MSC_VER)
+#if !BN_DIAG_HAS_RENDERDOC
     (void)explicitDllPath;
     if (captureRequested)
     {
