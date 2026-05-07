@@ -157,20 +157,24 @@
             const snippetUrl = "https://snippet.babylonjs.com";
             const pgRoot = "https://playground.babylonjs.com";
 
-            const retryTime = 500;
-            const maxRetry = 5;
+            const initialRetryTime = 500;
+            const maxRetry = 8;
             let retry = 0;
 
             const onError = function () {
                 retry++;
                 if (retry < maxRetry) {
+                    // Exponential backoff capped at 30s. The snippet service can be briefly
+                    // unavailable (5xx, 429, gateway timeout); 8 attempts over ~60s gives the
+                    // upstream room to recover before we fail the whole run.
+                    const delay = Math.min(initialRetryTime * Math.pow(2, retry - 1), 30000);
                     setTimeout(function () {
                         loadPG();
-                    }, retryTime);
+                    }, delay);
                 }
                 else {
                     // Fail the test, something wrong happen
-                    console.log("Running the playground failed.");
+                    console.log("Running the playground failed after " + maxRetry + " attempts.");
                     done(false);
                 }
             }
@@ -179,8 +183,16 @@
                 const xmlHttp = new XMLHttpRequest();
                 xmlHttp.addEventListener("readystatechange", function () {
                     if (xmlHttp.readyState === 4) {
+                        xmlHttp.onreadystatechange = null;
+                        // Treat any non-200 (5xx, 429, empty body, etc.) as retryable rather
+                        // than feeding the response body to JSON.parse and surfacing it as a
+                        // SyntaxError.
+                        if (xmlHttp.status !== 200) {
+                            console.error("Snippet fetch returned status " + xmlHttp.status + " for " + test.playgroundId);
+                            onError();
+                            return;
+                        }
                         try {
-                            xmlHttp.onreadystatechange = null;
                             const snippet = JSON.parse(xmlHttp.responseText);
                             let code = JSON.parse(snippet.jsonPayload).code.toString();
 
