@@ -130,16 +130,11 @@ per flag** (intentional design -- long-name aliases were removed).
                             still runs on the test's original renderCount, so
                             pass/fail is unaffected. Output: <cwd>/temp/
                             bgfx_frame<N>.rdc. Combine with --once / --test /
-                            --test-index for a single capture.
-    --renderdoc-dll=PATH    Pin which renderdoc.dll bgfx adopts. PATH may be
-                            a file or a directory (\renderdoc.dll appended).
-                            Validated at parse time: missing path / wrong
-                            kind exits 2. Eagerly preloaded before bgfx::init
-                            so bgfx's findModule("renderdoc.dll") adopts it.
-                            Always prints a diagnostic line:
-                              RenderDoc: <full path> (API X.Y.Z, FileVersion ...)
-                            Use this instead of $env:PATH manipulation -- it
-                            survives PATH ordering and works in headless CI.
+                            --test-index for a single capture. Requires
+                            renderdoc.dll to be loaded into the process; easiest
+                            is to launch via `renderdoccmd capture -w` or
+                            `rdc capture --trigger -w`, both of which inject
+                            the paired DLL before main.
 -t, --test=PATTERN          Run tests whose title contains PATTERN (substring,
                             case-insensitive). Repeatable; multiple = OR.
     --test-index=LIST       Run only the listed indices.
@@ -226,30 +221,27 @@ returns `true`, so the legacy throw-on-missing behavior is preserved.
 
 ### RenderDoc capture (one-liner)
 ```powershell
-# Preferred: pin the DLL explicitly. Survives PATH ordering, works in CI.
-.\Playground.exe --headless --once --test-index=286 --include-excluded `
-    --capture=5 --renderdoc-dll="C:\path\to\renderdoc-py" `
+# Launch under renderdoccmd: it injects the paired renderdoc.dll into the
+# Playground process before main, so bgfx::findModule adopts it. Version
+# always matches what `rdc open` accepts -- no PATH-ordering bugs.
+& "<renderdoc-py-dir>\renderdoccmd.exe" capture -w .\Playground.exe `
+    --headless --once --test-index=286 --include-excluded --capture=5 `
     app:///Scripts/validation_native.js
 # .rdc lives at <cwd>\temp\bgfx_frame5.rdc
 ```
-Alternatives that also work (in resolution order -- first match wins):
-1. `--renderdoc-dll=PATH` (CLI flag, parse-time validated; preferred).
-2. `BN_RENDERDOC_DLL=<file-or-dir>` env var (only loaded when `--capture` set).
-3. `RENDERDOC_PYTHON_PATH=<rdc-cli renderdoc-py dir>` (rdc-cli's own var, only when `--capture` set).
-4. `renderdoc.dll` discoverable via `LoadLibrary` (PATH search; fragile).
-
-Confirm the diagnostic line in stdout -- it tells you exactly which DLL was loaded:
+Equivalent with the rdc-cli wrapper (inject-only, no auto-capture handshake):
+```powershell
+& rdc capture --trigger --wait-for-exit -- .\Playground.exe `
+    --headless --once --test-index=286 --include-excluded --capture=5 `
+    app:///Scripts/validation_native.js
 ```
-RenderDoc: C:\Users\...\renderdoc-py\renderdoc.dll (API 1.6.0, FileVersion 1.41.0.0)
+Verify `renderdoc.dll` is loaded:
+```powershell
+(Get-Process Playground).Modules | Where-Object ModuleName -eq 'renderdoc.dll'
 ```
-If you see `RenderDoc: WARNING: --capture requested but renderdoc.dll could not
-be loaded.` -- none of the four sources resolved. Pin with `--renderdoc-dll=...`.
-If you see `RenderDoc: WARNING: loaded DLL differs from RENDERDOC_PYTHON_PATH
-pair.` -- the rdc-cli replay version won't match the captured version; the
-warning text includes the exact `--renderdoc-dll=...` to add. Pixel pass/fail
-is unchanged by `--capture`. See
+Pixel pass/fail is unchanged by `--capture`. See
 `playground/playground-renderdoc-capture.instructions.md` for the full recipe
-(DLL version match, multiple captures, `rdc` CLI inspection).
+(launcher selection, multiple captures, `rdc` CLI inspection).
 
 ### "App crashed but I only see one short line"
 Scroll **up** from the error line. The full `--- CRASH ---` /

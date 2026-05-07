@@ -5,7 +5,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <filesystem>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -106,52 +105,6 @@ namespace
             }
             pos = comma + 1;
         }
-        return true;
-    }
-
-    // Resolves a --renderdoc-dll value to the absolute path of an existing
-    // renderdoc.dll. Accepts a file path (used as-is) or a directory path
-    // containing renderdoc.dll. Returns false with err set on failure.
-    bool ResolveRenderDocDllPath(std::string_view raw, std::string& outAbsPath, std::string& err)
-    {
-        if (raw.empty())
-        {
-            err = "empty path";
-            return false;
-        }
-
-        std::error_code ec;
-        std::filesystem::path p{std::string{raw}};
-
-        if (!std::filesystem::exists(p, ec) || ec)
-        {
-            err = "path does not exist: '" + std::string{raw} + "'";
-            return false;
-        }
-
-        if (std::filesystem::is_directory(p, ec))
-        {
-            std::filesystem::path dll = p / "renderdoc.dll";
-            if (!std::filesystem::exists(dll, ec))
-            {
-                err = "directory has no renderdoc.dll: '" + std::string{raw} + "'";
-                return false;
-            }
-            p = dll;
-        }
-        else if (!std::filesystem::is_regular_file(p, ec))
-        {
-            err = "path is not a regular file: '" + std::string{raw} + "'";
-            return false;
-        }
-
-        std::filesystem::path absPath = std::filesystem::absolute(p, ec);
-        if (ec)
-        {
-            err = "could not make path absolute: '" + std::string{raw} + "'";
-            return false;
-        }
-        outAbsPath = absPath.string();
         return true;
     }
 
@@ -376,21 +329,6 @@ namespace CommandLine
             }
             if (!err.empty()) { opt.ParseError = true; opt.ErrorMessage = err; return opt; }
 
-            if (auto m = match("--renderdoc-dll", "", FlagKind::ValueRequired); m.matched)
-            {
-                std::string resolved;
-                std::string rerr;
-                if (!ResolveRenderDocDllPath(m.value, resolved, rerr))
-                {
-                    opt.ParseError = true;
-                    opt.ErrorMessage = "invalid --renderdoc-dll: " + rerr;
-                    return opt;
-                }
-                opt.RenderDocDll = resolved;
-                continue;
-            }
-            if (!err.empty()) { opt.ParseError = true; opt.ErrorMessage = err; return opt; }
-
             if (auto m = match("--test", "-t", FlagKind::ValueRequired); m.matched)
             {
                 opt.TestFilters.push_back(m.value);
@@ -460,13 +398,11 @@ namespace CommandLine
             "                              <cwd>/temp/bgfx_frame<N>.rdc.\n"
             "                              Combine with --once / --test / --test-index\n"
             "                              to limit to a single capture.\n"
-            "      --renderdoc-dll=PATH    Pin which renderdoc.dll bgfx loads. PATH may\n"
-            "                              be the DLL itself or a directory containing\n"
-            "                              renderdoc.dll. Avoids PATH-ordering surprises\n"
-            "                              and version mismatches with rdc-cli. If not\n"
-            "                              given, BN_RENDERDOC_DLL and\n"
-            "                              RENDERDOC_PYTHON_PATH env vars are consulted\n"
-            "                              when --capture is active.\n"
+            "                              Requires renderdoc.dll to be loaded into\n"
+            "                              the process. Easiest: launch via\n"
+            "                              `renderdoccmd capture -w Playground.exe ...`\n"
+            "                              or `rdc capture --trigger -w -- Playground.exe ...`\n"
+            "                              (those inject the paired DLL before main).\n"
             "  -t, --test=PATTERN          Run tests whose title contains PATTERN.\n"
             "                              May be specified multiple times (OR).\n"
             "      --test-index=LIST       Run only the listed indices. LIST may be a\n"

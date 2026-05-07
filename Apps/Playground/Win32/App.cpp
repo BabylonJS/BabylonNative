@@ -185,12 +185,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return 0;
     }
 
-    // Preload renderdoc.dll (if requested) BEFORE bgfx::init so bgfx adopts
-    // it via findModule("renderdoc.dll"). Prints version info too.
-    Diagnostics::SetupRenderDoc(
-        g_options.RenderDocDll.has_value() ? g_options.RenderDocDll->c_str() : nullptr,
-        g_options.CaptureFrame.has_value());
-
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_PLAYGROUNDWIN32, szWindowClass, MAX_LOADSTRING);

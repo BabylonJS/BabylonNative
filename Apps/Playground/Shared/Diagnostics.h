@@ -42,18 +42,4 @@ namespace Diagnostics
     // skipFrames is added on top of the helpers internal to DumpFailure.
     void DumpFailure(const char* category, const char* file, int line, unsigned int skipFrames, const char* fmt, ...);
     void DumpFailureV(const char* category, const char* file, int line, unsigned int skipFrames, const char* fmt, va_list args);
-
-    // Resolves and preloads renderdoc.dll before bgfx initializes, then prints
-    // the loaded module's path + API/file version. Resolution order:
-    //   1. explicitDllPath (--renderdoc-dll). Always preloaded if non-empty.
-    //   2. BN_RENDERDOC_DLL env var (only if captureRequested).
-    //   3. RENDERDOC_PYTHON_PATH env var, "/renderdoc.dll" appended (only if
-    //      captureRequested). Pairs with rdc-cli's expected version.
-    //   4. LoadLibrary("renderdoc.dll") via PATH (only if captureRequested).
-    //
-    // If a different module is already loaded when an explicit path was given,
-    // emits a hard error and returns without altering the existing module.
-    // Returns true if a renderdoc.dll is present in the process. Idempotent.
-    // No-op on non-Windows.
-    bool SetupRenderDoc(const char* explicitDllPath, bool captureRequested);
 }

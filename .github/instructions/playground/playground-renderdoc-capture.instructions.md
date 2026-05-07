@@ -9,7 +9,8 @@ Read this when the user wants to RenderDoc-debug a specific Playground test
 (by name or index), or asks "why is this pixel-diff test failing?" after
 visual inspection of the result/diff PNGs hasn't been enough. **Don't add
 new RenderDoc integration to BN code** -- bgfx's built-in `debug_renderdoc.cpp`
-is already wired through `TestUtils.captureNextFrame()`.
+is already wired through `TestUtils.captureNextFrame()`, and the launcher
+(`renderdoccmd` / `rdc capture`) handles DLL injection.
 
 For generic `rdc-cli` usage and inspection workflows, see
 `../renderdoc/renderdoc-gpu-debug.instructions.md` and
@@ -34,121 +35,71 @@ disqualifying patterns in stdout -- none of them are pixel-diff bugs and a
 `Pixel difference: N pixels.` in stdout.** That's the signature of a real
 GPU-side mismatch worth a RenderDoc capture session.
 
-## Why `rdc capture` (the launcher) doesn't work for Playground
+## How DLL loading works
 
-The `rdc capture` mode launches the target executable under a RenderDoc
-injector and waits for swapchain Present calls. It fails for Playground in
-two common modes:
+Playground itself does NOT preload `renderdoc.dll`. bgfx calls
+`findModule("renderdoc.dll")` at `bgfx::init`, adopts whatever is already in
+the process, and exposes the trigger via `bgfx::renderDocTriggerCapture` /
+`TestUtils.captureNextFrame()`. To get the DLL into the process before
+`bgfx::init`, launch under `renderdoccmd` or `rdc capture --trigger`. Both
+inject the `renderdoc.dll` paired with their own executable into the target
+via `CreateRemoteThread + LoadLibrary` before `wWinMain` runs. Because the
+DLL comes from the launcher's directory, the version always matches what
+`rdc open` will accept -- no PATH-ordering bugs, no version mismatch class.
 
-| Setup | Why it fails |
-|---|---|
-| `--headless` | No swapchain -> no Present calls -> RenderDoc has no frame boundary to capture. |
-| Windowed `--once` | App exits before the RenderDoc child-injection handshake completes. Error: "failed to connect to target". |
-
-Use bgfx's **in-process** capture path instead -- it doesn't need an injector
-and works in headless mode too because the `TriggerCapture` API records the
-in-flight D3D command stream regardless of whether a real Present happens.
-
-## Recipe (works for both windowed and headless)
-
-### Step 1 -- Pick which RenderDoc DLL to load
-
-`rdc-cli` ships with `renderdoc-py` whose `renderdoc.pyd` exposes a specific
-RenderDoc replay version. The capture must be made by a `renderdoc.dll` of
-the **same** RenderDoc version, otherwise `rdc open` rejects it with:
-
-```
-OpenCapture failed: Captured API data was made on a newer incompatible
-version of RenderDoc: D3D11 capture is incompatible version 20, newest
-supported by this build of RenderDoc is 19
-```
-
-The DLL paired with `rdc-cli` lives next to `renderdoc.pyd` in
-`renderdoc-py`'s install dir. Verify with `rdc doctor` -- both
-`renderdoc-module` and `win-renderdoc-install` rows should show the same
-version (e.g. 1.41).
-
-Playground accepts the DLL location from any of these (first match wins,
-top-down):
-
-| Source | Notes |
-|---|---|
-| `--renderdoc-dll=<file-or-dir>` | **Preferred.** Parse-time validated (exit 2 if path missing or directory has no `renderdoc.dll`). Works without `--capture` (lets you confirm what would load). Survives PATH ordering. |
-| `BN_RENDERDOC_DLL` env var | File or directory. Only consulted when `--capture` is set (so a stale env var doesn't silently load RenderDoc into every Playground run). |
-| `RENDERDOC_PYTHON_PATH` env var | Same var rdc-cli already reads -- set it once, both rdc-cli and Playground pick the matching DLL. Only consulted when `--capture` is set. `\renderdoc.dll` is appended automatically. |
-| PATH `LoadLibrary("renderdoc.dll")` | Fallback. Whichever directory PATH resolves first wins. Fragile -- easy to load the wrong version. |
-
-Always confirm in stdout:
-```
-RenderDoc: C:\Users\...\renderdoc-py\renderdoc.dll (API 1.6.0, FileVersion 1.41.0.0)
-```
-That line appears whenever any of the above resolved. Possible warnings:
-
-| Line prefix | Meaning |
-|---|---|
-| `RenderDoc: WARNING: --capture requested but renderdoc.dll could not be loaded.` | None of the four sources found a DLL. Pin one with `--renderdoc-dll=...`. |
-| `RenderDoc: WARNING: loaded DLL differs from RENDERDOC_PYTHON_PATH pair.` | A DLL was loaded, but it doesn't match what rdc-cli expects -> `rdc open` will likely reject the capture. The warning prints the exact `--renderdoc-dll=...` argument to add for a fix. |
-| `RenderDoc: ERROR: --renderdoc-dll=X could not be honored.` | Something (e.g. an injector) had already loaded a different `renderdoc.dll` before `wWinMain` ran. Use the path printed alongside, or relaunch outside the injector. |
-
-**Legacy PATH-based recipe** (still works):
-```powershell
-$env:Path = "<dir-with-matching-renderdoc.dll>;$env:Path"
-```
-Use only when you can't use `--renderdoc-dll`. Subject to PATH-ordering bugs.
-
-### Step 2 -- Launch with `--capture=N`
-
-The `--capture=N` CLI flag does all the wiring for you:
-
-- Triggers `TestUtils.captureNextFrame()` on the Nth rendered frame of
-  every executed test.
-- Auto-extends each test's render budget by 5 frames after the trigger so
-  RenderDoc has time to finalize the `.rdc`. (Single-frame default tests
-  with `renderCount: 1` would otherwise exit before finalize -- that was
-  the historical reason for hand-editing config.json.)
-- Pixel comparison still happens at the test's original `renderCount`, so
-  pass/fail is unchanged. You can compare the run output with-and-without
-  `--capture` and the "First pixel off / Pixel difference" lines should be
-  identical.
+Verify (while the process is alive):
 
 ```powershell
-$exe = "<build>\Apps\Playground\Debug\Playground.exe"
-$wd  = "<build>\Apps\Playground\Debug"
-Set-Location $wd
-
-& $exe --headless --once --include-excluded --test-index=<N> `
-       --capture=5 --renderdoc-dll="<dir-with-matching-renderdoc.dll>" `
-       app:///Scripts/validation_native.js
+(Get-Process Playground).Modules |
+    Where-Object ModuleName -eq 'renderdoc.dll' |
+    Select-Object FileName
+# -> C:\Users\<you>\Private\util\renderdoc-py\renderdoc.dll
 ```
+
+## Recipe
+
+### Step 1 -- Launch with `--capture=N` under the launcher
+
+```powershell
+$exe   = "<build>\Apps\Playground\Debug\Playground.exe"
+$rdcmd = "<renderdoc-py-dir>\renderdoccmd.exe"
+Set-Location (Split-Path $exe)
+
+& $rdcmd capture -w $exe `
+    --once --include-excluded --test-index=<N> --capture=5 `
+    app:///Scripts/validation_native.js
+```
+
+Or with the rdc-cli wrapper (same effect, plus `--trigger` skips the
+launcher's own auto-capture handshake):
+
+```powershell
+& rdc capture --trigger --wait-for-exit -- $exe `
+    --once --include-excluded --test-index=<N> --capture=5 `
+    app:///Scripts/validation_native.js
+```
+
+What the flags do:
+
+| Flag | Purpose |
+|---|---|
+| `renderdoccmd capture -w` | Inject paired `renderdoc.dll` before `main`; wait for target exit. |
+| `rdc capture --trigger -w` | Same, but explicitly inject-only (no launcher-side auto-capture). |
+| `--capture=N` | Trigger `TestUtils.captureNextFrame()` on the Nth rendered frame of every executed test. Auto-extends the test's render budget by 5 frames after the trigger so RenderDoc has time to finalize. Pixel comparison still happens at the test's original `renderCount`, so pass/fail is unchanged. |
+| `--once`, `--include-excluded`, `--test-index=N` | Standard test selection. |
 
 `--capture=5` is a good default: trigger mid-run, plenty of finalize headroom.
-Use a different N if you specifically need a different frame.
 
-Watch stdout for the diagnostic line:
-```
-RenderDoc: <full-path-to-loaded-renderdoc.dll> (API X.Y.Z, FileVersion ...)
-BGFX Loading RenderDoc...     # only if bgfx hadn't seen it; with --renderdoc-dll
-                              # it usually prints "RenderDoc is already loaded."
-BGFX [ ] Capture
-```
-The `RenderDoc:` line confirms the DLL load and version. The `BGFX [ ] Capture`
-line confirms the trigger fired. If you see neither, check the DLL location --
-the resolution order is documented in Step 1.
-
-The capture file lands at:
-```
-<cwd>/temp/bgfx_frame<N>.rdc
-```
-(`temp/bgfx` is the default `BGFX_CONFIG_RENDERDOC_LOG_FILEPATH`, relative
-to the working directory. The `<N>` here is bgfx's internal frame counter,
-NOT the value you passed to `--capture` -- both can be present.)
+The capture file lands at `<cwd>/temp/bgfx_frame<N>.rdc` (where `<N>` is
+bgfx's internal frame counter, NOT the value passed to `--capture` -- both
+can be present).
 
 > **Do not** edit `config.json`'s `"capture"` / `"renderCount"` for capture
 > work -- `--capture=N` supersedes that legacy path. The config-driven path
 > still works (kept for backwards compat) but it triggers at the test's
 > last frame and may not finalize.
 
-### Step 3 -- Open + inspect
+### Step 2 -- Open + inspect
 
 ```powershell
 $env:RENDERDOC_PYTHON_PATH = "<renderdoc-py dir>"
@@ -163,7 +114,7 @@ rdc.exe buffer <id> -o file.bin    # raw buffer bytes
 rdc.exe mesh <eid> --stage vs-out --json   # post-VS positions
 ```
 
-### Step 4 -- Clean up
+### Step 3 -- Clean up
 
 `--capture` and the rendered extra frames don't persist -- nothing to revert.
 Just delete `<cwd>/temp/` if you want to free disk.
@@ -217,10 +168,9 @@ Symptom: pixel `(13,13,15)` instead of expected `(255,0,0)`. Both cubes
 render black; reference shows red+green from per-instance color buffer.
 
 ```powershell
-.\Playground.exe --headless --once --test-index=286 --include-excluded `
-    --capture=5 --renderdoc-dll="C:\Users\bkaradzic\Private\util\renderdoc-py" `
+& $rdcmd capture -w .\Playground.exe `
+    --once --test-index=286 --include-excluded --capture=5 `
     app:///Scripts/validation_native.js
-# -> RenderDoc: C:\...\renderdoc-py\renderdoc.dll (API 1.6.0, FileVersion 1.41.0.0)
 # -> "First pixel off at 286108: Value: (13, 13, 15) - Expected: (255, 0, 0)"
 # -> "Pixel difference: 53296 pixels."
 # -> exit -1

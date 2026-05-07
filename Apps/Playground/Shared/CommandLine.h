@@ -23,13 +23,10 @@ struct PlaygroundOptions
 
     // 1-based frame index at which to call TestUtils.captureNextFrame()
     // (RenderDoc capture trigger). When set, the runner extends each test's
-    // render budget so the .rdc finalizes.
+    // render budget so the .rdc finalizes. Requires renderdoc.dll to be
+    // injected externally (e.g. via `renderdoccmd capture` or
+    // `rdc capture --trigger`); bgfx auto-adopts an already-loaded DLL.
     std::optional<int> CaptureFrame;
-
-    // Absolute path to a renderdoc.dll to preload before bgfx::init.
-    // Validated at parse time (must point to an existing file, or to a
-    // directory containing renderdoc.dll which is then resolved to that file).
-    std::optional<std::string> RenderDocDll;
 
     std::vector<std::string> TestFilters;
     std::vector<int> TestIndices;
