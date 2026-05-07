@@ -126,37 +126,50 @@ namespace Babylon
 
     void VertexBuffer::BuildInstanceDataBuffer(bgfx::InstanceDataBuffer& instanceDataBuffer, const std::map<bgfx::Attrib::Enum, InstanceInfo>& instances, uint32_t instanceCount)
     {
-        uint16_t instanceStride{};
-        for (auto& pair : instances)
-        {
-            if (instanceCount == 0)
-            {
-                const auto* vertexBuffer{pair.second.Buffer};
-                instanceCount = static_cast<uint32_t>(vertexBuffer->m_bytes.size()) / pair.second.Stride;
-            }
+        // bgfx expects that each instance attribute occupies exactly one 16-byte slot.
+        static constexpr uint16_t kSlotSize = 16;
 
-            instanceStride += static_cast<uint16_t>(pair.second.ElementSize);
+        if (instances.empty())
+        {
+            return;
         }
+
+        if (instanceCount == 0)
+        {
+            const auto& first{instances.begin()->second};
+            instanceCount = static_cast<uint32_t>(first.Buffer->m_bytes.size()) / first.Stride;
+        }
+
+        if (instanceCount == 0)
+        {
+            return;
+        }
+
+        const uint16_t instanceStride = static_cast<uint16_t>(instances.size() * kSlotSize);
 
         // Create instance datas. Instance Data Buffer is transient.
         bgfx::allocInstanceDataBuffer(&instanceDataBuffer, instanceCount, instanceStride);
 
-        // Copy instance data.
         uint8_t* data{instanceDataBuffer.data};
-        uint32_t offset{};
+
+        // Zero the buffer so any unused bytes within a 16-byte slot (when ElementSize < 16) read as
+        // zero in the shader instead of leaking transient ring-buffer garbage.
+        std::memset(data, 0, static_cast<size_t>(instanceStride) * instanceCount);
 
         // Reverse because bgfx maps instance data in reverse attrib order:
         // D3D11: TEXCOORD7 = i_data0, TEXCOORD6 = i_data1, etc.
         // OpenGL also expects this layout since bgfx abstracts the mapping.
+        uint32_t slotOffset{};
         for (auto iter = instances.rbegin(); iter != instances.rend(); ++iter)
         {
             const auto& element{iter->second};
+            assert(element.ElementSize <= kSlotSize);
             const auto* source{element.Buffer->m_bytes.data()};
             for (uint32_t instance = 0; instance < instanceCount; instance++)
             {
-                std::memcpy(data + instance * instanceStride + offset, source + instance * element.Stride + element.Offset, element.ElementSize);
+                std::memcpy(data + instance * instanceStride + slotOffset, source + instance * element.Stride + element.Offset, element.ElementSize);
             }
-            offset += iter->second.ElementSize;
+            slotOffset += kSlotSize;
         }
     }
 }
