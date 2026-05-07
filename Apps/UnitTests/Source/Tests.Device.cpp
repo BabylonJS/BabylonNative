@@ -12,7 +12,7 @@ extern Babylon::Graphics::Configuration g_deviceConfig;
 // Present, GPU TDR, hot unplug) and host-driven device swaps in embedding scenarios (e.g. WPF/Win32
 // interop where the host's ID3D11Device changes).
 //
-// Quiescence requirement (not exercised here, but required in production):
+// Idle requirement (not exercised here, but required in production):
 //   DisableRendering must be called between frames and with no outstanding JS / FrameCompletionScope
 //   work. This test runs purely on the render thread with no JS engine attached, so the requirement
 //   is trivially satisfied.
