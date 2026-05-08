@@ -2,6 +2,7 @@
 #include "Utils.h"
 
 #include <dxgi1_4.h>
+#include <winrt/base.h>
 
 Babylon::Graphics::TextureT CreateTestTexture(Babylon::Graphics::DeviceT device, uint32_t width, uint32_t height, uint32_t arraySize)
 {
@@ -44,17 +45,14 @@ void DestroyTestTexture(Babylon::Graphics::TextureT texture)
 
 Babylon::Graphics::DeviceT CreateTestGraphicsDevice()
 {
-    IDXGIFactory4* factory = nullptr;
-    EXPECT_HRESULT_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&factory)));
+    winrt::com_ptr<IDXGIFactory4> factory;
+    winrt::check_hresult(CreateDXGIFactory1(IID_PPV_ARGS(factory.put())));
 
-    IDXGIAdapter* warpAdapter = nullptr;
-    EXPECT_HRESULT_SUCCEEDED(factory->EnumWarpAdapter(IID_PPV_ARGS(&warpAdapter)));
+    winrt::com_ptr<IDXGIAdapter> warpAdapter;
+    winrt::check_hresult(factory->EnumWarpAdapter(IID_PPV_ARGS(warpAdapter.put())));
 
     ID3D12Device* device = nullptr;
-    EXPECT_HRESULT_SUCCEEDED(D3D12CreateDevice(warpAdapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)));
-
-    warpAdapter->Release();
-    factory->Release();
+    winrt::check_hresult(D3D12CreateDevice(warpAdapter.get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)));
 
     return device;
 }
