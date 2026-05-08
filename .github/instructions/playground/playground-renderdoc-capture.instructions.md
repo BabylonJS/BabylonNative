@@ -122,7 +122,7 @@ Just delete `<cwd>/temp/` if you want to free disk.
 ## What the rdc CLI **cannot** do (drop to renderdoc-py)
 
 - Show the IA input element layout (no `pipeline EID ia` section in
-  rdc 0.5.x with renderdoc-py 1.41).
+  current rdc).
 - Identify which buffer slot/offset feeds which shader semantic.
 - Show *all* components of VS output (only first 4 are dumped to JSON).
 - Debug shader execution (`rdc debug vertex/pixel` may crash the daemon
@@ -162,14 +162,14 @@ data = ctrl.GetBufferData(post.vertexResourceId,
 # GetAction(eid) on this version.
 ```
 
-## Worked example -- test 286 "Instances with color buffer"
+## Worked example -- "Instances with color buffer"
 
 Symptom: pixel `(13,13,15)` instead of expected `(255,0,0)`. Both cubes
 render black; reference shows red+green from per-instance color buffer.
 
 ```powershell
 & $rdcmd capture -w .\Playground.exe `
-    --once --test-index=286 --include-excluded --capture=5 `
+    --once --test "Instances with color buffer" --include-excluded --capture=5 `
     app:///Scripts/validation_native.js
 # -> "First pixel off at 286108: Value: (13, 13, 15) - Expected: (255, 0, 0)"
 # -> "Pixel difference: 53296 pixels."

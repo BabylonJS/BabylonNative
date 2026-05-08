@@ -1,6 +1,6 @@
 # RenderDoc GPU Debugging Instructions
 
-> Based on [rudybear/renderdoc-skill](https://github.com/rudybear/renderdoc-skill) -- adapted for GitHub Copilot.
+> Based on [rudybear/renderdoc-skill](https://github.com/rudybear/renderdoc-skill) — adapted for GitHub Copilot.
 
 ## When to Use
 
@@ -303,12 +303,12 @@ rdc diff capture_a.rdc capture_b.rdc --framebuffer --diff-output ./captures/anal
 
 For detailed step-by-step debugging workflows with expected output shapes, see `debugging-recipes.instructions.md`. Available recipes:
 
-- **Object is Invisible** -- culling, depth, blend, vertex transform checks
-- **Colors Are Wrong** -- texture bindings, constants, blend state, pixel shader trace
-- **Shadows Are Broken** -- shadow map resolution, depth bias, light matrices, PCF
-- **Performance Is Bad** -- draw counts, resource sizes, overdraw, state changes
-- **What Changed Between Two Frames** -- capture diff workflow
-- **Debug This Pixel** -- pixel history, shader trace, variable inspection
+- **Object is Invisible** — culling, depth, blend, vertex transform checks
+- **Colors Are Wrong** — texture bindings, constants, blend state, pixel shader trace
+- **Shadows Are Broken** — shadow map resolution, depth bias, light matrices, PCF
+- **Performance Is Bad** — draw counts, resource sizes, overdraw, state changes
+- **What Changed Between Two Frames** — capture diff workflow
+- **Debug This Pixel** — pixel history, shader trace, variable inspection
 
 ## 11. Output Size Management
 

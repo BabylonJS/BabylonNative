@@ -26,7 +26,7 @@ public:
         size_t height,
         DebugLogCallback debugLog,
         AdditionalInitCallback additionalInit = {},
-        const PlaygroundOptions* playgroundOptions = nullptr);
+        PlaygroundOptions playgroundOptions = {});
 
     ~AppContext();
 

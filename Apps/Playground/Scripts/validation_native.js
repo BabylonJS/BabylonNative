@@ -1,21 +1,21 @@
 (function () {
     let currentScene;
     let config;
-    const _opts = (typeof _playgroundOptions === "object" && _playgroundOptions) ? _playgroundOptions : {};
-    const justOnce = !!_opts.runOnce;
-    const saveResult = (typeof _opts.saveResults === "boolean") ? _opts.saveResults : true;
+    const opts = (typeof _playgroundOptions === "object" && _playgroundOptions) ? _playgroundOptions : {};
+    const justOnce = !!opts.runOnce;
+    const saveResult = (typeof opts.saveResults === "boolean") ? opts.saveResults : true;
     const testWidth = 600;
     const testHeight = 400;
-    const generateReferences = !!_opts.generateReferences;
-    const breakOnFail = !!_opts.breakOnFail;
-    const listTests = !!_opts.listTests;
-    const includeExcluded = !!_opts.includeExcluded;
-    const testFilters = Array.isArray(_opts.testFilters) ? _opts.testFilters.map(s => String(s).toLowerCase()) : [];
-    const testIndices = Array.isArray(_opts.testIndices) ? _opts.testIndices.map(n => +n) : [];
+    const generateReferences = !!opts.generateReferences;
+    const breakOnFail = !!opts.breakOnFail;
+    const listTests = !!opts.listTests;
+    const includeExcluded = !!opts.includeExcluded;
+    const testFilters = Array.isArray(opts.testFilters) ? opts.testFilters.map(s => String(s).toLowerCase()) : [];
+    const testIndices = Array.isArray(opts.testIndices) ? opts.testIndices.map(n => +n) : [];
     // CLI --capture=N: 1-based frame index at which to call
     // TestUtils.captureNextFrame() for every executed test. The runner
     // extends each test's render budget so the .rdc finalizes.
-    const cliCaptureFrame = (typeof _opts.captureFrame === "number" && _opts.captureFrame > 0) ? (_opts.captureFrame | 0) : 0;
+    const cliCaptureFrame = (typeof opts.captureFrame === "number" && opts.captureFrame > 0) ? (opts.captureFrame | 0) : 0;
     // Frames after the trigger to let RenderDoc finalize the .rdc.
     const POST_CAPTURE_FRAMES = 5;
 
@@ -46,16 +46,13 @@
     }
 
     // Per-run counters surfaced as a final summary line on exit.
-    let _ranCount = 0;
-    let _passedCount = 0;
-    let _failedCount = 0;
-    let _skippedCount = 0;
-    let _missingRefCount = 0;
+    let ranCount = 0;
+    let passedCount = 0;
+    let failedCount = 0;
+    let skippedCount = 0;
+    let missingRefCount = 0;
 
-    function getSkipReason(t) {
-        if (includeExcluded) {
-            return null;
-        }
+    function getExclusionReason(t) {
         if (t.onlyVisual) {
             return "onlyVisual";
         }
@@ -68,12 +65,19 @@
         return null;
     }
 
+    function getSkipReason(t) {
+        if (includeExcluded) {
+            return null;
+        }
+        return getExclusionReason(t);
+    }
+
     function logRunSummary() {
-        console.log("Run complete. ran=" + _ranCount +
-                    " passed=" + _passedCount +
-                    " failed=" + _failedCount +
-                    " missingRef=" + _missingRefCount +
-                    " skipped=" + _skippedCount);
+        console.log("Run complete. ran=" + ranCount +
+                    " passed=" + passedCount +
+                    " failed=" + failedCount +
+                    " missingRef=" + missingRefCount +
+                    " skipped=" + skippedCount);
     }
 
     const engine = new BABYLON.NativeEngine();
@@ -448,7 +452,7 @@
                 if (!test.referenceImage) {
                     console.error("MISSING_REFERENCE_IMAGE: Test '" + (test.title || "(unnamed)") +
                                   "' has no 'referenceImage' field in config.json - cannot run pixel comparison.");
-                    _missingRefCount++;
+                    missingRefCount++;
                     failTest(done);
                     return;
                 }
@@ -457,7 +461,7 @@
                     console.error("MISSING_REFERENCE_IMAGE: Test '" + (test.title || "(unnamed)") +
                                   "' reference image not found at app:///ReferenceImages/" +
                                   test.referenceImage + " - cannot run pixel comparison.");
-                    _missingRefCount++;
+                    missingRefCount++;
                     failTest(done);
                     return;
                 }
@@ -515,9 +519,13 @@
             config = JSON.parse(xhr.responseText);
 
             if (listTests) {
+                // Canonical TSV: index<TAB>title<TAB>referenceImage<TAB>exclusionReason.
+                // exclusionReason reflects config state (ignores --include-excluded)
+                // so the listing is the same regardless of run flags.
                 for (let i = 0; i < config.tests.length; ++i) {
                     const t = config.tests[i];
-                    console.log("[" + i + "] " + (t.title || "") + " -> " + (t.referenceImage || ""));
+                    const reason = getExclusionReason(t) || "";
+                    console.log(i + "\t" + (t.title || "") + "\t" + (t.referenceImage || "") + "\t" + reason);
                 }
                 engine.dispose();
                 TestUtils.exit(0);
@@ -544,7 +552,7 @@
                     const reason = getSkipReason(t);
                     if (reason !== null) {
                         console.log("Skipping '" + (t.title || "(unnamed)") + "' -- " + reason);
-                        _skippedCount++;
+                        skippedCount++;
                         i++;
                         continue;
                     }
@@ -553,25 +561,21 @@
                 if (i >= config.tests.length) {
                     logRunSummary();
                     engine.dispose();
-                    TestUtils.exit(_failedCount > 0 ? -1 : 0);
+                    TestUtils.exit(failedCount > 0 ? -1 : 0);
                     return;
                 }
                 const currentTitle = config.tests[i].title || "(unnamed)";
                 runTest(i, function (status) {
-                    _ranCount++;
+                    ranCount++;
                     if (!status) {
-                        _failedCount++;
-                        // Inner failures fire the debugger via failTest();
-                        // this catches the comparison-failed path.
-                        if (breakOnFail) {
-                            // eslint-disable-next-line no-debugger
-                            debugger;
-                        }
+                        failedCount++;
+                        // failTest() already triggered the debugger before
+                        // reaching this callback; no second `debugger` here.
                         logRunSummary();
                         TestUtils.exit(-1);
                         return;
                     }
-                    _passedCount++;
+                    passedCount++;
                     i++;
                     if (justOnce || i >= config.tests.length) {
                         logRunSummary();

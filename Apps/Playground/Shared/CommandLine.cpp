@@ -1,6 +1,7 @@
 #include "CommandLine.h"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -108,13 +109,129 @@ namespace
         return true;
     }
 
-    // Returns true if arg matches "--longName" / "--longName=value" or
-    // shortName. For ValueRequired flags missing an "=", consumes the next
-    // arg as the value.
     enum class FlagKind
     {
         Boolean,        // --flag (no value)
         ValueRequired,  // --flag=value or --flag value
+    };
+
+    // One row per flag. Add a flag = add a row here. PrintUsage walks the
+    // same table so flag definitions stop being a second source of truth.
+    struct FlagSpec
+    {
+        std::string_view longName;    // e.g. "--test"
+        std::string_view shortName;   // e.g. "-t" or "" if none
+        FlagKind kind;
+        std::string_view valueLabel;  // shown in usage as --flag=LABEL; "" for Boolean
+        // Single-line summary; long supplementary text goes in continuation.
+        // Continuation lines are pre-indented so they line up under the
+        // description column in PrintUsage.
+        std::string_view help;
+        std::string_view continuation;
+        // apply: set field(s) on `opt` from `value`. For Boolean flags `value`
+        // is empty. On a parse error set `err` and leave `opt` unchanged.
+        void (*apply)(PlaygroundOptions& opt, std::string_view value, std::string& err);
+    };
+
+    constexpr std::array kFlags = {
+        FlagSpec{"--help", "-h", FlagKind::Boolean, "",
+            "Show this help and exit (0).", "",
+            [](PlaygroundOptions& o, std::string_view, std::string&) { o.ShowHelp = true; }},
+
+        FlagSpec{"--list", "-l", FlagKind::Boolean, "",
+            "List configured tests as TSV and exit (0).",
+            "                              Columns: index, title, referenceImage,\n"
+            "                              exclusionReason. exclusionReason reflects\n"
+            "                              config state (ignores --include-excluded).\n",
+            [](PlaygroundOptions& o, std::string_view, std::string&) { o.ListTests = true; }},
+
+        FlagSpec{"--headless", "", FlagKind::Boolean, "",
+            "Don't show a window (still creates HWND).", "",
+            [](PlaygroundOptions& o, std::string_view, std::string&) { o.Headless = true; }},
+
+        FlagSpec{"--break-on-fail", "", FlagKind::Boolean, "",
+            "Trigger debugger break on a failing test.", "",
+            [](PlaygroundOptions& o, std::string_view, std::string&) { o.BreakOnFail = true; }},
+
+        FlagSpec{"--generate-references", "", FlagKind::Boolean, "",
+            "Save rendered images as new reference PNGs.", "",
+            [](PlaygroundOptions& o, std::string_view, std::string&) { o.GenerateReferences = true; }},
+
+        FlagSpec{"--once", "", FlagKind::Boolean, "",
+            "Run only the first matching test, then exit.", "",
+            [](PlaygroundOptions& o, std::string_view, std::string&) { o.RunOnce = true; }},
+
+        FlagSpec{"--include-excluded", "", FlagKind::Boolean, "",
+            "Force-run tests that have",
+            "                              excludeFromAutomaticTesting / onlyVisual /\n"
+            "                              excludedGraphicsApis set in config.json.\n"
+            "                              Useful for debugging quarantined tests\n"
+            "                              without editing the config.\n",
+            [](PlaygroundOptions& o, std::string_view, std::string&) { o.IncludeExcluded = true; }},
+
+        FlagSpec{"--save-results", "", FlagKind::ValueRequired, "BOOL",
+            "Override saving of result PNGs (default true).", "",
+            [](PlaygroundOptions& o, std::string_view value, std::string& err) {
+                bool b = false;
+                if (!ParseBool(value, b)) { err = "invalid bool for --save-results: '" + std::string{value} + "'"; return; }
+                o.SaveResults = b;
+            }},
+
+        FlagSpec{"--debug-trace", "", FlagKind::ValueRequired, "BOOL",
+            "Enable/disable Babylon::DebugTrace.", "",
+            [](PlaygroundOptions& o, std::string_view value, std::string& err) {
+                bool b = false;
+                if (!ParseBool(value, b)) { err = "invalid bool for --debug-trace: '" + std::string{value} + "'"; return; }
+                o.DebugTrace = b;
+            }},
+
+        FlagSpec{"--perf-trace", "", FlagKind::ValueRequired, "LEVEL",
+            "Set Babylon::PerfTrace level (None/Log).", "",
+            [](PlaygroundOptions& o, std::string_view value, std::string&) { o.PerfTrace = std::string{value}; }},
+
+        FlagSpec{"--capture", "", FlagKind::ValueRequired, "N",
+            "Trigger RenderDoc capture on the Nth",
+            "                              rendered frame (1-based) of each executed\n"
+            "                              test. The test's renderCount is auto-bumped\n"
+            "                              so the .rdc finalizes even if the test\n"
+            "                              normally renders only 1 frame. Pixel\n"
+            "                              comparison still happens at the test's\n"
+            "                              original renderCount, so pass/fail behavior\n"
+            "                              is unaffected. The .rdc lives at\n"
+            "                              <cwd>/temp/bgfx_frame<N>.rdc.\n"
+            "                              Combine with --once / --test / --test-index\n"
+            "                              to limit to a single capture.\n"
+            "                              Requires renderdoc.dll to be loaded into\n"
+            "                              the process. Easiest: launch via\n"
+            "                              `renderdoccmd capture -w Playground.exe ...`\n"
+            "                              or `rdc capture --trigger -w -- Playground.exe ...`\n"
+            "                              (those inject the paired DLL before main).\n",
+            [](PlaygroundOptions& o, std::string_view value, std::string& err) {
+                int n = 0;
+                if (!ParseIntStrict(value, n) || n < 1 || n > 100000)
+                {
+                    err = "invalid --capture value (expected positive integer): '" + std::string{value} + "'";
+                    return;
+                }
+                o.CaptureFrame = n;
+            }},
+
+        FlagSpec{"--test", "-t", FlagKind::ValueRequired, "PATTERN",
+            "Run tests whose title contains PATTERN.",
+            "                              May be specified multiple times (OR).\n",
+            [](PlaygroundOptions& o, std::string_view value, std::string&) { o.TestFilters.emplace_back(value); }},
+
+        FlagSpec{"--test-index", "", FlagKind::ValueRequired, "LIST",
+            "Run only the listed indices. LIST may be a",
+            "                              comma list of numbers or N-M ranges,\n"
+            "                              e.g. '3,5,7' or '3-6' or '3,5-7,9'.\n",
+            [](PlaygroundOptions& o, std::string_view value, std::string& err) {
+                std::string ierr;
+                if (!ParseIndexList(value, o.TestIndices, ierr))
+                {
+                    err = "invalid --test-index value: " + ierr;
+                }
+            }},
     };
 
     struct FlagMatch
@@ -124,28 +241,29 @@ namespace
         bool consumedNextArg = false;
     };
 
+    // Returns true if arg matches "--longName" / "--longName=value" or
+    // shortName. For ValueRequired flags missing an "=", consumes the next
+    // arg as the value.
     FlagMatch MatchFlag(
         std::string_view arg,
-        std::string_view longName,    // e.g. "--test"
-        std::string_view shortName,   // e.g. "-t" or "" if none
-        FlagKind kind,
+        const FlagSpec& spec,
         const char* nextArg /* may be null */,
         std::string& err)
     {
         FlagMatch m;
 
-        // --flag=value form
-        if (StartsWith(arg, longName))
+        // --flag / --flag=value form
+        if (StartsWith(arg, spec.longName))
         {
-            std::string_view rest = arg.substr(longName.size());
+            std::string_view rest = arg.substr(spec.longName.size());
             if (rest.empty())
             {
                 m.matched = true;
-                if (kind == FlagKind::ValueRequired)
+                if (spec.kind == FlagKind::ValueRequired)
                 {
                     if (nextArg == nullptr)
                     {
-                        err = "flag '" + std::string{longName} + "' requires a value";
+                        err = "flag '" + std::string{spec.longName} + "' requires a value";
                         m.matched = false;
                         return m;
                     }
@@ -156,9 +274,9 @@ namespace
             }
             if (rest[0] == '=')
             {
-                if (kind == FlagKind::Boolean)
+                if (spec.kind == FlagKind::Boolean)
                 {
-                    err = "flag '" + std::string{longName} + "' does not take a value";
+                    err = "flag '" + std::string{spec.longName} + "' does not take a value";
                     return m;
                 }
                 m.matched = true;
@@ -168,14 +286,14 @@ namespace
             // not a real match (e.g. --testindex prefix-matches --test)
         }
 
-        if (!shortName.empty() && arg == shortName)
+        if (!spec.shortName.empty() && arg == spec.shortName)
         {
             m.matched = true;
-            if (kind == FlagKind::ValueRequired)
+            if (spec.kind == FlagKind::ValueRequired)
             {
                 if (nextArg == nullptr)
                 {
-                    err = "flag '" + std::string{shortName} + "' requires a value";
+                    err = "flag '" + std::string{spec.shortName} + "' requires a value";
                     m.matched = false;
                     return m;
                 }
@@ -221,133 +339,41 @@ namespace CommandLine
 
             const char* nextArg = (i + 1 < argc) ? argv[i + 1] : nullptr;
             std::string err;
+            bool dispatched = false;
 
-            auto match = [&](std::string_view longN, std::string_view shortN, FlagKind kind) {
-                FlagMatch m = MatchFlag(arg, longN, shortN, kind, nextArg, err);
-                if (m.matched && m.consumedNextArg)
+            for (const FlagSpec& spec : kFlags)
+            {
+                FlagMatch m = MatchFlag(arg, spec, nextArg, err);
+                if (!err.empty())
+                {
+                    opt.ParseError = true;
+                    opt.ErrorMessage = err;
+                    return opt;
+                }
+                if (!m.matched)
+                {
+                    continue;
+                }
+                if (m.consumedNextArg)
                 {
                     ++i;
                 }
-                return m;
-            };
-
-            if (auto m = match("--help", "-h", FlagKind::Boolean); m.matched)
-            {
-                opt.ShowHelp = true;
-                continue;
-            }
-            if (!err.empty()) { opt.ParseError = true; opt.ErrorMessage = err; return opt; }
-
-            if (auto m = match("--list", "-l", FlagKind::Boolean); m.matched)
-            {
-                opt.ListTests = true;
-                continue;
-            }
-            if (!err.empty()) { opt.ParseError = true; opt.ErrorMessage = err; return opt; }
-
-            if (auto m = match("--headless", "", FlagKind::Boolean); m.matched)
-            {
-                opt.Headless = true;
-                continue;
-            }
-            if (!err.empty()) { opt.ParseError = true; opt.ErrorMessage = err; return opt; }
-
-            if (auto m = match("--break-on-fail", "", FlagKind::Boolean); m.matched)
-            {
-                opt.BreakOnFail = true;
-                continue;
-            }
-            if (!err.empty()) { opt.ParseError = true; opt.ErrorMessage = err; return opt; }
-
-            if (auto m = match("--generate-references", "", FlagKind::Boolean); m.matched)
-            {
-                opt.GenerateReferences = true;
-                continue;
-            }
-            if (!err.empty()) { opt.ParseError = true; opt.ErrorMessage = err; return opt; }
-
-            if (auto m = match("--once", "", FlagKind::Boolean); m.matched)
-            {
-                opt.RunOnce = true;
-                continue;
-            }
-            if (!err.empty()) { opt.ParseError = true; opt.ErrorMessage = err; return opt; }
-
-            if (auto m = match("--include-excluded", "", FlagKind::Boolean); m.matched)
-            {
-                opt.IncludeExcluded = true;
-                continue;
-            }
-            if (!err.empty()) { opt.ParseError = true; opt.ErrorMessage = err; return opt; }
-
-            if (auto m = match("--save-results", "", FlagKind::ValueRequired); m.matched)
-            {
-                bool b = false;
-                if (!ParseBool(m.value, b))
+                std::string applyErr;
+                spec.apply(opt, m.value, applyErr);
+                if (!applyErr.empty())
                 {
                     opt.ParseError = true;
-                    opt.ErrorMessage = "invalid bool for --save-results: '" + m.value + "'";
+                    opt.ErrorMessage = applyErr;
                     return opt;
                 }
-                opt.SaveResults = b;
-                continue;
+                dispatched = true;
+                break;
             }
-            if (!err.empty()) { opt.ParseError = true; opt.ErrorMessage = err; return opt; }
 
-            if (auto m = match("--debug-trace", "", FlagKind::ValueRequired); m.matched)
+            if (dispatched)
             {
-                bool b = false;
-                if (!ParseBool(m.value, b))
-                {
-                    opt.ParseError = true;
-                    opt.ErrorMessage = "invalid bool for --debug-trace: '" + m.value + "'";
-                    return opt;
-                }
-                opt.DebugTrace = b;
                 continue;
             }
-            if (!err.empty()) { opt.ParseError = true; opt.ErrorMessage = err; return opt; }
-
-            if (auto m = match("--perf-trace", "", FlagKind::ValueRequired); m.matched)
-            {
-                opt.PerfTrace = m.value;
-                continue;
-            }
-            if (!err.empty()) { opt.ParseError = true; opt.ErrorMessage = err; return opt; }
-
-            if (auto m = match("--capture", "", FlagKind::ValueRequired); m.matched)
-            {
-                int n = 0;
-                if (!ParseIntStrict(m.value, n) || n < 1 || n > 100000)
-                {
-                    opt.ParseError = true;
-                    opt.ErrorMessage = "invalid --capture value (expected positive integer): '" + m.value + "'";
-                    return opt;
-                }
-                opt.CaptureFrame = n;
-                continue;
-            }
-            if (!err.empty()) { opt.ParseError = true; opt.ErrorMessage = err; return opt; }
-
-            if (auto m = match("--test", "-t", FlagKind::ValueRequired); m.matched)
-            {
-                opt.TestFilters.push_back(m.value);
-                continue;
-            }
-            if (!err.empty()) { opt.ParseError = true; opt.ErrorMessage = err; return opt; }
-
-            if (auto m = match("--test-index", "", FlagKind::ValueRequired); m.matched)
-            {
-                std::string ierr;
-                if (!ParseIndexList(m.value, opt.TestIndices, ierr))
-                {
-                    opt.ParseError = true;
-                    opt.ErrorMessage = "invalid --test-index value: " + ierr;
-                    return opt;
-                }
-                continue;
-            }
-            if (!err.empty()) { opt.ParseError = true; opt.ErrorMessage = err; return opt; }
 
             // Unknown flag?
             if (StartsWith(arg, "-"))
@@ -367,55 +393,57 @@ namespace CommandLine
     void PrintUsage(const char* argv0)
     {
         const char* prog = (argv0 != nullptr && *argv0 != '\0') ? argv0 : "Playground";
-        std::printf(
-            "Usage: %s [options] [script...]\n"
-            "\n"
-            "Run Babylon Native Playground / visual tests.\n"
-            "\n"
-            "Options:\n"
-            "  -h, --help                  Show this help and exit (0).\n"
-            "  -l, --list                  List configured tests as TSV and exit (0).\n"
-            "      --headless              Don't show a window (still creates HWND).\n"
-            "      --break-on-fail         Trigger debugger break on a failing test.\n"
-            "      --generate-references   Save rendered images as new reference PNGs.\n"
-            "      --once                  Run only the first matching test, then exit.\n"
-            "      --include-excluded      Force-run tests that have\n"
-            "                              excludeFromAutomaticTesting / onlyVisual /\n"
-            "                              excludedGraphicsApis set in config.json.\n"
-            "                              Useful for debugging quarantined tests\n"
-            "                              without editing the config.\n"
-            "      --save-results=BOOL     Override saving of result PNGs (default true).\n"
-            "      --debug-trace=BOOL      Enable/disable Babylon::DebugTrace.\n"
-            "      --perf-trace=LEVEL      Set Babylon::PerfTrace level (None/Log).\n"
-            "      --capture=N             Trigger RenderDoc capture on the Nth\n"
-            "                              rendered frame (1-based) of each executed\n"
-            "                              test. The test's renderCount is auto-bumped\n"
-            "                              so the .rdc finalizes even if the test\n"
-            "                              normally renders only 1 frame. Pixel\n"
-            "                              comparison still happens at the test's\n"
-            "                              original renderCount, so pass/fail behavior\n"
-            "                              is unaffected. The .rdc lives at\n"
-            "                              <cwd>/temp/bgfx_frame<N>.rdc.\n"
-            "                              Combine with --once / --test / --test-index\n"
-            "                              to limit to a single capture.\n"
-            "                              Requires renderdoc.dll to be loaded into\n"
-            "                              the process. Easiest: launch via\n"
-            "                              `renderdoccmd capture -w Playground.exe ...`\n"
-            "                              or `rdc capture --trigger -w -- Playground.exe ...`\n"
-            "                              (those inject the paired DLL before main).\n"
-            "  -t, --test=PATTERN          Run tests whose title contains PATTERN.\n"
-            "                              May be specified multiple times (OR).\n"
-            "      --test-index=LIST       Run only the listed indices. LIST may be a\n"
-            "                              comma list of numbers or N-M ranges,\n"
-            "                              e.g. '3,5,7' or '3-6' or '3,5-7,9'.\n"
-            "      --                      End of options; everything after is a script.\n"
-            "\n"
-            "Exit codes:\n"
-            "   0  success / help / list\n"
-            "   1  uncaught JS exception\n"
-            "   2  command-line parse error\n"
-            "   3  hard crash (assert / SIGABRT / unhandled exception)\n"
-            "  -1  pixel-diff comparison failure\n",
-            prog);
+        std::printf("Usage: %s [options] [script...]\n\n", prog);
+        std::printf("Run Babylon Native Playground / visual tests.\n\n");
+        std::printf("Options:\n");
+
+        // Render each row of kFlags. The left column is fixed-width so
+        // descriptions line up. Continuation strings already include the
+        // matching indent so they slot in under the description column.
+        constexpr int leftWidth = 30;
+        for (const FlagSpec& spec : kFlags)
+        {
+            std::string left;
+            left.reserve(leftWidth);
+            left += "  ";
+            if (!spec.shortName.empty())
+            {
+                left += std::string{spec.shortName};
+                left += ", ";
+            }
+            else
+            {
+                left += "    ";
+            }
+            left += std::string{spec.longName};
+            if (spec.kind == FlagKind::ValueRequired)
+            {
+                left += '=';
+                left += std::string{spec.valueLabel};
+            }
+            if (static_cast<int>(left.size()) < leftWidth)
+            {
+                left.append(leftWidth - left.size(), ' ');
+            }
+            else
+            {
+                left += ' ';
+            }
+            std::printf("%s%.*s\n", left.c_str(),
+                static_cast<int>(spec.help.size()), spec.help.data());
+            if (!spec.continuation.empty())
+            {
+                std::fwrite(spec.continuation.data(), 1, spec.continuation.size(), stdout);
+            }
+        }
+
+        std::printf("      --                      End of options; everything after is a script.\n");
+        std::printf("\n");
+        std::printf("Exit codes:\n");
+        std::printf("   0  success / help / list\n");
+        std::printf("   1  uncaught JS exception\n");
+        std::printf("   2  command-line parse error\n");
+        std::printf("   3  hard crash (assert / SIGABRT / unhandled exception)\n");
+        std::printf("  -1  pixel-diff comparison failure\n");
     }
 }

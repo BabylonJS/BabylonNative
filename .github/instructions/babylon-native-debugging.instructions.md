@@ -165,9 +165,11 @@ Substring match, case-insensitive, against `test.title`.
 
 ### Run one test by index (when titles collide or you only have a survey row)
 ```powershell
-.\Playground.exe --headless --once --test-index=286 `
+.\Playground.exe --headless --once --test-index=N `
     app:///Scripts/validation_native.js
 ```
+Use `--list` to find the index for a title. Indices are not stable across
+config.json edits; always re-resolve when the test list changes.
 
 ### Run a quarantined test without editing config.json
 ```powershell
@@ -183,8 +185,8 @@ debugging.
 ```powershell
 .\Playground.exe --list
 ```
-Prints TSV with index, title, exclusion reason. Pipe to `findstr` /
-`Select-String` for filtering.
+Prints TSV with index, title, referenceImage, exclusionReason. Pipe to
+`findstr` / `Select-String` for filtering.
 
 ### Pixel-diff investigation
 1. Run the failing test with `--headless --once --include-excluded`.
@@ -225,14 +227,14 @@ returns `true`, so the legacy throw-on-missing behavior is preserved.
 # Playground process before main, so bgfx::findModule adopts it. Version
 # always matches what `rdc open` accepts -- no PATH-ordering bugs.
 & "<renderdoc-py-dir>\renderdoccmd.exe" capture -w .\Playground.exe `
-    --headless --once --test-index=286 --include-excluded --capture=5 `
+    --headless --once --test "<test title or substring>" --include-excluded --capture=5 `
     app:///Scripts/validation_native.js
 # .rdc lives at <cwd>\temp\bgfx_frame5.rdc
 ```
 Equivalent with the rdc-cli wrapper (inject-only, no auto-capture handshake):
 ```powershell
 & rdc capture --trigger --wait-for-exit -- .\Playground.exe `
-    --headless --once --test-index=286 --include-excluded --capture=5 `
+    --headless --once --test "<test title or substring>" --include-excluded --capture=5 `
     app:///Scripts/validation_native.js
 ```
 Verify `renderdoc.dll` is loaded:

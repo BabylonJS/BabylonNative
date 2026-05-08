@@ -24,7 +24,7 @@ WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 std::optional<AppContext> appContext{};
 bool minimized{false};
 int buttonRefCount{0};
-PlaygroundOptions g_options{};
+PlaygroundOptions options{};
 
 // Forward declarations of functions included in this code module:
 ATOM MyRegisterClass(HINSTANCE hInstance);
@@ -47,7 +47,7 @@ namespace
         return {url};
     }
 
-    std::vector<std::string> GetCommandLineArgumentsW()
+    std::vector<std::string> GetCommandLineArguments()
     {
         int argc;
         auto argv = CommandLineToArgvW(GetCommandLineW(), &argc);
@@ -55,6 +55,7 @@ namespace
         std::vector<std::string> arguments{};
         arguments.reserve(argc);
 
+        // Include argv[0]; CommandLine::Parse() skips it itself.
         for (int idx = 0; idx < argc; idx++)
         {
             std::wstring hstr{argv[idx]};
@@ -106,15 +107,15 @@ namespace
                 std::fputs(text.c_str(), stdout);
             },
             AppContext::AdditionalInitCallback{},
-            &g_options);
+            options);
 
-        if (g_options.Scripts.empty())
+        if (options.Scripts.empty())
         {
             appContext->ScriptLoader().LoadScript("app:///Scripts/experience.js");
         }
         else
         {
-            for (const auto& arg : g_options.Scripts)
+            for (const auto& arg : options.Scripts)
             {
                 appContext->ScriptLoader().LoadScript(GetUrlFromPath(arg));
             }
@@ -161,24 +162,24 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     });
 
     // Parse argv before creating any window so --help / --list don't pop one.
-    auto args = GetCommandLineArgumentsW();
+    auto args = GetCommandLineArguments();
     std::vector<const char*> argv;
     argv.reserve(args.size());
     for (const auto& a : args)
     {
         argv.push_back(a.c_str());
     }
-    g_options = CommandLine::Parse(static_cast<int>(argv.size()), argv.data());
+    options = CommandLine::Parse(static_cast<int>(argv.size()), argv.data());
 
-    if (g_options.ParseError)
+    if (options.ParseError)
     {
-        std::fprintf(stderr, "Error: %s\n\n", g_options.ErrorMessage.c_str());
+        std::fprintf(stderr, "Error: %s\n\n", options.ErrorMessage.c_str());
         CommandLine::PrintUsage(argv.empty() ? nullptr : argv[0]);
         Diagnostics::SetExitCode(2);
         return 2;
     }
 
-    if (g_options.ShowHelp)
+    if (options.ShowHelp)
     {
         CommandLine::PrintUsage(argv.empty() ? nullptr : argv[0]);
         Diagnostics::SetExitCode(0);
@@ -191,7 +192,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
-    if (!InitInstance(hInstance, g_options.Headless ? SW_HIDE : nCmdShow))
+    if (!InitInstance(hInstance, options.Headless ? SW_HIDE : nCmdShow))
     {
         Diagnostics::SetExitCode(FALSE);
         return FALSE;

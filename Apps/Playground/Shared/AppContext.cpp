@@ -52,15 +52,15 @@ AppContext::AppContext(
     size_t height,
     DebugLogCallback debugLog,
     AdditionalInitCallback additionalInit,
-    const PlaygroundOptions* playgroundOptions)
+    PlaygroundOptions playgroundOptions)
 {
-    Babylon::DebugTrace::EnableDebugTrace(playgroundOptions == nullptr || !playgroundOptions->DebugTrace.has_value() ? true : *playgroundOptions->DebugTrace);
+    Babylon::DebugTrace::EnableDebugTrace(playgroundOptions.DebugTrace.value_or(true));
     Babylon::DebugTrace::SetTraceOutput(debugLog);
 
     Babylon::PerfTrace::Level perfLevel{Babylon::PerfTrace::Level::Mark};
-    if (playgroundOptions != nullptr && playgroundOptions->PerfTrace.has_value())
+    if (playgroundOptions.PerfTrace.has_value())
     {
-        const auto& v = *playgroundOptions->PerfTrace;
+        const auto& v = *playgroundOptions.PerfTrace;
         if (v == "None" || v == "none")
         {
             perfLevel = Babylon::PerfTrace::Level::None;
@@ -118,38 +118,37 @@ AppContext::AppContext(
 
     m_runtime.emplace(options);
 
-    m_runtime->Dispatch([this, window, debugLog, additionalInit = std::move(additionalInit), playgroundOptions](Napi::Env env) {
+    m_runtime->Dispatch([this, window, debugLog, additionalInit = std::move(additionalInit), playgroundOptions = std::move(playgroundOptions)](Napi::Env env) {
         m_device->AddToJavaScript(env);
 
-        if (playgroundOptions != nullptr)
         {
             auto js = Napi::Object::New(env);
-            js.Set("listTests",          Napi::Boolean::New(env, playgroundOptions->ListTests));
-            js.Set("headless",           Napi::Boolean::New(env, playgroundOptions->Headless));
-            js.Set("breakOnFail",        Napi::Boolean::New(env, playgroundOptions->BreakOnFail));
-            js.Set("generateReferences", Napi::Boolean::New(env, playgroundOptions->GenerateReferences));
-            js.Set("runOnce",            Napi::Boolean::New(env, playgroundOptions->RunOnce));
-            js.Set("includeExcluded",    Napi::Boolean::New(env, playgroundOptions->IncludeExcluded));
-            if (playgroundOptions->SaveResults.has_value())
+            js.Set("listTests",          Napi::Boolean::New(env, playgroundOptions.ListTests));
+            js.Set("headless",           Napi::Boolean::New(env, playgroundOptions.Headless));
+            js.Set("breakOnFail",        Napi::Boolean::New(env, playgroundOptions.BreakOnFail));
+            js.Set("generateReferences", Napi::Boolean::New(env, playgroundOptions.GenerateReferences));
+            js.Set("runOnce",            Napi::Boolean::New(env, playgroundOptions.RunOnce));
+            js.Set("includeExcluded",    Napi::Boolean::New(env, playgroundOptions.IncludeExcluded));
+            if (playgroundOptions.SaveResults.has_value())
             {
-                js.Set("saveResults", Napi::Boolean::New(env, *playgroundOptions->SaveResults));
+                js.Set("saveResults", Napi::Boolean::New(env, *playgroundOptions.SaveResults));
             }
-            if (playgroundOptions->CaptureFrame.has_value())
+            if (playgroundOptions.CaptureFrame.has_value())
             {
-                js.Set("captureFrame", Napi::Number::New(env, *playgroundOptions->CaptureFrame));
+                js.Set("captureFrame", Napi::Number::New(env, *playgroundOptions.CaptureFrame));
             }
 
-            auto filters = Napi::Array::New(env, playgroundOptions->TestFilters.size());
-            for (uint32_t i = 0; i < playgroundOptions->TestFilters.size(); ++i)
+            auto filters = Napi::Array::New(env, playgroundOptions.TestFilters.size());
+            for (uint32_t i = 0; i < playgroundOptions.TestFilters.size(); ++i)
             {
-                filters[i] = Napi::String::New(env, playgroundOptions->TestFilters[i]);
+                filters[i] = Napi::String::New(env, playgroundOptions.TestFilters[i]);
             }
             js.Set("testFilters", filters);
 
-            auto indices = Napi::Array::New(env, playgroundOptions->TestIndices.size());
-            for (uint32_t i = 0; i < playgroundOptions->TestIndices.size(); ++i)
+            auto indices = Napi::Array::New(env, playgroundOptions.TestIndices.size());
+            for (uint32_t i = 0; i < playgroundOptions.TestIndices.size(); ++i)
             {
-                indices[i] = Napi::Number::New(env, playgroundOptions->TestIndices[i]);
+                indices[i] = Napi::Number::New(env, playgroundOptions.TestIndices[i]);
             }
             js.Set("testIndices", indices);
 
