@@ -124,10 +124,13 @@ extern "C"
 // See SimplifiedAPI.md §4.2 "Interop layer responsibilities".
 // =====================================================================
 
-// Call once at app startup, typically from `Application.onCreate`,
-// before constructing any BabylonNativeRuntime.
+// Set the application Context. Hosts call this once at app startup
+// (typically from `Application.onCreate` or the host Activity's
+// `onCreate`), before constructing any Runtime. Calling more than
+// once is harmless — `android::global::Initialize` deletes any
+// existing Context global ref and installs the new one.
 JNIEXPORT void JNICALL
-Java_com_babylonjs_integrations_BabylonNative_androidGlobalInitialize(
+Java_com_babylonjs_integrations_BabylonNative_setContext(
     JNIEnv* env, jclass, jobject context)
 {
     JavaVM* javaVM{nullptr};
@@ -139,26 +142,26 @@ Java_com_babylonjs_integrations_BabylonNative_androidGlobalInitialize(
 }
 
 JNIEXPORT void JNICALL
-Java_com_babylonjs_integrations_BabylonNative_androidGlobalSetCurrentActivity(
+Java_com_babylonjs_integrations_BabylonNative_setCurrentActivity(
     JNIEnv*, jclass, jobject activity)
 {
     android::global::SetCurrentActivity(activity);
 }
 
 JNIEXPORT void JNICALL
-Java_com_babylonjs_integrations_BabylonNative_androidGlobalPause(JNIEnv*, jclass)
+Java_com_babylonjs_integrations_BabylonNative_pause(JNIEnv*, jclass)
 {
     android::global::Pause();
 }
 
 JNIEXPORT void JNICALL
-Java_com_babylonjs_integrations_BabylonNative_androidGlobalResume(JNIEnv*, jclass)
+Java_com_babylonjs_integrations_BabylonNative_resume(JNIEnv*, jclass)
 {
     android::global::Resume();
 }
 
 JNIEXPORT void JNICALL
-Java_com_babylonjs_integrations_BabylonNative_androidGlobalRequestPermissionsResult(
+Java_com_babylonjs_integrations_BabylonNative_requestPermissionsResult(
     JNIEnv* env, jclass, jint requestCode, jobjectArray permissions, jintArray grantResults)
 {
     std::vector<std::string> nativePermissions{};

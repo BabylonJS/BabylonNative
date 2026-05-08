@@ -25,13 +25,13 @@ import com.babylonjs.integrations.BabylonNative;
  * needed at the rendering layer.
  *
  * <p>Activity lifecycle: the host Activity is responsible for the
- * process-wide {@code androidGlobalInitialize}, {@code SetCurrentActivity},
- * {@code Pause}/{@code Resume}, and {@code RequestPermissionsResult}
- * notifications (see {@code PlaygroundActivity.java}). The Runtime
- * automatically subscribes to {@code androidGlobalPause / Resume} when
- * created, so the host Activity does not need to invoke any per-view
- * pause/resume method — telling the JNI layer once is enough for every
- * Runtime in the process.
+ * process-wide {@code BabylonNative.setContext},
+ * {@code setCurrentActivity}, {@code pause} / {@code resume}, and
+ * {@code requestPermissionsResult} notifications (see
+ * {@code PlaygroundActivity.java}). The Runtime automatically subscribes
+ * to {@code pause} / {@code resume} when created, so the host Activity
+ * does not need to invoke any per-view pause/resume method — telling
+ * the JNI layer once is enough for every Runtime in the process.
  */
 public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2, View.OnTouchListener {
     private static final FrameLayout.LayoutParams childViewLayoutParams =

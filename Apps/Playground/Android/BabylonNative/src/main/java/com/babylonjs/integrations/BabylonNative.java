@@ -36,16 +36,23 @@ public final class BabylonNative {
     // Process-wide platform lifecycle
     // -------------------------------------------------------------------
 
-    /** Call once at app startup before any other method. */
-    public static native void androidGlobalInitialize(Context context);
+    /**
+     * Register the application Context. Hosts call this once at app
+     * startup (typically from {@code Application.onCreate} or the host
+     * Activity's {@code onCreate}), before constructing any Runtime.
+     * Calling more than once is harmless — the underlying
+     * {@code android::global::Initialize} replaces the existing
+     * Context global ref.
+     */
+    public static native void setContext(Context context);
 
-    public static native void androidGlobalSetCurrentActivity(Object activity);
+    public static native void setCurrentActivity(Object activity);
 
-    public static native void androidGlobalPause();
+    public static native void pause();
 
-    public static native void androidGlobalResume();
+    public static native void resume();
 
-    public static native void androidGlobalRequestPermissionsResult(
+    public static native void requestPermissionsResult(
             int requestCode, String[] permissions, int[] grantResults);
 
     // -------------------------------------------------------------------

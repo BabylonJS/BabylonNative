@@ -8,9 +8,6 @@ import com.babylonjs.integrations.BabylonNative;
 import com.library.babylonnative.BabylonView;
 
 public class PlaygroundActivity extends Activity {
-    /** {@link BabylonNative#androidGlobalInitialize} is process-wide; only call it once. */
-    private static boolean sGlobalInitDone = false;
-
     /**
      * Native helper bridging to {@code Apps/Playground/Shared/PlaygroundScripts.cpp},
      * which holds the Babylon.js bootstrap script list shared with the
@@ -26,15 +23,13 @@ public class PlaygroundActivity extends Activity {
     protected void onCreate(Bundle icicle) {
         super.onCreate(icicle);
 
-        // Process-wide one-shot init for AndroidExtensions::Globals
+        // Register the application Context with AndroidExtensions::Globals
         // (used by NativeCamera, NativeXr, etc.). Belongs at the
         // Activity/Application level — not on a per-view basis — because
         // it broadcasts to process-wide handlers that aren't refcounted.
-        if (!sGlobalInitDone) {
-            BabylonNative.androidGlobalInitialize(getApplication());
-            sGlobalInitDone = true;
-        }
-        BabylonNative.androidGlobalSetCurrentActivity(this);
+        // The JNI layer guards against double-initialization internally.
+        BabylonNative.setContext(getApplication());
+        BabylonNative.setCurrentActivity(this);
 
         // Owner of the Runtime lifetime: created here, destroyed in
         // onDestroy. The View only borrows the handle for its surface
@@ -64,14 +59,14 @@ public class PlaygroundActivity extends Activity {
         // auto-suspends because they each subscribed to this event in
         // BabylonNative.runtimeCreate. Same for cross-cutting subsystems
         // (NativeCamera, NativeXr) that hook AndroidExtensions::Globals.
-        BabylonNative.androidGlobalPause();
+        BabylonNative.pause();
         super.onPause();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        BabylonNative.androidGlobalResume();
+        BabylonNative.resume();
     }
 
     @Override
@@ -87,7 +82,7 @@ public class PlaygroundActivity extends Activity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
-        BabylonNative.androidGlobalRequestPermissionsResult(requestCode, permissions, results);
+        BabylonNative.requestPermissionsResult(requestCode, permissions, results);
     }
 
     @Override
