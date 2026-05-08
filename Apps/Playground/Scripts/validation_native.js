@@ -183,7 +183,6 @@
                 const xmlHttp = new XMLHttpRequest();
                 xmlHttp.addEventListener("readystatechange", function () {
                     if (xmlHttp.readyState === 4) {
-                        xmlHttp.onreadystatechange = null;
                         // Treat any non-200 (5xx, 429, empty body, etc.) as retryable rather
                         // than feeding the response body to JSON.parse and surfacing it as a
                         // SyntaxError.
