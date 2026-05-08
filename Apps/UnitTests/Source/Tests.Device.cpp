@@ -6,38 +6,7 @@
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
-// Exercises the canonical UpdateDevice flow: drive a frame, DisableRendering, UpdateDevice to a
-// new graphics device, drive another frame, and verify the active device pointer reflects the swap.
-// The motivating use cases are D3D11/D3D12 device-removed recovery (DXGI_ERROR_DEVICE_REMOVED on
-// Present, GPU TDR, hot unplug) and host-driven device swaps in embedding scenarios (e.g. WPF/Win32
-// interop where the host's ID3D11Device changes).
-//
-// Idle requirement (not exercised here, but required in production):
-//   DisableRendering must be called between frames and with no outstanding JS / FrameCompletionScope
-//   work. This test runs purely on the render thread with no JS engine attached, so the requirement
-//   is trivially satisfied.
-//
-// Per-platform scope:
-//   D3D11 / D3D12 -> the test runs using a bgfx-managed swap chain bound to the App-layer HWND.
-//                    Note: D3D12CreateDevice(WARP) returns the same singleton pointer on
-//                    successive calls (deviceA and deviceB compare equal), so post-swap
-//                    distinctness cannot be asserted on D3D12 + WARP. The test still exercises the
-//                    full teardown / re-init path. D3D11 (D3D11CreateDevice(WARP)) does return
-//                    distinct pointers per call.
-//   Metal / OpenGL -> the test is not built on these platforms (see Apps/UnitTests/CMakeLists.txt).
-//                     Metal does not expose an API to create distinct devices for the same GPU
-//                     (MTL::Device is a per-GPU singleton), and the OpenGL backend does not
-//                     support a caller-provided GLXContext at init. The shipping code paths on
-//                     those backends always use backend-owned contexts.
-//
-// The test does not exercise the caller-owned BackBufferColor path; it lets the swap chain be
-// managed on the App layer's HWND so the test focuses purely on UpdateDevice. The caller-owned
-// BackBuffer flow is covered by TEST(Device, BackBuffer) in Tests.Device.D3D11.cpp.
-//
-// Cleanup order:
-//   The Babylon::Graphics::Device destructor calls DisableRendering internally, which still expects
-//   the active graphics device to be valid. The Device is therefore scoped so it destructs before
-//   any caller-owned device handles are released.
+// Verifies UpdateDevice replaces the active graphics device after a DisableRendering / EnableRendering cycle.
 TEST(Device, UpdateDevice)
 {
     Babylon::Graphics::DeviceT deviceA = CreateTestGraphicsDevice();
