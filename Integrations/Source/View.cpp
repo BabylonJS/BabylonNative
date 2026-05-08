@@ -210,7 +210,6 @@ namespace Babylon::Integrations
             // and any loaded scripts are preserved on the JS side.
             impl.m_device->UpdateWindow(nativeWindow);
             impl.m_device->UpdateSize(width, height);
-            impl.m_device->EnableRendering();
             impl.m_device->StartRenderingCurrentFrame();
             impl.m_deviceUpdate->Start();
         }
@@ -236,7 +235,6 @@ namespace Babylon::Integrations
         {
             impl.m_deviceUpdate->Finish();
             impl.m_device->FinishRenderingCurrentFrame();
-            impl.m_device->DisableRendering();
         }
 
         impl.m_currentView = nullptr;
