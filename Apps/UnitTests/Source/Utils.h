@@ -6,7 +6,7 @@ Babylon::Graphics::TextureT CreateTestTexture(Babylon::Graphics::DeviceT device,
 void DestroyTestTexture(Babylon::Graphics::TextureT texture);
 
 // Returns a graphics device suitable for use as Babylon::Graphics::Configuration::Device. The
-// returned handle is owned by the caller and must be released with DestroyGraphicsDeviceForTest.
+// returned handle is owned by the caller and must be released with DestroyTestGraphicsDevice.
 //
 // Defined only on D3D11 and D3D12 -- the Tests.Device.cpp test that consumes these helpers is
 // gated to those backends. On D3D11 returns an ID3D11Device created via D3D11CreateDevice(WARP);
@@ -15,6 +15,6 @@ void DestroyTestTexture(Babylon::Graphics::TextureT texture);
 // Note: on D3D12, D3D12CreateDevice(WARP) returns the same singleton pointer on successive calls
 // in the same process, so two calls in a row may return equal handles. D3D11CreateDevice(WARP)
 // does return distinct handles per call.
-Babylon::Graphics::DeviceT CreateGraphicsDeviceForTest();
+Babylon::Graphics::DeviceT CreateTestGraphicsDevice();
 
-void DestroyGraphicsDeviceForTest(Babylon::Graphics::DeviceT device);
+void DestroyTestGraphicsDevice(Babylon::Graphics::DeviceT device);

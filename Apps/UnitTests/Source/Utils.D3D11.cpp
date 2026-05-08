@@ -27,7 +27,7 @@ void DestroyTestTexture(Babylon::Graphics::TextureT texture)
     texture->Release();
 }
 
-Babylon::Graphics::DeviceT CreateGraphicsDeviceForTest()
+Babylon::Graphics::DeviceT CreateTestGraphicsDevice()
 {
     ID3D11Device* device = nullptr;
     EXPECT_HRESULT_SUCCEEDED(D3D11CreateDevice(
@@ -44,7 +44,7 @@ Babylon::Graphics::DeviceT CreateGraphicsDeviceForTest()
     return device;
 }
 
-void DestroyGraphicsDeviceForTest(Babylon::Graphics::DeviceT device)
+void DestroyTestGraphicsDevice(Babylon::Graphics::DeviceT device)
 {
     if (device != nullptr)
     {

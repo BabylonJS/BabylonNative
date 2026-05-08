@@ -40,7 +40,7 @@ extern Babylon::Graphics::Configuration g_deviceConfig;
 //   any caller-owned device handles are released.
 TEST(Device, UpdateDevice)
 {
-    Babylon::Graphics::DeviceT deviceA = CreateGraphicsDeviceForTest();
+    Babylon::Graphics::DeviceT deviceA = CreateTestGraphicsDevice();
     ASSERT_NE(deviceA, nullptr);
 
     Babylon::Graphics::DeviceT deviceB = nullptr;
@@ -60,7 +60,7 @@ TEST(Device, UpdateDevice)
 
         EXPECT_EQ(device.GetPlatformInfo().Device, deviceA);
 
-        deviceB = CreateGraphicsDeviceForTest();
+        deviceB = CreateTestGraphicsDevice();
         ASSERT_NE(deviceB, nullptr);
 
         // Tear bgfx down before pointing the device at the new graphics device.
@@ -78,6 +78,6 @@ TEST(Device, UpdateDevice)
         // distinctness holds but exercising it does not add value over the EXPECT_EQ above.
     }   // Babylon::Graphics::Device destructs here, calling DisableRendering on deviceB.
 
-    DestroyGraphicsDeviceForTest(deviceB);
-    DestroyGraphicsDeviceForTest(deviceA);
+    DestroyTestGraphicsDevice(deviceB);
+    DestroyTestGraphicsDevice(deviceA);
 }

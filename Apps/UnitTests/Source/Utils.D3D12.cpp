@@ -42,7 +42,7 @@ void DestroyTestTexture(Babylon::Graphics::TextureT texture)
     texture->Release();
 }
 
-Babylon::Graphics::DeviceT CreateGraphicsDeviceForTest()
+Babylon::Graphics::DeviceT CreateTestGraphicsDevice()
 {
     IDXGIFactory4* factory = nullptr;
     EXPECT_HRESULT_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&factory)));
@@ -59,7 +59,7 @@ Babylon::Graphics::DeviceT CreateGraphicsDeviceForTest()
     return device;
 }
 
-void DestroyGraphicsDeviceForTest(Babylon::Graphics::DeviceT device)
+void DestroyTestGraphicsDevice(Babylon::Graphics::DeviceT device)
 {
     if (device != nullptr)
     {
