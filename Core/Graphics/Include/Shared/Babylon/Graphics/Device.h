@@ -116,8 +116,9 @@ namespace Babylon::Graphics
         // Sets the underlying graphics device used for rendering. The new device takes effect on
         // the next EnableRendering call.
         //
-        // This API is only valid when rendering is disabled. Calling it while rendering is enabled
-        // throws std::runtime_error.
+        // Only valid when rendering is disabled -- i.e. before the first EnableRendering /
+        // StartRenderingCurrentFrame call, or after a DisableRendering call. Throws
+        // std::runtime_error otherwise.
         void UpdateDevice(DeviceT device);
 
         void UpdateSize(size_t width, size_t height);
