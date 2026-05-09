@@ -902,7 +902,7 @@
             "title": "GPUPicker",
             "playgroundId": "#1RWFMT#8",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up.",
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up.",
             "referenceImage": "gpuPicker.png"
         },
         {
