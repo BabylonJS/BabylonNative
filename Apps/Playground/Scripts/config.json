@@ -1208,7 +1208,7 @@
             "playgroundId": "#1VGT5D#2",
             "renderCount": 50,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up.",
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up.",
             "referenceImage": "particle-helper.png"
         },
         {
@@ -1660,7 +1660,7 @@
             "renderCount": 100,
             "referenceImage": "particles.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "PBRMetallicRoughnessMaterial",
@@ -2441,7 +2441,7 @@
             "playgroundId": "#544N0Q#67",
             "renderCount": 120,
             "excludeFromAutomaticTesting": true,
-            "reason": "After #1569 stride fix, hits bgfx 'Invalid texture attachment' frame buffer validation (exit 1); needs separate investigation.",
+            "reason": "After #1691 stride fix, hits bgfx 'Invalid texture attachment' frame buffer validation (exit 1); needs separate investigation.",
             "referenceImage": "fluidParticleSystem.png"
         },
         {
@@ -2863,7 +2863,7 @@
             "playgroundId": "#2441BU#1",
             "renderCount": 20,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up.",
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up.",
             "referenceImage": "halo-particle-system.png"
         },
         {
@@ -2879,7 +2879,7 @@
             "playgroundId": "#DMLLV2",
             "renderCount": 5,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up.",
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up.",
             "referenceImage": "particle-system-with-custom-nme-shader.png"
         },
         {
@@ -4292,7 +4292,7 @@
             "renderCount": 120,
             "referenceImage": "NME-Particles-with-PositionW.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Basic Properties - Size",
@@ -4312,7 +4312,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-color.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Basic Properties - Speed",
@@ -4344,7 +4344,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-direction.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Basic Properties - Direction - Gravity",
@@ -4364,7 +4364,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-emit-rate-fast.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Basic Properties - Emission Limits",
@@ -4390,7 +4390,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-size.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Change - Size 2",
@@ -4404,7 +4404,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-color.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Change - Color 2",
@@ -4412,7 +4412,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-color-2.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Change - Speed",
@@ -4474,7 +4474,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-lifetime.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Change - Lifetime 2",
@@ -4494,7 +4494,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-point.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Emitters - Box",
@@ -4502,7 +4502,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-box.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Emitters - Sphere",
@@ -4510,7 +4510,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-sphere.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Emitters - Directed Sphere",
@@ -4530,7 +4530,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-cylinder.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Emitters - Directed Cylinder",
@@ -4552,7 +4552,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-directed-cone.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Emitters - Mesh",
@@ -4610,7 +4610,7 @@
             "renderCount": 120,
             "referenceImage": "particles-billboard-false.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Multiply Blend",
@@ -4640,7 +4640,7 @@
             "renderCount": 120,
             "referenceImage": "particles-helper-sun.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Helper - Smoke",
@@ -4663,7 +4663,7 @@
             "playgroundId": "#DEZ79M#73",
             "renderCount": 240,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1569 instance-data stride fix; not stride-related, needs follow-up.",
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up.",
             "referenceImage": "particles-attractors.png"
         },
         {
