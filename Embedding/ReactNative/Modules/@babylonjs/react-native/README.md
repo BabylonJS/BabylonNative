@@ -16,7 +16,7 @@ The minimum Android SDK version is 21. This must be set as `minSdkVersion` in th
 
 ### iOS Configuration
 
-The minimum deployment target version is 12. This must be set as `iOS Deployment Target` in the consuming project's `project.pbxproj`, and must also be set as `platform` in the consuming project's `Podfile`.
+The minimum deployment target version is 16. This must be set as `iOS Deployment Target` in the consuming project's `project.pbxproj`, and must also be set as `platform` in the consuming project's `Podfile`.
 Make sure `pod install` is called from the ios folder after npm install.
 
 #### Workspace
@@ -38,6 +38,12 @@ To use the system cmake (e.g. a Homebrew or system install) instead of the cmake
 ```
 export BABYLON_USE_SYSTEM_CMAKE=1
 ```
+
+To override the iOS deployment target used by the generated `ReactNativeBabylon.xcodeproj` (defaults to `16.0`), set this variable before running `npm install` so it matches your app's Podfile `platform :ios` value:
+```
+export BABYLON_IOS_DEPLOYMENT_TARGET=16.0
+```
+The previous default of iOS 12 caused Xcode 26's Clang to crash while compiling `DeviceImpl_iOS.mm`; the default is now `16.0` and this variable lets you raise it further (or, at your own risk, lower it) without patching the deployment target from a Podfile `post_install` hook.
 
 ### Plugins selection
 

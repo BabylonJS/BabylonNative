@@ -9,7 +9,23 @@ FetchContent_Declare(ios-cmake
 FetchContent_MakeAvailable(ios-cmake)
 set(CMAKE_TOOLCHAIN_FILE "${ios-cmake_SOURCE_DIR}/ios.toolchain.cmake" CACHE PATH "")
 set(PLATFORM "OS64COMBINED" CACHE STRING "")
-set(DEPLOYMENT_TARGET "12" CACHE STRING "")
+
+# Allow the consuming project to override the iOS deployment target used when
+# generating the Xcode project. Resolution order:
+#   1. -DDEPLOYMENT_TARGET=<x> on the cmake command line (highest priority)
+#   2. BABYLON_IOS_DEPLOYMENT_TARGET environment variable (forwarded by
+#      postinstall.js so consumers can set it before `npm install`)
+#   3. 16.0 (default). iOS 12 used to be the default, but it is known to crash
+#      Xcode 26's Clang while compiling DeviceImpl_iOS.mm; iOS 16 is now the
+#      supported minimum.
+if(NOT DEFINED DEPLOYMENT_TARGET OR "${DEPLOYMENT_TARGET}" STREQUAL "")
+    if(DEFINED ENV{BABYLON_IOS_DEPLOYMENT_TARGET} AND NOT "$ENV{BABYLON_IOS_DEPLOYMENT_TARGET}" STREQUAL "")
+        set(DEPLOYMENT_TARGET "$ENV{BABYLON_IOS_DEPLOYMENT_TARGET}" CACHE STRING "iOS deployment target")
+    else()
+        set(DEPLOYMENT_TARGET "16" CACHE STRING "iOS deployment target")
+    endif()
+endif()
+message(STATUS "BabylonReactNative iOS DEPLOYMENT_TARGET: ${DEPLOYMENT_TARGET}")
 set(ENABLE_ARC OFF CACHE STRING "Enables or disables ARC support.")
 set(ENABLE_PCH OFF CACHE STRING "Enables or disables precompiled headers.")
 set(CMAKE_XCODE_GENERATE_SCHEME ON)
@@ -91,7 +107,7 @@ target_link_libraries(BabylonNative
 # TODO: For some reason these don't work, so we specify these in the CMake command line args.
 set_target_properties(BabylonNative PROPERTIES
     XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC NO
-    XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET 12.0
+    XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET ${DEPLOYMENT_TARGET}
     XCODE_ATTRIBUTE_ENABLE_BITCODE YES
     XCODE_GENERATE_SCHEME ON
 )

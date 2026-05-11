@@ -1,6 +1,10 @@
 require_relative '../node_modules/react-native-test-app/test_app'
 require_relative '../node_modules/react-native-permissions/scripts/setup'
 
+# Match the @babylonjs/react-native pod's iOS 16 minimum (required for Xcode 26
+# builds, where the CMake-generated framework targets iOS 16 by default).
+platform :ios, '16.0'
+
 workspace 'Playground.xcworkspace'
 
 # react-native-permissions

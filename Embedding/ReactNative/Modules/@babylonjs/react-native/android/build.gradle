@@ -66,6 +66,15 @@ def graphics_api = safeExtGet('GRAPHICS_API', "OpenGL")
 def rootBuildDir = "${rootProject.rootDir}/../Build/Android"
 def extractedLibDir = "${rootBuildDir}/lib"
 
+// ARCore version. Consumers can override by setting ext.arcoreVersion in their
+// root build.gradle (e.g. `ext.arcoreVersion = '1.26.0'` to resolve the
+// duplicate-class conflict between com.google.ar:core:1.22 and
+// com.android.installreferrer:installreferrer:2.2). A consumer's
+// resolutionStrategy.force on com.google.ar:core also wins over this value,
+// in which case the dynamic ARCORE_LIBPATH resolution below still picks up
+// the actually-extracted AAR.
+def arcoreVersion = safeExtGet('arcoreVersion', '1.22.0')
+
 def BABYLON_NATIVE_PLUGIN_NATIVECAMERA = System.getenv("BABYLON_NATIVE_PLUGIN_NATIVECAMERA") != "0"
 def BABYLON_NATIVE_PLUGIN_NATIVEXR = System.getenv("BABYLON_NATIVE_PLUGIN_NATIVEXR") != "0"
 
@@ -168,10 +177,17 @@ android {
             cmake {
                 cppFlags "-fexceptions", "-frtti", "-std=c++1y", "-DONANDROID"
                 abiFilters (*reactNativeArchitectures())
+                // NOTE: -DARCORE_LIBPATH below points at the AAR matching the
+                // declared `arcoreVersion` (see top of this file). The actual
+                // resolved ARCore version may differ (consumer
+                // resolutionStrategy.force, dependency conflict resolution),
+                // so the argument is rewritten further down in this script
+                // (search for "arcoreAarFileName") to point at the AAR that
+                // Gradle actually extracted.
                 arguments "-DANDROID_STL=c++_shared",
                         "-DGRAPHICS_API=${graphics_api}",
                         "-DREACT_NATIVE_VERSION=${REACT_NATIVE_VERSION}",
-                        "-DARCORE_LIBPATH=${extractedLibDir}/core-1.22.0.aar/jni",
+                        "-DARCORE_LIBPATH=${extractedLibDir}/core-${arcoreVersion}.aar/jni",
                         "-DREACTNATIVE_DIR=${rootDir}/../node_modules/react-native/",
                         "-DBABYLON_NATIVE_PLUGIN_NATIVECAMERA=${BABYLON_NATIVE_PLUGIN_NATIVECAMERA ? '1' : '0'}",
                         "-DBABYLON_NATIVE_PLUGIN_NATIVEXR=${BABYLON_NATIVE_PLUGIN_NATIVEXR ? '1' : '0'}",
@@ -286,9 +302,9 @@ repositories {
 dependencies {
     //noinspection GradleDynamicVersion
     implementation 'com.facebook.react:react-native:+'  // From node_modules
-    implementation 'com.google.ar:core:1.22.0'
+    implementation "com.google.ar:core:${arcoreVersion}"
 
-    extractLibs 'com.google.ar:core:1.22.0'
+    extractLibs "com.google.ar:core:${arcoreVersion}"
 
     if (REACT_NATIVE_VERSION < 71) {
         logger.warn("BabylonReactNative: Extracting files from AAR (pre RN 0.71)")
@@ -386,6 +402,19 @@ def nativeBuildDependsOn(dependsOnTask, variant) {
     buildTasks = buildTasks.findAll({ task -> task.name.contains(variant) })
   }
   buildTasks.forEach { task -> task.dependsOn(dependsOnTask) }
+}
+
+// Resolve the actual ARCore AAR name. A consumer project may override
+// `ext.arcoreVersion` or apply a resolutionStrategy.force to com.google.ar:core
+// (e.g. to resolve a conflict with installreferrer 2.2 that requires
+// com.google.ar:core 1.26+). Gradle extracts the AAR into a folder named after
+// the *resolved* artifact (core-<version>.aar), so the native build's
+// -DARCORE_LIBPATH argument must match that resolved name rather than the
+// version literal declared in the dependencies block.
+def arcoreAar = configurations.extractLibs.resolvedConfiguration.resolvedArtifacts.find { it.name == 'core' }
+def arcoreAarName = arcoreAar ? "${arcoreAar.name}-${arcoreAar.moduleVersion.id.version}.aar" : "core-${arcoreVersion}.aar"
+android.defaultConfig.externalNativeBuild.cmake.arguments.replaceAll {
+    it.toString().startsWith('-DARCORE_LIBPATH=') ? "-DARCORE_LIBPATH=${extractedLibDir}/${arcoreAarName}/jni".toString() : it
 }
 
 configurations.extractLibs.files.each { file ->
