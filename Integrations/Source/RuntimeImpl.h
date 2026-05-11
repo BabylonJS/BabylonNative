@@ -110,6 +110,32 @@ namespace Babylon::Integrations
         // The `window` parameter is forwarded to TestUtils::Initialize
         // (the only plugin that wants it); ignored otherwise.
         void RunFirstAttachInit(Babylon::Graphics::WindowT window);
+
+#if BABYLON_NATIVE_PLUGIN_SHADERCACHE
+        // ----- Persistent shader cache -----
+        //
+        // Both methods are no-ops when `m_options.shaderCachePath` is
+        // empty. Both run synchronously on the host thread; they do
+        // not need to coordinate with the JS thread because callers
+        // (first-Attach, post-view-Suspend, destructor) are points at
+        // which the engine is known not to be compiling shaders.
+
+        // Load the on-disk shader cache file into the in-memory cache.
+        // Called from `RunFirstAttachInit` right after
+        // `ShaderCache::Enable()`. Safe because no shaders have been
+        // compiled yet at this point — the cache map is quiescent.
+        void LoadShaderCache();
+
+        // Serialize the in-memory shader cache to disk. Called from
+        // `Runtime::Suspend` (after `ViewImpl::Suspend()` has closed
+        // the current frame and locked the update safe-timespan) and
+        // from `~RuntimeImpl` (after the View precondition has
+        // guaranteed `ViewImpl::Suspend()` already ran via `~View`).
+        // No async/JS-thread coordination is required: at these
+        // points there is no in-flight engine work writing to the
+        // cache.
+        void SaveShaderCache();
+#endif
     };
 
     // Internal implementation of View. Holds the back-reference to the

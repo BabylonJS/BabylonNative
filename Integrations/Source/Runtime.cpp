@@ -38,6 +38,7 @@
 #endif
 
 #include <cassert>
+#include <fstream>
 #include <sstream>
 #include <utility>
 
@@ -109,21 +110,29 @@ namespace Babylon::Integrations
         assert(m_currentView == nullptr && "View must be destroyed before its Runtime.");
 
         // Order matters here:
-        //   1. ScriptLoader's dispatcher captures &m_appRuntime, so
+        //   1. Persist the shader cache. The View precondition above
+        //      guarantees `ViewImpl::Suspend()` already ran via
+        //      `~View`, so the engine is quiescent and a host-thread
+        //      Save is race-free.
+        //   2. ScriptLoader's dispatcher captures &m_appRuntime, so
         //      ~ScriptLoader must run before ~AppRuntime.
-        //   2. The Canvas polyfill and NativeInput pointer are referenced
+        //   3. The Canvas polyfill and NativeInput pointer are referenced
         //      from JS-thread state; clear them before joining the JS
         //      thread, but only after ScriptLoader has drained.
-        //   3. ~AppRuntime joins the JS thread.
-        //   4. ShaderCache::Disable() balances the Enable() that
-        //      View::Attach calls on first attach.
-        //   5. Device + DeviceUpdate destroyed last because the JS
+        //   4. ~AppRuntime joins the JS thread.
+        //   5. ShaderCache::Disable() balances the Enable() that
+        //      RunFirstAttachInit calls on first attach.
+        //   6. Device + DeviceUpdate destroyed last because the JS
         //      thread referenced them via Device::AddToJavaScript.
         //
         // m_initTcs is destroyed when this struct's members are
         // destroyed. If complete() was never called (no View ever
         // attached), the queued continuations are dropped without
         // firing, which is the desired behavior on shutdown.
+#if BABYLON_NATIVE_PLUGIN_SHADERCACHE
+        SaveShaderCache();
+#endif
+
         m_scriptLoader.reset();
 
 #if BABYLON_NATIVE_POLYFILL_CANVAS
@@ -168,6 +177,16 @@ namespace Babylon::Integrations
     // ---------------------------------------------------------------------
     void RuntimeImpl::RunFirstAttachInit(Babylon::Graphics::WindowT window)
     {
+#if BABYLON_NATIVE_PLUGIN_SHADERCACHE
+        // Enable the process-wide shader cache singleton and hydrate
+        // it from disk before any JS-thread shader compilation can
+        // begin. Both calls are host-thread safe (the singleton is
+        // not yet referenced by NativeEngine, which gets initialized
+        // on the JS thread below).
+        Babylon::Plugins::ShaderCache::Enable();
+        LoadShaderCache();
+#endif
+
         m_appRuntime->Dispatch([implPtr = this, window](Napi::Env env) {
             // 1. Make the Device available to JS.
             implPtr->m_device->AddToJavaScript(env);
@@ -255,6 +274,38 @@ namespace Babylon::Integrations
         });
     }
 
+    // ---------------------------------------------------------------------
+    // Persistent shader cache (no-ops when `shaderCachePath` is empty).
+    // ---------------------------------------------------------------------
+#if BABYLON_NATIVE_PLUGIN_SHADERCACHE
+    void RuntimeImpl::LoadShaderCache()
+    {
+        if (m_options.shaderCachePath.empty() || !Babylon::Plugins::ShaderCache::IsEnabled())
+        {
+            return;
+        }
+        std::ifstream stream{m_options.shaderCachePath, std::ios::binary};
+        if (stream.good())
+        {
+            Babylon::Plugins::ShaderCache::Load(stream);
+        }
+        // Missing or unreadable file is fine — we just start with an empty cache.
+    }
+
+    void RuntimeImpl::SaveShaderCache()
+    {
+        if (m_options.shaderCachePath.empty() || !Babylon::Plugins::ShaderCache::IsEnabled())
+        {
+            return;
+        }
+        std::ofstream stream{m_options.shaderCachePath, std::ios::binary};
+        if (stream.good())
+        {
+            Babylon::Plugins::ShaderCache::Save(stream);
+        }
+    }
+#endif
+
     std::unique_ptr<Runtime> Runtime::Create(RuntimeOptions options)
     {
         // Private ctor + manual unique_ptr because make_unique can't see it.
@@ -313,6 +364,13 @@ namespace Babylon::Integrations
             {
                 m_impl->m_currentView->m_impl->Suspend();
             }
+#if BABYLON_NATIVE_PLUGIN_SHADERCACHE
+            // Persist the shader cache while the engine is known
+            // quiescent: the view's Suspend just closed the current
+            // frame and locked the update safe-timespan, so no engine
+            // shader compilation can be in flight.
+            m_impl->SaveShaderCache();
+#endif
             m_impl->m_appRuntime->Suspend();
         }
     }

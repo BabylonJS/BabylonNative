@@ -62,6 +62,25 @@ public final class BabylonNative {
     /** Returns an opaque handle owned by the caller; release with {@link #runtimeDestroy(long)}. */
     public static native long runtimeCreate(boolean enableDebugger);
 
+    /**
+     * Overload that wires up a persistent on-disk GPU shader cache. The
+     * cache is loaded on first {@link #viewAttach(long, Surface)} and
+     * saved on suspend and on {@link #runtimeDestroy(long)}.
+     *
+     * <p>Pass a writable path (typically
+     * {@code context.getCacheDir() + "/babylon.shadercache"}). Pass
+     * {@code null} to disable the on-disk cache (equivalent to the
+     * one-arg {@link #runtimeCreate(boolean)} overload).
+     *
+     * <p>If {@code shaderCachePath} is non-null but the native library
+     * was built without {@code BABYLON_NATIVE_PLUGIN_SHADERCACHE},
+     * this method throws {@link IllegalStateException} so the
+     * misconfiguration surfaces at construction time rather than
+     * silently dropping the cache. Passing {@code null} is always
+     * safe regardless of native build config.
+     */
+    public static native long runtimeCreate(boolean enableDebugger, String shaderCachePath);
+
     public static native void runtimeDestroy(long handle);
 
     public static native void runtimeLoadScript(long handle, String url);
@@ -74,10 +93,23 @@ public final class BabylonNative {
     // those once per state change and every Runtime in the process
     // reacts. Hosts needing finer-grained control should use the C++ API.
 
-    // Compiled into the native library only when BABYLON_NATIVE_PLUGIN_NATIVEXR
-    // is enabled. Calling these without that flag will produce an UnsatisfiedLinkError.
+    /**
+     * Set the platform Surface that XR will render into (typically a
+     * separate transparent SurfaceView overlay, distinct from the main
+     * View's surface). Pass {@code null} to clear the XR surface.
+     *
+     * <p>Throws {@link IllegalStateException} if invoked when the
+     * native library was built without
+     * {@code BABYLON_NATIVE_PLUGIN_NATIVEXR}.
+     */
     public static native void runtimeSetXrSurface(long handle, Surface surface);
 
+    /**
+     * Returns whether an XR session is currently active. Returns
+     * {@code false} (never throws) when the native library was built
+     * without {@code BABYLON_NATIVE_PLUGIN_NATIVEXR} — no XR session
+     * can ever be active in that build.
+     */
     public static native boolean runtimeIsXrActive(long handle);
 
     // -------------------------------------------------------------------
@@ -103,6 +135,10 @@ public final class BabylonNative {
      * (Android-native physical-pixel coordinates). The View internally
      * normalizes to logical (CSS) pixels — the unit Babylon.js's
      * {@code PointerEvent.clientX/clientY} pipeline expects.
+     *
+     * <p>Throws {@link IllegalStateException} if invoked when the
+     * native library was built without
+     * {@code BABYLON_NATIVE_PLUGIN_NATIVEINPUT}.
      */
     public static native void viewPointerDown(long handle, int pointerId, float x, float y);
 

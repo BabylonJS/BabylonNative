@@ -38,5 +38,18 @@ namespace Babylon::Integrations
         //
         //     if (level == LogLevel::Fatal) std::quick_exit(1);
         std::function<void(LogLevel, std::string_view)> log;
+
+#if BABYLON_NATIVE_PLUGIN_SHADERCACHE
+        // Optional path for persisting the GPU shader cache across
+        // sessions. If non-empty:
+        //   - Loaded synchronously during the first `View::Attach` (after
+        //     `ShaderCache::Enable`). Missing or unreadable file: ignored.
+        //   - Saved asynchronously during `Runtime::Suspend` (queued onto
+        //     the JS thread before the suspension blocker) so the
+        //     on-disk cache reflects any shaders compiled this session.
+        //   - Saved synchronously during `~Runtime` so a final write
+        //     happens before the JS thread is torn down.
+        std::string shaderCachePath;
+#endif
     };
 }

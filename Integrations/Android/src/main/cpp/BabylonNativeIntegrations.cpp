@@ -95,6 +95,68 @@ namespace
         env->ReleaseStringUTFChars(jstr, utf);
         return result;
     }
+
+    // Throws a Java `IllegalStateException` with the given message.
+    // Used by interop entry points whose underlying plugin was not
+    // compiled into the native library, so the misconfiguration
+    // surfaces as a clean Java exception instead of an
+    // UnsatisfiedLinkError or silent no-op.
+    //
+    // `[[maybe_unused]]` is intentional: when every plugin flag is
+    // enabled, no `#else` branch in any JNI entry point invokes this
+    // helper, and -Werror=unused-function would otherwise fail the
+    // build.
+    [[maybe_unused]] void ThrowPluginNotEnabled(JNIEnv* env, const char* message)
+    {
+        jclass excClass = env->FindClass("java/lang/IllegalStateException");
+        if (excClass != nullptr)
+        {
+            env->ThrowNew(excClass, message);
+        }
+    }
+
+    // Shared body for the `runtimeCreate` JNI overloads. Wires up the
+    // Android-default logcat log sink, constructs the Runtime, attaches
+    // the Activity-lifecycle auto-Suspend/Resume tickets, and returns
+    // the opaque jlong handle the JVM side holds onto.
+    jlong MakeRuntimeHandle(RuntimeOptions options)
+    {
+        options.log = [](LogLevel level, std::string_view message) {
+            // logcat takes a NUL-terminated C string; copy the view.
+            std::string text{message};
+            __android_log_write(LogPriorityFor(level), "BabylonNative", text.c_str());
+        };
+
+        // Construct in two phases because the AppStateChangedCallbackTicket
+        // is neither default-constructible nor move-assignable: we need the
+        // Runtime pointer in hand before we can register the callbacks, and
+        // we register the callbacks before the wrapper itself exists.
+        auto runtime = Runtime::Create(std::move(options));
+        Runtime* runtimePtr = runtime.get();
+
+        // Auto-Suspend/Resume on Activity lifecycle. Hosts call
+        // pause / resume from their Activity's onPause / onResume;
+        // every Runtime in the process gets suspended and resumed
+        // automatically. Since Runtime::Suspend/Resume are refcounted,
+        // this composes safely with any explicit runtimeSuspend /
+        // runtimeResume calls the host might make for finer-grained
+        // reasons (e.g. modal dialogs).
+        auto pauseTicket = android::global::AddPauseCallback([runtimePtr]() {
+            runtimePtr->Suspend();
+        });
+        auto resumeTicket = android::global::AddResumeCallback([runtimePtr]() {
+            runtimePtr->Resume();
+        });
+
+        auto wrapper = std::unique_ptr<AndroidRuntime>{new AndroidRuntime{
+            std::move(runtime),
+            std::move(pauseTicket),
+            std::move(resumeTicket),
+        }};
+
+        // Ownership transfers to the JVM side via the returned jlong.
+        return reinterpret_cast<jlong>(wrapper.release());
+    }
 }
 
 // Public handle-decoding entry point. Hosts that ship app-specific JNI
@@ -194,49 +256,50 @@ Java_com_babylonjs_integrations_BabylonNative_requestPermissionsResult(
 // =====================================================================
 
 JNIEXPORT jlong JNICALL
-Java_com_babylonjs_integrations_BabylonNative_runtimeCreate(JNIEnv*, jclass, jboolean enableDebugger)
+Java_com_babylonjs_integrations_BabylonNative_runtimeCreate__Z(JNIEnv*, jclass, jboolean enableDebugger)
 {
     // Default Android consumers want logcat output; route Console
     // polyfill / DebugTrace / uncaught JS exceptions there. Hosts
     // that need different behavior can construct a Runtime in C++
     // directly with their own RuntimeOptions.
+    //
+    // Mangled name `__Z` (boolean) is the JNI long form, required
+    // because Java declares `runtimeCreate` as an overloaded native
+    // method (see the SHADERCACHE-gated overload below).
     RuntimeOptions options{};
     options.enableDebugger = (enableDebugger == JNI_TRUE);
-    options.log = [](LogLevel level, std::string_view message) {
-        // logcat takes a NUL-terminated C string; copy the view.
-        std::string text{message};
-        __android_log_write(LogPriorityFor(level), "BabylonNative", text.c_str());
-    };
+    return MakeRuntimeHandle(std::move(options));
+}
 
-    // Construct in two phases because the AppStateChangedCallbackTicket
-    // is neither default-constructible nor move-assignable: we need the
-    // Runtime pointer in hand before we can register the callbacks, and
-    // we register the callbacks before the wrapper itself exists.
-    auto runtime = Runtime::Create(std::move(options));
-    Runtime* runtimePtr = runtime.get();
-
-    // Auto-Suspend/Resume on Activity lifecycle. Hosts call
-    // androidGlobalPause / androidGlobalResume from their Activity's
-    // onPause / onResume; every Runtime in the process gets suspended
-    // and resumed automatically. Since Runtime::Suspend/Resume are
-    // refcounted, this composes safely with any explicit
-    // runtimeSuspend / runtimeResume calls the host might make for
-    // finer-grained reasons (e.g. modal dialogs).
-    auto pauseTicket = android::global::AddPauseCallback([runtimePtr]() {
-        runtimePtr->Suspend();
-    });
-    auto resumeTicket = android::global::AddResumeCallback([runtimePtr]() {
-        runtimePtr->Resume();
-    });
-
-    auto wrapper = std::unique_ptr<AndroidRuntime>{new AndroidRuntime{
-        std::move(runtime),
-        std::move(pauseTicket),
-        std::move(resumeTicket),
-    }};
-
-    // Ownership transfers to the JVM side via the returned jlong.
-    return reinterpret_cast<jlong>(wrapper.release());
+JNIEXPORT jlong JNICALL
+Java_com_babylonjs_integrations_BabylonNative_runtimeCreate__ZLjava_lang_String_2(
+    JNIEnv* env, jclass, jboolean enableDebugger, jstring shaderCachePath)
+{
+    // Overload that wires up `RuntimeOptions::shaderCachePath`.
+    // The JNI symbol is always exported so the Java surface is stable
+    // across native build configurations; if the caller passes a
+    // non-null path but `BABYLON_NATIVE_PLUGIN_SHADERCACHE` was not
+    // enabled at native build time, we throw `IllegalStateException`
+    // (fail loud, vs. silently dropping the path).
+    RuntimeOptions options{};
+    options.enableDebugger = (enableDebugger == JNI_TRUE);
+    if (shaderCachePath != nullptr)
+    {
+#if BABYLON_NATIVE_PLUGIN_SHADERCACHE
+        const char* utf = env->GetStringUTFChars(shaderCachePath, nullptr);
+        if (utf != nullptr)
+        {
+            options.shaderCachePath = utf;
+            env->ReleaseStringUTFChars(shaderCachePath, utf);
+        }
+#else
+        ThrowPluginNotEnabled(env,
+            "shaderCachePath was provided but BABYLON_NATIVE_PLUGIN_SHADERCACHE "
+            "was not enabled at native build time.");
+        return 0;
+#endif
+    }
+    return MakeRuntimeHandle(std::move(options));
 }
 
 JNIEXPORT void JNICALL
@@ -270,27 +333,39 @@ Java_com_babylonjs_integrations_BabylonNative_runtimeEval(
 // change; every Runtime in the process reacts. Hosts that need
 // finer-grained control should use the C++ API directly.
 
-#if BABYLON_NATIVE_PLUGIN_NATIVEXR
-
 JNIEXPORT void JNICALL
 Java_com_babylonjs_integrations_BabylonNative_runtimeSetXrSurface(
     JNIEnv* env, jclass, jlong handle, jobject surface)
 {
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
     ANativeWindow* window{nullptr};
     if (surface != nullptr)
     {
         window = ANativeWindow_fromSurface(env, surface);
     }
     AsRuntime(handle)->SetXrWindow(window);
+#else
+    (void)handle;
+    (void)surface;
+    ThrowPluginNotEnabled(env,
+        "runtimeSetXrSurface was called but BABYLON_NATIVE_PLUGIN_NATIVEXR "
+        "was not enabled at native build time.");
+#endif
 }
 
 JNIEXPORT jboolean JNICALL
 Java_com_babylonjs_integrations_BabylonNative_runtimeIsXrActive(JNIEnv*, jclass, jlong handle)
 {
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
     return AsRuntime(handle)->IsXrActive() ? JNI_TRUE : JNI_FALSE;
+#else
+    // State query: "no XR session is active" is the correct answer
+    // when XR isn't compiled in, so this is intentionally a
+    // non-throwing path.
+    (void)handle;
+    return JNI_FALSE;
+#endif
 }
-
-#endif // BABYLON_NATIVE_PLUGIN_NATIVEXR
 
 // =====================================================================
 // View
@@ -342,29 +417,49 @@ Java_com_babylonjs_integrations_BabylonNative_viewResize(
                             static_cast<uint32_t>(height));
 }
 
-#if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
-
 JNIEXPORT void JNICALL
 Java_com_babylonjs_integrations_BabylonNative_viewPointerDown(
-    JNIEnv*, jclass, jlong handle, jint pointerId, jfloat x, jfloat y)
+    JNIEnv* env, jclass, jlong handle, jint pointerId, jfloat x, jfloat y)
 {
+#if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
+    (void)env;
     AsView(handle)->OnPointerDown(static_cast<int32_t>(pointerId), x, y);
+#else
+    (void)handle; (void)pointerId; (void)x; (void)y;
+    ThrowPluginNotEnabled(env,
+        "viewPointerDown was called but BABYLON_NATIVE_PLUGIN_NATIVEINPUT "
+        "was not enabled at native build time.");
+#endif
 }
 
 JNIEXPORT void JNICALL
 Java_com_babylonjs_integrations_BabylonNative_viewPointerMove(
-    JNIEnv*, jclass, jlong handle, jint pointerId, jfloat x, jfloat y)
+    JNIEnv* env, jclass, jlong handle, jint pointerId, jfloat x, jfloat y)
 {
+#if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
+    (void)env;
     AsView(handle)->OnPointerMove(static_cast<int32_t>(pointerId), x, y);
+#else
+    (void)handle; (void)pointerId; (void)x; (void)y;
+    ThrowPluginNotEnabled(env,
+        "viewPointerMove was called but BABYLON_NATIVE_PLUGIN_NATIVEINPUT "
+        "was not enabled at native build time.");
+#endif
 }
 
 JNIEXPORT void JNICALL
 Java_com_babylonjs_integrations_BabylonNative_viewPointerUp(
-    JNIEnv*, jclass, jlong handle, jint pointerId, jfloat x, jfloat y)
+    JNIEnv* env, jclass, jlong handle, jint pointerId, jfloat x, jfloat y)
 {
+#if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
+    (void)env;
     AsView(handle)->OnPointerUp(static_cast<int32_t>(pointerId), x, y);
-}
-
+#else
+    (void)handle; (void)pointerId; (void)x; (void)y;
+    ThrowPluginNotEnabled(env,
+        "viewPointerUp was called but BABYLON_NATIVE_PLUGIN_NATIVEINPUT "
+        "was not enabled at native build time.");
 #endif
+}
 
 } // extern "C"

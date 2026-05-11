@@ -1,9 +1,5 @@
 #include "RuntimeImpl.h"
 
-#if BABYLON_NATIVE_PLUGIN_SHADERCACHE
-#include <Babylon/Plugins/ShaderCache.h>
-#endif
-
 #include <cassert>
 
 namespace Babylon::Integrations
@@ -40,10 +36,6 @@ namespace Babylon::Integrations
 
             impl.m_device.emplace(config);
             impl.m_deviceUpdate.emplace(impl.m_device->GetUpdate("update"));
-
-#if BABYLON_NATIVE_PLUGIN_SHADERCACHE
-            Babylon::Plugins::ShaderCache::Enable();
-#endif
         }
         else
         {

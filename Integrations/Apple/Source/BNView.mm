@@ -121,47 +121,58 @@
 
 #pragma mark - Pointer forwarding
 
-#if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
-
 - (void)pointerDown:(NSInteger)pointerId atX:(CGFloat)x y:(CGFloat)y
 {
+#if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
     if (_view)
     {
         _view->OnPointerDown(static_cast<int32_t>(pointerId),
                               static_cast<float>(x),
                               static_cast<float>(y));
     }
+#else
+    (void)pointerId; (void)x; (void)y;
+    @throw [NSException
+        exceptionWithName:@"BabylonNativePluginNotEnabledException"
+                   reason:@"pointerDown:atX:y: was called but BABYLON_NATIVE_PLUGIN_NATIVEINPUT was not enabled at native build time."
+                 userInfo:nil];
+#endif
 }
 
 - (void)pointerMove:(NSInteger)pointerId atX:(CGFloat)x y:(CGFloat)y
 {
+#if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
     if (_view)
     {
         _view->OnPointerMove(static_cast<int32_t>(pointerId),
                               static_cast<float>(x),
                               static_cast<float>(y));
     }
+#else
+    (void)pointerId; (void)x; (void)y;
+    @throw [NSException
+        exceptionWithName:@"BabylonNativePluginNotEnabledException"
+                   reason:@"pointerMove:atX:y: was called but BABYLON_NATIVE_PLUGIN_NATIVEINPUT was not enabled at native build time."
+                 userInfo:nil];
+#endif
 }
 
 - (void)pointerUp:(NSInteger)pointerId atX:(CGFloat)x y:(CGFloat)y
 {
+#if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
     if (_view)
     {
         _view->OnPointerUp(static_cast<int32_t>(pointerId),
                             static_cast<float>(x),
                             static_cast<float>(y));
     }
-}
-
 #else
-
-// When NATIVEINPUT is disabled at native build time, the methods are
-// still declared on the public BNView header for binary stability;
-// they become no-ops here.
-- (void)pointerDown:(NSInteger)pointerId atX:(CGFloat)x y:(CGFloat)y { (void)pointerId; (void)x; (void)y; }
-- (void)pointerMove:(NSInteger)pointerId atX:(CGFloat)x y:(CGFloat)y { (void)pointerId; (void)x; (void)y; }
-- (void)pointerUp:(NSInteger)pointerId atX:(CGFloat)x y:(CGFloat)y   { (void)pointerId; (void)x; (void)y; }
-
+    (void)pointerId; (void)x; (void)y;
+    @throw [NSException
+        exceptionWithName:@"BabylonNativePluginNotEnabledException"
+                   reason:@"pointerUp:atX:y: was called but BABYLON_NATIVE_PLUGIN_NATIVEINPUT was not enabled at native build time."
+                 userInfo:nil];
 #endif
+}
 
 @end

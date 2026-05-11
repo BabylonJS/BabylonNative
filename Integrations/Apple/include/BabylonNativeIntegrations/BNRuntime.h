@@ -23,7 +23,27 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)init;
 
 /// Same as `init` but lets the host opt into the JS debugger.
-- (instancetype)initWithEnableDebugger:(BOOL)enableDebugger NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithEnableDebugger:(BOOL)enableDebugger;
+
+/// Same as `initWithEnableDebugger:` but also wires up a persistent
+/// on-disk GPU shader cache. Pass a writable file path (typically
+/// inside `NSCachesDirectory`, e.g.
+/// `[NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES).firstObject stringByAppendingPathComponent:@"babylon.shadercache"]`).
+/// Pass `nil` to disable the on-disk cache (equivalent to the
+/// `initWithEnableDebugger:` overload).
+///
+/// The cache is loaded on first `BNView` attach and saved on `suspend`
+/// and on deallocation.
+///
+/// If `shaderCachePath` is non-`nil` but the native library was built
+/// without `BABYLON_NATIVE_PLUGIN_SHADERCACHE`, this method raises an
+/// `NSException` (name
+/// `BabylonNativePluginNotEnabledException`) so the misconfiguration
+/// surfaces at construction time rather than silently dropping the
+/// cache. Passing `nil` is always safe regardless of build config.
+- (instancetype)initWithEnableDebugger:(BOOL)enableDebugger
+                       shaderCachePath:(nullable NSString*)shaderCachePath
+                       NS_DESIGNATED_INITIALIZER;
 
 /// Load a script from a URL onto the JS thread. Calls made before
 /// the first `BNView` is created are queued internally and dispatched
@@ -54,13 +74,17 @@ NS_ASSUME_NONNULL_BEGIN
 /// call before the first `BNView` attach; the value is applied when
 /// NativeXr finishes initializing during that first attach.
 ///
-/// Compiled-in only when `BABYLON_NATIVE_PLUGIN_NATIVEXR` is enabled
-/// at native build time; otherwise this is a no-op.
+/// Raises an `NSException` (name
+/// `BabylonNativePluginNotEnabledException`) if invoked when
+/// `BABYLON_NATIVE_PLUGIN_NATIVEXR` was not enabled at native build
+/// time.
 - (void)setXrView:(nullable MTKView*)xrView;
 
 /// `YES` while an XR session is active. Updated from the JS thread
 /// by NativeXr's internal session-state callback; safe to poll from
-/// any thread.
+/// any thread. Returns `NO` when `BABYLON_NATIVE_PLUGIN_NATIVEXR` was
+/// not enabled at native build time (no XR session can ever be active
+/// in that build).
 @property (nonatomic, readonly, getter=isXRActive) BOOL xrActive;
 
 @end
