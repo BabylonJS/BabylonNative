@@ -99,6 +99,43 @@ namespace Babylon::Integrations
         // 0..1; tracked so we can guard against multiple concurrent
         // attachments (the API contract is "at most one View at a time").
         View* m_currentView{nullptr};
+
+        // First-Attach engine initialization: dispatched onto the JS
+        // thread by View::Attach the very first time it constructs the
+        // Device. Runs all plugin/polyfill `Initialize` calls, wires
+        // NativeXr session-state callbacks, then completes `m_initTcs`
+        // to unblock any LoadScript / Eval / RunOnJsThread calls the
+        // host queued before the first Attach.
+        //
+        // The `window` parameter is forwarded to TestUtils::Initialize
+        // (the only plugin that wants it); ignored otherwise.
+        void RunFirstAttachInit(Babylon::Graphics::WindowT window);
+
+#if BABYLON_NATIVE_PLUGIN_SHADERCACHE
+        // ----- Persistent shader cache -----
+        //
+        // Both methods are no-ops when `m_options.shaderCachePath` is
+        // empty. Both run synchronously on the host thread; they do
+        // not need to coordinate with the JS thread because callers
+        // (first-Attach, post-view-Suspend, destructor) are points at
+        // which the engine is known not to be compiling shaders.
+
+        // Load the on-disk shader cache file into the in-memory cache.
+        // Called from `RunFirstAttachInit` right after
+        // `ShaderCache::Enable()`. Safe because no shaders have been
+        // compiled yet at this point — the cache map is quiescent.
+        void LoadShaderCache();
+
+        // Serialize the in-memory shader cache to disk. Called from
+        // `Runtime::Suspend` (after `ViewImpl::Suspend()` has closed
+        // the current frame and locked the update safe-timespan) and
+        // from `~RuntimeImpl` (after the View precondition has
+        // guaranteed `ViewImpl::Suspend()` already ran via `~View`).
+        // No async/JS-thread coordination is required: at these
+        // points there is no in-flight engine work writing to the
+        // cache.
+        void SaveShaderCache();
+#endif
     };
 
     // Internal implementation of View. Holds the back-reference to the

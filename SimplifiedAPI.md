@@ -155,6 +155,12 @@ namespace Babylon::Integrations
 
         std::function<void(LogLevel, std::string_view)> log;
         std::function<void(std::string_view)>           onUnhandledError;
+
+        // If non-empty, the GPU shader cache is loaded from this path
+        // on first `View::Attach` and saved back on `Suspend` and
+        // `~Runtime`. Pass a per-app writable directory file (e.g.
+        // Android `Context.getCacheDir()/babylon.shadercache`).
+        std::string shaderCachePath;
     };
 
     // Long-lived: typically created once per app/process. Sets up the
@@ -1428,13 +1434,17 @@ manual and automatic paths compose cleanly.
   detach-mid-frame, and swap to a different surface mid-app.
   Reference: existing start/finish discipline in
   `Tests.ExternalTexture.D3D11.cpp:24-69`.
-- **Shader cache directory.** `Babylon::Plugins::ShaderCache::Load/Save`
-  needs an OS-mandated cache path that varies per platform (Android
-  `Context.getCacheDir()`, iOS `NSCachesDirectory`, etc.). Add
-  `RuntimeOptions::shaderCachePath: std::optional<std::string>` and
-  let the Integrations layer auto-load on `Create` and auto-save on
-  `Suspend` and `~Runtime`. Reference: bridge plumbing in
-  `BabylonNativeBridge.mm:88-106` and `babylon.cpp:242-260,378-398`.
+- **Shader cache directory.** *(Implemented.)*
+  `Babylon::Plugins::ShaderCache::Load/Save` is wired through
+  `RuntimeOptions::shaderCachePath` (`std::string`, empty = disabled).
+  The Integrations layer auto-loads on the first `View::Attach` (after
+  `ShaderCache::Enable`), auto-saves asynchronously on `Suspend`
+  (dispatched onto the JS thread before the suspension blocker takes
+  effect), and saves synchronously in `~Runtime`. Hosts only need to
+  pass the platform-appropriate cache path (Android
+  `Context.getCacheDir()`, iOS `NSCachesDirectory`, etc.). Reference:
+  bridge plumbing in `BabylonNativeBridge.mm:88-106` and
+  `babylon.cpp:242-260,378-398`.
 - **JS ↔ native messaging.** Both bridges add a custom Napi
   `ObjectWrap` (`LumiInterop`) exposing `callNative(jsonString)` and
   `notifyReady()` to JS, plus a way to push results back to the host

@@ -85,6 +85,12 @@ NS_ASSUME_NONNULL_BEGIN
 /// Forward a pointer-down event. `x`, `y` are in logical (CSS) pixels
 /// — pass `UITouch.location(in:)` (UIKit) or `NSEvent.locationInWindow`
 /// (AppKit) coordinates through unchanged.
+///
+/// Raises an `NSException` (name
+/// `BabylonNativePluginNotEnabledException`) if invoked when
+/// `BABYLON_NATIVE_PLUGIN_NATIVEINPUT` was not enabled at native
+/// build time. The same applies to `pointerMove:atX:y:` and
+/// `pointerUp:atX:y:` below.
 - (void)pointerDown:(NSInteger)pointerId atX:(CGFloat)x y:(CGFloat)y
     NS_SWIFT_NAME(pointerDown(id:x:y:));
 

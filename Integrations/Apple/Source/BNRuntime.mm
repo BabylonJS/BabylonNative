@@ -16,10 +16,16 @@
 
 - (instancetype)init
 {
-    return [self initWithEnableDebugger:NO];
+    return [self initWithEnableDebugger:NO shaderCachePath:nil];
 }
 
 - (instancetype)initWithEnableDebugger:(BOOL)enableDebugger
+{
+    return [self initWithEnableDebugger:enableDebugger shaderCachePath:nil];
+}
+
+- (instancetype)initWithEnableDebugger:(BOOL)enableDebugger
+                       shaderCachePath:(nullable NSString*)shaderCachePath
 {
     if ((self = [super init]))
     {
@@ -30,6 +36,21 @@
         options.log = [](Babylon::Integrations::LogLevel /*level*/, std::string_view message) {
             NSLog(@"%.*s", static_cast<int>(message.size()), message.data());
         };
+        if (shaderCachePath != nil)
+        {
+#if BABYLON_NATIVE_PLUGIN_SHADERCACHE
+            options.shaderCachePath = shaderCachePath.UTF8String;
+#else
+            // Caller explicitly asked for shader caching but the
+            // plugin wasn't compiled in. Fail loudly rather than
+            // silently dropping the cache on the floor (which would
+            // be hard to diagnose at runtime).
+            @throw [NSException
+                exceptionWithName:@"BabylonNativePluginNotEnabledException"
+                           reason:@"shaderCachePath was provided but BABYLON_NATIVE_PLUGIN_SHADERCACHE was not enabled at native build time."
+                         userInfo:nil];
+#endif
+        }
         _runtime = Babylon::Integrations::Runtime::Create(std::move(options));
     }
     return self;
@@ -77,6 +98,10 @@
     _runtime->SetXrWindow((__bridge void*)xrView);
 #else
     (void)xrView;
+    @throw [NSException
+        exceptionWithName:@"BabylonNativePluginNotEnabledException"
+                   reason:@"setXrView: was called but BABYLON_NATIVE_PLUGIN_NATIVEXR was not enabled at native build time."
+                 userInfo:nil];
 #endif
 }
 
@@ -85,6 +110,8 @@
 #if BABYLON_NATIVE_PLUGIN_NATIVEXR
     return _runtime->IsXrActive() ? YES : NO;
 #else
+    // State query: "no XR session is active" is the correct answer when
+    // XR isn't compiled in, so this is intentionally a non-throwing path.
     return NO;
 #endif
 }
