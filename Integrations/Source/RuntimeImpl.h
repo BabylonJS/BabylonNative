@@ -103,11 +103,36 @@ namespace Babylon::Integrations
 
     // Internal implementation of View. Holds the back-reference to the
     // Runtime that produced it. Provides per-platform helpers
-    // (implemented in ViewImpl_*.cpp / .mm).
+    // (implemented in ViewImpl_*.cpp / .mm) plus Suspend / Resume that
+    // manage the in-flight frame across runtime suspension.
+    //
+    // `m_suspended` is the View's view of whether it's currently
+    // holding an open Device frame:
+    //   - true  → no frame is open (StartRenderingCurrentFrame +
+    //             DeviceUpdate::Start have NOT been called, or have
+    //             been matched by Finish / FinishRenderingCurrentFrame)
+    //   - false → a frame is open and the JS thread's safe timespan
+    //             is active
+    //
+    // Initially `true`; `View::Attach` flips it to `false` after
+    // opening the first frame. `~View` calls `Suspend` before
+    // `Device::DisableRendering`. `Runtime::Suspend / Resume` call
+    // through here on the suspendCount 0↔1 transitions.
     struct ViewImpl
     {
         explicit ViewImpl(Runtime& runtime) : m_runtime{runtime} {}
         Runtime& m_runtime;
+        bool m_suspended{true};
+
+        // End the in-flight frame on the Device (Finish +
+        // FinishRenderingCurrentFrame). Idempotent — no-op if already
+        // suspended.
+        void Suspend();
+
+        // Open a new frame (StartRenderingCurrentFrame +
+        // DeviceUpdate::Start). Idempotent — no-op if not currently
+        // suspended.
+        void Resume();
 
         // Query the surface's pixel-buffer size from the native window
         // handle. Implemented per-platform.

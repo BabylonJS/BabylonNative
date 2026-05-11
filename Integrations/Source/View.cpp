@@ -171,17 +171,17 @@ namespace Babylon::Integrations
             return nullptr;
         }
 
+        const bool firstAttach = !impl.m_device;
+
         // Per-platform: query the surface's pixel-buffer size from the
         // native window handle. ViewImpl_*.cpp implements this; e.g.
         // ANativeWindow_getWidth on Android, GetClientRect on Win32,
         // CAMetalLayer.drawableSize on Apple.
         const auto [width, height] = ViewImpl::QuerySize(nativeWindow);
 
-        if (!impl.m_device)
+        if (firstAttach)
         {
-            // First Attach on this Runtime: construct the Device and
-            // open the first frame, then dispatch the engine-init lambda
-            // onto the JS thread.
+            // First Attach on this Runtime: construct the Device.
             Babylon::Graphics::Configuration config{};
             config.Window = nativeWindow;
             config.Width = width;
@@ -194,28 +194,31 @@ namespace Babylon::Integrations
 #if BABYLON_NATIVE_PLUGIN_SHADERCACHE
             Babylon::Plugins::ShaderCache::Enable();
 #endif
-
-            // Open the first frame *before* dispatching the init lambda
-            // so the Device::AddToJavaScript inside the lambda sees an
-            // open frame to record into.
-            impl.m_device->StartRenderingCurrentFrame();
-            impl.m_deviceUpdate->Start();
-
-            RunFirstAttachInit(impl, nativeWindow);
         }
         else
         {
             // Subsequent Attach: reuse the existing Device, just rebind
-            // the surface and re-enable rendering. Plugins, polyfills,
-            // and any loaded scripts are preserved on the JS side.
+            // the surface. Plugins, polyfills, and any loaded scripts
+            // are preserved on the JS side.
             impl.m_device->UpdateWindow(nativeWindow);
             impl.m_device->UpdateSize(width, height);
-            impl.m_device->StartRenderingCurrentFrame();
-            impl.m_deviceUpdate->Start();
         }
 
         std::unique_ptr<View> view{new View{std::make_unique<ViewImpl>(runtime)}};
         impl.m_currentView = view.get();
+
+        // Open the first frame via ViewImpl::Resume (which flips
+        // m_suspended → false). On first Attach, this must happen
+        // BEFORE dispatching the engine-init lambda so the
+        // Device::AddToJavaScript inside the lambda sees an open
+        // frame to record into.
+        view->m_impl->Resume();
+
+        if (firstAttach)
+        {
+            RunFirstAttachInit(impl, nativeWindow);
+        }
+
         return view;
     }
 
@@ -228,26 +231,73 @@ namespace Babylon::Integrations
     {
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
 
-        // Symmetric counterpart to Attach: close the in-flight frame and
-        // disable rendering. The Device persists on the Runtime so the
-        // next Attach is cheap.
-        if (impl.m_device)
+        // End the in-flight frame if one is open. Idempotent: if the
+        // Runtime was already suspended (which closed the frame via
+        // ViewImpl::Suspend), this is a no-op. The Device persists on
+        // the Runtime so the next Attach is cheap.
+        m_impl->Suspend();
+
+        impl.m_currentView = nullptr;
+    }
+
+    // ---------------------------------------------------------------------
+    // ViewImpl::Suspend / Resume
+    //
+    // Idempotent open/close of the in-flight Device frame. Called from:
+    //   - View::Attach            → Resume (open frame after Device setup)
+    //   - View::~View             → Suspend (close frame at teardown)
+    //   - Runtime::Suspend / Resume → matching call on the currently
+    //                                 attached view, if any, so the host's
+    //                                 OS-level pause/resume signal cleanly
+    //                                 brackets the GPU frame.
+    //
+    // The internal `m_suspended` flag means "no frame currently open."
+    // Initial state is `true`; the very first Resume opens the first
+    // frame. Multiple Suspend or Resume calls in a row are no-ops.
+    // ---------------------------------------------------------------------
+    void ViewImpl::Suspend()
+    {
+        if (m_suspended)
+        {
+            return;
+        }
+        RuntimeImpl& impl = *m_runtime.m_impl;
+        if (impl.m_device && impl.m_deviceUpdate)
         {
             impl.m_deviceUpdate->Finish();
             impl.m_device->FinishRenderingCurrentFrame();
         }
+        m_suspended = true;
+    }
 
-        impl.m_currentView = nullptr;
+    void ViewImpl::Resume()
+    {
+        if (!m_suspended)
+        {
+            return;
+        }
+        RuntimeImpl& impl = *m_runtime.m_impl;
+        if (impl.m_device && impl.m_deviceUpdate)
+        {
+            impl.m_device->StartRenderingCurrentFrame();
+            impl.m_deviceUpdate->Start();
+        }
+        m_suspended = false;
     }
 
     void View::RenderFrame()
     {
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
 
-        // Cheap suspended check (own mutex). Skip the GPU work entirely
-        // while the runtime is suspended; the host can keep calling
-        // RenderFrame() from its draw callback unconditionally.
-        if (m_impl->m_runtime.IsSuspended())
+        // Skip the GPU work entirely while this view is suspended;
+        // the host can keep calling RenderFrame() from its draw
+        // callback unconditionally. The view's `m_suspended` flag is
+        // flipped by Runtime::Suspend/Resume (and by ~View / Attach
+        // for the destruction / construction boundaries), so this
+        // check covers every "frame is not currently open" case
+        // including: pre-Attach, between Suspend and Resume, and
+        // during teardown.
+        if (m_impl->m_suspended)
         {
             return;
         }

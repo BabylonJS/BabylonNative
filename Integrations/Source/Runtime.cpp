@@ -154,6 +154,17 @@ namespace Babylon::Integrations
         std::lock_guard<std::mutex> lock{m_impl->m_suspendMutex};
         if (m_impl->m_suspendCount++ == 0)
         {
+            // Close the in-flight frame on the currently attached View
+            // (if any) BEFORE blocking the JS thread. This keeps the
+            // GPU side clean across the suspension: no held drawable,
+            // no open DeviceUpdate safe-timespan. The View tracks its
+            // own state, so this composes with the subsequent ~View
+            // (which Suspends again — no-op) and with hosts that
+            // suspend the Runtime while no View is attached.
+            if (m_impl->m_currentView)
+            {
+                m_impl->m_currentView->m_impl->Suspend();
+            }
             m_impl->m_appRuntime->Suspend();
         }
     }
@@ -169,6 +180,12 @@ namespace Babylon::Integrations
         if (--m_impl->m_suspendCount == 0)
         {
             m_impl->m_appRuntime->Resume();
+            // Re-open the frame on the attached View (if any) so the
+            // next RenderFrame call has something to Finish.
+            if (m_impl->m_currentView)
+            {
+                m_impl->m_currentView->m_impl->Resume();
+            }
         }
     }
 
