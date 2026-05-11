@@ -99,6 +99,17 @@ namespace Babylon::Integrations
         // 0..1; tracked so we can guard against multiple concurrent
         // attachments (the API contract is "at most one View at a time").
         View* m_currentView{nullptr};
+
+        // First-Attach engine initialization: dispatched onto the JS
+        // thread by View::Attach the very first time it constructs the
+        // Device. Runs all plugin/polyfill `Initialize` calls, wires
+        // NativeXr session-state callbacks, then completes `m_initTcs`
+        // to unblock any LoadScript / Eval / RunOnJsThread calls the
+        // host queued before the first Attach.
+        //
+        // The `window` parameter is forwarded to TestUtils::Initialize
+        // (the only plugin that wants it); ignored otherwise.
+        void RunFirstAttachInit(Babylon::Graphics::WindowT window);
     };
 
     // Internal implementation of View. Holds the back-reference to the

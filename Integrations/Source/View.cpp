@@ -1,163 +1,13 @@
 #include "RuntimeImpl.h"
 
-#if BABYLON_NATIVE_PLUGIN_NATIVEENGINE
-#include <Babylon/Plugins/NativeEngine.h>
-#endif
-#if BABYLON_NATIVE_PLUGIN_NATIVECAMERA
-#include <Babylon/Plugins/NativeCamera.h>
-#endif
-#if BABYLON_NATIVE_PLUGIN_NATIVECAPTURE
-#include <Babylon/Plugins/NativeCapture.h>
-#endif
-#if BABYLON_NATIVE_PLUGIN_NATIVEENCODING
-#include <Babylon/Plugins/NativeEncoding.h>
-#endif
-#if BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS
-#include <Babylon/Plugins/NativeOptimizations.h>
-#endif
-#if BABYLON_NATIVE_PLUGIN_NATIVETRACING
-#include <Babylon/Plugins/NativeTracing.h>
-#endif
 #if BABYLON_NATIVE_PLUGIN_SHADERCACHE
 #include <Babylon/Plugins/ShaderCache.h>
 #endif
-#if BABYLON_NATIVE_PLUGIN_TESTUTILS
-#include <Babylon/Plugins/TestUtils.h>
-#endif
-
-#include <Babylon/Polyfills/Blob.h>
-#include <Babylon/Polyfills/Console.h>
-#include <Babylon/Polyfills/Performance.h>
-#include <Babylon/Polyfills/TextDecoder.h>
-#include <Babylon/Polyfills/XMLHttpRequest.h>
-
-#if BABYLON_NATIVE_POLYFILL_WINDOW
-#include <Babylon/Polyfills/Window.h>
-#endif
 
 #include <cassert>
-#include <sstream>
 
 namespace Babylon::Integrations
 {
-    namespace
-    {
-        // Forward Babylon Console levels to the LogLevel exposed on
-        // RuntimeOptions::log so consumers don't have to depend on the
-        // Console polyfill header to read log output.
-        LogLevel ToIntegrationsLogLevel(Babylon::Polyfills::Console::LogLevel level)
-        {
-            switch (level)
-            {
-                case Babylon::Polyfills::Console::LogLevel::Log: return LogLevel::Log;
-                case Babylon::Polyfills::Console::LogLevel::Warn: return LogLevel::Warn;
-                case Babylon::Polyfills::Console::LogLevel::Error: return LogLevel::Error;
-            }
-            return LogLevel::Log;
-        }
-    }
-
-    // ---------------------------------------------------------------------
-    // First-Attach engine initialization: dispatched onto the JS thread by
-    // the first View::Attach call. Runs all plugin/polyfill Initialize()
-    // calls in the same order as Apps/Playground/Shared/AppContext.cpp,
-    // then completes m_initTcs to unblock any LoadScript / Eval /
-    // RunOnJsThread calls the host queued before the first Attach.
-    //
-    // After m_initTcs is complete, subsequent host calls to
-    // Runtime::LoadScript / Eval / RunOnJsThread fire their continuation
-    // synchronously on the calling thread (via inline_scheduler), which
-    // then submits to ScriptLoader directly.
-    // ---------------------------------------------------------------------
-    static void RunFirstAttachInit(RuntimeImpl& impl, Babylon::Graphics::WindowT window)
-    {
-        impl.m_appRuntime->Dispatch([implPtr = &impl, window](Napi::Env env) {
-            // 1. Make the Device available to JS.
-            implPtr->m_device->AddToJavaScript(env);
-
-            // 2. Polyfills (always-on).
-            Babylon::Polyfills::Blob::Initialize(env);
-
-            {
-                const auto userLog = implPtr->m_options.log;
-                Babylon::Polyfills::Console::Initialize(env,
-                    [userLog](const char* message, Babylon::Polyfills::Console::LogLevel level) {
-                        if (userLog && message)
-                        {
-                            userLog(ToIntegrationsLogLevel(level), message);
-                        }
-                    });
-            }
-
-            Babylon::Polyfills::Performance::Initialize(env);
-
-#if BABYLON_NATIVE_POLYFILL_WINDOW
-            Babylon::Polyfills::Window::Initialize(env);
-#endif
-
-            Babylon::Polyfills::TextDecoder::Initialize(env);
-            Babylon::Polyfills::XMLHttpRequest::Initialize(env);
-
-#if BABYLON_NATIVE_POLYFILL_CANVAS
-            implPtr->m_canvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
-#endif
-
-            // 3. Plugins.
-#if BABYLON_NATIVE_PLUGIN_NATIVETRACING
-            Babylon::Plugins::NativeTracing::Initialize(env);
-#endif
-#if BABYLON_NATIVE_PLUGIN_NATIVEENCODING
-            Babylon::Plugins::NativeEncoding::Initialize(env);
-#endif
-#if BABYLON_NATIVE_PLUGIN_NATIVEENGINE
-            Babylon::Plugins::NativeEngine::Initialize(env);
-#endif
-#if BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS
-            Babylon::Plugins::NativeOptimizations::Initialize(env);
-#endif
-#if BABYLON_NATIVE_PLUGIN_NATIVECAPTURE
-            Babylon::Plugins::NativeCapture::Initialize(env);
-#endif
-#if BABYLON_NATIVE_PLUGIN_NATIVECAMERA
-            Babylon::Plugins::NativeCamera::Initialize(env);
-#endif
-#if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
-            implPtr->m_input = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
-#endif
-#if BABYLON_NATIVE_PLUGIN_NATIVEXR
-            // Initialize NativeXr; apply any pending xr window the host
-            // may have already supplied via Runtime::SetXrWindow; wire
-            // the session-state callback to keep m_isXrActive in sync.
-            {
-                std::lock_guard<std::mutex> xrLock{implPtr->m_xrMutex};
-                implPtr->m_nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
-                if (implPtr->m_xrWindow)
-                {
-                    implPtr->m_nativeXr->UpdateWindow(implPtr->m_xrWindow);
-                }
-                implPtr->m_nativeXr->SetSessionStateChangedCallback(
-                    [implPtr](bool isActive) {
-                        implPtr->m_isXrActive.store(isActive, std::memory_order_relaxed);
-                    });
-            }
-#endif
-#if BABYLON_NATIVE_PLUGIN_TESTUTILS
-            Babylon::Plugins::TestUtils::Initialize(env, window);
-#else
-            (void)window;
-#endif
-
-            // 4. Unblock any LoadScript / Eval / RunOnJsThread calls
-            //    the host registered before first Attach. Each was
-            //    chained off m_initTcs.as_task().then(inline_scheduler,
-            //    ..., [...] { scriptLoader->...; });, so completing the
-            //    TCS here causes those continuations to fire (in
-            //    registration order) on the JS thread, each submitting
-            //    to ScriptLoader's task chain.
-            implPtr->m_initTcs.complete();
-        });
-    }
-
     // ---------------------------------------------------------------------
     // View::Attach (first time and subsequent)
     // ---------------------------------------------------------------------
@@ -216,7 +66,7 @@ namespace Babylon::Integrations
 
         if (firstAttach)
         {
-            RunFirstAttachInit(impl, nativeWindow);
+            impl.RunFirstAttachInit(nativeWindow);
         }
 
         return view;
