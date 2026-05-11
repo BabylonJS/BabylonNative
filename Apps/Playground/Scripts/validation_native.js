@@ -385,7 +385,9 @@
                         TestUtils.exit(0);
                         return;
                     }
-                    recursiveRunTest(i);
+                    // Defer the next iteration via setTimeout to avoid
+                    // blowing Chakra's recursion stack on long test lists.
+                    setTimeout(function () { recursiveRunTest(i); }, 0);
                 });
             }
 
