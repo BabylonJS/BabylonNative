@@ -1,0 +1,75 @@
+plugins {
+    id 'com.android.library'
+}
+
+def jsEngine = "QuickJS"
+if (project.hasProperty("jsEngine")) {
+    jsEngine = project.property("jsEngine")
+}
+
+def graphics_api = "OpenGL"
+if (project.hasProperty("GRAPHICS_API")) {
+    graphics_api = project.property("GRAPHICS_API")
+}
+
+android {
+    namespace = 'com.library.babylonnative'
+    compileSdk = 34
+
+    defaultConfig {
+        minSdk = 25
+
+        consumerProguardFiles "consumer-rules.pro"
+        ndkVersion = "29.0.14206865"
+        if (project.hasProperty("NDK_VERSION")) {
+            ndkVersion = project.property("NDK_VERSION")
+        }
+        externalNativeBuild {
+            cmake {
+                abiFilters "arm64-v8a", "x86_64"
+                arguments "-DANDROID_STL=c++_static",
+                    "-DENABLE_PCH=OFF",
+                    "-DGRAPHICS_API=${graphics_api}",
+                    "-DNAPI_JAVASCRIPT_ENGINE=${jsEngine}",
+                    "-DBABYLON_NATIVE_BUILD_APPS=OFF",
+                    "-DBABYLON_DEBUG_TRACE=ON",
+                    "-DBABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF",
+                    "-DBABYLON_NATIVE_PLUGIN_SHADERCOMPILER=OFF",
+                    "-DBABYLON_NATIVE_PLUGIN_NATIVEENGINE_COMPILESHADERS=OFF"
+                cppFlags += ["-Wno-deprecated-literal-operator"]
+            }
+        }
+        ndk {
+            abiFilters "arm64-v8a", "x86_64"
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            version = '3.19.6+'
+            path = 'CMakeLists.txt'
+            buildStagingDirectory = "../../../Build/Android-QuickJSMinimal"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled = false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            externalNativeBuild {
+                cmake {
+                    arguments "-DCMAKE_BUILD_TYPE=MinSizeRel",
+                        "-DCMAKE_C_FLAGS_MINSIZEREL=-Os -DNDEBUG",
+                        "-DCMAKE_CXX_FLAGS_MINSIZEREL=-Os -DNDEBUG",
+                        "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--strip-all,-gc-sections",
+                        "-DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections -fvisibility=hidden",
+                        "-DCMAKE_CXX_FLAGS=-ffunction-sections -fdata-sections -fvisibility=hidden -fvisibility-inlines-hidden"
+                }
+            }
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}

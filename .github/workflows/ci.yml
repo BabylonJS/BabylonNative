@@ -136,6 +136,10 @@ jobs:
       runs-on: macos-latest
       js-engine: V8
 
+  # ── Android QuickJS minimal AAR (publishable, MinSizeRel) ────
+  Android_QuickJSMinimal:
+    uses: ./.github/workflows/build-android-quickjs-minimal.yml
+
   # ── Installation Tests ────────────────────────────────────────
   iOS_Installation:
     uses: ./.github/workflows/test-install-ios.yml

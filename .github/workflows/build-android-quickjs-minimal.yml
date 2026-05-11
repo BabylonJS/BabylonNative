@@ -1,0 +1,58 @@
+name: Build Android QuickJS Minimal AAR
+
+on:
+  workflow_call:
+
+env:
+  NDK_VERSION: '28.2.13676358'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build AAR (release / MinSizeRel)
+        working-directory: Install/AndroidQuickJSMinimal
+        run: |
+          chmod +x gradlew
+          ./gradlew :BabylonNative:assembleRelease \
+            -PNDK_VERSION=${{ env.NDK_VERSION }}
+
+      - name: Print artifact sizes
+        working-directory: Install/AndroidQuickJSMinimal
+        run: |
+          AAR=BabylonNative/build/outputs/aar/BabylonNative-release.aar
+          if [ ! -f "$AAR" ]; then
+            echo "::error::AAR not found at $AAR"
+            exit 1
+          fi
+
+          echo "==> Artifact sizes"
+          AAR_BYTES=$(stat -c%s "$AAR")
+          AAR_MB=$(awk "BEGIN { printf \"%.2f\", $AAR_BYTES / 1048576 }")
+          printf 'AAR : %12d bytes  (%6s MB)  %s\n' "$AAR_BYTES" "$AAR_MB" "$AAR"
+
+          # Extract and report each libBabylonNativeJNI.so size
+          TMP=$(mktemp -d)
+          unzip -q "$AAR" "jni/*/libBabylonNativeJNI.so" -d "$TMP"
+          find "$TMP/jni" -name 'libBabylonNativeJNI.so' | sort | while read SO; do
+            REL=${SO#$TMP/}
+            SO_BYTES=$(stat -c%s "$SO")
+            SO_MB=$(awk "BEGIN { printf \"%.2f\", $SO_BYTES / 1048576 }")
+            printf '  - %-50s %12d bytes  (%6s MB)\n' "$REL" "$SO_BYTES" "$SO_MB"
+          done
+          rm -rf "$TMP"
+
+      - name: Upload AAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: BabylonNative-QuickJSMinimal-release-aar
+          path: Install/AndroidQuickJSMinimal/BabylonNative/build/outputs/aar/BabylonNative-release.aar
+          if-no-files-found: error
