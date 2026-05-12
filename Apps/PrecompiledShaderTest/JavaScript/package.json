@@ -11,18 +11,17 @@
         "prepare:shaders": "tsx ./tools/prepareShaders.ts"
     },
     "license": "MIT",
-    "dependencies": {},
     "devDependencies": {
         "@babel/cli": "^7.28.3",
         "@babel/core": "^7.28.3",
         "@babel/preset-env": "^7.28.3",
-        "@babylonjs/core": "^9.0.0",
+        "@babylonjs/core": "^9.3.4",
         "@types/node": "^24.7.1",
         "rimraf": "^6.0.1",
+        "terser-webpack-plugin": "^5.3.10",
         "ts-loader": "^9.5.4",
         "tsx": "^4.20.6",
         "typescript": "^5.5.4",
-        "terser-webpack-plugin": "^5.3.10",
         "webpack": "^5.101.3",
         "webpack-cli": "^6.0.1"
     },

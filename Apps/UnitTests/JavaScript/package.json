@@ -7,8 +7,8 @@
     "watch": "webpack -watch"
   },
   "dependencies": {
-    "babylonjs": "^9.0.0",
-    "babylonjs-materials": "^9.0.0",
+    "babylonjs": "^9.3.4",
+    "babylonjs-materials": "^9.3.4",
     "chai": "^5.2.0",
     "jsc-android": "^241213.1.0",
     "mocha": "^11.1.0",
@@ -27,8 +27,8 @@
     "@babel/preset-react": "^7.27.1",
     "@babel/preset-typescript": "^7.27.1",
     "@babel/runtime": "^7.28.2",
-    "@babylonjs/core": "^9.0.0",
-    "@babylonjs/materials": "^9.0.0",
+    "@babylonjs/core": "^9.3.4",
+    "@babylonjs/materials": "^9.3.4",
     "babel-loader": "^10.0.0",
     "buffer": "^6.0.3",
     "core-js": "^3.45.0",

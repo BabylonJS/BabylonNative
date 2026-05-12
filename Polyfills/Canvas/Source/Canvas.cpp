@@ -5,6 +5,7 @@
 #include <bgfx/bgfx.h>
 #include <napi/pointer.h>
 #include <cassert>
+#include <cstring>
 #include "Colors.h"
 #include "Gradient.h"
 
@@ -156,23 +157,24 @@ namespace Babylon::Polyfills::Internal
         if (m_dirty)
         {
             // make sure render targets are filled with 0 : https://registry.khronos.org/webgl/specs/latest/1.0/#TEXIMAGE2D
-            bgfx::ReleaseFn releaseFn{ [](void*, void* userData) {
-                bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
-            }};
-
-            bimg::ImageContainer* image = bimg::imageAlloc(&Babylon::Graphics::DeviceContext::GetDefaultAllocator(), bimg::TextureFormat::RGBA8, m_width, m_height, 1/*depth*/, 1, false/*cubeMap*/, false/*hasMips*/);
-            const bgfx::Memory* mem = bgfx::makeRef(image->m_data, image->m_size, releaseFn, image);
-            bx::memSet(image->m_data, 0, image->m_size);
+            const bgfx::Memory* mem = bgfx::alloc(static_cast<uint32_t>(m_width) * static_cast<uint32_t>(m_height) * 4);
+            std::memset(mem->data, 0, mem->size);
 
             std::array<bgfx::TextureHandle, 2> textures{
                 bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_RT, mem),
                 bgfx::createTexture2D(m_width, m_height, false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT)};
 
+            // See NativeEngine::CreateFrameBuffer: bgfx validation now asserts when BGFX_RESOLVE_AUTO_GEN_MIPS is used
+            // with a texture whose format doesn't have BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN. Gate the color attachment
+            // on the capability and pass BGFX_RESOLVE_NONE for the depth attachment (depth formats never support autogen).
+            const bgfx::Caps* caps = bgfx::getCaps();
+            const uint8_t colorResolve = 0 != (caps->formats[bgfx::TextureFormat::RGBA8] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN)
+                ? BGFX_RESOLVE_AUTO_GEN_MIPS
+                : BGFX_RESOLVE_NONE;
+
             std::array<bgfx::Attachment, textures.size()> attachments{};
-            for (size_t idx = 0; idx < attachments.size(); ++idx)
-            {
-                attachments[idx].init(textures[idx]);
-            }
+            attachments[0].init(textures[0], bgfx::Access::Write, 0, 1, 0, colorResolve);
+            attachments[1].init(textures[1], bgfx::Access::Write, 0, 1, 0, BGFX_RESOLVE_NONE);
             auto handle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
             assert(handle.idx != bgfx::kInvalidHandle);
             m_frameBuffer = std::make_unique<Graphics::FrameBuffer>(m_graphicsContext, handle, m_width, m_height, false, false, false);

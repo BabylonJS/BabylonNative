@@ -1,19 +1,16 @@
 #include <Babylon/Graphics/Texture.h>
 #include <Babylon/Graphics/DeviceContext.h>
 #include <cassert>
-#include <bimg/bimg.h>
+#include <cstring>
 
 namespace
 {
     const bgfx::Memory* GetZeroImageMemory(uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)
     {
-        bgfx::ReleaseFn releaseFn{[](void*, void* userData) {
-            bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
-        }};
-
-        bimg::ImageContainer* image = bimg::imageAlloc(&Babylon::Graphics::DeviceContext::GetDefaultAllocator(), static_cast<bimg::TextureFormat::Enum>(format), width, height, 1/*depth*/, numLayers, false/*cubeMap*/, hasMips);
-        const bgfx::Memory* mem = bgfx::makeRef(image->m_data, image->m_size, releaseFn, image);
-        bx::memSet(image->m_data, 0, image->m_size);
+        bgfx::TextureInfo info{};
+        bgfx::calcTextureSize(info, width, height, /*depth*/ 1, /*cubeMap*/ false, hasMips, numLayers, format);
+        const bgfx::Memory* mem = bgfx::alloc(info.storageSize);
+        std::memset(mem->data, 0, mem->size);
         return mem;
     }
 }

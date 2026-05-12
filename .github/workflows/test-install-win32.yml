@@ -3,19 +3,12 @@ name: Test Install Win32
 on:
   workflow_call: {}
 
-env:
-  CMAKE_VERSION: '3.31.6'
-
 jobs:
   test-install:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
-
-      - uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: ${{ env.CMAKE_VERSION }}
 
 
       - name: Configure

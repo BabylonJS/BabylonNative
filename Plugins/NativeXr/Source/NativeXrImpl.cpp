@@ -275,15 +275,22 @@ namespace Babylon
                     arcana::make_task(m_sessionState->GraphicsContext.AfterRenderScheduler(), arcana::cancellation::none(), [colorTexture, depthTexture, &viewConfig]() {
                         bgfx::overrideInternal(colorTexture, reinterpret_cast<uintptr_t>(viewConfig.ColorTexturePointer));
                         bgfx::overrideInternal(depthTexture, reinterpret_cast<uintptr_t>(viewConfig.DepthTexturePointer));
-                    }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, requiresAppClear, &viewConfig]() {
+                    }).then(m_runtimeScheduler, m_sessionState->CancellationSource, [this, thisRef{shared_from_this()}, colorTexture, depthTexture, colorTextureFormat, requiresAppClear, &viewConfig]() {
                           const auto eyeCount = std::max(static_cast<uint16_t>(1), static_cast<uint16_t>(viewConfig.ViewTextureSize.Depth));
                           // TODO (rgerd): Remove old framebuffers from resource table?
                           viewConfig.FrameBuffers.resize(eyeCount);
                           for (uint16_t eyeIdx = 0; eyeIdx < eyeCount; eyeIdx++)
                           {
+                              // See NativeEngine::CreateFrameBuffer: gate BGFX_RESOLVE_AUTO_GEN_MIPS on format caps and
+                              // always pass BGFX_RESOLVE_NONE for depth (depth formats don't support autogen mips).
+                              const bgfx::Caps* caps = bgfx::getCaps();
+                              const uint8_t colorResolve = 0 != (caps->formats[colorTextureFormat] & BGFX_CAPS_FORMAT_TEXTURE_MIP_AUTOGEN)
+                                  ? BGFX_RESOLVE_AUTO_GEN_MIPS
+                                  : BGFX_RESOLVE_NONE;
+
                               std::array<bgfx::Attachment, 2> attachments{};
-                              attachments[0].init(colorTexture, bgfx::Access::Write, eyeIdx);
-                              attachments[1].init(depthTexture, bgfx::Access::Write, eyeIdx);
+                              attachments[0].init(colorTexture, bgfx::Access::Write, eyeIdx, 1, 0, colorResolve);
+                              attachments[1].init(depthTexture, bgfx::Access::Write, eyeIdx, 1, 0, BGFX_RESOLVE_NONE);
 
                               auto frameBufferHandle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), false);
 

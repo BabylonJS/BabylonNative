@@ -1,11 +1,12 @@
 name: Test Install macOS
 
 on:
-  workflow_call: {}
-
-env:
-  CMAKE_VERSION: '3.31.6'
-  XCODE_VERSION: '16.4'
+  workflow_call:
+    inputs:
+      xcode-version:
+        required: false
+        type: string
+        default: '16.4'
 
 jobs:
   test-install:
@@ -14,13 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: ${{ env.CMAKE_VERSION }}
 
-
-      - name: Select Xcode ${{ env.XCODE_VERSION }}
-        run: sudo xcode-select --switch /Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer
+      - name: Select Xcode ${{ inputs.xcode-version }}
+        run: sudo xcode-select --switch /Applications/Xcode_${{ inputs.xcode-version }}.app/Contents/Developer
 
       - name: Configure
         run: |
