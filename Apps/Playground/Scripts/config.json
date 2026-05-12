@@ -2414,18 +2414,14 @@
         },
         {
             "title": "Load GUI snippet with unicode",
-            "playgroundId": "#YS93KY",
+            "playgroundId": "#YS93KY#0",
             "renderCount": 50,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "loadGuiSnippetWithUnicode.png"
         },
         {
             "title": "Parse GUI json with unicode",
-            "playgroundId": "#ERVGT5",
+            "playgroundId": "#ERVGT5#0",
             "renderCount": 50,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "parseGuiJsonWithUnicode.png"
         },
         {
@@ -3765,9 +3761,7 @@
         {
             "title": "OpenPBR Analytic Lights Anisotropy",
             "playgroundId": "#GRQHVV#61",
-            "referenceImage": "OpenPBR-Analytic-Lights-Anisotropy.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "OpenPBR-Analytic-Lights-Anisotropy.png"
         },
         {
             "title": "OpenPBR Analytic Lights Anisotropy Texture",
