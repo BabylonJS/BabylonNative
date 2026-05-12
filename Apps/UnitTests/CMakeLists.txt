@@ -11,6 +11,7 @@ set(BABYLONJS_MATERIALS_ASSETS
     "../node_modules/babylonjs-materials/babylonjs.materials.js")
 
 set(TEST_ASSETS
+    "JavaScript/dist/tests.externalTexture.render.js"
     "JavaScript/dist/tests.javaScript.all.js"
     "JavaScript/dist/tests.shaderCache.basicScene.js")
 
@@ -18,6 +19,7 @@ set(SOURCES
     "Source/App.h"
     "Source/App.cpp"
     "Source/Tests.ExternalTexture.cpp"
+    "Source/Tests.ExternalTexture.Render.cpp"
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.ShaderCache.cpp"
     "Source/Tests.UniformPadding.cpp"
@@ -26,8 +28,7 @@ set(SOURCES
 
 if(GRAPHICS_API STREQUAL "D3D11")
     set(SOURCES ${SOURCES}
-        "Source/Tests.Device.${GRAPHICS_API}.cpp"
-        "Source/Tests.ExternalTexture.${GRAPHICS_API}.cpp")
+        "Source/Tests.Device.${GRAPHICS_API}.cpp")
 endif()
 
 if(APPLE)
@@ -43,7 +44,11 @@ elseif(UNIX AND NOT ANDROID)
     set(SOURCES ${SOURCES} "Source/App.X11.cpp")
     set(ADDITIONAL_COMPILE_DEFINITIONS PRIVATE SKIP_EXTERNAL_TEXTURE_TESTS)
 elseif(WIN32)
-    set(SOURCES ${SOURCES} "Source/App.Win32.cpp")
+    set(SOURCES ${SOURCES}
+        "Source/App.Win32.cpp"
+        "Source/RenderDoc.h"
+        "Source/RenderDoc.cpp")
+    set(ADDITIONAL_COMPILE_DEFINITIONS ${ADDITIONAL_COMPILE_DEFINITIONS} PRIVATE HAS_RENDERDOC)
 endif()
 
 add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${SOURCES})
@@ -65,6 +70,10 @@ target_link_libraries(UnitTests
 
 target_compile_definitions(UnitTests PRIVATE ${ADDITIONAL_COMPILE_DEFINITIONS})
 
+if(GRAPHICS_API STREQUAL "D3D12")
+    target_compile_definitions(UnitTests PRIVATE SKIP_RENDER_TESTS)
+endif()
+
 add_test(NAME UnitTests COMMAND UnitTests)
 
 # See https://gitlab.kitware.com/cmake/cmake/-/issues/23543
@@ -77,6 +86,18 @@ if(ANGLE_LIBEGL)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ANGLE_LIBEGL}" "$<TARGET_FILE_DIR:UnitTests>"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${ANGLE_LIBGLESV2}" "$<TARGET_FILE_DIR:UnitTests>"
         COMMENT "Copying ANGLE libraries to UnitTests output directory"
+    )
+endif()
+
+if(WIN32 AND GRAPHICS_API STREQUAL "D3D12")
+    # bgfx's D3D12 renderer uses DXC for runtime shader compilation.
+    # dxcompiler.dll + dxil.dll aren't part of Windows, so deploy the copies shipped with bgfx.
+    FetchContent_GetProperties(bgfx.cmake SOURCE_DIR BGFX_CMAKE_SOURCE_DIR)
+    set(BGFX_DXC_DLL_DIR "${BGFX_CMAKE_SOURCE_DIR}/bgfx/tools/bin/windows")
+    add_custom_command(TARGET UnitTests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${BGFX_DXC_DLL_DIR}/dxcompiler.dll" "$<TARGET_FILE_DIR:UnitTests>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${BGFX_DXC_DLL_DIR}/dxil.dll" "$<TARGET_FILE_DIR:UnitTests>"
+        COMMENT "Copying DXC runtime DLLs for D3D12"
     )
 endif()
 
