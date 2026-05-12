@@ -33,6 +33,22 @@
 #include <Babylon/Polyfills/TextDecoder.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 
+#if BABYLON_NATIVE_POLYFILL_ABORTCONTROLLER
+#include <Babylon/Polyfills/AbortController.h>
+#endif
+
+#if BABYLON_NATIVE_POLYFILL_SCHEDULING
+#include <Babylon/Polyfills/Scheduling.h>
+#endif
+
+#if BABYLON_NATIVE_POLYFILL_URL
+#include <Babylon/Polyfills/URL.h>
+#endif
+
+#if BABYLON_NATIVE_POLYFILL_WEBSOCKET
+#include <Babylon/Polyfills/WebSocket.h>
+#endif
+
 #if BABYLON_NATIVE_POLYFILL_WINDOW
 #include <Babylon/Polyfills/Window.h>
 #endif
@@ -213,6 +229,19 @@ namespace Babylon::Integrations
 
             Babylon::Polyfills::TextDecoder::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+
+#if BABYLON_NATIVE_POLYFILL_ABORTCONTROLLER
+            Babylon::Polyfills::AbortController::Initialize(env);
+#endif
+#if BABYLON_NATIVE_POLYFILL_SCHEDULING
+            Babylon::Polyfills::Scheduling::Initialize(env);
+#endif
+#if BABYLON_NATIVE_POLYFILL_URL
+            Babylon::Polyfills::URL::Initialize(env);
+#endif
+#if BABYLON_NATIVE_POLYFILL_WEBSOCKET
+            Babylon::Polyfills::WebSocket::Initialize(env);
+#endif
 
 #if BABYLON_NATIVE_POLYFILL_CANVAS
             implPtr->m_canvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));

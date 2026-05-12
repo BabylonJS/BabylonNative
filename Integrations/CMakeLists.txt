@@ -54,6 +54,26 @@ if(BABYLON_NATIVE_POLYFILL_CANVAS)
     target_link_libraries(Integrations PRIVATE Canvas)
 endif()
 
+if(BABYLON_NATIVE_POLYFILL_ABORTCONTROLLER)
+    target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_POLYFILL_ABORTCONTROLLER=1)
+    target_link_libraries(Integrations PRIVATE AbortController)
+endif()
+
+if(BABYLON_NATIVE_POLYFILL_SCHEDULING)
+    target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_POLYFILL_SCHEDULING=1)
+    target_link_libraries(Integrations PRIVATE Scheduling)
+endif()
+
+if(BABYLON_NATIVE_POLYFILL_URL)
+    target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_POLYFILL_URL=1)
+    target_link_libraries(Integrations PRIVATE URL)
+endif()
+
+if(BABYLON_NATIVE_POLYFILL_WEBSOCKET)
+    target_compile_definitions(Integrations PUBLIC BABYLON_NATIVE_POLYFILL_WEBSOCKET=1)
+    target_link_libraries(Integrations PRIVATE WebSocket)
+endif()
+
 # ----- Conditionally-included plugins -----
 
 if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE)
