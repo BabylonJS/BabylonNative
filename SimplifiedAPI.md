@@ -1058,166 +1058,119 @@ class MainActivity : AppCompatActivity() {
 
 **Library-supplied Obj-C++ interop** (lives in `Integrations/Apple/`):
 
-The interop layer takes a host-supplied `MTKView` directly. It installs
-itself as the view's `MTKViewDelegate` and drives the per-frame render
-and resize callbacks internally — the Swift host doesn't have to wire
-anything up beyond constructing the `BNView`.
+The interop layer takes a host-supplied `MTKView` directly. `BNView`
+forces a layout pass and seeds `CAMetalLayer.drawableSize` from
+`view.bounds × scale` before handing the layer to the Graphics layer
+— hosts don't have to think about MTKView's lazy `autoResizeDrawable`
+semantics.
+
+`BNView` exposes `BNViewDelegate` as a public Obj-C class. The default
+behavior is "smart": if the host hasn't set `MTKView.delegate` by the
+time `BNView` is constructed, `BNView` creates and strongly retains a
+`BNViewDelegate` for the host. If the host has already set their own
+delegate (typically a `BNViewDelegate` subclass), `BNView` leaves it
+alone.
 
 ```objc
 // BNRuntime.h  — public Obj-C header (Swift sees this via the bridge)
 @interface BNRuntime : NSObject
 - (instancetype)init;
 - (void)loadScript:(NSString*)url;
+- (void)setXrView:(nullable MTKView*)xrView;   // runtime owns visibility toggling
 - (void)suspend;
 - (void)resume;
 @end
 
 @interface BNView : NSObject
-// "Super simple" mode: BNView installs itself as the MTKView's delegate
-// and drives draw/resize internally — no MTKViewDelegate boilerplate
-// in host code.
-- (instancetype)initWithRuntime:(BNRuntime*)rt view:(MTKView*)view;
+// If `view.delegate` is nil at construction time, BNView lazily
+// installs and retains a BNViewDelegate that drives the per-frame
+// render. If the host pre-installed a delegate, BNView leaves it
+// alone.
+- (nullable instancetype)initWithRuntime:(BNRuntime*)rt view:(MTKView*)view;
 
-// Explicit-mode init. With autoDelegate = NO, the host keeps ownership
-// of the MTKView's delegate and calls -renderFrame and
-// -resizeWithWidth:height: from its own MTKViewDelegate methods. Use
-// this when you need to interleave host work with the runtime's
-// per-frame render.
-- (instancetype)initWithRuntime:(BNRuntime*)rt
-                            view:(MTKView*)view
-                    autoDelegate:(BOOL)autoDelegate;
+// Used by `BNViewDelegate` (or by hosts using a fully manual
+// `MTKViewDelegate`) — usually you don't call these yourself.
+- (void)renderFrame;
+- (void)resizeWithWidth:(NSUInteger)w height:(NSUInteger)h NS_SWIFT_NAME(resize(width:height:));
+@end
 
-- (void)renderFrame;                                    // manual mode only
-- (void)resizeWithWidth:(NSUInteger)w height:(NSUInteger)h;  // manual mode only
+// Default MTKViewDelegate implementation. Subclass to insert per-frame
+// work; call super to keep the default forwarding behavior.
+@interface BNViewDelegate : NSObject <MTKViewDelegate>
+- (nullable instancetype)initWithView:(BNView*)view NS_DESIGNATED_INITIALIZER;
 @end
 ```
 
 ```objc++
-// BNRuntime.mm  — implementation
-@implementation BNRuntime {
-    std::unique_ptr<Babylon::Integrations::Runtime> _rt;
-}
-- (instancetype)init {
-    if ((self = [super init])) {
-        _rt = Babylon::Integrations::Runtime::Create();
-    }
-    return self;
-}
-- (void)loadScript:(NSString*)url { _rt->LoadScript(url.UTF8String); }
-- (void)suspend { _rt->Suspend(); }
-- (void)resume  { _rt->Resume();  }
-- (Babylon::Integrations::Runtime*)native { return _rt.get(); }
-@end
-
-@interface BNView () <MTKViewDelegate>
-@end
-
+// BNView.mm  — implementation sketch
 @implementation BNView {
     std::unique_ptr<Babylon::Integrations::View> _v;
+    BNRuntime* _runtime;
     MTKView* _mtkView;
-    BOOL _autoDelegate;
+    BNViewDelegate* _managedDelegate;     // strong; nil if host set their own
 }
 - (instancetype)initWithRuntime:(BNRuntime*)rt view:(MTKView*)view {
-    return [self initWithRuntime:rt view:view autoDelegate:YES];
-}
-- (instancetype)initWithRuntime:(BNRuntime*)rt
-                            view:(MTKView*)view
-                    autoDelegate:(BOOL)autoDelegate {
     if ((self = [super init])) {
+        _runtime = rt;
         _mtkView = view;
-        _autoDelegate = autoDelegate;
-        CAMetalLayer* layer = (CAMetalLayer*)view.layer;
 
         // Force layout so bounds are valid, then seed drawableSize.
-        // MTKView's autoResizeDrawable keeps it in sync from here on,
-        // but it can still be (0, 0) at attach time.
+        // MTKView's autoResizeDrawable keeps it in sync from here on.
         [view layoutIfNeeded];
-        const CGFloat scale = view.contentScaleFactor;     // macOS: window.backingScaleFactor
-        layer.drawableSize = CGSizeMake(view.bounds.size.width * scale,
-                                         view.bounds.size.height * scale);
+        const CGFloat scale = view.contentScaleFactor;
+        ((CAMetalLayer*)view.layer).drawableSize =
+            CGSizeMake(view.bounds.size.width  * scale,
+                        view.bounds.size.height * scale);
 
-        // First Attach on this runtime triggers Device construction +
-        // GPU plugin init + queued LoadScript flush.
         _v = Babylon::Integrations::View::Attach(*[rt native],
-                                                  (__bridge CA::MetalLayer*)layer);
-        if (autoDelegate) view.delegate = self;   // install AFTER Attach
+                                                  (__bridge CA::MetalLayer*)view.layer);
+
+        // Auto-install a default delegate iff the host hasn't.
+        if (view.delegate == nil) {
+            _managedDelegate = [[BNViewDelegate alloc] initWithView:self];
+            view.delegate = _managedDelegate;
+        }
     }
     return self;
 }
 - (void)dealloc {
-    if (_autoDelegate && _mtkView.delegate == self) { _mtkView.delegate = nil; }
+    if (_managedDelegate != nil && _mtkView.delegate == _managedDelegate) {
+        _mtkView.delegate = nil;
+    }
 }
-- (void)renderFrame { _v->RenderFrame(); }
+- (void)renderFrame {
+    [_runtime updateXrViewIfNeeded];      // default xrView visibility policy
+    _v->RenderFrame();
+}
 - (void)resizeWithWidth:(NSUInteger)w height:(NSUInteger)h {
     _v->Resize((uint32_t)w, (uint32_t)h);
 }
-- (void)mtkView:(MTKView*)v drawableSizeWillChange:(CGSize)size {
-    [self resizeWithWidth:(NSUInteger)size.width height:(NSUInteger)size.height];
+@end
+
+// BNViewDelegate.mm  — default MTKViewDelegate
+@implementation BNViewDelegate { __weak BNView* _view; }
+- (instancetype)initWithView:(BNView*)view {
+    if ((self = [super init])) { _view = view; }
+    return self;
 }
-- (void)drawInMTKView:(MTKView*)v { [self renderFrame]; }
+- (void)mtkView:(MTKView*)v drawableSizeWillChange:(CGSize)size {
+    [_view resizeWithWidth:(NSUInteger)size.width height:(NSUInteger)size.height];
+}
+- (void)drawInMTKView:(MTKView*)v {
+    [_view renderFrame];                   // BNView's renderFrame handles XR overlay
+}
 @end
 ```
 
-**Host code — "super simple" integration** (consumer's app — *not* shipped by the library):
+**Host code — "super simple" integration** (the iOS Playground uses this):
 
 The minimal host creates the runtime at app start, loads scripts
-(queued), then constructs a `BNView` against the user-visible MTKView
-and is done — BNView drives the per-frame render and resize itself.
+(queued), and constructs a `BNView` against the user-visible MTKView.
+That's it — because `mtkView.delegate` is `nil`, BNView auto-installs
+a `BNViewDelegate` that drives the per-frame render and resize,
+including keeping the XR overlay's visibility in sync.
 
 ```swift
-class AppDelegate: NSObject, UIApplicationDelegate {
-    let runtime: BNRuntime = {
-        let r = BNRuntime()
-        r.loadScript(Bundle.main.url(forResource: "experience",
-                                       withExtension: "js")!.absoluteString)
-        return r
-    }()
-    func applicationWillResignActive(_ app: UIApplication) { runtime.suspend() }
-    func applicationDidBecomeActive (_ app: UIApplication) { runtime.resume()  }
-}
-
-class BabylonViewController: UIViewController {
-    var babylonView: BNView?
-    override func viewDidLoad() {
-        let mtkView = view as! MTKView
-        let runtime = (UIApplication.shared.delegate as! AppDelegate).runtime
-        babylonView = BNView(runtime: runtime, view: mtkView)   // that's it
-    }
-}
-```
-
-**Host code — "simple" integration with manual delegate** (host needs to interleave per-frame work):
-
-When the host wants to do its own work each frame (e.g. toggling an
-overlay's visibility based on runtime state), pass `autoDelegate: false`
-and own the `MTKViewDelegate` yourself. Forward `draw(in:)` and
-`drawableSizeWillChange:` to `BNView`'s `renderFrame` / `resize`.
-
-```swift
-class BabylonViewController: UIViewController, MTKViewDelegate {
-    var babylonView: BNView?
-    var overlay: UIView!
-    let runtime = (UIApplication.shared.delegate as! AppDelegate).runtime
-
-    override func viewDidLoad() {
-        let mtkView = view as! MTKView
-        mtkView.delegate = self
-        babylonView = BNView(runtime: runtime, view: mtkView, autoDelegate: false)
-    }
-
-    func draw(in view: MTKView) {
-        overlay.isHidden = !runtime.isOverlayActive   // host's per-frame work
-        babylonView?.renderFrame()
-    }
-    func mtkView(_ v: MTKView, drawableSizeWillChange size: CGSize) {
-        babylonView?.resize(withWidth: UInt(size.width), height: UInt(size.height))
-    }
-}
-```
-layer in `viewDidLoad`.
-
-```swift
-// AppDelegate — runtime created once at app start.
 class AppDelegate: NSObject, UIApplicationDelegate {
     let runtime: BNRuntime = {
         let r = BNRuntime()
@@ -1226,21 +1179,73 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // LoadScript queues; flushes on first BNView attach.
         return r
     }()
-
     func applicationWillResignActive(_ app: UIApplication) { runtime.suspend() }
     func applicationDidBecomeActive (_ app: UIApplication) { runtime.resume()  }
 }
 
 class BabylonViewController: UIViewController {
     var babylonView: BNView?
-
     override func viewDidLoad() {
         let mtkView = view as! MTKView
         let runtime = (UIApplication.shared.delegate as! AppDelegate).runtime
         // First Attach: triggers Device + plugin init + queued script flush.
-        // BNView installs itself as the MTKView's delegate and drives
-        // per-frame render/resize internally.
+        // BNView auto-installs a BNViewDelegate since mtkView.delegate is nil.
         babylonView = BNView(runtime: runtime, view: mtkView)
+    }
+}
+```
+
+**Host code — customize per-frame work via subclass:**
+
+When the host wants to do per-frame work (e.g. updating an overlay
+based on runtime state), subclass `BNViewDelegate`, override the
+delegate methods, call `super` to keep the default behavior, and
+install the subclass on the MTKView **before** constructing BNView so
+the auto-install path doesn't fire.
+
+```swift
+class MyDelegate: BNViewDelegate {
+    override func draw(in v: MTKView) {
+        beforeWork()
+        super.draw(in: v)        // forwards to bnView.renderFrame (xrView toggle + render)
+        afterWork()
+    }
+    override func mtkView(_ v: MTKView, drawableSizeWillChange size: CGSize) {
+        super.mtkView(v, drawableSizeWillChange: size)   // forwards to bnView.resize
+        layoutOverlays(size)
+    }
+}
+
+// In the view controller:
+//   1. Construct BNView so it produces a BNView reference for the subclass.
+//   2. Install the subclass; this overwrites any auto-installed default.
+let bn = BNView(runtime: runtime, view: mtkView)!
+let delegate = MyDelegate(view: bn)!     // host retains; MTKView.delegate is weak
+mtkView.delegate = delegate
+self.viewDelegate = delegate
+self.babylonView = bn
+```
+
+**Host code — full manual `MTKViewDelegate`:**
+
+Hosts that need full control can skip `BNViewDelegate` entirely, write
+their own delegate, and call `BNView`'s `renderFrame` / `resize`
+directly. The XR overlay visibility toggle is still automatic because
+`BNView.renderFrame` calls `[runtime updateXrViewIfNeeded]` itself.
+
+```swift
+class BabylonViewController: UIViewController, MTKViewDelegate {
+    var babylonView: BNView?
+
+    override func viewDidLoad() {
+        let mtkView = view as! MTKView
+        mtkView.delegate = self     // BNView will see this is set and not touch it
+        babylonView = BNView(runtime: runtime, view: mtkView)
+    }
+
+    func draw(in v: MTKView) { babylonView?.renderFrame() }
+    func mtkView(_ v: MTKView, drawableSizeWillChange size: CGSize) {
+        babylonView?.resize(width: UInt(size.width), height: UInt(size.height))
     }
 }
 ```
@@ -1283,8 +1288,9 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 // ... later, in the view controller:
 //      delegate.releasePrewarm()
 //      babylonView = BNView(runtime: delegate.runtime, view: mtkView)
-//      // Device::UpdateWindow swaps to the user-visible surface; scene
-//      // state and JS state are preserved.
+//      // BNView auto-installs a BNViewDelegate on the user-visible
+//      // MTKView; Device::UpdateWindow swaps the underlying surface;
+//      // scene state and JS state are preserved.
 ```
 
 ### Suspend/Resume is reference-counted
