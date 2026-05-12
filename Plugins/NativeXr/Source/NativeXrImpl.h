@@ -111,12 +111,10 @@ namespace Babylon
             {
                 explicit SessionState(Graphics::DeviceContext& graphicsContext)
                     : GraphicsContext{graphicsContext}
-                    , Update{GraphicsContext.GetUpdate("update")}
                 {
                 }
 
                 Graphics::DeviceContext& GraphicsContext;
-                Graphics::Update Update;
                 Napi::FunctionReference CreateRenderTexture{};
                 Napi::FunctionReference DestroyRenderTexture{};
                 std::vector<ViewConfiguration*> ActiveViewConfigurations{};

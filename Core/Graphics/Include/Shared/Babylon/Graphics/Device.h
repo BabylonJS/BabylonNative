@@ -58,44 +58,22 @@ namespace Babylon::Graphics
         DepthStencilFormat BackBufferDepthStencilFormat{DepthStencilFormat::Depth24Stencil8};
     };
 
-    class Device;
+    class DeviceImpl;
 
+    // Deprecated: DeviceUpdate is a no-op compatibility shim. Frame synchronization
+    // is now handled by FrameCompletionScope inside StartRenderingCurrentFrame/
+    // FinishRenderingCurrentFrame. This class will be removed in a future PR.
     class DeviceUpdate
     {
     public:
-        void Start()
-        {
-            m_start();
-        }
+        void Start() {}
+        void Finish() {}
 
         void RequestFinish(std::function<void()> onFinishCallback)
         {
-            m_requestFinish(std::move(onFinishCallback));
+            onFinishCallback();
         }
-
-        void Finish()
-        {
-            std::promise<void> promise{};
-            auto future = promise.get_future();
-            RequestFinish([&promise] { promise.set_value(); });
-            future.wait();
-        }
-
-    private:
-        friend class Device;
-
-        template<typename StartCallableT, typename RequestEndCallableT>
-        DeviceUpdate(StartCallableT&& start, RequestEndCallableT&& requestEnd)
-            : m_start{std::forward<StartCallableT>(start)}
-            , m_requestFinish{std::forward<RequestEndCallableT>(requestEnd)}
-        {
-        }
-
-        std::function<void()> m_start{};
-        std::function<void(std::function<void()>)> m_requestFinish{};
     };
-
-    class DeviceImpl;
 
     class Device
     {
@@ -128,7 +106,7 @@ namespace Babylon::Graphics
         void EnableRendering();
         void DisableRendering();
 
-        DeviceUpdate GetUpdate(const char* updateName);
+        DeviceUpdate GetUpdate(const char* /*updateName*/) { return {}; }
 
         void StartRenderingCurrentFrame();
         void FinishRenderingCurrentFrame();

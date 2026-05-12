@@ -40,6 +40,13 @@ TEST(JavaScript, All)
 
     Babylon::Graphics::Device device{g_deviceConfig};
 
+    // Start rendering a frame to unblock the JavaScript from queuing graphics
+    // commands. The frame is held open through script load and the test pump
+    // (which only ticks bgfx via Finish; Start) so the JS thread can submit
+    // at any time without racing the gate. A final Finish closes it after
+    // runtime teardown.
+    device.StartRenderingCurrentFrame();
+
     std::optional<Babylon::Polyfills::Canvas> nativeCanvas;
 
     Babylon::AppRuntime::Options options{};
@@ -87,9 +94,22 @@ TEST(JavaScript, All)
     loader.LoadScript("app:///Assets/babylonjs.materials.js");
     loader.LoadScript("app:///Assets/tests.javaScript.all.js");
 
-    device.StartRenderingCurrentFrame();
-    device.FinishRenderingCurrentFrame();
+    // Pump frames while JS tests run — tests use RAF internally and
+    // SubmitCommands requires an active frame. The frame was opened
+    // immediately after device creation; the loop just ticks bgfx
+    // (Finish; Start) once per iteration so commands can advance.
+    auto exitCodeFuture = exitCodePromise.get_future();
+    while (exitCodeFuture.wait_for(std::chrono::milliseconds(16)) != std::future_status::ready)
+    {
+        device.FinishRenderingCurrentFrame();
+        device.StartRenderingCurrentFrame();
+    }
 
-    auto exitCode{exitCodePromise.get_future().get()};
+    auto exitCode = exitCodeFuture.get();
     EXPECT_EQ(exitCode, 0);
+
+    // Runtime destructor joins the JS thread; must happen before Finish.
+    nativeCanvas.reset();
+
+    device.FinishRenderingCurrentFrame();
 }
