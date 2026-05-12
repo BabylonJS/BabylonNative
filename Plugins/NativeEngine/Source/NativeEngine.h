@@ -26,6 +26,7 @@
 
 #include <arcana/threading/cancellation.h>
 #include <map>
+#include <optional>
 
 namespace Babylon
 {
@@ -128,10 +129,12 @@ namespace Babylon
         void SetCommandDataStream(const Napi::CallbackInfo& info);
         void SubmitCommands(const Napi::CallbackInfo& info);
         void PopulateFrameStats(const Napi::CallbackInfo& info);
+        void BeginFrame(const Napi::CallbackInfo&);
+        void EndFrame(const Napi::CallbackInfo&);
         void DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode);
 
-        Graphics::UpdateToken& GetUpdateToken();
-        Graphics::FrameBuffer& GetBoundFrameBuffer(bgfx::Encoder& encoder);
+        bgfx::Encoder* GetEncoder();
+        Graphics::FrameBuffer& GetBoundFrameBuffer();
 
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
 
@@ -141,11 +144,8 @@ namespace Babylon
 
         JsRuntime& m_runtime;
         Graphics::DeviceContext& m_deviceContext;
-        Graphics::Update m_update;
 
         JsRuntimeScheduler m_runtimeScheduler;
-
-        std::optional<Graphics::UpdateToken> m_updateToken{};
 
         void ScheduleRequestAnimationFrameCallbacks();
         bool m_requestAnimationFrameCallbacksScheduled{};
