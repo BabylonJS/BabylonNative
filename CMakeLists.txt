@@ -64,6 +64,8 @@ FetchContent_Declare(metal-cpp
     GIT_TAG metal-cpp_26
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(SPIRV-Cross
+    # TODO: revert to https://github.com/KhronosGroup/SPIRV-Cross.git once the
+    # corresponding PR on BabylonJS/SPIRV-Cross is merged, then bump GIT_TAG.
     GIT_REPOSITORY https://github.com/CedricGuillemet/SPIRV-Cross.git
     GIT_TAG 80a01c2bfff6c846b2757a0e1bbf29afbf25edbb
     EXCLUDE_FROM_ALL)

@@ -174,6 +174,10 @@ namespace Babylon::ShaderCompilerCommon
                 {
                     auto& uniform = info.Uniforms.emplace_back();
                     uniform.Name = compiler.get_name(id);
+                    if (uniform.Name.empty())
+                    {
+                        throw std::runtime_error{"Uniform with empty name detected — likely a UBO block or struct uniform was incorrectly type-converted."};
+                    }
                     uniform.Offset = 0; // Not actually used for anything by OpenGL.
 
                     if (type.columns == 1 && 1 <= type.vecsize && type.vecsize <= 4)
