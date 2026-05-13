@@ -57,6 +57,7 @@ namespace Babylon::Polyfills::Internal
         {
             constexpr const char* ReadyStateChange = "readystatechange";
             constexpr const char* LoadEnd = "loadend";
+            constexpr const char* Error = "error";
         }
     }
 
@@ -262,19 +263,24 @@ namespace Babylon::Polyfills::Internal
             .then(arcana::inline_scheduler, arcana::cancellation::none(), [sendRegion{std::move(sendRegion)}]() mutable {
                 sendRegion.reset();
             })
-            .then(m_runtimeScheduler, arcana::cancellation::none(), [this]() {
+            .then(m_runtimeScheduler, arcana::cancellation::none(), [this](const arcana::expected<void, std::exception_ptr>& result) {
+                // Run on every outcome -- transport exception OR underlying request succeeded but ended in a non-2xx
+                // status (e.g. a missing local file on UWP, where UrlLib silently retains status 0). The previous
+                // success-only continuation here skipped readyState=Done / loadend / error and let the JS observer
+                // hang.
+                const auto statusCode = arcana::underlying_cast(m_request.StatusCode());
+                const bool failed = result.has_error() || statusCode < 200 || statusCode >= 300;
+
                 SetReadyState(ReadyState::Done);
+                if (failed)
+                {
+                    RaiseEvent(EventType::Error);
+                }
                 RaiseEvent(EventType::LoadEnd);
 
                 // Assume the XMLHttpRequest will only be used for a single request and clear the event handlers.
                 // Single use seems to be the standard pattern, and we need to release our strong refs to event handlers.
                 m_eventHandlerRefs.clear();
-            })
-            .then(arcana::inline_scheduler, arcana::cancellation::none(), [env = info.Env()](arcana::expected<void, std::exception_ptr> result) {
-                if (result.has_error())
-                {
-                    Napi::Error::New(env, result.error()).ThrowAsJavaScriptException();
-                }
             });
     }
 
