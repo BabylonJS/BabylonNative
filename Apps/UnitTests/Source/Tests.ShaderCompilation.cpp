@@ -16,7 +16,7 @@ using namespace std::chrono_literals;
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
-TEST(ShadersCross, CompileComprehensiveGLSL)
+TEST(ShaderCompilation, CompileComprehensiveGLSL)
 {
     Babylon::Graphics::Device device{g_deviceConfig};
     Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
