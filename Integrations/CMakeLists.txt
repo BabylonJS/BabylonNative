@@ -23,6 +23,7 @@ target_link_libraries(Integrations
     # GraphicsDevice is PUBLIC because View.h (a public header)
     # references `Babylon::Graphics::WindowT` from <Babylon/Graphics/Platform.h>.
     PUBLIC GraphicsDevice
+    PRIVATE arcana
     PRIVATE AppRuntime
     PRIVATE ScriptLoader
     PRIVATE Blob
