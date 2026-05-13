@@ -1,5 +1,6 @@
 #include "DeviceImpl.h"
 
+#include <Babylon/Graphics/DeviceQueries.h>
 #include <Babylon/Graphics/Platform.h>
 #include <Babylon/Graphics/RendererType.h>
 #include <Babylon/JsRuntime.h>
@@ -101,7 +102,7 @@ namespace Babylon::Graphics
         std::scoped_lock lock{m_state.Mutex};
         ConfigureBgfxPlatformData(m_state.Bgfx.InitState.platformData, window);
         ConfigureBgfxRenderType(m_state.Bgfx.InitState.platformData, m_state.Bgfx.InitState.type);
-        m_state.Resolution.DevicePixelRatio = GetDevicePixelRatio(window);
+        m_state.Resolution.DevicePixelRatio = Babylon::Graphics::GetDevicePixelRatio(window);
         m_state.Bgfx.Dirty = true;
     }
 

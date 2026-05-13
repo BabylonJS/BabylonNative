@@ -252,27 +252,28 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 void ProcessMouseButtons(tagPOINTER_BUTTON_CHANGE_TYPE changeType, int x, int y)
 {
     using View = Babylon::Integrations::View;
+    using CoordinateUnits = Babylon::Integrations::CoordinateUnits;
     if (!g_view) return;
 
     switch (changeType)
     {
         case POINTER_CHANGE_FIRSTBUTTON_DOWN:
-            g_view->OnMouseDown(View::LeftMouseButton(), static_cast<float>(x), static_cast<float>(y));
+            g_view->OnMouseDown(View::LeftMouseButton(), static_cast<float>(x), static_cast<float>(y), CoordinateUnits::Physical);
             break;
         case POINTER_CHANGE_FIRSTBUTTON_UP:
-            g_view->OnMouseUp(View::LeftMouseButton(), static_cast<float>(x), static_cast<float>(y));
+            g_view->OnMouseUp(View::LeftMouseButton(), static_cast<float>(x), static_cast<float>(y), CoordinateUnits::Physical);
             break;
         case POINTER_CHANGE_SECONDBUTTON_DOWN:
-            g_view->OnMouseDown(View::RightMouseButton(), static_cast<float>(x), static_cast<float>(y));
+            g_view->OnMouseDown(View::RightMouseButton(), static_cast<float>(x), static_cast<float>(y), CoordinateUnits::Physical);
             break;
         case POINTER_CHANGE_SECONDBUTTON_UP:
-            g_view->OnMouseUp(View::RightMouseButton(), static_cast<float>(x), static_cast<float>(y));
+            g_view->OnMouseUp(View::RightMouseButton(), static_cast<float>(x), static_cast<float>(y), CoordinateUnits::Physical);
             break;
         case POINTER_CHANGE_THIRDBUTTON_DOWN:
-            g_view->OnMouseDown(View::MiddleMouseButton(), static_cast<float>(x), static_cast<float>(y));
+            g_view->OnMouseDown(View::MiddleMouseButton(), static_cast<float>(x), static_cast<float>(y), CoordinateUnits::Physical);
             break;
         case POINTER_CHANGE_THIRDBUTTON_UP:
-            g_view->OnMouseUp(View::MiddleMouseButton(), static_cast<float>(x), static_cast<float>(y));
+            g_view->OnMouseUp(View::MiddleMouseButton(), static_cast<float>(x), static_cast<float>(y), CoordinateUnits::Physical);
             break;
     }
 }
@@ -280,6 +281,7 @@ void ProcessMouseButtons(tagPOINTER_BUTTON_CHANGE_TYPE changeType, int x, int y)
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     using View = Babylon::Integrations::View;
+    using CoordinateUnits = Babylon::Integrations::CoordinateUnits;
 
     switch (message)
     {
@@ -328,7 +330,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             if (g_view)
             {
                 g_view->Resize(static_cast<uint32_t>(LOWORD(lParam)),
-                                static_cast<uint32_t>(HIWORD(lParam)));
+                                static_cast<uint32_t>(HIWORD(lParam)),
+                                CoordinateUnits::Physical);
             }
             break;
         }
@@ -375,7 +378,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     {
                         g_view->OnPointerDown(static_cast<int32_t>(pointerId),
                                                 static_cast<float>(x),
-                                                static_cast<float>(y));
+                                                static_cast<float>(y),
+                                                CoordinateUnits::Physical);
                     }
                 }
             }
@@ -397,13 +401,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     if (info.pointerType == PT_MOUSE)
                     {
                         ProcessMouseButtons(info.ButtonChangeType, x, y);
-                        g_view->OnMouseMove(static_cast<float>(x), static_cast<float>(y));
+                        g_view->OnMouseMove(static_cast<float>(x), static_cast<float>(y), CoordinateUnits::Physical);
                     }
                     else
                     {
                         g_view->OnPointerMove(static_cast<int32_t>(pointerId),
                                                 static_cast<float>(x),
-                                                static_cast<float>(y));
+                                                static_cast<float>(y),
+                                                CoordinateUnits::Physical);
                     }
                 }
             }
@@ -430,7 +435,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     {
                         g_view->OnPointerUp(static_cast<int32_t>(pointerId),
                                               static_cast<float>(x),
-                                              static_cast<float>(y));
+                                              static_cast<float>(y),
+                                              CoordinateUnits::Physical);
                     }
                 }
             }

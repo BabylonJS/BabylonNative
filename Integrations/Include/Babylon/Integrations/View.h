@@ -10,6 +10,40 @@ namespace Babylon::Integrations
     class Runtime;
     struct ViewImpl;
 
+    // Tag for the units of coordinates and dimensions handed to View
+    // methods. Babylon.js consumes pointer events and render-target
+    // sizes in **logical** (CSS / DIP) pixels; the View internally
+    // divides by the Device's queried device-pixel-ratio when given
+    // values in **physical** (surface pixel-buffer) units, so hosts
+    // pass through whatever their platform's native event system /
+    // surface-size API delivers.
+    //
+    // Examples:
+    //   Physical: Android `MotionEvent.getX/getY` /
+    //             `ANativeWindow_getWidth/Height`,
+    //             Apple `CAMetalLayer.drawableSize`,
+    //             Win32 `GetClientRect` / `WM_POINTER*` (DPI-aware),
+    //             X11 button events / `XGetGeometry`.
+    //   Logical:  iOS `UITouch.location`,
+    //             macOS `NSEvent.locationInWindow`,
+    //             UWP `PointerPoint.Position` / `CoreWindow.Bounds`,
+    //             host code that has already done its own DPR divide.
+    enum class CoordinateUnits
+    {
+        Physical,
+        Logical,
+    };
+
+    // Pixel dimensions returned by `ViewImpl::QuerySize`, tagged with
+    // the units they're in. `View::Attach` consumes this and converts
+    // to logical via the platform's queried DPR when needed.
+    struct ViewSize
+    {
+        uint32_t Width;
+        uint32_t Height;
+        CoordinateUnits Units;
+    };
+
     // Transient: created when a host surface appears, destroyed when
     // it goes away. Multiple sequential Views may be attached to the
     // same Runtime over its lifetime. **At most one View may be attached
@@ -28,11 +62,9 @@ namespace Babylon::Integrations
         // (HWND on Win32, ANativeWindow* on Android, CA::MetalLayer*
         // on Apple, X11 `Window` on Linux, winrt::IInspectable on UWP).
         // The View queries the surface's pixel-buffer size from the
-        // window itself (Android `ANativeWindow_getWidth/Height`,
-        // Apple `CAMetalLayer.drawableSize`, Win32 `GetClientRect`,
-        // X11 `XGetGeometry`, UWP bounds × scale) — the host doesn't
-        // pass dimensions. The Device queries the screen
-        // device-pixel-ratio internally as well.
+        // window itself via `ViewImpl::QuerySize`, which returns the
+        // platform-natural unit; the View internally converts to
+        // logical pixels before configuring the Device.
         //
         // The first Attach on a given Runtime is the heavy step: it
         // constructs `Babylon::Graphics::Device`, dispatches GPU plugin
@@ -71,32 +103,36 @@ namespace Babylon::Integrations
         // rendered").
         void RenderFrame();
 
-        // Resize the bound surface. `width` and `height` are in
-        // **physical pixels** — the actual pixel-buffer dimensions of
-        // the surface the GPU will render into. Hosts pass through
-        // whatever their platform's view layer reports (e.g.
-        // Android's `View.onSizeChanged` w/h, iOS's
-        // `MTKViewDelegate.drawableSizeWillChange:` size).
+        // Resize the bound surface. The View converts physical →
+        // logical internally if `units == CoordinateUnits::Physical`,
+        // so the host can pass whatever its platform's view layer
+        // reports without doing the DPR divide.
+        //
+        // Examples:
+        //   Android `View.onSizeChanged(w, h)` → Physical.
+        //   iOS `MTKViewDelegate.drawableSizeWillChange:` → Physical.
+        //   UWP `SizeChangedEventArgs.NewSize` (already in DIPs) → Logical.
         //
         // Must be called from the frame thread.
-        void Resize(uint32_t width, uint32_t height);
+        void Resize(uint32_t width, uint32_t height, CoordinateUnits units);
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
         // ----- Pointer / mouse input forwarding -----
         //
         // Host calls these from its event loop while the view exists.
         // Routed to the JS thread via `NativeInput`, where Babylon.js
-        // consumes them as `PointerEvent.clientX/clientY`.
+        // consumes them as `PointerEvent.clientX/clientY` (logical /
+        // CSS pixels). The View converts physical → logical internally
+        // if `units == CoordinateUnits::Physical`.
         //
-        // **Pass coordinates in whatever unit your platform's native
-        // event system delivers.** The View internally normalizes to
-        // logical (CSS) pixels — the unit Babylon.js expects — using
-        // a per-platform helper. On platforms whose native pointer
-        // events are already in logical units (iOS `UITouch`, macOS
-        // `NSEvent`, UWP `PointerPoint`), this is a passthrough; on
-        // platforms that deliver physical pixels (Android `MotionEvent`,
-        // Win32 `WM_POINTER*`, X11 button events), the View divides by
-        // the Device's queried device-pixel-ratio.
+        // Pass coordinates in whatever unit your platform's native
+        // event system delivers:
+        //   Physical: Android `MotionEvent.getX/getY`,
+        //             Win32 `WM_POINTER*` / `WM_MOUSE*` (DPI-aware),
+        //             X11 button events.
+        //   Logical:  iOS `UITouch.location`,
+        //             macOS `NSEvent.locationInWindow`,
+        //             UWP `PointerPoint.Position`.
         //
         // Babylon Native distinguishes pointer (touch) input from mouse
         // input; both methods feed the same Babylon.js pointer-event
@@ -112,9 +148,9 @@ namespace Babylon::Integrations
         // Safe to call from any thread.
 
         // Touch / pointer events.
-        void OnPointerDown(int32_t pointerId, float x, float y);
-        void OnPointerMove(int32_t pointerId, float x, float y);
-        void OnPointerUp(int32_t pointerId, float x, float y);
+        void OnPointerDown(int32_t pointerId, float x, float y, CoordinateUnits units);
+        void OnPointerMove(int32_t pointerId, float x, float y, CoordinateUnits units);
+        void OnPointerUp(int32_t pointerId, float x, float y, CoordinateUnits units);
 
         // Mouse events. `buttonIndex` is one of LeftMouseButton(),
         // MiddleMouseButton(), RightMouseButton(); `wheelAxis` is
@@ -122,9 +158,9 @@ namespace Babylon::Integrations
         // `Babylon::Plugins::NativeInput::*_ID` value (single source of
         // truth — no duplication, no risk of drift) without exposing the
         // NativeInput header from this public View.h.
-        void OnMouseDown(uint32_t buttonIndex, float x, float y);
-        void OnMouseUp(uint32_t buttonIndex, float x, float y);
-        void OnMouseMove(float x, float y);
+        void OnMouseDown(uint32_t buttonIndex, float x, float y, CoordinateUnits units);
+        void OnMouseUp(uint32_t buttonIndex, float x, float y, CoordinateUnits units);
+        void OnMouseMove(float x, float y, CoordinateUnits units);
         void OnMouseWheel(uint32_t wheelAxis, int32_t scrollValue);
 
         static uint32_t LeftMouseButton();

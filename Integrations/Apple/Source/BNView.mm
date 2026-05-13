@@ -115,7 +115,8 @@
     if (_view)
     {
         _view->Resize(static_cast<uint32_t>(width),
-                       static_cast<uint32_t>(height));
+                       static_cast<uint32_t>(height),
+                       Babylon::Integrations::CoordinateUnits::Physical);
     }
 }
 
@@ -128,7 +129,8 @@
     {
         _view->OnPointerDown(static_cast<int32_t>(pointerId),
                               static_cast<float>(x),
-                              static_cast<float>(y));
+                              static_cast<float>(y),
+                              Babylon::Integrations::CoordinateUnits::Logical);
     }
 #else
     (void)pointerId; (void)x; (void)y;
@@ -146,7 +148,8 @@
     {
         _view->OnPointerMove(static_cast<int32_t>(pointerId),
                               static_cast<float>(x),
-                              static_cast<float>(y));
+                              static_cast<float>(y),
+                              Babylon::Integrations::CoordinateUnits::Logical);
     }
 #else
     (void)pointerId; (void)x; (void)y;
@@ -164,7 +167,8 @@
     {
         _view->OnPointerUp(static_cast<int32_t>(pointerId),
                             static_cast<float>(x),
-                            static_cast<float>(y));
+                            static_cast<float>(y),
+                            Babylon::Integrations::CoordinateUnits::Logical);
     }
 #else
     (void)pointerId; (void)x; (void)y;

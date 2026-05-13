@@ -128,13 +128,23 @@ public final class BabylonNative {
 
     public static native void viewRenderFrame(long handle);
 
+    /**
+     * Push the surface's new pixel-buffer dimensions. Both
+     * {@code width} and {@code height} are in **physical pixels** —
+     * pass the values you receive from
+     * {@code SurfaceHolder.Callback.surfaceChanged} unchanged. The
+     * native View divides by the device-pixel-ratio internally
+     * before configuring {@code Babylon::Graphics::Device}.
+     */
     public static native void viewResize(long handle, int width, int height);
 
     /**
-     * Pointer events. Pass {@code MotionEvent.getX/getY} through unchanged
-     * (Android-native physical-pixel coordinates). The View internally
-     * normalizes to logical (CSS) pixels — the unit Babylon.js's
-     * {@code PointerEvent.clientX/clientY} pipeline expects.
+     * Pointer events. Pass {@code MotionEvent.getX/getY} through
+     * unchanged — Android-native physical-pixel coordinates. The
+     * native View divides by the device-pixel-ratio internally
+     * before forwarding to Babylon.js's
+     * {@code PointerEvent.clientX/clientY} pipeline (which expects
+     * logical / CSS pixels).
      *
      * <p>Throws {@link IllegalStateException} if invoked when the
      * native library was built without

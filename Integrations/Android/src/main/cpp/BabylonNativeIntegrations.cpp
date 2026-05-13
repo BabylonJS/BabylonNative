@@ -413,8 +413,11 @@ JNIEXPORT void JNICALL
 Java_com_babylonjs_integrations_BabylonNative_viewResize(
     JNIEnv*, jclass, jlong handle, jint width, jint height)
 {
+    // Java callers pass the SurfaceView's pixel-buffer dimensions
+    // (physical pixels on Android).
     AsView(handle)->Resize(static_cast<uint32_t>(width),
-                            static_cast<uint32_t>(height));
+                            static_cast<uint32_t>(height),
+                            Babylon::Integrations::CoordinateUnits::Physical);
 }
 
 JNIEXPORT void JNICALL
@@ -423,7 +426,9 @@ Java_com_babylonjs_integrations_BabylonNative_viewPointerDown(
 {
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
     (void)env;
-    AsView(handle)->OnPointerDown(static_cast<int32_t>(pointerId), x, y);
+    // Java callers pass `MotionEvent.getX/getY`, which are in physical pixels.
+    AsView(handle)->OnPointerDown(static_cast<int32_t>(pointerId), x, y,
+                                   Babylon::Integrations::CoordinateUnits::Physical);
 #else
     (void)handle; (void)pointerId; (void)x; (void)y;
     ThrowPluginNotEnabled(env,
@@ -438,7 +443,8 @@ Java_com_babylonjs_integrations_BabylonNative_viewPointerMove(
 {
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
     (void)env;
-    AsView(handle)->OnPointerMove(static_cast<int32_t>(pointerId), x, y);
+    AsView(handle)->OnPointerMove(static_cast<int32_t>(pointerId), x, y,
+                                   Babylon::Integrations::CoordinateUnits::Physical);
 #else
     (void)handle; (void)pointerId; (void)x; (void)y;
     ThrowPluginNotEnabled(env,
@@ -453,7 +459,8 @@ Java_com_babylonjs_integrations_BabylonNative_viewPointerUp(
 {
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
     (void)env;
-    AsView(handle)->OnPointerUp(static_cast<int32_t>(pointerId), x, y);
+    AsView(handle)->OnPointerUp(static_cast<int32_t>(pointerId), x, y,
+                                 Babylon::Integrations::CoordinateUnits::Physical);
 #else
     (void)handle; (void)pointerId; (void)x; (void)y;
     ThrowPluginNotEnabled(env,

@@ -23,6 +23,13 @@ target_link_libraries(Integrations
     # GraphicsDevice is PUBLIC because View.h (a public header)
     # references `Babylon::Graphics::WindowT` from <Babylon/Graphics/Platform.h>.
     PUBLIC GraphicsDevice
+    # GraphicsDeviceContext is PRIVATE — needed so View.cpp can see
+    # <Babylon/Graphics/DeviceQueries.h> for the free
+    # `Babylon::Graphics::GetDevicePixelRatio(window)` helper used to
+    # convert physical → logical pixels in `View::Attach`'s first-attach
+    # path (before the `Device` exists). Internal Graphics types are
+    # never exposed across the Integrations public surface.
+    PRIVATE GraphicsDeviceContext
     PRIVATE arcana
     PRIVATE AppRuntime
     PRIVATE ScriptLoader

@@ -1,5 +1,6 @@
 #include <cmath>
 #include <Babylon/Graphics/Platform.h>
+#include <Babylon/Graphics/DeviceQueries.h>
 #include "DeviceImpl.h"
 
 #import <QuartzCore/QuartzCore.h>
@@ -25,7 +26,7 @@ namespace Babylon::Graphics
     {
     }
 
-    float DeviceImpl::GetDevicePixelRatio(WindowT window)
+    float GetDevicePixelRatio(WindowT window)
     {
         // contentsScale can return 0 if it hasn't been set yet.
         float scale = static_cast<float>(((CAMetalLayer*)window).contentsScale);

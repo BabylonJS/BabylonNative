@@ -4,11 +4,11 @@
 
 namespace Babylon::Integrations
 {
-    std::pair<uint32_t, uint32_t> ViewImpl::QuerySize(Babylon::Graphics::WindowT window)
+    ViewSize ViewImpl::QuerySize(Babylon::Graphics::WindowT window)
     {
         if (window == 0)
         {
-            return {0, 0};
+            return {0, 0, CoordinateUnits::Physical};
         }
 
         // X11 `Window` is just an XID; querying its geometry needs a
@@ -18,7 +18,7 @@ namespace Babylon::Integrations
         Display* display = XOpenDisplay(nullptr);
         if (display == nullptr)
         {
-            return {0, 0};
+            return {0, 0, CoordinateUnits::Physical};
         }
 
         ::Window root{};
@@ -31,17 +31,9 @@ namespace Babylon::Integrations
 
         if (status == 0)
         {
-            return {0, 0};
+            return {0, 0, CoordinateUnits::Physical};
         }
-        return {width, height};
-    }
-
-    std::pair<float, float> ViewImpl::ToLogicalCoords(float x, float y) const
-    {
-        // X11 button-event coordinates are in physical pixels. Divide
-        // by the Device's queried DPR.
-        const auto& impl = *m_runtime.m_impl;
-        const float dpr = impl.m_device ? impl.m_device->GetDevicePixelRatio() : 1.0f;
-        return {x / dpr, y / dpr};
+        // XGetGeometry returns the window's size in physical pixels.
+        return {width, height, CoordinateUnits::Physical};
     }
 }

@@ -172,16 +172,9 @@ namespace Babylon::Integrations
         void Resume();
 
         // Query the surface's pixel-buffer size from the native window
-        // handle. Implemented per-platform.
-        static std::pair<uint32_t, uint32_t> QuerySize(Babylon::Graphics::WindowT window);
-
-        // Convert native pointer-event coordinates to the logical (CSS)
-        // pixels the NativeInput / Babylon.js pointer pipeline expects.
-        // On platforms whose native event system already delivers
-        // logical units (iOS, macOS, UWP), this is a passthrough; on
-        // platforms that deliver physical pixels (Android, Win32, X11),
-        // this divides by the Device's queried device-pixel-ratio.
-        // Implemented per-platform.
-        std::pair<float, float> ToLogicalCoords(float x, float y) const;
+        // handle, tagged with the platform-natural units it returned.
+        // Implemented per-platform. `View::Attach` converts to logical
+        // before configuring the Device.
+        static ViewSize QuerySize(Babylon::Graphics::WindowT window);
     };
 }

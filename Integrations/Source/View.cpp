@@ -1,9 +1,40 @@
 #include "RuntimeImpl.h"
 
+#include <Babylon/Graphics/DeviceQueries.h>
+
 #include <cassert>
 
 namespace Babylon::Integrations
 {
+    namespace
+    {
+        // Convert a (width, height) measured in `units` to logical
+        // pixels. Caller always passes the real DPR; this helper
+        // decides whether to apply it based on `units`.
+        std::pair<uint32_t, uint32_t> ToLogicalSize(uint32_t width, uint32_t height,
+                                                    CoordinateUnits units, float dpr)
+        {
+            if (units == CoordinateUnits::Logical || dpr <= 0.0f)
+            {
+                return {width, height};
+            }
+            return {static_cast<uint32_t>(width / dpr),
+                    static_cast<uint32_t>(height / dpr)};
+        }
+
+        // Convert a (x, y) coordinate pair measured in `units` to
+        // logical pixels.
+        std::pair<float, float> ToLogicalCoords(float x, float y,
+                                                CoordinateUnits units, float dpr)
+        {
+            if (units == CoordinateUnits::Logical || dpr <= 0.0f)
+            {
+                return {x, y};
+            }
+            return {x / dpr, y / dpr};
+        }
+    }
+
     // ---------------------------------------------------------------------
     // View::Attach (first time and subsequent)
     // ---------------------------------------------------------------------
@@ -20,18 +51,24 @@ namespace Babylon::Integrations
         const bool firstAttach = !impl.m_device;
 
         // Per-platform: query the surface's pixel-buffer size from the
-        // native window handle. ViewImpl_*.cpp implements this; e.g.
-        // ANativeWindow_getWidth on Android, GetClientRect on Win32,
-        // CAMetalLayer.drawableSize on Apple.
-        const auto [width, height] = ViewImpl::QuerySize(nativeWindow);
+        // native window handle in whatever unit is natural for the
+        // platform. `Babylon::Graphics::Device` expects logical pixels
+        // for `Configuration::Width/Height` and `UpdateSize`, so we
+        // convert if QuerySize returned physical. On first Attach the
+        // Device doesn't exist yet, so we go through the standalone
+        // `Babylon::Graphics::GetDevicePixelRatio(window)` free function.
+        const ViewSize querySize = ViewImpl::QuerySize(nativeWindow);
+        const float dpr = Babylon::Graphics::GetDevicePixelRatio(nativeWindow);
+        const auto [logicalW, logicalH] = ToLogicalSize(
+            querySize.Width, querySize.Height, querySize.Units, dpr);
 
         if (firstAttach)
         {
             // First Attach on this Runtime: construct the Device.
             Babylon::Graphics::Configuration config{};
             config.Window = nativeWindow;
-            config.Width = width;
-            config.Height = height;
+            config.Width = logicalW;
+            config.Height = logicalH;
             config.MSAASamples = impl.m_options.msaaSamples;
 
             impl.m_device.emplace(config);
@@ -43,7 +80,7 @@ namespace Babylon::Integrations
             // the surface. Plugins, polyfills, and any loaded scripts
             // are preserved on the JS side.
             impl.m_device->UpdateWindow(nativeWindow);
-            impl.m_device->UpdateSize(width, height);
+            impl.m_device->UpdateSize(logicalW, logicalH);
         }
 
         std::unique_ptr<View> view{new View{std::make_unique<ViewImpl>(runtime)}};
@@ -155,82 +192,90 @@ namespace Babylon::Integrations
         impl.m_deviceUpdate->Start();
     }
 
-    void View::Resize(uint32_t width, uint32_t height)
+    void View::Resize(uint32_t width, uint32_t height, CoordinateUnits units)
     {
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
         if (impl.m_device)
         {
-            impl.m_device->UpdateSize(width, height);
+            const auto [lw, lh] = ToLogicalSize(width, height, units,
+                                                impl.m_device->GetDevicePixelRatio());
+            impl.m_device->UpdateSize(lw, lh);
         }
     }
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
-    void View::OnPointerDown(int32_t pointerId, float x, float y)
+    void View::OnPointerDown(int32_t pointerId, float x, float y, CoordinateUnits units)
     {
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
-        if (impl.m_input)
+        if (impl.m_input && impl.m_device)
         {
-            const auto [lx, ly] = m_impl->ToLogicalCoords(x, y);
+            const auto [lx, ly] = ToLogicalCoords(x, y, units,
+                                                  impl.m_device->GetDevicePixelRatio());
             impl.m_input->TouchDown(static_cast<uint32_t>(pointerId),
                                      static_cast<int32_t>(lx),
                                      static_cast<int32_t>(ly));
         }
     }
 
-    void View::OnPointerMove(int32_t pointerId, float x, float y)
+    void View::OnPointerMove(int32_t pointerId, float x, float y, CoordinateUnits units)
     {
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
-        if (impl.m_input)
+        if (impl.m_input && impl.m_device)
         {
-            const auto [lx, ly] = m_impl->ToLogicalCoords(x, y);
+            const auto [lx, ly] = ToLogicalCoords(x, y, units,
+                                                  impl.m_device->GetDevicePixelRatio());
             impl.m_input->TouchMove(static_cast<uint32_t>(pointerId),
                                      static_cast<int32_t>(lx),
                                      static_cast<int32_t>(ly));
         }
     }
 
-    void View::OnPointerUp(int32_t pointerId, float x, float y)
+    void View::OnPointerUp(int32_t pointerId, float x, float y, CoordinateUnits units)
     {
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
-        if (impl.m_input)
+        if (impl.m_input && impl.m_device)
         {
-            const auto [lx, ly] = m_impl->ToLogicalCoords(x, y);
+            const auto [lx, ly] = ToLogicalCoords(x, y, units,
+                                                  impl.m_device->GetDevicePixelRatio());
             impl.m_input->TouchUp(static_cast<uint32_t>(pointerId),
                                    static_cast<int32_t>(lx),
                                    static_cast<int32_t>(ly));
         }
     }
 
-    void View::OnMouseDown(uint32_t buttonIndex, float x, float y)
+    void View::OnMouseDown(uint32_t buttonIndex, float x, float y, CoordinateUnits units)
     {
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
-        if (impl.m_input)
+        if (impl.m_input && impl.m_device)
         {
-            const auto [lx, ly] = m_impl->ToLogicalCoords(x, y);
+            const auto [lx, ly] = ToLogicalCoords(x, y, units,
+                                                  impl.m_device->GetDevicePixelRatio());
             impl.m_input->MouseDown(buttonIndex,
                                      static_cast<int32_t>(lx),
                                      static_cast<int32_t>(ly));
         }
     }
 
-    void View::OnMouseUp(uint32_t buttonIndex, float x, float y)
+    void View::OnMouseUp(uint32_t buttonIndex, float x, float y, CoordinateUnits units)
     {
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
-        if (impl.m_input)
+        if (impl.m_input && impl.m_device)
         {
-            const auto [lx, ly] = m_impl->ToLogicalCoords(x, y);
+            const auto [lx, ly] = ToLogicalCoords(x, y, units,
+                                                  impl.m_device->GetDevicePixelRatio());
             impl.m_input->MouseUp(buttonIndex,
                                    static_cast<int32_t>(lx),
                                    static_cast<int32_t>(ly));
         }
     }
 
-    void View::OnMouseMove(float x, float y)
+    void View::OnMouseMove(float x, float y, CoordinateUnits units)
     {
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
-        if (impl.m_input)
+        if (impl.m_input && impl.m_device)
         {
-            const auto [lx, ly] = m_impl->ToLogicalCoords(x, y);
+            const auto [lx, ly] = ToLogicalCoords(x, y, units,
+                                                  impl.m_device->GetDevicePixelRatio());
             impl.m_input->MouseMove(static_cast<int32_t>(lx),
                                      static_cast<int32_t>(ly));
         }
