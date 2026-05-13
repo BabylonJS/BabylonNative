@@ -34,16 +34,6 @@ namespace Babylon::Integrations
         Logical,
     };
 
-    // Pixel dimensions returned by `ViewImpl::QuerySize`, tagged with
-    // the units they're in. `View::Attach` consumes this and converts
-    // to logical via the platform's queried DPR when needed.
-    struct ViewSize
-    {
-        uint32_t Width;
-        uint32_t Height;
-        CoordinateUnits Units;
-    };
-
     // Transient: created when a host surface appears, destroyed when
     // it goes away. Multiple sequential Views may be attached to the
     // same Runtime over its lifetime. **At most one View may be attached

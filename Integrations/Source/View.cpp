@@ -57,7 +57,7 @@ namespace Babylon::Integrations
         // convert if QuerySize returned physical. On first Attach the
         // Device doesn't exist yet, so we go through the standalone
         // `Babylon::Graphics::GetDevicePixelRatio(window)` free function.
-        const ViewSize querySize = ViewImpl::QuerySize(nativeWindow);
+        const auto querySize = ViewImpl::QuerySize(nativeWindow);
         const float dpr = Babylon::Graphics::GetDevicePixelRatio(nativeWindow);
         const auto [logicalW, logicalH] = ToLogicalSize(
             querySize.Width, querySize.Height, querySize.Units, dpr);

@@ -175,6 +175,12 @@ namespace Babylon::Integrations
         // handle, tagged with the platform-natural units it returned.
         // Implemented per-platform. `View::Attach` converts to logical
         // before configuring the Device.
-        static ViewSize QuerySize(Babylon::Graphics::WindowT window);
+        struct QuerySizeResult
+        {
+            uint32_t Width;
+            uint32_t Height;
+            CoordinateUnits Units;
+        };
+        static QuerySizeResult QuerySize(Babylon::Graphics::WindowT window);
     };
 }

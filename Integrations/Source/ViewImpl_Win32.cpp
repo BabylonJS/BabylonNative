@@ -4,7 +4,7 @@
 
 namespace Babylon::Integrations
 {
-    ViewSize ViewImpl::QuerySize(Babylon::Graphics::WindowT window)
+    ViewImpl::QuerySizeResult ViewImpl::QuerySize(Babylon::Graphics::WindowT window)
     {
         RECT rect{};
         if (window == nullptr || !GetClientRect(window, &rect))

@@ -4,7 +4,7 @@
 
 namespace Babylon::Integrations
 {
-    ViewSize ViewImpl::QuerySize(Babylon::Graphics::WindowT window)
+    ViewImpl::QuerySizeResult ViewImpl::QuerySize(Babylon::Graphics::WindowT window)
     {
         if (window == 0)
         {

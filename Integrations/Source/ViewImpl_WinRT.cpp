@@ -5,7 +5,7 @@
 
 namespace Babylon::Integrations
 {
-    ViewSize ViewImpl::QuerySize(Babylon::Graphics::WindowT window)
+    ViewImpl::QuerySizeResult ViewImpl::QuerySize(Babylon::Graphics::WindowT window)
     {
         // WindowT here is `winrt::Windows::Foundation::IInspectable`
         // wrapping one of: ICoreWindow, ISwapChainPanel,
