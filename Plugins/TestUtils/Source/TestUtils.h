@@ -17,6 +17,10 @@
 
 namespace Babylon::Plugins::Internal
 {
+    // Defined in TestUtils.cpp. Invokes the optional host callback set via
+    // Babylon::Plugins::TestUtils::SetExitCallback(); no-op if unset.
+    void InvokeExitCallback(int exitCode);
+
     class TestUtils final : public Napi::ObjectWrap<TestUtils>
     {
     public:

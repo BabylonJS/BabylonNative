@@ -731,7 +731,7 @@ namespace Babylon::Polyfills::Internal
 
     void Context::PutImageData(const Napi::CallbackInfo&)
     {
-        throw std::runtime_error{"not implemented"};
+        throw std::runtime_error{"Context2D.putImageData: not implemented"};
     }
 
     void Context::Arc(const Napi::CallbackInfo& info)
@@ -844,7 +844,7 @@ namespace Babylon::Polyfills::Internal
 
     void Context::SetLineDash(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        throw Napi::Error::New(info.Env(), "Context2D.setLineDash: not implemented");
     }
 
     void Context::StrokeText(const Napi::CallbackInfo& info)
@@ -1073,41 +1073,41 @@ namespace Babylon::Polyfills::Internal
 
     Napi::Value Context::GetShadowColor(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        throw Napi::Error::New(info.Env(), "Context2D.shadowColor (get): not implemented");
     }
 
     void Context::SetShadowColor(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        throw Napi::Error::New(info.Env(), "Context2D.shadowColor (set): not implemented");
     }
 
     Napi::Value Context::GetShadowBlur(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        throw Napi::Error::New(info.Env(), "Context2D.shadowBlur (get): not implemented");
     }
 
     void Context::SetShadowBlur(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        throw Napi::Error::New(info.Env(), "Context2D.shadowBlur (set): not implemented");
     }
 
     Napi::Value Context::GetShadowOffsetX(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        throw Napi::Error::New(info.Env(), "Context2D.shadowOffsetX (get): not implemented");
     }
 
     void Context::SetShadowOffsetX(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        throw Napi::Error::New(info.Env(), "Context2D.shadowOffsetX (set): not implemented");
     }
 
     Napi::Value Context::GetShadowOffsetY(const Napi::CallbackInfo& info)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        throw Napi::Error::New(info.Env(), "Context2D.shadowOffsetY (get): not implemented");
     }
 
     void Context::SetShadowOffsetY(const Napi::CallbackInfo& info, const Napi::Value& value)
     {
-        throw Napi::Error::New(info.Env(), "not implemented");
+        throw Napi::Error::New(info.Env(), "Context2D.shadowOffsetY (set): not implemented");
     }
 }
