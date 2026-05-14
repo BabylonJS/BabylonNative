@@ -48,7 +48,9 @@ namespace UrlLib
         {
             ResetForOpen();
             m_responseBuffer = nullptr;
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
             m_fileResponseBuffer.clear();
+#endif
 
             m_method = method;
             m_uri = Foundation::Uri{winrt::to_hstring(url)};
