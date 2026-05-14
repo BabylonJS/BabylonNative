@@ -872,8 +872,6 @@
         {
             "title": "Color correction",
             "playgroundId": "#FBH4J7#278",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "color-correction.png"
         },
         {
@@ -1629,8 +1627,6 @@
             "title": "Default pipeline",
             "playgroundId": "#NAW8EA#6",
             "renderCount": 20,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "defaultPipeline.png"
         },
         {
@@ -1722,8 +1718,6 @@
         {
             "title": "Default rendering pipeline",
             "playgroundId": "#5XB8YT#2",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "DefaultRenderingPipeline.png"
         },
         {
@@ -2319,16 +2313,12 @@
             "title": "Baked Vertex Animation with Depth Of Field",
             "playgroundId": "#JWO4R0#8",
             "renderCount": 20,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "bakedVertexAnimationDOF.png"
         },
         {
             "title": "Baked Vertex Animation with Volumetric Light Scattering Post Process",
             "playgroundId": "#1LF9GK#3",
             "renderCount": 20,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "bakedVertexAnimationVLS.png"
         },
         {
@@ -2613,8 +2603,6 @@
         {
             "title": "PBR Debug Modes",
             "playgroundId": "#2FDQT5#2300",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "PBR-Debug-Modes.png"
         },
         {
@@ -2634,8 +2622,6 @@
         {
             "title": "MeshDebugPluginMaterial",
             "playgroundId": "#TFDNZI#2",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "MeshDebugPluginMaterial.png"
         },
         {
@@ -2743,8 +2729,6 @@
             "title": "sphere-with-custom-shader-to-display-wireframe-using-glow-layer",
             "playgroundId": "#Y05E2C#6",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "sphere-with-custom-shader-to-display-wireframe-using-glow-layer.png"
         },
         {
