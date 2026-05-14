@@ -25,7 +25,7 @@ For pure RenderDoc CLI usage (any app, not BN-specific), see
 | `Apps/Playground/Shared/CommandLine.{h,cpp}` | Argument parser. Single source of truth for supported flags. |
 | `Apps/Playground/Shared/Diagnostics.{h,cpp}` | Crash handler, `DumpFailure`, finish-line, exit-code tracking. |
 | `Apps/Playground/Shared/AppContext.cpp` | Wires `UnhandledExceptionHandler` + `console.error` into `DumpFailure`; injects `_playgroundOptions` into JS. |
-| `Apps/Playground/Scripts/validation_native.js` | Test runner. Reads `_playgroundOptions`, picks tests, calls `TestUtils.captureNextFrame()`, monkey-patches `console.error` to always include a JS stack. |
+| `Apps/Playground/Scripts/validation_native.js` | Test runner. Reads `_playgroundOptions`, picks tests, calls `TestUtils.captureNextFrame()`. Reference-image load failures arrive via `BABYLON.Tools.LoadFile`'s `onLoadFileError` and are tagged with `MISSING_REFERENCE_IMAGE:`. |
 | `Apps/Playground/Scripts/config.json` | Test catalog. Each entry has `title`, `playgroundId`/`scriptToRun`, `referenceImage`, optional `excludeFromAutomaticTesting`/`reason`/`onlyVisual`/`renderCount`/`capture`/`threshold`/`errorRatio`. |
 | `Plugins/TestUtils/Source/TestUtils.cpp` | Native side of `TestUtils.captureNextFrame()` -- calls `m_deviceContext.RequestCaptureNextFrame()`. |
 | `Core/Graphics/Source/BgfxCallback.cpp` | bgfx trace/fatal sink. Routes bgfx output to stdout in headless mode and to `OutputDebugString` always. |
@@ -80,8 +80,12 @@ When you see `[Error] Error: Cannot load X` in stdout, **scroll up** --
 short error line. The short line is kept so legacy log scrapers still match.
 
 ### 3. JS stack on every `console.error`
-`AppContext.cpp` monkey-patches `console.error` so every call automatically
-appends `new Error().stack` to the message before forwarding to the polyfill.
+`AppContext.cpp`'s `Console::Initialize` callback calls
+`Babylon::Polyfills::Console::CaptureCurrentJsStack(env)` on every
+`LogLevel::Error` message and appends the captured stack to the
+`DumpFailure` banner body. The capture is best-effort -- if the JS engine
+can't produce a stack (no JS context active, etc.) the helper returns an
+empty string and the banner just shows the message.
 Do not add per-callsite stack capture -- it's automatic.
 
 ### 4. Colored finish line
@@ -200,26 +204,25 @@ Prints TSV with index, title, referenceImage, exclusionReason. Pipe to
    vertex/index/transform. Then capture with RenderDoc -- see the dedicated
    recipe.
 
-### Reference image missing (pre-flight check)
+### Reference image missing
 If the test runner emits a line containing `MISSING_REFERENCE_IMAGE:` then the
-test never rendered -- `validation_native.js` checks that
-`<exe-dir>/ReferenceImages/<referenceImage>` exists *before* loading the
-playground source, and short-circuits with that grep-able token + `failTest`
-when the file is absent. The full message is one of:
+reference asset for that test wasn't usable. Two distinct sub-cases:
+
 ```
 MISSING_REFERENCE_IMAGE: Test 'X' has no 'referenceImage' field in config.json - cannot run pixel comparison.
-MISSING_REFERENCE_IMAGE: Test 'X' reference image not found at app:///ReferenceImages/<name>.png - cannot run pixel comparison.
+MISSING_REFERENCE_IMAGE: Test 'X' failed to load reference at app:///ReferenceImages/<name>.png. <exception>
 ```
-Exit code is **-1** (test failure), the run summary increments a dedicated
-counter (`missingRef=N`), and the run summary still prints. Distinct from
-both pixel-diff failures (which print `First pixel off`) and `[Uncaught Error]
-Failed to load file '...'` from urllib (which used to swallow this case as
-exit 1 with no run summary). RenderDoc capture is meaningless for these
-tests -- there are zero draws because the runner never reaches `loadPlayground`.
-The check is a no-op for `--generate-references` runs (refs don't exist by
-design) and for `onlyVisual` tests (which don't compare pixels). On non-Win32
-platforms the underlying `TestUtils.referenceImageExists` is a stub that
-returns `true`, so the legacy throw-on-missing behavior is preserved.
+
+The first is a catalog/config error (fixed by editing `config.json`). The
+second is a runtime asset-missing case -- the XHR for the reference PNG fired
+its `error` event (e.g. the file isn't on disk, or the local-file load failed
+otherwise), `BABYLON.Tools.LoadFile`'s `onLoadFileError` ran, the runner
+tagged the message with the grep-able token and `failTest`ed. Exit code is
+**-1** (test failure); the run summary increments a dedicated counter
+(`missingRef=N`). RenderDoc capture is meaningless for these tests -- there
+are zero draws because the runner never reaches `loadPlayground`. The check
+is a no-op for `--generate-references` runs (refs don't exist by design) and
+for `onlyVisual` tests (which don't compare pixels).
 
 ### RenderDoc capture (one-liner)
 ```powershell

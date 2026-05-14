@@ -31,11 +31,4 @@ namespace Babylon::Plugins::Internal
         auto localFolder = winrt::Windows::Storage::ApplicationData::Current().LocalFolder();
         return Napi::Value::From(info.Env(), winrt::to_string(localFolder.Path().data()));
     }
-
-    Napi::Value TestUtils::ReferenceImageExists(const Napi::CallbackInfo& info)
-    {
-        // Stub: Win32 has the real implementation.
-        (void)info;
-        return Napi::Boolean::New(info.Env(), true);
-    }
 }

@@ -440,35 +440,30 @@
         if (generateReferences) {
             loadPlayground(test, done, undefined, saveRenderedResult);
         } else {
-            // Pre-flight: verify the reference image exists before kicking
-            // off the playground load. Without this, BN's URL polyfill
-            // throws a synchronous std::runtime_error inside its async task
-            // on a missing app:///ReferenceImages/<name>.png, bypassing
-            // BABYLON.Tools.LoadFile's onLoadFileError and surfacing as
-            // UNCAUGHT JS error before the runner can record the failure.
-            // onlyVisual tests skip pixel comparison so they don't need the
-            // reference image to exist.
-            if (!test.onlyVisual) {
-                if (!test.referenceImage) {
-                    console.error("MISSING_REFERENCE_IMAGE: Test '" + (test.title || "(unnamed)") +
-                                  "' has no 'referenceImage' field in config.json - cannot run pixel comparison.");
-                    missingRefCount++;
-                    failTest(done);
-                    return;
-                }
-                if (typeof TestUtils.referenceImageExists === "function" &&
-                    !TestUtils.referenceImageExists(test.referenceImage)) {
-                    console.error("MISSING_REFERENCE_IMAGE: Test '" + (test.title || "(unnamed)") +
-                                  "' reference image not found at app:///ReferenceImages/" +
-                                  test.referenceImage + " - cannot run pixel comparison.");
-                    missingRefCount++;
-                    failTest(done);
-                    return;
-                }
+            // Config validation: missing 'referenceImage' field is a permanent
+            // catalog error (not a runtime asset-missing case), so short-circuit
+            // before issuing the load. onlyVisual tests skip pixel comparison
+            // so they don't need the reference image to exist.
+            if (!test.onlyVisual && !test.referenceImage) {
+                console.error("MISSING_REFERENCE_IMAGE: Test '" + (test.title || "(unnamed)") +
+                              "' has no 'referenceImage' field in config.json - cannot run pixel comparison.");
+                missingRefCount++;
+                failTest(done);
+                return;
             }
 
+            // run test and image comparison
+            const url = "app:///ReferenceImages/" + test.referenceImage;
+
             const onLoadFileError = function (request, exception) {
-                console.error("Failed to retrieve " + url + ".", exception);
+                // Reference-image load failures (missing file on disk, etc.)
+                // arrive here via JsRuntimeHost's XHR error event +
+                // BABYLON.Tools.LoadFile's onLoadFileError callback. Tag with
+                // MISSING_REFERENCE_IMAGE: so CI greps still match.
+                console.error("MISSING_REFERENCE_IMAGE: Test '" + (test.title || "(unnamed)") +
+                              "' failed to load reference at " + url + ". " +
+                              (exception ? exception : "(no exception details)"));
+                missingRefCount++;
                 failTest(done);
             };
 
@@ -481,8 +476,6 @@
                 loadPlayground(test, done, referenceImage, compare);
             };
 
-            // run test and image comparison
-            const url = "app:///ReferenceImages/" + test.referenceImage;
             BABYLON.Tools.LoadFile(url, onload, undefined, undefined, /*useArrayBuffer*/true, onLoadFileError);
         }
     }

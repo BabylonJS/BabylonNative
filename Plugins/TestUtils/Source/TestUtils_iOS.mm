@@ -22,11 +22,4 @@ namespace Babylon::Plugins::Internal
         // Not implemented for iOS
         return {};
     }
-
-    Napi::Value TestUtils::ReferenceImageExists(const Napi::CallbackInfo& info)
-    {
-        // Stub: Win32 has the real implementation.
-        (void)info;
-        return Napi::Boolean::New(info.Env(), true);
-    }
 }

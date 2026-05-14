@@ -157,7 +157,7 @@ AppContext::AppContext(
 
         Babylon::Polyfills::Blob::Initialize(env);
 
-        Babylon::Polyfills::Console::Initialize(env, [debugLog](const char* message, Babylon::Polyfills::Console::LogLevel logLevel) {
+        Babylon::Polyfills::Console::Initialize(env, [env, debugLog](const char* message, Babylon::Polyfills::Console::LogLevel logLevel) {
             std::ostringstream ss{};
             ss << "[" << GetLogLevelString(logLevel) << "] " << message;
             debugLog(ss.str().data());
@@ -166,43 +166,18 @@ AppContext::AppContext(
             // Babylon.js routes recoverable errors here.
             if (logLevel == Babylon::Polyfills::Console::LogLevel::Error)
             {
+                auto jsStack = Babylon::Polyfills::Console::CaptureCurrentJsStack(env);
                 Diagnostics::DumpFailure(
                     "JS CONSOLE ERROR",
                     nullptr,
                     0,
                     0,
-                    "%s",
-                    message != nullptr ? message : "(null)");
+                    "%s%s%s",
+                    message != nullptr ? message : "(null)",
+                    jsStack.empty() ? "" : "\nJS callstack:\n",
+                    jsStack.c_str());
             }
         });
-
-        // Wrap console.error so every call appends `new Error().stack` to its
-        // message. Uses new Function(body) so it works on V8 + JSI/JSC.
-        {
-            const char* wrapBody = R"JS(
-if (typeof console === 'undefined' || typeof console.error !== 'function' || console.__bnDiagWrapped) {
-    return;
-}
-var origError = console.error;
-console.error = function() {
-    var stack;
-    try { stack = (new Error()).stack; } catch (e) { stack = '<no stack>'; }
-    var args = Array.prototype.slice.call(arguments);
-    if (typeof stack === 'string') {
-        var lines = stack.split('\n');
-        if (lines.length > 0 && lines[0].indexOf('Error') === 0) { lines.shift(); }
-        if (lines.length > 0 && lines[0].indexOf('console.error') !== -1) { lines.shift(); }
-        stack = lines.join('\n');
-    }
-    args.push('\nJS callstack:\n' + stack);
-    return origError.apply(this, args);
-};
-console.__bnDiagWrapped = true;
-)JS";
-            auto fnCtor = env.Global().Get("Function").As<Napi::Function>();
-            auto wrapper = fnCtor.New({Napi::String::New(env, wrapBody)});
-            wrapper.As<Napi::Function>().Call({});
-        }
 
         Babylon::Polyfills::Performance::Initialize(env);
 

@@ -60,11 +60,4 @@ namespace Babylon::Plugins::Internal
         auto path = std::filesystem::path{exe}.parent_path().generic_string();
         return Napi::Value::From(info.Env(), path);
     }
-
-    Napi::Value TestUtils::ReferenceImageExists(const Napi::CallbackInfo& info)
-    {
-        // Stub: Win32 has the real implementation.
-        (void)info;
-        return Napi::Boolean::New(info.Env(), true);
-    }
 }
