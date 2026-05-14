@@ -39,6 +39,9 @@ namespace UrlLib
         {
             Cleanup();
 
+            ResetForOpen();
+            m_responseBuffer.clear();
+
             m_method = method;
 
             if (m_method == UrlMethod::Post)
@@ -178,18 +181,30 @@ namespace UrlLib
 
             m_thread.emplace([this, taskCompletionSource]() mutable
             {
-                curl_check(curl_easy_perform(m_curl));
+                try
+                {
+                    curl_check(curl_easy_perform(m_curl));
 
-                long codep{};
-                curl_check(curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &codep));
-                if (codep == 0 && m_file)
-                {
-                    // File scheme always returns 0
-                    m_statusCode = UrlStatusCode::Ok;
+                    long codep{};
+                    curl_check(curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &codep));
+                    if (codep == 0 && m_file)
+                    {
+                        // File scheme always returns 0
+                        m_statusCode = UrlStatusCode::Ok;
+                    }
+                    else
+                    {
+                        m_statusCode = static_cast<UrlStatusCode>(codep);
+                    }
                 }
-                else
+                catch (const std::exception&)
                 {
-                    m_statusCode = static_cast<UrlStatusCode>(codep);
+                    // Retain the default status code of 0 to indicate a client side error,
+                    // matching the convention of UrlRequest_UWP.cpp's catch(winrt::hresult_error)
+                    // and UrlRequest_Apple.mm's `m_url == nil` branch. Without this catch any
+                    // libcurl failure (e.g. CURLE_FILE_COULDNT_READ_FILE (37) for a missing local
+                    // `file://` or rewritten `app:///` target) would escape this std::thread and
+                    // call std::terminate.
                 }
 
                 taskCompletionSource.complete();

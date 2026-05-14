@@ -46,6 +46,10 @@ namespace UrlLib
     public:
         void Open(UrlMethod method, const std::string& url)
         {
+            ResetForOpen();
+            m_responseBuffer = nullptr;
+            m_fileResponseBuffer.clear();
+
             m_method = method;
             m_uri = Foundation::Uri{winrt::to_hstring(url)};
         }

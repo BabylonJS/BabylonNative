@@ -84,6 +84,19 @@ namespace UrlLib
             std::transform(s.cbegin(), s.cend(), s.begin(), [](auto c) { return static_cast<decltype(c)>(std::tolower(c)); });
         }
 
+        // Reset the per-request response state that lives in ImplBase. Each platform's `Open()`
+        // calls this at the start so a single `UrlRequest` can be reused across requests without
+        // leaking prior status / URL / body / headers. Platform-specific response buffers live in
+        // each `Impl` (different types per backend) and must be reset by the platform's `Open()`
+        // alongside this call.
+        void ResetForOpen()
+        {
+            m_statusCode = UrlStatusCode::None;
+            m_responseUrl.clear();
+            m_responseString.clear();
+            m_headers.clear();
+        }
+
         arcana::cancellation_source m_cancellationSource{};
         UrlResponseType m_responseType{UrlResponseType::String};
         UrlMethod m_method{UrlMethod::Get};
