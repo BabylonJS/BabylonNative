@@ -19,6 +19,10 @@ namespace Babylon::Plugins::Internal
     void TestUtils::Exit(const Napi::CallbackInfo& info)
     {
         auto exitCode = info[0].As<Napi::Number>().Int32Value();
+
+        // Notify the host before terminating.
+        InvokeExitCallback(exitCode);
+
         if (exitCode != 0)
         {
             std::quick_exit(exitCode);
