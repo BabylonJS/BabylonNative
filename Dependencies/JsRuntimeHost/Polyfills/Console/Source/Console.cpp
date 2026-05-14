@@ -139,4 +139,42 @@ namespace Babylon::Polyfills::Console
         AddMethod(console, "warn", LogLevel::Warn, callback);
         AddMethod(console, "error", LogLevel::Error, callback);
     }
+
+    std::string BABYLON_API CaptureCurrentJsStack(Napi::Env env)
+    {
+        // Construct a JS `Error` object via N-API which fills its `stack` property using the
+        // engine's current JS frames; on every backend we support (V8 / JSC / ChakraCore) the
+        // resulting string omits the C++ Napi wrapper frame, so the topmost JS frame is the
+        // user's call site. Best effort -- any failure (no `Error` global, engine doesn't expose
+        // a `stack` property, etc.) returns an empty string.
+        std::string stack{};
+        try
+        {
+            Napi::HandleScope scope{env};
+            Napi::Value errorCtorValue = env.Global().Get("Error");
+            if (errorCtorValue.IsFunction())
+            {
+                Napi::Object errObj = errorCtorValue.As<Napi::Function>().New({});
+                Napi::Value stackValue = errObj.Get("stack");
+                if (stackValue.IsString())
+                {
+                    stack = stackValue.As<Napi::String>().Utf8Value();
+                }
+            }
+        }
+        catch (...)
+        {
+        }
+
+        // N-API operations can leave a pending JS exception on `env` independently of throwing a
+        // C++ exception (e.g., `Object::Get` on a property accessor that throws); returning from
+        // the callback with a pending exception would cause `console.*` itself to throw on the
+        // JS side. Clear it so stack capture is truly side-effect free.
+        if (env.IsExceptionPending())
+        {
+            (void)env.GetAndClearPendingException();
+        }
+
+        return stack;
+    }
 }
