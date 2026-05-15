@@ -12,8 +12,12 @@ jobs:
   size-check:
     runs-on: windows-latest
     timeout-minutes: 90
+    # Intentionally no write permissions: this workflow builds untrusted PR code
+    # and uploads results as an artifact. The companion `Binary Size Check Comment`
+    # workflow (triggered on workflow_run) downloads the artifact and posts the
+    # sticky comment with full write perms from master.
+    # See https://securitylab.github.com/resources/github-actions-preventing-pwn-requests/
     permissions:
-      pull-requests: write
       contents: read
     steps:
       - name: Checkout base ref
@@ -177,45 +181,28 @@ jobs:
           [void]$sb.AppendLine('<sub>Comparison is informational only — no threshold enforcement. Configuration matches the Win32_x64_D3D11 CI job. Two sequential Release-with-debug-info builds per run. Small deltas on unchanged libs are typically COFF timestamps.</sub>')
 
           $body = $sb.ToString()
-          $bodyFile = Join-Path $env:RUNNER_TEMP 'size-comment.md'
+          $reportDir = Join-Path $env:RUNNER_TEMP 'size-check-report'
+          New-Item -ItemType Directory -Force $reportDir | Out-Null
+          $bodyFile = Join-Path $reportDir 'body.md'
           $body | Set-Content -Path $bodyFile -Encoding utf8
+
+          # Stash the PR number alongside the body so the comment workflow can find it
+          # (workflow_run events don't reliably populate pull_request context for fork PRs).
+          '${{ github.event.pull_request.number }}' | Set-Content -Path (Join-Path $reportDir 'pr-number.txt') -Encoding utf8
 
           Write-Host "=== comment body ==="
           Write-Host $body
           Write-Host "===================="
 
-          # Surface in run summary too
+          # Surface in run summary too (visible on the PR's checks page even when no sticky comment posts).
           $body | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
 
-          "body_file=$bodyFile"   | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
-          "marker=$marker"        | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
+          "report_dir=$reportDir" | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
 
-      - name: Post or update sticky PR comment
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $marker   = '${{ steps.measure.outputs.marker }}'
-          $bodyFile = '${{ steps.measure.outputs.body_file }}'
-          $pr       = ${{ github.event.pull_request.number }}
-          $repo     = '${{ github.repository }}'
-
-          try {
-              $comments = gh api "repos/$repo/issues/$pr/comments" --paginate | ConvertFrom-Json
-              if ($LASTEXITCODE -ne 0) { throw "gh api list comments exited $LASTEXITCODE" }
-
-              $existing = $comments | Where-Object { $_.body -like "*$marker*" } | Select-Object -First 1
-
-              if ($existing) {
-                  Write-Host "Updating existing comment $($existing.id)"
-                  gh api "repos/$repo/issues/comments/$($existing.id)" --method PATCH -F "body=@$bodyFile" | Out-Null
-              } else {
-                  Write-Host "Creating new comment"
-                  gh api "repos/$repo/issues/$pr/comments" --method POST -F "body=@$bodyFile" | Out-Null
-              }
-              if ($LASTEXITCODE -ne 0) { throw "gh api comment write exited $LASTEXITCODE" }
-              Write-Host "Posted comment OK."
-          } catch {
-              Write-Warning "Could not post PR comment (likely no write token on fork PR): $_"
-              Write-Host "Size details are still available in the run summary above."
-          }
+      - name: Upload size-check report artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: size-check-report
+          path: ${{ steps.measure.outputs.report_dir }}
+          if-no-files-found: error
+          retention-days: 7
