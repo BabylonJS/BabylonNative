@@ -7,8 +7,7 @@ set(SOURCES
     "${INTEGRATIONS_SHARED_INCLUDE_ROOT}/Babylon/Integrations/View.h"
     "Source/Runtime.cpp"
     "Source/RuntimeImpl.h"
-    "Source/View.cpp"
-    "Source/ViewImpl_${BABYLON_NATIVE_PLATFORM}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
+    "Source/View.cpp")
 
 add_library(Integrations ${SOURCES})
 
@@ -28,8 +27,9 @@ target_link_libraries(Integrations
     # GraphicsDeviceContext is PRIVATE — needed so View.cpp can see
     # <Babylon/Graphics/DeviceQueries.h> for the free
     # `Babylon::Graphics::GetDevicePixelRatio(window)` helper used to
-    # convert physical → logical pixels in `View::Attach`'s first-attach
-    # path (before the `Device` exists). Internal Graphics types are
+    # convert physical → logical pixels on the first `View::Resize`
+    # call (before the `Device` exists or while it is still bound to
+    # the previous window on a re-attach). Internal Graphics types are
     # never exposed across the Integrations public surface.
     PRIVATE GraphicsDeviceContext
     PRIVATE arcana
@@ -40,13 +40,6 @@ target_link_libraries(Integrations
     PRIVATE Performance
     PRIVATE TextDecoder
     PRIVATE XMLHttpRequest)
-
-# ----- Per-platform link dependencies for ViewImpl_*.{cpp,mm} -----
-if(ANDROID)
-    target_link_libraries(Integrations PRIVATE android)   # ANativeWindow_getWidth/Height
-elseif(UNIX AND NOT APPLE)
-    target_link_libraries(Integrations PRIVATE X11)       # XOpenDisplay / XGetGeometry
-endif()
 
 # ----- Conditionally-included polyfills -----
 #

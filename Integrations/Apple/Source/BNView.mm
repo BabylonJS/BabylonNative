@@ -8,24 +8,9 @@
 #import <QuartzCore/CAMetalLayer.h>
 
 #include <Babylon/Integrations/View.h>
-#include <exception>
 
-#include <cmath>
 #include <cstdint>
 #include <memory>
-
-namespace
-{
-    bool IsFinitePositive(CGFloat value)
-    {
-        return std::isfinite(static_cast<double>(value)) && value > 0;
-    }
-
-    bool IsFinitePositive(CGSize size)
-    {
-        return IsFinitePositive(size.width) && IsFinitePositive(size.height);
-    }
-}
 
 @implementation BNView
 {
@@ -55,69 +40,20 @@ namespace
         // +layerClass override).
         CAMetalLayer* layer = (CAMetalLayer*)view.layer;
 
-        // If MTKView has not produced a drawable size yet, seed it
-        // from real laid-out bounds. If the host supplied a non-zero
-        // drawableSize explicitly (for example, for hidden preload),
-        // preserve it.
-        const CGSize drawableSize = layer.drawableSize;
-        if (!IsFinitePositive(drawableSize))
-        {
-            [view layoutIfNeeded];
-
-            const CGSize boundsSize = view.bounds.size;
-            if (IsFinitePositive(boundsSize))
-            {
-#if TARGET_OS_OSX
-                CGFloat scale = view.window.backingScaleFactor > 0
-                    ? view.window.backingScaleFactor
-                    : 1.0;
-#else
-                CGFloat scale = view.contentScaleFactor;
-#endif
-                if (!IsFinitePositive(scale))
-                {
-                    scale = 1.0;
-                }
-                const CGSize seededDrawableSize = CGSizeMake(boundsSize.width * scale,
-                                                             boundsSize.height * scale);
-                if (IsFinitePositive(seededDrawableSize))
-                {
-                    layer.drawableSize = seededDrawableSize;
-                }
-            }
-        }
-
-        const CGSize finalDrawableSize = layer.drawableSize;
-        if (!IsFinitePositive(finalDrawableSize))
-        {
-            @throw [NSException
-                exceptionWithName:@"BabylonNativeInvalidViewException"
-                           reason:@"BNView requires a finite, non-zero drawableSize or finite, non-zero bounds before attach."
-                         userInfo:nil];
-        }
-
-        // First attach on this runtime triggers GPU device construction
-        // + plugin initialization + queued-script flush. The View
-        // queries the layer's drawableSize itself; the host doesn't
-        // need to pass dimensions.
-        try
-        {
-            _view = Babylon::Integrations::View::Attach(
-                *runtime.nativeRuntime,
-                (__bridge CA::MetalLayer*)layer);
-        }
-        catch (const std::exception& exception)
-        {
-            NSLog(@"BNView: View::Attach failed: %s", exception.what());
-            _mtkView = nil;
-            return nil;
-        }
-        catch (...)
-        {
-            NSLog(@"BNView: View::Attach failed with an unknown exception");
-            _mtkView = nil;
-            return nil;
-        }
+        // View::Attach is intentionally lightweight: it just stashes
+        // the layer pointer. No size query, no Device construction —
+        // and therefore nothing host-recoverable to throw. The MTKView
+        // delegate's `mtkView:drawableSizeWillChange:` (forwarded by
+        // BNViewDelegate to `-resizeWithWidth:height:`) is what
+        // actually drives Device construction + first-frame opening,
+        // on the first call. MTKView fires this callback before its
+        // first draw in normal Cocoa usage, so this bootstrap is
+        // automatic. Hosts that drive MTKView in unusual ways (e.g.
+        // hidden preload) can call `-resizeWithWidth:height:` directly
+        // with the surface's current pixel size.
+        _view = Babylon::Integrations::View::Attach(
+            *runtime.nativeRuntime,
+            (__bridge CA::MetalLayer*)layer);
         if (!_view)
         {
             _mtkView = nil;

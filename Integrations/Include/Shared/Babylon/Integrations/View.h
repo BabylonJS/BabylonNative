@@ -51,27 +51,39 @@ namespace Babylon::Integrations
         // per-platform typedef the Graphics layer already uses
         // (HWND on Win32, ANativeWindow* on Android, CA::MetalLayer*
         // on Apple, X11 `Window` on Linux, winrt::IInspectable on UWP).
-        // The View queries the surface's pixel-buffer size from the
-        // window itself via `ViewImpl::QuerySize`, which returns the
-        // platform-natural unit; the View internally converts to
-        // logical pixels before configuring the Device.
+        // The host owns the surface size: the View captures the
+        // window handle here and binds it to the Device on the first
+        // `Resize` call. Hosts MUST call `Resize` at least once
+        // (with the surface's current pixel dimensions) before the
+        // first frame will be rendered.
         //
-        // The first Attach on a given Runtime is the heavy step: it
-        // constructs `Babylon::Graphics::Device`, dispatches GPU plugin
-        // initialization (`Device::AddToJavaScript`,
-        // `NativeEngine::Initialize`, `NativeInput::CreateForJavaScript`,
-        // ...), and flushes any scripts queued via `Runtime::LoadScript`
-        // before this point. Opens the first frame.
+        // Attach itself is lightweight — it just registers as the
+        // current view and stashes the window handle. All Device
+        // work (first-time construction, or `UpdateWindow` +
+        // `UpdateSize` on a re-attach to an existing Runtime) is
+        // performed by the first `Resize` call, where the host-
+        // supplied dimensions become available. This folding is
+        // required: `Device::UpdateWindow` MUST be paired with a
+        // matching `Device::UpdateSize` or the next frame would be
+        // rendered to the new surface at the wrong size.
         //
-        // Subsequent Attach calls on the same Runtime are cheap: the
-        // Device is already constructed, plugins are initialized, the
-        // JS engine is running. They just call `Device::UpdateWindow` +
-        // `Device::EnableRendering` to bind the new surface, then open
-        // the first frame for the new attachment.
+        // The first Attach + Resize on a given Runtime is the heavy
+        // step: the Resize constructs `Babylon::Graphics::Device`,
+        // dispatches GPU plugin initialization
+        // (`Device::AddToJavaScript`, `NativeEngine::Initialize`,
+        // `NativeInput::CreateForJavaScript`, ...), and flushes any
+        // scripts queued via `Runtime::LoadScript` before this point.
+        // Opens the first frame.
         //
-        // Detach (`~View`) closes the in-flight frame and calls
-        // `Device::DisableRendering`. The Device persists on the
-        // Runtime, so the next Attach is fast.
+        // Subsequent Attach + Resize calls on the same Runtime are
+        // cheap: the Device is already constructed, plugins are
+        // initialized, the JS engine is running. They just call
+        // `Device::UpdateWindow` + `Device::UpdateSize` to bind the
+        // new surface, then open the first frame for the new
+        // attachment.
+        //
+        // Detach (`~View`) closes the in-flight frame. The Device
+        // persists on the Runtime, so the next Attach is fast.
         //
         // Must be called from the same thread that will call
         // `RenderFrame` and `Resize` (the "frame thread").

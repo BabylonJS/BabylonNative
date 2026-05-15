@@ -139,9 +139,21 @@ namespace Babylon::Integrations
     };
 
     // Internal implementation of View. Holds the back-reference to the
-    // Runtime that produced it. Provides per-platform helpers
-    // (implemented in ViewImpl_*.cpp / .mm) plus Suspend / Resume that
-    // manage the in-flight frame across runtime suspension.
+    // Runtime that produced it, the native window handle captured at
+    // `View::Attach`, plus Suspend / Resume that manage the in-flight
+    // frame across runtime suspension.
+    //
+    // `View::Attach` is intentionally cheap: it just stashes the
+    // window handle and registers as the current view. All Device
+    // interaction (first-time construction, or `UpdateWindow` +
+    // `UpdateSize` on a re-attach to an existing Runtime) is deferred
+    // to the first `View::Resize` call. This is a hard requirement:
+    // `Device::UpdateWindow` MUST be paired with a matching
+    // `Device::UpdateSize` or bgfx will render the next frame to the
+    // new window at the wrong size. Folding both into the first
+    // `Resize` makes the host-supplied dimensions the single source
+    // of truth — the Integrations layer never queries the window for
+    // its size.
     //
     // `m_suspended` is the View's view of whether it's currently
     // holding an open Device frame:
@@ -151,36 +163,47 @@ namespace Babylon::Integrations
     //   - false → a frame is open and the JS thread's safe timespan
     //             is active
     //
-    // Initially `true`; `View::Attach` flips it to `false` after
-    // opening the first frame. `~View` calls `Suspend` before
-    // `Device::DisableRendering`. `Runtime::Suspend / Resume` call
-    // through here on the suspendCount 0↔1 transitions.
+    // Initially `true`; the first `View::Resize` flips it to `false`
+    // after binding the Device to the new window+size and opening the
+    // first frame. `~View` calls `Suspend` before relinquishing the
+    // view slot. `Runtime::Suspend / Resume` call through here on the
+    // suspendCount 0↔1 transitions; both are no-ops while
+    // `m_initialized` is still `false`, since there is no Device
+    // binding to suspend/resume yet.
+    //
+    // `m_initialized` is the View's "first Resize on this Attach has
+    // run" latch. Starts `false`; the first successful `Resize` sets
+    // it `true` after the Device is bound. It is the gate that lets
+    // `Resume()` open a frame: while `false`, `Resume()` is a no-op,
+    // so render-loop callbacks that fire between `Attach` and the
+    // first `Resize` (typical on Apple, where MTKView fires
+    // `drawInMTKView:` before `drawableSizeWillChange:`) silently
+    // do nothing rather than rendering to an unbound surface.
     struct ViewImpl
     {
         explicit ViewImpl(Runtime& runtime) : m_runtime{runtime} {}
         Runtime& m_runtime;
+
+        // Window handle captured at `View::Attach`. Used by the first
+        // `View::Resize` to construct (first-Attach-ever) or rebind
+        // (subsequent Attach) the Device.
+        Babylon::Graphics::WindowT m_window{};
+
+        // See class-level comment. Latches to `true` on first successful
+        // Resize; never flips back for the lifetime of this ViewImpl.
+        bool m_initialized{false};
+
+        // See class-level comment. "No frame is currently open."
         bool m_suspended{true};
 
         // End the in-flight frame on the Device (Finish +
         // FinishRenderingCurrentFrame). Idempotent — no-op if already
-        // suspended.
+        // suspended or if the view has not yet been initialized.
         void Suspend();
 
         // Open a new frame (StartRenderingCurrentFrame +
         // DeviceUpdate::Start). Idempotent — no-op if not currently
-        // suspended.
+        // suspended or if the view has not yet been initialized.
         void Resume();
-
-        // Query the surface's pixel-buffer size from the native window
-        // handle, tagged with the platform-natural units it returned.
-        // Implemented per-platform. `View::Attach` converts to logical
-        // before configuring the Device.
-        struct QuerySizeResult
-        {
-            uint32_t Width;
-            uint32_t Height;
-            CoordinateUnits Units;
-        };
-        static QuerySizeResult QuerySize(Babylon::Graphics::WindowT window);
     };
 }
