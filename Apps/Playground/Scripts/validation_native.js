@@ -326,9 +326,12 @@
 
                             code = code
                                 .replace(/"\/textures\//g, '"' + pgRoot + "/textures/")
+                                .replace(/'\/textures\//g, "'" + pgRoot + "/textures/")
                                 .replace(/"textures\//g, '"' + pgRoot + "/textures/")
+                                .replace(/'textures\//g, "'" + pgRoot + "/textures/")
                                 .replace(/\/scenes\//g, pgRoot + "/scenes/")
                                 .replace(/"scenes\//g, '"' + pgRoot + "/scenes/")
+                                .replace(/'scenes\//g, "'" + pgRoot + "/scenes/")
                                 .replace(/"\.\.\/\.\.https/g, '"' + "https")
                                 .replace("http://", "https://");
 
