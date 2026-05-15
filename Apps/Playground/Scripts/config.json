@@ -2009,8 +2009,6 @@
             "title": "Prepass SSAO + sprites",
             "playgroundId": "#9RI8CG#187",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "prepass-ssao-sprites.png"
         },
         {
@@ -2033,8 +2031,6 @@
             "title": "Prepass SSAO + line edges renderer",
             "playgroundId": "#T90MQ4#3",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "prepass-ssao-line-edges.png"
         },
         {
@@ -2057,8 +2053,6 @@
             "title": "Prepass SSAO + GUI",
             "playgroundId": "#LLVZ90#4",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "prepass-ssao-gui.png"
         },
         {
@@ -2137,8 +2131,6 @@
             "title": "Prepass MBlur + Lens",
             "playgroundId": "#ZEB7H6#23",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "prepass-mb-lens.png"
         },
         {
@@ -2228,24 +2220,18 @@
             "title": "Thin instances + dynamic buffer resize",
             "playgroundId": "#217750#217",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "thin-instances-buffer-resize.png"
         },
         {
             "title": "Instances + render self motion blur",
             "playgroundId": "#217750#34",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "instances-renderself-mb.png"
         },
         {
             "title": "Thin instances + render self motion blur",
             "playgroundId": "#217750#218",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "thin-instances-renderself-mb.png"
         },
         {
@@ -3919,15 +3905,11 @@
         {
             "title": "OpenPBR Fuzz Weight vs Fuzz Roughness - Analytic Lights",
             "playgroundId": "#GRQHVV#112",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Fuzz-Roughness---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Fuzz Weight vs Coat Weight with Normal Maps - Analytic Lights",
             "playgroundId": "#GRQHVV#109",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Coat-Weight-with-Normal-Maps---Analytic-Lights.png"
         },
         {
@@ -4031,8 +4013,6 @@
         {
             "title": "OpenPBR Transmission Dispersion VS IOR - Analytic Lights",
             "playgroundId": "#GRQHVV#142",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "OpenPBR-Transmission-Dispersion-VS-IOR---Analytic-Lights.png"
         },
         {
