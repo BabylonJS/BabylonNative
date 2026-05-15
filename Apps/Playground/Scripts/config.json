@@ -692,9 +692,7 @@
         {
             "title": "Attractors",
             "playgroundId": "#DEZ79M#57",
-            "referenceImage": "attractors.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Linux (ASSERT bx::isAligned _stride 16 in bgfx)"
+            "referenceImage": "attractors.png"
         },
         {
             "title": "PBR in mirror",
@@ -874,8 +872,6 @@
         {
             "title": "Color correction",
             "playgroundId": "#FBH4J7#278",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "color-correction.png"
         },
         {
@@ -904,7 +900,7 @@
             "title": "GPUPicker",
             "playgroundId": "#1RWFMT#8",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up.",
             "referenceImage": "gpuPicker.png"
         },
         {
@@ -1210,7 +1206,7 @@
             "playgroundId": "#1VGT5D#2",
             "renderCount": 50,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up.",
             "referenceImage": "particle-helper.png"
         },
         {
@@ -1631,8 +1627,6 @@
             "title": "Default pipeline",
             "playgroundId": "#NAW8EA#6",
             "renderCount": 20,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "defaultPipeline.png"
         },
         {
@@ -1662,7 +1656,7 @@
             "renderCount": 100,
             "referenceImage": "particles.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Linux Clang/GCC (ASSERT, exit 133)"
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "PBRMetallicRoughnessMaterial",
@@ -1724,8 +1718,6 @@
         {
             "title": "Default rendering pipeline",
             "playgroundId": "#5XB8YT#2",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "DefaultRenderingPipeline.png"
         },
         {
@@ -2016,9 +2008,9 @@
         {
             "title": "Prepass SSAO + sprites",
             "playgroundId": "#9RI8CG#187",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: BGFX FATAL shader compile error (mediump float vs int conversion in PrePassRenderer fragment shader). Fixable separately; tracked for OpenGL backend follow-up.",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "prepass-ssao-sprites.png"
         },
         {
@@ -2040,9 +2032,9 @@
         {
             "title": "Prepass SSAO + line edges renderer",
             "playgroundId": "#T90MQ4#3",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: BGFX FATAL shader compile error (mediump float vs int conversion in PrePassRenderer fragment shader). Fixable separately; tracked for OpenGL backend follow-up.",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "prepass-ssao-line-edges.png"
         },
         {
@@ -2064,9 +2056,9 @@
         {
             "title": "Prepass SSAO + GUI",
             "playgroundId": "#LLVZ90#4",
-            "renderCount": 10,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "Order-dependent state leak: passes in isolation but produces ~6000-px diff (right at 2.5% errorRatio threshold, flaky in CI) when run after sibling Prepass-SSAO tests in the full sweep on Win32 D3D11. OpenGL also fails (BGFX FATAL 'mediump float' shader compile in PrePassRenderer fragment shader). Re-enable after the order-dependent SSAO state cleanup is investigated.",
+            "renderCount": 10,
             "referenceImage": "prepass-ssao-gui.png"
         },
         {
@@ -2145,8 +2137,6 @@
             "title": "Prepass MBlur + Lens",
             "playgroundId": "#ZEB7H6#23",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "prepass-mb-lens.png"
         },
         {
@@ -2236,24 +2226,18 @@
             "title": "Thin instances + dynamic buffer resize",
             "playgroundId": "#217750#217",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "thin-instances-buffer-resize.png"
         },
         {
             "title": "Instances + render self motion blur",
             "playgroundId": "#217750#34",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "instances-renderself-mb.png"
         },
         {
             "title": "Thin instances + render self motion blur",
             "playgroundId": "#217750#218",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "thin-instances-renderself-mb.png"
         },
         {
@@ -2321,16 +2305,12 @@
             "title": "Baked Vertex Animation with Depth Of Field",
             "playgroundId": "#JWO4R0#8",
             "renderCount": 20,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "bakedVertexAnimationDOF.png"
         },
         {
             "title": "Baked Vertex Animation with Volumetric Light Scattering Post Process",
             "playgroundId": "#1LF9GK#3",
             "renderCount": 20,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "bakedVertexAnimationVLS.png"
         },
         {
@@ -2416,18 +2396,14 @@
         },
         {
             "title": "Load GUI snippet with unicode",
-            "playgroundId": "#YS93KY",
+            "playgroundId": "#YS93KY#0",
             "renderCount": 50,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "loadGuiSnippetWithUnicode.png"
         },
         {
             "title": "Parse GUI json with unicode",
-            "playgroundId": "#ERVGT5",
+            "playgroundId": "#ERVGT5#0",
             "renderCount": 50,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "parseGuiJsonWithUnicode.png"
         },
         {
@@ -2443,7 +2419,7 @@
             "playgroundId": "#544N0Q#67",
             "renderCount": 120,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "After #1691 stride fix, hits bgfx 'Invalid texture attachment' frame buffer validation (exit 1); needs separate investigation.",
             "referenceImage": "fluidParticleSystem.png"
         },
         {
@@ -2619,8 +2595,6 @@
         {
             "title": "PBR Debug Modes",
             "playgroundId": "#2FDQT5#2300",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "PBR-Debug-Modes.png"
         },
         {
@@ -2640,8 +2614,6 @@
         {
             "title": "MeshDebugPluginMaterial",
             "playgroundId": "#TFDNZI#2",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "MeshDebugPluginMaterial.png"
         },
         {
@@ -2748,9 +2720,9 @@
         {
             "title": "sphere-with-custom-shader-to-display-wireframe-using-glow-layer",
             "playgroundId": "#Y05E2C#6",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: pixel diff out of tolerance (90900 px) -- likely glow-layer + custom-shader interaction differs from D3D11. Tracked for OpenGL backend follow-up.",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "sphere-with-custom-shader-to-display-wireframe-using-glow-layer.png"
         },
         {
@@ -2865,7 +2837,7 @@
             "playgroundId": "#2441BU#1",
             "renderCount": 20,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up.",
             "referenceImage": "halo-particle-system.png"
         },
         {
@@ -2881,7 +2853,7 @@
             "playgroundId": "#DMLLV2",
             "renderCount": 5,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up.",
             "referenceImage": "particle-system-with-custom-nme-shader.png"
         },
         {
@@ -3767,9 +3739,7 @@
         {
             "title": "OpenPBR Analytic Lights Anisotropy",
             "playgroundId": "#GRQHVV#61",
-            "referenceImage": "OpenPBR-Analytic-Lights-Anisotropy.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "OpenPBR-Analytic-Lights-Anisotropy.png"
         },
         {
             "title": "OpenPBR Analytic Lights Anisotropy Texture",
@@ -3943,15 +3913,11 @@
         {
             "title": "OpenPBR Fuzz Weight vs Fuzz Roughness - Analytic Lights",
             "playgroundId": "#GRQHVV#112",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Fuzz-Roughness---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Fuzz Weight vs Coat Weight with Normal Maps - Analytic Lights",
             "playgroundId": "#GRQHVV#109",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Coat-Weight-with-Normal-Maps---Analytic-Lights.png"
         },
         {
@@ -4055,8 +4021,6 @@
         {
             "title": "OpenPBR Transmission Dispersion VS IOR - Analytic Lights",
             "playgroundId": "#GRQHVV#142",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "OpenPBR-Transmission-Dispersion-VS-IOR---Analytic-Lights.png"
         },
         {
@@ -4294,23 +4258,19 @@
             "renderCount": 120,
             "referenceImage": "NME-Particles-with-PositionW.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Basic Properties - Size",
             "playgroundId": "#0K3AQ2#3780",
             "renderCount": 120,
-            "referenceImage": "particles-basic-size.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-size.png"
         },
         {
             "title": "Particles - Basic Properties - Scale",
             "playgroundId": "#0K3AQ2#3782",
             "renderCount": 120,
-            "referenceImage": "particles-basic-scale.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-scale.png"
         },
         {
             "title": "Particles - Basic Properties - Color",
@@ -4318,39 +4278,31 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-color.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Basic Properties - Speed",
             "playgroundId": "#0K3AQ2#3791",
             "renderCount": 120,
-            "referenceImage": "particles-basic-speed.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-speed.png"
         },
         {
             "title": "Particles - Basic Properties - Angular Speed",
             "playgroundId": "#0K3AQ2#3796",
             "renderCount": 120,
-            "referenceImage": "particles-basic-angular-speed.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-angular-speed.png"
         },
         {
             "title": "Particles - Basic Properties - Angular Speed - Rotation",
             "playgroundId": "#0K3AQ2#3806",
             "renderCount": 120,
-            "referenceImage": "particles-basic-angular-speed-rotation.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-angular-speed-rotation.png"
         },
         {
             "title": "Particles - Basic Properties - Translation Pivot",
             "playgroundId": "#0K3AQ2#3808",
             "renderCount": 120,
-            "referenceImage": "particles-basic-translation-pivot.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-translation-pivot.png"
         },
         {
             "title": "Particles - Basic Properties - Direction",
@@ -4358,23 +4310,19 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-direction.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Basic Properties - Direction - Gravity",
             "playgroundId": "#0K3AQ2#3816",
             "renderCount": 120,
-            "referenceImage": "particles-basic-direction-gravity.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-direction-gravity.png"
         },
         {
             "title": "Particles - Basic Properties - Emit Rate - Slow",
             "playgroundId": "#0K3AQ2#3821",
             "renderCount": 120,
-            "referenceImage": "particles-basic-emit-rate-slow.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-emit-rate-slow.png"
         },
         {
             "title": "Particles - Basic Properties - Emit Rate - Fast",
@@ -4382,31 +4330,25 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-emit-rate-fast.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Basic Properties - Emission Limits",
             "playgroundId": "#0K3AQ2#3825",
             "renderCount": 120,
-            "referenceImage": "particles-basic-emission-limits.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-emission-limits.png"
         },
         {
             "title": "Particles - Basic Properties - Lifetime - Short",
             "playgroundId": "#0K3AQ2#3829",
             "renderCount": 120,
-            "referenceImage": "particles-basic-lifetime-short.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-lifetime-short.png"
         },
         {
             "title": "Particles - Basic Properties - Lifetime - Long",
             "playgroundId": "#0K3AQ2#3834",
             "renderCount": 120,
-            "referenceImage": "particles-basic-lifetime-long.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-lifetime-long.png"
         },
         {
             "title": "Particles - Change - Size",
@@ -4414,15 +4356,13 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-size.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Change - Size 2",
             "playgroundId": "#0K3AQ2#3844",
             "renderCount": 120,
-            "referenceImage": "particles-basic-change-size-2.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-change-size-2.png"
         },
         {
             "title": "Particles - Change - Color",
@@ -4430,7 +4370,7 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-color.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Change - Color 2",
@@ -4438,79 +4378,61 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-color-2.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Change - Speed",
             "playgroundId": "#0K3AQ2#3853",
             "renderCount": 120,
-            "referenceImage": "particles-basic-change-speed.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-change-speed.png"
         },
         {
             "title": "Particles - Change - Speed 2",
             "playgroundId": "#0K3AQ2#3855",
             "renderCount": 120,
-            "referenceImage": "particles-basic-change-speed-2.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-change-speed-2.png"
         },
         {
             "title": "Particles - Change - Speed Limit",
             "playgroundId": "#0K3AQ2#3859",
             "renderCount": 120,
-            "referenceImage": "particles-basic-change-speed-limit.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-change-speed-limit.png"
         },
         {
             "title": "Particles - Change - Angular Speed",
             "playgroundId": "#0K3AQ2#3862",
             "renderCount": 120,
-            "referenceImage": "particles-basic-change-angular-speed.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-change-angular-speed.png"
         },
         {
             "title": "Particles - Change - Angular Speed 2",
             "playgroundId": "#0K3AQ2#3865",
             "renderCount": 120,
-            "referenceImage": "particles-basic-change-angular-speed-2.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-change-angular-speed-2.png"
         },
         {
             "title": "Particles - Change - Drag",
             "playgroundId": "#0K3AQ2#3868",
             "renderCount": 120,
-            "referenceImage": "particles-basic-change-drag.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-change-drag.png"
         },
         {
             "title": "Particles - Change - Drag 2",
             "playgroundId": "#0K3AQ2#3872",
             "renderCount": 120,
-            "referenceImage": "particles-basic-change-drag-2.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-change-drag-2.png"
         },
         {
             "title": "Particles - Change - Emit Rate",
             "playgroundId": "#0K3AQ2#3875",
             "renderCount": 120,
-            "referenceImage": "particles-basic-change-emit-rate.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-change-emit-rate.png"
         },
         {
             "title": "Particles - Change - Emit Rate 2",
             "playgroundId": "#0K3AQ2#3879",
             "renderCount": 120,
-            "referenceImage": "particles-basic-change-emit-rate-2.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-change-emit-rate-2.png"
         },
         {
             "title": "Particles - Change - Lifetime",
@@ -4518,23 +4440,19 @@
             "renderCount": 120,
             "referenceImage": "particles-basic-change-lifetime.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Change - Lifetime 2",
             "playgroundId": "#0K3AQ2#3890",
             "renderCount": 120,
-            "referenceImage": "particles-basic-change-lifetime-2.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-change-lifetime-2.png"
         },
         {
             "title": "Particles - Change - Start Size",
             "playgroundId": "#0K3AQ2#3897",
             "renderCount": 120,
-            "referenceImage": "particles-basic-change-start-size.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-basic-change-start-size.png"
         },
         {
             "title": "Particles - Emitters - Point",
@@ -4542,7 +4460,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-point.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Emitters - Box",
@@ -4550,7 +4468,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-box.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Emitters - Sphere",
@@ -4558,23 +4476,19 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-sphere.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Emitters - Directed Sphere",
             "playgroundId": "#WLX2I2#10",
             "renderCount": 120,
-            "referenceImage": "particles-emitters-directed-sphere.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-emitters-directed-sphere.png"
         },
         {
             "title": "Particles - Emitters - Hemisphere",
             "playgroundId": "#WLX2I2#11",
             "renderCount": 120,
-            "referenceImage": "particles-emitters-hemisphere.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "referenceImage": "particles-emitters-hemisphere.png"
         },
         {
             "title": "Particles - Emitters - Cylinder",
@@ -4582,7 +4496,7 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-cylinder.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Emitters - Directed Cylinder",
@@ -4596,9 +4510,7 @@
             "title": "Particles - Emitters - Cone",
             "playgroundId": "#WLX2I2#16",
             "renderCount": 120,
-            "referenceImage": "particles-emitters-cone.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "referenceImage": "particles-emitters-cone.png"
         },
         {
             "title": "Particles - Emitters - Directed Cone",
@@ -4606,63 +4518,49 @@
             "renderCount": 120,
             "referenceImage": "particles-emitters-directed-cone.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Emitters - Mesh",
             "playgroundId": "#WLX2I2#20",
             "renderCount": 120,
-            "referenceImage": "particles-emitters-mesh.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "referenceImage": "particles-emitters-mesh.png"
         },
         {
             "title": "Particles - Emitters - Custom",
             "playgroundId": "#WLX2I2#22",
             "renderCount": 120,
-            "referenceImage": "particles-emitters-custom.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "referenceImage": "particles-emitters-custom.png"
         },
         {
             "title": "Particles - Animations",
             "playgroundId": "#2MI0A1#7",
             "renderCount": 120,
-            "referenceImage": "particles-animations.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-animations.png"
         },
         {
             "title": "Particles - Animations 2",
             "playgroundId": "#2MI0A1#8",
             "renderCount": 120,
-            "referenceImage": "particles-animations-2.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-animations-2.png"
         },
         {
             "title": "Particles - Ramp Gradient",
             "playgroundId": "#I2D9MM#15",
             "renderCount": 120,
-            "referenceImage": "particles-ramp-gradient.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-ramp-gradient.png"
         },
         {
             "title": "Particles - Ramp Gradient Remap",
             "playgroundId": "#E3VU3R",
             "renderCount": 120,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "particles-ramp-gradient-remap.png"
         },
         {
             "title": "Particles - Ramp Gradient Remap Alpha",
             "playgroundId": "#I2D9MM#16",
             "renderCount": 120,
-            "referenceImage": "particles-ramp-gradient-remap-alpha.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "particles-ramp-gradient-remap-alpha.png"
         },
         {
             "title": "Particles - Billboard Y",
@@ -4678,7 +4576,7 @@
             "renderCount": 120,
             "referenceImage": "particles-billboard-false.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Multiply Blend",
@@ -4700,9 +4598,7 @@
             "title": "Particles - Effects",
             "playgroundId": "#1ASENS#424",
             "renderCount": 120,
-            "referenceImage": "particles-effects.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "referenceImage": "particles-effects.png"
         },
         {
             "title": "Particles - Helper - Sun",
@@ -4710,7 +4606,7 @@
             "renderCount": 120,
             "referenceImage": "particles-helper-sun.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test triggers bgfx ASSERT 'Stride must be multiple of 16' on Linux Clang/GCC JSC OpenGL builds (exit code 133)."
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
         },
         {
             "title": "Particles - Helper - Smoke",
@@ -4733,7 +4629,7 @@
             "playgroundId": "#DEZ79M#73",
             "renderCount": 240,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up.",
             "referenceImage": "particles-attractors.png"
         },
         {
@@ -4762,9 +4658,7 @@
         {
             "title": "Selection outline layer with instances and LOD",
             "playgroundId": "#8I487I#0",
-            "referenceImage": "Selection-outline-layer-with-instances-and-LOD.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "Selection-outline-layer-with-instances-and-LOD.png"
         },
         {
             "title": "Vertex Pulling - Normals UVs Colors Tangents",

@@ -10,6 +10,7 @@
 #include <optional>
 
 #include <Shared/AppContext.h>
+#include <Shared/Diagnostics.h>
 #include <Babylon/Plugins/TestUtils.h>
 
 static const char* s_applicationName  = "BabylonNative Playground";
@@ -62,6 +63,8 @@ namespace
 
 int main(int _argc, const char* const* _argv)
 {
+    Diagnostics::Initialize();
+
     XInitThreads();
     Display* display = XOpenDisplay(NULL);
 
