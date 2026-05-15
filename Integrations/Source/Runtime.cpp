@@ -83,11 +83,14 @@ namespace Babylon::Integrations
         // and enable it only when the host explicitly opts in.
         // DebugTrace is process-wide so this affects any concurrent
         // Runtime instances; that matches AppContext's behavior today.
+        // DebugTrace output is low-priority diagnostic noise, so it's
+        // forwarded at LogLevel::Verbose to make it easy for hosts to
+        // filter out.
         if (m_options.log)
         {
             const auto& logCallback = m_options.log;
             Babylon::DebugTrace::SetTraceOutput([logCallback](const char* message) {
-                logCallback(LogLevel::Log, message ? message : "");
+                logCallback(LogLevel::Verbose, message ? message : "");
             });
         }
         Babylon::DebugTrace::EnableDebugTrace(m_options.enableDebugTrace);

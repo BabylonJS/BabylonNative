@@ -70,10 +70,11 @@ namespace
     {
         switch (level)
         {
-            case LogLevel::Log:   return ANDROID_LOG_INFO;
-            case LogLevel::Warn:  return ANDROID_LOG_WARN;
-            case LogLevel::Error: return ANDROID_LOG_ERROR;
-            case LogLevel::Fatal: return ANDROID_LOG_FATAL;
+            case LogLevel::Verbose: return ANDROID_LOG_VERBOSE;
+            case LogLevel::Log:     return ANDROID_LOG_INFO;
+            case LogLevel::Warn:    return ANDROID_LOG_WARN;
+            case LogLevel::Error:   return ANDROID_LOG_ERROR;
+            case LogLevel::Fatal:   return ANDROID_LOG_FATAL;
         }
         return ANDROID_LOG_INFO;
     }
