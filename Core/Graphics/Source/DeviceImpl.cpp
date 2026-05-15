@@ -214,7 +214,8 @@ namespace Babylon::Graphics
             }
 
             m_state.Bgfx.Initialized = true;
-            m_state.Bgfx.Dirty = false;
+            // TODO: Should be able to clear the Dirty flag, but bgfx::init is not doing everything that UpdateBgfxState is doing (at least on Apple platforms).
+            // m_state.Bgfx.Dirty = false;
 
             m_cancellationSource.emplace();
 
