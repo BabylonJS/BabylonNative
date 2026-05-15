@@ -33,5 +33,3 @@ target_include_directories(BabylonNativeIntegrations
 
 target_link_libraries(BabylonNativeIntegrations
     PRIVATE Foundation)     # for <Babylon/PerfTrace.h> in PlaygroundScripts.cpp
-
-

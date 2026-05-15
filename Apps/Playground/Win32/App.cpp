@@ -7,19 +7,28 @@
 
 #include "App.h"
 
+#include <Babylon/DebugTrace.h>
 #include <Babylon/Integrations/Runtime.h>
 #include <Babylon/Integrations/View.h>
+#include <Babylon/PerfTrace.h>
+#include <Babylon/Plugins/TestUtils.h>
 
+#include <Shared/CommandLine.h>
+#include <Shared/Diagnostics.h>
 #include <Shared/PlaygroundScripts.h>
 
 #include <Windows.h>
 #include <Windowsx.h>
 #include <Shlwapi.h>
 
+#include <napi/napi.h>
+
+#include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <iostream>
 #include <memory>
-#include <sstream>
+#include <string>
 #include <vector>
 
 #define MAX_LOADSTRING 100
@@ -38,6 +47,7 @@ std::unique_ptr<Babylon::Integrations::Runtime> g_runtime;
 std::unique_ptr<Babylon::Integrations::View> g_view;
 
 bool minimized{false};
+PlaygroundOptions options{};
 
 // Forward declarations of functions included in this code module:
 ATOM MyRegisterClass(HINSTANCE hInstance);
@@ -68,7 +78,8 @@ namespace
         std::vector<std::string> arguments{};
         arguments.reserve(argc);
 
-        for (int idx = 1; idx < argc; idx++)
+        // Include argv[0]; CommandLine::Parse() skips it itself.
+        for (int idx = 0; idx < argc; idx++)
         {
             std::wstring hstr{argv[idx]};
             int bytesRequired = ::WideCharToMultiByte(CP_UTF8, 0, &hstr[0], static_cast<int>(hstr.size()), nullptr, 0, nullptr, nullptr);
@@ -81,25 +92,105 @@ namespace
         return arguments;
     }
 
+    void ApplyTraceOptions()
+    {
+        Babylon::DebugTrace::EnableDebugTrace(options.DebugTrace.value_or(true));
+
+        Babylon::PerfTrace::Level perfLevel{Babylon::PerfTrace::Level::Mark};
+        if (options.PerfTrace.has_value())
+        {
+            const auto& value = *options.PerfTrace;
+            if (value == "None" || value == "none")
+            {
+                perfLevel = Babylon::PerfTrace::Level::None;
+            }
+            else if (value == "Log" || value == "log" || value == "Detail" || value == "detail")
+            {
+                perfLevel = Babylon::PerfTrace::Level::Log;
+            }
+        }
+        Babylon::PerfTrace::SetLevel(perfLevel);
+    }
+
     Babylon::Integrations::RuntimeOptions MakeRuntimeOptions()
     {
-        Babylon::Integrations::RuntimeOptions options{};
-        options.enableDebugger = true;     // matches AppContext default
-        options.log = [](Babylon::Integrations::LogLevel level, std::string_view message) {
-            std::ostringstream ss{};
-            ss << message << std::endl;
-            OutputDebugStringA(ss.str().data());
-            std::cout << ss.str();
+        Babylon::Integrations::RuntimeOptions runtimeOptions{};
+        runtimeOptions.enableDebugger = true;     // matches AppContext default
+        runtimeOptions.log = [](Babylon::Integrations::LogLevel level, std::string_view message) {
+            std::string text{message};
+            while (!text.empty() && (text.back() == '\n' || text.back() == '\r'))
+            {
+                text.pop_back();
+            }
 
-            // Match AppContext's historical behavior: terminate on
-            // uncaught JS exceptions (Fatal). Routine console.error
-            // calls (Error) just print and continue.
+            std::string line{text};
+            line.push_back('\n');
+            OutputDebugStringA(line.c_str());
+            std::fputs(line.c_str(), stdout);
+
+            if (level == Babylon::Integrations::LogLevel::Error)
+            {
+                Diagnostics::DumpFailure(
+                    "JS CONSOLE ERROR",
+                    nullptr,
+                    0,
+                    0,
+                    "%s",
+                    text.c_str());
+            }
+
             if (level == Babylon::Integrations::LogLevel::Fatal)
             {
+                Diagnostics::DumpFailure(
+                    "UNCAUGHT JS ERROR",
+                    nullptr,
+                    0,
+                    0,
+                    "%s",
+                    text.c_str());
+                Diagnostics::SetExitCode(1);
+                Diagnostics::PrintFinishLine();
                 std::quick_exit(1);
             }
         };
-        return options;
+        return runtimeOptions;
+    }
+
+    void QueuePlaygroundOptions()
+    {
+        g_runtime->RunOnJsThread([playgroundOptions = options](Napi::Env env) {
+            auto js = Napi::Object::New(env);
+            js.Set("listTests",          Napi::Boolean::New(env, playgroundOptions.ListTests));
+            js.Set("headless",           Napi::Boolean::New(env, playgroundOptions.Headless));
+            js.Set("breakOnFail",        Napi::Boolean::New(env, playgroundOptions.BreakOnFail));
+            js.Set("generateReferences", Napi::Boolean::New(env, playgroundOptions.GenerateReferences));
+            js.Set("runOnce",            Napi::Boolean::New(env, playgroundOptions.RunOnce));
+            js.Set("includeExcluded",    Napi::Boolean::New(env, playgroundOptions.IncludeExcluded));
+            if (playgroundOptions.SaveResults.has_value())
+            {
+                js.Set("saveResults", Napi::Boolean::New(env, *playgroundOptions.SaveResults));
+            }
+            if (playgroundOptions.CaptureFrame.has_value())
+            {
+                js.Set("captureFrame", Napi::Number::New(env, *playgroundOptions.CaptureFrame));
+            }
+
+            auto filters = Napi::Array::New(env, playgroundOptions.TestFilters.size());
+            for (uint32_t idx = 0; idx < playgroundOptions.TestFilters.size(); ++idx)
+            {
+                filters[idx] = Napi::String::New(env, playgroundOptions.TestFilters[idx]);
+            }
+            js.Set("testFilters", filters);
+
+            auto indices = Napi::Array::New(env, playgroundOptions.TestIndices.size());
+            for (uint32_t idx = 0; idx < playgroundOptions.TestIndices.size(); ++idx)
+            {
+                indices[idx] = Napi::Number::New(env, playgroundOptions.TestIndices[idx]);
+            }
+            js.Set("testIndices", indices);
+
+            env.Global().Set("_playgroundOptions", js);
+        });
     }
 
     void LoadScripts()
@@ -108,14 +199,13 @@ namespace
         // Shared with the other Playground hosts via Shared/PlaygroundScripts.
         Playground::LoadBootstrapScripts(*g_runtime);
 
-        const auto args = GetCommandLineArguments();
-        if (args.empty())
+        if (options.Scripts.empty())
         {
             g_runtime->LoadScript("app:///Scripts/experience.js");
         }
         else
         {
-            for (const auto& arg : args)
+            for (const auto& arg : options.Scripts)
             {
                 g_runtime->LoadScript(GetUrlFromPath(arg));
             }
@@ -137,6 +227,8 @@ namespace
         Uninitialize();
 
         g_runtime = Babylon::Integrations::Runtime::Create(MakeRuntimeOptions());
+        ApplyTraceOptions();
+        QueuePlaygroundOptions();
         LoadScripts();
 
         // First View::Attach triggers GPU device construction, plugin
@@ -154,6 +246,51 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
+    // SUBSYSTEM:CONSOLE (see CMakeLists.txt) gives us inherited stdio.
+    // UTF-8 output so callstacks / non-ASCII filenames survive.
+    ::SetConsoleOutputCP(CP_UTF8);
+
+    // Unbuffered stdout/stderr so the tail of the log reaches the pipe even
+    // when we exit via std::quick_exit / _Exit / TestUtils.exit(). MSVC's
+    // CRT aliases _IOLBF to _IOFBF, so _IONBF is the only correct choice.
+    std::setvbuf(stdout, nullptr, _IONBF, 0);
+    std::setvbuf(stderr, nullptr, _IONBF, 0);
+
+    // Hook crash + assert handlers as early as possible.
+    Diagnostics::Initialize();
+
+    // Route TestUtils.exit(code) to the finish line. Fires on the JS thread
+    // before the platform's default exit (quick_exit / PostMessage).
+    Babylon::Plugins::TestUtils::SetExitCallback([](int code) {
+        Diagnostics::SetExitCode(code);
+        Diagnostics::PrintFinishLine();
+    });
+
+    // Parse argv before creating any window so --help / --list don't pop one.
+    auto args = GetCommandLineArguments();
+    std::vector<const char*> argv;
+    argv.reserve(args.size());
+    for (const auto& a : args)
+    {
+        argv.push_back(a.c_str());
+    }
+    options = CommandLine::Parse(static_cast<int>(argv.size()), argv.data());
+
+    if (options.ParseError)
+    {
+        std::cerr << "Error: " << options.ErrorMessage << "\n\n";
+        CommandLine::PrintUsage(argv.empty() ? nullptr : argv[0]);
+        Diagnostics::SetExitCode(2);
+        return 2;
+    }
+
+    if (options.ShowHelp)
+    {
+        CommandLine::PrintUsage(argv.empty() ? nullptr : argv[0]);
+        Diagnostics::SetExitCode(0);
+        return 0;
+    }
+
     // Process-wide Playground setup (PerfTrace level, etc.). Shared
     // with the other Playground hosts via Shared/PlaygroundScripts.
     Playground::Initialize();
@@ -164,8 +301,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
-    if (!InitInstance(hInstance, nCmdShow))
+    if (!InitInstance(hInstance, options.Headless ? SW_HIDE : nCmdShow))
     {
+        Diagnostics::SetExitCode(FALSE);
         return FALSE;
     }
 
@@ -204,6 +342,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         }
     }
 
+    Diagnostics::SetExitCode(static_cast<int>(msg.wParam));
     return (int)msg.wParam;
 }
 

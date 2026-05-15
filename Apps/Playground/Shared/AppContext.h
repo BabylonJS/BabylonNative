@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CommandLine.h"
+
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
 #include <Babylon/Polyfills/Canvas.h>
@@ -23,7 +25,8 @@ public:
         size_t width,
         size_t height,
         DebugLogCallback debugLog,
-        AdditionalInitCallback additionalInit = {});
+        AdditionalInitCallback additionalInit = {},
+        PlaygroundOptions playgroundOptions = {});
 
     ~AppContext();
 
