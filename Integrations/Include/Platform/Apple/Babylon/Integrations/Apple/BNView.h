@@ -58,7 +58,13 @@ NS_ASSUME_NONNULL_BEGIN
 /// initialization. Subsequent attaches just rebind the surface.
 ///
 /// Returns `nil` if `runtime` or `view` is `nil`, or if the underlying
-/// `Babylon::Integrations::View::Attach` fails.
+/// `Babylon::Integrations::View::Attach` fails after view-size
+/// preconditions are met.
+///
+/// Raises an `NSException` (name
+/// `BabylonNativeInvalidViewException`) if `view` has neither a
+/// non-zero `drawableSize` nor non-zero bounds at attach time. Hidden
+/// preload views should set a small non-zero `drawableSize` explicitly.
 ///
 /// **Delegate management:** If `view.delegate` is `nil` at the time of
 /// construction, BNView creates a `BNViewDelegate` and assigns it to
@@ -106,4 +112,3 @@ NS_ASSUME_NONNULL_BEGIN
 @end
 
 NS_ASSUME_NONNULL_END
-

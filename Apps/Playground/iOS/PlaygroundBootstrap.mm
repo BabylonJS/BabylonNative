@@ -4,7 +4,7 @@
 
 #import "PlaygroundBootstrap.h"
 
-#import <BabylonNativeIntegrations/BNRuntime.h>
+#import <Babylon/Integrations/Apple/BNRuntime.h>
 
 #include <Babylon/Integrations/Runtime.h>
 #include <Shared/PlaygroundScripts.h>

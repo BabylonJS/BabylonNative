@@ -14,15 +14,17 @@ if(NOT ANDROID)
         "Disable BABYLON_NATIVE_INTEGRATIONS_ANDROID for non-Android builds.")
 endif()
 
+set(ANDROID_INTEGRATIONS_INCLUDE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../Include/Platform/Android")
+
 set(SOURCES
-    "Include/Babylon/Integrations/Android/RuntimeHandle.h"
-    "src/main/cpp/BabylonNativeIntegrations.cpp")
+    "${ANDROID_INTEGRATIONS_INCLUDE_ROOT}/Babylon/Integrations/Android/RuntimeHandle.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/main/cpp/BabylonNativeIntegrations.cpp")
 
 add_library(BabylonNativeIntegrations SHARED ${SOURCES})
 
 warnings_as_errors(BabylonNativeIntegrations)
 
-target_include_directories(BabylonNativeIntegrations PUBLIC "Include")
+target_include_directories(BabylonNativeIntegrations PUBLIC "${ANDROID_INTEGRATIONS_INCLUDE_ROOT}")
 
 target_link_libraries(BabylonNativeIntegrations
     PRIVATE Integrations
@@ -34,4 +36,4 @@ target_link_libraries(BabylonNativeIntegrations
     PRIVATE -lz)
 
 set_property(TARGET BabylonNativeIntegrations PROPERTY FOLDER Integrations)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/.." FILES ${SOURCES})

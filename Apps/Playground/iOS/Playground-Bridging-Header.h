@@ -6,6 +6,6 @@
 
 #pragma once
 
-#import <BabylonNativeIntegrations/BabylonNativeIntegrations.h>
+#import <Babylon/Integrations/Apple/BabylonNativeIntegrations.h>
 
 #import "PlaygroundBootstrap.h"

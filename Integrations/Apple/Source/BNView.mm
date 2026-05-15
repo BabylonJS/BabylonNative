@@ -2,12 +2,13 @@
 // Babylon::Integrations::View.
 
 #import "BNRuntimeInternal.h"
-#import <BabylonNativeIntegrations/BNView.h>
+#import <Babylon/Integrations/Apple/BNView.h>
 
 #import <MetalKit/MetalKit.h>
 #import <QuartzCore/CAMetalLayer.h>
 
 #include <Babylon/Integrations/View.h>
+#include <exception>
 
 #include <cstdint>
 #include <memory>
@@ -40,30 +41,65 @@
         // +layerClass override).
         CAMetalLayer* layer = (CAMetalLayer*)view.layer;
 
-        // Force a layout pass so the view's bounds are valid before we
-        // read them, and seed the layer's drawableSize from the view's
-        // logical bounds × backing scale. MTKView's autoResizeDrawable
-        // will keep drawableSize in sync from this point on, but at
-        // attach time it can still be (0, 0) — so we set it explicitly
-        // to avoid handing bgfx a zero-sized swap chain.
-        [view layoutIfNeeded];
+        // If MTKView has not produced a drawable size yet, seed it
+        // from real laid-out bounds. If the host supplied a non-zero
+        // drawableSize explicitly (for example, for hidden preload),
+        // preserve it.
+        const CGSize drawableSize = layer.drawableSize;
+        if (drawableSize.width <= 0 || drawableSize.height <= 0)
+        {
+            [view layoutIfNeeded];
+
+            const CGSize boundsSize = view.bounds.size;
+            if (boundsSize.width > 0 && boundsSize.height > 0)
+            {
 #if TARGET_OS_OSX
-        const CGFloat scale = view.window.backingScaleFactor > 0
-            ? view.window.backingScaleFactor
-            : 1.0;
+                CGFloat scale = view.window.backingScaleFactor > 0
+                    ? view.window.backingScaleFactor
+                    : 1.0;
 #else
-        const CGFloat scale = view.contentScaleFactor;
+                CGFloat scale = view.contentScaleFactor;
 #endif
-        layer.drawableSize = CGSizeMake(view.bounds.size.width * scale,
-                                         view.bounds.size.height * scale);
+                if (scale <= 0)
+                {
+                    scale = 1.0;
+                }
+                layer.drawableSize = CGSizeMake(boundsSize.width * scale,
+                                                boundsSize.height * scale);
+            }
+        }
+
+        const CGSize finalDrawableSize = layer.drawableSize;
+        if (finalDrawableSize.width <= 0 || finalDrawableSize.height <= 0)
+        {
+            @throw [NSException
+                exceptionWithName:@"BabylonNativeInvalidViewException"
+                           reason:@"BNView requires a non-zero drawableSize or non-zero bounds before attach."
+                         userInfo:nil];
+        }
 
         // First attach on this runtime triggers GPU device construction
         // + plugin initialization + queued-script flush. The View
         // queries the layer's drawableSize itself; the host doesn't
         // need to pass dimensions.
-        _view = Babylon::Integrations::View::Attach(
-            *runtime.nativeRuntime,
-            (__bridge CA::MetalLayer*)layer);
+        try
+        {
+            _view = Babylon::Integrations::View::Attach(
+                *runtime.nativeRuntime,
+                (__bridge CA::MetalLayer*)layer);
+        }
+        catch (const std::exception& exception)
+        {
+            NSLog(@"BNView: View::Attach failed: %s", exception.what());
+            _mtkView = nil;
+            return nil;
+        }
+        catch (...)
+        {
+            NSLog(@"BNView: View::Attach failed with an unknown exception");
+            _mtkView = nil;
+            return nil;
+        }
         if (!_view)
         {
             _mtkView = nil;

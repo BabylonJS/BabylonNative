@@ -3,6 +3,8 @@
 #include <Babylon/Graphics/DeviceQueries.h>
 
 #include <cassert>
+#include <stdexcept>
+#include <string>
 
 namespace Babylon::Integrations
 {
@@ -33,6 +35,14 @@ namespace Babylon::Integrations
             }
             return {x / dpr, y / dpr};
         }
+
+        void ValidateNonZeroSize(uint32_t width, uint32_t height, const char* operation)
+        {
+            if (width == 0 || height == 0)
+            {
+                throw std::runtime_error{std::string{operation} + " requires non-zero width and height."};
+            }
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -58,9 +68,12 @@ namespace Babylon::Integrations
         // Device doesn't exist yet, so we go through the standalone
         // `Babylon::Graphics::GetDevicePixelRatio(window)` free function.
         const auto querySize = ViewImpl::QuerySize(nativeWindow);
+        ValidateNonZeroSize(querySize.Width, querySize.Height, "View::Attach native window size");
+
         const float dpr = Babylon::Graphics::GetDevicePixelRatio(nativeWindow);
         const auto [logicalW, logicalH] = ToLogicalSize(
             querySize.Width, querySize.Height, querySize.Units, dpr);
+        ValidateNonZeroSize(logicalW, logicalH, "View::Attach logical size");
 
         if (firstAttach)
         {
@@ -194,11 +207,14 @@ namespace Babylon::Integrations
 
     void View::Resize(uint32_t width, uint32_t height, CoordinateUnits units)
     {
+        ValidateNonZeroSize(width, height, "View::Resize size");
+
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
         if (impl.m_device)
         {
             const auto [lw, lh] = ToLogicalSize(width, height, units,
                                                 impl.m_device->GetDevicePixelRatio());
+            ValidateNonZeroSize(lw, lh, "View::Resize logical size");
             impl.m_device->UpdateSize(lw, lh);
         }
     }

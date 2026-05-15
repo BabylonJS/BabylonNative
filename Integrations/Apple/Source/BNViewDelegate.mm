@@ -3,7 +3,7 @@
 // override the delegate methods and call `super` to keep the default
 // forwarding behavior.
 
-#import <BabylonNativeIntegrations/BNView.h>
+#import <Babylon/Integrations/Apple/BNView.h>
 
 @implementation BNViewDelegate
 {
@@ -32,6 +32,11 @@
 
 - (void)mtkView:(MTKView* __unused)v drawableSizeWillChange:(CGSize)size
 {
+    if (size.width <= 0 || size.height <= 0)
+    {
+        return;
+    }
+
     [_view resizeWithWidth:static_cast<NSUInteger>(size.width)
                     height:static_cast<NSUInteger>(size.height)];
 }

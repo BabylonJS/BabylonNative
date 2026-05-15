@@ -13,35 +13,38 @@ if(NOT APPLE)
         "Disable BABYLON_NATIVE_INTEGRATIONS_APPLE for non-Apple builds.")
 endif()
 
+set(APPLE_INTEGRATIONS_INCLUDE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../Include/Platform/Apple")
+
 set(SOURCES
-    "include/BabylonNativeIntegrations/BabylonNativeIntegrations.h"
-    "include/BabylonNativeIntegrations/BNRuntime.h"
-    "include/BabylonNativeIntegrations/BNView.h"
-    "Source/BNRuntime.mm"
-    "Source/BNRuntimeInternal.h"
-    "Source/BNView.mm"
-    "Source/BNViewDelegate.mm")
+    "${APPLE_INTEGRATIONS_INCLUDE_ROOT}/Babylon/Integrations/Apple/BabylonNativeIntegrations.h"
+    "${APPLE_INTEGRATIONS_INCLUDE_ROOT}/Babylon/Integrations/Apple/BNRuntime.h"
+    "${APPLE_INTEGRATIONS_INCLUDE_ROOT}/Babylon/Integrations/Apple/BNRuntimeNative.h"
+    "${APPLE_INTEGRATIONS_INCLUDE_ROOT}/Babylon/Integrations/Apple/BNView.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Source/BNRuntime.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Source/BNRuntimeInternal.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Source/BNView.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Source/BNViewDelegate.mm")
 
 add_library(BabylonNativeIntegrations STATIC ${SOURCES})
 
 warnings_as_errors(BabylonNativeIntegrations)
 
 target_include_directories(BabylonNativeIntegrations
-    PUBLIC "include"
-    PRIVATE "Source")
+    PUBLIC "${APPLE_INTEGRATIONS_INCLUDE_ROOT}"
+    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Source")
 
 target_link_libraries(BabylonNativeIntegrations
-    PRIVATE Integrations
+    PUBLIC Integrations
     PRIVATE "-framework Foundation"
     PRIVATE "-framework QuartzCore"
     PRIVATE "-framework MetalKit")
 
 # Enable ARC for the Obj-C++ files.
 set_source_files_properties(
-    "Source/BNRuntime.mm"
-    "Source/BNView.mm"
-    "Source/BNViewDelegate.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Source/BNRuntime.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Source/BNView.mm"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Source/BNViewDelegate.mm"
     PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 
 set_property(TARGET BabylonNativeIntegrations PROPERTY FOLDER Integrations)
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/.." FILES ${SOURCES})

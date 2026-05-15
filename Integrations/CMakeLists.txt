@@ -1,8 +1,10 @@
+set(INTEGRATIONS_SHARED_INCLUDE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/Include/Shared")
+
 set(SOURCES
-    "Include/Babylon/Integrations/LogLevel.h"
-    "Include/Babylon/Integrations/Runtime.h"
-    "Include/Babylon/Integrations/RuntimeOptions.h"
-    "Include/Babylon/Integrations/View.h"
+    "${INTEGRATIONS_SHARED_INCLUDE_ROOT}/Babylon/Integrations/LogLevel.h"
+    "${INTEGRATIONS_SHARED_INCLUDE_ROOT}/Babylon/Integrations/Runtime.h"
+    "${INTEGRATIONS_SHARED_INCLUDE_ROOT}/Babylon/Integrations/RuntimeOptions.h"
+    "${INTEGRATIONS_SHARED_INCLUDE_ROOT}/Babylon/Integrations/View.h"
     "Source/Runtime.cpp"
     "Source/RuntimeImpl.h"
     "Source/View.cpp"
@@ -12,7 +14,7 @@ add_library(Integrations ${SOURCES})
 
 warnings_as_errors(Integrations)
 
-target_include_directories(Integrations PUBLIC "Include")
+target_include_directories(Integrations PUBLIC "${INTEGRATIONS_SHARED_INCLUDE_ROOT}")
 
 # Always-on dependencies. The Integrations layer formalizes the canonical
 # Babylon Native setup, so the polyfills that AppContext.cpp historically

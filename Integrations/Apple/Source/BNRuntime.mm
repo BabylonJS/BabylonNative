@@ -2,6 +2,7 @@
 // Babylon::Integrations::Runtime.
 
 #import "BNRuntimeInternal.h"
+#import <Babylon/Integrations/Apple/BNRuntimeNative.h>
 
 #import <Foundation/Foundation.h>
 #import <MetalKit/MetalKit.h>
@@ -136,4 +137,12 @@
 }
 
 @end
+
+namespace Babylon::Integrations::Apple
+{
+    Runtime* RuntimeFromBNRuntime(BNRuntime* runtime)
+    {
+        return runtime == nil ? nullptr : [runtime nativeRuntime];
+    }
+}
 
