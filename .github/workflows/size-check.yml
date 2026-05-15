@@ -67,142 +67,22 @@ jobs:
         run: cmake --build build\Win32_x64 --config RelWithDebInfo --target Playground -- /m
 
       - name: Measure sizes and format comment
-        id: measure
         shell: pwsh
         run: |
-          $marker      = '<!-- binary-size-check -->'
-          $config      = 'RelWithDebInfo'
-          $platform    = 'Win32 x64 D3D11 RelWithDebInfo'
-          $baseBuild   = Join-Path $env:GITHUB_WORKSPACE 'base\build\Win32_x64'
-          $headBuild   = Join-Path $env:GITHUB_WORKSPACE 'head\build\Win32_x64'
-          $baseRef     = '${{ github.event.pull_request.base.sha }}'
-          $headRef     = '${{ github.event.pull_request.head.sha }}'
-          $playgroundRel = "Apps\Playground\$config\Playground.exe"
-
-          function Get-Artifacts($root, $cfg) {
-              if (-not (Test-Path $root)) { return @() }
-              Get-ChildItem $root -Recurse -File -Include *.exe,*.dll,*.lib -ErrorAction SilentlyContinue |
-                  Where-Object { $_.FullName -match "\\$cfg\\" } |
-                  ForEach-Object {
-                      [PSCustomObject]@{
-                          Rel  = $_.FullName.Substring($root.Length + 1)
-                          Size = $_.Length
-                      }
-                  }
-          }
-
-          $baseArts = Get-Artifacts $baseBuild $config
-          $headArts = Get-Artifacts $headBuild $config
-
-          if ($baseArts.Count -eq 0 -or $headArts.Count -eq 0) {
-              throw "No artifacts found. base=$($baseArts.Count) head=$($headArts.Count). Build likely failed."
-          }
-
-          function FormatBytes([long]$n) {
-              $sign = if ($n -lt 0) { '-' } else { '+' }
-              $abs  = [math]::Abs($n)
-              if ($abs -ge 1MB) { return "$sign$([math]::Round($abs/1MB, 2)) MB" }
-              if ($abs -ge 1KB) { return "$sign$([math]::Round($abs/1KB, 1)) KB" }
-              return "$sign$abs B"
-          }
-
-          function FormatCount([long]$n) { '{0:N0}' -f $n }
-
-          # Headline: Playground.exe
-          $basePg = $baseArts | Where-Object { $_.Rel -match 'Playground\.exe$' } | Select-Object -First 1
-          $headPg = $headArts | Where-Object { $_.Rel -match 'Playground\.exe$' } | Select-Object -First 1
-
-          if (-not $basePg -or -not $headPg) {
-              throw "Playground.exe missing. base=$($basePg -ne $null) head=$($headPg -ne $null)"
-          }
-
-          $pgDelta = $headPg.Size - $basePg.Size
-          $pgPct   = if ($basePg.Size -gt 0) { [math]::Round(100 * $pgDelta / $basePg.Size, 3) } else { 0 }
-
-          # Build a name->sizes map for delta comparison
-          $pairs = @{}
-          foreach ($a in $baseArts) { $pairs[$a.Rel] = @{ Base = $a.Size; Head = 0 } }
-          foreach ($a in $headArts) {
-              if (-not $pairs.ContainsKey($a.Rel)) { $pairs[$a.Rel] = @{ Base = 0; Head = 0 } }
-              $pairs[$a.Rel].Head = $a.Size
-          }
-          $rows = $pairs.Keys | ForEach-Object {
-              $p = $pairs[$_]
-              [PSCustomObject]@{
-                  Rel   = $_
-                  Base  = $p.Base
-                  Head  = $p.Head
-                  Delta = $p.Head - $p.Base
-              }
-          }
-
-          # Top movers (absolute delta, excluding Playground.exe which we already feature)
-          $top = $rows |
-              Where-Object { $_.Rel -notmatch 'Playground\.exe$' -and [math]::Abs($_.Delta) -gt 256 } |
-              Sort-Object { [math]::Abs($_.Delta) } -Descending |
-              Select-Object -First 10
-
-          $baseTotal = ($baseArts | Measure-Object Size -Sum).Sum
-          $headTotal = ($headArts | Measure-Object Size -Sum).Sum
-          $totalDelta = $headTotal - $baseTotal
-          $totalPct   = if ($baseTotal -gt 0) { [math]::Round(100 * $totalDelta / $baseTotal, 3) } else { 0 }
-
-          # Build markdown
-          $sb = [System.Text.StringBuilder]::new()
-          [void]$sb.AppendLine($marker)
-          [void]$sb.AppendLine('## Binary size impact')
-          [void]$sb.AppendLine('')
-          [void]$sb.AppendLine("Platform: ``$platform`` &nbsp;|&nbsp; base ``$($baseRef.Substring(0,7))`` &nbsp;|&nbsp; head ``$($headRef.Substring(0,7))``")
-          [void]$sb.AppendLine('')
-          [void]$sb.AppendLine('### Final linked binary')
-          [void]$sb.AppendLine('')
-          [void]$sb.AppendLine('| Artifact | Base | Head | Δ bytes | Δ% |')
-          [void]$sb.AppendLine('|---|---:|---:|---:|---:|')
-          [void]$sb.AppendLine("| **Playground.exe** | $(FormatCount $basePg.Size) | $(FormatCount $headPg.Size) | **$(FormatBytes $pgDelta)** | **$pgPct %** |")
-          [void]$sb.AppendLine("| Aggregate (.exe/.dll/.lib) | $(FormatCount $baseTotal) | $(FormatCount $headTotal) | $(FormatBytes $totalDelta) | $totalPct % |")
-          [void]$sb.AppendLine('')
-
-          if ($top -and $top.Count -gt 0) {
-              [void]$sb.AppendLine('### Top movers (other static libs / DLLs, |Δ| > 256 B)')
-              [void]$sb.AppendLine('')
-              [void]$sb.AppendLine('| Artifact | Base | Head | Δ bytes |')
-              [void]$sb.AppendLine('|---|---:|---:|---:|')
-              foreach ($r in $top) {
-                  $shortRel = $r.Rel -replace '\\', '/'
-                  [void]$sb.AppendLine("| ``$shortRel`` | $(FormatCount $r.Base) | $(FormatCount $r.Head) | $(FormatBytes $r.Delta) |")
-              }
-              [void]$sb.AppendLine('')
-          } else {
-              [void]$sb.AppendLine('_No other artifact moved by more than 256 B._')
-              [void]$sb.AppendLine('')
-          }
-
-          [void]$sb.AppendLine('---')
-          [void]$sb.AppendLine('<sub>Comparison is informational only — no threshold enforcement. Configuration matches the Win32_x64_D3D11 CI job. Two sequential Release-with-debug-info builds per run. Small deltas on unchanged libs are typically COFF timestamps.</sub>')
-
-          $body = $sb.ToString()
-          $reportDir = Join-Path $env:RUNNER_TEMP 'size-check-report'
-          New-Item -ItemType Directory -Force $reportDir | Out-Null
-          $bodyFile = Join-Path $reportDir 'body.md'
-          $body | Set-Content -Path $bodyFile -Encoding utf8
-
-          # Stash the PR number alongside the body so the comment workflow can find it
-          # (workflow_run events don't reliably populate pull_request context for fork PRs).
-          '${{ github.event.pull_request.number }}' | Set-Content -Path (Join-Path $reportDir 'pr-number.txt') -Encoding utf8
-
-          Write-Host "=== comment body ==="
-          Write-Host $body
-          Write-Host "===================="
-
-          # Surface in run summary too (visible on the PR's checks page even when no sticky comment posts).
-          $body | Add-Content -Path $env:GITHUB_STEP_SUMMARY -Encoding utf8
-
-          "report_dir=$reportDir" | Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8
+          ./head/Scripts/MeasureBinarySize.ps1 `
+            -BaseBuildDir base/build/Win32_x64 `
+            -HeadBuildDir head/build/Win32_x64 `
+            -Config RelWithDebInfo `
+            -Platform "Win32 x64 D3D11 RelWithDebInfo" `
+            -BaseRef "${{ github.event.pull_request.base.sha }}" `
+            -HeadRef "${{ github.event.pull_request.head.sha }}" `
+            -PrNumber ${{ github.event.pull_request.number }} `
+            -OutputDir "${{ runner.temp }}/size-check-report"
 
       - name: Upload size-check report artifact
         uses: actions/upload-artifact@v6
         with:
           name: size-check-report
-          path: ${{ steps.measure.outputs.report_dir }}
+          path: ${{ runner.temp }}/size-check-report
           if-no-files-found: error
           retention-days: 7
