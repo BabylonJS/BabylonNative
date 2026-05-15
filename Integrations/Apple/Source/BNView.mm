@@ -10,8 +10,22 @@
 #include <Babylon/Integrations/View.h>
 #include <exception>
 
+#include <cmath>
 #include <cstdint>
 #include <memory>
+
+namespace
+{
+    bool IsFinitePositive(CGFloat value)
+    {
+        return std::isfinite(static_cast<double>(value)) && value > 0;
+    }
+
+    bool IsFinitePositive(CGSize size)
+    {
+        return IsFinitePositive(size.width) && IsFinitePositive(size.height);
+    }
+}
 
 @implementation BNView
 {
@@ -46,12 +60,12 @@
         // drawableSize explicitly (for example, for hidden preload),
         // preserve it.
         const CGSize drawableSize = layer.drawableSize;
-        if (drawableSize.width <= 0 || drawableSize.height <= 0)
+        if (!IsFinitePositive(drawableSize))
         {
             [view layoutIfNeeded];
 
             const CGSize boundsSize = view.bounds.size;
-            if (boundsSize.width > 0 && boundsSize.height > 0)
+            if (IsFinitePositive(boundsSize))
             {
 #if TARGET_OS_OSX
                 CGFloat scale = view.window.backingScaleFactor > 0
@@ -60,21 +74,25 @@
 #else
                 CGFloat scale = view.contentScaleFactor;
 #endif
-                if (scale <= 0)
+                if (!IsFinitePositive(scale))
                 {
                     scale = 1.0;
                 }
-                layer.drawableSize = CGSizeMake(boundsSize.width * scale,
-                                                boundsSize.height * scale);
+                const CGSize seededDrawableSize = CGSizeMake(boundsSize.width * scale,
+                                                             boundsSize.height * scale);
+                if (IsFinitePositive(seededDrawableSize))
+                {
+                    layer.drawableSize = seededDrawableSize;
+                }
             }
         }
 
         const CGSize finalDrawableSize = layer.drawableSize;
-        if (finalDrawableSize.width <= 0 || finalDrawableSize.height <= 0)
+        if (!IsFinitePositive(finalDrawableSize))
         {
             @throw [NSException
                 exceptionWithName:@"BabylonNativeInvalidViewException"
-                           reason:@"BNView requires a non-zero drawableSize or non-zero bounds before attach."
+                           reason:@"BNView requires a finite, non-zero drawableSize or finite, non-zero bounds before attach."
                          userInfo:nil];
         }
 

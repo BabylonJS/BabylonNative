@@ -1,6 +1,16 @@
 #include "RuntimeImpl.h"
 
+#include <cmath>
+
 #import <QuartzCore/CAMetalLayer.h>
+
+namespace
+{
+    bool IsFinitePositive(CGFloat value)
+    {
+        return std::isfinite(static_cast<double>(value)) && value > 0;
+    }
+}
 
 namespace Babylon::Integrations
 {
@@ -14,6 +24,10 @@ namespace Babylon::Integrations
         // CAMetalLayer*; drawableSize is in physical pixels.
         CAMetalLayer* layer = (__bridge CAMetalLayer*)window;
         const CGSize size = layer.drawableSize;
+        if (!IsFinitePositive(size.width) || !IsFinitePositive(size.height))
+        {
+            return {0, 0, CoordinateUnits::Physical};
+        }
         return {static_cast<uint32_t>(size.width),
                 static_cast<uint32_t>(size.height),
                 CoordinateUnits::Physical};

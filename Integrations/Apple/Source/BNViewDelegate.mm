@@ -5,6 +5,16 @@
 
 #import <Babylon/Integrations/Apple/BNView.h>
 
+#include <cmath>
+
+namespace
+{
+    bool IsFinitePositive(CGFloat value)
+    {
+        return std::isfinite(static_cast<double>(value)) && value > 0;
+    }
+}
+
 @implementation BNViewDelegate
 {
     // BNView holds the auto-installed delegate strongly, and
@@ -32,7 +42,7 @@
 
 - (void)mtkView:(MTKView* __unused)v drawableSizeWillChange:(CGSize)size
 {
-    if (size.width <= 0 || size.height <= 0)
+    if (!IsFinitePositive(size.width) || !IsFinitePositive(size.height))
     {
         return;
     }
