@@ -14,36 +14,51 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+@interface BNRuntimeOptions : NSObject
+
+/// Optional MSAA sample count for the back buffer. Valid values are 0, 2, 4, 8, and 16.
+/// Defaults to the shared C++ RuntimeOptions value when nil.
+@property (nonatomic, strong, nullable) NSNumber* msaaSamples;
+
+/// Enable the JavaScript debugger when supported by the configured JS engine.
+/// Defaults to NO, matching the shared C++ RuntimeOptions default.
+@property (nonatomic) BOOL enableDebugger;
+
+/// Enable Babylon::DebugTrace output through the default log sink.
+/// Defaults to NO, matching the shared C++ RuntimeOptions default.
+@property (nonatomic) BOOL enableDebugTrace;
+
+/// Block engine startup until a debugger attaches when supported by the configured JS engine.
+/// Defaults to NO, matching the shared C++ RuntimeOptions default.
+@property (nonatomic) BOOL waitForDebugger;
+
+/// Optional writable file path for a persistent on-disk GPU shader cache. Defaults to nil.
+@property (nonatomic, copy, nullable) NSString* shaderCachePath;
+
+@end
+
 @interface BNRuntime : NSObject
 
 /// Constructs the runtime: starts the JS engine + thread, sets up
 /// non-GPU polyfills and plugins. Cheap and synchronous; no GPU
 /// device is created yet (that happens on the first `BNView` attach).
-/// Default options: JS debugger off, log routes to `NSLog`.
+/// Default options: JS debugger off, DebugTrace off, log routes to `NSLog`.
 - (instancetype)init;
 
-/// Same as `init` but lets the host opt into the JS debugger.
-- (instancetype)initWithEnableDebugger:(BOOL)enableDebugger;
-
-/// Same as `initWithEnableDebugger:` but also wires up a persistent
-/// on-disk GPU shader cache. Pass a writable file path (typically
-/// inside `NSCachesDirectory`, e.g.
-/// `[NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES).firstObject stringByAppendingPathComponent:@"babylon.shadercache"]`).
-/// Pass `nil` to disable the on-disk cache (equivalent to the
-/// `initWithEnableDebugger:` overload).
+/// Constructs the runtime with platform-friendly options. Pass nil to use
+/// the same defaults as `init`.
 ///
-/// The cache is loaded on first `BNView` attach and saved on `suspend`
-/// and on deallocation.
+/// If `options.shaderCachePath` is non-`nil`, the cache is loaded on first
+/// `BNView` attach and saved on `suspend` and on deallocation.
 ///
-/// If `shaderCachePath` is non-`nil` but the native library was built
-/// without `BABYLON_NATIVE_PLUGIN_SHADERCACHE`, this method raises an
+/// If `options.shaderCachePath` is non-`nil` but the native library was built
+/// without `BABYLON_NATIVE_PLUGIN_SHADERCACHE`, this initializer raises an
 /// `NSException` (name
 /// `BabylonNativePluginNotEnabledException`) so the misconfiguration
 /// surfaces at construction time rather than silently dropping the
-/// cache. Passing `nil` is always safe regardless of build config.
-- (instancetype)initWithEnableDebugger:(BOOL)enableDebugger
-                       shaderCachePath:(nullable NSString*)shaderCachePath
-                       NS_DESIGNATED_INITIALIZER;
+/// cache. Passing nil options, or options with nil `shaderCachePath`, is
+/// always safe regardless of build config.
+- (instancetype)initWithOptions:(nullable BNRuntimeOptions*)options NS_DESIGNATED_INITIALIZER;
 
 /// Load a script from a URL onto the JS thread. Calls made before
 /// the first `BNView` is created are queued internally and dispatched

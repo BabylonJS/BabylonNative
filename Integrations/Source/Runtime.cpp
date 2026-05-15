@@ -79,17 +79,18 @@ namespace Babylon::Integrations
     RuntimeImpl::RuntimeImpl(RuntimeOptions options)
         : m_options{std::move(options)}
     {
-        // Wire DebugTrace through to the host's log callback (if any).
+        // Wire DebugTrace through to the host's log callback (if any),
+        // and enable it only when the host explicitly opts in.
         // DebugTrace is process-wide so this affects any concurrent
         // Runtime instances; that matches AppContext's behavior today.
         if (m_options.log)
         {
-            Babylon::DebugTrace::EnableDebugTrace(true);
             const auto& logCallback = m_options.log;
             Babylon::DebugTrace::SetTraceOutput([logCallback](const char* message) {
                 logCallback(LogLevel::Log, message ? message : "");
             });
         }
+        Babylon::DebugTrace::EnableDebugTrace(m_options.enableDebugTrace);
 
         // Construct AppRuntime. This starts the JS thread and creates a
         // Napi::Env. Plugin Initialize() calls will be dispatched onto

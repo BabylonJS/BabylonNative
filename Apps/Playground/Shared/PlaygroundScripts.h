@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CommandLine.h"
+
 namespace Babylon::Integrations
 {
     class Runtime;
@@ -8,12 +10,9 @@ namespace Babylon::Integrations
 namespace Playground
 {
     // Apply process-wide settings shared by every Playground host:
-    // currently `Babylon::PerfTrace::SetLevel(Mark)`. Call once per
-    // process, before constructing any `Babylon::Integrations::Runtime`.
-    //
-    // (DebugTrace setup is now handled by `RuntimeOptions::log` in the
-    // Integrations layer, so it doesn't need to live here.)
-    void Initialize();
+    // currently PerfTrace. Call before queuing scripts and attaching
+    // the first view.
+    void Initialize(const PlaygroundOptions& options = {});
 
     // Queue the standard Babylon.js bootstrap scripts (Babylon core,
     // loaders, materials, GUI, serializers, plus a few common extras)

@@ -34,7 +34,10 @@ public class PlaygroundActivity extends Activity {
         // Owner of the Runtime lifetime: created here, destroyed in
         // onDestroy. The View only borrows the handle for its surface
         // bindings.
-        mRuntimeHandle = BabylonNative.runtimeCreate(/*enableDebugger*/ true);
+        BabylonNative.RuntimeOptions runtimeOptions = new BabylonNative.RuntimeOptions();
+        runtimeOptions.enableDebugger = true;
+        runtimeOptions.enableDebugTrace = true;
+        mRuntimeHandle = BabylonNative.runtimeCreate(runtimeOptions);
 
         // Queue the Babylon.js bootstrap scripts, then the playground
         // experience script. Both happen synchronously from this thread;

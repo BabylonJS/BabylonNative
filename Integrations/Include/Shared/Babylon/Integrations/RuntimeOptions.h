@@ -18,13 +18,18 @@ namespace Babylon::Integrations
         // Enable the JavaScript debugger. Only implemented for V8 and Chakra.
         bool enableDebugger{false};
 
+        // Enable Babylon::DebugTrace. If a log sink is provided, DebugTrace
+        // output is forwarded to it as LogLevel::Log.
+        bool enableDebugTrace{false};
+
         // Block engine startup until a debugger has attached. Only
         // implemented for V8.
         bool waitForDebugger{false};
 
         // Optional log sink. Receives:
         //   - `console.{log,warn,error}` output  → LogLevel::{Log,Warn,Error}
-        //   - `Babylon::DebugTrace` output      → LogLevel::Log
+        //   - `Babylon::DebugTrace` output      → LogLevel::Log, when
+        //                                         enableDebugTrace is true
         //   - Uncaught JS exceptions             → LogLevel::Fatal
         //
         // If unset, ordinary log output is silently discarded and

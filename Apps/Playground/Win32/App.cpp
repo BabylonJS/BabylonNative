@@ -7,10 +7,8 @@
 
 #include "App.h"
 
-#include <Babylon/DebugTrace.h>
 #include <Babylon/Integrations/Runtime.h>
 #include <Babylon/Integrations/View.h>
-#include <Babylon/PerfTrace.h>
 #include <Babylon/Plugins/TestUtils.h>
 
 #include <Shared/CommandLine.h>
@@ -92,30 +90,11 @@ namespace
         return arguments;
     }
 
-    void ApplyTraceOptions()
-    {
-        Babylon::DebugTrace::EnableDebugTrace(options.DebugTrace.value_or(true));
-
-        Babylon::PerfTrace::Level perfLevel{Babylon::PerfTrace::Level::Mark};
-        if (options.PerfTrace.has_value())
-        {
-            const auto& value = *options.PerfTrace;
-            if (value == "None" || value == "none")
-            {
-                perfLevel = Babylon::PerfTrace::Level::None;
-            }
-            else if (value == "Log" || value == "log" || value == "Detail" || value == "detail")
-            {
-                perfLevel = Babylon::PerfTrace::Level::Log;
-            }
-        }
-        Babylon::PerfTrace::SetLevel(perfLevel);
-    }
-
     Babylon::Integrations::RuntimeOptions MakeRuntimeOptions()
     {
         Babylon::Integrations::RuntimeOptions runtimeOptions{};
         runtimeOptions.enableDebugger = true;     // matches AppContext default
+        runtimeOptions.enableDebugTrace = options.DebugTrace.value_or(true);
         runtimeOptions.log = [](Babylon::Integrations::LogLevel level, std::string_view message) {
             std::string text{message};
             while (!text.empty() && (text.back() == '\n' || text.back() == '\r'))
@@ -227,7 +206,7 @@ namespace
         Uninitialize();
 
         g_runtime = Babylon::Integrations::Runtime::Create(MakeRuntimeOptions());
-        ApplyTraceOptions();
+        Playground::Initialize(options);
         QueuePlaygroundOptions();
         LoadScripts();
 
@@ -290,10 +269,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         Diagnostics::SetExitCode(0);
         return 0;
     }
-
-    // Process-wide Playground setup (PerfTrace level, etc.). Shared
-    // with the other Playground hosts via Shared/PlaygroundScripts.
-    Playground::Initialize();
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);

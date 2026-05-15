@@ -13,7 +13,7 @@ import com.babylonjs.integrations.BabylonNative;
 /**
  * Playground View built on top of {@link BabylonNative}. Borrows a
  * Runtime handle from the host (the host is responsible for the
- * Runtime's lifetime via {@link BabylonNative#runtimeCreate(boolean)} /
+ * Runtime's lifetime via {@link BabylonNative#runtimeCreate()} /
  * {@link BabylonNative#runtimeDestroy(long)}); this class only owns the
  * View handle, which mirrors the underlying Surface lifecycle:
  * attach in {@code surfaceCreated}, resize in {@code surfaceChanged},

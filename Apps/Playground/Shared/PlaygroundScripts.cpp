@@ -5,11 +5,24 @@
 
 namespace Playground
 {
-    void Initialize()
+    void Initialize(const PlaygroundOptions& options)
     {
         // Process-wide perf-tracing configuration. Used to be done
         // inside AppContext's constructor.
-        Babylon::PerfTrace::SetLevel(Babylon::PerfTrace::Level::Mark);
+        Babylon::PerfTrace::Level perfLevel{Babylon::PerfTrace::Level::Mark};
+        if (options.PerfTrace.has_value())
+        {
+            const auto& value = *options.PerfTrace;
+            if (value == "None" || value == "none")
+            {
+                perfLevel = Babylon::PerfTrace::Level::None;
+            }
+            else if (value == "Log" || value == "log" || value == "Detail" || value == "detail")
+            {
+                perfLevel = Babylon::PerfTrace::Level::Log;
+            }
+        }
+        Babylon::PerfTrace::SetLevel(perfLevel);
     }
 
     void LoadBootstrapScripts(Babylon::Integrations::Runtime& runtime)

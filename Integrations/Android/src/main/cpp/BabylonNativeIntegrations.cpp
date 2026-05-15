@@ -115,6 +115,102 @@ namespace
         }
     }
 
+    bool ApplyJavaRuntimeOptions(JNIEnv* env, jobject javaOptions, RuntimeOptions& options)
+    {
+        if (javaOptions == nullptr)
+        {
+            return true;
+        }
+
+        jclass optionsClass = env->GetObjectClass(javaOptions);
+        if (optionsClass == nullptr)
+        {
+            return false;
+        }
+
+        auto readBoolean = [&](const char* name, bool& target) {
+            jfieldID field = env->GetFieldID(optionsClass, name, "Z");
+            if (field == nullptr)
+            {
+                return false;
+            }
+            target = env->GetBooleanField(javaOptions, field) == JNI_TRUE;
+            return true;
+        };
+
+        if (!readBoolean("enableDebugger", options.enableDebugger) ||
+            !readBoolean("enableDebugTrace", options.enableDebugTrace) ||
+            !readBoolean("waitForDebugger", options.waitForDebugger))
+        {
+            env->DeleteLocalRef(optionsClass);
+            return false;
+        }
+
+        jfieldID msaaSamplesField = env->GetFieldID(optionsClass, "msaaSamples", "Ljava/lang/Integer;");
+        if (msaaSamplesField == nullptr)
+        {
+            env->DeleteLocalRef(optionsClass);
+            return false;
+        }
+
+        jobject msaaSamples = env->GetObjectField(javaOptions, msaaSamplesField);
+        if (msaaSamples != nullptr)
+        {
+            jclass integerClass = env->GetObjectClass(msaaSamples);
+            if (integerClass == nullptr)
+            {
+                env->DeleteLocalRef(msaaSamples);
+                env->DeleteLocalRef(optionsClass);
+                return false;
+            }
+
+            jmethodID intValue = env->GetMethodID(integerClass, "intValue", "()I");
+            if (intValue == nullptr)
+            {
+                env->DeleteLocalRef(integerClass);
+                env->DeleteLocalRef(msaaSamples);
+                env->DeleteLocalRef(optionsClass);
+                return false;
+            }
+
+            const jint value = env->CallIntMethod(msaaSamples, intValue);
+            options.msaaSamples = value >= 0 && value <= 255 ? static_cast<uint8_t>(value) : 0;
+            env->DeleteLocalRef(integerClass);
+            env->DeleteLocalRef(msaaSamples);
+        }
+
+        jfieldID shaderCachePathField = env->GetFieldID(optionsClass, "shaderCachePath", "Ljava/lang/String;");
+        if (shaderCachePathField == nullptr)
+        {
+            env->DeleteLocalRef(optionsClass);
+            return false;
+        }
+
+        auto shaderCachePath = static_cast<jstring>(env->GetObjectField(javaOptions, shaderCachePathField));
+        if (shaderCachePath != nullptr)
+        {
+#if BABYLON_NATIVE_PLUGIN_SHADERCACHE
+            options.shaderCachePath = ToStdString(env, shaderCachePath);
+            env->DeleteLocalRef(shaderCachePath);
+            if (env->ExceptionCheck())
+            {
+                env->DeleteLocalRef(optionsClass);
+                return false;
+            }
+#else
+            env->DeleteLocalRef(shaderCachePath);
+            env->DeleteLocalRef(optionsClass);
+            ThrowPluginNotEnabled(env,
+                "shaderCachePath was provided but BABYLON_NATIVE_PLUGIN_SHADERCACHE "
+                "was not enabled at native build time.");
+            return false;
+#endif
+        }
+
+        env->DeleteLocalRef(optionsClass);
+        return true;
+    }
+
     // Shared body for the `runtimeCreate` JNI overloads. Wires up the
     // Android-default logcat log sink, constructs the Runtime, attaches
     // the Activity-lifecycle auto-Suspend/Resume tickets, and returns
@@ -256,48 +352,26 @@ Java_com_babylonjs_integrations_BabylonNative_requestPermissionsResult(
 // =====================================================================
 
 JNIEXPORT jlong JNICALL
-Java_com_babylonjs_integrations_BabylonNative_runtimeCreate__Z(JNIEnv*, jclass, jboolean enableDebugger)
+Java_com_babylonjs_integrations_BabylonNative_runtimeCreate__(JNIEnv*, jclass)
 {
     // Default Android consumers want logcat output; route Console
-    // polyfill / DebugTrace / uncaught JS exceptions there. Hosts
-    // that need different behavior can construct a Runtime in C++
-    // directly with their own RuntimeOptions.
-    //
-    // Mangled name `__Z` (boolean) is the JNI long form, required
-    // because Java declares `runtimeCreate` as an overloaded native
-    // method (see the SHADERCACHE-gated overload below).
+    // polyfill output and uncaught JS exceptions there. DebugTrace is routed
+    // there when enabled by RuntimeOptions. Hosts that need different behavior
+    // can construct a Runtime in C++ directly with their own RuntimeOptions.
     RuntimeOptions options{};
-    options.enableDebugger = (enableDebugger == JNI_TRUE);
     return MakeRuntimeHandle(std::move(options));
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_babylonjs_integrations_BabylonNative_runtimeCreate__ZLjava_lang_String_2(
-    JNIEnv* env, jclass, jboolean enableDebugger, jstring shaderCachePath)
+Java_com_babylonjs_integrations_BabylonNative_runtimeCreate__Lcom_babylonjs_integrations_BabylonNative_00024RuntimeOptions_2(
+    JNIEnv* env, jclass, jobject javaOptions)
 {
-    // Overload that wires up `RuntimeOptions::shaderCachePath`.
-    // The JNI symbol is always exported so the Java surface is stable
-    // across native build configurations; if the caller passes a
-    // non-null path but `BABYLON_NATIVE_PLUGIN_SHADERCACHE` was not
-    // enabled at native build time, we throw `IllegalStateException`
-    // (fail loud, vs. silently dropping the path).
+    // RuntimeOptions is intentionally a Java object so Java and Kotlin callers
+    // can use a stable construction API as RuntimeOptions grows.
     RuntimeOptions options{};
-    options.enableDebugger = (enableDebugger == JNI_TRUE);
-    if (shaderCachePath != nullptr)
+    if (!ApplyJavaRuntimeOptions(env, javaOptions, options))
     {
-#if BABYLON_NATIVE_PLUGIN_SHADERCACHE
-        const char* utf = env->GetStringUTFChars(shaderCachePath, nullptr);
-        if (utf != nullptr)
-        {
-            options.shaderCachePath = utf;
-            env->ReleaseStringUTFChars(shaderCachePath, utf);
-        }
-#else
-        ThrowPluginNotEnabled(env,
-            "shaderCachePath was provided but BABYLON_NATIVE_PLUGIN_SHADERCACHE "
-            "was not enabled at native build time.");
         return 0;
-#endif
     }
     return MakeRuntimeHandle(std::move(options));
 }

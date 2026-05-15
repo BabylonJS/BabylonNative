@@ -16,16 +16,40 @@ import android.view.Surface;
  * <ol>
  *   <li>Call {@link #androidGlobalInitialize(Context)} once at app startup
  *       (typically from {@code Application.onCreate}).</li>
- *   <li>Create a Runtime via {@link #runtimeCreate(boolean)} and remember
+ *   <li>Create a Runtime via {@link #runtimeCreate()} or {@link #runtimeCreate(RuntimeOptions)} and remember
  *       the returned {@code long} handle.</li>
  *   <li>Optional: queue scripts via {@link #runtimeLoadScript(long, String)}
- *       — they run after the first {@link #viewAttach(long, Surface, int, int, float)}.</li>
- *   <li>Attach a View via {@link #viewAttach(long, Surface, int, int, float)};
+ *       — they run after the first {@link #viewAttach(long, Surface)}.</li>
+ *   <li>Attach a View via {@link #viewAttach(long, Surface)};
  *       call {@link #viewRenderFrame(long)} from your draw loop.</li>
  *   <li>Tear down with {@link #viewDetach(long)} then {@link #runtimeDestroy(long)}.</li>
  * </ol>
  */
 public final class BabylonNative {
+    /**
+     * Construction options for {@link BabylonNative#runtimeCreate(RuntimeOptions)}.
+     *
+     * <p>The defaults match the C++ {@code Babylon::Integrations::RuntimeOptions}
+     * defaults. Fields are intentionally public so Java and Kotlin callers can use
+     * simple object-initializer patterns.
+     */
+    public static final class RuntimeOptions {
+        /** Optional MSAA sample count for the back buffer. Valid values are 0, 2, 4, 8, and 16. */
+        public Integer msaaSamples = null;
+
+        /** Enable the JavaScript debugger when supported by the configured JS engine. Defaults to false. */
+        public boolean enableDebugger = false;
+
+        /** Enable Babylon::DebugTrace output through the default logcat sink. Defaults to false. */
+        public boolean enableDebugTrace = false;
+
+        /** Block engine startup until a debugger attaches when supported by the configured JS engine. Defaults to false. */
+        public boolean waitForDebugger = false;
+
+        /** Optional writable file path for a persistent on-disk GPU shader cache. */
+        public String shaderCachePath = null;
+    }
+
     static {
         System.loadLibrary("BabylonNativeIntegrations");
     }
@@ -60,26 +84,24 @@ public final class BabylonNative {
     // -------------------------------------------------------------------
 
     /** Returns an opaque handle owned by the caller; release with {@link #runtimeDestroy(long)}. */
-    public static native long runtimeCreate(boolean enableDebugger);
+    public static native long runtimeCreate();
 
     /**
-     * Overload that wires up a persistent on-disk GPU shader cache. The
-     * cache is loaded on first {@link #viewAttach(long, Surface)} and
-     * saved on suspend and on {@link #runtimeDestroy(long)}.
+     * Returns an opaque handle owned by the caller; release with {@link #runtimeDestroy(long)}.
      *
-     * <p>Pass a writable path (typically
-     * {@code context.getCacheDir() + "/babylon.shadercache"}). Pass
-     * {@code null} to disable the on-disk cache (equivalent to the
-     * one-arg {@link #runtimeCreate(boolean)} overload).
+     * <p>Pass {@code null} to use the same defaults as {@link #runtimeCreate()}.
+     * If {@link RuntimeOptions#shaderCachePath} is non-null, the cache is loaded
+     * on first {@link #viewAttach(long, Surface)} and saved on suspend and on
+     * {@link #runtimeDestroy(long)}.
      *
-     * <p>If {@code shaderCachePath} is non-null but the native library
-     * was built without {@code BABYLON_NATIVE_PLUGIN_SHADERCACHE},
-     * this method throws {@link IllegalStateException} so the
-     * misconfiguration surfaces at construction time rather than
-     * silently dropping the cache. Passing {@code null} is always
-     * safe regardless of native build config.
+     * <p>If {@link RuntimeOptions#shaderCachePath} is non-null but the native
+     * library was built without {@code BABYLON_NATIVE_PLUGIN_SHADERCACHE}, this
+     * method throws {@link IllegalStateException} so the misconfiguration surfaces
+     * at construction time rather than silently dropping the cache. Passing null
+     * options, or options with null {@code shaderCachePath}, is always safe
+     * regardless of native build config.
      */
-    public static native long runtimeCreate(boolean enableDebugger, String shaderCachePath);
+    public static native long runtimeCreate(RuntimeOptions options);
 
     public static native void runtimeDestroy(long handle);
 

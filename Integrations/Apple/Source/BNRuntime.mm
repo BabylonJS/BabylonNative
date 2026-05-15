@@ -7,7 +7,21 @@
 #import <Foundation/Foundation.h>
 #import <MetalKit/MetalKit.h>
 
+#include <cstdint>
 #include <memory>
+
+namespace
+{
+    uint8_t ToRuntimeMSAASamples(NSNumber* msaaSamples)
+    {
+        const long long value = msaaSamples.longLongValue;
+        return value >= 0 && value <= UINT8_MAX ? static_cast<uint8_t>(value) : 0;
+    }
+}
+
+@implementation BNRuntimeOptions
+
+@end
 
 @implementation BNRuntime
 {
@@ -17,30 +31,33 @@
 
 - (instancetype)init
 {
-    return [self initWithEnableDebugger:NO shaderCachePath:nil];
+    return [self initWithOptions:nil];
 }
 
-- (instancetype)initWithEnableDebugger:(BOOL)enableDebugger
-{
-    return [self initWithEnableDebugger:enableDebugger shaderCachePath:nil];
-}
-
-- (instancetype)initWithEnableDebugger:(BOOL)enableDebugger
-                       shaderCachePath:(nullable NSString*)shaderCachePath
+- (instancetype)initWithOptions:(nullable BNRuntimeOptions*)runtimeOptions
 {
     if ((self = [super init]))
     {
         Babylon::Integrations::RuntimeOptions options{};
-        options.enableDebugger = enableDebugger ? true : false;
+        if (runtimeOptions != nil)
+        {
+            if (runtimeOptions.msaaSamples != nil)
+            {
+                options.msaaSamples = ToRuntimeMSAASamples(runtimeOptions.msaaSamples);
+            }
+            options.enableDebugger = runtimeOptions.enableDebugger ? true : false;
+            options.enableDebugTrace = runtimeOptions.enableDebugTrace ? true : false;
+            options.waitForDebugger = runtimeOptions.waitForDebugger ? true : false;
+        }
         // Default log sink: route every level to NSLog. Hosts that need
         // their own routing should drop down to the C++ API.
         options.log = [](Babylon::Integrations::LogLevel /*level*/, std::string_view message) {
             NSLog(@"%.*s", static_cast<int>(message.size()), message.data());
         };
-        if (shaderCachePath != nil)
+        if (runtimeOptions.shaderCachePath != nil)
         {
 #if BABYLON_NATIVE_PLUGIN_SHADERCACHE
-            options.shaderCachePath = shaderCachePath.UTF8String;
+            options.shaderCachePath = runtimeOptions.shaderCachePath.UTF8String;
 #else
             // Caller explicitly asked for shader caching but the
             // plugin wasn't compiled in. Fail loudly rather than

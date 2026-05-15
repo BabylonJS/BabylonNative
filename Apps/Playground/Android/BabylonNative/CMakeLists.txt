@@ -26,10 +26,12 @@ add_subdirectory(${REPO_ROOT_DIR} "${CMAKE_CURRENT_BINARY_DIR}/BabylonNative")
 # can be safely consumed by another.
 target_sources(BabylonNativeIntegrations
     PRIVATE src/main/cpp/PlaygroundJNI.cpp
+            ${PLAYGROUND_DIR}/Shared/Diagnostics.cpp
             ${PLAYGROUND_DIR}/Shared/PlaygroundScripts.cpp)
 
 target_include_directories(BabylonNativeIntegrations
     PRIVATE ${PLAYGROUND_DIR})
 
 target_link_libraries(BabylonNativeIntegrations
+    PRIVATE bx
     PRIVATE Foundation)     # for <Babylon/PerfTrace.h> in PlaygroundScripts.cpp

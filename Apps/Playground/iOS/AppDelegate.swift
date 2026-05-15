@@ -11,7 +11,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var runtime: BNRuntime?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        let runtime = BNRuntime(enableDebugger: true)
+        let runtimeOptions = BNRuntimeOptions()
+        runtimeOptions.enableDebugger = true
+        runtimeOptions.enableDebugTrace = true
+        let runtime = BNRuntime(options: runtimeOptions)
 
         // Queue the Babylon.js bootstrap scripts (shared with the other
         // Playground hosts via Apps/Playground/Shared/PlaygroundScripts.cpp),
