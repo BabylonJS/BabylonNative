@@ -67,9 +67,6 @@ namespace ModuleLoadTest
             "d3d12core.dll",
             "d3d12sdklayers.dll",
             "d3dscache.dll",
-            // TODO: bgfx loads dbghelp.dll at boot (callstack/crash helper). Drop this
-            // entry once bgfx stops pulling it in.
-            "dbghelp.dll",
             "dcomp.dll",
             "devobj.dll",
             "directxdatabasehelper.dll",
