@@ -2376,8 +2376,6 @@
         {
             "title": "Serialize scene without materials",
             "playgroundId": "#PH4DEZ#1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "serializeWithoutMaterials.png"
         },
         {
