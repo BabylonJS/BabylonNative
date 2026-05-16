@@ -217,6 +217,7 @@ AppContext::AppContext(
     // Commenting out recast.js for now because v8jsi is incompatible with asm.js.
     // m_scriptLoader->LoadScript("app:///Scripts/recast.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylon.max.js");
+    m_scriptLoader->LoadScript("app:///Scripts/cube_texture_polyfill.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylonjs.loaders.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylonjs.materials.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylon.gui.js");
