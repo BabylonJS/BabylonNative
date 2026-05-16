@@ -1317,76 +1317,58 @@
             "title": "GLTF Serializer with Negative World Matrix (left handed, once)",
             "playgroundId": "#KX53VK#88",
             "replace": "//options//, useRightHandedSystem = false; iterations = 1;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerNegativeWorldMatrix.png"
         },
         {
             "title": "GLTF Serializer with Negative World Matrix (left handed, twice)",
             "playgroundId": "#KX53VK#88",
             "replace": "//options//, useRightHandedSystem = false; iterations = 2;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerNegativeWorldMatrix.png"
         },
         {
             "title": "GLTF Serializer with Negative World Matrix (right handed, once)",
             "playgroundId": "#KX53VK#88",
             "replace": "//options//, useRightHandedSystem = true; iterations = 1;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerNegativeWorldMatrix.png"
         },
         {
             "title": "GLTF Serializer with Negative World Matrix (right handed, twice)",
             "playgroundId": "#KX53VK#88",
             "replace": "//options//, useRightHandedSystem = true; iterations = 2;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerNegativeWorldMatrix.png"
         },
         {
             "title": "GLTF Serializer Shared Buffer Conversions",
             "playgroundId": "#KX53VK#85",
             "replace": "//options//, meshCount = 2;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerSharedBufferConversions.png"
         },
         {
             "title": "GLTF Serializer Skinning and Animation",
             "playgroundId": "#DMZBX1#1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "gltfSerializerSkinningAndAnimation.png"
         },
         {
             "title": "GLTF Serializer Skinning and Animation (Right Handed)",
             "playgroundId": "#DMZBX1#2",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "gltfSerializerSkinningAndAnimation.png"
         },
         {
             "title": "GLTF Serializer Morph Target Animation",
             "playgroundId": "#84M2SR#107",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "gltfSerializerMorphTargetAnimation.png"
         },
         {
             "title": "GLTF Serializer Morph Target Animation Group",
             "playgroundId": "#T087A8#29",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "gltfSerializerMorphTargetAnimationGroup.png"
         },
         {
             "title": "GLTF Serializer KHR draco mesh compression",
             "playgroundId": "#F8BF8N#3",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Draco loader passes 'utf8' to TextDecoder which only accepts 'utf-8'",
             "referenceImage": "glTFSerializerKhrDracoMeshCompression.png"
         },
         {
@@ -1399,63 +1381,47 @@
         {
             "title": "GLTF Serializer KHR gpu instancing",
             "playgroundId": "#1Q2BWN#10",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerKhrGpuInstancing.png"
         },
         {
             "title": "GLTF Serializer KHR punctual light, left-handed",
             "playgroundId": "#FLXW8B#27",
             "replace": "//options//, roundtrip = true; useRightHandedSystem = false;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerKHRPunctualLightLH.png"
         },
         {
             "title": "GLTF Serializer KHR punctual light, right-handed",
             "playgroundId": "#FLXW8B#27",
             "replace": "//options//, roundtrip = true; useRightHandedSystem = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerKHRPunctualLightRH.png"
         },
         {
             "title": "GLTF Serializer Camera, left-handed",
             "playgroundId": "#O0M0J9#25",
             "replace": "//options//, roundtripCount = 1; useRightHandedSystem = false;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerCameraLeftHand.png"
         },
         {
             "title": "GLTF Serializer Camera, right-handed",
             "playgroundId": "#O0M0J9#25",
             "replace": "//options//, roundtripCount = 1; useRightHandedSystem = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerCameraRightHand.png"
         },
         {
             "title": "GLTF Serializer Camera, left-handed, round trip twice",
             "playgroundId": "#O0M0J9#25",
             "replace": "//options//, roundtripCount = 2; useRightHandedSystem = false;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerCameraLeftHand.png"
         },
         {
             "title": "GLTF Serializer Camera, right-handed, round trip twice",
             "playgroundId": "#O0M0J9#25",
             "replace": "//options//, roundtripCount = 2; useRightHandedSystem = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerCameraRightHand.png"
         },
         {
             "title": "GLTF Serializer Rotation conversion, left-handed",
             "playgroundId": "#UK7FLI#1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerRotationConversionLH.png"
         },
         {
@@ -1793,23 +1759,19 @@
             "title": "OBJ Stanford Bunny normals (round trip, LH)",
             "playgroundId": "#26R8NS#6",
             "replace": "//options//, roundTrip = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "File API not available in Babylon Native JS runtime (ReferenceError)",
             "referenceImage": "objStanfordBunnyNormalsRoundTripLH.png"
         },
         {
             "title": "OBJ Stanford Bunny normals (round trip, RH)",
             "playgroundId": "#26R8NS#6",
             "replace": "//options//, roundTrip = true; useRightHandedSystem = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "File API not available in Babylon Native JS runtime (ReferenceError)",
             "referenceImage": "objStanfordBunnyNormalsRoundTripRH.png"
         },
         {
             "title": "glTF to OBJ (LH)",
             "playgroundId": "#HYZWGK#3",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Hangs on Win32 Chakra D3D11 - glTF to OBJ round trip",
             "referenceImage": "gltfToObjLH.png"
         },
         {
@@ -1817,7 +1779,7 @@
             "playgroundId": "#HYZWGK#3",
             "replace": "//options//, useRightHandedSystem = true;",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Hangs on Win32 Chakra D3D11 - glTF to OBJ round trip",
             "referenceImage": "gltfToObjRH.png"
         },
         {
