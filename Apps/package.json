@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "babylonjs": "^9.3.4",
+    "babylonjs-addons": "^9.3.4",
     "babylonjs-gltf2interface": "^9.3.4",
     "babylonjs-gui": "^9.3.4",
     "babylonjs-loaders": "^9.3.4",
