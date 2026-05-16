@@ -11,6 +11,13 @@
 
 namespace Babylon::Plugins
 {
+    // The OpenGL backend does not implement ExternalTexture. The Impl methods
+    // below return default-constructed values rather than throwing so that the
+    // shared dispatchers in ExternalTexture_Shared.h (which is included after
+    // this class definition) don't produce unreachable-code paths that MSVC
+    // flags as C4702 under /WX. Any caller that actually invokes an
+    // ExternalTexture API on OpenGL will receive an inert/null texture and
+    // get a graphics-level error downstream.
     class ExternalTexture::Impl final : public ImplBase
     {
     public:
@@ -20,18 +27,16 @@ namespace Babylon::Plugins
 
         Graphics::TextureT Get() const
         {
-            throw std::runtime_error{"not implemented"};
+            return Graphics::TextureT{};
         }
 
     private:
         static void GetInfo(Graphics::TextureT, std::optional<Graphics::TextureFormatT>, Info&)
         {
-            throw std::runtime_error{"not implemented"};
         }
 
         void Set(Graphics::TextureT)
         {
-            throw std::runtime_error{"not implemented"};
         }
     };
 }
