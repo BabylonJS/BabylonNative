@@ -20,6 +20,7 @@
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/Polyfills/Console.h>
+#include <Babylon/Polyfills/Fetch.h>
 #include <Babylon/Polyfills/File.h>
 #include <Babylon/Polyfills/Performance.h>
 #include <Babylon/Polyfills/TextDecoder.h>
@@ -186,6 +187,7 @@ AppContext::AppContext(
         Babylon::Polyfills::TextDecoder::Initialize(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+        Babylon::Polyfills::Fetch::Initialize(env);
         m_canvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
 
         Babylon::Plugins::NativeTracing::Initialize(env);
