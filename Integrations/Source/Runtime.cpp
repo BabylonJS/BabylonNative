@@ -383,8 +383,10 @@ namespace Babylon::Integrations
 
     void Runtime::Suspend()
     {
-        std::lock_guard<std::mutex> lock{m_impl->m_suspendMutex};
-        if (m_impl->m_suspendCount++ == 0)
+        // Frame-thread only (see Runtime.h). No locking needed for the
+        // count itself; the atomic exists so cross-thread IsSuspended()
+        // reads stay coherent.
+        if (m_impl->m_suspendCount.fetch_add(1, std::memory_order_relaxed) == 0)
         {
             // Close the in-flight frame on the currently attached View
             // (if any) BEFORE blocking the JS thread. This keeps the
@@ -410,17 +412,19 @@ namespace Babylon::Integrations
 
     void Runtime::Resume()
     {
-        std::lock_guard<std::mutex> lock{m_impl->m_suspendMutex};
-        if (m_impl->m_suspendCount == 0)
+        // Frame-thread only (see Runtime.h).
+        if (m_impl->m_suspendCount.load(std::memory_order_relaxed) == 0)
         {
             // Mismatched Resume; ignore rather than underflow the count.
             return;
         }
-        if (--m_impl->m_suspendCount == 0)
+        if (m_impl->m_suspendCount.fetch_sub(1, std::memory_order_relaxed) == 1)
         {
             m_impl->m_appRuntime->Resume();
             // Re-open the frame on the attached View (if any) so the
-            // next RenderFrame call has something to Finish.
+            // next RenderFrame call has something to Finish. On a view
+            // that has been attached but never sized, this also drives
+            // the deferred first-Resize init via InitializeIfReady.
             if (m_impl->m_currentView)
             {
                 m_impl->m_currentView->m_impl->Resume();
@@ -430,8 +434,7 @@ namespace Babylon::Integrations
 
     bool Runtime::IsSuspended() const
     {
-        std::lock_guard<std::mutex> lock{m_impl->m_suspendMutex};
-        return m_impl->m_suspendCount > 0;
+        return m_impl->m_suspendCount.load(std::memory_order_relaxed) > 0;
     }
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEXR

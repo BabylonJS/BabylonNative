@@ -92,9 +92,13 @@ namespace Babylon::Integrations
         // ScriptLoader's existing contract; we do not add an outer mutex.
         arcana::task_completion_source<void, std::exception_ptr> m_initTcs;
 
-        // Reference-counted Suspend/Resume.
-        int m_suspendCount{0};
-        mutable std::mutex m_suspendMutex;
+        // Reference-counted Suspend/Resume. Atomic so `IsSuspended()`
+        // can be polled cheaply from any thread (e.g. a worker checking
+        // whether to bother queuing more host-side work). Mutations to
+        // the count itself happen only on the frame thread (the
+        // documented contract of `Runtime::Suspend` / `Runtime::Resume`),
+        // so the increment/decrement do not need to be locked.
+        std::atomic<int> m_suspendCount{0};
 
         // 0..1; tracked so we can guard against multiple concurrent
         // attachments (the API contract is "at most one View at a time").
@@ -140,70 +144,79 @@ namespace Babylon::Integrations
 
     // Internal implementation of View. Holds the back-reference to the
     // Runtime that produced it, the native window handle captured at
-    // `View::Attach`, plus Suspend / Resume that manage the in-flight
-    // frame across runtime suspension.
+    // `View::Attach`, the most recent size handed in via `View::Resize`,
+    // plus Suspend / Resume that manage the in-flight frame across
+    // runtime suspension.
     //
     // `View::Attach` is intentionally cheap: it just stashes the
     // window handle and registers as the current view. All Device
     // interaction (first-time construction, or `UpdateWindow` +
     // `UpdateSize` on a re-attach to an existing Runtime) is deferred
-    // to the first `View::Resize` call. This is a hard requirement:
-    // `Device::UpdateWindow` MUST be paired with a matching
-    // `Device::UpdateSize` or bgfx will render the next frame to the
-    // new window at the wrong size. Folding both into the first
-    // `Resize` makes the host-supplied dimensions the single source
-    // of truth — the Integrations layer never queries the window for
-    // its size.
+    // to `InitializeIfReady`, which only runs once all three
+    // preconditions hold:
     //
-    // `m_suspended` is the View's view of whether it's currently
-    // holding an open Device frame:
-    //   - true  → no frame is open (StartRenderingCurrentFrame +
-    //             DeviceUpdate::Start have NOT been called, or have
-    //             been matched by Finish / FinishRenderingCurrentFrame)
-    //   - false → a frame is open and the JS thread's safe timespan
-    //             is active
+    //   1. `m_initialized` is still `false` (the view hasn't been
+    //      initialized yet for this Attach),
+    //   2. `m_size` is set (the host has called `View::Resize` at
+    //      least once with a non-zero size), and
+    //   3. `RuntimeImpl::m_suspendCount` is zero (the host hasn't
+    //      called `Runtime::Suspend` without a matching `Resume`).
     //
-    // Initially `true`; the first `View::Resize` flips it to `false`
-    // after binding the Device to the new window+size and opening the
-    // first frame. `~View` calls `Suspend` before relinquishing the
-    // view slot. `Runtime::Suspend / Resume` call through here on the
-    // suspendCount 0↔1 transitions; both are no-ops while
-    // `m_initialized` is still `false`, since there is no Device
-    // binding to suspend/resume yet.
+    // `InitializeIfReady` is called from `View::Resize` (which sets
+    // condition 2) and from `ViewImpl::Resume` (which can clear
+    // condition 3). Whichever caller satisfies the last missing
+    // precondition is the one that actually runs the init recipe.
+    // This is also what makes the `UpdateWindow` + `UpdateSize` pair
+    // safe: both happen together inside `InitializeIfReady`, so bgfx
+    // never sees a window change without a matching size change.
     //
-    // `m_initialized` is the View's "first Resize on this Attach has
-    // run" latch. Starts `false`; the first successful `Resize` sets
-    // it `true` after the Device is bound. It is the gate that lets
-    // `Resume()` open a frame: while `false`, `Resume()` is a no-op,
-    // so render-loop callbacks that fire between `Attach` and the
-    // first `Resize` (typical on Apple, where MTKView fires
-    // `drawInMTKView:` before `drawableSizeWillChange:`) silently
-    // do nothing rather than rendering to an unbound surface.
+    // Once `m_initialized` flips to `true`, a Device frame is open
+    // iff `RuntimeImpl::m_suspendCount == 0`. `ViewImpl::Suspend` and
+    // `ViewImpl::Resume` are called by `Runtime::Suspend` /
+    // `Runtime::Resume` on the suspendCount 0↔1 transitions and
+    // toggle that frame open/closed.
     struct ViewImpl
     {
         explicit ViewImpl(Runtime& runtime) : m_runtime{runtime} {}
         Runtime& m_runtime;
 
-        // Window handle captured at `View::Attach`. Used by the first
-        // `View::Resize` to construct (first-Attach-ever) or rebind
-        // (subsequent Attach) the Device.
+        // Window handle captured at `View::Attach`. Used by
+        // `InitializeIfReady` to construct (first-Attach-ever) or
+        // rebind (subsequent Attach) the Device.
         Babylon::Graphics::WindowT m_window{};
 
-        // See class-level comment. Latches to `true` on first successful
-        // Resize; never flips back for the lifetime of this ViewImpl.
+        // Most recent size handed in via `View::Resize`, in logical
+        // pixels. Empty until the host has called `Resize` at least
+        // once. Used by `InitializeIfReady` to size the Device on the
+        // first init.
+        std::optional<std::pair<uint32_t, uint32_t>> m_size;
+
+        // Latches to `true` the first time `InitializeIfReady` runs
+        // all three preconditions to completion. Never flips back for
+        // the lifetime of this `ViewImpl`; a new `ViewImpl` is
+        // constructed on each `View::Attach`.
         bool m_initialized{false};
 
-        // See class-level comment. "No frame is currently open."
-        bool m_suspended{true};
-
-        // End the in-flight frame on the Device (Finish +
-        // FinishRenderingCurrentFrame). Idempotent — no-op if already
-        // suspended or if the view has not yet been initialized.
+        // Close the in-flight frame on the Device (Finish +
+        // FinishRenderingCurrentFrame). Called by `Runtime::Suspend`
+        // on the suspendCount 0→1 transition, and by `~View`. No-op
+        // when the view is not yet initialized (no frame to close).
         void Suspend();
 
         // Open a new frame (StartRenderingCurrentFrame +
-        // DeviceUpdate::Start). Idempotent — no-op if not currently
-        // suspended or if the view has not yet been initialized.
+        // DeviceUpdate::Start) on the Device. Called by
+        // `Runtime::Resume` on the suspendCount 1→0 transition. When
+        // the view is not yet initialized, this instead tries to run
+        // the deferred first-Resize init (which itself opens the
+        // first frame if it succeeds) — so a host that attached and
+        // resized while the Runtime was externally suspended sees its
+        // init kick off cleanly on the next `Runtime::Resume`.
         void Resume();
+
+        // Run the deferred Device-binding + first-frame-opening
+        // recipe iff all three preconditions are satisfied (see the
+        // class-level comment). No-op otherwise. Safe to call from
+        // any of the entry points that can satisfy a precondition.
+        void InitializeIfReady();
     };
 }

@@ -85,7 +85,16 @@ namespace Babylon::Integrations
         //     happens until Resume().
         // Calls are reference-counted; nesting is safe.
         //
-        // Safe to call from any thread.
+        // Threading: `Suspend` / `Resume` must be called from the frame
+        // thread (the same thread that drives `View::RenderFrame` /
+        // `View::Resize`). Hosts wiring these to platform lifecycle
+        // callbacks get this for free — iOS / macOS / Android / Win32 /
+        // UWP lifecycle callbacks all fire on the main / UI thread. A
+        // host that wants to suspend from a background thread should
+        // marshal the call to its main thread first, the same way it
+        // would for any other View / Runtime entry point. `IsSuspended`
+        // is the exception: it loads the suspend count atomically and
+        // is safe to read from any thread.
         void Suspend();
         void Resume();
         bool IsSuspended() const;

@@ -1,5 +1,6 @@
 #include "RuntimeImpl.h"
 
+#include <Babylon/DebugTrace.h>
 #include <Babylon/Graphics/DeviceQueries.h>
 
 #include <cassert>
@@ -51,23 +52,25 @@ namespace Babylon::Integrations
     // Lightweight: just register as the current view and stash the
     // native window handle. All Device interaction (first-time
     // construction, or `UpdateWindow` + `UpdateSize` on a re-attach to
-    // an existing Runtime) is deferred to the first `View::Resize`.
+    // an existing Runtime) is deferred to `ViewImpl::InitializeIfReady`,
+    // which is called from `View::Resize` and `ViewImpl::Resume` and
+    // only actually runs when all three init preconditions hold (see
+    // `RuntimeImpl.h` for details).
     //
     // Why deferred: `Device::UpdateWindow` MUST be paired with a
     // matching `Device::UpdateSize` (otherwise bgfx renders the next
-    // frame to the new window at the old size). The previous design
-    // queried the window's size at Attach time via a per-platform
-    // helper, which created two sources of truth for size — the
-    // initial query, and the host's subsequent `Resize` calls — and
-    // forced the platform integration layer (BNView on Apple) to do
-    // gymnastics to ensure the surface had a non-zero size before
-    // Attach. Folding both into the first `Resize` makes the host the
-    // single source of truth.
+    // frame to the new window at the old size), so we wait until the
+    // host has supplied a size via `Resize` and the Runtime is not
+    // currently externally suspended before binding the new surface.
+    // Folding the window-rebind and size-update together inside
+    // `InitializeIfReady` makes the host the single source of truth
+    // for surface size — the Integrations layer never queries the
+    // window for its size.
     //
-    // Render-loop callbacks that fire between `Attach` and the first
-    // `Resize` are safe: `m_initialized` is still `false`, so
-    // `RenderFrame` / `ViewImpl::Resume` early-out without touching
-    // the (potentially still-unbound) Device.
+    // Render-loop callbacks that fire between `Attach` and successful
+    // init are safe: `RenderFrame` early-outs while `m_initialized`
+    // is `false`, without touching the (potentially still-unbound)
+    // Device.
     // ---------------------------------------------------------------------
     std::unique_ptr<View> View::Attach(Runtime& runtime, Babylon::Graphics::WindowT nativeWindow)
     {
@@ -94,11 +97,17 @@ namespace Babylon::Integrations
     {
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
 
-        // End the in-flight frame if one is open. Idempotent: if the
-        // Runtime was already suspended (which closed the frame via
-        // ViewImpl::Suspend), this is a no-op. The Device persists on
-        // the Runtime so the next Attach is cheap.
-        m_impl->Suspend();
+        // Close the in-flight frame iff one is currently open. A frame
+        // is open exactly when this view is initialized and the
+        // Runtime is not externally suspended (Runtime::Suspend would
+        // already have closed the frame via ViewImpl::Suspend). The
+        // Device persists on the Runtime so the next Attach is cheap.
+        if (m_impl->m_initialized &&
+            impl.m_suspendCount.load(std::memory_order_relaxed) == 0)
+        {
+            impl.m_deviceUpdate->Finish();
+            impl.m_device->FinishRenderingCurrentFrame();
+        }
 
         impl.m_currentView = nullptr;
     }
@@ -106,64 +115,118 @@ namespace Babylon::Integrations
     // ---------------------------------------------------------------------
     // ViewImpl::Suspend / Resume
     //
-    // Idempotent open/close of the in-flight Device frame. Called from:
-    //   - View::Resize (first call)  → Resume (open frame after Device
-    //                                 binding completes)
-    //   - View::~View                → Suspend (close frame at teardown)
-    //   - Runtime::Suspend / Resume  → matching call on the currently
-    //                                 attached view, if any, so the host's
-    //                                 OS-level pause/resume signal cleanly
-    //                                 brackets the GPU frame.
-    //
-    // The internal `m_suspended` flag means "no frame currently open."
-    // Initial state is `true`; the first `View::Resize` opens the first
-    // frame via Resume. Both methods are no-ops while `m_initialized`
-    // is still `false` (no Device binding exists yet for this view, so
-    // there is nothing to suspend/resume).
+    // Called by `Runtime::Suspend` / `Runtime::Resume` on the
+    // suspendCount 0↔1 transitions (and by `~View` for the teardown
+    // close). When the view is already initialized, these are pure
+    // frame open/close operations. When the view is not yet
+    // initialized, Suspend has nothing to do (no frame exists) and
+    // Resume retries `InitializeIfReady` — because the suspendCount
+    // dropping to 0 may have been the last missing precondition.
     // ---------------------------------------------------------------------
     void ViewImpl::Suspend()
     {
-        if (m_suspended || !m_initialized)
+        if (!m_initialized)
         {
             return;
         }
         RuntimeImpl& impl = *m_runtime.m_impl;
-        if (impl.m_device && impl.m_deviceUpdate)
-        {
-            impl.m_deviceUpdate->Finish();
-            impl.m_device->FinishRenderingCurrentFrame();
-        }
-        m_suspended = true;
+        impl.m_deviceUpdate->Finish();
+        impl.m_device->FinishRenderingCurrentFrame();
     }
 
     void ViewImpl::Resume()
     {
-        if (!m_suspended || !m_initialized)
+        if (!m_initialized)
+        {
+            // Runtime just resumed; the suspendCount precondition is
+            // now satisfied. If the host has also already called
+            // `View::Resize` (size precondition), this will succeed;
+            // otherwise it's a silent no-op until they do.
+            InitializeIfReady();
+            return;
+        }
+        RuntimeImpl& impl = *m_runtime.m_impl;
+        impl.m_device->StartRenderingCurrentFrame();
+        impl.m_deviceUpdate->Start();
+    }
+
+    // ---------------------------------------------------------------------
+    // ViewImpl::InitializeIfReady
+    //
+    // The single recipe for binding the Device to this view's window
+    // and opening the first frame. Gated on all three preconditions
+    // (initialized? sized? not externally suspended?) so it can be
+    // called eagerly from anywhere that satisfies one of them, and
+    // does nothing until the last missing condition is fulfilled.
+    // ---------------------------------------------------------------------
+    void ViewImpl::InitializeIfReady()
+    {
+        if (m_initialized || !m_size)
         {
             return;
         }
         RuntimeImpl& impl = *m_runtime.m_impl;
-        if (impl.m_device && impl.m_deviceUpdate)
+        if (impl.m_suspendCount.load(std::memory_order_relaxed) > 0)
         {
-            impl.m_device->StartRenderingCurrentFrame();
-            impl.m_deviceUpdate->Start();
+            return;
         }
-        m_suspended = false;
+
+        const auto [lw, lh] = *m_size;
+        const bool firstAttachEver = !impl.m_device;
+        if (firstAttachEver)
+        {
+            Babylon::Graphics::Configuration config{};
+            config.Window = m_window;
+            config.Width = lw;
+            config.Height = lh;
+            config.MSAASamples = impl.m_options.msaaSamples;
+
+            impl.m_device.emplace(config);
+            impl.m_deviceUpdate.emplace(impl.m_device->GetUpdate("update"));
+        }
+        else
+        {
+            // Re-attach to an existing Runtime: rebind the surface and
+            // update the size in lockstep. Plugins, polyfills, and any
+            // loaded scripts are preserved on the JS side.
+            impl.m_device->UpdateWindow(m_window);
+            impl.m_device->UpdateSize(lw, lh);
+        }
+
+        // Open the first frame inline. On very first Attach this MUST
+        // happen BEFORE dispatching `RunFirstAttachInit` so the
+        // `Device::AddToJavaScript` inside that lambda sees an open
+        // frame to record into. Both happen on the same host thread,
+        // so by the time the dispatched lambda runs on the JS thread,
+        // the frame is already open regardless of whether we entered
+        // here from `View::Resize` or from `ViewImpl::Resume`.
+        impl.m_device->StartRenderingCurrentFrame();
+        impl.m_deviceUpdate->Start();
+        m_initialized = true;
+
+        if (firstAttachEver)
+        {
+            impl.RunFirstAttachInit(m_window);
+        }
     }
 
     void View::RenderFrame()
     {
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
 
-        // Skip the GPU work entirely while this view has no open
-        // frame: the host can keep calling RenderFrame() from its
-        // draw callback unconditionally. `m_suspended` covers every
-        // "frame is not currently open" case, including:
-        //   - Before the first Resize (m_initialized still false, so
-        //     m_suspended has never been flipped).
-        //   - Between Runtime::Suspend and Runtime::Resume.
-        //   - During teardown (after ~View → Suspend).
-        if (m_impl->m_suspended)
+        // Only render when a frame is currently open. The host can keep
+        // calling RenderFrame() from its draw callback unconditionally;
+        // the two non-rendering cases early-out below.
+        if (!m_impl->m_initialized)
+        {
+            // Flag the pre-init case to help hosts diagnose "my draw
+            // callback is firing but nothing renders" mistakes. The
+            // externally-suspended case (Runtime::Suspend) is expected
+            // behavior and stays silent.
+            DEBUG_TRACE("Babylon::Integrations::View::RenderFrame skipped: View has not yet been initialized. Call View::Resize with the surface's pixel dimensions to begin rendering.");
+            return;
+        }
+        if (impl.m_suspendCount.load(std::memory_order_relaxed) > 0)
         {
             return;
         }
@@ -182,16 +245,10 @@ namespace Babylon::Integrations
     // ---------------------------------------------------------------------
     // View::Resize
     //
-    // Owns deferred Device initialization. On the first call after
-    // `View::Attach`, this is where the Device is constructed (very
-    // first Attach on the Runtime) or re-bound to the new surface
-    // (subsequent Attach), and where the first frame is opened. Folding
-    // `UpdateWindow` + `UpdateSize` together here is required: the two
-    // calls MUST stay paired or bgfx will render to the new surface at
-    // the old size.
-    //
-    // On subsequent calls, this is a plain `UpdateSize` against the
-    // already-bound Device.
+    // Always stores the host-supplied size on the ViewImpl, then either
+    // pushes it through to `Device::UpdateSize` (already initialized)
+    // or kicks `InitializeIfReady` (still uninitialized). This is the
+    // single source of truth for surface size on the Integrations side.
     // ---------------------------------------------------------------------
     void View::Resize(uint32_t width, uint32_t height, CoordinateUnits units)
     {
@@ -199,66 +256,31 @@ namespace Babylon::Integrations
 
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
 
-        if (!m_impl->m_initialized)
-        {
-            // First Resize on this Attach: bind the Device to the
-            // window+size captured at Attach. We must compute DPR from
-            // the window directly via the standalone free function
-            // because, on a very first Attach, the Device doesn't
-            // exist yet; on a re-attach, the Device's stored DPR
-            // reflects the previous window and may not match the new
-            // one.
-            const auto window = m_impl->m_window;
-            const float dpr = Babylon::Graphics::GetDevicePixelRatio(window);
-            const auto [lw, lh] = ToLogicalSize(width, height, units, dpr);
-            ValidateNonZeroSize(lw, lh, "View::Resize logical size");
-
-            const bool firstAttachEver = !impl.m_device;
-            if (firstAttachEver)
-            {
-                Babylon::Graphics::Configuration config{};
-                config.Window = window;
-                config.Width = lw;
-                config.Height = lh;
-                config.MSAASamples = impl.m_options.msaaSamples;
-
-                impl.m_device.emplace(config);
-                impl.m_deviceUpdate.emplace(impl.m_device->GetUpdate("update"));
-            }
-            else
-            {
-                // Re-attach to an existing Runtime: rebind the surface
-                // and update the size in lockstep. Plugins, polyfills,
-                // and any loaded scripts are preserved on the JS side.
-                impl.m_device->UpdateWindow(window);
-                impl.m_device->UpdateSize(lw, lh);
-            }
-
-            // Flip the initialized latch BEFORE Resume() so the open-
-            // frame logic actually runs.
-            m_impl->m_initialized = true;
-
-            // Open the first frame. On very first Attach this must
-            // happen BEFORE dispatching `RunFirstAttachInit` so the
-            // `Device::AddToJavaScript` inside that lambda sees an
-            // open frame to record into.
-            m_impl->Resume();
-
-            if (firstAttachEver)
-            {
-                impl.RunFirstAttachInit(window);
-            }
-            return;
-        }
-
-        // Subsequent Resize on an initialized view: plain UpdateSize
-        // against the already-bound Device, using the Device's stored
-        // DPR (which matches the window the Device is currently bound
-        // to).
-        const auto [lw, lh] = ToLogicalSize(width, height, units,
-                                            impl.m_device->GetDevicePixelRatio());
+        // DPR source: before init, query the window directly because
+        // the Device either doesn't exist yet (first Attach ever) or is
+        // still bound to the previous attach's window (re-attach).
+        // After init, the Device's stored DPR matches the window we're
+        // bound to and is the authoritative source.
+        const float dpr = !m_impl->m_initialized
+            ? Babylon::Graphics::GetDevicePixelRatio(m_impl->m_window)
+            : impl.m_device->GetDevicePixelRatio();
+        const auto [lw, lh] = ToLogicalSize(width, height, units, dpr);
         ValidateNonZeroSize(lw, lh, "View::Resize logical size");
-        impl.m_device->UpdateSize(lw, lh);
+
+        m_impl->m_size = {lw, lh};
+
+        if (m_impl->m_initialized)
+        {
+            impl.m_device->UpdateSize(lw, lh);
+        }
+        else
+        {
+            // Just satisfied the "size known" precondition; try to init.
+            // Silent no-op if the Runtime is currently externally
+            // suspended; the eventual `Runtime::Resume` will retry via
+            // `ViewImpl::Resume`.
+            m_impl->InitializeIfReady();
+        }
     }
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
