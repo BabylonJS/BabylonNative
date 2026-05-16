@@ -216,6 +216,8 @@ AppContext::AppContext(
     // message on Chakra-based BN runtimes. No-op on engines that already
     // implement the ES2022 signature.
     m_scriptLoader->LoadScript("app:///Scripts/error_polyfill.js");
+    // ES2019 String.prototype.trimStart / trimEnd polyfill for Chakra.
+    m_scriptLoader->LoadScript("app:///Scripts/string_polyfill.js");
     m_scriptLoader->LoadScript("app:///Scripts/ammo.js");
     // Commenting out recast.js for now because v8jsi is incompatible with asm.js.
     // m_scriptLoader->LoadScript("app:///Scripts/recast.js");

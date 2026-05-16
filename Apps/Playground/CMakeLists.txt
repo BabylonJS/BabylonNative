@@ -14,6 +14,7 @@ set(DEPENDENCIES
 
 set(SCRIPTS
     "Scripts/error_polyfill.js"
+    "Scripts/string_polyfill.js"
     "Scripts/experience.js"
     "Scripts/playground_runner.js"
     "Scripts/validation_native.js"
