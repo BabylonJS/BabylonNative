@@ -45,6 +45,26 @@
         done(false);
     }
 
+    // Run `eval(src)` directly. If the host engine throws a SyntaxError
+    // (e.g. Chakra rejecting ?. ?? or numeric separators) and the
+    // __bnTranspileES2019 helper is available, retry once with an ES2019
+    // syntax-repaired version of the source. Re-throws on any other error.
+    function evalWithFallback(src, test) {
+        try {
+            return eval(src);
+        } catch (e) {
+            if (e instanceof SyntaxError && typeof __bnTranspileES2019 === "function") {
+                const repaired = __bnTranspileES2019(src);
+                if (repaired !== src) {
+                    const title = test && test.title ? test.title : "(unknown)";
+                    console.log("Retrying '" + title + "' after ES2019 syntax repair (host engine lacks ES2020+ parse support).");
+                    return eval(repaired);
+                }
+            }
+            throw e;
+        }
+    }
+
     // Per-run counters surfaced as a final summary line on exit.
     let ranCount = 0;
     let passedCount = 0;
@@ -363,7 +383,7 @@
                                 }
                             }
 
-                            currentScene = eval(code + "\r\ncreateScene(engine)");
+                            currentScene = evalWithFallback(code + "\r\ncreateScene(engine)", test);
 
                             if (currentScene.then) {
                                 // Handle if createScene returns a promise
@@ -434,7 +454,7 @@
                             }
                         }
 
-                        currentScene = eval(scriptToRun + test.functionToCall + "(engine)");
+                        currentScene = evalWithFallback(scriptToRun + test.functionToCall + "(engine)", test);
                         processCurrentScene(test, renderImage, done, compareFunction);
                     }
                     catch (e) {
