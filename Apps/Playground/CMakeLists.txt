@@ -13,6 +13,7 @@ set(DEPENDENCIES
     "../Dependencies/recast.js")
 
 set(SCRIPTS
+    "Scripts/es2019_transpile.js"
     "Scripts/experience.js"
     "Scripts/playground_runner.js"
     "Scripts/validation_native.js"
