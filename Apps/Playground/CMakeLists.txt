@@ -15,6 +15,7 @@ set(DEPENDENCIES
 set(SCRIPTS
     "Scripts/dom_polyfill.js"
     "Scripts/experience.js"
+    "Scripts/fetch_polyfill.js"
     "Scripts/playground_runner.js"
     "Scripts/validation_native.js"
     "Scripts/config.json")
