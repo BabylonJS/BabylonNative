@@ -892,8 +892,6 @@
         {
             "title": "NMEGLTF",
             "playgroundId": "#WGZLGJ#10320",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "nmegltf.png"
         },
         {
@@ -1108,15 +1106,11 @@
         {
             "title": "Anisotropic",
             "playgroundId": "#MAXCNU#1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "anisotropic.png"
         },
         {
             "title": "Clear Coat",
             "playgroundId": "#YACNQS#2",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "clearCoat.png"
         },
         {
@@ -1661,22 +1655,16 @@
         {
             "title": "PBRMetallicRoughnessMaterial",
             "playgroundId": "#2FDQT5#13",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "PBRMetallicRoughnessMaterial.png"
         },
         {
             "title": "PBRSpecularGlossinessMaterial",
             "playgroundId": "#Z1VL3V#4",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "PBRSpecularGlossinessMaterial.png"
         },
         {
             "title": "PBR",
             "playgroundId": "#LCA0Q4#27",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "pbr.png"
         },
         {
@@ -1985,8 +1973,6 @@
             "title": "Prepass SSAO + depth of field",
             "playgroundId": "#8F5HYV#72",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "prepass-ssao-dof.png"
         },
         {
