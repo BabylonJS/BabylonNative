@@ -354,11 +354,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
         return FALSE;
     }
 
+    RefreshBabylon(hWnd);
+
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
     EnableMouseInPointer(true);
-
-    RefreshBabylon(hWnd);
 
     return TRUE;
 }
