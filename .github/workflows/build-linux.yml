@@ -12,6 +12,10 @@ on:
       js-engine:
         required: true
         type: string
+      graphics-api:
+        required: false
+        type: string
+        default: OpenGL
       enable-sanitizers:
         required: false
         type: boolean
@@ -35,7 +39,7 @@ jobs:
       - name: Install packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang ninja-build
+          sudo apt-get install -y libjavascriptcoregtk-4.1-dev libgl1-mesa-dev libcurl4-openssl-dev libwayland-dev clang ninja-build libvulkan-dev vulkan-validationlayers
 
       - name: Build X11
         run: |
@@ -44,6 +48,7 @@ jobs:
             -D NAPI_JAVASCRIPT_ENGINE=${{ inputs.js-engine }} \
             -D CMAKE_BUILD_TYPE=RelWithDebInfo \
             -D BX_CONFIG_DEBUG=ON \
+            -D GRAPHICS_API=${{ inputs.graphics-api }} \
             -D OpenGL_GL_PREFERENCE=GLVND \
             -D BABYLON_DEBUG_TRACE=ON \
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} .
@@ -75,21 +80,21 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ inputs.cc }}-${{ inputs.js-engine }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
           path: build/Linux/Apps/Playground/Results
 
       - name: Upload Error Pictures
         if: failure()
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ inputs.cc }}-${{ inputs.js-engine }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-error-pictures
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-error-pictures
           path: build/Linux/Apps/Playground/Errors
 
       - name: Upload Core Dumps
         if: failure()
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ inputs.cc }}-${{ inputs.js-engine }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-core-dumps
+          name: ${{ inputs.cc }}-${{ inputs.js-engine }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-core-dumps
           path: |
             build/Linux/Apps/Playground/Playground
             build/Linux/Apps/Playground/core.*

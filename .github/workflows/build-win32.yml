@@ -93,14 +93,14 @@ jobs:
           )
 
       - name: Validation Tests
-        if: ${{ inputs.graphics-api != 'D3D12' }}
+        if: ${{ inputs.graphics-api != 'D3D12' && inputs.graphics-api != 'Vulkan' }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
           Playground app:///Scripts/validation_native.js
 
       - name: Upload Rendered Pictures
-        if: ${{ inputs.graphics-api != 'D3D12' && !cancelled() }}
+        if: ${{ inputs.graphics-api != 'D3D12' && inputs.graphics-api != 'Vulkan' && !cancelled() }}
         uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
@@ -123,7 +123,7 @@ jobs:
           Copy-Item -Path "build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo\Playground.*" -Destination "$env:RUNNER_TEMP\Dumps\" -ErrorAction SilentlyContinue
 
       - name: Unit Tests
-        if: ${{ inputs.graphics-api != 'D3D12' }}
+        if: ${{ inputs.graphics-api != 'D3D12' && inputs.graphics-api != 'Vulkan' }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\UnitTests\RelWithDebInfo
