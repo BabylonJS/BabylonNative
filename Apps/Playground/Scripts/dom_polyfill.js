@@ -12,8 +12,16 @@
 (function () {
     'use strict';
 
-    // Chakra has no `globalThis`; use the Function-constructor trick.
-    var g = (new Function('return this'))();
+    // Prefer non-eval global resolution; fall back to the Function-constructor
+    // trick only for very old runtimes that lack every standard global hook
+    // (older Chakra builds had no `globalThis`).
+    var g = (function () {
+        if (typeof globalThis !== 'undefined') return globalThis;
+        if (typeof self !== 'undefined') return self;
+        if (typeof window !== 'undefined') return window;
+        if (typeof global !== 'undefined') return global;
+        return (new Function('return this'))();
+    })();
 
     if (typeof g.TextEncoder === 'undefined') {
         function TextEncoder() {}
@@ -52,10 +60,11 @@
             return new Uint8Array(bytes);
         };
         TextEncoder.prototype.encodeInto = function (input, dest) {
-            var arr = this.encode(input);
+            var str = input === undefined ? '' : String(input);
+            var arr = this.encode(str);
             var n = Math.min(arr.length, dest.length);
             for (var i = 0; i < n; i++) dest[i] = arr[i];
-            return { read: String(input).length, written: n };
+            return { read: str.length, written: n };
         };
         g.TextEncoder = TextEncoder;
     }
@@ -65,7 +74,7 @@
             init = init || {};
             this.type = String(type || '');
             this.bubbles = !!init.bubbles;
-            this.cancelable = init.cancelable !== false;
+            this.cancelable = !!init.cancelable;
             this.composed = !!init.composed;
             this.defaultPrevented = false;
             this.target = init.target || null;
