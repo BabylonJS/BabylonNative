@@ -110,6 +110,34 @@ namespace Babylon::ShaderCompilerCommon
         }
     }
 
+    void AssignUniformBufferBindings(spirv_cross::Compiler& compiler)
+    {
+        // bgfx's D3D11/D3D12 backends bind their predefined constant buffer at register b0
+        // (see VSSetConstantBuffers/PSSetConstantBuffers in renderer_d3d11.cpp), so the "Frame"
+        // block synthesized by MoveNonSamplerUniformsIntoStruct must keep DecorationBinding=0.
+        // Any other uniform blocks declared by the source shader get sequential bindings
+        // starting at 1 so SPIRV-Cross emits distinct `register(bN)` annotations and FXC
+        // doesn't reject the shader with X4578 ("cbuffer bank N used more than once").
+        const auto resources = compiler.get_shader_resources();
+
+        for (const auto& uniformBuffer : resources.uniform_buffers)
+        {
+            if (uniformBuffer.name == "Frame")
+            {
+                compiler.set_decoration(uniformBuffer.id, spv::DecorationBinding, 0);
+            }
+        }
+
+        uint32_t nextBinding = 1;
+        for (const auto& uniformBuffer : resources.uniform_buffers)
+        {
+            if (uniformBuffer.name != "Frame")
+            {
+                compiler.set_decoration(uniformBuffer.id, spv::DecorationBinding, nextBinding++);
+            }
+        }
+    }
+
     NonSamplerUniformsInfo CollectNonSamplerUniforms(spirv_cross::Parser& parser, const spirv_cross::Compiler& compiler)
     {
         NonSamplerUniformsInfo info{};
