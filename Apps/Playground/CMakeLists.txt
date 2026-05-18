@@ -13,6 +13,7 @@ set(DEPENDENCIES
     "../Dependencies/recast.js")
 
 set(SCRIPTS
+    "Scripts/dom_polyfill.js"
     "Scripts/experience.js"
     "Scripts/file_polyfill.js"
     "Scripts/playground_runner.js"
@@ -135,6 +136,7 @@ endif()
 target_include_directories(Playground PRIVATE ".")
 
 target_link_libraries(Playground
+    PRIVATE AbortController
     PRIVATE AppRuntime
     PRIVATE Blob
     PRIVATE bx

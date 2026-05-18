@@ -25,6 +25,7 @@ target_link_libraries(BabylonNativeJNI
     PRIVATE EGL
     PRIVATE log
     PRIVATE -lz
+    PRIVATE AbortController
     PRIVATE AndroidExtensions
     PRIVATE AppRuntime
     PRIVATE Blob
