@@ -45,6 +45,26 @@
         done(false);
     }
 
+    // Run `eval(src)` directly. If the host engine throws a SyntaxError
+    // (e.g. Chakra rejecting ?. ?? or numeric separators) and the
+    // __bnTranspileES2019 helper is available, retry once with an ES2019
+    // syntax-repaired version of the source. Re-throws on any other error.
+    function evalWithFallback(src, test) {
+        try {
+            return eval(src);
+        } catch (e) {
+            if (e instanceof SyntaxError && typeof __bnTranspileES2019 === "function") {
+                const repaired = __bnTranspileES2019(src);
+                if (repaired !== src) {
+                    const title = test && test.title ? test.title : "(unknown)";
+                    console.log("Retrying '" + title + "' after ES2019 syntax repair (host engine lacks ES2020+ parse support).");
+                    return eval(repaired);
+                }
+            }
+            throw e;
+        }
+    }
+
     // Per-run counters surfaced as a final summary line on exit.
     let ranCount = 0;
     let passedCount = 0;
@@ -344,7 +364,7 @@
                                 }
                             }
 
-                            currentScene = eval(code + "\r\ncreateScene(engine)");
+                            currentScene = evalWithFallback(code + "\r\ncreateScene(engine)", test);
 
                             if (currentScene.then) {
                                 // Handle if createScene returns a promise
@@ -415,7 +435,7 @@
                             }
                         }
 
-                        currentScene = eval(scriptToRun + test.functionToCall + "(engine)");
+                        currentScene = evalWithFallback(scriptToRun + test.functionToCall + "(engine)", test);
                         processCurrentScene(test, renderImage, done, compareFunction);
                     }
                     catch (e) {
@@ -506,9 +526,52 @@
             if (type === "canvas") {
                 return new OffscreenCanvas(64, 64);
             }
-            return {};
+            // Generic element stub with a no-op dispatchEvent so serializer
+            // tests that simulate a click via createEvent/dispatchEvent run
+            // without throwing.
+            return {
+                style: {},
+                addEventListener: function () { },
+                removeEventListener: function () { },
+                dispatchEvent: function () { return true; },
+                appendChild: function (c) { return c; },
+                removeChild: function (c) { return c; },
+                setAttribute: function () { },
+                getAttribute: function () { return null; },
+                click: function () { },
+            };
         },
-        removeEventListener: function () { }
+        createEvent: function (type) {
+            var ev = {
+                type: '',
+                bubbles: false,
+                cancelable: false,
+                defaultPrevented: false,
+                target: null,
+                currentTarget: null,
+                timeStamp: Date.now(),
+                detail: null,
+                preventDefault: function () { ev.defaultPrevented = true; },
+                stopPropagation: function () { },
+                stopImmediatePropagation: function () { },
+            };
+            ev.initEvent = function (t, bubbles, cancelable) {
+                ev.type = String(t || '');
+                ev.bubbles = !!bubbles;
+                ev.cancelable = !!cancelable;
+            };
+            ev.initCustomEvent = function (t, bubbles, cancelable, detail) {
+                ev.initEvent(t, bubbles, cancelable);
+                ev.detail = detail;
+            };
+            ev.initUIEvent = ev.initEvent;
+            ev.initMouseEvent = ev.initEvent;
+            return ev;
+        },
+        addEventListener: function () { },
+        removeEventListener: function () { },
+        dispatchEvent: function () { return true; },
+        body: { appendChild: function (c) { return c; }, removeChild: function (c) { return c; } },
     }
 
     const xhr = new XMLHttpRequest();

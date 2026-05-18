@@ -13,7 +13,12 @@ set(DEPENDENCIES
     "../Dependencies/recast.js")
 
 set(SCRIPTS
+    "Scripts/cube_texture_polyfill.js"
+    "Scripts/dom_polyfill.js"
+    "Scripts/es2019_transpile.js"
     "Scripts/experience.js"
+    "Scripts/fetch_polyfill.js"
+    "Scripts/file_polyfill.js"
     "Scripts/playground_runner.js"
     "Scripts/validation_native.js"
     "Scripts/config.json")
@@ -134,6 +139,7 @@ endif()
 target_include_directories(Playground PRIVATE ".")
 
 target_link_libraries(Playground
+    PRIVATE AbortController
     PRIVATE AppRuntime
     PRIVATE Blob
     PRIVATE bx

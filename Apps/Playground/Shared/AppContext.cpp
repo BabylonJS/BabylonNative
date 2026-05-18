@@ -17,6 +17,7 @@
 #include <Babylon/Plugins/ShaderCache.h>
 #include <Babylon/Plugins/TestUtils.h>
 
+#include <Babylon/Polyfills/AbortController.h>
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/Polyfills/Console.h>
@@ -183,6 +184,8 @@ AppContext::AppContext(
 
         Babylon::Polyfills::Window::Initialize(env);
 
+        Babylon::Polyfills::AbortController::Initialize(env);
+
         Babylon::Polyfills::TextDecoder::Initialize(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
@@ -211,10 +214,15 @@ AppContext::AppContext(
     });
 
     m_scriptLoader.emplace(*m_runtime);
+    m_scriptLoader->LoadScript("app:///Scripts/es2019_transpile.js");
+    m_scriptLoader->LoadScript("app:///Scripts/fetch_polyfill.js");
+    m_scriptLoader->LoadScript("app:///Scripts/file_polyfill.js");
+    m_scriptLoader->LoadScript("app:///Scripts/dom_polyfill.js");
     m_scriptLoader->LoadScript("app:///Scripts/ammo.js");
     // Commenting out recast.js for now because v8jsi is incompatible with asm.js.
     // m_scriptLoader->LoadScript("app:///Scripts/recast.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylon.max.js");
+    m_scriptLoader->LoadScript("app:///Scripts/cube_texture_polyfill.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylonjs.loaders.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylonjs.materials.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylon.gui.js");

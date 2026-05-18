@@ -892,8 +892,6 @@
         {
             "title": "NMEGLTF",
             "playgroundId": "#WGZLGJ#10320",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "nmegltf.png"
         },
         {
@@ -1026,7 +1024,7 @@
             "playgroundId": "#QJ71C6#5",
             "referenceImage": "node-material1.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "GUI text labels render with red text on red background instead of green (BN GUI color regression affecting many GUI tests)."
         },
         {
             "title": "Node material 2",
@@ -1089,7 +1087,7 @@
             "playgroundId": "#UAIZCS#0",
             "referenceImage": "lodbillboardinstances.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "Instanced billboard foliage renders red instead of green (BN vertex/instance color routing regression)."
         },
         {
             "title": "Nested BBG",
@@ -1108,15 +1106,11 @@
         {
             "title": "Anisotropic",
             "playgroundId": "#MAXCNU#1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "anisotropic.png"
         },
         {
             "title": "Clear Coat",
             "playgroundId": "#YACNQS#2",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "clearCoat.png"
         },
         {
@@ -1124,14 +1118,14 @@
             "playgroundId": "#BS60AB#0",
             "referenceImage": "TransformStackPanel.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "GUI Transform StackPanel buttons render orange/red instead of green (BN GUI color regression)."
         },
         {
             "title": "GUI StackPanel",
             "playgroundId": "#LLVZ90#0",
             "referenceImage": "StackPanel.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "GUI StackPanel buttons render orange/red instead of green (BN GUI color regression)."
         },
         {
             "title": "GUI Slate",
@@ -1162,7 +1156,7 @@
             "renderCount": 50,
             "referenceImage": "LineEdgesRenderer.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "LineEdgesRenderer emits extra red lines not present in reference (likely Vector3.Cross precision or duplicate-edge dedup gap)."
         },
         {
             "title": "Simulate pointer",
@@ -1184,7 +1178,7 @@
             "renderCount": 5,
             "referenceImage": "clipplanes.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "GUI slider handles render red instead of green (BN GUI color regression); skull also has minor edge anti-aliasing differences."
         },
         {
             "title": "ShadowOnlyMaterial",
@@ -1287,7 +1281,7 @@
             "playgroundId": "#SLV8LW#3",
             "renderCount": 20,
             "excludeFromAutomaticTesting": true,
-            "reason": "Framebuffer creation fails on Win32 V8",
+            "reason": "GUI label backgrounds render red instead of white (BN GUI color regression).",
             "referenceImage": "advancedShadows.png"
         },
         {
@@ -1295,7 +1289,7 @@
             "playgroundId": "#B48X7G#64",
             "renderCount": 20,
             "excludeFromAutomaticTesting": true,
-            "reason": "Framebuffer creation fails on Win32 V8",
+            "reason": "GUI label backgrounds render red instead of white (BN GUI color regression).",
             "referenceImage": "advancedShadows2.png"
         },
         {
@@ -1375,76 +1369,58 @@
             "title": "GLTF Serializer with Negative World Matrix (left handed, once)",
             "playgroundId": "#KX53VK#88",
             "replace": "//options//, useRightHandedSystem = false; iterations = 1;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerNegativeWorldMatrix.png"
         },
         {
             "title": "GLTF Serializer with Negative World Matrix (left handed, twice)",
             "playgroundId": "#KX53VK#88",
             "replace": "//options//, useRightHandedSystem = false; iterations = 2;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerNegativeWorldMatrix.png"
         },
         {
             "title": "GLTF Serializer with Negative World Matrix (right handed, once)",
             "playgroundId": "#KX53VK#88",
             "replace": "//options//, useRightHandedSystem = true; iterations = 1;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerNegativeWorldMatrix.png"
         },
         {
             "title": "GLTF Serializer with Negative World Matrix (right handed, twice)",
             "playgroundId": "#KX53VK#88",
             "replace": "//options//, useRightHandedSystem = true; iterations = 2;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerNegativeWorldMatrix.png"
         },
         {
             "title": "GLTF Serializer Shared Buffer Conversions",
             "playgroundId": "#KX53VK#85",
             "replace": "//options//, meshCount = 2;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerSharedBufferConversions.png"
         },
         {
             "title": "GLTF Serializer Skinning and Animation",
             "playgroundId": "#DMZBX1#1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "gltfSerializerSkinningAndAnimation.png"
         },
         {
             "title": "GLTF Serializer Skinning and Animation (Right Handed)",
             "playgroundId": "#DMZBX1#2",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "gltfSerializerSkinningAndAnimation.png"
         },
         {
             "title": "GLTF Serializer Morph Target Animation",
             "playgroundId": "#84M2SR#107",
             "renderCount": 2,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "gltfSerializerMorphTargetAnimation.png"
         },
         {
             "title": "GLTF Serializer Morph Target Animation Group",
             "playgroundId": "#T087A8#29",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "gltfSerializerMorphTargetAnimationGroup.png"
         },
         {
             "title": "GLTF Serializer KHR draco mesh compression",
             "playgroundId": "#F8BF8N#3",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Draco loader passes 'utf8' to TextDecoder which only accepts 'utf-8'",
             "referenceImage": "glTFSerializerKhrDracoMeshCompression.png"
         },
         {
@@ -1457,63 +1433,57 @@
         {
             "title": "GLTF Serializer KHR gpu instancing",
             "playgroundId": "#1Q2BWN#10",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Pixel diff 3.4% on OpenGL backend (Linux JSC); passes on D3D11.",
             "referenceImage": "glTFSerializerKhrGpuInstancing.png"
         },
         {
             "title": "GLTF Serializer KHR punctual light, left-handed",
             "playgroundId": "#FLXW8B#27",
             "replace": "//options//, roundtrip = true; useRightHandedSystem = false;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerKHRPunctualLightLH.png"
         },
         {
             "title": "GLTF Serializer KHR punctual light, right-handed",
             "playgroundId": "#FLXW8B#27",
             "replace": "//options//, roundtrip = true; useRightHandedSystem = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerKHRPunctualLightRH.png"
         },
         {
             "title": "GLTF Serializer Camera, left-handed",
             "playgroundId": "#O0M0J9#25",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Camera roundtrip diverges on OpenGL backend (Linux JSC), 21% pixel diff; passes on D3D11.",
             "replace": "//options//, roundtripCount = 1; useRightHandedSystem = false;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerCameraLeftHand.png"
         },
         {
             "title": "GLTF Serializer Camera, right-handed",
             "playgroundId": "#O0M0J9#25",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Camera roundtrip diverges on OpenGL backend; passes on D3D11.",
             "replace": "//options//, roundtripCount = 1; useRightHandedSystem = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerCameraRightHand.png"
         },
         {
             "title": "GLTF Serializer Camera, left-handed, round trip twice",
             "playgroundId": "#O0M0J9#25",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Camera roundtrip diverges on OpenGL backend; passes on D3D11.",
             "replace": "//options//, roundtripCount = 2; useRightHandedSystem = false;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerCameraLeftHand.png"
         },
         {
             "title": "GLTF Serializer Camera, right-handed, round trip twice",
             "playgroundId": "#O0M0J9#25",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Camera roundtrip diverges on OpenGL backend; passes on D3D11.",
             "replace": "//options//, roundtripCount = 2; useRightHandedSystem = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerCameraRightHand.png"
         },
         {
             "title": "GLTF Serializer Rotation conversion, left-handed",
             "playgroundId": "#UK7FLI#1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "glTFSerializerRotationConversionLH.png"
         },
         {
@@ -1553,7 +1523,7 @@
             "playgroundId": "#8NTR5X#8",
             "replace": "//options//, roundtrip = true;",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Chakra parse fails on ES2022 syntax not handled by ES2019 polyfill (e.g. private class fields).",
             "referenceImage": "glTFSerializerTextureExport.png"
         },
         {
@@ -1661,22 +1631,16 @@
         {
             "title": "PBRMetallicRoughnessMaterial",
             "playgroundId": "#2FDQT5#13",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "PBRMetallicRoughnessMaterial.png"
         },
         {
             "title": "PBRSpecularGlossinessMaterial",
             "playgroundId": "#Z1VL3V#4",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "PBRSpecularGlossinessMaterial.png"
         },
         {
             "title": "PBR",
             "playgroundId": "#LCA0Q4#27",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "pbr.png"
         },
         {
@@ -1732,7 +1696,7 @@
             "playgroundId": "#2YLJ1L#2",
             "referenceImage": "instancedBones.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Deterministic sub-pixel animation/edge-AA differences on instanced bone animation (~3.5% px); render is structurally correct."
         },
         {
             "title": "GlowLayer",
@@ -1873,23 +1837,19 @@
             "title": "OBJ Stanford Bunny normals (round trip, LH)",
             "playgroundId": "#26R8NS#6",
             "replace": "//options//, roundTrip = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "File API not available in Babylon Native JS runtime (ReferenceError)",
             "referenceImage": "objStanfordBunnyNormalsRoundTripLH.png"
         },
         {
             "title": "OBJ Stanford Bunny normals (round trip, RH)",
             "playgroundId": "#26R8NS#6",
             "replace": "//options//, roundTrip = true; useRightHandedSystem = true;",
-            "excludeFromAutomaticTesting": true,
-            "reason": "File API not available in Babylon Native JS runtime (ReferenceError)",
             "referenceImage": "objStanfordBunnyNormalsRoundTripRH.png"
         },
         {
             "title": "glTF to OBJ (LH)",
             "playgroundId": "#HYZWGK#3",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Hangs on Win32 Chakra D3D11 - glTF to OBJ round trip",
             "referenceImage": "gltfToObjLH.png"
         },
         {
@@ -1897,7 +1857,7 @@
             "playgroundId": "#HYZWGK#3",
             "replace": "//options//, useRightHandedSystem = true;",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Hangs on Win32 Chakra D3D11 - glTF to OBJ round trip",
             "referenceImage": "gltfToObjRH.png"
         },
         {
@@ -1985,8 +1945,6 @@
             "title": "Prepass SSAO + depth of field",
             "playgroundId": "#8F5HYV#72",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "prepass-ssao-dof.png"
         },
         {
@@ -2298,7 +2256,7 @@
             "title": "Baked Vertex Animation",
             "playgroundId": "#14WJWW#13",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "Pixel-diff against Babylon.js reference after SPIRV-Cross bump (#1695): animation timing renders one frame off. Cannot re-bake from BN renderer per project policy.",
             "referenceImage": "bakedVertexAnimation.png"
         },
         {
@@ -2340,7 +2298,7 @@
             "title": "Material Plugin",
             "playgroundId": "#22HT5Z#10",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Chakra parse fails on ES2022 syntax not handled by ES2019 polyfill (e.g. private class fields).",
             "referenceImage": "materialPlugin.png"
         },
         {
@@ -2376,8 +2334,6 @@
         {
             "title": "Serialize scene without materials",
             "playgroundId": "#PH4DEZ#1",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "serializeWithoutMaterials.png"
         },
         {
@@ -2427,7 +2383,7 @@
             "playgroundId": "#PCMH7A#2",
             "renderCount": 120,
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Chakra parse fails on ES2022 syntax not handled by ES2019 polyfill (e.g. private class fields).",
             "referenceImage": "fluidBoxSphere.png"
         },
         {
@@ -2526,7 +2482,7 @@
             "playgroundId": "#PIZ1GK#1500",
             "renderCount": 5,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "NativeEngine Screen Space Reflections do not render the wet/reflective floor surface; SSR effect produces less reflection than WebGL reference.",
             "referenceImage": "Screen-Space-Reflections-2.png"
         },
         {
@@ -2568,7 +2524,7 @@
             "title": "Sprites Pixel Perfect",
             "playgroundId": "#ZX8DJ3#10",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "NativeEngine Sprite renderer shows opaque black background instead of transparent pixels around sprite quad; sprite alpha-blending regression.",
             "referenceImage": "Sprites-Pixel-Perfect.png"
         },
         {
@@ -2576,7 +2532,7 @@
             "playgroundId": "#XCPP9Y#18325",
             "referenceImage": "Rounding-values-on-controls-inside-StackPanel.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "GUI StackPanel buttons render orange/red instead of green (BN GUI color regression)."
         },
         {
             "title": "Rounding cell widths on Grid",
@@ -2751,7 +2707,7 @@
             "title": "soft-transparent-shadows",
             "playgroundId": "#G3DJGA#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "NativeEngine soft shadow filtering produces grainy/aliased shadows instead of smooth filtered output; filter quality regression vs WebGL reference.",
             "referenceImage": "soft-transparent-shadows.png"
         },
         {
@@ -2781,7 +2737,7 @@
             "playgroundId": "#MJ59Y8#18",
             "renderCount": 10,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "Pixel-diff against Babylon.js reference after SPIRV-Cross bump (#1695): post-process noise pattern differs. Cannot re-bake from BN renderer per project policy.",
             "referenceImage": "apply-all-post-processes.png"
         },
         {
@@ -2806,14 +2762,12 @@
             "renderCount": 20,
             "referenceImage": "skybox-with-boombox.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails after sync from Babylon.js: massive pixel difference (221k pixels) on Linux Clang/GCC JSC and Win32 D3D11."
+            "reason": "GUI text 'Hello world WebGPU!' renders pink/red instead of white (BN GUI color regression); boombox also has minor edge differences."
         },
         {
             "title": "custom-handling-of-materials-for-render-target-pass",
             "playgroundId": "#FIVL25#21",
             "renderCount": 60,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "custom-handling-of-materials-for-render-target-pass.png"
         },
         {
@@ -2907,7 +2861,7 @@
             "renderCount": 2,
             "replace": "//options//, modelIndex = 2;",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "ES2020+ ?. parsed via ES2019 polyfill; runtime TypeError from .stop() on optional null field.",
             "referenceImage": "computeMaxExtents-BoxAnimated.png"
         },
         {
@@ -2916,7 +2870,7 @@
             "renderCount": 2,
             "replace": "//options//, modelIndex = 4; animationIndex = 0;",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "ES2020+ ?. parsed via ES2019 polyfill; runtime TypeError from .stop() on optional null field.",
             "referenceImage": "computeMaxExtents-Fox0.png"
         },
         {
@@ -2925,7 +2879,7 @@
             "renderCount": 2,
             "replace": "//options//, modelIndex = 4; animationIndex = 1;",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "ES2020+ ?. parsed via ES2019 polyfill; runtime TypeError from .stop() on optional null field.",
             "referenceImage": "computeMaxExtents-Fox1.png"
         },
         {
@@ -2934,7 +2888,7 @@
             "renderCount": 2,
             "replace": "//options//, modelIndex = 5;",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "ES2020+ ?. parsed via ES2019 polyfill; runtime TypeError from .stop() on optional null field.",
             "referenceImage": "computeMaxExtents-MorphStressTest.png"
         },
         {
@@ -3047,7 +3001,7 @@
             "title": "FrameGraph nrge custom rendering",
             "playgroundId": "#1QCA2M#35",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Parse repaired via ES2019 polyfill; runtime fails (asset/URL load issue in FrameGraph snippet).",
             "referenceImage": "FrameGraph-nrge-custom-rendering.png"
         },
         {
@@ -3061,14 +3015,14 @@
             "title": "FrameGraph nrge glow layer",
             "playgroundId": "#IG8NRC#84",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Parse repaired via ES2019 polyfill; runtime fails: cubemap files not defined (asset gap).",
             "referenceImage": "FrameGraph-nrge-glow-layer.png"
         },
         {
             "title": "FrameGraph nrge highlight layer",
             "playgroundId": "#QZYNMK#3",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Parse repaired via ES2019 polyfill; runtime fails (asset/URL load issue in FrameGraph snippet).",
             "referenceImage": "FrameGraph-nrge-highlight-layer.png"
         },
         {
@@ -3126,7 +3080,7 @@
             "title": "FrameGraph nrge rig camera",
             "playgroundId": "#ATL1CS#19",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Parse repaired via ES2019 polyfill; runtime fails (asset/URL load issue in FrameGraph snippet).",
             "referenceImage": "FrameGraph-nrge-rig-camera.png"
         },
         {
@@ -3153,7 +3107,7 @@
             "title": "FrameGraph nrge volumetric lighting",
             "playgroundId": "#3VH0AC#2",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Parse repaired via ES2019 polyfill; runtime hangs (FrameGraph volumetric lighting).",
             "referenceImage": "FrameGraph-nrge-volumetric-lighting.png"
         },
         {
@@ -3180,14 +3134,14 @@
             "title": "FrameGraph nrge transmission",
             "playgroundId": "#ZNTBN2#10",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Chakra parse fails on ES2022 syntax not handled by ES2019 polyfill (e.g. private class fields).",
             "referenceImage": "FrameGraph-nrge-transmission.png"
         },
         {
             "title": "FrameGraph nrge selection outline layer",
             "playgroundId": "#ADUC74#1",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Parse repaired via ES2019 polyfill; runtime fails (asset/URL load issue in FrameGraph snippet).",
             "referenceImage": "FrameGraph-nrge-selection-outline-layer.png"
         },
         {
@@ -3295,7 +3249,7 @@
             "title": "FrameGraph volumetric lighting",
             "playgroundId": "#3VH0AC",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "Parse repaired via ES2019 polyfill; runtime TypeError (FrameGraph volumetric lighting).",
             "referenceImage": "FrameGraph-volumetric-lighting.png"
         },
         {
@@ -3316,14 +3270,14 @@
             "title": "FrameGraph selection outline",
             "playgroundId": "#E1F0GP#4",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Parse repaired via ES2019 polyfill; runtime fails: Unknown error opening URL.",
             "referenceImage": "FrameGraph-selection-outline.png"
         },
         {
             "title": "Render target texture with clustered lights",
             "playgroundId": "#1QCA2M#11",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Parse repaired via ES2019 polyfill; runtime fails: texture data size mismatch (clustered lighting gap).",
             "referenceImage": "Render-target-texture-with-clustered-lights.png"
         },
         {
@@ -3449,14 +3403,14 @@
             "title": "Sponza Clustered Lighting",
             "playgroundId": "#CSCJO2#17",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Parse repaired via ES2019 polyfill; runtime fails: texture data size mismatch (clustered lighting gap).",
             "referenceImage": "sponza-clustered-lighting.png"
         },
         {
             "title": "Sponza Clustered Lighting (2 viewports)",
             "playgroundId": "#CSCJO2#20",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Parse repaired via ES2019 polyfill; runtime fails: texture data size mismatch (clustered lighting gap).",
             "referenceImage": "sponza-clustered-lighting-viewports.png"
         },
         {
@@ -3537,28 +3491,28 @@
             "title": "Atmosphere Day",
             "playgroundId": "#VO1Z0C#39",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Requires babylonjs-addons (ADDONS.Atmosphere); not shipped by Babylon Native.",
             "referenceImage": "atmosphere-day.png"
         },
         {
             "title": "Atmosphere Day (Planet Origin)",
             "playgroundId": "#VO1Z0C#40",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Requires babylonjs-addons (ADDONS.Atmosphere); not shipped by Babylon Native.",
             "referenceImage": "atmosphere-day.png"
         },
         {
             "title": "Atmosphere Day (Ray Marching)",
             "playgroundId": "#VO1Z0C#41",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Requires babylonjs-addons (ADDONS.Atmosphere); not shipped by Babylon Native.",
             "referenceImage": "atmosphere-day-ray-marching.png"
         },
         {
             "title": "Atmosphere Sunset",
             "playgroundId": "#VO1Z0C#42",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Requires babylonjs-addons (ADDONS.Atmosphere); not shipped by Babylon Native.",
             "referenceImage": "atmosphere-sunset.png"
         },
         {
@@ -3967,7 +3921,7 @@
             "playgroundId": "#GRQHVV#124",
             "referenceImage": "OpenPBR-Transmission-Roughness-glTF---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "GUI grid labels render red instead of green/black (BN GUI color regression); OpenPBR transmission spheres minor anisotropy diff."
         },
         {
             "title": "OpenPBR Transmission Roughness vs IOR - Analytic Lights",
@@ -4064,7 +4018,7 @@
             "playgroundId": "#GRQHVV#268",
             "referenceImage": "OpenPBR-Transmission-Scatter-Anisotropy-Reflect---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "OpenPBR analytic-lights right-column spheres render saturated red where reference shows subsurface scattering (spirv-cross HLSL emit gap for OpenPBR Anisotropy/SSS BSDF)."
         },
         {
             "title": "OpenPBR Transmission Scatter Roughness - Analytic Lights",
@@ -4094,7 +4048,7 @@
             "playgroundId": "#GRQHVV#272",
             "referenceImage": "OpenPBR-Subsurface-Radius-vs-Anisotropy---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "OpenPBR analytic-lights right-column spheres render saturated red where reference shows subsurface scattering (spirv-cross HLSL emit gap for OpenPBR Anisotropy/SSS BSDF)."
         },
         {
             "title": "OpenPBR Subsurface Radius vs Radius Scale - IBL",
@@ -4118,7 +4072,7 @@
             "renderCount": 2,
             "referenceImage": "OpenPBR-Subsurface-Transmission-Blending---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "OpenPBR subsurface transmission shows red bands on label backgrounds (BN GUI color + minor SSS BSDF differences)."
         },
         {
             "title": "OpenPBR Subsurface Transmission Blending Zero Depth - IBL",
@@ -4158,7 +4112,7 @@
             "renderCount": 10,
             "referenceImage": "OpenPBR-Subsurface-Dense-Scattering---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "OpenPBR analytic-lights left column spheres render saturated red where reference shows subsurface scattering (spirv-cross HLSL emit gap for OpenPBR SSS BSDF)."
         },
         {
             "title": "OpenPBR Subsurface Dense Scattering - Realtime IBL",
@@ -4234,7 +4188,7 @@
             "playgroundId": "#UU7RQ#4458",
             "referenceImage": "Background-material-blur.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Background material blur produces red splotches in the blurred background (BN background-blur shader regression)."
         },
         {
             "title": "Lighting Volume",
@@ -4249,7 +4203,7 @@
             "renderCount": 180,
             "useLargeWorldRendering": true,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "Parse repaired via ES2019 polyfill; runtime fails: 'HK' (Havok) global not defined.",
             "referenceImage": "Havok-FloatingOrigin-Multi-Region.png"
         },
         {
@@ -4652,7 +4606,7 @@
             "title": "Selection outline layer with instances",
             "playgroundId": "#UR9706#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "reason": "Parse repaired via ES2019 polyfill; runtime fails (asset/URL load issue).",
             "referenceImage": "Selection-outline-layer-with-instances.png"
         },
         {
