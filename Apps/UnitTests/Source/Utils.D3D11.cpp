@@ -26,3 +26,28 @@ void DestroyTestTexture(Babylon::Graphics::TextureT texture)
 {
     texture->Release();
 }
+
+Babylon::Graphics::DeviceT CreateTestGraphicsDevice()
+{
+    ID3D11Device* device = nullptr;
+    EXPECT_HRESULT_SUCCEEDED(D3D11CreateDevice(
+        nullptr,
+        D3D_DRIVER_TYPE_WARP,
+        nullptr,
+        0,
+        nullptr,
+        0,
+        D3D11_SDK_VERSION,
+        &device,
+        nullptr,
+        nullptr));
+    return device;
+}
+
+void DestroyTestGraphicsDevice(Babylon::Graphics::DeviceT device)
+{
+    if (device != nullptr)
+    {
+        device->Release();
+    }
+}

@@ -1,6 +1,9 @@
 #include <gtest/gtest.h>
 #include "Utils.h"
 
+#include <dxgi1_4.h>
+#include <winrt/base.h>
+
 Babylon::Graphics::TextureT CreateTestTexture(Babylon::Graphics::DeviceT device, uint32_t width, uint32_t height, uint32_t arraySize)
 {
     D3D12_RESOURCE_DESC desc{};
@@ -38,4 +41,26 @@ Babylon::Graphics::TextureT CreateTestTexture(Babylon::Graphics::DeviceT device,
 void DestroyTestTexture(Babylon::Graphics::TextureT texture)
 {
     texture->Release();
+}
+
+Babylon::Graphics::DeviceT CreateTestGraphicsDevice()
+{
+    winrt::com_ptr<IDXGIFactory4> factory;
+    winrt::check_hresult(CreateDXGIFactory1(IID_PPV_ARGS(factory.put())));
+
+    winrt::com_ptr<IDXGIAdapter> warpAdapter;
+    winrt::check_hresult(factory->EnumWarpAdapter(IID_PPV_ARGS(warpAdapter.put())));
+
+    ID3D12Device* device = nullptr;
+    winrt::check_hresult(D3D12CreateDevice(warpAdapter.get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)));
+
+    return device;
+}
+
+void DestroyTestGraphicsDevice(Babylon::Graphics::DeviceT device)
+{
+    if (device != nullptr)
+    {
+        device->Release();
+    }
 }
