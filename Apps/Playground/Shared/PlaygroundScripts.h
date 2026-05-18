@@ -14,21 +14,16 @@ namespace Playground
     // the first view.
     void Initialize(const PlaygroundOptions& options = {});
 
-    // Queue the standard Babylon.js bootstrap scripts (Babylon core,
-    // loaders, materials, GUI, serializers, plus a few common extras)
-    // onto `runtime` in dependency order.
+    // Queue the standard Babylon.js bootstrap scripts (core, loaders,
+    // materials, GUI, serializers, etc.) onto `runtime` in dependency order.
     //
-    // These were historically loaded by `AppContext`'s constructor; the
-    // `Babylon::Integrations` layer no longer bundles script loading
-    // (each host decides between the multi-UMD route this helper
-    // implements and a single pre-bundled `bundle.js` route — see
-    // SimplifiedAPI.md §4.1 "Loading Babylon.js: two supported routes").
-    // We keep the list here so every Playground host stays in sync as
-    // the bundle list evolves.
+    // The `Babylon::Integrations` layer doesn't bundle script loading;
+    // each host picks between this multi-UMD route and a pre-bundled
+    // `bundle.js` route. Centralizing the list keeps every Playground
+    // host in sync as the bundle list evolves.
     //
-    // Calls to `LoadScript` made before the first `View::Attach` are
-    // queued on the runtime and dispatched after engine initialization
-    // completes; this helper relies on that, so it's safe to call
-    // immediately after `Runtime::Create`.
+    // LoadScript calls made before the first View::Attach are queued and
+    // dispatched after engine init, so this is safe to call immediately
+    // after `Runtime::Create`.
     void LoadBootstrapScripts(Babylon::Integrations::Runtime& runtime);
 }

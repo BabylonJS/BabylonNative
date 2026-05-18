@@ -17,11 +17,10 @@ namespace
 
 @implementation BNViewDelegate
 {
-    // BNView holds the auto-installed delegate strongly, and
-    // host-installed subclass delegates are typically held strongly by
-    // the host's own controller — so a weak back-reference here is
-    // sufficient and avoids any chance of a retain cycle if a subclass
-    // captures the BNView in a closure or property.
+    // BNView retains the auto-installed delegate strongly; host
+    // subclasses are typically held by the host's controller. Weak
+    // is sufficient and avoids retain cycles if a subclass captures
+    // the BNView.
     __weak BNView* _view;
 }
 
@@ -53,9 +52,8 @@ namespace
 
 - (void)drawInMTKView:(MTKView* __unused)v
 {
-    // `[_view renderFrame]` already handles the XR overlay visibility
-    // toggle internally via the runtime, so subclasses that override
-    // `drawInMTKView:` and call `super` get the behavior for free.
+    // [_view renderFrame] handles the XR overlay visibility toggle, so
+    // subclasses that override this and call super get it for free.
     [_view renderFrame];
 }
 

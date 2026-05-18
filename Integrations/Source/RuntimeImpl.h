@@ -61,162 +61,100 @@ namespace Babylon::Integrations
 #endif
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEXR
-        // NativeXr is initialized during the first View::Attach (it
-        // needs a Napi::Env). Until then, m_xrWindow holds the host's
-        // most recent SetXrWindow value so we can apply it as soon as
-        // the plugin is alive. m_xrMutex serializes both fields plus
-        // the optional itself. m_isXrActive is updated from the JS
-        // thread by NativeXr's session-state callback and read from
-        // any thread by IsXrActive() polling.
+        // NativeXr is initialized during the first View::Attach (needs a
+        // Napi::Env). Until then, m_xrWindow holds the most recent
+        // SetXrWindow value for application post-init. m_xrMutex serializes
+        // these fields. m_isXrActive is written from the JS thread and
+        // polled from any thread.
         std::optional<Babylon::Plugins::NativeXr> m_nativeXr;
         void* m_xrWindow{nullptr};
         mutable std::mutex m_xrMutex;
         std::atomic<bool> m_isXrActive{false};
 #endif
 
-        // ----- Pre-init queueing -----
+        // Pre-init queue for host LoadScript / Eval / RunOnJsThread.
+        // Each call chains its work off `m_initTcs.as_task().then(...)`.
+        // The first-Attach init lambda calls `m_initTcs.complete()` after
+        // all plugins are initialized, firing every queued continuation
+        // (in registration order) on the JS thread. After completion,
+        // future `.then(inline_scheduler, ...)` calls run synchronously
+        // on the calling thread and submit to ScriptLoader directly.
         //
-        // Host calls to LoadScript / Eval / RunOnJsThread are chained
-        // off `m_initTcs.as_task().then(inline_scheduler, ...)`. While
-        // the TCS is uncompleted (i.e. the first View::Attach hasn't
-        // finished plugin initialization on the JS thread), continuations
-        // sit on the task payload. The first-Attach init lambda calls
-        // `m_initTcs.complete()` after all plugins are initialized,
-        // which fires every queued continuation in registration order
-        // on the JS thread. After completion, subsequent
-        // `.then(inline_scheduler, ...)` calls run their callable
-        // synchronously on the calling thread, which then submits to
-        // ScriptLoader directly.
-        //
-        // Host-side serialization is the host's responsibility, matching
-        // ScriptLoader's existing contract; we do not add an outer mutex.
+        // Host-side serialization is the host's responsibility (same
+        // contract as ScriptLoader); no outer mutex.
         arcana::task_completion_source<void, std::exception_ptr> m_initTcs;
 
-        // Reference-counted Suspend/Resume. Atomic so `IsSuspended()`
-        // can be polled cheaply from any thread (e.g. a worker checking
-        // whether to bother queuing more host-side work). Mutations to
-        // the count itself happen only on the frame thread (the
-        // documented contract of `Runtime::Suspend` / `Runtime::Resume`),
-        // so the increment/decrement do not need to be locked.
+        // Reference-counted suspend depth. Mutated only on the frame
+        // thread; atomic so `IsSuspended()` can be polled from any thread.
         std::atomic<int> m_suspendCount{0};
 
-        // 0..1; tracked so we can guard against multiple concurrent
-        // attachments (the API contract is "at most one View at a time").
+        // 0..1 — enforces "at most one View attached at a time".
         View* m_currentView{nullptr};
 
-        // First-Attach engine initialization: dispatched onto the JS
-        // thread by View::Attach the very first time it constructs the
-        // Device. Runs all plugin/polyfill `Initialize` calls, wires
-        // NativeXr session-state callbacks, then completes `m_initTcs`
-        // to unblock any LoadScript / Eval / RunOnJsThread calls the
-        // host queued before the first Attach.
-        //
-        // The `window` parameter is forwarded to TestUtils::Initialize
-        // (the only plugin that wants it); ignored otherwise.
+        // Dispatched onto the JS thread by the very first View::Attach.
+        // Runs all plugin/polyfill Initialize calls, wires NativeXr
+        // callbacks, and completes m_initTcs. `window` is forwarded to
+        // TestUtils::Initialize; ignored otherwise.
         void RunFirstAttachInit(Babylon::Graphics::WindowT window);
 
 #if BABYLON_NATIVE_PLUGIN_SHADERCACHE
-        // ----- Persistent shader cache -----
-        //
-        // Both methods are no-ops when `m_options.shaderCachePath` is
-        // empty. Both run synchronously on the host thread; they do
-        // not need to coordinate with the JS thread because callers
-        // (first-Attach, post-view-Suspend, destructor) are points at
-        // which the engine is known not to be compiling shaders.
-
-        // Load the on-disk shader cache file into the in-memory cache.
-        // Called from `RunFirstAttachInit` right after
-        // `ShaderCache::Enable()`. Safe because no shaders have been
-        // compiled yet at this point — the cache map is quiescent.
+        // Persistent shader cache. No-ops when `m_options.shaderCachePath`
+        // is empty. Both run synchronously on the host thread at points
+        // where the engine is known not to be compiling shaders
+        // (first-Attach, post-view-Suspend, ~RuntimeImpl) — no JS-thread
+        // coordination required.
         void LoadShaderCache();
-
-        // Serialize the in-memory shader cache to disk. Called from
-        // `Runtime::Suspend` (after `ViewImpl::Suspend()` has closed
-        // the current frame and locked the update safe-timespan) and
-        // from `~RuntimeImpl` (after the View precondition has
-        // guaranteed `ViewImpl::Suspend()` already ran via `~View`).
-        // No async/JS-thread coordination is required: at these
-        // points there is no in-flight engine work writing to the
-        // cache.
         void SaveShaderCache();
 #endif
     };
 
-    // Internal implementation of View. Holds the back-reference to the
-    // Runtime that produced it, the native window handle captured at
-    // `View::Attach`, the most recent size handed in via `View::Resize`,
-    // plus Suspend / Resume that manage the in-flight frame across
-    // runtime suspension.
+    // Internal implementation of View. Owns the back-reference to its
+    // Runtime, the window handle captured at Attach, the most recent
+    // Resize size, and the frame-lifecycle Suspend/Resume hooks.
     //
-    // `View::Attach` is intentionally cheap: it just stashes the
-    // window handle and registers as the current view. All Device
-    // interaction (first-time construction, or `UpdateWindow` +
-    // `UpdateSize` on a re-attach to an existing Runtime) is deferred
-    // to `InitializeIfReady`, which only runs once all three
-    // preconditions hold:
+    // Attach is cheap: it just stashes the window and registers as the
+    // current view. All Device work runs in `InitializeIfReady`, which
+    // is gated on three preconditions:
     //
-    //   1. `m_initialized` is still `false` (the view hasn't been
-    //      initialized yet for this Attach),
-    //   2. `m_size` is set (the host has called `View::Resize` at
-    //      least once with a non-zero size), and
-    //   3. `RuntimeImpl::m_suspendCount` is zero (the host hasn't
-    //      called `Runtime::Suspend` without a matching `Resume`).
+    //   1. `m_initialized == false`,
+    //   2. `m_size` is set (host has called Resize at least once), and
+    //   3. `RuntimeImpl::m_suspendCount == 0`.
     //
-    // `InitializeIfReady` is called from `View::Resize` (which sets
-    // condition 2) and from `ViewImpl::Resume` (which can clear
-    // condition 3). Whichever caller satisfies the last missing
-    // precondition is the one that actually runs the init recipe.
-    // This is also what makes the `UpdateWindow` + `UpdateSize` pair
-    // safe: both happen together inside `InitializeIfReady`, so bgfx
-    // never sees a window change without a matching size change.
+    // Called from `View::Resize` (satisfies #2) and `ViewImpl::Resume`
+    // (can clear #3); whichever caller satisfies the last precondition
+    // runs the init. Folding `UpdateWindow` + `UpdateSize` together
+    // inside this function is what keeps the bgfx pair safe.
     //
-    // Once `m_initialized` flips to `true`, a Device frame is open
-    // iff `RuntimeImpl::m_suspendCount == 0`. `ViewImpl::Suspend` and
-    // `ViewImpl::Resume` are called by `Runtime::Suspend` /
-    // `Runtime::Resume` on the suspendCount 0↔1 transitions and
-    // toggle that frame open/closed.
+    // Once initialized, a Device frame is open iff `m_suspendCount == 0`.
+    // ViewImpl::Suspend/Resume toggle that frame on the 0↔1 transitions.
     struct ViewImpl
     {
         explicit ViewImpl(Runtime& runtime) : m_runtime{runtime} {}
         Runtime& m_runtime;
 
-        // Window handle captured at `View::Attach`. Used by
-        // `InitializeIfReady` to construct (first-Attach-ever) or
-        // rebind (subsequent Attach) the Device.
+        // Captured at View::Attach; used by InitializeIfReady to
+        // construct (first-Attach-ever) or rebind the Device.
         Babylon::Graphics::WindowT m_window{};
 
-        // Most recent size handed in via `View::Resize`, in logical
-        // pixels. Empty until the host has called `Resize` at least
-        // once. Used by `InitializeIfReady` to size the Device on the
-        // first init.
+        // Most recent Resize size, in logical pixels. Empty until the
+        // host calls Resize.
         std::optional<std::pair<uint32_t, uint32_t>> m_size;
 
-        // Latches to `true` the first time `InitializeIfReady` runs
-        // all three preconditions to completion. Never flips back for
-        // the lifetime of this `ViewImpl`; a new `ViewImpl` is
-        // constructed on each `View::Attach`.
+        // Latches true the first time InitializeIfReady succeeds; never
+        // flips back. A new ViewImpl is constructed per View::Attach.
         bool m_initialized{false};
 
-        // Close the in-flight frame on the Device (Finish +
-        // FinishRenderingCurrentFrame). Called by `Runtime::Suspend`
-        // on the suspendCount 0→1 transition, and by `~View`. No-op
-        // when the view is not yet initialized (no frame to close).
+        // Close the in-flight frame (called by Runtime::Suspend on 0→1
+        // and by ~View). No-op when uninitialized.
         void Suspend();
 
-        // Open a new frame (StartRenderingCurrentFrame +
-        // DeviceUpdate::Start) on the Device. Called by
-        // `Runtime::Resume` on the suspendCount 1→0 transition. When
-        // the view is not yet initialized, this instead tries to run
-        // the deferred first-Resize init (which itself opens the
-        // first frame if it succeeds) — so a host that attached and
-        // resized while the Runtime was externally suspended sees its
-        // init kick off cleanly on the next `Runtime::Resume`.
+        // Open a new frame (called by Runtime::Resume on 1→0). When
+        // uninitialized, retries InitializeIfReady — handles the case
+        // where the host attached and resized while suspended.
         void Resume();
 
-        // Run the deferred Device-binding + first-frame-opening
-        // recipe iff all three preconditions are satisfied (see the
-        // class-level comment). No-op otherwise. Safe to call from
-        // any of the entry points that can satisfy a precondition.
+        // Runs the deferred init iff all three preconditions hold.
+        // Safe to call from any caller that just satisfied one.
         void InitializeIfReady();
     };
 }

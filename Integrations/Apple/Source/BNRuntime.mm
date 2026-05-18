@@ -20,21 +20,19 @@ namespace
         return value >= 0 && value <= UINT8_MAX ? static_cast<uint8_t>(value) : 0;
     }
 
-    // Lazily-initialized process-wide logger used by the default log
-    // sink. Subsystem matches the Babylon Native CFBundleIdentifier
-    // convention so Console.app / `log stream` can filter it cleanly.
+    // Process-wide os_log channel for the default log sink. Subsystem
+    // matches the Babylon Native CFBundleIdentifier convention so
+    // Console.app / `log stream` can filter it.
     os_log_t BabylonNativeLogger()
     {
         static os_log_t logger = os_log_create("com.babylonjs.babylonnative", "Runtime");
         return logger;
     }
 
-    // Map LogLevel onto the closest os_log type. os_log has no "warn"
-    // distinct from "default", so Warn folds into DEFAULT (matching
-    // Apple's own console.warn → default mapping). DEBUG and INFO are
-    // filtered out of release builds and Console.app by default, so
-    // routing Verbose there keeps DebugTrace spam out of the way unless
-    // a developer explicitly opts in (`log stream --level debug ...`).
+    // Map LogLevel onto os_log types. os_log has no distinct "warn", so
+    // Warn folds into DEFAULT (matches Apple's console.warn → default).
+    // DEBUG/INFO are filtered out of release builds and Console.app by
+    // default, so Verbose lands there to suppress DebugTrace noise.
     os_log_type_t ToOSLogType(Babylon::Integrations::LogLevel level)
     {
         switch (level)
@@ -79,12 +77,10 @@ namespace
             options.enableDebugTrace = runtimeOptions.enableDebugTrace ? true : false;
             options.waitForDebugger = runtimeOptions.waitForDebugger ? true : false;
         }
-        // Default log sink: route through `os_log_with_type` so the
-        // level survives all the way to Console.app / `log stream`.
-        // Hosts that need their own routing should drop down to the
-        // C++ API. `%{public}.*s` is required to print the message
-        // payload; without `{public}` os_log redacts non-scalar
-        // arguments as `<private>` in release builds.
+        // Default log sink: route through os_log_with_type so the level
+        // reaches Console.app / `log stream`. Hosts wanting custom routing
+        // should use the C++ API. `%{public}.*s` is required — without
+        // `{public}` os_log redacts the payload as `<private>` in release.
         options.log = [](Babylon::Integrations::LogLevel level, std::string_view message) {
             os_log_with_type(BabylonNativeLogger(), ToOSLogType(level),
                              "%{public}.*s",
@@ -95,10 +91,8 @@ namespace
 #if BABYLON_NATIVE_PLUGIN_SHADERCACHE
             options.shaderCachePath = runtimeOptions.shaderCachePath.UTF8String;
 #else
-            // Caller explicitly asked for shader caching but the
-            // plugin wasn't compiled in. Fail loudly rather than
-            // silently dropping the cache on the floor (which would
-            // be hard to diagnose at runtime).
+            // Fail loudly: silently dropping a caller-supplied cache path
+            // would be hard to diagnose later.
             @throw [NSException
                 exceptionWithName:@"BabylonNativePluginNotEnabledException"
                            reason:@"shaderCachePath was provided but BABYLON_NATIVE_PLUGIN_SHADERCACHE was not enabled at native build time."
@@ -164,8 +158,7 @@ namespace
 #if BABYLON_NATIVE_PLUGIN_NATIVEXR
     return _runtime->IsXrActive() ? YES : NO;
 #else
-    // State query: "no XR session is active" is the correct answer when
-    // XR isn't compiled in, so this is intentionally a non-throwing path.
+    // Non-throwing: "no XR active" is the correct answer when XR is off.
     return NO;
 #endif
 }

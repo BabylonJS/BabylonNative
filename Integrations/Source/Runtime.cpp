@@ -62,9 +62,8 @@ namespace Babylon::Integrations
 {
     namespace
     {
-        // Forward Babylon Console levels to the LogLevel exposed on
-        // RuntimeOptions::log so consumers don't have to depend on the
-        // Console polyfill header to read log output.
+        // Forward Babylon Console levels to the public LogLevel enum so
+        // consumers don't need to depend on the Console polyfill header.
         LogLevel ToIntegrationsLogLevel(Babylon::Polyfills::Console::LogLevel level)
         {
             switch (level)
@@ -79,13 +78,9 @@ namespace Babylon::Integrations
     RuntimeImpl::RuntimeImpl(RuntimeOptions options)
         : m_options{std::move(options)}
     {
-        // Wire DebugTrace through to the host's log callback (if any),
-        // and enable it only when the host explicitly opts in.
-        // DebugTrace is process-wide so this affects any concurrent
-        // Runtime instances; that matches AppContext's behavior today.
-        // DebugTrace output is low-priority diagnostic noise, so it's
-        // forwarded at LogLevel::Verbose to make it easy for hosts to
-        // filter out.
+        // Forward DebugTrace through the host log callback (Verbose level
+        // for easy filtering). DebugTrace is process-wide; this matches
+        // AppContext's existing behavior.
         if (m_options.log)
         {
             const auto& logCallback = m_options.log;
@@ -95,16 +90,15 @@ namespace Babylon::Integrations
         }
         Babylon::DebugTrace::EnableDebugTrace(m_options.enableDebugTrace);
 
-        // Construct AppRuntime. This starts the JS thread and creates a
-        // Napi::Env. Plugin Initialize() calls will be dispatched onto
-        // this thread by the first View::Attach.
+        // Construct AppRuntime: starts the JS thread and creates a Napi::Env.
+        // Plugin Initialize() calls are dispatched onto this thread by the
+        // first View::Attach.
         Babylon::AppRuntime::Options appRuntimeOptions{};
         appRuntimeOptions.EnableDebugger = m_options.enableDebugger;
         appRuntimeOptions.WaitForDebugger = m_options.waitForDebugger;
 
-        // Route uncaught JS exceptions through the host's log callback
-        // with LogLevel::Fatal. If no log callback is set, leave the
-        // AppRuntime default in place (writes to program output).
+        // Route uncaught JS exceptions to the host log callback as Fatal.
+        // If no callback is set, the AppRuntime default writes to program output.
         if (m_options.log)
         {
             const auto& logCallback = m_options.log;
@@ -117,38 +111,28 @@ namespace Babylon::Integrations
 
         m_appRuntime.emplace(std::move(appRuntimeOptions));
 
-        // ScriptLoader serializes LoadScript / Eval / Dispatch onto the
-        // AppRuntime's JS thread. Its dispatcher captures a reference to
-        // m_appRuntime, so ~ScriptLoader must complete before ~AppRuntime.
+        // ScriptLoader's dispatcher captures &m_appRuntime, so ~ScriptLoader
+        // must run before ~AppRuntime.
         m_scriptLoader.emplace(*m_appRuntime);
     }
 
     RuntimeImpl::~RuntimeImpl()
     {
-        // Precondition: no View is currently attached. The host owns the
-        // ordering: destroy Views before destroying their Runtime.
+        // Host owns the ordering: destroy Views before their Runtime.
         assert(m_currentView == nullptr && "View must be destroyed before its Runtime.");
 
-        // Order matters here:
-        //   1. Persist the shader cache. The View precondition above
-        //      guarantees `ViewImpl::Suspend()` already ran via
-        //      `~View`, so the engine is quiescent and a host-thread
-        //      Save is race-free.
-        //   2. ScriptLoader's dispatcher captures &m_appRuntime, so
-        //      ~ScriptLoader must run before ~AppRuntime.
-        //   3. The Canvas polyfill and NativeInput pointer are referenced
-        //      from JS-thread state; clear them before joining the JS
-        //      thread, but only after ScriptLoader has drained.
+        // Teardown order:
+        //   1. SaveShaderCache: ~View already ran ViewImpl::Suspend, so the
+        //      engine is quiescent and a host-thread Save is race-free.
+        //   2. ~ScriptLoader before ~AppRuntime (dispatcher captures it).
+        //   3. Canvas / NativeInput / NativeXr hold JS-thread-bound state;
+        //      drop them before joining the JS thread.
         //   4. ~AppRuntime joins the JS thread.
-        //   5. ShaderCache::Disable() balances the Enable() that
-        //      RunFirstAttachInit calls on first attach.
-        //   6. Device + DeviceUpdate destroyed last because the JS
-        //      thread referenced them via Device::AddToJavaScript.
+        //   5. ShaderCache::Disable balances first-attach Enable.
+        //   6. Device + DeviceUpdate last (JS thread referenced them).
         //
-        // m_initTcs is destroyed when this struct's members are
-        // destroyed. If complete() was never called (no View ever
-        // attached), the queued continuations are dropped without
-        // firing, which is the desired behavior on shutdown.
+        // m_initTcs: if complete() was never called (no View ever attached),
+        // queued continuations are dropped on destruction, which is correct.
 #if BABYLON_NATIVE_PLUGIN_SHADERCACHE
         SaveShaderCache();
 #endif
@@ -164,9 +148,6 @@ namespace Babylon::Integrations
 #endif
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEXR
-        // NativeXr holds JS-thread-bound resources and a strong ref to
-        // the Napi::Env it was initialized with. Destroy it before the
-        // AppRuntime joins the JS thread; same reason as ScriptLoader.
         m_nativeXr.reset();
 #endif
 
@@ -183,26 +164,17 @@ namespace Babylon::Integrations
         m_device.reset();
     }
 
-    // ---------------------------------------------------------------------
-    // First-Attach engine initialization: dispatched onto the JS thread by
-    // the first View::Attach call. Runs all plugin/polyfill Initialize()
-    // calls in the same order as Apps/Playground/Shared/AppContext.cpp,
-    // then completes m_initTcs to unblock any LoadScript / Eval /
-    // RunOnJsThread calls the host queued before the first Attach.
-    //
-    // After m_initTcs is complete, subsequent host calls to
-    // Runtime::LoadScript / Eval / RunOnJsThread fire their continuation
-    // synchronously on the calling thread (via inline_scheduler), which
-    // then submits to ScriptLoader directly.
-    // ---------------------------------------------------------------------
+    // Dispatched onto the JS thread by the first View::Attach. Initializes
+    // all plugins/polyfills in the same order as AppContext.cpp, then
+    // completes m_initTcs to unblock host calls that were queued before
+    // first Attach. Post-init, those host calls fire their continuation
+    // synchronously via inline_scheduler and submit straight to ScriptLoader.
     void RuntimeImpl::RunFirstAttachInit(Babylon::Graphics::WindowT window)
     {
 #if BABYLON_NATIVE_PLUGIN_SHADERCACHE
-        // Enable the process-wide shader cache singleton and hydrate
-        // it from disk before any JS-thread shader compilation can
-        // begin. Both calls are host-thread safe (the singleton is
-        // not yet referenced by NativeEngine, which gets initialized
-        // on the JS thread below).
+        // Enable + hydrate before any JS-thread shader compilation. Both
+        // calls are host-thread safe since NativeEngine hasn't been
+        // initialized yet.
         Babylon::Plugins::ShaderCache::Enable();
         LoadShaderCache();
 #endif
@@ -274,9 +246,8 @@ namespace Babylon::Integrations
             implPtr->m_input = &Babylon::Plugins::NativeInput::CreateForJavaScript(env);
 #endif
 #if BABYLON_NATIVE_PLUGIN_NATIVEXR
-            // Initialize NativeXr; apply any pending xr window the host
-            // may have already supplied via Runtime::SetXrWindow; wire
-            // the session-state callback to keep m_isXrActive in sync.
+            // Initialize NativeXr, apply any pending xr window from a prior
+            // SetXrWindow, and wire the session-state callback.
             {
                 std::lock_guard<std::mutex> xrLock{implPtr->m_xrMutex};
                 implPtr->m_nativeXr.emplace(Babylon::Plugins::NativeXr::Initialize(env));
@@ -296,20 +267,12 @@ namespace Babylon::Integrations
             (void)window;
 #endif
 
-            // 4. Unblock any LoadScript / Eval / RunOnJsThread calls
-            //    the host registered before first Attach. Each was
-            //    chained off m_initTcs.as_task().then(inline_scheduler,
-            //    ..., [...] { scriptLoader->...; });, so completing the
-            //    TCS here causes those continuations to fire (in
-            //    registration order) on the JS thread, each submitting
-            //    to ScriptLoader's task chain.
+            // 4. Fire any host calls queued before the first Attach.
             implPtr->m_initTcs.complete();
         });
     }
 
-    // ---------------------------------------------------------------------
-    // Persistent shader cache (no-ops when `shaderCachePath` is empty).
-    // ---------------------------------------------------------------------
+    // Persistent shader cache (no-ops when shaderCachePath is empty).
 #if BABYLON_NATIVE_PLUGIN_SHADERCACHE
     void RuntimeImpl::LoadShaderCache()
     {
@@ -322,7 +285,7 @@ namespace Babylon::Integrations
         {
             Babylon::Plugins::ShaderCache::Load(stream);
         }
-        // Missing or unreadable file is fine — we just start with an empty cache.
+        // Missing/unreadable file: start with an empty cache.
     }
 
     void RuntimeImpl::SaveShaderCache()
@@ -341,7 +304,7 @@ namespace Babylon::Integrations
 
     std::unique_ptr<Runtime> Runtime::Create(RuntimeOptions options)
     {
-        // Private ctor + manual unique_ptr because make_unique can't see it.
+        // Private ctor; manual unique_ptr because make_unique can't see it.
         std::unique_ptr<Runtime> runtime{new Runtime()};
         runtime->m_impl = std::make_unique<RuntimeImpl>(std::move(options));
         return runtime;
@@ -383,27 +346,23 @@ namespace Babylon::Integrations
 
     void Runtime::Suspend()
     {
-        // Frame-thread only (see Runtime.h). No locking needed for the
-        // count itself; the atomic exists so cross-thread IsSuspended()
-        // reads stay coherent.
+        // Frame-thread only (see Runtime.h). The atomic is for cross-thread
+        // IsSuspended() reads, not for protecting the count.
         if (m_impl->m_suspendCount.fetch_add(1, std::memory_order_relaxed) == 0)
         {
-            // Close the in-flight frame on the currently attached View
-            // (if any) BEFORE blocking the JS thread. This keeps the
-            // GPU side clean across the suspension: no held drawable,
-            // no open DeviceUpdate safe-timespan. The View tracks its
-            // own state, so this composes with the subsequent ~View
-            // (which Suspends again — no-op) and with hosts that
-            // suspend the Runtime while no View is attached.
+            // Close the in-flight frame on the attached View (if any) BEFORE
+            // blocking the JS thread: keeps the GPU side clean (no held
+            // drawable, no open DeviceUpdate safe-timespan). Composes
+            // correctly with ~View (re-Suspend is a no-op) and with
+            // suspending while no View is attached.
             if (m_impl->m_currentView)
             {
                 m_impl->m_currentView->m_impl->Suspend();
             }
 #if BABYLON_NATIVE_PLUGIN_SHADERCACHE
-            // Persist the shader cache while the engine is known
-            // quiescent: the view's Suspend just closed the current
-            // frame and locked the update safe-timespan, so no engine
-            // shader compilation can be in flight.
+            // Engine is quiescent here (ViewImpl::Suspend just closed the
+            // frame and locked the update safe-timespan), so the save is
+            // race-free with any pending shader compilation.
             m_impl->SaveShaderCache();
 #endif
             m_impl->m_appRuntime->Suspend();
@@ -415,16 +374,15 @@ namespace Babylon::Integrations
         // Frame-thread only (see Runtime.h).
         if (m_impl->m_suspendCount.load(std::memory_order_relaxed) == 0)
         {
-            // Mismatched Resume; ignore rather than underflow the count.
+            // Mismatched Resume — ignore rather than underflow.
             return;
         }
         if (m_impl->m_suspendCount.fetch_sub(1, std::memory_order_relaxed) == 1)
         {
             m_impl->m_appRuntime->Resume();
-            // Re-open the frame on the attached View (if any) so the
-            // next RenderFrame call has something to Finish. On a view
-            // that has been attached but never sized, this also drives
-            // the deferred first-Resize init via InitializeIfReady.
+            // Re-open the frame on the attached View. On a view that was
+            // attached but never sized, this also drives the deferred
+            // first-Resize init via InitializeIfReady.
             if (m_impl->m_currentView)
             {
                 m_impl->m_currentView->m_impl->Resume();
@@ -446,9 +404,8 @@ namespace Babylon::Integrations
         {
             m_impl->m_nativeXr->UpdateWindow(nativeWindow);
         }
-        // If NativeXr isn't initialized yet (no View::Attach has
-        // happened), the value is stashed in m_xrWindow and applied
-        // by the first-Attach init lambda when it constructs NativeXr.
+        // If NativeXr isn't initialized yet (no View::Attach has happened),
+        // the value is applied by the first-Attach init lambda.
     }
 
     bool Runtime::IsXrActive() const

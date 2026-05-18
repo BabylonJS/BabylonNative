@@ -1,25 +1,18 @@
 // JNI interop for Babylon::Integrations on Android.
 //
 // This file is the C++ side of the Android interop layer. It exposes
-// `extern "C" JNIEXPORT` entry points that any JVM-language host (Kotlin
-// or Java) can call by declaring matching `external fun` / `native`
-// methods. The shape of those declarations follows directly from the
-// JNI signatures here.
+// `extern "C" JNIEXPORT` entry points that any JVM-language host can call
+// via matching `external fun` / `native` declarations.
 //
-// We deliberately do not ship a Kotlin or Java class library on top —
-// per the plan's non-goals (SimplifiedAPI.md §2), the interop layer's
-// job ends at "Kotlin/Java can call into native Babylon code"; designing
-// idiomatic high-level wrappers in the host language is left to the
-// consumer.
+// We deliberately ship no Kotlin/Java class library on top — interop ends
+// at "Kotlin/Java can call into Babylon".
 //
-// Convention: opaque C++ pointers cross the JNI boundary as `jlong`.
+// Convention: opaque C++ pointers cross JNI as `jlong`.
 // `unique_ptr::release()` transfers ownership to the JVM side; the
-// matching `*Destroy` function calls `delete` on the raw pointer.
+// matching `*Destroy` function `delete`s the raw pointer.
 //
-// Java class name on the other side is `com.babylonjs.integrations.BabylonNative`
-// (matching the `Java_com_babylonjs_integrations_BabylonNative_*` symbol
-// names below). Hosts can choose any class name they like — the Java
-// signatures must match the C++ symbols byte-for-byte.
+// Symbols here follow `Java_com_babylonjs_integrations_BabylonNative_*`.
+// Hosts can use any class name as long as Java signatures match.
 
 #include <Babylon/Integrations/Runtime.h>
 #include <Babylon/Integrations/View.h>
@@ -45,16 +38,13 @@ namespace
     using Babylon::Integrations::RuntimeOptions;
     using Babylon::Integrations::View;
 
-    // Wraps a Runtime with two `android::global` event tickets that
-    // auto-Suspend/Resume the Runtime in response to process-wide
-    // Activity lifecycle notifications. Member declaration order matters:
-    // tickets are declared *after* the Runtime so they're destroyed
-    // *before* the Runtime, which guarantees no callback can fire on a
-    // dead Runtime during teardown.
+    // Wraps a Runtime plus two `android::global` event tickets that
+    // auto-Suspend/Resume on Activity lifecycle. Tickets are declared
+    // AFTER the Runtime so they're destroyed BEFORE it — guaranteeing no
+    // callback fires on a dead Runtime during teardown.
     //
-    // Suspend/Resume on Babylon::Integrations::Runtime is reference-counted,
-    // so the auto-suspend composes safely with explicit host-side
-    // runtimeSuspend / runtimeResume calls.
+    // Runtime::Suspend/Resume are refcounted, so this composes safely
+    // with explicit host-side runtimeSuspend / runtimeResume calls.
     struct AndroidRuntime
     {
         std::unique_ptr<Runtime> runtime;
@@ -97,16 +87,11 @@ namespace
         return result;
     }
 
-    // Throws a Java `IllegalStateException` with the given message.
-    // Used by interop entry points whose underlying plugin was not
-    // compiled into the native library, so the misconfiguration
-    // surfaces as a clean Java exception instead of an
-    // UnsatisfiedLinkError or silent no-op.
-    //
-    // `[[maybe_unused]]` is intentional: when every plugin flag is
-    // enabled, no `#else` branch in any JNI entry point invokes this
-    // helper, and -Werror=unused-function would otherwise fail the
-    // build.
+    // Throws a Java IllegalStateException. Used when a plugin wasn't
+    // compiled in, so the misconfiguration surfaces as a clean Java
+    // exception rather than UnsatisfiedLinkError or silent no-op.
+    // [[maybe_unused]]: when every plugin flag is enabled no `#else`
+    // branch references this and -Werror=unused-function would fail.
     [[maybe_unused]] void ThrowPluginNotEnabled(JNIEnv* env, const char* message)
     {
         jclass excClass = env->FindClass("java/lang/IllegalStateException");
@@ -212,32 +197,27 @@ namespace
         return true;
     }
 
-    // Shared body for the `runtimeCreate` JNI overloads. Wires up the
-    // Android-default logcat log sink, constructs the Runtime, attaches
-    // the Activity-lifecycle auto-Suspend/Resume tickets, and returns
-    // the opaque jlong handle the JVM side holds onto.
+    // Shared body for the runtimeCreate JNI overloads. Installs the
+    // default logcat sink, constructs the Runtime, and registers
+    // Activity-lifecycle auto-Suspend/Resume tickets.
     jlong MakeRuntimeHandle(RuntimeOptions options)
     {
         options.log = [](LogLevel level, std::string_view message) {
-            // logcat takes a NUL-terminated C string; copy the view.
+            // logcat needs a NUL-terminated C string.
             std::string text{message};
             __android_log_write(LogPriorityFor(level), "BabylonNative", text.c_str());
         };
 
-        // Construct in two phases because the AppStateChangedCallbackTicket
-        // is neither default-constructible nor move-assignable: we need the
-        // Runtime pointer in hand before we can register the callbacks, and
-        // we register the callbacks before the wrapper itself exists.
+        // Two-phase construction: AppStateChangedCallbackTicket is neither
+        // default-constructible nor move-assignable, and we need the
+        // Runtime pointer before registering callbacks.
         auto runtime = Runtime::Create(std::move(options));
         Runtime* runtimePtr = runtime.get();
 
-        // Auto-Suspend/Resume on Activity lifecycle. Hosts call
-        // pause / resume from their Activity's onPause / onResume;
-        // every Runtime in the process gets suspended and resumed
-        // automatically. Since Runtime::Suspend/Resume are refcounted,
-        // this composes safely with any explicit runtimeSuspend /
-        // runtimeResume calls the host might make for finer-grained
-        // reasons (e.g. modal dialogs).
+        // Auto-Suspend/Resume on process-wide Activity lifecycle. Hosts
+        // call androidGlobalPause/Resume once per state change; every
+        // Runtime in the process reacts. Refcounted, so composes with
+        // any host-side explicit suspend/resume.
         auto pauseTicket = android::global::AddPauseCallback([runtimePtr]() {
             runtimePtr->Suspend();
         });
@@ -257,12 +237,9 @@ namespace
 }
 
 // Public handle-decoding entry point. Hosts that ship app-specific JNI
-// helpers in the same `libBabylonNativeIntegrations.so` (e.g. the
-// Playground's PlaygroundJNI.cpp for the Babylon.js bootstrap script
-// list) call this to get back a Runtime* from the opaque jlong returned
-// by `runtimeCreate`. Direct `reinterpret_cast<Runtime*>(handle)` is
-// wrong because each Runtime is wrapped in `AndroidRuntime` to hold
-// Activity-lifecycle tickets.
+// helpers in `libBabylonNativeIntegrations.so` must use this rather than
+// `reinterpret_cast<Runtime*>(handle)`, because each Runtime is wrapped
+// in `AndroidRuntime` to hold Activity-lifecycle tickets.
 namespace Babylon::Integrations::Android
 {
     Runtime* RuntimeFromHandle(jlong handle)
@@ -275,19 +252,17 @@ extern "C"
 {
 
 // =====================================================================
-// Android-specific platform lifecycle (platform interop layer surface).
+// Android platform lifecycle (interop layer surface).
 //
-// These don't belong on the cross-platform Runtime/View API — they exist
-// because Babylon Native plugins like NativeCamera require the host to
-// register the JavaVM + current Activity via AndroidExtensions::Globals.
-// See SimplifiedAPI.md §4.2 "Interop layer responsibilities".
+// Not part of the cross-platform Runtime/View API — exists because
+// plugins like NativeCamera require the host to register the JavaVM and
+// current Activity via AndroidExtensions::Globals.
 // =====================================================================
 
 // Set the application Context. Hosts call this once at app startup
-// (typically from `Application.onCreate` or the host Activity's
-// `onCreate`), before constructing any Runtime. Calling more than
-// once is harmless — `android::global::Initialize` deletes any
-// existing Context global ref and installs the new one.
+// (typically from Application.onCreate) before constructing any Runtime.
+// Calling more than once is harmless — Initialize replaces the existing
+// Context global ref.
 JNIEXPORT void JNICALL
 Java_com_babylonjs_integrations_BabylonNative_setContext(
     JNIEnv* env, jclass, jobject context)
@@ -355,10 +330,9 @@ Java_com_babylonjs_integrations_BabylonNative_requestPermissionsResult(
 JNIEXPORT jlong JNICALL
 Java_com_babylonjs_integrations_BabylonNative_runtimeCreate__(JNIEnv*, jclass)
 {
-    // Default Android consumers want logcat output; route Console
-    // polyfill output and uncaught JS exceptions there. DebugTrace is routed
-    // there when enabled by RuntimeOptions. Hosts that need different behavior
-    // can construct a Runtime in C++ directly with their own RuntimeOptions.
+    // Default Android consumers want logcat output; Console polyfill,
+    // uncaught JS exceptions, and (when enabled) DebugTrace all route
+    // there. Hosts wanting different behavior use the C++ API directly.
     RuntimeOptions options{};
     return MakeRuntimeHandle(std::move(options));
 }
@@ -367,8 +341,8 @@ JNIEXPORT jlong JNICALL
 Java_com_babylonjs_integrations_BabylonNative_runtimeCreate__Lcom_babylonjs_integrations_BabylonNative_00024RuntimeOptions_2(
     JNIEnv* env, jclass, jobject javaOptions)
 {
-    // RuntimeOptions is intentionally a Java object so Java and Kotlin callers
-    // can use a stable construction API as RuntimeOptions grows.
+    // RuntimeOptions is a Java object so callers have a stable
+    // construction API as fields are added.
     RuntimeOptions options{};
     if (!ApplyJavaRuntimeOptions(env, javaOptions, options))
     {
@@ -380,9 +354,8 @@ Java_com_babylonjs_integrations_BabylonNative_runtimeCreate__Lcom_babylonjs_inte
 JNIEXPORT void JNICALL
 Java_com_babylonjs_integrations_BabylonNative_runtimeDestroy(JNIEnv*, jclass, jlong handle)
 {
-    // Member dtor order (reverse declaration): resumeTicket → pauseTicket
-    // → runtime. The tickets unsubscribe before the Runtime is destroyed,
-    // so no callback can fire on a dead Runtime during teardown.
+    // Reverse declaration order: tickets unsubscribe before the Runtime
+    // is destroyed, so no callback fires on a dead Runtime.
     delete AsAndroidRuntime(handle);
 }
 
@@ -400,13 +373,11 @@ Java_com_babylonjs_integrations_BabylonNative_runtimeEval(
     AsRuntime(handle)->Eval(ToStdString(env, source), ToStdString(env, sourceUrl));
 }
 
-// Note: there is intentionally no per-Runtime Suspend/Resume on the JNI
-// surface. Activity-lifecycle Suspend/Resume is wired up automatically
-// inside runtimeCreate above (each Runtime subscribes to
-// android::global pause/resume callbacks). Hosts only call
-// `androidGlobalPause` / `androidGlobalResume` once per Activity state
-// change; every Runtime in the process reacts. Hosts that need
-// finer-grained control should use the C++ API directly.
+// No per-Runtime Suspend/Resume on the JNI surface: lifecycle wiring
+// happens automatically in MakeRuntimeHandle via the android::global
+// pause/resume tickets. Hosts call androidGlobalPause/Resume once per
+// Activity state change; every Runtime in the process reacts. Use the
+// C++ API for finer-grained control.
 
 JNIEXPORT void JNICALL
 Java_com_babylonjs_integrations_BabylonNative_runtimeSetXrSurface(
@@ -434,9 +405,7 @@ Java_com_babylonjs_integrations_BabylonNative_runtimeIsXrActive(JNIEnv*, jclass,
 #if BABYLON_NATIVE_PLUGIN_NATIVEXR
     return AsRuntime(handle)->IsXrActive() ? JNI_TRUE : JNI_FALSE;
 #else
-    // State query: "no XR session is active" is the correct answer
-    // when XR isn't compiled in, so this is intentionally a
-    // non-throwing path.
+    // Non-throwing: "no XR active" is correct when XR is off.
     (void)handle;
     return JNI_FALSE;
 #endif
@@ -465,9 +434,8 @@ Java_com_babylonjs_integrations_BabylonNative_viewAttach(
         ANativeWindow_release(window);
         return 0;
     }
-    // The View's Device::UpdateWindow has acquired its own reference
-    // on the ANativeWindow internally (bgfx retains it for the surface
-    // binding lifetime). We can release our local acquire here.
+    // bgfx retains its own reference on the ANativeWindow for the
+    // surface-binding lifetime, so release our local acquire here.
     ANativeWindow_release(window);
     return reinterpret_cast<jlong>(view.release());
 }
@@ -501,7 +469,7 @@ Java_com_babylonjs_integrations_BabylonNative_viewPointerDown(
 {
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
     (void)env;
-    // Java callers pass `MotionEvent.getX/getY`, which are in physical pixels.
+    // MotionEvent.getX/getY are physical pixels.
     AsView(handle)->OnPointerDown(static_cast<int32_t>(pointerId), x, y,
                                    Babylon::Integrations::CoordinateUnits::Physical);
 #else

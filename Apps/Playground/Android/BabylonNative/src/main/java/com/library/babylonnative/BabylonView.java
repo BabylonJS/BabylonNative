@@ -11,27 +11,20 @@ import android.widget.FrameLayout;
 import com.babylonjs.integrations.BabylonNative;
 
 /**
- * Playground View built on top of {@link BabylonNative}. Borrows a
- * Runtime handle from the host (the host is responsible for the
- * Runtime's lifetime via {@link BabylonNative#runtimeCreate()} /
- * {@link BabylonNative#runtimeDestroy(long)}); this class only owns the
- * View handle, which mirrors the underlying Surface lifecycle:
- * attach in {@code surfaceCreated}, resize in {@code surfaceChanged},
- * detach in {@code surfaceDestroyed}.
+ * Playground View built on {@link BabylonNative}. Borrows a Runtime handle
+ * from the host (which owns the Runtime's lifetime); this class owns only
+ * the View handle, mirroring the Surface lifecycle: attach in
+ * {@code surfaceCreated}, resize in {@code surfaceChanged}, detach in
+ * {@code surfaceDestroyed}.
  *
- * <p>All sizes and coordinates passed to the native layer are in
- * physical pixels (Android's natural unit) — the Device queries the
- * screen device-pixel-ratio internally and applies any conversions
- * needed at the rendering layer.
+ * <p>All sizes and coordinates passed to native are physical pixels —
+ * the Device queries DPR internally.
  *
- * <p>Activity lifecycle: the host Activity is responsible for the
- * process-wide {@code BabylonNative.setContext},
- * {@code setCurrentActivity}, {@code pause} / {@code resume}, and
- * {@code requestPermissionsResult} notifications (see
- * {@code PlaygroundActivity.java}). The Runtime automatically subscribes
- * to {@code pause} / {@code resume} when created, so the host Activity
- * does not need to invoke any per-view pause/resume method — telling
- * the JNI layer once is enough for every Runtime in the process.
+ * <p>The host Activity owns process-wide {@code setContext} /
+ * {@code setCurrentActivity} / {@code pause} / {@code resume} /
+ * {@code requestPermissionsResult} (see {@code PlaygroundActivity}). The
+ * Runtime auto-subscribes to pause/resume on creation, so there is no
+ * per-view pause/resume.
  */
 public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2, View.OnTouchListener {
     private static final FrameLayout.LayoutParams childViewLayoutParams =

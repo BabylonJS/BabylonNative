@@ -9,10 +9,9 @@ import com.library.babylonnative.BabylonView;
 
 public class PlaygroundActivity extends Activity {
     /**
-     * Native helper bridging to {@code Apps/Playground/Shared/PlaygroundScripts.cpp},
-     * which holds the Babylon.js bootstrap script list shared with the
-     * other Playground hosts (Win32, iOS, macOS, …). Implemented in
-     * {@code Apps/Playground/Android/BabylonNative/src/main/cpp/PlaygroundJNI.cpp}.
+     * Bridges to {@code Apps/Playground/Shared/PlaygroundScripts.cpp},
+     * which holds the bootstrap script list shared with the other
+     * Playground hosts. Implemented in PlaygroundJNI.cpp.
      */
     private static native void loadBootstrapScripts(long runtimeHandle);
 
@@ -23,27 +22,21 @@ public class PlaygroundActivity extends Activity {
     protected void onCreate(Bundle icicle) {
         super.onCreate(icicle);
 
-        // Register the application Context with AndroidExtensions::Globals
-        // (used by NativeCamera, NativeXr, etc.). Belongs at the
-        // Activity/Application level — not on a per-view basis — because
-        // it broadcasts to process-wide handlers that aren't refcounted.
-        // The JNI layer guards against double-initialization internally.
+        // Register Context/Activity with AndroidExtensions::Globals (used
+        // by NativeCamera, NativeXr). Process-wide, not per-view. The JNI
+        // layer guards against double-initialization.
         BabylonNative.setContext(getApplication());
         BabylonNative.setCurrentActivity(this);
 
-        // Owner of the Runtime lifetime: created here, destroyed in
-        // onDestroy. The View only borrows the handle for its surface
-        // bindings.
+        // Activity owns the Runtime lifetime; the View only borrows it.
         BabylonNative.RuntimeOptions runtimeOptions = new BabylonNative.RuntimeOptions();
         runtimeOptions.enableDebugger = true;
         runtimeOptions.enableDebugTrace = true;
         mRuntimeHandle = BabylonNative.runtimeCreate(runtimeOptions);
 
-        // Queue the Babylon.js bootstrap scripts, then the playground
-        // experience script. Both happen synchronously from this thread;
-        // the Runtime queues them internally and runs them after the
-        // first View::Attach completes engine initialization on the JS
-        // thread, in submission order.
+        // Queue the bootstrap scripts + experience script. They run after
+        // first View::Attach completes engine init on the JS thread, in
+        // submission order.
         loadBootstrapScripts(mRuntimeHandle);
         BabylonNative.runtimeLoadScript(mRuntimeHandle, "app:///Scripts/experience.js");
 
@@ -53,15 +46,13 @@ public class PlaygroundActivity extends Activity {
 
     @Override
     protected void onPause() {
-        // Hide the view to suppress its draw loop while paused. Visibility
-        // is restored by onWindowFocusChanged below when the Activity
-        // returns to the foreground.
+        // Hide the view to stop its draw loop; onWindowFocusChanged
+        // restores visibility on return.
         mView.setVisibility(View.GONE);
 
-        // Process-wide notification: every Runtime in this process
-        // auto-suspends because they each subscribed to this event in
-        // BabylonNative.runtimeCreate. Same for cross-cutting subsystems
-        // (NativeCamera, NativeXr) that hook AndroidExtensions::Globals.
+        // Process-wide: every Runtime auto-suspends (each subscribed in
+        // runtimeCreate); cross-cutting subsystems (NativeCamera,
+        // NativeXr) also hook this via AndroidExtensions::Globals.
         BabylonNative.pause();
         super.onPause();
     }
@@ -74,8 +65,8 @@ public class PlaygroundActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        // Surface lifecycle (view detach) has already fired by the time
-        // we get here; just release the Runtime.
+        // Surface lifecycle (view detach) has already fired; just
+        // release the Runtime.
         if (mRuntimeHandle != 0) {
             BabylonNative.runtimeDestroy(mRuntimeHandle);
             mRuntimeHandle = 0;

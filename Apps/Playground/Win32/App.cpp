@@ -1,9 +1,8 @@
 // App.cpp : Defines the entry point for the application.
 //
-// Migrated to Babylon::Integrations: this host no longer constructs
-// Babylon Native components directly. The cross-platform `Runtime` +
-// `View` API handles plugin/polyfill setup, GPU device construction,
-// frame rendering, and input forwarding.
+// Built on Babylon::Integrations: the cross-platform Runtime + View API
+// handles plugin/polyfill setup, GPU device construction, frame rendering,
+// and input forwarding.
 
 #include "App.h"
 
@@ -93,7 +92,7 @@ namespace
     Babylon::Integrations::RuntimeOptions MakeRuntimeOptions()
     {
         Babylon::Integrations::RuntimeOptions runtimeOptions{};
-        runtimeOptions.enableDebugger = true;     // matches AppContext default
+        runtimeOptions.enableDebugger = true;
         runtimeOptions.enableDebugTrace = options.DebugTrace.value_or(true);
         runtimeOptions.log = [](Babylon::Integrations::LogLevel level, std::string_view message) {
             std::string text{message};
@@ -174,8 +173,6 @@ namespace
 
     void LoadScripts()
     {
-        // Babylon.js bootstrap (core + loaders/materials/gui/serializers).
-        // Shared with the other Playground hosts via Shared/PlaygroundScripts.
         Playground::LoadBootstrapScripts(*g_runtime);
 
         if (options.Scripts.empty())
@@ -194,9 +191,8 @@ namespace
 
     void Uninitialize()
     {
-        // Destroy in reverse-construction order: View first (so the
-        // surface is unbound and the in-flight frame is closed), then
-        // Runtime (which joins the JS thread).
+        // View first (unbinds surface, closes in-flight frame), then
+        // Runtime (joins JS thread).
         g_view.reset();
         g_runtime.reset();
     }
@@ -210,9 +206,8 @@ namespace
         QueuePlaygroundOptions();
         LoadScripts();
 
-        // First View::Attach triggers GPU device construction, plugin
-        // initialization on the JS thread, and flushes the queued
-        // scripts. The View queries the HWND's client rect itself.
+        // First View::Attach triggers Device construction, plugin init,
+        // and flushes the queued scripts.
         g_view = Babylon::Integrations::View::Attach(*g_runtime, hWnd);
     }
 }

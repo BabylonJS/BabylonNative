@@ -18,9 +18,8 @@
     BNRuntime* _runtime;
     MTKView* _mtkView;
 
-    // When BNView auto-installs a default delegate (because the host
-    // didn't set one), it's held here so the strong reference outlives
-    // the MTKView's `weak` delegate slot. Stays nil if the host
+    // When BNView auto-installs a default delegate, hold a strong ref
+    // here to outlive MTKView's `weak` delegate slot. Nil when the host
     // installed their own delegate before constructing BNView.
     BNViewDelegate* _managedDelegate;
 }
@@ -36,21 +35,16 @@
         _runtime = runtime;
         _mtkView = view;
 
-        // MTKView's underlying layer is always a CAMetalLayer (its
-        // +layerClass override).
+        // MTKView's layer is always CAMetalLayer (via +layerClass).
         CAMetalLayer* layer = (CAMetalLayer*)view.layer;
 
-        // View::Attach is intentionally lightweight: it just stashes
-        // the layer pointer. No size query, no Device construction —
-        // and therefore nothing host-recoverable to throw. The MTKView
-        // delegate's `mtkView:drawableSizeWillChange:` (forwarded by
-        // BNViewDelegate to `-resizeWithWidth:height:`) is what
-        // actually drives Device construction + first-frame opening,
-        // on the first call. MTKView fires this callback before its
-        // first draw in normal Cocoa usage, so this bootstrap is
-        // automatic. Hosts that drive MTKView in unusual ways (e.g.
-        // hidden preload) can call `-resizeWithWidth:height:` directly
-        // with the surface's current pixel size.
+        // View::Attach is lightweight (just stashes the layer). Device
+        // construction is driven later by `-resizeWithWidth:height:`,
+        // which BNViewDelegate forwards from MTKView's
+        // `mtkView:drawableSizeWillChange:`. MTKView fires that before
+        // its first draw, so bootstrap is automatic. Hosts driving
+        // MTKView in unusual ways can call `-resizeWithWidth:height:`
+        // directly with the surface's pixel size.
         _view = Babylon::Integrations::View::Attach(
             *runtime.nativeRuntime,
             (__bridge CA::MetalLayer*)layer);
@@ -60,11 +54,10 @@
             return nil;
         }
 
-        // If the host hasn't installed their own MTKViewDelegate by
-        // now, install a default `BNViewDelegate` so frames start
-        // flowing without any extra host wiring. Done AFTER Attach so
-        // any drawableSizeWillChange: dispatched as a side-effect of
-        // the assignment doesn't reach us before _view is constructed.
+        // If the host hasn't installed an MTKViewDelegate, install a
+        // default BNViewDelegate. Done AFTER Attach so any
+        // drawableSizeWillChange: triggered by the assignment doesn't
+        // reach us before _view is constructed.
         if (view.delegate == nil)
         {
             _managedDelegate = [[BNViewDelegate alloc] initWithView:self];
@@ -76,8 +69,7 @@
 
 - (void)dealloc
 {
-    // Only clear the MTKView's delegate slot if it still points at the
-    // delegate we installed; never disturb a host-installed delegate.
+    // Only clear if it's still ours; never disturb a host-installed delegate.
     if (_managedDelegate != nil && _mtkView.delegate == _managedDelegate)
     {
         _mtkView.delegate = nil;
@@ -86,12 +78,11 @@
 
 - (void)renderFrame
 {
-    // The runtime owns the XR overlay view (handed to it via
-    // -setXrView:), so it's the natural place to keep its visibility
-    // in sync with the XR session state. Doing this here means hosts
-    // never have to manage the XR overlay themselves, regardless of
-    // whether the runtime's frame is being driven by the auto-installed
-    // BNViewDelegate, a host subclass, or a fully-custom delegate.
+    // The runtime owns the XR overlay view (via -setXrView:), so it's
+    // the natural place to keep its visibility in sync. Doing this here
+    // means hosts never need to manage the overlay themselves regardless
+    // of whether frames are driven by the auto-installed delegate, a
+    // host subclass, or a fully-custom delegate.
     [_runtime updateXrViewIfNeeded];
 
     if (_view)

@@ -11,9 +11,7 @@ namespace Babylon::Integrations
 {
     namespace
     {
-        // Convert a (width, height) measured in `units` to logical
-        // pixels. Caller always passes the real DPR; this helper
-        // decides whether to apply it based on `units`.
+        // Convert (width, height) in `units` to logical pixels.
         std::pair<uint32_t, uint32_t> ToLogicalSize(uint32_t width, uint32_t height,
                                                     CoordinateUnits units, float dpr)
         {
@@ -25,8 +23,7 @@ namespace Babylon::Integrations
                     static_cast<uint32_t>(height / dpr)};
         }
 
-        // Convert a (x, y) coordinate pair measured in `units` to
-        // logical pixels.
+        // Convert (x, y) in `units` to logical pixels.
         std::pair<float, float> ToLogicalCoords(float x, float y,
                                                 CoordinateUnits units, float dpr)
         {
@@ -46,32 +43,13 @@ namespace Babylon::Integrations
         }
     }
 
-    // ---------------------------------------------------------------------
-    // View::Attach
-    //
-    // Lightweight: just register as the current view and stash the
-    // native window handle. All Device interaction (first-time
-    // construction, or `UpdateWindow` + `UpdateSize` on a re-attach to
-    // an existing Runtime) is deferred to `ViewImpl::InitializeIfReady`,
-    // which is called from `View::Resize` and `ViewImpl::Resume` and
-    // only actually runs when all three init preconditions hold (see
-    // `RuntimeImpl.h` for details).
-    //
-    // Why deferred: `Device::UpdateWindow` MUST be paired with a
-    // matching `Device::UpdateSize` (otherwise bgfx renders the next
-    // frame to the new window at the old size), so we wait until the
-    // host has supplied a size via `Resize` and the Runtime is not
-    // currently externally suspended before binding the new surface.
-    // Folding the window-rebind and size-update together inside
-    // `InitializeIfReady` makes the host the single source of truth
-    // for surface size — the Integrations layer never queries the
-    // window for its size.
-    //
-    // Render-loop callbacks that fire between `Attach` and successful
-    // init are safe: `RenderFrame` early-outs while `m_initialized`
-    // is `false`, without touching the (potentially still-unbound)
-    // Device.
-    // ---------------------------------------------------------------------
+    // Lightweight: stash the window handle and register as current view.
+    // All Device work (first-time construction, or `UpdateWindow` +
+    // `UpdateSize` on a re-attach) is deferred to
+    // `ViewImpl::InitializeIfReady`, gated on all three preconditions
+    // (window stashed, size known, not externally suspended). Pre-init
+    // `RenderFrame` calls are safe — they early-out while `m_initialized`
+    // is false. See `RuntimeImpl.h` for the full state machine.
     std::unique_ptr<View> View::Attach(Runtime& runtime, Babylon::Graphics::WindowT nativeWindow)
     {
         RuntimeImpl& impl = *runtime.m_impl;
@@ -97,10 +75,9 @@ namespace Babylon::Integrations
     {
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
 
-        // Close the in-flight frame iff one is currently open. A frame
-        // is open exactly when this view is initialized and the
-        // Runtime is not externally suspended (Runtime::Suspend would
-        // already have closed the frame via ViewImpl::Suspend). The
+        // Close the in-flight frame iff one is currently open: i.e. the
+        // view is initialized and the Runtime is not externally suspended
+        // (Suspend already closed the frame via ViewImpl::Suspend). The
         // Device persists on the Runtime so the next Attach is cheap.
         if (m_impl->m_initialized &&
             impl.m_suspendCount.load(std::memory_order_relaxed) == 0)
@@ -112,17 +89,11 @@ namespace Babylon::Integrations
         impl.m_currentView = nullptr;
     }
 
-    // ---------------------------------------------------------------------
-    // ViewImpl::Suspend / Resume
-    //
-    // Called by `Runtime::Suspend` / `Runtime::Resume` on the
-    // suspendCount 0↔1 transitions (and by `~View` for the teardown
-    // close). When the view is already initialized, these are pure
-    // frame open/close operations. When the view is not yet
-    // initialized, Suspend has nothing to do (no frame exists) and
-    // Resume retries `InitializeIfReady` — because the suspendCount
-    // dropping to 0 may have been the last missing precondition.
-    // ---------------------------------------------------------------------
+    // Called by Runtime::Suspend/Resume on the 0↔1 transition (and ~View
+    // for teardown). When initialized, these are pure frame open/close.
+    // When uninitialized, Suspend is a no-op and Resume retries
+    // InitializeIfReady — the suspendCount drop may have been the last
+    // missing precondition.
     void ViewImpl::Suspend()
     {
         if (!m_initialized)
@@ -138,10 +109,8 @@ namespace Babylon::Integrations
     {
         if (!m_initialized)
         {
-            // Runtime just resumed; the suspendCount precondition is
-            // now satisfied. If the host has also already called
-            // `View::Resize` (size precondition), this will succeed;
-            // otherwise it's a silent no-op until they do.
+            // Suspend precondition just cleared. Succeeds if `Resize` has
+            // also run; otherwise silent no-op until it does.
             InitializeIfReady();
             return;
         }
@@ -150,15 +119,10 @@ namespace Babylon::Integrations
         impl.m_deviceUpdate->Start();
     }
 
-    // ---------------------------------------------------------------------
-    // ViewImpl::InitializeIfReady
-    //
-    // The single recipe for binding the Device to this view's window
-    // and opening the first frame. Gated on all three preconditions
-    // (initialized? sized? not externally suspended?) so it can be
-    // called eagerly from anywhere that satisfies one of them, and
-    // does nothing until the last missing condition is fulfilled.
-    // ---------------------------------------------------------------------
+    // Single recipe for binding the Device to this view's window and
+    // opening the first frame. Gated on all three preconditions
+    // (initialized? sized? not suspended?) so it can be called eagerly
+    // from anywhere that satisfies one of them.
     void ViewImpl::InitializeIfReady()
     {
         if (m_initialized || !m_size)
@@ -186,20 +150,17 @@ namespace Babylon::Integrations
         }
         else
         {
-            // Re-attach to an existing Runtime: rebind the surface and
-            // update the size in lockstep. Plugins, polyfills, and any
-            // loaded scripts are preserved on the JS side.
+            // Re-attach to an existing Runtime: rebind surface and size in
+            // lockstep. JS state (plugins, polyfills, scripts) is preserved.
             impl.m_device->UpdateWindow(m_window);
             impl.m_device->UpdateSize(lw, lh);
         }
 
-        // Open the first frame inline. On very first Attach this MUST
-        // happen BEFORE dispatching `RunFirstAttachInit` so the
-        // `Device::AddToJavaScript` inside that lambda sees an open
-        // frame to record into. Both happen on the same host thread,
-        // so by the time the dispatched lambda runs on the JS thread,
-        // the frame is already open regardless of whether we entered
-        // here from `View::Resize` or from `ViewImpl::Resume`.
+        // Open the first frame inline. On the very first Attach this MUST
+        // happen BEFORE dispatching RunFirstAttachInit, so the
+        // Device::AddToJavaScript inside that lambda sees an open frame to
+        // record into. Both run on the host thread, so the dispatched
+        // lambda always sees an open frame on the JS thread.
         impl.m_device->StartRenderingCurrentFrame();
         impl.m_deviceUpdate->Start();
         m_initialized = true;
@@ -214,15 +175,13 @@ namespace Babylon::Integrations
     {
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
 
-        // Only render when a frame is currently open. The host can keep
-        // calling RenderFrame() from its draw callback unconditionally;
-        // the two non-rendering cases early-out below.
+        // Host may call unconditionally from its draw callback; the
+        // not-rendering cases early-out.
         if (!m_impl->m_initialized)
         {
-            // Flag the pre-init case to help hosts diagnose "my draw
-            // callback is firing but nothing renders" mistakes. The
-            // externally-suspended case (Runtime::Suspend) is expected
-            // behavior and stays silent.
+            // Flag pre-init so hosts can diagnose "my draw callback fires
+            // but nothing renders". The externally-suspended case is
+            // expected and stays silent.
             DEBUG_TRACE("Babylon::Integrations::View::RenderFrame skipped: View has not yet been initialized. Call View::Resize with the surface's pixel dimensions to begin rendering.");
             return;
         }
@@ -231,36 +190,27 @@ namespace Babylon::Integrations
             return;
         }
 
-        // Babylon's JS render loop (requestAnimationFrame / scene.render)
-        // runs between Start and Finish, scheduled via DeviceUpdate onto
-        // the JS thread. This call doesn't enter JS directly —
-        // DeviceUpdate handles the cross-thread coordination via
-        // SafeTimespanGuarantor.
+        // Babylon's JS render loop runs between Start and Finish, scheduled
+        // via DeviceUpdate's SafeTimespanGuarantor onto the JS thread.
         impl.m_deviceUpdate->Finish();
         impl.m_device->FinishRenderingCurrentFrame();
         impl.m_device->StartRenderingCurrentFrame();
         impl.m_deviceUpdate->Start();
     }
 
-    // ---------------------------------------------------------------------
-    // View::Resize
-    //
-    // Always stores the host-supplied size on the ViewImpl, then either
-    // pushes it through to `Device::UpdateSize` (already initialized)
-    // or kicks `InitializeIfReady` (still uninitialized). This is the
-    // single source of truth for surface size on the Integrations side.
-    // ---------------------------------------------------------------------
+    // Stores the host-supplied size on the ViewImpl, then either pushes
+    // it through Device::UpdateSize (initialized) or drives
+    // InitializeIfReady (uninitialized). Single source of truth for
+    // surface size in the Integrations layer.
     void View::Resize(uint32_t width, uint32_t height, CoordinateUnits units)
     {
         ValidateNonZeroSize(width, height, "View::Resize size");
 
         RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
 
-        // DPR source: before init, query the window directly because
-        // the Device either doesn't exist yet (first Attach ever) or is
-        // still bound to the previous attach's window (re-attach).
-        // After init, the Device's stored DPR matches the window we're
-        // bound to and is the authoritative source.
+        // DPR source: before init, query the window directly (Device
+        // doesn't exist or is still bound to the previous attach). After
+        // init, the Device's stored DPR is authoritative.
         const float dpr = !m_impl->m_initialized
             ? Babylon::Graphics::GetDevicePixelRatio(m_impl->m_window)
             : impl.m_device->GetDevicePixelRatio();
@@ -275,10 +225,8 @@ namespace Babylon::Integrations
         }
         else
         {
-            // Just satisfied the "size known" precondition; try to init.
-            // Silent no-op if the Runtime is currently externally
-            // suspended; the eventual `Runtime::Resume` will retry via
-            // `ViewImpl::Resume`.
+            // "Size known" precondition just satisfied. Silent no-op if
+            // currently suspended; Runtime::Resume will retry.
             m_impl->InitializeIfReady();
         }
     }

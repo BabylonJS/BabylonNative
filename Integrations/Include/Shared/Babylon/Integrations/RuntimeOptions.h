@@ -27,33 +27,25 @@ namespace Babylon::Integrations
         bool waitForDebugger{false};
 
         // Optional log sink. Receives:
-        //   - `console.{log,warn,error}` output  → LogLevel::{Log,Warn,Error}
-        //   - `Babylon::DebugTrace` output      → LogLevel::Verbose, when
-        //                                         enableDebugTrace is true
-        //   - Uncaught JS exceptions             → LogLevel::Fatal
+        //   - `console.{log,warn,error}`     → LogLevel::{Log,Warn,Error}
+        //   - `Babylon::DebugTrace` output    → LogLevel::Verbose (when
+        //                                       enableDebugTrace is true)
+        //   - Uncaught JS exceptions          → LogLevel::Fatal
         //
-        // If unset, ordinary log output is silently discarded and
-        // uncaught exceptions fall back to
-        // `Babylon::AppRuntime::DefaultUnhandledExceptionHandler`
-        // (which writes to the program output).
-        //
-        // Hosts that want process termination on uncaught exceptions
-        // (matching the historical AppContext behavior) can do so from
-        // inside this callback, e.g.
-        //
-        //     if (level == LogLevel::Fatal) std::quick_exit(1);
+        // If unset, log output is discarded and uncaught exceptions fall
+        // back to `Babylon::AppRuntime::DefaultUnhandledExceptionHandler`.
+        // Hosts that want process termination on uncaught exceptions can do
+        // so from this callback, e.g. `if (level == Fatal) std::quick_exit(1);`.
         std::function<void(LogLevel, std::string_view)> log;
 
 #if BABYLON_NATIVE_PLUGIN_SHADERCACHE
-        // Optional path for persisting the GPU shader cache across
-        // sessions. If non-empty:
-        //   - Loaded synchronously during the first `View::Attach` (after
-        //     `ShaderCache::Enable`). Missing or unreadable file: ignored.
+        // Optional path for persisting the GPU shader cache across sessions.
+        // If non-empty:
+        //   - Loaded synchronously during the first `View::Attach` (missing
+        //     or unreadable file: ignored).
         //   - Saved asynchronously during `Runtime::Suspend` (queued onto
-        //     the JS thread before the suspension blocker) so the
-        //     on-disk cache reflects any shaders compiled this session.
-        //   - Saved synchronously during `~Runtime` so a final write
-        //     happens before the JS thread is torn down.
+        //     the JS thread before the suspension blocker).
+        //   - Saved synchronously during `~Runtime`.
         std::string shaderCachePath;
 #endif
     };
