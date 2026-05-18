@@ -93,6 +93,8 @@ namespace
             compiler->add_vertex_attribute_remap(attribute);
         }
 
+        Babylon::ShaderCompilerCommon::AssignUniformBufferBindings(*compiler);
+
         std::string hlsl = compiler->compile();
 
         auto& dxc = GetDxcCompiler();
