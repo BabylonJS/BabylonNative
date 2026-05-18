@@ -15,6 +15,7 @@ set(DEPENDENCIES
 set(SCRIPTS
     "Scripts/cube_texture_polyfill.js"
     "Scripts/dom_polyfill.js"
+    "Scripts/es2019_transpile.js"
     "Scripts/experience.js"
     "Scripts/fetch_polyfill.js"
     "Scripts/file_polyfill.js"

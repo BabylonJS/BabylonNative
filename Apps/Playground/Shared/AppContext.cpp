@@ -214,6 +214,7 @@ AppContext::AppContext(
     });
 
     m_scriptLoader.emplace(*m_runtime);
+    m_scriptLoader->LoadScript("app:///Scripts/es2019_transpile.js");
     m_scriptLoader->LoadScript("app:///Scripts/fetch_polyfill.js");
     m_scriptLoader->LoadScript("app:///Scripts/file_polyfill.js");
     m_scriptLoader->LoadScript("app:///Scripts/dom_polyfill.js");
