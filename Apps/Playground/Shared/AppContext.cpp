@@ -211,10 +211,18 @@ AppContext::AppContext(
     });
 
     m_scriptLoader.emplace(*m_runtime);
+    // ES2022 Error(message, options) polyfill: must run before any other JS
+    // so that Babylon.js shader-compile error rethrows surface their real
+    // message on Chakra-based BN runtimes. No-op on engines that already
+    // implement the ES2022 signature.
+    m_scriptLoader->LoadScript("app:///Scripts/error_polyfill.js");
+    // ES2019 String.prototype.trimStart / trimEnd polyfill for Chakra.
+    m_scriptLoader->LoadScript("app:///Scripts/string_polyfill.js");
     m_scriptLoader->LoadScript("app:///Scripts/ammo.js");
     // Commenting out recast.js for now because v8jsi is incompatible with asm.js.
     // m_scriptLoader->LoadScript("app:///Scripts/recast.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylon.max.js");
+    m_scriptLoader->LoadScript("app:///Scripts/babylonjs.addons.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylonjs.loaders.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylonjs.materials.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylon.gui.js");
