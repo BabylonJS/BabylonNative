@@ -1026,7 +1026,7 @@
             "playgroundId": "#QJ71C6#5",
             "referenceImage": "node-material1.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "GUI text labels render with red text on red background instead of green (BN GUI color regression affecting many GUI tests)."
         },
         {
             "title": "Node material 2",
@@ -1089,7 +1089,7 @@
             "playgroundId": "#UAIZCS#0",
             "referenceImage": "lodbillboardinstances.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "Instanced billboard foliage renders red instead of green (BN vertex/instance color routing regression)."
         },
         {
             "title": "Nested BBG",
@@ -1124,14 +1124,14 @@
             "playgroundId": "#BS60AB#0",
             "referenceImage": "TransformStackPanel.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "GUI Transform StackPanel buttons render orange/red instead of green (BN GUI color regression)."
         },
         {
             "title": "GUI StackPanel",
             "playgroundId": "#LLVZ90#0",
             "referenceImage": "StackPanel.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "GUI StackPanel buttons render orange/red instead of green (BN GUI color regression)."
         },
         {
             "title": "GUI Slate",
@@ -1162,7 +1162,7 @@
             "renderCount": 50,
             "referenceImage": "LineEdgesRenderer.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "LineEdgesRenderer emits extra red lines not present in reference (likely Vector3.Cross precision or duplicate-edge dedup gap)."
         },
         {
             "title": "Simulate pointer",
@@ -1184,7 +1184,7 @@
             "renderCount": 5,
             "referenceImage": "clipplanes.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "GUI slider handles render red instead of green (BN GUI color regression); skull also has minor edge anti-aliasing differences."
         },
         {
             "title": "ShadowOnlyMaterial",
@@ -1287,7 +1287,7 @@
             "playgroundId": "#SLV8LW#3",
             "renderCount": 20,
             "excludeFromAutomaticTesting": true,
-            "reason": "Framebuffer creation fails on Win32 V8",
+            "reason": "GUI label backgrounds render red instead of white (BN GUI color regression).",
             "referenceImage": "advancedShadows.png"
         },
         {
@@ -1295,7 +1295,7 @@
             "playgroundId": "#B48X7G#64",
             "renderCount": 20,
             "excludeFromAutomaticTesting": true,
-            "reason": "Framebuffer creation fails on Win32 V8",
+            "reason": "GUI label backgrounds render red instead of white (BN GUI color regression).",
             "referenceImage": "advancedShadows2.png"
         },
         {
@@ -1732,7 +1732,7 @@
             "playgroundId": "#2YLJ1L#2",
             "referenceImage": "instancedBones.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Deterministic sub-pixel animation/edge-AA differences on instanced bone animation (~3.5% px); render is structurally correct."
         },
         {
             "title": "GlowLayer",
@@ -2576,7 +2576,7 @@
             "playgroundId": "#XCPP9Y#18325",
             "referenceImage": "Rounding-values-on-controls-inside-StackPanel.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "GUI StackPanel buttons render orange/red instead of green (BN GUI color regression)."
         },
         {
             "title": "Rounding cell widths on Grid",
@@ -2806,7 +2806,7 @@
             "renderCount": 20,
             "referenceImage": "skybox-with-boombox.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails after sync from Babylon.js: massive pixel difference (221k pixels) on Linux Clang/GCC JSC and Win32 D3D11."
+            "reason": "GUI text 'Hello world WebGPU!' renders pink/red instead of white (BN GUI color regression); boombox also has minor edge differences."
         },
         {
             "title": "custom-handling-of-materials-for-render-target-pass",
@@ -3967,7 +3967,7 @@
             "playgroundId": "#GRQHVV#124",
             "referenceImage": "OpenPBR-Transmission-Roughness-glTF---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "GUI grid labels render red instead of green/black (BN GUI color regression); OpenPBR transmission spheres minor anisotropy diff."
         },
         {
             "title": "OpenPBR Transmission Roughness vs IOR - Analytic Lights",
@@ -4064,7 +4064,7 @@
             "playgroundId": "#GRQHVV#268",
             "referenceImage": "OpenPBR-Transmission-Scatter-Anisotropy-Reflect---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "OpenPBR analytic-lights right-column spheres render saturated red where reference shows subsurface scattering (spirv-cross HLSL emit gap for OpenPBR Anisotropy/SSS BSDF)."
         },
         {
             "title": "OpenPBR Transmission Scatter Roughness - Analytic Lights",
@@ -4094,7 +4094,7 @@
             "playgroundId": "#GRQHVV#272",
             "referenceImage": "OpenPBR-Subsurface-Radius-vs-Anisotropy---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "OpenPBR analytic-lights right-column spheres render saturated red where reference shows subsurface scattering (spirv-cross HLSL emit gap for OpenPBR Anisotropy/SSS BSDF)."
         },
         {
             "title": "OpenPBR Subsurface Radius vs Radius Scale - IBL",
@@ -4118,7 +4118,7 @@
             "renderCount": 2,
             "referenceImage": "OpenPBR-Subsurface-Transmission-Blending---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "OpenPBR subsurface transmission shows red bands on label backgrounds (BN GUI color + minor SSS BSDF differences)."
         },
         {
             "title": "OpenPBR Subsurface Transmission Blending Zero Depth - IBL",
@@ -4158,7 +4158,7 @@
             "renderCount": 10,
             "referenceImage": "OpenPBR-Subsurface-Dense-Scattering---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "OpenPBR analytic-lights left column spheres render saturated red where reference shows subsurface scattering (spirv-cross HLSL emit gap for OpenPBR SSS BSDF)."
         },
         {
             "title": "OpenPBR Subsurface Dense Scattering - Realtime IBL",
@@ -4234,7 +4234,7 @@
             "playgroundId": "#UU7RQ#4458",
             "referenceImage": "Background-material-blur.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Background material blur produces red splotches in the blurred background (BN background-blur shader regression)."
         },
         {
             "title": "Lighting Volume",
