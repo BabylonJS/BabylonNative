@@ -1,0 +1,2 @@
+-keep class com.babylonjs.integrations.BabylonNative { *; }
+-keep class com.babylonjs.integrations.BabylonNative$RuntimeOptions { *; }

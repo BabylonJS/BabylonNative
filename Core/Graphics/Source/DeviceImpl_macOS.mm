@@ -1,5 +1,6 @@
 #include <cmath>
 #include <Babylon/Graphics/Platform.h>
+#include <Babylon/Graphics/DeviceQueries.h>
 #include "DeviceImpl.h"
 
 #import <AppKit/AppKit.h>
@@ -16,7 +17,7 @@ namespace Babylon::Graphics
     {
     }
 
-    float DeviceImpl::GetDevicePixelRatio(WindowT window)
+    float GetDevicePixelRatio(WindowT window)
     {
         float scale = static_cast<float>(((CAMetalLayer*)window).contentsScale);
         if (std::isinf(scale) || scale <= 0)

@@ -1,41 +1,61 @@
 package com.library.babylonnative;
 
-import android.app.Activity;
 import android.content.Context;
 import android.graphics.Canvas;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.FrameLayout;
 
+import com.babylonjs.integrations.BabylonNative;
+
+/**
+ * Playground View built on top of {@link BabylonNative}. Borrows a
+ * Runtime handle from the host (the host is responsible for the
+ * Runtime's lifetime via {@link BabylonNative#runtimeCreate()} /
+ * {@link BabylonNative#runtimeDestroy(long)}); this class only owns the
+ * View handle, which mirrors the underlying Surface lifecycle:
+ * attach in {@code surfaceCreated}, resize in {@code surfaceChanged},
+ * detach in {@code surfaceDestroyed}.
+ *
+ * <p>All sizes and coordinates passed to the native layer are in
+ * physical pixels (Android's natural unit) — the Device queries the
+ * screen device-pixel-ratio internally and applies any conversions
+ * needed at the rendering layer.
+ *
+ * <p>Activity lifecycle: the host Activity is responsible for the
+ * process-wide {@code BabylonNative.setContext},
+ * {@code setCurrentActivity}, {@code pause} / {@code resume}, and
+ * {@code requestPermissionsResult} notifications (see
+ * {@code PlaygroundActivity.java}). The Runtime automatically subscribes
+ * to {@code pause} / {@code resume} when created, so the host Activity
+ * does not need to invoke any per-view pause/resume method — telling
+ * the JNI layer once is enough for every Runtime in the process.
+ */
 public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2, View.OnTouchListener {
-    private static final FrameLayout.LayoutParams childViewLayoutParams = new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
-    private static final String TAG = "BabylonView";
-    private boolean mViewReady = false;
-    private final ViewDelegate mViewDelegate;
-    private Activity mCurrentActivity;
+    private static final FrameLayout.LayoutParams childViewLayoutParams =
+            new FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+
     private final SurfaceView primarySurfaceView;
     private final SurfaceView xrSurfaceView;
-    private final float pixelDensityScale = getResources().getDisplayMetrics().density;
-    public BabylonView(Context context, ViewDelegate viewDelegate) {
-        this(context, viewDelegate, (Activity)viewDelegate);
-    }
 
-    public BabylonView(Context context, ViewDelegate viewDelegate, Activity currentActivity) {
+    /** Runtime handle borrowed from the host. Not owned by this view. */
+    private final long mRuntimeHandle;
+
+    /** Native View handle (0 if not attached). Owned by this view. */
+    private long mViewHandle = 0;
+
+    public BabylonView(Context context, long runtimeHandle) {
         super(context);
+        mRuntimeHandle = runtimeHandle;
 
         this.primarySurfaceView = new SurfaceView(context);
         this.primarySurfaceView.setLayoutParams(BabylonView.childViewLayoutParams);
         this.primarySurfaceView.getHolder().addCallback(this);
         this.addView(this.primarySurfaceView);
 
-        this.mCurrentActivity = currentActivity;
-        SurfaceHolder holder = this.primarySurfaceView.getHolder();
-        holder.addCallback(this);
         setOnTouchListener(this);
-        this.mViewDelegate = viewDelegate;
 
         this.xrSurfaceView = new SurfaceView(context);
         this.xrSurfaceView.setLayoutParams(childViewLayoutParams);
@@ -47,49 +67,18 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
 
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-                Wrapper.xrSurfaceChanged(holder.getSurface());
+                BabylonNative.runtimeSetXrSurface(mRuntimeHandle, holder.getSurface());
             }
 
             @Override
             public void surfaceDestroyed(SurfaceHolder holder) {
-                Wrapper.xrSurfaceChanged(null);
+                BabylonNative.runtimeSetXrSurface(mRuntimeHandle, null);
             }
         });
         this.xrSurfaceView.setVisibility(View.INVISIBLE);
         this.addView(this.xrSurfaceView);
 
         setWillNotDraw(false);
-
-        Wrapper.initEngine();
-    }
-
-    public void setCurrentActivity(Activity currentActivity)
-    {
-        if (currentActivity != this.mCurrentActivity) {
-            this.mCurrentActivity = currentActivity;
-            Wrapper.setCurrentActivity(this.mCurrentActivity);
-        }
-    }
-
-    public void loadScript(String path) {
-        Wrapper.loadScript(path);
-    }
-
-    public void eval(String source, String sourceURL) {
-        Wrapper.eval(source, sourceURL);
-    }
-
-    public void onPause() {
-        setVisibility(View.GONE);
-        Wrapper.activityOnPause();
-    }
-
-    public void onResume() {
-        Wrapper.activityOnResume();
-    }
-
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
-        Wrapper.activityOnRequestPermissionsResult(requestCode, permissions, results);
     }
 
     /**
@@ -97,12 +86,7 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceCreated(SurfaceHolder holder) {
-        Wrapper.surfaceCreated(holder.getSurface(), this.getContext());
-        Wrapper.setCurrentActivity(this.mCurrentActivity);
-        if (!this.mViewReady) {
-            this.mViewDelegate.onViewReady();
-            this.mViewReady = true;
-        }
+        mViewHandle = BabylonNative.viewAttach(mRuntimeHandle, holder.getSurface());
     }
 
     /**
@@ -110,6 +94,10 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceDestroyed(SurfaceHolder holder) {
+        if (mViewHandle != 0) {
+            BabylonNative.viewDetach(mViewHandle);
+            mViewHandle = 0;
+        }
     }
 
     /**
@@ -117,38 +105,35 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
      * not normally called or subclassed by clients of BabylonView.
      */
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
-        Wrapper.surfaceChanged((int)(w / this.pixelDensityScale), (int)(h / this.pixelDensityScale), holder.getSurface());
-    }
-
-    public interface ViewDelegate {
-        void onViewReady();
+        if (mViewHandle != 0) {
+            BabylonNative.viewResize(mViewHandle, w, h);
+        }
     }
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
+        if (mViewHandle == 0) {
+            return false;
+        }
+
         int pointerId = event.getPointerId(event.getActionIndex());
-        float mX = event.getX(event.getActionIndex()) / this.pixelDensityScale;
-        float mY = event.getY(event.getActionIndex()) / this.pixelDensityScale;
+        float x = event.getX(event.getActionIndex());
+        float y = event.getY(event.getActionIndex());
 
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
-                Wrapper.setTouchInfo(pointerId, mX, mY, true, 1);
+                BabylonNative.viewPointerDown(mViewHandle, pointerId, x, y);
                 break;
             case MotionEvent.ACTION_MOVE:
-                Wrapper.setTouchInfo(pointerId, mX, mY, false, 0);
+                BabylonNative.viewPointerMove(mViewHandle, pointerId, x, y);
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_POINTER_UP:
-                Wrapper.setTouchInfo(pointerId, mX, mY, true, 0);
+                BabylonNative.viewPointerUp(mViewHandle, pointerId, x, y);
                 break;
         }
         return true;
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
-        Wrapper.finishEngine();
     }
 
     /**
@@ -163,13 +148,15 @@ public class BabylonView extends FrameLayout implements SurfaceHolder.Callback2,
 
     @Override
     protected void onDraw(Canvas canvas) {
-        if (Wrapper.isXRActive()) {
+        if (BabylonNative.runtimeIsXrActive(mRuntimeHandle)) {
             this.xrSurfaceView.setVisibility(View.VISIBLE);
         } else {
             this.xrSurfaceView.setVisibility(View.INVISIBLE);
         }
 
-        Wrapper.renderFrame();
+        if (mViewHandle != 0) {
+            BabylonNative.viewRenderFrame(mViewHandle);
+        }
         invalidate();
     }
 }

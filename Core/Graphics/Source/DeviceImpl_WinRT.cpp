@@ -1,4 +1,5 @@
 #include <Babylon/Graphics/Platform.h>
+#include <Babylon/Graphics/DeviceQueries.h>
 #include "DeviceImpl.h"
 #include <Windows.UI.Core.h>
 #include <Windows.UI.Xaml.Controls.h>
@@ -24,7 +25,7 @@ namespace Babylon::Graphics
     {
     }
 
-    float DeviceImpl::GetDevicePixelRatio(WindowT window)
+    float GetDevicePixelRatio(WindowT window)
     {
         if (auto uiElement = window.try_as<ABI::Microsoft::UI::Xaml::IUIElement>())
         {

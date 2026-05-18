@@ -8,41 +8,30 @@ project(BabylonNative)
 get_filename_component(PLAYGROUND_DIR "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
 get_filename_component(REPO_ROOT_DIR "${PLAYGROUND_DIR}/../.." ABSOLUTE)
 
+# Build the cross-platform Integrations facade *and* the Android JNI
+# interop layer (`libBabylonNativeIntegrations.so`). The Playground
+# Android app loads that library directly via `BabylonNative.java`
+# (in the `com.babylonjs.integrations` package).
+set(BABYLON_NATIVE_INTEGRATIONS ON CACHE BOOL "" FORCE)
+set(BABYLON_NATIVE_INTEGRATIONS_ANDROID ON CACHE BOOL "" FORCE)
+
 add_subdirectory(${REPO_ROOT_DIR} "${CMAKE_CURRENT_BINARY_DIR}/BabylonNative")
 
-add_library(BabylonNativeJNI SHARED
-    src/main/cpp/BabylonNativeJNI.cpp
-    ${PLAYGROUND_DIR}/Shared/AppContext.cpp
-    ${PLAYGROUND_DIR}/Shared/Diagnostics.cpp)
+# Append a Playground-specific JNI helper to the generic
+# BabylonNativeIntegrations target so the bootstrap script list can stay
+# in Apps/Playground/Shared/PlaygroundScripts.{h,cpp} (shared with the
+# Win32 / iOS / macOS hosts) instead of being duplicated on the Java
+# side. Compiling these into the same .so keeps the Integrations layer
+# as a single in-process instance — handles produced by one entry point
+# can be safely consumed by another.
+target_sources(BabylonNativeIntegrations
+    PRIVATE src/main/cpp/PlaygroundJNI.cpp
+            ${PLAYGROUND_DIR}/Shared/Diagnostics.cpp
+            ${PLAYGROUND_DIR}/Shared/PlaygroundScripts.cpp)
 
-target_include_directories(BabylonNativeJNI
+target_include_directories(BabylonNativeIntegrations
     PRIVATE ${PLAYGROUND_DIR})
 
-target_link_libraries(BabylonNativeJNI
-    PRIVATE GLESv3
-    PRIVATE android
+target_link_libraries(BabylonNativeIntegrations
     PRIVATE bx
-    PRIVATE EGL
-    PRIVATE log
-    PRIVATE -lz
-    PRIVATE AndroidExtensions
-    PRIVATE AppRuntime
-    PRIVATE Blob
-    PRIVATE Canvas
-    PRIVATE Console
-    PRIVATE GraphicsDevice
-    PRIVATE NativeCamera
-    PRIVATE NativeCapture
-    PRIVATE NativeEncoding
-    PRIVATE NativeEngine
-    PRIVATE NativeInput
-    PRIVATE NativeOptimizations
-    PRIVATE NativeTracing
-    PRIVATE NativeXr
-    PRIVATE Performance
-    PRIVATE ScriptLoader
-    PRIVATE ShaderCache
-    PRIVATE TestUtils
-    PRIVATE TextDecoder
-    PRIVATE Window
-    PRIVATE XMLHttpRequest)
+    PRIVATE Foundation)     # for <Babylon/PerfTrace.h> in PlaygroundScripts.cpp

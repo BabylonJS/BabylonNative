@@ -1,5 +1,6 @@
 #include "DeviceImpl.h"
 
+#include <Babylon/Graphics/DeviceQueries.h>
 #include <Babylon/Graphics/Platform.h>
 #include <Babylon/Graphics/RendererType.h>
 #include <Babylon/JsRuntime.h>
@@ -101,7 +102,7 @@ namespace Babylon::Graphics
         std::scoped_lock lock{m_state.Mutex};
         ConfigureBgfxPlatformData(m_state.Bgfx.InitState.platformData, window);
         ConfigureBgfxRenderType(m_state.Bgfx.InitState.platformData, m_state.Bgfx.InitState.type);
-        m_state.Resolution.DevicePixelRatio = GetDevicePixelRatio(window);
+        m_state.Resolution.DevicePixelRatio = Babylon::Graphics::GetDevicePixelRatio(window);
         m_state.Bgfx.Dirty = true;
     }
 
@@ -213,7 +214,9 @@ namespace Babylon::Graphics
             }
 
             m_state.Bgfx.Initialized = true;
-            m_state.Bgfx.Dirty = false;
+            // TODO: Should be able to clear the Dirty flag, but bgfx::init is not doing everything that UpdateBgfxState is doing (at least on Apple platforms).
+            // See https://github.com/BabylonJS/ThePirateCove/issues/1657
+            // m_state.Bgfx.Dirty = false;
 
             m_cancellationSource.emplace();
 

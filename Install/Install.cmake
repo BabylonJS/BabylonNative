@@ -249,3 +249,17 @@ if(TARGET XMLHttpRequest)
     install_lib(XMLHttpRequest)
     install_include(XMLHttpRequest)
 endif()
+
+# ----------------
+# Integrations
+# ----------------
+
+if(TARGET Integrations)
+    install_lib(Integrations)
+    install_include(Integrations)
+endif()
+
+if(TARGET BabylonNativeIntegrations)
+    install_lib(BabylonNativeIntegrations)
+    install_include(BabylonNativeIntegrations)
+endif()

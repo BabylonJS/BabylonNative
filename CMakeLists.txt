@@ -140,8 +140,20 @@ option(BABYLON_NATIVE_PLUGIN_SHADERTOOL "Include Babylon Native Plugin ShaderToo
 option(BABYLON_NATIVE_PLUGIN_TESTUTILS "Include Babylon Native Plugin TestUtils." ON)
 
 # Polyfills
-option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
+option(BABYLON_NATIVE_POLYFILL_ABORTCONTROLLER "Include Babylon Native Polyfill AbortController." ON)
 option(BABYLON_NATIVE_POLYFILL_CANVAS "Include Babylon Native Polyfill Canvas." ON)
+option(BABYLON_NATIVE_POLYFILL_SCHEDULING "Include Babylon Native Polyfill Scheduling." ON)
+option(BABYLON_NATIVE_POLYFILL_URL "Include Babylon Native Polyfill URL." ON)
+option(BABYLON_NATIVE_POLYFILL_WEBSOCKET "Include Babylon Native Polyfill WebSocket." ON)
+option(BABYLON_NATIVE_POLYFILL_WINDOW "Include Babylon Native Polyfill Window." ON)
+
+# Integrations
+option(BABYLON_NATIVE_INTEGRATIONS "Build the cross-platform Babylon::Integrations facade (Runtime + View)." ON)
+option(BABYLON_NATIVE_INTEGRATIONS_ANDROID "Build the Android JNI interop layer for Babylon::Integrations." OFF)
+# Default ON for Apple platforms — the iOS Playground (and future
+# macOS / visionOS Playground migrations) consume it directly. Apple
+# hosts that don't want the interop layer can explicitly disable.
+option(BABYLON_NATIVE_INTEGRATIONS_APPLE "Build the Apple (iOS / macOS / visionOS) Obj-C++ interop layer for Babylon::Integrations." ${APPLE})
 
 # Sanitizers
 option(ENABLE_SANITIZERS "Enable AddressSanitizer and UBSan" OFF)
@@ -299,6 +311,10 @@ add_subdirectory(Dependencies)
 add_subdirectory(Core)
 add_subdirectory(Plugins)
 add_subdirectory(Polyfills)
+
+if(BABYLON_NATIVE_INTEGRATIONS)
+    add_subdirectory(Integrations)
+endif()
 
 if(BABYLON_NATIVE_BUILD_APPS)
     add_subdirectory(Apps)
