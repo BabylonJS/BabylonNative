@@ -94,6 +94,11 @@
             this.onerror = null;
             this.onloadend = null;
             this._listeners = {};
+            // Monotonic token used to invalidate in-flight reads on abort()
+            // or when a new read starts; the .then continuation in
+            // startRead() captures this value and early-returns if it has
+            // moved on (i.e. the read it belongs to was abandoned).
+            this._readId = 0;
         };
 
         FileReader.EMPTY = EMPTY;
@@ -131,6 +136,8 @@
             reader.readyState = LOADING;
             reader.result = null;
             reader.error = null;
+            reader._readId = (reader._readId || 0) + 1;
+            var myReadId = reader._readId;
 
             dispatch(reader, "loadstart");
 
@@ -158,19 +165,35 @@
             }
 
             Promise.resolve(bufPromise).then(function (buf) {
+                if (reader._readId !== myReadId || reader.readyState !== LOADING) {
+                    return;
+                }
                 if (mode === "arraybuffer") {
                     reader.result = buf;
                 } else if (mode === "text") {
-                    var bytes = new Uint8Array(buf);
-                    var s = "";
-                    for (var i = 0; i < bytes.length; i++) {
-                        s += String.fromCharCode(bytes[i]);
-                    }
-                    // Best-effort UTF-8 decode if TextDecoder is available.
+                    // Prefer TextDecoder (single-shot, native-speed). Only
+                    // fall back to a manual byte->char path when TextDecoder
+                    // is unavailable or throws; even the fallback uses
+                    // chunked String.fromCharCode.apply + Array.join to
+                    // avoid the previous O(n^2) `s += c` concatenation
+                    // loop, which is expensive for multi-MB GLTF JSON.
+                    var s;
                     if (typeof TextDecoder !== "undefined") {
                         try {
                             s = new TextDecoder("utf-8").decode(buf);
-                        } catch (e) { /* fall back to latin-1 string above */ }
+                        } catch (e) { /* fall through to manual fallback */ }
+                    }
+                    if (typeof s !== "string") {
+                        var textBytes = new Uint8Array(buf);
+                        var textChunkSize = 0x8000;
+                        var textParts = [];
+                        for (var ti = 0; ti < textBytes.length; ti += textChunkSize) {
+                            textParts.push(String.fromCharCode.apply(
+                                null,
+                                textBytes.subarray(ti, ti + textChunkSize)
+                            ));
+                        }
+                        s = textParts.join("");
                     }
                     reader.result = s;
                 } else if (mode === "dataurl") {
@@ -210,6 +233,9 @@
                 dispatch(reader, "load");
                 dispatch(reader, "loadend");
             }, function (err) {
+                if (reader._readId !== myReadId || reader.readyState !== LOADING) {
+                    return;
+                }
                 reader.error = err || new Error("FileReader: unknown error");
                 reader.readyState = DONE;
                 dispatch(reader, "error");
@@ -233,6 +259,10 @@
             if (this.readyState !== LOADING) {
                 return;
             }
+            // Bump the read token so the in-flight .then continuation in
+            // startRead() will early-return instead of clobbering state /
+            // dispatching a phantom "load" after the user's abort.
+            this._readId = (this._readId || 0) + 1;
             this.readyState = DONE;
             this.result = null;
             this.error = new Error("FileReader aborted");
@@ -259,7 +289,17 @@
                 }
             }
         };
-        FileReader.prototype.dispatchEvent = function () {
+        FileReader.prototype.dispatchEvent = function (event) {
+            // Route through the internal dispatch() helper so on* handlers
+            // and listeners registered via addEventListener actually fire.
+            // The internal helper constructs its own event payload (we
+            // intentionally do not surface the caller's event object), so
+            // this is a best-effort EventTarget-like contract sufficient
+            // for duck-typed FileReader consumers.
+            if (!event || typeof event.type !== "string") {
+                return false;
+            }
+            dispatch(this, event.type);
             return true;
         };
 

@@ -1368,7 +1368,7 @@
             "title": "GLTF Serializer KHR draco mesh compression",
             "playgroundId": "#F8BF8N#3",
             "excludeFromAutomaticTesting": true,
-            "reason": "Draco loader passes 'utf8' to TextDecoder which only accepts 'utf-8'",
+            "reason": "Draco loader passes 'utf8' label; BN TextDecoder only accepts 'utf-8' (WHATWG label normalization not implemented)",
             "referenceImage": "glTFSerializerKhrDracoMeshCompression.png"
         },
         {
