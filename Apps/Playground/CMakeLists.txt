@@ -13,6 +13,7 @@ set(DEPENDENCIES
     "../Dependencies/recast.js")
 
 set(SCRIPTS
+    "Scripts/cube_texture_polyfill.js"
     "Scripts/dom_polyfill.js"
     "Scripts/experience.js"
     "Scripts/fetch_polyfill.js"
