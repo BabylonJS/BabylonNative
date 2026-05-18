@@ -211,6 +211,7 @@ AppContext::AppContext(
     });
 
     m_scriptLoader.emplace(*m_runtime);
+    m_scriptLoader->LoadScript("app:///Scripts/fetch_polyfill.js");
     m_scriptLoader->LoadScript("app:///Scripts/ammo.js");
     // Commenting out recast.js for now because v8jsi is incompatible with asm.js.
     // m_scriptLoader->LoadScript("app:///Scripts/recast.js");
