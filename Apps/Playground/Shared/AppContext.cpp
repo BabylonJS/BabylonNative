@@ -1,4 +1,5 @@
 #include "AppContext.h"
+#include "Diagnostics.h"
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/DebugTrace.h>
@@ -50,11 +51,26 @@ AppContext::AppContext(
     size_t width,
     size_t height,
     DebugLogCallback debugLog,
-    AdditionalInitCallback additionalInit)
+    AdditionalInitCallback additionalInit,
+    PlaygroundOptions playgroundOptions)
 {
-    Babylon::DebugTrace::EnableDebugTrace(true);
+    Babylon::DebugTrace::EnableDebugTrace(playgroundOptions.DebugTrace.value_or(true));
     Babylon::DebugTrace::SetTraceOutput(debugLog);
-    Babylon::PerfTrace::SetLevel(Babylon::PerfTrace::Level::Mark);
+
+    Babylon::PerfTrace::Level perfLevel{Babylon::PerfTrace::Level::Mark};
+    if (playgroundOptions.PerfTrace.has_value())
+    {
+        const auto& v = *playgroundOptions.PerfTrace;
+        if (v == "None" || v == "none")
+        {
+            perfLevel = Babylon::PerfTrace::Level::None;
+        }
+        else if (v == "Log" || v == "log" || v == "Detail" || v == "detail")
+        {
+            perfLevel = Babylon::PerfTrace::Level::Log;
+        }
+    }
+    Babylon::PerfTrace::SetLevel(perfLevel);
 
     Babylon::Graphics::Configuration graphicsConfig{};
     graphicsConfig.Window = window;
@@ -64,6 +80,10 @@ AppContext::AppContext(
 
     m_device.emplace(graphicsConfig);
     m_deviceUpdate.emplace(m_device->GetUpdate("update"));
+
+    // Mirror bgfx trace output (BgfxCallback::traceVargs) to debugLog so it
+    // reaches stdout in headless mode, not just OutputDebugString.
+    m_device->SetDiagnosticOutput(debugLog);
 
     Babylon::Plugins::ShaderCache::Enable();
 
@@ -75,25 +95,88 @@ AppContext::AppContext(
     options.EnableDebugger = true;
 
     options.UnhandledExceptionHandler = [debugLog](const Napi::Error& error) {
-        std::ostringstream ss{};
-        ss << "[Uncaught Error] " << Napi::GetErrorString(error);
+        // Bx-style banner with native + JS callstack, then keep the legacy
+        // "[Uncaught Error] ..." one-liner for log scrapers.
+        const std::string js = Napi::GetErrorString(error);
 
+        Diagnostics::DumpFailure(
+            "UNCAUGHT JS ERROR",
+            nullptr,
+            0,
+            0,
+            "%s",
+            js.c_str());
+
+        std::ostringstream ss{};
+        ss << "[Uncaught Error] " << js;
         debugLog(ss.str().data());
 
+        Diagnostics::SetExitCode(1);
+        Diagnostics::PrintFinishLine();
         std::quick_exit(1);
     };
 
     m_runtime.emplace(options);
 
-    m_runtime->Dispatch([this, window, debugLog, additionalInit = std::move(additionalInit)](Napi::Env env) {
+    m_runtime->Dispatch([this, window, debugLog, additionalInit = std::move(additionalInit), playgroundOptions = std::move(playgroundOptions)](Napi::Env env) {
         m_device->AddToJavaScript(env);
+
+        {
+            auto js = Napi::Object::New(env);
+            js.Set("listTests",          Napi::Boolean::New(env, playgroundOptions.ListTests));
+            js.Set("headless",           Napi::Boolean::New(env, playgroundOptions.Headless));
+            js.Set("breakOnFail",        Napi::Boolean::New(env, playgroundOptions.BreakOnFail));
+            js.Set("generateReferences", Napi::Boolean::New(env, playgroundOptions.GenerateReferences));
+            js.Set("runOnce",            Napi::Boolean::New(env, playgroundOptions.RunOnce));
+            js.Set("includeExcluded",    Napi::Boolean::New(env, playgroundOptions.IncludeExcluded));
+            if (playgroundOptions.SaveResults.has_value())
+            {
+                js.Set("saveResults", Napi::Boolean::New(env, *playgroundOptions.SaveResults));
+            }
+            if (playgroundOptions.CaptureFrame.has_value())
+            {
+                js.Set("captureFrame", Napi::Number::New(env, *playgroundOptions.CaptureFrame));
+            }
+
+            auto filters = Napi::Array::New(env, playgroundOptions.TestFilters.size());
+            for (uint32_t i = 0; i < playgroundOptions.TestFilters.size(); ++i)
+            {
+                filters[i] = Napi::String::New(env, playgroundOptions.TestFilters[i]);
+            }
+            js.Set("testFilters", filters);
+
+            auto indices = Napi::Array::New(env, playgroundOptions.TestIndices.size());
+            for (uint32_t i = 0; i < playgroundOptions.TestIndices.size(); ++i)
+            {
+                indices[i] = Napi::Number::New(env, playgroundOptions.TestIndices[i]);
+            }
+            js.Set("testIndices", indices);
+
+            env.Global().Set("_playgroundOptions", js);
+        }
 
         Babylon::Polyfills::Blob::Initialize(env);
 
-        Babylon::Polyfills::Console::Initialize(env, [debugLog](const char* message, Babylon::Polyfills::Console::LogLevel logLevel) {
+        Babylon::Polyfills::Console::Initialize(env, [env, debugLog](const char* message, Babylon::Polyfills::Console::LogLevel logLevel) {
             std::ostringstream ss{};
             ss << "[" << GetLogLevelString(logLevel) << "] " << message;
             debugLog(ss.str().data());
+
+            // Promote console.error to a banner with JS + native callstack.
+            // Babylon.js routes recoverable errors here.
+            if (logLevel == Babylon::Polyfills::Console::LogLevel::Error)
+            {
+                auto jsStack = Babylon::Polyfills::Console::CaptureCurrentJsStack(env);
+                Diagnostics::DumpFailure(
+                    "JS CONSOLE ERROR",
+                    nullptr,
+                    0,
+                    0,
+                    "%s%s%s",
+                    message != nullptr ? message : "(null)",
+                    jsStack.empty() ? "" : "\nJS callstack:\n",
+                    jsStack.c_str());
+            }
         });
 
         Babylon::Polyfills::Performance::Initialize(env);

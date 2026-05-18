@@ -1,4 +1,5 @@
 #include "TestUtils.h"
+#include <Babylon/Plugins/TestUtils.h>
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
@@ -112,10 +113,37 @@ namespace Babylon::Plugins::Internal
     }
 }
 
+namespace
+{
+    Babylon::Plugins::TestUtils::ExitCallback& ExitCallbackStorage()
+    {
+        static Babylon::Plugins::TestUtils::ExitCallback s_callback;
+        return s_callback;
+    }
+}
+
 namespace Babylon::Plugins::TestUtils
 {
     void BABYLON_API Initialize(Napi::Env env, Graphics::WindowT window)
     {
         Internal::TestUtils::CreateInstance(env, window);
+    }
+
+    void BABYLON_API SetExitCallback(ExitCallback callback)
+    {
+        ExitCallbackStorage() = std::move(callback);
+    }
+}
+
+namespace Babylon::Plugins::Internal
+{
+    // Bridges per-platform TestUtils::Exit() to the host-registered callback.
+    void InvokeExitCallback(int exitCode)
+    {
+        auto& cb = ExitCallbackStorage();
+        if (cb)
+        {
+            cb(exitCode);
+        }
     }
 }

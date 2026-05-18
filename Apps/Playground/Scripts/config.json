@@ -872,8 +872,6 @@
         {
             "title": "Color correction",
             "playgroundId": "#FBH4J7#278",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "color-correction.png"
         },
         {
@@ -1629,8 +1627,6 @@
             "title": "Default pipeline",
             "playgroundId": "#NAW8EA#6",
             "renderCount": 20,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "defaultPipeline.png"
         },
         {
@@ -1722,8 +1718,6 @@
         {
             "title": "Default rendering pipeline",
             "playgroundId": "#5XB8YT#2",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "DefaultRenderingPipeline.png"
         },
         {
@@ -2014,9 +2008,9 @@
         {
             "title": "Prepass SSAO + sprites",
             "playgroundId": "#9RI8CG#187",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: BGFX FATAL shader compile error (mediump float vs int conversion in PrePassRenderer fragment shader). Fixable separately; tracked for OpenGL backend follow-up.",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "prepass-ssao-sprites.png"
         },
         {
@@ -2038,9 +2032,9 @@
         {
             "title": "Prepass SSAO + line edges renderer",
             "playgroundId": "#T90MQ4#3",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: BGFX FATAL shader compile error (mediump float vs int conversion in PrePassRenderer fragment shader). Fixable separately; tracked for OpenGL backend follow-up.",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "prepass-ssao-line-edges.png"
         },
         {
@@ -2062,9 +2056,9 @@
         {
             "title": "Prepass SSAO + GUI",
             "playgroundId": "#LLVZ90#4",
-            "renderCount": 10,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "Order-dependent state leak: passes in isolation but produces ~6000-px diff (right at 2.5% errorRatio threshold, flaky in CI) when run after sibling Prepass-SSAO tests in the full sweep on Win32 D3D11. OpenGL also fails (BGFX FATAL 'mediump float' shader compile in PrePassRenderer fragment shader). Re-enable after the order-dependent SSAO state cleanup is investigated.",
+            "renderCount": 10,
             "referenceImage": "prepass-ssao-gui.png"
         },
         {
@@ -2143,8 +2137,6 @@
             "title": "Prepass MBlur + Lens",
             "playgroundId": "#ZEB7H6#23",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "prepass-mb-lens.png"
         },
         {
@@ -2234,24 +2226,18 @@
             "title": "Thin instances + dynamic buffer resize",
             "playgroundId": "#217750#217",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "thin-instances-buffer-resize.png"
         },
         {
             "title": "Instances + render self motion blur",
             "playgroundId": "#217750#34",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "instances-renderself-mb.png"
         },
         {
             "title": "Thin instances + render self motion blur",
             "playgroundId": "#217750#218",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "thin-instances-renderself-mb.png"
         },
         {
@@ -2319,16 +2305,12 @@
             "title": "Baked Vertex Animation with Depth Of Field",
             "playgroundId": "#JWO4R0#8",
             "renderCount": 20,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "bakedVertexAnimationDOF.png"
         },
         {
             "title": "Baked Vertex Animation with Volumetric Light Scattering Post Process",
             "playgroundId": "#1LF9GK#3",
             "renderCount": 20,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "bakedVertexAnimationVLS.png"
         },
         {
@@ -2613,8 +2595,6 @@
         {
             "title": "PBR Debug Modes",
             "playgroundId": "#2FDQT5#2300",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "PBR-Debug-Modes.png"
         },
         {
@@ -2634,8 +2614,6 @@
         {
             "title": "MeshDebugPluginMaterial",
             "playgroundId": "#TFDNZI#2",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "MeshDebugPluginMaterial.png"
         },
         {
@@ -2742,9 +2720,9 @@
         {
             "title": "sphere-with-custom-shader-to-display-wireframe-using-glow-layer",
             "playgroundId": "#Y05E2C#6",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: pixel diff out of tolerance (90900 px) -- likely glow-layer + custom-shader interaction differs from D3D11. Tracked for OpenGL backend follow-up.",
             "renderCount": 5,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "sphere-with-custom-shader-to-display-wireframe-using-glow-layer.png"
         },
         {
@@ -3935,15 +3913,11 @@
         {
             "title": "OpenPBR Fuzz Weight vs Fuzz Roughness - Analytic Lights",
             "playgroundId": "#GRQHVV#112",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Fuzz-Roughness---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Fuzz Weight vs Coat Weight with Normal Maps - Analytic Lights",
             "playgroundId": "#GRQHVV#109",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "OpenPBR-Fuzz-Weight-vs-Coat-Weight-with-Normal-Maps---Analytic-Lights.png"
         },
         {
@@ -4047,8 +4021,6 @@
         {
             "title": "OpenPBR Transmission Dispersion VS IOR - Analytic Lights",
             "playgroundId": "#GRQHVV#142",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "OpenPBR-Transmission-Dispersion-VS-IOR---Analytic-Lights.png"
         },
         {
