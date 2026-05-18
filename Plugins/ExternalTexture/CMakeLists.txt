@@ -6,9 +6,6 @@ set(SOURCES
 
 add_library(ExternalTexture ${SOURCES})
 warnings_as_errors(ExternalTexture)
-if(GRAPHICS_API STREQUAL "OpenGL" AND MSVC)
-    target_compile_options(ExternalTexture PRIVATE /wd4702)
-endif()
 
 target_include_directories(ExternalTexture
     PUBLIC "Include")
