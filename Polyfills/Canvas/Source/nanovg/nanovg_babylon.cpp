@@ -797,7 +797,7 @@ namespace
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
-        finalFrameBuffer->Bind(*gl->encoder); // Should this be bound elsewhere?
+        finalFrameBuffer->Bind(); // Should this be bound elsewhere?
 
         call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
     }
@@ -857,7 +857,7 @@ namespace
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
-        finalFrameBuffer->Bind(*gl->encoder); // Should this be bound elsewhere?
+        finalFrameBuffer->Bind(); // Should this be bound elsewhere?
 
         call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
     }
@@ -900,7 +900,7 @@ namespace
             outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
         };
         Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
-        finalFrameBuffer->Bind(*gl->encoder); // Should this be bound elsewhere?
+        finalFrameBuffer->Bind(); // Should this be bound elsewhere?
 
         call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
     }
@@ -938,7 +938,7 @@ namespace
                 outBuffer->Submit(*gl->encoder, prog, BGFX_DISCARD_ALL);
 			};
             Babylon::Graphics::FrameBuffer *finalFrameBuffer = gl->frameBuffer;
-            finalFrameBuffer->Bind(*gl->encoder); // Should this be bound elsewhere?
+            finalFrameBuffer->Bind(); // Should this be bound elsewhere?
 
             call->filterStack.Render(firstProg, setUniform, firstPass, filterPass, finalPass, finalFrameBuffer, gl->frameBufferPool.acquire, gl->frameBufferPool.release);
         }
