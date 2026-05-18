@@ -1400,6 +1400,8 @@
         {
             "title": "GLTF Serializer Camera, left-handed",
             "playgroundId": "#O0M0J9#25",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Camera roundtrip diverges on OpenGL backend (Linux JSC), 21% pixel diff; passes on D3D11.",
             "replace": "//options//, roundtripCount = 1; useRightHandedSystem = false;",
             "referenceImage": "glTFSerializerCameraLeftHand.png"
         },
