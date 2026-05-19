@@ -35,7 +35,7 @@ public class PlaygroundActivity extends Activity {
         mRuntimeHandle = BabylonNative.runtimeCreate(runtimeOptions);
 
         // Queue the bootstrap scripts + experience script. They run after
-        // first View::Attach completes engine init on the JS thread, in
+        // the first View attach completes engine init on the JS thread, in
         // submission order.
         loadBootstrapScripts(mRuntimeHandle);
         BabylonNative.runtimeLoadScript(mRuntimeHandle, "app:///Scripts/experience.js");

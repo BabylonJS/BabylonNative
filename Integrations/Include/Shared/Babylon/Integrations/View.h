@@ -26,42 +26,44 @@ namespace Babylon::Integrations
         Logical,
     };
 
-    // Transient: created when a host surface appears, destroyed when it
-    // goes away. **At most one View may be attached at a time**; multiple
-    // sequential Views may share one Runtime over its lifetime. To switch
-    // surfaces, destroy the current View and construct a new one.
+    // Transient: constructed against a host surface, destroyed when the
+    // surface goes away. **At most one View may be attached to a Runtime
+    // at a time**; multiple sequential Views may share one Runtime over
+    // its lifetime. To switch surfaces, destroy the current View and
+    // construct a new one.
     class View
     {
     public:
-        // Attach `nativeWindow` (platform-specific surface handle) to `runtime`.
+        // Attach to `runtime`, binding `nativeWindow` (platform-specific
+        // surface handle: HWND on Win32, ANativeWindow* on Android,
+        // CA::MetalLayer* on Apple, X11 Window, winrt::IInspectable). The
+        // host owns the surface size; the View binds the window to the
+        // Device on the first `Resize`. Hosts MUST call `Resize` at least
+        // once with the surface's pixel dimensions before the first frame
+        // is rendered.
         //
-        // `nativeWindow` is `Babylon::Graphics::WindowT` — the same per-platform
-        // typedef the Graphics layer uses (HWND, ANativeWindow*, CA::MetalLayer*,
-        // X11 Window, winrt::IInspectable). The host owns the surface size; the
-        // View binds the window to the Device on the first `Resize`. Hosts MUST
-        // call `Resize` at least once before the first frame will be rendered.
+        // Throws `std::runtime_error` if another View is already attached
+        // to this Runtime.
         //
-        // The first Attach+Resize on a given Runtime is the heavy step: it
-        // constructs the Device, initializes GPU plugins (`Device::AddToJavaScript`,
-        // `NativeEngine::Initialize`, `NativeInput::CreateForJavaScript`), flushes
-        // queued `Runtime::LoadScript` calls, and opens the first frame.
-        // Subsequent Attach+Resize calls on the same Runtime just rebind the
-        // Device to the new surface. `~View` closes the in-flight frame; the
-        // Device persists on the Runtime so the next Attach is fast.
+        // The first attach for a given Runtime is the heavy step: the
+        // first `Resize` after this constructs the Device, initializes
+        // GPU plugins (`Device::AddToJavaScript`, `NativeEngine::Initialize`,
+        // `NativeInput::CreateForJavaScript`), flushes queued `LoadScript`
+        // calls, and opens the first frame. Subsequent attaches on the
+        // same Runtime just rebind the Device to the new surface.
+        // Destroying the View closes the in-flight frame; the Device
+        // persists on the Runtime so the next View is fast.
         //
-        // Device-rebind work is deferred to the first `Resize` because
-        // `Device::UpdateWindow` MUST be paired with a matching `UpdateSize`.
-        //
-        // Must be called from the "frame thread" — the same thread that will
-        // call `RenderFrame` and `Resize`.
-        static std::unique_ptr<View> Attach(Runtime& runtime, Babylon::Graphics::WindowT nativeWindow);
+        // Must be called from the "frame thread" — the same thread that
+        // will call `RenderFrame` and `Resize`.
+        View(Runtime& runtime, Babylon::Graphics::WindowT nativeWindow);
 
         ~View();
 
         View(const View&) = delete;
         View& operator=(const View&) = delete;
-        View(View&&) = delete;
-        View& operator=(View&&) = delete;
+        View(View&&) noexcept;
+        View& operator=(View&&) noexcept;
 
         // Render exactly one frame on the frame thread. No-op if the runtime
         // is suspended. Called from the platform view/control's draw callback
@@ -108,10 +110,6 @@ namespace Babylon::Integrations
 #endif
 
     private:
-        friend class Runtime;
-
         std::unique_ptr<ViewImpl> m_impl;
-
-        explicit View(std::unique_ptr<ViewImpl> impl);
     };
 }

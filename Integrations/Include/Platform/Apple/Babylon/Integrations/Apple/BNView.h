@@ -46,8 +46,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// given runtime this triggers GPU device construction and engine
 /// initialization; subsequent attaches just rebind the surface.
 ///
-/// Returns `nil` if `runtime` or `view` is `nil`, or if the underlying
-/// `Babylon::Integrations::View::Attach` fails.
+/// Returns `nil` if `runtime` or `view` is `nil`, or if constructing the
+/// underlying `Babylon::Integrations::View` throws (another View is
+/// already attached to the runtime).
 ///
 /// **Delegate management:** If `view.delegate` is nil, BNView creates a
 /// BNViewDelegate and assigns it (held strongly for the BNView's

@@ -3,9 +3,9 @@
 #include <Babylon/DebugTrace.h>
 #include <Babylon/Graphics/DeviceQueries.h>
 
-#include <cassert>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace Babylon::Integrations
 {
@@ -43,53 +43,40 @@ namespace Babylon::Integrations
         }
     }
 
-    // Lightweight: stash the window handle and register as current view.
-    // All Device work (first-time construction, or `UpdateWindow` +
-    // `UpdateSize` on a re-attach) is deferred to
-    // `ViewImpl::InitializeIfReady`, gated on all three preconditions
-    // (window stashed, size known, not externally suspended). Pre-init
-    // `RenderFrame` calls are safe — they early-out while `m_initialized`
-    // is false. See `RuntimeImpl.h` for the full state machine.
-    std::unique_ptr<View> View::Attach(Runtime& runtime, Babylon::Graphics::WindowT nativeWindow)
+    View::View(Runtime& runtime, Babylon::Graphics::WindowT nativeWindow)
     {
-        RuntimeImpl& impl = *runtime.m_impl;
-
-        assert(impl.m_currentView == nullptr && "Only one View may be attached at a time.");
-        if (impl.m_currentView != nullptr)
+        RuntimeImpl& runtimeImpl = *runtime.m_impl;
+        if (runtimeImpl.m_currentView != nullptr)
         {
-            return nullptr;
+            throw std::runtime_error{"Only one View may be attached to a Runtime at a time."};
         }
 
-        std::unique_ptr<View> view{new View{std::make_unique<ViewImpl>(runtime)}};
-        view->m_impl->m_window = nativeWindow;
-        impl.m_currentView = view.get();
-        return view;
+        m_impl = std::make_unique<ViewImpl>(runtimeImpl);
+        m_impl->m_window = nativeWindow;
+        runtimeImpl.m_currentView = m_impl.get();
     }
 
-    View::View(std::unique_ptr<ViewImpl> impl)
-        : m_impl{std::move(impl)}
-    {
-    }
+    View::~View() = default;
+    View::View(View&&) noexcept = default;
+    View& View::operator=(View&&) noexcept = default;
 
-    View::~View()
+    ViewImpl::~ViewImpl()
     {
-        RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
-
         // Close the in-flight frame iff one is currently open: i.e. the
         // view is initialized and the Runtime is not externally suspended
-        // (Suspend already closed the frame via ViewImpl::Suspend). The
-        // Device persists on the Runtime so the next Attach is cheap.
-        if (m_impl->m_initialized &&
-            impl.m_suspendCount.load(std::memory_order_relaxed) == 0)
+        // (Suspend already closed the frame). The Device persists on the
+        // Runtime so the next View is cheap.
+        if (m_initialized &&
+            m_runtime.m_suspendCount.load(std::memory_order_relaxed) == 0)
         {
-            impl.m_deviceUpdate->Finish();
-            impl.m_device->FinishRenderingCurrentFrame();
+            m_runtime.m_deviceUpdate->Finish();
+            m_runtime.m_device->FinishRenderingCurrentFrame();
         }
 
-        impl.m_currentView = nullptr;
+        m_runtime.m_currentView = nullptr;
     }
 
-    // Called by Runtime::Suspend/Resume on the 0↔1 transition (and ~View
+    // Called by Runtime::Suspend/Resume on the 0↔1 transition (and ~ViewImpl
     // for teardown). When initialized, these are pure frame open/close.
     // When uninitialized, Suspend is a no-op and Resume retries
     // InitializeIfReady — the suspendCount drop may have been the last
@@ -100,9 +87,8 @@ namespace Babylon::Integrations
         {
             return;
         }
-        RuntimeImpl& impl = *m_runtime.m_impl;
-        impl.m_deviceUpdate->Finish();
-        impl.m_device->FinishRenderingCurrentFrame();
+        m_runtime.m_deviceUpdate->Finish();
+        m_runtime.m_device->FinishRenderingCurrentFrame();
     }
 
     void ViewImpl::Resume()
@@ -114,9 +100,8 @@ namespace Babylon::Integrations
             InitializeIfReady();
             return;
         }
-        RuntimeImpl& impl = *m_runtime.m_impl;
-        impl.m_device->StartRenderingCurrentFrame();
-        impl.m_deviceUpdate->Start();
+        m_runtime.m_device->StartRenderingCurrentFrame();
+        m_runtime.m_deviceUpdate->Start();
     }
 
     // Single recipe for binding the Device to this view's window and
@@ -129,51 +114,50 @@ namespace Babylon::Integrations
         {
             return;
         }
-        RuntimeImpl& impl = *m_runtime.m_impl;
-        if (impl.m_suspendCount.load(std::memory_order_relaxed) > 0)
+        if (m_runtime.m_suspendCount.load(std::memory_order_relaxed) > 0)
         {
             return;
         }
 
         const auto [lw, lh] = *m_size;
-        const bool firstAttachEver = !impl.m_device;
+        const bool firstAttachEver = !m_runtime.m_device;
         if (firstAttachEver)
         {
             Babylon::Graphics::Configuration config{};
             config.Window = m_window;
             config.Width = lw;
             config.Height = lh;
-            config.MSAASamples = impl.m_options.msaaSamples;
+            config.MSAASamples = m_runtime.m_options.msaaSamples;
 
-            impl.m_device.emplace(config);
-            impl.m_deviceUpdate.emplace(impl.m_device->GetUpdate("update"));
+            m_runtime.m_device.emplace(config);
+            m_runtime.m_deviceUpdate.emplace(m_runtime.m_device->GetUpdate("update"));
         }
         else
         {
             // Re-attach to an existing Runtime: rebind surface and size in
             // lockstep. JS state (plugins, polyfills, scripts) is preserved.
-            impl.m_device->UpdateWindow(m_window);
-            impl.m_device->UpdateSize(lw, lh);
+            m_runtime.m_device->UpdateWindow(m_window);
+            m_runtime.m_device->UpdateSize(lw, lh);
         }
 
-        // Open the first frame inline. On the very first Attach this MUST
+        // Open the first frame inline. On the very first attach this MUST
         // happen BEFORE dispatching RunFirstAttachInit, so the
         // Device::AddToJavaScript inside that lambda sees an open frame to
         // record into. Both run on the host thread, so the dispatched
         // lambda always sees an open frame on the JS thread.
-        impl.m_device->StartRenderingCurrentFrame();
-        impl.m_deviceUpdate->Start();
+        m_runtime.m_device->StartRenderingCurrentFrame();
+        m_runtime.m_deviceUpdate->Start();
         m_initialized = true;
 
         if (firstAttachEver)
         {
-            impl.RunFirstAttachInit(m_window);
+            m_runtime.RunFirstAttachInit(m_window);
         }
     }
 
     void View::RenderFrame()
     {
-        RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
+        RuntimeImpl& impl = m_impl->m_runtime;
 
         // Host may call unconditionally from its draw callback; the
         // not-rendering cases early-out.
@@ -206,7 +190,7 @@ namespace Babylon::Integrations
     {
         ValidateNonZeroSize(width, height, "View::Resize size");
 
-        RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
+        RuntimeImpl& impl = m_impl->m_runtime;
 
         // DPR source: before init, query the window directly (Device
         // doesn't exist or is still bound to the previous attach). After
@@ -234,7 +218,7 @@ namespace Babylon::Integrations
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
     void View::OnPointerDown(int32_t pointerId, float x, float y, CoordinateUnits units)
     {
-        RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
+        RuntimeImpl& impl = m_impl->m_runtime;
         if (impl.m_input && impl.m_device)
         {
             const auto [lx, ly] = ToLogicalCoords(x, y, units,
@@ -247,7 +231,7 @@ namespace Babylon::Integrations
 
     void View::OnPointerMove(int32_t pointerId, float x, float y, CoordinateUnits units)
     {
-        RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
+        RuntimeImpl& impl = m_impl->m_runtime;
         if (impl.m_input && impl.m_device)
         {
             const auto [lx, ly] = ToLogicalCoords(x, y, units,
@@ -260,7 +244,7 @@ namespace Babylon::Integrations
 
     void View::OnPointerUp(int32_t pointerId, float x, float y, CoordinateUnits units)
     {
-        RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
+        RuntimeImpl& impl = m_impl->m_runtime;
         if (impl.m_input && impl.m_device)
         {
             const auto [lx, ly] = ToLogicalCoords(x, y, units,
@@ -273,7 +257,7 @@ namespace Babylon::Integrations
 
     void View::OnMouseDown(uint32_t buttonIndex, float x, float y, CoordinateUnits units)
     {
-        RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
+        RuntimeImpl& impl = m_impl->m_runtime;
         if (impl.m_input && impl.m_device)
         {
             const auto [lx, ly] = ToLogicalCoords(x, y, units,
@@ -286,7 +270,7 @@ namespace Babylon::Integrations
 
     void View::OnMouseUp(uint32_t buttonIndex, float x, float y, CoordinateUnits units)
     {
-        RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
+        RuntimeImpl& impl = m_impl->m_runtime;
         if (impl.m_input && impl.m_device)
         {
             const auto [lx, ly] = ToLogicalCoords(x, y, units,
@@ -299,7 +283,7 @@ namespace Babylon::Integrations
 
     void View::OnMouseMove(float x, float y, CoordinateUnits units)
     {
-        RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
+        RuntimeImpl& impl = m_impl->m_runtime;
         if (impl.m_input && impl.m_device)
         {
             const auto [lx, ly] = ToLogicalCoords(x, y, units,
@@ -311,7 +295,7 @@ namespace Babylon::Integrations
 
     void View::OnMouseWheel(uint32_t wheelAxis, int32_t scrollValue)
     {
-        RuntimeImpl& impl = *m_impl->m_runtime.m_impl;
+        RuntimeImpl& impl = m_impl->m_runtime;
         if (impl.m_input)
         {
             impl.m_input->MouseWheel(wheelAxis, scrollValue);

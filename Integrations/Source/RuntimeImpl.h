@@ -46,7 +46,7 @@ namespace Babylon::Integrations
         std::optional<Babylon::AppRuntime> m_appRuntime;
         std::optional<Babylon::ScriptLoader> m_scriptLoader;
 
-        // Lazily constructed during the first View::Attach.
+        // Lazily constructed during the first attached View.
         std::optional<Babylon::Graphics::Device> m_device;
         std::optional<Babylon::Graphics::DeviceUpdate> m_deviceUpdate;
 
@@ -61,7 +61,7 @@ namespace Babylon::Integrations
 #endif
 
 #if BABYLON_NATIVE_PLUGIN_NATIVEXR
-        // NativeXr is initialized during the first View::Attach (needs a
+        // NativeXr is initialized during the first View attach (needs a
         // Napi::Env). Until then, m_xrWindow holds the most recent
         // SetXrWindow value for application post-init. m_xrMutex serializes
         // these fields. m_isXrActive is written from the JS thread and
@@ -74,7 +74,7 @@ namespace Babylon::Integrations
 
         // Pre-init queue for host LoadScript / Eval / RunOnJsThread.
         // Each call chains its work off `m_initTcs.as_task().then(...)`.
-        // The first-Attach init lambda calls `m_initTcs.complete()` after
+        // The first-attach init lambda calls `m_initTcs.complete()` after
         // all plugins are initialized, firing every queued continuation
         // (in registration order) on the JS thread. After completion,
         // future `.then(inline_scheduler, ...)` calls run synchronously
@@ -88,10 +88,12 @@ namespace Babylon::Integrations
         // thread; atomic so `IsSuspended()` can be polled from any thread.
         std::atomic<int> m_suspendCount{0};
 
-        // 0..1 — enforces "at most one View attached at a time".
-        View* m_currentView{nullptr};
+        // 0..1 — enforces "at most one View attached at a time". Points
+        // at the ViewImpl directly (not the outer View), so the back-ref
+        // stays valid across moves of the outer View.
+        ViewImpl* m_currentView{nullptr};
 
-        // Dispatched onto the JS thread by the very first View::Attach.
+        // Dispatched onto the JS thread by the very first View attach.
         // Runs all plugin/polyfill Initialize calls, wires NativeXr
         // callbacks, and completes m_initTcs. `window` is forwarded to
         // TestUtils::Initialize; ignored otherwise.
@@ -101,7 +103,7 @@ namespace Babylon::Integrations
         // Persistent shader cache. No-ops when `m_options.shaderCachePath`
         // is empty. Both run synchronously on the host thread at points
         // where the engine is known not to be compiling shaders
-        // (first-Attach, post-view-Suspend, ~RuntimeImpl) — no JS-thread
+        // (first-attach, post-view-Suspend, ~RuntimeImpl) — no JS-thread
         // coordination required.
         void LoadShaderCache();
         void SaveShaderCache();
@@ -109,11 +111,11 @@ namespace Babylon::Integrations
     };
 
     // Internal implementation of View. Owns the back-reference to its
-    // Runtime, the window handle captured at Attach, the most recent
-    // Resize size, and the frame-lifecycle Suspend/Resume hooks.
+    // RuntimeImpl, the window handle captured at construction, the most
+    // recent Resize size, and the frame-lifecycle Suspend/Resume hooks.
     //
-    // Attach is cheap: it just stashes the window and registers as the
-    // current view. All Device work runs in `InitializeIfReady`, which
+    // Construction is cheap: it just stashes the window and registers as
+    // the current view. All Device work runs in `InitializeIfReady`, which
     // is gated on three preconditions:
     //
     //   1. `m_initialized == false`,
@@ -129,11 +131,16 @@ namespace Babylon::Integrations
     // ViewImpl::Suspend/Resume toggle that frame on the 0↔1 transitions.
     struct ViewImpl
     {
-        explicit ViewImpl(Runtime& runtime) : m_runtime{runtime} {}
-        Runtime& m_runtime;
+        explicit ViewImpl(RuntimeImpl& runtime) : m_runtime{runtime} {}
+        ~ViewImpl();
 
-        // Captured at View::Attach; used by InitializeIfReady to
-        // construct (first-Attach-ever) or rebind the Device.
+        ViewImpl(const ViewImpl&) = delete;
+        ViewImpl& operator=(const ViewImpl&) = delete;
+
+        RuntimeImpl& m_runtime;
+
+        // Captured at construction; used by InitializeIfReady to
+        // construct (first-attach-ever) or rebind the Device.
         Babylon::Graphics::WindowT m_window{};
 
         // Most recent Resize size, in logical pixels. Empty until the
@@ -141,11 +148,11 @@ namespace Babylon::Integrations
         std::optional<std::pair<uint32_t, uint32_t>> m_size;
 
         // Latches true the first time InitializeIfReady succeeds; never
-        // flips back. A new ViewImpl is constructed per View::Attach.
+        // flips back. A new ViewImpl is constructed per View attach.
         bool m_initialized{false};
 
         // Close the in-flight frame (called by Runtime::Suspend on 0→1
-        // and by ~View). No-op when uninitialized.
+        // and by ~ViewImpl). No-op when uninitialized.
         void Suspend();
 
         // Open a new frame (called by Runtime::Resume on 1→0). When

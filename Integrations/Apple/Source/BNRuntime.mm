@@ -53,7 +53,7 @@ namespace
 
 @implementation BNRuntime
 {
-    std::unique_ptr<Babylon::Integrations::Runtime> _runtime;
+    std::optional<Babylon::Integrations::Runtime> _runtime;
     MTKView* _xrView;
 }
 
@@ -99,7 +99,7 @@ namespace
                          userInfo:nil];
 #endif
         }
-        _runtime = Babylon::Integrations::Runtime::Create(std::move(options));
+        _runtime.emplace(std::move(options));
     }
     return self;
 }
@@ -165,7 +165,7 @@ namespace
 
 - (Babylon::Integrations::Runtime*)nativeRuntime
 {
-    return _runtime.get();
+    return _runtime ? &*_runtime : nullptr;
 }
 
 - (void)updateXrViewIfNeeded

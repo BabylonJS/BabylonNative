@@ -22,8 +22,8 @@ namespace Playground
     // `bundle.js` route. Centralizing the list keeps every Playground
     // host in sync as the bundle list evolves.
     //
-    // LoadScript calls made before the first View::Attach are queued and
+    // LoadScript calls made before the first View attach are queued and
     // dispatched after engine init, so this is safe to call immediately
-    // after `Runtime::Create`.
+    // after constructing the Runtime.
     void LoadBootstrapScripts(Babylon::Integrations::Runtime& runtime);
 }

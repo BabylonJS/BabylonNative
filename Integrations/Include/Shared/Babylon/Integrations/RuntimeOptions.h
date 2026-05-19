@@ -41,7 +41,7 @@ namespace Babylon::Integrations
 #if BABYLON_NATIVE_PLUGIN_SHADERCACHE
         // Optional path for persisting the GPU shader cache across sessions.
         // If non-empty:
-        //   - Loaded synchronously during the first `View::Attach` (missing
+        //   - Loaded synchronously during the first View attach (missing
         //     or unreadable file: ignored).
         //   - Saved asynchronously during `Runtime::Suspend` (queued onto
         //     the JS thread before the suspension blocker).

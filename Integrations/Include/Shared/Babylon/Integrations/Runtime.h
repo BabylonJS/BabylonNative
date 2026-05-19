@@ -17,32 +17,35 @@ namespace Babylon::Integrations
     // AppRuntime (JS thread + Napi env), JsRuntime, and non-GPU
     // polyfills/plugins. Construction is cheap and synchronous; the GPU
     // Device and plugins (NativeEngine, etc.) are deferred to the first
-    // `View::Attach`.
+    // attached `View`.
     class Runtime
     {
     public:
-        static std::unique_ptr<Runtime> Create(RuntimeOptions options = {});
+        explicit Runtime(RuntimeOptions options = {});
 
         // // Future construction mode: adopt a host-owned Babylon::JsRuntime
         // // (e.g. React Native with Hermes/JSC + CallInvoker). In Attach mode
         // // `~Runtime` does NOT tear down the JS engine, and Suspend/Resume
         // // only toggles Device rendering.
-        // static std::unique_ptr<Runtime> Attach(Babylon::JsRuntime& jsRuntime,
-        //                                        RuntimeOptions options = {});
+        // static Runtime Adopt(Babylon::JsRuntime& jsRuntime,
+        //                      RuntimeOptions options = {});
 
         ~Runtime();
 
-        // Non-copyable, non-movable (Views hold raw pointers back to this).
+        // Non-copyable; movable. Cross-references between Runtime and View
+        // point at the heap-allocated pimpls, so moves of the outer wrappers
+        // are safe and don't invalidate any back-pointers.
         Runtime(const Runtime&) = delete;
         Runtime& operator=(const Runtime&) = delete;
-        Runtime(Runtime&&) = delete;
-        Runtime& operator=(Runtime&&) = delete;
+        Runtime(Runtime&&) noexcept;
+        Runtime& operator=(Runtime&&) noexcept;
 
         // ----- JS interaction -----
         //
-        // Calls made before the first `View::Attach` are queued and dispatched
-        // onto the JS thread after engine initialization completes during that
-        // first Attach. Calls after first Attach are dispatched immediately.
+        // Calls made before the first `View` is attached are queued and
+        // dispatched onto the JS thread after engine initialization
+        // completes during that first attach. Calls after first attach are
+        // dispatched immediately.
         //
         // Not internally synchronized — call from a single thread (typically
         // the host's UI/main thread), matching `Babylon::ScriptLoader` /
@@ -81,9 +84,9 @@ namespace Babylon::Integrations
         //   Android : ANativeWindow*  (typically a transparent SurfaceView overlay)
         //   Apple   : CAMetalLayer* / MTKView* (separate Metal layer from the main View)
         //
-        // Pass nullptr to clear. Safe to call before the first `View::Attach`
-        // (the window is applied when NativeXr finishes initializing) and
-        // from any thread.
+        // Pass nullptr to clear. Safe to call before the first `View` is
+        // attached (the window is applied when NativeXr finishes
+        // initializing) and from any thread.
         void SetXrWindow(void* nativeWindow);
 
         // True while an XR session is active. Atomic; safe to poll from any
@@ -93,9 +96,6 @@ namespace Babylon::Integrations
 
     private:
         friend class View;
-        friend struct ViewImpl;
-
-        Runtime();
 
         std::unique_ptr<RuntimeImpl> m_impl;
     };

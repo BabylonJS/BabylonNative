@@ -10,11 +10,11 @@
 #include <Babylon/Integrations/View.h>
 
 #include <cstdint>
-#include <memory>
+#include <optional>
 
 @implementation BNView
 {
-    std::unique_ptr<Babylon::Integrations::View> _view;
+    std::optional<Babylon::Integrations::View> _view;
     BNRuntime* _runtime;
     MTKView* _mtkView;
 
@@ -30,6 +30,11 @@
     {
         return nil;
     }
+    Babylon::Integrations::Runtime* nativeRuntime = runtime.nativeRuntime;
+    if (nativeRuntime == nullptr)
+    {
+        return nil;
+    }
     if ((self = [super init]))
     {
         _runtime = runtime;
@@ -38,24 +43,25 @@
         // MTKView's layer is always CAMetalLayer (via +layerClass).
         CAMetalLayer* layer = (CAMetalLayer*)view.layer;
 
-        // View::Attach is lightweight (just stashes the layer). Device
+        // View construction is lightweight (just stashes the layer). Device
         // construction is driven later by `-resizeWithWidth:height:`,
         // which BNViewDelegate forwards from MTKView's
         // `mtkView:drawableSizeWillChange:`. MTKView fires that before
         // its first draw, so bootstrap is automatic. Hosts driving
         // MTKView in unusual ways can call `-resizeWithWidth:height:`
         // directly with the surface's pixel size.
-        _view = Babylon::Integrations::View::Attach(
-            *runtime.nativeRuntime,
-            (__bridge CA::MetalLayer*)layer);
-        if (!_view)
+        @try
+        {
+            _view.emplace(*nativeRuntime, (__bridge CA::MetalLayer*)layer);
+        }
+        @catch (NSException*)
         {
             _mtkView = nil;
             return nil;
         }
 
         // If the host hasn't installed an MTKViewDelegate, install a
-        // default BNViewDelegate. Done AFTER Attach so any
+        // default BNViewDelegate. Done AFTER View construction so any
         // drawableSizeWillChange: triggered by the assignment doesn't
         // reach us before _view is constructed.
         if (view.delegate == nil)

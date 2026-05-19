@@ -30,7 +30,7 @@ Java_com_android_babylonnative_playground_PlaygroundActivity_loadBootstrapScript
     // Idempotent process-wide setup (PerfTrace level, etc.).
     Playground::Initialize();
 
-    // Queue bootstrap scripts; they run after first View::Attach
+    // Queue bootstrap scripts; they run after the first View attach
     // completes engine init on the JS thread.
     Playground::LoadBootstrapScripts(*runtime);
 }

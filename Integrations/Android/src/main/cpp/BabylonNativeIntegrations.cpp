@@ -43,6 +43,10 @@ namespace
     // AFTER the Runtime so they're destroyed BEFORE it — guaranteeing no
     // callback fires on a dead Runtime during teardown.
     //
+    // Runtime is held by unique_ptr so its address is stable for the
+    // ticket lambdas (the tickets aren't move-assignable, so we have to
+    // know the address before constructing the wrapper).
+    //
     // Runtime::Suspend/Resume are refcounted, so this composes safely
     // with explicit host-side runtimeSuspend / runtimeResume calls.
     struct AndroidRuntime
@@ -208,10 +212,7 @@ namespace
             __android_log_write(LogPriorityFor(level), "BabylonNative", text.c_str());
         };
 
-        // Two-phase construction: AppStateChangedCallbackTicket is neither
-        // default-constructible nor move-assignable, and we need the
-        // Runtime pointer before registering callbacks.
-        auto runtime = Runtime::Create(std::move(options));
+        auto runtime = std::make_unique<Runtime>(std::move(options));
         Runtime* runtimePtr = runtime.get();
 
         // Auto-Suspend/Resume on process-wide Activity lifecycle. Hosts
@@ -428,8 +429,12 @@ Java_com_babylonjs_integrations_BabylonNative_viewAttach(
     {
         return 0;
     }
-    auto view = View::Attach(*AsRuntime(runtimeHandle), window);
-    if (!view)
+    View* view = nullptr;
+    try
+    {
+        view = new View{*AsRuntime(runtimeHandle), window};
+    }
+    catch (const std::exception&)
     {
         ANativeWindow_release(window);
         return 0;
@@ -437,7 +442,7 @@ Java_com_babylonjs_integrations_BabylonNative_viewAttach(
     // bgfx retains its own reference on the ANativeWindow for the
     // surface-binding lifetime, so release our local acquire here.
     ANativeWindow_release(window);
-    return reinterpret_cast<jlong>(view.release());
+    return reinterpret_cast<jlong>(view);
 }
 
 JNIEXPORT void JNICALL

@@ -25,6 +25,7 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -37,11 +38,11 @@ WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 
 // Process-scoped: created on app start, recreated on 'R' refresh,
 // destroyed on app exit.
-std::unique_ptr<Babylon::Integrations::Runtime> g_runtime;
+std::optional<Babylon::Integrations::Runtime> g_runtime;
 
 // Window-scoped: created on InitInstance after CreateWindowW returns,
 // destroyed on WM_DESTROY (or torn down + recreated by RefreshBabylon).
-std::unique_ptr<Babylon::Integrations::View> g_view;
+std::optional<Babylon::Integrations::View> g_view;
 
 bool minimized{false};
 PlaygroundOptions options{};
@@ -201,14 +202,14 @@ namespace
     {
         Uninitialize();
 
-        g_runtime = Babylon::Integrations::Runtime::Create(MakeRuntimeOptions());
+        g_runtime.emplace(MakeRuntimeOptions());
         Playground::Initialize(options);
         QueuePlaygroundOptions();
         LoadScripts();
 
-        // First View::Attach triggers Device construction, plugin init,
-        // and flushes the queued scripts.
-        g_view = Babylon::Integrations::View::Attach(*g_runtime, hWnd);
+        // First View attach triggers Device construction, plugin init, and
+        // flushes the queued scripts.
+        g_view.emplace(*g_runtime, hWnd);
     }
 }
 
