@@ -567,10 +567,11 @@ if(TARGET bgfx::shaderc)
 	# 	DEFINES defines
 	# 	[PROFILES profiles]
 	# 	[AS_HEADERS]
+	# 	[NO_SOURCE_GROUP]
 	# )
 	#
 	function(bgfx_compile_shaders)
-		set(options AS_HEADERS)
+		set(options AS_HEADERS NO_SOURCE_GROUP)
 		set(oneValueArgs TYPE VARYING_DEF OUTPUT_DIR OUT_FILES_VAR)
 		set(multiValueArgs SHADERS INCLUDE_DIRS DEFINES PROFILES)
 		cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" "${ARGN}")
@@ -627,7 +628,9 @@ if(TARGET bgfx::shaderc)
 
 		set(ALL_OUTPUTS "")
 		foreach(SHADER_FILE ${ARGS_SHADERS})
-			source_group("Shaders" FILES "${SHADER}")
+			if(NOT ARGS_NO_SOURCE_GROUP)
+				source_group("Shaders" FILES "${SHADER_FILE}")
+			endif()
 			get_filename_component(SHADER_FILE_BASENAME ${SHADER_FILE} NAME)
 			get_filename_component(SHADER_FILE_NAME_WE ${SHADER_FILE} NAME_WE)
 			get_filename_component(SHADER_FILE_ABSOLUTE ${SHADER_FILE} ABSOLUTE)
