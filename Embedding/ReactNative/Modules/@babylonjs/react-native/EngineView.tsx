@@ -27,7 +27,7 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
     //const [fps, setFps] = useState<number>();
     const [sceneStats, setSceneStats] = useState<SceneStats>();
     const engineViewRef = useRef<Component<NativeEngineViewProps>>(null);
-    const snapshotPromise = useRef<{ promise: Promise<string>, resolve: (data: string) => void }>();
+    const snapshotPromise = useRef<{ promise: Promise<string>, resolve: (data: string) => void } | null>(null);
     const isTransparent = props.isTransparent ?? false;
     const antiAliasing = props.antiAliasing ?? 0;
     const androidView = props.androidView ?? "";
@@ -109,7 +109,7 @@ export const EngineView: FunctionComponent<EngineViewProps> = (props: EngineView
         const { data } = event.nativeEvent as Event & { data: string };
         if (snapshotPromise.current) {
             snapshotPromise.current.resolve(data);
-            snapshotPromise.current = undefined;
+            snapshotPromise.current = null;
         }
     }, []);
 

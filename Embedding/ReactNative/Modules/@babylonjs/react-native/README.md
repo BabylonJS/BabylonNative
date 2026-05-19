@@ -10,6 +10,13 @@ This package has several **peer dependencies**. If these dependencies are unmet,
 
 The `react-native-permissions` dependency is required for XR capabilities of Babylon.js (to request camera permissions automatically). Be sure to follow the `react-native-permissions` [instructions](https://github.com/react-native-community/react-native-permissions#setup) to update your `Podfile` and `Info.plist` (iOS) and/or `AndroidManifest.xml` (Android). These plugins can be disabled and by such, dependency to `react-native-permissions` is not needed anymore (see below).
 
+### React Native minimum version
+
+| BabylonReactNative version | iOS / Android        | Windows                       |
+| -------------------------- | -------------------- | ----------------------------- |
+| next / main                | react-native 0.81.6+ | react-native-windows 0.81.4+  |
+| 2.0.0 - 2.0.2              | react-native 0.79.4  | react-native-windows 0.79.1   |
+
 ### Android Configuration
 
 The minimum Android SDK version is 21. This must be set as `minSdkVersion` in the consuming project's `build.gradle` file.
