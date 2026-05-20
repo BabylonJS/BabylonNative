@@ -1,7 +1,16 @@
+// App.cpp : Defines the entry point for the application.
+//
+// Built on Babylon::Integrations: the cross-platform Runtime + View API
+// handles plugin/polyfill setup, GPU device construction, frame rendering,
+// and input forwarding.
+
 #include "App.h"
 
-#include <sstream>
+#include <Shared/PlaygroundScripts.h>
+
 #include <iostream>
+#include <string>
+#include <string_view>
 
 using namespace winrt::Windows::ApplicationModel;
 using namespace winrt::Windows::ApplicationModel::Core;
@@ -12,6 +21,9 @@ using namespace winrt::Windows::System;
 using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Graphics::Display;
 
+using Babylon::Integrations::CoordinateUnits;
+using BNView = Babylon::Integrations::View;
+
 // The main function is only used to initialize our IFrameworkView class.
 int __stdcall wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
 {
@@ -20,29 +32,33 @@ int __stdcall wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
     return 0;
 }
 
-// Helper function to handle mouse button routing
-void ProcessMouseButtons(Babylon::Plugins::NativeInput* input, PointerUpdateKind updateKind, int x, int y)
+namespace
 {
-    switch (updateKind)
+    void ProcessMouseButtons(BNView& view, PointerUpdateKind updateKind, float x, float y)
     {
-        case PointerUpdateKind::LeftButtonPressed:
-            input->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
-            break;
-        case PointerUpdateKind::MiddleButtonPressed:
-            input->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
-            break;
-        case PointerUpdateKind::RightButtonPressed:
-            input->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
-            break;
-        case PointerUpdateKind::LeftButtonReleased:
-            input->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, x, y);
-            break;
-        case PointerUpdateKind::MiddleButtonReleased:
-            input->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, x, y);
-            break;
-        case PointerUpdateKind::RightButtonReleased:
-            input->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, x, y);
-            break;
+        switch (updateKind)
+        {
+            case PointerUpdateKind::LeftButtonPressed:
+                view.OnMouseDown(BNView::LeftMouseButton(), x, y, CoordinateUnits::Logical);
+                break;
+            case PointerUpdateKind::MiddleButtonPressed:
+                view.OnMouseDown(BNView::MiddleMouseButton(), x, y, CoordinateUnits::Logical);
+                break;
+            case PointerUpdateKind::RightButtonPressed:
+                view.OnMouseDown(BNView::RightMouseButton(), x, y, CoordinateUnits::Logical);
+                break;
+            case PointerUpdateKind::LeftButtonReleased:
+                view.OnMouseUp(BNView::LeftMouseButton(), x, y, CoordinateUnits::Logical);
+                break;
+            case PointerUpdateKind::MiddleButtonReleased:
+                view.OnMouseUp(BNView::MiddleMouseButton(), x, y, CoordinateUnits::Logical);
+                break;
+            case PointerUpdateKind::RightButtonReleased:
+                view.OnMouseUp(BNView::RightMouseButton(), x, y, CoordinateUnits::Logical);
+                break;
+            default:
+                break;
+        }
     }
 }
 
@@ -107,12 +123,9 @@ void App::Run()
 {
     while (!m_windowClosed)
     {
-        if (m_appContext)
+        if (m_view)
         {
-            m_appContext->DeviceUpdate().Finish();
-            m_appContext->Device().FinishRenderingCurrentFrame();
-            m_appContext->Device().StartRenderingCurrentFrame();
-            m_appContext->DeviceUpdate().Start();
+            m_view->RenderFrame();
         }
 
         CoreWindow::GetForCurrentThread().Dispatcher().ProcessEvents(CoreProcessEventsOption::ProcessAllIfPresent);
@@ -124,7 +137,10 @@ void App::Run()
 // class is torn down while the app is in the foreground.
 void App::Uninitialize()
 {
-    m_appContext.reset();
+    // View first (unbinds surface, closes in-flight frame), then Runtime
+    // (joins JS thread).
+    m_view.reset();
+    m_runtime.reset();
 }
 
 // Application lifecycle event handlers.
@@ -154,12 +170,10 @@ void App::OnSuspending(IInspectable const& /*sender*/, SuspendingEventArgs const
     // the app will be forced to exit.
     auto deferral = args.SuspendingOperation().GetDeferral();
 
-    if (m_appContext)
+    if (m_runtime)
     {
-        m_appContext->DeviceUpdate().Finish();
-        m_appContext->Device().FinishRenderingCurrentFrame();
-
-        m_appContext->Runtime().Suspend();
+        // Closes any in-flight frame on the attached View internally.
+        m_runtime->Suspend();
     }
 
     deferral.Complete();
@@ -167,15 +181,10 @@ void App::OnSuspending(IInspectable const& /*sender*/, SuspendingEventArgs const
 
 void App::OnResuming(IInspectable const& /*sender*/, IInspectable const& /*args*/)
 {
-    if (m_appContext)
+    if (m_runtime)
     {
-        // Restore any data or state that was unloaded on suspend. By default, data
-        // and state are persisted when resuming from suspend. Note that this event
-        // does not occur if the app was previously terminated.
-        m_appContext->Runtime().Resume();
-
-        m_appContext->Device().StartRenderingCurrentFrame();
-        m_appContext->DeviceUpdate().Start();
+        // Re-opens the frame on the attached View internally.
+        m_runtime->Resume();
     }
 }
 
@@ -183,11 +192,11 @@ void App::OnResuming(IInspectable const& /*sender*/, IInspectable const& /*args*
 
 void App::OnWindowSizeChanged(CoreWindow const& /*sender*/, WindowSizeChangedEventArgs const& args)
 {
-    if (m_appContext)
+    if (m_view)
     {
-        size_t width = static_cast<size_t>(args.Size().Width * m_displayScale);
-        size_t height = static_cast<size_t>(args.Size().Height * m_displayScale);
-        m_appContext->Device().UpdateSize(width, height);
+        m_view->Resize(static_cast<uint32_t>(args.Size().Width),
+                       static_cast<uint32_t>(args.Size().Height),
+                       CoordinateUnits::Logical);
     }
 }
 
@@ -204,81 +213,78 @@ void App::OnWindowClosed(CoreWindow const& /*sender*/, CoreWindowEventArgs const
 
 void App::OnPointerMoved(CoreWindow const&, PointerEventArgs const& args)
 {
-    if (m_appContext && m_appContext->Input())
+    if (!m_view) return;
+
+    const auto position = args.CurrentPoint().RawPosition();
+    const auto deviceType = args.CurrentPoint().PointerDevice().PointerDeviceType();
+    const auto deviceSlot = args.CurrentPoint().PointerId();
+    const auto updateKind = args.CurrentPoint().Properties().PointerUpdateKind();
+    const auto x = position.X;
+    const auto y = position.Y;
+
+    if (deviceType == winrt::Windows::Devices::Input::PointerDeviceType::Mouse)
     {
-        const auto position = args.CurrentPoint().RawPosition();
-        const auto deviceType = args.CurrentPoint().PointerDevice().PointerDeviceType();
-        const auto deviceSlot = args.CurrentPoint().PointerId();
-        const auto updateKind = args.CurrentPoint().Properties().PointerUpdateKind();
-        const auto x = static_cast<int>(position.X * m_displayScale);
-        const auto y = static_cast<int>(position.Y * m_displayScale);
+        m_view->OnMouseMove(x, y, CoordinateUnits::Logical);
 
-        if (deviceType == winrt::Windows::Devices::Input::PointerDeviceType::Mouse)
+        if (args.CurrentPoint().IsInContact())
         {
-            m_appContext->Input()->MouseMove(x, y);
-
-            if (args.CurrentPoint().IsInContact())
-            {
-                ProcessMouseButtons(m_appContext->Input(), updateKind, x, y);
-            }
+            ProcessMouseButtons(*m_view, updateKind, x, y);
         }
-        else
-        {
-            m_appContext->Input()->TouchMove(deviceSlot, x, y);
-        }
+    }
+    else
+    {
+        m_view->OnPointerMove(static_cast<int32_t>(deviceSlot), x, y, CoordinateUnits::Logical);
     }
 }
 
 void App::OnPointerPressed(CoreWindow const&, PointerEventArgs const& args)
 {
-    if (m_appContext && m_appContext->Input())
-    {
-        const auto position = args.CurrentPoint().RawPosition();
-        const auto deviceType = args.CurrentPoint().PointerDevice().PointerDeviceType();
-        const auto deviceSlot = args.CurrentPoint().PointerId();
-        const auto updateKind = args.CurrentPoint().Properties().PointerUpdateKind();
-        const auto x = static_cast<int>(position.X * m_displayScale);
-        const auto y = static_cast<int>(position.Y * m_displayScale);
+    if (!m_view) return;
 
-        if (deviceType == winrt::Windows::Devices::Input::PointerDeviceType::Mouse)
-        {
-            ProcessMouseButtons(m_appContext->Input(), updateKind, x, y);
-        }
-        else
-        {
-            m_appContext->Input()->TouchDown(deviceSlot, x, y);
-        }
+    const auto position = args.CurrentPoint().RawPosition();
+    const auto deviceType = args.CurrentPoint().PointerDevice().PointerDeviceType();
+    const auto deviceSlot = args.CurrentPoint().PointerId();
+    const auto updateKind = args.CurrentPoint().Properties().PointerUpdateKind();
+    const auto x = position.X;
+    const auto y = position.Y;
+
+    if (deviceType == winrt::Windows::Devices::Input::PointerDeviceType::Mouse)
+    {
+        ProcessMouseButtons(*m_view, updateKind, x, y);
+    }
+    else
+    {
+        m_view->OnPointerDown(static_cast<int32_t>(deviceSlot), x, y, CoordinateUnits::Logical);
     }
 }
 
 void App::OnPointerReleased(CoreWindow const&, PointerEventArgs const& args)
 {
-    if (m_appContext && m_appContext->Input())
-    {
-        const auto position = args.CurrentPoint().RawPosition();
-        const auto deviceType = args.CurrentPoint().PointerDevice().PointerDeviceType();
-        const auto deviceSlot = args.CurrentPoint().PointerId();
-        const auto updateKind = args.CurrentPoint().Properties().PointerUpdateKind();
-        const auto x = static_cast<int>(position.X * m_displayScale);
-        const auto y = static_cast<int>(position.Y * m_displayScale);
+    if (!m_view) return;
 
-        if (deviceType == winrt::Windows::Devices::Input::PointerDeviceType::Mouse)
-        {
-            ProcessMouseButtons(m_appContext->Input(), updateKind, x, y);
-        }
-        else
-        {
-            m_appContext->Input()->TouchUp(deviceSlot, x, y);
-        }
+    const auto position = args.CurrentPoint().RawPosition();
+    const auto deviceType = args.CurrentPoint().PointerDevice().PointerDeviceType();
+    const auto deviceSlot = args.CurrentPoint().PointerId();
+    const auto updateKind = args.CurrentPoint().Properties().PointerUpdateKind();
+    const auto x = position.X;
+    const auto y = position.Y;
+
+    if (deviceType == winrt::Windows::Devices::Input::PointerDeviceType::Mouse)
+    {
+        ProcessMouseButtons(*m_view, updateKind, x, y);
+    }
+    else
+    {
+        m_view->OnPointerUp(static_cast<int32_t>(deviceSlot), x, y, CoordinateUnits::Logical);
     }
 }
 
 void App::OnPointerWheelChanged(CoreWindow const&, PointerEventArgs const& args)
 {
-    if (m_appContext && m_appContext->Input())
+    if (m_view)
     {
         const auto delta = args.CurrentPoint().Properties().MouseWheelDelta();
-        m_appContext->Input()->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -delta);
+        m_view->OnMouseWheel(BNView::MouseWheelY(), -delta);
     }
 }
 
@@ -294,9 +300,9 @@ void App::OnKeyPressed(CoreWindow const& window, KeyEventArgs const& args)
 
 void App::OnDpiChanged(DisplayInformation const& /*sender*/, IInspectable const& /*args*/)
 {
-    DisplayInformation displayInformation = DisplayInformation::GetForCurrentView();
-    m_displayScale = static_cast<float>(displayInformation.RawPixelsPerViewPixel());
-    // resize event happens after. No need to force resize here.
+    // DPR is queried by the View through Babylon::Graphics::GetDevicePixelRatio
+    // on each Resize, so we don't cache it here. SizeChanged fires after a DPI
+    // change, which re-drives Resize.
 }
 
 void App::OnOrientationChanged(DisplayInformation const& /*sender*/, IInspectable const& /*args*/)
@@ -315,26 +321,27 @@ void App::RestartRuntime(Rect bounds)
 {
     Uninitialize();
 
-    DisplayInformation displayInformation = DisplayInformation::GetForCurrentView();
-    m_displayScale = static_cast<float>(displayInformation.RawPixelsPerViewPixel());
-    size_t width = static_cast<size_t>(bounds.Width * m_displayScale);
-    size_t height = static_cast<size_t>(bounds.Height * m_displayScale);
-    IInspectable window{CoreWindow::GetForCurrentThread()};
+    Babylon::Integrations::RuntimeOptions runtimeOptions{};
+    runtimeOptions.enableDebugger = true;
+    runtimeOptions.log = [](Babylon::Integrations::LogLevel /*level*/, std::string_view message) {
+        std::string line{message};
+        if (line.empty() || line.back() != '\n')
+        {
+            line.push_back('\n');
+        }
+        OutputDebugStringA(line.c_str());
+        std::cout << line;
+    };
 
-    m_appContext.emplace(
-        window,
-        width,
-        height,
-        [](const char* message) {
-            std::ostringstream ss{};
-            ss << message << std::endl;
-            OutputDebugStringA(ss.str().data());
-            std::cout << ss.str();
-        });
+    m_runtime.emplace(std::move(runtimeOptions));
+
+    PlaygroundOptions playgroundOptions{};
+    Playground::Initialize(playgroundOptions);
+    Playground::LoadBootstrapScripts(*m_runtime);
 
     if (m_files == nullptr)
     {
-        m_appContext->ScriptLoader().LoadScript("app:///Scripts/experience.js");
+        m_runtime->LoadScript("app:///Scripts/experience.js");
     }
     else
     {
@@ -344,9 +351,21 @@ void App::RestartRuntime(Rect bounds)
 
             // There is no built-in way to convert a local file path to a url in UWP, but
             // Foundation::Uri works with a url constructed using "file:///" with a local path.
-            m_appContext->ScriptLoader().LoadScript("file:///" + winrt::to_string(file.Path()));
+            m_runtime->LoadScript("file:///" + winrt::to_string(file.Path()));
         }
 
-        m_appContext->ScriptLoader().LoadScript("app:///Scripts/playground_runner.js");
+        m_runtime->LoadScript("app:///Scripts/playground_runner.js");
     }
+
+    // First View attach triggers Device construction, plugin init, and
+    // flushes the queued scripts. The CoreWindow is passed as IInspectable
+    // (matching Babylon::Graphics::WindowT on WinRT).
+    IInspectable window{CoreWindow::GetForCurrentThread()};
+    m_view.emplace(*m_runtime, window);
+
+    // Drive the first Resize with the initial window bounds (logical pixels);
+    // the View handles physical conversion via GetDevicePixelRatio.
+    m_view->Resize(static_cast<uint32_t>(bounds.Width),
+                   static_cast<uint32_t>(bounds.Height),
+                   CoordinateUnits::Logical);
 }

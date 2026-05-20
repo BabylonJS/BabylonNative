@@ -1,6 +1,8 @@
 #pragma once
 
-#include <Shared/AppContext.h>
+#include <Babylon/Integrations/Runtime.h>
+#include <Babylon/Integrations/View.h>
+
 #include <optional>
 
 #include <winrt/Windows.ApplicationModel.h>
@@ -50,12 +52,17 @@ private:
 
     void RestartRuntime(winrt::Windows::Foundation::Rect bounds);
 
-    std::optional<AppContext> m_appContext{};
+    // Process-scoped: created on app start, recreated on 'R' refresh,
+    // destroyed in Uninitialize.
+    std::optional<Babylon::Integrations::Runtime> m_runtime{};
+
+    // Window-scoped: created during RestartRuntime, destroyed in Uninitialize
+    // (and before a fresh Runtime is constructed).
+    std::optional<Babylon::Integrations::View> m_view{};
 
     winrt::Windows::Foundation::Collections::IVectorView<winrt::Windows::Storage::IStorageItem> m_files{nullptr};
     bool m_windowClosed;
     bool m_windowVisible;
-    float m_displayScale{1.f};
 };
 
 struct Direct3DApplicationSource : winrt::implements<Direct3DApplicationSource, winrt::Windows::ApplicationModel::Core::IFrameworkViewSource>
