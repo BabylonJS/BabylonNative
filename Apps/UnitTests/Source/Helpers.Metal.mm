@@ -15,7 +15,7 @@ namespace Helpers
         }
 
         MTL::TextureDescriptor* descriptor = MTL::TextureDescriptor::texture2DDescriptor(
-            MTL::PixelFormatBGRA8Unorm, width, height, false);
+            MTL::PixelFormatRGBA8Unorm, width, height, false);
 
         if (samples > 1)
         {
