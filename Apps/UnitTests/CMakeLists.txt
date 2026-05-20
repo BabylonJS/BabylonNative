@@ -11,7 +11,7 @@ set(BABYLONJS_MATERIALS_ASSETS
     "../node_modules/babylonjs-materials/babylonjs.materials.js")
 
 set(TEST_ASSETS
-    "JavaScript/dist/tests.externalTexture.msaa.render.js"
+    "JavaScript/dist/tests.externalTexture.msaa.js"
     "JavaScript/dist/tests.javaScript.all.js"
     "JavaScript/dist/tests.shaderCache.basicScene.js"
     "JavaScript/dist/tests.shaders.cross.js")

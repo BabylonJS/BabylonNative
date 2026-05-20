@@ -523,19 +523,19 @@ var __webpack_exports__ = {};
 // This entry needs to be wrapped in an IIFE because it needs to be in strict mode.
 (() => {
 "use strict";
-/*!**************************************************!*\
-  !*** ./src/tests.externalTexture.msaa.render.ts ***!
-  \**************************************************/
+/*!*******************************************!*\
+  !*** ./src/tests.externalTexture.msaa.ts ***!
+  \*******************************************/
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/helpers/asyncToGenerator */ "../../node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
 /* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @babel/runtime/regenerator */ "../../node_modules/@babel/runtime/regenerator/index.js");
 /* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__);
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @babylonjs/core */ "@babylonjs/core");
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_babylonjs_core__WEBPACK_IMPORTED_MODULE_2__);
- // JS-side scaffolding for Tests.ExternalTexture.Msaa.D3D11.cpp.
+ // JS-side scaffolding for Tests.ExternalTexture.Msaa.cpp.
 //
 // Renders a single rotated red plane (with white clearColor) into a RenderTargetTexture whose
-// colorAttachment is a NativeTexture wrapping an externally-created D3D11 texture. The C++ test
+// colorAttachment is a NativeTexture wrapping an externally-created GPU texture. The C++ test
 // reads back the resulting pixels and verifies MSAA behavior:
 //   - samples=4 case: edge pixels should show partial coverage (a red/white blend), e.g. r~255,
 //     g and b between 0 and 255.
@@ -574,7 +574,7 @@ function startup(outputNativeTexture, width, height, samples) {
   mat.disableLighting = true;
   plane.material = mat;
 
-  // Wrap the external D3D11 texture as the RTT's colorAttachment.
+  // Wrap the external GPU texture as the RTT's colorAttachment.
   rtt = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_2__.RenderTargetTexture(
     "msaaExternalRtt",
     { width: width, height: height },

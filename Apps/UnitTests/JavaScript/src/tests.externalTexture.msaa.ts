@@ -1,7 +1,7 @@
-// JS-side scaffolding for Tests.ExternalTexture.Msaa.D3D11.cpp.
+// JS-side scaffolding for Tests.ExternalTexture.Msaa.cpp.
 //
 // Renders a single rotated red plane (with white clearColor) into a RenderTargetTexture whose
-// colorAttachment is a NativeTexture wrapping an externally-created D3D11 texture. The C++ test
+// colorAttachment is a NativeTexture wrapping an externally-created GPU texture. The C++ test
 // reads back the resulting pixels and verifies MSAA behavior:
 //   - samples=4 case: edge pixels should show partial coverage (a red/white blend), e.g. r~255,
 //     g and b between 0 and 255.
@@ -40,7 +40,7 @@ function startup(outputNativeTexture: any, width: number, height: number, sample
     mat.disableLighting = true;
     plane.material = mat;
 
-    // Wrap the external D3D11 texture as the RTT's colorAttachment.
+    // Wrap the external GPU texture as the RTT's colorAttachment.
     rtt = new RenderTargetTexture(
         "msaaExternalRtt",
         { width, height },

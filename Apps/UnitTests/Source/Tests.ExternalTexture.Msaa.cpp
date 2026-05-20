@@ -57,7 +57,7 @@ namespace
 
         Babylon::ScriptLoader loader{runtime};
         loader.LoadScript("app:///Assets/babylon.max.js");
-        loader.LoadScript("app:///Assets/tests.externalTexture.msaa.render.js");
+        loader.LoadScript("app:///Assets/tests.externalTexture.msaa.js");
 
         // Queue AddToContextAsync inside the current bgfx frame and wire its .then to startup().
         std::promise<void> addToContextCalled;
