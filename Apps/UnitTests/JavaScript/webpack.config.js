@@ -9,6 +9,7 @@ module.exports = {
     "tests.javaScript.all": './src/tests.javaScript.all.ts',
     "tests.shaderCache.basicScene": './src/tests.shaderCache.basicScene.ts',
     "tests.shaders.cross": './src/tests.shaders.cross.ts',
+    "tests.externalTexture.msaa.render": './src/tests.externalTexture.msaa.render.ts',
   },
   externals: {
     "@babylonjs/core": "BABYLON",

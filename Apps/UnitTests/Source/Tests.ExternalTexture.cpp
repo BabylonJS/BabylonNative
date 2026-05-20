@@ -7,7 +7,7 @@
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/ExternalTexture.h>
 
-#include "Utils.h"
+#include "Helpers.h"
 
 #include <iostream>
 
@@ -24,9 +24,9 @@ TEST(ExternalTexture, Construction)
     device.StartRenderingCurrentFrame();
     update.Start();
 
-    auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256);
+    auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
-    DestroyTestTexture(nativeTexture);
+    Helpers::DestroyTexture(nativeTexture);
 
     EXPECT_EQ(externalTexture.Width(), 256u);
     EXPECT_EQ(externalTexture.Height(), 256u);
@@ -47,9 +47,9 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
     device.StartRenderingCurrentFrame();
     update.Start();
 
-    auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256);
+    auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
-    DestroyTestTexture(nativeTexture);
+    Helpers::DestroyTexture(nativeTexture);
 
     std::promise<void> addToContext{};
     std::promise<void> promiseResolved{};
@@ -95,9 +95,9 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
     update.Start();
 
     // Update the external texture to a new texture.
-    auto nativeTexture2 = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256);
+    auto nativeTexture2 = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
     externalTexture.Update(nativeTexture2);
-    DestroyTestTexture(nativeTexture2);
+    Helpers::DestroyTexture(nativeTexture2);
 
     update.Finish();
     device.FinishRenderingCurrentFrame();
