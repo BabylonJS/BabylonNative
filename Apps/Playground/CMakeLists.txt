@@ -43,9 +43,9 @@ if(APPLE)
         set(SOURCES ${SOURCES}
             "iOS/AppDelegate.swift"
             "iOS/ViewController.swift"
-            "iOS/PlaygroundBootstrap.h"
-            "iOS/PlaygroundBootstrap.mm"
             "iOS/Playground-Bridging-Header.h"
+            "AppleShared/PlaygroundBootstrap.h"
+            "AppleShared/PlaygroundBootstrap.mm"
             "AppleShared/GestureRecognizer.swift")
         set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Scripts")
         set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "ReferenceImages")
@@ -64,12 +64,15 @@ if(APPLE)
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
         set(RESOURCE_FILES ${STORYBOARD})
+        set(ADDITIONAL_LIBRARIES PRIVATE BabylonNativeIntegrations)
         set(SOURCES ${SOURCES}
             "macOS/main.mm"
-            "macOS/AppDelegate.m"
             "macOS/AppDelegate.h"
+            "macOS/AppDelegate.mm"
+            "macOS/ViewController.h"
             "macOS/ViewController.mm"
-            "macOS/ViewController.h")
+            "AppleShared/PlaygroundBootstrap.h"
+            "AppleShared/PlaygroundBootstrap.mm")
         set_source_files_properties(${SCRIPTS} ${BABYLON_SCRIPTS} ${DEPENDENCIES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/Scripts")
         set_source_files_properties(${REFERENCE_IMAGES} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/ReferenceImages")
     endif()

@@ -8,4 +8,4 @@
 
 #import <Babylon/Integrations/Apple/BabylonNativeIntegrations.h>
 
-#import "PlaygroundBootstrap.h"
+#import "AppleShared/PlaygroundBootstrap.h"

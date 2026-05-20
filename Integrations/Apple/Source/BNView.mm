@@ -166,4 +166,99 @@
 #endif
 }
 
+#pragma mark - Mouse forwarding
+
+- (void)mouseDown:(NSInteger)button atX:(CGFloat)x y:(CGFloat)y
+{
+#if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
+    if (_view)
+    {
+        _view->OnMouseDown(static_cast<uint32_t>(button),
+                            static_cast<float>(x),
+                            static_cast<float>(y),
+                            Babylon::Integrations::CoordinateUnits::Logical);
+    }
+#else
+    (void)button; (void)x; (void)y;
+    @throw [NSException
+        exceptionWithName:@"BabylonNativePluginNotEnabledException"
+                   reason:@"mouseDown:atX:y: was called but BABYLON_NATIVE_PLUGIN_NATIVEINPUT was not enabled at native build time."
+                 userInfo:nil];
+#endif
+}
+
+- (void)mouseUp:(NSInteger)button atX:(CGFloat)x y:(CGFloat)y
+{
+#if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
+    if (_view)
+    {
+        _view->OnMouseUp(static_cast<uint32_t>(button),
+                          static_cast<float>(x),
+                          static_cast<float>(y),
+                          Babylon::Integrations::CoordinateUnits::Logical);
+    }
+#else
+    (void)button; (void)x; (void)y;
+    @throw [NSException
+        exceptionWithName:@"BabylonNativePluginNotEnabledException"
+                   reason:@"mouseUp:atX:y: was called but BABYLON_NATIVE_PLUGIN_NATIVEINPUT was not enabled at native build time."
+                 userInfo:nil];
+#endif
+}
+
+- (void)mouseMoveAtX:(CGFloat)x y:(CGFloat)y
+{
+#if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
+    if (_view)
+    {
+        _view->OnMouseMove(static_cast<float>(x),
+                            static_cast<float>(y),
+                            Babylon::Integrations::CoordinateUnits::Logical);
+    }
+#else
+    (void)x; (void)y;
+    @throw [NSException
+        exceptionWithName:@"BabylonNativePluginNotEnabledException"
+                   reason:@"mouseMoveAtX:y: was called but BABYLON_NATIVE_PLUGIN_NATIVEINPUT was not enabled at native build time."
+                 userInfo:nil];
+#endif
+}
+
+- (void)mouseWheel:(NSInteger)axis delta:(NSInteger)delta
+{
+#if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
+    if (_view)
+    {
+        _view->OnMouseWheel(static_cast<uint32_t>(axis),
+                             static_cast<int32_t>(delta));
+    }
+#else
+    (void)axis; (void)delta;
+    @throw [NSException
+        exceptionWithName:@"BabylonNativePluginNotEnabledException"
+                   reason:@"mouseWheel:delta: was called but BABYLON_NATIVE_PLUGIN_NATIVEINPUT was not enabled at native build time."
+                 userInfo:nil];
+#endif
+}
+
++ (NSInteger)leftMouseButton
+{
+    return static_cast<NSInteger>(Babylon::Integrations::View::LeftMouseButton());
+}
+
++ (NSInteger)middleMouseButton
+{
+    return static_cast<NSInteger>(Babylon::Integrations::View::MiddleMouseButton());
+}
+
++ (NSInteger)rightMouseButton
+{
+    return static_cast<NSInteger>(Babylon::Integrations::View::RightMouseButton());
+}
+
++ (NSInteger)mouseWheelY
+{
+    return static_cast<NSInteger>(Babylon::Integrations::View::MouseWheelY());
+}
+
 @end

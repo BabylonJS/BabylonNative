@@ -1,8 +1,9 @@
 // PlaygroundBootstrap.h — Obj-C helper exposed to Swift via the
-// bridging header. Single class method that hands a freshly-created
-// `BNRuntime` to `Apps/Playground/Shared/PlaygroundScripts.cpp`,
-// which loads the Babylon.js bootstrap script list shared with the
-// other Playground hosts (Win32, Android, …).
+// bridging header on iOS, and used directly from Obj-C++ on macOS.
+// Single class method that hands a freshly-created `BNRuntime` to
+// `Apps/Playground/Shared/PlaygroundScripts.cpp`, which loads the
+// Babylon.js bootstrap script list shared with the other Playground
+// hosts (Win32, Android, …).
 
 #pragma once
 

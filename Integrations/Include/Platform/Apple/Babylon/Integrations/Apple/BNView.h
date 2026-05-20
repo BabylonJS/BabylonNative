@@ -83,6 +83,37 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)pointerUp:(NSInteger)pointerId atX:(CGFloat)x y:(CGFloat)y
     NS_SWIFT_NAME(pointerUp(id:x:y:));
 
+/// Forward a mouse-button event. `button` is one of `+leftMouseButton`,
+/// `+middleMouseButton`, `+rightMouseButton`. `x`, `y` are logical
+/// (CSS) pixels; AppKit hosts pass `NSEvent.locationInWindow` with the
+/// Y axis flipped to a top-left origin.
+///
+/// Raises `BabylonNativePluginNotEnabledException` when
+/// `BABYLON_NATIVE_PLUGIN_NATIVEINPUT` is not enabled. Same applies to
+/// `mouseUp:`, `mouseMove:`, and `mouseWheel:`.
+- (void)mouseDown:(NSInteger)button atX:(CGFloat)x y:(CGFloat)y
+    NS_SWIFT_NAME(mouseDown(button:x:y:));
+
+- (void)mouseUp:(NSInteger)button atX:(CGFloat)x y:(CGFloat)y
+    NS_SWIFT_NAME(mouseUp(button:x:y:));
+
+- (void)mouseMoveAtX:(CGFloat)x y:(CGFloat)y
+    NS_SWIFT_NAME(mouseMove(x:y:));
+
+/// Forward a scroll-wheel event. `axis` is `+mouseWheelY`. `delta` is
+/// the signed scroll amount; AppKit hosts pass `-NSEvent.deltaY` so
+/// scroll-up matches Babylon's negative convention.
+- (void)mouseWheel:(NSInteger)axis delta:(NSInteger)delta
+    NS_SWIFT_NAME(mouseWheel(axis:delta:));
+
+/// Button identifiers accepted by `mouseDown:` and `mouseUp:`.
+@property (class, nonatomic, readonly) NSInteger leftMouseButton;
+@property (class, nonatomic, readonly) NSInteger middleMouseButton;
+@property (class, nonatomic, readonly) NSInteger rightMouseButton;
+
+/// Wheel axis identifier accepted by `mouseWheel:delta:`.
+@property (class, nonatomic, readonly) NSInteger mouseWheelY;
+
 - (instancetype)init NS_UNAVAILABLE;
 + (instancetype)new NS_UNAVAILABLE;
 
