@@ -14,7 +14,7 @@ namespace Helpers
     Babylon::Graphics::TextureT CreateTexture(Babylon::Graphics::DeviceT device, uint32_t width, uint32_t height, uint32_t arraySize = 1, bool renderTarget = false, uint32_t samples = 1);
     void DestroyTexture(Babylon::Graphics::TextureT texture);
 
-    // Reads back the texture's pixels into an 8-bit RGBA/BGRA byte buffer (backend's native order).
+    // Reads back the texture's pixels into an 8-bit RGBA byte buffer (R, G, B, A byte order on all backends).
     // If the texture is multisampled, the samples are resolved down to 1 before the readback.
     // Implemented for D3D11 and Metal; D3D12 / OpenGL throw.
     std::vector<uint8_t> ReadPixels(const Babylon::Graphics::PlatformInfo& platformInfo, Babylon::Graphics::TextureT texture, uint32_t width, uint32_t height);

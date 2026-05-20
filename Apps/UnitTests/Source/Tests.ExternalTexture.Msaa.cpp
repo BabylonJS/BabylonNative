@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <future>
 #include <iostream>
+#include <stdexcept>
 #include <vector>
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
@@ -22,7 +23,7 @@ namespace
     constexpr uint32_t TEX_SIZE = 128;
 
     // Renders the rotated red plane into an external GPU texture (created with the given sample
-    // count), reads the result back, and returns the BGRA8 byte buffer.
+    // count), reads the result back, and returns the RGBA8 byte buffer.
     std::vector<uint8_t> RenderAndReadback(uint32_t samples)
     {
         Babylon::Graphics::Device device{g_deviceConfig};

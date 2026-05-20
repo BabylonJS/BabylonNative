@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "Helpers.h"
 
+#include <stdexcept>
+
 namespace Helpers
 {
     Babylon::Graphics::TextureT CreateTexture(Babylon::Graphics::DeviceT, uint32_t, uint32_t, uint32_t, bool, uint32_t)
