@@ -329,7 +329,7 @@ namespace Babylon::Integrations
             });
     }
 
-    void Runtime::RunOnJsThread(std::function<void(Napi::Env)> callback)
+    void Runtime::RunOnJsThread(std::function<void(Napi::Env)> callback, bool afterScriptLoad)
     {
         if (!callback)
         {
@@ -337,8 +337,18 @@ namespace Babylon::Integrations
         }
 
         m_impl->m_initTcs.as_task().then(arcana::inline_scheduler, arcana::cancellation::none(),
-            [scriptLoader = &*m_impl->m_scriptLoader, cb = std::move(callback)]() mutable {
-                scriptLoader->Dispatch(std::move(cb));
+            [appRuntime = &*m_impl->m_appRuntime,
+             scriptLoader = &*m_impl->m_scriptLoader,
+             cb = std::move(callback),
+             afterScriptLoad]() mutable {
+                if (afterScriptLoad)
+                {
+                    scriptLoader->Dispatch(std::move(cb));
+                }
+                else
+                {
+                    appRuntime->Dispatch(std::move(cb));
+                }
             });
     }
 

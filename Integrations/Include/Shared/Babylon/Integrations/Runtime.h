@@ -53,11 +53,20 @@ namespace Babylon::Integrations
         void LoadScript(std::string_view url);
         void Eval(std::string_view source, std::string_view sourceUrl = {});
 
-        // Escape hatch: post `callback` onto the JS thread after any pending
-        // init completes. Useful for installing custom Napi globals, registering
-        // ObjectWrap classes, or capturing FunctionReferences for native→JS calls.
-        // Same single-thread contract as LoadScript / Eval.
-        void RunOnJsThread(std::function<void(Napi::Env)> callback);
+        // Escape hatch: post `callback` onto the JS thread after engine
+        // initialization completes. Useful for installing custom Napi globals,
+        // registering ObjectWrap classes, or capturing FunctionReferences for
+        // native→JS calls. Same single-thread contract as LoadScript / Eval.
+        //
+        // `afterScriptLoad`:
+        //   false (default) — dispatch via `AppRuntime::Dispatch`. The callback
+        //     runs on the JS thread as soon as init is complete; it is NOT
+        //     serialized behind queued `LoadScript` / `Eval` calls and may
+        //     interleave with their execution.
+        //   true — dispatch via `ScriptLoader::Dispatch`. The callback is
+        //     serialized behind any earlier `LoadScript` / `Eval` / `RunOnJsThread(true)`
+        //     calls, so it observes the JS state after those have finished.
+        void RunOnJsThread(std::function<void(Napi::Env)> callback, bool afterScriptLoad = false);
 
         // ----- Suspend / Resume -----
         //
