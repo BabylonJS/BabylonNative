@@ -410,7 +410,15 @@ namespace Babylon::Integrations
         m_impl->m_xrWindow = nativeWindow;
         if (m_impl->m_nativeXr)
         {
-            m_impl->m_nativeXr->UpdateWindow(nativeWindow);
+            // NativeXr's entry points are JS-thread-only; dispatch the
+            // actual UpdateWindow call instead of touching it from
+            // whatever thread invoked SetXrWindow.
+            m_impl->m_appRuntime->Dispatch([implPtr = m_impl.get(), nativeWindow](Napi::Env) {
+                if (implPtr->m_nativeXr)
+                {
+                    implPtr->m_nativeXr->UpdateWindow(nativeWindow);
+                }
+            });
         }
         // If NativeXr isn't initialized yet (no View attach has happened),
         // the value is applied by the first-attach init lambda.

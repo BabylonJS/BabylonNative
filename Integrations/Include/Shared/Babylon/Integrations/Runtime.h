@@ -32,9 +32,11 @@ namespace Babylon::Integrations
 
         ~Runtime();
 
-        // Non-copyable; movable. Cross-references between Runtime and View
-        // point at the heap-allocated pimpls, so moves of the outer wrappers
-        // are safe and don't invalidate any back-pointers.
+        // Non-copyable; movable. Move-construction transfers the impl
+        // pointer, so any attached View keeps its back-reference valid.
+        // Move-assignment and destruction destroy the destination's
+        // existing impl; both share the same contract enforced by
+        // `~RuntimeImpl`: the destination must have no View attached.
         Runtime(const Runtime&) = delete;
         Runtime& operator=(const Runtime&) = delete;
         Runtime(Runtime&&) noexcept;

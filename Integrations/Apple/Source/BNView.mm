@@ -56,11 +56,11 @@
         // resize. If the drawable isn't sized yet (e.g. MTKView not yet
         // in a window), the early-out below skips it and the delegate
         // path will pick it up later.
-        @try
+        try
         {
             _view.emplace(*nativeRuntime, (__bridge CA::MetalLayer*)layer);
         }
-        @catch (NSException*)
+        catch (const std::exception&)
         {
             _mtkView = nil;
             return nil;
