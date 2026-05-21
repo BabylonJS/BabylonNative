@@ -176,7 +176,13 @@ namespace Babylon::Polyfills::Internal
             attachments[0].init(textures[0], bgfx::Access::Write, 0, 1, 0, colorResolve);
             attachments[1].init(textures[1], bgfx::Access::Write, 0, 1, 0, BGFX_RESOLVE_NONE);
             auto handle = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
-            assert(handle.idx != bgfx::kInvalidHandle);
+            if (handle.idx == bgfx::kInvalidHandle)
+            {
+                // Free the textures we just allocated so they don't leak alongside the failed FB.
+                bgfx::destroy(textures[0]);
+                bgfx::destroy(textures[1]);
+                throw std::runtime_error{"bgfx::createFrameBuffer returned invalid handle (framebuffer pool exhausted; raise BGFX_CONFIG_MAX_FRAME_BUFFERS or audit Canvas/Context lifetime)"};
+            }
             m_frameBuffer = std::make_unique<Graphics::FrameBuffer>(m_graphicsContext, handle, m_width, m_height, false, false, false);
             m_dirty = false;
 

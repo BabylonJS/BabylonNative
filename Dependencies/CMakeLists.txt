@@ -53,6 +53,15 @@ target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESH
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE=1024)
 target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 
+# Canvas plugin allocates one bgfx framebuffer per JS Canvas object and per
+# text-rendering operation; combined with V8 GC pacing this can exceed the
+# default 128 limit during long playground sweeps. CI workflows pass
+# -DBGFX_CONFIG_MAX_FRAME_BUFFERS as a CMake variable, so honour it here.
+if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS OR BGFX_CONFIG_MAX_FRAME_BUFFERS LESS 512)
+    set(BGFX_CONFIG_MAX_FRAME_BUFFERS 512)
+endif()
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_FRAME_BUFFERS=${BGFX_CONFIG_MAX_FRAME_BUFFERS})
+
 # Temporary disable uniform debug.
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_UNIFORM=0)
 

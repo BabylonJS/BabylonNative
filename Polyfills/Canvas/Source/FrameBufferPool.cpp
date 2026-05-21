@@ -67,6 +67,13 @@ namespace Babylon::Polyfills
             attachments[1].init(textures[1], bgfx::Access::Write, 0, 1, 0, BGFX_RESOLVE_NONE);
             TextBuffer = bgfx::createFrameBuffer(static_cast<uint8_t>(attachments.size()), attachments.data(), true);
 
+            if (TextBuffer.idx == bgfx::kInvalidHandle)
+            {
+                bgfx::destroy(textures[0]);
+                bgfx::destroy(textures[1]);
+                throw std::runtime_error{"FrameBufferPool::Add: bgfx::createFrameBuffer returned invalid handle (pool exhausted)"};
+            }
+
             FrameBuffer = new Graphics::FrameBuffer(*m_graphicsContext, TextBuffer, m_width, m_height, false, false, false);
             m_available++;
             mPoolBuffers.push_back({FrameBuffer, true});

@@ -661,11 +661,22 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void Context::Flush(const Napi::CallbackInfo&)
+    void Context::Flush(const Napi::CallbackInfo& info)
     {
         EnsureFontsLoaded();
 
-        bool needClear = m_canvas->UpdateRenderTarget();
+        bool needClear = false;
+        try
+        {
+            needClear = m_canvas->UpdateRenderTarget();
+        }
+        catch (const std::exception& ex)
+        {
+            // Convert C++ failures (e.g. bgfx framebuffer pool exhaustion) into a
+            // catchable JS error so the offending test fails cleanly instead of
+            // aborting the whole sweep.
+            throw Napi::Error::New(info.Env(), ex.what());
+        }
 
         Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
 
