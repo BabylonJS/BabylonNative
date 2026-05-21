@@ -439,6 +439,24 @@ Java_com_babylonjs_integrations_BabylonNative_viewAttach(
         ANativeWindow_release(window);
         return 0;
     }
+
+    // Kick off the first resize using the surface's current pixel
+    // dimensions. Hosts will typically also wire their SurfaceHolder
+    // callback's `surfaceChanged(holder, format, w, h)` to `viewResize`
+    // for subsequent size changes — this initial call composes cleanly
+    // with that because `View::Resize` past the first call is an
+    // idempotent `Device::UpdateSize`. If the surface reports zero
+    // (rare; surface not fully realized yet), skip and rely on the
+    // host's `surfaceChanged` to deliver the first size.
+    const int32_t surfaceWidth = ANativeWindow_getWidth(window);
+    const int32_t surfaceHeight = ANativeWindow_getHeight(window);
+    if (surfaceWidth > 0 && surfaceHeight > 0)
+    {
+        view->Resize(static_cast<uint32_t>(surfaceWidth),
+                      static_cast<uint32_t>(surfaceHeight),
+                      Babylon::Integrations::CoordinateUnits::Physical);
+    }
+
     // bgfx retains its own reference on the ANativeWindow for the
     // surface-binding lifetime, so release our local acquire here.
     ANativeWindow_release(window);
