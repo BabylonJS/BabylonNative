@@ -6,6 +6,8 @@
 
 #include <winrt/base.h>
 
+extern Babylon::Graphics::Configuration g_deviceConfig;
+
 namespace
 {
     winrt::com_ptr<ID3D11Device> CreateDevice()
@@ -100,4 +102,27 @@ TEST(Device, BackBuffer)
         update.Finish();
         device.FinishRenderingCurrentFrame();
     }
+}
+
+// Verifies that UpdateDevice throws when called while rendering is enabled.
+TEST(Device, UpdateDeviceThrowsWhenRenderingEnabled)
+{
+    winrt::com_ptr<ID3D11Device> d3dDevice = CreateDevice();
+
+    Babylon::Graphics::Configuration config = g_deviceConfig;
+    config.Device = d3dDevice.get();
+
+    Babylon::Graphics::Device device{config};
+
+    // Permitted before EnableRendering.
+    EXPECT_NO_THROW(device.UpdateDevice(d3dDevice.get()));
+
+    // StartRenderingCurrentFrame triggers EnableRendering -> throws.
+    device.StartRenderingCurrentFrame();
+    EXPECT_THROW(device.UpdateDevice(d3dDevice.get()), std::runtime_error);
+    device.FinishRenderingCurrentFrame();
+
+    // Permitted again after DisableRendering.
+    device.DisableRendering();
+    EXPECT_NO_THROW(device.UpdateDevice(d3dDevice.get()));
 }
