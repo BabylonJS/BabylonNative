@@ -2298,7 +2298,7 @@
             "title": "Baked Vertex Animation",
             "playgroundId": "#14WJWW#13",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "Pixel-diff against Babylon.js reference after SPIRV-Cross bump (#1695): animation timing renders one frame off. Cannot re-bake from BN renderer per project policy.",
             "referenceImage": "bakedVertexAnimation.png"
         },
         {
@@ -2526,7 +2526,7 @@
             "playgroundId": "#PIZ1GK#1500",
             "renderCount": 5,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "NativeEngine Screen Space Reflections do not render the wet/reflective floor surface; SSR effect produces less reflection than WebGL reference.",
             "referenceImage": "Screen-Space-Reflections-2.png"
         },
         {
@@ -2568,7 +2568,7 @@
             "title": "Sprites Pixel Perfect",
             "playgroundId": "#ZX8DJ3#10",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "NativeEngine Sprite renderer shows opaque black background instead of transparent pixels around sprite quad; sprite alpha-blending regression.",
             "referenceImage": "Sprites-Pixel-Perfect.png"
         },
         {
@@ -2751,7 +2751,7 @@
             "title": "soft-transparent-shadows",
             "playgroundId": "#G3DJGA#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "NativeEngine soft shadow filtering produces grainy/aliased shadows instead of smooth filtered output; filter quality regression vs WebGL reference.",
             "referenceImage": "soft-transparent-shadows.png"
         },
         {
@@ -2781,7 +2781,7 @@
             "playgroundId": "#MJ59Y8#18",
             "renderCount": 10,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "Pixel-diff against Babylon.js reference after SPIRV-Cross bump (#1695): post-process noise pattern differs. Cannot re-bake from BN renderer per project policy.",
             "referenceImage": "apply-all-post-processes.png"
         },
         {
