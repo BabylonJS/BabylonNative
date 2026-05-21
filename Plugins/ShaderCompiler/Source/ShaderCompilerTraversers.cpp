@@ -129,8 +129,12 @@ namespace Babylon::ShaderCompilerTraversers
 
             virtual void visitSymbol(TIntermSymbol* symbol) override
             {
-                // Collect all non-sampler uniforms and add the to the list of elements to process.
-                if (symbol->getType().getQualifier().isUniformOrBuffer() && symbol->getType().getBasicType() != EbtSampler)
+                // Collect all non-sampler scalar/vector/matrix uniforms. Excluding UBO blocks
+                // (EbtBlock) and uniform struct instances (EbtStruct) prevents this pass from
+                // mistakenly inserting whole blocks/structs into the consolidated uniform struct.
+                const auto basic = symbol->getType().getBasicType();
+                if (symbol->getType().getQualifier().isUniformOrBuffer()
+                    && (basic == EbtFloat || basic == EbtInt || basic == EbtUint || basic == EbtBool))
                 {
                     // Linker objects are treated differently by this traverser because unlike ordinary
                     // symbols which should simply be replaced with their struct members, the linker
@@ -305,8 +309,14 @@ namespace Babylon::ShaderCompilerTraversers
             {
                 auto& type = symbol->getType();
 
-                // We only care about uniforms that are neither samplers nor matrices.
-                if (type.getQualifier().isUniformOrBuffer() && type.getBasicType() != EbtSampler && !type.isMatrix())
+                // We only care about loose scalar/vector uniforms. Excluding matrices, samplers,
+                // UBO blocks (EbtBlock) and uniform struct instances (EbtStruct) prevents the
+                // traverser from rewriting whole blocks/structs to vec4, which destroys their
+                // member layout and member names.
+                const auto basic = type.getBasicType();
+                if (type.getQualifier().isUniformOrBuffer()
+                    && !type.isMatrix()
+                    && (basic == EbtFloat || basic == EbtInt || basic == EbtUint || basic == EbtBool))
                 {
                     // At present, this may end up creating layered swizzles; i.e., if a vec3 was already being projected
                     // down a la vec3.x, greedily adding a swizzle operator to deal with the new type mismatch may create

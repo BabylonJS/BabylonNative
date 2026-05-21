@@ -12,7 +12,8 @@ add_subdirectory(${REPO_ROOT_DIR} "${CMAKE_CURRENT_BINARY_DIR}/BabylonNative")
 
 add_library(BabylonNativeJNI SHARED
     src/main/cpp/BabylonNativeJNI.cpp
-    ${PLAYGROUND_DIR}/Shared/AppContext.cpp)
+    ${PLAYGROUND_DIR}/Shared/AppContext.cpp
+    ${PLAYGROUND_DIR}/Shared/Diagnostics.cpp)
 
 target_include_directories(BabylonNativeJNI
     PRIVATE ${PLAYGROUND_DIR})
@@ -20,6 +21,7 @@ target_include_directories(BabylonNativeJNI
 target_link_libraries(BabylonNativeJNI
     PRIVATE GLESv3
     PRIVATE android
+    PRIVATE bx
     PRIVATE EGL
     PRIVATE log
     PRIVATE -lz

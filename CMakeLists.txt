@@ -54,7 +54,7 @@ FetchContent_Declare(ios-cmake
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 808601482588b7f806d91231288310b94766dc84)
+    GIT_TAG 1e9b17e4544862270420f0e192c5dfe56fe768d2)
 FetchContent_Declare(libwebp
     GIT_REPOSITORY https://github.com/webmproject/libwebp.git
     GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c
@@ -65,7 +65,7 @@ FetchContent_Declare(metal-cpp
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 0e1654748e9e54b5469fb0fbc1c715b96fa06f8f
+    GIT_TAG 866e5edcc3407997a3ed62f3edf492f91bcb2629
     EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------

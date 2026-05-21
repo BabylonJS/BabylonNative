@@ -2,14 +2,14 @@
 
 #include <Babylon/Graphics/Device.h>
 
-#include "Utils.h"
+#include "Helpers.h"
 
 extern Babylon::Graphics::Configuration g_deviceConfig;
 
 // Verifies UpdateDevice replaces the active graphics device after a DisableRendering / EnableRendering cycle.
 TEST(Device, UpdateDevice)
 {
-    Babylon::Graphics::DeviceT deviceA = CreateTestGraphicsDevice();
+    Babylon::Graphics::DeviceT deviceA = Helpers::CreateTestGraphicsDevice();
     ASSERT_NE(deviceA, nullptr);
 
     Babylon::Graphics::DeviceT deviceB = nullptr;
@@ -29,7 +29,7 @@ TEST(Device, UpdateDevice)
 
         EXPECT_EQ(device.GetPlatformInfo().Device, deviceA);
 
-        deviceB = CreateTestGraphicsDevice();
+        deviceB = Helpers::CreateTestGraphicsDevice();
         ASSERT_NE(deviceB, nullptr);
 
         // Tear bgfx down before pointing the device at the new graphics device.
@@ -47,6 +47,6 @@ TEST(Device, UpdateDevice)
         // distinctness holds but exercising it does not add value over the EXPECT_EQ above.
     }   // Babylon::Graphics::Device destructs here, calling DisableRendering on deviceB.
 
-    DestroyTestGraphicsDevice(deviceB);
-    DestroyTestGraphicsDevice(deviceA);
+    Helpers::DestroyTestGraphicsDevice(deviceB);
+    Helpers::DestroyTestGraphicsDevice(deviceA);
 }

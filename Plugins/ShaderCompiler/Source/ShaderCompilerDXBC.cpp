@@ -45,6 +45,8 @@ namespace
             compiler->add_vertex_attribute_remap(attribute);
         }
 
+        Babylon::ShaderCompilerCommon::AssignUniformBufferBindings(*compiler);
+
         std::string hlsl = compiler->compile();
 
         Microsoft::WRL::ComPtr<ID3DBlob> errorMsgs;

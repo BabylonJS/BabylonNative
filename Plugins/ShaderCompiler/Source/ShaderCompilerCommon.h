@@ -64,6 +64,15 @@ namespace Babylon::ShaderCompilerCommon
     void AppendSamplers(std::vector<uint8_t>& bytes, const spirv_cross::Compiler& compiler, const spirv_cross::SmallVector<spirv_cross::Resource>& samplers, std::map<std::string, uint8_t>& stages);
     NonSamplerUniformsInfo CollectNonSamplerUniforms(spirv_cross::Parser& parser, const spirv_cross::Compiler& compiler);
 
+    /// Assigns unique descriptor bindings to every uniform buffer in the shader so that
+    /// when the SPIR-V is transpiled to HLSL/MSL each cbuffer ends up at a distinct
+    /// register. The "Frame" block synthesized by MoveNonSamplerUniformsIntoStruct is
+    /// kept at binding 0 (bgfx's D3D11/D3D12 backends always bind their predefined
+    /// constant buffer at register b0), while user-declared uniform blocks are assigned
+    /// sequential bindings starting at 1. This prevents FXC's "X4578: cbuffer bank 0
+    /// used more than once" error when a Babylon.js shader declares its own UBOs.
+    void AssignUniformBufferBindings(spirv_cross::Compiler& compiler);
+
     struct ShaderInfo
     {
         std::unique_ptr<spirv_cross::Parser> Parser;
