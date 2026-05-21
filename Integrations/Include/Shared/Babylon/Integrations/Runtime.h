@@ -23,11 +23,6 @@ namespace Babylon::Integrations
     public:
         explicit Runtime(RuntimeOptions options = {});
 
-        // `noexcept(false)`: throws `std::runtime_error` if a View is
-        // still attached. Same contract for `~Runtime` and move-assign;
-        // see the move comment below.
-        ~Runtime() noexcept(false);
-
         // // Future construction mode: adopt a host-owned Babylon::JsRuntime
         // // (e.g. React Native with Hermes/JSC + CallInvoker). In Attach mode
         // // `~Runtime` does NOT tear down the JS engine, and Suspend/Resume
@@ -35,18 +30,20 @@ namespace Babylon::Integrations
         // static Runtime Adopt(Babylon::JsRuntime& jsRuntime,
         //                      RuntimeOptions options = {});
 
-        ~Runtime();
+        // `noexcept(false)`: throws `std::runtime_error` if a View is still
+        // attached. Same contract for move-assignment (see below).
+        ~Runtime() noexcept(false);
 
         // Non-copyable; movable. Move-construction transfers the impl
         // pointer, so any attached View keeps its back-reference valid.
         // Move-assignment and destruction destroy the destination's
-        // existing impl; both share the same contract enforced by
-        // `~RuntimeImpl`: the destination must have no View attached,
-        // or the process terminates with a diagnostic message.
+        // existing impl; both share the same precondition enforced by
+        // `~RuntimeImpl`: the destination must have no View attached, or
+        // a `std::runtime_error` is thrown.
         Runtime(const Runtime&) = delete;
         Runtime& operator=(const Runtime&) = delete;
         Runtime(Runtime&&) noexcept;
-        Runtime& operator=(Runtime&&) noexcept;
+        Runtime& operator=(Runtime&&) noexcept(false);
 
         // ----- JS interaction -----
         //

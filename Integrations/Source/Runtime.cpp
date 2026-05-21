@@ -120,11 +120,9 @@ namespace Babylon::Integrations
     RuntimeImpl::~RuntimeImpl() noexcept(false)
     {
         // Host owns the ordering: destroy Views before their Runtime.
-        // Throwing from a destructor is normally avoided, but `~Runtime`
-        // is implicitly `noexcept`, so this turns into a deterministic
-        // `std::terminate` with a clear message in both debug and
-        // release — strictly better than a debug-only assert that
-        // silently UBs in release.
+        // Both `~Runtime` and `Runtime::operator=(Runtime&&)` are
+        // declared `noexcept(false)` so this propagates to the caller
+        // instead of triggering `std::terminate`.
         if (m_currentView != nullptr)
         {
             throw std::runtime_error{"View must be destroyed before its Runtime."};
@@ -316,9 +314,9 @@ namespace Babylon::Integrations
     {
     }
 
-    Runtime::~Runtime() = default;
+    Runtime::~Runtime() noexcept(false) = default;
     Runtime::Runtime(Runtime&&) noexcept = default;
-    Runtime& Runtime::operator=(Runtime&&) noexcept = default;
+    Runtime& Runtime::operator=(Runtime&&) noexcept(false) = default;
 
     void Runtime::LoadScript(std::string_view url)
     {
