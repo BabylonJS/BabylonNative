@@ -54,6 +54,7 @@
 #endif
 
 #include <cassert>
+#include <stdexcept>
 #include <fstream>
 #include <sstream>
 #include <utility>
@@ -116,10 +117,18 @@ namespace Babylon::Integrations
         m_scriptLoader.emplace(*m_appRuntime);
     }
 
-    RuntimeImpl::~RuntimeImpl()
+    RuntimeImpl::~RuntimeImpl() noexcept(false)
     {
         // Host owns the ordering: destroy Views before their Runtime.
-        assert(m_currentView == nullptr && "View must be destroyed before its Runtime.");
+        // Throwing from a destructor is normally avoided, but `~Runtime`
+        // is implicitly `noexcept`, so this turns into a deterministic
+        // `std::terminate` with a clear message in both debug and
+        // release — strictly better than a debug-only assert that
+        // silently UBs in release.
+        if (m_currentView != nullptr)
+        {
+            throw std::runtime_error{"View must be destroyed before its Runtime."};
+        }
 
         // Teardown order:
         //   1. SaveShaderCache: ~ViewImpl already ran ViewImpl::Suspend, so
