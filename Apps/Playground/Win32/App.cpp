@@ -210,6 +210,16 @@ namespace
         // First View attach triggers Device construction, plugin init, and
         // flushes the queued scripts.
         g_view.emplace(*g_runtime, hWnd);
+
+        // Drive the first Resize with the initial window bounds (physical pixels);
+        // the View handles physical conversion via GetDevicePixelRatio.
+        RECT rect{};
+        if (GetClientRect(hWnd, &rect))
+        {
+            g_view->Resize(static_cast<uint32_t>(rect.right - rect.left),
+                           static_cast<uint32_t>(rect.bottom - rect.top),
+                           Babylon::Integrations::CoordinateUnits::Physical);
+        }
     }
 }
 
