@@ -57,7 +57,7 @@ namespace Helpers
         throw std::runtime_error{"ReadPixels not implemented for D3D12"};
     }
 
-    Babylon::Graphics::DeviceT CreateTestGraphicsDevice()
+    Babylon::Graphics::DeviceT CreateDevice()
     {
         winrt::com_ptr<IDXGIFactory4> factory;
         winrt::check_hresult(CreateDXGIFactory1(IID_PPV_ARGS(factory.put())));
@@ -71,7 +71,7 @@ namespace Helpers
         return device;
     }
 
-    void DestroyTestGraphicsDevice(Babylon::Graphics::DeviceT device)
+    void DestroyDevice(Babylon::Graphics::DeviceT device)
     {
         if (device != nullptr)
         {

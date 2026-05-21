@@ -92,7 +92,7 @@ namespace Helpers
         return pixels;
     }
 
-    Babylon::Graphics::DeviceT CreateTestGraphicsDevice()
+    Babylon::Graphics::DeviceT CreateDevice()
     {
         ID3D11Device* device = nullptr;
         EXPECT_HRESULT_SUCCEEDED(D3D11CreateDevice(
@@ -109,7 +109,7 @@ namespace Helpers
         return device;
     }
 
-    void DestroyTestGraphicsDevice(Babylon::Graphics::DeviceT device)
+    void DestroyDevice(Babylon::Graphics::DeviceT device)
     {
         if (device != nullptr)
         {
