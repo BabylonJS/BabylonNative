@@ -44,12 +44,18 @@
         CAMetalLayer* layer = (CAMetalLayer*)view.layer;
 
         // View construction is lightweight (just stashes the layer). Device
-        // construction is driven later by `-resizeWithWidth:height:`,
-        // which BNViewDelegate forwards from MTKView's
-        // `mtkView:drawableSizeWillChange:`. MTKView fires that before
-        // its first draw, so bootstrap is automatic. Hosts driving
-        // MTKView in unusual ways can call `-resizeWithWidth:height:`
-        // directly with the surface's pixel size.
+        // construction is driven by the first `-resizeWithWidth:height:`
+        // call, which BNViewDelegate forwards from MTKView's
+        // `mtkView:drawableSizeWillChange:`. UIKit's view lifecycle
+        // reliably fires that callback during initial layout, but AppKit
+        // is more lazy: on macOS the callback typically does NOT fire
+        // for the initial drawable size if the delegate was installed
+        // after the size was already determined — only for subsequent
+        // changes. To keep both platforms working out of the box, we
+        // query the current drawable size below and kick off an explicit
+        // resize. If the drawable isn't sized yet (e.g. MTKView not yet
+        // in a window), the early-out below skips it and the delegate
+        // path will pick it up later.
         @try
         {
             _view.emplace(*nativeRuntime, (__bridge CA::MetalLayer*)layer);
@@ -68,6 +74,31 @@
         {
             _managedDelegate = [[BNViewDelegate alloc] initWithView:self];
             view.delegate = _managedDelegate;
+        }
+
+        // Kick off the first resize using the MTKView's bounds in
+        // logical units (points/DIPs). `View::Resize` handles the DPR
+        // conversion internally; passing Logical here means we don't
+        // have to query the layer's drawableSize (which can be zero
+        // before MTKView's first layout pass) or recompute the same
+        // bounds × scale conversion ourselves.
+        //
+        // If bounds are also zero (e.g. MTKView not yet in a window),
+        // skip and rely on the delegate path
+        // (`mtkView:drawableSizeWillChange:`) to deliver the first
+        // size once layout happens. `View::Resize` past the first
+        // call is just an idempotent `Device::UpdateSize`, so the
+        // explicit kick here composes harmlessly with any subsequent
+        // delegate callback.
+        const CGSize bounds = view.bounds.size;
+        if (bounds.width > 0 && bounds.height > 0)
+        {
+            if (_view)
+            {
+                _view->Resize(static_cast<uint32_t>(bounds.width),
+                               static_cast<uint32_t>(bounds.height),
+                               Babylon::Integrations::CoordinateUnits::Logical);
+            }
         }
     }
     return self;
