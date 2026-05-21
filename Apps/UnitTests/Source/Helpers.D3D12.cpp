@@ -1,6 +1,9 @@
 #include <gtest/gtest.h>
 #include "Helpers.h"
 
+#include <dxgi1_4.h>
+#include <winrt/base.h>
+
 #include <stdexcept>
 
 namespace Helpers
@@ -52,5 +55,27 @@ namespace Helpers
     std::vector<uint8_t> ReadPixels(const Babylon::Graphics::PlatformInfo&, Babylon::Graphics::TextureT, uint32_t, uint32_t)
     {
         throw std::runtime_error{"ReadPixels not implemented for D3D12"};
+    }
+
+    Babylon::Graphics::DeviceT CreateDevice()
+    {
+        winrt::com_ptr<IDXGIFactory4> factory;
+        winrt::check_hresult(CreateDXGIFactory1(IID_PPV_ARGS(factory.put())));
+
+        winrt::com_ptr<IDXGIAdapter> warpAdapter;
+        winrt::check_hresult(factory->EnumWarpAdapter(IID_PPV_ARGS(warpAdapter.put())));
+
+        ID3D12Device* device = nullptr;
+        winrt::check_hresult(D3D12CreateDevice(warpAdapter.get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)));
+
+        return device;
+    }
+
+    void DestroyDevice(Babylon::Graphics::DeviceT device)
+    {
+        if (device != nullptr)
+        {
+            device->Release();
+        }
     }
 }

@@ -31,6 +31,11 @@ set(SOURCES
     "Source/Helpers.h"
     "Source/Helpers.${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
 
+if(GRAPHICS_API STREQUAL "D3D11" OR GRAPHICS_API STREQUAL "D3D12")
+    set(SOURCES ${SOURCES}
+        "Source/Tests.Device.cpp")
+endif()
+
 if(GRAPHICS_API STREQUAL "D3D11")
     set(SOURCES ${SOURCES}
         "Source/Tests.Device.${GRAPHICS_API}.cpp"

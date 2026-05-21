@@ -18,4 +18,17 @@ namespace Helpers
     // If the texture is multisampled, the samples are resolved down to 1 before the readback.
     // Implemented for D3D11 and Metal; D3D12 / OpenGL throw.
     std::vector<uint8_t> ReadPixels(const Babylon::Graphics::PlatformInfo& platformInfo, Babylon::Graphics::TextureT texture, uint32_t width, uint32_t height);
+
+    // Returns a graphics device suitable for use as Babylon::Graphics::Configuration::Device. The
+    // returned handle is owned by the caller and must be released with DestroyDevice.
+    //
+    // Defined only on D3D11 and D3D12 -- the Tests.Device.cpp test that consumes these helpers is
+    // gated to those backends. On D3D11 returns an ID3D11Device created via D3D11CreateDevice(WARP);
+    // on D3D12 returns an ID3D12Device created via D3D12CreateDevice on the WARP DXGI adapter.
+    //
+    // Note: on D3D12, D3D12CreateDevice(WARP) returns the same singleton pointer on successive calls
+    // in the same process, so two calls in a row may return equal handles. D3D11CreateDevice(WARP)
+    // does return distinct handles per call. Metal / OpenGL throw.
+    Babylon::Graphics::DeviceT CreateDevice();
+    void DestroyDevice(Babylon::Graphics::DeviceT device);
 }
