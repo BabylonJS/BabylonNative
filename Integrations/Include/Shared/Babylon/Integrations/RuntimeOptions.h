@@ -32,6 +32,12 @@ namespace Babylon::Integrations
         //                                       enableDebugTrace is true)
         //   - Uncaught JS exceptions          → LogLevel::Fatal
         //
+        // For Error and Fatal messages, a JS callstack is appended to the
+        // message body when the underlying JS engine can produce one. This
+        // is best-effort and silently omitted on engines / contexts that
+        // can't (the message body just won't contain a "JS callstack:" /
+        // "Stack:" trailer).
+        //
         // If unset, log output is discarded and uncaught exceptions fall
         // back to `Babylon::AppRuntime::DefaultUnhandledExceptionHandler`.
         // Hosts that want process termination on uncaught exceptions can do

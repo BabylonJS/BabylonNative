@@ -16,9 +16,8 @@ warnings_as_errors(Integrations)
 target_include_directories(Integrations PUBLIC "${INTEGRATIONS_SHARED_INCLUDE_ROOT}")
 
 # Always-on dependencies. The Integrations layer formalizes the canonical
-# Babylon Native setup, so the polyfills that AppContext.cpp historically
-# initializes unconditionally (Blob / Console / Performance / TextDecoder /
-# XMLHttpRequest) are always linked.
+# Babylon Native setup, so the standard polyfills (Blob / Console /
+# Performance / TextDecoder / XMLHttpRequest) are always linked.
 target_link_libraries(Integrations
     PUBLIC napi
     # GraphicsDevice is PUBLIC because View.h (a public header)

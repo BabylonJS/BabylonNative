@@ -95,43 +95,12 @@ namespace
         Babylon::Integrations::RuntimeOptions runtimeOptions{};
         runtimeOptions.enableDebugger = true;
         runtimeOptions.enableDebugTrace = options.DebugTrace.value_or(true);
-        runtimeOptions.log = [](Babylon::Integrations::LogLevel level, std::string_view message) {
-            std::string text{message};
-            while (!text.empty() && (text.back() == '\n' || text.back() == '\r'))
-            {
-                text.pop_back();
-            }
-
+        runtimeOptions.log = Playground::MakeLogCallback([](std::string_view text) {
             std::string line{text};
             line.push_back('\n');
             OutputDebugStringA(line.c_str());
             std::fputs(line.c_str(), stdout);
-
-            if (level == Babylon::Integrations::LogLevel::Error)
-            {
-                Diagnostics::DumpFailure(
-                    "JS CONSOLE ERROR",
-                    nullptr,
-                    0,
-                    0,
-                    "%s",
-                    text.c_str());
-            }
-
-            if (level == Babylon::Integrations::LogLevel::Fatal)
-            {
-                Diagnostics::DumpFailure(
-                    "UNCAUGHT JS ERROR",
-                    nullptr,
-                    0,
-                    0,
-                    "%s",
-                    text.c_str());
-                Diagnostics::SetExitCode(1);
-                Diagnostics::PrintFinishLine();
-                std::quick_exit(1);
-            }
-        };
+        });
         return runtimeOptions;
     }
 

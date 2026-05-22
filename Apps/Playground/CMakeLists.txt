@@ -19,8 +19,6 @@ set(SCRIPTS
     "Scripts/config.json")
 
 set(SOURCES
-    "Shared/AppContext.cpp"
-    "Shared/AppContext.h"
     "Shared/CommandLine.cpp"
     "Shared/CommandLine.h"
     "Shared/Diagnostics.cpp"

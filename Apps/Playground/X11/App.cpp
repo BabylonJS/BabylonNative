@@ -36,9 +36,9 @@ namespace
         Uninitialize();
 
         Babylon::Integrations::RuntimeOptions runtimeOptions{};
-        runtimeOptions.log = [](Babylon::Integrations::LogLevel, std::string_view message) {
-            std::cout << message << std::endl;
-        };
+        runtimeOptions.log = Playground::MakeLogCallback([](std::string_view text) {
+            std::cout << text << std::endl;
+        });
 
         g_runtime.emplace(std::move(runtimeOptions));
         Playground::Initialize();

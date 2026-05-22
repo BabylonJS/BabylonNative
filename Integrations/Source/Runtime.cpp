@@ -80,8 +80,7 @@ namespace Babylon::Integrations
         : m_options{std::move(options)}
     {
         // Forward DebugTrace through the host log callback (Verbose level
-        // for easy filtering). DebugTrace is process-wide; this matches
-        // AppContext's existing behavior.
+        // for easy filtering). DebugTrace is process-wide.
         if (m_options.log)
         {
             const auto& logCallback = m_options.log;
@@ -172,7 +171,7 @@ namespace Babylon::Integrations
     }
 
     // Dispatched onto the JS thread by the first View attach. Initializes
-    // all plugins/polyfills in the same order as AppContext.cpp, then
+    // all plugins/polyfills in the canonical Babylon Native order, then
     // completes m_initTcs to unblock host calls that were queued before the
     // first attach. Post-init, those host calls fire their continuation
     // synchronously via inline_scheduler and submit straight to ScriptLoader.
@@ -196,11 +195,32 @@ namespace Babylon::Integrations
             {
                 const auto userLog = implPtr->m_options.log;
                 Babylon::Polyfills::Console::Initialize(env,
-                    [userLog](const char* message, Babylon::Polyfills::Console::LogLevel level) {
-                        if (userLog && message)
+                    [userLog, env](const char* message, Babylon::Polyfills::Console::LogLevel level) {
+                        if (!userLog || !message)
                         {
-                            userLog(ToIntegrationsLogLevel(level), message);
+                            return;
                         }
+
+                        // Promote console.error to "message + JS callstack" so
+                        // hosts get a usable diagnostic for recoverable JS
+                        // errors (Babylon.js routes most of its non-fatal
+                        // failures through console.error). Stack capture is
+                        // best-effort: engines without stack support return
+                        // empty, and we omit the trailer in that case.
+                        if (level == Babylon::Polyfills::Console::LogLevel::Error)
+                        {
+                            const auto jsStack = Babylon::Polyfills::Console::CaptureCurrentJsStack(env);
+                            if (!jsStack.empty())
+                            {
+                                std::string combined{message};
+                                combined.append("\nJS callstack:\n");
+                                combined.append(jsStack);
+                                userLog(LogLevel::Error, combined);
+                                return;
+                            }
+                        }
+
+                        userLog(ToIntegrationsLogLevel(level), message);
                     });
             }
 

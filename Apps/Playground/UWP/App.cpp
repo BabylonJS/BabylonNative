@@ -323,15 +323,12 @@ void App::RestartRuntime(Rect bounds)
 
     Babylon::Integrations::RuntimeOptions runtimeOptions{};
     runtimeOptions.enableDebugger = true;
-    runtimeOptions.log = [](Babylon::Integrations::LogLevel /*level*/, std::string_view message) {
-        std::string line{message};
-        if (line.empty() || line.back() != '\n')
-        {
-            line.push_back('\n');
-        }
+    runtimeOptions.log = Playground::MakeLogCallback([](std::string_view text) {
+        std::string line{text};
+        line.push_back('\n');
         OutputDebugStringA(line.c_str());
         std::cout << line;
-    };
+    });
 
     m_runtime.emplace(std::move(runtimeOptions));
 
