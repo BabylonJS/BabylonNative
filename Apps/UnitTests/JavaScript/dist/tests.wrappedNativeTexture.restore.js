@@ -591,6 +591,9 @@ renderFrame() {return _renderFrame.apply(this, arguments);}function _renderFrame
 
 
 function restoreTexture(newNativeTexture) {
+  if (typeof engine.updateWrappedNativeTexture !== "function") {
+    throw new Error("updateWrappedNativeTexture not available -- requires @babylonjs/core >= 9.9.1");
+  }
   var wrappedInternalTexture = rtt.renderTarget.texture;
   engine.updateWrappedNativeTexture(wrappedInternalTexture, newNativeTexture);
 
