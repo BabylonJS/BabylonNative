@@ -30,20 +30,15 @@ namespace Babylon::Integrations
         // static Runtime Adopt(Babylon::JsRuntime& jsRuntime,
         //                      RuntimeOptions options = {});
 
-        // `noexcept(false)`: throws `std::runtime_error` if a View is still
-        // attached. Same contract for move-assignment (see below).
-        ~Runtime() noexcept(false);
+        ~Runtime();
 
-        // Non-copyable; movable. Move-construction transfers the impl
-        // pointer, so any attached View keeps its back-reference valid.
-        // Move-assignment and destruction destroy the destination's
-        // existing impl; both share the same precondition enforced by
-        // `~RuntimeImpl`: the destination must have no View attached, or
-        // a `std::runtime_error` is thrown.
+        // Non-copyable; movable. Cross-references between Runtime and View
+        // point at the heap-allocated pimpls, so moves of the outer wrappers
+        // are safe and don't invalidate any back-pointers.
         Runtime(const Runtime&) = delete;
         Runtime& operator=(const Runtime&) = delete;
         Runtime(Runtime&&) noexcept;
-        Runtime& operator=(Runtime&&) noexcept(false);
+        Runtime& operator=(Runtime&&) noexcept;
 
         // ----- JS interaction -----
         //

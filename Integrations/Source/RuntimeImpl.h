@@ -33,7 +33,7 @@ namespace Babylon::Integrations
     struct RuntimeImpl
     {
         explicit RuntimeImpl(RuntimeOptions options);
-        ~RuntimeImpl() noexcept(false);
+        ~RuntimeImpl();
 
         RuntimeImpl(const RuntimeImpl&) = delete;
         RuntimeImpl& operator=(const RuntimeImpl&) = delete;
