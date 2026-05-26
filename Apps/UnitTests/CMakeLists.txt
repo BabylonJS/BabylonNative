@@ -10,11 +10,15 @@ set(BABYLONJS_ASSETS
 set(BABYLONJS_MATERIALS_ASSETS
     "../node_modules/babylonjs-materials/babylonjs.materials.js")
 
+set(BABYLONJS_LOADERS_ASSETS
+    "../node_modules/babylonjs-loaders/babylonjs.loaders.js")
+
 set(TEST_ASSETS
     "JavaScript/dist/tests.externalTexture.msaa.js"
     "JavaScript/dist/tests.javaScript.all.js"
     "JavaScript/dist/tests.shaderCache.basicScene.js"
-    "JavaScript/dist/tests.shaders.cross.js")
+    "JavaScript/dist/tests.shaders.cross.js"
+    "JavaScript/dist/tests.perf.glbAnimation.js")
 
 file(GLOB TEST_SCRIPTS "JavaScript/src/*.ts")
 set_source_files_properties(${TEST_SCRIPTS} PROPERTIES HEADER_FILE_ONLY TRUE)
@@ -25,6 +29,7 @@ set(SOURCES
     "Source/Tests.ExternalTexture.cpp"
     "Source/Tests.ExternalTexture.Msaa.cpp"
     "Source/Tests.JavaScript.cpp"
+    "Source/Tests.Perf.GLBAnimation.cpp"
     "Source/Tests.ShaderCache.cpp"
     "Source/Tests.ShaderCompilation.cpp"
     "Source/Tests.UniformPadding.cpp"
@@ -58,7 +63,7 @@ elseif(WIN32)
     set(SOURCES ${SOURCES} "Source/App.Win32.cpp")
 endif()
 
-add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
+add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${BABYLONJS_LOADERS_ASSETS} ${TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
 target_link_libraries(UnitTests
     PRIVATE AppRuntime
     PRIVATE Blob
@@ -96,7 +101,7 @@ if(ANGLE_LIBEGL)
     )
 endif()
 
-foreach(ASSET ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS})
+foreach(ASSET ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${BABYLONJS_LOADERS_ASSETS} ${TEST_ASSETS})
     get_filename_component(ASSET_NAME "${ASSET}" NAME)
     add_custom_command(
         OUTPUT "${CMAKE_CFG_INTDIR}/Assets/${ASSET_NAME}"
@@ -109,5 +114,6 @@ set_property(TARGET UnitTests PROPERTY FOLDER Apps)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs PREFIX Assets FILES ${BABYLONJS_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs-materials PREFIX Assets FILES ${BABYLONJS_MATERIALS_ASSETS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs-loaders PREFIX Assets FILES ${BABYLONJS_LOADERS_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/dist PREFIX Assets FILES ${TEST_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/src PREFIX TypeScript FILES ${TEST_SCRIPTS})
