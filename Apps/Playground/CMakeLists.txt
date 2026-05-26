@@ -14,7 +14,6 @@ set(DEPENDENCIES
 
 set(SCRIPTS
     "Scripts/experience.js"
-    "Scripts/file_polyfill.js"
     "Scripts/playground_runner.js"
     "Scripts/validation_native.js"
     "Scripts/config.json")
@@ -141,6 +140,7 @@ target_link_libraries(Playground
     PRIVATE Canvas
     PRIVATE Console
     PRIVATE ExternalTexture
+    PRIVATE File
     PRIVATE GraphicsDevice
     PRIVATE NativeCamera
     PRIVATE NativeCapture

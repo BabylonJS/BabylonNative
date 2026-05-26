@@ -20,6 +20,7 @@
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/Polyfills/Console.h>
+#include <Babylon/Polyfills/File.h>
 #include <Babylon/Polyfills/Performance.h>
 #include <Babylon/Polyfills/TextDecoder.h>
 #include <Babylon/Polyfills/Window.h>
@@ -156,6 +157,7 @@ AppContext::AppContext(
         }
 
         Babylon::Polyfills::Blob::Initialize(env);
+        Babylon::Polyfills::File::Initialize(env);
 
         Babylon::Polyfills::Console::Initialize(env, [env, debugLog](const char* message, Babylon::Polyfills::Console::LogLevel logLevel) {
             std::ostringstream ss{};
@@ -211,7 +213,6 @@ AppContext::AppContext(
     });
 
     m_scriptLoader.emplace(*m_runtime);
-    m_scriptLoader->LoadScript("app:///Scripts/file_polyfill.js");
     m_scriptLoader->LoadScript("app:///Scripts/ammo.js");
     // Commenting out recast.js for now because v8jsi is incompatible with asm.js.
     // m_scriptLoader->LoadScript("app:///Scripts/recast.js");
