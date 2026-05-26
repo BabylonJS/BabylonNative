@@ -15,9 +15,14 @@
 //
 // The summary is printed to stdout at the end of the test.
 
-#include "App.h"
-
+// IMPORTANT (Linux include order): <gtest/gtest.h> MUST be included before any header that
+// transitively pulls in <X11/Xlib.h>. Xlib defines `Bool`, `True`, `False`, `None`, etc. as
+// preprocessor macros, which collide with gtest's `internal::ParamGenerator<bool> Bool()`
+// template function (and other identifiers). Including gtest first keeps gtest's symbols
+// intact; user code below can then deal with Xlib pollution locally if needed.
 #include <gtest/gtest.h>
+
+#include "App.h"
 
 #include <Babylon/AppRuntime.h>
 #include <Babylon/Graphics/Device.h>
@@ -57,7 +62,10 @@
 namespace
 {
     using PerfClock = std::chrono::steady_clock;
-    using ByteCount = std::int64_t;
+    // Signed because we report deltas; aliased on top of int64_t rather than reusing one of the
+    // many platform "ByteCount" typedefs (Apple's MacTypes.h has `typedef unsigned long ByteCount`
+    // in the global namespace, which would create ambiguous lookups against our local type).
+    using MemBytes = std::int64_t;
 
     double DurationMs(PerfClock::duration d)
     {
@@ -77,14 +85,14 @@ namespace
     // (Chakra/V8/QuickJS/JSC all ultimately route to one of those). This is the right metric
     // for cross-engine comparison because it does not depend on which allocator the engine
     // chose. Returns 0 when unavailable (e.g. unsupported platform or syscall failure).
-    ByteCount QueryPrivateBytes()
+    MemBytes QueryPrivateBytes()
     {
 #if defined(_WIN32)
         PROCESS_MEMORY_COUNTERS_EX pmc{};
         pmc.cb = sizeof(pmc);
         if (::K32GetProcessMemoryInfo(::GetCurrentProcess(), reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&pmc), sizeof(pmc)))
         {
-            return static_cast<ByteCount>(pmc.PrivateUsage);
+            return static_cast<MemBytes>(pmc.PrivateUsage);
         }
         return 0;
 #elif defined(__APPLE__)
@@ -93,7 +101,7 @@ namespace
         if (task_info(mach_task_self(), TASK_VM_INFO, reinterpret_cast<task_info_t>(&info), &count) == KERN_SUCCESS)
         {
             // phys_footprint matches Activity Monitor's "Memory" column.
-            return static_cast<ByteCount>(info.phys_footprint);
+            return static_cast<MemBytes>(info.phys_footprint);
         }
         return 0;
 #elif defined(__linux__) || defined(__ANDROID__)
@@ -118,7 +126,7 @@ namespace
 #endif
     }
 
-    std::string FormatBytesDelta(ByteCount bytes)
+    std::string FormatBytesDelta(MemBytes bytes)
     {
         const char sign = bytes < 0 ? '-' : '+';
         const double abs = static_cast<double>(bytes < 0 ? -bytes : bytes);
@@ -144,7 +152,7 @@ namespace
     {
         std::string Label;
         double Ms;
-        ByteCount DeltaBytes;
+        MemBytes DeltaBytes;
         bool HasMemDelta;
     };
 
@@ -167,7 +175,7 @@ TEST(Perf, GLBAnimation)
 
     std::mutex perfMutex;
     std::vector<PerfEntry> perfEntries;
-    auto logPerf = [&](std::string label, double ms, ByteCount deltaBytes, bool hasMemDelta) {
+    auto logPerf = [&](std::string label, double ms, MemBytes deltaBytes, bool hasMemDelta) {
         std::scoped_lock lock{perfMutex};
         perfEntries.push_back({std::move(label), ms, deltaBytes, hasMemDelta});
     };
@@ -277,7 +285,7 @@ TEST(Perf, GLBAnimation)
                 const auto ms = info[1].As<Napi::Number>().DoubleValue();
                 if (info.Length() >= 3 && info[2].IsNumber())
                 {
-                    const auto deltaBytes = static_cast<ByteCount>(info[2].As<Napi::Number>().DoubleValue());
+                    const auto deltaBytes = static_cast<MemBytes>(info[2].As<Napi::Number>().DoubleValue());
                     logPerf(std::move(label), ms, deltaBytes, true);
                 }
                 else
