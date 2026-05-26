@@ -242,22 +242,8 @@
             if (currentScene.activeCamera && currentScene.activeCamera.useAutoRotationBehavior) {
                 currentScene.activeCamera.useAutoRotationBehavior = false;
             }
-            // Wait for GUI ADTs (e.g. images loaded after parseFromSnippetAsync)
-            // before counting comparison frames, matching BJS Playwright runner.
-            var sceneAdts = currentScene.textures.filter(function (t) {
-                return t.getClassName() === "AdvancedDynamicTexture";
-            });
-            var guiSettleFrames = sceneAdts.length > 0 ? 1 : 0;
             engine.runRenderLoop(function () {
                 try {
-                    if (guiSettleFrames > 0) {
-                        currentScene.render();
-                        if (sceneAdts.every(function (adt) { return adt.guiIsReady(); })) {
-                            guiSettleFrames--;
-                        }
-                        return;
-                    }
-
                     frameIndex++;
 
                     if (captureFrame > 0 && frameIndex === captureFrame && TestUtils.captureNextFrame) {
