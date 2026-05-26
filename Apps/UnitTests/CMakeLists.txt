@@ -20,6 +20,10 @@ set(TEST_ASSETS
     "JavaScript/dist/tests.shaders.cross.js"
     "JavaScript/dist/tests.perf.glbAnimation.js")
 
+# GLB binary assets used by Perf.GLBAnimation. Globbed so dropping additional .glb files
+# into the `glb/` folder picks them up automatically without editing CMakeLists.
+file(GLOB GLB_ASSETS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "glb/*.glb")
+
 file(GLOB TEST_SCRIPTS "JavaScript/src/*.ts")
 set_source_files_properties(${TEST_SCRIPTS} PROPERTIES HEADER_FILE_ONLY TRUE)
 
@@ -63,7 +67,7 @@ elseif(WIN32)
     set(SOURCES ${SOURCES} "Source/App.Win32.cpp")
 endif()
 
-add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${BABYLONJS_LOADERS_ASSETS} ${TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
+add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${BABYLONJS_LOADERS_ASSETS} ${TEST_ASSETS} ${GLB_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
 target_link_libraries(UnitTests
     PRIVATE AppRuntime
     PRIVATE Blob
@@ -75,6 +79,7 @@ target_link_libraries(UnitTests
     PRIVATE NativeEncoding
     PRIVATE ScriptLoader
     PRIVATE ShaderCache
+    PRIVATE TestUtils
     PRIVATE Window
     PRIVATE XMLHttpRequest
     PRIVATE gtest_main
@@ -110,6 +115,18 @@ foreach(ASSET ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${BABYLONJS_LOAD
         MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${ASSET}")
 endforeach()
 
+# Copy every glb/*.glb next to the executable (preserving the `glb` subfolder), the same
+# way Apps/Playground copies ReferenceImages. The TestUtils plugin's listFiles("glb")
+# enumerates this folder at runtime so the JS benchmark iterates every file present.
+foreach(GLB ${GLB_ASSETS})
+    get_filename_component(GLB_NAME "${GLB}" NAME)
+    add_custom_command(
+        OUTPUT "${CMAKE_CFG_INTDIR}/glb/${GLB_NAME}"
+        COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${GLB}" "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/glb/${GLB_NAME}"
+        COMMENT "Copying ${GLB_NAME}"
+        MAIN_DEPENDENCY "${CMAKE_CURRENT_SOURCE_DIR}/${GLB}")
+endforeach()
+
 set_property(TARGET UnitTests PROPERTY FOLDER Apps)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs PREFIX Assets FILES ${BABYLONJS_ASSETS})
@@ -117,3 +134,6 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs-material
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs-loaders PREFIX Assets FILES ${BABYLONJS_LOADERS_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/dist PREFIX Assets FILES ${TEST_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/src PREFIX TypeScript FILES ${TEST_SCRIPTS})
+if(GLB_ASSETS)
+    source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX Assets FILES ${GLB_ASSETS})
+endif()

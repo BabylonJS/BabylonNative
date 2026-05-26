@@ -534,14 +534,24 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _babylonjs_core__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_babylonjs_core__WEBPACK_IMPORTED_MODULE_2__);
 function _createForOfIteratorHelper(r, e) {var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];if (!t) {if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) {t && (r = t);var _n = 0,F = function F() {};return { s: F, n: function n() {return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] };}, e: function e(r) {throw r;}, f: F };}throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");}var o,a = !0,u = !1;return { s: function s() {t = t.call(r);}, n: function n() {var r = t.next();return a = r.done, r;}, e: function e(r) {u = !0, o = r;}, f: function f() {try {a || null == t.return || t.return();} finally {if (u) throw o;}} };}function _unsupportedIterableToArray(r, a) {if (r) {if ("string" == typeof r) return _arrayLikeToArray(r, a);var t = {}.toString.call(r).slice(8, -1);return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0;}}function _arrayLikeToArray(r, a) {(null == a || a > r.length) && (a = r.length);for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];return n;} // JS-side scaffolding for Tests.Perf.GLBAnimation.cpp.
 //
-// Loads Horse.glb from raw.githubusercontent.com, then steps every animation in the GLB frame
-// by frame (group.from -> group.to in increments of 1) and renders each step via scene.render().
+// Enumerates `<exe-dir>/glb/*.glb` via TestUtils.listFiles (exposed by the TestUtils
+// plugin), then for each GLB: fetches the bytes, parses them through SceneLoader, and steps
+// every animation in the asset frame by frame (group.from -> group.to in increments of 1)
+// rendering each step via scene.render().
 //
-// Phase timings are reported back to C++ through four globals that the C++ side installs:
-//   _perfNow(): number                             -- high-resolution wall time in ms (sub-ms)
-//   _perfReport(label: string, durationMs: number) -- record a labeled timing
-//   _perfDone()                                    -- signal end of benchmark
-//   _perfFail(reason: string)                      -- signal a JS-side failure and end benchmark
+// Phase timings (and memory deltas) are reported back to C++ through five globals that the
+// C++ side installs:
+//   _perfNow(): number                                              -- wall time ms (sub-ms)
+//   _memBytes(): number                                             -- process private bytes
+//   _perfReport(label, durationMs[, deltaBytes])                    -- record a labeled timing
+//   _perfDone()                                                     -- signal end of benchmark
+//   _perfFail(reason)                                               -- signal a JS-side failure
+//
+// Memory deltas are computed against the process-level private byte counter (Win32
+// PrivateUsage / macOS phys_footprint / Linux VmData) -- engine-agnostic since it does not
+// depend on which allocator the JS engine uses internally. This lets the benchmark serve as
+// a cross-engine memory comparison: same phases, same labels, different engine -> different
+// deltas.
 //
 // All timings on this side use _perfNow() (steady_clock-backed, sub-millisecond resolution).
 
@@ -552,8 +562,21 @@ function _createForOfIteratorHelper(r, e) {var t = "undefined" != typeof Symbol 
 
 
 
-var HORSE_GLB_URL =
-"https://raw.githubusercontent.com/CedricGuillemet/dump/master/Horse.glb";
+
+
+
+
+
+// Installed by the TestUtils plugin on the C++ side; listFiles enumerates regular files
+// in <exe-dir>/<relativePath> (basenames only, sorted, no recursion).
+
+
+
+
+// GLB binaries are copied next to the executable under `glb/` by Apps/UnitTests/CMakeLists.txt.
+// The same string is used both to list them and to build the per-file `app:///` URL.
+var GLB_FOLDER = "glb";
+
 
 
 
@@ -578,17 +601,24 @@ group)
     var min = Number.POSITIVE_INFINITY;
     var max = 0;
     var start = _perfNow();
+    // Memory delta is captured per group (not per frame): per-frame deltas would be ~0
+    // for most engines once the steady-state allocator is warmed up, and the noise from
+    // GC events would swamp the signal. Per-group totals show the net retained growth
+    // across rendering an entire animation.
+    var memStart = _memBytes();
 
     var _tick = function tick() {
       if (currentFrame > to) {
         engine.stopRenderLoop(_tick);
         var totalMs = _perfNow() - start;
+        var deltaBytes = _memBytes() - memStart;
         resolve({
           frameCount: count,
           totalMs: totalMs,
           minMs: count > 0 ? min : 0,
           maxMs: max,
-          avgMs: count > 0 ? sum / count : 0
+          avgMs: count > 0 ? sum / count : 0,
+          deltaBytes: deltaBytes
         });
         return;
       }
@@ -622,16 +652,19 @@ count)
     var min = Number.POSITIVE_INFINITY;
     var max = 0;
     var start = _perfNow();
+    var memStart = _memBytes();
     var _tick2 = function tick() {
       if (i >= count) {
         engine.stopRenderLoop(_tick2);
         var totalMs = _perfNow() - start;
+        var deltaBytes = _memBytes() - memStart;
         resolve({
           frameCount: i,
           totalMs: totalMs,
           minMs: i > 0 ? min : 0,
           maxMs: max,
-          avgMs: i > 0 ? sum / i : 0
+          avgMs: i > 0 ? sum / i : 0,
+          deltaBytes: deltaBytes
         });
         return;
       }
@@ -652,67 +685,133 @@ count)
 }
 
 function reportFrameStats(label, result) {
-  // Report the totals and individual frame stats as separate entries. The frame count is
-  // embedded in the label (not passed as a ms value) so it is not formatted/aggregated as a
-  // duration in the C++ summary.
-  _perfReport(label + " (frames=" + result.frameCount + ") total (sum)", result.totalMs);
+  // The total carries the memory delta for the whole group; min/max/avg are pure per-frame
+  // timing stats and have no associated mem delta (would be misleading at per-frame scale).
+  _perfReport(
+    label + " (frames=" + result.frameCount + ") total (sum)",
+    result.totalMs,
+    result.deltaBytes
+  );
   _perfReport(label + "   min frame", result.minMs);
   _perfReport(label + "   max frame", result.maxMs);
   _perfReport(label + "   avg frame", result.avgMs);
-}function
+}
 
-runBenchmark() {return _runBenchmark.apply(this, arguments);}function _runBenchmark() {_runBenchmark = (0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee() {var jsStart, setupStart, engine, scene, loadStart, container, addStart, readyStart, groups, renderAllStart, result, _iterator, _step, group, _result, label, _t;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context) {while (1) switch (_context.prev = _context.next) {case 0:
-          jsStart = _perfNow();
+// Runs the fetch -> parse -> addToScene -> render-all-animations cycle for a single GLB.
+// Each GLB gets its own NativeEngine + Scene so the per-asset timings are not polluted by
+// state held over from previous assets (animation groups, materials, GC pressure).
+function runOneGlb(_x) {return _runOneGlb.apply(this, arguments);}function _runOneGlb() {_runOneGlb = (0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee(name) {var tag, url, setupT0, setupM0, engine, scene, fetchT0, fetchM0, buffer, parseT0, parseM0, container, addT0, addM0, readyT0, readyM0, groups, renderAllStart, renderAllMemStart, result, _iterator, _step, group, _result, label, disposeT0, disposeM0, _t;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context) {while (1) switch (_context.prev = _context.next) {case 0:
+          tag = "'" + name + "'";
+          url = "app:///" + GLB_FOLDER + "/" + name;
 
-          // 1. Engine + Scene + Camera setup.
-          setupStart = _perfNow();
+          // Engine + Scene + Camera (per-GLB so each measurement starts clean).
+          setupT0 = _perfNow();
+          setupM0 = _memBytes();
           engine = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_2__.NativeEngine();
           scene = new _babylonjs_core__WEBPACK_IMPORTED_MODULE_2__.Scene(engine);
           scene.createDefaultCamera(true, true, true);
-          _perfReport("[JS]     NativeEngine + Scene + DefaultCamera", _perfNow() - setupStart);
+          _perfReport("[JS]     " + tag + " setup (NativeEngine+Scene+Camera)",
+          _perfNow() - setupT0, _memBytes() - setupM0);
 
-          // 2. GLB fetch + parse.
-          loadStart = _perfNow();_context.next = 1;return (
+          // Fetch the GLB bytes from the local app:/// URL (XHR -> file read, no network).
+          fetchT0 = _perfNow();
+          fetchM0 = _memBytes();_context.next = 1;return (
+            _babylonjs_core__WEBPACK_IMPORTED_MODULE_2__.Tools.LoadFileAsync(url, true));case 1:buffer = _context.sent;
+          _perfReport(
+            "[JS]     " + tag + " fetch (XHR arraybuffer, " + buffer.byteLength + " bytes)",
+            _perfNow() - fetchT0, _memBytes() - fetchM0
+          );
+
+          // Parse the GLB through the SceneLoader using the already-fetched bytes.
+          // Passing a Uint8Array bypasses the URL fetch path; pluginExtension tells the loader
+          // which plugin (glTF 2.0) to use since there is no filename to infer it from.
+          parseT0 = _perfNow();
+          parseM0 = _memBytes();_context.next = 2;return (
             _babylonjs_core__WEBPACK_IMPORTED_MODULE_2__.SceneLoader.LoadAssetContainerAsync(
               "",
-              HORSE_GLB_URL,
-              scene
-            ));case 1:container = _context.sent;
-          _perfReport("[JS]     Horse.glb load (fetch + parse)", _perfNow() - loadStart);
+              new Uint8Array(buffer),
+              scene,
+              undefined,
+              ".glb"
+            ));case 2:container = _context.sent;
+          _perfReport("[JS]     " + tag + " parse (SceneLoader)",
+          _perfNow() - parseT0, _memBytes() - parseM0);
 
-          // 3. addAllToScene.
-          addStart = _perfNow();
+          // addAllToScene.
+          addT0 = _perfNow();
+          addM0 = _memBytes();
           container.addAllToScene();
-          _perfReport("[JS]     addAllToScene", _perfNow() - addStart);
+          _perfReport("[JS]     " + tag + " addAllToScene",
+          _perfNow() - addT0, _memBytes() - addM0);
 
-          // 4. Wait for scene to be fully ready (textures, materials, etc.).
-          readyStart = _perfNow();_context.next = 2;return (
-            scene.whenReadyAsync());case 2:
-          _perfReport("[JS]     scene.whenReadyAsync", _perfNow() - readyStart);
+          // Wait for scene to be fully ready (textures, materials, etc.).
+          readyT0 = _perfNow();
+          readyM0 = _memBytes();_context.next = 3;return (
+            scene.whenReadyAsync());case 3:
+          _perfReport("[JS]     " + tag + " scene.whenReadyAsync",
+          _perfNow() - readyT0, _memBytes() - readyM0);
 
           groups = container.animationGroups;
-          _perfReport("[JS]     animation groups discovered: count=".concat(groups.length), 0);
+          _perfReport("[JS]     " + tag + " animation groups discovered: count=" + groups.length, 0);
 
-          // 5. Step through every animation frame by frame.
-          renderAllStart = _perfNow();if (!(
-          groups.length === 0)) {_context.next = 4;break;}_context.next = 3;return (
-            renderStaticFrames(engine, scene, 1));case 3:result = _context.sent;
-          reportFrameStats("[JS]     (no animations) static frame", result);_context.next = 12;break;case 4:_iterator = _createForOfIteratorHelper(
+          // Step through every animation frame by frame.
+          renderAllStart = _perfNow();
+          renderAllMemStart = _memBytes();if (!(
+          groups.length === 0)) {_context.next = 5;break;}_context.next = 4;return (
+            renderStaticFrames(engine, scene, 1));case 4:result = _context.sent;
+          reportFrameStats("[JS]     " + tag + " (no animations) static frame", result);_context.next = 13;break;case 5:_iterator = _createForOfIteratorHelper(
 
-            groups);_context.prev = 5;_iterator.s();case 6:if ((_step = _iterator.n()).done) {_context.next = 9;break;}group = _step.value;
+            groups);_context.prev = 6;_iterator.s();case 7:if ((_step = _iterator.n()).done) {_context.next = 10;break;}group = _step.value;
           // Disable looping so goToFrame is purely a pose set, not a play.
-          group.loopAnimation = false;_context.next = 7;return (
-            stepAnimationGroup(engine, scene, group));case 7:_result = _context.sent;
+          group.loopAnimation = false;_context.next = 8;return (
+            stepAnimationGroup(engine, scene, group));case 8:_result = _context.sent;
           label =
-          "[JS]     '" + group.name + "' " +
+          "[JS]     " + tag + " '" + group.name + "' " +
           "range=[" + group.from + ", " + group.to + "]";
-          reportFrameStats(label, _result);case 8:_context.next = 6;break;case 9:_context.next = 11;break;case 10:_context.prev = 10;_t = _context["catch"](5);_iterator.e(_t);case 11:_context.prev = 11;_iterator.f();return _context.finish(11);case 12:
+          reportFrameStats(label, _result);case 9:_context.next = 7;break;case 10:_context.next = 12;break;case 11:_context.prev = 11;_t = _context["catch"](6);_iterator.e(_t);case 12:_context.prev = 12;_iterator.f();return _context.finish(12);case 13:
 
 
-          _perfReport("[JS]     render all animations (sum)", _perfNow() - renderAllStart);
+          _perfReport("[JS]     " + tag + " render all animations (sum)",
+          _perfNow() - renderAllStart, _memBytes() - renderAllMemStart);
 
-          _perfReport("[JS]     benchmark total (JS-side wall time)", _perfNow() - jsStart);
-          _perfDone();case 13:case "end":return _context.stop();}}, _callee, null, [[5, 10, 11, 12]]);}));return _runBenchmark.apply(this, arguments);}
+          // Dispose so the next GLB starts with a fresh engine/scene state.
+          disposeT0 = _perfNow();
+          disposeM0 = _memBytes();
+          scene.dispose();
+          engine.dispose();
+          _perfReport("[JS]     " + tag + " dispose (scene+engine)",
+          _perfNow() - disposeT0, _memBytes() - disposeM0);case 14:case "end":return _context.stop();}}, _callee, null, [[6, 11, 12, 13]]);}));return _runOneGlb.apply(this, arguments);}function
+
+
+runBenchmark() {return _runBenchmark.apply(this, arguments);}function _runBenchmark() {_runBenchmark = (0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().mark(function _callee2() {var jsStart, jsMemStart, names, _iterator2, _step2, name, _t2;return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1___default().wrap(function (_context2) {while (1) switch (_context2.prev = _context2.next) {case 0:
+          jsStart = _perfNow();
+          jsMemStart = _memBytes();if (!(
+
+          typeof TestUtils === "undefined" || typeof TestUtils.listFiles !== "function")) {_context2.next = 1;break;}throw (
+            new Error("TestUtils.listFiles not available -- TestUtils plugin not initialized?"));case 1:
+
+
+          names = TestUtils.listFiles(GLB_FOLDER).filter(function (n) {return n.toLowerCase().endsWith(".glb");});
+          _perfReport("[JS]     glb files discovered: count=" + names.length, 0);if (!(
+
+          names.length === 0)) {_context2.next = 2;break;}
+          _perfFail(
+            "No .glb files found in '" + GLB_FOLDER + "/' next to the executable. " +
+            "Drop at least one .glb into Apps/UnitTests/glb/ and rebuild."
+          );return _context2.abrupt("return");case 2:_iterator2 = _createForOfIteratorHelper(
+
+
+
+            names);_context2.prev = 3;_iterator2.s();case 4:if ((_step2 = _iterator2.n()).done) {_context2.next = 6;break;}name = _step2.value;_context2.next = 5;return (
+            runOneGlb(name));case 5:_context2.next = 4;break;case 6:_context2.next = 8;break;case 7:_context2.prev = 7;_t2 = _context2["catch"](3);_iterator2.e(_t2);case 8:_context2.prev = 8;_iterator2.f();return _context2.finish(8);case 9:
+
+
+          _perfReport(
+            "[JS]     benchmark total (JS-side wall time)",
+            _perfNow() - jsStart,
+            _memBytes() - jsMemStart
+          );
+          _perfDone();case 10:case "end":return _context2.stop();}}, _callee2, null, [[3, 7, 8, 9]]);}));return _runBenchmark.apply(this, arguments);}
 
 
 runBenchmark().catch(function (err) {
