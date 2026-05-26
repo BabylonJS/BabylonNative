@@ -124,10 +124,10 @@ function renderStaticFrames(
 }
 
 function reportFrameStats(label: string, result: StepResult): void {
-    // Report the totals and individual stats as separate entries so the C++ summary lines
-    // them up under each other in the order they were observed.
-    _perfReport(label + " total (sum)", result.totalMs);
-    _perfReport(label + "   frames", result.frameCount);
+    // Report the totals and individual frame stats as separate entries. The frame count is
+    // embedded in the label (not passed as a ms value) so it is not formatted/aggregated as a
+    // duration in the C++ summary.
+    _perfReport(label + " (frames=" + result.frameCount + ") total (sum)", result.totalMs);
     _perfReport(label + "   min frame", result.minMs);
     _perfReport(label + "   max frame", result.maxMs);
     _perfReport(label + "   avg frame", result.avgMs);

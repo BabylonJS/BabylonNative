@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "babylonjs": "^9.3.4",
+    "babylonjs-loaders": "^9.3.4",
     "babylonjs-materials": "^9.3.4",
     "chai": "^5.2.0",
     "jsc-android": "^241213.1.0",

@@ -27,6 +27,7 @@
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/ScriptLoader.h>
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
@@ -78,6 +79,14 @@ namespace
 
 TEST(Perf, GLBAnimation)
 {
+    // This is a wall-clock performance benchmark; running it as part of the default UnitTests
+    // suite would add multi-second network/render time and noisy numbers to every dev/CI run.
+    // Opt in by setting BN_RUN_PERF_TESTS=1 in the environment.
+    if (const char* env = std::getenv("BN_RUN_PERF_TESTS"); !env || std::string{env} == "0")
+    {
+        GTEST_SKIP() << "Perf.GLBAnimation is opt-in; set BN_RUN_PERF_TESTS=1 to run it.";
+    }
+
     const auto totalStart = PerfClock::now();
 
     std::mutex perfMutex;
@@ -266,6 +275,7 @@ TEST(Perf, GLBAnimation)
         std::scoped_lock lock{perfMutex};
         for (const auto& e : perfEntries)
         {
+            // Parenthesized to suppress the Windows <windows.h> `max` macro expansion.
             labelWidth = (std::max)(labelWidth, e.Label.size());
         }
     }
