@@ -1,17 +1,22 @@
-// Cube texture fallback for BN's NativeEngine.
-//
-// BN's NativeEngine.createCubeTexture only natively handles .env single-file
-// cubemaps and 6-file face arrays. Snippets that load .dds (or .ktx) cubemaps
-// without an explicit forcedExtension or 6-file array throw "Cannot load
-// cubemap because 6 files were not defined".
-//
-// Babylon's standard environment cubemaps are hosted both as <name>.dds and
-// <name>.env at the same path on assets.babylonjs.com and
-// playground.babylonjs.com. This polyfill detects the failure pre-condition
-// and transparently retries with the .env URL. If the .env counterpart 404s,
-// it falls through to the original (which throws), preserving existing
-// behavior.
+#include <Babylon/Polyfills/CubeTexture.h>
 
+#include <napi/env.h>
+
+namespace Babylon::Polyfills::CubeTexture
+{
+    namespace
+    {
+        // Embedded polyfill source. Kept verbatim from the original Playground
+        // cube_texture_polyfill.js (PR #1710 v0) so behaviour stays identical:
+        //   - Patches BABYLON.NativeEngine.prototype.createCubeTexture.
+        //   - Triggers only when the URL ends in .dds / .ktx / .ktx2 and no
+        //     forcedExtension, 6-file array, or raw buffer was supplied.
+        //   - Retries via NativeEngine._loadFile to fetch the .env counterpart;
+        //     on 404 falls back to the original (which throws), preserving the
+        //     existing failure mode.
+        //   - Idempotent via the __cubeTexturePolyfillInstalled marker on the
+        //     prototype.
+        constexpr const char* JS_SOURCE = R"javascript(
 (function () {
     "use strict";
 
@@ -92,7 +97,7 @@
             });
         };
 
-        var onEnvFailed = function (request, exception) {
+        var onEnvFailed = function (/* request, exception */) {
             settle(function () {
                 original.call(self, rootUrl, scene, files, noMipmap, onLoad, onError, format, forcedExtension, createPolynomials, lodScale, lodOffset, texture, loaderOptions, useSRGBBuffer, buffer);
             });
@@ -108,6 +113,22 @@
     };
 
     if (typeof console !== "undefined" && console.log) {
-        console.log("[cube_texture_polyfill] NativeEngine.createCubeTexture patched with .env fallback");
+        console.log("[CubeTexture polyfill] NativeEngine.createCubeTexture patched with .env fallback");
     }
 })();
+)javascript";
+
+        constexpr const char* JS_SOURCE_URL = "babylon-native://polyfills/CubeTexture.js";
+    }
+
+    void Initialize(Napi::Env env)
+    {
+        // The free function Napi::Eval(env, source, url) is declared by every
+        // engine-specific <napi/env.h> across both N-API trees (Chakra, V8,
+        // JavaScriptCore in Core/Node-API/Include/Engine/<X>/, and JSI in
+        // Core/Node-API-JSI/Include/napi/). Using it uniformly avoids the
+        // Shared-only env.RunScript() which is missing from the JSI tree.
+        Napi::HandleScope scope{env};
+        Napi::Eval(env, JS_SOURCE, JS_SOURCE_URL);
+    }
+}

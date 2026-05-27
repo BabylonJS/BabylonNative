@@ -30,6 +30,7 @@ target_link_libraries(BabylonNativeJNI
     PRIVATE Blob
     PRIVATE Canvas
     PRIVATE Console
+    PRIVATE CubeTexture
     PRIVATE File
     PRIVATE GraphicsDevice
     PRIVATE NativeCamera

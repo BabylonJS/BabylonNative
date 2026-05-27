@@ -20,6 +20,7 @@
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/Polyfills/Console.h>
+#include <Babylon/Polyfills/CubeTexture.h>
 #include <Babylon/Polyfills/File.h>
 #include <Babylon/Polyfills/Performance.h>
 #include <Babylon/Polyfills/TextDecoder.h>
@@ -217,7 +218,13 @@ AppContext::AppContext(
     // Commenting out recast.js for now because v8jsi is incompatible with asm.js.
     // m_scriptLoader->LoadScript("app:///Scripts/recast.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylon.max.js");
-    m_scriptLoader->LoadScript("app:///Scripts/cube_texture_polyfill.js");
+    // CubeTexture polyfill must run AFTER babylon.max.js is evaluated because
+    // it patches BABYLON.NativeEngine.prototype.createCubeTexture. The
+    // ScriptLoader's Dispatch is ordered against LoadScript on the same task
+    // chain, so this is guaranteed to run after babylon.max.js completes.
+    m_scriptLoader->Dispatch([](Napi::Env env) {
+        Babylon::Polyfills::CubeTexture::Initialize(env);
+    });
     m_scriptLoader->LoadScript("app:///Scripts/babylonjs.loaders.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylonjs.materials.js");
     m_scriptLoader->LoadScript("app:///Scripts/babylon.gui.js");

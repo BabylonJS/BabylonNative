@@ -13,7 +13,6 @@ set(DEPENDENCIES
     "../Dependencies/recast.js")
 
 set(SCRIPTS
-    "Scripts/cube_texture_polyfill.js"
     "Scripts/experience.js"
     "Scripts/playground_runner.js"
     "Scripts/validation_native.js"
@@ -140,6 +139,7 @@ target_link_libraries(Playground
     PRIVATE bx
     PRIVATE Canvas
     PRIVATE Console
+    PRIVATE CubeTexture
     PRIVATE ExternalTexture
     PRIVATE File
     PRIVATE GraphicsDevice
