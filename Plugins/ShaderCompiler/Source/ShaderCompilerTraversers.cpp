@@ -1256,6 +1256,17 @@ namespace Babylon::ShaderCompilerTraversers
                     // function-call temporaries in the generated HLSL/SPIR-V.
                     auto& qualifiers = call->getQualifierList();
 
+                    // Invariant: glslang populates the qualifier list in lockstep with args for
+                    // every EOpFunctionCall reaching this rewriter. If they ever disagree, we
+                    // must fail loudly -- silently degrading would re-introduce the very bug
+                    // this pass exists to fix (qualifiers OOB-read -> elided OpStore ->
+                    // uninitialized texture access -> accessChain.isRValue() assert).
+                    if (qualifiers.size() != args.size())
+                    {
+                        throw std::runtime_error{
+                            "SamplerFunctionParameterSplitter: call qualifier list size does not match argument list size"};
+                    }
+
                     // Process right-to-left so earlier sampler indices remain valid as we
                     // expand each `EOpConstructTextureSampler(t, s)` argument into two args.
                     for (auto it = info.OriginalSamplerParamIndices.rbegin(); it != info.OriginalSamplerParamIndices.rend(); ++it)
@@ -1291,10 +1302,7 @@ namespace Babylon::ShaderCompilerTraversers
                         // sampler inherit the original sampler argument's qualifier (typically
                         // EvqIn for function parameters); samplers are opaque types so glslang
                         // takes the originalParam l-value path regardless.
-                        if (idx < gsl::narrow_cast<int>(qualifiers.size()))
-                        {
-                            qualifiers.insert(qualifiers.begin() + idx + 1, qualifiers[idx]);
-                        }
+                        qualifiers.insert(qualifiers.begin() + idx + 1, qualifiers[idx]);
                     }
 
                     call->setName(info.NewMangledName.c_str());
