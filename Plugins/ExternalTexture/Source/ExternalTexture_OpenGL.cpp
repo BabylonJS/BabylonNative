@@ -11,6 +11,8 @@
 
 namespace Babylon::Plugins
 {
+    // Suppress C4702 for the shared dispatcher - Impl stubs always throw,
+    // making the dispatcher's post-call code unreachable.
     class ExternalTexture::Impl final : public ImplBase
     {
     public:
@@ -36,4 +38,13 @@ namespace Babylon::Plugins
     };
 }
 
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4702) // unreachable code (Impl stubs always throw)
+#endif
+
 #include "ExternalTexture_Shared.h"
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
