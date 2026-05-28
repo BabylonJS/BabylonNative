@@ -120,7 +120,21 @@ namespace Diagnostics
             return;
         }
 
+#if defined(__SANITIZE_ADDRESS__)
+        // Under ASAN the sanitizer runtime installs its own SEH /
+        // _set_invalid_parameter_handler / abort hooks and provides its
+        // own crash diagnostics. Letting bx install its handlers on top
+        // (since bgfx commit eed706f, "Suppress MSVC CRT assert dialogs")
+        // adds a _set_thread_local_invalid_parameter_handler + SEH
+        // top-level filter + _set_purecall_handler that BN doesn't
+        // override -- inside those, bx walks the callstack via dbghelp,
+        // which can deadlock against ASAN's allocator lock when a
+        // sanitizer-instrumented allocation races with handler entry.
+        // BN's own _set_invalid_parameter_handler / SIGABRT / CRT report
+        // hooks below cover the diagnostics paths we actually rely on.
+#else
         bx::installExceptionHandler();
+#endif
 
 #if defined(_MSC_VER)
         // Route assert() to stderr instead of UCRT's modal dialog. Covers the
