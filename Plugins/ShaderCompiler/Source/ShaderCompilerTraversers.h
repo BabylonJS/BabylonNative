@@ -78,6 +78,32 @@ namespace Babylon::ShaderCompilerTraversers
     /// the expectations of native platforms.
     void SplitSamplersIntoSamplersAndTextures(glslang::TProgram& program, IdGenerator& ids);
 
+    /// Split combined `sampler2D`/`samplerCube`/etc. function parameters of user-defined
+    /// functions into separate texture and sampler parameters. Must be called AFTER
+    /// SplitSamplersIntoSamplersAndTextures.
+    ///
+    /// The GLSL emitted by Babylon.js contains user functions that take combined
+    /// samplers as parameters and pass uniform samplers to them at the call site, e.g.
+    ///
+    ///     vec3 fetch(sampler2D s, vec2 uv) { return texture(s, uv).rgb; }
+    ///     void main() { ... fetch(myUniformSampler, uv); }
+    ///
+    /// glslang's SPIR-V emitter requires opaque (sampler) function arguments to be
+    /// l-values (it calls `accessChainGetLValue()` on them). After
+    /// SplitSamplersIntoSamplersAndTextures has rewritten the call-site sampler argument
+    /// into an `EOpConstructTextureSampler(t, s)` aggregate (an r-value), glslang
+    /// asserts at `SpvBuilder.cpp:accessChainGetLValue()`. See TPC #1584 for details.
+    ///
+    /// This pass fixes the assert by:
+    ///   1. Rewriting each user function with sampler parameters: each `sampler2D s`
+    ///      parameter becomes two parameters `texture2D sTexture, sampler s`, and every
+    ///      reference to the original `s` in the body becomes an
+    ///      `EOpConstructTextureSampler(sTexture, s)` aggregate.
+    ///   2. Rewriting every call site to such functions: the single
+    ///      `EOpConstructTextureSampler(t, s)` argument is replaced with two separate
+    ///      arguments (t and s).
+    void SplitSamplerFunctionParameters(glslang::TProgram& program, IdGenerator& ids);
+
     /// Invert dFdy operands similar to bgfx_shader.sh
     /// https://github.com/bkaradzic/bgfx/blob/7be225bf490bb1cd231cfb4abf7e617bf35b59cb/src/bgfx_shader.sh#L44-L45
     /// https://github.com/bkaradzic/bgfx/blob/7be225bf490bb1cd231cfb4abf7e617bf35b59cb/src/bgfx_shader.sh#L62-L65
