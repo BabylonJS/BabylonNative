@@ -11,26 +11,8 @@
 
 namespace Babylon::Plugins
 {
-    // ExternalTexture is not implemented on the OpenGL backend. The Impl
-    // stubs throw "not implemented" so callers get an unambiguous diagnostic
-    // matching every other backend's unimplemented path. The shared
-    // dispatchers in ExternalTexture_Shared.h (included below) call these
-    // stubs unconditionally, so MSVC's flow analysis would otherwise flag
-    // the dispatcher's post-call code as unreachable (C4702) under /WX. The
-    // pragma block around the include suppresses C4702 only for the
-    // dispatcher code instantiated in this translation unit; any other code
-    // in this file is still subject to /WX C4702 enforcement.
-    //
-    // Alternatives considered:
-    //   - [[noreturn]] on the stubs: MSVC propagates "never returns" through
-    //     the shared dispatcher, which flags *more* post-call statements as
-    //     unreachable. Tried and rejected (it made the warning worse).
-    //   - TU-wide /wd4702 via target_compile_options: silences any future
-    //     legitimate C4702 elsewhere in the same TU, defeating /WX.
-    //   - Replacing the throws with inert return-default stubs: changes
-    //     product behaviour (callers would silently receive a null texture
-    //     instead of a clear "not implemented" error) to work around a
-    //     compiler warning. Rejected on principle.
+    // Suppress C4702 for the shared dispatcher - Impl stubs always throw,
+    // making the dispatcher's post-call code unreachable.
     class ExternalTexture::Impl final : public ImplBase
     {
     public:
