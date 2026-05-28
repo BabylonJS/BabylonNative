@@ -1312,6 +1312,239 @@ namespace Babylon::ShaderCompilerTraversers
             };
         };
 
+        /// Prepends a zero-initialization assignment to the start of every function body
+        /// for each struct-typed local variable referenced anywhere in that body.
+        ///
+        /// Babylon.js emits patterns like
+        ///
+        ///     lightingInfo computeAreaLighting(...) {
+        ///         lightingInfo result;             // declared, no initializer
+        ///         result.specular += value;        // read-modify-write of an
+        ///         result.diffuse  += value;        // uninitialized field
+        ///         return result;
+        ///     }
+        ///
+        /// which is undefined behavior in GLSL but tolerated by WebGL drivers. The HLSL
+        /// emitted by SPIRV-Cross faithfully reproduces the pattern, and D3DCompile
+        /// rejects it with `error X4000: variable 'result_1' used without having been
+        /// completely initialized`.
+        ///
+        /// This pass walks every function body, collects all struct-typed local
+        /// (`EvqTemporary`) symbols it references, and prepends an assignment of an
+        /// `EOpConstructStruct(0, 0, ...)` aggregate at the start of the body. The
+        /// SPIR-V emitter sees this as a normal store and emits well-defined SPIR-V;
+        /// SPIRV-Cross then emits HLSL with the struct local initialized at declaration
+        /// (or shortly after). Any subsequent real assignment in the body is dead-code
+        /// eliminated by the HLSL compiler's optimizer (FXC for the DXBC backend, DXC
+        /// for DXIL), so functional behavior is unchanged for previously-well-defined
+        /// shaders.
+        ///
+        /// Note on nested-scope locals: a struct local declared inside a loop body or
+        /// conditional branch (e.g. `for (...) { lightingInfo r; r.x += ...; }`) also
+        /// gets its init prepended at the *function* entry rather than at its lexical
+        /// scope entry. This is safe — and necessary — because:
+        ///
+        ///   1. SPIR-V's `OpVariable` rule requires every function-scope variable to
+        ///      live in the function's entry basic block, so glslang already hoists
+        ///      nested-scope locals to function scope in the SPIR-V it emits; SPIRV-
+        ///      Cross then emits HLSL with the variable at function scope as well,
+        ///      meaning a function-entry init reaches every use site correctly.
+        ///   2. Real BabylonJS shaders (Standard / PBR / OpenPBR area lighting,
+        ///      `computeAreaLighting` inlined per-light) hit this exact pattern — the
+        ///      inlined struct locals are referenced *only* from nested scopes — and
+        ///      need the init to suppress X4000.
+        ///   3. The marginal semantic change versus per-scope init (a hypothetical
+        ///      "accumulator that depends on per-iteration freshness" pattern) does
+        ///      not occur in BabylonJS-generated GLSL, which only ever uses the
+        ///      uninitialized-first-read pattern this pass targets.
+        class StructLocalZeroInitializerTraverser final
+        {
+        public:
+            static void Traverse(TProgram& program)
+            {
+                StructLocalZeroInitializerTraverser pass{};
+                pass.TraverseStage(program.getIntermediate(EShLangVertex));
+                pass.TraverseStage(program.getIntermediate(EShLangFragment));
+            }
+
+        private:
+            void TraverseStage(TIntermediate* intermediate)
+            {
+                if (intermediate == nullptr)
+                {
+                    return;
+                }
+
+                auto* root = intermediate->getTreeRoot()->getAsAggregate();
+                if (root == nullptr)
+                {
+                    return;
+                }
+
+                for (auto* node : root->getSequence())
+                {
+                    auto* function = node->getAsAggregate();
+                    if (function != nullptr && function->getOp() == EOpFunction)
+                    {
+                        ProcessFunction(intermediate, function);
+                    }
+                }
+            }
+
+            static void ProcessFunction(TIntermediate* intermediate, TIntermAggregate* function)
+            {
+                auto& functionSequence = function->getSequence();
+                if (functionSequence.size() < 2)
+                {
+                    return;
+                }
+
+                auto* body = functionSequence[1]->getAsAggregate();
+                if (body == nullptr)
+                {
+                    return;
+                }
+
+                SymbolCollector collector{};
+                body->traverse(&collector);
+
+                if (collector.UniqueLocals.empty())
+                {
+                    return;
+                }
+
+                std::vector<TIntermNode*> initStatements{};
+                initStatements.reserve(collector.UniqueLocals.size());
+                for (const auto& [id, symbolNode] : collector.UniqueLocals)
+                {
+                    BX_UNUSED(id);
+                    const TType& type = symbolNode->getType();
+                    TIntermTyped* zeroValue = MakeZeroForType(intermediate, type, symbolNode->getLoc());
+                    if (zeroValue == nullptr)
+                    {
+                        continue;
+                    }
+                    TIntermSymbol* lhs = intermediate->addSymbol(*symbolNode);
+                    TIntermTyped* assign = intermediate->addAssign(EOpAssign, lhs, zeroValue, symbolNode->getLoc());
+                    if (assign != nullptr)
+                    {
+                        initStatements.push_back(assign);
+                    }
+                }
+
+                if (!initStatements.empty())
+                {
+                    auto& bodySequence = body->getSequence();
+                    bodySequence.insert(bodySequence.begin(), initStatements.begin(), initStatements.end());
+                }
+            }
+
+            /// Build a typed expression that evaluates to the all-zero value of `type`.
+            /// For struct types, recursively constructs `EOpConstructStruct(zero_field_0, ...)`.
+            /// For scalar/vector/matrix types, builds a `TIntermConstantUnion` with zeros.
+            /// Returns nullptr for unsupported types (currently: array types).
+            static TIntermTyped* MakeZeroForType(TIntermediate* intermediate, const TType& type, const TSourceLoc& loc)
+            {
+                if (type.isArray())
+                {
+                    // Skipping array initialization keeps this pass focused on the
+                    // X4000-on-struct-local case observed in BabylonJS's
+                    // `computeAreaLighting`. Array-of-struct is rare in BJS shaders and
+                    // can be added later if a concrete failure surfaces.
+                    return nullptr;
+                }
+
+                if (type.isStruct())
+                {
+                    const TTypeList* structFields = type.getStruct();
+                    if (structFields == nullptr || structFields->empty())
+                    {
+                        return nullptr;
+                    }
+
+                    TIntermAggregate* construct = nullptr;
+                    for (const TTypeLoc& field : *structFields)
+                    {
+                        TIntermTyped* fieldZero = MakeZeroForType(intermediate, *field.type, loc);
+                        if (fieldZero == nullptr)
+                        {
+                            return nullptr;
+                        }
+                        construct = intermediate->growAggregate(construct, fieldZero, loc);
+                    }
+
+                    if (construct == nullptr)
+                    {
+                        return nullptr;
+                    }
+                    construct->setOperator(EOpConstructStruct);
+                    construct->setType(type);
+                    return construct;
+                }
+
+                const size_t numComponents = gsl::narrow_cast<size_t>(type.computeNumComponents());
+                if (numComponents == 0)
+                {
+                    return nullptr;
+                }
+
+                TConstUnionArray zeros{gsl::narrow_cast<int>(numComponents)};
+                for (size_t i = 0; i < numComponents; ++i)
+                {
+                    switch (type.getBasicType())
+                    {
+                        case EbtFloat:
+                        case EbtDouble:
+                        case EbtFloat16:
+                            zeros[i].setDConst(0.0);
+                            break;
+                        case EbtInt:
+                        case EbtInt8:
+                        case EbtInt16:
+                        case EbtInt64:
+                            zeros[i].setIConst(0);
+                            break;
+                        case EbtUint:
+                        case EbtUint8:
+                        case EbtUint16:
+                        case EbtUint64:
+                            zeros[i].setUConst(0);
+                            break;
+                        case EbtBool:
+                            zeros[i].setBConst(false);
+                            break;
+                        default:
+                            // Unknown basic type (e.g. opaque sampler); skip.
+                            return nullptr;
+                    }
+                }
+
+                return intermediate->addConstantUnion(zeros, type, loc, true);
+            }
+
+            class SymbolCollector final : public TIntermTraverser
+            {
+            public:
+                // Map uniqueId -> a representative symbol node (used to read type/loc when
+                // building the init statement). One entry per distinct local variable.
+                std::map<long long, TIntermSymbol*> UniqueLocals{};
+
+                void visitSymbol(TIntermSymbol* symbol) override
+                {
+                    const TType& type = symbol->getType();
+                    if (type.getQualifier().storage != EvqTemporary)
+                    {
+                        return;
+                    }
+                    if (!type.isStruct() || type.isArray())
+                    {
+                        return;
+                    }
+                    UniqueLocals.try_emplace(symbol->getId(), symbol);
+                }
+            };
+        };
+
         class InvertYDerivativeOperandsTraverser : public TIntermTraverser
         {
         public:
@@ -1381,6 +1614,11 @@ namespace Babylon::ShaderCompilerTraversers
     void SplitSamplerFunctionParameters(TProgram& program, IdGenerator& ids)
     {
         SamplerFunctionParameterSplitterTraverser::Traverse(program, ids);
+    }
+
+    void ZeroInitializeStructLocals(TProgram& program)
+    {
+        StructLocalZeroInitializerTraverser::Traverse(program);
     }
 
     void InvertYDerivativeOperands(TProgram& program)

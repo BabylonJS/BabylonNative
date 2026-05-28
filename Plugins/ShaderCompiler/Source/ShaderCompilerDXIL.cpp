@@ -184,6 +184,7 @@ namespace Babylon::Plugins
         ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryingsD3D(program, ids, vertexAttributeRenaming);
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
         ShaderCompilerTraversers::SplitSamplerFunctionParameters(program, ids);
+        ShaderCompilerTraversers::ZeroInitializeStructLocals(program);
         ShaderCompilerTraversers::InvertYDerivativeOperands(program);
 
         // clang-format off
