@@ -113,7 +113,11 @@ namespace Babylon::ShaderCompilerTraversers
     /// emits the corresponding HLSL.
     ///
     /// Locals of array, scalar, vector and matrix type are left unchanged; only
-    /// struct-typed locals (the observed X4000 trigger) are initialized.
+    /// struct-typed locals (the observed X4000 trigger) are initialized. Struct
+    /// locals declared in a nested scope are also initialized at the *function*
+    /// entry — see the implementation doc comment for the rationale (SPIR-V's
+    /// `OpVariable` hoisting rule plus the absence of per-iteration-freshness
+    /// accumulators in BabylonJS-generated GLSL).
     void ZeroInitializeStructLocals(glslang::TProgram& program);
 
     /// Invert dFdy operands similar to bgfx_shader.sh

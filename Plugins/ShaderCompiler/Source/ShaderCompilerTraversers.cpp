@@ -1335,7 +1335,28 @@ namespace Babylon::ShaderCompilerTraversers
         /// SPIR-V emitter sees this as a normal store and emits well-defined SPIR-V;
         /// SPIRV-Cross then emits HLSL with the struct local initialized at declaration
         /// (or shortly after). Any subsequent real assignment in the body is dead-code
-        /// eliminated by DXC's optimizer, so functional behavior is unchanged.
+        /// eliminated by the HLSL compiler's optimizer (FXC for the DXBC backend, DXC
+        /// for DXIL), so functional behavior is unchanged for previously-well-defined
+        /// shaders.
+        ///
+        /// Note on nested-scope locals: a struct local declared inside a loop body or
+        /// conditional branch (e.g. `for (...) { lightingInfo r; r.x += ...; }`) also
+        /// gets its init prepended at the *function* entry rather than at its lexical
+        /// scope entry. This is safe — and necessary — because:
+        ///
+        ///   1. SPIR-V's `OpVariable` rule requires every function-scope variable to
+        ///      live in the function's entry basic block, so glslang already hoists
+        ///      nested-scope locals to function scope in the SPIR-V it emits; SPIRV-
+        ///      Cross then emits HLSL with the variable at function scope as well,
+        ///      meaning a function-entry init reaches every use site correctly.
+        ///   2. Real BabylonJS shaders (Standard / PBR / OpenPBR area lighting,
+        ///      `computeAreaLighting` inlined per-light) hit this exact pattern — the
+        ///      inlined struct locals are referenced *only* from nested scopes — and
+        ///      need the init to suppress X4000.
+        ///   3. The marginal semantic change versus per-scope init (a hypothetical
+        ///      "accumulator that depends on per-iteration freshness" pattern) does
+        ///      not occur in BabylonJS-generated GLSL, which only ever uses the
+        ///      uninitialized-first-read pattern this pass targets.
         class StructLocalZeroInitializerTraverser final
         {
         public:
