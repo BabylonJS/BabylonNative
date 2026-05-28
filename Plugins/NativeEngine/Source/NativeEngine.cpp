@@ -734,6 +734,11 @@ namespace Babylon
 
                 InstanceMethod("populateFrameStats", &NativeEngine::PopulateFrameStats),
 
+                InstanceMethod("setRenderResetCallback", &NativeEngine::SetRenderResetCallback),
+                // Deprecated: prefer setRenderResetCallback. Kept for backward compatibility with
+                // older Babylon.js builds. The callback fires when bgfx is (re)initialized on the
+                // graphics device, which is the device-restored point, not device-lost; the legacy
+                // name remains for source compatibility.
                 InstanceMethod("setDeviceLostCallback", &NativeEngine::SetRenderResetCallback),
             });
 
