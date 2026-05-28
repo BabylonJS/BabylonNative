@@ -104,6 +104,18 @@ namespace Babylon::ShaderCompilerTraversers
     ///      arguments (t and s).
     void SplitSamplerFunctionParameters(glslang::TProgram& program, IdGenerator& ids);
 
+    /// Prepends a zero-initialization assignment at the start of every function body
+    /// for each struct-typed local variable referenced inside the body. Works around
+    /// Babylon.js shaders that read from uninitialized struct fields (e.g.
+    /// `lightingInfo result; result.diffuse += ...;` inside `computeAreaLighting`),
+    /// which compile successfully under WebGL but trip D3DCompile's `error X4000:
+    /// variable used without having been completely initialized` once SPIRV-Cross
+    /// emits the corresponding HLSL.
+    ///
+    /// Locals of array, scalar, vector and matrix type are left unchanged; only
+    /// struct-typed locals (the observed X4000 trigger) are initialized.
+    void ZeroInitializeStructLocals(glslang::TProgram& program);
+
     /// Invert dFdy operands similar to bgfx_shader.sh
     /// https://github.com/bkaradzic/bgfx/blob/7be225bf490bb1cd231cfb4abf7e617bf35b59cb/src/bgfx_shader.sh#L44-L45
     /// https://github.com/bkaradzic/bgfx/blob/7be225bf490bb1cd231cfb4abf7e617bf35b59cb/src/bgfx_shader.sh#L62-L65
