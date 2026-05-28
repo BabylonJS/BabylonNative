@@ -12,7 +12,7 @@ set(BABYLONJS_MATERIALS_ASSETS
 
 set(TEST_ASSETS
     "JavaScript/dist/tests.externalTexture.msaa.js"
-    "JavaScript/dist/tests.wrappedNativeTexture.restore.js"
+    "JavaScript/dist/tests.externalTexture.restore.js"
     "JavaScript/dist/tests.javaScript.all.js"
     "JavaScript/dist/tests.shaderCache.basicScene.js"
     "JavaScript/dist/tests.shaders.cross.js")
@@ -25,7 +25,7 @@ set(SOURCES
     "Source/App.cpp"
     "Source/Tests.ExternalTexture.cpp"
     "Source/Tests.ExternalTexture.Msaa.cpp"
-    "Source/Tests.WrappedNativeTexture.Restore.cpp"
+    "Source/Tests.ExternalTexture.Restore.cpp"
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.ShaderCache.cpp"
     "Source/Tests.ShaderCompilation.cpp"

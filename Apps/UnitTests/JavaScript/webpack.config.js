@@ -10,7 +10,7 @@ module.exports = {
     "tests.shaderCache.basicScene": './src/tests.shaderCache.basicScene.ts',
     "tests.shaders.cross": './src/tests.shaders.cross.ts',
     "tests.externalTexture.msaa": './src/tests.externalTexture.msaa.ts',
-    "tests.wrappedNativeTexture.restore": './src/tests.wrappedNativeTexture.restore.ts',
+    "tests.externalTexture.restore": './src/tests.externalTexture.restore.ts',
   },
   externals: {
     "@babylonjs/core": "BABYLON",

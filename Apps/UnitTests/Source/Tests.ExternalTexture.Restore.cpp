@@ -65,8 +65,7 @@ namespace
 //   1. Create an external GPU texture, wrap it, render red into it, readback → expect red.
 //   2. Create a SECOND GPU texture (simulating device restore), call updateWrappedNativeTexture,
 //      render blue into it, readback → expect blue.
-// This exercises BJS #18469 updateWrappedNativeTexture on Native.
-TEST(WrappedNativeTexture, RestoreAfterDeviceLoss)
+TEST(ExternalTexture, RestoreAfterDeviceLoss)
 {
 #if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
     GTEST_SKIP();
@@ -103,7 +102,7 @@ TEST(WrappedNativeTexture, RestoreAfterDeviceLoss)
 
     Babylon::ScriptLoader loader{runtime};
     loader.LoadScript("app:///Assets/babylon.max.js");
-    loader.LoadScript("app:///Assets/tests.wrappedNativeTexture.restore.js");
+    loader.LoadScript("app:///Assets/tests.externalTexture.restore.js");
 
     // Queue AddToContextAsync and call startup() with the wrapped texture.
     std::promise<void> addToContextCalled;
