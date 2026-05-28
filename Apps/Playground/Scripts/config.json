@@ -1145,8 +1145,8 @@
             "title": "GUI Near Menu",
             "playgroundId": "#2YZFA0#302",
             "renderCount": 60,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 V8 D3D11 / hangs on OpenGL",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: BGFX FATAL shader compile error in GUI fragment shader ('=' : cannot convert from 'highp float' to 'bool'). Re-enabled on D3D11 post BabylonJS/BabylonNative#1695 (original 'V8 D3D11 crash' no longer reproduces under Chakra; original 'hangs on OpenGL' is now this clean shader-compile failure surfaced by the BabylonJS/BabylonNative#1688 BgfxCallback).",
             "referenceImage": "guiNearMenu.png"
         },
         {
