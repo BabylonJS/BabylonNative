@@ -55,7 +55,7 @@ TEST(ShaderCompilation, CompileComprehensiveGLSL)
 
     Babylon::ScriptLoader loader{runtime};
     loader.LoadScript("app:///Assets/babylon.max.js");
-    loader.LoadScript("app:///Assets/tests.shaders.cross.js");
+    loader.LoadScript("app:///Assets/tests.shaderCompilation.comprehensiveGLSL.js");
     loader.Dispatch([&scriptIsDone](Napi::Env) {
         scriptIsDone.set_value();
     });
