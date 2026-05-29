@@ -90,7 +90,15 @@ namespace Babylon::Graphics
         // method and structure might change.
 
         void UpdateWindow(WindowT window);
+
+        // Sets the underlying graphics device used for rendering. The new device takes effect on
+        // the next EnableRendering call.
+        //
+        // Only valid when rendering is disabled -- i.e. before the first EnableRendering /
+        // StartRenderingCurrentFrame call, or after a DisableRendering call. Throws
+        // std::runtime_error otherwise.
         void UpdateDevice(DeviceT device);
+
         void UpdateSize(size_t width, size_t height);
         void UpdateMSAA(uint8_t value);
         void UpdateAlphaPremultiplied(bool enabled);

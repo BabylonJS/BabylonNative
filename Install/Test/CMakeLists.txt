@@ -48,8 +48,8 @@ if(WIN32 AND NOT WINDOWS_STORE)
         "${SOURCE_DIR}/Tests.ExternalTexture.D3D11.cpp"
         "${SOURCE_DIR}/Tests.JavaScript.cpp"
         "${SOURCE_DIR}/Tests.ShaderCache.cpp"
-        "${SOURCE_DIR}/Utils.D3D11.cpp"
-        "${SOURCE_DIR}/Utils.h")
+        "${SOURCE_DIR}/Helpers.D3D11.cpp"
+        "${SOURCE_DIR}/Helpers.h")
 else()
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()

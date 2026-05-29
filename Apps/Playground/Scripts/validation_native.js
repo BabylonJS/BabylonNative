@@ -83,6 +83,27 @@
     const engine = new BABYLON.NativeEngine();
     engine.getCaps().parallelShaderCompile = undefined;
 
+    // Broaden Babylon's default retry strategy for the test framework: in addition to
+    // network drops (status 0, the default trigger), also retry transient HTTP errors
+    // (5xx) and rate limits (429). Applies to every BABYLON.Tools.LoadFile request
+    // including the snippet fetches in loadPG below and the texture/asset loads
+    // initiated from inside each playground's createScene().
+    BABYLON.Tools.DefaultRetryStrategy = function (url, request, retryIndex) {
+        const maxRetries = 5;
+        if (retryIndex >= maxRetries) {
+            return -1;
+        }
+        if (url.indexOf("file:") !== -1) {
+            return -1;
+        }
+        if (request.status === 0 ||
+            request.status === 429 ||
+            (request.status >= 500 && request.status < 600)) {
+            return Math.pow(2, retryIndex) * 500;
+        }
+        return -1;
+    };
+
     engine.getRenderingCanvas = function () {
         return window;
     }
@@ -284,31 +305,13 @@
             const snippetUrl = "https://snippet.babylonjs.com";
             const pgRoot = "https://playground.babylonjs.com";
 
-            const retryTime = 500;
-            const maxRetry = 5;
-            let retry = 0;
-
-            const onError = function () {
-                retry++;
-                if (retry < maxRetry) {
-                    setTimeout(function () {
-                        loadPG();
-                    }, retryTime);
-                }
-                else {
-                    // Fail the test, something wrong happen
-                    console.log("Running the playground failed.");
-                    failTest(done);
-                }
-            }
-
             const loadPG = function () {
-                const xmlHttp = new XMLHttpRequest();
-                xmlHttp.addEventListener("readystatechange", function () {
-                    if (xmlHttp.readyState === 4) {
+                const url = snippetUrl + test.playgroundId.replace(/#/g, "/");
+                BABYLON.Tools.LoadFile(
+                    url,
+                    function (responseText) {
                         try {
-                            xmlHttp.onreadystatechange = null;
-                            const snippet = JSON.parse(xmlHttp.responseText);
+                            const snippet = JSON.parse(responseText);
                             let code = JSON.parse(snippet.jsonPayload).code.toString();
 
                             // Check if this is a v2 manifest and extract the entry file's code
@@ -326,9 +329,12 @@
 
                             code = code
                                 .replace(/"\/textures\//g, '"' + pgRoot + "/textures/")
+                                .replace(/'\/textures\//g, "'" + pgRoot + "/textures/")
                                 .replace(/"textures\//g, '"' + pgRoot + "/textures/")
+                                .replace(/'textures\//g, "'" + pgRoot + "/textures/")
                                 .replace(/\/scenes\//g, pgRoot + "/scenes/")
                                 .replace(/"scenes\//g, '"' + pgRoot + "/scenes/")
+                                .replace(/'scenes\//g, "'" + pgRoot + "/scenes/")
                                 .replace(/"\.\.\/\.\.https/g, '"' + "https")
                                 .replace("http://", "https://");
 
@@ -350,26 +356,30 @@
                                     processCurrentScene(test, referenceImage, done, compareFunction);
                                 }).catch(function (e) {
                                     console.error(e);
-                                    onError();
-                                })
+                                    failTest(done);
+                                });
                             } else {
                                 // Handle if createScene returns a scene
                                 processCurrentScene(test, referenceImage, done, compareFunction);
                             }
-
                         }
                         catch (e) {
-                            console.error(e);
-                            onError();
+                            console.error("Failed to evaluate playground snippet " + test.playgroundId + ": " + e);
+                            failTest(done);
                         }
+                    },
+                    undefined,  // onProgress
+                    undefined,  // database
+                    false,      // useArrayBuffer (snippet response is JSON text)
+                    function (request, exception) {
+                        const status = request ? (request.status + " " + request.statusText) : "no response";
+                        console.error("Failed to load playground snippet " + test.playgroundId + " after retries: " + status);
+                        if (exception) {
+                            console.error(exception);
+                        }
+                        failTest(done);
                     }
-                }, false);
-                xmlHttp.onerror = function () {
-                    console.error("Network error during test load.");
-                    onError();
-                }
-                xmlHttp.open("GET", snippetUrl + test.playgroundId.replace(/#/g, "/"));
-                xmlHttp.send();
+                );
             }
             loadPG();
         } else {
