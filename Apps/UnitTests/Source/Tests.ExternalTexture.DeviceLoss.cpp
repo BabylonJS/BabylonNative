@@ -102,7 +102,7 @@ TEST(ExternalTexture, RestoreAfterDeviceLoss)
 
     Babylon::ScriptLoader loader{runtime};
     loader.LoadScript("app:///Assets/babylon.max.js");
-    loader.LoadScript("app:///Assets/tests.externalTexture.restore.js");
+    loader.LoadScript("app:///Assets/tests.externalTexture.deviceLoss.js");
 
     // Queue AddToContextAsync and call startup() with the wrapped texture.
     std::promise<void> addToContextCalled;

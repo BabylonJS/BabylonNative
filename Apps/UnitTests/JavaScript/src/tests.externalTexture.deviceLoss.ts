@@ -1,4 +1,4 @@
-// JS-side scaffolding for Tests.ExternalTexture.Restore.cpp.
+// JS-side scaffolding for Tests.ExternalTexture.DeviceLoss.cpp.
 //
 // Tests the device-loss / device-restore flow for wrapped native textures:
 //   1. Wrap an external GPU texture via wrapNativeTexture.
