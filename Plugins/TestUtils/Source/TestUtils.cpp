@@ -13,13 +13,59 @@
 #include <Babylon/Graphics/DeviceContext.h>
 #include <Babylon/Graphics/Platform.h>
 
+#include <algorithm>
+#include <filesystem>
 #include <functional>
 #include <gsl/span>
 #include <memory>
 #include <sstream>
+#include <system_error>
+#include <vector>
+
+#if defined(_WIN32)
+#include <Windows.h>
+#elif defined(__APPLE__)
+#include <mach-o/dyld.h>
+#elif defined(__linux__) || defined(__ANDROID__)
+#include <unistd.h>
+#endif
 
 #define STRINGIZEX(x) #x
 #define STRINGIZE(x) STRINGIZEX(x)
+
+namespace
+{
+    // Returns the directory containing the running executable. Mirrors the per-platform
+    // helpers already used by the Playground / UnitTests; folded into TestUtils.cpp so the
+    // listFiles API does not need a new entry point per platform file.
+    std::filesystem::path GetExecutableDirectory()
+    {
+#if defined(_WIN32)
+        wchar_t buffer[MAX_PATH]{};
+        ::GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+        return std::filesystem::path{buffer}.parent_path();
+#elif defined(__APPLE__)
+        char buffer[1024]{};
+        uint32_t size = sizeof(buffer);
+        if (_NSGetExecutablePath(buffer, &size) != 0)
+        {
+            return {};
+        }
+        return std::filesystem::path{buffer}.parent_path();
+#elif defined(__linux__) || defined(__ANDROID__)
+        char buffer[1024]{};
+        const auto len = ::readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+        if (len <= 0)
+        {
+            return {};
+        }
+        buffer[len] = 0;
+        return std::filesystem::path{buffer}.parent_path();
+#else
+        return {};
+#endif
+    }
+}
 
 namespace Babylon::Plugins::Internal
 {
@@ -110,6 +156,38 @@ namespace Babylon::Plugins::Internal
     void TestUtils::CaptureNextFrame(const Napi::CallbackInfo& /*info*/)
     {
         m_deviceContext.RequestCaptureNextFrame();
+    }
+
+    // listFiles(relativePath): returns the basenames of regular files in
+    // <exe-dir>/<relativePath>, sorted lexicographically. Non-existent or non-directory
+    // paths return an empty array (not an error) so callers can probe optional asset
+    // folders without exception handling. Subdirectories are not recursed.
+    Napi::Value TestUtils::ListFiles(const Napi::CallbackInfo& info)
+    {
+        const auto relPath = info[0].As<Napi::String>().Utf8Value();
+        const auto dir = GetExecutableDirectory() / relPath;
+
+        std::vector<std::string> names;
+        std::error_code ec;
+        if (std::filesystem::is_directory(dir, ec))
+        {
+            for (const auto& entry : std::filesystem::directory_iterator(dir, ec))
+            {
+                std::error_code entryEc;
+                if (entry.is_regular_file(entryEc))
+                {
+                    names.push_back(entry.path().filename().generic_string());
+                }
+            }
+        }
+        std::sort(names.begin(), names.end());
+
+        auto arr = Napi::Array::New(info.Env(), names.size());
+        for (uint32_t i = 0; i < names.size(); ++i)
+        {
+            arr.Set(i, Napi::String::New(info.Env(), names[i]));
+        }
+        return arr;
     }
 }
 

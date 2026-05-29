@@ -44,6 +44,7 @@ namespace Babylon::Plugins::Internal
                     ParentT::InstanceMethod("getOutputDirectory", &TestUtils::GetOutputDirectory),
                     ParentT::InstanceMethod("getFrameBufferData", &TestUtils::GetFrameBufferData),
                     ParentT::InstanceMethod("captureNextFrame", &TestUtils::CaptureNextFrame),
+                    ParentT::InstanceMethod("listFiles", &TestUtils::ListFiles),
                 },
                 &window);
 
@@ -77,6 +78,7 @@ namespace Babylon::Plugins::Internal
         Napi::Value GetImageData(const Napi::CallbackInfo& info);
         void GetFrameBufferData(const Napi::CallbackInfo& info);
         void CaptureNextFrame(const Napi::CallbackInfo& info);
+        Napi::Value ListFiles(const Napi::CallbackInfo& info);
 
         JsRuntime& m_runtime;
         Graphics::DeviceContext& m_deviceContext;
