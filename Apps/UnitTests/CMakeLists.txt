@@ -11,6 +11,7 @@ set(BABYLONJS_MATERIALS_ASSETS
     "../node_modules/babylonjs-materials/babylonjs.materials.js")
 
 set(TEST_ASSETS
+    "JavaScript/dist/tests.externalTexture.deviceLoss.js"
     "JavaScript/dist/tests.externalTexture.msaa.js"
     "JavaScript/dist/tests.externalTexture.render.js"
     "JavaScript/dist/tests.javaScript.all.js"
@@ -24,6 +25,7 @@ set(SOURCES
     "Source/App.h"
     "Source/App.cpp"
     "Source/Tests.ExternalTexture.cpp"
+    "Source/Tests.ExternalTexture.DeviceLoss.cpp"
     "Source/Tests.ExternalTexture.Msaa.cpp"
     "Source/Tests.ExternalTexture.Render.cpp"
     "Source/Tests.JavaScript.cpp"

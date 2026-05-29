@@ -396,7 +396,7 @@
                     try {
                         request.onreadystatechange = null;
 
-                        const scriptToRun = request.responseText.replace(/..\/..\/assets\//g, config.root + "/Assets/");
+                        let scriptToRun = request.responseText.replace(/..\/..\/assets\//g, config.root + "/Assets/");
                         scriptToRun = scriptToRun.replace(/..\/..\/Assets\//g, config.root + "/Assets/");
                         scriptToRun = scriptToRun.replace(/\/assets\//g, config.root + "/Assets/");
 
