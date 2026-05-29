@@ -23,6 +23,9 @@ on:
 env:
   UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1:symbolize=1
   ASAN_OPTIONS: abort_on_error=1
+  # Absorb transient npm registry / CDN flakes during `npm install` in Apps/CMakeLists.txt.
+  # npm's default fetch-retries is 2; bump to 5 (npm's own exponential backoff handles spacing).
+  npm_config_fetch_retries: '5'
 
 jobs:
   build:

@@ -11,6 +11,11 @@ on:
         type: string
         default: direct
 
+# Absorb transient npm registry / CDN flakes during `npm install` in Apps/CMakeLists.txt.
+# npm's default fetch-retries is 2; bump to 5 (npm's own exponential backoff handles spacing).
+env:
+  npm_config_fetch_retries: '5'
+
 jobs:
   build:
     runs-on: windows-latest
