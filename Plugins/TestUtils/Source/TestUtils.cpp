@@ -1,9 +1,12 @@
 #include "TestUtils.h"
+#include <Babylon/Plugins/TestUtils.h>
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 #include <bimg/decode.h>
 #include <bimg/encode.h>
+#endif
 #include <bx/file.h>
 
 #include <Babylon/JsRuntime.h>
@@ -27,6 +30,9 @@ namespace Babylon::Plugins::Internal
 
     void TestUtils::WritePNG(const Napi::CallbackInfo& info)
     {
+#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF).");
+#else
         const auto buffer = info[0].As<Napi::Uint8Array>();
         const auto width = info[1].As<Napi::Number>().Uint32Value();
         const auto height = info[2].As<Napi::Number>().Uint32Value();
@@ -48,10 +54,14 @@ namespace Babylon::Plugins::Internal
             bimg::imageWritePng(&writer, width, height, width * 4, buffer.Data(), bimg::TextureFormat::RGBA8, false);
             writer.close();
         }
+#endif
     }
 
     Napi::Value TestUtils::DecodeImage(const Napi::CallbackInfo& info)
     {
+#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF).");
+#else
         Image* image = new Image;
         const auto buffer = info[0].As<Napi::ArrayBuffer>();
 
@@ -59,10 +69,14 @@ namespace Babylon::Plugins::Internal
 
         auto finalizer = [](Napi::Env, Image* image) { delete image; };
         return Napi::External<Image>::New(info.Env(), image, std::move(finalizer));
+#endif
     }
 
     Napi::Value TestUtils::GetImageData(const Napi::CallbackInfo& info)
     {
+#ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
+        throw Napi::Error::New(info.Env(), "Image loading is disabled in this build (BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES=OFF).");
+#else
         const auto imageData = info[0].As<Napi::External<Image>>().Data();
 
         if (!imageData || !imageData->m_Image || !imageData->m_Image->m_size)
@@ -75,6 +89,7 @@ namespace Babylon::Plugins::Internal
         memcpy(data.Data(), ptr, imageData->m_Image->m_size);
 
         return Napi::Value::From(info.Env(), data);
+#endif
     }
 
     void TestUtils::GetFrameBufferData(const Napi::CallbackInfo& info)
@@ -98,10 +113,37 @@ namespace Babylon::Plugins::Internal
     }
 }
 
+namespace
+{
+    Babylon::Plugins::TestUtils::ExitCallback& ExitCallbackStorage()
+    {
+        static Babylon::Plugins::TestUtils::ExitCallback s_callback;
+        return s_callback;
+    }
+}
+
 namespace Babylon::Plugins::TestUtils
 {
     void BABYLON_API Initialize(Napi::Env env, Graphics::WindowT window)
     {
         Internal::TestUtils::CreateInstance(env, window);
+    }
+
+    void BABYLON_API SetExitCallback(ExitCallback callback)
+    {
+        ExitCallbackStorage() = std::move(callback);
+    }
+}
+
+namespace Babylon::Plugins::Internal
+{
+    // Bridges per-platform TestUtils::Exit() to the host-registered callback.
+    void InvokeExitCallback(int exitCode)
+    {
+        auto& cb = ExitCallbackStorage();
+        if (cb)
+        {
+            cb(exitCode);
+        }
     }
 }

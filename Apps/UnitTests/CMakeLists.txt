@@ -11,20 +11,32 @@ set(BABYLONJS_MATERIALS_ASSETS
     "../node_modules/babylonjs-materials/babylonjs.materials.js")
 
 set(TEST_ASSETS
+    "JavaScript/dist/tests.externalTexture.msaa.js"
     "JavaScript/dist/tests.externalTexture.render.js"
     "JavaScript/dist/tests.javaScript.all.js"
-    "JavaScript/dist/tests.shaderCache.basicScene.js")
+    "JavaScript/dist/tests.shaderCache.basicScene.js"
+    "JavaScript/dist/tests.shaders.cross.js")
+
+file(GLOB TEST_SCRIPTS "JavaScript/src/*.ts")
+set_source_files_properties(${TEST_SCRIPTS} PROPERTIES HEADER_FILE_ONLY TRUE)
 
 set(SOURCES
     "Source/App.h"
     "Source/App.cpp"
     "Source/Tests.ExternalTexture.cpp"
+    "Source/Tests.ExternalTexture.Msaa.cpp"
     "Source/Tests.ExternalTexture.Render.cpp"
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.ShaderCache.cpp"
+    "Source/Tests.ShaderCompilation.cpp"
     "Source/Tests.UniformPadding.cpp"
-    "Source/Utils.h"
-    "Source/Utils.${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
+    "Source/Helpers.h"
+    "Source/Helpers.${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}")
+
+if(GRAPHICS_API STREQUAL "D3D11" OR GRAPHICS_API STREQUAL "D3D12")
+    set(SOURCES ${SOURCES}
+        "Source/Tests.Device.cpp")
+endif()
 
 if(GRAPHICS_API STREQUAL "D3D11")
     set(SOURCES ${SOURCES}
@@ -51,7 +63,7 @@ elseif(WIN32)
     set(ADDITIONAL_COMPILE_DEFINITIONS ${ADDITIONAL_COMPILE_DEFINITIONS} PRIVATE HAS_RENDERDOC)
 endif()
 
-add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${SOURCES})
+add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})
 target_link_libraries(UnitTests
     PRIVATE AppRuntime
     PRIVATE Blob
@@ -103,3 +115,4 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs PREFIX Assets FILES ${BABYLONJS_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/../node_modules/babylonjs-materials PREFIX Assets FILES ${BABYLONJS_MATERIALS_ASSETS})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/dist PREFIX Assets FILES ${TEST_ASSETS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/JavaScript/src PREFIX TypeScript FILES ${TEST_SCRIPTS})

@@ -108,6 +108,10 @@ namespace Babylon::Graphics
     void DeviceImpl::UpdateDevice(DeviceT device)
     {
         std::scoped_lock lock{m_state.Mutex};
+        if (m_state.Bgfx.Initialized)
+        {
+            throw std::runtime_error{"UpdateDevice called while rendering is enabled."};
+        }
         m_state.Bgfx.InitState.platformData.context = device;
         m_state.Bgfx.Dirty = true;
     }
@@ -408,6 +412,11 @@ namespace Babylon::Graphics
             throw std::runtime_error{"Too many views"};
         }
         return viewId;
+    }
+
+    bgfx::ViewId DeviceImpl::PeekNextViewId() const
+    {
+        return m_nextViewId.load();
     }
 
     void DeviceImpl::UpdateBgfxState()

@@ -16,6 +16,15 @@ target_link_libraries(TestUtils
     PRIVATE GraphicsDevice
     PRIVATE GraphicsDeviceContext)
 
+if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
+    target_compile_definitions(TestUtils
+        PRIVATE BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
+    target_link_libraries(TestUtils
+        PRIVATE bimg
+        PRIVATE bimg_encode
+        PRIVATE bimg_decode)
+endif()
+
 target_compile_definitions(TestUtils PRIVATE GRAPHICS_API=${GRAPHICS_API})
 
 if(APPLE)

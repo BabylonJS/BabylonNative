@@ -95,6 +95,7 @@ namespace Babylon::Graphics
         CaptureCallbackTicketT AddCaptureCallback(std::function<void(const BgfxCallback::CaptureData&)> callback);
 
         bgfx::ViewId AcquireNewViewId(bgfx::Encoder&);
+        bgfx::ViewId PeekNextViewId() const;
 
         /* ********** END DEVICE CONTEXT CONTRACT ********** */
 

@@ -38,9 +38,6 @@ target_compile_definitions(Graphics
 target_link_libraries(Graphics
     PRIVATE JsRuntimeInternal
     PRIVATE bgfx
-    PRIVATE bimg
-    PRIVATE bimg_encode
-    PRIVATE bimg_decode
     PRIVATE minz
     PRIVATE bx)
 
@@ -98,7 +95,6 @@ target_link_libraries(GraphicsDeviceContext
     INTERFACE JsRuntimeInternal
     INTERFACE arcana
     INTERFACE bgfx
-    INTERFACE bimg
     INTERFACE bx)
 
 if(APPLE)

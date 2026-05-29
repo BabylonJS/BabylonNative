@@ -129,8 +129,12 @@ namespace Babylon::ShaderCompilerTraversers
 
             virtual void visitSymbol(TIntermSymbol* symbol) override
             {
-                // Collect all non-sampler uniforms and add the to the list of elements to process.
-                if (symbol->getType().getQualifier().isUniformOrBuffer() && symbol->getType().getBasicType() != EbtSampler)
+                // Collect all non-sampler scalar/vector/matrix uniforms. Excluding UBO blocks
+                // (EbtBlock) and uniform struct instances (EbtStruct) prevents this pass from
+                // mistakenly inserting whole blocks/structs into the consolidated uniform struct.
+                const auto basic = symbol->getType().getBasicType();
+                if (symbol->getType().getQualifier().isUniformOrBuffer()
+                    && (basic == EbtFloat || basic == EbtInt || basic == EbtUint || basic == EbtBool))
                 {
                     // Linker objects are treated differently by this traverser because unlike ordinary
                     // symbols which should simply be replaced with their struct members, the linker
@@ -305,8 +309,14 @@ namespace Babylon::ShaderCompilerTraversers
             {
                 auto& type = symbol->getType();
 
-                // We only care about uniforms that are neither samplers nor matrices.
-                if (type.getQualifier().isUniformOrBuffer() && type.getBasicType() != EbtSampler && !type.isMatrix())
+                // We only care about loose scalar/vector uniforms. Excluding matrices, samplers,
+                // UBO blocks (EbtBlock) and uniform struct instances (EbtStruct) prevents the
+                // traverser from rewriting whole blocks/structs to vec4, which destroys their
+                // member layout and member names.
+                const auto basic = type.getBasicType();
+                if (type.getQualifier().isUniformOrBuffer()
+                    && !type.isMatrix()
+                    && (basic == EbtFloat || basic == EbtInt || basic == EbtUint || basic == EbtBool))
                 {
                     // At present, this may end up creating layered swizzles; i.e., if a vec3 was already being projected
                     // down a la vec3.x, greedily adding a swizzle operator to deal with the new type mismatch may create
@@ -905,6 +915,636 @@ namespace Babylon::ShaderCompilerTraversers
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
         };
 
+        /// <summary>
+        /// Split combined sampler parameters of user-defined functions into separate
+        /// texture and sampler parameters. See `SplitSamplerFunctionParameters` in the
+        /// header for the full rationale. This pass must run AFTER `SamplerSplitterTraverser`
+        /// so that uniform sampler call-site arguments have already been rewritten into
+        /// `EOpConstructTextureSampler(t, s)` aggregates whose operands we can unpack at
+        /// call sites.
+        /// </summary>
+        class SamplerFunctionParameterSplitterTraverser final
+        {
+        public:
+            static void Traverse(TProgram& program, IdGenerator& ids)
+            {
+                SamplerFunctionParameterSplitterTraverser pass{};
+                pass.Traverse(program.getIntermediate(EShLangVertex), ids);
+                pass.Traverse(program.getIntermediate(EShLangFragment), ids);
+            }
+
+        private:
+            struct RewrittenFunction
+            {
+                std::string NewMangledName;
+                std::vector<int> OriginalSamplerParamIndices;
+            };
+
+            // Per-stage scope: the call-site rewriter must only see functions rewritten
+            // for the current stage (vertex/fragment), since each stage has its own
+            // intermediate and ID space.
+            std::map<std::string, RewrittenFunction> m_rewrittenFunctions{};
+
+            void Traverse(TIntermediate* intermediate, IdGenerator& ids)
+            {
+                if (intermediate == nullptr)
+                {
+                    return;
+                }
+
+                auto* root = intermediate->getTreeRoot()->getAsAggregate();
+                if (root == nullptr)
+                {
+                    return;
+                }
+
+                m_rewrittenFunctions.clear();
+
+                // Phase 1: rewrite function declarations that have sampler parameters.
+                for (auto* node : root->getSequence())
+                {
+                    auto* function = node->getAsAggregate();
+                    if (function != nullptr && function->getOp() == EOpFunction)
+                    {
+                        RewriteFunctionDefinition(intermediate, ids, function);
+                    }
+                }
+
+                if (m_rewrittenFunctions.empty())
+                {
+                    return;
+                }
+
+                // Phase 2: rewrite call sites in every function body to match the new
+                // parameter lists.
+                CallSiteRewriter callRewriter{m_rewrittenFunctions};
+                for (auto* node : root->getSequence())
+                {
+                    auto* function = node->getAsAggregate();
+                    if (function != nullptr && function->getOp() == EOpFunction)
+                    {
+                        function->traverse(&callRewriter);
+                    }
+                }
+            }
+
+            void RewriteFunctionDefinition(TIntermediate* intermediate, IdGenerator& ids, TIntermAggregate* function)
+            {
+                auto& functionSequence = function->getSequence();
+                if (functionSequence.empty())
+                {
+                    return;
+                }
+
+                auto* paramsAggregate = functionSequence[0]->getAsAggregate();
+                if (paramsAggregate == nullptr || paramsAggregate->getOp() != EOpParameters)
+                {
+                    return;
+                }
+
+                // Find positions of combined-sampler parameters in the original parameter list.
+                std::vector<int> originalSamplerParamIndices{};
+                auto& params = paramsAggregate->getSequence();
+                for (int i = 0; i < gsl::narrow_cast<int>(params.size()); ++i)
+                {
+                    auto* paramSymbol = params[i]->getAsSymbolNode();
+                    if (paramSymbol != nullptr && IsCombinedSamplerType(paramSymbol->getType()))
+                    {
+                        originalSamplerParamIndices.push_back(i);
+                    }
+                }
+
+                if (originalSamplerParamIndices.empty())
+                {
+                    return;
+                }
+
+                const std::string oldMangledName{function->getName().c_str()};
+
+                // For each sampler parameter, allocate a texture symbol and a sampler symbol
+                // and an `EOpConstructTextureSampler(texture, sampler)` aggregate that takes
+                // their place in the function body. Walk right-to-left so that earlier indices
+                // remain valid as we expand the parameter list in place.
+                std::map<long long, TIntermAggregate*> originalParamIdToConstruction{};
+                for (auto it = originalSamplerParamIndices.rbegin(); it != originalSamplerParamIndices.rend(); ++it)
+                {
+                    const int idx = *it;
+                    auto* originalParam = params[idx]->getAsSymbolNode();
+                    const TType& originalType = originalParam->getType();
+                    const long long originalId = originalParam->getId();
+                    const std::string originalName{originalParam->getName().c_str()};
+
+                    TIntermSymbol* newTextureSymbol;
+                    {
+                        TPublicType publicType{};
+                        publicType.qualifier.clearLayout();
+                        publicType.basicType = originalType.getBasicType();
+                        publicType.qualifier = originalType.getQualifier();
+                        publicType.sampler = originalType.getSampler();
+                        publicType.sampler.combined = false;
+
+                        TType newType{publicType};
+                        const std::string newName = originalName + "Texture";
+                        newTextureSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), newName.c_str(), newType});
+                    }
+
+                    TIntermSymbol* newSamplerSymbol;
+                    {
+                        TPublicType publicType{};
+                        publicType.qualifier.clearLayout();
+                        publicType.basicType = originalType.getBasicType();
+                        publicType.qualifier = originalType.getQualifier();
+                        publicType.sampler.sampler = true;
+
+                        TType newType{publicType};
+                        newSamplerSymbol = intermediate->addSymbol(TIntermSymbol{ids.Next(), originalName.c_str(), newType});
+                    }
+
+                    // Build the `EOpConstructTextureSampler(texture, sampler)` aggregate that
+                    // will replace every reference to the original sampler parameter inside
+                    // the function body. Mirror the type construction performed by
+                    // SamplerSplitterTraverser for uniform samplers.
+                    auto* construction = intermediate->growAggregate(newTextureSymbol, newSamplerSymbol);
+                    construction->setOperator(EOpConstructTextureSampler);
+                    {
+                        TPublicType publicType{};
+                        publicType.basicType = originalType.getBasicType();
+                        publicType.qualifier.clearLayout();
+                        publicType.qualifier.storage = EvqTemporary;
+                        publicType.sampler = originalType.getSampler();
+                        publicType.sampler.combined = true;
+                        construction->setType(TType{publicType});
+                    }
+
+                    originalParamIdToConstruction[originalId] = construction;
+
+                    // Replace params[idx] with the new texture symbol, then insert the new
+                    // sampler symbol immediately after it. This expands one sampler parameter
+                    // into two parameters at the original position.
+                    RemoveAllTreeNodes(params[idx]);
+                    params[idx] = newTextureSymbol;
+                    params.insert(params.begin() + idx + 1, newSamplerSymbol);
+                }
+
+                // Rewrite the function body: every reference to an original sampler parameter
+                // becomes a reference to its `EOpConstructTextureSampler(t, s)` aggregate.
+                if (functionSequence.size() >= 2)
+                {
+                    BodySamplerParamReferenceRewriter bodyRewriter{originalParamIdToConstruction};
+                    functionSequence[1]->traverse(&bodyRewriter);
+                    bodyRewriter.ApplyReplacements();
+                }
+
+                // Update the function's mangled name to reflect the new parameter list and
+                // record the rewrite so Phase 2 can update matching call sites.
+                const std::string newMangledName = ComputeMangledName(oldMangledName, paramsAggregate);
+                function->setName(newMangledName.c_str());
+
+                m_rewrittenFunctions[oldMangledName] = RewrittenFunction{
+                    std::move(newMangledName),
+                    std::move(originalSamplerParamIndices),
+                };
+            }
+
+            static bool IsCombinedSamplerType(const TType& type)
+            {
+                return type.getBasicType() == EbtSampler && type.getSampler().isCombined();
+            }
+
+            static std::string ComputeMangledName(const std::string& oldMangledName, TIntermAggregate* paramsAggregate)
+            {
+                // glslang mangles function names as `funcName(typeMangle1;typeMangle2;...`.
+                // Preserve the function-name prefix from the original mangled name and
+                // re-mangle each parameter from its updated TType.
+                const auto parenPos = oldMangledName.find('(');
+                if (parenPos == std::string::npos)
+                {
+                    return oldMangledName;
+                }
+
+                TString mangled{oldMangledName.substr(0, parenPos + 1).c_str()};
+                for (auto* paramNode : paramsAggregate->getSequence())
+                {
+                    auto* paramSymbol = paramNode->getAsSymbolNode();
+                    if (paramSymbol != nullptr)
+                    {
+                        paramSymbol->getType().appendMangledName(mangled);
+                    }
+                }
+                return mangled.c_str();
+            }
+
+            /// Collects references to specific symbol IDs inside a function body and replaces
+            /// them in their parents with the corresponding `EOpConstructTextureSampler`
+            /// aggregate. Mirrors the parent-node-type dispatch from `MakeReplacements`.
+            class BodySamplerParamReferenceRewriter final : public TIntermTraverser
+            {
+            public:
+                explicit BodySamplerParamReferenceRewriter(std::map<long long, TIntermAggregate*>& idToConstruction)
+                    : m_idToConstruction{idToConstruction}
+                {
+                }
+
+                void visitSymbol(TIntermSymbol* symbol) override
+                {
+                    if (m_idToConstruction.find(symbol->getId()) != m_idToConstruction.end())
+                    {
+                        m_pendingReplacements.emplace_back(symbol, this->getParentNode());
+                    }
+                }
+
+                void ApplyReplacements()
+                {
+                    for (const auto& [symbol, parent] : m_pendingReplacements)
+                    {
+                        TIntermAggregate* replacement = m_idToConstruction.at(symbol->getId());
+                        ReplaceInParent(parent, symbol, replacement);
+                    }
+                }
+
+            private:
+                static void ReplaceInParent(TIntermNode* parent, TIntermSymbol* oldSymbol, TIntermAggregate* replacement)
+                {
+                    if (auto* aggregate = parent->getAsAggregate())
+                    {
+                        auto& sequence = aggregate->getSequence();
+                        for (size_t i = 0; i < sequence.size(); ++i)
+                        {
+                            if (sequence[i] == oldSymbol)
+                            {
+                                sequence[i] = replacement;
+                            }
+                        }
+                    }
+                    else if (auto* binary = parent->getAsBinaryNode())
+                    {
+                        if (binary->getLeft() == oldSymbol)
+                        {
+                            binary->setLeft(replacement);
+                        }
+                        else if (binary->getRight() == oldSymbol)
+                        {
+                            binary->setRight(replacement);
+                        }
+                    }
+                    else if (auto* unary = parent->getAsUnaryNode())
+                    {
+                        if (unary->getOperand() == oldSymbol)
+                        {
+                            unary->setOperand(replacement);
+                        }
+                    }
+                    else if (auto* selection = parent->getAsSelectionNode())
+                    {
+                        if (oldSymbol == selection->getCondition())
+                        {
+                            selection->setCondition(replacement);
+                        }
+                        else if (oldSymbol == selection->getTrueBlock())
+                        {
+                            selection->setTrueBlock(replacement);
+                        }
+                        else if (oldSymbol == selection->getFalseBlock())
+                        {
+                            selection->setFalseBlock(replacement);
+                        }
+                    }
+                    else
+                    {
+                        throw std::runtime_error{
+                            "SamplerFunctionParameterSplitter: unsupported parent node when rewriting body sampler reference"};
+                    }
+                }
+
+                std::map<long long, TIntermAggregate*>& m_idToConstruction;
+                std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_pendingReplacements{};
+            };
+
+            /// Walks function bodies looking for `EOpFunctionCall` nodes that call a
+            /// rewritten function. For each, unpacks the `EOpConstructTextureSampler(t, s)`
+            /// aggregate at each original sampler parameter position into two separate
+            /// arguments (the texture and the sampler), and updates the call's mangled name.
+            class CallSiteRewriter final : public TIntermTraverser
+            {
+            public:
+                explicit CallSiteRewriter(const std::map<std::string, RewrittenFunction>& rewrittenFunctions)
+                    : m_rewrittenFunctions{rewrittenFunctions}
+                {
+                }
+
+                bool visitAggregate(TVisit visit, TIntermAggregate* node) override
+                {
+                    if (visit == EvPreVisit && node->getOp() == EOpFunctionCall)
+                    {
+                        auto it = m_rewrittenFunctions.find(node->getName().c_str());
+                        if (it != m_rewrittenFunctions.end())
+                        {
+                            RewriteCallSite(node, it->second);
+                        }
+                    }
+                    return true;
+                }
+
+            private:
+                static void RewriteCallSite(TIntermAggregate* call, const RewrittenFunction& info)
+                {
+                    auto& args = call->getSequence();
+                    // glslang's SPIR-V emitter (handleUserFunctionCall) indexes its qualifier
+                    // list in lockstep with the args sequence. Expanding args without expanding
+                    // the qualifier list reads past-the-end memory for the trailing args, which
+                    // silently elides their OpStore instructions and yields uninitialized
+                    // function-call temporaries in the generated HLSL/SPIR-V.
+                    auto& qualifiers = call->getQualifierList();
+
+                    // Invariant: glslang populates the qualifier list in lockstep with args for
+                    // every EOpFunctionCall reaching this rewriter. If they ever disagree, we
+                    // must fail loudly -- silently degrading would re-introduce the very bug
+                    // this pass exists to fix (qualifiers OOB-read -> elided OpStore ->
+                    // uninitialized texture access -> accessChain.isRValue() assert).
+                    if (qualifiers.size() != args.size())
+                    {
+                        throw std::runtime_error{
+                            "SamplerFunctionParameterSplitter: call qualifier list size does not match argument list size"};
+                    }
+
+                    // Process right-to-left so earlier sampler indices remain valid as we
+                    // expand each `EOpConstructTextureSampler(t, s)` argument into two args.
+                    for (auto it = info.OriginalSamplerParamIndices.rbegin(); it != info.OriginalSamplerParamIndices.rend(); ++it)
+                    {
+                        const int idx = *it;
+                        if (idx < 0 || idx >= gsl::narrow_cast<int>(args.size()))
+                        {
+                            throw std::runtime_error{
+                                "SamplerFunctionParameterSplitter: call site argument index out of bounds"};
+                        }
+
+                        auto* argAggregate = args[idx]->getAsAggregate();
+                        if (argAggregate == nullptr || argAggregate->getOp() != EOpConstructTextureSampler)
+                        {
+                            throw std::runtime_error{
+                                "SamplerFunctionParameterSplitter: expected EOpConstructTextureSampler at sampler argument position"};
+                        }
+
+                        auto& constructionOperands = argAggregate->getSequence();
+                        if (constructionOperands.size() != 2)
+                        {
+                            throw std::runtime_error{
+                                "SamplerFunctionParameterSplitter: EOpConstructTextureSampler aggregate must have exactly two operands"};
+                        }
+
+                        TIntermNode* textureOperand = constructionOperands[0];
+                        TIntermNode* samplerOperand = constructionOperands[1];
+
+                        args[idx] = textureOperand;
+                        args.insert(args.begin() + idx + 1, samplerOperand);
+
+                        // Keep the qualifier list aligned with args. Both the texture and the
+                        // sampler inherit the original sampler argument's qualifier (typically
+                        // EvqIn for function parameters); samplers are opaque types so glslang
+                        // takes the originalParam l-value path regardless.
+                        qualifiers.insert(qualifiers.begin() + idx + 1, qualifiers[idx]);
+                    }
+
+                    call->setName(info.NewMangledName.c_str());
+                }
+
+                const std::map<std::string, RewrittenFunction>& m_rewrittenFunctions;
+            };
+        };
+
+        /// Prepends a zero-initialization assignment to the start of every function body
+        /// for each struct-typed local variable referenced anywhere in that body.
+        ///
+        /// Babylon.js emits patterns like
+        ///
+        ///     lightingInfo computeAreaLighting(...) {
+        ///         lightingInfo result;             // declared, no initializer
+        ///         result.specular += value;        // read-modify-write of an
+        ///         result.diffuse  += value;        // uninitialized field
+        ///         return result;
+        ///     }
+        ///
+        /// which is undefined behavior in GLSL but tolerated by WebGL drivers. The HLSL
+        /// emitted by SPIRV-Cross faithfully reproduces the pattern, and D3DCompile
+        /// rejects it with `error X4000: variable 'result_1' used without having been
+        /// completely initialized`.
+        ///
+        /// This pass walks every function body, collects all struct-typed local
+        /// (`EvqTemporary`) symbols it references, and prepends an assignment of an
+        /// `EOpConstructStruct(0, 0, ...)` aggregate at the start of the body. The
+        /// SPIR-V emitter sees this as a normal store and emits well-defined SPIR-V;
+        /// SPIRV-Cross then emits HLSL with the struct local initialized at declaration
+        /// (or shortly after). Any subsequent real assignment in the body is dead-code
+        /// eliminated by the HLSL compiler's optimizer (FXC for the DXBC backend, DXC
+        /// for DXIL), so functional behavior is unchanged for previously-well-defined
+        /// shaders.
+        ///
+        /// Note on nested-scope locals: a struct local declared inside a loop body or
+        /// conditional branch (e.g. `for (...) { lightingInfo r; r.x += ...; }`) also
+        /// gets its init prepended at the *function* entry rather than at its lexical
+        /// scope entry. This is safe — and necessary — because:
+        ///
+        ///   1. SPIR-V's `OpVariable` rule requires every function-scope variable to
+        ///      live in the function's entry basic block, so glslang already hoists
+        ///      nested-scope locals to function scope in the SPIR-V it emits; SPIRV-
+        ///      Cross then emits HLSL with the variable at function scope as well,
+        ///      meaning a function-entry init reaches every use site correctly.
+        ///   2. Real BabylonJS shaders (Standard / PBR / OpenPBR area lighting,
+        ///      `computeAreaLighting` inlined per-light) hit this exact pattern — the
+        ///      inlined struct locals are referenced *only* from nested scopes — and
+        ///      need the init to suppress X4000.
+        ///   3. The marginal semantic change versus per-scope init (a hypothetical
+        ///      "accumulator that depends on per-iteration freshness" pattern) does
+        ///      not occur in BabylonJS-generated GLSL, which only ever uses the
+        ///      uninitialized-first-read pattern this pass targets.
+        class StructLocalZeroInitializerTraverser final
+        {
+        public:
+            static void Traverse(TProgram& program)
+            {
+                StructLocalZeroInitializerTraverser pass{};
+                pass.TraverseStage(program.getIntermediate(EShLangVertex));
+                pass.TraverseStage(program.getIntermediate(EShLangFragment));
+            }
+
+        private:
+            void TraverseStage(TIntermediate* intermediate)
+            {
+                if (intermediate == nullptr)
+                {
+                    return;
+                }
+
+                auto* root = intermediate->getTreeRoot()->getAsAggregate();
+                if (root == nullptr)
+                {
+                    return;
+                }
+
+                for (auto* node : root->getSequence())
+                {
+                    auto* function = node->getAsAggregate();
+                    if (function != nullptr && function->getOp() == EOpFunction)
+                    {
+                        ProcessFunction(intermediate, function);
+                    }
+                }
+            }
+
+            static void ProcessFunction(TIntermediate* intermediate, TIntermAggregate* function)
+            {
+                auto& functionSequence = function->getSequence();
+                if (functionSequence.size() < 2)
+                {
+                    return;
+                }
+
+                auto* body = functionSequence[1]->getAsAggregate();
+                if (body == nullptr)
+                {
+                    return;
+                }
+
+                SymbolCollector collector{};
+                body->traverse(&collector);
+
+                if (collector.UniqueLocals.empty())
+                {
+                    return;
+                }
+
+                std::vector<TIntermNode*> initStatements{};
+                initStatements.reserve(collector.UniqueLocals.size());
+                for (const auto& [id, symbolNode] : collector.UniqueLocals)
+                {
+                    BX_UNUSED(id);
+                    const TType& type = symbolNode->getType();
+                    TIntermTyped* zeroValue = MakeZeroForType(intermediate, type, symbolNode->getLoc());
+                    if (zeroValue == nullptr)
+                    {
+                        continue;
+                    }
+                    TIntermSymbol* lhs = intermediate->addSymbol(*symbolNode);
+                    TIntermTyped* assign = intermediate->addAssign(EOpAssign, lhs, zeroValue, symbolNode->getLoc());
+                    if (assign != nullptr)
+                    {
+                        initStatements.push_back(assign);
+                    }
+                }
+
+                if (!initStatements.empty())
+                {
+                    auto& bodySequence = body->getSequence();
+                    bodySequence.insert(bodySequence.begin(), initStatements.begin(), initStatements.end());
+                }
+            }
+
+            /// Build a typed expression that evaluates to the all-zero value of `type`.
+            /// For struct types, recursively constructs `EOpConstructStruct(zero_field_0, ...)`.
+            /// For scalar/vector/matrix types, builds a `TIntermConstantUnion` with zeros.
+            /// Returns nullptr for unsupported types (currently: array types).
+            static TIntermTyped* MakeZeroForType(TIntermediate* intermediate, const TType& type, const TSourceLoc& loc)
+            {
+                if (type.isArray())
+                {
+                    // Skipping array initialization keeps this pass focused on the
+                    // X4000-on-struct-local case observed in BabylonJS's
+                    // `computeAreaLighting`. Array-of-struct is rare in BJS shaders and
+                    // can be added later if a concrete failure surfaces.
+                    return nullptr;
+                }
+
+                if (type.isStruct())
+                {
+                    const TTypeList* structFields = type.getStruct();
+                    if (structFields == nullptr || structFields->empty())
+                    {
+                        return nullptr;
+                    }
+
+                    TIntermAggregate* construct = nullptr;
+                    for (const TTypeLoc& field : *structFields)
+                    {
+                        TIntermTyped* fieldZero = MakeZeroForType(intermediate, *field.type, loc);
+                        if (fieldZero == nullptr)
+                        {
+                            return nullptr;
+                        }
+                        construct = intermediate->growAggregate(construct, fieldZero, loc);
+                    }
+
+                    if (construct == nullptr)
+                    {
+                        return nullptr;
+                    }
+                    construct->setOperator(EOpConstructStruct);
+                    construct->setType(type);
+                    return construct;
+                }
+
+                const size_t numComponents = gsl::narrow_cast<size_t>(type.computeNumComponents());
+                if (numComponents == 0)
+                {
+                    return nullptr;
+                }
+
+                TConstUnionArray zeros{gsl::narrow_cast<int>(numComponents)};
+                for (size_t i = 0; i < numComponents; ++i)
+                {
+                    switch (type.getBasicType())
+                    {
+                        case EbtFloat:
+                        case EbtDouble:
+                        case EbtFloat16:
+                            zeros[i].setDConst(0.0);
+                            break;
+                        case EbtInt:
+                        case EbtInt8:
+                        case EbtInt16:
+                        case EbtInt64:
+                            zeros[i].setIConst(0);
+                            break;
+                        case EbtUint:
+                        case EbtUint8:
+                        case EbtUint16:
+                        case EbtUint64:
+                            zeros[i].setUConst(0);
+                            break;
+                        case EbtBool:
+                            zeros[i].setBConst(false);
+                            break;
+                        default:
+                            // Unknown basic type (e.g. opaque sampler); skip.
+                            return nullptr;
+                    }
+                }
+
+                return intermediate->addConstantUnion(zeros, type, loc, true);
+            }
+
+            class SymbolCollector final : public TIntermTraverser
+            {
+            public:
+                // Map uniqueId -> a representative symbol node (used to read type/loc when
+                // building the init statement). One entry per distinct local variable.
+                std::map<long long, TIntermSymbol*> UniqueLocals{};
+
+                void visitSymbol(TIntermSymbol* symbol) override
+                {
+                    const TType& type = symbol->getType();
+                    if (type.getQualifier().storage != EvqTemporary)
+                    {
+                        return;
+                    }
+                    if (!type.isStruct() || type.isArray())
+                    {
+                        return;
+                    }
+                    UniqueLocals.try_emplace(symbol->getId(), symbol);
+                }
+            };
+        };
+
         class InvertYDerivativeOperandsTraverser : public TIntermTraverser
         {
         public:
@@ -969,6 +1609,16 @@ namespace Babylon::ShaderCompilerTraversers
     void SplitSamplersIntoSamplersAndTextures(TProgram& program, IdGenerator& ids)
     {
         SamplerSplitterTraverser::Traverse(program, ids);
+    }
+
+    void SplitSamplerFunctionParameters(TProgram& program, IdGenerator& ids)
+    {
+        SamplerFunctionParameterSplitterTraverser::Traverse(program, ids);
+    }
+
+    void ZeroInitializeStructLocals(TProgram& program)
+    {
+        StructLocalZeroInitializerTraverser::Traverse(program);
     }
 
     void InvertYDerivativeOperands(TProgram& program)

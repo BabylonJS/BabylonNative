@@ -6,7 +6,9 @@
 #include <UrlLib/UrlLib.h>
 #include <Babylon/JsRuntimeScheduler.h>
 #include <bx/allocator.h>
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 #include <bimg/bimg.h>
+#endif
 
 struct NVGcontext;
 
@@ -48,6 +50,8 @@ namespace Babylon::Polyfills::Internal
         Napi::FunctionReference m_onloadHandlerRef;
         Napi::FunctionReference m_onerrorHandlerRef;
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
         bimg::ImageContainer* m_imageContainer{};
+#endif
     };
 }
