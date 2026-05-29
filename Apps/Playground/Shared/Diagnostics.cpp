@@ -25,6 +25,23 @@
 #include <unistd.h>
 #endif
 
+#if defined(__SANITIZE_ADDRESS__)
+// MSVC ASAN reads this exported function during runtime init (before main)
+// to pick up default options without requiring ASAN_OPTIONS in the env.
+// detect_leaks=0 disables Windows-ASAN's leak detector (known buggy on x64).
+// malloc_context_size=5 trims per-allocation stack capture (default 30) so
+// big-texture tests like EXR Loader fit in the 60-min CI budget.
+// quarantine_size_mb=64 caps the freed-allocation quarantine.
+// abort_on_error=1 matches the Linux/macOS sanitizer jobs.
+extern "C" __declspec(dllexport) const char* __cdecl __asan_default_options()
+{
+    return "abort_on_error=1"
+           ":detect_leaks=0"
+           ":malloc_context_size=5"
+           ":quarantine_size_mb=64";
+}
+#endif
+
 namespace
 {
     std::atomic<bool> s_installed{false};

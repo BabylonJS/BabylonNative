@@ -310,6 +310,16 @@ namespace CommandLine
     PlaygroundOptions Parse(int argc, const char* const* argv)
     {
         PlaygroundOptions opt;
+
+#if defined(__SANITIZE_ADDRESS__)
+        // Under ASAN we always want headless: the message pump on a
+        // display-less CI runner pessimises every native call under
+        // sanitizer instrumentation; without it the EXR Loader test alone
+        // can blow the 60-min CI budget. Routing trace to stdout also
+        // gives us per-test progress visible in the CI log.
+        opt.Headless = true;
+#endif
+
         if (argc <= 0 || argv == nullptr)
         {
             return opt;
