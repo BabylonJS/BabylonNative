@@ -4,7 +4,6 @@ $input v_position, v_texcoord0, v_texcoord1
 
 #define EDGE_AA 1
 
-uniform vec4 u_viewSize;
 uniform mat3 u_scissorMat;
 uniform mat3 u_paintMat;
 uniform vec4 u_innerCol;

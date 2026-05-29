@@ -17,8 +17,10 @@
 
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 #include <bimg/bimg.h>
 #include <bx/allocator.h>
+#endif
 
 #include <gsl/gsl>
 

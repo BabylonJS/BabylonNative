@@ -7,7 +7,9 @@
 #endif
 
 #include <bx/allocator.h>
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
 #include <bimg/bimg.h>
+#endif
 #include <Babylon/JsRuntime.h>
 #include <Babylon/Graphics/DeviceContext.h>
 #include <Babylon/Graphics/Platform.h>
@@ -15,6 +17,10 @@
 
 namespace Babylon::Plugins::Internal
 {
+    // Defined in TestUtils.cpp. Invokes the optional host callback set via
+    // Babylon::Plugins::TestUtils::SetExitCallback(); no-op if unset.
+    void InvokeExitCallback(int exitCode);
+
     class TestUtils final : public Napi::ObjectWrap<TestUtils>
     {
     public:
@@ -81,13 +87,17 @@ namespace Babylon::Plugins::Internal
             Image() = default;
             ~Image()
             {
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
                 if (m_Image)
                 {
                     bimg::imageFree(m_Image);
                     m_Image = nullptr;
                 }
+#endif
             }
+#ifdef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
             bimg::ImageContainer* m_Image{};
+#endif
         };
     };
 }
