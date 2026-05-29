@@ -734,6 +734,8 @@ namespace Babylon
 
                 InstanceMethod("populateFrameStats", &NativeEngine::PopulateFrameStats),
 
+                // setDeviceLostCallback is a deprecated alias. Prefer setRenderResetCallback.
+                InstanceMethod("setRenderResetCallback", &NativeEngine::SetRenderResetCallback),
                 InstanceMethod("setDeviceLostCallback", &NativeEngine::SetRenderResetCallback),
             });
 
