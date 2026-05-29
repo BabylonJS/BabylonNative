@@ -8,7 +8,7 @@
 #include <Babylon/Plugins/ExternalTexture.h>
 #include <Babylon/ScriptLoader.h>
 
-#include "Utils.h"
+#include "Helpers.h"
 #ifdef HAS_RENDERDOC
 #include "RenderDoc.h"
 #endif
@@ -29,7 +29,7 @@ TEST(ExternalTexture, RenderTextureArray)
     constexpr uint32_t TEX_SIZE = 64;
     constexpr uint32_t SLICE_COUNT = 3;
 
-    const Color sliceColors[SLICE_COUNT] = {
+    const Helpers::Color sliceColors[SLICE_COUNT] = {
         {255, 0, 0, 255},
         {0, 255, 0, 255},
         {0, 0, 255, 255},
@@ -45,12 +45,12 @@ TEST(ExternalTexture, RenderTextureArray)
     device.StartRenderingCurrentFrame();
     update.Start();
 
-    auto inputTexture = CreateTestTextureArrayWithData(
+    auto inputTexture = Helpers::CreateTextureArrayWithData(
         device.GetPlatformInfo().Device, TEX_SIZE, TEX_SIZE, sliceColors, SLICE_COUNT);
     Babylon::Plugins::ExternalTexture inputExternalTexture{inputTexture};
 
-    auto outputTexture = CreateRenderTargetTexture(
-        device.GetPlatformInfo().Device, TEX_SIZE, TEX_SIZE);
+    auto outputTexture = Helpers::CreateTexture(
+        device.GetPlatformInfo().Device, TEX_SIZE, TEX_SIZE, /*arraySize*/ 1, /*renderTarget*/ true);
     Babylon::Plugins::ExternalTexture outputExternalTexture{outputTexture};
 
     std::promise<void> startupDone;
@@ -135,8 +135,8 @@ TEST(ExternalTexture, RenderTextureArray)
         RenderDoc::StopFrameCapture(device.GetPlatformInfo().Device);
 #endif
 
-        auto pixels = ReadBackRenderTarget(
-            device.GetPlatformInfo().Device, outputTexture, TEX_SIZE, TEX_SIZE);
+        auto pixels = Helpers::ReadPixels(
+            device.GetPlatformInfo(), outputTexture, TEX_SIZE, TEX_SIZE);
 
         const auto& expected = sliceColors[sliceIndex];
         uint32_t matchCount = 0;
@@ -180,7 +180,7 @@ TEST(ExternalTexture, RenderTextureArray)
             << matchPercent << "% of pixels matched";
     }
 
-    DestroyRenderTargetTexture(outputTexture);
-    DestroyTestTexture(inputTexture);
+    Helpers::DestroyTexture(outputTexture);
+    Helpers::DestroyTexture(inputTexture);
 #endif
 }

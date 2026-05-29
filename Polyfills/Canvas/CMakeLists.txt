@@ -47,12 +47,18 @@ target_include_directories(Canvas
 target_link_libraries(Canvas
     PUBLIC napi
     PRIVATE bgfx
-    PRIVATE bimg
     PRIVATE bx
     PRIVATE JsRuntimeInternal
     PRIVATE GraphicsDeviceContext
     PRIVATE UrlLib
     PRIVATE base-n)
+
+if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
+    target_compile_definitions(Canvas
+        PRIVATE BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
+    target_link_libraries(Canvas
+        PRIVATE bimg)
+endif()
 
 if(SHADERC_PATH AND NOT IOS AND NOT VISIONOS AND NOT ANDROID)
     if(EXISTS "${SHADERC_PATH}")

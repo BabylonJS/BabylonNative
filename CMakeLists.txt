@@ -35,7 +35,7 @@ FetchContent_Declare(base-n
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG be578c80f6c1c1e4d2b5baa163bd452f1d3b88fa
+    GIT_TAG e5f3f31c1ec8a376dde75f8b20366e2696810ea0
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
@@ -43,7 +43,7 @@ FetchContent_Declare(CMakeExtensions
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(glslang
     GIT_REPOSITORY https://github.com/BabylonJS/glslang.git
-    GIT_TAG 39a80699a315cb7f66c4ab3180edd4e2910fab28
+    GIT_TAG 284e4301e5a6b44b279635276588db7cdd942624
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(googletest
     URL "https://github.com/google/googletest/archive/refs/tags/v1.17.0.tar.gz"
@@ -54,7 +54,7 @@ FetchContent_Declare(ios-cmake
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(JsRuntimeHost
     GIT_REPOSITORY https://github.com/BabylonJS/JsRuntimeHost.git
-    GIT_TAG 808601482588b7f806d91231288310b94766dc84)
+    GIT_TAG 1e9b17e4544862270420f0e192c5dfe56fe768d2)
 FetchContent_Declare(libwebp
     GIT_REPOSITORY https://github.com/webmproject/libwebp.git
     GIT_TAG 57e324e2eb99be46df46d77b65705e34a7ae616c
@@ -65,7 +65,7 @@ FetchContent_Declare(metal-cpp
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 0e1654748e9e54b5469fb0fbc1c715b96fa06f8f
+    GIT_TAG a512817ddbcd879a3929aef7d1d762871bdf8635
     EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------
@@ -124,6 +124,11 @@ option(BABYLON_NATIVE_PLUGIN_NATIVECAPTURE "Include Babylon Native Plugin Native
 option(BABYLON_NATIVE_PLUGIN_NATIVEENCODING "Include Babylon Native Plugin NativeEncoding." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE "Include Babylon Native Plugin NativeEngine." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP "Include Babylon Native Plugin NativeEngine - WebP." ON)
+option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES "Enable image loading in NativeEngine (LoadTexture, image bitmap, bimg, WebP)." ON)
+if(NOT BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
+    # WebP support relies on image loading code paths; force it off when image loading is disabled.
+    set(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP OFF CACHE BOOL "Include Babylon Native Plugin NativeEngine - WebP." FORCE)
+endif()
 option(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_COMPILESHADERS "Include Babylon Native Plugin NativeEngine - Compile Shaders." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEINPUT "Include Babylon Native Plugin NativeInput." ON)
 option(BABYLON_NATIVE_PLUGIN_NATIVEOPTIMIZATIONS "Include Babylon Native Plugin NativeOptimizations." ON)
@@ -159,7 +164,10 @@ if(ENABLE_SANITIZERS)
 
         string(JOIN "," SANITIZER_FLAGS ${SANITIZERS})
 
-        add_compile_options(-fsanitize=${SANITIZER_FLAGS} -fno-omit-frame-pointer)
+        # -fno-sanitize-recover=all makes UBSan findings fatal. Without it, UBSan
+        # only prints a diagnostic to stderr and execution continues, so CI stays
+        # green while latent UB goes unreported.
+        add_compile_options(-fsanitize=${SANITIZER_FLAGS} -fno-omit-frame-pointer -fno-sanitize-recover=all)
         add_link_options(-fsanitize=${SANITIZER_FLAGS})
     elseif(MSVC)
         # MSVC only supports AddressSanitizer

@@ -1,10 +1,18 @@
 #include <Babylon/Graphics/BgfxCallback.h>
 #include <bgfx/bgfx.h>
 #include <bx/bx.h>
+#include <bx/debug.h>
 #include <bx/string.h>
 #include <cassert>
+#include <cstdio>
+#include <cstdlib>
 #include <stdarg.h>
 #include <stdexcept>
+
+#if BX_PLATFORM_WINDOWS
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
 
 namespace Babylon::Graphics
 {
@@ -25,19 +33,36 @@ namespace Babylon::Graphics
 
     void BgfxCallback::fatal(const char* filePath, uint16_t line, bgfx::Fatal::Enum code, const char* str)
     {
-        // Always log fatal errors to stderr so they appear in CI logs.
+        // Always log first. trace() routes only to OutputDebugString +
+        // optional console hook -- write to stderr too so CI captures it.
         trace(filePath, line, "BGFX FATAL 0x%08x: %s\n", code, str);
-        fprintf(stderr, "BGFX FATAL %s (%d): 0x%08x: %s\n", filePath, line, code, str);
-        fflush(stderr);
+        std::fprintf(stderr, "[BgfxCallback] FATAL 0x%08x at %s(%u): %s\n",
+                     static_cast<unsigned>(code),
+                     filePath != nullptr ? filePath : "(null)",
+                     static_cast<unsigned>(line),
+                     str != nullptr ? str : "(null)");
+        std::fflush(stderr);
 
         if (bgfx::Fatal::DebugCheck == code)
         {
+#if BX_PLATFORM_WINDOWS
+            // Only break when a debugger is attached; otherwise the BP
+            // exception escapes as STATUS_BREAKPOINT and we lose our exit
+            // code + callstack.
+            if (::IsDebuggerPresent())
+            {
+                bx::debugBreak();
+            }
+#else
             bx::debugBreak();
+#endif
         }
-        else
-        {
-            abort();
-        }
+
+        // Falls through (DebugCheck on no-debugger Windows, or any other
+        // Fatal code) to abort() so the SIGABRT handler in Diagnostics.cpp
+        // produces a callstack and exit code 3.
+        BX_UNUSED(code, str);
+        std::abort();
     }
 
     void BgfxCallback::traceVargs(const char* filePath, uint16_t line, const char* format, va_list argList)

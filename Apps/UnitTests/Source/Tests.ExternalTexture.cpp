@@ -7,7 +7,7 @@
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/ExternalTexture.h>
 
-#include "Utils.h"
+#include "Helpers.h"
 
 #include <iostream>
 
@@ -24,9 +24,9 @@ TEST(ExternalTexture, Construction)
     device.StartRenderingCurrentFrame();
     update.Start();
 
-    auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256);
+    auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
-    DestroyTestTexture(nativeTexture);
+    Helpers::DestroyTexture(nativeTexture);
 
     EXPECT_EQ(externalTexture.Width(), 256u);
     EXPECT_EQ(externalTexture.Height(), 256u);
@@ -47,9 +47,9 @@ TEST(ExternalTexture, CreateForJavaScript)
     device.StartRenderingCurrentFrame();
     update.Start();
 
-    auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256);
+    auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
-    DestroyTestTexture(nativeTexture);
+    Helpers::DestroyTexture(nativeTexture);
 
     std::promise<void> done{};
 
@@ -87,9 +87,9 @@ TEST(ExternalTexture, Update)
     device.StartRenderingCurrentFrame();
     update.Start();
 
-    auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256);
+    auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
-    DestroyTestTexture(nativeTexture);
+    Helpers::DestroyTexture(nativeTexture);
 
     EXPECT_EQ(externalTexture.Width(), 256u);
     EXPECT_EQ(externalTexture.Height(), 256u);
@@ -101,9 +101,9 @@ TEST(ExternalTexture, Update)
     device.StartRenderingCurrentFrame();
     update.Start();
 
-    auto nativeTexture2 = CreateTestTexture(device.GetPlatformInfo().Device, 128, 128);
+    auto nativeTexture2 = Helpers::CreateTexture(device.GetPlatformInfo().Device, 128, 128);
     externalTexture.Update(nativeTexture2);
-    DestroyTestTexture(nativeTexture2);
+    Helpers::DestroyTexture(nativeTexture2);
 
     EXPECT_EQ(externalTexture.Width(), 128u);
     EXPECT_EQ(externalTexture.Height(), 128u);

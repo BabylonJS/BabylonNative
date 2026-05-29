@@ -61,6 +61,11 @@ namespace Babylon::Graphics
         return m_graphicsImpl.RequestScreenShot(std::move(callback));
     }
 
+    void DeviceContext::RequestCaptureNextFrame()
+    {
+        m_graphicsImpl.RequestCaptureNextFrame();
+    }
+
     void DeviceContext::SetRenderResetCallback(std::function<void()> callback)
     {
         return m_graphicsImpl.SetRenderResetCallback(std::move(callback));
@@ -104,6 +109,11 @@ namespace Babylon::Graphics
     bgfx::ViewId DeviceContext::AcquireNewViewId(bgfx::Encoder& encoder)
     {
         return m_graphicsImpl.AcquireNewViewId(encoder);
+    }
+
+    bgfx::ViewId DeviceContext::PeekNextViewId() const
+    {
+        return m_graphicsImpl.PeekNextViewId();
     }
 
     void DeviceContext::AddTexture(bgfx::TextureHandle handle, uint16_t width, uint16_t height, bool hasMips, uint16_t numLayers, bgfx::TextureFormat::Enum format)
