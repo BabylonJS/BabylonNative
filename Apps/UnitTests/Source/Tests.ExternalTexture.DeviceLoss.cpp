@@ -62,15 +62,25 @@ namespace
 }
 
 // End-to-end test for the wrapped-native-texture device-loss restore flow:
-//   1. Create an external GPU texture, wrap it, render red into it, readback → expect red.
-//   2. Create a SECOND GPU texture (simulating device restore), call updateWrappedNativeTexture,
-//      render blue into it, readback → expect blue.
+//   1. Create explicit deviceA, wrap a texture on deviceA, render red, readback → expect red.
+//   2. DisableRendering -> UpdateDevice(deviceB) tears bgfx down and re-points the Graphics::Device
+//      at a fresh graphics device. The next StartRenderingCurrentFrame triggers EnableRendering
+//      which re-inits bgfx and fires the JS render-reset callback (BJS _restoreEngineAfterContextLost).
+//      BJS's rebuild walks skip InternalTextureSource.External, leaving the wrapped RT untouched.
+//   3. Create a NEW external texture on deviceB, call updateWrappedNativeTexture to repoint the
+//      wrapper at the new handle, render blue, readback → expect blue.
 TEST(ExternalTexture, RestoreAfterDeviceLoss)
 {
 #if defined(SKIP_EXTERNAL_TEXTURE_TESTS) || defined(SKIP_RENDER_TESTS)
     GTEST_SKIP();
 #else
-    Babylon::Graphics::Device device{g_deviceConfig};
+    Babylon::Graphics::DeviceT deviceA = Helpers::CreateDevice();
+    ASSERT_NE(deviceA, nullptr);
+    Babylon::Graphics::DeviceT deviceB = nullptr;
+
+    Babylon::Graphics::Configuration config = g_deviceConfig;
+    config.Device = deviceA;
+    Babylon::Graphics::Device device{config};
     Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
     device.StartRenderingCurrentFrame();
@@ -85,7 +95,7 @@ TEST(ExternalTexture, RestoreAfterDeviceLoss)
     Babylon::AppRuntime::Options options{};
     options.UnhandledExceptionHandler = [](const Napi::Error& error) {
         std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
-        std::cerr.flush();
+        std::quick_exit(1);
     };
 
     Babylon::AppRuntime runtime{options};
@@ -165,9 +175,24 @@ TEST(ExternalTexture, RestoreAfterDeviceLoss)
     EXPECT_GT(stats1.pureRed, 100u) << "Before restore: expected red plane pixels.";
     EXPECT_EQ(stats1.pureBlue, 0u) << "Before restore: no blue expected.";
 
-    // --- Phase 2: simulate device restore with a NEW texture, call restoreTexture, render blue, readback ---
-    auto nativeTexture2 = Helpers::CreateTexture(
-        device.GetPlatformInfo().Device, TEX_SIZE, TEX_SIZE, 1, true);
+    // --- Simulate device loss: tear bgfx down on deviceA and re-point Graphics::Device at deviceB ---
+    device.DisableRendering();
+
+    deviceB = Helpers::CreateDevice();
+    ASSERT_NE(deviceB, nullptr);
+    device.UpdateDevice(deviceB);
+
+    // The next StartRenderingCurrentFrame (inside phase 2 below) triggers EnableRendering -> bgfx::init
+    // on deviceB -> render-reset callback -> BJS _restoreEngineAfterContextLost (Native override) ->
+    // _rebuildGraphicsResources -> onContextRestoredObservable. External-source RT wrappers and
+    // InternalTextures are skipped by the rebuild walks, leaving our wrapped RT intact and waiting
+    // for updateWrappedNativeTexture below.
+
+    // --- Phase 2: simulate device restore with a NEW texture on deviceB, call restoreTexture, render blue, readback ---
+    // bgfx is torn down between DisableRendering and EnableRendering, so device.GetPlatformInfo().Device
+    // (which goes through bgfx::getInternalData) returns stale data in this window. Create the new texture
+    // directly on deviceB instead.
+    auto nativeTexture2 = Helpers::CreateTexture(deviceB, TEX_SIZE, TEX_SIZE, 1, true);
     Babylon::Plugins::ExternalTexture externalTexture2{nativeTexture2};
 
     device.StartRenderingCurrentFrame();
@@ -232,5 +257,9 @@ TEST(ExternalTexture, RestoreAfterDeviceLoss)
 
     Helpers::DestroyTexture(nativeTexture1);
     Helpers::DestroyTexture(nativeTexture2);
+
+    // Graphics::Device destructs at scope exit; release the underlying graphics devices.
+    Helpers::DestroyDevice(deviceB);
+    Helpers::DestroyDevice(deviceA);
 #endif
 }
