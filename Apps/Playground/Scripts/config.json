@@ -229,7 +229,7 @@
         },
         {
             "title": "Solid particle system",
-            "playgroundId": "#WCDZS#92",
+            "playgroundId": "#WCDZS#531",
             "renderCount": 150,
             "referenceImage": "sps.png",
             "errorRatio": 6.0
@@ -860,7 +860,7 @@
         },
         {
             "title": "Volumetric Light Scattering Post Process with Morph Targets",
-            "playgroundId": "#5E318S#5",
+            "playgroundId": "#5E318S#7",
             "excludeFromAutomaticTesting": true,
             "reason": "Pixel comparison fails on Linux (large diff)",
             "referenceImage": "volumetricLightScatteringMorphTargets.png"
@@ -4969,7 +4969,7 @@
         },
         {
             "title": "wgsl-in-shadermaterial",
-            "playgroundId": "#8RU8Q3#157",
+            "playgroundId": "#8RU8Q3#193",
             "renderCount": 30,
             "excludeFromAutomaticTesting": true,
             "reason": "NativeEngine missing createStorageBuffer for WGSL ShaderMaterial",
