@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <thread>
 
 #if defined(_MSC_VER)
 #define WIN32_LEAN_AND_MEAN
@@ -21,6 +22,8 @@
 #include <stdlib.h>
 #include <io.h>
 #include <wchar.h>
+#include <psapi.h>
+#pragma comment(lib, "psapi.lib")
 #else
 #include <unistd.h>
 #endif
@@ -53,6 +56,66 @@ namespace
     std::chrono::steady_clock::time_point s_startTime{};
 
     bool s_ansiEnabled{false};
+
+    // Heartbeat: prints "[hb] T=Ns WS=Mb" every N seconds so CI logs reveal
+    // long-running native work (e.g. EXR decode under WARP+ASAN) instead of
+    // appearing as opaque silence. Stops at PrintFinishLine.
+    std::atomic<bool> s_heartbeatStop{false};
+    std::thread       s_heartbeatThread;
+
+    void HeartbeatLoop(int intervalSeconds)
+    {
+        // Stagger first tick so any "Running <test>" line lands in the log
+        // before our first heartbeat marker.
+        const auto interval = std::chrono::seconds(intervalSeconds);
+
+        while (!s_heartbeatStop.load(std::memory_order_relaxed))
+        {
+            // Sleep in short slices so shutdown is responsive.
+            for (int i = 0; i < intervalSeconds * 10; ++i)
+            {
+                if (s_heartbeatStop.load(std::memory_order_relaxed))
+                {
+                    return;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+
+            const auto elapsed = std::chrono::steady_clock::now() - s_startTime;
+            const long long sec = std::chrono::duration_cast<std::chrono::seconds>(elapsed).count();
+
+            long long wsMb = -1;
+#if defined(_MSC_VER)
+            PROCESS_MEMORY_COUNTERS_EX pmc{};
+            pmc.cb = sizeof(pmc);
+            if (::GetProcessMemoryInfo(::GetCurrentProcess(),
+                                       reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&pmc),
+                                       sizeof(pmc)))
+            {
+                wsMb = static_cast<long long>(pmc.WorkingSetSize / (1024 * 1024));
+            }
+#endif
+
+            if (wsMb >= 0)
+            {
+                std::fprintf(stdout, "[hb] T=%llds WS=%lldMB\n", sec, wsMb);
+            }
+            else
+            {
+                std::fprintf(stdout, "[hb] T=%llds\n", sec);
+            }
+            std::fflush(stdout);
+        }
+    }
+
+    void StopHeartbeat()
+    {
+        s_heartbeatStop.store(true, std::memory_order_relaxed);
+        if (s_heartbeatThread.joinable())
+        {
+            s_heartbeatThread.join();
+        }
+    }
 
 #if defined(_MSC_VER)
     void __cdecl OnInvalidParameter(
@@ -219,6 +282,40 @@ namespace Diagnostics
         // via s_finishPrinted; whichever fires first wins.
         std::atexit(&PrintFinishLine);
         std::at_quick_exit(&PrintFinishLine);
+
+        // Heartbeat thread: only enabled when explicitly opted-in via env
+        // var BN_HEARTBEAT_SECONDS=<positive int>, or always under ASAN where
+        // long bimg/WARP work otherwise looks like a deadlock in CI logs.
+        int interval = 0;
+#if defined(__SANITIZE_ADDRESS__)
+        interval = 10;
+#endif
+        const char* envInterval = nullptr;
+#if defined(_MSC_VER)
+        char* envBuf = nullptr;
+        size_t envLen = 0;
+        if (::_dupenv_s(&envBuf, &envLen, "BN_HEARTBEAT_SECONDS") == 0)
+        {
+            envInterval = envBuf;
+        }
+#else
+        envInterval = std::getenv("BN_HEARTBEAT_SECONDS");
+#endif
+        if (envInterval != nullptr)
+        {
+            interval = std::atoi(envInterval);
+        }
+#if defined(_MSC_VER)
+        if (envBuf != nullptr)
+        {
+            std::free(envBuf);
+        }
+#endif
+        if (interval > 0)
+        {
+            s_heartbeatStop.store(false, std::memory_order_relaxed);
+            s_heartbeatThread = std::thread(&HeartbeatLoop, interval);
+        }
     }
 
     void SetExitCode(int code)
@@ -233,6 +330,8 @@ namespace Diagnostics
         {
             return;
         }
+
+        StopHeartbeat();
 
         const int code = s_exitCode.load(std::memory_order_relaxed);
         const bool success = (code == 0);
