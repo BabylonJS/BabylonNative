@@ -238,7 +238,40 @@
             evaluateScreenshot(test, screenshot, renderImage, done, compareFunction);
         };
 
+        let readyPollCount = 0;
+        const readyProbe = setInterval(function () {
+            readyPollCount++;
+            try {
+                const ready = currentScene.isReady ? currentScene.isReady() : "n/a";
+                let notReadyTex = 0;
+                const texs = currentScene.textures || [];
+                for (let i = 0; i < texs.length; i++) {
+                    if (texs[i].isReady && !texs[i].isReady()) { notReadyTex++; }
+                }
+                const mats = currentScene.materials || [];
+                let notReadyMat = 0;
+                for (let i = 0; i < mats.length; i++) {
+                    if (mats[i].isReady && !mats[i].isReady(currentScene.meshes && currentScene.meshes[0])) { notReadyMat++; }
+                }
+                console.log("[BN-DIAG-JS] readyProbe #" + readyPollCount + " isReady=" + ready +
+                    " textures=" + texs.length + " notReadyTex=" + notReadyTex +
+                    " materials=" + mats.length + " notReadyMat=" + notReadyMat +
+                    " meshes=" + (currentScene.meshes ? currentScene.meshes.length : "n/a"));
+            } catch (e) {
+                console.log("[BN-DIAG-JS] readyProbe error: " + e);
+            }
+            // Stop polling after ~240s so the stall watchdog (which is reset by
+            // every console.log) can still fire and produce a dump/fail instead
+            // of letting the job run to the 60-min CI timeout. 240s covers the
+            // ~165s EXR mip-gen + onSuccess plus margin to observe readiness.
+            if (readyPollCount >= 120) {
+                clearInterval(readyProbe);
+                console.log("[BN-DIAG-JS] readyProbe giving up after " + readyPollCount + " polls; leaving watchdog to fire");
+            }
+        }, 2000);
+
         currentScene.executeWhenReady(function () {
+            clearInterval(readyProbe);
             console.log("[BN-DIAG-JS] executeWhenReady fired (test='" + (test.title || "?") + "', compareFrame=" + compareFrame + ", stopFrame=" + stopFrame + ")");
             if (currentScene.activeCamera && currentScene.activeCamera.useAutoRotationBehavior) {
                 currentScene.activeCamera.useAutoRotationBehavior = false;

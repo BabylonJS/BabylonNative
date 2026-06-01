@@ -1363,6 +1363,7 @@ namespace Babylon
                 {
                     std::fprintf(stderr, "[BN-DIAG] LoadTexture continuation: SUCCESS\n"); std::fflush(stderr);
                     onSuccessRef.Call({});
+                    std::fprintf(stderr, "[BN-DIAG] LoadTexture continuation: onSuccess returned\n"); std::fflush(stderr);
                 }
             });
 #endif
