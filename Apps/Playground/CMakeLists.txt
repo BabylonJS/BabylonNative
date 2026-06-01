@@ -134,6 +134,7 @@ endif()
 target_include_directories(Playground PRIVATE ".")
 
 target_link_libraries(Playground
+    PRIVATE AbortController
     PRIVATE AppRuntime
     PRIVATE Blob
     PRIVATE bx

@@ -17,6 +17,7 @@
 #include <Babylon/Plugins/ShaderCache.h>
 #include <Babylon/Plugins/TestUtils.h>
 
+#include <Babylon/Polyfills/AbortController.h>
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/Polyfills/Console.h>
@@ -184,6 +185,8 @@ AppContext::AppContext(
         Babylon::Polyfills::Performance::Initialize(env);
 
         Babylon::Polyfills::Window::Initialize(env);
+
+        Babylon::Polyfills::AbortController::Initialize(env);
 
         Babylon::Polyfills::TextDecoder::Initialize(env);
 
