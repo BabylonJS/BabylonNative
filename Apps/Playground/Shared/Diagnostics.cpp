@@ -23,8 +23,16 @@
 #include <io.h>
 #include <wchar.h>
 #include <intrin.h>
+// MiniDumpWriteDump / CreateFileW are desktop-only; UWP (Store) builds use
+// MSVC too but cannot link dbghelp's dump API, so gate it behind the desktop
+// partition.
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#define BN_WATCHDOG_DUMP_SUPPORTED 1
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
+#else
+#define BN_WATCHDOG_DUMP_SUPPORTED 0
+#endif
 #else
 #include <unistd.h>
 #endif
@@ -75,6 +83,7 @@ namespace
 
     void WatchdogWriteDump()
     {
+#if BN_WATCHDOG_DUMP_SUPPORTED
         // Best-effort full-memory dump of the stalled process, written from
         // this (healthy) watchdog thread before we fast-fail. dbghelp uses the
         // Win32 heap, not the CRT/ASAN allocator, so it does not contend with a
@@ -114,6 +123,9 @@ namespace
         WatchdogWriteRaw(ok
             ? "Watchdog: wrote Playground.dmp.\n"
             : "Watchdog: MiniDumpWriteDump failed.\n");
+#else
+        WatchdogWriteRaw("Watchdog: crash dump not supported on this platform.\n");
+#endif
     }
 #endif
 
@@ -332,7 +344,11 @@ namespace Diagnostics
         // BN_WATCHDOG_SECONDS=<positive int>.
         int watchdogSeconds = 0;
 #if defined(__SANITIZE_ADDRESS__)
-        watchdogSeconds = 300;
+        // 420s: large textures (e.g. the EXR Loader's 3240x4800 RGBA32F) take
+        // ~3 min just to CPU-generate mipmaps under ASAN; the budget must clear
+        // that legitimately-slow-but-progressing window so the watchdog only
+        // fires on a genuine stall.
+        watchdogSeconds = 420;
 #endif
         const char* envWatchdog = nullptr;
 #if defined(_MSC_VER)

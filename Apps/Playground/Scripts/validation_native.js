@@ -239,6 +239,7 @@
         };
 
         currentScene.executeWhenReady(function () {
+            console.log("[BN-DIAG-JS] executeWhenReady fired (test='" + (test.title || "?") + "', compareFrame=" + compareFrame + ", stopFrame=" + stopFrame + ")");
             if (currentScene.activeCamera && currentScene.activeCamera.useAutoRotationBehavior) {
                 currentScene.activeCamera.useAutoRotationBehavior = false;
             }
@@ -250,13 +251,17 @@
                         TestUtils.captureNextFrame();
                     }
 
+                    console.log("[BN-DIAG-JS] render frame " + frameIndex + " begin");
                     currentScene.render();
+                    console.log("[BN-DIAG-JS] render frame " + frameIndex + " end");
 
                     if (frameIndex === compareFrame) {
                         // Queue the framebuffer readback. The callback runs
                         // asynchronously; safe to dispose the scene from it
                         // but only after stopRenderLoop() has been called.
+                        console.log("[BN-DIAG-JS] requesting getFrameBufferData at frame " + frameIndex);
                         TestUtils.getFrameBufferData(function (data) {
+                            console.log("[BN-DIAG-JS] getFrameBufferData callback received (" + (data ? data.length : "null") + " bytes)");
                             if (stopped) {
                                 runEvaluation(data);
                             } else {
