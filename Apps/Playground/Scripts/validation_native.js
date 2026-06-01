@@ -238,41 +238,23 @@
             evaluateScreenshot(test, screenshot, renderImage, done, compareFunction);
         };
 
-        let readyPollCount = 0;
-        const readyProbe = setInterval(function () {
-            readyPollCount++;
-            try {
-                const ready = currentScene.isReady ? currentScene.isReady() : "n/a";
-                let notReadyTex = 0;
-                const texs = currentScene.textures || [];
-                for (let i = 0; i < texs.length; i++) {
-                    if (texs[i].isReady && !texs[i].isReady()) { notReadyTex++; }
-                }
-                const mats = currentScene.materials || [];
-                let notReadyMat = 0;
-                for (let i = 0; i < mats.length; i++) {
-                    if (mats[i].isReady && !mats[i].isReady(currentScene.meshes && currentScene.meshes[0])) { notReadyMat++; }
-                }
-                console.log("[BN-DIAG-JS] readyProbe #" + readyPollCount + " isReady=" + ready +
-                    " textures=" + texs.length + " notReadyTex=" + notReadyTex +
-                    " materials=" + mats.length + " notReadyMat=" + notReadyMat +
-                    " meshes=" + (currentScene.meshes ? currentScene.meshes.length : "n/a"));
-            } catch (e) {
-                console.log("[BN-DIAG-JS] readyProbe error: " + e);
-            }
-            // Stop polling after ~240s so the stall watchdog (which is reset by
-            // every console.log) can still fire and produce a dump/fail instead
-            // of letting the job run to the 60-min CI timeout. 240s covers the
-            // ~165s EXR mip-gen + onSuccess plus margin to observe readiness.
-            if (readyPollCount >= 120) {
-                clearInterval(readyProbe);
-                console.log("[BN-DIAG-JS] readyProbe giving up after " + readyPollCount + " polls; leaving watchdog to fire");
-            }
-        }, 2000);
+        // Babylon's Scene.executeWhenReady gives up after Scene.onReadyTimeoutDuration
+        // (default 120s): once that elapses it fires onReadyTimeoutObservable and
+        // silently drops the executeWhenReady callback. Some validation scenes load
+        // very large assets (e.g. the EXR Loader's 3240x4800 RGBA32F image, whose
+        // gamma-correct CPU mip generation takes ~3 min under ASAN on the 2-core CI
+        // runner), which legitimately exceeds 120s. Without this the callback is
+        // dropped, the render loop never starts, and the test hangs until the CI
+        // job times out. Extend the budget generously and convert a genuine
+        // never-ready scene into a fast test failure instead of a silent hang.
+        currentScene.onReadyTimeoutDuration = 10 * 60 * 1000;
+        currentScene.onReadyTimeoutObservable.addOnce(function () {
+            console.error("Scene '" + (test.title || "?") + "' did not become ready within " +
+                (currentScene.onReadyTimeoutDuration / 1000) + "s.");
+            failTest(done);
+        });
 
         currentScene.executeWhenReady(function () {
-            clearInterval(readyProbe);
-            console.log("[BN-DIAG-JS] executeWhenReady fired (test='" + (test.title || "?") + "', compareFrame=" + compareFrame + ", stopFrame=" + stopFrame + ")");
             if (currentScene.activeCamera && currentScene.activeCamera.useAutoRotationBehavior) {
                 currentScene.activeCamera.useAutoRotationBehavior = false;
             }
@@ -284,17 +266,13 @@
                         TestUtils.captureNextFrame();
                     }
 
-                    console.log("[BN-DIAG-JS] render frame " + frameIndex + " begin");
                     currentScene.render();
-                    console.log("[BN-DIAG-JS] render frame " + frameIndex + " end");
 
                     if (frameIndex === compareFrame) {
                         // Queue the framebuffer readback. The callback runs
                         // asynchronously; safe to dispose the scene from it
                         // but only after stopRenderLoop() has been called.
-                        console.log("[BN-DIAG-JS] requesting getFrameBufferData at frame " + frameIndex);
                         TestUtils.getFrameBufferData(function (data) {
-                            console.log("[BN-DIAG-JS] getFrameBufferData callback received (" + (data ? data.length : "null") + " bytes)");
                             if (stopped) {
                                 runEvaluation(data);
                             } else {
