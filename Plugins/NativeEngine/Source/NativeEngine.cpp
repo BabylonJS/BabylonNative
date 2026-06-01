@@ -21,6 +21,7 @@
 
 #include <stb/stb_image_resize.h>
 #include <bx/math.h>
+#include <bx/error.h>
 #endif
 
 #include <cmath>
@@ -188,7 +189,12 @@ namespace Babylon
 
         bimg::ImageContainer* ParseImage(bx::AllocatorI& allocator, gsl::span<uint8_t> data)
         {
-            bimg::ImageContainer* image{bimg::imageParse(&allocator, data.data(), static_cast<uint32_t>(data.size()))};
+            // Pass a bx::ErrorIgnore so bimg::imageParse reports unrecognized
+            // formats (e.g. WebP, handled by the fallback below) by returning
+            // nullptr instead of tripping its internal BX_ERROR_SCOPE assert.
+            // ErrorIgnore intentionally swallows any error that is set.
+            bx::ErrorIgnore parseError;
+            bimg::ImageContainer* image{bimg::imageParse(&allocator, data.data(), static_cast<uint32_t>(data.size()), bimg::TextureFormat::Count, &parseError)};
             if (image == nullptr)
             {
 #ifdef WEBP
