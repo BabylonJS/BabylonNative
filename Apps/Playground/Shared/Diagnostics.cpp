@@ -22,8 +22,7 @@
 #include <stdlib.h>
 #include <io.h>
 #include <wchar.h>
-#include <psapi.h>
-#pragma comment(lib, "psapi.lib")
+#include <intrin.h>
 #else
 #include <unistd.h>
 #endif
@@ -40,63 +39,74 @@ namespace
 
     bool s_ansiEnabled{false};
 
-    // Heartbeat: prints "[hb] T=Ns WS=Mb" every N seconds so CI logs reveal
-    // long-running native work (e.g. EXR decode under WARP+ASAN) instead of
-    // appearing as opaque silence. Stops at PrintFinishLine.
-    std::atomic<bool> s_heartbeatStop{false};
-    std::thread       s_heartbeatThread;
+    // Stall watchdog: forces an external full-process crash dump if the app
+    // makes no forward progress for a configurable interval. Built to capture
+    // the Win32 ASAN "EXR Loader" stall, where an allocator-lock deadlock
+    // freezes the test runner (and any in-process diagnostic that allocates)
+    // silently until the 60-min CI job times out -- which GitHub records as a
+    // *cancellation*, so no crash dump is produced. NotifyProgress() is called
+    // on every JS console line; once the gap exceeds the threshold the watchdog
+    // raises __fastfail, which Windows Error Reporting turns into a full dump
+    // (all thread stacks) that the existing `if: failure()` CI steps upload.
+    std::atomic<bool>      s_watchdogStop{false};
+    std::atomic<long long> s_lastProgressMs{0};
+    std::thread            s_watchdogThread;
 
-    void HeartbeatLoop(int intervalSeconds)
+    long long ElapsedMs()
     {
-        // Stagger first tick so any "Running <test>" line lands in the log
-        // before our first heartbeat marker.
-        const auto interval = std::chrono::seconds(intervalSeconds);
+        const auto elapsed = std::chrono::steady_clock::now() - s_startTime;
+        return std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+    }
 
-        while (!s_heartbeatStop.load(std::memory_order_relaxed))
-        {
-            // Sleep in short slices so shutdown is responsive.
-            for (int i = 0; i < intervalSeconds * 10; ++i)
-            {
-                if (s_heartbeatStop.load(std::memory_order_relaxed))
-                {
-                    return;
-                }
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
-
-            const auto elapsed = std::chrono::steady_clock::now() - s_startTime;
-            const long long sec = std::chrono::duration_cast<std::chrono::seconds>(elapsed).count();
-
-            long long wsMb = -1;
 #if defined(_MSC_VER)
-            PROCESS_MEMORY_COUNTERS_EX pmc{};
-            pmc.cb = sizeof(pmc);
-            if (::GetProcessMemoryInfo(::GetCurrentProcess(),
-                                       reinterpret_cast<PROCESS_MEMORY_COUNTERS*>(&pmc),
-                                       sizeof(pmc)))
-            {
-                wsMb = static_cast<long long>(pmc.WorkingSetSize / (1024 * 1024));
-            }
+    void WatchdogWriteRaw(const char* msg)
+    {
+        // Write straight to the stderr OS handle, bypassing the CRT -- the CRT
+        // allocator/lock may be exactly what's deadlocked.
+        const HANDLE h = ::GetStdHandle(STD_ERROR_HANDLE);
+        if (h != nullptr && h != INVALID_HANDLE_VALUE)
+        {
+            DWORD written = 0;
+            ::WriteFile(h, msg, static_cast<DWORD>(std::strlen(msg)), &written, nullptr);
+        }
+    }
 #endif
 
-            if (wsMb >= 0)
+    void WatchdogLoop(int timeoutSeconds)
+    {
+        const long long timeoutMs = static_cast<long long>(timeoutSeconds) * 1000;
+        while (!s_watchdogStop.load(std::memory_order_relaxed))
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            if (s_watchdogStop.load(std::memory_order_relaxed))
             {
-                std::fprintf(stdout, "[hb] T=%llds WS=%lldMB\n", sec, wsMb);
+                return;
             }
-            else
+
+            const long long sinceMs = ElapsedMs() - s_lastProgressMs.load(std::memory_order_relaxed);
+            if (sinceMs >= timeoutMs)
             {
-                std::fprintf(stdout, "[hb] T=%llds\n", sec);
+#if defined(_MSC_VER)
+                WatchdogWriteRaw(
+                    "\n--- BN: WATCHDOG STALL ---\n"
+                    "No forward progress within the watchdog interval; "
+                    "forcing a crash dump via __fastfail.\n");
+                // int 0x29: bypasses SEH/VEH (incl. ASAN's) and goes straight
+                // to WER, so a deadlocked allocator can't swallow it.
+                __fastfail(FAST_FAIL_FATAL_APP_EXIT);
+#else
+                std::abort();
+#endif
             }
-            std::fflush(stdout);
         }
     }
 
-    void StopHeartbeat()
+    void StopWatchdog()
     {
-        s_heartbeatStop.store(true, std::memory_order_relaxed);
-        if (s_heartbeatThread.joinable())
+        s_watchdogStop.store(true, std::memory_order_relaxed);
+        if (s_watchdogThread.joinable())
         {
-            s_heartbeatThread.join();
+            s_watchdogThread.join();
         }
     }
 
@@ -266,27 +276,32 @@ namespace Diagnostics
         std::atexit(&PrintFinishLine);
         std::at_quick_exit(&PrintFinishLine);
 
-        // Heartbeat thread: only enabled when explicitly opted-in via env
-        // var BN_HEARTBEAT_SECONDS=<positive int>, or always under ASAN where
-        // long bimg/WARP work otherwise looks like a deadlock in CI logs.
-        int interval = 0;
+        // Reset the progress baseline so the watchdog measures from startup.
+        NotifyProgress();
+
+        // Stall watchdog: forces a crash dump if no forward progress occurs for
+        // the configured interval, to capture the Win32 ASAN EXR-Loader stall
+        // in CI (where a hang otherwise times out as an undumpable cancel).
+        // Default 300s under ASAN; override/enable elsewhere with
+        // BN_WATCHDOG_SECONDS=<positive int>.
+        int watchdogSeconds = 0;
 #if defined(__SANITIZE_ADDRESS__)
-        interval = 10;
+        watchdogSeconds = 300;
 #endif
-        const char* envInterval = nullptr;
+        const char* envWatchdog = nullptr;
 #if defined(_MSC_VER)
         char* envBuf = nullptr;
         size_t envLen = 0;
-        if (::_dupenv_s(&envBuf, &envLen, "BN_HEARTBEAT_SECONDS") == 0)
+        if (::_dupenv_s(&envBuf, &envLen, "BN_WATCHDOG_SECONDS") == 0)
         {
-            envInterval = envBuf;
+            envWatchdog = envBuf;
         }
 #else
-        envInterval = std::getenv("BN_HEARTBEAT_SECONDS");
+        envWatchdog = std::getenv("BN_WATCHDOG_SECONDS");
 #endif
-        if (envInterval != nullptr)
+        if (envWatchdog != nullptr)
         {
-            interval = std::atoi(envInterval);
+            watchdogSeconds = std::atoi(envWatchdog);
         }
 #if defined(_MSC_VER)
         if (envBuf != nullptr)
@@ -294,16 +309,21 @@ namespace Diagnostics
             std::free(envBuf);
         }
 #endif
-        if (interval > 0)
+        if (watchdogSeconds > 0)
         {
-            s_heartbeatStop.store(false, std::memory_order_relaxed);
-            s_heartbeatThread = std::thread(&HeartbeatLoop, interval);
+            s_watchdogStop.store(false, std::memory_order_relaxed);
+            s_watchdogThread = std::thread(&WatchdogLoop, watchdogSeconds);
         }
     }
 
     void SetExitCode(int code)
     {
         s_exitCode.store(code, std::memory_order_relaxed);
+    }
+
+    void NotifyProgress()
+    {
+        s_lastProgressMs.store(ElapsedMs(), std::memory_order_relaxed);
     }
 
     void PrintFinishLine()
@@ -314,7 +334,7 @@ namespace Diagnostics
             return;
         }
 
-        StopHeartbeat();
+        StopWatchdog();
 
         const int code = s_exitCode.load(std::memory_order_relaxed);
         const bool success = (code == 0);

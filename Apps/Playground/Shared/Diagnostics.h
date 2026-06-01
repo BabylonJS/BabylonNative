@@ -24,6 +24,12 @@ namespace Diagnostics
     // code. Idempotent (only first call produces output).
     void PrintFinishLine();
 
+    // Records that forward progress was made (e.g. a test produced output).
+    // Resets the stall watchdog. Cheap and lock-free; safe to call from any
+    // thread. No-op unless the watchdog is enabled (sanitizer builds, or
+    // BN_WATCHDOG_SECONDS set).
+    void NotifyProgress();
+
     // Emits a bx-style banner with native callstack and build info to both
     // stderr and bx::getDebugOut(). Format:
     //

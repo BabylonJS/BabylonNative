@@ -158,6 +158,10 @@ AppContext::AppContext(
         Babylon::Polyfills::Blob::Initialize(env);
 
         Babylon::Polyfills::Console::Initialize(env, [env, debugLog](const char* message, Babylon::Polyfills::Console::LogLevel logLevel) {
+            // Any JS console output counts as forward progress for the stall
+            // watchdog (the validation runner logs per-test).
+            Diagnostics::NotifyProgress();
+
             std::ostringstream ss{};
             ss << "[" << GetLogLevelString(logLevel) << "] " << message;
             debugLog(ss.str().data());
