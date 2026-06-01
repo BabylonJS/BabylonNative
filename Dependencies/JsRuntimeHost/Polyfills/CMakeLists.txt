@@ -33,3 +33,7 @@ endif()
 if(JSRUNTIMEHOST_POLYFILL_TEXTDECODER)
     add_subdirectory(TextDecoder)
 endif()
+
+if(JSRUNTIMEHOST_POLYFILL_TEXTENCODER)
+    add_subdirectory(TextEncoder)
+endif()

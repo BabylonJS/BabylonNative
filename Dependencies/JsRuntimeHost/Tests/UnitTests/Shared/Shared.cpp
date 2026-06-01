@@ -10,6 +10,7 @@
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/TextDecoder.h>
+#include <Babylon/Polyfills/TextEncoder.h>
 #include <gtest/gtest.h>
 #include <arcana/threading/blocking_concurrent_queue.h>
 #include <atomic>
@@ -83,6 +84,7 @@ TEST(JavaScript, All)
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
         Babylon::Polyfills::Blob::Initialize(env);
         Babylon::Polyfills::TextDecoder::Initialize(env);
+        Babylon::Polyfills::TextEncoder::Initialize(env);
 
         auto setExitCodeCallback = Napi::Function::New(
             env, [&exitCodePromise](const Napi::CallbackInfo& info) {

@@ -42,4 +42,5 @@ target_link_libraries(UnitTestsJNI
     PRIVATE gtest_main
     PRIVATE Blob
     PRIVATE TextDecoder
+    PRIVATE TextEncoder
     PRIVATE Performance)
