@@ -35,14 +35,7 @@ FetchContent_Declare(base-n
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    # Temporary bisection pin to bgfx.cmake#119 (5a00e8d) to narrow down
-    # the bgfx commit that introduced the Win32_x64_D3D11_Sanitizers /
-    # EXR Loader CI hang. This is the first clean bgfx pin after master
-    # (waypoint A = 98531b5 has unresolved merge conflict markers in
-    # renderer_d3d11.cpp from bgfx commit 056846eb, fixed by 4d5276c7e
-    # which is included in this pin). Will be restored to af75c874 once
-    # the bad commit is identified and fixed/reverted upstream.
-    GIT_TAG 5a00e8df9e409ec459dcd7ea9e4607c07262c373
+    GIT_TAG af75c874d9764e6114504de591f41b7299dfde6e
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
