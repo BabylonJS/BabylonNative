@@ -15,7 +15,7 @@ set(TEST_ASSETS
     "JavaScript/dist/tests.externalTexture.msaa.js"
     "JavaScript/dist/tests.javaScript.all.js"
     "JavaScript/dist/tests.shaderCache.basicScene.js"
-    "JavaScript/dist/tests.shaders.cross.js")
+    "JavaScript/dist/tests.shaderCompilation.comprehensiveGLSL.js")
 
 file(GLOB TEST_SCRIPTS "JavaScript/src/*.ts")
 set_source_files_properties(${TEST_SCRIPTS} PROPERTIES HEADER_FILE_ONLY TRUE)
