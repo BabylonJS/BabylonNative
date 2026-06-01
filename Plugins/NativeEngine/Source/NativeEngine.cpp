@@ -189,11 +189,11 @@ namespace Babylon
 
         bimg::ImageContainer* ParseImage(bx::AllocatorI& allocator, gsl::span<uint8_t> data)
         {
-            // Pass an explicit bx::Error so bimg::imageParse reports unrecognized
+            // Pass a bx::ErrorIgnore so bimg::imageParse reports unrecognized
             // formats (e.g. WebP, handled by the fallback below) by returning
             // nullptr instead of tripping its internal BX_ERROR_SCOPE assert.
-            // bx::Error has no destructor, so leaving it set is safe to ignore.
-            bx::Error parseError;
+            // ErrorIgnore intentionally swallows any error that is set.
+            bx::ErrorIgnore parseError;
             bimg::ImageContainer* image{bimg::imageParse(&allocator, data.data(), static_cast<uint32_t>(data.size()), bimg::TextureFormat::Count, &parseError)};
             if (image == nullptr)
             {
