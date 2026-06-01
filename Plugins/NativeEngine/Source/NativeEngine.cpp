@@ -25,8 +25,6 @@
 #endif
 
 #include <cmath>
-#include <cstdio>
-#include <string>
 
 #if defined(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES) && defined(WEBP)
 #include <webp/decode.h>
@@ -1341,29 +1339,18 @@ namespace Babylon
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
             [dataSpan, generateMips, invertY, srgb, texture, cancellationSource{m_cancellationSource}]() {
                 arcana::trace_region loadRegion{"NativeEngine::LoadTexture"};
-                std::fprintf(stderr, "[BN-DIAG] LoadTexture task begin (bytes=%zu generateMips=%d)\n", static_cast<size_t>(dataSpan.size()), generateMips ? 1 : 0); std::fflush(stderr);
                 bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan)};
-                std::fprintf(stderr, "[BN-DIAG] LoadTexture parsed (%ux%u fmt=%d)\n", image->m_width, image->m_height, static_cast<int>(image->m_format)); std::fflush(stderr);
                 image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, srgb, generateMips);
-                std::fprintf(stderr, "[BN-DIAG] LoadTexture prepared (numMips=%u)\n", image->m_numMips); std::fflush(stderr);
                 LoadTextureFromImage(texture, image, srgb);
-                std::fprintf(stderr, "[BN-DIAG] LoadTexture uploaded\n"); std::fflush(stderr);
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [dataRef{Napi::Persistent(data)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
                 if (result.has_error())
                 {
-                    std::string message{"(unknown)"};
-                    try { std::rethrow_exception(result.error()); }
-                    catch (const std::exception& e) { message = e.what(); }
-                    catch (...) {}
-                    std::fprintf(stderr, "[BN-DIAG] LoadTexture continuation: ERROR: %s\n", message.c_str()); std::fflush(stderr);
                     onErrorRef.Call({});
                 }
                 else
                 {
-                    std::fprintf(stderr, "[BN-DIAG] LoadTexture continuation: SUCCESS\n"); std::fflush(stderr);
                     onSuccessRef.Call({});
-                    std::fprintf(stderr, "[BN-DIAG] LoadTexture continuation: onSuccess returned\n"); std::fflush(stderr);
                 }
             });
 #endif

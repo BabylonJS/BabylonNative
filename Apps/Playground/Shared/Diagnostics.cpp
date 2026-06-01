@@ -13,7 +13,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
-#include <thread>
 
 #if defined(_MSC_VER)
 #define WIN32_LEAN_AND_MEAN
@@ -22,17 +21,6 @@
 #include <stdlib.h>
 #include <io.h>
 #include <wchar.h>
-#include <intrin.h>
-// MiniDumpWriteDump / CreateFileW are desktop-only; UWP (Store) builds use
-// MSVC too but cannot link dbghelp's dump API, so gate it behind the desktop
-// partition.
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-#define BN_WATCHDOG_DUMP_SUPPORTED 1
-#include <dbghelp.h>
-#pragma comment(lib, "dbghelp.lib")
-#else
-#define BN_WATCHDOG_DUMP_SUPPORTED 0
-#endif
 #else
 #include <unistd.h>
 #endif
@@ -48,125 +36,6 @@ namespace
     std::chrono::steady_clock::time_point s_startTime{};
 
     bool s_ansiEnabled{false};
-
-    // Stall watchdog: forces an external full-process crash dump if the app
-    // makes no forward progress for a configurable interval. Built to capture
-    // the Win32 ASAN "EXR Loader" stall, where an allocator-lock deadlock
-    // freezes the test runner (and any in-process diagnostic that allocates)
-    // silently until the 60-min CI job times out -- which GitHub records as a
-    // *cancellation*, so no crash dump is produced. NotifyProgress() is called
-    // on every JS console line; once the gap exceeds the threshold the watchdog
-    // raises __fastfail, which Windows Error Reporting turns into a full dump
-    // (all thread stacks) that the existing `if: failure()` CI steps upload.
-    std::atomic<bool>      s_watchdogStop{false};
-    std::atomic<long long> s_lastProgressMs{0};
-    std::thread            s_watchdogThread;
-
-    long long ElapsedMs()
-    {
-        const auto elapsed = std::chrono::steady_clock::now() - s_startTime;
-        return std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
-    }
-
-#if defined(_MSC_VER)
-    void WatchdogWriteRaw(const char* msg)
-    {
-        // Write straight to the stderr OS handle, bypassing the CRT -- the CRT
-        // allocator/lock may be exactly what's deadlocked.
-        const HANDLE h = ::GetStdHandle(STD_ERROR_HANDLE);
-        if (h != nullptr && h != INVALID_HANDLE_VALUE)
-        {
-            DWORD written = 0;
-            ::WriteFile(h, msg, static_cast<DWORD>(std::strlen(msg)), &written, nullptr);
-        }
-    }
-
-    void WatchdogWriteDump()
-    {
-#if BN_WATCHDOG_DUMP_SUPPORTED
-        // Best-effort full-memory dump of the stalled process, written from
-        // this (healthy) watchdog thread before we fast-fail. dbghelp uses the
-        // Win32 heap, not the CRT/ASAN allocator, so it does not contend with a
-        // blocked main thread. Named "Playground.dmp" in the run cwd so the
-        // existing CI "Stage Playground Crash Dump" glob (Playground.*) uploads
-        // it without any workflow change.
-        const HANDLE hFile = ::CreateFileW(
-            L"Playground.dmp",
-            GENERIC_WRITE,
-            0,
-            nullptr,
-            CREATE_ALWAYS,
-            FILE_ATTRIBUTE_NORMAL,
-            nullptr);
-        if (hFile == INVALID_HANDLE_VALUE)
-        {
-            WatchdogWriteRaw("Watchdog: could not create Playground.dmp.\n");
-            return;
-        }
-
-        const MINIDUMP_TYPE type = static_cast<MINIDUMP_TYPE>(
-            MiniDumpWithThreadInfo |
-            MiniDumpWithIndirectlyReferencedMemory |
-            MiniDumpWithUnloadedModules |
-            MiniDumpWithHandleData);
-
-        const BOOL ok = ::MiniDumpWriteDump(
-            ::GetCurrentProcess(),
-            ::GetCurrentProcessId(),
-            hFile,
-            type,
-            nullptr,
-            nullptr,
-            nullptr);
-
-        ::CloseHandle(hFile);
-        WatchdogWriteRaw(ok
-            ? "Watchdog: wrote Playground.dmp.\n"
-            : "Watchdog: MiniDumpWriteDump failed.\n");
-#else
-        WatchdogWriteRaw("Watchdog: crash dump not supported on this platform.\n");
-#endif
-    }
-#endif
-
-    void WatchdogLoop(int timeoutSeconds)
-    {
-        const long long timeoutMs = static_cast<long long>(timeoutSeconds) * 1000;
-        while (!s_watchdogStop.load(std::memory_order_relaxed))
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            if (s_watchdogStop.load(std::memory_order_relaxed))
-            {
-                return;
-            }
-
-            const long long sinceMs = ElapsedMs() - s_lastProgressMs.load(std::memory_order_relaxed);
-            if (sinceMs >= timeoutMs)
-            {
-#if defined(_MSC_VER)
-                WatchdogWriteRaw(
-                    "\n--- BN: WATCHDOG STALL ---\n"
-                    "No forward progress within the watchdog interval; "
-                    "writing a crash dump, then forcing __fastfail.\n");
-                WatchdogWriteDump();
-                // int 0x29: bypasses SEH/VEH (incl. ASAN's) and goes straight
-                // to WER, so a deadlocked allocator can't swallow it.
-                __fastfail(FAST_FAIL_FATAL_APP_EXIT);
-#else
-                std::abort();
-#endif
-            }
-        }
-    }
-
-    void StopWatchdog()
-    {
-        s_watchdogStop.store(true, std::memory_order_relaxed);
-        if (s_watchdogThread.joinable())
-        {
-            s_watchdogThread.join();
-        }
-    }
 
 #if defined(_MSC_VER)
     void __cdecl OnInvalidParameter(
@@ -251,21 +120,7 @@ namespace Diagnostics
             return;
         }
 
-#if defined(__SANITIZE_ADDRESS__)
-        // Under ASAN the sanitizer runtime installs its own SEH /
-        // _set_invalid_parameter_handler / abort hooks and provides its
-        // own crash diagnostics. Letting bx install its handlers on top
-        // (since bgfx commit eed706f, "Suppress MSVC CRT assert dialogs")
-        // adds a _set_thread_local_invalid_parameter_handler + SEH
-        // top-level filter + _set_purecall_handler that BN doesn't
-        // override -- inside those, bx walks the callstack via dbghelp,
-        // which can deadlock against ASAN's allocator lock when a
-        // sanitizer-instrumented allocation races with handler entry.
-        // BN's own _set_invalid_parameter_handler / SIGABRT / CRT report
-        // hooks below cover the diagnostics paths we actually rely on.
-#else
         bx::installExceptionHandler();
-#endif
 
 #if defined(_MSC_VER)
         // Route assert() to stderr instead of UCRT's modal dialog. Covers the
@@ -333,59 +188,11 @@ namespace Diagnostics
         // via s_finishPrinted; whichever fires first wins.
         std::atexit(&PrintFinishLine);
         std::at_quick_exit(&PrintFinishLine);
-
-        // Reset the progress baseline so the watchdog measures from startup.
-        NotifyProgress();
-
-        // Stall watchdog: forces a crash dump if no forward progress occurs for
-        // the configured interval, to capture the Win32 ASAN EXR-Loader stall
-        // in CI (where a hang otherwise times out as an undumpable cancel).
-        // Default 300s under ASAN; override/enable elsewhere with
-        // BN_WATCHDOG_SECONDS=<positive int>.
-        int watchdogSeconds = 0;
-#if defined(__SANITIZE_ADDRESS__)
-        // 420s: large textures (e.g. the EXR Loader's 3240x4800 RGBA32F) take
-        // ~3 min just to CPU-generate mipmaps under ASAN; the budget must clear
-        // that legitimately-slow-but-progressing window so the watchdog only
-        // fires on a genuine stall.
-        watchdogSeconds = 420;
-#endif
-        const char* envWatchdog = nullptr;
-#if defined(_MSC_VER)
-        char* envBuf = nullptr;
-        size_t envLen = 0;
-        if (::_dupenv_s(&envBuf, &envLen, "BN_WATCHDOG_SECONDS") == 0)
-        {
-            envWatchdog = envBuf;
-        }
-#else
-        envWatchdog = std::getenv("BN_WATCHDOG_SECONDS");
-#endif
-        if (envWatchdog != nullptr)
-        {
-            watchdogSeconds = std::atoi(envWatchdog);
-        }
-#if defined(_MSC_VER)
-        if (envBuf != nullptr)
-        {
-            std::free(envBuf);
-        }
-#endif
-        if (watchdogSeconds > 0)
-        {
-            s_watchdogStop.store(false, std::memory_order_relaxed);
-            s_watchdogThread = std::thread(&WatchdogLoop, watchdogSeconds);
-        }
     }
 
     void SetExitCode(int code)
     {
         s_exitCode.store(code, std::memory_order_relaxed);
-    }
-
-    void NotifyProgress()
-    {
-        s_lastProgressMs.store(ElapsedMs(), std::memory_order_relaxed);
     }
 
     void PrintFinishLine()
@@ -395,8 +202,6 @@ namespace Diagnostics
         {
             return;
         }
-
-        StopWatchdog();
 
         const int code = s_exitCode.load(std::memory_order_relaxed);
         const bool success = (code == 0);
