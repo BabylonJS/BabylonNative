@@ -24,6 +24,7 @@
 #include <Babylon/Polyfills/File.h>
 #include <Babylon/Polyfills/Performance.h>
 #include <Babylon/Polyfills/TextDecoder.h>
+#include <Babylon/Polyfills/TextEncoder.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 
@@ -189,6 +190,8 @@ AppContext::AppContext(
         Babylon::Polyfills::AbortController::Initialize(env);
 
         Babylon::Polyfills::TextDecoder::Initialize(env);
+
+        Babylon::Polyfills::TextEncoder::Initialize(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
         m_canvas.emplace(Babylon::Polyfills::Canvas::Initialize(env));
