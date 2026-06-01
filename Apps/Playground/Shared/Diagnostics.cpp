@@ -23,6 +23,8 @@
 #include <io.h>
 #include <wchar.h>
 #include <intrin.h>
+#include <dbghelp.h>
+#pragma comment(lib, "dbghelp.lib")
 #else
 #include <unistd.h>
 #endif
@@ -70,6 +72,49 @@ namespace
             ::WriteFile(h, msg, static_cast<DWORD>(std::strlen(msg)), &written, nullptr);
         }
     }
+
+    void WatchdogWriteDump()
+    {
+        // Best-effort full-memory dump of the stalled process, written from
+        // this (healthy) watchdog thread before we fast-fail. dbghelp uses the
+        // Win32 heap, not the CRT/ASAN allocator, so it does not contend with a
+        // blocked main thread. Named "Playground.dmp" in the run cwd so the
+        // existing CI "Stage Playground Crash Dump" glob (Playground.*) uploads
+        // it without any workflow change.
+        const HANDLE hFile = ::CreateFileW(
+            L"Playground.dmp",
+            GENERIC_WRITE,
+            0,
+            nullptr,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr);
+        if (hFile == INVALID_HANDLE_VALUE)
+        {
+            WatchdogWriteRaw("Watchdog: could not create Playground.dmp.\n");
+            return;
+        }
+
+        const MINIDUMP_TYPE type = static_cast<MINIDUMP_TYPE>(
+            MiniDumpWithThreadInfo |
+            MiniDumpWithIndirectlyReferencedMemory |
+            MiniDumpWithUnloadedModules |
+            MiniDumpWithHandleData);
+
+        const BOOL ok = ::MiniDumpWriteDump(
+            ::GetCurrentProcess(),
+            ::GetCurrentProcessId(),
+            hFile,
+            type,
+            nullptr,
+            nullptr,
+            nullptr);
+
+        ::CloseHandle(hFile);
+        WatchdogWriteRaw(ok
+            ? "Watchdog: wrote Playground.dmp.\n"
+            : "Watchdog: MiniDumpWriteDump failed.\n");
+    }
 #endif
 
     void WatchdogLoop(int timeoutSeconds)
@@ -90,7 +135,8 @@ namespace
                 WatchdogWriteRaw(
                     "\n--- BN: WATCHDOG STALL ---\n"
                     "No forward progress within the watchdog interval; "
-                    "forcing a crash dump via __fastfail.\n");
+                    "writing a crash dump, then forcing __fastfail.\n");
+                WatchdogWriteDump();
                 // int 0x29: bypasses SEH/VEH (incl. ASAN's) and goes straight
                 // to WER, so a deadlocked allocator can't swallow it.
                 __fastfail(FAST_FAIL_FATAL_APP_EXIT);
