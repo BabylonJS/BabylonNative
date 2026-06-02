@@ -712,6 +712,7 @@ namespace Babylon
                 InstanceMethod("loadCubeTextureWithMips", &NativeEngine::LoadCubeTextureWithMips),
                 InstanceMethod("getTextureWidth", &NativeEngine::GetTextureWidth),
                 InstanceMethod("getTextureHeight", &NativeEngine::GetTextureHeight),
+                InstanceMethod("getTextureLayerCount", &NativeEngine::GetTextureLayerCount),
                 InstanceMethod("deleteTexture", &NativeEngine::DeleteTexture),
                 InstanceMethod("readTexture", &NativeEngine::ReadTexture),
 
@@ -1516,6 +1517,12 @@ namespace Babylon
     {
         const Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
         return Napi::Value::From(info.Env(), texture->Height());
+    }
+
+    Napi::Value NativeEngine::GetTextureLayerCount(const Napi::CallbackInfo& info)
+    {
+        const Graphics::Texture* texture = info[0].As<Napi::Pointer<Graphics::Texture>>().Get();
+        return Napi::Value::From(info.Env(), texture->NumLayers());
     }
 
     void NativeEngine::SetTextureSampling(NativeDataStream::Reader& data)
