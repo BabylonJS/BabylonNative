@@ -322,25 +322,33 @@ namespace {
                               napi_callback cb,
                               void* data,
                               napi_value* result) {
-      JSObjectRef constructor{JSObjectMakeConstructor(env->context, nullptr, CallAsConstructor)};
-      // BEGIN TODO: This extra prototype should no longer be needed, but for some reason removing it leads to errors
-      //             when setting properties on some prototypes. This should be investigated and removed.
-      JSObjectRef prototype{JSObjectMake(env->context, nullptr, nullptr)};
-      JSObjectSetPrototype(env->context, prototype, JSObjectGetPrototype(env->context, constructor));
-      JSObjectSetPrototype(env->context, constructor, prototype);
-
-      JSValueRef exception{};
-      JSObjectSetProperty(env->context, prototype, JSString("constructor"), constructor,
-        kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete, &exception);
-      CHECK_JSC(env, exception);
-      // END TODO
-
       ConstructorInfo* info{new ConstructorInfo(env, utf8name, length, cb, data)};
       if (info == nullptr) {
         return napi_set_last_error(env, napi_generic_failure);
       }
 
+      // Pass the per-class JSClassRef so JSObjectMakeConstructor assigns a fresh
+      // per-class object as the constructor's .prototype property. With a null
+      // class JSC defaults .prototype to the global Object.prototype, then
+      // installs it with the ReadOnly attribute, which both pollutes
+      // Object.prototype (writes to Foo.prototype mutate Object.prototype) and
+      // makes the property unwritable after the fact. See #172.
+      JSObjectRef constructor{JSObjectMakeConstructor(env->context, info->_class, CallAsConstructor)};
+
+      // Create the sentinel immediately so JSC's GC takes ownership of `info`
+      // via Finalize. If any of the prototype wiring below fails, the sentinel
+      // becomes garbage and Finalize will free `info`.
       JSObjectRef sentinel{JSObjectMake(env->context, info->_class, info)};
+
+      JSValueRef exception{};
+      JSValueRef prototypeValue{JSObjectGetProperty(env->context, constructor, JSString("prototype"), &exception)};
+      CHECK_JSC(env, exception);
+      JSObjectRef prototype{JSValueToObject(env->context, prototypeValue, &exception)};
+      CHECK_JSC(env, exception);
+      JSObjectSetProperty(env->context, prototype, JSString("constructor"), constructor,
+        kJSPropertyAttributeDontEnum, &exception);
+      CHECK_JSC(env, exception);
+
       CHECK_NAPI(NativeInfo::Link<ConstructorInfo>(env, constructor, sentinel));
 
       *result = ToNapi(constructor);
@@ -380,7 +388,11 @@ namespace {
       napi_clear_last_error(env);
 
       JSObjectRef instance{JSObjectMake(ctx, nullptr, nullptr)};
-      JSObjectSetPrototype(ctx, instance, JSObjectGetPrototype(ctx, constructor));
+      JSValueRef prototypeValue{JSObjectGetProperty(ctx, constructor, JSString("prototype"), exception)};
+      if (*exception != nullptr) {
+        return nullptr;
+      }
+      JSObjectSetPrototype(ctx, instance, prototypeValue);
 
       napi_callback_info__ cbinfo{};
       cbinfo.thisArg = ToNapi(instance);
@@ -933,7 +945,10 @@ napi_status napi_define_class(napi_env env,
 
   if (instancePropertyCount > 0) {
     napi_value prototype{};
-    CHECK_NAPI(napi_get_prototype(env, constructor, &prototype));
+    // Read the .prototype property directly. napi_get_prototype returns the
+    // [[Prototype]] internal slot, which for our constructors is
+    // Function.prototype — not where instance methods belong. See #172.
+    CHECK_NAPI(napi_get_named_property(env, constructor, "prototype", &prototype));
 
     CHECK_NAPI(napi_define_properties(env,
                                       prototype,
