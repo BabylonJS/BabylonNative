@@ -1669,8 +1669,12 @@ namespace Babylon
             buffer = Napi::ArrayBuffer::New(env, bufferLength);
         }
 
-        // Make sure the buffer is big enough for the offset + length.
-        if (buffer.ByteLength() < bufferOffset + bufferLength)
+        // Make sure the buffer is big enough for the offset + length. bufferOffset
+        // and bufferLength are JS-supplied uint32_t, so widen the addition to 64-bit:
+        // computing it in 32-bit can wrap around (e.g. offset 0xF0000000 + length
+        // 0x20000000), letting an out-of-range offset pass this gate and overflow
+        // the ArrayBuffer backing store in the memcpy below.
+        if (buffer.ByteLength() < static_cast<uint64_t>(bufferOffset) + bufferLength)
         {
             deferred.Reject(Napi::Error::New(env, "Provided buffer is too small for the specified offset and length.").Value());
         }
