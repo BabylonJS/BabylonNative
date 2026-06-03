@@ -31,6 +31,13 @@ namespace Napi
         ThrowIfFailed(JsGetPropertyIdFromName(L"hasOwnProperty", &propertyId));
         ThrowIfFailed(JsGetProperty(prototype, propertyId, &env_ptr->has_own_property_function));
 
+        JsValueRef wrapSymbolDescription;
+        ThrowIfFailed(JsPointerToString(L"BabylonNative_External", 22, &wrapSymbolDescription));
+        JsValueRef wrapSymbol;
+        ThrowIfFailed(JsCreateSymbol(wrapSymbolDescription, &wrapSymbol));
+        ThrowIfFailed(JsAddRef(wrapSymbol, nullptr));
+        ThrowIfFailed(JsGetPropertyIdFromSymbol(wrapSymbol, &env_ptr->wrap_property_id));
+
         return {env_ptr};
     }
 

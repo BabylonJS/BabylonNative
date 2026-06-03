@@ -3,6 +3,7 @@
 #include <array>
 #include <cassert>
 #include <cmath>
+#include <optional>
 #include <vector>
 #include <string>
 #include <stdexcept>
@@ -227,46 +228,49 @@ JsErrorCode JsNameValueFromPropertyDescriptor(const napi_property_descriptor* p,
   }
 }
 
-inline napi_status FindWrapper(napi_env env, JsValueRef obj, JsValueRef* wrapper, JsValueRef* parent = nullptr) {
-  // Search the object's prototype chain for the wrapper with external data.
-  // Usually the wrapper would be the first in the chain, but it is OK for
-  // other objects to be inserted in the prototype chain.
-  JsValueRef candidate = obj;
-  JsValueRef current = JS_INVALID_REFERENCE;
+inline napi_status FindWrapper(napi_env env, JsValueRef obj, JsValueRef* wrapper) {
+  *wrapper = JS_INVALID_REFERENCE;
+
+  JsValueType valueType;
+  CHECK_JSRT(env, JsGetValueType(obj, &valueType));
+  if (valueType != JsObject && valueType != JsFunction) {
+    return napi_ok;
+  }
+
+  // Use GetOwnPropertyDescriptor rather than JsGetProperty so a wrap-key
+  // property installed on Object.prototype cannot spoof an unwrap via the
+  // prototype chain.
+  JsValueRef descriptor = JS_INVALID_REFERENCE;
+  CHECK_JSRT(env, JsGetOwnPropertyDescriptor(obj, env->wrap_property_id, &descriptor));
+
+  JsValueType descriptorType;
+  CHECK_JSRT(env, JsGetValueType(descriptor, &descriptorType));
+  if (descriptorType == JsUndefined) {
+    return napi_ok;
+  }
+
+  JsPropertyIdRef valuePid;
+  CHECK_JSRT(env, JsCreatePropertyId(STR_AND_LENGTH("value"), &valuePid));
+
+  JsValueRef candidate = JS_INVALID_REFERENCE;
+  CHECK_JSRT(env, JsGetProperty(descriptor, valuePid, &candidate));
+
+  // Reject anything other than a JsExternalObject so a caller that
+  // stashed a fake value under the wrap key cannot make napi_unwrap
+  // hand back bogus data.
   bool hasExternalData = false;
-
-  JsValueRef nullValue = JS_INVALID_REFERENCE;
-  CHECK_JSRT(env, JsGetNullValue(&nullValue));
-
-  do {
-    current = candidate;
-
-    CHECK_JSRT(env, JsGetPrototype(current, &candidate));
-    if (candidate == JS_INVALID_REFERENCE || candidate == nullValue) {
-      if (parent != nullptr) {
-        *parent = JS_INVALID_REFERENCE;
-      }
-
-      *wrapper = JS_INVALID_REFERENCE;
-      return napi_ok;
-    }
-
-    CHECK_JSRT(env, JsHasExternalData(candidate, &hasExternalData));
-  } while (!hasExternalData);
-
-  if (parent != nullptr) {
-    *parent = current;
+  CHECK_JSRT(env, JsHasExternalData(candidate, &hasExternalData));
+  if (!hasExternalData) {
+    return napi_ok;
   }
 
   *wrapper = candidate;
-
   return napi_ok;
 }
 
-inline napi_status Unwrap(napi_env env, JsValueRef obj, ExternalData** externalData, JsValueRef* wrapper = nullptr, JsValueRef* parent = nullptr) {
+inline napi_status Unwrap(napi_env env, JsValueRef obj, ExternalData** externalData, JsValueRef* wrapper = nullptr) {
   JsValueRef candidate = JS_INVALID_REFERENCE;
-  JsValueRef candidateParent = JS_INVALID_REFERENCE;
-  CHECK_NAPI(FindWrapper(env, obj, &candidate, &candidateParent));
+  CHECK_NAPI(FindWrapper(env, obj, &candidate));
   RETURN_STATUS_IF_FALSE(env, candidate != JS_INVALID_REFERENCE, napi_invalid_arg);
 
   CHECK_JSRT(env, JsGetExternalData(candidate,
@@ -274,10 +278,6 @@ inline napi_status Unwrap(napi_env env, JsValueRef obj, ExternalData** externalD
 
   if (wrapper != nullptr) {
     *wrapper = candidate;
-  }
-
-  if (parent != nullptr) {
-    *parent = candidateParent;
   }
 
   return napi_ok;
@@ -440,6 +440,51 @@ struct DataViewInfo {
     delete reinterpret_cast<DataViewInfo*>(data);
   }
 };
+
+napi_status DefineProperty(napi_env env,
+                           JsValueRef object,
+                           JsPropertyIdRef property_id,
+                           JsValueRef value,
+                           JsValueRef getter,
+                           JsValueRef setter,
+                           std::optional<bool> writable,
+                           bool enumerable,
+                           bool configurable,
+                           bool* defined) {
+  JsValueRef descriptor;
+  CHECK_JSRT(env, JsCreateObject(&descriptor));
+
+  auto setField = [&](const char* name, size_t len, JsValueRef v) -> napi_status {
+    JsPropertyIdRef pid;
+    CHECK_JSRT(env, JsCreatePropertyId(name, len, &pid));
+    CHECK_JSRT(env, JsSetProperty(descriptor, pid, v, true));
+    return napi_ok;
+  };
+
+  auto setBoolField = [&](const char* name, size_t len, bool v) -> napi_status {
+    JsValueRef vr;
+    CHECK_JSRT(env, JsBoolToBoolean(v, &vr));
+    return setField(name, len, vr);
+  };
+
+  CHECK_NAPI(setBoolField(STR_AND_LENGTH("enumerable"), enumerable));
+  CHECK_NAPI(setBoolField(STR_AND_LENGTH("configurable"), configurable));
+  if (writable.has_value()) {
+    CHECK_NAPI(setBoolField(STR_AND_LENGTH("writable"), *writable));
+  }
+  if (value != JS_INVALID_REFERENCE) {
+    CHECK_NAPI(setField(STR_AND_LENGTH("value"), value));
+  }
+  if (getter != JS_INVALID_REFERENCE) {
+    CHECK_NAPI(setField(STR_AND_LENGTH("get"), getter));
+  }
+  if (setter != JS_INVALID_REFERENCE) {
+    CHECK_NAPI(setField(STR_AND_LENGTH("set"), setter));
+  }
+
+  CHECK_JSRT(env, JsDefineProperty(object, property_id, descriptor, defined));
+  return napi_ok;
+}
 
 } // end anonymous namespace
 
@@ -799,27 +844,18 @@ napi_status napi_define_properties(napi_env env,
     CHECK_ARG(env, properties);
   }
 
-  JsPropertyIdRef configurableProperty;
-  CHECK_JSRT(env, JsCreatePropertyId(STR_AND_LENGTH("configurable"),
-                                &configurableProperty));
-
-  JsPropertyIdRef enumerableProperty;
-  CHECK_JSRT(env, JsCreatePropertyId(STR_AND_LENGTH("enumerable"),
-                                &enumerableProperty));
-
   for (size_t i = 0; i < property_count; i++) {
     const napi_property_descriptor* p = properties + i;
 
-    JsValueRef descriptor;
-    CHECK_JSRT(env, JsCreateObject(&descriptor));
+    JsPropertyIdRef nameProperty;
+    CHECK_JSRT(env, JsPropertyIdFromPropertyDescriptor(p, &nameProperty));
 
-    JsValueRef configurable;
-    CHECK_JSRT(env, JsBoolToBoolean((p->attributes & napi_configurable), &configurable));
-    CHECK_JSRT(env, JsSetProperty(descriptor, configurableProperty, configurable, true));
-
-    JsValueRef enumerable;
-    CHECK_JSRT(env, JsBoolToBoolean((p->attributes & napi_enumerable), &enumerable));
-    CHECK_JSRT(env, JsSetProperty(descriptor, enumerableProperty, enumerable, true));
+    JsValueRef value = JS_INVALID_REFERENCE;
+    JsValueRef getter = JS_INVALID_REFERENCE;
+    JsValueRef setter = JS_INVALID_REFERENCE;
+    std::optional<bool> writable;
+    bool enumerable = (p->attributes & napi_enumerable) != 0;
+    bool configurable = (p->attributes & napi_configurable) != 0;
 
     if (p->getter != nullptr || p->setter != nullptr) {
       napi_value property_name;
@@ -827,57 +863,31 @@ napi_status napi_define_properties(napi_env env,
         JsNameValueFromPropertyDescriptor(p, &property_name));
 
       if (p->getter != nullptr) {
-        JsPropertyIdRef getProperty;
-        CHECK_JSRT(env, JsCreatePropertyId(STR_AND_LENGTH("get"), &getProperty));
-        JsValueRef getter;
         CHECK_NAPI(CreatePropertyFunction(env, property_name,
           p->getter, p->data, reinterpret_cast<napi_value*>(&getter)));
-        CHECK_JSRT(env, JsSetProperty(descriptor, getProperty, getter, true));
       }
 
       if (p->setter != nullptr) {
-        JsPropertyIdRef setProperty;
-        CHECK_JSRT(env, JsCreatePropertyId(STR_AND_LENGTH("set"), &setProperty));
-        JsValueRef setter;
         CHECK_NAPI(CreatePropertyFunction(env, property_name,
           p->setter, p->data, reinterpret_cast<napi_value*>(&setter)));
-        CHECK_JSRT(env, JsSetProperty(descriptor, setProperty, setter, true));
       }
     } else if (p->method != nullptr) {
       napi_value property_name;
       CHECK_JSRT(env,
         JsNameValueFromPropertyDescriptor(p, &property_name));
 
-      JsPropertyIdRef valueProperty;
-      CHECK_JSRT(env, JsCreatePropertyId(STR_AND_LENGTH("value"), &valueProperty));
-      JsValueRef method;
       CHECK_NAPI(CreatePropertyFunction(env, property_name,
-        p->method, p->data, reinterpret_cast<napi_value*>(&method)));
-      CHECK_JSRT(env, JsSetProperty(descriptor, valueProperty, method, true));
+        p->method, p->data, reinterpret_cast<napi_value*>(&value)));
     } else {
       RETURN_STATUS_IF_FALSE(env, p->value != nullptr, napi_invalid_arg);
-
-      JsPropertyIdRef writableProperty;
-      CHECK_JSRT(env, JsCreatePropertyId(STR_AND_LENGTH("writable"),
-                                    &writableProperty));
-      JsValueRef writable;
-      CHECK_JSRT(env, JsBoolToBoolean((p->attributes & napi_writable), &writable));
-      CHECK_JSRT(env, JsSetProperty(descriptor, writableProperty, writable, true));
-
-      JsPropertyIdRef valueProperty;
-      CHECK_JSRT(env, JsCreatePropertyId(STR_AND_LENGTH("value"), &valueProperty));
-      CHECK_JSRT(env, JsSetProperty(descriptor, valueProperty,
-        reinterpret_cast<JsValueRef>(p->value), true));
+      value = reinterpret_cast<JsValueRef>(p->value);
+      writable = (p->attributes & napi_writable) != 0;
     }
 
-    JsPropertyIdRef nameProperty;
-    CHECK_JSRT(env, JsPropertyIdFromPropertyDescriptor(p, &nameProperty));
-    bool result;
-    CHECK_JSRT(env, JsDefineProperty(
-      reinterpret_cast<JsValueRef>(object),
-      reinterpret_cast<JsPropertyIdRef>(nameProperty),
-      reinterpret_cast<JsValueRef>(descriptor),
-      &result));
+    bool defined;
+    CHECK_NAPI(DefineProperty(env, reinterpret_cast<JsValueRef>(object),
+      nameProperty, value, getter, setter, writable, enumerable,
+      configurable, &defined));
   }
 
   return napi_ok;
@@ -1659,11 +1669,16 @@ napi_status napi_wrap(napi_env env,
   CHECK_JSRT(env, JsCreateExternalObject(
     externalData, ExternalData::Finalize, &external));
 
-  // Insert the external object into the value's prototype chain.
-  JsValueRef valuePrototype = JS_INVALID_REFERENCE;
-  CHECK_JSRT(env, JsGetPrototype(value, &valuePrototype));
-  CHECK_JSRT(env, JsSetPrototype(external, valuePrototype));
-  CHECK_JSRT(env, JsSetPrototype(value, external));
+  bool defined = false;
+  CHECK_NAPI(DefineProperty(env, value, env->wrap_property_id,
+    /*value*/ external,
+    /*getter*/ JS_INVALID_REFERENCE,
+    /*setter*/ JS_INVALID_REFERENCE,
+    /*writable*/ false,
+    /*enumerable*/ false,
+    /*configurable*/ true,
+    &defined));
+  RETURN_STATUS_IF_FALSE(env, defined, napi_invalid_arg);
 
   if (result != nullptr) {
     CHECK_NAPI(napi_create_reference(env, js_object, 0, result));
@@ -1693,18 +1708,21 @@ napi_status napi_remove_wrap(napi_env env, napi_value js_object, void** result) 
   JsValueRef value = reinterpret_cast<JsValueRef>(js_object);
 
   ExternalData* externalData = nullptr;
-  JsValueRef parent = JS_INVALID_REFERENCE;
   JsValueRef wrapper = JS_INVALID_REFERENCE;
-  CHECK_NAPI(Unwrap(env, value, &externalData, &wrapper, &parent));
-  RETURN_STATUS_IF_FALSE(env, parent != JS_INVALID_REFERENCE, napi_invalid_arg);
+  CHECK_NAPI(Unwrap(env, value, &externalData, &wrapper));
   RETURN_STATUS_IF_FALSE(env, wrapper != JS_INVALID_REFERENCE, napi_invalid_arg);
 
-  // Remove the external from the prototype chain
-  JsValueRef wrapperProto = JS_INVALID_REFERENCE;
-  CHECK_JSRT(env, JsGetPrototype(wrapper, &wrapperProto));
-  CHECK_JSRT(env, JsSetPrototype(parent, wrapperProto));
+  // Remove the hidden wrap property first. If deletion fails (e.g. user
+  // code redefined it as non-configurable after napi_wrap), bail before
+  // detaching the external data so a subsequent napi_unwrap still returns
+  // the original data rather than a stale property with cleared external.
+  JsValueRef deleteResult = JS_INVALID_REFERENCE;
+  CHECK_JSRT(env, JsDeleteProperty(value, env->wrap_property_id, false /* isStrictMode */, &deleteResult));
 
-  // Clear the external data from the object
+  bool wasDeleted = false;
+  CHECK_JSRT(env, JsBooleanToBool(deleteResult, &wasDeleted));
+  RETURN_STATUS_IF_FALSE(env, wasDeleted, napi_generic_failure);
+
   CHECK_JSRT(env, JsSetExternalData(wrapper, nullptr));
 
   if (externalData != nullptr) {

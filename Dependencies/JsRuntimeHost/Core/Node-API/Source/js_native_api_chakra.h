@@ -13,6 +13,8 @@ struct napi_env__ {
   napi_extended_error_info last_error{ nullptr, nullptr, 0, napi_ok };
   JsValueRef has_own_property_function = JS_INVALID_REFERENCE;
 
+  JsPropertyIdRef wrap_property_id = JS_INVALID_REFERENCE;
+
   const std::thread::id thread_id{std::this_thread::get_id()};
 };
 
