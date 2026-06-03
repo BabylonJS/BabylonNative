@@ -229,7 +229,7 @@
         },
         {
             "title": "Solid particle system",
-            "playgroundId": "#WCDZS#92",
+            "playgroundId": "#WCDZS#531",
             "renderCount": 150,
             "referenceImage": "sps.png",
             "errorRatio": 6.0
@@ -698,75 +698,71 @@
             "title": "PBR in mirror",
             "playgroundId": "#Q7DP2M",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "pbr_mirror.png"
+            "reason": "Cubemap load not implemented on Babylon Native",
+            "referenceImage": "pbr-mirror.png"
         },
         {
             "title": "OpenPBR Base Weight",
             "playgroundId": "#DT1XPP#4",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "openpbr_base_weight.png"
+            "referenceImage": "openpbr-base-weight.png"
         },
         {
             "title": "OpenPBR Base Diffuse Roughness Analytical Lights",
             "playgroundId": "#MXACV7#30",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "openpbr_base_diffuse_roughness.png"
+            "referenceImage": "openpbr-base-diffuse-roughness.png"
         },
         {
             "title": "OpenPBR Base Diffuse Roughness Realtime IBL",
             "playgroundId": "#MXACV7#29",
             "renderCount": 15,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "openpbr_base_diffuse_roughness_realtime_ibl.png"
+            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
+            "referenceImage": "openpbr-base-diffuse-roughness-realtime-ibl.png"
         },
         {
             "title": "OpenPBR Base Diffuse Roughness Prefiltered IBL with CDF",
             "playgroundId": "#MXACV7#28",
             "renderCount": 5,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "openpbr_base_diffuse_roughness_prefiltered_ibl_with_cdf.png"
+            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
+            "referenceImage": "openpbr-base-diffuse-roughness-prefiltered-ibl-with-cdf.png"
         },
         {
             "title": "OpenPBR Base Diffuse Roughness Prefiltered IBL",
             "playgroundId": "#MXACV7#27",
             "renderCount": 5,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "openpbr_base_diffuse_roughness_prefiltered_ibl.png"
+            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
+            "referenceImage": "openpbr-base-diffuse-roughness-prefiltered-ibl.png"
         },
         {
             "title": "OpenPBR Base Diffuse Roughness SH IBL",
             "playgroundId": "#MXACV7#32",
             "renderCount": 2,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "openpbr_base_diffuse_roughness_spherical_harmonics.png"
+            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
+            "referenceImage": "openpbr-base-diffuse-roughness-spherical-harmonics.png"
         },
         {
             "title": "NME Glow Manual",
             "playgroundId": "#7QCYPB#320",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "nme_glow_manual.png"
+            "reason": "Pixel diff: ~99% of pixels differ vs reference",
+            "referenceImage": "nme-glow-manual.png"
         },
         {
             "title": "NME Glow Automatic",
             "playgroundId": "#7QCYPB#327",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "nme_glow_automatic.png"
+            "reason": "Cubemap load not implemented on Babylon Native",
+            "referenceImage": "nme-glow-automatic.png"
         },
         {
             "title": "EXT_lights_ies",
             "playgroundId": "#UIAXAU#19",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "ext_lights_ies.png"
+            "reason": "Loading remote https:// assets is not supported",
+            "referenceImage": "ext-lights-ies.png"
         },
         {
             "title": "IES Profile",
@@ -864,7 +860,7 @@
         },
         {
             "title": "Volumetric Light Scattering Post Process with Morph Targets",
-            "playgroundId": "#5E318S#5",
+            "playgroundId": "#5E318S#7",
             "excludeFromAutomaticTesting": true,
             "reason": "Pixel comparison fails on Linux (large diff)",
             "referenceImage": "volumetricLightScatteringMorphTargets.png"
@@ -1026,7 +1022,7 @@
             "playgroundId": "#QJ71C6#5",
             "referenceImage": "node-material1.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "GUI text labels render with red text on red background instead of green (BN GUI color regression affecting many GUI tests)."
         },
         {
             "title": "Node material 2",
@@ -1089,7 +1085,7 @@
             "playgroundId": "#UAIZCS#0",
             "referenceImage": "lodbillboardinstances.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "Instanced billboard foliage renders red instead of green (BN vertex/instance color routing regression)."
         },
         {
             "title": "Nested BBG",
@@ -1124,14 +1120,14 @@
             "playgroundId": "#BS60AB#0",
             "referenceImage": "TransformStackPanel.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "GUI Transform StackPanel buttons render orange/red instead of green (BN GUI color regression)."
         },
         {
             "title": "GUI StackPanel",
             "playgroundId": "#LLVZ90#0",
             "referenceImage": "StackPanel.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "GUI StackPanel buttons render orange/red instead of green (BN GUI color regression)."
         },
         {
             "title": "GUI Slate",
@@ -1145,8 +1141,8 @@
             "title": "GUI Near Menu",
             "playgroundId": "#2YZFA0#302",
             "renderCount": 60,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 V8 D3D11 / hangs on OpenGL",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "OpenGL: BGFX FATAL shader compile error in GUI fragment shader ('=' : cannot convert from 'highp float' to 'bool'). Re-enabled on D3D11 post BabylonJS/BabylonNative#1695 (original 'V8 D3D11 crash' no longer reproduces under Chakra; original 'hangs on OpenGL' is now this clean shader-compile failure surfaced by the BabylonJS/BabylonNative#1688 BgfxCallback).",
             "referenceImage": "guiNearMenu.png"
         },
         {
@@ -1162,7 +1158,7 @@
             "renderCount": 50,
             "referenceImage": "LineEdgesRenderer.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "LineEdgesRenderer emits extra red lines not present in reference (likely Vector3.Cross precision or duplicate-edge dedup gap)."
         },
         {
             "title": "Simulate pointer",
@@ -1184,7 +1180,7 @@
             "renderCount": 5,
             "referenceImage": "clipplanes.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "reason": "GUI slider handles render red instead of green (BN GUI color regression); skull also has minor edge anti-aliasing differences."
         },
         {
             "title": "ShadowOnlyMaterial",
@@ -1287,7 +1283,7 @@
             "playgroundId": "#SLV8LW#3",
             "renderCount": 20,
             "excludeFromAutomaticTesting": true,
-            "reason": "Framebuffer creation fails on Win32 V8",
+            "reason": "GUI label backgrounds render red instead of white (BN GUI color regression).",
             "referenceImage": "advancedShadows.png"
         },
         {
@@ -1295,7 +1291,7 @@
             "playgroundId": "#B48X7G#64",
             "renderCount": 20,
             "excludeFromAutomaticTesting": true,
-            "reason": "Framebuffer creation fails on Win32 V8",
+            "reason": "GUI label backgrounds render red instead of white (BN GUI color regression).",
             "referenceImage": "advancedShadows2.png"
         },
         {
@@ -1732,7 +1728,7 @@
             "playgroundId": "#2YLJ1L#2",
             "referenceImage": "instancedBones.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "Deterministic sub-pixel animation/edge-AA differences on instanced bone animation (~3.5% px); render is structurally correct."
         },
         {
             "title": "GlowLayer",
@@ -2298,7 +2294,7 @@
             "title": "Baked Vertex Animation",
             "playgroundId": "#14WJWW#13",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "Pixel-diff against Babylon.js reference after SPIRV-Cross bump (#1695): animation timing renders one frame off. Cannot re-bake from BN renderer per project policy.",
             "referenceImage": "bakedVertexAnimation.png"
         },
         {
@@ -2503,16 +2499,12 @@
         {
             "title": "Asset Container Instantiate to Scene",
             "playgroundId": "#5NFRVE#142",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "Asset-Container-Instantiate-to-Scene"
+            "referenceImage": "Asset-Container-Instantiate-to-Scene.png"
         },
         {
             "title": "Asset Container Instantiate to Scene 2",
             "playgroundId": "#5NFRVE#161",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
-            "referenceImage": "Asset-Container-Instantiate-to-Scene-2"
+            "referenceImage": "Asset-Container-Instantiate-to-Scene-2.png"
         },
         {
             "title": "Instantiate Hierarchy",
@@ -2526,7 +2518,7 @@
             "playgroundId": "#PIZ1GK#1500",
             "renderCount": 5,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "NativeEngine Screen Space Reflections do not render the wet/reflective floor surface; SSR effect produces less reflection than WebGL reference.",
             "referenceImage": "Screen-Space-Reflections-2.png"
         },
         {
@@ -2568,7 +2560,7 @@
             "title": "Sprites Pixel Perfect",
             "playgroundId": "#ZX8DJ3#10",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "NativeEngine Sprite renderer shows opaque black background instead of transparent pixels around sprite quad; sprite alpha-blending regression.",
             "referenceImage": "Sprites-Pixel-Perfect.png"
         },
         {
@@ -2576,7 +2568,7 @@
             "playgroundId": "#XCPP9Y#18325",
             "referenceImage": "Rounding-values-on-controls-inside-StackPanel.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "reason": "GUI StackPanel buttons render orange/red instead of green (BN GUI color regression)."
         },
         {
             "title": "Rounding cell widths on Grid",
@@ -2751,7 +2743,7 @@
             "title": "soft-transparent-shadows",
             "playgroundId": "#G3DJGA#0",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "NativeEngine soft shadow filtering produces grainy/aliased shadows instead of smooth filtered output; filter quality regression vs WebGL reference.",
             "referenceImage": "soft-transparent-shadows.png"
         },
         {
@@ -2781,7 +2773,7 @@
             "playgroundId": "#MJ59Y8#18",
             "renderCount": 10,
             "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "reason": "Pixel-diff against Babylon.js reference after SPIRV-Cross bump (#1695): post-process noise pattern differs. Cannot re-bake from BN renderer per project policy.",
             "referenceImage": "apply-all-post-processes.png"
         },
         {
@@ -2806,7 +2798,7 @@
             "renderCount": 20,
             "referenceImage": "skybox-with-boombox.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails after sync from Babylon.js: massive pixel difference (221k pixels) on Linux Clang/GCC JSC and Win32 D3D11."
+            "reason": "GUI text 'Hello world WebGPU!' renders pink/red instead of white (BN GUI color regression); boombox also has minor edge differences."
         },
         {
             "title": "custom-handling-of-materials-for-render-target-pass",
@@ -3133,7 +3125,8 @@
             "title": "FrameGraph nrge clustered lights (simple)",
             "playgroundId": "#1QCA2M#37",
             "excludeFromAutomaticTesting": true,
-            "reason": "No matching reference image found"
+            "reason": "Chakra parse failure on modern JS syntax",
+            "referenceImage": "FrameGraph-nrge-clustered-lights-simple-.png"
         },
         {
             "title": "FrameGraph nrge multiple post processes",
@@ -3167,7 +3160,8 @@
             "title": "FrameGraph nrge OIT (Geometry renderer)",
             "playgroundId": "#MIACY4#14",
             "excludeFromAutomaticTesting": true,
-            "reason": "No matching reference image found"
+            "reason": "FrameGraph render pipeline hangs past 120s",
+            "referenceImage": "FrameGraph-nrge-OIT-Geometry-renderer-.png"
         },
         {
             "title": "FrameGraph nrge multi-render targets",
@@ -3395,13 +3389,15 @@
             "title": "Furnace Test (Legacy) for Spec-Gloss",
             "playgroundId": "#KQYNYS#20",
             "excludeFromAutomaticTesting": true,
-            "reason": "No matching reference image found"
+            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
+            "referenceImage": "Furnace-Test-Legacy-for-Spec-Gloss.png"
         },
         {
             "title": "Furnace Test (Legacy) for Metal-Rough",
             "playgroundId": "#KQYNYS#21",
             "excludeFromAutomaticTesting": true,
-            "reason": "No matching reference image found"
+            "reason": "CDF renderer / IBL prefiltering fails with 'FLOAT' undefined",
+            "referenceImage": "Furnace-Test-Legacy-for-Metal-Rough.png"
         },
         {
             "title": "Furnace Test for Spec-Gloss",
@@ -3470,61 +3466,71 @@
             "title": "Sponza Clustered Lighting (node material std)",
             "playgroundId": "#QY98Z3#16",
             "excludeFromAutomaticTesting": true,
-            "reason": "No matching reference image found"
+            "reason": "Chakra parse failure on modern JS syntax",
+            "referenceImage": "Sponza-Clustered-Lighting-node-material-std-.png"
         },
         {
             "title": "Sponza Clustered Lighting (node material pbr)",
             "playgroundId": "#QY98Z3#17",
             "excludeFromAutomaticTesting": true,
-            "reason": "No matching reference image found"
+            "reason": "Chakra parse failure on modern JS syntax",
+            "referenceImage": "Sponza-Clustered-Lighting-node-material-pbr-.png"
         },
         {
             "title": "Clustered Lighting (lhs std material)",
             "playgroundId": "#CSCJO2#59",
             "excludeFromAutomaticTesting": true,
-            "reason": "No matching reference image found"
+            "reason": "Chakra parse failure on modern JS syntax",
+            "referenceImage": "Clustered-Lighting-lhs-std-material-.png"
         },
         {
             "title": "Clustered Lighting (lhs pbr material)",
             "playgroundId": "#CSCJO2#60",
             "excludeFromAutomaticTesting": true,
-            "reason": "No matching reference image found"
+            "reason": "Chakra parse failure on modern JS syntax",
+            "referenceImage": "Clustered-Lighting-lhs-pbr-material-.png"
         },
         {
             "title": "Clustered Lighting (lhs std nodematerial)",
             "playgroundId": "#CSCJO2#64",
             "excludeFromAutomaticTesting": true,
-            "reason": "No matching reference image found"
+            "reason": "Chakra parse failure on modern JS syntax",
+            "referenceImage": "Clustered-Lighting-lhs-std-nodematerial-.png"
         },
         {
             "title": "Clustered Lighting (lhs pbr nodematerial)",
             "playgroundId": "#CSCJO2#62",
             "excludeFromAutomaticTesting": true,
-            "reason": "No matching reference image found"
+            "reason": "Chakra parse failure on modern JS syntax",
+            "referenceImage": "Clustered-Lighting-lhs-pbr-nodematerial-.png"
         },
         {
             "title": "Clustered Lighting (rhs std material)",
             "playgroundId": "#CSCJO2#69",
             "excludeFromAutomaticTesting": true,
-            "reason": "No matching reference image found"
+            "reason": "Chakra parse failure on modern JS syntax",
+            "referenceImage": "Clustered-Lighting-rhs-std-material-.png"
         },
         {
             "title": "Clustered Lighting (rhs pbr material)",
             "playgroundId": "#CSCJO2#70",
             "excludeFromAutomaticTesting": true,
-            "reason": "No matching reference image found"
+            "reason": "Chakra parse failure on modern JS syntax",
+            "referenceImage": "Clustered-Lighting-rhs-pbr-material-.png"
         },
         {
             "title": "Clustered Lighting (rhs std nodematerial)",
             "playgroundId": "#CSCJO2#71",
             "excludeFromAutomaticTesting": true,
-            "reason": "No matching reference image found"
+            "reason": "Chakra parse failure on modern JS syntax",
+            "referenceImage": "Clustered-Lighting-rhs-std-nodematerial-.png"
         },
         {
             "title": "Clustered Lighting (rhs pbr nodematerial)",
             "playgroundId": "#CSCJO2#72",
             "excludeFromAutomaticTesting": true,
-            "reason": "No matching reference image found"
+            "reason": "Chakra parse failure on modern JS syntax",
+            "referenceImage": "Clustered-Lighting-rhs-pbr-nodematerial-.png"
         },
         {
             "title": "Clustered Light Serialization",
@@ -3967,7 +3973,7 @@
             "playgroundId": "#GRQHVV#124",
             "referenceImage": "OpenPBR-Transmission-Roughness-glTF---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "GUI grid labels render red instead of green/black (BN GUI color regression); OpenPBR transmission spheres minor anisotropy diff."
         },
         {
             "title": "OpenPBR Transmission Roughness vs IOR - Analytic Lights",
@@ -4064,7 +4070,7 @@
             "playgroundId": "#GRQHVV#268",
             "referenceImage": "OpenPBR-Transmission-Scatter-Anisotropy-Reflect---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "OpenPBR analytic-lights right-column spheres render saturated red where reference shows subsurface scattering (spirv-cross HLSL emit gap for OpenPBR Anisotropy/SSS BSDF)."
         },
         {
             "title": "OpenPBR Transmission Scatter Roughness - Analytic Lights",
@@ -4094,7 +4100,7 @@
             "playgroundId": "#GRQHVV#272",
             "referenceImage": "OpenPBR-Subsurface-Radius-vs-Anisotropy---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "OpenPBR analytic-lights right-column spheres render saturated red where reference shows subsurface scattering (spirv-cross HLSL emit gap for OpenPBR Anisotropy/SSS BSDF)."
         },
         {
             "title": "OpenPBR Subsurface Radius vs Radius Scale - IBL",
@@ -4118,7 +4124,7 @@
             "renderCount": 2,
             "referenceImage": "OpenPBR-Subsurface-Transmission-Blending---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "OpenPBR subsurface transmission shows red bands on label backgrounds (BN GUI color + minor SSS BSDF differences)."
         },
         {
             "title": "OpenPBR Subsurface Transmission Blending Zero Depth - IBL",
@@ -4158,7 +4164,7 @@
             "renderCount": 10,
             "referenceImage": "OpenPBR-Subsurface-Dense-Scattering---Analytic-Lights.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "OpenPBR analytic-lights left column spheres render saturated red where reference shows subsurface scattering (spirv-cross HLSL emit gap for OpenPBR SSS BSDF)."
         },
         {
             "title": "OpenPBR Subsurface Dense Scattering - Realtime IBL",
@@ -4234,7 +4240,7 @@
             "playgroundId": "#UU7RQ#4458",
             "referenceImage": "Background-material-blur.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "reason": "Background material blur produces red splotches in the blurred background (BN background-blur shader regression)."
         },
         {
             "title": "Lighting Volume",
@@ -4963,17 +4969,19 @@
         },
         {
             "title": "wgsl-in-shadermaterial",
-            "playgroundId": "#8RU8Q3#157",
+            "playgroundId": "#8RU8Q3#193",
             "renderCount": 30,
             "excludeFromAutomaticTesting": true,
-            "reason": "Requires WebGL2-only feature (not supported by Babylon Native)"
+            "reason": "NativeEngine missing createStorageBuffer for WGSL ShaderMaterial",
+            "referenceImage": "wgsl-in-shadermaterial.png"
         },
         {
             "title": "terrain-erosion",
             "playgroundId": "#C90R62#17",
             "renderCount": 15,
             "excludeFromAutomaticTesting": true,
-            "reason": "Requires WebGL2-only feature (not supported by Babylon Native)"
+            "reason": "Chakra parse failure on modern JS syntax",
+            "referenceImage": "terrain-erosion.png"
         },
         {
             "title": "Read-write storage texture compute",
@@ -4993,45 +5001,46 @@
             "title": "FrameGraph nrge clustered lights",
             "playgroundId": "#1QCA2M#36",
             "excludeFromAutomaticTesting": true,
-            "reason": "Requires WebGL2-only feature (not supported by Babylon Native)"
+            "reason": "Chakra parse failure on modern JS syntax",
+            "referenceImage": "FrameGraph-nrge-clustered-lights.png"
         },
         {
             "title": "Depth Renderer and RTT - debug markers",
             "playgroundId": "#7E73LI#21",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires WebGL2-only feature (not supported by Babylon Native)"
+            "referenceImage": "Depth-Renderer-and-RTT---debug-markers.png"
         },
         {
             "title": "Clustered lights - debug markers",
             "playgroundId": "#1QCA2M#47",
             "excludeFromAutomaticTesting": true,
-            "reason": "Requires WebGL2-only feature (not supported by Babylon Native)"
+            "reason": "Chakra parse failure on modern JS syntax",
+            "referenceImage": "Clustered-lights---debug-markers.png"
         },
         {
             "title": "CSM  FrameGraph - debug markers",
             "playgroundId": "#JWKDME#216",
             "excludeFromAutomaticTesting": true,
-            "reason": "Requires WebGL2-only feature (not supported by Babylon Native)"
+            "reason": "FrameGraph render pipeline hangs past 120s",
+            "referenceImage": "CSM-FrameGraph---debug-markers.png"
         },
         {
             "title": "Reflection Probes - debug markers",
             "playgroundId": "#KA93U#1723",
             "excludeFromAutomaticTesting": true,
-            "reason": "Requires WebGL2-only feature (not supported by Babylon Native)"
+            "reason": "ReflectionProbe: 'TEXTURE_CUBE_MAP' undefined on NativeEngine",
+            "referenceImage": "Reflection-Probes---debug-markers.png"
         },
         {
             "title": "Unbalanced push pop - debug markers",
             "playgroundId": "#T26WTI#2",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires WebGL2-only feature (not supported by Babylon Native)"
+            "referenceImage": "Unbalanced-push-pop---debug-markers.png"
         },
         {
             "title": "Pending pop - debug markers",
             "playgroundId": "#24HWT9#25",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Requires WebGL2-only feature (not supported by Babylon Native)"
+            "referenceImage": "Pending-pop---debug-markers.png"
         },
         {
             "title": "WebGPU async pipeline pre-warming",

@@ -45,6 +45,8 @@ namespace
             compiler->add_vertex_attribute_remap(attribute);
         }
 
+        Babylon::ShaderCompilerCommon::AssignUniformBufferBindings(*compiler);
+
         std::string hlsl = compiler->compile();
 
         Microsoft::WRL::ComPtr<ID3DBlob> errorMsgs;
@@ -105,6 +107,8 @@ namespace Babylon::Plugins
         std::map<std::string, std::string> vertexAttributeRenaming = {};
         ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryingsD3D(program, ids, vertexAttributeRenaming);
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
+        ShaderCompilerTraversers::SplitSamplerFunctionParameters(program, ids);
+        ShaderCompilerTraversers::ZeroInitializeStructLocals(program);
         ShaderCompilerTraversers::InvertYDerivativeOperands(program);
 
         // clang-format off

@@ -35,7 +35,7 @@ FetchContent_Declare(base-n
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(bgfx.cmake
     GIT_REPOSITORY https://github.com/BabylonJS/bgfx.cmake.git
-    GIT_TAG e5f3f31c1ec8a376dde75f8b20366e2696810ea0
+    GIT_TAG 8711456e9986e3361f43c18422839d03af0c42bc
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
@@ -65,7 +65,7 @@ FetchContent_Declare(metal-cpp
     EXCLUDE_FROM_ALL)
 FetchContent_Declare(SPIRV-Cross
     GIT_REPOSITORY https://github.com/BabylonJS/SPIRV-Cross.git
-    GIT_TAG 866e5edcc3407997a3ed62f3edf492f91bcb2629
+    GIT_TAG a512817ddbcd879a3929aef7d1d762871bdf8635
     EXCLUDE_FROM_ALL)
 
 # --------------------------------------------------

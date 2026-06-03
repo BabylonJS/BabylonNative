@@ -7,7 +7,7 @@
 #include <Babylon/Plugins/NativeEngine.h>
 #include <Babylon/Plugins/ExternalTexture.h>
 
-#include "Utils.h"
+#include "Helpers.h"
 
 #include <iostream>
 
@@ -24,7 +24,7 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdateWithLayerIndex)
     device.StartRenderingCurrentFrame();
     update.Start();
 
-    auto nativeTexture = CreateTestTexture(device.GetPlatformInfo().Device, 256, 256, 3);
+    auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256, 3);
 
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
 
@@ -75,7 +75,7 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdateWithLayerIndex)
     // Update the external texture to a new texture with explicit layer index 2.
     externalTexture.Update(nativeTexture, std::nullopt, 2);
 
-    DestroyTestTexture(nativeTexture);
+    Helpers::DestroyTexture(nativeTexture);
 
     update.Finish();
     device.FinishRenderingCurrentFrame();
