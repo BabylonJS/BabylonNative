@@ -19,7 +19,7 @@
 #include <bimg/decode.h>
 #include <bimg/encode.h>
 
-#include <stb/stb_image_resize.h>
+#include <stb/stb_image_resize2.h>
 #include <bx/math.h>
 #include <bx/error.h>
 #endif
@@ -2103,8 +2103,8 @@ namespace Babylon
         auto outputData = Napi::Uint8Array::New(env, bufferWidth * bufferHeight * 4);
         if (width != bufferWidth || height != bufferHeight)
         {
-            stbir_resize_uint8(static_cast<unsigned char*>(image->m_data), width, height, 0,
-                outputData.Data(), bufferWidth, bufferHeight, 0, 4);
+            stbir_resize_uint8_linear(static_cast<unsigned char*>(image->m_data), width, height, 0,
+                outputData.Data(), bufferWidth, bufferHeight, 0, STBIR_RGBA);
         }
         else
         {
