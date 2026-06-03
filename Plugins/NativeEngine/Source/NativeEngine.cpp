@@ -2079,7 +2079,32 @@ namespace Babylon
 
         const Napi::Env env{info.Env()};
 
-        bimg::ImageContainer* image = bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, data.Data());
+        // bufferWidth/bufferHeight are the (JS-controlled) resize target extents.
+        // They feed both the output allocation and stbir's output dimensions
+        // (which are signed int), so bound them to the same 16-bit texture limit
+        // bimg enforces for the source. This also keeps the allocation size below
+        // the 32-bit overflow the naive width*height*4 multiply would otherwise
+        // hit (and that stbir would then write past).
+        if (bufferWidth == 0 || bufferWidth > UINT16_MAX || bufferHeight == 0 || bufferHeight > UINT16_MAX)
+        {
+            throw Napi::Error::New(env, "Invalid target image dimensions for ResizeImageBitmap.");
+        }
+
+        // width/height/format come straight from the (JS-controlled) imageBitmap
+        // object and are later used as the source extents for the resize read.
+        // bimg::imageAlloc rejects dimensions that don't fit in 16 bits (it would
+        // otherwise truncate and under-allocate), so pass the full 32-bit values
+        // and let it validate; a rejected allocation surfaces as the error below.
+        // Also make sure the supplied pixel buffer is large enough for those
+        // dimensions, since imageAlloc memcpy's the source into the new container
+        // and an undersized buffer would read out of bounds of the JS array.
+        const uint64_t sourceSize = bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, format);
+        if (sourceSize == 0 || data.ByteLength() < sourceSize)
+        {
+            throw Napi::Error::New(env, "Invalid source image dimensions for ResizeImageBitmap.");
+        }
+
+        bimg::ImageContainer* image = bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, 1, 1, false, false, data.Data());
         if (image == nullptr)
         {
             throw Napi::Error::New(env, "Unable to allocate image for ResizeImageBitmap.");
@@ -2100,7 +2125,7 @@ namespace Babylon
             image = rgba;
         }
 
-        auto outputData = Napi::Uint8Array::New(env, bufferWidth * bufferHeight * 4);
+        auto outputData = Napi::Uint8Array::New(env, static_cast<size_t>(bufferWidth) * bufferHeight * 4);
         if (width != bufferWidth || height != bufferHeight)
         {
             stbir_resize_uint8_linear(static_cast<unsigned char*>(image->m_data), width, height, 0,
