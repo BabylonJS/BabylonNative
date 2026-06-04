@@ -51,9 +51,9 @@ target_include_directories(node_lite
     PRIVATE
         ${NODE_API_TEST_ROOT}
         ${NODE_API_TEST_ROOT}/include
-        ${CMAKE_SOURCE_DIR}/Core/Node-API/Include/Shared
-        ${CMAKE_SOURCE_DIR}/Core/Node-API/Include/Engine/${NAPI_JAVASCRIPT_ENGINE}
-        ${CMAKE_SOURCE_DIR}/Core/Node-API/Source
+        ${JsRuntimeHost_SOURCE_DIR}/Core/Node-API/Include/Shared
+        ${JsRuntimeHost_SOURCE_DIR}/Core/Node-API/Include/Engine/${NAPI_JAVASCRIPT_ENGINE}
+        ${JsRuntimeHost_SOURCE_DIR}/Core/Node-API/Source
 )
 
 target_compile_definitions(node_lite
@@ -133,10 +133,10 @@ function(add_node_api_module MODULE_TARGET)
     target_include_directories(${MODULE_TARGET}
         PRIVATE
             ${NODE_API_TEST_ROOT}/include
-            ${CMAKE_SOURCE_DIR}/Core/Node-API/Include/Shared
-            ${CMAKE_SOURCE_DIR}/Core/Node-API/Include/Shared/napi
-            ${CMAKE_SOURCE_DIR}/Core/Node-API/Include/Engine/${NAPI_JAVASCRIPT_ENGINE}
-            ${CMAKE_SOURCE_DIR}/Core/Node-API/Include/Engine/${NAPI_JAVASCRIPT_ENGINE}/napi
+            ${JsRuntimeHost_SOURCE_DIR}/Core/Node-API/Include/Shared
+            ${JsRuntimeHost_SOURCE_DIR}/Core/Node-API/Include/Shared/napi
+            ${JsRuntimeHost_SOURCE_DIR}/Core/Node-API/Include/Engine/${NAPI_JAVASCRIPT_ENGINE}
+            ${JsRuntimeHost_SOURCE_DIR}/Core/Node-API/Include/Engine/${NAPI_JAVASCRIPT_ENGINE}/napi
     )
 
     target_compile_definitions(${MODULE_TARGET}
@@ -150,6 +150,15 @@ function(add_node_api_module MODULE_TARGET)
         target_link_options(${MODULE_TARGET}
             PRIVATE
                 "-undefined" "dynamic_lookup"
+        )
+    elseif(ANDROID)
+        # The .node module is dlopen'd into a host (UnitTestsJNI) that already provides the napi_*
+        # symbols. The Android NDK links shared libraries with --no-undefined by default, which would
+        # reject those symbols at build time; allow them to remain unresolved so they bind at load
+        # time (the ELF equivalent of Apple's -undefined dynamic_lookup above).
+        target_link_options(${MODULE_TARGET}
+            PRIVATE
+                "-Wl,--unresolved-symbols=ignore-all"
         )
     endif()
 

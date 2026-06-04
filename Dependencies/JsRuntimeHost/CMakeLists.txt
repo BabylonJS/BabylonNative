@@ -159,10 +159,6 @@ if(ANDROID)
     if(NOT AndroidExtensions_POPULATED)
         FetchContent_Populate(AndroidExtensions)
         FetchContent_GetProperties(AndroidExtensions)
-        message(STATUS "Patching AndroidExtensions Globals.cpp in ${androidextensions_SOURCE_DIR}")
-        file(COPY
-            ${CMAKE_CURRENT_SOURCE_DIR}/patches/AndroidExtensions/Globals.cpp
-            DESTINATION ${androidextensions_SOURCE_DIR}/Source)
         add_subdirectory(${androidextensions_SOURCE_DIR} ${androidextensions_BINARY_DIR})
     else()
         add_subdirectory(${androidextensions_SOURCE_DIR} ${androidextensions_BINARY_DIR})

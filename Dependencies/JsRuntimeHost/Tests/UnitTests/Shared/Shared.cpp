@@ -26,7 +26,7 @@
 #include <unordered_set>
 #include <vector>
 
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) && defined(NODE_API_AVAILABLE_NATIVE_TESTS)
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
 #include <android/log.h>
@@ -43,7 +43,7 @@
 
 namespace
 {
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) && defined(NODE_API_AVAILABLE_NATIVE_TESTS)
     namespace
     {
         using namespace std::filesystem;
@@ -990,16 +990,16 @@ TEST(NodeApi, AdjacentEscapableScopesEscapeIndependently)
 
 int RunTests()
 {
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) && defined(NODE_API_AVAILABLE_NATIVE_TESTS)
     ConfigureNodeApiTests();
 #endif
     testing::InitGoogleTest();
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) && defined(NODE_API_AVAILABLE_NATIVE_TESTS)
     node_api_tests::RegisterNodeApiTests();
 #endif
     return RUN_ALL_TESTS();
 }
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) && defined(NODE_API_AVAILABLE_NATIVE_TESTS)
 void SetNodeApiTestEnvironment(AAssetManager* assetManager, const std::filesystem::path& baseDir)
 {
     OverrideAssetManager() = assetManager;
