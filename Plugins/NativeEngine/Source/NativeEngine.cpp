@@ -1422,11 +1422,12 @@ namespace Babylon
         // uint16_t. Reject zero or out-of-range dimensions against the GPU limits
         // before creating the texture so a crafted size can't drive an oversized
         // allocation or an out-of-bounds read in the renderer.
-        const bgfx::Caps* caps = bgfx::getCaps();
+        const auto maxTextureSize = bgfx::getCaps()->limits.maxTextureSize;
+        const auto maxTextureLayers = bgfx::getCaps()->limits.maxTextureLayers;
         if (width == 0 || height == 0 || depth == 0 ||
-            width > caps->limits.maxTextureSize ||
-            height > caps->limits.maxTextureSize ||
-            depth > caps->limits.maxTextureLayers)
+            width > maxTextureSize ||
+            height > maxTextureSize ||
+            depth > maxTextureLayers)
         {
             throw Napi::Error::New(Env(), "Invalid width, height, or depth for the 2D texture array.");
         }
