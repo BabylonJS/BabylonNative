@@ -11,6 +11,7 @@ This is a multi-PR effort. Keep the boundaries strict:
   - **Bug fixes** against the current N-API implementation that the tests surface → *quarantine* the failing test via the allow-list and open a separate fix PR. Do not fix impl bugs in the test-suite PR.
   - **Any `NAPI_VERSION` bump** (6 → 7 → 8 → …) and the per-engine native work it requires.
   - **jsc-android engine bump** (v6 enabler — see below).
+  - **Android in-process addon loading** — building `napi` as a shared library so `dlopen`'d test addons can resolve `napi_*` from the host (see *Platform status* below). Affects every Android consumer's packaging → separate PR.
 
 ## Current state (2026-06-04)
 
@@ -28,6 +29,15 @@ This is a multi-PR effort. Keep the boundaries strict:
 | **Chakra** | `js_native_api_chakra.cc` (97) | ✅* | ❌ (hard wall: BigInt) | ❌ | partial (soft) | Frozen OS engine on post-EOL Win10. Decouple; see ceiling. |
 
 `*` v5 surface to be confirmed green by this PR's suite.
+
+### Platform status (this PR)
+
+| Platform | Engine | v5 suite | Runner | Notes |
+|---|---|---|---|---|
+| **macOS** | JavaScriptCore | ✅ **12/12** (plain + ASan/UBSan + TSan) | child-process | Full v5 reference. |
+| **Android** | V8 (`libv8android.so`) | builds + harness runs; **addon tests SKIPPED** | in-process | App sandbox can't `fork`/`exec`; see below. |
+
+**Android in-process addon loading (deferred fix).** The js-native-api conformance addons are `dlopen`'d in-process and import `napi_*` from the host (`libUnitTestsJNI.so`). The host exports all 106 `napi_*` symbols (`NAPI_EXTERN = visibility("default")`), but bionic does not surface a `System.loadLibrary`-loaded (RTLD_LOCAL) host's symbols to a `dlopen`'d module, and post-hoc `RTLD_GLOBAL` promotion of the host is a **no-op on bionic** (verified on device: the module `dlopen` returns NULL; the addon carries no `DT_NEEDED` for napi). The fix is to build `napi` as a **shared library** (`libnapi.so`) depended on by both the host and the addons (a real `DT_NEEDED`) — a packaging change for every Android consumer that also needs export-visibility auditing across the `napi`/`jsr_`/`Napi::` surface, so it is tracked as a separate PR. Until then `test_main.cpp` `GTEST_SKIP`s these tests on Android with a documented reason; the Android suite still builds, the in-process harness runs without aborting (the `noexcept`-removal fix, commit `38864e4`), and the suite passes with the addon tests reported skipped (commit `39a87ea`).
 
 ## Chakra N-API ceiling
 
