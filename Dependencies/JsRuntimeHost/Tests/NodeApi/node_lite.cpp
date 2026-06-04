@@ -1300,10 +1300,10 @@ NodeApiEnvScope& NodeApiEnvScope::operator=(NodeApiEnvScope&& other) noexcept {
 
 /*static*/ napi_value NodeApi::CallFunction(napi_env env,
                                             napi_value func,
-                                            span<napi_value> args) {
+                                            std::initializer_list<napi_value> args) {
   napi_value result{};
   NODE_LITE_CALL(napi_call_function(
-      env, GetUndefined(env), func, args.size(), args.data(), &result));
+      env, GetUndefined(env), func, args.size(), args.begin(), &result));
   return result;
 }
 

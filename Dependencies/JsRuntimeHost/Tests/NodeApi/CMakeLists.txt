@@ -179,6 +179,23 @@ function(add_node_api_module MODULE_TARGET)
             $<TARGET_FILE_DIR:NodeApiTests>/test/js-native-api/${FOLDER_NAME}/build
         COMMENT "Copying Node-API module ${MODULE_TARGET} outputs"
     )
+
+    if(APPLE)
+        # The copy_directory above runs as an Xcode "Run Script" phase, which executes BEFORE
+        # Xcode's implicit CodeSign phase signs the original module. The copied .node files (the
+        # ones node_lite/NodeApiTests actually dlopen) are therefore unsigned on a clean build, and
+        # macOS refuses to load them ("Trying to load an unsigned library"). Ad-hoc sign the copies
+        # directly so clean builds work without a second pass.
+        set(_node_api_cfg_dir $<IF:$<CONFIG:Debug>,Debug,Release>)
+        add_custom_command(TARGET ${MODULE_TARGET} POST_BUILD
+            COMMAND codesign --force --sign -
+                "$<TARGET_FILE_DIR:node_lite>/test/js-native-api/${FOLDER_NAME}/build/${_node_api_cfg_dir}/$<TARGET_FILE_NAME:${MODULE_TARGET}>"
+            COMMAND codesign --force --sign -
+                "$<TARGET_FILE_DIR:NodeApiTests>/test/js-native-api/${FOLDER_NAME}/build/${_node_api_cfg_dir}/$<TARGET_FILE_NAME:${MODULE_TARGET}>"
+            COMMENT "Ad-hoc signing copied ${MODULE_TARGET}.node for dlopen on macOS"
+            VERBATIM
+        )
+    endif()
 endfunction()
 
 add_dependencies(NodeApiTests NodeApiModules)

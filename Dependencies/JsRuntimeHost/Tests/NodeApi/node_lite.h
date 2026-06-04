@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <functional>
+#include <initializer_list>
 #include <list>
 #include <memory>
 #include <stdexcept>
@@ -389,7 +390,7 @@ class NodeApi {
 
   static napi_value CallFunction(napi_env env,
                                  napi_value func,
-                                 span<napi_value> args);
+                                 std::initializer_list<napi_value> args);
 
   static napi_value CreateFunction(napi_env env,
                                    std::string_view name,
