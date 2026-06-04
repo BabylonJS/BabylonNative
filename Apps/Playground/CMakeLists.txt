@@ -195,6 +195,12 @@ if(APPLE)
             XCODE_ATTRIBUTE_FRAMEWORK_SEARCH_PATHS "$(inherited) $(SDKROOT)$(SYSTEM_LIBRARY_DIR)/Frameworks"
             XCODE_ATTRIBUTE_ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES YES
 
+            # The iPhoneSimulator Metal stub in Xcode 26.x does not export MTLIOErrorDomain / MTLTensorDomain,
+            # even though the device Metal stub does. bgfx's metal-cpp (compiled as C++ against the iOS 26 SDK)
+            # emits direct link-time externs for these constants, so simulator links fail with undefined symbols.
+            # Resolve them dynamically for simulator builds only; device builds are unaffected.
+            "XCODE_ATTRIBUTE_OTHER_LDFLAGS[sdk=iphonesimulator*]" "-Wl,-U,_MTLIOErrorDomain -Wl,-U,_MTLTensorDomain"
+
             # CMake seems to add a custom flag "-Wno-unknown-pragmas" to the Swift compiler. That flag is used for Clang,
             # So we need to make sure we override it with nothing here in order to compile Swift.
             XCODE_ATTRIBUTE_OTHER_SWIFT_FLAGS "")
