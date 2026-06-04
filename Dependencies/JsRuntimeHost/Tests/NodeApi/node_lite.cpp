@@ -8,6 +8,7 @@
 #include <cstdarg>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -1379,6 +1380,13 @@ ProcessResult RunNodeLiteScript(const std::filesystem::path& js_root,
         result.std_error += '\n';
       }
       result.std_error += info.details;
+    }
+    // If this handler is reached while another exception is already unwinding (e.g. invoked from a
+    // teardown destructor after a failing test in the in-process runner), throwing again would be a
+    // second in-flight exception -> std::terminate (the "double exception" abort). The result is
+    // already captured above, so just return and let the original exception reach the catch below.
+    if (std::uncaught_exceptions() > 0) {
+      return;
     }
     throw NodeLiteFatalError(info);
   };
