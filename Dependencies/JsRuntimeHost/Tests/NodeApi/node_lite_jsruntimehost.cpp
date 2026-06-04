@@ -38,8 +38,14 @@ class JsRuntimeHostEnvHolder : public IEnvHolder {
     create_params.array_buffer_allocator = allocator_.get();
     isolate_ = v8::Isolate::New(create_params);
 
-    v8::Locker locker(isolate_);
-    v8::Isolate::Scope isolate_scope(isolate_);
+    // The host runs its own V8 isolate in this process, so V8 enforces multi-isolate locking.
+    // Hold a Locker + Isolate::Scope for this holder's entire lifetime so all subsequent
+    // Node-API/V8 access on this thread (running the test script, native callbacks, teardown) is
+    // properly locked and scoped to our isolate -- otherwise V8 aborts with "Entering the V8 API
+    // without proper locking in place".
+    locker_ = std::make_unique<v8::Locker>(isolate_);
+    isolate_scope_ = std::make_unique<v8::Isolate::Scope>(isolate_);
+
     v8::HandleScope handle_scope(isolate_);
     v8::Local<v8::Context> context = v8::Context::New(isolate_);
     context_.Reset(isolate_, context);
@@ -81,8 +87,7 @@ class JsRuntimeHostEnvHolder : public IEnvHolder {
     }
 #elif defined(__ANDROID__)
     if (env_ != nullptr && isolate_ != nullptr) {
-      v8::Locker locker(isolate_);
-      v8::Isolate::Scope isolate_scope(isolate_);
+      // Still locked + isolate-scoped on this thread via locker_/isolate_scope_ (held members).
       v8::HandleScope handle_scope(isolate_);
       v8::Local<v8::Context> context = context_.Get(isolate_);
       v8::Context::Scope context_scope(context);
@@ -104,6 +109,9 @@ class JsRuntimeHostEnvHolder : public IEnvHolder {
 
     context_.Reset();
 
+    isolate_scope_.reset();
+    locker_.reset();
+
     if (isolate_ != nullptr) {
       isolate_->Dispose();
       isolate_ = nullptr;
@@ -122,11 +130,11 @@ class JsRuntimeHostEnvHolder : public IEnvHolder {
   class V8Platform {
    public:
     static void EnsureInitialized() {
-      std::call_once(init_flag_, []() {
-        platform_ = v8::platform::NewDefaultPlatform();
-        v8::V8::InitializePlatform(platform_.get());
-        v8::V8::Initialize();
-      });
+      // V8's platform is process-global and is already initialized by JsRuntimeHost -- the host
+      // AppRuntime that UnitTestsJNI links and that runs (via the regular V8 unit tests) before
+      // these in-process Node-API tests. Initializing it a second time aborts V8 with
+      // "Wrong initialization order", so reuse the host's platform and only create our own
+      // isolate/context below.
     }
 
    private:
@@ -135,6 +143,8 @@ class JsRuntimeHostEnvHolder : public IEnvHolder {
   };
 
   v8::Isolate* isolate_{nullptr};
+  std::unique_ptr<v8::Locker> locker_{};
+  std::unique_ptr<v8::Isolate::Scope> isolate_scope_{};
   v8::Global<v8::Context> context_;
   std::unique_ptr<v8::ArrayBuffer::Allocator> allocator_{};
 #endif

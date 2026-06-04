@@ -399,6 +399,12 @@ fs::path NodeLiteRuntime::ResolveModulePath(
     if (fs::exists(node_module_path)) {
       return node_module_path;
     }
+#if defined(__ANDROID__)
+    // On Android the addon ships as lib<name>.so in the app's nativeLibraryDir rather than as a
+    // .node file on disk, so the existence check above fails. Resolve to the .node path anyway so
+    // LoadNativeModule runs; node_lite_android dlopens it by soname (lib<stem>.so).
+    return node_module_path;
+#endif
     // See if the module was prefixed with the parent folder to disambiguate C++
     // project name.
     fs::path fs_parent_folder = fs::path(parent_module_path).filename();

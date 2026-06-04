@@ -50,36 +50,54 @@ namespace
 
         void CopyAssetsRecursive(AAssetManager* manager, const std::string& asset_path, const path& destination)
         {
-            AAssetDir* dir = AAssetManager_openDir(manager, asset_path.c_str());
-            if (dir == nullptr)
+            // The NDK AAssetManager cannot enumerate subdirectories -- AAssetDir_getNextFileName
+            // returns files in a single directory only, never nested directories -- so the test
+            // tree cannot be discovered at runtime. Instead read a build-time manifest (one
+            // relative path per line, produced by the copyNodeApiTests Gradle task) and copy each
+            // listed file individually (AAssetManager_open works fine for a known file path).
+            std::string manifest_asset = asset_path + "/manifest.txt";
+            AAsset* manifest = AAssetManager_open(manager, manifest_asset.c_str(), AASSET_MODE_BUFFER);
+            if (manifest == nullptr)
             {
                 return;
             }
 
-            const char* filename = nullptr;
-            while ((filename = AAssetDir_getNextFileName(dir)) != nullptr)
-            {
-                std::string child_asset = asset_path.empty() ? filename : asset_path + "/" + filename;
-                AAsset* asset = AAssetManager_open(manager, child_asset.c_str(), AASSET_MODE_STREAMING);
-                if (asset != nullptr)
-                {
-                    create_directories(destination);
-                    std::ofstream output(destination / filename, std::ios::binary);
-                    char buffer[4096];
-                    int read = 0;
-                    while ((read = AAsset_read(asset, buffer, sizeof(buffer))) > 0)
-                    {
-                        output.write(buffer, read);
-                    }
-                    AAsset_close(asset);
-                }
-                else
-                {
-                    CopyAssetsRecursive(manager, child_asset, destination / filename);
-                }
-            }
+            off_t manifest_length = AAsset_getLength(manifest);
+            std::string manifest_text(static_cast<size_t>(manifest_length), '\0');
+            AAsset_read(manifest, manifest_text.data(), manifest_length);
+            AAsset_close(manifest);
 
-            AAssetDir_close(dir);
+            std::stringstream manifest_stream(manifest_text);
+            std::string relative_path;
+            while (std::getline(manifest_stream, relative_path))
+            {
+                if (!relative_path.empty() && relative_path.back() == '\r')
+                {
+                    relative_path.pop_back();
+                }
+                if (relative_path.empty())
+                {
+                    continue;
+                }
+
+                std::string child_asset = asset_path + "/" + relative_path;
+                AAsset* asset = AAssetManager_open(manager, child_asset.c_str(), AASSET_MODE_STREAMING);
+                if (asset == nullptr)
+                {
+                    continue;
+                }
+
+                path output_path = destination / relative_path;
+                create_directories(output_path.parent_path());
+                std::ofstream output(output_path, std::ios::binary);
+                char buffer[8192];
+                int read = 0;
+                while ((read = AAsset_read(asset, buffer, sizeof(buffer))) > 0)
+                {
+                    output.write(buffer, read);
+                }
+                AAsset_close(asset);
+            }
         }
 
         path GetFilesDir()

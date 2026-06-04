@@ -134,6 +134,22 @@ task copyScripts {
 task copyNodeApiTests(type: Copy) {
     from '../../../NodeApi/test'
     into "${nodeApiAssetsDir}/NodeApi/test"
+    // Always re-run so the manifest is regenerated even when the copied sources are unchanged.
+    outputs.upToDateWhen { false }
+    doLast {
+        // AAssetManager cannot enumerate subdirectories at runtime, so emit a manifest listing
+        // every copied file (one path relative to NodeApi/test per line). Consumed by Shared.cpp.
+        // Must NOT start with a dot -- aapt ignores dotfiles when packaging assets.
+        def testRoot = file("${nodeApiAssetsDir}/NodeApi/test")
+        def manifestFile = new File(testRoot, 'manifest.txt')
+        manifestFile.withWriter('UTF-8') { writer ->
+            testRoot.eachFileRecurse(groovy.io.FileType.FILES) { f ->
+                if (f != manifestFile) {
+                    writer.writeLine(testRoot.toPath().relativize(f.toPath()).toString().replace(File.separator, '/'))
+                }
+            }
+        }
+    }
 }
 
 // Run copyScripts task after CMake external build
