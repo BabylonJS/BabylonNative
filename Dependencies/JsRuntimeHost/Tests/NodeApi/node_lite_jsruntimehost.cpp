@@ -97,7 +97,14 @@ class JsRuntimeHostEnvHolder : public IEnvHolder {
         if (napi_is_exception_pending(env_, &hasPending) == napi_ok && hasPending) {
           napi_value error{};
           if (napi_get_and_clear_last_exception(env_, &error) == napi_ok) {
-            onUnhandledError_(env_, error);
+            // onUnhandledError_ may invoke the in-process fatal handler, which throws
+            // NodeLiteFatalError. A destructor must not let that escape (std::terminate). Real
+            // test errors are reported synchronously via ExitOnException; this is a best-effort
+            // fallback for anything still pending at teardown.
+            try {
+              onUnhandledError_(env_, error);
+            } catch (...) {
+            }
           }
         }
       }

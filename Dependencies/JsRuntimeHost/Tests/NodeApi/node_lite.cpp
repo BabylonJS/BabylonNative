@@ -886,8 +886,10 @@ NodeApiHandleScope::NodeApiHandleScope(napi_env env) noexcept : env_{env} {
 }
 
 NodeApiHandleScope::~NodeApiHandleScope() noexcept {
-  napi_env env = env_;
-  NODE_LITE_CALL(napi_close_handle_scope(env, scope_));
+  // Destructors must not throw: this can run while a NodeLiteFatalError unwinds (a failing test in
+  // the in-process runner). Ignore the status rather than NODE_LITE_CALL, which would throw and
+  // std::terminate during unwinding.
+  static_cast<void>(napi_close_handle_scope(env_, scope_));
 }
 
 //=============================================================================
@@ -900,8 +902,8 @@ NodeApiEnvScope::NodeApiEnvScope(napi_env env) noexcept : env_{env} {
 
 NodeApiEnvScope ::~NodeApiEnvScope() noexcept {
   if (env_ != nullptr) {
-    napi_env env = env_;
-    NODE_LITE_CALL(jsr_close_napi_env_scope(env, scope_));
+    // Destructors must not throw (see NodeApiHandleScope). Ignore the status.
+    static_cast<void>(jsr_close_napi_env_scope(env_, scope_));
   }
 }
 
