@@ -1418,12 +1418,29 @@ namespace Babylon
             throw Napi::Error::New(Env(), "Texture 2D array currently do not support invert Y.");
         }
 
+        // width/height/depth originate from JS and are otherwise only truncated to
+        // uint16_t. Reject zero or out-of-range dimensions against the GPU limits
+        // before creating the texture so a crafted size can't drive an oversized
+        // allocation or an out-of-bounds read in the renderer.
+        const bgfx::Caps* caps = bgfx::getCaps();
+        if (width == 0 || height == 0 || depth == 0 ||
+            width > caps->limits.maxTextureSize ||
+            height > caps->limits.maxTextureSize ||
+            depth > caps->limits.maxTextureLayers)
+        {
+            throw Napi::Error::New(Env(), "Invalid width, height, or depth for the 2D texture array.");
+        }
+
         uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE | BGFX_CAPS_TEXTURE_2D_ARRAY};
         texture->Create2D(width, height, generateMips, depth, Cast(format), flags);
 
         if (!data.IsNull())
         {
-            if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, depth, format))
+            // imageGetSize returns the full size in 64-bit; compare against the
+            // 64-bit byte length so a crafted width/height/depth cannot wrap the
+            // expected size and slip an undersized buffer past this check.
+            const uint64_t expectedSize{bimg::imageGetSize(nullptr, width, height, 1, false, false, depth, format)};
+            if (expectedSize == 0 || static_cast<uint64_t>(data.ByteLength()) != expectedSize)
             {
                 throw Napi::Error::New(Env(), "The data size does not match width, height, depth and format");
             }
@@ -1432,6 +1449,13 @@ namespace Babylon
             size_t dataSize = data.ByteLength();
 
             size_t textureSize = dataSize / static_cast<size_t>(depth);
+
+            // bgfx::Memory uses a 32-bit size; reject a per-layer payload that
+            // would be truncated by the bgfx::copy cast below.
+            if (textureSize > UINT32_MAX)
+            {
+                throw Napi::Error::New(Env(), "The 2D texture array layer size is too large.");
+            }
 
             for (uint16_t i = 0; i < depth; i++)
             {
