@@ -55,8 +55,10 @@ target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 
 # Canvas plugin allocates one bgfx framebuffer per JS Canvas object and per
 # text-rendering operation; combined with V8 GC pacing this can exceed the
-# default 128 limit during long playground sweeps. CI workflows pass
-# -DBGFX_CONFIG_MAX_FRAME_BUFFERS as a CMake variable, so honour it here.
+# default 128 limit during long playground sweeps. We enforce a floor of 512:
+# CI workflows pass -DBGFX_CONFIG_MAX_FRAME_BUFFERS, and any value below 512
+# (including a smaller CI override) is clamped up so the pool never regresses
+# below the size the Canvas sweeps need.
 if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS OR BGFX_CONFIG_MAX_FRAME_BUFFERS LESS 512)
     set(BGFX_CONFIG_MAX_FRAME_BUFFERS 512)
 endif()
