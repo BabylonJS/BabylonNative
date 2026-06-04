@@ -1401,9 +1401,9 @@ namespace Babylon
 #else
         const auto texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
         const auto data = info[1].As<Napi::TypedArray>();
-        const auto width{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
-        const auto height{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
-        const auto depth{static_cast<uint16_t>(info[4].As<Napi::Number>().Int32Value())};
+        const auto rawWidth{info[2].As<Napi::Number>().Uint32Value()};
+        const auto rawHeight{info[3].As<Napi::Number>().Uint32Value()};
+        const auto rawDepth{info[4].As<Napi::Number>().Uint32Value()};
         const auto format{static_cast<bimg::TextureFormat::Enum>(info[5].As<Napi::Number>().Uint32Value())};
         const auto generateMips = info[6].As<Napi::Boolean>().Value();
         const auto invertY = info[7].As<Napi::Boolean>().Value();
@@ -1418,19 +1418,24 @@ namespace Babylon
             throw Napi::Error::New(Env(), "Texture 2D array currently do not support invert Y.");
         }
 
-        // width/height/depth originate from JS and are otherwise only truncated to
-        // uint16_t. Reject zero or out-of-range dimensions against the GPU limits
-        // before creating the texture so a crafted size can't drive an oversized
-        // allocation or an out-of-bounds read in the renderer.
+        // width/height/depth originate from JS. Validate the raw 32-bit values
+        // against the GPU limits before narrowing to uint16_t, otherwise an
+        // out-of-range value (e.g. 70000) would wrap into an in-range uint16_t
+        // and slip past this check, driving an oversized allocation or an
+        // out-of-bounds read in the renderer.
         const auto maxTextureSize = bgfx::getCaps()->limits.maxTextureSize;
         const auto maxTextureLayers = bgfx::getCaps()->limits.maxTextureLayers;
-        if (width == 0 || height == 0 || depth == 0 ||
-            width > maxTextureSize ||
-            height > maxTextureSize ||
-            depth > maxTextureLayers)
+        if (rawWidth == 0 || rawHeight == 0 || rawDepth == 0 ||
+            rawWidth > maxTextureSize ||
+            rawHeight > maxTextureSize ||
+            rawDepth > maxTextureLayers)
         {
             throw Napi::Error::New(Env(), "Invalid width, height, or depth for the 2D texture array.");
         }
+
+        const auto width{static_cast<uint16_t>(rawWidth)};
+        const auto height{static_cast<uint16_t>(rawHeight)};
+        const auto depth{static_cast<uint16_t>(rawDepth)};
 
         uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE | BGFX_CAPS_TEXTURE_2D_ARRAY};
         texture->Create2D(width, height, generateMips, depth, Cast(format), flags);
