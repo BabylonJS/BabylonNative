@@ -119,16 +119,17 @@ class NodeLiteErrorHandler {
                                           char const* expr,
                                           char const* message);
 
-  [[noreturn]] static void ExitWithJSError(napi_env env,
-                                           napi_value error) noexcept;
+  // NOTE: not noexcept. With the default fatal handler these call std::exit, but the in-process
+  // runner installs a handler that *throws* NodeLiteFatalError (to be caught as a ProcessResult).
+  // A throw crossing a noexcept boundary is an immediate std::terminate, so these must allow it.
+  [[noreturn]] static void ExitWithJSError(napi_env env, napi_value error);
 
-  [[noreturn]] static void ExitWithJSAssertError(napi_env env,
-                                                 napi_value error) noexcept;
+  [[noreturn]] static void ExitWithJSAssertError(napi_env env, napi_value error);
 
   [[noreturn]] static void ExitWithMessage(
       const std::string& message,
       std::function<void(std::ostream&)> get_error_details = nullptr,
-      int exit_code = 1) noexcept;
+      int exit_code = 1);
 
  private:
   static Handler& GetHandler() noexcept;

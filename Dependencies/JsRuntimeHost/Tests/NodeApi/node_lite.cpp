@@ -988,7 +988,7 @@ NodeApiEnvScope& NodeApiEnvScope::operator=(NodeApiEnvScope&& other) noexcept {
 }
 
 /*static*/ [[noreturn]] void NodeLiteErrorHandler::ExitWithJSError(
-    napi_env env, napi_value error) noexcept {
+    napi_env env, napi_value error) {
   // TODO: protect from stack overflow
   napi_valuetype error_value_type = NodeApi::TypeOf(env, error);
   if (error_value_type == napi_object) {
@@ -1012,7 +1012,7 @@ NodeApiEnvScope& NodeApiEnvScope::operator=(NodeApiEnvScope&& other) noexcept {
 }
 
 /*static*/ [[noreturn]] void NodeLiteErrorHandler::ExitWithJSAssertError(
-    napi_env env, napi_value error) noexcept {
+    napi_env env, napi_value error) {
   std::string message = NodeApi::GetPropertyString(env, error, "message");
   std::string method = NodeApi::GetPropertyString(env, error, "method");
   std::string expected = NodeApi::GetPropertyString(env, error, "expected");
@@ -1046,7 +1046,7 @@ NodeApiEnvScope& NodeApiEnvScope::operator=(NodeApiEnvScope&& other) noexcept {
 /*static*/ [[noreturn]] void NodeLiteErrorHandler::ExitWithMessage(
     const std::string& message,
     std::function<void(std::ostream&)> get_error_details,
-    int exit_code) noexcept {
+    int exit_code) {
   std::ostringstream details_stream;
   if (get_error_details) {
     get_error_details(details_stream);
