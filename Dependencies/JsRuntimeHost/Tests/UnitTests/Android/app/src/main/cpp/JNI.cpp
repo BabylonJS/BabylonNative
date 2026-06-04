@@ -37,6 +37,33 @@ Java_com_jsruntimehost_unittests_Native_javaScriptTests(JNIEnv* env, jclass claz
 
     android::global::Initialize(javaVM, applicationContext, assetManagerObj);
 
+#if defined(NODE_API_AVAILABLE_NATIVE_TESTS)
+    // Wire the in-process Node-API test harness to a native AssetManager and a writable base dir
+    // derived from the (still-valid) instrumentation Context, so it does not fall back to
+    // android::global::GetAppContext() during the run -- that global ref is not valid here and
+    // dereferencing it aborts with "use of deleted global reference".
+    if (assetManagerObj != nullptr)
+    {
+        AAssetManager* nativeAssetManager = AAssetManager_fromJava(env, assetManagerObj);
+
+        jclass ctxClass = env->GetObjectClass(context);
+        jmethodID getFilesDir = env->GetMethodID(ctxClass, "getFilesDir", "()Ljava/io/File;");
+        jobject filesDir = env->CallObjectMethod(context, getFilesDir);
+        jclass fileClass = env->GetObjectClass(filesDir);
+        jmethodID getAbsolutePath = env->GetMethodID(fileClass, "getAbsolutePath", "()Ljava/lang/String;");
+        auto pathString = static_cast<jstring>(env->CallObjectMethod(filesDir, getAbsolutePath));
+        const char* rawPath = env->GetStringUTFChars(pathString, nullptr);
+        std::filesystem::path baseDir = std::filesystem::path{rawPath} / "node_api_tests";
+        env->ReleaseStringUTFChars(pathString, rawPath);
+        env->DeleteLocalRef(pathString);
+        env->DeleteLocalRef(fileClass);
+        env->DeleteLocalRef(filesDir);
+        env->DeleteLocalRef(ctxClass);
+
+        SetNodeApiTestEnvironment(nativeAssetManager, baseDir);
+    }
+#endif
+
     if (assetManagerObj != nullptr)
     {
         env->DeleteLocalRef(assetManagerObj);
