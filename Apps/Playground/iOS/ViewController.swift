@@ -34,21 +34,23 @@ class ViewController: UIViewController {
         )
         mtkView.addGestureRecognizer(gesture)
         
-        // Force a layout pass so mtkView (and its backing CAMetalLayer) gets a
-        // valid drawable size before bgfx is initialized and before the first
-        // draw(in:) callback. mtkView is added via Auto Layout and is otherwise
-        // still 0x0 at this point, which would make bgfx render into a 0x0 layer
-        // and trigger the Metal validation error
+        // Force a layout pass so mtkView (and its backing CAMetalLayer) is laid
+        // out and gets a valid drawable size before bgfx is initialized and
+        // before the first draw(in:) callback. mtkView is added via Auto Layout
+        // and is otherwise still 0x0 at this point, which would make bgfx render
+        // into a 0x0 layer and trigger the Metal validation error
         // "No output textures defined for the render pass".
         view.layoutIfNeeded()
 
-        let drawableSize = mtkView.drawableSize
+        let scale  = view.contentScaleFactor
+        let width  = view.bounds.size.width
+        let height = view.bounds.size.height
         
         bridge.init(
             mtkView,
             screenScale:Float(UIScreen.main.scale),
-            width:Int32(drawableSize.width),
-            height:Int32(drawableSize.height),
+            width:Int32(width * scale),
+            height:Int32(height * scale),
             xrView:Unmanaged.passUnretained(xrView).toOpaque()
         )
     }
