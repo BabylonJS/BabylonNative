@@ -13,6 +13,9 @@
 
 struct jsr_napi_env_scope_s {
   napi_env env{nullptr};
+#if defined(__ANDROID__)
+  v8::Global<v8::Context> context;
+#endif
 };
 
 napi_status jsr_open_napi_env_scope(napi_env env,
@@ -23,6 +26,20 @@ napi_status jsr_open_napi_env_scope(napi_env env,
 
   auto* scope_impl = new jsr_napi_env_scope_s{};
   scope_impl->env = env;
+#if defined(__ANDROID__)
+  // node_lite calls Node-API outside any napi callback, so V8 has no *current context*. The env
+  // holder already holds a Locker + Isolate::Scope; enter the env's context here (exited in
+  // jsr_close_napi_env_scope) so calls such as napi_create_object -> v8::Object::New(isolate),
+  // which use the isolate's current context, don't segfault. (On JSC this scope is a no-op -- the
+  // env carries its context explicitly.)
+  if (env != nullptr) {
+    v8::Isolate* isolate = env->isolate;
+    v8::HandleScope handle_scope(isolate);
+    v8::Local<v8::Context> context = env->context();
+    scope_impl->context.Reset(isolate, context);
+    context->Enter();
+  }
+#endif
   *scope = scope_impl;
   return napi_ok;
 }
@@ -33,6 +50,15 @@ napi_status jsr_close_napi_env_scope(napi_env /*env*/,
     return napi_invalid_arg;
   }
 
+#if defined(__ANDROID__)
+  if (scope->env != nullptr) {
+    v8::Isolate* isolate = scope->env->isolate;
+    v8::HandleScope handle_scope(isolate);
+    v8::Local<v8::Context> context = scope->context.Get(isolate);
+    context->Exit();
+    scope->context.Reset();
+  }
+#endif
   delete scope;
   return napi_ok;
 }
