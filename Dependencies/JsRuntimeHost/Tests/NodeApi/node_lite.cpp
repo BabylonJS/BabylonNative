@@ -65,7 +65,12 @@ void ThrowJSErrorOnException(napi_env env, TCallback&& callback) noexcept {
 }
 
 template <typename TCallback>
-void ExitOnException(napi_env env, TCallback&& callback) noexcept {
+void ExitOnException(napi_env env, TCallback&& callback) {
+  // NOT noexcept: the in-process runner (RunNodeLiteScript) installs a fatal-error handler that
+  // *throws* NodeLiteFatalError (to be caught and turned into a ProcessResult) rather than calling
+  // std::exit. ExitWithJSError/ExitWithMessage below invoke that handler, so this function must let
+  // the throw propagate -- if it were noexcept the throw would std::terminate the whole test
+  // process. (With the default handler these call std::exit and never throw.)
   try {
     callback();
   } catch (const NodeLiteException& e) {
