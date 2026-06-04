@@ -25,6 +25,7 @@
 #endif
 
 #include <cmath>
+#include <limits>
 
 #if defined(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES) && defined(WEBP)
 #include <webp/decode.h>
@@ -2125,7 +2126,20 @@ namespace Babylon
             image = rgba;
         }
 
-        auto outputData = Napi::Uint8Array::New(env, static_cast<size_t>(bufferWidth) * bufferHeight * 4);
+        // Compute the output size in 64-bit and reject anything that doesn't fit
+        // in size_t: on 32-bit builds size_t is 32-bit, so even within the 16-bit
+        // dimension cap above bufferWidth*bufferHeight*4 can exceed it (~17GB) and
+        // wrap to an undersized allocation that stbir_resize would then write past.
+        const uint64_t outputByteCount = static_cast<uint64_t>(bufferWidth) * bufferHeight * 4;
+        if constexpr (std::numeric_limits<size_t>::max() < std::numeric_limits<uint64_t>::max())
+        {
+            if (outputByteCount > static_cast<uint64_t>(std::numeric_limits<size_t>::max()))
+            {
+                throw Napi::Error::New(env, "Requested output buffer is too large for ResizeImageBitmap.");
+            }
+        }
+
+        auto outputData = Napi::Uint8Array::New(env, static_cast<size_t>(outputByteCount));
         if (width != bufferWidth || height != bufferHeight)
         {
             stbir_resize_uint8_linear(static_cast<unsigned char*>(image->m_data), width, height, 0,
