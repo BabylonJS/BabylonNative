@@ -264,13 +264,20 @@ Make sure Hermes was fetched at the top-level CMakeLists.txt and NAPI_JAVASCRIPT
     message(STATUS "Selected ${NAPI_JAVASCRIPT_ENGINE}")
 endif()
 
-# On Android the Node-API conformance addons are dlopen'd as standalone SHARED .node modules (matching
-# nodejs/node-api-cts's add_node_api_cts_addon model). For an addon's napi_* imports to bind at load,
-# napi must be a shared library that both the host and the addons depend on via a real DT_NEEDED
-# (libnapi.so) -- bionic will not surface a statically-linked host's napi to a dlopen'd module. There
-# is a single napi instance (one libnapi.so) shared by the host and every addon. Elsewhere (the
-# child-process desktop runner) napi stays a static library.
+# On Android, native addons are dlopen'd as standalone .node modules and resolve their napi_* imports
+# from a shared napi at load time -- bionic will not surface a statically-linked host's napi to a
+# dlopen'd module, so the host and every addon must share a single libnapi.so. Default napi to a
+# shared library on Android so that model works out of the box; an integrator who wants a static napi
+# (e.g. for size/packaging) can override with -DJSR_NAPI_SHARED=OFF. The option defaults OFF on other
+# platforms, where napi keeps following the project's default library type (i.e. honors
+# BUILD_SHARED_LIBS).
+set(JSR_NAPI_SHARED_DEFAULT OFF)
 if(ANDROID)
+    set(JSR_NAPI_SHARED_DEFAULT ON)
+endif()
+option(JSR_NAPI_SHARED "Build napi as a shared library (libnapi.so)" ${JSR_NAPI_SHARED_DEFAULT})
+
+if(JSR_NAPI_SHARED)
     add_library(napi SHARED ${SOURCES})
 else()
     add_library(napi ${SOURCES})
