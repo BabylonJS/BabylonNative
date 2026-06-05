@@ -96,14 +96,14 @@ jobs:
           )
 
       - name: Validation Tests
-        if: ${{ inputs.graphics-api != 'D3D12' }}
+        if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type != 'Hermes' }}
         shell: cmd
         run: |
           cd build\${{ steps.vars.outputs.solution_name }}\Apps\Playground\RelWithDebInfo
           Playground app:///Scripts/validation_native.js
 
       - name: Upload Rendered Pictures
-        if: ${{ inputs.graphics-api != 'D3D12' && !cancelled() }}
+        if: ${{ inputs.graphics-api != 'D3D12' && inputs.napi-type != 'Hermes' && !cancelled() }}
         uses: actions/upload-artifact@v6
         with:
           name: ${{ steps.vars.outputs.solution_name }}-${{ inputs.graphics-api }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
