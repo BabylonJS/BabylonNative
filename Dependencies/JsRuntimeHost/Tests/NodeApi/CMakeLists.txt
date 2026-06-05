@@ -172,6 +172,12 @@ function(add_node_api_module MODULE_TARGET)
         # Link the shared napi (libnapi.so) so the addon's napi_* imports resolve at dlopen via a real
         # DT_NEEDED -- the same libnapi.so the host depends on, so there is a single napi instance.
         target_link_libraries(${MODULE_TARGET} PRIVATE napi)
+    elseif(WIN32)
+        # MSVC binds a DLL's imports at link time (there's no node.exe-style host export / delay-load
+        # wired up here), so the .node addon must resolve its napi_* against the napi library directly.
+        # napi is static on Windows, so the references bind into the addon; node_lite isn't executed by
+        # the Windows/UWP CI (build-only), so a single shared napi instance isn't required there.
+        target_link_libraries(${MODULE_TARGET} PRIVATE napi)
     endif()
 
     if(ANDROID)
