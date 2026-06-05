@@ -120,6 +120,13 @@ if(JSR_NODE_API_BUILD_NATIVE_TESTS)
 endif()
 
 function(add_node_api_module MODULE_TARGET)
+    if(ANDROID)
+        # On Android the conformance addons are statically linked into the in-process test host
+        # (Tests/UnitTests/Android/app/src/main/cpp/CMakeLists.txt) -- there is no standalone .node to
+        # build or dlopen, so this desktop helper builds nothing here.
+        return()
+    endif()
+
     cmake_parse_arguments(PARSE_ARGV 0 ARG "" "" "SOURCES;DEFINES")
 
     get_filename_component(FOLDER_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
@@ -128,13 +135,8 @@ function(add_node_api_module MODULE_TARGET)
         set(MODULE_TARGET "${FOLDER_NAME}_${MODULE_TARGET}")
     endif()
 
-    # On Android the addon must be a SHARED library so Gradle/AGP packages it into the APK's
-    # lib/<abi>/ (the app's nativeLibraryDir). Elsewhere it is a MODULE (dlopen-only) .node.
-    if(ANDROID)
-        add_library(${MODULE_TARGET} SHARED)
-    else()
-        add_library(${MODULE_TARGET} MODULE)
-    endif()
+    # The addon is a MODULE (dlopen-only) .node, loaded by the node_lite child-process runner.
+    add_library(${MODULE_TARGET} MODULE)
     target_sources(${MODULE_TARGET} PRIVATE ${ARG_SOURCES})
     target_include_directories(${MODULE_TARGET}
         PRIVATE
@@ -153,61 +155,42 @@ function(add_node_api_module MODULE_TARGET)
     )
 
     if(APPLE)
+        # The addon is dlopen'd into node_lite, which already provides the napi_* symbols; let them
+        # remain unresolved at link time.
         target_link_options(${MODULE_TARGET}
             PRIVATE
                 "-undefined" "dynamic_lookup"
         )
-    elseif(ANDROID)
-        # The .node module is dlopen'd into a host (UnitTestsJNI) that already provides the napi_*
-        # symbols. The Android NDK links shared libraries with --no-undefined by default, which would
-        # reject those symbols at build time; allow them to remain unresolved so they bind at load
-        # time (the ELF equivalent of Apple's -undefined dynamic_lookup above).
-        target_link_options(${MODULE_TARGET}
-            PRIVATE
-                "-Wl,--unresolved-symbols=ignore-all"
-        )
     endif()
 
-    if(ANDROID)
-        # lib<name>.so so AGP packages it into lib/<abi>/ (-> nativeLibraryDir), the only place a
-        # native library may be dlopen'd from on API 29+. node_lite_android loads it by soname.
-        set_target_properties(${MODULE_TARGET}
-            PROPERTIES
-                PREFIX "lib"
-                SUFFIX ".so"
-        )
-    else()
-        set(MODULE_OUTPUT_DIR
-            ${CMAKE_CURRENT_BINARY_DIR}/build/$<IF:$<CONFIG:Debug>,Debug,Release>)
-        set_target_properties(${MODULE_TARGET}
-            PROPERTIES
-                PREFIX ""
-                SUFFIX ".node"
-                ARCHIVE_OUTPUT_DIRECTORY ${MODULE_OUTPUT_DIR}
-                LIBRARY_OUTPUT_DIRECTORY ${MODULE_OUTPUT_DIR}
-                RUNTIME_OUTPUT_DIRECTORY ${MODULE_OUTPUT_DIR}
-        )
-    endif()
+    set(MODULE_OUTPUT_DIR
+        ${CMAKE_CURRENT_BINARY_DIR}/build/$<IF:$<CONFIG:Debug>,Debug,Release>)
+    set_target_properties(${MODULE_TARGET}
+        PROPERTIES
+            PREFIX ""
+            SUFFIX ".node"
+            ARCHIVE_OUTPUT_DIRECTORY ${MODULE_OUTPUT_DIR}
+            LIBRARY_OUTPUT_DIRECTORY ${MODULE_OUTPUT_DIR}
+            RUNTIME_OUTPUT_DIRECTORY ${MODULE_OUTPUT_DIR}
+    )
 
     add_dependencies(NodeApiModules ${MODULE_TARGET})
 
-    if(NOT ANDROID)
-        # Desktop: stage the built .node next to the node_lite / NodeApiTests runners so they can
-        # dlopen it relative to the copied test files. (Android loads from nativeLibraryDir.)
-        add_custom_command(TARGET ${MODULE_TARGET} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E make_directory
-                $<TARGET_FILE_DIR:node_lite>/test/js-native-api/${FOLDER_NAME}/build
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-                ${CMAKE_CURRENT_BINARY_DIR}/build
-                $<TARGET_FILE_DIR:node_lite>/test/js-native-api/${FOLDER_NAME}/build
-            COMMAND ${CMAKE_COMMAND} -E make_directory
-                $<TARGET_FILE_DIR:NodeApiTests>/test/js-native-api/${FOLDER_NAME}/build
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-                ${CMAKE_CURRENT_BINARY_DIR}/build
-                $<TARGET_FILE_DIR:NodeApiTests>/test/js-native-api/${FOLDER_NAME}/build
-            COMMENT "Copying Node-API module ${MODULE_TARGET} outputs"
-        )
-    endif()
+    # Stage the built .node next to the node_lite / NodeApiTests runners so they can dlopen it
+    # relative to the copied test files.
+    add_custom_command(TARGET ${MODULE_TARGET} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            $<TARGET_FILE_DIR:node_lite>/test/js-native-api/${FOLDER_NAME}/build
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_CURRENT_BINARY_DIR}/build
+            $<TARGET_FILE_DIR:node_lite>/test/js-native-api/${FOLDER_NAME}/build
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            $<TARGET_FILE_DIR:NodeApiTests>/test/js-native-api/${FOLDER_NAME}/build
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_CURRENT_BINARY_DIR}/build
+            $<TARGET_FILE_DIR:NodeApiTests>/test/js-native-api/${FOLDER_NAME}/build
+        COMMENT "Copying Node-API module ${MODULE_TARGET} outputs"
+    )
 
     if(APPLE)
         # The copy_directory above runs as an Xcode "Run Script" phase, which executes BEFORE
