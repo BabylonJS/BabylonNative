@@ -35,8 +35,16 @@ typedef struct napi_module_s {
     void* reserved[4];
 } napi_module;
 
+// These may be overridden by the build (e.g. -DNODE_API_MODULE_REGISTER_FUNCTION=...) so that several
+// addons can be *statically* linked into a single host binary -- each with a uniquely suffixed entry
+// point -- without symbol clashes. The defaults are the canonical names a dynamic loader (dlsym)
+// looks up in a standalone .node.
+#ifndef NODE_API_MODULE_GET_API_VERSION_FUNCTION
 #define NODE_API_MODULE_GET_API_VERSION_FUNCTION node_api_module_get_api_version_v1
+#endif
+#ifndef NODE_API_MODULE_REGISTER_FUNCTION
 #define NODE_API_MODULE_REGISTER_FUNCTION napi_register_module_v1
+#endif
 
 #define NAPI_MODULE_INIT()                                                     \
     NODE_API_EXTERN_C_START                                                    \

@@ -60,20 +60,6 @@ class NodeApiTestFixture : public TestFixtureBase {
     ASSERT_TRUE(static_cast<bool>(config.run_script))
         << "Node-API test runner is not configured.";
 
-#if defined(__ANDROID__)
-    // The js-native-api conformance addons are dlopen'd in-process and import napi_* from the host
-    // (libUnitTestsJNI.so). On Android that host is loaded RTLD_LOCAL by System.loadLibrary, and
-    // bionic's linker-namespace model does not expose its statically linked napi_* symbols to a
-    // dlopen'd module -- so the addon cannot bind them at load time. Resolving this requires building
-    // napi as a shared library (libnapi.so) shared by the host and the addons, a packaging change
-    // tracked separately (see NAPI_VERSION_ROADMAP.md). Until then skip the in-process addon tests on
-    // Android; macOS runs the full v5 addon suite as the reference.
-    if (m_jsFilePath.string().find("js-native-api") != std::string::npos) {
-      GTEST_SKIP() << "Android in-process addon loading needs napi built as a shared library "
-                      "(libnapi.so); tracked separately. macOS covers the v5 addon suite.";
-    }
-#endif
-
     ProcessResult result = config.run_script(m_jsFilePath);
     if (result.status == 0) {
       return;

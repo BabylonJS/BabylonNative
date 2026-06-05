@@ -85,5 +85,33 @@ target_link_libraries(UnitTestsJNI
 if(ANDROID)
     target_link_libraries(UnitTestsJNI PRIVATE dl)
 endif()
+set(JSR_NODE_API_NATIVE_TESTS 2_function_arguments 3_callbacks 4_object_factory 5_function_factory)
+string(JOIN "," JSR_NODE_API_NATIVE_TESTS_CSV ${JSR_NODE_API_NATIVE_TESTS})
 target_compile_definitions(UnitTestsJNI
-    PRIVATE NODE_API_AVAILABLE_NATIVE_TESTS="2_function_arguments,3_callbacks,4_object_factory,5_function_factory")
+    PRIVATE NODE_API_AVAILABLE_NATIVE_TESTS="${JSR_NODE_API_NATIVE_TESTS_CSV}")
+
+# --- Statically linked Node-API conformance addons (Android in-process runner) ------------------
+# Dynamic .node loading is never shipped to the Play / Quest stores, and bionic will not resolve a
+# dlopen'd addon's napi_* imports against the System.loadLibrary-loaded host anyway (see
+# NAPI_VERSION_ROADMAP.md; task #9 tracks the shared-lib alternative). So compile each addon into the
+# host with a uniquely suffixed entry point -- avoiding one-definition clashes between addons -- and
+# let node_lite resolve them from the in-process static registry (node_lite_android) instead of dlsym.
+# entry_point.h emits, per addon, a load-time constructor that self-registers those entry points.
+foreach(_mod ${JSR_NODE_API_NATIVE_TESTS})
+    add_library(jsr_addon_${_mod} OBJECT
+        ${TESTS_DIR}/NodeApi/test/js-native-api/${_mod}/${_mod}.c)
+    target_include_directories(jsr_addon_${_mod} PRIVATE
+        ${TESTS_DIR}/NodeApi/include
+        ${TESTS_DIR}/NodeApi/test/js-native-api
+        ${REPO_ROOT_DIR}/Core/Node-API/Include/Shared
+        ${REPO_ROOT_DIR}/Core/Node-API/Include/Shared/napi
+        ${REPO_ROOT_DIR}/Core/Node-API/Include/Engine/${NAPI_JAVASCRIPT_ENGINE}
+        ${REPO_ROOT_DIR}/Core/Node-API/Include/Engine/${NAPI_JAVASCRIPT_ENGINE}/napi)
+    target_compile_definitions(jsr_addon_${_mod} PRIVATE
+        JSR_NODE_API_STATIC_LINK
+        NODE_API_EXPERIMENTAL_NO_WARNING
+        NODE_GYP_MODULE_NAME=\"${_mod}\"
+        NODE_API_MODULE_REGISTER_FUNCTION=jsr_napi_register_${_mod}
+        NODE_API_MODULE_GET_API_VERSION_FUNCTION=jsr_get_api_version_${_mod})
+    target_sources(UnitTestsJNI PRIVATE $<TARGET_OBJECTS:jsr_addon_${_mod}>)
+endforeach()
