@@ -28,7 +28,7 @@ def cmakeArguments = [
     "-DBABYLON_DEBUG_TRACE=ON"
 ]
 if (project.hasProperty("importHostCompilers")) {
-    cmakeArguments.add("-DIMPORT_HOST_COMPILERS=${project.property("importHostCompilers")}")
+    cmakeArguments.add("-DIMPORT_HOST_COMPILERS=${project.property('importHostCompilers')}")
 }
 
 configurations { natives }

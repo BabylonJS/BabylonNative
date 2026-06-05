@@ -24,7 +24,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: ${{ inputs.js-engine == 'Hermes' && 60 || 30 }}
     env:
       CC: ${{ inputs.cc }}
       CXX: ${{ inputs.cxx }}
@@ -46,6 +46,7 @@ jobs:
             -D BX_CONFIG_DEBUG=ON \
             -D OpenGL_GL_PREFERENCE=GLVND \
             -D BABYLON_DEBUG_TRACE=ON \
+            ${{ inputs.js-engine == 'Hermes' && '-D HERMES_UNICODE_LITE=ON -D HERMES_ALLOW_BOOST_CONTEXT=0' || '' }} \
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} .
           ninja -C build/Linux
 
@@ -53,6 +54,7 @@ jobs:
         run: sudo sysctl -w kernel.core_pattern=core.%p
 
       - name: Validation Tests
+        if: ${{ inputs.js-engine != 'Hermes' }}
         run: |
           cd build/Linux/Apps/Playground
           ulimit -c unlimited
@@ -72,7 +74,7 @@ jobs:
           xvfb-run ./ModuleLoadTest
 
       - name: Upload Rendered Pictures
-        if: always()
+        if: ${{ inputs.js-engine != 'Hermes' && always() }}
         uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.cc }}-${{ inputs.js-engine }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures

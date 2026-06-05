@@ -27,10 +27,14 @@ jobs:
           java-version: '17'
 
       - name: Install Hermes host build tools
-        if: inputs.js-engine == 'Hermes' && runner.os == 'Linux'
+        if: inputs.js-engine == 'Hermes'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y ninja-build
+          elif [ "${{ runner.os }}" = "macOS" ] && ! command -v ninja >/dev/null 2>&1; then
+            brew install ninja
+          fi
 
       - name: Build Hermes host compilers
         if: inputs.js-engine == 'Hermes'

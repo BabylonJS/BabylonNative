@@ -110,6 +110,13 @@ jobs:
       cxx: clang++
       js-engine: JavaScriptCore
 
+  Ubuntu_Clang_Hermes:
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      cc: clang
+      cxx: clang++
+      js-engine: Hermes
+
   Ubuntu_GCC_JSC:
     uses: ./.github/workflows/build-linux.yml
     with:
