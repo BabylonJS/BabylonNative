@@ -844,6 +844,18 @@ void napi_env__::deinit_symbol(JSValueRef symbol) {
   JSValueUnprotect(context, symbol);
 }
 
+void napi_env__::init_function_prototype_call() {
+  // Capture the canonical Function.prototype.call once, at env init, so napi_call_function does not
+  // depend on a target function's own (user-overridable) "call" property.
+  JSObjectRef global = JSContextGetGlobalObject(context);
+  JSValueRef function_ctor = JSObjectGetProperty(context, global, JSString("Function"), nullptr);
+  JSObjectRef function_ctor_obj = JSValueToObject(context, function_ctor, nullptr);
+  JSValueRef prototype = JSObjectGetProperty(context, function_ctor_obj, JSString("prototype"), nullptr);
+  JSObjectRef prototype_obj = JSValueToObject(context, prototype, nullptr);
+  function_prototype_call = JSObjectGetProperty(context, prototype_obj, JSString("call"), nullptr);
+  JSValueProtect(context, function_prototype_call);
+}
+
 // Warning: Keep in-sync with napi_status enum
 static const char* error_messages[] = {
   nullptr,
@@ -1659,11 +1671,10 @@ napi_status napi_call_function(napi_env env,
   }
 
   JSValueRef exception{};
-  JSValueRef call_value{JSObjectGetProperty(
-      env->context, function_object, JSString("call"), &exception)};
-  CHECK_JSC(env, exception);
-
-  JSObjectRef call_object = JSValueToObject(env->context, call_value, &exception);
+  // Invoke through the canonical Function.prototype.call (captured at env init), not the target's own
+  // "call" property -- user code could override func.call and change native call behavior.
+  JSObjectRef call_object =
+      JSValueToObject(env->context, env->function_prototype_call, &exception);
   CHECK_JSC(env, exception);
 
   JSValueRef return_value{JSObjectCallAsFunction(env->context,

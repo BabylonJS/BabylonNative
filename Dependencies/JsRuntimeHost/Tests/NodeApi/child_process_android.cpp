@@ -5,7 +5,8 @@ namespace node_api_tests {
 ProcessResult SpawnSync(std::string_view /*command*/, std::vector<std::string> /*args*/)
 {
     ProcessResult result{};
-    result.status = -1;
+    // Non-zero failure (status is uint32_t); spawnSync is unsupported in the in-process Android runner.
+    result.status = 1;
     result.std_error = "child_process.spawnSync is not supported on this platform.";
     result.std_output.clear();
     return result;
