@@ -486,40 +486,30 @@
             "title": "GLTF Node NegativeScale (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Node_NegativeScale, __page__, 0, __disableSRGBBuffers__, 0",
-            "referenceImage": "gltfNodeNegativeScale0.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "referenceImage": "gltfNodeNegativeScale0.png"
         },
         {
             "title": "GLTF Node NegativeScale (1)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Node_NegativeScale, __page__, 1, __disableSRGBBuffers__, 0",
-            "referenceImage": "gltfNodeNegativeScale1.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "referenceImage": "gltfNodeNegativeScale1.png"
         },
         {
             "title": "GLTF Texture Sampler (0)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Texture_Sampler, __page__, 0, __disableSRGBBuffers__, 0",
-            "referenceImage": "gltfTextureSampler0.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "referenceImage": "gltfTextureSampler0.png"
         },
         {
             "title": "GLTF Texture Sampler (1)",
             "playgroundId": "#DS8AA7#27",
             "replace": "__folder__, Texture_Sampler, __page__, 1, __disableSRGBBuffers__, 0",
-            "referenceImage": "gltfTextureSampler1.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "referenceImage": "gltfTextureSampler1.png"
         },
         {
             "title": "GLTF Alien",
             "playgroundId": "#XN37SR#5",
-            "referenceImage": "gltfAlien.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "referenceImage": "gltfAlien.png"
         },
         {
             "title": "Interleaved buffers test",
@@ -622,8 +612,6 @@
         {
             "title": "NPE - Angle align",
             "playgroundId": "#H5RP91",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "npe-angle-align.png"
         },
         {
@@ -657,9 +645,7 @@
         {
             "title": "RH billboard2",
             "playgroundId": "#QDVYS4#4",
-            "referenceImage": "rh-billboard2.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "referenceImage": "rh-billboard2.png"
         },
         {
             "title": "MSDF",
@@ -789,9 +775,7 @@
         {
             "title": "Lattice",
             "playgroundId": "#MDVD75#19",
-            "referenceImage": "lattice.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "referenceImage": "lattice.png"
         },
         {
             "title": "HAL Lattice",
@@ -803,38 +787,28 @@
         {
             "title": "NME Loop Block",
             "playgroundId": "#D8AK3Z#115",
-            "referenceImage": "nme-loop.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 V8 D3D11 (access violation)"
+            "referenceImage": "nme-loop.png"
         },
         {
             "title": "Gaussian Splatting Loading",
             "playgroundId": "#CID4NN#204",
             "renderCount": 15,
-            "referenceImage": "gsplat-loading.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 D3D11 / Sanitizers / V8 D3D11"
+            "referenceImage": "gsplat-loading.png"
         },
         {
             "title": "Simple refraction",
             "playgroundId": "#22KZUW#652",
-            "referenceImage": "simple-refraction.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 V8 D3D11 (access violation)"
+            "referenceImage": "simple-refraction.png"
         },
         {
             "title": "Detail map",
             "playgroundId": "#F8FDYT#2",
-            "referenceImage": "detail-map.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 D3D11 / Sanitizers (STATUS_BREAKPOINT)"
+            "referenceImage": "detail-map.png"
         },
         {
             "title": "needDepthPrePass",
             "playgroundId": "#7A66KI#1",
-            "referenceImage": "needDepthPrePass.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 V8 D3D11 (access violation)"
+            "referenceImage": "needDepthPrePass.png"
         },
         {
             "title": "Decal map PP",
@@ -847,16 +821,12 @@
         {
             "title": "Convolution Post Process",
             "playgroundId": "#FBH4J7#281",
-            "referenceImage": "convolution.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 D3D11 / Sanitizers (STATUS_BREAKPOINT)"
+            "referenceImage": "convolution.png"
         },
         {
             "title": "Volumetric Light Scattering Post Process with Skeleton",
             "playgroundId": "#5E318S#6",
-            "referenceImage": "volumetricLightScatteringSkeleton.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Triggers ACCESS_VIOLATION cascade on Win32 V8 D3D11 -- the next test always crashes regardless of which one it is. Likely heap corruption."
+            "referenceImage": "volumetricLightScatteringSkeleton.png"
         },
         {
             "title": "Volumetric Light Scattering Post Process with Morph Targets",
@@ -902,9 +872,7 @@
         {
             "title": "Trailmesh tapered and untapered",
             "playgroundId": "#XGGSWJ#4",
-            "referenceImage": "trailMesh.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 V8 D3D11 (access violation cascade)"
+            "referenceImage": "trailMesh.png"
         },
         {
             "title": "GUI Input Text Area with Placeholder",
@@ -916,16 +884,12 @@
         {
             "title": "Ground Projection",
             "playgroundId": "#XG08YC#0",
-            "referenceImage": "groundProjection.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 V8 D3D11 (access violation cascade)"
+            "referenceImage": "groundProjection.png"
         },
         {
             "title": "Node geometry",
             "playgroundId": "#WGZLGJ#9152",
-            "referenceImage": "nodeGeometry.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 V8 D3D11 (access violation cascade)"
+            "referenceImage": "nodeGeometry.png"
         },
         {
             "title": "Node Geometry - Building generator",
@@ -965,30 +929,22 @@
         {
             "title": "Negative scaling with instances",
             "playgroundId": "#Z3YS9T#0",
-            "referenceImage": "negative-scaling-with-instances.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 V8 D3D11 (access violation cascade)"
+            "referenceImage": "negative-scaling-with-instances.png"
         },
         {
             "title": "Iridescence",
             "playgroundId": "#2FDQT5#1505",
-            "referenceImage": "iridescence.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 V8 D3D11 (access violation cascade)"
+            "referenceImage": "iridescence.png"
         },
         {
             "title": "Merge Meshes",
             "playgroundId": "#484RHA#0",
-            "referenceImage": "mergemeshes.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 V8 D3D11 (access violation cascade)"
+            "referenceImage": "mergemeshes.png"
         },
         {
             "title": "Sprites",
             "playgroundId": "#ZX8DJ3#1",
-            "referenceImage": "Sprites.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; V8 cascade victim that crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "referenceImage": "Sprites.png"
         },
         {
             "title": "Procedural texture with NME",
@@ -1034,9 +990,7 @@
         {
             "title": "Node material 3",
             "playgroundId": "#LWGVT0#2",
-            "referenceImage": "node-material3.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "referenceImage": "node-material3.png"
         },
         {
             "title": "Node material 4",
@@ -1048,9 +1002,7 @@
         {
             "title": "Node material 5",
             "playgroundId": "#V8VH7B#0",
-            "referenceImage": "node-material5.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "referenceImage": "node-material5.png"
         },
         {
             "title": "Node material 6",
@@ -1170,9 +1122,7 @@
         {
             "title": "Color Grading",
             "playgroundId": "#8EDB5N#2",
-            "referenceImage": "colorGrading.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Newly added test crashes Win32 V8 D3D11 with ACCESS_VIOLATION (-1073741819)."
+            "referenceImage": "colorGrading.png"
         },
         {
             "title": "Clip planes",
