@@ -88,11 +88,26 @@ run the suite per engine → implement the JSC/(Chakra) gaps → green.
 ## Test-suite sourcing strategy
 
 - **Now (this PR):** vendored copy of vmoroz's hermes-windows `unittests/NodeApi/` (engine-layer, v8-capable
-  harness, `node_lite`). Resync the v1–v5 test files from upstream hermes-windows so our copies are current.
-- **Later:** migrate to **`nodejs/node-api-cts`** (engine-agnostic, CMake `add_node_api_cts_addon()`,
-  `implementors/<runtime>/` harness contract: `assert`/`loadAddon`/`gcUntil`/`napiVersion`/`features`).
-  Consume via `FetchContent` `GIT_REPOSITORY` once it stabilizes / publishes (currently pre-1.0, not on npm;
-  `node-api/` runtime tests not yet started). This replaces the "gross copying" the PR flags.
+  harness, `node_lite`). Resync the v1–v5 test files from upstream hermes-windows so our copies are current (task 5).
+- **Evaluated (task 6) — `nodejs/node-api-cts` as a `FetchContent` `GIT_REPOSITORY` dep: not yet; track for later.**
+  Findings (HEAD `ea10da9`, 2026-06):
+  - **Maturity blocker:** the README states it "is currently a work-in-progress and shouldn't yet be relied on by
+    anyone" (v0.1.0, not on npm). Too early to take as an upstream dependency.
+  - **Harness-model mismatch:** the runner is Node.js + TypeScript (`node --test implementors/node/run-tests.ts`,
+    `amaro` for TS-strip); the only implementor is `node`. Adopting it means authoring an `implementors/jsruntimehost/`
+    harness (JS modules: `load-addon`, `assert`, `must-call`, `gc`, `napi-version`, `features`, `skip-test`) and
+    driving the test `.js` from our runtime — i.e. re-expressing what `node_lite` already does, in their contract.
+  - **Doesn't solve Android:** `add_node_api_cts_addon()` builds SHARED `.node` (dlopen), with only Apple
+    `-undefined dynamic_lookup` / MSVC import-lib handling and no Android path — we'd re-apply the same static-link
+    adaptation just landed here.
+  - **No v5 coverage gain now:** its `tests/js-native-api/` are ported from the same `nodejs/node` source as our
+    vendored copies; the 4 v5 tests are identical content.
+  - **Upside (why track it):** engine-agnostic, active (~24 js-native-api tests ported incl. `test_bigint`,
+    `test_typedarray`, `test_string`, `test_date` — valuable once we bump NAPI_VERSION), CMake-based, and
+    contributing a JsRuntimeHost implementor could upstream our Android in-process + static-link learnings.
+  - **Recommendation:** keep the vendored suite for v5 (works; both platforms green). Revisit node-api-cts when we
+    bump NAPI_VERSION (needing its broader tests) **and** it approaches 1.0 — migrating there rather than doing a
+    hermes-windows resync at that point. That is the eventual answer to the "gross copying" this PR flags.
 
 ---
 
