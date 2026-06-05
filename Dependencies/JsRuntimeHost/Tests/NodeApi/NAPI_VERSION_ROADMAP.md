@@ -11,7 +11,11 @@ This is a multi-PR effort. Keep the boundaries strict:
   - **Bug fixes** against the current N-API implementation that the tests surface → *quarantine* the failing test via the allow-list and open a separate fix PR. Do not fix impl bugs in the test-suite PR.
   - **Any `NAPI_VERSION` bump** (6 → 7 → 8 → …) and the per-engine native work it requires.
   - **jsc-android engine bump** (v6 enabler — see below).
-  - **Android in-process addon loading** — building `napi` as a shared library so `dlopen`'d test addons can resolve `napi_*` from the host (see *Platform status* below). Affects every Android consumer's packaging → separate PR.
+
+> **Android packaging note:** to run the suite in-process the addons are `dlopen`'d as standalone
+> `.node` modules, which requires `napi` to ship as a shared library (`libnapi.so`) on Android (see
+> *Platform status*). That is a deliberate packaging change for all Android consumers; if upstream
+> prefers it isolated, it can land as a small precursor commit/PR that this suite depends on.
 
 ## Current state (2026-06-04)
 
@@ -35,11 +39,13 @@ This is a multi-PR effort. Keep the boundaries strict:
 | Platform | Engine | v5 suite | Runner | Notes |
 |---|---|---|---|---|
 | **macOS** | JavaScriptCore | ✅ **12/12** (plain + ASan/UBSan + TSan) | child-process | Full v5 reference. |
-| **Android** | V8 (`libv8android.so`) | ✅ **4/4 js-native-api** (statically linked, in-process) | in-process | App sandbox can't `fork`/`exec`; addons static-linked — see below. |
+| **Android** | V8 (`libv8android.so`) | ✅ **4/4 js-native-api** (dynamic `.node` + `libnapi.so`, in-process) | in-process | App sandbox can't `fork`/`exec`; addons `dlopen`'d — see below. |
 
-**Android in-process addon loading (statically linked).** The app sandbox can't `fork`/`exec`, so the conformance suite runs the addons *in-process*. Dynamic `.node` loading there is a dead end — and is never shipped to the Play/Quest stores anyway: the host (`libUnitTestsJNI.so`) is loaded RTLD_LOCAL by `System.loadLibrary`, and bionic won't surface its (exported) `napi_*` to a `dlopen`'d module; post-hoc `RTLD_GLOBAL` promotion is a no-op on bionic (verified on device: the module `dlopen` returns NULL; the addon carries no `DT_NEEDED` for napi). So the addons are **statically linked into the host** instead: `node_api.h` makes the registrar/version entry-point names overridable, `entry_point.h` (under `JSR_NODE_API_STATIC_LINK`) gives `Init` internal linkage and emits a per-addon load-time constructor that self-registers its uniquely-suffixed entry points, the Android CMake compiles each addon as an OBJECT library, and `node_lite_android` resolves them from an in-process registry instead of `dlopen`+`dlsym`. The 4 v5 js-native-api tests now execute in-process and **pass** (commits `f32130e`, `f0d1c2e`; the harness also needed the `noexcept`-removal fix `38864e4` so a failing test surfaces as a `ProcessResult` rather than `std::terminate`). Native stdout/stderr is pumped to logcat (tag `NodeApiTests`) so gtest results are visible (`adb logcat -s NodeApiTests`). Building `napi` as a shared library (task #9) would also work and is the only option if real external `.node` addons ever need `dlopen` on Android, but it ripples to every consumer's packaging and is not needed for the conformance suite.
+**Android in-process addon loading (dynamic `.node` + shared `libnapi.so`).** The app sandbox can't `fork`/`exec`, so the conformance suite runs the addons *in-process*. The addons are built as standalone SHARED `lib<name>.so` modules (matching nodejs/node-api-cts's `add_node_api_cts_addon`), packaged by AGP into `nativeLibraryDir`, and `dlopen`'d by `node_lite_android` by soname. For their `napi_*` imports to bind at load, **`napi` is built as a shared library (`libnapi.so`) on Android** — a real `DT_NEEDED` of both the host and every addon, so there is a single napi instance. This is the IoC / dynamic-self-registration model: `dlopen` the addon → its `DT_NEEDED libnapi.so` resolves the `napi_*` → `dlsym("napi_register_module_v1")` → call it. Verified on device: `lib2_function_arguments.so` carries `DT_NEEDED [libnapi.so]`, its 8 `napi_*` are imports (`U`), `libnapi.so` exports all 106 `napi_*` (`T`), and the 4 v5 tests pass. The harness also needs the `noexcept`-removal fix (`38864e4`) so a failing test surfaces as a `ProcessResult` rather than `std::terminate`, and native stdout/stderr is pumped to logcat (tag `NodeApiTests`) for visible gtest output.
 
-> Emulator note: the unrelated `JavaScript.All` UnitTest (XMLHttpRequest/WebSocket/HTTP mocha tests) fails in an offline emulator (status 0 vs 200/404, socket timeouts); it runs before and is independent of the js-native-api suite.
+> Why shared `napi` rather than static-linking the addons into the host: bionic will not surface a `System.loadLibrary`-loaded (RTLD_LOCAL) host's `napi_*` to a `dlopen`'d module, and post-hoc `RTLD_GLOBAL` host promotion is a no-op on bionic — so a `dlopen`'d addon can only resolve `napi` via a real shared-library `DT_NEEDED`. (An earlier iteration statically linked the addons into the host and passed too; the shared-lib model was adopted to align with node-api-cts's dynamic `.node` addons, easing a future migration.)
+
+> Emulator note: the unrelated `JavaScript.All` UnitTest (XMLHttpRequest/WebSocket/HTTP mocha tests) can fail in an offline emulator (status 0 vs 200/404, socket timeouts); it runs before and is independent of the js-native-api suite.
 
 ## Chakra N-API ceiling
 
@@ -97,9 +103,10 @@ run the suite per engine → implement the JSC/(Chakra) gaps → green.
     `amaro` for TS-strip); the only implementor is `node`. Adopting it means authoring an `implementors/jsruntimehost/`
     harness (JS modules: `load-addon`, `assert`, `must-call`, `gc`, `napi-version`, `features`, `skip-test`) and
     driving the test `.js` from our runtime — i.e. re-expressing what `node_lite` already does, in their contract.
-  - **Doesn't solve Android:** `add_node_api_cts_addon()` builds SHARED `.node` (dlopen), with only Apple
-    `-undefined dynamic_lookup` / MSVC import-lib handling and no Android path — we'd re-apply the same static-link
-    adaptation just landed here.
+  - **Android now aligns:** `add_node_api_cts_addon()` builds SHARED `.node` (dlopen) — the same model our Android
+    suite now uses (dynamic `.node` + `libnapi.so`). Its CMake only handles Apple `-undefined dynamic_lookup` /
+    MSVC import-libs, so an Android port would still need our `libnapi.so` + soname-load glue, but the addon model
+    itself matches — a future migration is much smoother now.
   - **No v5 coverage gain now:** its `tests/js-native-api/` are ported from the same `nodejs/node` source as our
     vendored copies; the 4 v5 tests are identical content.
   - **Upside (why track it):** engine-agnostic, active (~24 js-native-api tests ported incl. `test_bigint`,
