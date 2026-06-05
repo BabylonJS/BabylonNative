@@ -91,6 +91,23 @@ run the suite per engine → implement the JSC/(Chakra) gaps → green.
 `*` stretch. Separately: the worklets/worker goal needs **threadsafe functions** — a runtime-layer
 (`node_api.h`, `NAPI_HAS_THREADS 1`) axis not covered by the engine-only suite; track independently.
 
+**Reference/finalizer test staging (measured at v5).** Of the vendored reference/finalizer/wrap dirs, only
+`test_reference_double_free` is v5-clean and is enabled now (green on macOS/JSC incl. ASan, and Android/V8); its
+`test_wrap.js` is quarantined (JSC `napi_remove_wrap` on an unwrapped object returns `napi_invalid_arg` — it
+does not crash; separate fix). The rest are gated by symbols our v5 pin doesn't export and enable with the
+bump: `test_reference` → `node_api_symbol_for` (v9, B4); `test_finalizer/` & `6_object_wrap` →
+`napi_get_instance_data` (v6, B1) + `node_api_basic_env`/`node_api_post_finalizer` (v9, B4). `test_finalizer`
+also surfaced a JSC finalizer-delivery timing case (`mustCall(1)`→0) to confirm at B1.
+
+**GC-safety (re upstream [hermes-windows#321](https://github.com/microsoft/hermes-windows/pull/321)).** That
+weak-ref-over-Proxy moving-GC bug is **not present here**. V8 uses `v8::Persistent` (an immediate, auto-relocated
+GC root). JSC keeps the to-be-referenced object in the `value` argument on the C stack across the reference's
+finalizer-setup allocation, so JSC's **conservative stack scan pins it against collection and relocation** — the
+creation-time window is closed regardless of whether the collector moves cells — and weak liveness is an
+object-id check, not a bare-pointer deref. Chakra is non-moving with a nullptr-returning weak read. Empirically,
+`test_reference_double_free` runs **clean under ASan on the modern system JSC** (no use-after-free). There is no
+weak-ref-over-Proxy case in the suite yet; add one at the v9 tier.
+
 ## Test-suite sourcing strategy
 
 - **Now (this PR):** vendored copy of vmoroz's hermes-windows `unittests/NodeApi/` (engine-layer, v8-capable
