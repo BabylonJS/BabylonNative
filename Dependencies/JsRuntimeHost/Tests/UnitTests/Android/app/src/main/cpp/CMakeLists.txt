@@ -86,7 +86,7 @@ if(ANDROID)
     target_link_libraries(UnitTestsJNI PRIVATE dl)
 endif()
 target_compile_definitions(UnitTestsJNI
-    PRIVATE NODE_API_AVAILABLE_NATIVE_TESTS="2_function_arguments,3_callbacks,4_object_factory,5_function_factory")
+    PRIVATE NODE_API_AVAILABLE_NATIVE_TESTS="2_function_arguments,3_callbacks,4_object_factory,5_function_factory,test_reference_double_free")
 
 # The conformance addons are built as standalone SHARED lib<name>.so by Tests/NodeApi/CMakeLists.txt,
 # packaged by AGP into nativeLibraryDir, and dlopen'd in-process by node_lite_android. Both they and
