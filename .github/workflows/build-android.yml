@@ -30,7 +30,7 @@ jobs:
         if: inputs.js-engine == 'Hermes' && runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build
+          sudo apt-get install -y ninja-build libx11-dev
 
       - name: Build Hermes host compilers
         if: inputs.js-engine == 'Hermes'
@@ -39,6 +39,7 @@ jobs:
             -D CMAKE_BUILD_TYPE=RelWithDebInfo \
             -D NAPI_JAVASCRIPT_ENGINE=Hermes \
             -D HERMES_UNICODE_LITE=ON \
+            -D HERMES_ALLOW_BOOST_CONTEXT=0 \
             -D BABYLON_NATIVE_BUILD_APPS=OFF \
             -D BABYLON_NATIVE_INSTALL=OFF
           cmake --build Build/HermesHost --target hermesc shermes --config RelWithDebInfo

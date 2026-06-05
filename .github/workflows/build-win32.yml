@@ -41,7 +41,7 @@ jobs:
             JS_DEFINE="-DNAPI_JAVASCRIPT_ENGINE=V8"
           elif [ "${{ inputs.napi-type }}" = "Hermes" ]; then
             SUFFIX="_Hermes"
-            JS_DEFINE="-DNAPI_JAVASCRIPT_ENGINE=Hermes"
+            JS_DEFINE="-DNAPI_JAVASCRIPT_ENGINE=Hermes -DHERMES_ALLOW_BOOST_CONTEXT=0"
           fi
           echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
           echo "js_define=$JS_DEFINE" >> "$GITHUB_OUTPUT"
