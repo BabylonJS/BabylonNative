@@ -119,6 +119,7 @@ AppContext::AppContext(
     m_runtime.emplace(options);
 
     m_runtime->Dispatch([this, window, debugLog, additionalInit = std::move(additionalInit), playgroundOptions = std::move(playgroundOptions)](Napi::Env env) {
+        env.Global().Set("globalThis", env.Global());
         m_device->AddToJavaScript(env);
 
         {
@@ -182,6 +183,7 @@ AppContext::AppContext(
         Babylon::Polyfills::Performance::Initialize(env);
 
         Babylon::Polyfills::Window::Initialize(env);
+        env.Global().Set("canvas", env.Global());
 
         Babylon::Polyfills::TextDecoder::Initialize(env);
 
