@@ -5,7 +5,6 @@
 
 #include <stdexcept>
 #include <memory>
-#include <mutex>
 #include <utility>
 
 #if defined(__APPLE__)
@@ -14,7 +13,6 @@
 #elif defined(__ANDROID__)
 #include <v8.h>
 #include "js_native_api_v8.h"
-#include <libplatform/libplatform.h>
 #endif
 
 namespace node_api_tests {
@@ -31,8 +29,10 @@ class JsRuntimeHostEnvHolder : public IEnvHolder {
     context_ = JSGlobalContextCreateInGroup(nullptr, nullptr);
     env_ = Napi::Attach(context_);
 #elif defined(__ANDROID__)
-    V8Platform::EnsureInitialized();
-
+    // V8's platform is process-global and is already initialized by JsRuntimeHost -- the host
+    // AppRuntime that UnitTestsJNI links and that runs (via the regular V8 unit tests) before these
+    // in-process Node-API tests. Initializing it a second time aborts V8 with "Wrong initialization
+    // order", so reuse the host's platform and only create our own isolate/context below.
     allocator_.reset(v8::ArrayBuffer::Allocator::NewDefaultAllocator());
     v8::Isolate::CreateParams create_params;
     create_params.array_buffer_allocator = allocator_.get();
@@ -134,21 +134,6 @@ class JsRuntimeHostEnvHolder : public IEnvHolder {
 #if defined(__APPLE__)
   JSGlobalContextRef context_{};
 #elif defined(__ANDROID__)
-  class V8Platform {
-   public:
-    static void EnsureInitialized() {
-      // V8's platform is process-global and is already initialized by JsRuntimeHost -- the host
-      // AppRuntime that UnitTestsJNI links and that runs (via the regular V8 unit tests) before
-      // these in-process Node-API tests. Initializing it a second time aborts V8 with
-      // "Wrong initialization order", so reuse the host's platform and only create our own
-      // isolate/context below.
-    }
-
-   private:
-    static std::once_flag init_flag_;
-    static std::unique_ptr<v8::Platform> platform_;
-  };
-
   v8::Isolate* isolate_{nullptr};
   std::unique_ptr<v8::Locker> locker_{};
   std::unique_ptr<v8::Isolate::Scope> isolate_scope_{};
@@ -158,11 +143,6 @@ class JsRuntimeHostEnvHolder : public IEnvHolder {
   napi_env env_{};
   std::function<void(napi_env, napi_value)> onUnhandledError_{};
 };
-
-#if defined(__ANDROID__)
-std::once_flag JsRuntimeHostEnvHolder::V8Platform::init_flag_{};
-std::unique_ptr<v8::Platform> JsRuntimeHostEnvHolder::V8Platform::platform_{};
-#endif
 
 }  // namespace
 
