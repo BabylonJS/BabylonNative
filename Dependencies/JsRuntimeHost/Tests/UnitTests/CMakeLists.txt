@@ -59,6 +59,7 @@ target_link_libraries(UnitTests
     PRIVATE gtest_main
     PRIVATE Foundation
     PRIVATE Blob
+    PRIVATE File
     PRIVATE Performance
     PRIVATE TextDecoder
     PRIVATE TextEncoder

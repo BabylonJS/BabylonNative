@@ -21,6 +21,10 @@ FetchContent_Declare(asio
     GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
     GIT_TAG f693a3eb7fe72a5f19b975289afc4f437d373d9c
     EXCLUDE_FROM_ALL)
+FetchContent_Declare(base-n
+    GIT_REPOSITORY https://github.com/azawadzki/base-n.git
+    GIT_TAG 7573e77c0b9b0e8a5fb63d96dbde212c921993b4
+    EXCLUDE_FROM_ALL)
 FetchContent_Declare(CMakeExtensions
     GIT_REPOSITORY https://github.com/BabylonJS/CMakeExtensions.git
     GIT_TAG dc750e7f69dad76779419df6442f834c57a30a1f
@@ -80,6 +84,7 @@ option(JSRUNTIMEHOST_POLYFILL_URL "Include JsRuntimeHost Polyfill URL and URLSea
 option(JSRUNTIMEHOST_POLYFILL_ABORT_CONTROLLER "Include JsRuntimeHost Polyfills AbortController and AbortSignal." ON)
 option(JSRUNTIMEHOST_POLYFILL_WEBSOCKET "Include JsRuntimeHost Polyfill WebSocket." ON)
 option(JSRUNTIMEHOST_POLYFILL_BLOB "Include JsRuntimeHost Polyfill Blob." ON)
+option(JSRUNTIMEHOST_POLYFILL_FILE "Include JsRuntimeHost Polyfill File and FileReader." ON)
 option(JSRUNTIMEHOST_POLYFILL_PERFORMANCE "Include JsRuntimeHost Polyfill Performance." ON)
 option(JSRUNTIMEHOST_POLYFILL_TEXTDECODER "Include JsRuntimeHost Polyfill TextDecoder." ON)
 option(JSRUNTIMEHOST_POLYFILL_TEXTENCODER "Include JsRuntimeHost Polyfill TextEncoder." ON)
@@ -138,6 +143,13 @@ set_property(TARGET arcana PROPERTY FOLDER Dependencies)
 if(JSRUNTIMEHOST_POLYFILL_XMLHTTPREQUEST)
     FetchContent_MakeAvailable_With_Message(UrlLib)
     set_property(TARGET UrlLib PROPERTY FOLDER Dependencies)
+endif()
+
+if(JSRUNTIMEHOST_POLYFILL_FILE)
+    FetchContent_MakeAvailable_With_Message(base-n)
+    add_library(base-n INTERFACE)
+    target_include_directories(base-n INTERFACE "${base-n_SOURCE_DIR}/include")
+    set_property(TARGET base-n PROPERTY FOLDER Dependencies)
 endif()
 
 if(BABYLON_DEBUG_TRACE)

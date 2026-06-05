@@ -1435,6 +1435,349 @@ describe("TextEncoder", function () {
     });
 });
 
+declare const File: any;
+declare const FileReader: any;
+
+describe("File", function () {
+    // -------------------------------- Construction --------------------------------
+    it("creates an empty File", function () {
+        const file = new File([], "empty.txt");
+        expect(file.size).to.equal(0);
+        expect(file.type).to.equal("");
+        expect(file.name).to.equal("empty.txt");
+    });
+
+    it("creates a File from a string array", function () {
+        const file = new File(["Hello"], "hello.txt");
+        expect(file.size).to.equal(5);
+        expect(file.name).to.equal("hello.txt");
+    });
+
+    it("creates a File from a TypedArray", function () {
+        const data = new Uint8Array([72, 101, 108, 108, 111]); // "Hello"
+        const file = new File([data], "typed.bin");
+        expect(file.size).to.equal(5);
+        expect(file.name).to.equal("typed.bin");
+    });
+
+    it("creates a File from an ArrayBuffer", function () {
+        const buffer = new Uint8Array([72, 101, 108, 108, 111]).buffer;
+        const file = new File([buffer], "buffer.bin");
+        expect(file.size).to.equal(5);
+    });
+
+    it("creates a File from a Blob", function () {
+        const blob = new Blob(["Hello"]);
+        const file = new File([blob], "from-blob.txt");
+        expect(file.size).to.equal(5);
+    });
+
+    it("applies MIME type from options", function () {
+        const file = new File(["{}"], "data.json", { type: "application/json" });
+        expect(file.type).to.equal("application/json");
+    });
+
+    it("defaults lastModified to a recent timestamp when not provided", function () {
+        const before = Date.now();
+        const file = new File([], "x.txt");
+        const after = Date.now();
+        expect(file.lastModified).to.be.a("number");
+        // Allow small clock-skew slack on either side.
+        expect(file.lastModified).to.be.at.least(before - 1000);
+        expect(file.lastModified).to.be.at.most(after + 1000);
+    });
+
+    it("honors lastModified from options", function () {
+        const file = new File([], "x.txt", { lastModified: 12345 });
+        expect(file.lastModified).to.equal(12345);
+    });
+
+    it("coerces a non-string name to a string", function () {
+        const file = new File([], 42 as any);
+        expect(file.name).to.equal("42");
+    });
+
+    it("coerces undefined and null name per WebIDL USVString", function () {
+        // Per the WHATWG File constructor's WebIDL signature, name is a
+        // non-optional USVString; ToString is applied regardless of input
+        // type, so passing undefined/null yields the string "undefined" /
+        // "null" rather than an empty string.
+        expect(new File([], undefined as any).name).to.equal("undefined");
+        expect(new File([], null as any).name).to.equal("null");
+    });
+
+    // TODO(JsRH#175): Re-enable once the Chakra Node-API shim surfaces
+    // exceptions thrown from class constructor callbacks back to JS.
+    // it("throws when fewer than 2 arguments are passed", function () {
+    //     // File requires both fileBits and fileName per the WebIDL bindings.
+    //     // Browsers throw TypeError on missing arguments; the native polyfill
+    //     // must match that surface so consumers don't accidentally create a
+    //     // File with empty name when their call site is misspelled.
+    //     // Note: we only assert *that* it throws (not the specific error
+    //     // type), because the JSI napi shim wraps thrown Napi::TypeError as
+    //     // a generic JS Error when surfacing it across the host boundary.
+    //     expect(() => new (File as any)()).to.throw();
+    //     expect(() => new (File as any)([])).to.throw();
+    // });
+
+    // -------------------------------- Read API --------------------------------
+    it("returns text via .text()", async function () {
+        const file = new File(["Hello"], "hello.txt");
+        const text = await file.text();
+        expect(text).to.equal("Hello");
+    });
+
+    it("returns bytes via .bytes()", async function () {
+        const file = new File(["Hello"], "hello.txt");
+        const bytes = await file.bytes();
+        expect(bytes).to.be.instanceOf(Uint8Array);
+        expect(bytes.length).to.equal(5);
+        expect(bytes[0]).to.equal(72); // 'H'
+        expect(bytes[4]).to.equal(111); // 'o'
+    });
+
+    it("returns an ArrayBuffer via .arrayBuffer()", async function () {
+        const file = new File(["Hello"], "hello.txt");
+        const buffer = await file.arrayBuffer();
+        expect(buffer).to.be.instanceOf(ArrayBuffer);
+        expect(buffer.byteLength).to.equal(5);
+    });
+
+    it("handles multi-byte UTF-8 content", async function () {
+        const file = new File(["你好, 世界"], "utf8.txt");
+        const text = await file.text();
+        expect(text).to.equal("你好, 世界");
+    });
+
+    // -------------------------------- Blob inheritance --------------------------------
+    it("is an instance of Blob (prototype chain wired up)", function () {
+        // BJS core (fileTools, Offline/database, abstractEngine,
+        // thinNativeEngine) branches on `instanceof Blob`. File must
+        // satisfy that check for File inputs to take the Blob path,
+        // matching the WHATWG spec where File is a Blob subtype.
+        const file = new File(["x"], "x.txt");
+        expect(file instanceof Blob).to.equal(true);
+        expect(file instanceof File).to.equal(true);
+    });
+});
+
+describe("FileReader", function () {
+    // -------------------------------- State constants --------------------------------
+    it("exposes EMPTY / LOADING / DONE as static constants", function () {
+        expect(FileReader.EMPTY).to.equal(0);
+        expect(FileReader.LOADING).to.equal(1);
+        expect(FileReader.DONE).to.equal(2);
+    });
+
+    it("exposes EMPTY / LOADING / DONE on instances", function () {
+        const reader = new FileReader();
+        expect(reader.EMPTY).to.equal(0);
+        expect(reader.LOADING).to.equal(1);
+        expect(reader.DONE).to.equal(2);
+    });
+
+    it("does not pollute Object.prototype with EMPTY/LOADING/DONE", function () {
+        // Regression: in earlier drafts the JSC napi shim's
+        // func.Get("prototype") returns Object.prototype, so writing
+        // EMPTY/LOADING/DONE through it pollutes every plain object's
+        // for..in iteration and breaks consumers like Babylon.js's
+        // CameraInputsManager.attachElement.
+        const plain: any = {};
+        const keys: string[] = [];
+        for (const k in plain) keys.push(k);
+        expect(keys).to.have.lengthOf(0);
+
+        // And the keys must not be present as inherited enumerable
+        // properties on a fresh object either.
+        expect("EMPTY" in plain && !Object.prototype.hasOwnProperty.call(plain, "EMPTY"))
+            .to.equal(false);
+    });
+
+    // -------------------------------- Initial state --------------------------------
+    it("initializes with EMPTY readyState and null result/error", function () {
+        const reader = new FileReader();
+        expect(reader.readyState).to.equal(FileReader.EMPTY);
+        expect(reader.result).to.equal(null);
+        expect(reader.error).to.equal(null);
+    });
+
+    it("provides null on* event handler slots by default", function () {
+        const reader = new FileReader();
+        expect(reader.onloadstart).to.equal(null);
+        expect(reader.onprogress).to.equal(null);
+        expect(reader.onload).to.equal(null);
+        expect(reader.onabort).to.equal(null);
+        expect(reader.onerror).to.equal(null);
+        expect(reader.onloadend).to.equal(null);
+    });
+
+    // -------------------------------- readAsText --------------------------------
+    it("reads a Blob as text via onload", function (done) {
+        const reader = new FileReader();
+        const blob = new Blob(["Hello"]);
+        reader.onload = function () {
+            try {
+                expect(reader.readyState).to.equal(FileReader.DONE);
+                expect(reader.result).to.equal("Hello");
+                done();
+            } catch (e) {
+                done(e);
+            }
+        };
+        reader.readAsText(blob);
+    });
+
+    it("reads a File as text via onload", function (done) {
+        const reader = new FileReader();
+        const file = new File(["World"], "world.txt");
+        reader.onload = function () {
+            try {
+                expect(reader.result).to.equal("World");
+                done();
+            } catch (e) {
+                done(e);
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    it("fires onloadend after onload", function (done) {
+        const reader = new FileReader();
+        const blob = new Blob(["abc"]);
+        let loadFired = false;
+        reader.onload = function () {
+            loadFired = true;
+        };
+        reader.onloadend = function () {
+            try {
+                expect(loadFired).to.equal(true);
+                expect(reader.readyState).to.equal(FileReader.DONE);
+                done();
+            } catch (e) {
+                done(e);
+            }
+        };
+        reader.readAsText(blob);
+    });
+
+    // -------------------------------- readAsArrayBuffer --------------------------------
+    it("reads a Blob as an ArrayBuffer via onload", function (done) {
+        const reader = new FileReader();
+        const blob = new Blob([new Uint8Array([1, 2, 3])]);
+        reader.onload = function () {
+            try {
+                expect(reader.result).to.be.instanceOf(ArrayBuffer);
+                expect(reader.result.byteLength).to.equal(3);
+                const view = new Uint8Array(reader.result);
+                expect(view[0]).to.equal(1);
+                expect(view[2]).to.equal(3);
+                done();
+            } catch (e) {
+                done(e);
+            }
+        };
+        reader.readAsArrayBuffer(blob);
+    });
+
+    // -------------------------------- readAsDataURL --------------------------------
+    it("reads a Blob as a base64 data URL", function (done) {
+        const reader = new FileReader();
+        // "Hello" -> base64 SGVsbG8=
+        const blob = new Blob(["Hello"], { type: "text/plain" });
+        reader.onload = function () {
+            try {
+                expect(reader.result).to.be.a("string");
+                expect(reader.result).to.equal("data:text/plain;base64,SGVsbG8=");
+                done();
+            } catch (e) {
+                done(e);
+            }
+        };
+        reader.readAsDataURL(blob);
+    });
+
+    it("falls back to application/octet-stream when the source blob has no type", function (done) {
+        const reader = new FileReader();
+        const blob = new Blob(["Hello"]);
+        reader.onload = function () {
+            try {
+                expect(reader.result).to.equal("data:application/octet-stream;base64,SGVsbG8=");
+                done();
+            } catch (e) {
+                done(e);
+            }
+        };
+        reader.readAsDataURL(blob);
+    });
+
+    // -------------------------------- addEventListener --------------------------------
+    it("dispatches 'load' events to addEventListener listeners", function (done) {
+        const reader = new FileReader();
+        const blob = new Blob(["abc"]);
+        let countA = 0;
+        let countB = 0;
+        const handlerA = function () {
+            countA++;
+        };
+        const handlerB = function () {
+            countB++;
+        };
+        reader.addEventListener("load", handlerA);
+        reader.addEventListener("load", handlerB);
+        // Per WHATWG, adding the same listener twice is a no-op, so handlerA
+        // should still fire exactly once.
+        reader.addEventListener("load", handlerA);
+        reader.onloadend = function () {
+            try {
+                expect(countA).to.equal(1);
+                expect(countB).to.equal(1);
+                done();
+            } catch (e) {
+                done(e);
+            }
+        };
+        reader.readAsText(blob);
+    });
+
+    it("does not call a listener after removeEventListener", function (done) {
+        const reader = new FileReader();
+        const blob = new Blob(["abc"]);
+        let called = false;
+        const handler = function () {
+            called = true;
+        };
+        reader.addEventListener("load", handler);
+        reader.removeEventListener("load", handler);
+        reader.onloadend = function () {
+            try {
+                expect(called).to.equal(false);
+                done();
+            } catch (e) {
+                done(e);
+            }
+        };
+        reader.readAsText(blob);
+    });
+
+    // -------------------------------- abort --------------------------------
+    it("transitions readyState to DONE after abort()", function (done) {
+        const reader = new FileReader();
+        const blob = new Blob(["abc"]);
+        reader.readAsText(blob);
+        // Immediately abort before the queued read completes.
+        reader.abort();
+        // Wait one microtask turn so any pending dispatch settles before we inspect state.
+        Promise.resolve().then(() => {
+            try {
+                expect(reader.readyState).to.equal(FileReader.DONE);
+                done();
+            } catch (e) {
+                done(e);
+            }
+        });
+    });
+});
+
 function runTests() {
     mocha.run((failures: number) => {
         // Test program will wait for code to be set before exiting
