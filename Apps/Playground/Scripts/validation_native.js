@@ -81,6 +81,7 @@
     }
 
     const engine = new BABYLON.NativeEngine();
+    globalThis.engine = engine;
     engine.getCaps().parallelShaderCompile = undefined;
 
     // Broaden Babylon's default retry strategy for the test framework: in addition to
@@ -113,6 +114,7 @@
     }
 
     const canvas = window;
+    globalThis.canvas = canvas;
 
     // Random replacement
     let seed = 1;
