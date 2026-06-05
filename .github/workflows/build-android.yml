@@ -26,12 +26,34 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Install Hermes host build tools
+        if: inputs.js-engine == 'Hermes' && runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: Build Hermes host compilers
+        if: inputs.js-engine == 'Hermes'
+        run: |
+          cmake -B Build/HermesHost -G Ninja \
+            -D CMAKE_BUILD_TYPE=RelWithDebInfo \
+            -D NAPI_JAVASCRIPT_ENGINE=Hermes \
+            -D HERMES_UNICODE_LITE=ON \
+            -D BABYLON_NATIVE_BUILD_APPS=OFF \
+            -D BABYLON_NATIVE_INSTALL=OFF
+          cmake --build Build/HermesHost --target hermesc shermes --config RelWithDebInfo
+
       - name: Build Playground ${{ inputs.js-engine }}
         working-directory: Apps/Playground/Android
         run: |
+          EXTRA_ARGS=""
+          if [ "${{ inputs.js-engine }}" = "Hermes" ]; then
+            EXTRA_ARGS="-PimportHostCompilers=${{ github.workspace }}/Build/HermesHost/ImportHostCompilers.cmake"
+          fi
           chmod +x gradlew
           ./gradlew assembleRelease \
-            -PJSEngine=${{ inputs.js-engine }} \
+            -PjsEngine=${{ inputs.js-engine }} \
             -PARM64Only \
             -PNDK_VERSION=${{ env.NDK_VERSION }} \
-            -PSANITIZERS=OFF
+            -PSANITIZERS=OFF \
+            ${EXTRA_ARGS}
