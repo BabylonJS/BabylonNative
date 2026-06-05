@@ -1871,7 +1871,11 @@ namespace Babylon
             throw Napi::Error::New(info.Env(), "Failed to create frame buffer");
         }
 
-        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, generateDepth, generateStencilBuffer, depthStencilAttachmentIndex);
+        // Stencil-without-depth still allocates a combined depth/stencil attachment above, so the framebuffer
+        // genuinely has depth in that case too. Report hasDepth accordingly, otherwise Clear/DrawInternal would
+        // skip depth clear and Z-writes against a depth buffer that actually exists.
+        const bool hasDepthAttachment = generateDepth || generateStencilBuffer;
+        Graphics::FrameBuffer* frameBuffer = new Graphics::FrameBuffer(m_deviceContext, frameBufferHandle, width, height, false, hasDepthAttachment, generateStencilBuffer, depthStencilAttachmentIndex);
 
         // For a standalone depth/stencil texture request, alias the framebuffer's readable depth attachment back
         // into the caller-supplied texture so Babylon can sample it (e.g. fluid rendering's depth copy). The
