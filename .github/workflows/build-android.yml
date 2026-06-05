@@ -30,18 +30,18 @@ jobs:
         if: inputs.js-engine == 'Hermes' && runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build libx11-dev
+          sudo apt-get install -y ninja-build
 
       - name: Build Hermes host compilers
         if: inputs.js-engine == 'Hermes'
         run: |
-          cmake -B Build/HermesHost -G Ninja \
+          git clone --depth 1 --branch hermes-integration https://github.com/CedricGuillemet/JsRuntimeHost.git Build/JsRuntimeHostHost
+          cmake -B Build/HermesHost -G Ninja -S Build/JsRuntimeHostHost \
             -D CMAKE_BUILD_TYPE=RelWithDebInfo \
             -D NAPI_JAVASCRIPT_ENGINE=Hermes \
             -D HERMES_UNICODE_LITE=ON \
             -D HERMES_ALLOW_BOOST_CONTEXT=0 \
-            -D BABYLON_NATIVE_BUILD_APPS=OFF \
-            -D BABYLON_NATIVE_INSTALL=OFF
+            -D JSRUNTIMEHOST_TESTS=OFF
           cmake --build Build/HermesHost --target hermesc shermes --config RelWithDebInfo
 
       - name: Build Playground ${{ inputs.js-engine }}
