@@ -297,5 +297,11 @@ if(NAPI_JAVASCRIPT_ENGINE STREQUAL "Hermes")
         NAPI_HERMES_MAX_HEAP_SIZE_MB=${NAPI_HERMES_MAX_HEAP_SIZE_MB})
 endif()
 
+# Expose the selected engine as a compile definition so engine-agnostic consumers (the node_lite test
+# harness) can branch on engine capability instead of guessing from the platform
+# (__APPLE__ == JSC / __ANDROID__ == V8 breaks Android-JSC, Linux-V8, Windows-Chakra, ...).
+string(TOUPPER "${NAPI_JAVASCRIPT_ENGINE}" NAPI_ENGINE_UPPER)
+target_compile_definitions(napi PUBLIC JSR_NAPI_ENGINE_${NAPI_ENGINE_UPPER})
+
 set_property(TARGET napi PROPERTY FOLDER Dependencies)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})

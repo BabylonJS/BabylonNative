@@ -3,17 +3,17 @@
 #include <napi/js_native_api.h>
 #include <napi/js_native_api_types.h>
 
-#if defined(__APPLE__)
+#if defined(JSR_NAPI_ENGINE_JAVASCRIPTCORE)
 #include <JavaScriptCore/JavaScript.h>
 #include "js_native_api_javascriptcore.h"
-#elif defined(__ANDROID__)
+#elif defined(JSR_NAPI_ENGINE_V8)
 #include <v8.h>
 #include "js_native_api_v8.h"
 #endif
 
 struct jsr_napi_env_scope_s {
   napi_env env{nullptr};
-#if defined(__ANDROID__)
+#if defined(JSR_NAPI_ENGINE_V8)
   v8::Global<v8::Context> context;
 #endif
 };
@@ -26,7 +26,7 @@ napi_status jsr_open_napi_env_scope(napi_env env,
 
   auto* scope_impl = new jsr_napi_env_scope_s{};
   scope_impl->env = env;
-#if defined(__ANDROID__)
+#if defined(JSR_NAPI_ENGINE_V8)
   // node_lite calls Node-API outside any napi callback, so V8 has no *current context*. The env
   // holder already holds a Locker + Isolate::Scope; enter the env's context here (exited in
   // jsr_close_napi_env_scope) so calls such as napi_create_object -> v8::Object::New(isolate),
@@ -50,7 +50,7 @@ napi_status jsr_close_napi_env_scope(napi_env /*env*/,
     return napi_invalid_arg;
   }
 
-#if defined(__ANDROID__)
+#if defined(JSR_NAPI_ENGINE_V8)
   if (scope->env != nullptr) {
     v8::Isolate* isolate = scope->env->isolate;
     v8::HandleScope handle_scope(isolate);
@@ -71,7 +71,7 @@ napi_status jsr_run_script(napi_env env,
 }
 
 napi_status jsr_collect_garbage(napi_env env) {
-#if defined(__APPLE__)
+#if defined(JSR_NAPI_ENGINE_JAVASCRIPTCORE)
   if (env == nullptr) {
     return napi_invalid_arg;
   }
@@ -83,7 +83,7 @@ napi_status jsr_collect_garbage(napi_env env) {
 
   JSGarbageCollect(context);
   return napi_ok;
-#elif defined(__ANDROID__)
+#elif defined(JSR_NAPI_ENGINE_V8)
   if (env == nullptr) {
     return napi_invalid_arg;
   }

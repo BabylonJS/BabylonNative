@@ -7,10 +7,10 @@
 #include <memory>
 #include <utility>
 
-#if defined(__APPLE__)
+#if defined(JSR_NAPI_ENGINE_JAVASCRIPTCORE)
 #include <JavaScriptCore/JavaScript.h>
 #include "js_native_api_javascriptcore.h"
-#elif defined(__ANDROID__)
+#elif defined(JSR_NAPI_ENGINE_V8)
 #include <v8.h>
 #include "js_native_api_v8.h"
 #endif
@@ -25,10 +25,10 @@ class JsRuntimeHostEnvHolder : public IEnvHolder {
       std::shared_ptr<NodeLiteTaskRunner> /*taskRunner*/,
       std::function<void(napi_env, napi_value)> onUnhandledError)
       : onUnhandledError_(std::move(onUnhandledError)) {
-#if defined(__APPLE__)
+#if defined(JSR_NAPI_ENGINE_JAVASCRIPTCORE)
     context_ = JSGlobalContextCreateInGroup(nullptr, nullptr);
     env_ = Napi::Attach(context_);
-#elif defined(__ANDROID__)
+#elif defined(JSR_NAPI_ENGINE_V8)
     // V8's platform is process-global and is already initialized by JsRuntimeHost -- the host
     // AppRuntime that UnitTestsJNI links and that runs (via the regular V8 unit tests) before these
     // in-process Node-API tests. Initializing it a second time aborts V8 with "Wrong initialization
@@ -59,7 +59,7 @@ class JsRuntimeHostEnvHolder : public IEnvHolder {
   }
 
   ~JsRuntimeHostEnvHolder() override {
-#if defined(__APPLE__)
+#if defined(JSR_NAPI_ENGINE_JAVASCRIPTCORE)
     if (env_ != nullptr) {
       Napi::Env napiEnv{env_};
 
@@ -85,7 +85,7 @@ class JsRuntimeHostEnvHolder : public IEnvHolder {
       JSGlobalContextRelease(context_);
       context_ = nullptr;
     }
-#elif defined(__ANDROID__)
+#elif defined(JSR_NAPI_ENGINE_V8)
     if (env_ != nullptr && isolate_ != nullptr) {
       // Still locked + isolate-scoped on this thread via locker_/isolate_scope_ (held members).
       v8::HandleScope handle_scope(isolate_);
@@ -131,9 +131,9 @@ class JsRuntimeHostEnvHolder : public IEnvHolder {
   napi_env getEnv() override { return env_; }
 
  private:
-#if defined(__APPLE__)
+#if defined(JSR_NAPI_ENGINE_JAVASCRIPTCORE)
   JSGlobalContextRef context_{};
-#elif defined(__ANDROID__)
+#elif defined(JSR_NAPI_ENGINE_V8)
   v8::Isolate* isolate_{nullptr};
   std::unique_ptr<v8::Locker> locker_{};
   std::unique_ptr<v8::Isolate::Scope> isolate_scope_{};
