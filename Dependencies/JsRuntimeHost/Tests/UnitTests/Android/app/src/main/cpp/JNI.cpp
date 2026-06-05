@@ -7,60 +7,8 @@
 #include "Babylon/StandardStreamLogger.h"
 #include <Shared/Shared.h>
 
-#include <pthread.h>
-#include <unistd.h>
-#include <cstdio>
-#include <string>
-
-namespace {
-
-// The conformance suite runs gtest in-process and writes results (including failure file/line/message)
-// to stdout/stderr, which Android otherwise discards. Pump both to logcat so test output -- and any
-// native crash context printed before the process dies -- is actually visible (e.g.
-// `adb logcat -s NodeApiTests`). Without this the only signal is the JUnit "expected 0, was 1".
-void* PumpStdioToLogcat(void* arg) {
-    int read_fd = *static_cast<int*>(arg);
-    char buffer[1024];
-    std::string line;
-    ssize_t count;
-    while ((count = read(read_fd, buffer, sizeof(buffer) - 1)) > 0) {
-        buffer[count] = '\0';
-        line += buffer;
-        std::string::size_type newline;
-        while ((newline = line.find('\n')) != std::string::npos) {
-            __android_log_write(ANDROID_LOG_INFO, "NodeApiTests", line.substr(0, newline).c_str());
-            line.erase(0, newline + 1);
-        }
-    }
-    return nullptr;
-}
-
-void RedirectStdioToLogcat() {
-    static int pipe_fds[2];
-    static bool installed = false;
-    if (installed) {
-        return;
-    }
-    installed = true;
-    setvbuf(stdout, nullptr, _IOLBF, 0);
-    setvbuf(stderr, nullptr, _IONBF, 0);
-    if (pipe(pipe_fds) != 0) {
-        return;
-    }
-    dup2(pipe_fds[1], STDOUT_FILENO);
-    dup2(pipe_fds[1], STDERR_FILENO);
-    pthread_t thread;
-    if (pthread_create(&thread, nullptr, PumpStdioToLogcat, &pipe_fds[0]) == 0) {
-        pthread_detach(thread);
-    }
-}
-
-}  // namespace
-
 extern "C" JNIEXPORT jint JNICALL
 Java_com_jsruntimehost_unittests_Native_javaScriptTests(JNIEnv* env, jclass clazz, jobject context) {
-    RedirectStdioToLogcat();
-
     JavaVM* javaVM{};
     if (env->GetJavaVM(&javaVM) != JNI_OK)
     {
@@ -76,7 +24,6 @@ Java_com_jsruntimehost_unittests_Native_javaScriptTests(JNIEnv* env, jclass claz
     jclass webSocketClass{env->FindClass("com/jsruntimehost/unittests/WebSocket")};
     java::websocket::WebSocketClient::InitializeJavaWebSocketClass(webSocketClass, env);
 
-    android::global::Initialize(javaVM, context);
     jclass contextClass = env->GetObjectClass(context);
     jmethodID getApplicationContext = env->GetMethodID(contextClass, "getApplicationContext", "()Landroid/content/Context;");
     jobject applicationContext = env->CallObjectMethod(context, getApplicationContext);
