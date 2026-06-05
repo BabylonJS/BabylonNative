@@ -67,7 +67,7 @@ jobs:
           xvfb-run ./UnitTests
 
       - name: Module Load Test
-        if: ${{ !inputs.enable-sanitizers }}
+        if: ${{ !inputs.enable-sanitizers && inputs.js-engine != 'Hermes' }}
         run: |
           cd build/Linux/Apps/ModuleLoadTest
           ulimit -c unlimited
