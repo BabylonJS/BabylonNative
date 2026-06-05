@@ -4,6 +4,7 @@
 #ifndef NODE_API_TEST_CHILD_PROCESS_H
 #define NODE_API_TEST_CHILD_PROCESS_H
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
