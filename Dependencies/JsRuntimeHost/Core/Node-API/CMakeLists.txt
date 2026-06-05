@@ -264,7 +264,17 @@ Make sure Hermes was fetched at the top-level CMakeLists.txt and NAPI_JAVASCRIPT
     message(STATUS "Selected ${NAPI_JAVASCRIPT_ENGINE}")
 endif()
 
-add_library(napi ${SOURCES})
+# On Android the Node-API conformance addons are dlopen'd as standalone SHARED .node modules (matching
+# nodejs/node-api-cts's add_node_api_cts_addon model). For an addon's napi_* imports to bind at load,
+# napi must be a shared library that both the host and the addons depend on via a real DT_NEEDED
+# (libnapi.so) -- bionic will not surface a statically-linked host's napi to a dlopen'd module. There
+# is a single napi instance (one libnapi.so) shared by the host and every addon. Elsewhere (the
+# child-process desktop runner) napi stays a static library.
+if(ANDROID)
+    add_library(napi SHARED ${SOURCES})
+else()
+    add_library(napi ${SOURCES})
+endif()
 
 target_include_directories(napi ${INCLUDE_DIRECTORIES})
 target_link_libraries(napi ${LINK_LIBRARIES})

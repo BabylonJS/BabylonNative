@@ -406,10 +406,10 @@ fs::path NodeLiteRuntime::ResolveModulePath(
       return node_module_path;
     }
 #if defined(__ANDROID__)
-    // On Android the conformance addons are statically linked into the host rather than present as
-    // .node files on disk, so the existence check above fails. Resolve to the .node path anyway so
-    // LoadNativeModule runs; node_lite_android resolves the entry points from the in-process static
-    // registry, keyed by this path's stem (the module name).
+    // On Android the addon ships as lib<name>.so in the app's nativeLibraryDir rather than as a .node
+    // file on disk, so the existence check above fails. Resolve to the .node path anyway so
+    // LoadNativeModule runs; node_lite_android dlopens it by soname (lib<stem>.so), resolving its
+    // napi_* imports from the shared libnapi.so.
     return node_module_path;
 #endif
     // See if the module was prefixed with the parent folder to disambiguate C++
