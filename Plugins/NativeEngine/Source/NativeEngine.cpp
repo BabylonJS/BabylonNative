@@ -2,6 +2,9 @@
 
 #include <Babylon/Graphics/Texture.h>
 
+#include <map>
+#include <string>
+
 #include "JsConsoleLogger.h"
 
 #include <arcana/threading/task.h>
@@ -975,6 +978,7 @@ namespace Babylon
         Napi::Value jsProgram = Napi::Pointer<Program>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
         try
         {
+            program->SetSources(vertexSource, fragmentSource);
             program->Initialize(m_shaderProvider.Get(vertexSource, fragmentSource));
         }
         catch (const std::exception& ex)
@@ -993,6 +997,8 @@ namespace Babylon
 
         Program* program = new Program{m_deviceContext};
         Napi::Value jsProgram = Napi::Pointer<Program>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
+
+        program->SetSources(vertexSource, fragmentSource);
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
             [this, vertexSource = std::move(vertexSource), fragmentSource = std::move(fragmentSource), program, cancellationSource{m_cancellationSource}]() {
@@ -2342,6 +2348,47 @@ namespace Babylon
             encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
         }
 
+        // Divisor-driven instancing: a consumer-instanced attribute (divisor==1) recorded at a
+        // base bgfx location below TexCoord3 was compiled to a per-vertex slot. bgfx can only feed
+        // per-instance data into i_data slots (TexCoord3..TexCoord7), so route those attributes to
+        // the correct i_data slot via a lazily-compiled program variant. The target location mirrors
+        // BuildInstanceDataBuffer's reverse-attrib packing: highest base attrib -> TexCoord7.
+        bgfx::ProgramHandle programHandle = m_currentProgram->Handle();
+        if (m_boundVertexArray != nullptr)
+        {
+            const auto& instances = m_boundVertexArray->GetInstances();
+            if (!instances.empty())
+            {
+                std::map<std::string, uint32_t> genericInstancedAttributes;
+                const auto& attributeLocations = m_currentProgram->VertexAttributeLocations();
+                const size_t count = instances.size();
+                size_t ascendingIndex = 0;
+                for (const auto& instance : instances)
+                {
+                    const bgfx::Attrib::Enum attrib = instance.first;
+                    if (attrib < bgfx::Attrib::TexCoord3)
+                    {
+                        const size_t rank = count - 1 - ascendingIndex;
+                        const uint32_t targetLocation = static_cast<uint32_t>(bgfx::Attrib::TexCoord7) - static_cast<uint32_t>(rank);
+                        for (const auto& [name, location] : attributeLocations)
+                        {
+                            if (location == static_cast<uint32_t>(attrib))
+                            {
+                                genericInstancedAttributes.emplace(name, targetLocation);
+                                break;
+                            }
+                        }
+                    }
+                    ++ascendingIndex;
+                }
+
+                if (!genericInstancedAttributes.empty())
+                {
+                    programHandle = m_currentProgram->GetOrCreateInstancedVariant(genericInstancedAttributes, m_shaderProvider);
+                }
+            }
+        }
+
         auto& boundFrameBuffer = GetBoundFrameBuffer();
         if (boundFrameBuffer.HasDepth())
         {
@@ -2355,7 +2402,7 @@ namespace Babylon
         boundFrameBuffer.SetStencil(*encoder, m_stencilState);
 
         // Discard everything except textures since we keep the state of everything else.
-        boundFrameBuffer.Submit(*encoder, m_currentProgram->Handle(), BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
+        boundFrameBuffer.Submit(*encoder, programHandle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
     }
 
     Graphics::FrameBuffer& NativeEngine::GetBoundFrameBuffer()

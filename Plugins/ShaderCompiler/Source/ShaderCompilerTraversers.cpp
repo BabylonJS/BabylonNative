@@ -12,6 +12,7 @@
 #include <gsl/gsl>
 
 #include <stdexcept>
+#include <string>
 #include <arcana/macros.h>
 
 using namespace glslang;
@@ -552,8 +553,12 @@ namespace Babylon::ShaderCompilerTraversers
                 replacementToOriginalName[newName] = name;
             }
 
-            static bool IsInstance(const char* name)
+            bool IsInstance(const char* name) const
             {
+                if (m_instancedAttributes != nullptr && m_instancedAttributes->count(name) != 0)
+                {
+                    return true;
+                }
                 return (!strcmp(name, "world0") ||
                         !strcmp(name, "world1") ||
                         !strcmp(name, "world2") ||
@@ -565,7 +570,27 @@ namespace Babylon::ShaderCompilerTraversers
                         !strcmp(name, "splatIndex3"));
             }
 
+            // True when the name has no built-in instance mapping and must be assigned a
+            // generic per-instance i_data slot (top TEXCOORD semantics).
+            bool IsGenericInstance(const char* name) const
+            {
+                if (m_instancedAttributes == nullptr || m_instancedAttributes->count(name) == 0)
+                {
+                    return false;
+                }
+                return strcmp(name, "world0") != 0 &&
+                       strcmp(name, "world1") != 0 &&
+                       strcmp(name, "world2") != 0 &&
+                       strcmp(name, "world3") != 0 &&
+                       strcmp(name, "instanceColor") != 0 &&
+                       strcmp(name, "splatIndex0") != 0 &&
+                       strcmp(name, "splatIndex1") != 0 &&
+                       strcmp(name, "splatIndex2") != 0 &&
+                       strcmp(name, "splatIndex3") != 0;
+            }
+
             unsigned int m_genericAttributesRunningCount{0};
+            const std::map<std::string, uint32_t>* m_instancedAttributes{nullptr};
             std::map<std::string, TIntermSymbol*> m_varyingNameToSymbol{};
             std::vector<std::pair<TIntermSymbol*, TIntermNode*>> m_symbolsToParents{};
 
@@ -607,18 +632,21 @@ namespace Babylon::ShaderCompilerTraversers
         class VertexVaryingInTraverserOpenGL final : private VertexVaryingInTraverser
         {
         public:
-            static void Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
+            static void Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
             {
                 auto intermediate{program.getIntermediate(EShLangVertex)};
                 VertexVaryingInTraverserOpenGL traverser{};
+                traverser.m_instancedAttributes = &instancedAttributes;
                 intermediate->getTreeRoot()->traverse(&traverser);
 
                 // Pre-count instance attributes so i_data names can be assigned in reverse.
                 // bgfx maps i_data0 to the last attribute (TEXCOORD7), so instance names
-                // must be assigned in reverse order, matching the Metal traverser.
+                // must be assigned in reverse order, matching the Metal traverser. Generic
+                // (consumer-declared) instanced attributes are excluded here because they are
+                // routed to an explicit i_data slot from their caller-supplied location.
                 for (const auto& [name, symbol] : traverser.m_varyingNameToSymbol)
                 {
-                    if (IsInstance(name.c_str()))
+                    if (traverser.IsInstance(name.c_str()) && !traverser.IsGenericInstance(name.c_str()))
                     {
                         traverser.m_instanceAttributeCount++;
                     }
@@ -635,6 +663,17 @@ namespace Babylon::ShaderCompilerTraversers
                 // the first attribute encountered with the symbol bgfx uses for attribute 0 and increment for each subsequent attribute encountered.
                 // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
                 m_genericAttributesRunningCount++;
+                if (IsGenericInstance(name))
+                {
+                    // Consumer-declared instanced attribute: route to the explicit bgfx i_data
+                    // slot derived from its caller-supplied per-instance location (TEXCOORD7 ==
+                    // i_data0, descending), matching BuildInstanceDataBuffer's packing and the D3D path.
+                    const unsigned int location = m_instancedAttributes->at(name);
+                    const unsigned int slot = static_cast<unsigned int>(bgfx::Attrib::TexCoord7) - location;
+                    if (slot >= BX_COUNTOF(s_attribInstanceName))
+                        throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[slot]};
+                }
                 if (IsInstance(name))
                 {
                     // Reverse: bgfx maps i_data0 to the highest semantic (TEXCOORD7),
@@ -652,10 +691,11 @@ namespace Babylon::ShaderCompilerTraversers
         class VertexVaryingInTraverserMetal final : private VertexVaryingInTraverser
         {
         public:
-            static void Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
+            static void Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
             {
                 auto intermediate{program.getIntermediate(EShLangVertex)};
                 VertexVaryingInTraverserMetal traverser{};
+                traverser.m_instancedAttributes = &instancedAttributes;
                 intermediate->getTreeRoot()->traverse(&traverser);
                 traverser.Traverse(intermediate, ids, replacementToOriginalName);
             }
@@ -685,7 +725,10 @@ namespace Babylon::ShaderCompilerTraversers
                         const bool isInstance = IsInstance(name.c_str());
                         if ((pass == 0 && isInstance) || (pass == 1 && !isInstance))
                         {
-                            if (pass == 0)
+                            // Count only built-in instance attributes for the reverse i_data
+                            // assignment; generic (consumer-declared) instanced attributes are
+                            // routed to an explicit i_data slot from their caller-supplied location.
+                            if (pass == 0 && !IsGenericInstance(name.c_str()))
                             {
                                 m_instanceAttributeCount++;
                             }
@@ -706,6 +749,17 @@ namespace Babylon::ShaderCompilerTraversers
                 // This will cause our shader to have nonsensical naming, but will allow us to efficiently "pack" the attributes.
 
                 m_genericAttributesRunningCount++;
+                if (IsGenericInstance(name))
+                {
+                    // Consumer-declared instanced attribute: route to the explicit bgfx i_data
+                    // slot derived from its caller-supplied per-instance location (TEXCOORD7 ==
+                    // i_data0, descending), matching BuildInstanceDataBuffer's packing and the D3D path.
+                    const unsigned int location = m_instancedAttributes->at(name);
+                    const unsigned int slot = static_cast<unsigned int>(bgfx::Attrib::TexCoord7) - location;
+                    if (slot >= BX_COUNTOF(s_attribInstanceName))
+                        throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
+                    return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[slot]};
+                }
                 if (IsInstance(name))
                 {
                     return {static_cast<unsigned int>(m_genericAttributesRunningCount - 1), s_attribInstanceName[--m_instanceAttributeCount]};
@@ -722,10 +776,11 @@ namespace Babylon::ShaderCompilerTraversers
         class VertexVaryingInTraverserD3D final : private VertexVaryingInTraverser
         {
         public:
-            static void Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
+            static void Traverse(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
             {
                 auto intermediate{program.getIntermediate(EShLangVertex)};
                 VertexVaryingInTraverserD3D traverser{};
+                traverser.m_instancedAttributes = &instancedAttributes;
                 intermediate->getTreeRoot()->traverse(&traverser);
                 // UVs are effectively a special kind of generic attribute since they both use
                 // are implemented using texture coordinates, so we preprocess to pre-count the
@@ -743,6 +798,19 @@ namespace Babylon::ShaderCompilerTraversers
         private:
             std::pair<unsigned int, const char*> GetVaryingLocationAndNewNameForName(const char* name)
             {
+                // Consumer-declared instanced attributes with no built-in mapping (e.g. the
+                // fluid renderer's `position` or an instanced `color`) are routed to the bgfx
+                // per-instance i_data location supplied by the caller. That location is derived
+                // from the draw-time instance packing order (TEXCOORD7 == i_data0, descending),
+                // so per-instance data reaches the shader instead of the per-vertex input.
+                if (IsGenericInstance(name))
+                {
+                    const unsigned int location = m_instancedAttributes->at(name);
+                    const unsigned int slot = static_cast<unsigned int>(bgfx::Attrib::TexCoord7) - location;
+                    if (slot >= BX_COUNTOF(s_attribInstanceName))
+                        throw std::runtime_error(std::string{"Instanced attribute '"} + name + "' has location " + std::to_string(location) + " which does not map to a valid bgfx i_data slot (computed slot " + std::to_string(slot) + ").");
+                    return {location, s_attribInstanceName[slot]};
+                }
 #define IF_NAME_RETURN_ATTRIB(varyingName, attrib, newName)  \
     if (std::strcmp(name, varyingName) == 0)                 \
     {                                                        \
@@ -1617,19 +1685,19 @@ namespace Babylon::ShaderCompilerTraversers
         return UniformTypeChangeTraverser::Traverse(program, ids);
     }
 
-    void AssignLocationsAndNamesToVertexVaryingsOpenGL(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
+    void AssignLocationsAndNamesToVertexVaryingsOpenGL(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
     {
-        VertexVaryingInTraverserOpenGL::Traverse(program, ids, replacementToOriginalName);
+        VertexVaryingInTraverserOpenGL::Traverse(program, ids, replacementToOriginalName, instancedAttributes);
     }
 
-    void AssignLocationsAndNamesToVertexVaryingsMetal(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
+    void AssignLocationsAndNamesToVertexVaryingsMetal(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
     {
-        VertexVaryingInTraverserMetal::Traverse(program, ids, replacementToOriginalName);
+        VertexVaryingInTraverserMetal::Traverse(program, ids, replacementToOriginalName, instancedAttributes);
     }
 
-    void AssignLocationsAndNamesToVertexVaryingsD3D(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName)
+    void AssignLocationsAndNamesToVertexVaryingsD3D(TProgram& program, IdGenerator& ids, std::map<std::string, std::string>& replacementToOriginalName, const std::map<std::string, uint32_t>& instancedAttributes)
     {
-        VertexVaryingInTraverserD3D::Traverse(program, ids, replacementToOriginalName);
+        VertexVaryingInTraverserD3D::Traverse(program, ids, replacementToOriginalName, instancedAttributes);
     }
 
     void SplitSamplersIntoSamplersAndTextures(TProgram& program, IdGenerator& ids)
