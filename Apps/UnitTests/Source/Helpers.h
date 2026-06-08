@@ -7,12 +7,22 @@
 
 namespace Helpers
 {
+    struct Color
+    {
+        uint8_t R, G, B, A;
+    };
+
     // Creates a 2D texture (or 2D array if arraySize > 1). When renderTarget is true, the texture
     // also gets the render-target bind flag so it can be wrapped as the color attachment of a
     // bgfx framebuffer via wrapNativeTexture. samples > 1 requires renderTarget = true.
     // Implemented for D3D11 and Metal; D3D12 / OpenGL throw.
     Babylon::Graphics::TextureT CreateTexture(Babylon::Graphics::DeviceT device, uint32_t width, uint32_t height, uint32_t arraySize = 1, bool renderTarget = false, uint32_t samples = 1);
     void DestroyTexture(Babylon::Graphics::TextureT texture);
+
+    // Creates a 2D texture array initialized to one solid color per slice. Used by
+    // Tests.ExternalTexture.Render to compose a multi-slice input texture.
+    // Implemented for D3D11 and Metal; D3D12 / OpenGL throw.
+    Babylon::Graphics::TextureT CreateTextureArrayWithData(Babylon::Graphics::DeviceT device, uint32_t width, uint32_t height, const Color* sliceColors, uint32_t sliceCount);
 
     // Reads back the texture's pixels into an 8-bit RGBA byte buffer (R, G, B, A byte order on all backends).
     // If the texture is multisampled, the samples are resolved down to 1 before the readback.

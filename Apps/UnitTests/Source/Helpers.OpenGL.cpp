@@ -15,6 +15,11 @@ namespace Helpers
         throw std::runtime_error{"not implemented"};
     }
 
+    Babylon::Graphics::TextureT CreateTextureArrayWithData(Babylon::Graphics::DeviceT, uint32_t, uint32_t, const Color*, uint32_t)
+    {
+        throw std::runtime_error{"not implemented"};
+    }
+
     std::vector<uint8_t> ReadPixels(const Babylon::Graphics::PlatformInfo&, Babylon::Graphics::TextureT, uint32_t, uint32_t)
     {
         throw std::runtime_error{"not implemented"};

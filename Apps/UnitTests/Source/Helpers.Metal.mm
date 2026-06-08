@@ -50,6 +50,40 @@ namespace Helpers
         texture->release();
     }
 
+    Babylon::Graphics::TextureT CreateTextureArrayWithData(Babylon::Graphics::DeviceT device, uint32_t width, uint32_t height, const Color* sliceColors, uint32_t sliceCount)
+    {
+        MTL::TextureDescriptor* descriptor = MTL::TextureDescriptor::texture2DDescriptor(
+            MTL::PixelFormatRGBA8Unorm, width, height, false);
+        descriptor->setTextureType(MTL::TextureType2DArray);
+        descriptor->setArrayLength(sliceCount);
+        descriptor->setUsage(MTL::TextureUsageShaderRead);
+        descriptor->setStorageMode(MTL::StorageModeManaged);
+
+        MTL::Texture* texture = device->newTexture(descriptor);
+        EXPECT_NE(texture, nullptr);
+
+        const uint32_t bytesPerRow = width * 4;
+        const uint32_t sliceSize = bytesPerRow * height;
+        std::vector<uint8_t> pixels(sliceSize);
+
+        for (uint32_t s = 0; s < sliceCount; ++s)
+        {
+            for (uint32_t i = 0; i < width * height; ++i)
+            {
+                uint8_t* p = pixels.data() + i * 4;
+                p[0] = sliceColors[s].R;
+                p[1] = sliceColors[s].G;
+                p[2] = sliceColors[s].B;
+                p[3] = sliceColors[s].A;
+            }
+
+            MTL::Region region = MTL::Region::Make2D(0, 0, width, height);
+            texture->replaceRegion(region, 0, s, pixels.data(), bytesPerRow, 0);
+        }
+
+        return texture;
+    }
+
     std::vector<uint8_t> ReadPixels(const Babylon::Graphics::PlatformInfo& platformInfo, Babylon::Graphics::TextureT texture, uint32_t width, uint32_t height)
     {
         const bool isMsaa = texture->sampleCount() > 1;
