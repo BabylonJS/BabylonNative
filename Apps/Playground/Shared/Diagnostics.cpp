@@ -124,11 +124,19 @@ namespace
     bool OnBxAssert(const bx::Location& location, uint32_t skip, const char* format, va_list args)
     {
         // Guard against re-entry if formatting/stack-walking itself faults.
+        // Returning false here would tell bx to *continue* past the failed
+        // assert / propagate the exception, i.e. keep running in an
+        // already-failing state. Instead fail fast deterministically: skip the
+        // (faulting) formatting path, emit a minimal marker, and exit.
         static std::atomic<bool> s_inHandler{false};
         bool expected = false;
         if (!s_inHandler.compare_exchange_strong(expected, true))
         {
-            return false;
+            std::fputs("\n--- BN: CRASH (re-entrant) ---\n", stderr);
+            std::fflush(stderr);
+            Diagnostics::SetExitCode(3);
+            Diagnostics::PrintFinishLine();
+            std::_Exit(3);
         }
 
         // bx's exception-handler call sites (SEH filter, pure-call) pass
