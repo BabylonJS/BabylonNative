@@ -279,34 +279,6 @@ if(TARGET MachineIndependent)
 endif()
 
 # --------------------------------------------------
-# WebP
-# --------------------------------------------------
-if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP)
-    set(WEBP_BUILD_ANIM_UTILS OFF)
-    set(WEBP_BUILD_CWEBP OFF)
-    set(WEBP_BUILD_DWEBP OFF)
-    set(WEBP_BUILD_GIF2WEBP OFF)
-    set(WEBP_BUILD_IMG2WEBP OFF)
-    set(WEBP_BUILD_VWEBP OFF)
-    set(WEBP_BUILD_WEBPINFO OFF)
-    set(WEBP_BUILD_LIBWEBPMUX OFF)
-    set(WEBP_BUILD_WEBPMUX OFF)
-    set(WEBP_BUILD_EXTRAS OFF)
-    FetchContent_MakeAvailable_With_Message(libwebp)
-
-    set_property(TARGET sharpyuv PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webp PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpdecode PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpdecoder PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpdemux PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpdsp PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpdspdecode PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webpencode PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webputils PROPERTY FOLDER Dependencies/libwebp)
-    set_property(TARGET webputilsdecode PROPERTY FOLDER Dependencies/libwebp)
-endif()
-
-# --------------------------------------------------
 # WindowsAppSDK
 # --------------------------------------------------
 if(WINDOWS_STORE)
