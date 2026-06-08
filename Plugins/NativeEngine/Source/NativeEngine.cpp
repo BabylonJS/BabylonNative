@@ -21,9 +21,11 @@
 
 #include <stb/stb_image_resize2.h>
 #include <bx/math.h>
+#include <bx/error.h>
 #endif
 
 #include <cmath>
+#include <limits>
 
 #if defined(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES) && defined(WEBP)
 #include <webp/decode.h>
@@ -188,7 +190,12 @@ namespace Babylon
 
         bimg::ImageContainer* ParseImage(bx::AllocatorI& allocator, gsl::span<uint8_t> data)
         {
-            bimg::ImageContainer* image{bimg::imageParse(&allocator, data.data(), static_cast<uint32_t>(data.size()))};
+            // Pass a bx::ErrorIgnore so bimg::imageParse reports unrecognized
+            // formats (e.g. WebP, handled by the fallback below) by returning
+            // nullptr instead of tripping its internal BX_ERROR_SCOPE assert.
+            // ErrorIgnore intentionally swallows any error that is set.
+            bx::ErrorIgnore parseError;
+            bimg::ImageContainer* image{bimg::imageParse(&allocator, data.data(), static_cast<uint32_t>(data.size()), bimg::TextureFormat::Count, &parseError)};
             if (image == nullptr)
             {
 #ifdef WEBP
@@ -734,6 +741,8 @@ namespace Babylon
 
                 InstanceMethod("populateFrameStats", &NativeEngine::PopulateFrameStats),
 
+                // setDeviceLostCallback is a deprecated alias. Prefer setRenderResetCallback.
+                InstanceMethod("setRenderResetCallback", &NativeEngine::SetRenderResetCallback),
                 InstanceMethod("setDeviceLostCallback", &NativeEngine::SetRenderResetCallback),
             });
 
@@ -1393,9 +1402,9 @@ namespace Babylon
 #else
         const auto texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
         const auto data = info[1].As<Napi::TypedArray>();
-        const auto width{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
-        const auto height{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
-        const auto depth{static_cast<uint16_t>(info[4].As<Napi::Number>().Int32Value())};
+        const auto rawWidth{info[2].As<Napi::Number>().Uint32Value()};
+        const auto rawHeight{info[3].As<Napi::Number>().Uint32Value()};
+        const auto rawDepth{info[4].As<Napi::Number>().Uint32Value()};
         const auto format{static_cast<bimg::TextureFormat::Enum>(info[5].As<Napi::Number>().Uint32Value())};
         const auto generateMips = info[6].As<Napi::Boolean>().Value();
         const auto invertY = info[7].As<Napi::Boolean>().Value();
@@ -1410,12 +1419,35 @@ namespace Babylon
             throw Napi::Error::New(Env(), "Texture 2D array currently do not support invert Y.");
         }
 
+        // width/height/depth originate from JS. Validate the raw 32-bit values
+        // against the GPU limits before narrowing to uint16_t, otherwise an
+        // out-of-range value (e.g. 70000) would wrap into an in-range uint16_t
+        // and slip past this check, driving an oversized allocation or an
+        // out-of-bounds read in the renderer.
+        const auto maxTextureSize = bgfx::getCaps()->limits.maxTextureSize;
+        const auto maxTextureLayers = bgfx::getCaps()->limits.maxTextureLayers;
+        if (rawWidth == 0 || rawHeight == 0 || rawDepth == 0 ||
+            rawWidth > maxTextureSize ||
+            rawHeight > maxTextureSize ||
+            rawDepth > maxTextureLayers)
+        {
+            throw Napi::Error::New(Env(), "Invalid width, height, or depth for the 2D texture array.");
+        }
+
+        const auto width{static_cast<uint16_t>(rawWidth)};
+        const auto height{static_cast<uint16_t>(rawHeight)};
+        const auto depth{static_cast<uint16_t>(rawDepth)};
+
         uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE | BGFX_CAPS_TEXTURE_2D_ARRAY};
         texture->Create2D(width, height, generateMips, depth, Cast(format), flags);
 
         if (!data.IsNull())
         {
-            if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, depth, format))
+            // imageGetSize returns the full size in 64-bit; compare against the
+            // 64-bit byte length so a crafted width/height/depth cannot wrap the
+            // expected size and slip an undersized buffer past this check.
+            const uint64_t expectedSize{bimg::imageGetSize(nullptr, width, height, 1, false, false, depth, format)};
+            if (expectedSize == 0 || static_cast<uint64_t>(data.ByteLength()) != expectedSize)
             {
                 throw Napi::Error::New(Env(), "The data size does not match width, height, depth and format");
             }
@@ -1424,6 +1456,13 @@ namespace Babylon
             size_t dataSize = data.ByteLength();
 
             size_t textureSize = dataSize / static_cast<size_t>(depth);
+
+            // bgfx::Memory uses a 32-bit size; reject a per-layer payload that
+            // would be truncated by the bgfx::copy cast below.
+            if (textureSize > UINT32_MAX)
+            {
+                throw Napi::Error::New(Env(), "The 2D texture array layer size is too large.");
+            }
 
             for (uint16_t i = 0; i < depth; i++)
             {
@@ -1671,8 +1710,12 @@ namespace Babylon
             buffer = Napi::ArrayBuffer::New(env, bufferLength);
         }
 
-        // Make sure the buffer is big enough for the offset + length.
-        if (buffer.ByteLength() < bufferOffset + bufferLength)
+        // Make sure the buffer is big enough for the offset + length. Both
+        // bufferOffset and bufferLength are JS-supplied uint32_t, so widen the
+        // addition to 64-bit: computing it in 32-bit can wrap around (e.g. offset
+        // 0xF0000000 + length 0x20000000), letting an out-of-range offset pass this
+        // gate and overflow the ArrayBuffer backing store in the memcpy below.
+        if (buffer.ByteLength() < static_cast<uint64_t>(bufferOffset) + bufferLength)
         {
             deferred.Reject(Napi::Error::New(env, "Provided buffer is too small for the specified offset and length.").Value());
         }
@@ -2081,7 +2124,32 @@ namespace Babylon
 
         const Napi::Env env{info.Env()};
 
-        bimg::ImageContainer* image = bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, data.Data());
+        // bufferWidth/bufferHeight are the (JS-controlled) resize target extents.
+        // They feed both the output allocation and stbir's output dimensions
+        // (which are signed int), so bound them to the same 16-bit texture limit
+        // bimg enforces for the source. This also keeps the allocation size below
+        // the 32-bit overflow the naive width*height*4 multiply would otherwise
+        // hit (and that stbir would then write past).
+        if (bufferWidth == 0 || bufferWidth > UINT16_MAX || bufferHeight == 0 || bufferHeight > UINT16_MAX)
+        {
+            throw Napi::Error::New(env, "Invalid target image dimensions for ResizeImageBitmap.");
+        }
+
+        // width/height/format come straight from the (JS-controlled) imageBitmap
+        // object and are later used as the source extents for the resize read.
+        // bimg::imageAlloc rejects dimensions that don't fit in 16 bits (it would
+        // otherwise truncate and under-allocate), so pass the full 32-bit values
+        // and let it validate; a rejected allocation surfaces as the error below.
+        // Also make sure the supplied pixel buffer is large enough for those
+        // dimensions, since imageAlloc memcpy's the source into the new container
+        // and an undersized buffer would read out of bounds of the JS array.
+        const uint64_t sourceSize = bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, format);
+        if (sourceSize == 0 || data.ByteLength() < sourceSize)
+        {
+            throw Napi::Error::New(env, "Invalid source image dimensions for ResizeImageBitmap.");
+        }
+
+        bimg::ImageContainer* image = bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, 1, 1, false, false, data.Data());
         if (image == nullptr)
         {
             throw Napi::Error::New(env, "Unable to allocate image for ResizeImageBitmap.");
@@ -2102,7 +2170,20 @@ namespace Babylon
             image = rgba;
         }
 
-        auto outputData = Napi::Uint8Array::New(env, bufferWidth * bufferHeight * 4);
+        // Compute the output size in 64-bit and reject anything that doesn't fit
+        // in size_t: on 32-bit builds size_t is 32-bit, so even within the 16-bit
+        // dimension cap above bufferWidth*bufferHeight*4 can exceed it (~17GB) and
+        // wrap to an undersized allocation that stbir_resize would then write past.
+        const uint64_t outputByteCount = static_cast<uint64_t>(bufferWidth) * bufferHeight * 4;
+        if constexpr (std::numeric_limits<size_t>::max() < std::numeric_limits<uint64_t>::max())
+        {
+            if (outputByteCount > static_cast<uint64_t>(std::numeric_limits<size_t>::max()))
+            {
+                throw Napi::Error::New(env, "Requested output buffer is too large for ResizeImageBitmap.");
+            }
+        }
+
+        auto outputData = Napi::Uint8Array::New(env, static_cast<size_t>(outputByteCount));
         if (width != bufferWidth || height != bufferHeight)
         {
             stbir_resize_uint8_linear(static_cast<unsigned char*>(image->m_data), width, height, 0,

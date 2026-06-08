@@ -238,6 +238,22 @@
             evaluateScreenshot(test, screenshot, renderImage, done, compareFunction);
         };
 
+        // Babylon's Scene.executeWhenReady gives up after Scene.onReadyTimeoutDuration
+        // (default 120s): once that elapses it fires onReadyTimeoutObservable and
+        // silently drops the executeWhenReady callback. Some validation scenes load
+        // very large assets (e.g. the EXR Loader's 3240x4800 RGBA32F image, whose
+        // gamma-correct CPU mip generation takes ~3 min under ASAN on the 2-core CI
+        // runner), which legitimately exceeds 120s. Without this the callback is
+        // dropped, the render loop never starts, and the test hangs until the CI
+        // job times out. Extend the budget generously and convert a genuine
+        // never-ready scene into a fast test failure instead of a silent hang.
+        currentScene.onReadyTimeoutDuration = 10 * 60 * 1000;
+        currentScene.onReadyTimeoutObservable.addOnce(function () {
+            console.error("Scene '" + (test.title || "?") + "' did not become ready within " +
+                (currentScene.onReadyTimeoutDuration / 1000) + "s.");
+            failTest(done);
+        });
+
         currentScene.executeWhenReady(function () {
             if (currentScene.activeCamera && currentScene.activeCamera.useAutoRotationBehavior) {
                 currentScene.activeCamera.useAutoRotationBehavior = false;
@@ -396,7 +412,7 @@
                     try {
                         request.onreadystatechange = null;
 
-                        const scriptToRun = request.responseText.replace(/..\/..\/assets\//g, config.root + "/Assets/");
+                        let scriptToRun = request.responseText.replace(/..\/..\/assets\//g, config.root + "/Assets/");
                         scriptToRun = scriptToRun.replace(/..\/..\/Assets\//g, config.root + "/Assets/");
                         scriptToRun = scriptToRun.replace(/\/assets\//g, config.root + "/Assets/");
 

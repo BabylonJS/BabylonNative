@@ -198,7 +198,10 @@ namespace Babylon::ShaderCompilerCommon
                 auto& type = compiler.get_type_from_variable(id);
                 if (var.storage == spv::StorageClassUniformConstant &&
                     type.basetype != spirv_cross::SPIRType::BaseType::SampledImage &&
-                    type.basetype != spirv_cross::SPIRType::BaseType::Sampler)
+                    type.basetype != spirv_cross::SPIRType::BaseType::Sampler &&
+                    type.basetype != spirv_cross::SPIRType::BaseType::Image &&
+                    type.basetype != spirv_cross::SPIRType::BaseType::Struct &&
+                    type.basetype != spirv_cross::SPIRType::BaseType::AtomicCounter)
                 {
                     auto& uniform = info.Uniforms.emplace_back();
                     uniform.Name = compiler.get_name(id);
