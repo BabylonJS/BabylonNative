@@ -54,7 +54,6 @@ jobs:
         run: sudo sysctl -w kernel.core_pattern=core.%p
 
       - name: Validation Tests
-        if: ${{ inputs.js-engine != 'Hermes' }}
         run: |
           cd build/Linux/Apps/Playground
           ulimit -c unlimited
@@ -67,14 +66,14 @@ jobs:
           xvfb-run ./UnitTests
 
       - name: Module Load Test
-        if: ${{ !inputs.enable-sanitizers && inputs.js-engine != 'Hermes' }}
+        if: ${{ !inputs.enable-sanitizers }}
         run: |
           cd build/Linux/Apps/ModuleLoadTest
           ulimit -c unlimited
           xvfb-run ./ModuleLoadTest
 
       - name: Upload Rendered Pictures
-        if: ${{ inputs.js-engine != 'Hermes' && always() }}
+        if: always()
         uses: actions/upload-artifact@v6
         with:
           name: ${{ inputs.cc }}-${{ inputs.js-engine }}${{ inputs.enable-sanitizers && '-sanitizer' || '' }}-rendered-pictures
