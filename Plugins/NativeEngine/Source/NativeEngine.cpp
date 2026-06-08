@@ -1601,7 +1601,17 @@ namespace Babylon
         const UniformInfo* uniformInfo = data.ReadPointer<UniformInfo>();
         const Graphics::Texture* texture = data.ReadPointer<Graphics::Texture>();
 
-        encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle(), texture->SamplerFlags());
+        const uint16_t numLayers = texture->ViewNumLayers();
+        if (numLayers != 0)
+        {
+            // Select a single array slice of a multi-layer texture at bind time (e.g. NV12 decoder
+            // frame-pool slice). The texture itself stays a full TEXTURE2DARRAY.
+            encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle(), texture->ViewFirstLayer(), numLayers, 0, UINT8_MAX, texture->SamplerFlags());
+        }
+        else
+        {
+            encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle(), texture->SamplerFlags());
+        }
     }
 
     void NativeEngine::UnsetTexture(NativeDataStream::Reader& data)

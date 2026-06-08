@@ -46,7 +46,7 @@ namespace Babylon::Plugins
         // state (m_info, derived m_ptr, m_textures) consistently and to mutate m_textures.
         // They contain no JS callouts, so the lock is never held across user-visible JS
         // execution -- preventing the recursive-mutex / finalizer-reentrancy bug class.
-        Graphics::Texture* CreateTexture(Graphics::DeviceContext& context);
+        Graphics::Texture* CreateTexture(Graphics::DeviceContext& context, std::optional<uint16_t> layerIndex);
         void DestroyTexture(Graphics::Texture* texture);
 
     protected:
@@ -74,7 +74,7 @@ namespace Babylon::Plugins
 
         // Re-attaches every registered Graphics::Texture to a fresh bgfx handle backed by
         // `ptr`. Caller must hold m_mutex (called from the locked region of Impl::Update).
-        void UpdateTextures(Graphics::TextureT ptr)
+        void UpdateTextures(Graphics::TextureT ptr, std::optional<uint16_t> layerIndex)
         {
             for (auto* texture : m_textures)
             {
@@ -95,6 +95,8 @@ namespace Babylon::Plugins
                 }
 
                 texture->Attach(handle, true, m_info.Width, m_info.Height, HasMips(), m_info.NumLayers, m_info.Format, m_info.Flags);
+                texture->ViewFirstLayer(layerIndex.value_or(0));
+                texture->ViewNumLayers(layerIndex.has_value() ? 1 : 0);
             }
         }
 

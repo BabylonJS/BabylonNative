@@ -14,7 +14,7 @@ namespace Babylon::Plugins
         Set(ptr);
     }
 
-    void ExternalTexture::Impl::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
+    void ExternalTexture::Impl::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, std::optional<uint16_t> layerIndex)
     {
         Info info;
         GetInfo(ptr, overrideFormat, info);
@@ -28,11 +28,11 @@ namespace Babylon::Plugins
             std::scoped_lock lock{m_mutex};
             m_info = info;
             Set(ptr);
-            UpdateTextures(ptr);
+            UpdateTextures(ptr, layerIndex);
         }
     }
 
-    Graphics::Texture* ExternalTexture::ImplBase::CreateTexture(Graphics::DeviceContext& context)
+    Graphics::Texture* ExternalTexture::ImplBase::CreateTexture(Graphics::DeviceContext& context, std::optional<uint16_t> layerIndex)
     {
         std::scoped_lock lock{m_mutex};
 
@@ -57,6 +57,8 @@ namespace Babylon::Plugins
 
         auto* texture = new Graphics::Texture{context};
         texture->Attach(handle, true, m_info.Width, m_info.Height, HasMips(), m_info.NumLayers, m_info.Format, m_info.Flags);
+        texture->ViewFirstLayer(layerIndex.value_or(0));
+        texture->ViewNumLayers(layerIndex.has_value() ? 1 : 0);
 
         if (!m_textures.insert(texture).second)
         {
@@ -106,7 +108,7 @@ namespace Babylon::Plugins
         return m_impl->Get();
     }
 
-    Napi::Value ExternalTexture::CreateForJavaScript(Napi::Env env) const
+    Napi::Value ExternalTexture::CreateForJavaScript(Napi::Env env, std::optional<uint16_t> layerIndex) const
     {
         // Resolve the DeviceContext outside any lock: the lookup is a JS property read
         // that may run engine GC/finalizers, and finalizers may re-enter the impl mutex.
@@ -115,7 +117,7 @@ namespace Babylon::Plugins
 
         // CreateTexture locks internally and contains no JS callouts, so the
         // mutex is never held across the JS object allocation below.
-        Graphics::Texture* texture = m_impl->CreateTexture(context);
+        Graphics::Texture* texture = m_impl->CreateTexture(context, layerIndex);
 
         return Napi::Pointer<Graphics::Texture>::Create(env, texture, [texture, weakImpl = std::weak_ptr{m_impl}] {
             if (auto impl = weakImpl.lock())
@@ -129,9 +131,9 @@ namespace Babylon::Plugins
         });
     }
 
-    void ExternalTexture::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat)
+    void ExternalTexture::Update(Graphics::TextureT ptr, std::optional<Graphics::TextureFormatT> overrideFormat, std::optional<uint16_t> layerIndex)
     {
-        m_impl->Update(ptr, overrideFormat);
+        m_impl->Update(ptr, overrideFormat, layerIndex);
     }
 
     Napi::Promise ExternalTexture::AddToContextAsync(Napi::Env env) const
