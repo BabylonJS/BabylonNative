@@ -4,6 +4,7 @@
 #include <winrt/base.h>
 
 #include <cstring>
+#include <cassert>
 
 namespace Helpers
 {
@@ -65,6 +66,55 @@ namespace Helpers
         desc.MipLevels = 1;
         desc.ArraySize = sliceCount;
         desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.SampleDesc.Count = 1;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+        ID3D11Texture2D* texture = nullptr;
+        EXPECT_HRESULT_SUCCEEDED(device->CreateTexture2D(&desc, initData.data(), &texture));
+
+        return texture;
+    }
+
+    Babylon::Graphics::TextureT CreateNV12TextureArrayWithData(Babylon::Graphics::DeviceT device, uint32_t width, uint32_t height, const YuvColor* sliceColors, uint32_t sliceCount)
+    {
+        // NV12 requires even dimensions: the chroma (UV) plane is half-resolution in both axes.
+        assert(width % 2 == 0 && height % 2 == 0);
+
+        // One subresource per array slice, with the Y plane and the interleaved UV plane packed
+        // contiguously: [Y: height rows x width bytes][UV: height/2 rows x width bytes]. The UV row
+        // holds width/2 (U,V) byte pairs. SysMemPitch is the luma row stride (width).
+        const uint32_t ySize = width * height;
+        const uint32_t uvSize = width * (height / 2);
+        const uint32_t sliceSize = ySize + uvSize;
+
+        std::vector<uint8_t> pixels(static_cast<size_t>(sliceSize) * sliceCount);
+        for (uint32_t s = 0; s < sliceCount; ++s)
+        {
+            uint8_t* slice = pixels.data() + static_cast<size_t>(s) * sliceSize;
+            std::memset(slice, sliceColors[s].Y, ySize);
+            uint8_t* uv = slice + ySize;
+            for (uint32_t i = 0; i < uvSize / 2; ++i)
+            {
+                uv[i * 2 + 0] = sliceColors[s].U;
+                uv[i * 2 + 1] = sliceColors[s].V;
+            }
+        }
+
+        std::vector<D3D11_SUBRESOURCE_DATA> initData(sliceCount);
+        for (uint32_t s = 0; s < sliceCount; ++s)
+        {
+            initData[s].pSysMem = pixels.data() + static_cast<size_t>(s) * sliceSize;
+            initData[s].SysMemPitch = width;
+            initData[s].SysMemSlicePitch = 0;
+        }
+
+        D3D11_TEXTURE2D_DESC desc{};
+        desc.Width = width;
+        desc.Height = height;
+        desc.MipLevels = 1;
+        desc.ArraySize = sliceCount;
+        desc.Format = DXGI_FORMAT_NV12;
         desc.SampleDesc.Count = 1;
         desc.Usage = D3D11_USAGE_DEFAULT;
         desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;

@@ -13,6 +13,7 @@ set(BABYLONJS_MATERIALS_ASSETS
 set(TEST_ASSETS
     "JavaScript/dist/tests.externalTexture.msaa.js"
     "JavaScript/dist/tests.externalTexture.render.js"
+    "JavaScript/dist/tests.externalTexture.renderNV12.js"
     "JavaScript/dist/tests.javaScript.all.js"
     "JavaScript/dist/tests.shaderCache.basicScene.js"
     "JavaScript/dist/tests.shaders.cross.js")
@@ -40,7 +41,8 @@ endif()
 
 if(GRAPHICS_API STREQUAL "D3D11")
     set(SOURCES ${SOURCES}
-        "Source/Tests.Device.${GRAPHICS_API}.cpp")
+        "Source/Tests.Device.${GRAPHICS_API}.cpp"
+        "Source/Tests.ExternalTexture.RenderNV12.${GRAPHICS_API}.cpp")
 endif()
 
 if(APPLE)
