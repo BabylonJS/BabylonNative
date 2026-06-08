@@ -805,13 +805,25 @@ namespace Babylon::ShaderCompilerTraversers
 
             static void Traverse(TProgram& program, IdGenerator& ids)
             {
-                unsigned int layoutBinding{0};
-                Traverse(program.getIntermediate(EShLangVertex), ids, layoutBinding);
-                Traverse(program.getIntermediate(EShLangFragment), ids, layoutBinding);
+                // bgfx binds samplers using a single per-name "stage" index that is shared between
+                // vertex and fragment shaders (e.g. bgfx Metal's TextureMtl::commit uses the same
+                // `_stage` for both `setVertexTexture` and `setFragmentTexture`). The same sampler
+                // name appearing in both stages must therefore receive the SAME binding number,
+                // otherwise:
+                //   * AppendSamplers' per-name stage map records only one of the two bindings,
+                //     so the other stage cannot resolve the binding and ends up reading garbage.
+                //   * Backends with a per-stage binding limit (Metal allows binding indices 0-15)
+                //     run out of slots much faster if bindings are sequential across stages.
+                // Sharing the binding map across stages also keeps the binding space compact for
+                // shaders that declare many sampler uniforms but only use a few.
+                std::map<std::string, unsigned int> nameToBinding{};
+                unsigned int nextBinding{0};
+                Traverse(program.getIntermediate(EShLangVertex), ids, nameToBinding, nextBinding);
+                Traverse(program.getIntermediate(EShLangFragment), ids, nameToBinding, nextBinding);
             }
 
         private:
-            static void Traverse(TIntermediate* intermediate, IdGenerator& ids, unsigned int& layoutBinding)
+            static void Traverse(TIntermediate* intermediate, IdGenerator& ids, std::map<std::string, unsigned int>& nameToBinding, unsigned int& nextBinding)
             {
                 SamplerSplitterTraverser traverser{};
                 intermediate->getTreeRoot()->traverse(&traverser);
@@ -825,6 +837,21 @@ namespace Babylon::ShaderCompilerTraversers
                 // Create all the new replacers.
                 for (const auto& [name, symbol] : traverser.m_samplerNameToSymbol)
                 {
+                    // Reuse the binding assigned in a previous stage if this sampler name was
+                    // already seen, otherwise assign a new sequential binding. See the comment
+                    // on the public Traverse() overload for why bindings are shared.
+                    unsigned int layoutBinding;
+                    const auto bindingIt = nameToBinding.find(name);
+                    if (bindingIt != nameToBinding.end())
+                    {
+                        layoutBinding = bindingIt->second;
+                    }
+                    else
+                    {
+                        layoutBinding = nextBinding++;
+                        nameToBinding[name] = layoutBinding;
+                    }
+
                     // For each name and symbol, create a replacer.
                     const auto& type = symbol->getType();
 
@@ -879,7 +906,6 @@ namespace Babylon::ShaderCompilerTraversers
                     }
 
                     nameToReplacement[name] = aggregate;
-                    ++layoutBinding;
                 }
 
                 // Perform linker object replacements.

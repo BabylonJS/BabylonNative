@@ -661,7 +661,7 @@ namespace Babylon::Polyfills::Internal
         }
     }
 
-    void Context::Flush(const Napi::CallbackInfo&)
+    void Context::Flush(const Napi::CallbackInfo& info)
     {
         // Pick up any fonts loaded after this Context was created (#1683).
         EnsureFontsLoaded();
@@ -686,46 +686,57 @@ namespace Babylon::Polyfills::Internal
         // now it shares the frame encoder with NativeEngine.
         encoder->discard(BGFX_DISCARD_ALL);
 
-        bool needClear = m_canvas->UpdateRenderTarget();
-
-        Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
-
-        frameBuffer.Bind();
-        if (needClear)
+        try
         {
-            frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
+            // The entire flush is wrapped: bgfx framebuffer pool exhaustion can throw both from
+            // UpdateRenderTarget() and from FrameBufferPool::Acquire() reached via nvgEndFrame()
+            // below. Converting any such C++ failure into a catchable JS error lets the offending
+            // test fail cleanly instead of aborting the whole sweep.
+            const bool needClear = m_canvas->UpdateRenderTarget();
+
+            Graphics::FrameBuffer& frameBuffer = m_canvas->GetFrameBuffer();
+
+            frameBuffer.Bind();
+            if (needClear)
+            {
+                frameBuffer.Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
+            }
+            frameBuffer.SetViewPort(0.f, 0.f, 1.f, 1.f);
+            const auto width = m_canvas->GetWidth();
+            const auto height = m_canvas->GetHeight();
+
+            for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
+            {
+                // sanity check no buffers should have been acquired yet
+                assert(buffer.isAvailable == true);
+            }
+            std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this]() -> Babylon::Graphics::FrameBuffer* {
+                Babylon::Graphics::FrameBuffer *frameBuffer = this->m_canvas->m_frameBufferPool.Acquire();
+                frameBuffer->Bind();
+                return frameBuffer;
+            };
+            std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
+                // clear framebuffer when released
+                frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
+                this->m_canvas->m_frameBufferPool.Release(frameBuffer);
+                frameBuffer->Unbind();
+            };
+
+            nvgBeginFrame(*m_nvg, float(width), float(height), 1.0f);
+            nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder);
+            nvgSetFrameBufferPool(*m_nvg, { acquire, release });
+            nvgEndFrame(*m_nvg);
+            frameBuffer.Unbind();
+
+            for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
+            {
+                // sanity check no unreleased buffers
+                assert(buffer.isAvailable == true);
+            }
         }
-        frameBuffer.SetViewPort(0.f, 0.f, 1.f, 1.f);
-        const auto width = m_canvas->GetWidth();
-        const auto height = m_canvas->GetHeight();
-
-        for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
+        catch (const std::exception& ex)
         {
-            // sanity check no buffers should have been acquired yet
-            assert(buffer.isAvailable == true);
-        }
-        std::function<Babylon::Graphics::FrameBuffer*()> acquire = [this, encoder]() -> Babylon::Graphics::FrameBuffer* {
-            Babylon::Graphics::FrameBuffer *frameBuffer = this->m_canvas->m_frameBufferPool.Acquire();
-            frameBuffer->Bind();
-            return frameBuffer;
-        };
-        std::function<void(Babylon::Graphics::FrameBuffer*)> release = [this, encoder](Babylon::Graphics::FrameBuffer* frameBuffer) -> void {
-            // clear framebuffer when released
-            frameBuffer->Clear(*encoder, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH | BGFX_CLEAR_STENCIL, 0, 1.f, 0);
-            this->m_canvas->m_frameBufferPool.Release(frameBuffer);
-            frameBuffer->Unbind();
-        };
-
-        nvgBeginFrame(*m_nvg, float(width), float(height), 1.0f);
-        nvgSetFrameBufferAndEncoder(*m_nvg, frameBuffer, encoder);
-        nvgSetFrameBufferPool(*m_nvg, { acquire, release });
-        nvgEndFrame(*m_nvg);
-        frameBuffer.Unbind();
-
-        for (auto& buffer : m_canvas->m_frameBufferPool.GetPoolBuffers())
-        {
-            // sanity check no unreleased buffers
-            assert(buffer.isAvailable == true);
+            throw Napi::Error::New(info.Env(), ex.what());
         }
     }
 

@@ -15,7 +15,9 @@
 #include <string>
 
 #if defined(_MSC_VER)
-#define WIN32_LEAN_AND_MEAN
+#   ifndef WIN32_LEAN_AND_MEAN
+#       define WIN32_LEAN_AND_MEAN
+#   endif // WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <crtdbg.h>
 #include <stdlib.h>

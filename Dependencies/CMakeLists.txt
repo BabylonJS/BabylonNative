@@ -53,6 +53,17 @@ target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_THRESH
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_UNIFORM_BUFFER_RESIZE_INCREMENT_SIZE=1024)
 target_compile_definitions(bgfx PUBLIC BGFX_PLATFORM_SUPPORTS_WGSL=0)
 
+# Canvas plugin allocates one bgfx framebuffer per JS Canvas object and per
+# text-rendering operation; combined with V8 GC pacing this can exceed the
+# default 128 limit during long playground sweeps. We enforce a floor of 512:
+# CI workflows pass -DBGFX_CONFIG_MAX_FRAME_BUFFERS, and any value below 512
+# (including a smaller CI override) is clamped up so the pool never regresses
+# below the size the Canvas sweeps need.
+if(NOT BGFX_CONFIG_MAX_FRAME_BUFFERS OR BGFX_CONFIG_MAX_FRAME_BUFFERS LESS 512)
+    set(BGFX_CONFIG_MAX_FRAME_BUFFERS 512)
+endif()
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_FRAME_BUFFERS=${BGFX_CONFIG_MAX_FRAME_BUFFERS})
+
 # Temporary disable uniform debug.
 target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_DEBUG_UNIFORM=0)
 
@@ -80,6 +91,30 @@ set_property(TARGET bgfx PROPERTY FOLDER Dependencies/bgfx)
 set_property(TARGET bimg PROPERTY FOLDER Dependencies/bgfx)
 set_property(TARGET bx PROPERTY FOLDER Dependencies/bgfx)
 target_compile_definitions(bx PRIVATE _CRT_SECURE_NO_WARNINGS)
+
+# The updated tinyexr (vendored by bimg) uses fopen in its file I/O helpers,
+# which MSVC flags as C4996 and fails the warnings-as-errors UWP build. Mirror
+# the bx workaround above and silence the deprecation for the bimg targets that
+# compile the tinyexr implementation.
+foreach(_bimg_target IN ITEMS bimg_decode bimg_encode tinyexr)
+    if(TARGET ${_bimg_target})
+        target_compile_definitions(${_bimg_target} PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
+endforeach()
+
+if(UNIX AND NOT APPLE AND NOT ANDROID AND CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)")
+    # The new bx requires SSE4.2 on x86_64 (see bx scripts/toolchain.lua and
+    # include/bx/inline/simd128_sse.inl which uses _mm_round_ps / _mm_blendv_ps
+    # under "SSE4.1 - always available with SSE4.2 minspec"). bgfx.cmake does
+    # not propagate this flag, so add it explicitly on Linux x86_64 where
+    # GCC/Clang don't enable SSE4.x by default. MSVC and Apple Silicon are
+    # unaffected.
+    foreach(_bx_target IN ITEMS bx bgfx bimg bimg_decode bimg_encode)
+        if(TARGET ${_bx_target})
+            target_compile_options(${_bx_target} PRIVATE -msse4.2)
+        endif()
+    endforeach()
+endif()
 
 if(UNIX AND NOT APPLE AND NOT ANDROID)
     # Use GLVND libraries for EGL support in bgfx
