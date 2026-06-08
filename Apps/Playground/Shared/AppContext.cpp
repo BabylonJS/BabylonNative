@@ -20,6 +20,7 @@
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/Polyfills/Console.h>
+#include <Babylon/Polyfills/File.h>
 #include <Babylon/Polyfills/Performance.h>
 #include <Babylon/Polyfills/TextDecoder.h>
 #include <Babylon/Polyfills/Window.h>
@@ -157,6 +158,7 @@ AppContext::AppContext(
         }
 
         Babylon::Polyfills::Blob::Initialize(env);
+        Babylon::Polyfills::File::Initialize(env);
 
         Babylon::Polyfills::Console::Initialize(env, [env, debugLog](const char* message, Babylon::Polyfills::Console::LogLevel logLevel) {
             std::ostringstream ss{};
