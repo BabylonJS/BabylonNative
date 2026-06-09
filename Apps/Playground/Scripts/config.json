@@ -310,7 +310,7 @@
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Suspected to cause later Win32 D3D11 cascade crash; also pixel diff fail on Linux (56223 px diff)"
+            "reason": "State-leak cascade fixed in validation_native.js (stencil/scissor reset between tests); remains excluded only due to pixel diff fail on Linux (56223 px diff) under 0.9 hardware scaling."
         },
         {
             "title": "Scissor test with 1.5 hardware scaling",
@@ -1194,6 +1194,8 @@
         {
             "title": "Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#67",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Renders black on Linux desktop OpenGL (area-light LTC path unsupported); passes on Win32 D3D11 and Windows ANGLE GL.",
             "referenceImage": "areaLightsStandardMaterial.png"
         },
         {
@@ -1213,6 +1215,8 @@
         {
             "title": "Area Lights - PBR",
             "playgroundId": "#T7FXR8#12",
+            "excludeFromAutomaticTesting": true,
+            "reason": "Renders black on Linux desktop OpenGL (area-light LTC path unsupported); passes on Win32 D3D11 and Windows ANGLE GL.",
             "referenceImage": "areaLightsPBRMaterial.png"
         },
         {
@@ -2036,7 +2040,7 @@
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
             "excludeFromAutomaticTesting": true,
-            "reason": "Suspected to cause later Win32 D3D11 cascade crash; also pixel diff fail on Linux (56223 px diff)"
+            "reason": "State-leak cascade fixed in validation_native.js (stencil/scissor reset between tests); remains excluded only due to pixel diff fail on Linux (56223 px diff) under 0.9 hardware scaling."
         },
         {
             "title": "Scissor test with 1.5 hardware scaling",
@@ -2536,9 +2540,7 @@
         {
             "title": "cube-with-holes-using-stencil-buffer",
             "playgroundId": "#CW5PRI#11",
-            "referenceImage": "cube-with-holes-using-stencil-buffer.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Disabled to land sync PR; newly-added test in cascade path of Win32 V8 D3D11 ACCESS_VIOLATION (-1073741819). Will be re-enabled in follow-up fix PR."
+            "referenceImage": "cube-with-holes-using-stencil-buffer.png"
         },
         {
             "title": "water-material",
