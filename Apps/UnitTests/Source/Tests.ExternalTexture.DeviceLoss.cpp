@@ -141,12 +141,16 @@ TEST(ExternalTexture, RestoreAfterDeviceLoss)
     addToContextCalled.get_future().wait();
     update.Finish();
     device.FinishRenderingCurrentFrame();
-    startupDone.get_future().get();
 
-    // --- Phase 1: render red into texture 1, readback ---
+    // Open the next frame BEFORE waiting on startup(): under the reworked single-frame-encoder
+    // model the AddToContextAsync .then() runs startup() on the JS thread, whose SubmitCommands
+    // blocks until a frame is in progress. The same frame is reused for Phase 1's renderFrame.
     device.StartRenderingCurrentFrame();
     update.Start();
 
+    startupDone.get_future().get();
+
+    // --- Phase 1: render red into texture 1, readback (reuses the open frame) ---
     std::promise<void> render1Done;
     loader.Dispatch([&render1Done](Napi::Env env) {
         auto jsPromise = env.Global().Get("renderFrame").As<Napi::Function>().Call({}).As<Napi::Promise>();
@@ -221,12 +225,15 @@ TEST(ExternalTexture, RestoreAfterDeviceLoss)
     addToContext2Called.get_future().wait();
     update.Finish();
     device.FinishRenderingCurrentFrame();
-    restoreDone.get_future().get();
 
-    // Render blue into restored RTT.
+    // Open the next frame before waiting on restoreTexture(): SubmitCommands needs an open frame
+    // under the reworked model. The same frame is reused for the blue render below.
     device.StartRenderingCurrentFrame();
     update.Start();
 
+    restoreDone.get_future().get();
+
+    // Render blue into restored RTT (reuses the open frame).
     std::promise<void> render2Done;
     loader.Dispatch([&render2Done](Napi::Env env) {
         auto jsPromise = env.Global().Get("renderFrame").As<Napi::Function>().Call({}).As<Napi::Promise>();

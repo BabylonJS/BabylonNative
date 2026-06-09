@@ -135,6 +135,15 @@ int RunApp(
     Babylon::ScriptLoader loader{runtime};
     loader.LoadScript("app:///index.js");
 
+    // Close the script-load frame.
+    deviceUpdate.Finish();
+    device.FinishRenderingCurrentFrame();
+
+    // Open a new frame for `startup` so the JS-side resource creation and
+    // startup() call run in the same frame as the wait that observes them.
+    device.StartRenderingCurrentFrame();
+    deviceUpdate.Start();
+
     std::promise<void> startup{};
 
     // Create an external texture for the render target texture and pass it to
@@ -150,10 +159,12 @@ int RunApp(
         startup.set_value();
     });
 
+    // Wait for `startup` to finish.
+    startup.get_future().wait();
+
+    // Close the startup frame.
     deviceUpdate.Finish();
     device.FinishRenderingCurrentFrame();
-
-    startup.get_future().wait();
 
     // Start a new frame for rendering the scene.
     device.StartRenderingCurrentFrame();

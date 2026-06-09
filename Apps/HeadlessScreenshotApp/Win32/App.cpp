@@ -127,6 +127,15 @@ int main()
     // Create a render target texture for the output.
     winrt::com_ptr<ID3D11Texture2D> outputTexture = CreateD3DRenderTargetTexture(d3dDevice.get());
 
+    // Close the script-load frame.
+    deviceUpdate.Finish();
+    device.FinishRenderingCurrentFrame();
+
+    // Open a new frame for `startup` so the JS-side resource creation and
+    // startup() call run in the same frame as the wait that observes them.
+    device.StartRenderingCurrentFrame();
+    deviceUpdate.Start();
+
     std::promise<void> startup{};
 
     // Create an external texture for the render target texture and pass it to
@@ -142,10 +151,12 @@ int main()
         startup.set_value();
     });
 
+    // Wait for `startup` to finish.
+    startup.get_future().wait();
+
+    // Close the startup frame.
     deviceUpdate.Finish();
     device.FinishRenderingCurrentFrame();
-
-    startup.get_future().wait();
 
     struct Asset
     {
