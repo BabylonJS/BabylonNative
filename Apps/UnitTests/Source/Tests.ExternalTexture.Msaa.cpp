@@ -89,11 +89,16 @@ namespace
         addToContextCalled.get_future().wait();
         update.Finish();
         device.FinishRenderingCurrentFrame();
-        startupDone.get_future().get();
 
-        // New frame: drive a single renderFrame() on the JS side.
+        // Open the next frame BEFORE waiting for startup() to complete. The AddToContextAsync .then()
+        // callback runs on the JS thread and calls startup(), which constructs NativeEngine + Scene + RTT,
+        // each step submitting bgfx commands. In the threading model from #1652, SubmitCommands
+        // synchronously acquires a FrameCompletionScope and blocks until a frame is in progress, so a
+        // frame must be open while startup() runs. The same frame is reused for renderFrame().
         device.StartRenderingCurrentFrame();
         update.Start();
+
+        startupDone.get_future().get();
 
         std::promise<void> renderDone;
         loader.Dispatch([&renderDone](Napi::Env env) {
