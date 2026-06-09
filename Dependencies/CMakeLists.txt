@@ -102,6 +102,13 @@ foreach(_bimg_target IN ITEMS bimg_decode bimg_encode tinyexr)
     endif()
 endforeach()
 
+# WebP parsing is provided by bimg's bundled simplewebp decoder. Toggle it
+# through bimg's own config macro so disabling the option compiles the parser
+# out of bimg_decode instead of pulling in a separate libwebp dependency.
+if(NOT BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP AND TARGET bimg_decode)
+    target_compile_definitions(bimg_decode PRIVATE BIMG_CONFIG_PARSE_WEBP=0)
+endif()
+
 if(UNIX AND NOT APPLE AND NOT ANDROID AND CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|amd64|AMD64)")
     # The new bx requires SSE4.2 on x86_64 (see bx scripts/toolchain.lua and
     # include/bx/inline/simd128_sse.inl which uses _mm_round_ps / _mm_blendv_ps
