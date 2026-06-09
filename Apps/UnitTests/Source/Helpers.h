@@ -12,12 +12,6 @@ namespace Helpers
         uint8_t R, G, B, A;
     };
 
-    // A single NV12 (BT.601) sample: luma Y and chroma U/V, each 0-255.
-    struct YuvColor
-    {
-        uint8_t Y, U, V;
-    };
-
     // Creates a 2D texture (or 2D array if arraySize > 1). When renderTarget is true, the texture
     // also gets the render-target bind flag so it can be wrapped as the color attachment of a
     // bgfx framebuffer via wrapNativeTexture. samples > 1 requires renderTarget = true.
@@ -29,12 +23,6 @@ namespace Helpers
     // Tests.ExternalTexture.Render to compose a multi-slice input texture.
     // Implemented for D3D11 and Metal; D3D12 / OpenGL throw.
     Babylon::Graphics::TextureT CreateTextureArrayWithData(Babylon::Graphics::DeviceT device, uint32_t width, uint32_t height, const Color* sliceColors, uint32_t sliceCount);
-
-    // Creates an NV12 (DXGI_FORMAT_NV12) Texture2DArray initialized to one solid YUV color per array
-    // slice (each slice a separate decoder-style frame). Width and height must be even. Used by
-    // Tests.ExternalTexture.RenderNV12 to exercise single-slice (layerIndex) selection of a planar
-    // array. D3D11-only.
-    Babylon::Graphics::TextureT CreateNV12TextureArrayWithData(Babylon::Graphics::DeviceT device, uint32_t width, uint32_t height, const YuvColor* sliceColors, uint32_t sliceCount);
 
     // Reads back the texture's pixels into an 8-bit RGBA byte buffer (R, G, B, A byte order on all backends).
     // If the texture is multisampled, the samples are resolved down to 1 before the readback.

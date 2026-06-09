@@ -8,7 +8,6 @@ module.exports = {
   entry: {
     "tests.javaScript.all": './src/tests.javaScript.all.ts',
     "tests.externalTexture.render": './src/tests.externalTexture.render.ts',
-    "tests.externalTexture.renderNV12": './src/tests.externalTexture.renderNV12.ts',
     "tests.shaderCache.basicScene": './src/tests.shaderCache.basicScene.ts',
     "tests.shaderCompilation.comprehensiveGLSL": './src/tests.shaderCompilation.comprehensiveGLSL.ts',
     "tests.externalTexture.msaa": './src/tests.externalTexture.msaa.ts',
