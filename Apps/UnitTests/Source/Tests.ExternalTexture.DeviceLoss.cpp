@@ -90,8 +90,6 @@ TEST(ExternalTexture, RestoreAfterDeviceLoss)
         device.GetPlatformInfo().Device, TEX_SIZE, TEX_SIZE, 1, true);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture1};
 
-    std::promise<void> startupDone;
-
     Babylon::AppRuntime::Options options{};
     options.UnhandledExceptionHandler = [](const Napi::Error& error) {
         std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
@@ -114,43 +112,33 @@ TEST(ExternalTexture, RestoreAfterDeviceLoss)
     loader.LoadScript("app:///Assets/babylon.max.js");
     loader.LoadScript("app:///Assets/tests.externalTexture.deviceLoss.js");
 
-    // Queue AddToContextAsync and call startup() with the wrapped texture.
-    std::promise<void> addToContextCalled;
-    loader.Dispatch([&externalTexture, &addToContextCalled, &startupDone](Napi::Env env) {
-        auto jsPromise = externalTexture.AddToContextAsync(env);
-        addToContextCalled.set_value();
-
-        auto jsOnFulfilled = Napi::Function::New(env, [&startupDone](const Napi::CallbackInfo& info) {
-            auto jsNativeTexture = info[0];
-            info.Env().Global().Get("startup").As<Napi::Function>().Call({
+    // CreateForJavaScript is synchronous so startup() runs in the same JS task as the texture wrap.
+    std::promise<void> startupDone;
+    loader.Dispatch([&externalTexture, &startupDone](Napi::Env env) {
+        try
+        {
+            auto jsNativeTexture = externalTexture.CreateForJavaScript(env);
+            env.Global().Get("startup").As<Napi::Function>().Call({
                 jsNativeTexture,
-                Napi::Number::New(info.Env(), TEX_SIZE),
-                Napi::Number::New(info.Env(), TEX_SIZE),
+                Napi::Number::New(env, TEX_SIZE),
+                Napi::Number::New(env, TEX_SIZE),
             });
             startupDone.set_value();
-        });
-
-        auto jsOnRejected = Napi::Function::New(env, [&startupDone](const Napi::CallbackInfo& info) {
-            startupDone.set_exception(std::make_exception_ptr(
-                std::runtime_error{Napi::GetErrorString(info[0].As<Napi::Error>())}));
-        });
-
-        jsPromise.Get("then").As<Napi::Function>().Call(jsPromise, {jsOnFulfilled, jsOnRejected});
+        }
+        catch (...)
+        {
+            startupDone.set_exception(std::current_exception());
+        }
     });
 
-    addToContextCalled.get_future().wait();
+    startupDone.get_future().get();
     update.Finish();
     device.FinishRenderingCurrentFrame();
 
-    // Open the next frame BEFORE waiting on startup(): under the reworked single-frame-encoder
-    // model the AddToContextAsync .then() runs startup() on the JS thread, whose SubmitCommands
-    // blocks until a frame is in progress. The same frame is reused for Phase 1's renderFrame.
+    // --- Phase 1: render red into texture 1, readback ---
     device.StartRenderingCurrentFrame();
     update.Start();
 
-    startupDone.get_future().get();
-
-    // --- Phase 1: render red into texture 1, readback (reuses the open frame) ---
     std::promise<void> render1Done;
     loader.Dispatch([&render1Done](Napi::Env env) {
         auto jsPromise = env.Global().Get("renderFrame").As<Napi::Function>().Call({}).As<Napi::Promise>();
@@ -203,37 +191,27 @@ TEST(ExternalTexture, RestoreAfterDeviceLoss)
     update.Start();
 
     std::promise<void> restoreDone;
-    std::promise<void> addToContext2Called;
-    loader.Dispatch([&externalTexture2, &addToContext2Called, &restoreDone](Napi::Env env) {
-        auto jsPromise = externalTexture2.AddToContextAsync(env);
-        addToContext2Called.set_value();
-
-        auto jsOnFulfilled = Napi::Function::New(env, [&restoreDone](const Napi::CallbackInfo& info) {
-            auto jsNewNativeTexture = info[0];
-            info.Env().Global().Get("restoreTexture").As<Napi::Function>().Call({jsNewNativeTexture});
+    loader.Dispatch([&externalTexture2, &restoreDone](Napi::Env env) {
+        try
+        {
+            auto jsNewNativeTexture = externalTexture2.CreateForJavaScript(env);
+            env.Global().Get("restoreTexture").As<Napi::Function>().Call({jsNewNativeTexture});
             restoreDone.set_value();
-        });
-
-        auto jsOnRejected = Napi::Function::New(env, [&restoreDone](const Napi::CallbackInfo& info) {
-            restoreDone.set_exception(std::make_exception_ptr(
-                std::runtime_error{Napi::GetErrorString(info[0].As<Napi::Error>())}));
-        });
-
-        jsPromise.Get("then").As<Napi::Function>().Call(jsPromise, {jsOnFulfilled, jsOnRejected});
+        }
+        catch (...)
+        {
+            restoreDone.set_exception(std::current_exception());
+        }
     });
 
-    addToContext2Called.get_future().wait();
+    restoreDone.get_future().get();
     update.Finish();
     device.FinishRenderingCurrentFrame();
 
-    // Open the next frame before waiting on restoreTexture(): SubmitCommands needs an open frame
-    // under the reworked model. The same frame is reused for the blue render below.
+    // Render blue into restored RTT.
     device.StartRenderingCurrentFrame();
     update.Start();
 
-    restoreDone.get_future().get();
-
-    // Render blue into restored RTT (reuses the open frame).
     std::promise<void> render2Done;
     loader.Dispatch([&render2Done](Napi::Env env) {
         auto jsPromise = env.Global().Get("renderFrame").As<Napi::Function>().Call({}).As<Napi::Promise>();

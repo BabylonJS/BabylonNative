@@ -162,7 +162,7 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
     // Wait for AddToContextAsync to be called.
     addToContext.get_future().wait();
 
-    // Render a frame so that AddToContextAsync will complete.
+    // Close the frame in which the deprecated shim's synchronous CreateForJavaScript ran.
     update.Finish();
     device.FinishRenderingCurrentFrame();
 
