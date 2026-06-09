@@ -33,6 +33,48 @@ namespace Helpers
         texture->Release();
     }
 
+    Babylon::Graphics::TextureT CreateTextureArrayWithData(Babylon::Graphics::DeviceT device, uint32_t width, uint32_t height, const Color* sliceColors, uint32_t sliceCount)
+    {
+        const uint32_t rowPitch = width * 4;
+        const uint32_t sliceSize = rowPitch * height;
+
+        std::vector<uint8_t> pixels(sliceSize * sliceCount);
+        for (uint32_t s = 0; s < sliceCount; ++s)
+        {
+            for (uint32_t i = 0; i < width * height; ++i)
+            {
+                uint8_t* p = pixels.data() + s * sliceSize + i * 4;
+                p[0] = sliceColors[s].R;
+                p[1] = sliceColors[s].G;
+                p[2] = sliceColors[s].B;
+                p[3] = sliceColors[s].A;
+            }
+        }
+
+        std::vector<D3D11_SUBRESOURCE_DATA> initData(sliceCount);
+        for (uint32_t s = 0; s < sliceCount; ++s)
+        {
+            initData[s].pSysMem = pixels.data() + s * sliceSize;
+            initData[s].SysMemPitch = rowPitch;
+            initData[s].SysMemSlicePitch = 0;
+        }
+
+        D3D11_TEXTURE2D_DESC desc{};
+        desc.Width = width;
+        desc.Height = height;
+        desc.MipLevels = 1;
+        desc.ArraySize = sliceCount;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.SampleDesc.Count = 1;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+        ID3D11Texture2D* texture = nullptr;
+        EXPECT_HRESULT_SUCCEEDED(device->CreateTexture2D(&desc, initData.data(), &texture));
+
+        return texture;
+    }
+
     std::vector<uint8_t> ReadPixels(const Babylon::Graphics::PlatformInfo& platformInfo, Babylon::Graphics::TextureT texture, uint32_t width, uint32_t height)
     {
         winrt::com_ptr<ID3D11DeviceContext> context;

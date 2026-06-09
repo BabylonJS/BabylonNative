@@ -37,6 +37,13 @@ namespace Babylon::Graphics
         uint32_t SamplerFlags() const;
         void SamplerFlags(uint32_t);
 
+        // View sub-range used at bind time to select a single array slice of a multi-layer
+        // texture (bgfx setTexture view API). ViewNumLayers == 0 means "no override; bind whole texture".
+        uint16_t ViewFirstLayer() const;
+        void ViewFirstLayer(uint16_t);
+        uint16_t ViewNumLayers() const;
+        void ViewNumLayers(uint16_t);
+
     private:
         bgfx::TextureHandle m_handle{bgfx::kInvalidHandle};
         bool m_ownsHandle{false};
@@ -47,6 +54,8 @@ namespace Babylon::Graphics
         bgfx::TextureFormat::Enum m_format{bgfx::TextureFormat::Enum::Unknown};
         uint64_t m_flags{BGFX_TEXTURE_NONE};
         uint32_t m_samplerFlags{BGFX_SAMPLER_NONE};
+        uint16_t m_viewFirstLayer{0};
+        uint16_t m_viewNumLayers{0};
         uintptr_t m_deviceID;
         DeviceContext& m_deviceContext;
     };

@@ -36,8 +36,6 @@ namespace
             device.GetPlatformInfo().Device, TEX_SIZE, TEX_SIZE, 1, true, samples);
         Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
 
-        std::promise<void> startupDone;
-
         Babylon::AppRuntime::Options options{};
         options.UnhandledExceptionHandler = [](const Napi::Error& error) {
             std::cerr << "[Uncaught Error] " << Napi::GetErrorString(error) << std::endl;
@@ -60,48 +58,19 @@ namespace
         loader.LoadScript("app:///Assets/babylon.max.js");
         loader.LoadScript("app:///Assets/tests.externalTexture.msaa.js");
 
-        // Queue AddToContextAsync inside the current bgfx frame and wire its .then to startup().
-        std::promise<void> addToContextCalled;
-        loader.Dispatch([&externalTexture, &addToContextCalled, &startupDone, samples](Napi::Env env) {
-            auto jsPromise = externalTexture.AddToContextAsync(env);
-            addToContextCalled.set_value();
-
-            auto jsOnFulfilled = Napi::Function::New(env, [&startupDone, samples](const Napi::CallbackInfo& info) {
-                auto jsNativeTexture = info[0];
-                info.Env().Global().Get("startup").As<Napi::Function>().Call({
-                    jsNativeTexture,
-                    Napi::Number::New(info.Env(), TEX_SIZE),
-                    Napi::Number::New(info.Env(), TEX_SIZE),
-                    Napi::Number::New(info.Env(), samples),
-                });
-                startupDone.set_value();
-            });
-
-            auto jsOnRejected = Napi::Function::New(env, [&startupDone](const Napi::CallbackInfo& info) {
-                startupDone.set_exception(std::make_exception_ptr(
-                    std::runtime_error{Napi::GetErrorString(info[0].As<Napi::Error>())}));
-            });
-
-            jsPromise.Get("then").As<Napi::Function>().Call(jsPromise, {jsOnFulfilled, jsOnRejected});
-        });
-
-        // Ensure AddToContextAsync was queued in the current frame, then finish it so the promise resolves.
-        addToContextCalled.get_future().wait();
-        update.Finish();
-        device.FinishRenderingCurrentFrame();
-
-        // Open the next frame BEFORE waiting for startup() to complete. The AddToContextAsync .then()
-        // callback runs on the JS thread and calls startup(), which constructs NativeEngine + Scene + RTT,
-        // each step submitting bgfx commands. In the threading model from #1652, SubmitCommands
-        // synchronously acquires a FrameCompletionScope and blocks until a frame is in progress, so a
-        // frame must be open while startup() runs. The same frame is reused for renderFrame().
-        device.StartRenderingCurrentFrame();
-        update.Start();
-
-        startupDone.get_future().get();
-
+        // CreateForJavaScript is synchronous so startup() can run in the same JS task as the
+        // texture wrap. renderFrame() submits draw commands which are flushed when the frame ends.
         std::promise<void> renderDone;
-        loader.Dispatch([&renderDone](Napi::Env env) {
+        loader.Dispatch([&externalTexture, &renderDone, samples](Napi::Env env) {
+            auto jsNativeTexture = externalTexture.CreateForJavaScript(env);
+
+            env.Global().Get("startup").As<Napi::Function>().Call({
+                jsNativeTexture,
+                Napi::Number::New(env, TEX_SIZE),
+                Napi::Number::New(env, TEX_SIZE),
+                Napi::Number::New(env, samples),
+            });
+
             auto jsPromise = env.Global().Get("renderFrame").As<Napi::Function>().Call({}).As<Napi::Promise>();
 
             auto jsOnFulfilled = Napi::Function::New(env, [&renderDone](const Napi::CallbackInfo&) {

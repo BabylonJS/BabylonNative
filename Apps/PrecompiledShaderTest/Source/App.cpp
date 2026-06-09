@@ -135,45 +135,34 @@ int RunApp(
     Babylon::ScriptLoader loader{runtime};
     loader.LoadScript("app:///index.js");
 
-    std::promise<void> addToContext{};
+    // Close the script-load frame.
+    deviceUpdate.Finish();
+    device.FinishRenderingCurrentFrame();
+
+    // Open a new frame for `startup` so the JS-side resource creation and
+    // startup() call run in the same frame as the wait that observes them.
+    device.StartRenderingCurrentFrame();
+    deviceUpdate.Start();
+
     std::promise<void> startup{};
 
     // Create an external texture for the render target texture and pass it to
     // the `startup` JavaScript function.
-    loader.Dispatch([externalTexture = std::move(externalTexture), &addToContext, &startup](Napi::Env env) {
-        auto jsPromise = externalTexture.AddToContextAsync(env);
-        addToContext.set_value();
-
-        auto jsOnFulfilled = Napi::Function::New(env, [&startup](const Napi::CallbackInfo& info) {
-            auto nativeTexture = info[0];
-            info.Env().Global().Get("startup").As<Napi::Function>().Call(
-                {
-                    nativeTexture,
-                    Napi::Value::From(info.Env(), WIDTH),
-                    Napi::Value::From(info.Env(), HEIGHT),
-                });
-            startup.set_value();
-        });
-
-        jsPromise = jsPromise.Get("then").As<Napi::Function>().Call(jsPromise, {jsOnFulfilled}).As<Napi::Promise>();
-        CatchAndLogError(jsPromise);
+    loader.Dispatch([externalTexture = std::move(externalTexture), &startup](Napi::Env env) {
+        auto nativeTexture = externalTexture.CreateForJavaScript(env);
+        env.Global().Get("startup").As<Napi::Function>().Call(
+            {
+                nativeTexture,
+                Napi::Value::From(env, WIDTH),
+                Napi::Value::From(env, HEIGHT),
+            });
+        startup.set_value();
     });
-
-    // Wait for `AddToContextAsync` to be called.
-    addToContext.get_future().wait();
-
-    // Render a frame so that `AddToContextAsync` will complete.
-    deviceUpdate.Finish();
-    device.FinishRenderingCurrentFrame();
-
-    // Reopen the gate so JS can continue running (startup may issue bgfx commands).
-    device.StartRenderingCurrentFrame();
-    deviceUpdate.Start();
 
     // Wait for `startup` to finish.
     startup.get_future().wait();
 
-    // Close the frame opened above.
+    // Close the startup frame.
     deviceUpdate.Finish();
     device.FinishRenderingCurrentFrame();
 
