@@ -774,6 +774,37 @@ namespace Babylon
         m_deviceContext.SetRenderResetCallback(nullptr);
 
         m_cancellationSource->cancel();
+
+        // Cancellation doesn't stop work already running on a threadpool thread, so wait for
+        // any in-flight graphics tasks to finish before teardown frees the resources they use.
+        m_asyncTaskTracker->Wait();
+    }
+
+    NativeEngine::AsyncTaskTracker::Scope::Scope(std::shared_ptr<AsyncTaskTracker> tracker)
+        : m_tracker{std::move(tracker)}
+    {
+        std::lock_guard<std::mutex> lock{m_tracker->m_mutex};
+        ++m_tracker->m_count;
+    }
+
+    NativeEngine::AsyncTaskTracker::Scope::~Scope()
+    {
+        {
+            std::lock_guard<std::mutex> lock{m_tracker->m_mutex};
+            --m_tracker->m_count;
+        }
+        m_tracker->m_condition.notify_all();
+    }
+
+    void NativeEngine::AsyncTaskTracker::Wait()
+    {
+        std::unique_lock<std::mutex> lock{m_mutex};
+        m_condition.wait(lock, [this]() { return m_count == 0; });
+    }
+
+    std::shared_ptr<void> NativeEngine::TrackAsyncTask()
+    {
+        return std::make_shared<AsyncTaskTracker::Scope>(m_asyncTaskTracker);
     }
 
     void NativeEngine::Dispose(const Napi::CallbackInfo& /*info*/)
@@ -984,7 +1015,12 @@ namespace Babylon
         program->SetSources(vertexSource, fragmentSource);
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [this, vertexSource = std::move(vertexSource), fragmentSource = std::move(fragmentSource), program, cancellationSource{m_cancellationSource}]() {
+            [this, vertexSource = std::move(vertexSource), fragmentSource = std::move(fragmentSource), program, cancellationSource{m_cancellationSource}, asyncTaskScope{TrackAsyncTask()}]() {
+                // Skip touching graphics resources if teardown has already begun.
+                if (cancellationSource->cancelled())
+                {
+                    return;
+                }
                 program->Initialize(m_shaderProvider.Get(vertexSource, fragmentSource));
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [jsProgramRef{Napi::Persistent(jsProgram)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
@@ -1334,7 +1370,12 @@ namespace Babylon
         const auto dataSpan = gsl::make_span(static_cast<uint8_t*>(data.ArrayBuffer().Data()) + data.ByteOffset(), data.ByteLength());
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
-            [dataSpan, generateMips, invertY, srgb, texture, cancellationSource{m_cancellationSource}]() {
+            [dataSpan, generateMips, invertY, srgb, texture, cancellationSource{m_cancellationSource}, asyncTaskScope{TrackAsyncTask()}]() {
+                // Skip touching graphics resources if teardown has already begun.
+                if (cancellationSource->cancelled())
+                {
+                    return;
+                }
                 arcana::trace_region loadRegion{"NativeEngine::LoadTexture"};
                 bimg::ImageContainer* image{ParseImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan)};
                 image = PrepareImage(Graphics::DeviceContext::GetDefaultAllocator(), image, invertY, srgb, generateMips);
@@ -1499,7 +1540,7 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}](std::vector<bimg::ImageContainer*> images) {
+            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}, asyncTaskScope{TrackAsyncTask()}](std::vector<bimg::ImageContainer*> images) {
                 LoadCubeTextureFromImages(texture, images, srgb);
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
@@ -1547,7 +1588,7 @@ namespace Babylon
         }
 
         arcana::when_all(gsl::make_span(tasks))
-            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}](std::vector<bimg::ImageContainer*> images) {
+            .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}, asyncTaskScope{TrackAsyncTask()}](std::vector<bimg::ImageContainer*> images) {
                 LoadCubeTextureFromImages(texture, images, srgb);
             })
             .then(m_runtimeScheduler, *m_cancellationSource, [dataRefs{std::move(dataRefs)}, onSuccessRef{Napi::Persistent(onSuccess)}, onErrorRef{Napi::Persistent(onError)}, cancellationSource{m_cancellationSource}](arcana::expected<void, std::exception_ptr> result) {
