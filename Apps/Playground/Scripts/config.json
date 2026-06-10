@@ -2575,8 +2575,6 @@
             "title": "blur-cube-with-the-effect-renderer",
             "playgroundId": "#4C900K#2",
             "renderCount": 20,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "blur-cube-with-the-effect-renderer.png"
         },
         {
