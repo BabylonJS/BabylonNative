@@ -226,9 +226,7 @@ namespace Babylon::Graphics
             }
 
             m_state.Bgfx.Initialized = true;
-            // TODO: Should be able to clear the Dirty flag, but bgfx::init is not doing everything that UpdateBgfxState is doing (at least on Apple platforms).
-            // See https://github.com/BabylonJS/ThePirateCove/issues/1657
-            // m_state.Bgfx.Dirty = false;
+            m_state.Bgfx.Dirty = false;
 
             m_cancellationSource.emplace();
 
