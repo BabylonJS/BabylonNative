@@ -55,6 +55,7 @@ target_link_libraries(UnitTests
     PRIVATE URL
     PRIVATE UrlLib
     PRIVATE XMLHttpRequest
+    PRIVATE Fetch
     PRIVATE WebSocket
     PRIVATE gtest_main
     PRIVATE Foundation

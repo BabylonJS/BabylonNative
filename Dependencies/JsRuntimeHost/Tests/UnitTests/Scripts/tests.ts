@@ -238,6 +238,92 @@ describe("XMLHTTPRequest", function () {
     });
 });
 
+describe("fetch", function () {
+    this.timeout(30000);
+
+    it("should resolve with ok=true and status=200 for a resource that exists", async function () {
+        const response = await fetch("https://github.com/");
+        expect(response.ok).to.equal(true);
+        expect(response.status).to.equal(200);
+    });
+
+    it("should resolve (not reject) with ok=false and status=404 for a resource that does not exist", async function () {
+        const response = await fetch("https://github.com/babylonJS/BabylonNative404");
+        expect(response.ok).to.equal(false);
+        expect(response.status).to.equal(404);
+    });
+
+    it("should expose statusText", async function () {
+        const response = await fetch("https://github.com/babylonJS/BabylonNative404");
+        expect(response.statusText).to.equal("Not Found");
+    });
+
+    it("text() should return the body as a string", async function () {
+        const response = await fetch("app:///Scripts/symlink_target.js");
+        expect(await response.text()).to.equal("var symlink_target_js = true;");
+    });
+
+    it("arrayBuffer() should return the body as bytes", async function () {
+        const response = await fetch("app:///Scripts/symlink_target.js");
+        const expected = new Uint8Array("var symlink_target_js = true;".split("").map(x => x.charCodeAt(0)));
+        expect(new Uint8Array(await response.arrayBuffer())).to.eql(expected);
+    });
+
+    it("json() should parse a JSON body", async function () {
+        const response = await fetch("app:///Assets/sample.json");
+        const json = await response.json();
+        expect(json.name).to.equal("fetch-polyfill-test");
+        expect(json.value).to.equal(42);
+        expect(json.nested.items).to.eql([1, 2, 3]);
+    });
+
+    it("json() should reject when the body is not valid JSON", async function () {
+        const response = await fetch("app:///Scripts/symlink_target.js");
+        let rejected = false;
+        try {
+            await response.json();
+        } catch {
+            rejected = true;
+        }
+        expect(rejected).to.equal(true);
+    });
+
+    it("blob() should return a Blob with the body bytes", async function () {
+        const response = await fetch("app:///Scripts/symlink_target.js");
+        const blob = await response.blob();
+        expect(blob.size).to.equal("var symlink_target_js = true;".length);
+        expect(await blob.text()).to.equal("var symlink_target_js = true;");
+    });
+
+    it("headers.get() should be case-insensitive and headers.has() should work", async function () {
+        const response = await fetch("https://github.com/");
+        expect(response.headers.has("Content-Type")).to.equal(true);
+        expect(response.headers.get("CONTENT-TYPE")).to.equal(response.headers.get("content-type"));
+    });
+
+    it("clone() should produce an independently readable response", async function () {
+        const response = await fetch("app:///Scripts/symlink_target.js");
+        const clone = response.clone();
+        expect(await response.text()).to.equal("var symlink_target_js = true;");
+        expect(await clone.text()).to.equal("var symlink_target_js = true;");
+    });
+
+    it("should accept a method in the init object", async function () {
+        const response = await fetch("https://github.com/", { method: "GET" });
+        expect(response.status).to.equal(200);
+    });
+
+    it("should reject when no arguments are provided", async function () {
+        let rejected = false;
+        try {
+            await (fetch as any)();
+        } catch {
+            rejected = true;
+        }
+        expect(rejected).to.equal(true);
+    });
+});
+
 describe("setTimeout", function () {
     this.timeout(1000);
 

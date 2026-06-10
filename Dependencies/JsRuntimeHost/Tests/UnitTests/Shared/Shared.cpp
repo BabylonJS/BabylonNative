@@ -8,6 +8,7 @@
 #include <Babylon/Polyfills/URL.h>
 #include <Babylon/Polyfills/WebSocket.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
+#include <Babylon/Polyfills/Fetch.h>
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/File.h>
 #include <Babylon/Polyfills/TextDecoder.h>
@@ -83,6 +84,7 @@ TEST(JavaScript, All)
         Babylon::Polyfills::URL::Initialize(env);
         Babylon::Polyfills::WebSocket::Initialize(env);
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
+        Babylon::Polyfills::Fetch::Initialize(env);
         Babylon::Polyfills::Blob::Initialize(env);
         Babylon::Polyfills::File::Initialize(env);
         Babylon::Polyfills::TextDecoder::Initialize(env);
