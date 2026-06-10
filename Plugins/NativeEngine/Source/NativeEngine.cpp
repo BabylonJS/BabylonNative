@@ -32,6 +32,11 @@
 #include <limits>
 #include <optional>
 
+#ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
+#include <atomic>
+#include <chrono>
+#include <thread>
+#endif
 namespace Babylon
 {
     namespace
@@ -684,6 +689,9 @@ namespace Babylon
                 StaticValue("COMMAND_COPYTEXTURE", Napi::FunctionPointer::Create(env, &NativeEngine::CopyTexture)),
 
                 InstanceMethod("dispose", &NativeEngine::Dispose),
+#ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
+                InstanceMethod("_disposeDrainTestSchedule", &NativeEngine::DisposeDrainTestSchedule),
+#endif
 
                 InstanceMethod("requestAnimationFrame", &NativeEngine::RequestAnimationFrame),
 
@@ -2512,4 +2520,40 @@ namespace Babylon
         assert(encoder != nullptr);
         return encoder;
     }
+
+#ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
+    static std::atomic<bool> s_disposeDrainTestTaskStarted{false};
+    static std::atomic<bool> s_disposeDrainTestTaskFinished{false};
+
+    // Test-only: schedules a tracked threadpool task (the same TrackAsyncTask mechanism used by
+    // the async texture/shader loaders) that signals start, sleeps, then signals finish. The task
+    // touches no graphics resources, so the test can observe purely whether Dispose drains it.
+    void NativeEngine::DisposeDrainTestSchedule(const Napi::CallbackInfo&)
+    {
+        s_disposeDrainTestTaskStarted = false;
+        s_disposeDrainTestTaskFinished = false;
+        arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
+            [asyncTaskScope{TrackAsyncTask()}]() {
+                s_disposeDrainTestTaskStarted = true;
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                s_disposeDrainTestTaskFinished = true;
+            });
+    }
+#endif
 }
+
+#ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
+namespace Babylon::Plugins
+{
+    // Test-only accessors for the DisposeDrainTestSchedule task state (see NativeEngine.cpp).
+    bool NativeEngineDisposeDrainTestTaskStarted()
+    {
+        return ::Babylon::s_disposeDrainTestTaskStarted.load();
+    }
+
+    bool NativeEngineDisposeDrainTestTaskFinished()
+    {
+        return ::Babylon::s_disposeDrainTestTaskFinished.load();
+    }
+}
+#endif

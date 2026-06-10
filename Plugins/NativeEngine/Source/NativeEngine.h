@@ -49,6 +49,11 @@ namespace Babylon
         void Dispose();
 
         void Dispose(const Napi::CallbackInfo& info);
+#ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
+        // Test-only: schedules a tracked threadpool task that signals start, sleeps, then signals
+        // finish, so unit tests can verify Dispose drains in-flight async work. See NativeEngine.cpp.
+        void DisposeDrainTestSchedule(const Napi::CallbackInfo& info);
+#endif
         void RequestAnimationFrame(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexArray(const Napi::CallbackInfo& info);
         void DeleteVertexArray(NativeDataStream::Reader& data);
