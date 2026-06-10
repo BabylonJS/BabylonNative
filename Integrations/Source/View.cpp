@@ -69,7 +69,6 @@ namespace Babylon::Integrations
         if (m_initialized &&
             m_runtime.m_suspendCount.load(std::memory_order_relaxed) == 0)
         {
-            m_runtime.m_deviceUpdate->Finish();
             m_runtime.m_device->FinishRenderingCurrentFrame();
         }
 
@@ -87,7 +86,6 @@ namespace Babylon::Integrations
         {
             return;
         }
-        m_runtime.m_deviceUpdate->Finish();
         m_runtime.m_device->FinishRenderingCurrentFrame();
     }
 
@@ -101,7 +99,6 @@ namespace Babylon::Integrations
             return;
         }
         m_runtime.m_device->StartRenderingCurrentFrame();
-        m_runtime.m_deviceUpdate->Start();
     }
 
     // Single recipe for binding the Device to this view's window and
@@ -130,7 +127,6 @@ namespace Babylon::Integrations
             config.MSAASamples = m_runtime.m_options.msaaSamples;
 
             m_runtime.m_device.emplace(config);
-            m_runtime.m_deviceUpdate.emplace(m_runtime.m_device->GetUpdate("update"));
         }
         else
         {
@@ -146,7 +142,6 @@ namespace Babylon::Integrations
         // record into. Both run on the host thread, so the dispatched
         // lambda always sees an open frame on the JS thread.
         m_runtime.m_device->StartRenderingCurrentFrame();
-        m_runtime.m_deviceUpdate->Start();
         m_initialized = true;
 
         if (firstAttachEver)
@@ -176,10 +171,8 @@ namespace Babylon::Integrations
 
         // Babylon's JS render loop runs between Start and Finish, scheduled
         // via DeviceUpdate's SafeTimespanGuarantor onto the JS thread.
-        impl.m_deviceUpdate->Finish();
         impl.m_device->FinishRenderingCurrentFrame();
         impl.m_device->StartRenderingCurrentFrame();
-        impl.m_deviceUpdate->Start();
     }
 
     // Stores the host-supplied size on the ViewImpl, then either pushes
