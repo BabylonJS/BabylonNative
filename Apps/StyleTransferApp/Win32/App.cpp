@@ -334,36 +334,36 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     loader.LoadScript("app:///Scripts/babylonjs.loaders.js");
     loader.LoadScript("app:///Scripts/index.js");
 
-    std::promise<void> addToContext{};
+    // Close the script-load frame.
+    g_update->Finish();
+    g_device->FinishRenderingCurrentFrame();
+
+    // Open a new frame for `startup` so the JS-side resource creation and
+    // startup() call run in the same frame as the wait that observes them.
+    g_device->StartRenderingCurrentFrame();
+    g_update->Start();
+
     std::promise<void> startup{};
 
     // Create an external texture for the render target texture and pass it to
     // the `startup` JavaScript function.
-    loader.Dispatch([externalTexture = Babylon::Plugins::ExternalTexture{g_BabylonRenderTexture.get()}, &addToContext, &startup](Napi::Env env) {
-        auto jsPromise = externalTexture.AddToContextAsync(env);
-        addToContext.set_value();
-
-        jsPromise.Get("then").As<Napi::Function>().Call(jsPromise, {Napi::Function::New(env, [&startup](const Napi::CallbackInfo& info) {
-            auto nativeTexture = info[0];
-            info.Env().Global().Get("startup").As<Napi::Function>().Call(
-                {
-                    nativeTexture,
-                    Napi::Value::From(info.Env(), WIDTH),
-                    Napi::Value::From(info.Env(), HEIGHT),
-                });
-            startup.set_value();
-        })});
+    loader.Dispatch([externalTexture = Babylon::Plugins::ExternalTexture{g_BabylonRenderTexture.get()}, &startup](Napi::Env env) {
+        auto nativeTexture = externalTexture.CreateForJavaScript(env);
+        env.Global().Get("startup").As<Napi::Function>().Call(
+            {
+                nativeTexture,
+                Napi::Value::From(env, WIDTH),
+                Napi::Value::From(env, HEIGHT),
+            });
+        startup.set_value();
     });
-
-    // Wait for `AddToContextAsync` to be called.
-    addToContext.get_future().wait();
-
-    // Render a frame so that `AddToContextAsync` will complete.
-    g_update->Finish();
-    g_device->FinishRenderingCurrentFrame();
 
     // Wait for `startup` to finish.
     startup.get_future().wait();
+
+    // Close the startup frame.
+    g_update->Finish();
+    g_device->FinishRenderingCurrentFrame();
 
     // --------------------------- Rendering loop -------------------------
 

@@ -52,6 +52,11 @@ namespace Helpers
         texture->Release();
     }
 
+    Babylon::Graphics::TextureT CreateTextureArrayWithData(Babylon::Graphics::DeviceT, uint32_t, uint32_t, const Color*, uint32_t)
+    {
+        throw std::runtime_error{"CreateTextureArrayWithData not implemented for D3D12"};
+    }
+
     std::vector<uint8_t> ReadPixels(const Babylon::Graphics::PlatformInfo&, Babylon::Graphics::TextureT, uint32_t, uint32_t)
     {
         throw std::runtime_error{"ReadPixels not implemented for D3D12"};

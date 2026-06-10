@@ -120,7 +120,6 @@ namespace Babylon::Polyfills::Internal
         std::vector<SavedStyle> m_savedStyles;
 
         Graphics::DeviceContext& m_graphicsContext;
-        Graphics::Update m_update;
 
         bool m_isClipped{false};
 

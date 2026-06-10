@@ -129,6 +129,10 @@ namespace ModuleLoadTest
             "dxil.dll",
             // VS Start-Without-Debugging launch environment
             "kernel.appcore.dll",
+            // Ambient shell/appcore DLL pulled in transitively (e.g. via
+            // windows.storage.dll / DComp) on some Windows images such as the
+            // GitHub windows-2022 runner; not introduced by BabylonNative.
+            "twinapi.appcore.dll",
         };
         for (const auto& prefix : kPrefixes)
         {

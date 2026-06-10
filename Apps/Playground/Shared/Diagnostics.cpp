@@ -1,5 +1,6 @@
 #include "Diagnostics.h"
 
+#include <bx/bx.h>
 #include <bx/debug.h>
 #include <bx/error.h>
 #include <bx/platform.h>
@@ -110,6 +111,57 @@ namespace
         std::_Exit(3);
     }
 #endif
+
+    // bx routes BOTH BX_ASSERT failures and the Windows SEH top-level
+    // exception filter (bx::installExceptionHandler) through its assert
+    // handler. bx's built-in default writes the banner only to
+    // bx::getDebugOut() (OutputDebugString), which is invisible in a console /
+    // CI run, and then tears the process down via TerminateProcess -- so the
+    // native callstack never reaches the log and atexit (the finish line)
+    // never runs. Route it through DumpFailure instead, which writes to stderr
+    // (captured by CI), then exit deterministically with code 3 like the other
+    // hard-failure handlers above.
+    bool OnBxAssert(const bx::Location& location, uint32_t skip, const char* format, va_list args)
+    {
+        // Guard against re-entry if formatting/stack-walking itself faults.
+        // Returning false here would tell bx to *continue* past the failed
+        // assert / propagate the exception, i.e. keep running in an
+        // already-failing state. Instead fail fast deterministically: skip the
+        // (faulting) formatting path, emit a minimal marker, and exit.
+        static std::atomic<bool> s_inHandler{false};
+        bool expected = false;
+        if (!s_inHandler.compare_exchange_strong(expected, true))
+        {
+            std::fputs("\n--- BN: CRASH (re-entrant) ---\n", stderr);
+            std::fflush(stderr);
+            Diagnostics::SetExitCode(3);
+            Diagnostics::PrintFinishLine();
+            std::_Exit(3);
+        }
+
+        // bx's exception-handler call sites (SEH filter, pure-call) pass
+        // UINT32_MAX as the line and a synthetic file ("Exception Handler");
+        // real BX_ASSERT sites pass an actual file/line.
+        const bool isException = (location.line == UINT32_MAX);
+        Diagnostics::DumpFailureV(
+            isException ? "CRASH" : "ASSERT",
+            isException ? nullptr : location.filePath,
+            isException ? 0 : static_cast<int>(location.line),
+            skip,
+            format,
+            args);
+
+#if defined(_MSC_VER)
+        if (::IsDebuggerPresent())
+        {
+            bx::debugBreak();
+        }
+#endif
+
+        Diagnostics::SetExitCode(3);
+        Diagnostics::PrintFinishLine();
+        std::_Exit(3);
+    }
 }
 
 namespace Diagnostics
@@ -123,6 +175,10 @@ namespace Diagnostics
         }
 
         bx::installExceptionHandler();
+
+        // Route bx asserts + the SEH top-level exception filter to DumpFailure
+        // (stderr-visible) instead of bx's OutputDebugString-only default.
+        bx::setAssertHandler(&OnBxAssert);
 
 #if defined(_MSC_VER)
         // Route assert() to stderr instead of UCRT's modal dialog. Covers the
