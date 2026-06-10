@@ -309,8 +309,8 @@
             "playgroundId": "#W7E7CF#34",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "State-leak cascade fixed in validation_native.js (stencil/scissor reset between tests); remains excluded only due to pixel diff fail on Linux (56223 px diff) under 0.9 hardware scaling."
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "State-leak cascade fixed in validation_native.js (stencil/scissor reset between tests); pixel diff fail on Linux OpenGL (56223 px) under 0.9 hardware scaling; passes on Win32 D3D11."
         },
         {
             "title": "Scissor test with 1.5 hardware scaling",
@@ -1194,8 +1194,8 @@
         {
             "title": "Area Lights - Standard Material",
             "playgroundId": "#T7FXR8#67",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Renders black on Linux desktop OpenGL (area-light LTC path unsupported); passes on Win32 D3D11 and Windows ANGLE GL.",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Renders black on Linux desktop OpenGL (area-light LTC path unsupported); passes on Win32 D3D11.",
             "referenceImage": "areaLightsStandardMaterial.png"
         },
         {
@@ -1215,8 +1215,8 @@
         {
             "title": "Area Lights - PBR",
             "playgroundId": "#T7FXR8#12",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Renders black on Linux desktop OpenGL (area-light LTC path unsupported); passes on Win32 D3D11 and Windows ANGLE GL.",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Renders black on Linux desktop OpenGL (area-light LTC path unsupported); passes on Win32 D3D11.",
             "referenceImage": "areaLightsPBRMaterial.png"
         },
         {
@@ -2039,8 +2039,8 @@
             "playgroundId": "#W7E7CF#38",
             "replace": "//options//, hardwareScalingLevel = 0.9;",
             "referenceImage": "scissor-test-2.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "State-leak cascade fixed in validation_native.js (stencil/scissor reset between tests); remains excluded only due to pixel diff fail on Linux (56223 px diff) under 0.9 hardware scaling."
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "State-leak cascade fixed in validation_native.js (stencil/scissor reset between tests); pixel diff fail on Linux OpenGL (56223 px) under 0.9 hardware scaling; passes on Win32 D3D11."
         },
         {
             "title": "Scissor test with 1.5 hardware scaling",
@@ -3640,15 +3640,15 @@
         {
             "title": "OpenPBR Thin Film Weight VS IOR - Analytic Lights",
             "playgroundId": "#GRQHVV#87",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Thin-film renders as background on Linux desktop OpenGL (28798 px diff); passes on Win32 D3D11 and Windows ANGLE GL.",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Thin-film renders as background on Linux desktop OpenGL (28798 px diff); passes on Win32 D3D11.",
             "referenceImage": "OpenPBR-Thin-Film-Weight-VS-IOR---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Thin Film Thickness VS IOR - Analytic Lights",
             "playgroundId": "#GRQHVV#88",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Thin-film renders as background on Linux desktop OpenGL; passes on Win32 D3D11 and Windows ANGLE GL.",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Thin-film renders as background on Linux desktop OpenGL; passes on Win32 D3D11.",
             "referenceImage": "OpenPBR-Thin-Film-Thickness-VS-IOR---Analytic-Lights.png"
         },
         {
@@ -3682,15 +3682,15 @@
         {
             "title": "OpenPBR Thin Film and Specular Weight - Analytic Lights",
             "playgroundId": "#GRQHVV#95",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Thin-film renders as background on Linux desktop OpenGL; passes on Win32 D3D11 and Windows ANGLE GL.",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Thin-film renders as background on Linux desktop OpenGL; passes on Win32 D3D11.",
             "referenceImage": "OpenPBR-Thin-Film-and-Specular-Weight---Analytic-Lights.png"
         },
         {
             "title": "OpenPBR Thin Film and Specular Weight Metals - Analytic Lights",
             "playgroundId": "#GRQHVV#96",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Thin-film renders as background on Linux desktop OpenGL; passes on Win32 D3D11 and Windows ANGLE GL.",
+            "excludedGraphicsApis": ["OpenGL"],
+            "reason": "Thin-film renders as background on Linux desktop OpenGL; passes on Win32 D3D11.",
             "referenceImage": "OpenPBR-Thin-Film-and-Specular-Weight-Metals---Analytic-Lights.png"
         },
         {
