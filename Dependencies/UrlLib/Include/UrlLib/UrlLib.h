@@ -61,6 +61,8 @@ namespace UrlLib
         
         UrlStatusCode StatusCode() const;
 
+        std::string_view StatusText() const;
+
         std::string_view ResponseUrl() const;
 
         std::string_view ResponseString() const;

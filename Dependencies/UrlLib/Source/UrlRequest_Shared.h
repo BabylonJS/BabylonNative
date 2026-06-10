@@ -67,6 +67,11 @@ namespace UrlLib
         return m_impl->StatusCode();
     }
 
+    std::string_view UrlRequest::StatusText() const
+    {
+        return m_impl->StatusText();
+    }
+
     std::string_view UrlRequest::ResponseUrl() const
     {
         return m_impl->ResponseUrl();
