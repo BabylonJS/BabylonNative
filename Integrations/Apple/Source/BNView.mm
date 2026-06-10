@@ -116,22 +116,18 @@
 
 - (void)renderFrame
 {
-    // Skip rendering while the backing CAMetalLayer has a zero-sized
-    // drawable. We deliberately don't force a layout pass at construction
-    // (see -initWithRuntime:view:), so on AppKit the drawable can still be
-    // 0x0 for the first frame(s) before layout runs. bgfx can't acquire a
-    // drawable at that size, which trips Metal API validation ("no output
-    // textures defined for the render pass"). A real size flows back in via
-    // the host's layout-driven -resizeWithWidth:height: (which sets the
-    // drawable size), at which point rendering resumes.
+    // Skip rendering until the backing CAMetalLayer has a non-zero drawable;
+    // bgfx can't acquire a drawable at 0x0 and Metal validation fails with
+    // "no output textures defined for the render pass". The host's
+    // layout-driven -resizeWithWidth:height: delivers the real size.
     //
-    // This guard lives here — not in the cross-platform View::RenderFrame —
-    // because the live drawable size is an Apple/Metal concept that the
-    // shared layer can't (and shouldn't) observe, and -renderFrame is the
-    // single chokepoint every render path funnels through (auto-installed
-    // delegate, host subclass calling super, or fully-custom delegate). It's
-    // the same reason the XR overlay toggle below lives here.
-    const CGSize drawableSize = _mtkView.drawableSize;
+    // Read from the CAMetalLayer, not MTKView.drawableSize: BNView sets
+    // autoResizeDrawable = NO, so MTKView stops tracking drawableSize (stays
+    // 0x0) while Babylon Native writes the real size onto the layer. The
+    // guard lives here because the live drawable size is Apple-specific and
+    // -renderFrame is the single chokepoint for every render path.
+    CAMetalLayer* metalLayer = (CAMetalLayer*)_mtkView.layer;
+    const CGSize drawableSize = metalLayer.drawableSize;
     if (drawableSize.width <= 0 || drawableSize.height <= 0)
     {
         return;
