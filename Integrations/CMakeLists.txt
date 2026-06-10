@@ -16,7 +16,7 @@ warnings_as_errors(Integrations)
 target_include_directories(Integrations PUBLIC "${INTEGRATIONS_SHARED_INCLUDE_ROOT}")
 
 # Always-on dependencies. The Integrations layer formalizes the canonical
-# Babylon Native setup, so the standard polyfills (Blob / Console /
+# Babylon Native setup, so the standard polyfills (Blob / Console / File /
 # Performance / TextDecoder / XMLHttpRequest) are always linked.
 target_link_libraries(Integrations
     PUBLIC napi
@@ -36,6 +36,7 @@ target_link_libraries(Integrations
     PRIVATE ScriptLoader
     PRIVATE Blob
     PRIVATE Console
+    PRIVATE File
     PRIVATE Performance
     PRIVATE TextDecoder
     PRIVATE XMLHttpRequest)

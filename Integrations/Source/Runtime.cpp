@@ -29,6 +29,7 @@
 
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Console.h>
+#include <Babylon/Polyfills/File.h>
 #include <Babylon/Polyfills/Performance.h>
 #include <Babylon/Polyfills/TextDecoder.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
@@ -184,6 +185,7 @@ namespace Babylon::Integrations
 
             // 2. Polyfills (always-on).
             Babylon::Polyfills::Blob::Initialize(env);
+            Babylon::Polyfills::File::Initialize(env);
 
             {
                 const auto userLog = implPtr->m_options.log;

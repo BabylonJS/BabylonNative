@@ -13,6 +13,7 @@ set(BABYLONJS_MATERIALS_ASSETS
 set(TEST_ASSETS
     "JavaScript/dist/tests.externalTexture.deviceLoss.js"
     "JavaScript/dist/tests.externalTexture.msaa.js"
+    "JavaScript/dist/tests.externalTexture.render.js"
     "JavaScript/dist/tests.javaScript.all.js"
     "JavaScript/dist/tests.shaderCache.basicScene.js"
     "JavaScript/dist/tests.shaderCompilation.comprehensiveGLSL.js")
@@ -26,6 +27,7 @@ set(SOURCES
     "Source/Tests.ExternalTexture.cpp"
     "Source/Tests.ExternalTexture.DeviceLoss.cpp"
     "Source/Tests.ExternalTexture.Msaa.cpp"
+    "Source/Tests.ExternalTexture.Render.cpp"
     "Source/Tests.JavaScript.cpp"
     "Source/Tests.ShaderCache.cpp"
     "Source/Tests.ShaderCompilation.cpp"
@@ -40,8 +42,7 @@ endif()
 
 if(GRAPHICS_API STREQUAL "D3D11")
     set(SOURCES ${SOURCES}
-        "Source/Tests.Device.${GRAPHICS_API}.cpp"
-        "Source/Tests.ExternalTexture.${GRAPHICS_API}.cpp")
+        "Source/Tests.Device.${GRAPHICS_API}.cpp")
 endif()
 
 if(APPLE)
@@ -57,7 +58,11 @@ elseif(UNIX AND NOT ANDROID)
     set(SOURCES ${SOURCES} "Source/App.X11.cpp")
     set(ADDITIONAL_COMPILE_DEFINITIONS PRIVATE SKIP_EXTERNAL_TEXTURE_TESTS)
 elseif(WIN32)
-    set(SOURCES ${SOURCES} "Source/App.Win32.cpp")
+    set(SOURCES ${SOURCES}
+        "Source/App.Win32.cpp"
+        "Source/RenderDoc.h"
+        "Source/RenderDoc.cpp")
+    set(ADDITIONAL_COMPILE_DEFINITIONS ${ADDITIONAL_COMPILE_DEFINITIONS} PRIVATE HAS_RENDERDOC)
 endif()
 
 add_executable(UnitTests ${BABYLONJS_ASSETS} ${BABYLONJS_MATERIALS_ASSETS} ${TEST_ASSETS} ${TEST_SCRIPTS} ${SOURCES})

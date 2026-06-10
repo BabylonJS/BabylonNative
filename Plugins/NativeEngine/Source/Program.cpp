@@ -27,6 +27,17 @@ namespace
             uniformNameToIndex[info.name] = handleIndex;
         }
     }
+
+    bgfx::ShaderHandle CreateShader(const std::shared_ptr<Babylon::Graphics::BgfxShaderInfo>& shaderInfo, gsl::span<const uint8_t> bytes)
+    {
+        using ShaderInfoPtr = std::shared_ptr<Babylon::Graphics::BgfxShaderInfo>;
+        static auto ShaderInfoReleaseFn = [](void*, void* userData) {
+            delete reinterpret_cast<ShaderInfoPtr*>(userData);
+        };
+        return bgfx::createShader(bgfx::makeRef(
+            bytes.data(), static_cast<uint32_t>(bytes.size()),
+            ShaderInfoReleaseFn, new ShaderInfoPtr{shaderInfo}));
+    }
 }
 
 namespace Babylon
@@ -47,37 +58,67 @@ namespace Babylon
     {
         arcana::trace_region region{"Program::Initialize"};
 
-        using ShaderInfoPtr = std::shared_ptr<Graphics::BgfxShaderInfo>;
-
-        static auto ShaderInfoReleaseFn = [](void*, void* userData) {
-            delete reinterpret_cast<ShaderInfoPtr*>(userData);
-        };
-
-        auto vertexShader = bgfx::createShader(bgfx::makeRef(
-            shaderInfo->VertexBytes.data(), static_cast<uint32_t>(shaderInfo->VertexBytes.size()),
-            ShaderInfoReleaseFn, new ShaderInfoPtr{shaderInfo}));
+        auto vertexShader = CreateShader(shaderInfo, shaderInfo->VertexBytes);
         InitUniformInfos(vertexShader, shaderInfo->UniformStages, m_uniformInfos, m_uniformNameToIndex);
 
-        auto fragmentShader = bgfx::createShader(bgfx::makeRef(
-            shaderInfo->FragmentBytes.data(), static_cast<uint32_t>(shaderInfo->FragmentBytes.size()),
-            ShaderInfoReleaseFn, new ShaderInfoPtr{shaderInfo}));
+        auto fragmentShader = CreateShader(shaderInfo, shaderInfo->FragmentBytes);
         InitUniformInfos(fragmentShader, shaderInfo->UniformStages, m_uniformInfos, m_uniformNameToIndex);
 
         m_handle = bgfx::createProgram(vertexShader, fragmentShader, true);
         m_vertexAttributeLocations = shaderInfo->VertexAttributeLocations;
     }
 
+    void Program::SetSources(std::string vertexSource, std::string fragmentSource)
+    {
+        m_vertexSource = std::move(vertexSource);
+        m_fragmentSource = std::move(fragmentSource);
+    }
+
+    bgfx::ProgramHandle Program::GetOrCreateInstancedVariant(const std::map<std::string, uint32_t>& instancedAttributes, ShaderProvider& shaderProvider)
+    {
+        if (instancedAttributes.empty())
+        {
+            return m_handle;
+        }
+
+        const auto it = m_instancedVariants.find(instancedAttributes);
+        if (it != m_instancedVariants.end())
+        {
+            return it->second;
+        }
+
+        auto shaderInfo = shaderProvider.Get(m_vertexSource, m_fragmentSource, instancedAttributes);
+
+        auto vertexShader = CreateShader(shaderInfo, shaderInfo->VertexBytes);
+        auto fragmentShader = CreateShader(shaderInfo, shaderInfo->FragmentBytes);
+        bgfx::ProgramHandle handle = bgfx::createProgram(vertexShader, fragmentShader, true);
+
+        m_instancedVariants.emplace(instancedAttributes, handle);
+        return handle;
+    }
+
     void Program::Dispose()
     {
+        const bool sameDevice = m_deviceID == m_deviceContext.GetDeviceId();
+
         if (bgfx::isValid(m_handle))
         {
-            if (m_deviceID == m_deviceContext.GetDeviceId())
+            if (sameDevice)
             {
                 bgfx::destroy(m_handle);
             }
 
             m_handle = BGFX_INVALID_HANDLE;
         }
+
+        for (auto& [key, handle] : m_instancedVariants)
+        {
+            if (sameDevice && bgfx::isValid(handle))
+            {
+                bgfx::destroy(handle);
+            }
+        }
+        m_instancedVariants.clear();
 
         m_uniforms.clear();
         m_uniformNameToIndex.clear();

@@ -69,19 +69,19 @@ namespace Babylon::Graphics
         return m_defaultBackBuffer;
     }
 
-    void FrameBuffer::Bind(bgfx::Encoder&)
+    void FrameBuffer::Bind()
     {
         m_viewId.reset();
     }
 
-    void FrameBuffer::Unbind(bgfx::Encoder&)
+    void FrameBuffer::Unbind()
     {
     }
 
     void FrameBuffer::Clear(bgfx::Encoder& encoder, uint16_t flags, uint32_t rgba, float depth, uint8_t stencil)
     {
         // BGFX requires us to create a new viewID, this will ensure that the view gets cleared.
-        m_viewId = m_deviceContext.AcquireNewViewId(encoder);
+        m_viewId = m_deviceContext.AcquireNewViewId();
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), flags, rgba, depth, stencil);
@@ -124,28 +124,28 @@ namespace Babylon::Graphics
         encoder.touch(m_viewId.value());
     }
 
-    void FrameBuffer::SetViewPort(bgfx::Encoder& encoder, float x, float y, float width, float height)
+    void FrameBuffer::SetViewPort(float x, float y, float width, float height)
     {
         m_desiredViewPort = {x, y, width, height};
-        SetBgfxViewPortAndScissor(encoder, m_desiredViewPort, m_desiredScissor);
+        SetBgfxViewPortAndScissor(m_desiredViewPort, m_desiredScissor);
     }
 
-    void FrameBuffer::SetScissor(bgfx::Encoder& encoder, float x, float y, float width, float height)
+    void FrameBuffer::SetScissor(float x, float y, float width, float height)
     {
         m_desiredScissor = GetBgfxScissor(x, y, width, height);
-        SetBgfxViewPortAndScissor(encoder, m_desiredViewPort, m_desiredScissor);
+        SetBgfxViewPortAndScissor(m_desiredViewPort, m_desiredScissor);
     }
 
     void FrameBuffer::Submit(bgfx::Encoder& encoder, bgfx::ProgramHandle programHandle, uint8_t flags)
     {
-        SetBgfxViewPortAndScissor(encoder, m_desiredViewPort, m_desiredScissor);
+        SetBgfxViewPortAndScissor(m_desiredViewPort, m_desiredScissor);
         encoder.submit(m_viewId.value(), programHandle, 0, flags);
     }
 
     void FrameBuffer::Blit(bgfx::Encoder& encoder, bgfx::TextureHandle dst, uint16_t dstX, uint16_t dstY, bgfx::TextureHandle src, uint16_t srcX, uint16_t srcY, uint16_t width, uint16_t height)
     {
         // In order for Blit to work properly we need to force the creation of a new ViewID.
-        SetBgfxViewPortAndScissor(encoder, m_desiredViewPort, m_desiredScissor);
+        SetBgfxViewPortAndScissor(m_desiredViewPort, m_desiredScissor);
         encoder.blit(m_viewId.value(), dst, dstX, dstY, src, srcX, srcY, width, height);
     }
 
@@ -195,14 +195,14 @@ namespace Babylon::Graphics
         return Rect{x, y, width, height};
     }
 
-    void FrameBuffer::SetBgfxViewPortAndScissor(bgfx::Encoder& encoder, const Rect& viewPort, const Rect& scissor)
+    void FrameBuffer::SetBgfxViewPortAndScissor(const Rect& viewPort, const Rect& scissor)
     {
         if (m_viewId.has_value() && viewPort.Equals(m_bgfxViewPort) && scissor.Equals(m_bgfxScissor))
         {
             return;
         }
 
-        m_viewId = m_deviceContext.AcquireNewViewId(encoder);
+        m_viewId = m_deviceContext.AcquireNewViewId();
 
         bgfx::setViewMode(m_viewId.value(), bgfx::ViewMode::Sequential);
         bgfx::setViewClear(m_viewId.value(), BGFX_CLEAR_NONE, 0, 1.0f, 0);

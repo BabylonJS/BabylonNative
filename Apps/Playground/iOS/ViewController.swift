@@ -72,4 +72,3 @@ class ViewController: UIViewController {
         view.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "V:|[xrView]|", options: [], metrics: nil, views: ["xrView" : xrView]))
     }
 }
-

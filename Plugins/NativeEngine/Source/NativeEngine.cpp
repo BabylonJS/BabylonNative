@@ -2,6 +2,9 @@
 
 #include <Babylon/Graphics/Texture.h>
 
+#include <map>
+#include <string>
+
 #include "JsConsoleLogger.h"
 
 #include <arcana/threading/task.h>
@@ -24,7 +27,10 @@
 #include <bx/error.h>
 #endif
 
+#include <cassert>
 #include <cmath>
+#include <limits>
+#include <optional>
 
 #if defined(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES) && defined(WEBP)
 #include <webp/decode.h>
@@ -329,7 +335,7 @@ namespace Babylon
                 texture->Create2D(static_cast<uint16_t>(image->m_width), static_cast<uint16_t>(image->m_height), (image->m_numMips > 1), 1, Cast(image->m_format), flags);
             }
 
-            for (uint8_t mip = 0, numMips = image->m_numMips; mip < numMips; ++mip)
+            for (uint8_t mip = 0; mip < image->m_numMips; ++mip)
             {
                 bimg::ImageMip imageMip{};
                 if (bimg::imageGetRawData(*image, 0, mip, image->m_data, image->m_size, imageMip))
@@ -398,7 +404,7 @@ namespace Babylon
                 for (uint8_t side = 0; side < 6; ++side)
                 {
                     bimg::ImageContainer* image{images[side]};
-                    for (uint8_t mip = 0, numMips = image->m_numMips; mip < numMips; ++mip)
+                    for (uint8_t mip = 0; mip < image->m_numMips; ++mip)
                     {
                         bimg::ImageMip imageMip{};
                         if (bimg::imageGetRawData(*image, 0, mip, image->m_data, image->m_size, imageMip))
@@ -739,10 +745,14 @@ namespace Babylon
                 InstanceMethod("submitCommands", &NativeEngine::SubmitCommands),
 
                 InstanceMethod("populateFrameStats", &NativeEngine::PopulateFrameStats),
+                InstanceMethod("beginFrame", &NativeEngine::BeginFrame),
+                InstanceMethod("endFrame", &NativeEngine::EndFrame),
 
                 // setDeviceLostCallback is a deprecated alias. Prefer setRenderResetCallback.
                 InstanceMethod("setRenderResetCallback", &NativeEngine::SetRenderResetCallback),
                 InstanceMethod("setDeviceLostCallback", &NativeEngine::SetRenderResetCallback),
+
+
             });
 
         JsRuntime::NativeObject::GetFromJavaScript(env).Set(JS_CONSTRUCTOR_NAME, func);
@@ -758,7 +768,6 @@ namespace Babylon
         , m_cancellationSource{std::make_shared<arcana::cancellation_source>()}
         , m_runtime{runtime}
         , m_deviceContext{Graphics::DeviceContext::GetFromJavaScript(info.Env())}
-        , m_update{m_deviceContext.GetUpdate("update")}
         , m_runtimeScheduler{runtime}
         , m_defaultFrameBuffer{m_deviceContext, BGFX_INVALID_HANDLE, 0, 0, true, true, true}
         , m_boundFrameBuffer{&m_defaultFrameBuffer}
@@ -969,6 +978,7 @@ namespace Babylon
         Napi::Value jsProgram = Napi::Pointer<Program>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
         try
         {
+            program->SetSources(vertexSource, fragmentSource);
             program->Initialize(m_shaderProvider.Get(vertexSource, fragmentSource));
         }
         catch (const std::exception& ex)
@@ -987,6 +997,8 @@ namespace Babylon
 
         Program* program = new Program{m_deviceContext};
         Napi::Value jsProgram = Napi::Pointer<Program>::Create(info.Env(), program, Napi::NapiPointerDeleter(program));
+
+        program->SetSources(vertexSource, fragmentSource);
 
         arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource,
             [this, vertexSource = std::move(vertexSource), fragmentSource = std::move(fragmentSource), program, cancellationSource{m_cancellationSource}]() {
@@ -1360,11 +1372,14 @@ namespace Babylon
 
     void NativeEngine::CopyTexture(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
+        bgfx::Encoder* encoder = GetEncoder();
 
         const auto textureSource = data.ReadPointer<Graphics::Texture>();
         const auto textureDestination = data.ReadPointer<Graphics::Texture>();
 
+        // Use a view id greater than every view used so far so the blit runs after
+        // all canvas Flushes that may have produced the source content (bgfx
+        // processes blits in numeric view-id order). See #1683.
         const bgfx::ViewId blitView = m_deviceContext.PeekNextViewId();
         encoder->blit(blitView, textureDestination->Handle(), 0, 0, textureSource->Handle());
     }
@@ -1401,9 +1416,9 @@ namespace Babylon
 #else
         const auto texture{info[0].As<Napi::Pointer<Graphics::Texture>>().Get()};
         const auto data = info[1].As<Napi::TypedArray>();
-        const auto width{static_cast<uint16_t>(info[2].As<Napi::Number>().Uint32Value())};
-        const auto height{static_cast<uint16_t>(info[3].As<Napi::Number>().Uint32Value())};
-        const auto depth{static_cast<uint16_t>(info[4].As<Napi::Number>().Int32Value())};
+        const auto rawWidth{info[2].As<Napi::Number>().Uint32Value()};
+        const auto rawHeight{info[3].As<Napi::Number>().Uint32Value()};
+        const auto rawDepth{info[4].As<Napi::Number>().Uint32Value()};
         const auto format{static_cast<bimg::TextureFormat::Enum>(info[5].As<Napi::Number>().Uint32Value())};
         const auto generateMips = info[6].As<Napi::Boolean>().Value();
         const auto invertY = info[7].As<Napi::Boolean>().Value();
@@ -1418,12 +1433,35 @@ namespace Babylon
             throw Napi::Error::New(Env(), "Texture 2D array currently do not support invert Y.");
         }
 
+        // width/height/depth originate from JS. Validate the raw 32-bit values
+        // against the GPU limits before narrowing to uint16_t, otherwise an
+        // out-of-range value (e.g. 70000) would wrap into an in-range uint16_t
+        // and slip past this check, driving an oversized allocation or an
+        // out-of-bounds read in the renderer.
+        const auto maxTextureSize = bgfx::getCaps()->limits.maxTextureSize;
+        const auto maxTextureLayers = bgfx::getCaps()->limits.maxTextureLayers;
+        if (rawWidth == 0 || rawHeight == 0 || rawDepth == 0 ||
+            rawWidth > maxTextureSize ||
+            rawHeight > maxTextureSize ||
+            rawDepth > maxTextureLayers)
+        {
+            throw Napi::Error::New(Env(), "Invalid width, height, or depth for the 2D texture array.");
+        }
+
+        const auto width{static_cast<uint16_t>(rawWidth)};
+        const auto height{static_cast<uint16_t>(rawHeight)};
+        const auto depth{static_cast<uint16_t>(rawDepth)};
+
         uint64_t flags{BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE | BGFX_CAPS_TEXTURE_2D_ARRAY};
         texture->Create2D(width, height, generateMips, depth, Cast(format), flags);
 
         if (!data.IsNull())
         {
-            if (data.ByteLength() != bimg::imageGetSize(nullptr, width, height, 1, false, false, depth, format))
+            // imageGetSize returns the full size in 64-bit; compare against the
+            // 64-bit byte length so a crafted width/height/depth cannot wrap the
+            // expected size and slip an undersized buffer past this check.
+            const uint64_t expectedSize{bimg::imageGetSize(nullptr, width, height, 1, false, false, depth, format)};
+            if (expectedSize == 0 || static_cast<uint64_t>(data.ByteLength()) != expectedSize)
             {
                 throw Napi::Error::New(Env(), "The data size does not match width, height, depth and format");
             }
@@ -1432,6 +1470,13 @@ namespace Babylon
             size_t dataSize = data.ByteLength();
 
             size_t textureSize = dataSize / static_cast<size_t>(depth);
+
+            // bgfx::Memory uses a 32-bit size; reject a per-layer payload that
+            // would be truncated by the bgfx::copy cast below.
+            if (textureSize > UINT32_MAX)
+            {
+                throw Napi::Error::New(Env(), "The 2D texture array layer size is too large.");
+            }
 
             for (uint16_t i = 0; i < depth; i++)
             {
@@ -1604,26 +1649,35 @@ namespace Babylon
 
     void NativeEngine::SetTexture(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
-
         const UniformInfo* uniformInfo = data.ReadPointer<UniformInfo>();
         const Graphics::Texture* texture = data.ReadPointer<Graphics::Texture>();
 
-        encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle(), texture->SamplerFlags());
+        bgfx::Encoder* encoder = GetEncoder();
+
+        const uint16_t numLayers = texture->ViewNumLayers();
+        if (numLayers != 0)
+        {
+            // Select a single array slice of a multi-layer texture at bind time (e.g. NV12 decoder
+            // frame-pool slice). The texture itself stays a full TEXTURE2DARRAY.
+            encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle(), texture->ViewFirstLayer(), numLayers, 0, UINT8_MAX, texture->SamplerFlags());
+        }
+        else
+        {
+            encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, texture->Handle(), texture->SamplerFlags());
+        }
     }
 
     void NativeEngine::UnsetTexture(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
-
         const UniformInfo* uniformInfo = data.ReadPointer<UniformInfo>();
 
+        bgfx::Encoder* encoder = GetEncoder();
         encoder->setTexture(uniformInfo->Stage, uniformInfo->Handle, BGFX_INVALID_HANDLE);
     }
 
     void NativeEngine::DiscardAllTextures(NativeDataStream::Reader&)
     {
-        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
+        bgfx::Encoder* encoder = GetEncoder();
         encoder->discard(BGFX_DISCARD_BINDINGS);
     }
 
@@ -1669,8 +1723,12 @@ namespace Babylon
             buffer = Napi::ArrayBuffer::New(env, bufferLength);
         }
 
-        // Make sure the buffer is big enough for the offset + length.
-        if (buffer.ByteLength() < bufferOffset + bufferLength)
+        // Make sure the buffer is big enough for the offset + length. Both
+        // bufferOffset and bufferLength are JS-supplied uint32_t, so widen the
+        // addition to 64-bit: computing it in 32-bit can wrap around (e.g. offset
+        // 0xF0000000 + length 0x20000000), letting an out-of-range offset pass this
+        // gate and overflow the ArrayBuffer backing store in the memcpy below.
+        if (buffer.ByteLength() < static_cast<uint64_t>(bufferOffset) + bufferLength)
         {
             deferred.Reject(Napi::Error::New(env, "Provided buffer is too small for the specified offset and length.").Value());
         }
@@ -1681,31 +1739,33 @@ namespace Babylon
         }
         else
         {
+            // Acquire a FrameCompletionScope for the duration of the read operation.
+            // This ensures the encoder is available for the blit (if needed) and that
+            // bgfx::readTexture lands in the same frame as the blit.
+            Graphics::FrameCompletionScope scope{m_deviceContext.AcquireFrameCompletionScope()};
+
             bgfx::TextureHandle sourceTextureHandle{texture->Handle()};
             auto tempTexture = std::make_shared<bool>(false);
 
-            // If the image needs to be cropped (not starting at 0, or less than full width/height (accounting for requested mip level)),
-            // or if the texture was not created with the BGFX_TEXTURE_READ_BACK flag, then blit it to a temp texture.
+            // If the image needs to be cropped or the texture lacks the READ_BACK flag, blit to a temp texture.
             if (x != 0 || y != 0 || width != (texture->Width() >> mipLevel) || height != (texture->Height() >> mipLevel) || (texture->Flags() & BGFX_TEXTURE_READ_BACK) == 0)
             {
                 const bgfx::TextureHandle blitTextureHandle{bgfx::createTexture2D(width, height, /*hasMips*/ false, /*numLayers*/ 1, sourceTextureFormat, BGFX_TEXTURE_BLIT_DST | BGFX_TEXTURE_READ_BACK)};
-                bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
+
+                bgfx::Encoder* encoder = GetEncoder();
                 encoder->blit(static_cast<uint16_t>(bgfx::getCaps()->limits.maxViews - 1), blitTextureHandle, /*dstMip*/ 0, /*dstX*/ 0, /*dstY*/ 0, /*dstZ*/ 0, sourceTextureHandle, mipLevel, x, y, /*srcZ*/ 0, width, height, /*depth*/ 0);
 
                 sourceTextureHandle = blitTextureHandle;
                 *tempTexture = true;
-
-                // The requested mip level was blitted, so the source texture now has just one mip, so reset the mip level to 0.
                 mipLevel = 0;
             }
 
             // Allocate a buffer to store the source pixel data.
             std::vector<uint8_t> textureBuffer(sourceTextureInfo.storageSize);
 
-            // Read the source texture.
+            // Read the source texture (async — completes after bgfx::frame).
             m_deviceContext.ReadTextureAsync(sourceTextureHandle, textureBuffer, mipLevel)
                 .then(arcana::inline_scheduler, *m_cancellationSource, [textureBuffer{std::move(textureBuffer)}, sourceTextureInfo, targetTextureInfo]() mutable {
-                    // If the source texture format does not match the target texture format, convert it.
                     if (targetTextureInfo.format != sourceTextureInfo.format)
                     {
 #ifndef BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES
@@ -1719,47 +1779,32 @@ namespace Babylon
                         textureBuffer = convertedTextureBuffer;
 #endif
                     }
-
-                    // Ensure the final texture buffer has the expected size.
                     assert(textureBuffer.size() == targetTextureInfo.storageSize);
-
-                    // Flip the image vertically if needed.
                     if (bgfx::getCaps()->originBottomLeft)
                     {
                         FlipImage(textureBuffer, targetTextureInfo.height);
                     }
-
                     return textureBuffer;
                 })
                 .then(m_runtimeScheduler, *m_cancellationSource, [this, bufferRef{Napi::Persistent(buffer)}, bufferOffset, deferred, tempTexture, sourceTextureHandle](std::vector<uint8_t> textureBuffer) mutable {
-                    // Double check the destination buffer length. This is redundant with prior checks, but we'll be extra sure before the memcpy.
                     assert(bufferRef.Value().ByteLength() - bufferOffset >= textureBuffer.size());
-
-                    // Copy the pixel data into the JS ArrayBuffer.
-                    uint8_t* buffer{static_cast<uint8_t*>(bufferRef.Value().Data())};
-                    std::memcpy(buffer + bufferOffset, textureBuffer.data(), textureBuffer.size());
-
-                    // Dispose of the texture handle before resolving the promise.
-                    // TODO: Handle properly handle stale handles after BGFX shutdown
+                    uint8_t* buf{static_cast<uint8_t*>(bufferRef.Value().Data())};
+                    std::memcpy(buf + bufferOffset, textureBuffer.data(), textureBuffer.size());
                     if (*tempTexture && !m_cancellationSource->cancelled())
                     {
                         bgfx::destroy(sourceTextureHandle);
                         *tempTexture = false;
                     }
-
                     deferred.Resolve(bufferRef.Value());
                 })
-                .then(m_runtimeScheduler, arcana::cancellation::none(), [this, env, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
-                    // Dispose of the texture handle if not yet disposed.
-                    // TODO: Handle properly handle stale handles after BGFX shutdown
+                .then(m_runtimeScheduler, arcana::cancellation::none(), [this, deferred, tempTexture, sourceTextureHandle](const arcana::expected<void, std::exception_ptr>& result) {
                     if (*tempTexture && !m_cancellationSource->cancelled())
                     {
                         bgfx::destroy(sourceTextureHandle);
                     }
-
                     if (result.has_error())
                     {
-                        deferred.Reject(Napi::Error::New(env, result.error()).Value());
+                        deferred.Reject(Napi::Error::New(Env(), result.error()).Value());
                     }
                 });
         }
@@ -1843,63 +1888,55 @@ namespace Babylon
 
     void NativeEngine::BindFrameBuffer(NativeDataStream::Reader& data)
     {
-        auto encoder = GetUpdateToken().GetEncoder();
-
         Graphics::FrameBuffer* frameBuffer = data.ReadPointer<Graphics::FrameBuffer>();
-        m_boundFrameBuffer->Unbind(*encoder);
+        m_boundFrameBuffer->Unbind();
         m_boundFrameBuffer = frameBuffer;
-        m_boundFrameBuffer->Bind(*encoder);
-        m_boundFrameBufferNeedsRebinding.Set(*encoder, false);
+        m_boundFrameBuffer->Bind();
+        m_boundFrameBufferNeedsRebinding.Set(false);
     }
 
     void NativeEngine::UnbindFrameBuffer(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder = GetUpdateToken().GetEncoder();
-
         const Graphics::FrameBuffer* frameBuffer = data.ReadPointer<Graphics::FrameBuffer>();
 
         assert(m_boundFrameBuffer == frameBuffer);
         UNUSED(frameBuffer);
 
-        m_boundFrameBuffer->Unbind(*encoder);
+        m_boundFrameBuffer->Unbind();
         m_boundFrameBuffer = nullptr;
-        m_boundFrameBufferNeedsRebinding.Set(*encoder, false);
+        m_boundFrameBufferNeedsRebinding.Set(false);
     }
 
     // Note: For legacy reasons JS might call this function for instance drawing.
     // In that case the instanceCount will be calculated inside the SetVertexBuffers method.
     void NativeEngine::DrawIndexed(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-
         const uint32_t fillMode = data.ReadUint32();
         const uint32_t indexStart = data.ReadUint32();
         const uint32_t indexCount = data.ReadUint32();
 
+        bgfx::Encoder* encoder = GetEncoder();
         if (m_boundVertexArray != nullptr)
         {
             m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
             m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max());
         }
-
         DrawInternal(encoder, fillMode);
     }
 
     void NativeEngine::DrawIndexedInstanced(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-
         const uint32_t fillMode = data.ReadUint32();
         const uint32_t indexStart = data.ReadUint32();
         const uint32_t indexCount = data.ReadUint32();
         const uint32_t instanceCount = data.ReadUint32();
 
+        bgfx::Encoder* encoder = GetEncoder();
         if (m_boundVertexArray != nullptr)
         {
             m_boundVertexArray->SetIndexBuffer(encoder, indexStart, indexCount);
             m_boundVertexArray->SetVertexBuffers(encoder, 0, std::numeric_limits<uint32_t>::max(), instanceCount);
         }
-
         DrawInternal(encoder, fillMode);
     }
 
@@ -1907,41 +1944,35 @@ namespace Babylon
     // In that case the instanceCount will be calculated inside the SetVertexBuffers method.
     void NativeEngine::Draw(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-
         const uint32_t fillMode = data.ReadUint32();
         const uint32_t verticesStart = data.ReadUint32();
         const uint32_t verticesCount = data.ReadUint32();
 
+        bgfx::Encoder* encoder = GetEncoder();
         if (m_boundVertexArray != nullptr)
         {
             m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount);
         }
-
         DrawInternal(encoder, fillMode);
     }
 
     void NativeEngine::DrawInstanced(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-
         const uint32_t fillMode = data.ReadUint32();
         const uint32_t verticesStart = data.ReadUint32();
         const uint32_t verticesCount = data.ReadUint32();
         const uint32_t instanceCount = data.ReadUint32();
 
+        bgfx::Encoder* encoder = GetEncoder();
         if (m_boundVertexArray != nullptr)
         {
             m_boundVertexArray->SetVertexBuffers(encoder, verticesStart, verticesCount, instanceCount);
         }
-
         DrawInternal(encoder, fillMode);
     }
 
     void NativeEngine::Clear(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-
         uint16_t flags{0};
         uint32_t rgba{0x000000ff};
 
@@ -1954,6 +1985,8 @@ namespace Babylon
         const float depth{data.ReadFloat32()};
         const bool shouldClearStencil{static_cast<bool>(data.ReadUint32())};
         const uint8_t stencil{static_cast<uint8_t>(data.ReadUint32())};
+
+        bgfx::Encoder* encoder = GetEncoder();
 
         if (shouldClearColor)
         {
@@ -1976,7 +2009,7 @@ namespace Babylon
             flags |= BGFX_CLEAR_STENCIL;
         }
 
-        GetBoundFrameBuffer(*encoder).Clear(*encoder, flags, rgba, depth, stencil);
+        GetBoundFrameBuffer().Clear(*encoder, flags, rgba, depth, stencil);
     }
 
     Napi::Value NativeEngine::GetRenderWidth(const Napi::CallbackInfo& info)
@@ -2079,7 +2112,32 @@ namespace Babylon
 
         const Napi::Env env{info.Env()};
 
-        bimg::ImageContainer* image = bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false, data.Data());
+        // bufferWidth/bufferHeight are the (JS-controlled) resize target extents.
+        // They feed both the output allocation and stbir's output dimensions
+        // (which are signed int), so bound them to the same 16-bit texture limit
+        // bimg enforces for the source. This also keeps the allocation size below
+        // the 32-bit overflow the naive width*height*4 multiply would otherwise
+        // hit (and that stbir would then write past).
+        if (bufferWidth == 0 || bufferWidth > UINT16_MAX || bufferHeight == 0 || bufferHeight > UINT16_MAX)
+        {
+            throw Napi::Error::New(env, "Invalid target image dimensions for ResizeImageBitmap.");
+        }
+
+        // width/height/format come straight from the (JS-controlled) imageBitmap
+        // object and are later used as the source extents for the resize read.
+        // bimg::imageAlloc rejects dimensions that don't fit in 16 bits (it would
+        // otherwise truncate and under-allocate), so pass the full 32-bit values
+        // and let it validate; a rejected allocation surfaces as the error below.
+        // Also make sure the supplied pixel buffer is large enough for those
+        // dimensions, since imageAlloc memcpy's the source into the new container
+        // and an undersized buffer would read out of bounds of the JS array.
+        const uint64_t sourceSize = bimg::imageGetSize(nullptr, width, height, 1, false, false, 1, format);
+        if (sourceSize == 0 || data.ByteLength() < sourceSize)
+        {
+            throw Napi::Error::New(env, "Invalid source image dimensions for ResizeImageBitmap.");
+        }
+
+        bimg::ImageContainer* image = bimg::imageAlloc(&Graphics::DeviceContext::GetDefaultAllocator(), format, width, height, 1, 1, false, false, data.Data());
         if (image == nullptr)
         {
             throw Napi::Error::New(env, "Unable to allocate image for ResizeImageBitmap.");
@@ -2100,7 +2158,20 @@ namespace Babylon
             image = rgba;
         }
 
-        auto outputData = Napi::Uint8Array::New(env, bufferWidth * bufferHeight * 4);
+        // Compute the output size in 64-bit and reject anything that doesn't fit
+        // in size_t: on 32-bit builds size_t is 32-bit, so even within the 16-bit
+        // dimension cap above bufferWidth*bufferHeight*4 can exceed it (~17GB) and
+        // wrap to an undersized allocation that stbir_resize would then write past.
+        const uint64_t outputByteCount = static_cast<uint64_t>(bufferWidth) * bufferHeight * 4;
+        if constexpr (std::numeric_limits<size_t>::max() < std::numeric_limits<uint64_t>::max())
+        {
+            if (outputByteCount > static_cast<uint64_t>(std::numeric_limits<size_t>::max()))
+            {
+                throw Napi::Error::New(env, "Requested output buffer is too large for ResizeImageBitmap.");
+            }
+        }
+
+        auto outputData = Napi::Uint8Array::New(env, static_cast<size_t>(outputByteCount));
         if (width != bufferWidth || height != bufferHeight)
         {
             stbir_resize_uint8_linear(static_cast<unsigned char*>(image->m_data), width, height, 0,
@@ -2156,27 +2227,23 @@ namespace Babylon
 
     void NativeEngine::SetViewPort(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-
         const float x{data.ReadFloat32()};
         const float y{data.ReadFloat32()};
         const float width{data.ReadFloat32()};
         const float height{data.ReadFloat32()};
         const float yOrigin = bgfx::getCaps()->originBottomLeft ? y : (1.f - y - height);
 
-        GetBoundFrameBuffer(*encoder).SetViewPort(*encoder, x, yOrigin, width, height);
+        GetBoundFrameBuffer().SetViewPort(x, yOrigin, width, height);
     }
 
     void NativeEngine::SetScissor(NativeDataStream::Reader& data)
     {
-        bgfx::Encoder* encoder{GetUpdateToken().GetEncoder()};
-
         const float x{data.ReadFloat32()};
         const float y{data.ReadFloat32()};
         const float width{data.ReadFloat32()};
         const float height{data.ReadFloat32()};
 
-        GetBoundFrameBuffer(*encoder).SetScissor(*encoder, x, y, width, height);
+        GetBoundFrameBuffer().SetScissor(x, y, width, height);
     }
 
     void NativeEngine::SetCommandDataStream(const Napi::CallbackInfo& info)
@@ -2188,6 +2255,25 @@ namespace Babylon
 
     void NativeEngine::SubmitCommands(const Napi::CallbackInfo& info)
     {
+        // Acquire a FrameCompletionScope and capture it into a Dispatch
+        // lambda so the frame stays open across the rest of the current JS
+        // task, not just this command-stream pass. Any continuation work in
+        // the same JS task (further submitCommands calls, immediate promise
+        // resolutions touching bgfx, scene.dispose() cleanup, etc.) sees
+        // count > 0 and remains protected from a concurrent
+        // FinishRenderingCurrentFrame.
+        //
+        // Dispatching at the top (before the try block) also makes the
+        // coverage exception-safe — if the command stream throws, the lambda
+        // is already queued so the scope still survives to the next dispatch
+        // cycle.
+        //
+        // shared_ptr because Dispatchable is move-only at the AppRuntime
+        // layer but JsRuntime downstream type-erases via std::function which
+        // requires copy-constructibility.
+        m_runtime.Dispatch([scope = std::make_shared<Graphics::FrameCompletionScope>(
+            m_deviceContext.AcquireFrameCompletionScope())](auto) {});
+
         try
         {
             NativeDataStream::Reader reader = m_commandStream->GetReader();
@@ -2204,12 +2290,23 @@ namespace Babylon
 
     void NativeEngine::PopulateFrameStats(const Napi::CallbackInfo& info)
     {
-        const auto updateToken{m_update.GetUpdateToken()};
         const auto stats{bgfx::getStats()};
         const double toGpuNs = 1000000000.0 / double(stats->gpuTimerFreq);
         const double gpuTimeNs = (stats->gpuTimeEnd - stats->gpuTimeBegin) * toGpuNs;
         Napi::Object jsStatsObject = info[0].As<Napi::Object>();
         jsStatsObject.Set("gpuTimeNs", gpuTimeNs);
+    }
+
+    void NativeEngine::BeginFrame(const Napi::CallbackInfo&)
+    {
+        // Encoder is managed by StartRenderingCurrentFrame/FinishRenderingCurrentFrame.
+        // Nothing to do here.
+    }
+
+    void NativeEngine::EndFrame(const Napi::CallbackInfo&)
+    {
+        // Encoder is managed by StartRenderingCurrentFrame/FinishRenderingCurrentFrame.
+        // Nothing to do here.
     }
 
     void NativeEngine::DrawInternal(bgfx::Encoder* encoder, uint32_t fillMode)
@@ -2262,7 +2359,48 @@ namespace Babylon
             encoder->setUniform({it.first}, value.Data.data(), value.ElementLength);
         }
 
-        auto& boundFrameBuffer = GetBoundFrameBuffer(*encoder);
+        // Divisor-driven instancing: a consumer-instanced attribute (divisor==1) recorded at a
+        // base bgfx location below TexCoord3 was compiled to a per-vertex slot. bgfx can only feed
+        // per-instance data into i_data slots (TexCoord3..TexCoord7), so route those attributes to
+        // the correct i_data slot via a lazily-compiled program variant. The target location mirrors
+        // BuildInstanceDataBuffer's reverse-attrib packing: highest base attrib -> TexCoord7.
+        bgfx::ProgramHandle programHandle = m_currentProgram->Handle();
+        if (m_boundVertexArray != nullptr)
+        {
+            const auto& instances = m_boundVertexArray->GetInstances();
+            if (!instances.empty())
+            {
+                std::map<std::string, uint32_t> genericInstancedAttributes;
+                const auto& attributeLocations = m_currentProgram->VertexAttributeLocations();
+                const size_t count = instances.size();
+                size_t ascendingIndex = 0;
+                for (const auto& instance : instances)
+                {
+                    const bgfx::Attrib::Enum attrib = instance.first;
+                    if (attrib < bgfx::Attrib::TexCoord3)
+                    {
+                        const size_t rank = count - 1 - ascendingIndex;
+                        const uint32_t targetLocation = static_cast<uint32_t>(bgfx::Attrib::TexCoord7) - static_cast<uint32_t>(rank);
+                        for (const auto& [name, location] : attributeLocations)
+                        {
+                            if (location == static_cast<uint32_t>(attrib))
+                            {
+                                genericInstancedAttributes.emplace(name, targetLocation);
+                                break;
+                            }
+                        }
+                    }
+                    ++ascendingIndex;
+                }
+
+                if (!genericInstancedAttributes.empty())
+                {
+                    programHandle = m_currentProgram->GetOrCreateInstancedVariant(genericInstancedAttributes, m_shaderProvider);
+                }
+            }
+        }
+
+        auto& boundFrameBuffer = GetBoundFrameBuffer();
         if (boundFrameBuffer.HasDepth())
         {
             encoder->setState(m_engineState | fillModeState);
@@ -2275,36 +2413,23 @@ namespace Babylon
         boundFrameBuffer.SetStencil(*encoder, m_stencilState);
 
         // Discard everything except textures since we keep the state of everything else.
-        boundFrameBuffer.Submit(*encoder, m_currentProgram->Handle(), BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
+        boundFrameBuffer.Submit(*encoder, programHandle, BGFX_DISCARD_ALL & ~BGFX_DISCARD_BINDINGS);
     }
 
-    Graphics::UpdateToken& NativeEngine::GetUpdateToken()
-    {
-        if (!m_updateToken)
-        {
-            m_updateToken.emplace(m_update.GetUpdateToken());
-            m_runtime.Dispatch([this](auto) {
-                m_updateToken.reset();
-            });
-        }
-
-        return m_updateToken.value();
-    }
-
-    Graphics::FrameBuffer& NativeEngine::GetBoundFrameBuffer(bgfx::Encoder& encoder)
+    Graphics::FrameBuffer& NativeEngine::GetBoundFrameBuffer()
     {
         if (m_boundFrameBuffer == nullptr)
         {
             m_boundFrameBuffer = &m_defaultFrameBuffer;
-            m_defaultFrameBuffer.Bind(encoder);
+            m_defaultFrameBuffer.Bind();
         }
-        else if (m_boundFrameBufferNeedsRebinding.Get(encoder))
+        else if (m_boundFrameBufferNeedsRebinding.Get())
         {
-            m_boundFrameBuffer->Unbind(encoder);
-            m_boundFrameBuffer->Bind(encoder);
+            m_boundFrameBuffer->Unbind();
+            m_boundFrameBuffer->Bind();
         }
 
-        m_boundFrameBufferNeedsRebinding.Set(encoder, false);
+        m_boundFrameBufferNeedsRebinding.Set(false);
         return *m_boundFrameBuffer;
     }
 
@@ -2317,8 +2442,23 @@ namespace Babylon
 
         m_requestAnimationFrameCallbacksScheduled = true;
 
-        arcana::make_task(m_update.Scheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
-            return arcana::make_task(m_runtimeScheduler, *m_cancellationSource, [this, updateToken{m_update.GetUpdateToken()}, cancellationSource{m_cancellationSource}]() {
+        // Schedule a two-phase task:
+        // Phase 1 (FrameStartScheduler, runs on main thread during StartRenderingCurrentFrame):
+        //   Acquires a FrameCompletionScope to keep the frame open, then dispatches to JS.
+        // Phase 2 (runtimeScheduler, runs on JS thread):
+        //   Executes RAF callbacks (which call scene.render → beginFrame/endFrame).
+        //   Defers scope release to the NEXT dispatch cycle so that any bgfx API calls
+        //   triggered after callbacks return (e.g., GC-driven resource destruction) are
+        //   still protected from concurrent bgfx::frame().
+        arcana::make_task(m_deviceContext.FrameStartScheduler(), *m_cancellationSource, [this, cancellationSource{m_cancellationSource}]() {
+            return arcana::make_task(
+				  m_runtimeScheduler
+				, *m_cancellationSource
+				, [this
+					, frameScope{std::make_shared<Graphics::FrameCompletionScope>(m_deviceContext.AcquireFrameCompletionScope())}
+					, cancellationSource{m_cancellationSource}
+				  ]()
+			{
                 m_requestAnimationFrameCallbacksScheduled = false;
 
                 arcana::trace_region scheduleRegion{"NativeEngine::ScheduleRequestAnimationFrameCallbacks invoke JS callbacks"};
@@ -2327,6 +2467,12 @@ namespace Babylon
                 {
                     callback.Value().Call({});
                 }
+
+                // Defer scope release to next dispatch cycle. The shared_ptr captured by
+                // the Dispatch lambda is the last reference — when that lambda runs and
+                // returns, the scope is destroyed, decrementing the counter and allowing
+                // FinishRenderingCurrentFrame to proceed.
+                m_runtime.Dispatch([prevent_frame = frameScope](auto) {});
             }).then(arcana::inline_scheduler, *m_cancellationSource, [this, cancellationSource{m_cancellationSource}](const arcana::expected<void, std::exception_ptr>& result) {
                 if (!cancellationSource->cancelled() && result.has_error())
                 {
@@ -2334,5 +2480,12 @@ namespace Babylon
                 }
             });
         });
+    }
+
+    bgfx::Encoder* NativeEngine::GetEncoder()
+    {
+        bgfx::Encoder* encoder = m_deviceContext.GetActiveEncoder();
+        assert(encoder != nullptr);
+        return encoder;
     }
 }

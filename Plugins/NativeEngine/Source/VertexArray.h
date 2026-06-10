@@ -24,6 +24,8 @@ namespace Babylon
         void SetIndexBuffer(bgfx::Encoder* encoder, uint32_t firstIndex, uint32_t numIndices);
         void SetVertexBuffers(bgfx::Encoder* encoder, uint32_t startVertex, uint32_t numVertices, uint32_t instanceCount = 0);
 
+        const std::map<bgfx::Attrib::Enum, VertexBuffer::InstanceInfo>& GetInstances() const { return m_vertexBufferInstances; }
+
     private:
         IndexBuffer* m_indexBuffer{};
 

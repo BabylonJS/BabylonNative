@@ -36,6 +36,85 @@ TEST(ExternalTexture, Construction)
 #endif
 }
 
+TEST(ExternalTexture, CreateForJavaScript)
+{
+#ifdef SKIP_EXTERNAL_TEXTURE_TESTS
+    GTEST_SKIP();
+#else
+    Babylon::Graphics::Device device{g_deviceConfig};
+    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
+
+    device.StartRenderingCurrentFrame();
+    update.Start();
+
+    auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
+    Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
+    Helpers::DestroyTexture(nativeTexture);
+
+    std::promise<void> done{};
+
+    Babylon::AppRuntime runtime{};
+    runtime.Dispatch([&device, &done, externalTexture](Napi::Env env) {
+        device.AddToJavaScript(env);
+
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+            std::cout << message << std::endl;
+        });
+
+        Babylon::Polyfills::Window::Initialize(env);
+
+        Babylon::Plugins::NativeEngine::Initialize(env);
+
+        auto jsTexture = externalTexture.CreateForJavaScript(env);
+        EXPECT_TRUE(jsTexture.IsObject());
+
+        done.set_value();
+    });
+
+    done.get_future().wait();
+
+    update.Finish();
+    device.FinishRenderingCurrentFrame();
+#endif
+}
+
+TEST(ExternalTexture, Update)
+{
+#ifdef SKIP_EXTERNAL_TEXTURE_TESTS
+    GTEST_SKIP();
+#else
+    Babylon::Graphics::Device device{g_deviceConfig};
+    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
+
+    device.StartRenderingCurrentFrame();
+    update.Start();
+
+    auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
+    Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
+    Helpers::DestroyTexture(nativeTexture);
+
+    EXPECT_EQ(externalTexture.Width(), 256u);
+    EXPECT_EQ(externalTexture.Height(), 256u);
+
+    update.Finish();
+    device.FinishRenderingCurrentFrame();
+
+    // Update the external texture to point at a new native texture with different dimensions.
+    device.StartRenderingCurrentFrame();
+    update.Start();
+
+    auto nativeTexture2 = Helpers::CreateTexture(device.GetPlatformInfo().Device, 128, 128);
+    externalTexture.Update(nativeTexture2);
+    Helpers::DestroyTexture(nativeTexture2);
+
+    EXPECT_EQ(externalTexture.Width(), 128u);
+    EXPECT_EQ(externalTexture.Height(), 128u);
+
+    update.Finish();
+    device.FinishRenderingCurrentFrame();
+#endif
+}
+
 TEST(ExternalTexture, AddToContextAsyncAndUpdate)
 {
 #ifdef SKIP_EXTERNAL_TEXTURE_TESTS
@@ -83,7 +162,7 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
     // Wait for AddToContextAsync to be called.
     addToContext.get_future().wait();
 
-    // Render a frame so that AddToContextAsync will complete.
+    // Close the frame in which the deprecated shim's synchronous CreateForJavaScript ran.
     update.Finish();
     device.FinishRenderingCurrentFrame();
 

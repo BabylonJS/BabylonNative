@@ -149,4 +149,24 @@ namespace Babylon::Graphics
     {
         m_samplerFlags = value;
     }
+
+    uint16_t Texture::ViewFirstLayer() const
+    {
+        return m_viewFirstLayer;
+    }
+
+    void Texture::ViewFirstLayer(uint16_t value)
+    {
+        m_viewFirstLayer = value;
+    }
+
+    uint16_t Texture::ViewNumLayers() const
+    {
+        return m_viewNumLayers;
+    }
+
+    void Texture::ViewNumLayers(uint16_t value)
+    {
+        m_viewNumLayers = value;
+    }
 }

@@ -2,16 +2,39 @@
 
 #include <Babylon/DebugTrace.h>
 #include <Babylon/Graphics/RendererType.h>
+#include <Babylon/Graphics/Texture.h>
 #include <bgfx/bgfx.h>
 #include <set>
 #include <cassert>
 #include <cmath>
+#include <type_traits>
 
 namespace Babylon::Plugins
 {
+    namespace
+    {
+        template<typename T>
+        uintptr_t NativeHandleToUintPtr(T value)
+        {
+            if constexpr (std::is_pointer_v<T>)
+            {
+                return reinterpret_cast<uintptr_t>(value);
+            }
+            else
+            {
+                return static_cast<uintptr_t>(value);
+            }
+        }
+    }
+
     class ExternalTexture::ImplBase
     {
     public:
+        // Per the ExternalTexture public contract, all read-only accessors are called
+        // only from the graphics thread, where they are serialized against Update() (also
+        // graphics-thread). They do not need to lock against themselves; the mutex below
+        // exists solely to bridge graphics-thread state to the JS thread for
+        // CreateTexture / DestroyTexture.
         uint16_t Width() const { return m_info.Width; }
         uint16_t Height() const { return m_info.Height; }
         bgfx::TextureFormat::Enum Format() const { return m_info.Format; }
@@ -19,26 +42,12 @@ namespace Babylon::Plugins
         uint16_t NumLayers() const { return m_info.NumLayers; }
         uint64_t Flags() const { return m_info.Flags; }
 
-        void AddHandle(bgfx::TextureHandle handle)
-        {
-            std::scoped_lock lock{m_mutex};
-
-            if (!m_handles.insert(handle).second)
-            {
-                assert(!"Failed to insert handle");
-            }
-        }
-
-        void RemoveHandle(bgfx::TextureHandle handle)
-        {
-            std::scoped_lock lock{m_mutex};
-
-            auto it = m_handles.find(handle);
-            if (it != m_handles.end())
-            {
-                m_handles.erase(it);
-            }
-        }
+        // JS-thread entry points. These lock internally to read graphics-thread-written
+        // state (m_info, derived m_ptr, m_textures) consistently and to mutate m_textures.
+        // They contain no JS callouts, so the lock is never held across user-visible JS
+        // execution -- preventing the recursive-mutex / finalizer-reentrancy bug class.
+        Graphics::Texture* CreateTexture(Graphics::DeviceContext& context, std::optional<uint16_t> layerIndex);
+        void DestroyTexture(Graphics::Texture* texture);
 
     protected:
         static bool IsFullMipChain(uint16_t mipLevel, uint16_t width, uint16_t height)
@@ -63,16 +72,31 @@ namespace Babylon::Plugins
             return BGFX_TEXTURE_NONE;
         }
 
-        void UpdateHandles(Graphics::TextureT ptr, std::optional<uint16_t> layerIndex)
+        // Re-attaches every registered Graphics::Texture to a fresh bgfx handle backed by
+        // `ptr`. Caller must hold m_mutex (called from the locked region of Impl::Update).
+        void UpdateTextures(Graphics::TextureT ptr, std::optional<uint16_t> layerIndex)
         {
-            std::scoped_lock lock{m_mutex};
-
-            for (auto handle : m_handles)
+            for (auto* texture : m_textures)
             {
-                if (bgfx::overrideInternal(handle, uintptr_t(ptr), layerIndex.value_or(0)) == 0)
+                bgfx::TextureHandle handle = bgfx::createTexture2D(
+                    Width(),
+                    Height(),
+                    HasMips(),
+                    NumLayers(),
+                    Format(),
+                    Flags(),
+                    0,
+                    NativeHandleToUintPtr(ptr)
+                );
+
+                if (!bgfx::isValid(handle))
                 {
-                    assert(!"Failed to override texture");
+                    throw std::runtime_error{"Failed to create external texture"};
                 }
+
+                texture->Attach(handle, true, m_info.Width, m_info.Height, HasMips(), m_info.NumLayers, m_info.Format, m_info.Flags);
+                texture->ViewFirstLayer(layerIndex.value_or(0));
+                texture->ViewNumLayers(layerIndex.has_value() ? 1 : 0);
             }
         }
 
@@ -87,17 +111,9 @@ namespace Babylon::Plugins
         };
 
         Info m_info{};
+        mutable std::mutex m_mutex{};
 
     private:
-        struct TextureHandleLess
-        {
-            bool operator()(const bgfx::TextureHandle& a, const bgfx::TextureHandle& b) const
-            {
-                return a.idx < b.idx;
-            }
-        };
-
-        mutable std::mutex m_mutex{};
-        std::set<bgfx::TextureHandle, TextureHandleLess> m_handles{};
+        std::set<Graphics::Texture*> m_textures{};
     };
 }

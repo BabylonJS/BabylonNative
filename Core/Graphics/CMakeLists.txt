@@ -7,7 +7,6 @@ set(SOURCES
     "InternalInclude/Babylon/Graphics/DeviceContext.h"
     "InternalInclude/Babylon/Graphics/DeviceQueries.h"
     "InternalInclude/Babylon/Graphics/FrameBuffer.h"
-    "InternalInclude/Babylon/Graphics/SafeTimespanGuarantor.h"
     "InternalInclude/Babylon/Graphics/Texture.h"
     "Source/BgfxCallback.cpp"
     "Source/FrameBuffer.cpp"
@@ -17,7 +16,6 @@ set(SOURCES
     "Source/DeviceImpl.h"
     "Source/DeviceImpl_${BABYLON_NATIVE_PLATFORM}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
     "Source/DeviceImpl_${GRAPHICS_API}.${BABYLON_NATIVE_PLATFORM_IMPL_EXT}"
-    "Source/SafeTimespanGuarantor.cpp"
     "Source/Texture.cpp")
 
 add_library(Graphics ${SOURCES})
@@ -55,6 +53,17 @@ elseif(ANDROID)
 elseif(APPLE)
     target_link_libraries(Graphics
         PRIVATE metal-cpp)
+    if(IOS)
+        # bgfx's metal-cpp (compiled as C++ against the iOS 26 SDK) emits direct link-time
+        # externs for the MTLIOErrorDomain / MTLTensorDomain constants. The iPhoneSimulator
+        # Metal stub in Xcode 26.x does not export them (the device stub does), so simulator
+        # links fail with undefined symbols. Allow these two symbols to be resolved by dynamic
+        # lookup at runtime; this is harmless on device, where they resolve normally. Propagated
+        # to consumers (the final app link) via INTERFACE.
+        target_link_options(Graphics INTERFACE
+            "LINKER:-U,_MTLIOErrorDomain"
+            "LINKER:-U,_MTLTensorDomain")
+    endif()
 endif()
 
 set_property(TARGET Graphics PROPERTY FOLDER Core)

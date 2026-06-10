@@ -150,6 +150,7 @@ target_link_libraries(Playground
     PRIVATE Canvas
     PRIVATE Console
     PRIVATE ExternalTexture
+    PRIVATE File
     PRIVATE GraphicsDevice
     PRIVATE Integrations
     PRIVATE NativeCamera

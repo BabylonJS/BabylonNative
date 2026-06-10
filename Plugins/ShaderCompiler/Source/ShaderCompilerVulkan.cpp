@@ -57,7 +57,7 @@ namespace Babylon::Plugins
         glslang::FinalizeProcess();
     }
 
-    Graphics::BgfxShaderInfo ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource)
+    Graphics::BgfxShaderInfo ShaderCompiler::Compile(std::string_view vertexSource, std::string_view fragmentSource, const std::map<std::string, uint32_t>& instancedAttributes)
     {
         glslang::TProgram program;
 
@@ -81,7 +81,7 @@ namespace Babylon::Plugins
         auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
         auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
         std::map<std::string, std::string> vertexAttributeRenaming = {};
-        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryingsD3D(program, ids, vertexAttributeRenaming);
+        ShaderCompilerTraversers::AssignLocationsAndNamesToVertexVaryingsD3D(program, ids, vertexAttributeRenaming, instancedAttributes);
         ShaderCompilerTraversers::SplitSamplersIntoSamplersAndTextures(program, ids);
         ShaderCompilerTraversers::SplitSamplerFunctionParameters(program, ids);
         ShaderCompilerTraversers::ZeroInitializeStructLocals(program);
