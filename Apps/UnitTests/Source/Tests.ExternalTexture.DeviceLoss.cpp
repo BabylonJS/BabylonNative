@@ -81,10 +81,8 @@ TEST(ExternalTexture, RestoreAfterDeviceLoss)
     Babylon::Graphics::Configuration config = g_deviceConfig;
     config.Device = deviceA;
     Babylon::Graphics::Device device{config};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     auto nativeTexture1 = Helpers::CreateTexture(
         device.GetPlatformInfo().Device, TEX_SIZE, TEX_SIZE, 1, true);
@@ -132,12 +130,10 @@ TEST(ExternalTexture, RestoreAfterDeviceLoss)
     });
 
     startupDone.get_future().get();
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 
     // --- Phase 1: render red into texture 1, readback ---
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     std::promise<void> render1Done;
     loader.Dispatch([&render1Done](Napi::Env env) {
@@ -153,7 +149,6 @@ TEST(ExternalTexture, RestoreAfterDeviceLoss)
     });
 
     render1Done.get_future().get();
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 
     auto pixels1 = Helpers::ReadPixels(device.GetPlatformInfo(), nativeTexture1, TEX_SIZE, TEX_SIZE);
@@ -188,7 +183,6 @@ TEST(ExternalTexture, RestoreAfterDeviceLoss)
     Babylon::Plugins::ExternalTexture externalTexture2{nativeTexture2};
 
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     std::promise<void> restoreDone;
     loader.Dispatch([&externalTexture2, &restoreDone](Napi::Env env) {
@@ -205,12 +199,10 @@ TEST(ExternalTexture, RestoreAfterDeviceLoss)
     });
 
     restoreDone.get_future().get();
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 
     // Render blue into restored RTT.
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     std::promise<void> render2Done;
     loader.Dispatch([&render2Done](Napi::Env env) {
@@ -226,7 +218,6 @@ TEST(ExternalTexture, RestoreAfterDeviceLoss)
     });
 
     render2Done.get_future().get();
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 
     auto pixels2 = Helpers::ReadPixels(device.GetPlatformInfo(), nativeTexture2, TEX_SIZE, TEX_SIZE);
