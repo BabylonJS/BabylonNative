@@ -30,13 +30,18 @@
     {
         return nil;
     }
+
     Babylon::Integrations::Runtime* nativeRuntime = runtime.nativeRuntime;
     if (nativeRuntime == nullptr)
     {
         return nil;
     }
+
     if ((self = [super init]))
     {
+        // Babylon Native must control the drawable size.
+        view.autoResizeDrawable = NO;
+
         _runtime = runtime;
         _mtkView = view;
 
@@ -45,17 +50,16 @@
 
         // View construction is lightweight (just stashes the layer). Device
         // construction is driven by the first `-resizeWithWidth:height:`
-        // call, which BNViewDelegate forwards from MTKView's
-        // `mtkView:drawableSizeWillChange:`. UIKit's view lifecycle
-        // reliably fires that callback during initial layout, but AppKit
-        // is more lazy: on macOS the callback typically does NOT fire
-        // for the initial drawable size if the delegate was installed
-        // after the size was already determined — only for subsequent
-        // changes. To keep both platforms working out of the box, we
-        // query the current drawable size below and kick off an explicit
-        // resize. If the drawable isn't sized yet (e.g. MTKView not yet
-        // in a window), the early-out below skips it and the delegate
-        // path will pick it up later.
+        // call. Because BNView sets `autoResizeDrawable = NO` above
+        // (Babylon Native owns the drawable size), MTKView no longer
+        // reports size via `mtkView:drawableSizeWillChange:`; instead the
+        // host drives resize explicitly from a layout hook
+        // (`-viewDidLayoutSubviews` / `-viewDidLayout`), the same as every
+        // other platform. We still kick off an initial resize from the
+        // current bounds below so JS engine init can begin immediately
+        // when the view is already laid out at construction time; if
+        // bounds are still zero (view not yet laid out / in a window), the
+        // host's first layout pass delivers the size.
         try
         {
             _view.emplace(*nativeRuntime, (__bridge CA::MetalLayer*)layer);
@@ -67,9 +71,9 @@
         }
 
         // If the host hasn't installed an MTKViewDelegate, install a
-        // default BNViewDelegate. Done AFTER View construction so any
-        // drawableSizeWillChange: triggered by the assignment doesn't
-        // reach us before _view is constructed.
+        // default (render-only) BNViewDelegate. Done AFTER View
+        // construction so any delegate callback triggered by the
+        // assignment doesn't reach us before _view is constructed.
         if (view.delegate == nil)
         {
             _managedDelegate = [[BNViewDelegate alloc] initWithView:self];
@@ -78,18 +82,15 @@
 
         // Kick off the first resize using the MTKView's bounds in
         // logical units (points/DIPs). `View::Resize` handles the DPR
-        // conversion internally; passing Logical here means we don't
-        // have to query the layer's drawableSize (which can be zero
-        // before MTKView's first layout pass) or recompute the same
-        // bounds × scale conversion ourselves.
+        // conversion internally; passing Logical here matches the units
+        // the host's layout hook passes for subsequent resizes.
         //
-        // If bounds are also zero (e.g. MTKView not yet in a window),
-        // skip and rely on the delegate path
-        // (`mtkView:drawableSizeWillChange:`) to deliver the first
-        // size once layout happens. `View::Resize` past the first
-        // call is just an idempotent `Device::UpdateSize`, so the
-        // explicit kick here composes harmlessly with any subsequent
-        // delegate callback.
+        // If bounds are zero (e.g. MTKView not yet laid out / in a
+        // window), skip and rely on the host's first layout-driven
+        // `-resizeWithWidth:height:` to deliver the first size.
+        // `View::Resize` past the first call is just an idempotent
+        // `Device::UpdateSize`, so this explicit kick composes harmlessly
+        // with the host's subsequent resize calls.
         const CGSize bounds = view.bounds.size;
         if (bounds.width > 0 && bounds.height > 0)
         {
@@ -115,6 +116,27 @@
 
 - (void)renderFrame
 {
+    // Skip rendering while the backing CAMetalLayer has a zero-sized
+    // drawable. We deliberately don't force a layout pass at construction
+    // (see -initWithRuntime:view:), so on AppKit the drawable can still be
+    // 0x0 for the first frame(s) before layout runs. bgfx can't acquire a
+    // drawable at that size, which trips Metal API validation ("no output
+    // textures defined for the render pass"). A real size flows back in via
+    // the host's layout-driven -resizeWithWidth:height: (which sets the
+    // drawable size), at which point rendering resumes.
+    //
+    // This guard lives here — not in the cross-platform View::RenderFrame —
+    // because the live drawable size is an Apple/Metal concept that the
+    // shared layer can't (and shouldn't) observe, and -renderFrame is the
+    // single chokepoint every render path funnels through (auto-installed
+    // delegate, host subclass calling super, or fully-custom delegate). It's
+    // the same reason the XR overlay toggle below lives here.
+    const CGSize drawableSize = _mtkView.drawableSize;
+    if (drawableSize.width <= 0 || drawableSize.height <= 0)
+    {
+        return;
+    }
+
     // The runtime owns the XR overlay view (via -setXrView:), so it's
     // the natural place to keep its visibility in sync. Doing this here
     // means hosts never need to manage the overlay themselves regardless
@@ -132,9 +154,11 @@
 {
     if (_view)
     {
+        // Host passes logical points (from the view's bounds); View::Resize
+        // converts to physical internally using the layer's DPR.
         _view->Resize(static_cast<uint32_t>(width),
                        static_cast<uint32_t>(height),
-                       Babylon::Integrations::CoordinateUnits::Physical);
+                       Babylon::Integrations::CoordinateUnits::Logical);
     }
 }
 

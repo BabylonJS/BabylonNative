@@ -33,9 +33,10 @@ final class BabylonRuntime: ObservableObject {
 }
 
 /// SwiftUI wrapper around the `MTKView` + `BNView` pair. BNView's
-/// auto-installed `BNViewDelegate` drives per-frame render and resize
-/// callbacks; we just have to keep BNView alive for the lifetime of
-/// the MTKView (held in the Coordinator).
+/// auto-installed `BNViewDelegate` drives per-frame render; resize is
+/// driven from the MTKView's `layoutSubviews` (SwiftUI has no
+/// view-controller layout hook). We keep BNView alive for the lifetime
+/// of the MTKView (held in the Coordinator).
 struct BabylonView: UIViewRepresentable {
     let runtime: BNRuntime
 
@@ -44,16 +45,25 @@ struct BabylonView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> MTKView {
-        let mtkView = MTKView()
+        let mtkView = BabylonMTKView()
+        let coordinator = context.coordinator
 
         // First BNView attach on this runtime triggers GPU device
         // construction + plugin initialization on the JS thread +
         // queued-script flush.
-        context.coordinator.bnView = BNView(runtime: runtime, view: mtkView)
+        coordinator.bnView = BNView(runtime: runtime, view: mtkView)
+
+        // Babylon Native owns the drawable size (BNView sets
+        // autoResizeDrawable = NO), so MTKView no longer reports size
+        // changes via its delegate. Drive resize from layout, passing
+        // logical points; BNView applies the device-pixel-ratio internally.
+        mtkView.onLayout = { [weak coordinator] size in
+            guard let bnView = coordinator?.bnView, size.width > 0, size.height > 0 else { return }
+            bnView.resize(width: UInt(size.width), height: UInt(size.height))
+        }
 
         // Simple gesture recognizer: forwards touches to BNView. Same
         // wiring as the iOS Playground.
-        let coordinator = context.coordinator
         let recognizer = UIBabylonGestureRecognizer(
             target: coordinator,
             onTouchDown: { [weak coordinator] (id, x, y) in
@@ -76,6 +86,19 @@ struct BabylonView: UIViewRepresentable {
     /// Holds the BNView strongly so it outlives `makeUIView`'s scope.
     class Coordinator {
         var bnView: BNView?
+    }
+}
+
+/// MTKView subclass that reports layout changes. SwiftUI has no
+/// view-controller layout hook, so we observe layout on the view itself
+/// to drive BNView resize — the same role `viewDidLayoutSubviews` plays
+/// on iOS and `viewDidLayout` on macOS.
+final class BabylonMTKView: MTKView {
+    var onLayout: ((CGSize) -> Void)?
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        onLayout?(bounds.size)
     }
 }
 

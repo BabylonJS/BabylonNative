@@ -64,7 +64,8 @@
     [[self view] addSubview:_mtkView];
 
     // BNView attaches the runtime to the MTKView and installs a default
-    // MTKViewDelegate that drives per-frame render + resize.
+    // MTKViewDelegate that drives per-frame render. Resize is driven
+    // separately from -viewDidLayout below.
     _bnView = [[BNView alloc] initWithRuntime:_runtime view:_mtkView];
 }
 
@@ -78,6 +79,24 @@
     [super viewDidDisappear];
 
     [self uninitialize];
+}
+
+- (void)viewDidLayout {
+    [super viewDidLayout];
+
+    // Babylon Native owns the drawable size (BNView sets
+    // autoResizeDrawable = NO), so MTKView no longer reports size changes
+    // via its delegate. Drive resize explicitly from layout, passing
+    // logical points; BNView applies the device-pixel-ratio internally.
+    if (_bnView != nil)
+    {
+        const CGSize size = _mtkView.bounds.size;
+        if (size.width > 0 && size.height > 0)
+        {
+            [_bnView resizeWithWidth:static_cast<NSUInteger>(size.width)
+                              height:static_cast<NSUInteger>(size.height)];
+        }
+    }
 }
 
 #pragma mark - Input forwarding

@@ -25,10 +25,10 @@ class ViewController: UIViewController {
 
         // Attach BNView to the main MTKView. Because mtkView's delegate
         // is still nil at this point, BNView auto-installs a managed
-        // `BNViewDelegate` that drives the per-frame render and resize
-        // callbacks. First attach on this runtime triggers GPU device
-        // construction + plugin initialization on the JS thread +
-        // queued-script flush.
+        // `BNViewDelegate` that drives the per-frame render callback.
+        // Resize is driven separately from `viewDidLayoutSubviews` below.
+        // First attach on this runtime triggers GPU device construction +
+        // plugin initialization on the JS thread + queued-script flush.
         bnView = BNView(runtime: runtime, view: mtkView)
 
         // Simple gesture recognizer: forwards touches to BNView.
@@ -39,6 +39,21 @@ class ViewController: UIViewController {
             onTouchUp:   { [weak self] (id, x, y) in self?.bnView?.pointerUp  (id: Int(id), x: CGFloat(x), y: CGFloat(y)) }
         )
         mtkView.addGestureRecognizer(recognizer)
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+
+        // Babylon Native owns the drawable size (BNView sets
+        // autoResizeDrawable = NO), so MTKView no longer reports size
+        // changes via its delegate. Drive resize explicitly from layout,
+        // passing logical points; BNView applies the device-pixel-ratio
+        // internally.
+        guard let mtkView = mtkView, let bnView = bnView else { return }
+        let size = mtkView.bounds.size
+        if size.width > 0 && size.height > 0 {
+            bnView.resize(width: UInt(size.width), height: UInt(size.height))
+        }
     }
 
     func setupViews() {

@@ -21,13 +21,16 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-/// Default `MTKViewDelegate` implementation that drives a BNView.
-/// Forwards `drawInMTKView:` → `[bnView renderFrame]` and
-/// `mtkView:drawableSizeWillChange:` → `[bnView resizeWithWidth:height:]`.
+/// Default `MTKViewDelegate` implementation that drives a BNView's
+/// per-frame rendering: forwards `drawInMTKView:` → `[bnView renderFrame]`.
+///
+/// It does NOT drive resize — BNView sets `autoResizeDrawable = NO`, so
+/// MTKView no longer reports size changes and the host drives resize
+/// explicitly from a layout hook (see `-[BNView resizeWithWidth:height:]`).
 ///
 /// BNView installs and retains one automatically when constructed
 /// against an MTKView that has no delegate. To insert per-frame work,
-/// subclass this, override the delegate methods, and call `super`.
+/// subclass this, override `drawInMTKView:`, and call `super`.
 @interface BNViewDelegate : NSObject <MTKViewDelegate>
 
 /// Initialize a delegate that drives `view`. The reference is weak;
@@ -54,16 +57,23 @@ NS_ASSUME_NONNULL_BEGIN
 /// BNViewDelegate and assigns it (held strongly for the BNView's
 /// lifetime, since MTKView.delegate is `weak`). If the host already
 /// set a delegate, BNView leaves it alone and the host drives
-/// `-renderFrame` and `-resizeWithWidth:height:`.
+/// `-renderFrame`. Either way the host must drive `-resizeWithWidth:height:`
+/// from a layout hook; the delegate never does (BNView sets
+/// `autoResizeDrawable = NO`, so MTKView reports no size changes).
 - (nullable instancetype)initWithRuntime:(BNRuntime*)runtime view:(MTKView*)view;
 
 /// Render exactly one frame. Call from your MTKViewDelegate's
 /// `drawInMTKView:`, or rely on the auto-installed BNViewDelegate.
 - (void)renderFrame;
 
-/// Inform the runtime that the underlying surface's pixel-buffer size
-/// has changed. Sizes are in physical pixels (same convention as
-/// `CAMetalLayer.drawableSize`).
+/// Inform the runtime that the view's size has changed. Call this from
+/// your view-controller layout hook — `-viewDidLayoutSubviews` on UIKit,
+/// `-viewDidLayout` on AppKit — passing the MTKView's `bounds.size`.
+///
+/// Sizes are in **logical** points (CSS pixels); BNView applies the
+/// device-pixel-ratio internally. Babylon's render resolution then
+/// follows the engine's hardware scaling level (logical by default, or
+/// physical when `adaptToDevicePixelRatio` is enabled).
 - (void)resizeWithWidth:(NSUInteger)width height:(NSUInteger)height
     NS_SWIFT_NAME(resize(width:height:));
 

@@ -112,6 +112,12 @@ namespace Babylon::Graphics
         static void ConfigureBgfxPlatformData(bgfx::PlatformData& pd, WindowT window);
         static void ConfigureBgfxRenderType(bgfx::PlatformData& pd, bgfx::RendererType::Enum& renderType);
 
+        // Push the render resolution onto the native rendering surface so it
+        // matches what bgfx renders into. Implemented per graphics API. The
+        // window may be default-constructed (null) before UpdateWindow has run
+        // (e.g. during construction), in which case there's nothing to size.
+        static void UpdateWindowSize(WindowT window, uint32_t width, uint32_t height);
+
         void UpdateBgfxState();
         void UpdateBgfxResolution();
         void RequestScreenShots();
@@ -133,6 +139,13 @@ namespace Babylon::Graphics
         {
             // Mutable since const getters need to lock.
             mutable std::recursive_mutex Mutex{};
+
+            // The native window/surface we render into. Cached as WindowT (the
+            // handle in Bgfx.InitState.platformData is type-erased to void* and
+            // can't be cast back to WindowT portably) so UpdateWindowSize can
+            // push the render resolution onto the surface. Null until
+            // UpdateWindow.
+            WindowT Window{};
 
             struct
             {
