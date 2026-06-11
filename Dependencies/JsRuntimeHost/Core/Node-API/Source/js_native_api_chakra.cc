@@ -2244,7 +2244,13 @@ napi_status napi_create_dataview(napi_env env,
     &unused,
     &bufferLength));
 
-  if (byte_length + byte_offset > bufferLength) {
+  // bufferLength is 32-bit; byte_offset and byte_length are caller-supplied
+  // size_t values. Validate each against the buffer size without adding them
+  // (byte_offset + byte_length could overflow size_t and wrap past the check,
+  // after which the values would be truncated to 32-bit for JsCreateDataView
+  // while the original 64-bit values get stored in DataViewInfo and later
+  // handed back by napi_get_dataview_info, enabling an out-of-bounds access).
+  if (byte_offset > bufferLength || byte_length > bufferLength - byte_offset) {
     napi_throw_range_error(
       env,
       "ERR_NAPI_INVALID_DATAVIEW_ARGS",

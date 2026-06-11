@@ -17,6 +17,7 @@
 #include <arcana/threading/blocking_concurrent_queue.h>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <future>
 #include <iostream>
 #include <thread>
@@ -277,6 +278,78 @@ TEST(AppRuntime, DestroyDoesNotDeadlock)
 
     testThread.join();
 }
+
+// The V8JSI Node-API shim does not implement napi_create_dataview /
+// napi_get_dataview_info (its DataView::New throws "TODO"), so this native test
+// only builds on the Chakra, V8, and JavaScriptCore backends. The size_t-width
+// guard is required because the overflow scenario below needs a 64-bit size_t.
+#if (SIZE_MAX > 0xFFFFFFFFu) && !defined(JSRUNTIMEHOST_NAPI_ENGINE_JSI)
+TEST(NodeApi, CreateDataViewRejectsOverflowingRange)
+{
+    // Regression: napi_create_dataview must reject a (byte_offset, byte_length)
+    // pair whose sum overflows size_t. The pre-fix code performed an unchecked
+    // `byte_offset + byte_length > bufferLength` comparison; with the inputs
+    // below the 64-bit sum wraps to 8 and slips past it. It then truncated the
+    // values to 32-bit (offset -> 0, length -> 8) and created a valid 8-byte
+    // DataView, but stored the ORIGINAL 64-bit offset/length in DataViewInfo,
+    // which napi_get_dataview_info hands back alongside the small real buffer --
+    // an out-of-bounds access primitive. This path is not reachable from JS
+    // `new DataView`, so it is covered natively here. The scenario requires a
+    // 64-bit size_t (where the 32-bit truncation diverged from the stored value),
+    // hence the size_t-width guard.
+    Babylon::AppRuntime runtime{};
+
+    std::promise<bool> overflowSafe;
+    std::promise<bool> validAccepted;
+
+    runtime.Dispatch([&overflowSafe, &validAccepted](Napi::Env env) {
+        napi_env nenv{env};
+
+        Napi::ArrayBuffer arrayBuffer{Napi::ArrayBuffer::New(env, 16)};
+        napi_value arrayBufferValue{arrayBuffer};
+
+        // Low 32 bits are individually valid for the 16-byte buffer (offset 0,
+        // length 8), but the full 64-bit values are enormous and their sum wraps
+        // around size_t to 8.
+        const size_t hugeOffset{0xFFFFFFFF00000000ull};
+        const size_t hugeLength{0x0000000100000008ull};
+
+        napi_value result{nullptr};
+        napi_status status{napi_create_dataview(nenv, hugeLength, arrayBufferValue, hugeOffset, &result)};
+
+        bool safe;
+        if (status != napi_ok || result == nullptr)
+        {
+            // Fixed path: the out-of-range request is rejected outright.
+            safe = true;
+        }
+        else
+        {
+            // If creation unexpectedly succeeds, the reported extents must still
+            // lie within the 16-byte backing buffer (i.e. not the raw 64-bit
+            // inputs). The pre-fix code reported the huge stored values here.
+            size_t reportedLength{0};
+            size_t reportedOffset{0};
+            void* data{nullptr};
+            napi_get_dataview_info(nenv, result, &reportedLength, &data, nullptr, &reportedOffset);
+            safe = reportedOffset <= 16 && reportedLength <= 16 && reportedOffset + reportedLength <= 16;
+        }
+
+        // Clear any pending range error so it doesn't surface as an unhandled error.
+        napi_value pendingException{nullptr};
+        napi_get_and_clear_last_exception(nenv, &pendingException);
+        overflowSafe.set_value(safe);
+
+        // A legitimate offset/length pair must still succeed.
+        napi_value validResult{nullptr};
+        napi_status validStatus{napi_create_dataview(nenv, 8, arrayBufferValue, 4, &validResult)};
+        validAccepted.set_value(validStatus == napi_ok && validResult != nullptr);
+    });
+
+    EXPECT_TRUE(overflowSafe.get_future().get());
+    EXPECT_TRUE(validAccepted.get_future().get());
+}
+#endif
 
 int RunTests()
 {

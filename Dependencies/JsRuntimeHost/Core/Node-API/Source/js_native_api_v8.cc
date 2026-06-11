@@ -3185,7 +3185,13 @@ napi_status NAPI_CDECL napi_create_dataview(napi_env env,
   RETURN_STATUS_IF_FALSE(env, value->IsArrayBuffer(), napi_invalid_arg);
 
   v8::Local<v8::ArrayBuffer> buffer = value.As<v8::ArrayBuffer>();
-  if (byte_length + byte_offset > buffer->ByteLength()) {
+  // [BABYLON-NATIVE-ADDITION]: overflow-safe bounds check; not in Node.js upstream
+  // byte_offset and byte_length are caller-supplied size_t values; computing
+  // byte_length + byte_offset can overflow and wrap past the buffer size, which
+  // would slip an out-of-range request through and trip a fatal CHECK inside
+  // v8::DataView::New. Validate each against the buffer size without adding them.
+  if (byte_offset > buffer->ByteLength() ||
+      byte_length > buffer->ByteLength() - byte_offset) {
     napi_throw_range_error(env,
                            "ERR_NAPI_INVALID_DATAVIEW_ARGS",
                            "byte_offset + byte_length should be less than or "
