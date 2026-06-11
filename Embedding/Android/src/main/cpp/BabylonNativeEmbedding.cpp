@@ -54,6 +54,17 @@ namespace
         std::unique_ptr<Runtime> runtime;
         android::global::AppStateChangedCallbackTicket pauseTicket;
         android::global::AppStateChangedCallbackTicket resumeTicket;
+
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
+        // The ANativeWindow currently handed to Runtime::SetXrWindow.
+        // NativeXr stores the raw pointer without acquiring a reference (and
+        // only consumes it lazily at XR session creation on the JS thread),
+        // so the JNI layer owns this reference: it's acquired via
+        // ANativeWindow_fromSurface in runtimeSetXrSurface, released and
+        // replaced when the surface changes, and released in runtimeDestroy
+        // after the Runtime (and thus NativeXr) is torn down.
+        ANativeWindow* xrWindow{nullptr};
+#endif
     };
 
     AndroidRuntime* AsAndroidRuntime(jlong handle) { return reinterpret_cast<AndroidRuntime*>(handle); }
@@ -355,9 +366,25 @@ Java_com_babylonjs_embedding_BabylonNative_runtimeCreate__Lcom_babylonjs_embeddi
 JNIEXPORT void JNICALL
 Java_com_babylonjs_embedding_BabylonNative_runtimeDestroy(JNIEnv*, jclass, jlong handle)
 {
+    AndroidRuntime* androidRuntime = AsAndroidRuntime(handle);
+
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
+    // Grab the XR window before tearing down the Runtime; it can only be
+    // released once the Runtime (and NativeXr, which holds the raw pointer)
+    // is gone.
+    ANativeWindow* xrWindow = androidRuntime->xrWindow;
+#endif
+
     // Reverse declaration order: tickets unsubscribe before the Runtime
     // is destroyed, so no callback fires on a dead Runtime.
-    delete AsAndroidRuntime(handle);
+    delete androidRuntime;
+
+#if BABYLON_NATIVE_PLUGIN_NATIVEXR
+    if (xrWindow != nullptr)
+    {
+        ANativeWindow_release(xrWindow);
+    }
+#endif
 }
 
 JNIEXPORT void JNICALL
@@ -385,12 +412,27 @@ Java_com_babylonjs_embedding_BabylonNative_runtimeSetXrSurface(
     JNIEnv* env, jclass, jlong handle, jobject surface)
 {
 #if BABYLON_NATIVE_PLUGIN_NATIVEXR
+    AndroidRuntime* androidRuntime = AsAndroidRuntime(handle);
+
     ANativeWindow* window{nullptr};
     if (surface != nullptr)
     {
+        // +1 reference owned by us; released when replaced below or in
+        // runtimeDestroy. NativeXr only stores the raw pointer.
         window = ANativeWindow_fromSurface(env, surface);
     }
-    AsRuntime(handle)->SetXrWindow(window);
+
+    androidRuntime->runtime->SetXrWindow(window);
+
+    // Release the previously-held window now that NativeXr has been pointed
+    // at the new one. Hosts must not swap the XR surface out from under an
+    // active session; the usual flow is set(surface) … set(null) bracketing
+    // a session.
+    if (androidRuntime->xrWindow != nullptr)
+    {
+        ANativeWindow_release(androidRuntime->xrWindow);
+    }
+    androidRuntime->xrWindow = window;
 #else
     (void)handle;
     (void)surface;
