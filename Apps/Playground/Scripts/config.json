@@ -1811,16 +1811,12 @@
             "title": "Shadows with instances in left handed system",
             "playgroundId": "#MSAHKR#79",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "shadowsinstancesleft.png"
         },
         {
             "title": "Shadows with instances in right handed system",
             "playgroundId": "#MSAHKR#13",
             "renderCount": 10,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "shadowsinstancesright.png"
         },
         {
