@@ -66,9 +66,16 @@ namespace Babylon::Graphics
     class DeviceUpdate
     {
     public:
+        [[deprecated("DeviceUpdate is a no-op; frame synchronization is handled by "
+                     "StartRenderingCurrentFrame/FinishRenderingCurrentFrame.")]]
         void Start() {}
+
+        [[deprecated("DeviceUpdate is a no-op; frame synchronization is handled by "
+                     "StartRenderingCurrentFrame/FinishRenderingCurrentFrame.")]]
         void Finish() {}
 
+        [[deprecated("DeviceUpdate is a no-op; frame synchronization is handled by "
+                     "StartRenderingCurrentFrame/FinishRenderingCurrentFrame.")]]
         void RequestFinish(std::function<void()> onFinishCallback)
         {
             onFinishCallback();
@@ -114,6 +121,7 @@ namespace Babylon::Graphics
         void EnableRendering();
         void DisableRendering();
 
+        [[deprecated("DeviceUpdate is a no-op; remove GetUpdate/Start/Finish calls.")]]
         DeviceUpdate GetUpdate(const char* /*updateName*/) { return {}; }
 
         void StartRenderingCurrentFrame();

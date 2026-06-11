@@ -27,10 +27,8 @@ TEST(ShaderCache, SaveAndLoad)
     Babylon::Plugins::ShaderCache::Enable();
 
     Babylon::Graphics::Device device{g_deviceConfig};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     Babylon::AppRuntime::Options options{};
 
@@ -73,10 +71,8 @@ TEST(ShaderCache, SaveAndLoad)
     auto sceneIsReadyFuture = sceneIsReady.get_future();
     while (sceneIsReadyFuture.wait_for(16ms) != std::future_status::ready)
     {
-        update.Finish();
         device.FinishRenderingCurrentFrame();
         device.StartRenderingCurrentFrame();
-        update.Start();
     }
 
     const auto shaderCachePath = GetExecutableDirectory() / "shaderCache.bin";
@@ -99,7 +95,6 @@ TEST(ShaderCache, SaveAndLoad)
     EXPECT_FALSE(ec) << "Failed to remove " << shaderCachePath << ": " << ec.message();
     EXPECT_TRUE(removed) << "Expected shader cache file to be removed: " << shaderCachePath;
 
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 
     Babylon::Plugins::ShaderCache::Disable();

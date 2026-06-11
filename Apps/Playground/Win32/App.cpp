@@ -215,10 +215,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         {
             if (appContext)
             {
-                appContext->DeviceUpdate().Finish();
                 appContext->Device().FinishRenderingCurrentFrame();
                 appContext->Device().StartRenderingCurrentFrame();
-                appContext->DeviceUpdate().Start();
             }
 
             result = PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) && msg.message != WM_QUIT;
@@ -340,7 +338,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             {
                 if (appContext)
                 {
-                    appContext->DeviceUpdate().Finish();
                     appContext->Device().FinishRenderingCurrentFrame();
 
                     appContext->Runtime().Suspend();
@@ -359,7 +356,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         appContext->Runtime().Resume();
 
                         appContext->Device().StartRenderingCurrentFrame();
-                        appContext->DeviceUpdate().Start();
                     }
                 }
             }
