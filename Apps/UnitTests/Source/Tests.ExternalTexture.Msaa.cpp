@@ -27,10 +27,8 @@ namespace
     std::vector<uint8_t> RenderAndReadback(uint32_t samples)
     {
         Babylon::Graphics::Device device{g_deviceConfig};
-        Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
         device.StartRenderingCurrentFrame();
-        update.Start();
 
         auto nativeTexture = Helpers::CreateTexture(
             device.GetPlatformInfo().Device, TEX_SIZE, TEX_SIZE, 1, true, samples);
@@ -86,7 +84,6 @@ namespace
 
         renderDone.get_future().get();
 
-        update.Finish();
         device.FinishRenderingCurrentFrame();
 
         auto pixels = Helpers::ReadPixels(

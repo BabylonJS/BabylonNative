@@ -19,10 +19,8 @@ TEST(ExternalTexture, Construction)
     GTEST_SKIP();
 #else
     Babylon::Graphics::Device device{g_deviceConfig};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
@@ -31,7 +29,6 @@ TEST(ExternalTexture, Construction)
     EXPECT_EQ(externalTexture.Width(), 256u);
     EXPECT_EQ(externalTexture.Height(), 256u);
 
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 #endif
 }
@@ -42,10 +39,8 @@ TEST(ExternalTexture, CreateForJavaScript)
     GTEST_SKIP();
 #else
     Babylon::Graphics::Device device{g_deviceConfig};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
@@ -73,7 +68,6 @@ TEST(ExternalTexture, CreateForJavaScript)
 
     done.get_future().wait();
 
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 #endif
 }
@@ -84,10 +78,8 @@ TEST(ExternalTexture, Update)
     GTEST_SKIP();
 #else
     Babylon::Graphics::Device device{g_deviceConfig};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
@@ -96,12 +88,10 @@ TEST(ExternalTexture, Update)
     EXPECT_EQ(externalTexture.Width(), 256u);
     EXPECT_EQ(externalTexture.Height(), 256u);
 
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 
     // Update the external texture to point at a new native texture with different dimensions.
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     auto nativeTexture2 = Helpers::CreateTexture(device.GetPlatformInfo().Device, 128, 128);
     externalTexture.Update(nativeTexture2);
@@ -110,7 +100,6 @@ TEST(ExternalTexture, Update)
     EXPECT_EQ(externalTexture.Width(), 128u);
     EXPECT_EQ(externalTexture.Height(), 128u);
 
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 #endif
 }
@@ -121,10 +110,8 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
     GTEST_SKIP();
 #else
     Babylon::Graphics::Device device{g_deviceConfig};
-    Babylon::Graphics::DeviceUpdate update{device.GetUpdate("update")};
 
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
     Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
@@ -163,7 +150,6 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
     addToContext.get_future().wait();
 
     // Close the frame in which the deprecated shim's synchronous CreateForJavaScript ran.
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 
     // Wait for promise to resolve.
@@ -171,14 +157,12 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
 
     // Start a new frame.
     device.StartRenderingCurrentFrame();
-    update.Start();
 
     // Update the external texture to a new texture.
     auto nativeTexture2 = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256);
     externalTexture.Update(nativeTexture2);
     Helpers::DestroyTexture(nativeTexture2);
 
-    update.Finish();
     device.FinishRenderingCurrentFrame();
 #endif
 }

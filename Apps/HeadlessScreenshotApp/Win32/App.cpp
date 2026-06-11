@@ -93,12 +93,10 @@ int main()
 
     // Create the Babylon Native graphics device and update.
     auto device = CreateGraphicsDevice(d3dDevice.get());
-    auto deviceUpdate = device.GetUpdate("update");
 
     // Start rendering a frame to unblock the JavaScript from queuing graphics
     // commands.
     device.StartRenderingCurrentFrame();
-    deviceUpdate.Start();
 
     // Create a Babylon Native application runtime which hosts a JavaScript
     // engine on a new thread.
@@ -128,13 +126,11 @@ int main()
     winrt::com_ptr<ID3D11Texture2D> outputTexture = CreateD3DRenderTargetTexture(d3dDevice.get());
 
     // Close the script-load frame.
-    deviceUpdate.Finish();
     device.FinishRenderingCurrentFrame();
 
     // Open a new frame for `startup` so the JS-side resource creation and
     // startup() call run in the same frame as the wait that observes them.
     device.StartRenderingCurrentFrame();
-    deviceUpdate.Start();
 
     std::promise<void> startup{};
 
@@ -155,7 +151,6 @@ int main()
     startup.get_future().wait();
 
     // Close the startup frame.
-    deviceUpdate.Finish();
     device.FinishRenderingCurrentFrame();
 
     struct Asset
@@ -177,7 +172,6 @@ int main()
 
         // Start rendering a frame to unblock the JavaScript again.
         device.StartRenderingCurrentFrame();
-        deviceUpdate.Start();
 
         std::promise<void> loadAndRenderAsset{};
 
@@ -200,7 +194,6 @@ int main()
         loadAndRenderAsset.get_future().wait();
 
         // Finish rendering the frame.
-        deviceUpdate.Finish();
         device.FinishRenderingCurrentFrame();
 
         // Tell RenderDoc to stop capturing.
