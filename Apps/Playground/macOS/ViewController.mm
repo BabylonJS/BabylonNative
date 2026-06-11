@@ -1,6 +1,6 @@
 #import "ViewController.h"
 
-#import <Babylon/Integrations/Apple/BabylonNativeIntegrations.h>
+#import <Babylon/Embedding/Apple/BabylonNativeEmbedding.h>
 #import "AppleShared/PlaygroundBootstrap.h"
 
 #import <MetalKit/MTKView.h>

@@ -1,6 +1,6 @@
 // App.cpp : Defines the entry point for the application.
 //
-// Built on Babylon::Integrations: the cross-platform Runtime + View API
+// Built on Babylon::Embedding: the cross-platform Runtime + View API
 // handles plugin/polyfill setup, GPU device construction, frame rendering,
 // and input forwarding.
 
@@ -21,8 +21,8 @@ using namespace winrt::Windows::System;
 using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::Graphics::Display;
 
-using Babylon::Integrations::CoordinateUnits;
-using BNView = Babylon::Integrations::View;
+using Babylon::Embedding::CoordinateUnits;
+using BNView = Babylon::Embedding::View;
 
 // The main function is only used to initialize our IFrameworkView class.
 int __stdcall wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
@@ -321,7 +321,7 @@ void App::RestartRuntime(Rect bounds)
 {
     Uninitialize();
 
-    Babylon::Integrations::RuntimeOptions runtimeOptions{};
+    Babylon::Embedding::RuntimeOptions runtimeOptions{};
     runtimeOptions.enableDebugger = true;
     runtimeOptions.log = Playground::MakeLogCallback([](std::string_view text) {
         std::string line{text};

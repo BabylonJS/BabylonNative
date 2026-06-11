@@ -1,6 +1,6 @@
 // App.swift — visionOS Playground entry point.
 //
-// Built on the Babylon::Integrations Apple interop layer (BNRuntime /
+// Built on the Babylon::Embedding Apple interop layer (BNRuntime /
 // BNView), the same one the iOS Playground uses. visionOS differs
 // from iOS in two small ways:
 //   1. SwiftUI app lifecycle (`@main App`) instead of

@@ -80,7 +80,7 @@ When you see `[Error] Error: Cannot load X` in stdout, **scroll up** --
 short error line. The short line is kept so legacy log scrapers still match.
 
 ### 3. JS stack on every `console.error`
-The Integrations layer's `Console::Initialize` callback calls
+The Embedding layer's `Console::Initialize` callback calls
 `Babylon::Polyfills::Console::CaptureCurrentJsStack(env)` on every
 `LogLevel::Error` message and appends the captured stack to the message
 body that the host's `RuntimeOptions::log` callback receives (which the

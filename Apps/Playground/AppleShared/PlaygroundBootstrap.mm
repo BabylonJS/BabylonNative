@@ -3,15 +3,15 @@
 
 #import "PlaygroundBootstrap.h"
 
-#import <Babylon/Integrations/Apple/BNRuntime.h>
+#import <Babylon/Embedding/Apple/BNRuntime.h>
 
-#include <Babylon/Integrations/Runtime.h>
+#include <Babylon/Embedding/Runtime.h>
 #include <Shared/PlaygroundScripts.h>
 
 // Re-declare the internal class extension that exposes the C++ Runtime*
-// from BNRuntime (implementation lives in Integrations/Apple/Source/BNRuntime.mm).
+// from BNRuntime (implementation lives in Embedding/Apple/Source/BNRuntime.mm).
 @interface BNRuntime ()
-- (Babylon::Integrations::Runtime*)nativeRuntime;
+- (Babylon::Embedding::Runtime*)nativeRuntime;
 @end
 
 @implementation PlaygroundBootstrap

@@ -1,13 +1,13 @@
 // App.cpp : Defines the entry point for the application.
 //
-// Built on Babylon::Integrations: the cross-platform Runtime + View API
+// Built on Babylon::Embedding: the cross-platform Runtime + View API
 // handles plugin/polyfill setup, GPU device construction, frame rendering,
 // and input forwarding.
 
 #include "App.h"
 
-#include <Babylon/Integrations/Runtime.h>
-#include <Babylon/Integrations/View.h>
+#include <Babylon/Embedding/Runtime.h>
+#include <Babylon/Embedding/View.h>
 #include <Babylon/Plugins/TestUtils.h>
 
 #include <Shared/CommandLine.h>
@@ -38,11 +38,11 @@ WCHAR szWindowClass[MAX_LOADSTRING]; // the main window class name
 
 // Process-scoped: created on app start, recreated on 'R' refresh,
 // destroyed on app exit.
-std::optional<Babylon::Integrations::Runtime> g_runtime;
+std::optional<Babylon::Embedding::Runtime> g_runtime;
 
 // Window-scoped: created on InitInstance after CreateWindowW returns,
 // destroyed on WM_DESTROY (or torn down + recreated by RefreshBabylon).
-std::optional<Babylon::Integrations::View> g_view;
+std::optional<Babylon::Embedding::View> g_view;
 
 bool minimized{false};
 PlaygroundOptions options{};
@@ -90,9 +90,9 @@ namespace
         return arguments;
     }
 
-    Babylon::Integrations::RuntimeOptions MakeRuntimeOptions()
+    Babylon::Embedding::RuntimeOptions MakeRuntimeOptions()
     {
-        Babylon::Integrations::RuntimeOptions runtimeOptions{};
+        Babylon::Embedding::RuntimeOptions runtimeOptions{};
         runtimeOptions.enableDebugger = true;
         runtimeOptions.enableDebugTrace = options.DebugTrace.value_or(true);
         runtimeOptions.log = Playground::MakeLogCallback([](std::string_view text) {
@@ -187,7 +187,7 @@ namespace
         {
             g_view->Resize(static_cast<uint32_t>(rect.right - rect.left),
                            static_cast<uint32_t>(rect.bottom - rect.top),
-                           Babylon::Integrations::CoordinateUnits::Physical);
+                           Babylon::Embedding::CoordinateUnits::Physical);
         }
     }
 }
@@ -340,8 +340,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 void ProcessMouseButtons(tagPOINTER_BUTTON_CHANGE_TYPE changeType, int x, int y)
 {
-    using View = Babylon::Integrations::View;
-    using CoordinateUnits = Babylon::Integrations::CoordinateUnits;
+    using View = Babylon::Embedding::View;
+    using CoordinateUnits = Babylon::Embedding::CoordinateUnits;
     if (!g_view) return;
 
     switch (changeType)
@@ -369,8 +369,8 @@ void ProcessMouseButtons(tagPOINTER_BUTTON_CHANGE_TYPE changeType, int x, int y)
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    using View = Babylon::Integrations::View;
-    using CoordinateUnits = Babylon::Integrations::CoordinateUnits;
+    using View = Babylon::Embedding::View;
+    using CoordinateUnits = Babylon::Embedding::CoordinateUnits;
 
     switch (message)
     {

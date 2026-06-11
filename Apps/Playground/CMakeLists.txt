@@ -35,9 +35,9 @@ if(APPLE)
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/Main.storyboard"
             "${CMAKE_CURRENT_LIST_DIR}/iOS/Base.lproj/LaunchScreen.storyboard")
         set(RESOURCE_FILES ${STORYBOARD} ${SCRIPTS})
-        # NativeXr is consumed transitively through `BabylonNativeIntegrations`
+        # NativeXr is consumed transitively through `BabylonNativeEmbedding`
         # (the Apple interop static lib); no need to link it directly.
-        set(ADDITIONAL_LIBRARIES PRIVATE z BabylonNativeIntegrations)
+        set(ADDITIONAL_LIBRARIES PRIVATE z BabylonNativeEmbedding)
         set(SOURCES ${SOURCES}
             "iOS/AppDelegate.swift"
             "iOS/ViewController.swift"
@@ -51,9 +51,9 @@ if(APPLE)
         set(PLIST_FILE
             "${CMAKE_CURRENT_LIST_DIR}/visionOS/Info.plist")
         set(RESOURCE_FILES ${SCRIPTS})
-        # NativeXr is consumed transitively through `BabylonNativeIntegrations`
+        # NativeXr is consumed transitively through `BabylonNativeEmbedding`
         # (the Apple interop static lib); no need to link it directly.
-        set(ADDITIONAL_LIBRARIES PRIVATE z BabylonNativeIntegrations)
+        set(ADDITIONAL_LIBRARIES PRIVATE z BabylonNativeEmbedding)
         set(SOURCES ${SOURCES}
             "visionOS/App.swift"
             "visionOS/Playground-Bridging-Header.h"
@@ -66,7 +66,7 @@ if(APPLE)
         set(PLIST_FILE "${CMAKE_CURRENT_LIST_DIR}/macOS/Info.plist")
         set(STORYBOARD "${CMAKE_CURRENT_LIST_DIR}/macOS/Base.lproj/Main.storyboard")
         set(RESOURCE_FILES ${STORYBOARD})
-        set(ADDITIONAL_LIBRARIES PRIVATE BabylonNativeIntegrations)
+        set(ADDITIONAL_LIBRARIES PRIVATE BabylonNativeEmbedding)
         set(SOURCES ${SOURCES}
             "macOS/main.mm"
             "macOS/AppDelegate.h"
@@ -152,7 +152,7 @@ target_link_libraries(Playground
     PRIVATE ExternalTexture
     PRIVATE File
     PRIVATE GraphicsDevice
-    PRIVATE Integrations
+    PRIVATE Embedding
     PRIVATE NativeCamera
     PRIVATE NativeCapture
     PRIVATE NativeEncoding

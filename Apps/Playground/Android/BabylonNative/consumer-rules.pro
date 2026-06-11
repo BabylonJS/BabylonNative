@@ -1,2 +1,2 @@
--keep class com.babylonjs.integrations.BabylonNative { *; }
--keep class com.babylonjs.integrations.BabylonNative$RuntimeOptions { *; }
+-keep class com.babylonjs.embedding.BabylonNative { *; }
+-keep class com.babylonjs.embedding.BabylonNative$RuntimeOptions { *; }

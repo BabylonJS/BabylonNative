@@ -2,7 +2,7 @@
 
 #include "Diagnostics.h"
 
-#include <Babylon/Integrations/Runtime.h>
+#include <Babylon/Embedding/Runtime.h>
 #include <Babylon/PerfTrace.h>
 
 #include <cstdlib>
@@ -30,7 +30,7 @@ namespace Playground
         Babylon::PerfTrace::SetLevel(perfLevel);
     }
 
-    void LoadBootstrapScripts(Babylon::Integrations::Runtime& runtime)
+    void LoadBootstrapScripts(Babylon::Embedding::Runtime& runtime)
     {
         runtime.LoadScript("app:///Scripts/ammo.js");
         // Commenting out recast.js for now because v8jsi is incompatible with asm.js.
@@ -43,10 +43,10 @@ namespace Playground
         runtime.LoadScript("app:///Scripts/babylonjs.serializers.js");
     }
 
-    std::function<void(Babylon::Integrations::LogLevel, std::string_view)>
+    std::function<void(Babylon::Embedding::LogLevel, std::string_view)>
     MakeLogCallback(std::function<void(std::string_view)> platformSink)
     {
-        return [sink = std::move(platformSink)](Babylon::Integrations::LogLevel level, std::string_view message) {
+        return [sink = std::move(platformSink)](Babylon::Embedding::LogLevel level, std::string_view message) {
             std::string text{message};
             while (!text.empty() && (text.back() == '\n' || text.back() == '\r'))
             {
@@ -60,7 +60,7 @@ namespace Playground
 
             // Babylon.js routes recoverable errors through console.error;
             // surface them as a grep-able banner with a native callstack.
-            if (level == Babylon::Integrations::LogLevel::Error)
+            if (level == Babylon::Embedding::LogLevel::Error)
             {
                 Diagnostics::DumpFailure(
                     "JS CONSOLE ERROR",
@@ -72,9 +72,9 @@ namespace Playground
             }
 
             // Uncaught JS exceptions: banner + finish-line + non-zero exit.
-            // The Integrations UnhandledExceptionHandler has already formatted
+            // The Embedding UnhandledExceptionHandler has already formatted
             // the message as "[Uncaught Error] <message + JS stack>".
-            if (level == Babylon::Integrations::LogLevel::Fatal)
+            if (level == Babylon::Embedding::LogLevel::Fatal)
             {
                 Diagnostics::DumpFailure(
                     "UNCAUGHT JS ERROR",

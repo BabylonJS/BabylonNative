@@ -4,7 +4,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
 
-import com.babylonjs.integrations.BabylonNative;
+import com.babylonjs.embedding.BabylonNative;
 import com.library.babylonnative.BabylonView;
 
 public class PlaygroundActivity extends Activity {

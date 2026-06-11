@@ -9,8 +9,8 @@
 #include <iostream>
 #include <optional>
 
-#include <Babylon/Integrations/Runtime.h>
-#include <Babylon/Integrations/View.h>
+#include <Babylon/Embedding/Runtime.h>
+#include <Babylon/Embedding/View.h>
 #include <Babylon/Plugins/TestUtils.h>
 #include <Shared/Diagnostics.h>
 #include <Shared/PlaygroundScripts.h>
@@ -20,8 +20,8 @@ static const char* s_applicationClass = "Playground";
 
 namespace
 {
-    std::optional<Babylon::Integrations::Runtime> g_runtime;
-    std::optional<Babylon::Integrations::View> g_view;
+    std::optional<Babylon::Embedding::Runtime> g_runtime;
+    std::optional<Babylon::Embedding::View> g_view;
 
     void Uninitialize()
     {
@@ -35,7 +35,7 @@ namespace
     {
         Uninitialize();
 
-        Babylon::Integrations::RuntimeOptions runtimeOptions{};
+        Babylon::Embedding::RuntimeOptions runtimeOptions{};
         runtimeOptions.log = Playground::MakeLogCallback([](std::string_view text) {
             std::cout << text << std::endl;
         });
@@ -68,7 +68,7 @@ namespace
         if (g_view)
         {
             // X11 reports surface dimensions in physical pixels.
-            g_view->Resize(width, height, Babylon::Integrations::CoordinateUnits::Physical);
+            g_view->Resize(width, height, Babylon::Embedding::CoordinateUnits::Physical);
         }
     }
 }
@@ -183,19 +183,19 @@ int main(int _argc, const char* const* _argv)
                         if (g_view) {
                             switch (xbutton.button) {
                                 case Button1:
-                                    g_view->OnMouseDown(Babylon::Integrations::View::LeftMouseButton(), xmotion.x, xmotion.y, Babylon::Integrations::CoordinateUnits::Physical);
+                                    g_view->OnMouseDown(Babylon::Embedding::View::LeftMouseButton(), xmotion.x, xmotion.y, Babylon::Embedding::CoordinateUnits::Physical);
                                     break;
                                 case Button2:
-                                    g_view->OnMouseDown(Babylon::Integrations::View::MiddleMouseButton(), xmotion.x, xmotion.y, Babylon::Integrations::CoordinateUnits::Physical);
+                                    g_view->OnMouseDown(Babylon::Embedding::View::MiddleMouseButton(), xmotion.x, xmotion.y, Babylon::Embedding::CoordinateUnits::Physical);
                                     break;
                                 case Button3:
-                                    g_view->OnMouseDown(Babylon::Integrations::View::RightMouseButton(), xmotion.x, xmotion.y, Babylon::Integrations::CoordinateUnits::Physical);
+                                    g_view->OnMouseDown(Babylon::Embedding::View::RightMouseButton(), xmotion.x, xmotion.y, Babylon::Embedding::CoordinateUnits::Physical);
                                     break;
                                 case Button4:
-                                    g_view->OnMouseWheel(Babylon::Integrations::View::MouseWheelY(), -120);
+                                    g_view->OnMouseWheel(Babylon::Embedding::View::MouseWheelY(), -120);
                                     break;
                                 case Button5:
-                                    g_view->OnMouseWheel(Babylon::Integrations::View::MouseWheelY(), 120);
+                                    g_view->OnMouseWheel(Babylon::Embedding::View::MouseWheelY(), 120);
                                     break;
                             }
                         }
@@ -211,13 +211,13 @@ int main(int _argc, const char* const* _argv)
                             switch (xbutton.button)
                             {
                                 case Button1:
-                                    g_view->OnMouseUp(Babylon::Integrations::View::LeftMouseButton(), xmotion.x, xmotion.y, Babylon::Integrations::CoordinateUnits::Physical);
+                                    g_view->OnMouseUp(Babylon::Embedding::View::LeftMouseButton(), xmotion.x, xmotion.y, Babylon::Embedding::CoordinateUnits::Physical);
                                     break;
                                 case Button2:
-                                    g_view->OnMouseUp(Babylon::Integrations::View::MiddleMouseButton(), xmotion.x, xmotion.y, Babylon::Integrations::CoordinateUnits::Physical);
+                                    g_view->OnMouseUp(Babylon::Embedding::View::MiddleMouseButton(), xmotion.x, xmotion.y, Babylon::Embedding::CoordinateUnits::Physical);
                                     break;
                                 case Button3:
-                                    g_view->OnMouseUp(Babylon::Integrations::View::RightMouseButton(), xmotion.x, xmotion.y, Babylon::Integrations::CoordinateUnits::Physical);
+                                    g_view->OnMouseUp(Babylon::Embedding::View::RightMouseButton(), xmotion.x, xmotion.y, Babylon::Embedding::CoordinateUnits::Physical);
                                     break;
                             }
                         }
@@ -227,7 +227,7 @@ int main(int _argc, const char* const* _argv)
                     {
                         const XMotionEvent& xmotion = event.xmotion;
                         if (g_view) {
-                            g_view->OnMouseMove(xmotion.x, xmotion.y, Babylon::Integrations::CoordinateUnits::Physical);
+                            g_view->OnMouseMove(xmotion.x, xmotion.y, Babylon::Embedding::CoordinateUnits::Physical);
                         }
                     }
                     break;

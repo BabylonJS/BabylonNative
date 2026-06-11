@@ -1,14 +1,14 @@
 // Playground-specific JNI helper. Built into the same .so as the generic
-// Integrations/Android JNI (added via target_sources in the Playground
-// CMakeLists), so there's a single copy of Babylon::Integrations across
+// Embedding/Android JNI (added via target_sources in the Playground
+// CMakeLists), so there's a single copy of Babylon::Embedding across
 // the process — avoids cross-library handle-passing UB.
 //
 // Sole purpose: surface Apps/Playground/Shared/PlaygroundScripts.{h,cpp}
 // to Java so the bootstrap script list stays in one place, shared with
 // the other Playground hosts.
 
-#include <Babylon/Integrations/Runtime.h>
-#include <Babylon/Integrations/Android/RuntimeHandle.h>
+#include <Babylon/Embedding/Runtime.h>
+#include <Babylon/Embedding/Android/RuntimeHandle.h>
 
 #include <Shared/PlaygroundScripts.h>
 
@@ -21,7 +21,7 @@ JNIEXPORT void JNICALL
 Java_com_android_babylonnative_playground_PlaygroundActivity_loadBootstrapScripts(
     JNIEnv*, jclass, jlong runtimeHandle)
 {
-    auto* runtime = Babylon::Integrations::Android::RuntimeFromHandle(runtimeHandle);
+    auto* runtime = Babylon::Embedding::Android::RuntimeFromHandle(runtimeHandle);
     if (runtime == nullptr)
     {
         return;

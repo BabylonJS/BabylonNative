@@ -8,7 +8,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.FrameLayout;
 
-import com.babylonjs.integrations.BabylonNative;
+import com.babylonjs.embedding.BabylonNative;
 
 /**
  * Playground View built on {@link BabylonNative}. Borrows a Runtime handle

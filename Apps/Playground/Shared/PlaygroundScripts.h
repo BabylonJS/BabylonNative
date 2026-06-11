@@ -2,12 +2,12 @@
 
 #include "CommandLine.h"
 
-#include <Babylon/Integrations/LogLevel.h>
+#include <Babylon/Embedding/LogLevel.h>
 
 #include <functional>
 #include <string_view>
 
-namespace Babylon::Integrations
+namespace Babylon::Embedding
 {
     class Runtime;
 }
@@ -22,7 +22,7 @@ namespace Playground
     // Queue the standard Babylon.js bootstrap scripts (core, loaders,
     // materials, GUI, serializers, etc.) onto `runtime` in dependency order.
     //
-    // The `Babylon::Integrations` layer doesn't bundle script loading;
+    // The `Babylon::Embedding` layer doesn't bundle script loading;
     // each host picks between this multi-UMD route and a pre-bundled
     // `bundle.js` route. Centralizing the list keeps every Playground
     // host in sync as the bundle list evolves.
@@ -30,7 +30,7 @@ namespace Playground
     // LoadScript calls made before the first View attach are queued and
     // dispatched after engine init, so this is safe to call immediately
     // after constructing the Runtime.
-    void LoadBootstrapScripts(Babylon::Integrations::Runtime& runtime);
+    void LoadBootstrapScripts(Babylon::Embedding::Runtime& runtime);
 
     // Build a `RuntimeOptions::log` callback that:
     //   1) Trims trailing newlines from `message` and forwards it to
@@ -40,13 +40,13 @@ namespace Playground
     //   2) On `LogLevel::Error`: emits a `JS CONSOLE ERROR` banner via
     //      `Diagnostics::DumpFailure` (banner header + native callstack +
     //      build info). The JS callstack is already appended by the
-    //      Integrations layer, so it lands inside the banner body.
+    //      Embedding layer, so it lands inside the banner body.
     //   3) On `LogLevel::Fatal`: emits an `UNCAUGHT JS ERROR` banner,
     //      sets exit code 1, prints the finish line, and `std::quick_exit`s.
     //
     // Centralizing this matches the behavior every Playground host had
-    // pre-Integrations via `AppContext` (which routed `console.error` and
+    // pre-Embedding via `AppContext` (which routed `console.error` and
     // the unhandled exception handler through `DumpFailure`).
-    std::function<void(Babylon::Integrations::LogLevel, std::string_view)>
+    std::function<void(Babylon::Embedding::LogLevel, std::string_view)>
     MakeLogCallback(std::function<void(std::string_view)> platformSink);
 }

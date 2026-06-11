@@ -251,15 +251,15 @@ if(TARGET XMLHttpRequest)
 endif()
 
 # ----------------
-# Integrations
+# Embedding
 # ----------------
 
-if(TARGET Integrations)
-    install_lib(Integrations)
-    install_include(Integrations)
+if(TARGET Embedding)
+    install_lib(Embedding)
+    install_include(Embedding)
 endif()
 
-if(TARGET BabylonNativeIntegrations)
-    install_lib(BabylonNativeIntegrations)
-    install_include(BabylonNativeIntegrations)
+if(TARGET BabylonNativeEmbedding)
+    install_lib(BabylonNativeEmbedding)
+    install_include(BabylonNativeEmbedding)
 endif()

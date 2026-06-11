@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Babylon/Integrations/Runtime.h>
-#include <Babylon/Integrations/View.h>
+#include <Babylon/Embedding/Runtime.h>
+#include <Babylon/Embedding/View.h>
 
 #include <optional>
 
@@ -54,11 +54,11 @@ private:
 
     // Process-scoped: created on app start, recreated on 'R' refresh,
     // destroyed in Uninitialize.
-    std::optional<Babylon::Integrations::Runtime> m_runtime{};
+    std::optional<Babylon::Embedding::Runtime> m_runtime{};
 
     // Window-scoped: created during RestartRuntime, destroyed in Uninitialize
     // (and before a fresh Runtime is constructed).
-    std::optional<Babylon::Integrations::View> m_view{};
+    std::optional<Babylon::Embedding::View> m_view{};
 
     winrt::Windows::Foundation::Collections::IVectorView<winrt::Windows::Storage::IStorageItem> m_files{nullptr};
     bool m_windowClosed;
