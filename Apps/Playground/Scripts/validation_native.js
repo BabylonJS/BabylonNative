@@ -525,52 +525,9 @@
             if (type === "canvas") {
                 return new OffscreenCanvas(64, 64);
             }
-            // Generic element stub with a no-op dispatchEvent so serializer
-            // tests that simulate a click via createEvent/dispatchEvent run
-            // without throwing.
-            return {
-                style: {},
-                addEventListener: function () { },
-                removeEventListener: function () { },
-                dispatchEvent: function () { return true; },
-                appendChild: function (c) { return c; },
-                removeChild: function (c) { return c; },
-                setAttribute: function () { },
-                getAttribute: function () { return null; },
-                click: function () { },
-            };
+            return {};
         },
-        createEvent: function (type) {
-            var ev = {
-                type: '',
-                bubbles: false,
-                cancelable: false,
-                defaultPrevented: false,
-                target: null,
-                currentTarget: null,
-                timeStamp: Date.now(),
-                detail: null,
-                preventDefault: function () { ev.defaultPrevented = true; },
-                stopPropagation: function () { },
-                stopImmediatePropagation: function () { },
-            };
-            ev.initEvent = function (t, bubbles, cancelable) {
-                ev.type = String(t || '');
-                ev.bubbles = !!bubbles;
-                ev.cancelable = !!cancelable;
-            };
-            ev.initCustomEvent = function (t, bubbles, cancelable, detail) {
-                ev.initEvent(t, bubbles, cancelable);
-                ev.detail = detail;
-            };
-            ev.initUIEvent = ev.initEvent;
-            ev.initMouseEvent = ev.initEvent;
-            return ev;
-        },
-        addEventListener: function () { },
-        removeEventListener: function () { },
-        dispatchEvent: function () { return true; },
-        body: { appendChild: function (c) { return c; }, removeChild: function (c) { return c; } },
+        removeEventListener: function () { }
     }
 
     const xhr = new XMLHttpRequest();
