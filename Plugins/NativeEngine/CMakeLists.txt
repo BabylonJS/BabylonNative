@@ -45,13 +45,6 @@ if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES)
         PRIVATE bimg_decode)
 endif()
 
-if(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_WEBP)
-    target_compile_definitions(NativeEngine
-        PRIVATE WEBP)
-    target_link_libraries(NativeEngine
-        PRIVATE webp)
-endif()
-
 if(BABYLON_NATIVE_PLUGIN_SHADERCACHE)
     target_compile_definitions(NativeEngine
         PRIVATE SHADER_CACHE)

@@ -32,10 +32,6 @@
 #include <limits>
 #include <optional>
 
-#if defined(BABYLON_NATIVE_PLUGIN_NATIVEENGINE_LOAD_IMAGES) && defined(WEBP)
-#include <webp/decode.h>
-#endif
-
 namespace Babylon
 {
     namespace
@@ -196,26 +192,13 @@ namespace Babylon
         bimg::ImageContainer* ParseImage(bx::AllocatorI& allocator, gsl::span<uint8_t> data)
         {
             // Pass a bx::ErrorIgnore so bimg::imageParse reports unrecognized
-            // formats (e.g. WebP, handled by the fallback below) by returning
-            // nullptr instead of tripping its internal BX_ERROR_SCOPE assert.
-            // ErrorIgnore intentionally swallows any error that is set.
+            // or corrupt images by returning nullptr instead of tripping its
+            // internal BX_ERROR_SCOPE assert. ErrorIgnore intentionally
+            // swallows any error that is set.
             bx::ErrorIgnore parseError;
             bimg::ImageContainer* image{bimg::imageParse(&allocator, data.data(), static_cast<uint32_t>(data.size()), bimg::TextureFormat::Count, &parseError)};
             if (image == nullptr)
             {
-#ifdef WEBP
-                int width;
-                int height;
-                if (WebPGetInfo(data.data(), data.size(), &width, &height))
-                {
-                    image = bimg::imageAlloc(&allocator, bimg::TextureFormat::RGBA8, static_cast<uint16_t>(width), static_cast<uint16_t>(height), 1, 1, false, false);
-                    if (WebPDecodeRGBAInto(data.data(), data.size(), static_cast<uint8_t*>(image->m_data), static_cast<size_t>(image->m_size), width * 4))
-                    {
-                        return image;
-                    }
-                }
-#endif
-
                 throw std::runtime_error{"Failed to parse image."};
             }
 
