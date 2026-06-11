@@ -80,6 +80,7 @@ namespace Babylon::Polyfills::Internal
                 InstanceAccessor("responseType", &XMLHttpRequest::GetResponseType, &XMLHttpRequest::SetResponseType),
                 InstanceAccessor("responseURL", &XMLHttpRequest::GetResponseURL, nullptr),
                 InstanceAccessor("status", &XMLHttpRequest::GetStatus, nullptr),
+                InstanceAccessor("statusText", &XMLHttpRequest::GetStatusText, nullptr),
                 InstanceMethod("getAllResponseHeaders", &XMLHttpRequest::GetAllResponseHeaders),
                 InstanceMethod("getResponseHeader", &XMLHttpRequest::GetResponseHeader),
                 InstanceMethod("setRequestHeader", &XMLHttpRequest::SetRequestHeader),
@@ -147,6 +148,18 @@ namespace Babylon::Polyfills::Internal
     Napi::Value XMLHttpRequest::GetStatus(const Napi::CallbackInfo&)
     {
         return Napi::Value::From(Env(), arcana::underlying_cast(m_request.StatusCode()));
+    }
+
+    Napi::Value XMLHttpRequest::GetStatusText(const Napi::CallbackInfo&)
+    {
+        // Per the XHR spec, statusText is the empty string until a response is available
+        // (status 0 means UNSENT/OPENED or a network error).
+        if (arcana::underlying_cast(m_request.StatusCode()) == 0)
+        {
+            return Napi::String::New(Env(), "");
+        }
+
+        return Napi::String::New(Env(), std::string{m_request.StatusText()});
     }
 
     Napi::Value XMLHttpRequest::GetResponseHeader(const Napi::CallbackInfo& info)

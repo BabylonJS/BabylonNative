@@ -24,6 +24,7 @@ namespace Babylon::Polyfills::Internal
         struct ResponseData
         {
             int statusCode{};
+            std::string statusText;
             std::string url;
             std::vector<std::pair<std::string, std::string>> headers;
             std::vector<std::byte> body;
@@ -49,36 +50,6 @@ namespace Babylon::Polyfills::Internal
             }
 
             throw std::runtime_error{"Unsupported fetch method: " + method + " (only GET and POST are supported)"};
-        }
-
-        const char* StatusText(int statusCode)
-        {
-            switch (statusCode)
-            {
-                case 200: return "OK";
-                case 201: return "Created";
-                case 202: return "Accepted";
-                case 204: return "No Content";
-                case 206: return "Partial Content";
-                case 301: return "Moved Permanently";
-                case 302: return "Found";
-                case 304: return "Not Modified";
-                case 307: return "Temporary Redirect";
-                case 308: return "Permanent Redirect";
-                case 400: return "Bad Request";
-                case 401: return "Unauthorized";
-                case 403: return "Forbidden";
-                case 404: return "Not Found";
-                case 405: return "Method Not Allowed";
-                case 408: return "Request Timeout";
-                case 409: return "Conflict";
-                case 429: return "Too Many Requests";
-                case 500: return "Internal Server Error";
-                case 502: return "Bad Gateway";
-                case 503: return "Service Unavailable";
-                case 504: return "Gateway Timeout";
-                default: return "";
-            }
         }
 
         std::optional<std::string> FindHeader(const ResponseData& data, std::string_view name)
@@ -181,7 +152,7 @@ namespace Babylon::Polyfills::Internal
             const bool ok = data->statusCode >= 200 && data->statusCode < 300;
             response.Set("ok", Napi::Boolean::New(env, ok));
             response.Set("status", Napi::Number::New(env, data->statusCode));
-            response.Set("statusText", Napi::String::New(env, StatusText(data->statusCode)));
+            response.Set("statusText", Napi::String::New(env, data->statusText));
             response.Set("url", Napi::String::New(env, data->url));
             response.Set("redirected", Napi::Boolean::New(env, false));
             response.Set("type", Napi::String::New(env, "basic"));
@@ -355,6 +326,7 @@ namespace Babylon::Polyfills::Internal
 
                                 auto data = std::make_shared<ResponseData>();
                                 data->statusCode = status;
+                                data->statusText = std::string{request->StatusText()};
                                 data->url = std::string{request->ResponseUrl()};
                                 for (const auto& header : request->GetAllResponseHeaders())
                                 {

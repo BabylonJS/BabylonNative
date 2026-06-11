@@ -121,6 +121,13 @@ describe("XMLHTTPRequest", function () {
         expect(xhr.status).to.equal(404);
     });
 
+    it("should expose statusText", async function () {
+        const okXhr = await createRequest("GET", "https://github.com/");
+        expect(okXhr.statusText).to.equal("OK");
+        const notFoundXhr = await createRequest("GET", "https://github.com/babylonJS/BabylonNative404");
+        expect(notFoundXhr.statusText).to.equal("Not Found");
+    });
+
     it("should fire 'error' event for a remote URL that returns HTTP 404", async function () {
         // Regression test: previously the success-only continuation in XMLHttpRequest::Send
         // skipped 'error' on async failures including non-2xx HTTP responses, so onerror
@@ -254,8 +261,10 @@ describe("fetch", function () {
     });
 
     it("should expose statusText", async function () {
-        const response = await fetch("https://github.com/babylonJS/BabylonNative404");
-        expect(response.statusText).to.equal("Not Found");
+        const okResponse = await fetch("https://github.com/");
+        expect(okResponse.statusText).to.equal("OK");
+        const notFoundResponse = await fetch("https://github.com/babylonJS/BabylonNative404");
+        expect(notFoundResponse.statusText).to.equal("Not Found");
     });
 
     it("text() should return the body as a string", async function () {
