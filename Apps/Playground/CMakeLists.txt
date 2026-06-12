@@ -134,6 +134,7 @@ endif()
 target_include_directories(Playground PRIVATE ".")
 
 target_link_libraries(Playground
+    PRIVATE AbortController
     PRIVATE AppRuntime
     PRIVATE Blob
     PRIVATE bx
@@ -154,6 +155,7 @@ target_link_libraries(Playground
     PRIVATE ShaderCache
     PRIVATE TestUtils
     PRIVATE TextDecoder
+    PRIVATE TextEncoder
     PRIVATE Window
     PRIVATE XMLHttpRequest
     PRIVATE Fetch

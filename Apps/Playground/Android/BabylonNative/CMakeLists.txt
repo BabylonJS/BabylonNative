@@ -25,6 +25,7 @@ target_link_libraries(BabylonNativeJNI
     PRIVATE EGL
     PRIVATE log
     PRIVATE -lz
+    PRIVATE AbortController
     PRIVATE AndroidExtensions
     PRIVATE AppRuntime
     PRIVATE Blob
@@ -46,5 +47,6 @@ target_link_libraries(BabylonNativeJNI
     PRIVATE ShaderCache
     PRIVATE TestUtils
     PRIVATE TextDecoder
+    PRIVATE TextEncoder
     PRIVATE Window
     PRIVATE XMLHttpRequest)

@@ -17,6 +17,7 @@
 #include <Babylon/Plugins/ShaderCache.h>
 #include <Babylon/Plugins/TestUtils.h>
 
+#include <Babylon/Polyfills/AbortController.h>
 #include <Babylon/Polyfills/Blob.h>
 #include <Babylon/Polyfills/Canvas.h>
 #include <Babylon/Polyfills/Console.h>
@@ -24,6 +25,7 @@
 #include <Babylon/Polyfills/File.h>
 #include <Babylon/Polyfills/Performance.h>
 #include <Babylon/Polyfills/TextDecoder.h>
+#include <Babylon/Polyfills/TextEncoder.h>
 #include <Babylon/Polyfills/Window.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 
@@ -184,7 +186,11 @@ AppContext::AppContext(
 
         Babylon::Polyfills::Window::Initialize(env);
 
+        Babylon::Polyfills::AbortController::Initialize(env);
+
         Babylon::Polyfills::TextDecoder::Initialize(env);
+
+        Babylon::Polyfills::TextEncoder::Initialize(env);
 
         Babylon::Polyfills::XMLHttpRequest::Initialize(env);
         Babylon::Polyfills::Fetch::Initialize(env);
