@@ -25,7 +25,10 @@
 #include <gsl/gsl>
 
 #include <arcana/threading/cancellation.h>
+#include <condition_variable>
 #include <map>
+#include <memory>
+#include <mutex>
 #include <optional>
 
 namespace Babylon
@@ -46,6 +49,11 @@ namespace Babylon
         void Dispose();
 
         void Dispose(const Napi::CallbackInfo& info);
+#ifdef BABYLON_NATIVE_NATIVEENGINE_TEST_HOOKS
+        // Test-only: schedules a tracked threadpool task that signals start, sleeps, then signals
+        // finish, so unit tests can verify Dispose drains in-flight async work. See NativeEngine.cpp.
+        void DisposeDrainTestSchedule(const Napi::CallbackInfo& info);
+#endif
         void RequestAnimationFrame(const Napi::CallbackInfo& info);
         Napi::Value CreateVertexArray(const Napi::CallbackInfo& info);
         void DeleteVertexArray(NativeDataStream::Reader& data);
@@ -137,6 +145,42 @@ namespace Babylon
         Graphics::FrameBuffer& GetBoundFrameBuffer();
 
         std::shared_ptr<arcana::cancellation_source> m_cancellationSource{};
+
+        // Tracks in-flight threadpool work that touches graphics resources (bgfx handles,
+        // textures, the shader provider). Cancellation only short-circuits scheduling, so a
+        // task already running on a threadpool thread keeps going; Dispose() drains these
+        // before teardown frees the resources they reference.
+        struct AsyncTaskTracker
+        {
+            // RAII token: increments the in-flight count on construction and decrements it
+            // (notifying any waiter) on destruction. Counting is tied to the token's lifetime
+            // so the Enter/Leave pair can never be split by an exception.
+            struct Scope
+            {
+                explicit Scope(std::shared_ptr<AsyncTaskTracker> tracker);
+                ~Scope();
+                Scope(const Scope&) = delete;
+                Scope& operator=(const Scope&) = delete;
+
+            private:
+                std::shared_ptr<AsyncTaskTracker> m_tracker;
+            };
+
+            // Blocks until the in-flight count reaches zero.
+            void Wait();
+
+        private:
+            std::mutex m_mutex{};
+            std::condition_variable m_condition{};
+            uint32_t m_count{};
+        };
+
+        std::shared_ptr<AsyncTaskTracker> m_asyncTaskTracker{std::make_shared<AsyncTaskTracker>()};
+
+        // Returns an RAII token whose destruction marks the tracked task complete. Call on the
+        // JS thread and capture the token into the graphics-touching lambda; it decrements when
+        // the lambda runs or is discarded on cancellation.
+        std::shared_ptr<void> TrackAsyncTask();
 
         ShaderProvider m_shaderProvider{};
 
