@@ -2047,13 +2047,17 @@ namespace Babylon
             // with no type safety (see napi/pointer.h). Reading it off an arbitrary object would let crafted
             // JS (e.g. `{ _imageContainer: new Uint32Array([lo, hi]) }`) forge a native pointer and turn the
             // memcpy below into an attacker-controlled-address read into a JS-visible buffer (CWE-822 /
-            // CWE-125). Only accept the handle from a genuine Image (NativeCanvasImage) instance, whose
-            // engine-owned getter mints the pointer. NativeCanvasImage registers its constructor as "Image"
-            // on the native object (Polyfills/Canvas/Source/Image.cpp); validating instanceof against it
-            // rejects forged objects. (napi type-tagging would be ideal but is V8-only in JsRuntimeHost.)
+            // CWE-125). Only accept the handle from a genuine Image (NativeCanvasImage) instance, and only
+            // via its engine-owned prototype accessor. NativeCanvasImage registers its constructor as "Image"
+            // on the native object and exposes _imageContainer as a prototype InstanceAccessor
+            // (Polyfills/Canvas/Source/Image.cpp). instanceof alone is bypassable -- e.g.
+            // `Object.create(_native.Image.prototype)` with an OWN _imageContainer property that shadows the
+            // accessor -- so also require that the object does NOT carry its own _imageContainer property,
+            // forcing the value to resolve through the engine-owned accessor. (napi type-tagging would be the
+            // ideal mechanism but is V8-only in JsRuntimeHost; instanceof / has-own-property are portable.)
             constexpr const char* imageConstructorName = "Image";
             const auto imageConstructor = JsRuntime::NativeObject::GetFromJavaScript(env).Get(imageConstructorName);
-            if (imageConstructor.IsFunction() && imageObject.InstanceOf(imageConstructor.As<Napi::Function>()) && imageObject.Has("_imageContainer"))
+            if (imageConstructor.IsFunction() && imageObject.InstanceOf(imageConstructor.As<Napi::Function>()) && !imageObject.HasOwnProperty("_imageContainer"))
             {
                 const auto napiImageContainer = imageObject.Get("_imageContainer");
                 if (!napiImageContainer.IsNull())
