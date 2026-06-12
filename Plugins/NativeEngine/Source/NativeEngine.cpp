@@ -628,28 +628,44 @@ namespace Babylon
                 texture->CreateCube(static_cast<uint16_t>(size), hasMips, 1, format, flags);
             }
 
-            // Every (side, mip) view points into the single container's backing
-            // store, so the allocation is released exactly once, after bgfx has
-            // consumed the final upload.
+            // The single release callback is attached to the last (side, mip) upload, so every
+            // expected face/mip must be present; otherwise the container would leak (the callback
+            // would never fire) and the texture would be left partially initialized. Validate the
+            // whole face/mip grid up front and fail fast.
             const uint8_t numMips{static_cast<uint8_t>(image->m_numMips)};
             for (uint8_t side = 0; side < 6; ++side)
             {
                 for (uint8_t mip = 0; mip < numMips; ++mip)
                 {
                     bimg::ImageMip imageMip{};
-                    if (bimg::imageGetRawData(*image, side, mip, image->m_data, image->m_size, imageMip))
+                    if (!bimg::imageGetRawData(*image, side, mip, image->m_data, image->m_size, imageMip))
                     {
-                        bgfx::ReleaseFn releaseFn{};
-                        if (side == 5 && mip == numMips - 1)
-                        {
-                            releaseFn = [](void*, void* userData) {
-                                bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
-                            };
-                        }
-
-                        const bgfx::Memory* mem{bgfx::makeRef(imageMip.m_data, imageMip.m_size, releaseFn, image)};
-                        texture->UpdateCube(0, side, mip, 0, 0, static_cast<uint16_t>(imageMip.m_width), static_cast<uint16_t>(imageMip.m_height), mem);
+                        bimg::imageFree(image);
+                        throw std::runtime_error{"Cubemap container is missing one or more faces/mips."};
                     }
+                }
+            }
+
+            // Every (side, mip) view points into the single container's backing
+            // store, so the allocation is released exactly once, after bgfx has
+            // consumed the final upload.
+            for (uint8_t side = 0; side < 6; ++side)
+            {
+                for (uint8_t mip = 0; mip < numMips; ++mip)
+                {
+                    bimg::ImageMip imageMip{};
+                    bimg::imageGetRawData(*image, side, mip, image->m_data, image->m_size, imageMip);
+
+                    bgfx::ReleaseFn releaseFn{};
+                    if (side == 5 && mip == numMips - 1)
+                    {
+                        releaseFn = [](void*, void* userData) {
+                            bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
+                        };
+                    }
+
+                    const bgfx::Memory* mem{bgfx::makeRef(imageMip.m_data, imageMip.m_size, releaseFn, image)};
+                    texture->UpdateCube(0, side, mip, 0, 0, static_cast<uint16_t>(imageMip.m_width), static_cast<uint16_t>(imageMip.m_height), mem);
                 }
             }
         }
@@ -1780,7 +1796,7 @@ namespace Babylon
             arcana::make_task(arcana::threadpool_scheduler, *m_cancellationSource, [dataSpan]() {
                 return ParseCubeImage(Graphics::DeviceContext::GetDefaultAllocator(), dataSpan);
             })
-                .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}](bimg::ImageContainer* image) {
+                .then(arcana::inline_scheduler, *m_cancellationSource, [texture, srgb, cancellationSource{m_cancellationSource}, asyncTaskScope{TrackAsyncTask()}](bimg::ImageContainer* image) {
                     // Compute the spherical harmonics from the decoded top mip before the upload
                     // hands the container's memory to bgfx.
                     auto sphericalPolynomial = ComputeCubeSphericalPolynomial(Graphics::DeviceContext::GetDefaultAllocator(), image);
