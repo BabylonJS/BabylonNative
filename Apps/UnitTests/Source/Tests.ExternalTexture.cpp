@@ -218,7 +218,7 @@ TEST(ExternalTexture, AddToContextAsyncWithLayerIndex)
     // Close the frame in which the deprecated shim's synchronous CreateForJavaScript ran.
     device.FinishRenderingCurrentFrame();
 
-    // Wait for promise to resolve.
-    promiseResolved.get_future().wait();
+    // get() (not wait()) so a rejected promise rethrows and fails the test.
+    EXPECT_NO_THROW(promiseResolved.get_future().get());
 #endif
 }
