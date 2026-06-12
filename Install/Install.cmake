@@ -48,11 +48,6 @@ install_lib(bimg_encode bimg_decode bgfx bimg bx minz)
 ## glslang
 install_lib(GenericCodeGen glslang glslang-default-resource-limits MachineIndependent OGLCompiler OSDependent SPIRV)
 
-## libwebp
-if(TARGET webp)
-    install_lib(webp)
-endif()
-
 ## metal-cpp
 if(APPLE)
     install_lib(metal-cpp)

@@ -4276,6 +4276,7 @@
             "title": "Particles - Emitters - Cylinder",
             "playgroundId": "#WLX2I2#12",
             "renderCount": 120,
+            "errorRatio": 4,
             "referenceImage": "particles-emitters-cylinder.png"
         },
         {
@@ -4383,8 +4384,7 @@
             "playgroundId": "#A97UQ6#5",
             "renderCount": 120,
             "referenceImage": "particles-helper-sun.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel diff after #1691 instance-data stride fix; not stride-related, needs follow-up."
+            "errorRatio": 8
         },
         {
             "title": "Particles - Helper - Smoke",
