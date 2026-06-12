@@ -2042,7 +2042,18 @@ namespace Babylon
         {
             // If this is an object, then check if it has the _imageContainer property defined.
             auto imageObject = info[0].As<Napi::Object>();
-            if (imageObject.Has("_imageContainer"))
+
+            // Security: _imageContainer is a Napi::Pointer, i.e. the raw bytes of a bimg::ImageContainer*
+            // with no type safety (see napi/pointer.h). Reading it off an arbitrary object would let crafted
+            // JS (e.g. `{ _imageContainer: new Uint32Array([lo, hi]) }`) forge a native pointer and turn the
+            // memcpy below into an attacker-controlled-address read into a JS-visible buffer (CWE-822 /
+            // CWE-125). Only accept the handle from a genuine Image (NativeCanvasImage) instance, whose
+            // engine-owned getter mints the pointer. NativeCanvasImage registers its constructor as "Image"
+            // on the native object (Polyfills/Canvas/Source/Image.cpp); validating instanceof against it
+            // rejects forged objects. (napi type-tagging would be ideal but is V8-only in JsRuntimeHost.)
+            constexpr const char* imageConstructorName = "Image";
+            const auto imageConstructor = JsRuntime::NativeObject::GetFromJavaScript(env).Get(imageConstructorName);
+            if (imageConstructor.IsFunction() && imageObject.InstanceOf(imageConstructor.As<Napi::Function>()) && imageObject.Has("_imageContainer"))
             {
                 const auto napiImageContainer = imageObject.Get("_imageContainer");
                 if (!napiImageContainer.IsNull())
