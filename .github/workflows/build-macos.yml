@@ -31,6 +31,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/.fc-cache
+            !${{ github.workspace }}/.fc-cache/*-build
+            !${{ github.workspace }}/.fc-cache/*-build/**
+          key: fc-v2-macos-${{ inputs.generator }}-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            fc-v2-macos-${{ inputs.generator }}-
 
       - name: Select Xcode ${{ inputs.xcode-version }}
         run: sudo xcode-select --switch /Applications/Xcode_${{ inputs.xcode-version }}.app/Contents/Developer
@@ -38,6 +48,8 @@ jobs:
       - name: Generate macOS solution
         run: |
           cmake -G "${{ inputs.generator }}" -B build/macOS \
+            -D FETCHCONTENT_BASE_DIR=${{ github.workspace }}/.fc-cache \
+            -D FETCHCONTENT_UPDATES_DISCONNECTED=ON \
             -D BABYLON_DEBUG_TRACE=ON \
             -D ENABLE_SANITIZERS=${{ inputs.enable-sanitizers && 'ON' || 'OFF' }} \
             -D BABYLON_NATIVE_TESTS_USE_NOOP_METAL_DEVICE=ON

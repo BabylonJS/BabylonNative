@@ -31,6 +31,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/.fc-cache
+            !${{ github.workspace }}/.fc-cache/*-build
+            !${{ github.workspace }}/.fc-cache/*-build/**
+          key: fc-v2-linux-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            fc-v2-linux-
 
       - name: Install packages
         run: |
@@ -40,6 +50,8 @@ jobs:
       - name: Build X11
         run: |
           cmake -G Ninja -B build/Linux \
+            -D FETCHCONTENT_BASE_DIR=${{ github.workspace }}/.fc-cache \
+            -D FETCHCONTENT_UPDATES_DISCONNECTED=ON \
             -D JAVASCRIPTCORE_LIBRARY=/usr/lib/x86_64-linux-gnu/libjavascriptcoregtk-4.1.so \
             -D NAPI_JAVASCRIPT_ENGINE=${{ inputs.js-engine }} \
             -D CMAKE_BUILD_TYPE=RelWithDebInfo \

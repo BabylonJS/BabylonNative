@@ -18,6 +18,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/.fc-cache
+            !${{ github.workspace }}/.fc-cache/*-build
+            !${{ github.workspace }}/.fc-cache/*-build/**
+          key: fc-v2-uwp-${{ inputs.platform }}-${{ hashFiles('**/CMakeLists.txt') }}
+          restore-keys: |
+            fc-v2-uwp-${{ inputs.platform }}-
 
       - name: Set NAPI variables
         id: napi
@@ -36,6 +46,8 @@ jobs:
         run: |
           cmake -G "Visual Studio 17 2022" ^
             -B build/UWP_${{ inputs.platform }}${{ steps.napi.outputs.suffix }} ^
+            -D FETCHCONTENT_BASE_DIR=${{ github.workspace }}/.fc-cache ^
+            -D FETCHCONTENT_UPDATES_DISCONNECTED=ON ^
             -D CMAKE_SYSTEM_NAME=WindowsStore ^
             -D CMAKE_SYSTEM_VERSION=10.0 ^
             ${{ steps.napi.outputs.define }} ^
