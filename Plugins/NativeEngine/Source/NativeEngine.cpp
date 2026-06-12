@@ -632,10 +632,9 @@ namespace Babylon
             // expected face/mip must be present; otherwise the container would leak (the callback
             // would never fire) and the texture would be left partially initialized. Validate the
             // whole face/mip grid up front and fail fast.
-            const uint8_t numMips{static_cast<uint8_t>(image->m_numMips)};
             for (uint8_t side = 0; side < 6; ++side)
             {
-                for (uint8_t mip = 0; mip < numMips; ++mip)
+                for (uint8_t mip = 0, numMips = image->m_numMips; mip < numMips; ++mip)
                 {
                     bimg::ImageMip imageMip{};
                     if (!bimg::imageGetRawData(*image, side, mip, image->m_data, image->m_size, imageMip))
@@ -651,13 +650,13 @@ namespace Babylon
             // consumed the final upload.
             for (uint8_t side = 0; side < 6; ++side)
             {
-                for (uint8_t mip = 0; mip < numMips; ++mip)
+                for (uint8_t mip = 0, numMips = image->m_numMips; mip < numMips; ++mip)
                 {
                     bimg::ImageMip imageMip{};
                     bimg::imageGetRawData(*image, side, mip, image->m_data, image->m_size, imageMip);
 
                     bgfx::ReleaseFn releaseFn{};
-                    if (side == 5 && mip == numMips - 1)
+                    if (side == 5 && mip == image->m_numMips - 1)
                     {
                         releaseFn = [](void*, void* userData) {
                             bimg::imageFree(static_cast<bimg::ImageContainer*>(userData));
