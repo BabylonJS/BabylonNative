@@ -351,6 +351,58 @@ TEST(NodeApi, CreateDataViewRejectsOverflowingRange)
 }
 #endif
 
+// The V8JSI Node-API shim does not expose napi_get_value_string_utf16, so this
+// native test only builds on the Chakra, V8, and JavaScriptCore backends.
+#if !defined(JSRUNTIMEHOST_NAPI_ENGINE_JSI)
+TEST(NodeApi, GetValueStringUtf16HandlesZeroBufsize)
+{
+    // Regression: napi_get_value_string_utf16 with a non-null buffer and
+    // bufsize == 0 must not evaluate bufsize - 1. On the Chakra backend the
+    // pre-fix code forwarded bufsize - 1 (== SIZE_MAX) to JsCopyStringUtf16 as
+    // the destination capacity, copying the entire JS string into the
+    // zero-length buffer, and then stored the terminator at buf[bufsize - 1]
+    // (== buf[SIZE_MAX]). The call must instead write nothing and report zero.
+    Babylon::AppRuntime runtime{};
+
+    std::promise<bool> zeroSafe;
+    std::promise<bool> normalWorks;
+
+    runtime.Dispatch([&zeroSafe, &normalWorks](Napi::Env env) {
+        napi_env nenv{env};
+
+        napi_value strValue{Napi::String::New(env, "hello world")};
+
+        // Sentinel-filled buffer. With bufsize == 0 nothing may be written, so
+        // every element must survive unchanged (a SIZE_MAX-capacity copy would
+        // clobber it / overflow).
+        char16_t guard[8];
+        for (auto& c : guard)
+        {
+            c = static_cast<char16_t>(0x7FFF);
+        }
+
+        size_t copied{0xDEAD};
+        napi_status status{napi_get_value_string_utf16(nenv, strValue, guard, 0, &copied)};
+
+        bool safe{status == napi_ok && copied == 0};
+        for (auto c : guard)
+        {
+            safe = safe && (c == static_cast<char16_t>(0x7FFF));
+        }
+        zeroSafe.set_value(safe);
+
+        // A sufficiently-sized buffer must still copy and null-terminate.
+        char16_t buf[32];
+        size_t copied2{0};
+        napi_status status2{napi_get_value_string_utf16(nenv, strValue, buf, 32, &copied2)};
+        normalWorks.set_value(status2 == napi_ok && copied2 == 11 && buf[copied2] == 0);
+    });
+
+    EXPECT_TRUE(zeroSafe.get_future().get());
+    EXPECT_TRUE(normalWorks.get_future().get());
+}
+#endif
+
 int RunTests()
 {
     testing::InitGoogleTest();

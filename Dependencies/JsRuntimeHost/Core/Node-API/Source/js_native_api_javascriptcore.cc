@@ -1815,6 +1815,12 @@ napi_status napi_get_value_string_latin1(napi_env env,
 
   if (buf == nullptr) {
     *result = string.LengthLatin1();
+  } else if (bufsize == 0) {
+    // No room for any character or the null terminator; report zero and write
+    // nothing rather than letting the copy helper underflow bufsize - 1.
+    if (result != nullptr) {
+      *result = 0;
+    }
   } else {
     string.CopyToLatin1(buf, bufsize, result);
   }
@@ -1844,6 +1850,12 @@ napi_status napi_get_value_string_utf8(napi_env env,
 
   if (buf == nullptr) {
     *result = string.LengthUTF8();
+  } else if (bufsize == 0) {
+    // No room for any byte or the null terminator; report zero and write
+    // nothing rather than letting the copy helper underflow bufsize - 1.
+    if (result != nullptr) {
+      *result = 0;
+    }
   } else {
     string.CopyToUTF8(buf, bufsize, result);
   }
@@ -1873,6 +1885,12 @@ napi_status napi_get_value_string_utf16(napi_env env,
 
   if (buf == nullptr) {
     *result = string.Length();
+  } else if (bufsize == 0) {
+    // No room for any code unit or the null terminator; report zero and write
+    // nothing rather than letting the copy helper underflow bufsize - 1.
+    if (result != nullptr) {
+      *result = 0;
+    }
   } else {
     static_assert(sizeof(char16_t) == sizeof(JSChar));
     string.CopyTo(reinterpret_cast<JSChar*>(buf), bufsize, result);

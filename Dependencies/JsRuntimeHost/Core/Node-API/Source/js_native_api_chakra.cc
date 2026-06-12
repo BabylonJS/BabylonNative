@@ -1405,6 +1405,14 @@ napi_status napi_get_value_string_latin1(napi_env env,
     CHECK_JSRT_EXPECTED(env,
       JsCopyString(jsValue, nullptr, 0, result, CP_LATIN1),
       napi_string_expected);
+  } else if (bufsize == 0) {
+    // A non-null buffer with bufsize == 0 has no room for the null terminator;
+    // report zero and write nothing. The slow path below would otherwise run a
+    // needless allocation and store the terminator at buf[0], one byte past the
+    // zero-length buffer.
+    if (result != nullptr) {
+      *result = 0;
+    }
   } else {
     size_t count = 0;
     CHECK_JSRT_EXPECTED(env,
@@ -1489,6 +1497,14 @@ napi_status napi_get_value_string_utf8(napi_env env,
     CHECK_JSRT_EXPECTED(env,
       JsCopyString(jsValue, nullptr, 0, result),
       napi_string_expected);
+  } else if (bufsize == 0) {
+    // A non-null buffer with bufsize == 0 has no room for the null terminator;
+    // report zero and write nothing. The slow path below would otherwise run a
+    // needless allocation and store the terminator at buf[0], one byte past the
+    // zero-length buffer.
+    if (result != nullptr) {
+      *result = 0;
+    }
   } else {
     size_t count = 0;
     CHECK_JSRT_EXPECTED(env,
@@ -1574,7 +1590,7 @@ napi_status napi_get_value_string_utf16(napi_env env,
     CHECK_JSRT_EXPECTED(env,
       JsCopyStringUtf16(jsValue, nullptr, 0, result),
       napi_string_expected);
-  } else {
+  } else if (bufsize != 0) {
     size_t copied = 0;
     CHECK_JSRT_EXPECTED(env,
       JsCopyStringUtf16(
@@ -1593,6 +1609,12 @@ napi_status napi_get_value_string_utf16(napi_env env,
     if (result != nullptr) {
       *result = copied;
     }
+  } else if (result != nullptr) {
+    // A non-null buffer with bufsize == 0 has no room for any character or the
+    // null terminator. Report zero copied and write nothing, instead of letting
+    // bufsize - 1 underflow to SIZE_MAX (which would copy the whole string into
+    // the zero-length buffer and store the terminator at buf[SIZE_MAX]).
+    *result = 0;
   }
 
   return napi_ok;
