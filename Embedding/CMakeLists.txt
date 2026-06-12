@@ -17,7 +17,8 @@ target_include_directories(Embedding PUBLIC "${EMBEDDING_SHARED_INCLUDE_ROOT}")
 
 # Always-on dependencies. The Embedding layer formalizes the canonical
 # Babylon Native setup, so the standard polyfills (Blob / Console / Fetch /
-# File / Performance / TextDecoder / XMLHttpRequest) are always linked.
+# File / Performance / TextDecoder / TextEncoder / XMLHttpRequest) are
+# always linked.
 target_link_libraries(Embedding
     PUBLIC napi
     # GraphicsDevice is PUBLIC because View.h (a public header)
@@ -40,6 +41,7 @@ target_link_libraries(Embedding
     PRIVATE File
     PRIVATE Performance
     PRIVATE TextDecoder
+    PRIVATE TextEncoder
     PRIVATE XMLHttpRequest)
 
 # ----- Conditionally-included polyfills -----

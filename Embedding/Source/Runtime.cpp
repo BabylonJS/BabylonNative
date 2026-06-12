@@ -33,6 +33,7 @@
 #include <Babylon/Polyfills/File.h>
 #include <Babylon/Polyfills/Performance.h>
 #include <Babylon/Polyfills/TextDecoder.h>
+#include <Babylon/Polyfills/TextEncoder.h>
 #include <Babylon/Polyfills/XMLHttpRequest.h>
 
 #if BABYLON_NATIVE_POLYFILL_ABORTCONTROLLER
@@ -227,6 +228,7 @@ namespace Babylon::Embedding
 #endif
 
             Babylon::Polyfills::TextDecoder::Initialize(env);
+            Babylon::Polyfills::TextEncoder::Initialize(env);
             Babylon::Polyfills::XMLHttpRequest::Initialize(env);
             Babylon::Polyfills::Fetch::Initialize(env);
 
