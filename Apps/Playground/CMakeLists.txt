@@ -143,33 +143,18 @@ endif()
 
 target_include_directories(Playground PRIVATE ".")
 
+# The Embedding layer links and initializes the full canonical set of
+# polyfills/plugins (Blob, Canvas, Console, File, GraphicsDevice, the
+# Native* plugins, ScriptLoader, ShaderCache, the polyfills, etc.) and
+# forwards them transitively, so the Playground only needs to list the
+# libraries it consumes directly:
+#   - Embedding : the Runtime + View API the host is built on.
+#   - bx        : <bx/*.h> used by Shared/Diagnostics.cpp.
+#   - TestUtils : <Babylon/Plugins/TestUtils.h> used by Win32/X11 --test mode.
 target_link_libraries(Playground
-    PRIVATE AbortController
-    PRIVATE AppRuntime
-    PRIVATE Blob
-    PRIVATE bx
-    PRIVATE Canvas
-    PRIVATE Console
-    PRIVATE ExternalTexture
-    PRIVATE File
-    PRIVATE GraphicsDevice
     PRIVATE Embedding
-    PRIVATE NativeCamera
-    PRIVATE NativeCapture
-    PRIVATE NativeEncoding
-    PRIVATE NativeEngine
-    PRIVATE NativeInput
-    PRIVATE NativeOptimizations
-    PRIVATE NativeTracing
-    PRIVATE Performance
-    PRIVATE ScriptLoader
-    PRIVATE ShaderCache
+    PRIVATE bx
     PRIVATE TestUtils
-    PRIVATE TextDecoder
-    PRIVATE TextEncoder
-    PRIVATE Window
-    PRIVATE XMLHttpRequest
-    PRIVATE Fetch
     ${ADDITIONAL_LIBRARIES}
     ${BABYLON_NATIVE_PLAYGROUND_EXTENSION_LIBRARIES})
 
