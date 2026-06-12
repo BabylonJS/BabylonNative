@@ -36,6 +36,9 @@ namespace Playground
         // Commenting out recast.js for now because v8jsi is incompatible with asm.js.
         // runtime.LoadScript("app:///Scripts/recast.js");
         runtime.LoadScript("app:///Scripts/babylon.max.js");
+        // Load addons right after babylon.max.js so addons init sees a fully
+        // constructed BABYLON global.
+        runtime.LoadScript("app:///Scripts/babylonjs.addons.js");
         runtime.LoadScript("app:///Scripts/babylonjs.loaders.js");
         runtime.LoadScript("app:///Scripts/babylonjs.materials.js");
         runtime.LoadScript("app:///Scripts/babylon.gui.js");

@@ -40,8 +40,9 @@ namespace Babylon::Plugins
 
         // Deprecated: use CreateForJavaScript instead. Retained as a shim for existing consumers.
         // Returns a Promise that is already resolved with the value from CreateForJavaScript.
+        // If layerIndex is set, the JavaScript texture views only that array layer (single-slice).
         [[deprecated("Use CreateForJavaScript instead.")]]
-        Napi::Promise AddToContextAsync(Napi::Env) const;
+        Napi::Promise AddToContextAsync(Napi::Env, std::optional<uint16_t> layerIndex = {}) const;
 
         // Updates to a new texture. If layerIndex is set, views only that array layer (single-slice).
         void Update(Graphics::TextureT, std::optional<Graphics::TextureFormatT> = {}, std::optional<uint16_t> layerIndex = {});
