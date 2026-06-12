@@ -166,3 +166,59 @@ TEST(ExternalTexture, AddToContextAsyncAndUpdate)
     device.FinishRenderingCurrentFrame();
 #endif
 }
+
+TEST(ExternalTexture, AddToContextAsyncWithLayerIndex)
+{
+#ifdef SKIP_EXTERNAL_TEXTURE_TESTS
+    GTEST_SKIP();
+#else
+    Babylon::Graphics::Device device{g_deviceConfig};
+
+    device.StartRenderingCurrentFrame();
+
+    // Array texture (3 layers) so a non-zero layer index is valid.
+    auto nativeTexture = Helpers::CreateTexture(device.GetPlatformInfo().Device, 256, 256, 3);
+    Babylon::Plugins::ExternalTexture externalTexture{nativeTexture};
+    Helpers::DestroyTexture(nativeTexture);
+
+    std::promise<void> addToContext{};
+    std::promise<void> promiseResolved{};
+
+    Babylon::AppRuntime runtime{};
+    runtime.Dispatch([&device, &addToContext, &promiseResolved, externalTexture](Napi::Env env) {
+        device.AddToJavaScript(env);
+
+        Babylon::Polyfills::Console::Initialize(env, [](const char* message, auto) {
+            std::cout << message << std::endl;
+        });
+
+        Babylon::Polyfills::Window::Initialize(env);
+
+        Babylon::Plugins::NativeEngine::Initialize(env);
+
+        // Backwards-compat: the deprecated AddToContextAsync must still accept a layer
+        // index and forward it to CreateForJavaScript (views only that array slice).
+        auto jsPromise = externalTexture.AddToContextAsync(env, 1);
+        addToContext.set_value();
+
+        auto jsOnFulfilled = Napi::Function::New(env, [&promiseResolved](const Napi::CallbackInfo& info) {
+            promiseResolved.set_value();
+        });
+
+        auto jsOnRejected = Napi::Function::New(env, [&promiseResolved](const Napi::CallbackInfo& info) {
+            promiseResolved.set_exception(std::make_exception_ptr(info[0].As<Napi::Error>()));
+        });
+
+        jsPromise.Get("then").As<Napi::Function>().Call(jsPromise, {jsOnFulfilled, jsOnRejected});
+    });
+
+    // Wait for AddToContextAsync to be called.
+    addToContext.get_future().wait();
+
+    // Close the frame in which the deprecated shim's synchronous CreateForJavaScript ran.
+    device.FinishRenderingCurrentFrame();
+
+    // Wait for promise to resolve.
+    promiseResolved.get_future().wait();
+#endif
+}
