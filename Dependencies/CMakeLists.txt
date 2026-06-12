@@ -208,27 +208,23 @@ if(APPLE)
         message(FATAL_ERROR "Failed to generate metal-cpp single header")
     endif()
 
-    # Generate source that includes the single header with the necessary implementation defines.
-    file(WRITE "${METAL_CPP_GENERATED_DIR}/Source/Metal.cpp"
-        "#define NS_PRIVATE_IMPLEMENTATION\n"
-        "#define MTL_PRIVATE_IMPLEMENTATION\n"
-        "#define CA_PRIVATE_IMPLEMENTATION\n"
-        "#include <Metal/Metal.hpp>\n")
-
-    set(SOURCES
-        "${METAL_CPP_GENERATED_DIR}/Include/Metal/Metal.hpp"
-        "${METAL_CPP_GENERATED_DIR}/Source/Metal.cpp")
-
-    add_library(metal-cpp ${SOURCES})
-    target_include_directories(metal-cpp SYSTEM PUBLIC "${METAL_CPP_GENERATED_DIR}/Include")
+    # metal-cpp is consumed as a header-only library. The metal-cpp
+    # implementation (the NS / MTL / CA `*_PRIVATE_IMPLEMENTATION` globals) is
+    # already compiled into bgfx's Metal renderer, which embeds and builds its
+    # own copy of metal-cpp (see bgfx's renderer_mtl.cpp). Compiling a second
+    # copy here would define those globals in both libmetal-cpp.a and libbgfx.a;
+    # whether that produces ~1900 "duplicate symbol" link errors then depends
+    # purely on the (fragile) order in which the two static archives appear on
+    # the link line. We instead expose metal-cpp as headers only and let the
+    # single bgfx-provided implementation satisfy the symbols at link time.
+    # Graphics — the only consumer — always links bgfx on Apple, so the
+    # implementation symbols always resolve.
+    add_library(metal-cpp INTERFACE)
+    target_include_directories(metal-cpp SYSTEM INTERFACE "${METAL_CPP_GENERATED_DIR}/Include")
     target_link_libraries(metal-cpp
-        PRIVATE "-framework Foundation"
-        PRIVATE "-framework Metal"
-        PRIVATE "-framework QuartzCore")
-
-    source_group(TREE "${metal-cpp_SOURCE_DIR}" FILES ${METAL_CPP_HEADERS})
-    source_group(TREE "${METAL_CPP_GENERATED_DIR}" FILES ${SOURCES})
-    set_property(TARGET metal-cpp PROPERTY FOLDER Dependencies)
+        INTERFACE "-framework Foundation"
+        INTERFACE "-framework Metal"
+        INTERFACE "-framework QuartzCore")
 endif()
 
 # --------------------------------------------------
