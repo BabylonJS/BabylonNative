@@ -1,4 +1,5 @@
 #include <Babylon/Graphics/Platform.h>
+#include <Babylon/Graphics/DeviceQueries.h>
 #include "DeviceImpl.h"
 #include <Windows.h>
 
@@ -13,7 +14,7 @@ namespace Babylon::Graphics
     {
     }
 
-    float DeviceImpl::GetDevicePixelRatio(WindowT window)
+    float GetDevicePixelRatio(WindowT window)
     {
         UINT dpi = GetDpiForWindow(window);
 

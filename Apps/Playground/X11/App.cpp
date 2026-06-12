@@ -5,58 +5,70 @@
 #include <X11/Xutil.h>
 #include <unistd.h> // syscall
 #undef None
-#include <filesystem>
+#include <cstring>
 #include <iostream>
 #include <optional>
 
-#include <Shared/AppContext.h>
-#include <Shared/Diagnostics.h>
+#include <Babylon/Embedding/Runtime.h>
+#include <Babylon/Embedding/View.h>
 #include <Babylon/Plugins/TestUtils.h>
+#include <Shared/Diagnostics.h>
+#include <Shared/PlaygroundScripts.h>
 
 static const char* s_applicationName  = "BabylonNative Playground";
 static const char* s_applicationClass = "Playground";
 
 namespace
 {
-    std::optional<AppContext> g_appContext{};
+    std::optional<Babylon::Embedding::Runtime> g_runtime;
+    std::optional<Babylon::Embedding::View> g_view;
 
     void Uninitialize()
     {
-        g_appContext.reset();
+        // View first (unbinds surface, closes in-flight frame), then
+        // Runtime (joins JS thread).
+        g_view.reset();
+        g_runtime.reset();
     }
 
-    void InitBabylon(Window window, int width, int height, int argc, const char* const* argv)
+    void InitBabylon(Window window, int argc, const char* const* argv)
     {
         Uninitialize();
 
-        g_appContext.emplace(
-            window,
-            static_cast<size_t>(width),
-            static_cast<size_t>(height),
-            [](const char* message) {
-                std::cout << message << std::endl;
-            });
+        Babylon::Embedding::RuntimeOptions runtimeOptions{};
+        runtimeOptions.log = Playground::MakeLogCallback([](std::string_view text) {
+            std::cout << text << std::endl;
+        });
+
+        g_runtime.emplace(std::move(runtimeOptions));
+        Playground::Initialize();
+        Playground::LoadBootstrapScripts(*g_runtime);
 
         if (argc == 1)
         {
-            g_appContext->ScriptLoader().LoadScript("app:///Scripts/experience.js");
+            g_runtime->LoadScript("app:///Scripts/experience.js");
         }
         else
         {
             for (int i = 1; i < argc; ++i)
             {
-                g_appContext->ScriptLoader().LoadScript(argv[i]);
+                g_runtime->LoadScript(argv[i]);
             }
 
-            g_appContext->ScriptLoader().LoadScript("app:///Scripts/playground_runner.js");
+            g_runtime->LoadScript("app:///Scripts/playground_runner.js");
         }
+
+        // First View attach triggers Device construction, plugin init, and
+        // flushes the queued scripts.
+        g_view.emplace(*g_runtime, window);
     }
 
-    void UpdateWindowSize(float width, float height)
+    void UpdateWindowSize(uint32_t width, uint32_t height)
     {
-        if (g_appContext)
+        if (g_view)
         {
-            g_appContext->Device().UpdateSize(width, height);
+            // X11 reports surface dimensions in physical pixels.
+            g_view->Resize(width, height, Babylon::Embedding::CoordinateUnits::Physical);
         }
     }
 }
@@ -131,16 +143,15 @@ int main(int _argc, const char* const* _argv)
             , NULL
             );
 
-    InitBabylon(window, width, height, _argc, _argv);
+    InitBabylon(window, _argc, _argv);
     UpdateWindowSize(width, height);
 
     bool exit{};
     while (!exit)
     {
-        if (!XPending(display) && g_appContext)
+        if (!XPending(display) && g_view)
         {
-            g_appContext->Device().FinishRenderingCurrentFrame();
-            g_appContext->Device().StartRenderingCurrentFrame();
+            g_view->RenderFrame();
         }
         else
         {
@@ -169,22 +180,22 @@ int main(int _argc, const char* const* _argv)
                         const XMotionEvent& xmotion = event.xmotion;
                         const XButtonEvent& xbutton = event.xbutton;
 
-                        if (g_appContext && g_appContext->Input()) {
+                        if (g_view) {
                             switch (xbutton.button) {
                                 case Button1:
-                                    g_appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_view->OnMouseDown(Babylon::Embedding::View::LeftMouseButton(), xmotion.x, xmotion.y, Babylon::Embedding::CoordinateUnits::Physical);
                                     break;
                                 case Button2:
-                                    g_appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_view->OnMouseDown(Babylon::Embedding::View::MiddleMouseButton(), xmotion.x, xmotion.y, Babylon::Embedding::CoordinateUnits::Physical);
                                     break;
                                 case Button3:
-                                    g_appContext->Input()->MouseDown(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_view->OnMouseDown(Babylon::Embedding::View::RightMouseButton(), xmotion.x, xmotion.y, Babylon::Embedding::CoordinateUnits::Physical);
                                     break;
                                 case Button4:
-                                    g_appContext->Input()->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, -120);
+                                    g_view->OnMouseWheel(Babylon::Embedding::View::MouseWheelY(), -120);
                                     break;
                                 case Button5:
-                                    g_appContext->Input()->MouseWheel(Babylon::Plugins::NativeInput::MOUSEWHEEL_Y_ID, 120);
+                                    g_view->OnMouseWheel(Babylon::Embedding::View::MouseWheelY(), 120);
                                     break;
                             }
                         }
@@ -195,18 +206,18 @@ int main(int _argc, const char* const* _argv)
                         const XMotionEvent& xmotion = event.xmotion;
                         const XButtonEvent& xbutton = event.xbutton;
 
-                        if (g_appContext && g_appContext->Input())
+                        if (g_view)
                         {
                             switch (xbutton.button)
                             {
                                 case Button1:
-                                    g_appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::LEFT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_view->OnMouseUp(Babylon::Embedding::View::LeftMouseButton(), xmotion.x, xmotion.y, Babylon::Embedding::CoordinateUnits::Physical);
                                     break;
                                 case Button2:
-                                    g_appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::MIDDLE_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_view->OnMouseUp(Babylon::Embedding::View::MiddleMouseButton(), xmotion.x, xmotion.y, Babylon::Embedding::CoordinateUnits::Physical);
                                     break;
                                 case Button3:
-                                    g_appContext->Input()->MouseUp(Babylon::Plugins::NativeInput::RIGHT_MOUSE_BUTTON_ID, xmotion.x, xmotion.y);
+                                    g_view->OnMouseUp(Babylon::Embedding::View::RightMouseButton(), xmotion.x, xmotion.y, Babylon::Embedding::CoordinateUnits::Physical);
                                     break;
                             }
                         }
@@ -215,8 +226,8 @@ int main(int _argc, const char* const* _argv)
                 case MotionNotify:
                     {
                         const XMotionEvent& xmotion = event.xmotion;
-                        if (g_appContext && g_appContext->Input()) {
-                            g_appContext->Input()->MouseMove(xmotion.x, xmotion.y);
+                        if (g_view) {
+                            g_view->OnMouseMove(xmotion.x, xmotion.y, Babylon::Embedding::CoordinateUnits::Physical);
                         }
                     }
                     break;
