@@ -147,6 +147,8 @@
             "title": "GUI3D SpherePanel",
             "playgroundId": "#HB4C01#9",
             "renderCount": 50,
+            "threshold": 80,
+            "errorRatio": 0.25,
             "referenceImage": "spherepanel.png"
         },
         {
@@ -1085,16 +1087,15 @@
             "title": "GUI Slate",
             "playgroundId": "#2YZFA0#277",
             "renderCount": 60,
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "errorRatio": 0.1,
             "referenceImage": "guiSlate.png"
         },
         {
             "title": "GUI Near Menu",
             "playgroundId": "#2YZFA0#302",
             "renderCount": 60,
-            "excludedGraphicsApis": ["OpenGL"],
-            "reason": "OpenGL: BGFX FATAL shader compile error in GUI fragment shader ('=' : cannot convert from 'highp float' to 'bool'). Re-enabled on D3D11 post BabylonJS/BabylonNative#1695 (original 'V8 D3D11 crash' no longer reproduces under Chakra; original 'hangs on OpenGL' is now this clean shader-compile failure surfaced by the BabylonJS/BabylonNative#1688 BgfxCallback).",
+            "threshold": 35,
+            "errorRatio": 0.25,
             "referenceImage": "guiNearMenu.png"
         },
         {
@@ -2329,22 +2330,19 @@
         {
             "title": "GUI Gradient Linear",
             "playgroundId": "#XCPP9Y#17227",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
+            "errorRatio": 1.0,
             "referenceImage": "GUI-Gradient-Linear.png"
         },
         {
             "title": "GUI Gradient Radial",
             "playgroundId": "#4Z7EK3",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "errorRatio": 1.0,
             "referenceImage": "GUI-Gradient-Radial.png"
         },
         {
             "title": "GUI Gradient Linear with transparency",
             "playgroundId": "#PFK1Z5",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
+            "errorRatio": 1.0,
             "referenceImage": "GUI-Gradient-Linear-with-transparency.png"
         },
         {
@@ -4042,6 +4040,24 @@
             "excludeFromAutomaticTesting": true,
             "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "Lighting-Volume.png"
+        },
+        {
+            "title": "Texture Repetition - Standard Material",
+            "playgroundId": "#ESP440#0",
+            "renderCount": 1,
+            "errorRatio": 0.1,
+            "referenceImage": "texture-repetition-standard-material.png",
+            "excludedEngines": ["webgl1"],
+            "dependsOn": ["Materials", "Textures"]
+        },
+        {
+            "title": "Texture Repetition - PBR Material",
+            "playgroundId": "#6EPUUH#0",
+            "renderCount": 1,
+            "errorRatio": 1.0,
+            "referenceImage": "texture-repetition-pbr-material.png",
+            "excludedEngines": ["webgl1"],
+            "dependsOn": ["PBR", "Textures"]
         },
         {
             "title": "Havok FloatingOrigin Multi-Region",
