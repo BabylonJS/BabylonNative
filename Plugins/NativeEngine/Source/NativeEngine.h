@@ -107,6 +107,7 @@ namespace Babylon
         void DeleteTexture(const Napi::CallbackInfo& info);
         Napi::Value ReadTexture(const Napi::CallbackInfo& info);
         Napi::Value CreateFrameBuffer(const Napi::CallbackInfo& info);
+        Napi::Value CreateMultiFrameBuffer(const Napi::CallbackInfo& info);
         void DeleteFrameBuffer(NativeDataStream::Reader& data);
         void BindFrameBuffer(NativeDataStream::Reader& data);
         void UnbindFrameBuffer(NativeDataStream::Reader& data);
