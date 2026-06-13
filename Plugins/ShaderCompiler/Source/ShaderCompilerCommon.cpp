@@ -35,18 +35,14 @@ namespace Babylon::ShaderCompilerCommon
             throw std::runtime_error{"ProcessSamplerFlip: Could not find shader name define."};
         }
 
+        // The vertical (V) flip applied to texture()/textureLod() sample coordinates is performed by
+        // the FlipSamplerCoordinates AST traverser, not by a preprocessor macro. A 2-argument
+        // function-like macro (`#define texture(x,y) texture(x, flip(y))`) cannot match the
+        // 3-argument bias form `texture(sampler, uv, bias)` emitted by some Babylon.js shaders (e.g.
+        // GreasedLine), and glslang's preprocessor has no variadic-macro support, so those shaders
+        // failed to compile. texelFetch keeps its macro because it takes integer texel coordinates,
+        // which the float-coordinate AST flip does not handle.
         static const auto textureSamplerFunctions = R"(
-            highp vec2 flip(highp vec2 uv)
-            {
-                return vec2(uv.x, 1. - uv.y);
-            }
-            highp vec3 flip(highp vec3 uv)
-            {
-                return uv;
-            }
-
-            #define texture(x,y) texture(x, flip(y))
-            #define textureLod(x,y,z) textureLod(x, flip(y), z)
             #define texelFetch(tex, uv, lod) texelFetch((tex), ivec2((uv).x, textureSize((tex), (lod)).y - 1 - (uv).y), (lod))
             #define SHADER_NAME)";
 
