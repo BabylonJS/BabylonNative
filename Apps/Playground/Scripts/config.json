@@ -2212,8 +2212,6 @@
         {
             "title": "Test updateTextureData",
             "playgroundId": "#EVX1DH#80",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Pixel comparison fails (more than 20% pixels differ)",
             "referenceImage": "testUpdateTextureData.png"
         },
         {
