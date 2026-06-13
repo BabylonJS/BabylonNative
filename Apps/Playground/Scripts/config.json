@@ -843,8 +843,6 @@
         {
             "title": "NME Multi Build",
             "playgroundId": "#D8AK3Z#113",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes or hangs on Babylon Native",
             "referenceImage": "nme-multi-build.png"
         },
         {
@@ -1265,8 +1263,6 @@
         {
             "title": "Custom render target",
             "playgroundId": "#TQCEBF#5",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test crashes on Win32 D3D11 plain (STATUS_BREAKPOINT)",
             "referenceImage": "customRTT.png"
         },
         {
@@ -2839,9 +2835,7 @@
         {
             "title": "UV2 Morphing",
             "playgroundId": "#N5DLM7#1",
-            "referenceImage": "UV2-Morphing.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "UV2-Morphing.png"
         },
         {
             "title": "FrameGraph nrge shadows",
@@ -4449,9 +4443,7 @@
         {
             "title": "Vertex Pulling - Morph Targets and Bones",
             "playgroundId": "#CT4C3C#2",
-            "referenceImage": "vertexPullingMorphBones.png",
-            "excludeFromAutomaticTesting": true,
-            "reason": "Test fails locally on Win32 D3D11 sweep; disabled until BabylonNative fixes are made."
+            "referenceImage": "vertexPullingMorphBones.png"
         },
         {
             "title": "Vertex Pulling - isUnIndexed with index buffer",
