@@ -10,7 +10,7 @@ namespace Babylon::Graphics
         return {static_cast<DeviceT>(bgfx::getInternalData()->context)};
     }
 
-    void DeviceImpl::UpdateWindowSize(WindowT /*window*/, uint32_t /*width*/, uint32_t /*height*/)
+    void DeviceImpl::ResizeRenderSurface(WindowT /*window*/, uint32_t /*width*/, uint32_t /*height*/)
     {
         // No-op: the surface size is managed elsewhere on this platform.
     }

@@ -14,7 +14,7 @@ namespace Babylon::Graphics
         };
     }
 
-    void DeviceImpl::UpdateWindowSize(WindowT window, uint32_t width, uint32_t height)
+    void DeviceImpl::ResizeRenderSurface(WindowT window, uint32_t width, uint32_t height)
     {
         // The window is the CAMetalLayer we render into. Resize its drawable to
         // match the render resolution bgfx will use so the backbuffer and the

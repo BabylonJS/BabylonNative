@@ -55,7 +55,7 @@ namespace Babylon::Graphics
         //
         // Configure the window/device BEFORE the resolution below. The
         // first UpdateSize -> UpdateBgfxResolution syncs the render
-        // resolution onto the surface via UpdateWindowSize, which reads
+        // resolution onto the surface via ResizeRenderSurface, which reads
         // m_state.Window — so the window must already be set. This also
         // matches the re-attach ordering in ViewImpl::InitializeIfReady
         // (UpdateWindow then UpdateSize).
@@ -506,7 +506,7 @@ namespace Babylon::Graphics
         // Keep the native rendering surface in sync with the render resolution
         // we just computed (platform/graphics-API specific; no-op where the
         // surface size is driven elsewhere).
-        UpdateWindowSize(m_state.Window, res.width, res.height);
+        ResizeRenderSurface(m_state.Window, res.width, res.height);
     }
 
     void DeviceImpl::RequestScreenShots()

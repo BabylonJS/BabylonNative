@@ -123,7 +123,7 @@ namespace Babylon::Graphics
         // matches what bgfx renders into. Implemented per graphics API. The
         // window may be default-constructed (null) before UpdateWindow has run
         // (e.g. during construction), in which case there's nothing to size.
-        static void UpdateWindowSize(WindowT window, uint32_t width, uint32_t height);
+        static void ResizeRenderSurface(WindowT window, uint32_t width, uint32_t height);
 
         void UpdateBgfxState();
         void UpdateBgfxResolution();
@@ -153,7 +153,7 @@ namespace Babylon::Graphics
 
             // The native window/surface we render into. Cached as WindowT (the
             // handle in Bgfx.InitState.platformData is type-erased to void* and
-            // can't be cast back to WindowT portably) so UpdateWindowSize can
+            // can't be cast back to WindowT portably) so ResizeRenderSurface can
             // push the render resolution onto the surface. Null until
             // UpdateWindow.
             WindowT Window{};
