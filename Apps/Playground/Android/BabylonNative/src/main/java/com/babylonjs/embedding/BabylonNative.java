@@ -1,5 +1,6 @@
 package com.babylonjs.embedding;
 
+import android.app.Activity;
 import android.content.Context;
 import android.view.Surface;
 
@@ -63,7 +64,7 @@ public final class BabylonNative {
      */
     public static native void setContext(Context context);
 
-    public static native void setCurrentActivity(Object activity);
+    public static native void setCurrentActivity(Activity activity);
 
     public static native void pause();
 
