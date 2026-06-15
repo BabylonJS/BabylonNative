@@ -32,9 +32,11 @@ namespace Babylon::Embedding
 
         ~Runtime();
 
-        // Non-copyable; movable. Cross-references between Runtime and View
-        // point at the heap-allocated pimpls, so moves of the outer wrappers
-        // are safe and don't invalidate any back-pointers.
+        // Non-copyable; movable. Cross-references point at the heap-allocated
+        // pimpls, so move-construction is always safe and never invalidates a
+        // back-pointer. Move-assignment is safe only when the destination has
+        // no View attached -- it destroys the destination's pimpl, which
+        // ~RuntimeImpl guards with assert(m_currentView == nullptr).
         Runtime(const Runtime&) = delete;
         Runtime& operator=(const Runtime&) = delete;
         Runtime(Runtime&&) noexcept;
