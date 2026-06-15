@@ -1,4 +1,5 @@
 #include <Babylon/Graphics/Platform.h>
+#include <Babylon/Graphics/DeviceQueries.h>
 #include "DeviceImpl.h"
 
 namespace Babylon::Graphics
@@ -12,7 +13,7 @@ namespace Babylon::Graphics
     {
     }
 
-    float DeviceImpl::GetDevicePixelRatio(WindowT)
+    float GetDevicePixelRatio(WindowT)
     {
       return [UITraitCollection currentTraitCollection].displayScale;
     }

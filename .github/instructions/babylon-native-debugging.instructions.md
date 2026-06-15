@@ -24,7 +24,7 @@ For pure RenderDoc CLI usage (any app, not BN-specific), see
 |---|---|
 | `Apps/Playground/Shared/CommandLine.{h,cpp}` | Argument parser. Single source of truth for supported flags. |
 | `Apps/Playground/Shared/Diagnostics.{h,cpp}` | Crash handler, `DumpFailure`, finish-line, exit-code tracking. |
-| `Apps/Playground/Shared/AppContext.cpp` | Wires `UnhandledExceptionHandler` + `console.error` into `DumpFailure`; injects `_playgroundOptions` into JS. |
+| `Apps/Playground/Win32/App.cpp` (and the other per-host `App.*`) | Wires the `RuntimeOptions::log` callback into `DumpFailure` (`JS CONSOLE ERROR` for `LogLevel::Error`, `UNCAUGHT JS ERROR` for `LogLevel::Fatal`) and injects `_playgroundOptions` into JS via `Runtime::RunOnJsThread`. |
 | `Apps/Playground/Scripts/validation_native.js` | Test runner. Reads `_playgroundOptions`, picks tests, calls `TestUtils.captureNextFrame()`. Reference-image load failures arrive via `BABYLON.Tools.LoadFile`'s `onLoadFileError` and are tagged with `MISSING_REFERENCE_IMAGE:`. |
 | `Apps/Playground/Scripts/config.json` | Test catalog. Each entry has `title`, `playgroundId`/`scriptToRun`, `referenceImage`, optional `excludeFromAutomaticTesting`/`reason`/`onlyVisual`/`renderCount`/`capture`/`threshold`/`errorRatio`. |
 | `Plugins/TestUtils/Source/TestUtils.cpp` | Native side of `TestUtils.captureNextFrame()` -- calls `m_deviceContext.RequestCaptureNextFrame()`. |
@@ -80,13 +80,15 @@ When you see `[Error] Error: Cannot load X` in stdout, **scroll up** --
 short error line. The short line is kept so legacy log scrapers still match.
 
 ### 3. JS stack on every `console.error`
-`AppContext.cpp`'s `Console::Initialize` callback calls
+The Embedding layer's `Console::Initialize` callback calls
 `Babylon::Polyfills::Console::CaptureCurrentJsStack(env)` on every
-`LogLevel::Error` message and appends the captured stack to the
-`DumpFailure` banner body. The capture is best-effort -- if the JS engine
-can't produce a stack (no JS context active, etc.) the helper returns an
-empty string and the banner just shows the message.
-Do not add per-callsite stack capture -- it's automatic.
+`LogLevel::Error` message and appends the captured stack to the message
+body that the host's `RuntimeOptions::log` callback receives (which the
+Playground hosts then route into the `DumpFailure` banner). The capture is
+best-effort — if the JS engine can't produce a stack (no JS context active,
+unsupported engine, etc.) the helper returns an empty string and the host
+just gets the bare message.
+Do not add per-callsite stack capture — it's automatic.
 
 ### 4. Colored finish line
 `Playground: Finished in <time>. (exit <code>)` is printed once at every exit

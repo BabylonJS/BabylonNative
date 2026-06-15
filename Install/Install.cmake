@@ -244,3 +244,17 @@ if(TARGET XMLHttpRequest)
     install_lib(XMLHttpRequest)
     install_include(XMLHttpRequest)
 endif()
+
+# ----------------
+# Embedding
+# ----------------
+
+if(TARGET Embedding)
+    install_lib(Embedding)
+    install_include(Embedding)
+endif()
+
+if(TARGET BabylonNativeEmbedding)
+    install_lib(BabylonNativeEmbedding)
+    install_include(BabylonNativeEmbedding)
+endif()
