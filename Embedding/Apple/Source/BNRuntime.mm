@@ -62,7 +62,7 @@ namespace
     return [self initWithOptions:nil];
 }
 
-- (instancetype)initWithOptions:(nullable BNRuntimeOptions*)runtimeOptions
+- (nullable instancetype)initWithOptions:(nullable BNRuntimeOptions*)runtimeOptions
 {
     if ((self = [super init]))
     {
@@ -91,15 +91,27 @@ namespace
 #if BABYLON_NATIVE_PLUGIN_SHADERCACHE
             options.shaderCachePath = runtimeOptions.shaderCachePath.UTF8String;
 #else
-            // Fail loudly: silently dropping a caller-supplied cache path
-            // would be hard to diagnose later.
-            @throw [NSException
-                exceptionWithName:@"BabylonNativePluginNotEnabledException"
-                           reason:@"shaderCachePath was provided but BABYLON_NATIVE_PLUGIN_SHADERCACHE was not enabled at native build time."
-                         userInfo:nil];
+            // Fail the initializer: a caller-supplied cache path can't be
+            // honored without the ShaderCache plugin. Return nil (rather than
+            // throwing) so the failure is catchable from Swift and consistent
+            // with BNView's failable init.
+            os_log_error(BabylonNativeLogger(),
+                "BNRuntime init failed: shaderCachePath was provided but "
+                "BABYLON_NATIVE_PLUGIN_SHADERCACHE was not enabled at native build time.");
+            return nil;
 #endif
         }
-        _runtime.emplace(std::move(options));
+
+        try
+        {
+            _runtime.emplace(std::move(options));
+        }
+        catch (const std::exception& e)
+        {
+            os_log_error(BabylonNativeLogger(),
+                "BNRuntime init failed: %{public}s", e.what());
+            return nil;
+        }
     }
     return self;
 }

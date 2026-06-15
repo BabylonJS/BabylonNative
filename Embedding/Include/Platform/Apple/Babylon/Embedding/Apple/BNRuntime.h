@@ -41,16 +41,24 @@ NS_ASSUME_NONNULL_BEGIN
 /// non-GPU polyfills/plugins. The GPU Device is deferred to the first
 /// `BNView` attach. Default options: debugger off, DebugTrace off,
 /// log routes to `os_log`.
-- (instancetype)init;
+///
+/// Returns `nil` if the runtime can't be constructed (see
+/// `initWithOptions:`).
+- (nullable instancetype)init;
 
 /// Constructs the runtime with platform-friendly options (nil = same
 /// defaults as `init`).
 ///
 /// `options.shaderCachePath`: loaded on first BNView attach; saved on
-/// `suspend` and on deallocation. Raises
-/// `BabylonNativePluginNotEnabledException` when non-nil but the
-/// native library was built without `BABYLON_NATIVE_PLUGIN_SHADERCACHE`.
-- (instancetype)initWithOptions:(nullable BNRuntimeOptions*)options NS_DESIGNATED_INITIALIZER;
+/// `suspend` and on deallocation.
+///
+/// Returns `nil` on failure — e.g. `options.shaderCachePath` is non-nil
+/// but the native library was built without
+/// `BABYLON_NATIVE_PLUGIN_SHADERCACHE`, or the underlying engine fails to
+/// start. The reason is written to `os_log`. (Returning `nil` rather than
+/// raising keeps the failure catchable from Swift and consistent with
+/// `BNView`'s failable init.)
+- (nullable instancetype)initWithOptions:(nullable BNRuntimeOptions*)options NS_DESIGNATED_INITIALIZER;
 
 /// Load a script from a URL onto the JS thread. Calls made before the
 /// first `BNView` is created are queued and dispatched after engine

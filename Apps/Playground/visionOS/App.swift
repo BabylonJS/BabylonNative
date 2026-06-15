@@ -25,7 +25,10 @@ final class BabylonRuntime: ObservableObject {
         let options = BNRuntimeOptions()
         options.enableDebugger = true
         options.enableDebugTrace = true
-        bnRuntime = BNRuntime(options: options)
+        guard let bnRuntime = BNRuntime(options: options) else {
+            fatalError("Failed to construct BNRuntime")
+        }
+        self.bnRuntime = bnRuntime
 
         PlaygroundBootstrap.loadScripts(bnRuntime)
         bnRuntime.loadScript("app:///Scripts/experience.js")

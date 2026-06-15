@@ -14,7 +14,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let runtimeOptions = BNRuntimeOptions()
         runtimeOptions.enableDebugger = true
         runtimeOptions.enableDebugTrace = true
-        let runtime = BNRuntime(options: runtimeOptions)
+        guard let runtime = BNRuntime(options: runtimeOptions) else {
+            fatalError("Failed to construct BNRuntime")
+        }
 
         // Queue the Babylon.js bootstrap scripts (shared with the other
         // Playground hosts via Apps/Playground/Shared/PlaygroundScripts.cpp),
