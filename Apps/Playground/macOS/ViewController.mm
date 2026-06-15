@@ -117,7 +117,7 @@
 
 - (void)mouseDown:(NSEvent*)theEvent {
     NSPoint p = [self logicalPointFromEvent:theEvent];
-    [_bnView mouseDown:BNView.leftMouseButton atX:p.x y:p.y];
+    [_bnView mouseDown:BNViewMouseButtonLeft atX:p.x y:p.y];
 }
 
 - (void)mouseDragged:(NSEvent*)theEvent {
@@ -127,12 +127,12 @@
 
 - (void)mouseUp:(NSEvent*)theEvent {
     NSPoint p = [self logicalPointFromEvent:theEvent];
-    [_bnView mouseUp:BNView.leftMouseButton atX:p.x y:p.y];
+    [_bnView mouseUp:BNViewMouseButtonLeft atX:p.x y:p.y];
 }
 
 - (void)otherMouseDown:(NSEvent*)theEvent {
     NSPoint p = [self logicalPointFromEvent:theEvent];
-    [_bnView mouseDown:BNView.middleMouseButton atX:p.x y:p.y];
+    [_bnView mouseDown:BNViewMouseButtonMiddle atX:p.x y:p.y];
 }
 
 - (void)otherMouseDragged:(NSEvent*)theEvent {
@@ -142,12 +142,12 @@
 
 - (void)otherMouseUp:(NSEvent*)theEvent {
     NSPoint p = [self logicalPointFromEvent:theEvent];
-    [_bnView mouseUp:BNView.middleMouseButton atX:p.x y:p.y];
+    [_bnView mouseUp:BNViewMouseButtonMiddle atX:p.x y:p.y];
 }
 
 - (void)rightMouseDown:(NSEvent*)theEvent {
     NSPoint p = [self logicalPointFromEvent:theEvent];
-    [_bnView mouseDown:BNView.rightMouseButton atX:p.x y:p.y];
+    [_bnView mouseDown:BNViewMouseButtonRight atX:p.x y:p.y];
 }
 
 - (void)rightMouseDragged:(NSEvent*)theEvent {
@@ -157,12 +157,12 @@
 
 - (void)rightMouseUp:(NSEvent*)theEvent {
     NSPoint p = [self logicalPointFromEvent:theEvent];
-    [_bnView mouseUp:BNView.rightMouseButton atX:p.x y:p.y];
+    [_bnView mouseUp:BNViewMouseButtonRight atX:p.x y:p.y];
 }
 
 - (void)scrollWheel:(NSEvent*)theEvent {
     // Negate so scroll-up matches Babylon's negative-delta convention.
-    [_bnView mouseWheel:BNView.mouseWheelY delta:static_cast<NSInteger>(-theEvent.deltaY)];
+    [_bnView mouseWheel:BNViewMouseWheelAxisY delta:-theEvent.deltaY];
 }
 
 - (IBAction)refresh:(id)__unused sender {

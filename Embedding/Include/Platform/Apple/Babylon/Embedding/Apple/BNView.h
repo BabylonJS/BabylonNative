@@ -21,6 +21,22 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+/// Mouse buttons accepted by `-mouseDown:atX:y:` / `-mouseUp:atX:y:`.
+/// Obj-C can't nest a type in `@interface`, so the enum is prefixed and
+/// surfaced to Swift nested as `BNView.MouseButton` (`.left` / `.middle`
+/// / `.right`).
+typedef NS_ENUM(NSInteger, BNViewMouseButton) {
+    BNViewMouseButtonLeft,
+    BNViewMouseButtonMiddle,
+    BNViewMouseButtonRight,
+} NS_SWIFT_NAME(BNView.MouseButton);
+
+/// Scroll-wheel axes accepted by `-mouseWheel:delta:`.
+/// Surfaced to Swift nested as `BNView.MouseWheelAxis` (`.y`).
+typedef NS_ENUM(NSInteger, BNViewMouseWheelAxis) {
+    BNViewMouseWheelAxisY,
+} NS_SWIFT_NAME(BNView.MouseWheelAxis);
+
 /// Default `MTKViewDelegate` implementation that drives a BNView's
 /// per-frame rendering: forwards `drawInMTKView:` → `[bnView renderFrame]`.
 ///
@@ -93,36 +109,28 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)pointerUp:(NSInteger)pointerId atX:(CGFloat)x y:(CGFloat)y
     NS_SWIFT_NAME(pointerUp(id:x:y:));
 
-/// Forward a mouse-button event. `button` is one of `+leftMouseButton`,
-/// `+middleMouseButton`, `+rightMouseButton`. `x`, `y` are logical
-/// (CSS) pixels; AppKit hosts pass `NSEvent.locationInWindow` with the
-/// Y axis flipped to a top-left origin.
+/// Forward a mouse-button event. `button` selects which button. `x`, `y`
+/// are logical (CSS) pixels; AppKit hosts pass `NSEvent.locationInWindow`
+/// with the Y axis flipped to a top-left origin.
 ///
 /// Raises `BabylonNativePluginNotEnabledException` when
 /// `BABYLON_NATIVE_PLUGIN_NATIVEINPUT` is not enabled. Same applies to
 /// `mouseUp:`, `mouseMove:`, and `mouseWheel:`.
-- (void)mouseDown:(NSInteger)button atX:(CGFloat)x y:(CGFloat)y
+- (void)mouseDown:(BNViewMouseButton)button atX:(CGFloat)x y:(CGFloat)y
     NS_SWIFT_NAME(mouseDown(button:x:y:));
 
-- (void)mouseUp:(NSInteger)button atX:(CGFloat)x y:(CGFloat)y
+- (void)mouseUp:(BNViewMouseButton)button atX:(CGFloat)x y:(CGFloat)y
     NS_SWIFT_NAME(mouseUp(button:x:y:));
 
 - (void)mouseMoveAtX:(CGFloat)x y:(CGFloat)y
     NS_SWIFT_NAME(mouseMove(x:y:));
 
-/// Forward a scroll-wheel event. `axis` is `+mouseWheelY`. `delta` is
-/// the signed scroll amount; AppKit hosts pass `-NSEvent.deltaY` so
-/// scroll-up matches Babylon's negative convention.
-- (void)mouseWheel:(NSInteger)axis delta:(NSInteger)delta
+/// Forward a scroll-wheel event. `axis` selects which axis. `delta` is the
+/// signed scroll amount; AppKit hosts pass `-NSEvent.deltaY` so scroll-up
+/// matches Babylon's negative convention. The fractional delta is truncated
+/// to an integer for the underlying input pipeline.
+- (void)mouseWheel:(BNViewMouseWheelAxis)axis delta:(CGFloat)delta
     NS_SWIFT_NAME(mouseWheel(axis:delta:));
-
-/// Button identifiers accepted by `mouseDown:` and `mouseUp:`.
-@property (class, nonatomic, readonly) NSInteger leftMouseButton;
-@property (class, nonatomic, readonly) NSInteger middleMouseButton;
-@property (class, nonatomic, readonly) NSInteger rightMouseButton;
-
-/// Wheel axis identifier accepted by `mouseWheel:delta:`.
-@property (class, nonatomic, readonly) NSInteger mouseWheelY;
 
 - (instancetype)init NS_UNAVAILABLE;
 + (instancetype)new NS_UNAVAILABLE;

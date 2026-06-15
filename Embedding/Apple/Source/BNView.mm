@@ -12,6 +12,32 @@
 #include <cstdint>
 #include <optional>
 
+namespace
+{
+    // Map the public BNView mouse enums onto the NativeInput button/axis IDs
+    // the C++ View expects, keeping the NativeInput numbering out of the
+    // public Obj-C/Swift surface.
+    uint32_t NativeMouseButtonId(BNViewMouseButton button)
+    {
+        switch (button)
+        {
+            case BNViewMouseButtonLeft:   return Babylon::Embedding::View::LeftMouseButton();
+            case BNViewMouseButtonMiddle: return Babylon::Embedding::View::MiddleMouseButton();
+            case BNViewMouseButtonRight:  return Babylon::Embedding::View::RightMouseButton();
+        }
+        return Babylon::Embedding::View::LeftMouseButton();
+    }
+
+    uint32_t NativeMouseWheelAxisId(BNViewMouseWheelAxis axis)
+    {
+        switch (axis)
+        {
+            case BNViewMouseWheelAxisY: return Babylon::Embedding::View::MouseWheelY();
+        }
+        return Babylon::Embedding::View::MouseWheelY();
+    }
+}
+
 @implementation BNView
 {
     std::optional<Babylon::Embedding::View> _view;
@@ -219,12 +245,12 @@
 
 #pragma mark - Mouse forwarding
 
-- (void)mouseDown:(NSInteger)button atX:(CGFloat)x y:(CGFloat)y
+- (void)mouseDown:(BNViewMouseButton)button atX:(CGFloat)x y:(CGFloat)y
 {
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
     if (_view)
     {
-        _view->OnMouseDown(static_cast<uint32_t>(button),
+        _view->OnMouseDown(NativeMouseButtonId(button),
                             static_cast<float>(x),
                             static_cast<float>(y),
                             Babylon::Embedding::CoordinateUnits::Logical);
@@ -238,12 +264,12 @@
 #endif
 }
 
-- (void)mouseUp:(NSInteger)button atX:(CGFloat)x y:(CGFloat)y
+- (void)mouseUp:(BNViewMouseButton)button atX:(CGFloat)x y:(CGFloat)y
 {
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
     if (_view)
     {
-        _view->OnMouseUp(static_cast<uint32_t>(button),
+        _view->OnMouseUp(NativeMouseButtonId(button),
                           static_cast<float>(x),
                           static_cast<float>(y),
                           Babylon::Embedding::CoordinateUnits::Logical);
@@ -275,12 +301,12 @@
 #endif
 }
 
-- (void)mouseWheel:(NSInteger)axis delta:(NSInteger)delta
+- (void)mouseWheel:(BNViewMouseWheelAxis)axis delta:(CGFloat)delta
 {
 #if BABYLON_NATIVE_PLUGIN_NATIVEINPUT
     if (_view)
     {
-        _view->OnMouseWheel(static_cast<uint32_t>(axis),
+        _view->OnMouseWheel(NativeMouseWheelAxisId(axis),
                              static_cast<int32_t>(delta));
     }
 #else
@@ -290,26 +316,6 @@
                    reason:@"mouseWheel:delta: was called but BABYLON_NATIVE_PLUGIN_NATIVEINPUT was not enabled at native build time."
                  userInfo:nil];
 #endif
-}
-
-+ (NSInteger)leftMouseButton
-{
-    return static_cast<NSInteger>(Babylon::Embedding::View::LeftMouseButton());
-}
-
-+ (NSInteger)middleMouseButton
-{
-    return static_cast<NSInteger>(Babylon::Embedding::View::MiddleMouseButton());
-}
-
-+ (NSInteger)rightMouseButton
-{
-    return static_cast<NSInteger>(Babylon::Embedding::View::RightMouseButton());
-}
-
-+ (NSInteger)mouseWheelY
-{
-    return static_cast<NSInteger>(Babylon::Embedding::View::MouseWheelY());
 }
 
 @end
