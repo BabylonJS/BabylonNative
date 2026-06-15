@@ -24,16 +24,36 @@ file(
 	${MINIZ_SOURCES} #
 )
 
-add_library(bimg_decode STATIC ${BIMG_DECODE_SOURCES})
+# AVIF decoding (libavif + dav1d), enabled by default in bimg
+set(BIMG_DECODE_AVIF_SOURCES
+	${BIMG_DIR}/3rdparty/dav1d/dav1d-amalgamated.c #
+	${BIMG_DIR}/3rdparty/dav1d/dav1d-bitdepth-8.c #
+	${BIMG_DIR}/3rdparty/dav1d/dav1d-bitdepth-16.c #
+	${BIMG_DIR}/3rdparty/libavif/libavif-amalgamated.c #
+)
+
+add_library(bimg_decode STATIC ${BIMG_DECODE_SOURCES} ${BIMG_DECODE_AVIF_SOURCES})
 
 # Put in a "bgfx" folder in Visual Studio
 set_target_properties(bimg_decode PROPERTIES FOLDER "bgfx")
+
+# dav1d amalgamated sources require C11
+set_source_files_properties(${BIMG_DECODE_AVIF_SOURCES} PROPERTIES C_STANDARD 11)
+
+target_compile_definitions(bimg_decode PRIVATE AVIF_CODEC_DAV1D)
+
 target_include_directories(
 	bimg_decode
 	PUBLIC $<BUILD_INTERFACE:${BIMG_DIR}/include> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 	PRIVATE ${LOADPNG_INCLUDE_DIR} #
 			${MINIZ_INCLUDE_DIR} #
 			${TINYEXR_INCLUDE_DIR} #
+			${BIMG_DIR}/3rdparty/libavif #
+			${BIMG_DIR}/3rdparty/libavif/include #
+			${BIMG_DIR}/3rdparty/libavif/third_party/libyuv/include #
+			${BIMG_DIR}/3rdparty/dav1d #
+			${BIMG_DIR}/3rdparty/dav1d/include #
+			$<$<C_COMPILER_ID:MSVC>:${BIMG_DIR}/3rdparty/dav1d/include/compat/msvc> #
 )
 
 target_link_libraries(

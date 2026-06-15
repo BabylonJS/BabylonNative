@@ -48,6 +48,7 @@ option(BGFX_CUSTOM_TARGETS "Include convenience custom targets." ON)
 cmake_dependent_option(BGFX_CONFIG_MULTITHREADED "Build bgfx with multithreaded configuration" ON "NOT CMAKE_SYSTEM_NAME STREQUAL Emscripten" OFF)
 option(BGFX_CONFIG_RENDERER_WEBGPU "Enable the webgpu renderer" OFF)
 option(BGFX_CONFIG_DEBUG_ANNOTATION "Enable gfx debug annotations (default: on in debug)" OFF)
+option(BGFX_CONFIG_VIDEO "Enable hardware video decoder" ON)
 
 set(BGFX_OPENGL_VERSION "" CACHE STRING "Specify minimum opengl version")
 set(BGFX_OPENGLES_VERSION "" CACHE STRING "Specify minimum OpenGL ES version")

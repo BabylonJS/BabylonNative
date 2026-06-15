@@ -119,6 +119,7 @@ target_compile_definitions(
 		"BX_CONFIG_DEBUG=$<OR:$<CONFIG:Debug>,$<BOOL:${BX_CONFIG_DEBUG}>>"
 		"BGFX_CONFIG_DEBUG_ANNOTATION=$<AND:$<NOT:$<STREQUAL:${CMAKE_SYSTEM_NAME},WindowsStore>>,$<OR:$<CONFIG:Debug>,$<BOOL:${BGFX_CONFIG_DEBUG_ANNOTATION}>>>"
 		"BGFX_CONFIG_MULTITHREADED=$<BOOL:${BGFX_CONFIG_MULTITHREADED}>"
+		"BGFX_CONFIG_VIDEO=$<BOOL:${BGFX_CONFIG_VIDEO}>"
 )
 
 # directx-headers
@@ -154,6 +155,11 @@ if(${CMAKE_SYSTEM_NAME} MATCHES iOS|tvOS)
 		PUBLIC
 			"-framework OpenGLES -framework Metal -framework UIKit -framework CoreGraphics -framework QuartzCore -framework IOKit -framework CoreFoundation"
 	)
+	if(BGFX_CONFIG_VIDEO)
+		target_link_libraries(
+			bgfx PUBLIC "-framework VideoToolbox -framework CoreMedia -framework CoreVideo"
+		)
+	endif()
 elseif(APPLE)
 	find_library(COCOA_LIBRARY Cocoa)
 	find_library(METAL_LIBRARY Metal)
@@ -168,6 +174,17 @@ elseif(APPLE)
 	target_link_libraries(
 		bgfx PUBLIC ${COCOA_LIBRARY} ${METAL_LIBRARY} ${QUARTZCORE_LIBRARY} ${IOKIT_LIBRARY} ${COREFOUNDATION_LIBRARY}
 	)
+	if(BGFX_CONFIG_VIDEO)
+		find_library(VIDEOTOOLBOX_LIBRARY VideoToolbox)
+		find_library(COREMEDIA_LIBRARY CoreMedia)
+		find_library(COREVIDEO_LIBRARY CoreVideo)
+		mark_as_advanced(VIDEOTOOLBOX_LIBRARY)
+		mark_as_advanced(COREMEDIA_LIBRARY)
+		mark_as_advanced(COREVIDEO_LIBRARY)
+		target_link_libraries(
+			bgfx PUBLIC ${VIDEOTOOLBOX_LIBRARY} ${COREMEDIA_LIBRARY} ${COREVIDEO_LIBRARY}
+		)
+	endif()
 endif()
 
 if(UNIX

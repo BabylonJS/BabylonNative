@@ -13,6 +13,7 @@ include(3rdparty/meshoptimizer.cmake)
 include(3rdparty/dear-imgui.cmake)
 
 if(BGFX_BUILD_TOOLS_TEXTURE)
+	include(3rdparty/l-smash.cmake)
 	include(texturev.cmake)
 endif()
 if(BGFX_BUILD_TOOLS_GEOMETRY)

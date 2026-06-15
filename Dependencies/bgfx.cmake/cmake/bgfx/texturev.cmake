@@ -19,7 +19,7 @@ else()
 	add_executable(texturev ${TEXTUREV_SOURCES})
 endif()
 
-target_link_libraries(texturev PRIVATE example-common)
+target_link_libraries(texturev PRIVATE example-common l-smash)
 set_target_properties(
 	texturev PROPERTIES FOLDER "bgfx/tools" #
 						OUTPUT_NAME ${BGFX_TOOLS_PREFIX}texturev #
