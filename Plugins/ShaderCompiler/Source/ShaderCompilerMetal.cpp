@@ -103,6 +103,8 @@ namespace Babylon::Plugins
         }
 
         ShaderCompilerTraversers::IdGenerator ids{};
+        // Flip 2D texture sample coordinates (replaces the former ProcessSamplerFlip texture() macro).
+        ShaderCompilerTraversers::FlipSamplerCoordinates(program);
         auto cutScope = ShaderCompilerTraversers::ChangeUniformTypes(program, ids);
         auto utstScope = ShaderCompilerTraversers::MoveNonSamplerUniformsIntoStruct(program, ids);
         std::map<std::string, std::string> vertexAttributeRenaming = {};

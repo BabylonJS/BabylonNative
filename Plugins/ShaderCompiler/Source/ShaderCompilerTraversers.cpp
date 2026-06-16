@@ -1673,6 +1673,76 @@ namespace Babylon::ShaderCompilerTraversers
 
             TIntermediate* m_intermediate{};
         };
+
+        class FlipSamplerCoordinatesTraverser : public TIntermTraverser
+        {
+        public:
+            static void Traverse(TProgram& program)
+            {
+                for (auto stage : {EShLangVertex, EShLangFragment})
+                {
+                    auto* intermediate{program.getIntermediate(stage)};
+                    if (intermediate != nullptr)
+                    {
+                        FlipSamplerCoordinatesTraverser traverser{intermediate};
+                        intermediate->getTreeRoot()->traverse(&traverser);
+                    }
+                }
+            }
+
+        protected:
+            virtual bool visitAggregate(TVisit visit, TIntermAggregate* node) override
+            {
+                if (visit == EvPreVisit && (node->getOp() == EOpTexture || node->getOp() == EOpTextureLod))
+                {
+                    auto& sequence = node->getSequence();
+                    if (sequence.size() >= 2)
+                    {
+                        // The coordinate is the operand right after the sampler. Only 2-component
+                        // float coordinates (sampler2D-style) are flipped; cube/array/3D coordinates
+                        // (vec3+) are left untouched, matching the original flip(vec2)/flip(vec3).
+                        auto* coordinate = sequence[1]->getAsTyped();
+                        if (coordinate != nullptr &&
+                            coordinate->getType().getBasicType() == EbtFloat &&
+                            !coordinate->getType().isArray() &&
+                            coordinate->getType().getVectorSize() == 2)
+                        {
+                            sequence[1] = FlipVerticalCoordinate(coordinate);
+                        }
+                    }
+                }
+
+                return true;
+            }
+
+        private:
+            FlipSamplerCoordinatesTraverser(TIntermediate* intermediate)
+                : m_intermediate{intermediate}
+            {
+            }
+
+            // Builds `coordinate * vec2(1.0, -1.0) + vec2(0.0, 1.0)`, i.e. (u, 1.0 - v).
+            TIntermTyped* FlipVerticalCoordinate(TIntermTyped* coordinate)
+            {
+                const TSourceLoc& loc{coordinate->getLoc()};
+                TType vec2Type{EbtFloat, EvqConst, 2};
+
+                TConstUnionArray scaleValues{2};
+                scaleValues[0].setDConst(1.0);
+                scaleValues[1].setDConst(-1.0);
+                TIntermTyped* scale{m_intermediate->addConstantUnion(scaleValues, vec2Type, loc)};
+
+                TConstUnionArray offsetValues{2};
+                offsetValues[0].setDConst(0.0);
+                offsetValues[1].setDConst(1.0);
+                TIntermTyped* offset{m_intermediate->addConstantUnion(offsetValues, vec2Type, loc)};
+
+                TIntermTyped* scaled{m_intermediate->addBinaryMath(EOpMul, coordinate, scale, loc)};
+                return m_intermediate->addBinaryMath(EOpAdd, scaled, offset, loc);
+            }
+
+            TIntermediate* m_intermediate{};
+        };
     }
 
     ScopeT MoveNonSamplerUniformsIntoStruct(TProgram& program, IdGenerator& ids)
@@ -1718,5 +1788,10 @@ namespace Babylon::ShaderCompilerTraversers
     void InvertYDerivativeOperands(TProgram& program)
     {
         InvertYDerivativeOperandsTraverser::Traverse(program);
+    }
+
+    void FlipSamplerCoordinates(TProgram& program)
+    {
+        FlipSamplerCoordinatesTraverser::Traverse(program);
     }
 }
