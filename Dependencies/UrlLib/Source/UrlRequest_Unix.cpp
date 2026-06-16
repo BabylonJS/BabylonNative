@@ -2,6 +2,7 @@
 
 #include <curl/curl.h>
 #include <unistd.h>
+#include <array>
 #include <cstring>
 #include <filesystem>
 #include <cassert>
@@ -14,6 +15,45 @@ namespace
         if (code != CURLE_OK)
         {
             throw std::runtime_error{(std::stringstream{} << "CURL call failed with code (" << code << ")").str()};
+        }
+    }
+
+    // Stable symbolic names for the CURLcodes most likely to be diagnostic in the field.
+    // Restricted to constants that have existed in libcurl for a long time so this compiles
+    // against older system curl headers; anything else gets a synthesized "CURLE_<n>" token.
+    std::string curl_error_symbol(CURLcode code)
+    {
+        switch (code)
+        {
+            case CURLE_UNSUPPORTED_PROTOCOL: return "CURLE_UNSUPPORTED_PROTOCOL";
+            case CURLE_URL_MALFORMAT: return "CURLE_URL_MALFORMAT";
+            case CURLE_COULDNT_RESOLVE_PROXY: return "CURLE_COULDNT_RESOLVE_PROXY";
+            case CURLE_COULDNT_RESOLVE_HOST: return "CURLE_COULDNT_RESOLVE_HOST";
+            case CURLE_COULDNT_CONNECT: return "CURLE_COULDNT_CONNECT";
+            case CURLE_REMOTE_ACCESS_DENIED: return "CURLE_REMOTE_ACCESS_DENIED";
+            case CURLE_PARTIAL_FILE: return "CURLE_PARTIAL_FILE";
+            case CURLE_HTTP_RETURNED_ERROR: return "CURLE_HTTP_RETURNED_ERROR";
+            case CURLE_WRITE_ERROR: return "CURLE_WRITE_ERROR";
+            case CURLE_UPLOAD_FAILED: return "CURLE_UPLOAD_FAILED";
+            case CURLE_READ_ERROR: return "CURLE_READ_ERROR";
+            case CURLE_OUT_OF_MEMORY: return "CURLE_OUT_OF_MEMORY";
+            case CURLE_OPERATION_TIMEDOUT: return "CURLE_OPERATION_TIMEDOUT";
+            case CURLE_RANGE_ERROR: return "CURLE_RANGE_ERROR";
+            case CURLE_HTTP_POST_ERROR: return "CURLE_HTTP_POST_ERROR";
+            case CURLE_SSL_CONNECT_ERROR: return "CURLE_SSL_CONNECT_ERROR";
+            case CURLE_BAD_DOWNLOAD_RESUME: return "CURLE_BAD_DOWNLOAD_RESUME";
+            case CURLE_FILE_COULDNT_READ_FILE: return "CURLE_FILE_COULDNT_READ_FILE";
+            case CURLE_TOO_MANY_REDIRECTS: return "CURLE_TOO_MANY_REDIRECTS";
+            case CURLE_GOT_NOTHING: return "CURLE_GOT_NOTHING";
+            case CURLE_SEND_ERROR: return "CURLE_SEND_ERROR";
+            case CURLE_RECV_ERROR: return "CURLE_RECV_ERROR";
+            case CURLE_SSL_CERTPROBLEM: return "CURLE_SSL_CERTPROBLEM";
+            case CURLE_SSL_CIPHER: return "CURLE_SSL_CIPHER";
+            case CURLE_PEER_FAILED_VERIFICATION: return "CURLE_PEER_FAILED_VERIFICATION";
+            case CURLE_BAD_CONTENT_ENCODING: return "CURLE_BAD_CONTENT_ENCODING";
+            case CURLE_SSL_CACERT_BADFILE: return "CURLE_SSL_CACERT_BADFILE";
+            case CURLE_REMOTE_FILE_NOT_FOUND: return "CURLE_REMOTE_FILE_NOT_FOUND";
+            default: return "CURLE_" + std::to_string(static_cast<int>(code));
         }
     }
 
@@ -105,6 +145,9 @@ namespace UrlLib
                 curl_check(curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, this));
                 curl_check(curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, HeaderCallback));
                 curl_check(curl_easy_setopt(m_curl, CURLOPT_FOLLOWLOCATION, 1L));
+                // Request-specific failure detail (host/port/path specifics) lands here during
+                // curl_easy_perform; see the error handling in PerformAsync.
+                curl_check(curl_easy_setopt(m_curl, CURLOPT_ERRORBUFFER, m_curlErrorBuffer.data()));
             }
         }
 
@@ -182,30 +225,44 @@ namespace UrlLib
 
             m_thread.emplace([this, taskCompletionSource]() mutable
             {
-                try
-                {
-                    curl_check(curl_easy_perform(m_curl));
-
-                    long codep{};
-                    curl_check(curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &codep));
-                    if (codep == 0 && m_file)
-                    {
-                        // File scheme always returns 0
-                        m_statusCode = UrlStatusCode::Ok;
-                    }
-                    else
-                    {
-                        m_statusCode = static_cast<UrlStatusCode>(codep);
-                    }
-                }
-                catch (const std::exception&)
+                m_curlErrorBuffer[0] = '\0';
+                const CURLcode performResult = curl_easy_perform(m_curl);
+                if (performResult != CURLE_OK)
                 {
                     // Retain the default status code of 0 to indicate a client side error,
                     // matching the convention of UrlRequest_UWP.cpp's catch(winrt::hresult_error)
-                    // and UrlRequest_Apple.mm's `m_url == nil` branch. Without this catch any
-                    // libcurl failure (e.g. CURLE_FILE_COULDNT_READ_FILE (37) for a missing local
-                    // `file://` or rewritten `app:///` target) would escape this std::thread and
-                    // call std::terminate.
+                    // and UrlRequest_Apple.mm's error branch -- but record what actually went
+                    // wrong so consumers can surface it. Prefer libcurl's per-request
+                    // CURLOPT_ERRORBUFFER detail (it includes host/port/path specifics, e.g.
+                    // "Failed to connect to 127.0.0.1 port 47651 ...") over the generic
+                    // curl_easy_strerror text.
+                    const char* detail = m_curlErrorBuffer[0] != '\0' ? m_curlErrorBuffer.data() : curl_easy_strerror(performResult);
+                    SetError("curl", curl_error_symbol(performResult), static_cast<int32_t>(performResult), detail);
+                }
+                else
+                {
+                    try
+                    {
+                        long codep{};
+                        curl_check(curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &codep));
+                        if (codep == 0 && m_file)
+                        {
+                            // File scheme always returns 0
+                            m_statusCode = UrlStatusCode::Ok;
+                        }
+                        else
+                        {
+                            m_statusCode = static_cast<UrlStatusCode>(codep);
+                        }
+                    }
+                    catch (const std::exception& e)
+                    {
+                        // Keep status 0 and record why. Without this catch the exception would
+                        // escape this std::thread and call std::terminate. "GetInfoFailed" is not
+                        // a real CURLcode, so it deliberately omits the "CURLE_" prefix to avoid
+                        // implying libcurl produced this code.
+                        SetError("curl", "GetInfoFailed", -1, e.what());
+                    }
                 }
 
                 taskCompletionSource.complete();
@@ -300,6 +357,7 @@ namespace UrlLib
         CURL* m_curl{};
         CURLU* m_curlu{};
         bool m_file{};
+        std::array<char, CURL_ERROR_SIZE> m_curlErrorBuffer{};
         std::optional<std::thread> m_thread{};
     };
 }

@@ -101,3 +101,16 @@ if(APPLE)
 endif()
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+
+# Unit tests: on by default only when UrlLib is the top-level project being built for a
+# desktop host, so consumers that FetchContent UrlLib are unaffected.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND NOT IOS AND NOT ANDROID)
+    option(URLLIB_TESTS "Build the UrlLib unit tests." ON)
+else()
+    option(URLLIB_TESTS "Build the UrlLib unit tests." OFF)
+endif()
+
+if(URLLIB_TESTS)
+    enable_testing()
+    add_subdirectory(Tests)
+endif()

@@ -75,6 +75,21 @@ namespace UrlLib
             return ReasonPhraseForStatusCode(static_cast<int>(m_statusCode));
         }
 
+        std::string_view ErrorString() const
+        {
+            return m_errorString;
+        }
+
+        std::string_view ErrorSymbol() const
+        {
+            return m_errorSymbol;
+        }
+
+        int32_t ErrorCode() const
+        {
+            return m_errorCode;
+        }
+
         std::string_view ResponseUrl()
         {
             return m_responseUrl;
@@ -155,6 +170,34 @@ namespace UrlLib
             }
         }
 
+        // Record a transport-level failure in a normalized, grep-friendly shape:
+        //   "<domain>:<symbol>(<code>): <detail>"
+        // e.g.
+        //   "curl:CURLE_COULDNT_CONNECT(7): Failed to connect to 127.0.0.1 port 47651 ..."
+        //   "nsurl:NSURLErrorCannotConnectToHost(-1004): Could not connect to the server."
+        //   "urllib:AppResourceNotFound(0): no bundled resource for 'app:///missing.js'"
+        // `domain` and `symbol` are stable ASCII tokens (no spaces) so observability pipelines
+        // (Splunk and the like) can filter on exact substrings; `detail` carries the platform's
+        // human-readable message, including host/port/path specifics where the platform
+        // provides them. Callers complete SendAsync() normally after recording the error --
+        // the status code stays 0 (None), preserving the existing contract that transport
+        // failures surface as a 0 status rather than a faulted task.
+        void SetError(std::string_view domain, std::string_view symbol, int32_t code, std::string_view detail)
+        {
+            m_errorCode = code;
+            m_errorSymbol = symbol;
+
+            m_errorString.clear();
+            m_errorString.reserve(domain.size() + symbol.size() + detail.size() + 16);
+            m_errorString.append(domain);
+            m_errorString.push_back(':');
+            m_errorString.append(symbol);
+            m_errorString.push_back('(');
+            m_errorString.append(std::to_string(code));
+            m_errorString.append("): ");
+            m_errorString.append(detail);
+        }
+
         // Reset the per-request response state that lives in ImplBase. Each platform's `Open()`
         // calls this at the start so a single `UrlRequest` can be reused across requests without
         // leaking prior status / URL / body / headers. Platform-specific response buffers live in
@@ -167,6 +210,9 @@ namespace UrlLib
             m_responseUrl.clear();
             m_responseString.clear();
             m_headers.clear();
+            m_errorCode = 0;
+            m_errorSymbol.clear();
+            m_errorString.clear();
         }
 
         arcana::cancellation_source m_cancellationSource{};
@@ -174,6 +220,9 @@ namespace UrlLib
         UrlMethod m_method{UrlMethod::Get};
         UrlStatusCode m_statusCode{UrlStatusCode::None};
         std::string m_statusText{};
+        int32_t m_errorCode{};
+        std::string m_errorSymbol{};
+        std::string m_errorString{};
         std::string m_responseUrl{};
         std::string m_responseString{};
         std::unordered_map<std::string, std::string> m_headers;
